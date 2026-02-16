@@ -10,11 +10,13 @@ import {
   Alert,
   ActivityIndicator,
   ScrollView,
+  Keyboard,
 } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthContext } from '../../components/AuthProvider';
+import { hapticFeedback } from '../../utils/haptics';
 
 export default function SignupScreen() {
   const router = useRouter();
@@ -26,35 +28,53 @@ export default function SignupScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   const validatePassword = (pwd: string) => {
     return pwd.length >= 8;
   };
 
   const handleSignup = async () => {
+    setError('');
+    Keyboard.dismiss();
+    
     if (!fullName.trim()) {
-      Alert.alert('Error', 'Please enter your name');
+      setError('Please enter your name');
+      hapticFeedback.error();
       return;
     }
 
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      setError('Please fill in all fields');
+      hapticFeedback.error();
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError('Please enter a valid email address');
+      hapticFeedback.error();
       return;
     }
 
     if (!validatePassword(password)) {
-      Alert.alert('Error', 'Password must be at least 8 characters');
+      setError('Password must be at least 8 characters');
+      hapticFeedback.error();
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      setError('Passwords do not match');
+      hapticFeedback.error();
       return;
     }
 
     setIsSubmitting(true);
+    hapticFeedback.light();
+    
     try {
       const { user } = await signUpWithEmail(email, password, fullName);
+      hapticFeedback.success();
       
       if (user && !user.confirmed_at) {
         Alert.alert(
@@ -66,28 +86,37 @@ export default function SignupScreen() {
         router.replace('/onboarding');
       }
     } catch (error: any) {
-      Alert.alert('Signup Failed', error.message || 'Something went wrong');
+      setError(error.message || 'Something went wrong');
+      hapticFeedback.error();
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleGoogleSignup = async () => {
+    setError('');
+    hapticFeedback.light();
     try {
       await signInWithGoogle();
+      hapticFeedback.success();
       router.replace('/onboarding');
     } catch (error: any) {
-      Alert.alert('Google Signup Failed', error.message || 'Something went wrong');
+      setError(error.message || 'Google signup failed');
+      hapticFeedback.error();
     }
   };
 
   const handleAppleSignup = async () => {
+    setError('');
+    hapticFeedback.light();
     try {
       await signInWithApple();
+      hapticFeedback.success();
       router.replace('/onboarding');
     } catch (error: any) {
       if (error.code !== 'ERR_REQUEST_CANCELED') {
-        Alert.alert('Apple Signup Failed', error.message || 'Something went wrong');
+        setError(error.message || 'Apple signup failed');
+        hapticFeedback.error();
       }
     }
   };
@@ -195,6 +224,13 @@ export default function SignupScreen() {
                   secureTextEntry={!showPassword}
                 />
               </View>
+
+              {error ? (
+                <View style={styles.errorContainer}>
+                  <Ionicons name="alert-circle" size={16} color="#ef4444" />
+                  <Text style={styles.errorText}>{error}</Text>
+                </View>
+              ) : null}
 
               <TouchableOpacity
                 style={styles.signupButton}
@@ -326,6 +362,20 @@ const styles = StyleSheet.create({
     height: 52,
     color: '#fff',
     fontSize: 16,
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+  errorText: {
+    flex: 1,
+    color: '#ef4444',
+    fontSize: 14,
   },
   signupButton: {
     backgroundColor: '#6366f1',

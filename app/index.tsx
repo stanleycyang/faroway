@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { View, Text, Image, StyleSheet, Dimensions, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -12,12 +12,12 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const { hasCompletedOnboarding, isAuthenticated } = useUserStore();
 
-  const [logoOpacity] = useState(new Animated.Value(0));
-  const [logoScale] = useState(new Animated.Value(0.8));
-  const [titleOpacity] = useState(new Animated.Value(0));
-  const [titleTranslateY] = useState(new Animated.Value(20));
-  const [subtitleOpacity] = useState(new Animated.Value(0));
-  const [buttonOpacity] = useState(new Animated.Value(0));
+  const logoOpacity = useRef(new Animated.Value(0)).current;
+  const logoScale = useRef(new Animated.Value(0.8)).current;
+  const titleOpacity = useRef(new Animated.Value(0)).current;
+  const titleTranslateY = useRef(new Animated.Value(20)).current;
+  const subtitleOpacity = useRef(new Animated.Value(0)).current;
+  const buttonOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Animate entrance

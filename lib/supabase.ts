@@ -40,7 +40,9 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 });
 
 // Backend API base URL
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+// In production builds, EXPO_PUBLIC_API_URL must be set to an https URL.
+// The http fallback is only acceptable for local development.
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || (__DEV__ ? 'http://localhost:3000' : '');
 
 // Helper to get auth headers for API requests
 export async function getAuthHeaders(): Promise<HeadersInit> {

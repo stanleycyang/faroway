@@ -20,10 +20,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: 'ai.tripgenie.app',
     usesAppleSignIn: true,
     infoPlist: {
-      NSCameraUsageDescription: 'TripGenie needs camera access to capture travel moments.',
-      NSPhotoLibraryUsageDescription: 'TripGenie needs photo library access to add trip photos.',
       NSLocationWhenInUseUsageDescription: 'TripGenie uses your location to provide navigation to trip destinations.',
-      NSUserTrackingUsageDescription: 'This identifier will be used to deliver personalized recommendations.',
     },
     config: {
       usesNonExemptEncryption: false,

@@ -9,6 +9,9 @@ import {
   TextInput,
   KeyboardAvoidingView,
   Platform,
+  Animated,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -23,6 +26,7 @@ import {
 import { useTripStore } from '../../stores/tripStore';
 import { popularDestinations, travelerTypes } from '../../constants/destinations';
 import { colors, borderRadius, shadows } from '../../constants/theme';
+import { hapticFeedback } from '../../utils/haptics';
 
 export default function CreateTripScreen() {
   const router = useRouter();
@@ -50,23 +54,29 @@ export default function CreateTripScreen() {
     : popularDestinations;
 
   const handleSelectDestination = (name: string, country: string) => {
+    hapticFeedback.selection();
     setDraftInput({ destination: name, country });
     setShowSearch(false);
     setSearchQuery('');
   };
 
   const handleTravelerTypeSelect = (typeId: string) => {
+    hapticFeedback.selection();
     setDraftInput({ travelerType: typeId });
   };
 
   const handleVibesSelect = (vibes: string[]) => {
+    hapticFeedback.light();
     setDraftInput({ vibes });
   };
 
   const handleTravelersChange = (delta: number) => {
     const current = draftInput?.travelers || 2;
     const newValue = Math.max(1, Math.min(10, current + delta));
-    setDraftInput({ travelers: newValue });
+    if (newValue !== current) {
+      hapticFeedback.light();
+      setDraftInput({ travelers: newValue });
+    }
   };
 
   const canProceed =
@@ -76,7 +86,10 @@ export default function CreateTripScreen() {
 
   const handleContinue = () => {
     if (canProceed) {
+      hapticFeedback.success();
       router.push('/create/generating');
+    } else {
+      hapticFeedback.error();
     }
   };
 

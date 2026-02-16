@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/ui';
 import { colors } from '../../constants/theme';
+import { hapticFeedback } from '../../utils/haptics';
 
 const { width, height } = Dimensions.get('window');
 
@@ -84,15 +85,18 @@ export default function OnboardingScreen() {
   }, [currentIndex]);
 
   const handleNext = () => {
+    hapticFeedback.light();
     if (currentIndex < SLIDES.length - 1) {
       flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
     } else {
+      hapticFeedback.success();
       // Skip preferences, go straight to creating a trip
       router.replace('/(tabs)');
     }
   };
 
   const handleSkip = () => {
+    hapticFeedback.light();
     // Go straight to the app - let them create a trip immediately
     router.replace('/(tabs)');
   };

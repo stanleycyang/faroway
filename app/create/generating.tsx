@@ -7,6 +7,7 @@ import {
   Image,
   Animated,
   Easing,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -22,6 +23,8 @@ import {
   SearchResults,
   SearchProgress,
 } from '../../services/searchService';
+import { useStreamingItinerary } from '../../hooks/useStreamingItinerary';
+import { registry } from '../../lib/json-render/registry';
 
 const { width, height } = Dimensions.get('window');
 
@@ -313,6 +316,44 @@ function generateMockItinerary(input: any): Trip {
   };
 }
 
+/**
+ * Simple json-render Renderer Component
+ * Renders a json-render document using the component registry
+ */
+function JsonRenderRenderer({ document }: { document: any }) {
+  const [fadeAnim] = useState(new Animated.Value(0));
+
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 300,
+      useNativeDriver: true,
+    }).start();
+  }, [document]);
+
+  if (!document) return null;
+
+  const renderComponent = (comp: any, index: number) => {
+    if (!comp || !comp.type) return null;
+
+    const Component = registry[comp.type as keyof typeof registry];
+    if (!Component) {
+      console.warn(`[JsonRender] Unknown component type: ${comp.type}`);
+      return null;
+    }
+
+    return <Component key={index} {...(comp.props || {})} />;
+  };
+
+  const components = Array.isArray(document) ? document : [document];
+
+  return (
+    <Animated.View style={{ opacity: fadeAnim }}>
+      {components.map((comp, index) => renderComponent(comp, index))}
+    </Animated.View>
+  );
+}
+
 export default function GeneratingScreen() {
   const router = useRouter();
   const { draftInput, finishGeneration } = useTripStore();
@@ -320,6 +361,7 @@ export default function GeneratingScreen() {
   const [progress, setProgress] = useState(0);
   const [statusMessage, setStatusMessage] = useState(GENERATION_STEPS[0].text);
   const [useBackend, setUseBackend] = useState(true);
+  const [useJsonRender, setUseJsonRender] = useState(true);
   const searchIdRef = useRef<string | null>(null);
 
   // Animations
@@ -330,6 +372,29 @@ export default function GeneratingScreen() {
   const destinationInfo = popularDestinations.find(
     (d) => d.name === draftInput?.destination
   );
+
+  // Streaming itinerary with json-render
+  const streamingState = useStreamingItinerary({
+    input: useJsonRender && draftInput ? {
+      destination: draftInput.destination!,
+      startDate: draftInput.startDate!,
+      endDate: draftInput.endDate!,
+      travelers: draftInput.travelers || 2,
+      travelerType: draftInput.travelerType as any,
+      vibes: draftInput.vibes || [],
+      budget: draftInput.budget,
+    } : undefined,
+    onComplete: (document) => {
+      console.log('[Generating] json-render streaming complete', document);
+      // We'll still save as Trip for now, but render from json-render
+      // In the future, we can store the json-render document directly
+    },
+    onError: (error) => {
+      console.error('[Generating] json-render streaming error:', error);
+      // Fall back to traditional polling
+      setUseJsonRender(false);
+    },
+  });
 
   useEffect(() => {
     // Rotate animation
@@ -484,6 +549,12 @@ export default function GeneratingScreen() {
     outputRange: ['0deg', '360deg'],
   });
 
+  // Combine progress from both streaming and polling
+  const displayProgress = useJsonRender ? streamingState.progress : progress;
+  const displayMessage = useJsonRender && streamingState.isStreaming
+    ? 'Generating your itinerary...'
+    : statusMessage;
+
   return (
     <View style={styles.container}>
       {/* Background Image */}
@@ -499,7 +570,12 @@ export default function GeneratingScreen() {
         style={styles.overlay}
       />
 
-      <SafeAreaView style={styles.content}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        <SafeAreaView style={styles.content}>
         {/* Destination Info */}
         <View style={styles.header}>
           <Text style={styles.destinationLabel}>Creating your trip to</Text>
@@ -535,10 +611,10 @@ export default function GeneratingScreen() {
         {/* Progress */}
         <View style={styles.progressContainer}>
           <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${progress}%` }]} />
+            <View style={[styles.progressFill, { width: `${displayProgress}%` }]} />
           </View>
           <Animated.Text style={[styles.stepText, { opacity: stepOpacity }]}>
-            {useBackend ? statusMessage : GENERATION_STEPS[currentStep]?.text}
+            {displayMessage}
           </Animated.Text>
         </View>
 
@@ -581,7 +657,15 @@ export default function GeneratingScreen() {
             </View>
           )}
         </View>
+
+        {/* json-render Content - Progressively revealed */}
+        {useJsonRender && streamingState.document && (
+          <View style={styles.jsonRenderContainer}>
+            <JsonRenderRenderer document={streamingState.document} />
+          </View>
+        )}
       </SafeAreaView>
+      </ScrollView>
     </View>
   );
 }
@@ -601,8 +685,14 @@ const styles = StyleSheet.create({
     width,
     height,
   },
-  content: {
+  scrollView: {
     flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  content: {
+    minHeight: height,
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingVertical: 48,
@@ -701,5 +791,13 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: 'rgba(255,255,255,0.1)',
     alignItems: 'center',
+  },
+  jsonRenderContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: borderRadius.xl,
+    borderTopRightRadius: borderRadius.xl,
+    marginTop: 32,
+    padding: 20,
+    minHeight: 200,
   },
 });

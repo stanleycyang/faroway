@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,17 +7,64 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
+  Animated,
+  RefreshControl,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as WebBrowser from 'expo-web-browser';
 import { Button, VibeChips } from '../../components/ui';
 import { useTripStore, TripActivity } from '../../stores/tripStore';
 import { colors, borderRadius, shadows } from '../../constants/theme';
+import { hapticFeedback } from '../../utils/haptics';
+import { registry } from '../../lib/json-render/registry';
 
 const { width } = Dimensions.get('window');
 const HEADER_HEIGHT = 300;
+
+/**
+ * Helper function to open URLs using expo-web-browser
+ */
+const openURL = async (url: string) => {
+  try {
+    await WebBrowser.openBrowserAsync(url, {
+      presentationStyle: WebBrowser.WebBrowserPresentationStyle.AUTOMATIC,
+      controlsColor: colors.primary[600],
+    });
+  } catch (error) {
+    console.error('Failed to open URL:', error);
+  }
+};
+
+/**
+ * Simple json-render Renderer Component
+ */
+function JsonRenderRenderer({ document }: { document: any }) {
+  if (!document) return null;
+
+  const renderComponent = (comp: any, index: number) => {
+    if (!comp || !comp.type) return null;
+
+    const Component = registry[comp.type as keyof typeof registry];
+    if (!Component) {
+      console.warn(`[JsonRender] Unknown component type: ${comp.type}`);
+      return null;
+    }
+
+    return <Component key={index} {...(comp.props || {})} />;
+  };
+
+  const components = Array.isArray(document) ? document : [document];
+
+  return (
+    <View>
+      {components.map((comp, index) => renderComponent(comp, index))}
+    </View>
+  );
+}
 
 interface ActivityCardProps {
   activity: TripActivity;
@@ -103,10 +150,16 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
             )}
           </View>
         )}
-        <TouchableOpacity style={styles.bookButton}>
-          <Text style={styles.bookButtonText}>Book Now</Text>
-          <Ionicons name="arrow-forward" size={16} color={colors.primary[500]} />
-        </TouchableOpacity>
+        {activity.bookingUrl && (
+          <TouchableOpacity
+            style={styles.bookButton}
+            onPress={() => openURL(activity.bookingUrl!)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.bookButtonText}>Book Now</Text>
+            <Ionicons name="arrow-forward" size={16} color={colors.primary[500]} />
+          </TouchableOpacity>
+        )}
       </View>
     </TouchableOpacity>
   );
@@ -117,7 +170,9 @@ export default function TripDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { trips, currentTrip } = useTripStore();
   const [selectedDay, setSelectedDay] = useState(0);
-
+  const [refreshing, setRefreshing] = useState(false);
+  
+  const scrollY = useRef(new Animated.Value(0)).current;
   const trip = trips.find((t) => t.id === id) || currentTrip;
 
   useEffect(() => {
@@ -126,10 +181,20 @@ export default function TripDetailScreen() {
     }
   }, [trip, id]);
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    hapticFeedback.light();
+    // Simulate refresh - in real app, refetch trip data
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    setRefreshing(false);
+    hapticFeedback.success();
+  };
+
   if (!trip) {
     return (
       <View style={styles.loadingContainer}>
-        <Text>Loading...</Text>
+        <ActivityIndicator size="large" color={colors.primary[500]} />
+        <Text style={styles.loadingText}>Loading trip...</Text>
       </View>
     );
   }
@@ -147,15 +212,43 @@ export default function TripDetailScreen() {
     })}`;
   };
 
+  const headerTranslate = scrollY.interpolate({
+    inputRange: [0, HEADER_HEIGHT],
+    outputRange: [0, -HEADER_HEIGHT / 2],
+    extrapolate: 'clamp',
+  });
+
+  const imageScale = scrollY.interpolate({
+    inputRange: [-100, 0],
+    outputRange: [1.5, 1],
+    extrapolate: 'clamp',
+  });
+
   return (
     <View style={styles.container}>
-      <ScrollView
+      <Animated.ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
       >
         {/* Hero Image */}
-        <View style={styles.heroContainer}>
-          <Image source={{ uri: trip.coverImage }} style={styles.heroImage} />
+        <Animated.View
+          style={[
+            styles.heroContainer,
+            { transform: [{ translateY: headerTranslate }] },
+          ]}
+        >
+          <Animated.Image
+            source={{ uri: trip.coverImage }}
+            style={[styles.heroImage, { transform: [{ scale: imageScale }] }]}
+          />
           <LinearGradient
             colors={['rgba(0,0,0,0.3)', 'transparent', 'rgba(0,0,0,0.8)']}
             style={styles.heroGradient}
@@ -194,7 +287,7 @@ export default function TripDetailScreen() {
               </View>
             </View>
           </SafeAreaView>
-        </View>
+        </Animated.View>
 
         {/* Content */}
         <View style={styles.content}>
@@ -219,7 +312,10 @@ export default function TripDetailScreen() {
                     styles.dayTab,
                     selectedDay === index && styles.dayTabSelected,
                   ]}
-                  onPress={() => setSelectedDay(index)}
+                  onPress={() => {
+                    hapticFeedback.selection();
+                    setSelectedDay(index);
+                  }}
                 >
                   <Text
                     style={[
@@ -259,7 +355,7 @@ export default function TripDetailScreen() {
             ))}
           </View>
         </View>
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Bottom Bar */}
       <View style={styles.bottomBar}>
@@ -287,6 +383,12 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: colors.neutral[500],
   },
   scrollContent: {
     paddingBottom: 120,

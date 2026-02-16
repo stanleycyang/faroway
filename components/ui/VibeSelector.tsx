@@ -1,7 +1,8 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated } from 'react-native';
 import { colors, borderRadius } from '../../constants/theme';
 import { travelVibes } from '../../constants/destinations';
+import { hapticFeedback } from '../../utils/haptics';
 
 interface VibeSelectorProps {
   selected: string[];
@@ -16,9 +17,14 @@ export function VibeSelector({
 }: VibeSelectorProps) {
   const toggleVibe = (vibeId: string) => {
     if (selected.includes(vibeId)) {
+      hapticFeedback.light();
       onSelect(selected.filter((id) => id !== vibeId));
     } else if (selected.length < maxSelections) {
+      hapticFeedback.medium();
       onSelect([...selected, vibeId]);
+    } else {
+      // Max reached - give error feedback
+      hapticFeedback.error();
     }
   };
 

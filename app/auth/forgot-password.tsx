@@ -7,7 +7,6 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -22,10 +21,19 @@ export default function ForgotPasswordScreen() {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
+  const [error, setError] = useState('');
 
   const handleResetPassword = async () => {
+    setError('');
+    
     if (!email) {
-      Alert.alert('Error', 'Please enter your email address');
+      setError('Please enter your email address');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError('Please enter a valid email address');
       return;
     }
 
@@ -33,8 +41,8 @@ export default function ForgotPasswordScreen() {
     try {
       await resetPassword(email);
       setEmailSent(true);
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to send reset email');
+    } catch (err: any) {
+      setError(err.message || 'Failed to send reset email. Please try again.');
     } finally {
       setIsSubmitting(false);
     }
@@ -80,7 +88,13 @@ export default function ForgotPasswordScreen() {
       >
         <View style={styles.content}>
           {/* Back Button */}
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="Go back"
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
             <Ionicons name="arrow-back" size={24} color="#fff" />
           </TouchableOpacity>
 
@@ -107,6 +121,13 @@ export default function ForgotPasswordScreen() {
                 autoCorrect={false}
               />
             </View>
+
+            {error ? (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={16} color="#ef4444" />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
 
             <TouchableOpacity
               style={styles.button}
@@ -150,9 +171,13 @@ const styles = StyleSheet.create({
   },
   backButton: {
     position: 'absolute',
-    top: 60,
-    left: 24,
-    padding: 8,
+    top: 56,
+    left: 20,
+    padding: 12,
+    minWidth: 44,
+    minHeight: 44,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     marginBottom: 32,
@@ -196,6 +221,20 @@ const styles = StyleSheet.create({
     height: 52,
     color: '#fff',
     fontSize: 16,
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+  errorText: {
+    flex: 1,
+    color: '#ef4444',
+    fontSize: 14,
   },
   button: {
     backgroundColor: '#6366f1',

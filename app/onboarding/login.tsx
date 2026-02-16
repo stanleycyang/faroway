@@ -14,6 +14,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, Input } from '../../components/ui';
 import { useUserStore } from '../../stores/userStore';
+import { supabase } from '../../lib/supabase';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 
 export default function LoginScreen() {
@@ -33,58 +34,72 @@ export default function LoginScreen() {
     setIsLoading(true);
     setError('');
 
-    // TODO: Replace with Supabase auth
-    // const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    
-    setTimeout(() => {
-      setUser({
-        id: 'user-1',
-        name: 'Traveler',
-        email: email,
-        preferences: { vibes: [] },
-      });
-      setOnboardingComplete(true);
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
+      
+      if (authError) {
+        setError(authError.message || 'Invalid email or password');
+        setIsLoading(false);
+        return;
+      }
+
+      if (data?.user) {
+        setUser({
+          id: data.user.id,
+          name: data.user.user_metadata?.full_name || data.user.email?.split('@')[0] || 'Traveler',
+          email: data.user.email || email,
+          preferences: { vibes: [] },
+        });
+        setOnboardingComplete(true);
+        router.replace('/(tabs)');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Login failed. Please try again.');
+    } finally {
       setIsLoading(false);
-      router.replace('/(tabs)');
-    }, 1500);
+    }
   };
 
   const handleGoogleLogin = async () => {
     setIsLoading(true);
+    setError('');
     
-    // TODO: Replace with Supabase Google OAuth
-    // const { data, error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
-    
-    setTimeout(() => {
-      setUser({
-        id: 'google-user',
-        name: 'Google User',
-        email: 'user@gmail.com',
-        preferences: { vibes: [] },
-      });
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+      
+      if (authError) {
+        setError(authError.message || 'Google login failed');
+        return;
+      }
+
       setOnboardingComplete(true);
-      setIsLoading(false);
       router.replace('/(tabs)');
-    }, 1500);
+    } catch (err: any) {
+      setError(err.message || 'Google login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleAppleLogin = async () => {
     setIsLoading(true);
+    setError('');
     
-    // TODO: Replace with Supabase Apple OAuth
-    // const { data, error } = await supabase.auth.signInWithOAuth({ provider: 'apple' });
-    
-    setTimeout(() => {
-      setUser({
-        id: 'apple-user',
-        name: 'Apple User',
-        email: 'user@icloud.com',
-        preferences: { vibes: [] },
-      });
+    try {
+      const { data, error: authError } = await supabase.auth.signInWithOAuth({ provider: 'apple' });
+      
+      if (authError) {
+        setError(authError.message || 'Apple login failed');
+        return;
+      }
+
       setOnboardingComplete(true);
-      setIsLoading(false);
       router.replace('/(tabs)');
-    }, 1500);
+    } catch (err: any) {
+      setError(err.message || 'Apple login failed. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSkipLogin = () => {

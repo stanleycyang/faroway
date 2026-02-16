@@ -176,7 +176,12 @@ export async function startSearch(
  * Get search status and results
  */
 export async function getSearchStatus(searchId: string): Promise<SearchStatusResponse> {
-  const response = await fetch(`${API_BASE_URL}/api/search/${searchId}`);
+  // Validate searchId to prevent path traversal
+  if (!searchId || /[^a-zA-Z0-9_-]/.test(searchId)) {
+    throw new Error('Invalid search ID');
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/search/${encodeURIComponent(searchId)}`);
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }));

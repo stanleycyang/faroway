@@ -35,7 +35,8 @@ export interface UserProfile {
   updatedAt: string;
 }
 
-// Storage for auth token (will be managed by auth provider)
+// Auth token managed via Supabase SecureStore - this is an in-memory cache only.
+// Do NOT persist this token to AsyncStorage or other insecure storage.
 let authToken: string | null = null;
 
 export function setAuthToken(token: string | null) {
@@ -124,7 +125,7 @@ export async function getTrips(): Promise<ApiResponse<{ trips: Trip[] }>> {
 }
 
 export async function getTrip(id: string): Promise<ApiResponse<{ trip: Trip }>> {
-  return apiFetch<{ trip: Trip }>(`/api/trips/${id}`);
+  return apiFetch<{ trip: Trip }>(`/api/trips/${encodeURIComponent(id)}`);
 }
 
 export async function createTrip(trip: {
@@ -153,14 +154,14 @@ export async function updateTrip(
   id: string,
   updates: Partial<Trip>
 ): Promise<ApiResponse<{ trip: Trip }>> {
-  return apiFetch<{ trip: Trip }>(`/api/trips/${id}`, {
+  return apiFetch<{ trip: Trip }>(`/api/trips/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     body: JSON.stringify(updates),
   });
 }
 
 export async function deleteTrip(id: string): Promise<ApiResponse<void>> {
-  return apiFetch<void>(`/api/trips/${id}`, {
+  return apiFetch<void>(`/api/trips/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
 }

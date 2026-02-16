@@ -81,20 +81,51 @@ function RootLayoutNav() {
           headerShown: false,
           contentStyle: { backgroundColor: '#0a0a0a' },
           animation: 'slide_from_right',
+          animationDuration: 300,
         }}
       >
-        <Stack.Screen name="index" />
-        <Stack.Screen name="auth" options={{ animation: 'fade' }} />
-        <Stack.Screen name="onboarding" options={{ animation: 'fade' }} />
-        <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
+        <Stack.Screen
+          name="index"
+          options={{
+            animation: 'fade',
+          }}
+        />
+        <Stack.Screen
+          name="auth"
+          options={{
+            animation: 'fade',
+            animationDuration: 200,
+          }}
+        />
+        <Stack.Screen
+          name="onboarding"
+          options={{
+            animation: 'fade',
+            animationDuration: 200,
+          }}
+        />
+        <Stack.Screen
+          name="(tabs)"
+          options={{
+            animation: 'fade',
+            animationDuration: 250,
+          }}
+        />
         <Stack.Screen
           name="create"
           options={{
             presentation: 'modal',
             animation: 'slide_from_bottom',
+            animationDuration: 350,
           }}
         />
-        <Stack.Screen name="trip/[id]" />
+        <Stack.Screen
+          name="trip/[id]"
+          options={{
+            animation: 'slide_from_right',
+            animationDuration: 300,
+          }}
+        />
       </Stack>
     </>
   );

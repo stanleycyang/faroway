@@ -13,6 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useUserStore } from '../../stores/userStore';
 import { useTripStore } from '../../stores/tripStore';
 import { colors, borderRadius, shadows } from '../../constants/theme';
+import { hapticFeedback } from '../../utils/haptics';
 
 interface MenuItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -31,8 +32,13 @@ function MenuItem({
   showChevron = true,
   danger = false,
 }: MenuItemProps) {
+  const handlePress = () => {
+    hapticFeedback.light();
+    onPress();
+  };
+  
   return (
-    <TouchableOpacity style={styles.menuItem} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity style={styles.menuItem} onPress={handlePress} activeOpacity={0.7}>
       <View
         style={[
           styles.menuIconContainer,

@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { TripCard, Button } from '../../components/ui';
 import { useTripStore } from '../../stores/tripStore';
 import { colors, borderRadius, shadows } from '../../constants/theme';
+import { hapticFeedback } from '../../utils/haptics';
 
 type FilterTab = 'all' | 'upcoming' | 'past';
 
@@ -49,6 +50,7 @@ export default function TripsScreen() {
   };
 
   const handleTripPress = (tripId: string) => {
+    hapticFeedback.light();
     router.push(`/trip/${tripId}`);
   };
 
@@ -131,7 +133,10 @@ export default function TripsScreen() {
           <TouchableOpacity
             key={tab.id}
             style={[styles.tab, activeTab === tab.id && styles.tabActive]}
-            onPress={() => setActiveTab(tab.id)}
+            onPress={() => {
+              hapticFeedback.selection();
+              setActiveTab(tab.id);
+            }}
           >
             <Text
               style={[

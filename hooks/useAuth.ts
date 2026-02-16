@@ -95,7 +95,8 @@ export function useAuth() {
     return () => {
       subscription.unsubscribe();
     };
-  }, [setUser, clearUserStore]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // setUser/clearUserStore are stable zustand selectors
 
   // Sign in with email/password
   const signInWithEmail = useCallback(async (email: string, password: string) => {

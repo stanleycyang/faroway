@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -6,8 +6,11 @@ import {
   ActivityIndicator,
   ViewStyle,
   TextStyle,
+  Animated,
+  Pressable,
 } from 'react-native';
 import { colors, borderRadius, typography } from '../../constants/theme';
+import { hapticFeedback } from '../../utils/haptics';
 
 interface ButtonProps {
   title: string;
@@ -34,6 +37,28 @@ export function Button({
   style,
   textStyle,
 }: ButtonProps) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = () => {
+    if (!disabled && !loading) {
+      hapticFeedback.light();
+      Animated.spring(scaleAnim, {
+        toValue: 0.96,
+        useNativeDriver: true,
+        speed: 50,
+        bounciness: 4,
+      }).start();
+    }
+  };
+
+  const handlePressOut = () => {
+    Animated.spring(scaleAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 50,
+      bounciness: 4,
+    }).start();
+  };
   const getButtonStyles = (): ViewStyle => {
     const baseStyle: ViewStyle = {
       flexDirection: 'row',
@@ -96,25 +121,33 @@ export function Button({
   };
 
   return (
-    <TouchableOpacity
-      style={[getButtonStyles(), style]}
+    <Pressable
       onPress={onPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       disabled={disabled || loading}
-      activeOpacity={0.8}
     >
-      {loading ? (
-        <ActivityIndicator
-          color={variant === 'primary' || variant === 'secondary' ? '#fff' : colors.primary[500]}
-          size="small"
-        />
-      ) : (
-        <>
-          {icon && <>{icon}</>}
-          <Text style={[getTextStyles(), icon ? { marginLeft: 8 } : undefined, textStyle]}>
-            {title}
-          </Text>
-        </>
-      )}
-    </TouchableOpacity>
+      <Animated.View
+        style={[
+          getButtonStyles(),
+          { transform: [{ scale: scaleAnim }] },
+          style,
+        ]}
+      >
+        {loading ? (
+          <ActivityIndicator
+            color={variant === 'primary' || variant === 'secondary' ? '#fff' : colors.primary[500]}
+            size="small"
+          />
+        ) : (
+          <>
+            {icon && <>{icon}</>}
+            <Text style={[getTextStyles(), icon ? { marginLeft: 8 } : undefined, textStyle]}>
+              {title}
+            </Text>
+          </>
+        )}
+      </Animated.View>
+    </Pressable>
   );
 }

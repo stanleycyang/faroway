@@ -9,11 +9,13 @@ import {
   Platform,
   Alert,
   ActivityIndicator,
+  Keyboard,
 } from 'react-native';
 import { useRouter, Link } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthContext } from '../../components/AuthProvider';
+import { hapticFeedback } from '../../utils/haptics';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -23,40 +25,64 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState('');
 
   const handleEmailLogin = async () => {
+    setError('');
+    Keyboard.dismiss();
+    
     if (!email || !password) {
-      Alert.alert('Error', 'Please enter your email and password');
+      setError('Please enter your email and password');
+      hapticFeedback.error();
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError('Please enter a valid email address');
+      hapticFeedback.error();
       return;
     }
 
     setIsSubmitting(true);
+    hapticFeedback.light();
+    
     try {
       await signInWithEmail(email, password);
+      hapticFeedback.success();
       router.replace('/(tabs)');
     } catch (error: any) {
-      Alert.alert('Login Failed', error.message || 'Invalid email or password');
+      setError(error.message || 'Invalid email or password');
+      hapticFeedback.error();
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handleGoogleLogin = async () => {
+    setError('');
+    hapticFeedback.light();
     try {
       await signInWithGoogle();
+      hapticFeedback.success();
       router.replace('/(tabs)');
     } catch (error: any) {
-      Alert.alert('Google Login Failed', error.message || 'Something went wrong');
+      setError(error.message || 'Google login failed');
+      hapticFeedback.error();
     }
   };
 
   const handleAppleLogin = async () => {
+    setError('');
+    hapticFeedback.light();
     try {
       await signInWithApple();
+      hapticFeedback.success();
       router.replace('/(tabs)');
     } catch (error: any) {
       if (error.code !== 'ERR_REQUEST_CANCELED') {
-        Alert.alert('Apple Login Failed', error.message || 'Something went wrong');
+        setError(error.message || 'Apple login failed');
+        hapticFeedback.error();
       }
     }
   };
@@ -118,6 +144,8 @@ export default function LoginScreen() {
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
+                accessibilityLabel="Email address"
+                textContentType="emailAddress"
               />
             </View>
 
@@ -130,6 +158,8 @@ export default function LoginScreen() {
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
+                accessibilityLabel="Password"
+                textContentType="password"
               />
               <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
                 <Ionicons
@@ -146,10 +176,19 @@ export default function LoginScreen() {
               </Link>
             </TouchableOpacity>
 
+            {error ? (
+              <View style={styles.errorContainer}>
+                <Ionicons name="alert-circle" size={16} color="#ef4444" />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
+
             <TouchableOpacity
               style={styles.loginButton}
               onPress={handleEmailLogin}
               disabled={isSubmitting || loading}
+              accessibilityRole="button"
+              accessibilityLabel="Sign in"
             >
               {isSubmitting ? (
                 <ActivityIndicator color="#fff" />
@@ -270,6 +309,20 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     color: '#6366f1',
+    fontSize: 14,
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fef2f2',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 8,
+    gap: 8,
+  },
+  errorText: {
+    flex: 1,
+    color: '#ef4444',
     fontSize: 14,
   },
   loginButton: {

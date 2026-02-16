@@ -8,8 +8,8 @@
 // so that the Expo app can connect (localhost won't work on physical devices)
 
 export const API_BASE_URL = __DEV__
-  ? 'http://localhost:3000' // Local development
-  : 'https://backend-eta-nine-28.vercel.app'; // Production Vercel URL
+  ? (process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000') // Local development
+  : (process.env.EXPO_PUBLIC_API_URL || 'https://backend-eta-nine-28.vercel.app'); // Production Vercel URL
 
 // Alternative: Use your computer's local IP for testing on physical devices
 // export const API_BASE_URL = __DEV__

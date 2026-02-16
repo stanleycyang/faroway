@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -18,6 +18,7 @@ import { popularDestinations } from '../../constants/destinations';
 import { useAuthContext } from '../../components/AuthProvider';
 import { useTripStore } from '../../stores/tripStore';
 import { colors, borderRadius, shadows } from '../../constants/theme';
+import { hapticFeedback } from '../../utils/haptics';
 
 const { width } = Dimensions.get('window');
 
@@ -38,8 +39,9 @@ export default function ExploreScreen() {
   const [greeting, setGreeting] = useState('');
   
   // Animation
-  const fadeAnim = useState(new Animated.Value(0))[0];
-  const slideAnim = useState(new Animated.Value(20))[0];
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+  const scrollY = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     // Set greeting based on time
@@ -64,6 +66,7 @@ export default function ExploreScreen() {
   }, []);
 
   const handleDestinationPress = (destinationId: string) => {
+    hapticFeedback.light();
     const destination = popularDestinations.find((d) => d.id === destinationId);
     if (destination) {
       router.push({
@@ -74,10 +77,12 @@ export default function ExploreScreen() {
   };
 
   const handleCreateTrip = () => {
+    hapticFeedback.medium();
     router.push('/create');
   };
 
   const handleInspirationPress = (text: string) => {
+    hapticFeedback.light();
     // Could pre-fill vibes based on inspiration
     router.push('/create');
   };
@@ -86,9 +91,14 @@ export default function ExploreScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
+      <Animated.ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
       >
         {/* Header */}
         <Animated.View
@@ -261,7 +271,7 @@ export default function ExploreScreen() {
 
         {/* Bottom padding */}
         <View style={{ height: 100 }} />
-      </ScrollView>
+      </Animated.ScrollView>
     </SafeAreaView>
   );
 }

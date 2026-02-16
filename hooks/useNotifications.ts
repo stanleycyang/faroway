@@ -155,7 +155,8 @@ export function useNotifications(
     return () => {
       mounted = false;
     };
-  }, [autoRequestPermissions, registerForNotifications, onNotificationResponse, handleNotificationNavigation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRequestPermissions]); // callbacks are stable via useCallback
 
   // Set up notification listeners
   useEffect(() => {
