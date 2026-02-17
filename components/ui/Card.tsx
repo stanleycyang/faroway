@@ -8,7 +8,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, borderRadius, shadows, typography } from '../../constants/theme';
+import { colors, borderRadius, shadows } from '../../constants/theme';
 
 const { width } = Dimensions.get('window');
 
@@ -43,13 +43,14 @@ export function DestinationCard({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.9}
-      style={[styles.cardContainer, dimensions, shadows.lg]}
+      style={[styles.cardContainer, dimensions, shadows.md]}
     >
       <Image source={{ uri: image }} style={styles.cardImage} />
       <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.8)']}
+        colors={['transparent', 'rgba(0,0,0,0.85)']}
         style={styles.gradient}
       />
+      {/* Glassmorphic info overlay */}
       <View style={styles.cardContent}>
         <Text style={styles.cardCountry}>{country}</Text>
         <Text style={styles.cardName}>{name}</Text>
@@ -91,14 +92,14 @@ export function TripCard({
   daysCount,
   onPress,
 }: TripCardProps) {
-  const statusColors = {
-    draft: colors.neutral[400],
+  const statusColors: Record<string, string> = {
+    draft: colors.surface[500],
     planned: colors.primary[500],
-    active: colors.success,
-    completed: colors.neutral[600],
+    active: colors.accent[500],
+    completed: colors.surface[600],
   };
 
-  const statusLabels = {
+  const statusLabels: Record<string, string> = {
     draft: 'Draft',
     planned: 'Upcoming',
     active: 'In Progress',
@@ -112,14 +113,21 @@ export function TripCard({
       style={[styles.tripCard, shadows.md]}
     >
       <Image source={{ uri: image }} style={styles.tripImage} />
+      <LinearGradient
+        colors={['transparent', 'rgba(0,0,0,0.5)']}
+        style={styles.tripImageOverlay}
+      />
       <View style={styles.tripContent}>
         <View style={styles.tripHeader}>
           <View>
             <Text style={styles.tripDestination}>{destination}</Text>
             <Text style={styles.tripCountry}>{country}</Text>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: statusColors[status] }]}>
-            <Text style={styles.statusText}>{statusLabels[status]}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: `${statusColors[status]}20` }]}>
+            <View style={[styles.statusDot, { backgroundColor: statusColors[status] }]} />
+            <Text style={[styles.statusText, { color: statusColors[status] }]}>
+              {statusLabels[status]}
+            </Text>
           </View>
         </View>
         <View style={styles.tripFooter}>
@@ -135,7 +143,7 @@ const styles = StyleSheet.create({
   cardContainer: {
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
-    backgroundColor: colors.neutral[900],
+    backgroundColor: colors.surface[800],
   },
   cardImage: {
     width: '100%',
@@ -147,7 +155,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: '60%',
+    height: '65%',
   },
   cardContent: {
     position: 'absolute',
@@ -161,17 +169,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 1.2,
     marginBottom: 4,
   },
   cardName: {
     color: '#fff',
     fontSize: 24,
-    fontWeight: '700',
+    fontWeight: '800',
     marginBottom: 4,
   },
   cardDescription: {
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(255,255,255,0.75)',
     fontSize: 14,
     lineHeight: 20,
   },
@@ -182,10 +190,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tag: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.15)',
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.1)',
   },
   tagText: {
     color: '#fff',
@@ -193,13 +203,22 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   tripCard: {
-    backgroundColor: '#fff',
-    borderRadius: borderRadius.lg,
+    backgroundColor: colors.surface[800],
+    borderRadius: borderRadius.xl,
     overflow: 'hidden',
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   tripImage: {
     width: '100%',
+    height: 160,
+  },
+  tripImageOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
     height: 160,
   },
   tripContent: {
@@ -214,20 +233,27 @@ const styles = StyleSheet.create({
   tripDestination: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.neutral[900],
+    color: '#fff',
   },
   tripCountry: {
     fontSize: 14,
-    color: colors.neutral[500],
+    color: colors.surface[400],
     marginTop: 2,
   },
   statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingVertical: 5,
     borderRadius: borderRadius.full,
+    gap: 6,
+  },
+  statusDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
   },
   statusText: {
-    color: '#fff',
     fontSize: 12,
     fontWeight: '600',
   },
@@ -238,11 +264,11 @@ const styles = StyleSheet.create({
   },
   tripDates: {
     fontSize: 14,
-    color: colors.neutral[600],
+    color: colors.surface[400],
   },
   tripDays: {
     fontSize: 14,
-    color: colors.primary[600],
+    color: colors.primary[400],
     fontWeight: '600',
   },
 });

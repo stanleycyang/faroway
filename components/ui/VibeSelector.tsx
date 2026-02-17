@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Animated } from 'react-native';
+import React from 'react';
+import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { colors, borderRadius } from '../../constants/theme';
 import { travelVibes } from '../../constants/destinations';
 import { hapticFeedback } from '../../utils/haptics';
@@ -23,7 +23,6 @@ export function VibeSelector({
       hapticFeedback.medium();
       onSelect([...selected, vibeId]);
     } else {
-      // Max reached - give error feedback
       hapticFeedback.error();
     }
   };
@@ -97,12 +96,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.neutral[900],
+    color: '#fff',
     marginBottom: 4,
   },
   subtitle: {
     fontSize: 14,
-    color: colors.neutral[500],
+    color: colors.surface[400],
   },
   grid: {
     flexDirection: 'row',
@@ -112,16 +111,20 @@ const styles = StyleSheet.create({
   vibeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.neutral[100],
+    backgroundColor: colors.surface[800],
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: borderRadius.full,
-    borderWidth: 2,
-    borderColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   vibeButtonSelected: {
-    backgroundColor: colors.primary[50],
+    backgroundColor: 'rgba(99,102,241,0.15)',
     borderColor: colors.primary[500],
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
   },
   vibeEmoji: {
     fontSize: 18,
@@ -130,10 +133,10 @@ const styles = StyleSheet.create({
   vibeLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.neutral[700],
+    color: colors.surface[300],
   },
   vibeLabelSelected: {
-    color: colors.primary[700],
+    color: colors.primary[300],
   },
   chipsContainer: {
     flexDirection: 'row',
@@ -142,10 +145,12 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.primary[50],
+    backgroundColor: 'rgba(99,102,241,0.15)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: borderRadius.full,
+    borderWidth: 1,
+    borderColor: 'rgba(99,102,241,0.3)',
   },
   chipEmoji: {
     fontSize: 14,
@@ -154,6 +159,6 @@ const styles = StyleSheet.create({
   chipLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.primary[700],
+    color: colors.primary[300],
   },
 });

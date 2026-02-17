@@ -793,7 +793,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   jsonRenderContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface[800],
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     marginTop: 32,

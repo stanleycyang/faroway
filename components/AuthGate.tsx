@@ -7,11 +7,12 @@ import {
   Modal,
   Dimensions,
   Image,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAuthContext } from './AuthProvider';
 import { colors, borderRadius, shadows } from '../constants/theme';
 
 const { height } = Dimensions.get('window');
@@ -68,12 +69,36 @@ export function AuthGate({
   onDismiss,
   onClose,
 }: AuthGateProps) {
-  const router = useRouter();
+  const { signInWithGoogle, signInWithApple } = useAuthContext();
+  const [loading, setLoading] = useState(false);
   const content = triggerContent[trigger];
 
-  const handleAuthOption = (method: 'apple' | 'google' | 'email') => {
-    onClose();
-    router.push(`/auth/login?method=${method}`);
+  const handleGoogle = async () => {
+    setLoading(true);
+    try {
+      await signInWithGoogle();
+      onAuthenticated?.();
+      onClose();
+    } catch (err: any) {
+      Alert.alert('Sign In Failed', err.message || 'Please try again');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleApple = async () => {
+    setLoading(true);
+    try {
+      await signInWithApple();
+      onAuthenticated?.();
+      onClose();
+    } catch (err: any) {
+      if (err.code !== 'ERR_REQUEST_CANCELED') {
+        Alert.alert('Sign In Failed', err.message || 'Please try again');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleMaybeLater = () => {
@@ -135,34 +160,33 @@ export function AuthGate({
             </View>
 
             {/* Auth Buttons */}
-            <View style={styles.authButtons}>
-              <TouchableOpacity
-                style={styles.appleButton}
-                onPress={() => handleAuthOption('apple')}
-                activeOpacity={0.9}
-              >
-                <Ionicons name="logo-apple" size={20} color="#fff" />
-                <Text style={styles.appleButtonText}>Continue with Apple</Text>
-              </TouchableOpacity>
+            {loading ? (
+              <ActivityIndicator
+                size="large"
+                color={colors.primary[500]}
+                style={{ marginVertical: 24 }}
+              />
+            ) : (
+              <View style={styles.authButtons}>
+                <TouchableOpacity
+                  style={styles.googleButton}
+                  onPress={handleGoogle}
+                  activeOpacity={0.9}
+                >
+                  <Ionicons name="logo-google" size={18} color="#DB4437" />
+                  <Text style={styles.googleButtonText}>Continue with Google</Text>
+                </TouchableOpacity>
 
-              <TouchableOpacity
-                style={styles.googleButton}
-                onPress={() => handleAuthOption('google')}
-                activeOpacity={0.9}
-              >
-                <Ionicons name="logo-google" size={18} color={colors.neutral[700]} />
-                <Text style={styles.googleButtonText}>Continue with Google</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.emailButton}
-                onPress={() => handleAuthOption('email')}
-                activeOpacity={0.9}
-              >
-                <Ionicons name="mail-outline" size={18} color={colors.neutral[700]} />
-                <Text style={styles.emailButtonText}>Continue with Email</Text>
-              </TouchableOpacity>
-            </View>
+                <TouchableOpacity
+                  style={styles.appleButton}
+                  onPress={handleApple}
+                  activeOpacity={0.9}
+                >
+                  <Ionicons name="logo-apple" size={20} color="#fff" />
+                  <Text style={styles.appleButtonText}>Continue with Apple</Text>
+                </TouchableOpacity>
+              </View>
+            )}
 
             {/* Maybe Later */}
             <TouchableOpacity
@@ -210,17 +234,17 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   bottomSheet: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface[800],
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: 12,
     paddingBottom: 40,
-    ...shadows.xl,
+    ...shadows.lg,
   },
   handle: {
     width: 40,
     height: 4,
-    backgroundColor: colors.neutral[300],
+    backgroundColor: colors.surface[600],
     borderRadius: 2,
     alignSelf: 'center',
     marginBottom: 20,
@@ -233,7 +257,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: colors.primary[50],
+    backgroundColor: 'rgba(99,102,241,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -244,20 +268,20 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '800',
-    color: colors.neutral[900],
+    color: '#fff',
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: colors.neutral[500],
+    color: colors.surface[400],
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 22,
   },
   benefits: {
     width: '100%',
-    backgroundColor: colors.neutral[50],
+    backgroundColor: colors.surface[700],
     borderRadius: borderRadius.lg,
     padding: 16,
     marginBottom: 24,
@@ -270,13 +294,29 @@ const styles = StyleSheet.create({
   },
   benefitText: {
     fontSize: 15,
-    color: colors.neutral[700],
+    color: colors.surface[300],
     fontWeight: '500',
   },
   authButtons: {
     width: '100%',
     gap: 12,
     marginBottom: 16,
+  },
+  googleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    backgroundColor: colors.surface[700],
+    paddingVertical: 16,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
+  },
+  googleButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
   },
   appleButton: {
     flexDirection: 'row',
@@ -286,41 +326,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#000',
     paddingVertical: 16,
     borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   appleButtonText: {
     fontSize: 16,
     fontWeight: '600',
     color: '#fff',
-  },
-  googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: '#fff',
-    paddingVertical: 16,
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: colors.neutral[200],
-  },
-  googleButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.neutral[700],
-  },
-  emailButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 10,
-    backgroundColor: colors.neutral[100],
-    paddingVertical: 16,
-    borderRadius: borderRadius.lg,
-  },
-  emailButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: colors.neutral[700],
   },
   maybeLaterButton: {
     paddingVertical: 12,
@@ -328,17 +340,17 @@ const styles = StyleSheet.create({
   },
   maybeLaterText: {
     fontSize: 15,
-    color: colors.neutral[400],
+    color: colors.surface[500],
     fontWeight: '600',
   },
   terms: {
     fontSize: 12,
-    color: colors.neutral[400],
+    color: colors.surface[500],
     textAlign: 'center',
     lineHeight: 18,
   },
   termsLink: {
-    color: colors.primary[500],
+    color: colors.primary[400],
     fontWeight: '600',
   },
 });

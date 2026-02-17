@@ -25,7 +25,6 @@ function RootLayoutNav() {
   useEffect(() => {
     if (!initialized) return;
 
-    const inAuthGroup = segments[0] === 'auth';
     const inOnboarding = segments[0] === 'onboarding';
     const inIndex = (segments as string[]).length === 0 || segments[0] === undefined;
     const inCreate = segments[0] === 'create';
@@ -51,15 +50,9 @@ function RootLayoutNav() {
     if (inTabs && !isProtectedTab) return;
     
     // If user is not authenticated and trying to access protected routes
-    if (!isAuthenticated && (inAuthGroup === false && isProtectedTab)) {
+    if (!isAuthenticated && isProtectedTab) {
       // Don't redirect - we'll show AuthGate component instead
-      // This allows the user to stay on the page and see the auth prompt
       return;
-    }
-    
-    // If user is authenticated and in auth screens, redirect to main app
-    if (isAuthenticated && inAuthGroup) {
-      router.replace('/(tabs)');
     }
   }, [isAuthenticated, initialized, segments]);
 
@@ -91,13 +84,6 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="auth"
-          options={{
-            animation: 'fade',
-            animationDuration: 200,
-          }}
-        />
-        <Stack.Screen
           name="onboarding"
           options={{
             animation: 'fade',
@@ -121,6 +107,13 @@ function RootLayoutNav() {
         />
         <Stack.Screen
           name="trip/[id]"
+          options={{
+            animation: 'slide_from_right',
+            animationDuration: 300,
+          }}
+        />
+        <Stack.Screen
+          name="profile"
           options={{
             animation: 'slide_from_right',
             animationDuration: 300,

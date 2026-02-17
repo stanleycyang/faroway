@@ -6,12 +6,8 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
-  Animated,
-  Keyboard,
-  TouchableWithoutFeedback,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -19,7 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Button,
-  SearchInput,
+  PlacesAutocomplete,
   DateRangePicker,
   VibeSelector,
 } from '../../components/ui';
@@ -30,10 +26,9 @@ import { hapticFeedback } from '../../utils/haptics';
 
 export default function CreateTripScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ destination?: string; country?: string }>();
+  const params = useLocalSearchParams<{ destination?: string; country?: string; placeId?: string }>();
   const { draftInput, setDraftInput } = useTripStore();
 
-  const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(!params.destination);
 
   useEffect(() => {
@@ -41,23 +36,15 @@ export default function CreateTripScreen() {
       setDraftInput({
         destination: params.destination,
         country: params.country,
+        placeId: params.placeId,
       });
     }
-  }, [params.destination, params.country]);
+  }, [params.destination, params.country, params.placeId]);
 
-  const filteredDestinations = searchQuery
-    ? popularDestinations.filter(
-        (d) =>
-          d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          d.country.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : popularDestinations;
-
-  const handleSelectDestination = (name: string, country: string) => {
+  const handleSelectDestination = (name: string, country: string, placeId?: string) => {
     hapticFeedback.selection();
-    setDraftInput({ destination: name, country });
+    setDraftInput({ destination: name, country, placeId });
     setShowSearch(false);
-    setSearchQuery('');
   };
 
   const handleTravelerTypeSelect = (typeId: string) => {
@@ -130,9 +117,14 @@ export default function CreateTripScreen() {
                 onPress={() => setShowSearch(true)}
                 activeOpacity={0.9}
               >
-                {selectedDestination && (
+                {selectedDestination ? (
                   <Image
                     source={{ uri: selectedDestination.image }}
+                    style={styles.selectedDestinationImage}
+                  />
+                ) : (
+                  <LinearGradient
+                    colors={[colors.primary[800], colors.primary[600]]}
                     style={styles.selectedDestinationImage}
                   />
                 )}
@@ -140,6 +132,14 @@ export default function CreateTripScreen() {
                   colors={['transparent', 'rgba(0,0,0,0.7)']}
                   style={styles.selectedDestinationGradient}
                 />
+                {!selectedDestination && (
+                  <Ionicons
+                    name="location"
+                    size={40}
+                    color="rgba(255,255,255,0.25)"
+                    style={styles.selectedDestinationIcon}
+                  />
+                )}
                 <View style={styles.selectedDestinationContent}>
                   <Text style={styles.selectedDestinationCountry}>
                     {draftInput.country}
@@ -154,18 +154,14 @@ export default function CreateTripScreen() {
               </TouchableOpacity>
             ) : (
               <>
-                <SearchInput
-                  value={searchQuery}
-                  onChangeText={setSearchQuery}
-                  placeholder="Search cities, countries..."
-                />
+                <PlacesAutocomplete onSelect={handleSelectDestination} />
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
                   style={styles.destinationList}
                   contentContainerStyle={styles.destinationListContent}
                 >
-                  {filteredDestinations.map((dest) => (
+                  {popularDestinations.map((dest) => (
                     <TouchableOpacity
                       key={dest.id}
                       style={styles.destinationOption}
@@ -314,7 +310,7 @@ export default function CreateTripScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface[900],
   },
   header: {
     flexDirection: 'row',
@@ -323,20 +319,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: colors.neutral[100],
+    borderBottomColor: 'rgba(255,255,255,0.06)',
   },
   closeButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.neutral[100],
+    backgroundColor: colors.surface[800],
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.neutral[900],
+    color: '#fff',
   },
   scrollContent: {
     paddingVertical: 24,
@@ -348,7 +344,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.neutral[900],
+    color: '#fff',
     marginBottom: 16,
   },
   selectedDestination: {
@@ -368,6 +364,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: '60%',
+  },
+  selectedDestinationIcon: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginTop: -20,
+    marginLeft: -20,
   },
   selectedDestinationContent: {
     position: 'absolute',
@@ -391,7 +394,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 16,
     right: 16,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: 'rgba(0,0,0,0.5)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: borderRadius.full,
@@ -399,7 +402,7 @@ const styles = StyleSheet.create({
   changeButtonText: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.neutral[700],
+    color: '#fff',
   },
   destinationList: {
     marginTop: 16,
@@ -448,15 +451,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.neutral[50],
+    backgroundColor: colors.surface[800],
     padding: 16,
     borderRadius: borderRadius.lg,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   travelerCounterLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.neutral[700],
+    color: colors.surface[300],
   },
   counterControls: {
     flexDirection: 'row',
@@ -467,14 +472,14 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.neutral[200],
+    backgroundColor: colors.surface[700],
     justifyContent: 'center',
     alignItems: 'center',
   },
   counterValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.neutral[900],
+    color: '#fff',
     minWidth: 30,
     textAlign: 'center',
   },
@@ -486,7 +491,7 @@ const styles = StyleSheet.create({
   travelerTypeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.neutral[100],
+    backgroundColor: colors.surface[800],
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: borderRadius.full,
@@ -495,28 +500,27 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   travelerTypeButtonSelected: {
-    backgroundColor: colors.primary[50],
+    backgroundColor: 'rgba(99,102,241,0.15)',
     borderColor: colors.primary[500],
   },
   travelerTypeLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.neutral[600],
+    color: colors.surface[400],
   },
   travelerTypeLabelSelected: {
-    color: colors.primary[700],
+    color: colors.primary[400],
   },
   bottomBar: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface[800],
     paddingHorizontal: 24,
     paddingVertical: 16,
     paddingBottom: 40,
     borderTopWidth: 1,
-    borderTopColor: colors.neutral[100],
-    ...shadows.lg,
+    borderTopColor: 'rgba(255,255,255,0.06)',
   },
 });

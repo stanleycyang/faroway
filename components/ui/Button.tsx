@@ -1,6 +1,5 @@
 import React, { useRef } from 'react';
 import {
-  TouchableOpacity,
   Text,
   StyleSheet,
   ActivityIndicator,
@@ -9,7 +8,8 @@ import {
   Animated,
   Pressable,
 } from 'react-native';
-import { colors, borderRadius, typography } from '../../constants/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 
 interface ButtonProps {
@@ -59,66 +59,83 @@ export function Button({
       bounciness: 4,
     }).start();
   };
+
+  const sizeStyles: Record<string, ViewStyle> = {
+    sm: { paddingVertical: 10, paddingHorizontal: 18, minHeight: 38 },
+    md: { paddingVertical: 14, paddingHorizontal: 28, minHeight: 50 },
+    lg: { paddingVertical: 18, paddingHorizontal: 36, minHeight: 58 },
+  };
+
+  const textSizeStyles: Record<string, TextStyle> = {
+    sm: { fontSize: 14 },
+    md: { fontSize: 16 },
+    lg: { fontSize: 18 },
+  };
+
+  const isPrimary = variant === 'primary';
+
   const getButtonStyles = (): ViewStyle => {
     const baseStyle: ViewStyle = {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
       borderRadius: borderRadius.lg,
+      overflow: 'hidden',
+      ...sizeStyles[size],
     };
 
-    // Size styles
-    const sizeStyles: Record<string, ViewStyle> = {
-      sm: { paddingVertical: 8, paddingHorizontal: 16, minHeight: 36 },
-      md: { paddingVertical: 12, paddingHorizontal: 24, minHeight: 48 },
-      lg: { paddingVertical: 16, paddingHorizontal: 32, minHeight: 56 },
-    };
-
-    // Variant styles
     const variantStyles: Record<string, ViewStyle> = {
-      primary: { backgroundColor: colors.primary[500] },
-      secondary: { backgroundColor: colors.neutral[800] },
+      primary: {},
+      secondary: { backgroundColor: colors.surface[700] },
       outline: {
         backgroundColor: 'transparent',
         borderWidth: 1.5,
-        borderColor: colors.neutral[300],
+        borderColor: 'rgba(255,255,255,0.15)',
       },
       ghost: { backgroundColor: 'transparent' },
     };
 
     return {
       ...baseStyle,
-      ...sizeStyles[size],
       ...variantStyles[variant],
-      opacity: disabled ? 0.5 : 1,
+      opacity: disabled ? 0.4 : 1,
       width: fullWidth ? '100%' : undefined,
     };
   };
 
   const getTextStyles = (): TextStyle => {
-    const baseStyle: TextStyle = {
-      fontWeight: '600',
-    };
-
-    const sizeStyles: Record<string, TextStyle> = {
-      sm: { fontSize: 14 },
-      md: { fontSize: 16 },
-      lg: { fontSize: 18 },
-    };
-
     const variantStyles: Record<string, TextStyle> = {
       primary: { color: '#fff' },
       secondary: { color: '#fff' },
-      outline: { color: colors.neutral[900] },
-      ghost: { color: colors.neutral[900] },
+      outline: { color: 'rgba(255,255,255,0.9)' },
+      ghost: { color: 'rgba(255,255,255,0.8)' },
     };
 
     return {
-      ...baseStyle,
-      ...sizeStyles[size],
+      fontWeight: '700',
+      letterSpacing: 0.3,
+      ...textSizeStyles[size],
       ...variantStyles[variant],
     };
   };
+
+  const content = (
+    <>
+      {loading ? (
+        <ActivityIndicator
+          color={variant === 'primary' || variant === 'secondary' ? '#fff' : colors.primary[400]}
+          size="small"
+        />
+      ) : (
+        <>
+          {icon && <>{icon}</>}
+          <Text style={[getTextStyles(), icon ? { marginLeft: 8 } : undefined, textStyle]}>
+            {title}
+          </Text>
+        </>
+      )}
+    </>
+  );
 
   return (
     <Pressable
@@ -130,24 +147,31 @@ export function Button({
       <Animated.View
         style={[
           getButtonStyles(),
+          isPrimary && !disabled && styles.primaryGlow,
           { transform: [{ scale: scaleAnim }] },
           style,
         ]}
       >
-        {loading ? (
-          <ActivityIndicator
-            color={variant === 'primary' || variant === 'secondary' ? '#fff' : colors.primary[500]}
-            size="small"
+        {isPrimary ? (
+          <LinearGradient
+            colors={disabled ? ['#374151', '#374151'] : ['#6366f1', '#8b5cf6']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={[StyleSheet.absoluteFill, { borderRadius: borderRadius.lg }]}
           />
-        ) : (
-          <>
-            {icon && <>{icon}</>}
-            <Text style={[getTextStyles(), icon ? { marginLeft: 8 } : undefined, textStyle]}>
-              {title}
-            </Text>
-          </>
-        )}
+        ) : null}
+        {content}
       </Animated.View>
     </Pressable>
   );
 }
+
+const styles = StyleSheet.create({
+  primaryGlow: {
+    shadowColor: '#818cf8',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 16,
+    elevation: 8,
+  },
+});

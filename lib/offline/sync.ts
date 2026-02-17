@@ -54,6 +54,7 @@ class SyncService {
   private lastSyncAttempt: number = 0;
   private networkUnsubscribe: (() => void) | null = null;
   private autoSyncEnabled: boolean = true;
+  private hasResolvedNetwork: boolean = false;
 
   /**
    * Initialize the sync service
@@ -61,18 +62,23 @@ class SyncService {
   async initialize(): Promise<void> {
     // Initialize network monitoring
     await networkMonitor.initialize();
-    
+
     // Subscribe to network changes
     this.networkUnsubscribe = networkMonitor.subscribe(async (networkState) => {
       const wasOffline = !this.state.isOnline;
       this.state.isOnline = networkState.status === 'online';
-      
-      if (wasOffline && this.state.isOnline && this.autoSyncEnabled) {
-        // Network restored - trigger sync
+
+      // Only trigger "network restored" sync after the initial state has settled.
+      // The unknown → online transition at startup is not a real restore.
+      if (wasOffline && this.state.isOnline && this.autoSyncEnabled && this.hasResolvedNetwork) {
         console.log('[SyncService] Network restored, triggering sync');
         await this.sync();
       }
-      
+
+      if (networkState.status !== 'unknown') {
+        this.hasResolvedNetwork = true;
+      }
+
       this.notifyListeners();
     });
 
@@ -194,18 +200,32 @@ class SyncService {
       console.log('[SyncService] Sync complete:', result);
       return result;
     } catch (error: any) {
-      console.error('[SyncService] Sync failed:', error);
-      
       result.success = false;
+
+      // Treat network request failures (server unreachable) as temporary offline,
+      // not as a hard error. This prevents error spam when the backend isn't running.
+      const isNetworkError =
+        error instanceof TypeError && /network request failed/i.test(error.message);
+
+      if (isNetworkError) {
+        console.log('[SyncService] Backend unreachable, treating as offline');
+        this.updateState({
+          status: 'offline',
+          error: null,
+        });
+        return result;
+      }
+
+      console.error('[SyncService] Sync failed:', error);
       result.errors.push({ mutationId: '', error: error.message });
-      
+
       this.updateState({
         status: 'error',
         error: error.message,
       });
 
       await offlineStorage.recordFailedSync();
-      
+
       return result;
     } finally {
       this.syncInProgress = false;
@@ -244,6 +264,12 @@ class SyncService {
         result.synced++;
         console.log(`[SyncService] Mutation ${mutation.id} synced successfully`);
       } catch (error: any) {
+        // If backend is unreachable, stop processing the rest of the queue
+        const isNetworkError =
+          error instanceof TypeError && /network request failed/i.test(error.message);
+        if (isNetworkError) {
+          throw error; // Let sync() handle this as offline
+        }
         console.error(`[SyncService] Mutation ${mutation.id} failed:`, error);
         await offlineStorage.incrementMutationRetry(mutation.id);
         result.failed++;
@@ -344,7 +370,12 @@ class SyncService {
       await offlineStorage.saveTrips(mergedTrips);
       console.log(`[SyncService] Pulled ${serverTrips.length} trips from server`);
     } catch (error) {
-      console.error('[SyncService] Pull failed:', error);
+      // Network errors are handled by sync() — only log non-network failures here
+      const isNetworkError =
+        error instanceof TypeError && /network request failed/i.test((error as Error).message);
+      if (!isNetworkError) {
+        console.error('[SyncService] Pull failed:', error);
+      }
       throw error;
     }
   }

@@ -106,7 +106,7 @@ export function ActivityCard({
           <View style={styles.imageContainer}>
             <Image source={{ uri: activity.image }} style={styles.image} />
             <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.6)']}
+              colors={['transparent', 'rgba(0,0,0,0.7)']}
               style={styles.imageGradient}
             />
             {/* Type badge */}
@@ -139,7 +139,7 @@ export function ActivityCard({
           <View style={styles.titleRow}>
             <View style={styles.titleContainer}>
               {!activity.image && (
-                <View style={[styles.iconCircle, { backgroundColor: `${typeColor}15` }]}>
+                <View style={[styles.iconCircle, { backgroundColor: `${typeColor}20` }]}>
                   <Ionicons
                     name={getTypeIcon(activity.type) as any}
                     size={16}
@@ -191,6 +191,12 @@ export function ActivityCard({
               onPress={onBook}
               activeOpacity={0.8}
             >
+              <LinearGradient
+                colors={['#6366f1', '#8b5cf6']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
               <Text style={styles.bookButtonText}>Reserve Now</Text>
               {activity.freeCancellation && (
                 <View style={styles.freeCancelBadge}>
@@ -204,7 +210,7 @@ export function ActivityCard({
               activeOpacity={0.8}
             >
               <Text style={styles.detailsButtonText}>Details</Text>
-              <Ionicons name="chevron-forward" size={16} color={colors.neutral[500]} />
+              <Ionicons name="chevron-forward" size={16} color={colors.surface[400]} />
             </TouchableOpacity>
           </View>
         </View>
@@ -226,7 +232,7 @@ const styles = StyleSheet.create({
   timeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: colors.neutral[500],
+    color: colors.surface[400],
     marginBottom: 8,
   },
   dot: {
@@ -234,21 +240,22 @@ const styles = StyleSheet.create({
     height: 12,
     borderRadius: 6,
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: colors.surface[800],
     ...shadows.sm,
   },
   line: {
     flex: 1,
     width: 2,
-    backgroundColor: colors.neutral[200],
+    backgroundColor: colors.surface[700],
     marginTop: 8,
   },
   card: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface[800],
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
-    ...shadows.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   imageContainer: {
     height: 140,
@@ -288,7 +295,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.3)',
+    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -320,22 +327,22 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 17,
     fontWeight: '700',
-    color: colors.neutral[900],
+    color: '#fff',
     marginBottom: 2,
   },
   duration: {
     fontSize: 13,
-    color: colors.neutral[500],
+    color: colors.surface[400],
   },
   price: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.primary[600],
+    color: colors.primary[400],
     marginLeft: 12,
   },
   description: {
     fontSize: 14,
-    color: colors.neutral[600],
+    color: colors.surface[400],
     lineHeight: 20,
     marginBottom: 12,
   },
@@ -350,7 +357,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#fef3c7',
+    backgroundColor: 'rgba(251, 191, 36, 0.15)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: borderRadius.sm,
@@ -358,16 +365,16 @@ const styles = StyleSheet.create({
   ratingText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#92400e',
+    color: '#fbbf24',
   },
   reviewCount: {
     fontSize: 13,
-    color: colors.neutral[500],
+    color: colors.surface[400],
   },
   topReview: {
     flex: 1,
     fontSize: 12,
-    color: colors.neutral[500],
+    color: colors.surface[500],
     fontStyle: 'italic',
   },
   actions: {
@@ -376,10 +383,10 @@ const styles = StyleSheet.create({
   },
   bookButton: {
     flex: 1,
-    backgroundColor: colors.primary[500],
     paddingVertical: 14,
     borderRadius: borderRadius.lg,
     alignItems: 'center',
+    overflow: 'hidden',
   },
   bookButtonText: {
     fontSize: 15,
@@ -399,13 +406,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingHorizontal: 16,
     paddingVertical: 14,
-    backgroundColor: colors.neutral[100],
+    backgroundColor: colors.surface[700],
     borderRadius: borderRadius.lg,
     gap: 4,
   },
   detailsButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: colors.neutral[600],
+    color: colors.surface[300],
   },
 });

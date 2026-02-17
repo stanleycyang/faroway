@@ -48,7 +48,7 @@ export default function PreferencesScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.neutral[700]} />
+          <Ionicons name="arrow-back" size={24} color={colors.surface[300]} />
         </TouchableOpacity>
         <View style={styles.progress}>
           <View style={styles.progressBar}>
@@ -144,7 +144,7 @@ export default function PreferencesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface[900],
   },
   header: {
     flexDirection: 'row',
@@ -157,7 +157,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.neutral[100],
+    backgroundColor: colors.surface[800],
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -167,7 +167,7 @@ const styles = StyleSheet.create({
   },
   progressBar: {
     height: 4,
-    backgroundColor: colors.neutral[200],
+    backgroundColor: colors.surface[700],
     borderRadius: 2,
   },
   progressFill: {
@@ -185,12 +185,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: '800',
-    color: colors.neutral[900],
+    color: '#fff',
     marginBottom: 12,
   },
   subtitle: {
     fontSize: 16,
-    color: colors.neutral[500],
+    color: colors.surface[400],
     lineHeight: 24,
   },
   section: {
@@ -199,7 +199,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: colors.neutral[900],
+    color: '#fff',
     marginBottom: 16,
   },
   budgetOptions: {
@@ -208,14 +208,14 @@ const styles = StyleSheet.create({
   budgetOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.neutral[50],
+    backgroundColor: colors.surface[800],
     padding: 16,
     borderRadius: borderRadius.lg,
     borderWidth: 2,
     borderColor: 'transparent',
   },
   budgetOptionSelected: {
-    backgroundColor: colors.primary[50],
+    backgroundColor: 'rgba(99,102,241,0.15)',
     borderColor: colors.primary[500],
   },
   budgetEmoji: {
@@ -225,16 +225,16 @@ const styles = StyleSheet.create({
   budgetLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.neutral[900],
+    color: '#fff',
     marginRight: 8,
   },
   budgetLabelSelected: {
-    color: colors.primary[700],
+    color: colors.primary[400],
   },
   budgetDescription: {
     flex: 1,
     fontSize: 13,
-    color: colors.neutral[500],
+    color: colors.surface[400],
   },
   checkmark: {
     marginLeft: 8,
@@ -244,18 +244,18 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface[800],
     paddingHorizontal: 24,
     paddingVertical: 16,
     paddingBottom: 40,
     borderTopWidth: 1,
-    borderTopColor: colors.neutral[100],
+    borderTopColor: 'rgba(255,255,255,0.06)',
     alignItems: 'center',
     gap: 16,
   },
   skipText: {
     fontSize: 14,
-    color: colors.neutral[500],
+    color: colors.surface[400],
     fontWeight: '600',
   },
 });

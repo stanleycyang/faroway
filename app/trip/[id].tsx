@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
   },
   content: {
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface[900],
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     marginTop: -24,
@@ -494,16 +494,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: borderRadius.lg,
-    backgroundColor: colors.neutral[100],
+    backgroundColor: colors.surface[800],
     alignItems: 'center',
   },
   dayTabSelected: {
-    backgroundColor: colors.neutral[900],
+    backgroundColor: colors.primary[500],
   },
   dayTabNumber: {
     fontSize: 14,
     fontWeight: '700',
-    color: colors.neutral[600],
+    color: colors.surface[400],
     marginBottom: 2,
   },
   dayTabNumberSelected: {
@@ -511,7 +511,7 @@ const styles = StyleSheet.create({
   },
   dayTabDate: {
     fontSize: 12,
-    color: colors.neutral[400],
+    color: colors.surface[500],
   },
   dayTabDateSelected: {
     color: 'rgba(255,255,255,0.7)',
@@ -523,7 +523,7 @@ const styles = StyleSheet.create({
   dayTheme: {
     fontSize: 22,
     fontWeight: '700',
-    color: colors.neutral[900],
+    color: '#fff',
   },
   activitiesContainer: {
     paddingHorizontal: 24,
@@ -540,7 +540,7 @@ const styles = StyleSheet.create({
   activityTimeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.neutral[500],
+    color: colors.surface[500],
     marginBottom: 8,
   },
   activityDot: {
@@ -551,14 +551,16 @@ const styles = StyleSheet.create({
   activityLine: {
     flex: 1,
     width: 2,
-    backgroundColor: colors.neutral[200],
+    backgroundColor: colors.surface[700],
     marginTop: 8,
   },
   activityContent: {
     flex: 1,
-    backgroundColor: colors.neutral[50],
+    backgroundColor: colors.surface[800],
     borderRadius: borderRadius.lg,
     padding: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   activityHeader: {
     flexDirection: 'row',
@@ -579,21 +581,21 @@ const styles = StyleSheet.create({
   activityTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: colors.neutral[900],
+    color: '#fff',
   },
   activityDuration: {
     fontSize: 12,
-    color: colors.neutral[500],
+    color: colors.surface[400],
     marginTop: 2,
   },
   activityPrice: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.primary[600],
+    color: colors.primary[400],
   },
   activityDescription: {
     fontSize: 14,
-    color: colors.neutral[600],
+    color: colors.surface[400],
     lineHeight: 20,
     marginBottom: 8,
   },
@@ -605,12 +607,12 @@ const styles = StyleSheet.create({
   activityRatingText: {
     fontSize: 13,
     fontWeight: '600',
-    color: colors.neutral[700],
+    color: '#fff',
     marginLeft: 4,
   },
   activityReviewCount: {
     fontSize: 13,
-    color: colors.neutral[500],
+    color: colors.surface[400],
     marginLeft: 4,
   },
   bookButton: {
@@ -618,14 +620,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: colors.primary[50],
+    backgroundColor: 'rgba(99,102,241,0.15)',
     paddingVertical: 10,
     borderRadius: borderRadius.md,
   },
   bookButtonText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.primary[600],
+    color: colors.primary[400],
   },
   bottomBar: {
     position: 'absolute',
@@ -635,24 +637,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface[800],
     paddingHorizontal: 24,
     paddingVertical: 16,
     paddingBottom: 40,
     borderTopWidth: 1,
-    borderTopColor: colors.neutral[100],
-    ...shadows.lg,
+    borderTopColor: 'rgba(255,255,255,0.06)',
   },
   bottomBarInfo: {},
   bottomBarLabel: {
     fontSize: 12,
-    color: colors.neutral[500],
+    color: colors.surface[400],
     marginBottom: 2,
   },
   bottomBarPrice: {
     fontSize: 24,
     fontWeight: '800',
-    color: colors.neutral[900],
+    color: '#fff',
   },
   bookAllButton: {
     minWidth: 140,

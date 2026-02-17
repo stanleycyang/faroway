@@ -98,45 +98,6 @@ export function useAuth() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // setUser/clearUserStore are stable zustand selectors
 
-  // Sign in with email/password
-  const signInWithEmail = useCallback(async (email: string, password: string) => {
-    setAuthState(prev => ({ ...prev, loading: true }));
-    
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      setAuthState(prev => ({ ...prev, loading: false }));
-      throw error;
-    }
-
-    return data;
-  }, []);
-
-  // Sign up with email/password
-  const signUpWithEmail = useCallback(async (email: string, password: string, fullName?: string) => {
-    setAuthState(prev => ({ ...prev, loading: true }));
-    
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          full_name: fullName,
-        },
-      },
-    });
-
-    if (error) {
-      setAuthState(prev => ({ ...prev, loading: false }));
-      throw error;
-    }
-
-    return data;
-  }, []);
-
   // Sign in with Google OAuth
   const signInWithGoogle = useCallback(async () => {
     try {
@@ -254,23 +215,11 @@ export function useAuth() {
     clearUserStore();
   }, [clearUserStore]);
 
-  // Send password reset email
-  const resetPassword = useCallback(async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${process.env.EXPO_PUBLIC_API_URL}/auth/reset-password`,
-    });
-
-    if (error) throw error;
-  }, []);
-
   return {
     ...authState,
     isAuthenticated: !!authState.session,
-    signInWithEmail,
-    signUpWithEmail,
     signInWithGoogle,
     signInWithApple,
     signOut,
-    resetPassword,
   };
 }

@@ -340,16 +340,17 @@ const styles = StyleSheet.create({
   },
   valueProps: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 20,
+    gap: 12,
   },
   valueProp: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 4,
   },
   valuePropText: {
-    fontSize: 13,
+    fontSize: 12,
     color: 'rgba(255,255,255,0.7)',
     fontWeight: '500',
   },

@@ -204,9 +204,7 @@ const styles = StyleSheet.create({
   buttonContainer: {
     gap: 12,
   },
-  primaryButton: {
-    backgroundColor: colors.primary[500],
-  },
+  primaryButton: {},
   ghostButtonText: {
     color: 'rgba(255,255,255,0.8)',
   },

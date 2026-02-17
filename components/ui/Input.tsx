@@ -63,14 +63,14 @@ export function Input({
           <Ionicons
             name={icon}
             size={20}
-            color={isFocused ? colors.primary[500] : colors.neutral[400]}
+            color={isFocused ? colors.primary[400] : colors.surface[500]}
             style={styles.leftIcon}
           />
         )}
         <TextInput
           style={[styles.input, multiline && styles.multilineInput]}
           placeholder={placeholder}
-          placeholderTextColor={colors.neutral[400]}
+          placeholderTextColor={colors.surface[500]}
           value={value}
           onChangeText={onChangeText}
           secureTextEntry={secureTextEntry && !isPasswordVisible}
@@ -90,7 +90,7 @@ export function Input({
             <Ionicons
               name={isPasswordVisible ? 'eye-off' : 'eye'}
               size={20}
-              color={colors.neutral[400]}
+              color={colors.surface[500]}
             />
           </TouchableOpacity>
         )}
@@ -99,7 +99,7 @@ export function Input({
             onPress={onRightIconPress}
             style={styles.rightIconButton}
           >
-            <Ionicons name={rightIcon} size={20} color={colors.neutral[400]} />
+            <Ionicons name={rightIcon} size={20} color={colors.surface[500]} />
           </TouchableOpacity>
         )}
       </View>
@@ -128,13 +128,13 @@ export function SearchInput({
       <Ionicons
         name="search"
         size={20}
-        color={colors.neutral[400]}
+        color={colors.surface[500]}
         style={styles.searchIcon}
       />
       <TextInput
         style={styles.searchInput}
         placeholder={placeholder}
-        placeholderTextColor={colors.neutral[400]}
+        placeholderTextColor={colors.surface[500]}
         value={value}
         onChangeText={onChangeText}
         onSubmitEditing={onSubmit}
@@ -145,7 +145,7 @@ export function SearchInput({
           <Ionicons
             name="close-circle"
             size={20}
-            color={colors.neutral[400]}
+            color={colors.surface[500]}
           />
         </TouchableOpacity>
       )}
@@ -160,28 +160,32 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.neutral[700],
+    color: colors.surface[300],
     marginBottom: 8,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.neutral[100],
+    backgroundColor: colors.surface[800],
     borderRadius: borderRadius.md,
     borderWidth: 1.5,
-    borderColor: 'transparent',
+    borderColor: 'rgba(255,255,255,0.08)',
     paddingHorizontal: 16,
   },
   inputFocused: {
     borderColor: colors.primary[500],
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface[900],
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
   },
   inputError: {
     borderColor: colors.error,
   },
   inputDisabled: {
-    backgroundColor: colors.neutral[200],
-    opacity: 0.7,
+    backgroundColor: colors.surface[700],
+    opacity: 0.5,
   },
   leftIcon: {
     marginRight: 12,
@@ -189,7 +193,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: colors.neutral[900],
+    color: '#fff',
     paddingVertical: 14,
   },
   multilineInput: {
@@ -207,10 +211,12 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.neutral[100],
+    backgroundColor: colors.surface[800],
     borderRadius: borderRadius.full,
     paddingHorizontal: 16,
     paddingVertical: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   searchIcon: {
     marginRight: 12,
@@ -218,6 +224,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: colors.neutral[900],
+    color: '#fff',
   },
 });

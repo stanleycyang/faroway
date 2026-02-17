@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SearchInput, DestinationCard, Button } from '../../components/ui';
+import { PlacesAutocomplete, DestinationCard, Button } from '../../components/ui';
 import { popularDestinations } from '../../constants/destinations';
 import { useAuthContext } from '../../components/AuthProvider';
 import { useTripStore } from '../../stores/tripStore';
@@ -35,7 +35,6 @@ export default function ExploreScreen() {
   const router = useRouter();
   const { isAuthenticated } = useAuthContext();
   const { trips } = useTripStore();
-  const [searchQuery, setSearchQuery] = useState('');
   const [greeting, setGreeting] = useState('');
   
   // Animation
@@ -117,17 +116,25 @@ export default function ExploreScreen() {
             <Ionicons
               name="notifications-outline"
               size={24}
-              color={colors.neutral[700]}
+              color={colors.surface[300]}
             />
           </TouchableOpacity>
         </Animated.View>
 
         {/* Search */}
         <View style={styles.searchSection}>
-          <SearchInput
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search destinations..."
+          <PlacesAutocomplete
+            onSelect={(city, country, placeId) => {
+              hapticFeedback.light();
+              router.push({
+                pathname: '/create',
+                params: {
+                  destination: city,
+                  country,
+                  ...(placeId ? { placeId } : {}),
+                },
+              });
+            }}
           />
         </View>
 
@@ -214,12 +221,16 @@ export default function ExploreScreen() {
             snapToInterval={width * 0.7 + 16}
           >
             {popularDestinations.slice(0, 5).map((destination) => (
-              <DestinationCard
-                key={destination.id}
-                destination={destination}
-                onPress={() => handleDestinationPress(destination.id)}
-                style={styles.destinationCard}
-              />
+              <View key={destination.id} style={styles.destinationCard}>
+                <DestinationCard
+                  name={destination.name}
+                  country={destination.country}
+                  image={destination.image}
+                  description={destination.description}
+                  tags={destination.tags}
+                  onPress={() => handleDestinationPress(destination.id)}
+                />
+              </View>
             ))}
           </ScrollView>
         </View>
@@ -279,7 +290,7 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.neutral[50],
+    backgroundColor: colors.surface[900],
   },
   scrollContent: {
     paddingTop: 8,
@@ -293,26 +304,28 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 14,
-    color: colors.neutral[500],
+    color: colors.surface[400],
     marginBottom: 4,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: colors.neutral[900],
+    color: '#fff',
   },
   notificationButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface[800],
     justifyContent: 'center',
     alignItems: 'center',
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   searchSection: {
     paddingHorizontal: 24,
     marginBottom: 24,
+    zIndex: 50,
   },
   heroCard: {
     marginHorizontal: 24,
@@ -420,7 +433,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: colors.neutral[900],
+    color: '#fff',
     paddingHorizontal: 24,
     marginBottom: 16,
   },
@@ -437,11 +450,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface[800],
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: borderRadius.full,
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   inspirationEmoji: {
     fontSize: 20,
@@ -449,7 +463,7 @@ const styles = StyleSheet.create({
   inspirationText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.neutral[700],
+    color: colors.surface[300],
   },
   horizontalScroll: {
     paddingHorizontal: 24,
@@ -466,9 +480,10 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     marginHorizontal: 24,
     marginBottom: 24,
-    backgroundColor: '#fff',
+    backgroundColor: colors.surface[800],
     borderRadius: borderRadius.lg,
-    ...shadows.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   socialProofAvatars: {
     flexDirection: 'row',
@@ -477,22 +492,22 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: colors.neutral[100],
+    backgroundColor: colors.surface[700],
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#fff',
+    borderColor: colors.surface[800],
   },
   avatarEmoji: {
     fontSize: 16,
   },
   socialProofText: {
     fontSize: 14,
-    color: colors.neutral[600],
+    color: colors.surface[400],
   },
   socialProofNumber: {
     fontWeight: '700',
-    color: colors.neutral[900],
+    color: '#fff',
   },
   trendingGrid: {
     flexDirection: 'row',

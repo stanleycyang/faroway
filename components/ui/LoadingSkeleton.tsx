@@ -3,7 +3,7 @@ import { View, StyleSheet, Animated, ViewStyle } from 'react-native';
 import { colors, borderRadius } from '../../constants/theme';
 
 interface SkeletonProps {
-  width?: number | string;
+  width?: number | `${number}%`;
   height?: number;
   borderRadius?: number;
   style?: ViewStyle;
@@ -31,7 +31,7 @@ export function Skeleton({ width = '100%', height = 20, borderRadius: radius = 8
 
   const opacity = animatedValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [0.3, 0.7],
+    outputRange: [0.15, 0.35],
   });
 
   return (
@@ -92,7 +92,7 @@ export function ActivityCardSkeleton() {
 
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: colors.neutral[200],
+    backgroundColor: colors.surface[600],
   },
   destinationCard: {
     width: 240,
@@ -104,9 +104,11 @@ const styles = StyleSheet.create({
   tripCard: {
     flexDirection: 'row',
     padding: 16,
-    backgroundColor: colors.neutral[50],
+    backgroundColor: colors.surface[800],
     borderRadius: borderRadius.lg,
     marginBottom: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.06)',
   },
   tripCardContent: {
     flex: 1,

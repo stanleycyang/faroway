@@ -53,6 +53,7 @@ export interface Trip {
   id: string;
   destination: string;
   country: string;
+  placeId?: string;
   startDate: string;
   endDate: string;
   travelers: number;
@@ -69,6 +70,7 @@ export interface Trip {
 export interface TripInput {
   destination: string;
   country?: string;
+  placeId?: string;
   startDate: string;
   endDate: string;
   travelers: number;
