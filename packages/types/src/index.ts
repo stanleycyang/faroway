@@ -1,0 +1,528 @@
+/**
+ * @tripgenie/types
+ * Shared type definitions for TripGenie web and mobile apps.
+ * Pure TypeScript interfaces — zero runtime dependencies.
+ */
+
+// =============================================================================
+// Common / Utility Types
+// =============================================================================
+
+export interface ApiResponse<T> {
+  success?: boolean;
+  data?: T;
+  error?: string;
+  message?: string;
+  code?: string;
+}
+
+export interface PaginatedResponse<T> extends ApiResponse<T[]> {
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+// =============================================================================
+// User Types
+// =============================================================================
+
+export interface User {
+  id: string;
+  email: string;
+  name?: string;
+  authProvider?: string;
+  subscriptionTier?: 'free' | 'pro' | 'premium';
+  created_at?: string;
+  updated_at?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export type UserPublic = Omit<User, 'password_hash'>;
+
+export interface UserProfile {
+  id: string;
+  email: string;
+  authProvider: string;
+  subscriptionTier: 'free' | 'pro' | 'premium';
+  createdAt: string;
+  updatedAt: string;
+}
+
+// =============================================================================
+// Trip Types
+// =============================================================================
+
+/**
+ * Unified Trip status superset.
+ * Web statuses: draft, planning, booked, in_progress, completed, cancelled
+ * Mobile statuses: draft, planned, active, completed
+ */
+export type TripStatus =
+  | 'draft'
+  | 'planning'
+  | 'planned'
+  | 'booked'
+  | 'active'
+  | 'in_progress'
+  | 'completed'
+  | 'cancelled';
+
+export interface Trip {
+  id: string;
+  user_id?: string;
+  destination: string;
+  country?: string;
+  start_date?: string;
+  end_date?: string;
+  startDate?: string;
+  endDate?: string;
+  travelers?: number;
+  travelerType?: string;
+  vibes?: string[];
+  budget?: number | string | null;
+  status: TripStatus;
+  created_at?: string;
+  updated_at?: string;
+  createdAt?: string;
+}
+
+export interface CreateTripInput {
+  destination: string;
+  start_date?: string;
+  end_date?: string;
+  startDate?: string;
+  endDate?: string;
+  budget?: number;
+  status?: TripStatus;
+  travelers?: number;
+  preferences?: {
+    travelerType?: string;
+    vibes?: string[];
+  };
+}
+
+export interface UpdateTripInput {
+  destination?: string;
+  start_date?: string;
+  end_date?: string;
+  budget?: number;
+  status?: TripStatus;
+}
+
+// =============================================================================
+// Travel Style & Preferences
+// =============================================================================
+
+export type TravelStyle = 'budget' | 'mid_range' | 'luxury' | 'backpacker' | 'business';
+
+export type BudgetLevel = 'budget' | 'moderate' | 'luxury';
+
+export type TravelerType = 'solo' | 'couple' | 'family' | 'friends' | 'business';
+
+export type TimeOfDay = 'morning' | 'afternoon' | 'evening';
+
+export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+
+export interface Preferences {
+  id: string;
+  user_id: string;
+  interests: string[];
+  travel_style: TravelStyle | null;
+  dietary_restrictions: string[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface TripPreferences {
+  destination: string;
+  startDate: string;
+  endDate: string;
+  budget: BudgetLevel;
+  vibes: string[];
+  travelers: {
+    adults: number;
+    children: number;
+  };
+  interests?: string[];
+  dietaryRestrictions?: string[];
+  mobilityNeeds?: string;
+}
+
+// =============================================================================
+// Location Types
+// =============================================================================
+
+export interface LocationInfo {
+  name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  neighborhood?: string;
+}
+
+export interface Coordinates {
+  lat: number;
+  lng: number;
+}
+
+// =============================================================================
+// Itinerary Types (AI-generated)
+// =============================================================================
+
+export interface ItineraryActivity {
+  id: string;
+  name: string;
+  description: string;
+  duration: number;
+  estimatedCost: {
+    amount: number;
+    currency: string;
+  };
+  timeOfDay: TimeOfDay;
+  category: 'sightseeing' | 'adventure' | 'cultural' | 'relaxation' | 'entertainment' | 'shopping';
+  location: {
+    name: string;
+    address?: string;
+    coordinates?: Coordinates;
+  };
+  vibeMatch: {
+    matchedVibes: string[];
+    reasoning: string;
+  };
+  bookingInfo?: {
+    requiresReservation: boolean;
+    bookingUrl?: string;
+    affiliateId?: string;
+  };
+}
+
+export interface Restaurant {
+  id: string;
+  name: string;
+  cuisineType: string[];
+  priceLevel: 1 | 2 | 3 | 4;
+  description: string;
+  estimatedCost: {
+    amount: number;
+    currency: string;
+    perPerson: boolean;
+  };
+  mealType: MealType;
+  location: {
+    name: string;
+    address?: string;
+    coordinates?: Coordinates;
+  };
+  dietaryOptions: string[];
+  vibeMatch: {
+    matchedVibes: string[];
+    reasoning: string;
+  };
+  reservationInfo?: {
+    recommended: boolean;
+    url?: string;
+  };
+}
+
+export interface TripDay {
+  dayNumber: number;
+  date: string;
+  title: string;
+  summary: string;
+  morning: {
+    activities: ItineraryActivity[];
+    meals: Restaurant[];
+  };
+  afternoon: {
+    activities: ItineraryActivity[];
+    meals: Restaurant[];
+  };
+  evening: {
+    activities: ItineraryActivity[];
+    meals: Restaurant[];
+  };
+  totalEstimatedCost: {
+    amount: number;
+    currency: string;
+  };
+  tips: string[];
+}
+
+export interface GeneratedItinerary {
+  tripId: string;
+  destination: string;
+  startDate: string;
+  endDate: string;
+  days: TripDay[];
+  totalEstimatedCost: {
+    amount: number;
+    currency: string;
+  };
+  overview: string;
+  packingList?: string[];
+  generalTips?: string[];
+  generatedAt: string;
+}
+
+export interface ItineraryGenerationRequest {
+  preferences: TripPreferences;
+  userId: string;
+  additionalNotes?: string;
+}
+
+export interface StreamingProgress {
+  status: 'started' | 'processing' | 'completed' | 'error';
+  currentDay?: number;
+  totalDays: number;
+  message: string;
+  partialItinerary?: Partial<GeneratedItinerary>;
+}
+
+export interface AIGenerationError {
+  code: string;
+  message: string;
+  details?: unknown;
+}
+
+// =============================================================================
+// Search Types
+// =============================================================================
+
+export interface SearchInput {
+  destination: string;
+  startDate: string;
+  endDate: string;
+  travelers: number;
+  travelerType?: TravelerType;
+  vibes: string[];
+  budget?: BudgetLevel;
+  userId?: string;
+}
+
+export type SearchStatus = 'pending' | 'searching' | 'completed' | 'error';
+
+export type AgentStatus = 'pending' | 'searching' | 'done' | 'error';
+
+export interface SearchProgress {
+  orchestrator: AgentStatus;
+  hotels: AgentStatus;
+  activities: AgentStatus;
+  dining: AgentStatus;
+  aggregator: AgentStatus;
+}
+
+export interface SearchRecord {
+  id: string;
+  user_id: string | null;
+  destination: string;
+  start_date: string;
+  end_date: string;
+  travelers: number;
+  traveler_type: string | null;
+  vibes: string[];
+  budget: string;
+  status: SearchStatus;
+  workflow_run_id: string | null;
+  progress: SearchProgress;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+  completed_at: string | null;
+}
+
+export interface SearchPlan {
+  destination: string;
+  country: string;
+  dates: {
+    start: string;
+    end: string;
+    nights: number;
+  };
+  searchPriorities: ('hotels' | 'activities' | 'dining')[];
+  hotelCriteria: {
+    priceRange: { min: number; max: number };
+    starRating: number[];
+    amenities: string[];
+    neighborhoods: string[];
+  };
+  activityCriteria: {
+    categories: string[];
+    pacePreference: 'relaxed' | 'moderate' | 'packed';
+    mustSee: string[];
+    interests: string[];
+  };
+  diningCriteria: {
+    cuisineTypes: string[];
+    priceRange: 'budget' | 'moderate' | 'upscale';
+    dietaryNeeds: string[];
+    mealPriorities: ('breakfast' | 'lunch' | 'dinner')[];
+  };
+  vibeInterpretation: {
+    vibes: string[];
+    searchKeywords: string[];
+    avoidKeywords: string[];
+  };
+}
+
+// =============================================================================
+// Search Result Types
+// =============================================================================
+
+export interface HotelResult {
+  id: string;
+  name: string;
+  description: string;
+  starRating: number;
+  userRating: number;
+  reviewCount: number;
+  pricePerNight: number;
+  totalPrice: number;
+  currency: string;
+  amenities: string[];
+  location: LocationInfo;
+  images: string[];
+  affiliateUrl: string;
+  affiliatePartner: string;
+  vibeScore: number;
+  vibeMatch: string[];
+}
+
+export interface ActivityResult {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  duration: number;
+  price: number;
+  currency: string;
+  rating: number;
+  reviewCount: number;
+  location: LocationInfo;
+  images: string[];
+  affiliateUrl: string;
+  affiliatePartner: string;
+  bestTimeOfDay: 'morning' | 'afternoon' | 'evening' | 'any';
+  vibeScore: number;
+  vibeMatch: string[];
+  bookingRequired: boolean;
+}
+
+export interface DiningResult {
+  id: string;
+  name: string;
+  description: string;
+  cuisineTypes: string[];
+  priceLevel: 1 | 2 | 3 | 4;
+  rating: number;
+  reviewCount: number;
+  location: LocationInfo;
+  images: string[];
+  reservationUrl?: string;
+  affiliatePartner?: string;
+  mealTypes: ('breakfast' | 'lunch' | 'dinner')[];
+  vibeScore: number;
+  vibeMatch: string[];
+  dietaryOptions: string[];
+}
+
+export interface SearchResults {
+  searchId: string;
+  hotels: HotelResult[];
+  activities: ActivityResult[];
+  dining: DiningResult[];
+  itinerary: SuggestedDay[];
+}
+
+export interface SuggestedDay {
+  dayNumber: number;
+  date: string;
+  title: string;
+  summary: string;
+  hotel?: HotelResult;
+  morning: {
+    activities: ActivityResult[];
+    meal?: DiningResult;
+  };
+  afternoon: {
+    activities: ActivityResult[];
+    meal?: DiningResult;
+  };
+  evening: {
+    activities: ActivityResult[];
+    meal?: DiningResult;
+  };
+  estimatedCost: number;
+  currency: string;
+  tips: string[];
+}
+
+// =============================================================================
+// Search API Response Types
+// =============================================================================
+
+export interface StartSearchResponse {
+  searchId: string;
+  workflowRunId: string;
+  status: 'started';
+  estimatedTime: number;
+}
+
+export interface SearchStatusResponse {
+  searchId: string;
+  status: SearchStatus;
+  progress: SearchProgress;
+  results?: SearchResults;
+  error?: string;
+  createdAt: string;
+  completedAt?: string;
+}
+
+// =============================================================================
+// Affiliate Types
+// =============================================================================
+
+export interface TrackClickParams {
+  itemType: 'hotel' | 'activity' | 'restaurant' | 'flight';
+  itemId: string;
+  itemName: string;
+  affiliatePartner: string;
+  affiliateUrl: string;
+  searchId?: string;
+  tripId?: string;
+  price?: number;
+  currency?: string;
+  source?: 'search_results' | 'trip_view' | 'itinerary' | 'email';
+}
+
+export interface TrackClickResponse {
+  clickId: string;
+  redirectUrl: string;
+}
+
+// =============================================================================
+// Legacy Activity type (from Express backend, used in itinerary CRUD)
+// =============================================================================
+
+export interface Activity {
+  time: string;
+  title: string;
+  description: string;
+  location?: string;
+  duration_minutes?: number;
+  cost?: number;
+  category?: string;
+}
+
+export interface Itinerary {
+  id: string;
+  trip_id: string;
+  day_number: number;
+  activities: Activity[];
+  notes: string | null;
+  created_at?: string;
+  updated_at?: string;
+}

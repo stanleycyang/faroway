@@ -1,0 +1,34 @@
+{
+  "name": "@tripgenie/supabase",
+  "version": "0.0.1",
+  "private": true,
+  "exports": {
+    "./client": "./src/client.ts",
+    "./server": "./src/server.ts",
+    "./mobile": "./src/mobile.ts"
+  },
+  "scripts": {
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist .turbo"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.8.0",
+    "@supabase/supabase-js": "^2.95.3"
+  },
+  "peerDependencies": {
+    "next": ">=14.0.0",
+    "expo-secure-store": ">=15.0.0",
+    "react-native": ">=0.74.0",
+    "react-native-url-polyfill": ">=3.0.0"
+  },
+  "peerDependenciesMeta": {
+    "next": { "optional": true },
+    "expo-secure-store": { "optional": true },
+    "react-native": { "optional": true },
+    "react-native-url-polyfill": { "optional": true }
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "@types/react": "^19.0.0"
+  }
+}

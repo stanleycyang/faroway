@@ -1,7 +1,12 @@
-# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
-
 # dependencies
 node_modules/
+
+# Turborepo
+.turbo/
+
+# Next.js
+.next/
+out/
 
 # Expo
 .expo/
@@ -31,11 +36,18 @@ yarn-error.*
 *.pem
 
 # local env files
+.env
 .env*.local
 
 # typescript
 *.tsbuildinfo
 
 # generated native folders
-/ios
-/android
+ios/
+android/
+
+# build outputs
+dist/
+
+# lock files (keep bun.lock, ignore bun.lockb binary)
+bun.lockb
