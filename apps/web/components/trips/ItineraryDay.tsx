@@ -124,7 +124,7 @@ export function ItineraryDay({
             <TimeBlockSection
               icon={<Moon className="w-4 h-4" />}
               label="Evening"
-              color="indigo"
+              color="primary"
               block={evening}
             />
           )}
@@ -165,7 +165,7 @@ export function ItineraryDay({
 interface TimeBlockSectionProps {
   icon: React.ReactNode;
   label: string;
-  color: 'amber' | 'orange' | 'indigo';
+  color: 'amber' | 'orange' | 'primary';
   block: TimeBlock;
 }
 
@@ -173,7 +173,7 @@ function TimeBlockSection({ icon, label, color, block }: TimeBlockSectionProps) 
   const colorClasses = {
     amber: 'bg-amber-100 text-amber-700',
     orange: 'bg-orange-100 text-orange-700',
-    indigo: 'bg-indigo-100 text-indigo-700',
+    primary: 'bg-primary-100 text-primary-700',
   };
 
   return (

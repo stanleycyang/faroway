@@ -47,7 +47,7 @@ export function TableOfContents({ content }: { content: string }) {
 
   return (
     <nav className="hidden xl:block sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto" aria-label="Table of contents">
-      <h2 className="text-sm font-semibold text-gray-900 uppercase tracking-wider mb-4">On This Page</h2>
+      <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4">On This Page</h2>
       <ul className="space-y-2 text-sm border-l-2 border-gray-200">
         {headings.map(({ id, text, level }) => (
           <li key={id}>
@@ -57,8 +57,8 @@ export function TableOfContents({ content }: { content: string }) {
                 level === 3 ? 'pl-6' : 'pl-4'
               } ${
                 activeId === id
-                  ? 'text-primary-600 border-l-2 border-primary-500 -ml-[2px] font-medium'
-                  : 'text-gray-500 hover:text-gray-800'
+                  ? 'text-primary border-l-2 border-primary -ml-[2px] font-medium'
+                  : 'text-slate-500 hover:text-slate-700'
               }`}
             >
               {text}

@@ -29,7 +29,7 @@ export function DestinationCard({ name, country, imageUrl, description }: Destin
         </p>
       </div>
       
-      <div className="absolute top-4 right-4 bg-[#ec7a1c] text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
+      <div className="absolute top-4 right-4 bg-primary text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
         Explore
       </div>
     </div>

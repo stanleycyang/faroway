@@ -81,7 +81,7 @@ function LoginContent() {
             Don&apos;t have an account?{' '}
             <Link 
               href={`/auth/signup${redirectTo !== '/dashboard' ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ''}`}
-              className="font-semibold text-[#ec7a1c] hover:text-[#dd6012] transition-colors"
+              className="font-semibold text-primary hover:text-primary-dark transition-colors"
             >
               Sign up
             </Link>
@@ -104,7 +104,7 @@ export default function LoginPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ec7a1c]" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
       </div>
     }>
       <LoginContent />

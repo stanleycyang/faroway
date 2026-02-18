@@ -12,6 +12,8 @@ import {
   generateBookingAffiliateUrl,
   type AffiliatePartner,
 } from '@/lib/affiliates';
+import { optionalAuth } from '@/lib/auth/middleware';
+import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 
 interface ClickRequest {
   tripId?: string;
@@ -28,8 +30,15 @@ interface ClickRequest {
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limit: 10 req/min per IP
+    const ip = getClientIp(request);
+    const rl = checkRateLimit(`affiliate-click:${ip}`, { maxRequests: 10, windowMs: 60_000 });
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    }
+
     const body: ClickRequest = await request.json();
-    
+
     // Validate required fields
     if (!body.partner || !body.productId || !body.productName) {
       return NextResponse.json(
@@ -47,11 +56,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get user info from headers
-    const userId = request.headers.get('x-user-id') || undefined;
-    const ipAddress = request.headers.get('x-forwarded-for')?.split(',')[0] || 
-                      request.headers.get('x-real-ip') ||
-                      'unknown';
+    // Extract user ID from auth token (not spoofable header)
+    const authUser = await optionalAuth(request);
+    const userId = authUser?.id;
+    const ipAddress = ip;
     const userAgent = request.headers.get('user-agent') || undefined;
     const referrerUrl = request.headers.get('referer') || undefined;
 

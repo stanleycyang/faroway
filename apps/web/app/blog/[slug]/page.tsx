@@ -9,8 +9,7 @@ import { TableOfContents } from '@/components/blog/TableOfContents';
 import { ShareButtons } from '@/components/blog/ShareButtons';
 import { NewsletterCTA } from '@/components/blog/NewsletterCTA';
 import { BlogCard } from '@/components/blog/BlogCard';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
+import { ViewTracker } from '@/components/blog/ViewTracker';
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tripgenie.ai';
 
@@ -77,10 +76,10 @@ function renderMarkdown(md: string): string {
   const out: string[] = [];
   let inList = false;
   let listType = '';
-  
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
-    
+
     if (/^- /.test(line)) {
       if (!inList || listType !== 'ul') {
         if (inList) out.push(`</${listType}>`);
@@ -145,13 +144,13 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
   return (
     <>
-      <Header />
       <ReadingProgressBar />
+      <ViewTracker slug={post.slug} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
 
-      <main className="min-h-screen pt-20">
+      <main className="min-h-screen pt-16">
         {/* Hero Image */}
-        <div className="relative w-full aspect-[21/9] max-h-[500px] overflow-hidden">
+        <div className="relative w-full aspect-[21/9] max-h-[480px] overflow-hidden">
           <Image
             src={post.coverImage}
             alt={post.coverImageAlt || post.title}
@@ -160,13 +159,15 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             priority
             sizes="100vw"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/20" />
         </div>
 
-        <div className="container mx-auto px-6 max-w-7xl">
-          <div className="max-w-3xl mx-auto -mt-20 relative z-10">
-            {/* Breadcrumbs */}
-            <div className="bg-white rounded-t-2xl pt-6 px-2">
+        {/* Article container */}
+        <div className="container mx-auto px-4 sm:px-6 max-w-7xl">
+          {/* Header card — pulls up over hero image */}
+          <div className="max-w-[720px] mx-auto -mt-24 relative z-10">
+            <div className="bg-white/90 backdrop-blur-xl border border-gray-200 rounded-2xl p-6 sm:p-10 shadow-lg">
+              {/* Breadcrumbs */}
               <Breadcrumbs
                 items={[
                   { label: 'Home', href: '/' },
@@ -175,42 +176,47 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                   { label: post.title },
                 ]}
               />
-            </div>
 
-            {/* Post Header */}
-            <header className="bg-white px-2 pb-8">
-              <div className="flex items-center gap-3 text-sm mb-4">
+              {/* Meta line */}
+              <div className="flex items-center gap-3 text-sm mb-5">
                 <Link
                   href={`/blog/category/${post.category.toLowerCase().replace(/\s+/g, '-')}`}
-                  className="text-primary-600 font-semibold hover:text-primary-800"
+                  className="text-primary font-semibold hover:text-primary-dark transition-colors"
                 >
                   {post.category}
                 </Link>
-                <span className="text-gray-300">•</span>
-                <time dateTime={post.date} className="text-gray-500">
+                <span className="text-slate-400">·</span>
+                <time dateTime={post.date} className="text-slate-500">
                   {new Date(post.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                 </time>
-                <span className="text-gray-300">•</span>
-                <span className="text-gray-500">{post.readingTime} min read</span>
+                <span className="text-slate-400">·</span>
+                <span className="text-slate-500">{post.readingTime} min read</span>
               </div>
-              <h1 className="text-3xl md:text-5xl font-bold text-gray-900 leading-tight mb-6">
+
+              {/* Title */}
+              <h1 className="text-3xl sm:text-4xl md:text-[2.75rem] font-bold text-slate-900 leading-[1.15] tracking-tight mb-5">
                 {post.title}
               </h1>
-              <p className="text-xl text-gray-500 mb-6">{post.description}</p>
 
-              <div className="flex items-center justify-between flex-wrap gap-4">
+              {/* Description */}
+              <p className="text-lg text-slate-600 leading-relaxed mb-6">
+                {post.description}
+              </p>
+
+              {/* Author + Share */}
+              <div className="flex items-center justify-between flex-wrap gap-4 pt-5 border-t border-gray-200">
                 <div className="flex items-center gap-3">
                   <Image
                     src={post.author.avatar}
                     alt={post.author.name}
-                    width={44}
-                    height={44}
-                    className="rounded-full"
+                    width={40}
+                    height={40}
+                    className="rounded-full ring-2 ring-gray-200"
                   />
                   <div>
-                    <p className="font-semibold text-gray-900">{post.author.name}</p>
+                    <p className="font-semibold text-slate-900 text-sm">{post.author.name}</p>
                     {post.lastUpdated && (
-                      <p className="text-xs text-gray-400">
+                      <p className="text-xs text-slate-500">
                         Updated {new Date(post.lastUpdated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </p>
                     )}
@@ -218,31 +224,26 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 </div>
                 <ShareButtons url={postUrl} title={post.title} description={post.description} />
               </div>
-            </header>
+            </div>
           </div>
 
-          {/* Content + TOC */}
-          <div className="flex gap-12 max-w-7xl mx-auto">
-            <article className="max-w-3xl mx-auto flex-1 min-w-0">
+          {/* Content + TOC row */}
+          <div className="flex gap-12 max-w-7xl mx-auto mt-12">
+            {/* Article content */}
+            <article className="max-w-[720px] mx-auto flex-1 min-w-0">
               <div
-                className="prose prose-lg prose-gray max-w-none
-                  prose-headings:font-bold prose-headings:tracking-tight
-                  prose-h2:text-3xl prose-h2:mt-12 prose-h2:mb-4
-                  prose-h3:text-xl prose-h3:mt-8 prose-h3:mb-3
-                  prose-p:leading-relaxed prose-p:text-gray-700
-                  prose-a:text-primary-600 prose-a:underline prose-a:underline-offset-4 hover:prose-a:text-primary-800
-                  prose-strong:text-gray-900
-                  prose-ul:my-4 prose-li:my-1
-                  prose-img:rounded-xl prose-img:shadow-lg
-                  prose-blockquote:border-primary-400 prose-blockquote:bg-gray-50 prose-blockquote:rounded-r-xl prose-blockquote:py-1"
+                className="prose prose-lg max-w-none"
                 dangerouslySetInnerHTML={{ __html: contentHtml }}
               />
 
               {/* Tags */}
-              <div className="mt-12 pt-6 border-t border-gray-200">
+              <div className="mt-14 pt-6 border-t border-gray-200">
                 <div className="flex flex-wrap gap-2">
                   {post.tags.map((tag) => (
-                    <span key={tag} className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm">
+                    <span
+                      key={tag}
+                      className="px-3 py-1.5 bg-gray-50 text-slate-600 rounded-full text-sm border border-gray-200 hover:bg-gray-100 transition-colors"
+                    >
                       #{tag}
                     </span>
                   ))}
@@ -250,21 +251,23 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
               </div>
 
               {/* Author Bio */}
-              <div className="mt-8 p-6 bg-gray-50 rounded-2xl flex gap-4 items-start">
+              <div className="mt-10 p-6 bg-gray-50 border border-gray-200 rounded-2xl flex gap-4 items-start">
                 <Image
                   src={post.author.avatar}
                   alt={post.author.name}
-                  width={56}
-                  height={56}
-                  className="rounded-full flex-shrink-0"
+                  width={52}
+                  height={52}
+                  className="rounded-full flex-shrink-0 ring-2 ring-gray-200"
                 />
                 <div>
-                  <p className="font-bold text-gray-900">{post.author.name}</p>
-                  <p className="text-gray-600 text-sm mt-1">{post.author.bio}</p>
+                  <p className="font-bold text-slate-900">{post.author.name}</p>
+                  <p className="text-slate-600 text-sm mt-1.5 leading-relaxed">{post.author.bio}</p>
                 </div>
               </div>
 
-              <ShareButtons url={postUrl} title={post.title} description={post.description} />
+              <div className="mt-8">
+                <ShareButtons url={postUrl} title={post.title} description={post.description} />
+              </div>
 
               <NewsletterCTA />
             </article>
@@ -277,8 +280,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
 
           {/* Related Posts */}
           {related.length > 0 && (
-            <section className="max-w-7xl mx-auto py-16">
-              <h2 className="text-2xl font-bold text-gray-900 mb-8">You Might Also Like</h2>
+            <section className="max-w-7xl mx-auto py-16 mt-8 border-t border-gray-200">
+              <h2 className="text-2xl font-bold text-slate-900 mb-8">You Might Also Like</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 {related.map((p) => (
                   <BlogCard key={p.slug} post={p} />
@@ -288,7 +291,6 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
           )}
         </div>
       </main>
-      <Footer />
     </>
   );
 }

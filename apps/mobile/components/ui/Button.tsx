@@ -86,11 +86,11 @@ export function Button({
 
     const variantStyles: Record<string, ViewStyle> = {
       primary: {},
-      secondary: { backgroundColor: colors.surface[700] },
+      secondary: { backgroundColor: colors.surface[100] },
       outline: {
         backgroundColor: 'transparent',
         borderWidth: 1.5,
-        borderColor: 'rgba(255,255,255,0.15)',
+        borderColor: '#e2e8f0',
       },
       ghost: { backgroundColor: 'transparent' },
     };
@@ -106,9 +106,9 @@ export function Button({
   const getTextStyles = (): TextStyle => {
     const variantStyles: Record<string, TextStyle> = {
       primary: { color: '#fff' },
-      secondary: { color: '#fff' },
-      outline: { color: 'rgba(255,255,255,0.9)' },
-      ghost: { color: 'rgba(255,255,255,0.8)' },
+      secondary: { color: '#0f172a' },
+      outline: { color: '#0f172a' },
+      ghost: { color: colors.surface[600] },
     };
 
     return {
@@ -154,7 +154,7 @@ export function Button({
       >
         {isPrimary ? (
           <LinearGradient
-            colors={disabled ? ['#374151', '#374151'] : ['#6366f1', '#8b5cf6']}
+            colors={disabled ? ['#cbd5e1', '#cbd5e1'] : ['#F97066', '#F59E0B']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[StyleSheet.absoluteFill, { borderRadius: borderRadius.lg }]}
@@ -168,7 +168,7 @@ export function Button({
 
 const styles = StyleSheet.create({
   primaryGlow: {
-    shadowColor: '#818cf8',
+    shadowColor: '#FA8C84',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 16,

@@ -54,6 +54,7 @@ export default function TripDetailPage() {
   const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
 
   // Fetch trip data
   const fetchTrip = useCallback(async () => {
@@ -121,17 +122,30 @@ export default function TripDetailPage() {
     return () => clearInterval(interval);
   }, [trip?.workflow_id, trip?.status, pollWorkflowStatus, fetchTrip]);
 
-  const handleShare = () => {
-    // Placeholder - will implement sharing later
-    if (navigator.share) {
-      navigator.share({
-        title: `Trip to ${trip?.destination}`,
-        text: `Check out my trip itinerary to ${trip?.destination}!`,
-        url: window.location.href,
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Link copied to clipboard!');
+  const handleShare = async () => {
+    try {
+      let url = shareUrl;
+      if (!url) {
+        const res = await fetch(`/api/trips/${tripId}/share`, { method: 'POST' });
+        if (!res.ok) throw new Error('Failed to enable sharing');
+        const data = await res.json();
+        url = data.shareUrl;
+        setShareUrl(url!);
+      }
+      if (navigator.share) {
+        await navigator.share({
+          title: `Trip to ${trip?.destination}`,
+          text: `Check out my trip itinerary to ${trip?.destination}!`,
+          url: url!,
+        });
+      } else {
+        await navigator.clipboard.writeText(url!);
+        alert('Share link copied to clipboard!');
+      }
+    } catch (err) {
+      if (err instanceof Error && err.name !== 'AbortError') {
+        console.error('Share failed:', err);
+      }
     }
   };
 
@@ -303,15 +317,24 @@ export default function TripDetailPage() {
 
         {/* Share This Trip */}
         {tripStatus === 'completed' && itinerary && (
-          <div className="mt-8 bg-gradient-to-r from-primary-50 to-purple-50 rounded-2xl p-6 text-center">
+          <div className="mt-8 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl p-6 text-center">
             <h3 className="font-semibold text-gray-900 mb-2">📤 Share Your Adventure</h3>
             <p className="text-sm text-gray-600 mb-4">Let friends and family know about your upcoming trip!</p>
             <ShareButtons
+              url={shareUrl || undefined}
               title={`My ${trip.destination} Trip Itinerary`}
               description={`Check out my ${itinerary.days?.length || ''}-day AI-generated itinerary to ${trip.destination}! Created with TripGenie.`}
               hashtags={['TripGenie', 'Travel', trip.destination.replace(/\s+/g, '')]}
               className="justify-center"
             />
+            {!shareUrl && (
+              <button
+                onClick={handleShare}
+                className="mt-3 text-sm text-primary-600 hover:text-primary-700 font-medium"
+              >
+                Generate a public share link
+              </button>
+            )}
           </div>
         )}
       </main>

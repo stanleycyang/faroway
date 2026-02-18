@@ -160,22 +160,22 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.surface[300],
+    color: colors.surface[600],
     marginBottom: 8,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     borderRadius: borderRadius.md,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#e2e8f0',
     paddingHorizontal: 16,
   },
   inputFocused: {
     borderColor: colors.primary[500],
-    backgroundColor: colors.surface[900],
-    shadowColor: '#6366f1',
+    backgroundColor: '#ffffff',
+    shadowColor: '#F97066',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -184,7 +184,7 @@ const styles = StyleSheet.create({
     borderColor: colors.error,
   },
   inputDisabled: {
-    backgroundColor: colors.surface[700],
+    backgroundColor: colors.surface[100],
     opacity: 0.5,
   },
   leftIcon: {
@@ -193,7 +193,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#fff',
+    color: '#0f172a',
     paddingVertical: 14,
   },
   multilineInput: {
@@ -211,12 +211,12 @@ const styles = StyleSheet.create({
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     borderRadius: borderRadius.full,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#e2e8f0',
   },
   searchIcon: {
     marginRight: 12,
@@ -224,6 +224,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#fff',
+    color: '#0f172a',
   },
 });

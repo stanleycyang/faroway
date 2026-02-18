@@ -37,7 +37,7 @@ const SLIDES: OnboardingSlide[] = [
     subtitle: 'Tell us where you want to go, and watch magic happen',
     highlight: 'in seconds',
     image: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80',
-    gradient: ['#6366f1', '#8b5cf6'],
+    gradient: ['#F97066', '#F59E0B'],
   },
   {
     id: '2',
@@ -321,14 +321,14 @@ const styles = StyleSheet.create({
   },
   dotActive: {
     width: 28,
-    backgroundColor: '#6366f1',
+    backgroundColor: '#F97066',
   },
   ctaButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#6366f1',
+    backgroundColor: '#F97066',
     paddingVertical: 18,
     borderRadius: 16,
     marginBottom: 20,

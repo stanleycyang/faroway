@@ -1,0 +1,177 @@
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import { Sparkles } from 'lucide-react';
+import { TripHeader } from '@/components/trips/TripHeader';
+import { ItineraryDay } from '@/components/trips/ItineraryDay';
+import { ShareButtons } from '@/components/ShareButtons';
+import type { TripDay } from '@/lib/ai/types';
+
+interface SharedItinerary {
+  days: TripDay[];
+  overview: string;
+  totalEstimatedCost?: {
+    amount: number;
+    currency: string;
+  };
+  packingList?: string[];
+  generalTips?: string[];
+  generatedAt: string;
+}
+
+interface SharedTripViewProps {
+  destination: string;
+  startDate: string;
+  endDate: string;
+  travelers: number;
+  travelerType?: string;
+  vibes?: string[];
+  budgetTier?: string;
+  itinerary: SharedItinerary | null;
+  shareToken: string;
+}
+
+export function SharedTripView({
+  destination,
+  startDate,
+  endDate,
+  travelers,
+  travelerType,
+  vibes,
+  itinerary,
+  shareToken,
+}: SharedTripViewProps) {
+  const baseUrl = typeof window !== 'undefined'
+    ? window.location.origin
+    : 'https://tripgenie.ai';
+  const shareUrl = `${baseUrl}/s/${shareToken}`;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <TripHeader
+        destination={destination}
+        startDate={startDate}
+        endDate={endDate}
+        travelers={travelers}
+        totalCost={itinerary?.totalEstimatedCost}
+        backUrl="/"
+        showActions={false}
+      />
+
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        {/* Trip Meta */}
+        {(travelerType || (vibes && vibes.length > 0)) && (
+          <div className="flex flex-wrap gap-2 mb-6">
+            {travelerType && (
+              <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-primary-50 text-primary-700 font-medium">
+                {travelerType}
+              </span>
+            )}
+            {vibes?.map((vibe) => (
+              <span
+                key={vibe}
+                className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-primary-50 text-primary-700"
+              >
+                {vibe}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Overview */}
+        {itinerary?.overview && (
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">Trip Overview</h2>
+            <p className="text-gray-600">{itinerary.overview}</p>
+          </div>
+        )}
+
+        {/* Day-by-Day Itinerary */}
+        {itinerary?.days && itinerary.days.length > 0 && (
+          <div className="space-y-4">
+            <h2 className="text-lg font-semibold text-gray-900">Day-by-Day Itinerary</h2>
+            {itinerary.days.map((day, index) => (
+              <ItineraryDay
+                key={day.dayNumber}
+                dayNumber={day.dayNumber}
+                date={day.date}
+                title={day.title}
+                summary={day.summary}
+                morning={day.morning}
+                afternoon={day.afternoon}
+                evening={day.evening}
+                totalEstimatedCost={day.totalEstimatedCost}
+                tips={day.tips}
+                defaultExpanded={index === 0}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* General Tips */}
+        {itinerary?.generalTips && itinerary.generalTips.length > 0 && (
+          <div className="mt-6 bg-primary-50 rounded-2xl p-6">
+            <h3 className="font-semibold text-primary-800 mb-3">💡 Travel Tips for {destination}</h3>
+            <ul className="space-y-2">
+              {itinerary.generalTips.map((tip, i) => (
+                <li key={i} className="text-sm text-primary-700 flex items-start gap-2">
+                  <span className="text-primary-400 mt-0.5">•</span>
+                  <span>{tip}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Packing List */}
+        {itinerary?.packingList && itinerary.packingList.length > 0 && (
+          <div className="mt-6 bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            <h3 className="font-semibold text-gray-900 mb-3">🧳 Packing Suggestions</h3>
+            <div className="flex flex-wrap gap-2">
+              {itinerary.packingList.map((item, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-gray-100 text-gray-700"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Share Section */}
+        <div className="mt-8 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl p-6 text-center">
+          <h3 className="font-semibold text-gray-900 mb-2">📤 Share This Trip</h3>
+          <p className="text-sm text-gray-600 mb-4">Know someone who&apos;d love this itinerary? Spread the word!</p>
+          <ShareButtons
+            url={shareUrl}
+            title={`${destination} Trip Itinerary`}
+            description={`Check out this ${itinerary?.days?.length || ''}-day AI-generated itinerary to ${destination}! Created with TripGenie.`}
+            hashtags={['TripGenie', 'Travel', destination.replace(/\s+/g, '')]}
+            className="justify-center"
+          />
+        </div>
+
+        {/* CTA Banner */}
+        <div className="mt-8 bg-gradient-to-br from-primary to-primary-600 rounded-2xl p-8 text-center text-white">
+          <div className="w-14 h-14 rounded-xl bg-white/20 flex items-center justify-center mx-auto mb-4">
+            <Sparkles className="w-7 h-7 text-white" />
+          </div>
+          <h3 className="text-xl font-bold mb-2">Create Your Own Trip</h3>
+          <p className="text-white/80 mb-6 max-w-md mx-auto">
+            Plan your perfect trip in 60 seconds with our AI-powered travel planner.
+          </p>
+          <Link
+            href="/create"
+            className="inline-flex items-center gap-2 px-8 py-3 bg-white text-primary-700 rounded-full font-semibold hover:bg-white/90 transition-colors"
+          >
+            <Sparkles className="w-5 h-5" />
+            Get Started Free
+          </Link>
+        </div>
+      </main>
+    </div>
+  );
+}

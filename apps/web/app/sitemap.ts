@@ -1,5 +1,6 @@
 import { MetadataRoute } from 'next'
 import { getAllPostMetas, getAllCategories } from '@/lib/blog'
+import { getSupabase } from '@/lib/supabase/server'
 
 // Static destinations for sitemap
 const popularDestinations = [
@@ -9,7 +10,7 @@ const popularDestinations = [
   'prague', 'vienna', 'berlin', 'copenhagen', 'oslo', 'stockholm'
 ]
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tripgenie.ai'
   const currentDate = new Date().toISOString()
   
@@ -35,6 +36,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
     },
     {
       url: `${baseUrl}/auth/signup`,
+      lastModified: currentDate,
+      changeFrequency: 'monthly',
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/privacy`,
+      lastModified: currentDate,
+      changeFrequency: 'monthly',
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/terms`,
+      lastModified: currentDate,
+      changeFrequency: 'monthly',
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/support`,
       lastModified: currentDate,
       changeFrequency: 'monthly',
       priority: 0.5,
@@ -73,5 +92,29 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.6,
   }))
 
-  return [...staticPages, ...destinationPages, ...blogIndex, ...blogPosts, ...blogCategories]
+  // Shared trip pages
+  let sharedTripPages: MetadataRoute.Sitemap = []
+  try {
+    const supabase = getSupabase()
+    const { data: sharedTrips } = await supabase
+      .from('trips')
+      .select('share_token, updated_at')
+      .eq('is_shared', true)
+      .not('share_token', 'is', null)
+      .order('shared_at', { ascending: false })
+      .limit(200)
+
+    if (sharedTrips) {
+      sharedTripPages = sharedTrips.map(trip => ({
+        url: `${baseUrl}/s/${trip.share_token}`,
+        lastModified: trip.updated_at || currentDate,
+        changeFrequency: 'weekly' as const,
+        priority: 0.6,
+      }))
+    }
+  } catch {
+    // Continue without shared trips if DB is unavailable
+  }
+
+  return [...staticPages, ...destinationPages, ...blogIndex, ...blogPosts, ...blogCategories, ...sharedTripPages]
 }

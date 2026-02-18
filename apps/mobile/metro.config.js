@@ -13,4 +13,7 @@ config.resolver.nodeModulesPaths = [
   path.resolve(monorepoRoot, 'node_modules'),
 ];
 
+// Ensure Metro follows symlinks (required for Bun workspace symlink layout)
+config.resolver.unstable_enableSymlinks = true;
+
 module.exports = config;

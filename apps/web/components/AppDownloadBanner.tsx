@@ -44,7 +44,7 @@ export function AppDownloadBanner() {
           visible ? 'translate-y-0' : 'translate-y-full'
         }`}
       >
-        <div className="bg-gradient-to-r from-primary-600 to-primary text-white px-4 py-3 shadow-2xl">
+        <div className="bg-gradient-to-r from-primary-600 via-primary to-amber-500 text-white px-4 py-3 shadow-2xl">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center flex-shrink-0 text-lg">
               ✈️
@@ -79,7 +79,7 @@ export function AppDownloadBanner() {
         visible ? 'translate-y-0' : '-translate-y-full'
       }`}
     >
-      <div className="bg-gradient-to-r from-primary-600 via-primary to-primary-500 text-white">
+      <div className="bg-gradient-to-r from-primary-600 via-primary to-amber-500 text-white">
         <div className="max-w-7xl mx-auto px-4 py-2.5 flex items-center justify-center gap-4 text-sm">
           <span className="font-medium">📱 TripGenie is better on mobile!</span>
           <div className="flex items-center gap-2">

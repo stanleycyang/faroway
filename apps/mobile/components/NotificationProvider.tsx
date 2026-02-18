@@ -1,6 +1,4 @@
 import React, { useEffect, useCallback, createContext, useContext, useState } from 'react';
-import { Alert } from 'react-native';
-import * as Notifications from 'expo-notifications';
 import { useNotifications } from '../hooks/useNotifications';
 import { useUserStore } from '../stores/userStore';
 import { NotificationData } from '../lib/notifications';
@@ -41,7 +39,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
 
   // Handle notification received in foreground
   const handleNotificationReceived = useCallback(
-    (notification: Notifications.Notification, data: NotificationData | null) => {
+    (notification: any, data: NotificationData | null) => {
       console.log('[Notifications] Received in foreground:', {
         title: notification.request.content.title,
         body: notification.request.content.body,

@@ -6,7 +6,7 @@ export function Footer() {
   const currentYear = new Date().getFullYear();
   
   return (
-    <footer className="bg-gray-900 text-gray-300">
+    <footer className="bg-surface-950 text-gray-300 border-t border-white/[0.04]">
       <div className="container mx-auto px-6 py-12 max-w-7xl">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           {/* Brand */}
@@ -53,14 +53,14 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/create-trip" className="hover:text-primary transition-colors">
+                <Link href="/create" className="hover:text-primary transition-colors">
                   Start Planning
                 </Link>
               </li>
               <li>
-                <Link href="/download" className="hover:text-primary transition-colors">
+                <a href="#download" className="hover:text-primary transition-colors">
                   Download App
-                </Link>
+                </a>
               </li>
             </ul>
           </div>
@@ -80,13 +80,18 @@ export function Footer() {
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="hover:text-primary transition-colors">
-                  Contact
+                <Link href="/support" className="hover:text-primary transition-colors">
+                  Contact & Support
                 </Link>
               </li>
               <li>
                 <Link href="/privacy" className="hover:text-primary transition-colors">
                   Privacy Policy
+                </Link>
+              </li>
+              <li>
+                <Link href="/terms" className="hover:text-primary transition-colors">
+                  Terms of Service
                 </Link>
               </li>
             </ul>

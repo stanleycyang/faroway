@@ -8,8 +8,11 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "format": "prettier --write \"**/*.{ts,tsx}\"",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "clean": "rm -rf .next .turbo"
   },
   "dependencies": {
@@ -36,9 +39,9 @@
     "nanoid": "^5.1.6",
     "next": "^16.1.6",
     "postcss": "^8.5.6",
-    "react": "^19.2.4",
+    "react": "19.1.0",
     "react-day-picker": "^9.13.2",
-    "react-dom": "^19.2.4",
+    "react-dom": "19.1.0",
     "react-hook-form": "^7.71.1",
     "tailwind-merge": "^3.4.1",
     "tailwindcss": "^4.1.18",
@@ -47,7 +50,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.5.0",
-    "@types/react": "19.2.14",
+    "@types/react": "~19.1.10",
     "@typescript-eslint/eslint-plugin": "^8.2.0",
     "@typescript-eslint/parser": "^8.2.0",
     "eslint": "^8.57.0",

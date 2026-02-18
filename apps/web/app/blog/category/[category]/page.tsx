@@ -1,11 +1,10 @@
 import type { Metadata } from 'next';
-import { getPostsByCategory, getAllCategories, CATEGORIES } from '@/lib/blog';
+import { getPostsByCategory, getAllCategories, paginate, CATEGORIES, POSTS_PER_PAGE } from '@/lib/blog';
 import { BlogCard } from '@/components/blog/BlogCard';
 import { Breadcrumbs } from '@/components/blog/Breadcrumbs';
+import { CategoryPills } from '@/components/blog/CategoryPills';
 import { NewsletterCTA } from '@/components/blog/NewsletterCTA';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
-import Link from 'next/link';
+import { Pagination } from '@/components/blog/Pagination';
 
 export function generateStaticParams() {
   return getAllCategories().map((cat) => ({
@@ -23,65 +22,66 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
   };
 }
 
-export default async function CategoryPage({ params }: { params: Promise<{ category: string }> }) {
+export default async function CategoryPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ category: string }>;
+  searchParams: Promise<{ page?: string }>;
+}) {
   const { category } = await params;
-  const posts = getPostsByCategory(category);
+  const { page: pageParam } = await searchParams;
+  const currentPage = Math.max(1, parseInt(pageParam || '1', 10) || 1);
+
+  const allPosts = getPostsByCategory(category);
   const label = CATEGORIES.find((c) => c.toLowerCase().replace(/\s+/g, '-') === category) || category;
 
+  const { items: posts, totalPages, totalItems } = paginate(allPosts, currentPage, POSTS_PER_PAGE);
+
   return (
-    <>
-      <Header />
-      <main className="min-h-screen pt-20">
-        <div className="container mx-auto px-6 max-w-7xl py-8">
-          <Breadcrumbs
-            items={[
-              { label: 'Home', href: '/' },
-              { label: 'Blog', href: '/blog' },
-              { label: String(label) },
-            ]}
-          />
+    <main className="min-h-screen pt-20">
+      <div className="container mx-auto px-6 max-w-7xl py-8">
+        <Breadcrumbs
+          items={[
+            { label: 'Home', href: '/' },
+            { label: 'Blog', href: '/blog' },
+            { label: String(label) },
+          ]}
+        />
 
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">{String(label)}</h1>
-          <p className="text-gray-500 mb-8">{posts.length} article{posts.length !== 1 ? 's' : ''}</p>
+        <h1 className="text-4xl font-bold text-slate-900 mb-2">{String(label)}</h1>
+        <p className="text-slate-600 mb-8">
+          {totalItems} article{totalItems !== 1 ? 's' : ''}
+          {totalPages > 1 && <span> · Page {currentPage} of {totalPages}</span>}
+        </p>
 
-          {/* Category tabs */}
-          <div className="flex flex-wrap gap-2 mb-10">
-            <Link href="/blog" className="px-4 py-2 rounded-full bg-gray-100 text-gray-600 hover:bg-primary-50 hover:text-primary-600 text-sm font-medium transition-colors">
-              All
-            </Link>
-            {CATEGORIES.map((cat) => {
-              const slug = cat.toLowerCase().replace(/\s+/g, '-');
-              const active = slug === category;
-              return (
-                <Link
-                  key={cat}
-                  href={`/blog/category/${slug}`}
-                  className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                    active ? 'bg-primary-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-primary-50 hover:text-primary-600'
-                  }`}
-                >
-                  {cat}
-                </Link>
-              );
-            })}
+        {/* Category tabs */}
+        <div className="mb-10">
+          <CategoryPills activeCategory={category} />
+        </div>
+
+        {posts.length === 0 ? (
+          <p className="text-slate-500 text-center py-20">No articles in this category yet.</p>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {posts.map((post) => (
+              <BlogCard key={post.slug} post={post} />
+            ))}
           </div>
+        )}
 
-          {posts.length === 0 ? (
-            <p className="text-gray-400 text-center py-20">No articles in this category yet.</p>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {posts.map((post) => (
-                <BlogCard key={post.slug} post={post} />
-              ))}
-            </div>
-          )}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          basePath={`/blog/category/${category}`}
+        />
 
+        {(currentPage === totalPages || totalPages <= 1) && (
           <div className="max-w-4xl mx-auto">
             <NewsletterCTA />
           </div>
-        </div>
-      </main>
-      <Footer />
-    </>
+        )}
+      </div>
+    </main>
   );
 }

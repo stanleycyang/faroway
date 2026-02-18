@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
     marginBottom: 4,
   },
   subtitle: {
@@ -111,17 +111,17 @@ const styles = StyleSheet.create({
   vibeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: borderRadius.full,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#e2e8f0',
   },
   vibeButtonSelected: {
-    backgroundColor: 'rgba(99,102,241,0.15)',
+    backgroundColor: '#FFF5F4',
     borderColor: colors.primary[500],
-    shadowColor: '#6366f1',
+    shadowColor: '#F97066',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -133,10 +133,10 @@ const styles = StyleSheet.create({
   vibeLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.surface[300],
+    color: colors.surface[600],
   },
   vibeLabelSelected: {
-    color: colors.primary[300],
+    color: colors.primary[600],
   },
   chipsContainer: {
     flexDirection: 'row',
@@ -145,12 +145,12 @@ const styles = StyleSheet.create({
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(99,102,241,0.15)',
+    backgroundColor: '#FFF5F4',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: borderRadius.full,
     borderWidth: 1,
-    borderColor: 'rgba(99,102,241,0.3)',
+    borderColor: colors.primary[200],
   },
   chipEmoji: {
     fontSize: 14,
@@ -159,6 +159,6 @@ const styles = StyleSheet.create({
   chipLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.primary[300],
+    color: colors.primary[600],
   },
 });

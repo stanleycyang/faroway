@@ -10,6 +10,8 @@ import {
   Animated,
   RefreshControl,
   ActivityIndicator,
+  Share,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -18,6 +20,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
 import { Button, VibeChips } from '../../components/ui';
 import { useTripStore, TripActivity } from '../../stores/tripStore';
+import { getTrip, shareTrip } from '../../services/api';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import { registry } from '../../lib/json-render/registry';
@@ -182,12 +185,39 @@ export default function TripDetailScreen() {
   }, [trip, id]);
 
   const onRefresh = async () => {
+    if (!id) return;
     setRefreshing(true);
     hapticFeedback.light();
-    // Simulate refresh - in real app, refetch trip data
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    try {
+      const result = await getTrip(id);
+      if (result.data?.trip) {
+        const { saveTrip } = useTripStore.getState();
+        saveTrip(result.data.trip as any);
+      }
+    } catch (error) {
+      console.error('Failed to refresh trip:', error);
+    }
     setRefreshing(false);
     hapticFeedback.success();
+  };
+
+  const handleShare = async () => {
+    if (!id) return;
+    hapticFeedback.light();
+    try {
+      const result = await shareTrip(id);
+      if (result.data?.shareUrl) {
+        await Share.share({
+          message: `Check out my trip to ${trip?.destination}! ${result.data.shareUrl}`,
+          url: result.data.shareUrl,
+          title: `${trip?.destination} Trip Itinerary`,
+        });
+      } else {
+        Alert.alert('Error', result.error || 'Failed to create share link');
+      }
+    } catch (error) {
+      console.error('Share failed:', error);
+    }
   };
 
   if (!trip) {
@@ -265,7 +295,7 @@ export default function TripDetailScreen() {
                 <TouchableOpacity style={styles.actionButton}>
                   <Ionicons name="heart-outline" size={22} color="#fff" />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.actionButton}>
+                <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
                   <Ionicons name="share-outline" size={22} color="#fff" />
                 </TouchableOpacity>
               </View>
@@ -473,7 +503,7 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.8)',
   },
   content: {
-    backgroundColor: colors.surface[900],
+    backgroundColor: '#ffffff',
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     marginTop: -24,
@@ -494,7 +524,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: borderRadius.lg,
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#f1f5f9',
     alignItems: 'center',
   },
   dayTabSelected: {
@@ -503,7 +533,7 @@ const styles = StyleSheet.create({
   dayTabNumber: {
     fontSize: 14,
     fontWeight: '700',
-    color: colors.surface[400],
+    color: '#64748b',
     marginBottom: 2,
   },
   dayTabNumberSelected: {
@@ -511,7 +541,7 @@ const styles = StyleSheet.create({
   },
   dayTabDate: {
     fontSize: 12,
-    color: colors.surface[500],
+    color: '#94a3b8',
   },
   dayTabDateSelected: {
     color: 'rgba(255,255,255,0.7)',
@@ -523,7 +553,7 @@ const styles = StyleSheet.create({
   dayTheme: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
   },
   activitiesContainer: {
     paddingHorizontal: 24,
@@ -540,7 +570,7 @@ const styles = StyleSheet.create({
   activityTimeText: {
     fontSize: 12,
     fontWeight: '600',
-    color: colors.surface[500],
+    color: '#64748b',
     marginBottom: 8,
   },
   activityDot: {
@@ -551,16 +581,16 @@ const styles = StyleSheet.create({
   activityLine: {
     flex: 1,
     width: 2,
-    backgroundColor: colors.surface[700],
+    backgroundColor: '#e2e8f0',
     marginTop: 8,
   },
   activityContent: {
     flex: 1,
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     borderRadius: borderRadius.lg,
     padding: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#e2e8f0',
   },
   activityHeader: {
     flexDirection: 'row',
@@ -581,11 +611,11 @@ const styles = StyleSheet.create({
   activityTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
   },
   activityDuration: {
     fontSize: 12,
-    color: colors.surface[400],
+    color: '#64748b',
     marginTop: 2,
   },
   activityPrice: {
@@ -595,7 +625,7 @@ const styles = StyleSheet.create({
   },
   activityDescription: {
     fontSize: 14,
-    color: colors.surface[400],
+    color: '#475569',
     lineHeight: 20,
     marginBottom: 8,
   },
@@ -607,12 +637,12 @@ const styles = StyleSheet.create({
   activityRatingText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#fff',
+    color: '#0f172a',
     marginLeft: 4,
   },
   activityReviewCount: {
     fontSize: 13,
-    color: colors.surface[400],
+    color: '#64748b',
     marginLeft: 4,
   },
   bookButton: {
@@ -620,7 +650,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    backgroundColor: 'rgba(99,102,241,0.15)',
+    backgroundColor: '#FFF5F4',
     paddingVertical: 10,
     borderRadius: borderRadius.md,
   },
@@ -637,23 +667,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     paddingHorizontal: 24,
     paddingVertical: 16,
     paddingBottom: 40,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: '#e2e8f0',
   },
   bottomBarInfo: {},
   bottomBarLabel: {
     fontSize: 12,
-    color: colors.surface[400],
+    color: '#64748b',
     marginBottom: 2,
   },
   bottomBarPrice: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#fff',
+    color: '#0f172a',
   },
   bookAllButton: {
     minWidth: 140,

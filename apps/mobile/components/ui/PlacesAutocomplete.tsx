@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
-  FlatList,
+  ScrollView as DropdownScroll,
   TouchableOpacity,
   StyleSheet,
   Keyboard,
@@ -58,31 +58,6 @@ export function PlacesAutocomplete({ onSelect }: PlacesAutocompleteProps) {
 
   const showDropdown = query.length >= 2;
 
-  const renderPrediction = ({ item }: { item: PlacePrediction }) => (
-    <TouchableOpacity
-      style={styles.row}
-      onPress={() => handleSelect(item)}
-      activeOpacity={0.7}
-    >
-      <Ionicons
-        name="location"
-        size={18}
-        color={colors.primary[400]}
-        style={styles.rowIcon}
-      />
-      <View style={styles.rowText}>
-        <Text style={styles.city} numberOfLines={1}>
-          {item.city}
-        </Text>
-        {item.secondary ? (
-          <Text style={styles.secondary} numberOfLines={1}>
-            {item.secondary}
-          </Text>
-        ) : null}
-      </View>
-    </TouchableOpacity>
-  );
-
   return (
     <View style={styles.wrapper}>
       <SearchInput
@@ -110,14 +85,37 @@ export function PlacesAutocomplete({ onSelect }: PlacesAutocompleteProps) {
               ))}
             </View>
           ) : predictions.length > 0 ? (
-            <FlatList
-              data={predictions}
-              keyExtractor={(item) => item.placeId}
-              renderItem={renderPrediction}
+            <DropdownScroll
               keyboardShouldPersistTaps="handled"
-              scrollEnabled={predictions.length > 4}
+              nestedScrollEnabled
               style={styles.list}
-            />
+            >
+              {predictions.map((item) => (
+                <TouchableOpacity
+                  key={item.placeId}
+                  style={styles.row}
+                  onPress={() => handleSelect(item)}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="location"
+                    size={18}
+                    color={colors.primary[400]}
+                    style={styles.rowIcon}
+                  />
+                  <View style={styles.rowText}>
+                    <Text style={styles.city} numberOfLines={1}>
+                      {item.city}
+                    </Text>
+                    {item.secondary ? (
+                      <Text style={styles.secondary} numberOfLines={1}>
+                        {item.secondary}
+                      </Text>
+                    ) : null}
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </DropdownScroll>
           ) : (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>No cities found</Text>
@@ -154,10 +152,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     marginTop: 4,
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#e2e8f0',
     maxHeight: 280,
     overflow: 'hidden',
   },
@@ -170,7 +168,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: '#e2e8f0',
   },
   rowIcon: {
     marginRight: 12,
@@ -181,7 +179,7 @@ const styles = StyleSheet.create({
   city: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#fff',
+    color: '#0f172a',
   },
   secondary: {
     fontSize: 13,
@@ -215,7 +213,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    backgroundColor: 'rgba(99,102,241,0.12)',
+    backgroundColor: '#FFF5F4',
     borderRadius: borderRadius.full,
   },
   fallbackButtonText: {

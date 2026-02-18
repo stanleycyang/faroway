@@ -32,7 +32,7 @@ function getMarkedDates(
 ) {
   const marked: Record<string, any> = {};
   const accentColor = colors.primary[500];
-  const fillColor = 'rgba(99, 102, 241, 0.2)';
+  const fillColor = 'rgba(249, 112, 102, 0.2)';
 
   if (startDate && !endDate) {
     marked[startDate] = {
@@ -57,7 +57,7 @@ function getMarkedDates(
 
     marked[dateStr] = {
       color: isStart || isEnd ? accentColor : fillColor,
-      textColor: isStart || isEnd ? '#fff' : colors.surface[200],
+      textColor: isStart || isEnd ? '#fff' : colors.surface[600],
       startingDay: isStart,
       endingDay: isEnd,
     };
@@ -132,9 +132,9 @@ export function DateRangePicker({
 
   const calendarTheme = useMemo(
     () => ({
-      calendarBackground: colors.surface[800],
-      dayTextColor: '#fff',
-      monthTextColor: '#fff',
+      calendarBackground: '#ffffff',
+      dayTextColor: '#0f172a',
+      monthTextColor: '#0f172a',
       textMonthFontSize: 18,
       textMonthFontWeight: '600' as const,
       todayTextColor: colors.primary[400],
@@ -327,7 +327,7 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
     marginBottom: 12,
   },
   dateButtons: {
@@ -339,15 +339,15 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     padding: 16,
     borderRadius: borderRadius.md,
     borderWidth: 1.5,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#e2e8f0',
   },
   dateButtonActive: {
     borderColor: colors.primary[500],
-    backgroundColor: 'rgba(99,102,241,0.1)',
+    backgroundColor: '#FFF5F4',
   },
   dateButtonText: {
     marginLeft: 12,
@@ -360,7 +360,7 @@ const styles = StyleSheet.create({
   dateValue: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#fff',
+    color: '#0f172a',
   },
   modalOverlay: {
     flex: 1,
@@ -368,12 +368,12 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     height: SCREEN_HEIGHT * 0.9,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.08)',
+    borderColor: '#e2e8f0',
     borderBottomWidth: 0,
   },
   dragHandleContainer: {
@@ -385,7 +385,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 4,
     borderRadius: 2,
-    backgroundColor: colors.surface[600],
+    backgroundColor: colors.surface[300],
   },
   modalHeader: {
     flexDirection: 'row',
@@ -398,7 +398,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
   },
   chipRow: {
     flexDirection: 'row',
@@ -412,13 +412,13 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: borderRadius.md,
-    backgroundColor: colors.surface[700],
+    backgroundColor: '#f8fafc',
     borderWidth: 1.5,
     borderColor: 'transparent',
   },
   chipActive: {
     borderColor: colors.primary[500],
-    backgroundColor: 'rgba(99,102,241,0.1)',
+    backgroundColor: '#FFF5F4',
   },
   chipLabel: {
     fontSize: 11,
@@ -434,13 +434,13 @@ const styles = StyleSheet.create({
   chipDate: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.surface[300],
+    color: colors.surface[600],
   },
   chipDateActive: {
-    color: '#fff',
+    color: colors.primary[600],
   },
   calendar: {
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
   },
   doneContainer: {
     position: 'absolute',
@@ -450,9 +450,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: 12,
     paddingBottom: 40,
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
+    borderTopColor: '#e2e8f0',
   },
   doneButton: {
     backgroundColor: colors.primary[500],

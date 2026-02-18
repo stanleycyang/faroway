@@ -197,7 +197,7 @@ export default function TripsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface[900],
+    backgroundColor: '#ffffff',
   },
   header: {
     flexDirection: 'row',
@@ -210,13 +210,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#fff',
+    color: '#0f172a',
   },
   addButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(99,102,241,0.15)',
+    backgroundColor: '#FFF5F4',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -230,7 +230,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#f1f5f9',
   },
   tabActive: {
     backgroundColor: colors.primary[500],
@@ -238,7 +238,7 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.surface[400],
+    color: '#64748b',
   },
   tabTextActive: {
     color: '#fff',
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: 60,
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 24,
@@ -266,12 +266,12 @@ const styles = StyleSheet.create({
   emptyStateTitle: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
     marginBottom: 12,
   },
   emptyStateSubtitle: {
     fontSize: 16,
-    color: colors.surface[400],
+    color: '#475569',
     textAlign: 'center',
     lineHeight: 24,
     marginBottom: 32,
@@ -283,17 +283,17 @@ const styles = StyleSheet.create({
     marginTop: 32,
     paddingTop: 32,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.08)',
+    borderTopColor: '#e2e8f0',
   },
   sampleTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
     marginBottom: 4,
   },
   sampleSubtitle: {
     fontSize: 14,
-    color: colors.surface[400],
+    color: '#475569',
     marginBottom: 20,
   },
   noResults: {
@@ -302,6 +302,6 @@ const styles = StyleSheet.create({
   },
   noResultsText: {
     fontSize: 16,
-    color: colors.surface[500],
+    color: '#64748b',
   },
 });

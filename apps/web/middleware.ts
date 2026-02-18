@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { applyCorsHeaders, handleCorsPreflightResponse } from '@/lib/security/cors'
 
 // Routes that require authentication
 const protectedRoutes = [
@@ -16,6 +17,15 @@ const authRoutes = [
 ]
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Handle CORS for API routes
+  if (pathname.startsWith('/api/')) {
+    if (request.method === 'OPTIONS') {
+      return handleCorsPreflightResponse(request);
+    }
+  }
+
   let response = NextResponse.next({
     request: {
       headers: request.headers,
@@ -50,8 +60,6 @@ export async function middleware(request: NextRequest) {
   // Refresh session if expired
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { pathname } = request.nextUrl
-
   // Check if the current route requires authentication
   const isProtectedRoute = protectedRoutes.some(route => 
     pathname.startsWith(route)
@@ -79,6 +87,11 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL(redirectTo, request.url))
   }
 
+  // Apply CORS headers to API responses
+  if (pathname.startsWith('/api/')) {
+    applyCorsHeaders(request, response);
+  }
+
   return response
 }
 
@@ -90,7 +103,6 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder
-     * - api routes (handled separately)
      */
     '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
