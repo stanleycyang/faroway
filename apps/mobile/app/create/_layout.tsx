@@ -11,7 +11,6 @@ export default function CreateLayout() {
       }}
     >
       <Stack.Screen name="index" />
-      <Stack.Screen name="details" />
       <Stack.Screen name="generating" />
     </Stack>
   );

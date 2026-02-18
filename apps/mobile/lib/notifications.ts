@@ -1,7 +1,38 @@
-import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+
+// Lazy-load expo-notifications to avoid crashes in Expo Go (SDK 53+)
+// where remote notification support was removed.
+let _notifications: typeof import('expo-notifications') | null = null;
+let _initPromise: Promise<typeof import('expo-notifications') | null> | null = null;
+
+async function getNotifications() {
+  if (_notifications) return _notifications;
+  if (_initPromise) return _initPromise;
+
+  _initPromise = (async () => {
+    try {
+      const mod = await import('expo-notifications');
+      mod.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+          shouldShowBanner: true,
+          shouldShowList: true,
+        }),
+      });
+      _notifications = mod;
+      return mod;
+    } catch (e) {
+      console.warn('[Notifications] expo-notifications not available:', e);
+      return null;
+    }
+  })();
+
+  return _initPromise;
+}
 
 // ============================================
 // Types
@@ -25,37 +56,25 @@ export interface PushTokenResult {
   error?: string;
 }
 
-// ============================================
-// Configuration
-// ============================================
-
-// Configure how notifications are handled when app is in foreground
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowAlert: true,
-    shouldPlaySound: true,
-    shouldSetBadge: true,
-    shouldShowBanner: true,
-    shouldShowList: true,
-  }),
-});
+// Re-export types that consumers need (use `any` for the lazy-loaded module's types)
+export type NotificationReceivedHandler = (notification: any) => void;
+export type NotificationResponseHandler = (response: any) => void;
+export type EventSubscription = { remove: () => void };
 
 // ============================================
 // Permission Handling
 // ============================================
 
-/**
- * Request notification permissions from the user
- * Returns true if permissions were granted
- */
 export async function requestNotificationPermissions(): Promise<boolean> {
   if (!Device.isDevice) {
     console.log('Notifications require a physical device');
     return false;
   }
 
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  const Notifications = await getNotifications();
+  if (!Notifications) return false;
 
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 
   if (existingStatus !== 'granted') {
@@ -71,10 +90,10 @@ export async function requestNotificationPermissions(): Promise<boolean> {
   return true;
 }
 
-/**
- * Check if notification permissions are currently granted
- */
 export async function checkNotificationPermissions(): Promise<boolean> {
+  const Notifications = await getNotifications();
+  if (!Notifications) return false;
+
   const { status } = await Notifications.getPermissionsAsync();
   return status === 'granted';
 }
@@ -83,47 +102,36 @@ export async function checkNotificationPermissions(): Promise<boolean> {
 // Push Token Registration
 // ============================================
 
-/**
- * Register for push notifications and get Expo Push Token
- */
 export async function registerForPushNotificationsAsync(): Promise<PushTokenResult> {
-  // Check if running on a physical device
   if (!Device.isDevice) {
-    return {
-      token: null,
-      error: 'Push notifications require a physical device',
-    };
+    return { token: null, error: 'Push notifications require a physical device' };
   }
 
-  // Request permissions
+  const Notifications = await getNotifications();
+  if (!Notifications) {
+    return { token: null, error: 'Notifications not available in this environment' };
+  }
+
   const permissionGranted = await requestNotificationPermissions();
   if (!permissionGranted) {
-    return {
-      token: null,
-      error: 'Notification permissions not granted',
-    };
+    return { token: null, error: 'Notification permissions not granted' };
   }
 
   try {
-    // Get the project ID from Constants
     const projectId =
       Constants.expoConfig?.extra?.eas?.projectId ??
       Constants.easConfig?.projectId;
 
     if (!projectId) {
-      // For development, we can still get a token but it won't work in production
       console.warn('No projectId found - push notifications may not work in production');
     }
 
-    // Get Expo Push Token
     const tokenResponse = await Notifications.getExpoPushTokenAsync({
       projectId: projectId || undefined,
     });
 
     const token = tokenResponse.data;
-    console.log('Expo Push Token:', token);
 
-    // Configure Android notification channel
     if (Platform.OS === 'android') {
       await setupAndroidNotificationChannel();
     }
@@ -132,17 +140,14 @@ export async function registerForPushNotificationsAsync(): Promise<PushTokenResu
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error getting push token:', errorMessage);
-    return {
-      token: null,
-      error: errorMessage,
-    };
+    return { token: null, error: errorMessage };
   }
 }
 
-/**
- * Setup Android notification channel (required for Android 8.0+)
- */
 async function setupAndroidNotificationChannel(): Promise<void> {
+  const Notifications = await getNotifications();
+  if (!Notifications) return;
+
   await Notifications.setNotificationChannelAsync('default', {
     name: 'Default',
     importance: Notifications.AndroidImportance.MAX,
@@ -151,7 +156,6 @@ async function setupAndroidNotificationChannel(): Promise<void> {
     sound: 'default',
   });
 
-  // Create a channel for trip reminders
   await Notifications.setNotificationChannelAsync('trip-reminders', {
     name: 'Trip Reminders',
     description: 'Reminders about upcoming trips',
@@ -159,7 +163,6 @@ async function setupAndroidNotificationChannel(): Promise<void> {
     sound: 'default',
   });
 
-  // Create a channel for trip generation updates
   await Notifications.setNotificationChannelAsync('trip-generation', {
     name: 'Trip Generation',
     description: 'Updates about AI trip generation',
@@ -172,37 +175,24 @@ async function setupAndroidNotificationChannel(): Promise<void> {
 // Notification Handlers
 // ============================================
 
-export type NotificationReceivedHandler = (
-  notification: Notifications.Notification
-) => void;
-
-export type NotificationResponseHandler = (
-  response: Notifications.NotificationResponse
-) => void;
-
-/**
- * Subscribe to notifications received while app is in foreground
- */
-export function addNotificationReceivedListener(
+export async function addNotificationReceivedListener(
   handler: NotificationReceivedHandler
-): Notifications.EventSubscription {
+): Promise<EventSubscription> {
+  const Notifications = await getNotifications();
+  if (!Notifications) return { remove: () => {} };
   return Notifications.addNotificationReceivedListener(handler);
 }
 
-/**
- * Subscribe to notification interactions (user taps notification)
- */
-export function addNotificationResponseListener(
+export async function addNotificationResponseListener(
   handler: NotificationResponseHandler
-): Notifications.EventSubscription {
+): Promise<EventSubscription> {
+  const Notifications = await getNotifications();
+  if (!Notifications) return { remove: () => {} };
   return Notifications.addNotificationResponseReceivedListener(handler);
 }
 
-/**
- * Parse notification data from a notification
- */
 export function parseNotificationData(
-  notification: Notifications.Notification
+  notification: any
 ): NotificationData | null {
   try {
     const data = notification.request.content.data as NotificationData;
@@ -212,10 +202,9 @@ export function parseNotificationData(
   }
 }
 
-/**
- * Get the last notification response (for handling app opens from notification)
- */
-export function getLastNotificationResponse(): Notifications.NotificationResponse | null {
+export async function getLastNotificationResponse(): Promise<any | null> {
+  const Notifications = await getNotifications();
+  if (!Notifications) return null;
   return Notifications.getLastNotificationResponse();
 }
 
@@ -223,15 +212,15 @@ export function getLastNotificationResponse(): Notifications.NotificationRespons
 // Local Notifications (for testing/scheduling)
 // ============================================
 
-/**
- * Schedule a local notification
- */
 export async function scheduleLocalNotification(
   title: string,
   body: string,
   data?: NotificationData,
-  trigger?: Notifications.NotificationTriggerInput
+  trigger?: any
 ): Promise<string> {
+  const Notifications = await getNotifications();
+  if (!Notifications) return '';
+
   const notificationId = await Notifications.scheduleNotificationAsync({
     content: {
       title,
@@ -239,26 +228,24 @@ export async function scheduleLocalNotification(
       data: data as Record<string, unknown>,
       sound: true,
     },
-    trigger: trigger || null, // null = immediate
+    trigger: trigger || null,
   });
 
   return notificationId;
 }
 
-/**
- * Schedule a trip reminder notification
- */
 export async function scheduleTripReminder(
   tripId: string,
   tripTitle: string,
   tripDate: Date
 ): Promise<string | null> {
-  // Calculate reminder time (1 day before at 9 AM)
+  const Notifications = await getNotifications();
+  if (!Notifications) return null;
+
   const reminderDate = new Date(tripDate);
   reminderDate.setDate(reminderDate.getDate() - 1);
   reminderDate.setHours(9, 0, 0, 0);
 
-  // Don't schedule if the reminder time has already passed
   if (reminderDate <= new Date()) {
     console.log('Trip reminder time has already passed');
     return null;
@@ -281,26 +268,21 @@ export async function scheduleTripReminder(
   return notificationId;
 }
 
-/**
- * Cancel a scheduled notification
- */
 export async function cancelNotification(notificationId: string): Promise<void> {
+  const Notifications = await getNotifications();
+  if (!Notifications) return;
   await Notifications.cancelScheduledNotificationAsync(notificationId);
 }
 
-/**
- * Cancel all scheduled notifications
- */
 export async function cancelAllNotifications(): Promise<void> {
+  const Notifications = await getNotifications();
+  if (!Notifications) return;
   await Notifications.cancelAllScheduledNotificationsAsync();
 }
 
-/**
- * Get all scheduled notifications
- */
-export async function getScheduledNotifications(): Promise<
-  Notifications.NotificationRequest[]
-> {
+export async function getScheduledNotifications(): Promise<any[]> {
+  const Notifications = await getNotifications();
+  if (!Notifications) return [];
   return Notifications.getAllScheduledNotificationsAsync();
 }
 
@@ -308,17 +290,15 @@ export async function getScheduledNotifications(): Promise<
 // Badge Management
 // ============================================
 
-/**
- * Set app badge count
- */
 export async function setBadgeCount(count: number): Promise<void> {
+  const Notifications = await getNotifications();
+  if (!Notifications) return;
   await Notifications.setBadgeCountAsync(count);
 }
 
-/**
- * Clear app badge
- */
 export async function clearBadge(): Promise<void> {
+  const Notifications = await getNotifications();
+  if (!Notifications) return;
   await Notifications.setBadgeCountAsync(0);
 }
 
@@ -326,10 +306,6 @@ export async function clearBadge(): Promise<void> {
 // Supabase Integration
 // ============================================
 
-/**
- * Store push token in Supabase
- * This should be called after successful authentication
- */
 export async function storePushTokenInSupabase(
   supabaseClient: {
     from: (table: string) => {
@@ -367,9 +343,6 @@ export async function storePushTokenInSupabase(
   }
 }
 
-/**
- * Remove push token from Supabase (call on logout)
- */
 export async function removePushTokenFromSupabase(
   supabaseClient: {
     from: (table: string) => {

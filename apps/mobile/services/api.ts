@@ -82,7 +82,18 @@ export async function getUserProfile(): Promise<ApiResponse<UserProfile>> {
 }
 
 export async function updateUserProfile(
-  updates: Partial<Pick<UserProfile, 'email' | 'subscriptionTier'>>
+  updates: {
+    email?: string;
+    subscription_tier?: string;
+    display_name?: string;
+    avatar_url?: string;
+    preferences?: {
+      vibes?: string[];
+      budget?: string;
+      travelerType?: string;
+    };
+    notification_settings?: Record<string, boolean>;
+  }
 ): Promise<ApiResponse<UserProfile>> {
   return apiFetch<UserProfile>('/api/user/profile', {
     method: 'PATCH',
@@ -138,6 +149,17 @@ export async function deleteTrip(id: string): Promise<ApiResponse<void>> {
   return apiFetch<void>(`/api/trips/${encodeURIComponent(id)}`, {
     method: 'DELETE',
   });
+}
+
+// ============================================
+// Trip Sharing APIs
+// ============================================
+
+export async function shareTrip(id: string): Promise<ApiResponse<{ shareUrl: string; shareToken: string }>> {
+  return apiFetch<{ shareUrl: string; shareToken: string }>(
+    `/api/trips/${encodeURIComponent(id)}/share`,
+    { method: 'POST' }
+  );
 }
 
 // ============================================

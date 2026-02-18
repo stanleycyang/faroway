@@ -38,7 +38,7 @@ export function Header() {
         </div>
         
         <div className="flex items-center gap-4">
-          <Link href="/auth/login" className="text-gray-700 hover:text-[#ec7a1c] transition-colors font-medium hidden md:block">
+          <Link href="/auth/login" className="text-gray-700 hover:text-primary transition-colors font-medium hidden md:block">
             Sign In
           </Link>
           <Button size="md" onClick={() => window.location.href = '/create'}>

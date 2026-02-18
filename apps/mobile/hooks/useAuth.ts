@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Alert, Platform } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { useUserStore } from '../stores/userStore';
+import { setAuthToken, getUserProfile } from '../services/api';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import * as AppleAuthentication from 'expo-apple-authentication';
@@ -27,34 +28,69 @@ export function useAuth() {
   
   const { setUser, logout: clearUserStore } = useUserStore();
 
+  /**
+   * Hydrate user store from profile API, falling back to Supabase auth metadata.
+   */
+  const hydrateUser = async (session: Session) => {
+    const authUser = session.user;
+    // Set auth token for API calls
+    setAuthToken(session.access_token);
+
+    // Start with Supabase metadata as fallback
+    const fallback = {
+      id: authUser.id,
+      name: authUser.user_metadata?.full_name || authUser.email?.split('@')[0] || 'User',
+      email: authUser.email || '',
+      avatar: authUser.user_metadata?.avatar_url,
+      preferences: { vibes: [] as string[] },
+    };
+
+    // Try fetching full profile from API
+    try {
+      const result = await getUserProfile();
+      if (result.data) {
+        const profile = result.data;
+        setUser({
+          id: profile.id,
+          name: profile.name || fallback.name,
+          email: profile.email,
+          avatar: profile.avatar || fallback.avatar,
+          preferences: {
+            vibes: profile.preferences?.vibes || [],
+            budget: profile.preferences?.budget,
+            travelerType: profile.preferences?.travelerType,
+          },
+          notificationSettings: profile.notificationSettings,
+        } as any);
+        return;
+      }
+    } catch (err) {
+      console.warn('Failed to fetch profile from API, using auth metadata:', err);
+    }
+
+    setUser(fallback);
+  };
+
   // Initialize auth state
   useEffect(() => {
     // Get initial session
     const initSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
-        
+
         if (error) {
           console.error('Error getting session:', error);
         }
-        
+
         setAuthState({
           user: session?.user ?? null,
           session,
           loading: false,
           initialized: true,
         });
-        
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
-            email: session.user.email || '',
-            avatar: session.user.user_metadata?.avatar_url,
-            preferences: {
-              vibes: [],
-            },
-          });
+
+        if (session) {
+          await hydrateUser(session);
         }
       } catch (error) {
         console.error('Error initializing session:', error);
@@ -68,7 +104,7 @@ export function useAuth() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
         console.log('Auth state changed:', event);
-        
+
         setAuthState({
           user: session?.user ?? null,
           session,
@@ -76,17 +112,10 @@ export function useAuth() {
           initialized: true,
         });
 
-        if (session?.user) {
-          setUser({
-            id: session.user.id,
-            name: session.user.user_metadata?.full_name || session.user.email?.split('@')[0] || 'User',
-            email: session.user.email || '',
-            avatar: session.user.user_metadata?.avatar_url,
-            preferences: {
-              vibes: [],
-            },
-          });
+        if (session) {
+          await hydrateUser(session);
         } else {
+          setAuthToken(null);
           clearUserStore();
         }
       }

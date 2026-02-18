@@ -24,6 +24,25 @@ import { popularDestinations, travelerTypes } from '@tripgenie/constants';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 
+const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
+
+function getStaticMapUrl(destination: string, country: string): string | null {
+  if (!GOOGLE_API_KEY) return null;
+  const center = encodeURIComponent(`${destination}${country ? `, ${country}` : ''}`);
+  return (
+    `https://maps.googleapis.com/maps/api/staticmap?center=${center}` +
+    `&zoom=11&size=800&scale=2&maptype=roadmap` +
+    `&style=feature:all|element:geometry|color:0x242f3e` +
+    `&style=feature:all|element:labels.text.stroke|color:0x242f3e` +
+    `&style=feature:all|element:labels.text.fill|color:0x746855` +
+    `&style=feature:water|element:geometry|color:0x17263c` +
+    `&style=feature:road|element:geometry|color:0x38414e` +
+    `&style=feature:road|element:geometry.stroke|color:0x212a37` +
+    `&style=feature:poi|element:geometry|color:0x283d6a` +
+    `&key=${GOOGLE_API_KEY}`
+  );
+}
+
 export default function CreateTripScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ destination?: string; country?: string; placeId?: string }>();
@@ -84,6 +103,10 @@ export default function CreateTripScreen() {
     (d) => d.name === draftInput?.destination
   );
 
+  const mapUrl = draftInput?.destination
+    ? getStaticMapUrl(draftInput.destination, draftInput.country || '')
+    : null;
+
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <KeyboardAvoidingView
@@ -117,7 +140,13 @@ export default function CreateTripScreen() {
                 onPress={() => setShowSearch(true)}
                 activeOpacity={0.9}
               >
-                {selectedDestination ? (
+                {mapUrl ? (
+                  <Image
+                    source={{ uri: mapUrl }}
+                    style={styles.selectedDestinationImage}
+                    resizeMode="cover"
+                  />
+                ) : selectedDestination ? (
                   <Image
                     source={{ uri: selectedDestination.image }}
                     style={styles.selectedDestinationImage}
@@ -132,7 +161,16 @@ export default function CreateTripScreen() {
                   colors={['transparent', 'rgba(0,0,0,0.7)']}
                   style={styles.selectedDestinationGradient}
                 />
-                {!selectedDestination && (
+                {mapUrl && (
+                  <View style={styles.mapPinContainer}>
+                    <Ionicons
+                      name="location"
+                      size={28}
+                      color={colors.primary[400]}
+                    />
+                  </View>
+                )}
+                {!mapUrl && !selectedDestination && (
                   <Ionicons
                     name="location"
                     size={40}
@@ -310,7 +348,7 @@ export default function CreateTripScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface[900],
+    backgroundColor: '#ffffff',
   },
   header: {
     flexDirection: 'row',
@@ -319,20 +357,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: '#e2e8f0',
   },
   closeButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
   },
   scrollContent: {
     paddingVertical: 24,
@@ -344,13 +382,14 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
     marginBottom: 16,
   },
   selectedDestination: {
     height: 180,
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
+    backgroundColor: '#f1f5f9',
     ...shadows.md,
   },
   selectedDestinationImage: {
@@ -371,6 +410,13 @@ const styles = StyleSheet.create({
     left: '50%',
     marginTop: -20,
     marginLeft: -20,
+  },
+  mapPinContainer: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    marginTop: -22,
+    marginLeft: -14,
   },
   selectedDestinationContent: {
     position: 'absolute',
@@ -451,17 +497,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     padding: 16,
     borderRadius: borderRadius.lg,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#e2e8f0',
   },
   travelerCounterLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: colors.surface[300],
+    color: '#475569',
   },
   counterControls: {
     flexDirection: 'row',
@@ -472,14 +518,14 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: colors.surface[700],
+    backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   counterValue: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
     minWidth: 30,
     textAlign: 'center',
   },
@@ -491,7 +537,7 @@ const styles = StyleSheet.create({
   travelerTypeButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: borderRadius.full,
@@ -500,13 +546,13 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   travelerTypeButtonSelected: {
-    backgroundColor: 'rgba(99,102,241,0.15)',
+    backgroundColor: '#FFF5F4',
     borderColor: colors.primary[500],
   },
   travelerTypeLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.surface[400],
+    color: '#64748b',
   },
   travelerTypeLabelSelected: {
     color: colors.primary[400],
@@ -516,11 +562,11 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     paddingHorizontal: 24,
     paddingVertical: 16,
     paddingBottom: 40,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
+    borderTopColor: '#e2e8f0',
   },
 });

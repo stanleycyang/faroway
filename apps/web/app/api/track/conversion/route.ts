@@ -48,10 +48,10 @@ function verifyWebhookSignature(
 ): boolean {
   const secret = WEBHOOK_SECRETS[partner];
   
-  // If no secret configured, allow in development
+  // Fail-closed: reject if no secret configured regardless of environment
   if (!secret) {
-    console.warn(`[Conversion Webhook] No secret configured for partner: ${partner}`);
-    return process.env.NODE_ENV === 'development';
+    console.warn(`[Conversion Webhook] No secret configured for partner: ${partner}. Rejecting request.`);
+    return false;
   }
 
   if (!signature) {

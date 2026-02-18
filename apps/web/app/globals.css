@@ -1,101 +1,155 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+@plugin "@tailwindcss/typography";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-  --primary: #ec7a1c;
-  --primary-dark: #dd6012;
-  --primary-light: #fef7ee;
-}
-
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
-html {
-  scroll-behavior: smooth;
-}
-
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+/*
+ * Base styles — MUST be inside @layer base so Tailwind utilities can override them.
+ * In Tailwind v4, unlayered CSS beats ALL layered utilities (including px-*, bg-*, text-*).
+ */
+@layer base {
+  :root {
+    --background: #ffffff;
+    --foreground: #0f172a;
+    --primary: #F97066;
+    --primary-dark: #E04D43;
+    --primary-light: #FA8C84;
+    --accent: #14B8A6;
+    --surface-800: #111827;
+    --surface-700: #1e293b;
+    --surface-600: #475569;
   }
 
-  /* Animation utilities */
-  .animate-fade-in {
-    animation: fadeIn 0.6s ease-out;
-  }
-
-  .animate-slide-up {
-    animation: slideUp 0.8s ease-out;
-  }
-
-  .animate-slide-in-left {
-    animation: slideInLeft 0.8s ease-out;
-  }
-
-  .animate-slide-in-right {
-    animation: slideInRight 0.8s ease-out;
-  }
-
-  /* Smooth scrolling for hash links */
   html {
+    scroll-behavior: smooth;
     scroll-padding-top: 80px;
   }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 }
 
+/* Custom utilities */
+@utility text-balance {
+  text-wrap: balance;
+}
+
+@utility animate-fade-in {
+  animation: fadeIn 0.6s ease-out;
+}
+
+@utility animate-slide-up {
+  animation: slideUp 0.8s ease-out;
+}
+
+@utility animate-slide-in-left {
+  animation: slideInLeft 0.8s ease-out;
+}
+
+@utility animate-slide-in-right {
+  animation: slideInRight 0.8s ease-out;
+}
+
+@utility animate-glow-pulse {
+  animation: glowPulse 3s ease-in-out infinite;
+}
+
+@utility animate-gradient-shift {
+  animation: gradientShift 8s ease infinite;
+  background-size: 200% 200%;
+}
+
+@utility animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+/* Keyframes */
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(30px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes slideInLeft {
-  from {
-    opacity: 0;
-    transform: translateX(-30px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
 }
 
 @keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(30px);
+  from { opacity: 0; transform: translateX(30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+@keyframes glowPulse {
+  0%, 100% { box-shadow: 0 0 20px rgba(249, 112, 102, 0.15), 0 0 40px rgba(249, 112, 102, 0.05); }
+  50% { box-shadow: 0 0 30px rgba(249, 112, 102, 0.25), 0 0 60px rgba(249, 112, 102, 0.1); }
+}
+
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* ===== Glassmorphism & Glow Utilities ===== */
+@layer components {
+  .glass-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
   }
-  to {
-    opacity: 1;
-    transform: translateX(0);
+
+  .glass-card-hover:hover {
+    background: rgba(255, 255, 255, 0.08);
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: 0 0 30px rgba(249, 112, 102, 0.1);
+  }
+
+  .glow-shadow {
+    box-shadow: 0 0 20px rgba(249, 112, 102, 0.15), 0 0 40px rgba(249, 112, 102, 0.05);
+  }
+
+  .glow-shadow-lg {
+    box-shadow: 0 0 40px rgba(249, 112, 102, 0.2), 0 0 80px rgba(249, 112, 102, 0.08);
+  }
+
+  .text-gradient {
+    background: linear-gradient(135deg, #F97066, #F59E0B, #FBBF24);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-gradient-hero {
+    background: linear-gradient(135deg, #FDB4AF, #F97066, #F59E0B);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .bg-gradient-mesh {
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(249, 112, 102, 0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(245, 158, 11, 0.1) 0%, transparent 50%),
+      radial-gradient(ellipse at 60% 80%, rgba(20, 184, 166, 0.08) 0%, transparent 50%);
   }
 }
+

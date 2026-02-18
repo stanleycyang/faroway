@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { VibeSelector } from '../../components/ui';
 import { useUserStore } from '../../stores/userStore';
+import { updateUserProfile } from '../../services/api';
 import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 
@@ -27,8 +28,12 @@ export default function PreferencesScreen() {
   const [selectedBudget, setSelectedBudget] = useState<string>(user?.preferences?.budget || '');
   const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     updatePreferences({ vibes: selectedVibes, budget: selectedBudget });
+    // Persist to backend
+    updateUserProfile({
+      preferences: { vibes: selectedVibes, budget: selectedBudget },
+    });
     hapticFeedback.success();
     setSaved(true);
     setTimeout(() => router.back(), 600);
@@ -42,7 +47,7 @@ export default function PreferencesScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.surface[300]} />
+          <Ionicons name="arrow-back" size={24} color={'#475569'} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Travel Preferences</Text>
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
@@ -118,7 +123,7 @@ export default function PreferencesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface[900],
+    backgroundColor: '#ffffff',
   },
   header: {
     flexDirection: 'row',
@@ -127,20 +132,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: '#e2e8f0',
   },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
   },
   saveButton: {
     paddingHorizontal: 16,
@@ -163,7 +168,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
     marginBottom: 16,
   },
   budgetOptions: {
@@ -172,14 +177,14 @@ const styles = StyleSheet.create({
   budgetOption: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     padding: 16,
     borderRadius: borderRadius.lg,
     borderWidth: 2,
     borderColor: 'transparent',
   },
   budgetOptionSelected: {
-    backgroundColor: 'rgba(99,102,241,0.15)',
+    backgroundColor: '#FFF5F4',
     borderColor: colors.primary[500],
   },
   budgetEmoji: {
@@ -192,14 +197,14 @@ const styles = StyleSheet.create({
   budgetLabel: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
   },
   budgetLabelSelected: {
     color: colors.primary[400],
   },
   budgetDescription: {
     fontSize: 13,
-    color: colors.surface[400],
+    color: '#64748b',
     marginTop: 2,
   },
 });

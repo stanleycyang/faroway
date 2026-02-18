@@ -16,6 +16,8 @@ interface TripHeaderProps {
   status?: 'generating' | 'completed' | 'failed';
   onShare?: () => void;
   onExport?: () => void;
+  backUrl?: string;
+  showActions?: boolean;
 }
 
 export function TripHeader({
@@ -27,6 +29,8 @@ export function TripHeader({
   status = 'completed',
   onShare,
   onExport,
+  backUrl = '/dashboard',
+  showActions = true,
 }: TripHeaderProps) {
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
@@ -59,7 +63,7 @@ export function TripHeader({
       <div className="max-w-4xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
           <Link
-            href="/dashboard"
+            href={backUrl}
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -73,22 +77,26 @@ export function TripHeader({
             <span className="text-lg font-bold text-gray-900 hidden sm:inline">TripGenie</span>
           </Link>
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={onShare}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Share trip"
-            >
-              <Share2 className="w-5 h-5" />
-            </button>
-            <button
-              onClick={onExport}
-              className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
-              title="Export itinerary"
-            >
-              <Download className="w-5 h-5" />
-            </button>
-          </div>
+          {showActions ? (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={onShare}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Share trip"
+              >
+                <Share2 className="w-5 h-5" />
+              </button>
+              <button
+                onClick={onExport}
+                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Export itinerary"
+              >
+                <Download className="w-5 h-5" />
+              </button>
+            </div>
+          ) : (
+            <div />
+          )}
         </div>
       </div>
 

@@ -8,6 +8,8 @@
 export { catalog } from './catalog';
 export { registry } from './registry';
 export { useStreamingItinerary } from '../../hooks/useStreamingItinerary';
+export { useItineraryGeneration } from '../../hooks/useItineraryGeneration';
 
 export type { CatalogComponents } from './catalog';
 export type { StreamingState, UseStreamingItineraryOptions } from '../../hooks/useStreamingItinerary';
+export type { ItineraryGenerationState, UseItineraryGenerationInput } from '../../hooks/useItineraryGeneration';

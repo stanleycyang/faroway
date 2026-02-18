@@ -8,11 +8,14 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import * as WebBrowser from 'expo-web-browser';
 import { useAuthContext } from '../../components/AuthProvider';
 import { useUserStore } from '../../stores/userStore';
 import { useTripStore } from '../../stores/tripStore';
@@ -107,10 +110,10 @@ function GuestProfileCard() {
     <View style={styles.guestCard}>
       <View style={styles.guestAvatarContainer}>
         <LinearGradient
-          colors={[colors.surface[700], colors.surface[800]]}
+          colors={['#f1f5f9', '#e2e8f0']}
           style={styles.guestAvatar}
         >
-          <Ionicons name="person" size={40} color={colors.surface[500]} />
+          <Ionicons name="person" size={40} color={'#94a3b8'} />
         </LinearGradient>
       </View>
 
@@ -180,7 +183,7 @@ export default function ProfileScreen() {
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Profile</Text>
           <TouchableOpacity style={styles.settingsButton}>
-            <Ionicons name="settings-outline" size={24} color={colors.surface[300]} />
+            <Ionicons name="settings-outline" size={24} color={'#475569'} />
           </TouchableOpacity>
         </View>
 
@@ -273,17 +276,22 @@ export default function ProfileScreen() {
           <MenuItem
             icon="help-circle-outline"
             label="Help Center"
-            onPress={() => {}}
+            onPress={() => WebBrowser.openBrowserAsync('https://tripgenie.app/support')}
           />
           <MenuItem
             icon="chatbubble-outline"
             label="Contact Us"
-            onPress={() => {}}
+            onPress={() => Linking.openURL('mailto:support@tripgenie.app')}
           />
           <MenuItem
             icon="star-outline"
             label="Rate the App"
-            onPress={() => {}}
+            onPress={() => {
+              const url = Platform.OS === 'ios'
+                ? 'https://apps.apple.com/app/tripgenie/id0000000000'
+                : 'https://play.google.com/store/apps/details?id=app.tripgenie';
+              Linking.openURL(url);
+            }}
           />
         </View>
 
@@ -292,12 +300,12 @@ export default function ProfileScreen() {
           <MenuItem
             icon="document-text-outline"
             label="Terms of Service"
-            onPress={() => {}}
+            onPress={() => WebBrowser.openBrowserAsync('https://tripgenie.app/terms')}
           />
           <MenuItem
             icon="shield-outline"
             label="Privacy Policy"
-            onPress={() => {}}
+            onPress={() => WebBrowser.openBrowserAsync('https://tripgenie.app/privacy')}
           />
         </View>
 
@@ -323,7 +331,7 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface[900],
+    backgroundColor: '#ffffff',
   },
   scrollContent: {
     paddingBottom: 100,
@@ -339,17 +347,17 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#fff',
+    color: '#0f172a',
   },
   settingsButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#e2e8f0',
   },
 
   // ─── Guest / Logged-Out ──────────
@@ -358,10 +366,10 @@ const styles = StyleSheet.create({
     padding: 28,
     marginHorizontal: 24,
     marginBottom: 24,
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     borderRadius: borderRadius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#e2e8f0',
   },
   guestAvatarContainer: {
     marginBottom: 20,
@@ -376,12 +384,12 @@ const styles = StyleSheet.create({
   guestTitle: {
     fontSize: 22,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
     marginBottom: 8,
   },
   guestSubtitle: {
     fontSize: 14,
-    color: colors.surface[400],
+    color: '#475569',
     textAlign: 'center',
     lineHeight: 20,
     marginBottom: 4,
@@ -395,12 +403,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface[700],
+    backgroundColor: '#f8fafc',
     paddingVertical: 14,
     borderRadius: borderRadius.lg,
     gap: 10,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#e2e8f0',
   },
   appleButton: {
     backgroundColor: '#000',
@@ -409,7 +417,7 @@ const styles = StyleSheet.create({
   socialButtonText: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#fff',
+    color: '#0f172a',
   },
   appleButtonText: {
     color: '#fff',
@@ -430,10 +438,10 @@ const styles = StyleSheet.create({
     paddingVertical: 24,
     marginHorizontal: 24,
     marginBottom: 24,
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     borderRadius: borderRadius.xl,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#e2e8f0',
   },
   avatar: {
     width: 100,
@@ -444,25 +452,25 @@ const styles = StyleSheet.create({
     borderColor: colors.primary[500],
   },
   avatarPlaceholder: {
-    backgroundColor: colors.surface[700],
+    backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   userName: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
     marginBottom: 4,
   },
   userEmail: {
     fontSize: 14,
-    color: colors.surface[400],
+    color: '#475569',
     marginBottom: 24,
   },
   statsContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface[700],
+    backgroundColor: '#f8fafc',
     borderRadius: borderRadius.lg,
     paddingVertical: 16,
     paddingHorizontal: 24,
@@ -475,17 +483,17 @@ const styles = StyleSheet.create({
   statValue: {
     fontSize: 24,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: colors.surface[400],
+    color: '#64748b',
   },
   statDivider: {
     width: 1,
     height: 40,
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: '#e2e8f0',
   },
 
   // ─── Premium Banner ──────────
@@ -532,7 +540,7 @@ const styles = StyleSheet.create({
   menuSectionTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.surface[500],
+    color: '#64748b',
     marginBottom: 12,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
@@ -540,18 +548,18 @@ const styles = StyleSheet.create({
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     padding: 16,
     borderRadius: borderRadius.lg,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.04)',
+    borderColor: '#e2e8f0',
   },
   menuIconContainer: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: 'rgba(99,102,241,0.15)',
+    backgroundColor: '#FFF5F4',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 16,
@@ -565,20 +573,20 @@ const styles = StyleSheet.create({
   menuLabel: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: '#0f172a',
   },
   menuLabelDanger: {
     color: colors.error,
   },
   menuValue: {
     fontSize: 13,
-    color: colors.surface[400],
+    color: '#64748b',
     marginTop: 2,
   },
   versionText: {
     textAlign: 'center',
     fontSize: 12,
-    color: colors.surface[500],
+    color: '#94a3b8',
     marginTop: 16,
   },
 });

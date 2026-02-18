@@ -92,7 +92,7 @@ export function ActivityCardSkeleton() {
 
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: colors.surface[600],
+    backgroundColor: '#e2e8f0',
   },
   destinationCard: {
     width: 240,
@@ -104,11 +104,11 @@ const styles = StyleSheet.create({
   tripCard: {
     flexDirection: 'row',
     padding: 16,
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     borderRadius: borderRadius.lg,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#e2e8f0',
   },
   tripCardContent: {
     flex: 1,

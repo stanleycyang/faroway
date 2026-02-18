@@ -10,6 +10,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useUserStore } from '../../stores/userStore';
+import { updateUserProfile } from '../../services/api';
 import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 
@@ -47,18 +49,28 @@ const notificationSettings: NotificationSetting[] = [
   },
 ];
 
+const defaultSettings: Record<string, boolean> = {
+  trip_reminders: true,
+  deals: true,
+  itinerary_updates: true,
+  app_updates: false,
+};
+
 export default function NotificationsScreen() {
   const router = useRouter();
-  const [settings, setSettings] = useState<Record<string, boolean>>({
-    trip_reminders: true,
-    deals: true,
-    itinerary_updates: true,
-    app_updates: false,
-  });
+  const { user } = useUserStore();
+  const [settings, setSettings] = useState<Record<string, boolean>>(
+    (user as any)?.notificationSettings && Object.keys((user as any).notificationSettings).length > 0
+      ? (user as any).notificationSettings
+      : defaultSettings
+  );
 
   const toggleSetting = (id: string) => {
     hapticFeedback.selection();
-    setSettings((prev) => ({ ...prev, [id]: !prev[id] }));
+    const updated = { ...settings, [id]: !settings[id] };
+    setSettings(updated);
+    // Persist to backend
+    updateUserProfile({ notification_settings: updated });
   };
 
   return (
@@ -69,7 +81,7 @@ export default function NotificationsScreen() {
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color={colors.surface[300]} />
+          <Ionicons name="arrow-back" size={24} color={'#475569'} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
         <View style={{ width: 44 }} />
@@ -120,7 +132,7 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface[900],
+    backgroundColor: '#ffffff',
   },
   header: {
     flexDirection: 'row',
@@ -129,27 +141,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: '#e2e8f0',
   },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
   },
   scrollContent: {
     padding: 24,
   },
   sectionDescription: {
     fontSize: 15,
-    color: colors.surface[400],
+    color: '#475569',
     lineHeight: 22,
     marginBottom: 24,
   },
@@ -159,17 +171,17 @@ const styles = StyleSheet.create({
   settingItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     padding: 16,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#e2e8f0',
   },
   settingIconContainer: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: 'rgba(99,102,241,0.1)',
+    backgroundColor: '#FFF5F4',
     justifyContent: 'center',
     alignItems: 'center',
     marginRight: 14,
@@ -181,12 +193,12 @@ const styles = StyleSheet.create({
   settingTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#fff',
+    color: '#0f172a',
     marginBottom: 2,
   },
   settingDescription: {
     fontSize: 13,
-    color: colors.surface[400],
+    color: '#64748b',
     lineHeight: 18,
   },
 });

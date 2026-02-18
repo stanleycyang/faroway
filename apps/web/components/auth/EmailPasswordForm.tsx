@@ -120,7 +120,7 @@ export function EmailPasswordForm({ mode, redirectTo = '/dashboard' }: EmailPass
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
           required
-          className="w-full px-4 py-3 min-h-[48px] border border-gray-300 rounded-xl text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#ec7a1c] focus:border-transparent transition-all"
+          className="w-full px-4 py-3 min-h-[48px] border border-gray-300 rounded-xl text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
         />
       </div>
 
@@ -138,7 +138,7 @@ export function EmailPasswordForm({ mode, redirectTo = '/dashboard' }: EmailPass
           placeholder="••••••••"
           required
           minLength={8}
-          className="w-full px-4 py-3 min-h-[48px] border border-gray-300 rounded-xl text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#ec7a1c] focus:border-transparent transition-all"
+          className="w-full px-4 py-3 min-h-[48px] border border-gray-300 rounded-xl text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
         />
       </div>
 
@@ -157,7 +157,7 @@ export function EmailPasswordForm({ mode, redirectTo = '/dashboard' }: EmailPass
             placeholder="••••••••"
             required
             minLength={8}
-            className="w-full px-4 py-3 min-h-[48px] border border-gray-300 rounded-xl text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#ec7a1c] focus:border-transparent transition-all"
+            className="w-full px-4 py-3 min-h-[48px] border border-gray-300 rounded-xl text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
           />
         </div>
       )}
@@ -184,7 +184,7 @@ export function EmailPasswordForm({ mode, redirectTo = '/dashboard' }: EmailPass
                 setMessage('Check your email for a password reset link')
               }
             }}
-            className="text-sm text-[#ec7a1c] hover:text-[#dd6012] font-medium transition-colors"
+            className="text-sm text-primary hover:text-primary-dark font-medium transition-colors"
           >
             Forgot password?
           </button>
@@ -195,7 +195,7 @@ export function EmailPasswordForm({ mode, redirectTo = '/dashboard' }: EmailPass
       <button
         type="submit"
         disabled={loading}
-        className="w-full px-4 py-3 min-h-[48px] bg-[#ec7a1c] text-white rounded-xl font-semibold hover:bg-[#dd6012] transition-all duration-200 shadow-lg shadow-orange-200 disabled:opacity-50 disabled:cursor-not-allowed"
+        className="w-full px-4 py-3 min-h-[48px] bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark transition-all duration-200 shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? (
           <span className="flex items-center justify-center gap-2">

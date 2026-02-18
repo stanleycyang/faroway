@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuthContext } from '../../components/AuthProvider';
 import { useUserStore } from '../../stores/userStore';
+import { updateUserProfile } from '../../services/api';
 import { supabase } from '../../lib/supabase';
 import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
@@ -43,6 +44,9 @@ export default function EditProfileScreen() {
         if (error) throw error;
       }
 
+      // Persist display_name to our users table
+      await updateUserProfile({ display_name: name.trim() });
+
       // Update local store
       if (user) {
         setUser({ ...user, name: name.trim() });
@@ -69,7 +73,7 @@ export default function EditProfileScreen() {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={24} color={colors.surface[300]} />
+            <Ionicons name="arrow-back" size={24} color={'#475569'} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Profile</Text>
           <TouchableOpacity
@@ -152,7 +156,7 @@ export default function EditProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface[900],
+    backgroundColor: '#ffffff',
   },
   header: {
     flexDirection: 'row',
@@ -161,20 +165,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.06)',
+    borderBottomColor: '#e2e8f0',
   },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
   },
   saveButton: {
     paddingHorizontal: 16,
@@ -213,13 +217,13 @@ const styles = StyleSheet.create({
   avatarPlaceholder: {
     width: '100%',
     height: '100%',
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarHint: {
     fontSize: 13,
-    color: colors.surface[500],
+    color: '#94a3b8',
   },
   formSection: {
     gap: 24,
@@ -230,18 +234,18 @@ const styles = StyleSheet.create({
   inputLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.surface[300],
+    color: '#475569',
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     borderRadius: borderRadius.lg,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#e2e8f0',
   },
   inputDisabled: {
     opacity: 0.6,
@@ -252,17 +256,17 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: 52,
-    color: '#fff',
+    color: '#0f172a',
     fontSize: 16,
   },
   inputDisabledText: {
     flex: 1,
     paddingVertical: 16,
-    color: colors.surface[400],
+    color: '#94a3b8',
     fontSize: 16,
   },
   inputHint: {
     fontSize: 12,
-    color: colors.surface[600],
+    color: '#94a3b8',
   },
 });

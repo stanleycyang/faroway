@@ -46,8 +46,16 @@ export type UserPublic = Omit<User, 'password_hash'>;
 export interface UserProfile {
   id: string;
   email: string;
+  name?: string;
+  avatar?: string;
   authProvider: string;
   subscriptionTier: 'free' | 'pro' | 'premium';
+  preferences?: {
+    vibes?: string[];
+    budget?: string;
+    travelerType?: string;
+  };
+  notificationSettings?: Record<string, boolean>;
   createdAt: string;
   updatedAt: string;
 }
@@ -85,6 +93,9 @@ export interface Trip {
   vibes?: string[];
   budget?: number | string | null;
   status: TripStatus;
+  share_token?: string | null;
+  is_shared?: boolean;
+  shared_at?: string | null;
   created_at?: string;
   updated_at?: string;
   createdAt?: string;
@@ -476,6 +487,7 @@ export interface SearchStatusResponse {
   status: SearchStatus;
   progress: SearchProgress;
   results?: SearchResults;
+  jsonRenderSpec?: unknown;
   error?: string;
   createdAt: string;
   completedAt?: string;

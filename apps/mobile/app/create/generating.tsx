@@ -8,6 +8,7 @@ import {
   Animated,
   Easing,
   ScrollView,
+  TouchableOpacity,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -15,16 +16,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTripStore, Trip, TripDay, Activity } from '../../stores/tripStore';
 import { popularDestinations } from '@tripgenie/constants';
 import { colors, borderRadius } from '../../constants/theme';
-import {
-  startSearch,
-  pollSearchStatus,
-  calculateProgressPercent,
-  getStatusMessage,
-  SearchResults,
-  SearchProgress,
-} from '../../services/searchService';
-import { useStreamingItinerary } from '../../hooks/useStreamingItinerary';
+import { useItineraryGeneration } from '../../hooks/useItineraryGeneration';
 import { registry } from '../../lib/json-render/registry';
+import type { SearchResults } from '../../services/searchService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -214,113 +208,9 @@ function convertResultsToTrip(
 }
 
 /**
- * Generate mock itinerary as fallback
+ * Render a json-render component array using the mobile component registry
  */
-function generateMockItinerary(input: any): Trip {
-  const startDate = new Date(input.startDate);
-  const endDate = new Date(input.endDate);
-  const dayCount =
-    Math.ceil(
-      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)
-    ) + 1;
-
-  const destinationInfo = popularDestinations.find(
-    (d) => d.name === input.destination
-  );
-
-  const days: TripDay[] = [];
-  for (let i = 0; i < dayCount; i++) {
-    const currentDate = new Date(startDate);
-    currentDate.setDate(currentDate.getDate() + i);
-
-    days.push({
-      date: currentDate.toISOString().split('T')[0],
-      dayNumber: i + 1,
-      theme:
-        i === 0
-          ? 'Arrival & Exploration'
-          : i === dayCount - 1
-            ? 'Departure Day'
-            : `Day ${i + 1} Adventure`,
-      activities: [
-        {
-          id: `${i}-1`,
-          time: '09:00',
-          title: i === 0 ? 'Arrive & Check In' : 'Morning Activity',
-          description: 'Start your day with an authentic local experience',
-          location: input.destination,
-          duration: '2 hours',
-          type: 'activity',
-          price: '$45',
-          rating: 4.8,
-          reviewCount: 1247,
-          image: destinationInfo?.image,
-        },
-        {
-          id: `${i}-2`,
-          time: '12:00',
-          title: 'Local Lunch Experience',
-          description:
-            'Savor the flavors of local cuisine at a highly-rated restaurant',
-          location: input.destination,
-          duration: '1.5 hours',
-          type: 'restaurant',
-          price: '$$',
-          rating: 4.6,
-          reviewCount: 892,
-        },
-        {
-          id: `${i}-3`,
-          time: '14:30',
-          title: 'Afternoon Exploration',
-          description: 'Discover iconic landmarks and hidden gems',
-          location: input.destination,
-          duration: '3 hours',
-          type: 'activity',
-          price: '$30',
-          rating: 4.9,
-          reviewCount: 2341,
-        },
-        {
-          id: `${i}-4`,
-          time: '19:00',
-          title: 'Evening Dining',
-          description: 'End the day with a memorable dinner experience',
-          location: input.destination,
-          duration: '2 hours',
-          type: 'restaurant',
-          price: '$$$',
-          rating: 4.7,
-          reviewCount: 567,
-        },
-      ],
-    });
-  }
-
-  return {
-    id: `trip-${Date.now()}`,
-    destination: input.destination,
-    country: input.country || destinationInfo?.country || '',
-    startDate: input.startDate,
-    endDate: input.endDate,
-    travelers: input.travelers,
-    travelerType: input.travelerType,
-    vibes: input.vibes,
-    budget: input.budget,
-    days,
-    coverImage:
-      destinationInfo?.image ||
-      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80',
-    createdAt: new Date().toISOString(),
-    status: 'planned',
-  };
-}
-
-/**
- * Simple json-render Renderer Component
- * Renders a json-render document using the component registry
- */
-function JsonRenderRenderer({ document }: { document: any }) {
+function JsonRenderRenderer({ spec }: { spec: unknown[] }) {
   const [fadeAnim] = useState(new Animated.Value(0));
 
   useEffect(() => {
@@ -329,27 +219,21 @@ function JsonRenderRenderer({ document }: { document: any }) {
       duration: 300,
       useNativeDriver: true,
     }).start();
-  }, [document]);
-
-  if (!document) return null;
-
-  const renderComponent = (comp: any, index: number) => {
-    if (!comp || !comp.type) return null;
-
-    const Component = registry[comp.type as keyof typeof registry];
-    if (!Component) {
-      console.warn(`[JsonRender] Unknown component type: ${comp.type}`);
-      return null;
-    }
-
-    return <Component key={index} {...(comp.props || {})} />;
-  };
-
-  const components = Array.isArray(document) ? document : [document];
+  }, []);
 
   return (
     <Animated.View style={{ opacity: fadeAnim }}>
-      {components.map((comp, index) => renderComponent(comp, index))}
+      {spec.map((comp: any, index: number) => {
+        if (!comp || !comp.type) return null;
+
+        const Component = registry[comp.type as keyof typeof registry];
+        if (!Component) {
+          console.warn(`[JsonRender] Unknown component type: ${comp.type}`);
+          return null;
+        }
+
+        return <Component key={index} {...(comp.props || {})} />;
+      })}
     </Animated.View>
   );
 }
@@ -358,11 +242,6 @@ export default function GeneratingScreen() {
   const router = useRouter();
   const { draftInput, finishGeneration } = useTripStore();
   const [currentStep, setCurrentStep] = useState(0);
-  const [progress, setProgress] = useState(0);
-  const [statusMessage, setStatusMessage] = useState(GENERATION_STEPS[0].text);
-  const [useBackend, setUseBackend] = useState(true);
-  const [useJsonRender, setUseJsonRender] = useState(true);
-  const searchIdRef = useRef<string | null>(null);
 
   // Animations
   const [rotateAnim] = useState(new Animated.Value(0));
@@ -373,31 +252,23 @@ export default function GeneratingScreen() {
     (d) => d.name === draftInput?.destination
   );
 
-  // Streaming itinerary with json-render
-  const streamingState = useStreamingItinerary({
-    input: useJsonRender && draftInput ? {
-      destination: draftInput.destination!,
-      startDate: draftInput.startDate!,
-      endDate: draftInput.endDate!,
-      travelers: draftInput.travelers || 2,
-      travelerType: draftInput.travelerType as any,
-      vibes: draftInput.vibes || [],
-      budget: draftInput.budget,
-    } : undefined,
-    onComplete: (document) => {
-      console.log('[Generating] json-render streaming complete', document);
-      // We'll still save as Trip for now, but render from json-render
-      // In the future, we can store the json-render document directly
-    },
-    onError: (error) => {
-      console.error('[Generating] json-render streaming error:', error);
-      // Fall back to traditional polling
-      setUseJsonRender(false);
-    },
-  });
+  // Single poll-based generation hook
+  const generation = useItineraryGeneration(
+    draftInput
+      ? {
+          destination: draftInput.destination!,
+          startDate: draftInput.startDate!,
+          endDate: draftInput.endDate!,
+          travelers: draftInput.travelers || 2,
+          travelerType: draftInput.travelerType,
+          vibes: draftInput.vibes || [],
+          budget: draftInput.budget,
+        }
+      : null,
+  );
 
+  // Start looping animations
   useEffect(() => {
-    // Rotate animation
     Animated.loop(
       Animated.timing(rotateAnim, {
         toValue: 1,
@@ -407,7 +278,6 @@ export default function GeneratingScreen() {
       })
     ).start();
 
-    // Pulse animation
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, {
@@ -424,96 +294,18 @@ export default function GeneratingScreen() {
     ).start();
   }, []);
 
+  // Map search progress to current step index
   useEffect(() => {
-    if (!draftInput) return;
+    if (!generation.searchProgress) return;
 
-    const runSearch = async () => {
-      try {
-        // Start the search
-        const { searchId, estimatedTime } = await startSearch({
-          destination: draftInput.destination!,
-          startDate: draftInput.startDate!,
-          endDate: draftInput.endDate!,
-          travelers: draftInput.travelers || 2,
-          travelerType: draftInput.travelerType as any,
-          vibes: draftInput.vibes || [],
-          budget: draftInput.budget as any,
-        });
-
-        searchIdRef.current = searchId;
-        console.log(`[Generating] Search started: ${searchId}, ETA: ${estimatedTime}s`);
-
-        // Poll for results
-        const results = await pollSearchStatus(
-          searchId,
-          (status) => {
-            // Update progress UI based on agent status
-            const progressPercent = calculateProgressPercent(status.progress);
-            setProgress(progressPercent);
-            setStatusMessage(getStatusMessage(status.progress));
-
-            // Update step based on progress
-            const steps = ['orchestrator', 'hotels', 'activities', 'dining', 'aggregator'] as const;
-            for (let i = steps.length - 1; i >= 0; i--) {
-              if (status.progress[steps[i]] === 'searching' || status.progress[steps[i]] === 'done') {
-                if (currentStep !== i) {
-                  setCurrentStep(i);
-                  // Fade animation for step change
-                  Animated.sequence([
-                    Animated.timing(stepOpacity, {
-                      toValue: 0,
-                      duration: 150,
-                      useNativeDriver: true,
-                    }),
-                    Animated.timing(stepOpacity, {
-                      toValue: 1,
-                      duration: 150,
-                      useNativeDriver: true,
-                    }),
-                  ]).start();
-                }
-                break;
-              }
-            }
-          },
-          2000, // Poll every 2 seconds
-          90 // Max 3 minutes
-        );
-
-        // Convert results to trip format
-        const trip = convertResultsToTrip(searchId, results, draftInput);
-        finishGeneration(trip);
-        router.replace(`/trip/${trip.id}`);
-      } catch (error) {
-        console.error('[Generating] Search failed:', error);
-        // Fallback to mock data if backend fails
-        setUseBackend(false);
-        const trip = generateMockItinerary(draftInput);
-        finishGeneration(trip);
-        router.replace(`/trip/${trip.id}`);
-      }
-    };
-
-    if (useBackend) {
-      runSearch();
-    } else {
-      // Fallback: use mock generation with simulated progress
-      const progressInterval = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 100) {
-            clearInterval(progressInterval);
-            return 100;
-          }
-          return prev + 1;
-        });
-      }, 50);
-
-      const stepInterval = setInterval(() => {
-        setCurrentStep((prev) => {
-          if (prev >= GENERATION_STEPS.length - 1) {
-            clearInterval(stepInterval);
-            return prev;
-          }
+    const steps = ['orchestrator', 'hotels', 'activities', 'dining', 'aggregator'] as const;
+    for (let i = steps.length - 1; i >= 0; i--) {
+      if (
+        generation.searchProgress[steps[i]] === 'searching' ||
+        generation.searchProgress[steps[i]] === 'done'
+      ) {
+        if (currentStep !== i) {
+          setCurrentStep(i);
           Animated.sequence([
             Animated.timing(stepOpacity, {
               toValue: 0,
@@ -526,34 +318,24 @@ export default function GeneratingScreen() {
               useNativeDriver: true,
             }),
           ]).start();
-          return prev + 1;
-        });
-      }, 1000);
-
-      const completeTimeout = setTimeout(() => {
-        const trip = generateMockItinerary(draftInput);
-        finishGeneration(trip);
-        router.replace(`/trip/${trip.id}`);
-      }, 5500);
-
-      return () => {
-        clearInterval(progressInterval);
-        clearInterval(stepInterval);
-        clearTimeout(completeTimeout);
-      };
+        }
+        break;
+      }
     }
-  }, [draftInput, useBackend]);
+  }, [generation.searchProgress]);
+
+  // Navigate to trip detail when complete (using traditional results path)
+  const handleViewTrip = () => {
+    if (!generation.results || !generation.searchId || !draftInput) return;
+    const trip = convertResultsToTrip(generation.searchId, generation.results, draftInput);
+    finishGeneration(trip);
+    router.replace(`/trip/${trip.id}`);
+  };
 
   const rotation = rotateAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
   });
-
-  // Combine progress from both streaming and polling
-  const displayProgress = useJsonRender ? streamingState.progress : progress;
-  const displayMessage = useJsonRender && streamingState.isStreaming
-    ? 'Generating your itinerary...'
-    : statusMessage;
 
   return (
     <View style={styles.container}>
@@ -576,95 +358,126 @@ export default function GeneratingScreen() {
         showsVerticalScrollIndicator={false}
       >
         <SafeAreaView style={styles.content}>
-        {/* Destination Info */}
-        <View style={styles.header}>
-          <Text style={styles.destinationLabel}>Creating your trip to</Text>
-          <Text style={styles.destinationName}>{draftInput?.destination}</Text>
-        </View>
-
-        {/* Animated Loader */}
-        <View style={styles.loaderContainer}>
-          <Animated.View
-            style={[styles.outerRing, { transform: [{ rotate: rotation }] }]}
-          >
-            <LinearGradient
-              colors={[
-                colors.primary[400],
-                colors.primary[600],
-                colors.primary[400],
-              ]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={styles.ringGradient}
-            />
-          </Animated.View>
-
-          <Animated.View
-            style={[styles.innerCircle, { transform: [{ scale: pulseAnim }] }]}
-          >
-            <Text style={styles.progressEmoji}>
-              {GENERATION_STEPS[currentStep]?.emoji || '✈️'}
-            </Text>
-          </Animated.View>
-        </View>
-
-        {/* Progress */}
-        <View style={styles.progressContainer}>
-          <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: `${displayProgress}%` }]} />
+          {/* Destination Info */}
+          <View style={styles.header}>
+            <Text style={styles.destinationLabel}>Creating your trip to</Text>
+            <Text style={styles.destinationName}>{draftInput?.destination}</Text>
           </View>
-          <Animated.Text style={[styles.stepText, { opacity: stepOpacity }]}>
-            {displayMessage}
-          </Animated.Text>
-        </View>
 
-        {/* Trip Details */}
-        <View style={styles.detailsContainer}>
-          <View style={styles.detailRow}>
-            <View style={styles.detailItem}>
-              <Text style={styles.detailLabel}>Dates</Text>
-              <Text style={styles.detailValue}>
-                {draftInput?.startDate && draftInput?.endDate
-                  ? `${new Date(draftInput.startDate).toLocaleDateString(
-                      'en-US',
-                      {
-                        month: 'short',
-                        day: 'numeric',
-                      }
-                    )} - ${new Date(draftInput.endDate).toLocaleDateString(
-                      'en-US',
-                      {
-                        month: 'short',
-                        day: 'numeric',
-                      }
-                    )}`
-                  : '-'}
+          {/* Animated Loader (hidden once complete) */}
+          {!generation.isComplete && (
+            <>
+              <View style={styles.loaderContainer}>
+                <Animated.View
+                  style={[styles.outerRing, { transform: [{ rotate: rotation }] }]}
+                >
+                  <LinearGradient
+                    colors={[
+                      colors.primary[400],
+                      colors.primary[600],
+                      colors.primary[400],
+                    ]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.ringGradient}
+                  />
+                </Animated.View>
+
+                <Animated.View
+                  style={[styles.innerCircle, { transform: [{ scale: pulseAnim }] }]}
+                >
+                  <Text style={styles.progressEmoji}>
+                    {GENERATION_STEPS[currentStep]?.emoji || '✈️'}
+                  </Text>
+                </Animated.View>
+              </View>
+
+              {/* Progress */}
+              <View style={styles.progressContainer}>
+                <View style={styles.progressBar}>
+                  <View style={[styles.progressFill, { width: `${generation.progress}%` }]} />
+                </View>
+                <Animated.Text style={[styles.stepText, { opacity: stepOpacity }]}>
+                  {generation.statusMessage}
+                </Animated.Text>
+              </View>
+            </>
+          )}
+
+          {/* Error state */}
+          {generation.error && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>
+                Something went wrong: {generation.error}
               </Text>
-            </View>
-            <View style={styles.detailItem}>
-              <Text style={styles.detailLabel}>Travelers</Text>
-              <Text style={styles.detailValue}>
-                {draftInput?.travelers || 2}
-              </Text>
-            </View>
-          </View>
-          {draftInput?.vibes && draftInput.vibes.length > 0 && (
-            <View style={styles.vibesRow}>
-              <Text style={styles.detailLabel}>Vibes</Text>
-              <Text style={styles.detailValue}>
-                {draftInput.vibes.slice(0, 3).join(' • ')}
-              </Text>
+              <TouchableOpacity
+                style={styles.retryButton}
+                onPress={() => router.back()}
+              >
+                <Text style={styles.retryButtonText}>Go Back</Text>
+              </TouchableOpacity>
             </View>
           )}
-        </View>
 
-        {/* json-render Content - Progressively revealed */}
-        {useJsonRender && streamingState.document && (
-          <View style={styles.jsonRenderContainer}>
-            <JsonRenderRenderer document={streamingState.document} />
+          {/* Trip Details */}
+          <View style={styles.detailsContainer}>
+            <View style={styles.detailRow}>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Dates</Text>
+                <Text style={styles.detailValue}>
+                  {draftInput?.startDate && draftInput?.endDate
+                    ? `${new Date(draftInput.startDate).toLocaleDateString(
+                        'en-US',
+                        { month: 'short', day: 'numeric' }
+                      )} - ${new Date(draftInput.endDate).toLocaleDateString(
+                        'en-US',
+                        { month: 'short', day: 'numeric' }
+                      )}`
+                    : '-'}
+                </Text>
+              </View>
+              <View style={styles.detailItem}>
+                <Text style={styles.detailLabel}>Travelers</Text>
+                <Text style={styles.detailValue}>
+                  {draftInput?.travelers || 2}
+                </Text>
+              </View>
+            </View>
+            {draftInput?.vibes && draftInput.vibes.length > 0 && (
+              <View style={styles.vibesRow}>
+                <Text style={styles.detailLabel}>Vibes</Text>
+                <Text style={styles.detailValue}>
+                  {draftInput.vibes.slice(0, 3).join(' • ')}
+                </Text>
+              </View>
+            )}
           </View>
-        )}
-      </SafeAreaView>
+
+          {/* json-render spec – rendered once complete */}
+          {generation.isComplete && generation.jsonRenderSpec && (
+            <View style={styles.jsonRenderContainer}>
+              <JsonRenderRenderer spec={generation.jsonRenderSpec} />
+            </View>
+          )}
+
+          {/* View Trip button once complete */}
+          {generation.isComplete && generation.results && (
+            <TouchableOpacity
+              style={styles.viewTripButton}
+              onPress={handleViewTrip}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={[colors.primary[500], colors.primary[700]]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.viewTripButtonGradient}
+              >
+                <Text style={styles.viewTripButtonText}>View Trip</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          )}
+        </SafeAreaView>
       </ScrollView>
     </View>
   );
@@ -793,11 +606,47 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   jsonRenderContainer: {
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#f8f9fa',
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     marginTop: 32,
     padding: 20,
     minHeight: 200,
+  },
+  errorContainer: {
+    alignItems: 'center',
+    paddingVertical: 24,
+  },
+  errorText: {
+    color: '#f87171',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  retryButton: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: borderRadius.lg,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  viewTripButton: {
+    marginTop: 24,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+  },
+  viewTripButtonGradient: {
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  viewTripButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
   },
 });

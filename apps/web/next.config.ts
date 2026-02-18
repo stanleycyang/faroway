@@ -24,21 +24,12 @@ const nextConfig: NextConfig = {
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
         ],
       },
-      {
-        // CORS headers for API routes (mobile app cross-origin requests)
-        source: '/api/:path*',
-        headers: [
-          { key: 'Access-Control-Allow-Origin', value: '*' },
-          { key: 'Access-Control-Allow-Methods', value: 'GET, POST, PATCH, DELETE, OPTIONS' },
-          { key: 'Access-Control-Allow-Headers', value: 'Content-Type, Authorization' },
-          { key: 'Access-Control-Max-Age', value: '86400' },
-        ],
-      },
     ];
   },
 };
 
 export default withWorkflow(nextConfig, {
   workflows: {
+    lazyDiscovery: true,
   },
 });

@@ -10,6 +10,7 @@ interface User {
     budget?: string;
     travelerType?: string;
   };
+  notificationSettings?: Record<string, boolean>;
 }
 
 interface UserStore {

@@ -143,7 +143,7 @@ const styles = StyleSheet.create({
   cardContainer: {
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
   },
   cardImage: {
     width: '100%',
@@ -203,12 +203,12 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   tripCard: {
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     borderRadius: borderRadius.xl,
     overflow: 'hidden',
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#e2e8f0',
   },
   tripImage: {
     width: '100%',
@@ -233,11 +233,11 @@ const styles = StyleSheet.create({
   tripDestination: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
   },
   tripCountry: {
     fontSize: 14,
-    color: colors.surface[400],
+    color: colors.surface[500],
     marginTop: 2,
   },
   statusBadge: {
@@ -264,7 +264,7 @@ const styles = StyleSheet.create({
   },
   tripDates: {
     fontSize: 14,
-    color: colors.surface[400],
+    color: colors.surface[500],
   },
   tripDays: {
     fontSize: 14,

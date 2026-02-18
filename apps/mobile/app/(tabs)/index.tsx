@@ -116,7 +116,7 @@ export default function ExploreScreen() {
             <Ionicons
               name="notifications-outline"
               size={24}
-              color={colors.surface[300]}
+              color={'#475569'}
             />
           </TouchableOpacity>
         </Animated.View>
@@ -141,7 +141,7 @@ export default function ExploreScreen() {
         {/* Hero Card - Main CTA */}
         <TouchableOpacity onPress={handleCreateTrip} activeOpacity={0.95}>
           <LinearGradient
-            colors={['#6366f1', '#8b5cf6', '#a855f7']}
+            colors={['#F97066', '#F59E0B', '#FBBF24']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.heroCard}
@@ -166,7 +166,7 @@ export default function ExploreScreen() {
 
               <View style={styles.heroButton}>
                 <Text style={styles.heroButtonText}>Start Planning</Text>
-                <Ionicons name="arrow-forward" size={18} color="#6366f1" />
+                <Ionicons name="arrow-forward" size={18} color="#F97066" />
               </View>
 
               <View style={styles.heroFeatures}>
@@ -290,7 +290,7 @@ export default function ExploreScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface[900],
+    backgroundColor: '#ffffff',
   },
   scrollContent: {
     paddingTop: 8,
@@ -304,23 +304,23 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 14,
-    color: colors.surface[400],
+    color: '#475569',
     marginBottom: 4,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: '800',
-    color: '#fff',
+    color: '#0f172a',
   },
   notificationButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#e2e8f0',
   },
   searchSection: {
     paddingHorizontal: 24,
@@ -404,7 +404,7 @@ const styles = StyleSheet.create({
   heroButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#6366f1',
+    color: '#F97066',
   },
   heroFeatures: {
     flexDirection: 'row',
@@ -433,7 +433,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
     paddingHorizontal: 24,
     marginBottom: 16,
   },
@@ -450,12 +450,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: borderRadius.full,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#e2e8f0',
   },
   inspirationEmoji: {
     fontSize: 20,
@@ -463,7 +463,7 @@ const styles = StyleSheet.create({
   inspirationText: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.surface[300],
+    color: '#475569',
   },
   horizontalScroll: {
     paddingHorizontal: 24,
@@ -480,10 +480,10 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
     marginHorizontal: 24,
     marginBottom: 24,
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#ffffff',
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: '#e2e8f0',
   },
   socialProofAvatars: {
     flexDirection: 'row',
@@ -492,22 +492,22 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: colors.surface[700],
+    backgroundColor: '#f8fafc',
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: colors.surface[800],
+    borderColor: '#ffffff',
   },
   avatarEmoji: {
     fontSize: 16,
   },
   socialProofText: {
     fontSize: 14,
-    color: colors.surface[400],
+    color: '#475569',
   },
   socialProofNumber: {
     fontWeight: '700',
-    color: '#fff',
+    color: '#0f172a',
   },
   trendingGrid: {
     flexDirection: 'row',

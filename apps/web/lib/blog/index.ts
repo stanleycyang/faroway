@@ -1,7 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import matter from 'gray-matter';
-import { BlogPost, BlogPostMeta, AUTHORS } from './types';
+import { BlogPost, BlogPostMeta, AUTHORS, PaginatedResult } from './types';
 
 const CONTENT_DIR = path.join(process.cwd(), 'content/blog');
 
@@ -89,5 +89,24 @@ export function getFeaturedPost(): BlogPostMeta | undefined {
   return getAllPostMetas().find((p) => p.featured) || getAllPostMetas()[0];
 }
 
-export { type BlogPost, type BlogPostMeta, type Author } from './types';
+export const POSTS_PER_PAGE = 9;
+
+export function paginate<T>(items: T[], page: number, pageSize: number = POSTS_PER_PAGE): PaginatedResult<T> {
+  const totalItems = items.length;
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+  const safePage = Math.max(1, Math.min(page, totalPages));
+  const start = (safePage - 1) * pageSize;
+
+  return {
+    items: items.slice(start, start + pageSize),
+    page: safePage,
+    pageSize,
+    totalItems,
+    totalPages,
+    hasNext: safePage < totalPages,
+    hasPrev: safePage > 1,
+  };
+}
+
+export { type BlogPost, type BlogPostMeta, type Author, type PaginatedResult } from './types';
 export { AUTHORS, CATEGORIES } from './types';
