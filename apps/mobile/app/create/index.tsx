@@ -64,6 +64,7 @@ export default function CreateTripScreen() {
 
   const handleSelectDestination = (name: string, country: string, placeId?: string) => {
     hapticFeedback.selection();
+    setMapLoadFailed(false);
     setDraftInput({ destination: name, country, placeId });
     setShowSearch(false);
   };
@@ -142,11 +143,12 @@ export default function CreateTripScreen() {
                 onPress={() => setShowSearch(true)}
                 activeOpacity={0.9}
               >
-                {mapUrl ? (
+                {mapUrl && !mapLoadFailed ? (
                   <Image
                     source={{ uri: mapUrl }}
                     style={styles.selectedDestinationImage}
                     resizeMode="cover"
+                    onError={() => setMapLoadFailed(true)}
                   />
                 ) : selectedDestination ? (
                   <Image
@@ -163,16 +165,7 @@ export default function CreateTripScreen() {
                   colors={['transparent', 'rgba(0,0,0,0.7)']}
                   style={styles.selectedDestinationGradient}
                 />
-                {mapUrl && (
-                  <View style={styles.mapPinContainer}>
-                    <Ionicons
-                      name="location"
-                      size={28}
-                      color={colors.primary[400]}
-                    />
-                  </View>
-                )}
-                {!mapUrl && !selectedDestination && (
+                {(!mapUrl || mapLoadFailed) && !selectedDestination && (
                   <Ionicons
                     name="location"
                     size={40}
@@ -412,13 +405,6 @@ const styles = StyleSheet.create({
     left: '50%',
     marginTop: -20,
     marginLeft: -20,
-  },
-  mapPinContainer: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    marginTop: -22,
-    marginLeft: -14,
   },
   selectedDestinationContent: {
     position: 'absolute',
