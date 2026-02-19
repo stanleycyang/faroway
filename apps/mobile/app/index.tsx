@@ -108,7 +108,14 @@ export default function WelcomeScreen() {
               },
             ]}
           >
-            <Text style={styles.logoIcon}>🧞</Text>
+            <LinearGradient
+              colors={[colors.primary[500], '#f59e0b']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.logoGradient}
+            >
+              <Text style={styles.logoIcon}>✦</Text>
+            </LinearGradient>
           </Animated.View>
 
           <Animated.Text
@@ -177,16 +184,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   logoContainer: {
+    marginBottom: 24,
+  },
+  logoGradient: {
     width: 100,
     height: 100,
     borderRadius: 30,
-    backgroundColor: 'rgba(255,255,255,0.15)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 24,
   },
   logoIcon: {
     fontSize: 48,
+    color: '#fff',
+    fontWeight: '700',
   },
   title: {
     fontSize: 44,

@@ -1,6 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
+import { Logo } from './Logo';
 
 export function Footer() {
   const currentYear = new Date().getFullYear();
@@ -11,18 +11,7 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           {/* Brand */}
           <div className="col-span-1 md:col-span-2">
-            <Link href="/" className="flex items-center gap-3 mb-4 hover:opacity-80 transition-opacity">
-              <div className="relative w-10 h-10">
-                <Image
-                  src="/icon.png"
-                  alt="TripGenie Logo"
-                  width={40}
-                  height={40}
-                  className="rounded-xl"
-                />
-              </div>
-              <span className="text-2xl font-bold text-white">TripGenie</span>
-            </Link>
+            <Logo size="md" variant="light" className="mb-4" />
             <p className="text-gray-400 max-w-md mb-6">
               Your AI-powered travel genie. Plan your dream trip with AI, book everything in one place, and save your favorite itineraries.
             </p>

@@ -32,6 +32,7 @@ function getStaticMapUrl(destination: string, country: string): string | null {
   return (
     `https://maps.googleapis.com/maps/api/staticmap?center=${center}` +
     `&zoom=11&size=800&scale=2&maptype=roadmap` +
+    `&markers=color:0x6366f1|${center}` +
     `&style=feature:all|element:geometry|color:0x242f3e` +
     `&style=feature:all|element:labels.text.stroke|color:0x242f3e` +
     `&style=feature:all|element:labels.text.fill|color:0x746855` +
@@ -49,6 +50,7 @@ export default function CreateTripScreen() {
   const { draftInput, setDraftInput } = useTripStore();
 
   const [showSearch, setShowSearch] = useState(!params.destination);
+  const [mapLoadFailed, setMapLoadFailed] = useState(false);
 
   useEffect(() => {
     if (params.destination) {
