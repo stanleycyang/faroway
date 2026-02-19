@@ -6,3 +6,5 @@
 export { popularDestinations, travelVibes, travelerTypes } from './destinations';
 export type { Destination, TravelVibe, TravelerTypeOption } from './destinations';
 export { VIBE_KEYWORDS, BUDGET_RANGES } from './search';
+export { INSPIRATION_CATEGORIES, getInspirationBySlug } from './inspirations';
+export type { InspirationCategory } from './inspirations';

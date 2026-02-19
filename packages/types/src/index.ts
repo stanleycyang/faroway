@@ -516,6 +516,38 @@ export interface TrackClickResponse {
 }
 
 // =============================================================================
+// Destination Types
+// =============================================================================
+
+export interface DestinationInfo {
+  id: string;
+  slug: string;
+  name: string;
+  country: string;
+  description: string;
+  image: string;
+  tags: string[];
+  seasons: {
+    peak: number[];
+    good: number[];
+    off: number[];
+  };
+  currency: string;
+  language: string;
+  bestTime: string;
+  score: number;
+  tripCount?: number;
+  searchCount?: number;
+}
+
+export interface DestinationsResponse {
+  destinations: DestinationInfo[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+// =============================================================================
 // Legacy Activity type (from Express backend, used in itinerary CRUD)
 // =============================================================================
 

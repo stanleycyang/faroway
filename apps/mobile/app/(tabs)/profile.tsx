@@ -223,29 +223,6 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {/* Premium Banner */}
-        <TouchableOpacity activeOpacity={0.9}>
-          <LinearGradient
-            colors={['#1a1a2e', '#16213e']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.premiumBanner}
-          >
-            <View style={styles.premiumContent}>
-              <View style={styles.premiumIcon}>
-                <Ionicons name="diamond" size={24} color="#ffd700" />
-              </View>
-              <View style={styles.premiumText}>
-                <Text style={styles.premiumTitle}>Upgrade to Pro</Text>
-                <Text style={styles.premiumSubtitle}>
-                  Unlock unlimited AI itineraries
-                </Text>
-              </View>
-              <Ionicons name="arrow-forward" size={20} color="#fff" />
-            </View>
-          </LinearGradient>
-        </TouchableOpacity>
-
         {/* Account Menu (only when logged in) */}
         {isAuthenticated && (
           <View style={styles.menuSection}>
@@ -276,7 +253,7 @@ export default function ProfileScreen() {
           <MenuItem
             icon="help-circle-outline"
             label="Help Center"
-            onPress={() => WebBrowser.openBrowserAsync('https://tripgenie.app/support')}
+            onPress={() => WebBrowser.openBrowserAsync('https://tripgenie.ai/support')}
           />
           <MenuItem
             icon="chatbubble-outline"
@@ -300,12 +277,12 @@ export default function ProfileScreen() {
           <MenuItem
             icon="document-text-outline"
             label="Terms of Service"
-            onPress={() => WebBrowser.openBrowserAsync('https://tripgenie.app/terms')}
+            onPress={() => WebBrowser.openBrowserAsync('https://tripgenie.ai/terms')}
           />
           <MenuItem
             icon="shield-outline"
             label="Privacy Policy"
-            onPress={() => WebBrowser.openBrowserAsync('https://tripgenie.app/privacy')}
+            onPress={() => WebBrowser.openBrowserAsync('https://tripgenie.ai/privacy')}
           />
         </View>
 
@@ -494,42 +471,6 @@ const styles = StyleSheet.create({
     width: 1,
     height: 40,
     backgroundColor: '#e2e8f0',
-  },
-
-  // ─── Premium Banner ──────────
-  premiumBanner: {
-    marginHorizontal: 24,
-    marginBottom: 32,
-    borderRadius: borderRadius.xl,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,215,0,0.15)',
-  },
-  premiumContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  premiumIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255,215,0,0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 16,
-  },
-  premiumText: {
-    flex: 1,
-  },
-  premiumTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
-    marginBottom: 2,
-  },
-  premiumSubtitle: {
-    fontSize: 14,
-    color: 'rgba(255,255,255,0.7)',
   },
 
   // ─── Menu ──────────

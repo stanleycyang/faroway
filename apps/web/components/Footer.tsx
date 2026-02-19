@@ -70,7 +70,7 @@ export function Footer() {
               </li>
               <li>
                 <Link href="/support" className="hover:text-primary transition-colors">
-                  Contact & Support
+                  Help Center
                 </Link>
               </li>
               <li>

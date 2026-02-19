@@ -2,6 +2,7 @@
   "name": "@tripgenie/web",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "TripGenie web app and API backend",
   "scripts": {
     "dev": "next dev",

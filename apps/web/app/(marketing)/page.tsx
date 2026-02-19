@@ -640,7 +640,7 @@ export default function LandingPage() {
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
             {destinations.map((dest, i) => (
               <FadeInOnScroll key={dest.name} delay={i * 100}>
-                <Link href={`/create?destination=${encodeURIComponent(dest.name)}`} className="group cursor-pointer block">
+                <Link href={`/destinations/${dest.name.toLowerCase().replace(/ /g, '-')}`} className="group cursor-pointer block">
                   <div className="relative aspect-[4/5] rounded-2xl overflow-hidden border border-white/[0.06] hover:border-primary/30 transition-all duration-500">
                     <Image
                       src={dest.image}
@@ -659,7 +659,7 @@ export default function LandingPage() {
                       <h3 className="text-2xl font-bold text-white mb-0.5">{dest.name}</h3>
                       <p className="text-white/60 text-sm mb-3">{dest.country}</p>
                       <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 translate-y-2 group-hover:translate-y-0">
-                        <span className="text-primary-300 text-sm font-medium">Plan this trip</span>
+                        <span className="text-primary-300 text-sm font-medium">Explore guide</span>
                         <span className="text-primary-300">→</span>
                       </div>
                     </div>
@@ -667,6 +667,13 @@ export default function LandingPage() {
                 </Link>
               </FadeInOnScroll>
             ))}
+          </div>
+
+          <div className="text-center mt-10">
+            <Link href="/destinations" className="inline-flex items-center gap-2 text-primary font-semibold hover:text-primary-700 transition-colors">
+              View All Destination Guides
+              <span>→</span>
+            </Link>
           </div>
         </div>
       </section>

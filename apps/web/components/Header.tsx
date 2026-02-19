@@ -8,7 +8,7 @@ import { Logo } from './Logo';
 const NAV_ITEMS = [
   { label: 'Features', href: '/#features' },
   { label: 'How It Works', href: '/#how-it-works' },
-  { label: 'Destinations', href: '/#destinations' },
+  { label: 'Destinations', href: '/destinations' },
   { label: 'About', href: '/about' },
   { label: 'Blog', href: '/blog' },
 ];

@@ -4,10 +4,10 @@
  */
 
 import { API_BASE_URL, API_TIMEOUT } from '../constants/api';
-import type { ApiResponse, Trip, UserProfile, TrackClickParams, TrackClickResponse } from '@tripgenie/types';
+import type { ApiResponse, Trip, UserProfile, TrackClickParams, TrackClickResponse, DestinationsResponse } from '@tripgenie/types';
 
 // Re-export types for backward compatibility
-export type { ApiResponse, Trip, UserProfile, TrackClickParams, TrackClickResponse } from '@tripgenie/types';
+export type { ApiResponse, Trip, UserProfile, TrackClickParams, TrackClickResponse, DestinationsResponse } from '@tripgenie/types';
 
 // Auth token managed via Supabase SecureStore - this is an in-memory cache only.
 // Do NOT persist this token to AsyncStorage or other insecure storage.
@@ -160,6 +160,31 @@ export async function shareTrip(id: string): Promise<ApiResponse<{ shareUrl: str
     `/api/trips/${encodeURIComponent(id)}/share`,
     { method: 'POST' }
   );
+}
+
+// ============================================
+// Destinations APIs
+// ============================================
+
+export async function getPopularDestinations(
+  params: { limit?: number; offset?: number; tags?: string } = {}
+): Promise<ApiResponse<DestinationsResponse>> {
+  const query = new URLSearchParams();
+  if (params.limit) query.set('limit', String(params.limit));
+  if (params.offset) query.set('offset', String(params.offset));
+  if (params.tags) query.set('tags', params.tags);
+  const qs = query.toString();
+  return apiFetch<DestinationsResponse>(`/api/destinations/popular${qs ? `?${qs}` : ''}`);
+}
+
+export async function getTrendingDestinations(
+  params: { limit?: number; offset?: number } = {}
+): Promise<ApiResponse<DestinationsResponse>> {
+  const query = new URLSearchParams();
+  if (params.limit) query.set('limit', String(params.limit));
+  if (params.offset) query.set('offset', String(params.offset));
+  const qs = query.toString();
+  return apiFetch<DestinationsResponse>(`/api/destinations/trending${qs ? `?${qs}` : ''}`);
 }
 
 // ============================================

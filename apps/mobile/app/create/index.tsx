@@ -31,7 +31,7 @@ function getStaticMapUrl(destination: string, country: string): string | null {
   const center = encodeURIComponent(`${destination}${country ? `, ${country}` : ''}`);
   return (
     `https://maps.googleapis.com/maps/api/staticmap?center=${center}` +
-    `&zoom=11&size=800&scale=2&maptype=roadmap` +
+    `&zoom=11&size=600x300&scale=2&maptype=roadmap` +
     `&markers=color:0x6366f1|${center}` +
     `&style=feature:all|element:geometry|color:0x242f3e` +
     `&style=feature:all|element:labels.text.stroke|color:0x242f3e` +
@@ -46,7 +46,16 @@ function getStaticMapUrl(destination: string, country: string): string | null {
 
 export default function CreateTripScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ destination?: string; country?: string; placeId?: string }>();
+  const params = useLocalSearchParams<{
+    destination?: string;
+    country?: string;
+    placeId?: string;
+    vibes?: string;
+    startDate?: string;
+    endDate?: string;
+    travelerType?: string;
+    travelers?: string;
+  }>();
   const { draftInput, setDraftInput } = useTripStore();
 
   const [showSearch, setShowSearch] = useState(!params.destination);
@@ -54,13 +63,32 @@ export default function CreateTripScreen() {
 
   useEffect(() => {
     if (params.destination) {
-      setDraftInput({
+      const updates: Record<string, any> = {
         destination: params.destination,
         country: params.country,
         placeId: params.placeId,
-      });
+      };
+      if (params.vibes) {
+        updates.vibes = params.vibes.split(',');
+      }
+      if (params.startDate) {
+        updates.startDate = params.startDate;
+      }
+      if (params.endDate) {
+        updates.endDate = params.endDate;
+      }
+      if (params.travelerType) {
+        updates.travelerType = params.travelerType;
+      }
+      if (params.travelers) {
+        const count = parseInt(params.travelers, 10);
+        if (!isNaN(count)) {
+          updates.travelers = count;
+        }
+      }
+      setDraftInput(updates);
     }
-  }, [params.destination, params.country, params.placeId]);
+  }, [params.destination, params.country, params.placeId, params.vibes, params.startDate, params.endDate, params.travelerType, params.travelers]);
 
   const handleSelectDestination = (name: string, country: string, placeId?: string) => {
     hapticFeedback.selection();

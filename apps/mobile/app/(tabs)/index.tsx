@@ -15,6 +15,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { PlacesAutocomplete, DestinationCard, Button } from '../../components/ui';
 import { popularDestinations } from '@tripgenie/constants';
+import { getPopularDestinations, getTrendingDestinations } from '../../services/api';
+import type { DestinationInfo } from '@tripgenie/types';
 import { useAuthContext } from '../../components/AuthProvider';
 import { useTripStore } from '../../stores/tripStore';
 import { colors, borderRadius, shadows } from '../../constants/theme';
@@ -23,12 +25,12 @@ import { hapticFeedback } from '../../utils/haptics';
 const { width } = Dimensions.get('window');
 
 const INSPIRATIONS = [
-  { emoji: '🏖️', text: 'Beach getaway' },
-  { emoji: '🏔️', text: 'Mountain escape' },
-  { emoji: '🍜', text: 'Foodie adventure' },
-  { emoji: '🎨', text: 'Art & culture' },
-  { emoji: '🎉', text: 'Party weekend' },
-  { emoji: '💑', text: 'Romantic trip' },
+  { emoji: '🏖️', text: 'Beach getaway', slug: 'beach-getaway' },
+  { emoji: '🏔️', text: 'Mountain escape', slug: 'mountain-escape' },
+  { emoji: '🍜', text: 'Foodie adventure', slug: 'foodie-adventure' },
+  { emoji: '🎨', text: 'Art & culture', slug: 'art-and-culture' },
+  { emoji: '🎉', text: 'Party weekend', slug: 'party-weekend' },
+  { emoji: '💑', text: 'Romantic trip', slug: 'romantic-trip' },
 ];
 
 export default function ExploreScreen() {
@@ -36,7 +38,9 @@ export default function ExploreScreen() {
   const { isAuthenticated } = useAuthContext();
   const { trips } = useTripStore();
   const [greeting, setGreeting] = useState('');
-  
+  const [apiPopular, setApiPopular] = useState<DestinationInfo[] | null>(null);
+  const [apiTrending, setApiTrending] = useState<DestinationInfo[] | null>(null);
+
   // Animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(20)).current;
@@ -64,15 +68,22 @@ export default function ExploreScreen() {
     ]).start();
   }, []);
 
-  const handleDestinationPress = (destinationId: string) => {
+  // Fetch destinations from API (swap in when ready, hardcoded shows immediately)
+  useEffect(() => {
+    getPopularDestinations({ limit: 5 }).then((res) => {
+      if (res.data?.destinations?.length) setApiPopular(res.data.destinations);
+    });
+    getTrendingDestinations({ limit: 4 }).then((res) => {
+      if (res.data?.destinations?.length) setApiTrending(res.data.destinations);
+    });
+  }, []);
+
+  const handleDestinationPress = (name: string, country: string) => {
     hapticFeedback.light();
-    const destination = popularDestinations.find((d) => d.id === destinationId);
-    if (destination) {
-      router.push({
-        pathname: '/create',
-        params: { destination: destination.name, country: destination.country },
-      });
-    }
+    router.push({
+      pathname: '/create',
+      params: { destination: name, country },
+    });
   };
 
   const handleCreateTrip = () => {
@@ -80,10 +91,9 @@ export default function ExploreScreen() {
     router.push('/create');
   };
 
-  const handleInspirationPress = (text: string) => {
+  const handleInspirationPress = (slug: string) => {
     hapticFeedback.light();
-    // Could pre-fill vibes based on inspiration
-    router.push('/create');
+    router.push(`/inspiration/${slug}`);
   };
 
   const hasTrips = trips.length > 0;
@@ -195,7 +205,7 @@ export default function ExploreScreen() {
               <TouchableOpacity
                 key={index}
                 style={styles.inspirationChip}
-                onPress={() => handleInspirationPress(item.text)}
+                onPress={() => handleInspirationPress(item.slug)}
                 activeOpacity={0.7}
               >
                 <Text style={styles.inspirationEmoji}>{item.emoji}</Text>
@@ -220,7 +230,7 @@ export default function ExploreScreen() {
             decelerationRate="fast"
             snapToInterval={width * 0.7 + 16}
           >
-            {popularDestinations.slice(0, 5).map((destination) => (
+            {(apiPopular ?? popularDestinations.slice(0, 5)).map((destination) => (
               <View key={destination.id} style={styles.destinationCard}>
                 <DestinationCard
                   name={destination.name}
@@ -228,7 +238,7 @@ export default function ExploreScreen() {
                   image={destination.image}
                   description={destination.description}
                   tags={destination.tags}
-                  onPress={() => handleDestinationPress(destination.id)}
+                  onPress={() => handleDestinationPress(destination.name, destination.country)}
                 />
               </View>
             ))}
@@ -256,11 +266,11 @@ export default function ExploreScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Trending This Season</Text>
           <View style={styles.trendingGrid}>
-            {popularDestinations.slice(5, 9).map((destination) => (
+            {(apiTrending ?? popularDestinations.slice(5, 9)).map((destination) => (
               <TouchableOpacity
                 key={destination.id}
                 style={styles.trendingCard}
-                onPress={() => handleDestinationPress(destination.id)}
+                onPress={() => handleDestinationPress(destination.name, destination.country)}
                 activeOpacity={0.9}
               >
                 <Image
