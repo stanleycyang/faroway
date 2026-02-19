@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Mail, Check } from 'lucide-react'
+import { Logo } from '@/components/Logo'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('')
@@ -83,10 +84,9 @@ export default function ForgotPasswordPage() {
 
         {/* Logo */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2">
-            <span className="text-3xl">✈️</span>
-            <span className="text-2xl font-bold text-gray-900">TripGenie</span>
-          </Link>
+          <div className="flex justify-center mb-4">
+            <Logo size="lg" variant="dark" />
+          </div>
           <h1 className="mt-6 text-2xl font-semibold text-gray-900">
             Reset your password
           </h1>

@@ -6,6 +6,7 @@ import { Suspense } from 'react'
 import { EmailPasswordForm } from '@/components/auth/EmailPasswordForm'
 import { GoogleButton } from '@/components/auth/GoogleButton'
 import { AppleButton } from '@/components/auth/AppleButton'
+import { Logo } from '@/components/Logo'
 
 function SignupContent() {
   const searchParams = useSearchParams()
@@ -17,10 +18,9 @@ function SignupContent() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <Link href="/" className="inline-flex items-center gap-2">
-            <span className="text-3xl">✈️</span>
-            <span className="text-2xl font-bold text-gray-900">TripGenie</span>
-          </Link>
+          <div className="flex justify-center mb-4">
+            <Logo size="lg" variant="dark" />
+          </div>
           <h1 className="mt-6 text-2xl font-semibold text-gray-900">
             Create your account
           </h1>
