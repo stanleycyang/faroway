@@ -69,3 +69,27 @@ export function createServiceClient(): SupabaseClient {
 
   return createSupabaseClient(url, key);
 }
+
+/**
+ * Create a Supabase client from an incoming request.
+ * Supports Bearer token auth (mobile) and falls back to cookie auth (web).
+ */
+export async function createClientFromRequest(request: { headers: { get(name: string): string | null } }) {
+  const authHeader = request.headers.get('Authorization');
+
+  // If Bearer token is present (mobile app), create client with that token
+  if (authHeader?.startsWith('Bearer ')) {
+    const token = authHeader.substring(7);
+    return createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        auth: { persistSession: false, autoRefreshToken: false },
+        global: { headers: { Authorization: `Bearer ${token}` } },
+      }
+    );
+  }
+
+  // Otherwise fall back to cookie-based auth (web browser)
+  return createClient();
+}

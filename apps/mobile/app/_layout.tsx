@@ -29,6 +29,7 @@ function RootLayoutNav() {
     const inIndex = (segments as string[]).length === 0 || segments[0] === undefined;
     const inCreate = segments[0] === 'create';
     const inTrip = segments[0] === 'trip';
+    const inInspiration = segments[0] === 'inspiration';
     const inTabs = segments[0] === '(tabs)';
     
     // Protected routes that require authentication
@@ -44,7 +45,7 @@ function RootLayoutNav() {
     // - Create trip flow
     // - View trips
     // - Main tabs (except profile)
-    if (inOnboarding || inCreate || inTrip) return;
+    if (inOnboarding || inCreate || inTrip || inInspiration) return;
     
     // Allow tabs except protected ones
     if (inTabs && !isProtectedTab) return;
@@ -110,6 +111,13 @@ function RootLayoutNav() {
           options={{
             animation: 'slide_from_right',
             animationDuration: 300,
+          }}
+        />
+        <Stack.Screen
+          name="inspiration/[slug]"
+          options={{
+            animation: 'slide_from_bottom',
+            animationDuration: 350,
           }}
         />
         <Stack.Screen
