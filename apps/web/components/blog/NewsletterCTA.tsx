@@ -29,11 +29,12 @@ export function NewsletterCTA() {
   return (
     <section className="my-16 rounded-2xl glass-card p-8 md:p-12">
       <div className="max-w-2xl mx-auto text-center">
+        <div className="h-1 w-16 bg-gradient-to-r from-primary to-amber-500 rounded-full mx-auto mb-6" />
         <h2 className="text-2xl md:text-3xl font-bold text-slate-900 mb-3">
           Get Travel Tips Delivered Weekly
         </h2>
         <p className="text-slate-600 mb-6">
-          Join 25,000+ travelers who get our best tips, destination guides, and exclusive deals straight to their inbox.
+          Get our best travel tips, destination guides, and exclusive deals delivered straight to your inbox every week.
         </p>
         {status === 'success' ? (
           <p className="text-primary font-semibold text-lg">You&apos;re in! Check your inbox for a welcome email.</p>

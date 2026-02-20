@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
   try {
     const { data: profile, error } = await getSupabase()
       .from('users')
-      .select('*')
+      .select('id, email, display_name, avatar_url, auth_provider, subscription_tier, preferences, notification_settings, created_at, updated_at')
       .eq('id', user!.id)
       .single();
 

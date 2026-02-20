@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTripStore, Trip, TripDay, Activity } from '../../stores/tripStore';
-import { popularDestinations } from '@tripgenie/constants';
+import { popularDestinations, IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
 import { colors, borderRadius } from '../../constants/theme';
 import { useItineraryGeneration } from '../../hooks/useItineraryGeneration';
 import { registry } from '../../lib/json-render/registry';
@@ -201,7 +201,7 @@ function convertResultsToTrip(
     coverImage:
       destinationInfo?.image ||
       topHotel?.images[0] ||
-      'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80',
+      getImageUrl(IMAGE_PATHS.inspirations['beach-getaway']),
     createdAt: new Date().toISOString(),
     status: 'planned',
   };

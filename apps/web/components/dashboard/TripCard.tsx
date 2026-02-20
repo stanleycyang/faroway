@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
+import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants'
 
 export type TripStatus = 'draft' | 'generating' | 'complete'
 
@@ -91,10 +92,10 @@ export function TripCard({ trip }: TripCardProps) {
   
   // Default placeholder images based on destination
   const placeholderImages = [
-    'https://images.unsplash.com/photo-1499856871958-5b9627545d1a?w=400&h=300&fit=crop', // Paris
-    'https://images.unsplash.com/photo-1513407030348-c983a97b98d8?w=400&h=300&fit=crop', // Tokyo
-    'https://images.unsplash.com/photo-1534430480872-3498386e7856?w=400&h=300&fit=crop', // NYC
-    'https://images.unsplash.com/photo-1516483638261-f4dbaf036963?w=400&h=300&fit=crop', // Italy
+    getImageUrl(IMAGE_PATHS.placeholders.paris),
+    getImageUrl(IMAGE_PATHS.placeholders.tokyo),
+    getImageUrl(IMAGE_PATHS.placeholders.nyc),
+    getImageUrl(IMAGE_PATHS.placeholders.italy),
   ]
   
   const imageIndex = trip.destination.length % placeholderImages.length

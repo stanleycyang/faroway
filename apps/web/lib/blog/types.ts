@@ -11,6 +11,7 @@ export interface BlogPost {
   coverImageAlt?: string;
   readingTime: number;
   featured?: boolean;
+  cluster?: string;
   content: string;
 }
 
@@ -34,6 +35,7 @@ export interface BlogPostMeta {
   coverImageAlt?: string;
   readingTime: number;
   featured?: boolean;
+  cluster?: string;
 }
 
 export const AUTHORS: Record<string, Author> = {
@@ -42,18 +44,6 @@ export const AUTHORS: Record<string, Author> = {
     avatar: '/icon.png',
     bio: 'The TripGenie team is passionate about making travel planning effortless with AI. We combine travel expertise with cutting-edge technology to help you explore the world.',
     twitter: '@tripgenie',
-  },
-  'sarah-chen': {
-    name: 'Sarah Chen',
-    avatar: '/icon.png',
-    bio: 'Sarah is a seasoned travel writer and digital nomad who has visited 60+ countries. She specializes in budget travel and off-the-beaten-path destinations.',
-    twitter: '@sarahchentravels',
-  },
-  'james-miller': {
-    name: 'James Miller',
-    avatar: '/icon.png',
-    bio: 'James is TripGenie\'s Head of Product and a travel tech enthusiast. He writes about the intersection of AI and travel planning.',
-    twitter: '@jmillertravels',
   },
 };
 

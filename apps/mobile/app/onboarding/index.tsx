@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/ui';
 import { colors } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
+import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
 
 const { width, height } = Dimensions.get('window');
 
@@ -36,7 +37,7 @@ const SLIDES: OnboardingSlide[] = [
     title: 'AI Plans Your\nPerfect Trip',
     subtitle: 'Tell us where you want to go, and watch magic happen',
     highlight: 'in seconds',
-    image: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80',
+    image: getImageUrl(IMAGE_PATHS.marketing.travelPlanning),
     gradient: ['#F97066', '#F59E0B'],
   },
   {
@@ -45,7 +46,7 @@ const SLIDES: OnboardingSlide[] = [
     title: 'Discover\nHidden Gems',
     subtitle: 'Local favorites and secret spots that guidebooks miss',
     highlight: 'curated for you',
-    image: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80',
+    image: getImageUrl(IMAGE_PATHS.marketing.aerialTravel),
     gradient: ['#f59e0b', '#ef4444'],
   },
   {
@@ -54,7 +55,7 @@ const SLIDES: OnboardingSlide[] = [
     title: 'Book Everything\nIn One Tap',
     subtitle: 'Hotels, restaurants, experiences — all in one place',
     highlight: 'no more tabs',
-    image: 'https://images.unsplash.com/photo-1530789253388-582c481c54b0?w=800&q=80',
+    image: getImageUrl(IMAGE_PATHS.marketing.travelDiscovery),
     gradient: ['#10b981', '#059669'],
   },
 ];

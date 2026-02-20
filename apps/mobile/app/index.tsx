@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useUserStore } from '../stores/userStore';
 import { Button } from '../components/ui';
 import { colors } from '../constants/theme';
+import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
 
 const { width, height } = Dimensions.get('window');
 
@@ -88,7 +89,7 @@ export default function WelcomeScreen() {
     <View style={styles.container}>
       <Image
         source={{
-          uri: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80',
+          uri: getImageUrl(IMAGE_PATHS.inspirations['beach-getaway']),
         }}
         style={styles.backgroundImage}
       />

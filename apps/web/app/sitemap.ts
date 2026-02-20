@@ -1,15 +1,9 @@
 import { MetadataRoute } from 'next'
-import { getAllPostMetas, getAllCategories } from '@/lib/blog'
+import { getAllPostMetas, getAllCategories, getAllClusterSlugs } from '@/lib/blog'
 import { getSupabase } from '@/lib/supabase/server'
 import { getGuideSlugs } from '@/lib/destination-guides'
 
-// Static destinations for sitemap
-const popularDestinations = [
-  'tokyo', 'paris', 'bali', 'santorini', 'new-york', 'barcelona',
-  'london', 'rome', 'dubai', 'sydney', 'amsterdam', 'kyoto',
-  'maldives', 'iceland', 'marrakech', 'singapore', 'bangkok', 'lisbon',
-  'prague', 'vienna', 'berlin', 'copenhagen', 'oslo', 'stockholm'
-]
+import { getAllCostProfiles } from '@/lib/tools/cost-data'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tripgenie.ai'
@@ -73,8 +67,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ]
   
-  // Destination landing pages (for future implementation)
-  const destinationPages: MetadataRoute.Sitemap = popularDestinations.map(dest => ({
+  // Destination landing pages
+  const guideSlugs = getGuideSlugs()
+  const destinationPages: MetadataRoute.Sitemap = guideSlugs.map(dest => ({
     url: `${baseUrl}/destinations/${dest}`,
     lastModified: currentDate,
     changeFrequency: 'weekly' as const,
@@ -91,14 +86,29 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ]
 
-  const blogPosts: MetadataRoute.Sitemap = getAllPostMetas().map(post => ({
+  const blogPosts: MetadataRoute.Sitemap = (await getAllPostMetas()).map(post => ({
     url: `${baseUrl}/blog/${post.slug}`,
     lastModified: post.lastUpdated || post.date,
     changeFrequency: 'monthly' as const,
     priority: 0.7,
   }))
 
-  const blogCategories: MetadataRoute.Sitemap = getAllCategories().map(cat => ({
+  const blogGuides: MetadataRoute.Sitemap = [
+    {
+      url: `${baseUrl}/blog/guides`,
+      lastModified: currentDate,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    ...getAllClusterSlugs().map(slug => ({
+      url: `${baseUrl}/blog/guides/${slug}`,
+      lastModified: currentDate,
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
+    })),
+  ]
+
+  const blogCategories: MetadataRoute.Sitemap = (await getAllCategories()).map(cat => ({
     url: `${baseUrl}/blog/category/${cat.toLowerCase().replace(/\s+/g, '-')}`,
     lastModified: currentDate,
     changeFrequency: 'weekly' as const,
@@ -130,7 +140,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   // Tools pages
-  const toolSlugs = ['travel-quiz', 'packing-list', 'trip-cost', 'best-time-to-visit']
+  const toolSlugs = ['travel-quiz', 'packing-list', 'trip-cost', 'best-time-to-visit', 'visa-checker', 'currency-converter']
   const toolPages: MetadataRoute.Sitemap = [
     {
       url: `${baseUrl}/tools`,
@@ -144,13 +154,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: 'monthly' as const,
       priority: 0.7,
     })),
-    ...getGuideSlugs().map(slug => ({
+    ...guideSlugs.map(slug => ({
       url: `${baseUrl}/tools/best-time-to-visit/${slug}`,
+      lastModified: currentDate,
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    })),
+    ...getAllCostProfiles().map(p => ({
+      url: `${baseUrl}/tools/trip-cost/${p.slug}`,
+      lastModified: currentDate,
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    })),
+    ...guideSlugs.map(slug => ({
+      url: `${baseUrl}/tools/visa-checker/${slug}`,
       lastModified: currentDate,
       changeFrequency: 'monthly' as const,
       priority: 0.6,
     })),
   ]
 
-  return [...staticPages, ...destinationPages, ...toolPages, ...blogIndex, ...blogPosts, ...blogCategories, ...sharedTripPages]
+  return [...staticPages, ...destinationPages, ...toolPages, ...blogIndex, ...blogPosts, ...blogCategories, ...blogGuides, ...sharedTripPages]
 }

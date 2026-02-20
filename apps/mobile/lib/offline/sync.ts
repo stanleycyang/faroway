@@ -7,6 +7,7 @@ import { offlineStorage, PendingMutation } from './storage';
 import { networkMonitor } from './network';
 import { API_BASE_URL, getAuthHeaders } from '../supabase';
 import type { Trip, TripInput } from '../../stores/tripStore';
+import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
 
 export type SyncStatus = 'idle' | 'syncing' | 'success' | 'error' | 'offline';
 
@@ -415,7 +416,7 @@ class SyncService {
       vibes: apiTrip.vibes || [],
       budget: apiTrip.budget,
       days: apiTrip.itinerary?.days || [],
-      coverImage: apiTrip.cover_image || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828',
+      coverImage: apiTrip.cover_image || getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
       createdAt: apiTrip.created_at,
       status: apiTrip.status as Trip['status'],
     };

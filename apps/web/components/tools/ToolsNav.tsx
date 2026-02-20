@@ -9,6 +9,8 @@ const TOOL_LINKS = [
   { label: 'Packing', href: '/tools/packing-list' },
   { label: 'Cost', href: '/tools/trip-cost' },
   { label: 'Best Time', href: '/tools/best-time-to-visit' },
+  { label: 'Visa', href: '/tools/visa-checker' },
+  { label: 'Currency', href: '/tools/currency-converter' },
 ];
 
 export function ToolsNav() {

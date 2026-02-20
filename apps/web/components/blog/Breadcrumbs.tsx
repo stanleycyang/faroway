@@ -5,7 +5,8 @@ interface Crumb {
   href?: string;
 }
 
-export function Breadcrumbs({ items }: { items: Crumb[] }) {
+export function Breadcrumbs({ items, variant = 'light' }: { items: Crumb[]; variant?: 'light' | 'dark' }) {
+  const isDark = variant === 'dark';
   const jsonLd = {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
@@ -20,15 +21,15 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <nav aria-label="Breadcrumb" className="text-sm text-gray-500 mb-6">
+      <nav aria-label="Breadcrumb" className={`text-sm ${isDark ? 'text-white/50' : 'text-gray-500'} mb-6`}>
         <ol className="flex flex-wrap items-center gap-1.5">
           {items.map((item, i) => (
             <li key={i} className="flex items-center gap-1.5">
-              {i > 0 && <span className="text-gray-600">/</span>}
+              {i > 0 && <span className={isDark ? 'text-white/30' : 'text-gray-600'}>/</span>}
               {item.href ? (
                 <Link href={item.href} className="hover:text-primary transition-colors">{item.label}</Link>
               ) : (
-                <span className="text-slate-900 font-medium">{item.label}</span>
+                <span className={`${isDark ? 'text-white/80' : 'text-slate-900'} font-medium`}>{item.label}</span>
               )}
             </li>
           ))}

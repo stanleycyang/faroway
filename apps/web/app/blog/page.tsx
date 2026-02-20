@@ -26,8 +26,8 @@ export default async function BlogIndex({
   const { page: pageParam } = await searchParams;
   const currentPage = Math.max(1, parseInt(pageParam || '1', 10) || 1);
 
-  const allPosts = getAllPostMetas();
-  const featured = getFeaturedPost();
+  const allPosts = await getAllPostMetas();
+  const featured = await getFeaturedPost();
   const isFirstPage = currentPage === 1;
 
   // On page 1 we show the featured hero separately, so exclude it from the grid

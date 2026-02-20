@@ -6,8 +6,8 @@ import { CategoryPills } from '@/components/blog/CategoryPills';
 import { NewsletterCTA } from '@/components/blog/NewsletterCTA';
 import { Pagination } from '@/components/blog/Pagination';
 
-export function generateStaticParams() {
-  return getAllCategories().map((cat) => ({
+export async function generateStaticParams() {
+  return (await getAllCategories()).map((cat) => ({
     category: cat.toLowerCase().replace(/\s+/g, '-'),
   }));
 }
@@ -33,7 +33,7 @@ export default async function CategoryPage({
   const { page: pageParam } = await searchParams;
   const currentPage = Math.max(1, parseInt(pageParam || '1', 10) || 1);
 
-  const allPosts = getPostsByCategory(category);
+  const allPosts = await getPostsByCategory(category);
   const label = CATEGORIES.find((c) => c.toLowerCase().replace(/\s+/g, '-') === category) || category;
 
   const { items: posts, totalPages, totalItems } = paginate(allPosts, currentPage, POSTS_PER_PAGE);

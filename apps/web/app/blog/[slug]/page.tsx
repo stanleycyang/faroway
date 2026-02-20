@@ -10,16 +10,18 @@ import { ShareButtons } from '@/components/blog/ShareButtons';
 import { NewsletterCTA } from '@/components/blog/NewsletterCTA';
 import { BlogCard } from '@/components/blog/BlogCard';
 import { ViewTracker } from '@/components/blog/ViewTracker';
+import { ProseWrapper } from '@/components/blog/MDXComponents';
+import { FadeInOnScroll } from '@/components/landing/FadeInOnScroll';
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tripgenie.ai';
 
 export async function generateStaticParams() {
-  return getAllPosts().map((p) => ({ slug: p.slug }));
+  return (await getAllPosts()).map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const post = getPostBySlug(slug);
+  const post = await getPostBySlug(slug);
   if (!post) return {};
 
   return {
@@ -46,22 +48,62 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-// Simple markdown-to-HTML (handles headings, bold, italic, links, lists, blockquotes, images, hr)
+// ---- Security helpers ----
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function isSafeUrl(url: string): boolean {
+  const trimmed = url.trim().toLowerCase();
+  // Block javascript:, data:, vbscript: protocols
+  if (/^(javascript|data|vbscript)\s*:/i.test(trimmed)) return false;
+  // Allow relative URLs, http(s), mailto, tel
+  return /^(https?:\/\/|mailto:|tel:|\/|#|\.)/.test(trimmed) || !trimmed.includes(':');
+}
+
+function sanitizeUrl(url: string): string {
+  return isSafeUrl(url) ? url : '#';
+}
+
+// ---- Markdown-to-HTML renderer ----
 function renderMarkdown(md: string): string {
-  let html = md
-    // Code blocks
-    .replace(/```(\w*)\n([\s\S]*?)```/g, '<pre><code class="language-$1">$2</code></pre>')
-    // Images
-    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '<img src="$2" alt="$1" loading="lazy" />')
-    // Links
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-    // Bold
+  // Step 1: Escape all raw HTML in source to prevent XSS.
+  // Preserve markdown syntax characters (*, #, -, [, ], etc.)
+  // but neutralize any HTML tags/attributes in the source content.
+
+  // Extract fenced code blocks first (preserve their content verbatim)
+  const codeBlocks: string[] = [];
+  let escaped = md.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, lang, code) => {
+    const idx = codeBlocks.length;
+    codeBlocks.push(`<pre><code class="language-${escapeHtml(lang)}">${escapeHtml(code)}</code></pre>`);
+    return `\n%%CODEBLOCK_${idx}%%\n`;
+  });
+
+  // Escape HTML in the remaining content
+  escaped = escapeHtml(escaped);
+
+  // Step 2: Apply inline markdown transformations (on escaped content)
+  let html = escaped
+    // Inline code (single backticks) — before other inline transforms
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    // Images — validate src URL
+    .replace(/!\[([^\]]*)\]\(([^)]+)\)/g, (_m, alt, src) =>
+      `<img src="${sanitizeUrl(src)}" alt="${alt}" loading="lazy" />`)
+    // Links — validate href URL
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, (_m, text, href) =>
+      `<a href="${sanitizeUrl(href)}">${text}</a>`)
+    // Bold (must be before italic)
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     // Italic
     .replace(/\*(.+?)\*/g, '<em>$1</em>')
     // HR
     .replace(/^---$/gm, '<hr />')
-    // Headings (with IDs for TOC)
+    // Headings (h3 before h2 before h1 — most specific first)
     .replace(/^### (.+)$/gm, (_m, t) => {
       const id = t.replace(/<[^>]+>/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       return `<h3 id="${id}">${t}</h3>`;
@@ -69,16 +111,81 @@ function renderMarkdown(md: string): string {
     .replace(/^## (.+)$/gm, (_m, t) => {
       const id = t.replace(/<[^>]+>/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
       return `<h2 id="${id}">${t}</h2>`;
+    })
+    .replace(/^# (.+)$/gm, (_m, t) => {
+      const id = t.replace(/<[^>]+>/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+      return `<h1 id="${id}">${t}</h1>`;
     });
 
-  // Process blocks (paragraphs, lists, blockquotes)
+  // Step 3: Restore code blocks
+  html = html.replace(/%%CODEBLOCK_(\d+)%%/g, (_m, idx) => codeBlocks[Number(idx)]);
+
+  // Step 4: Process block-level elements (paragraphs, lists, blockquotes, tables)
   const lines = html.split('\n');
   const out: string[] = [];
   let inList = false;
   let listType = '';
+  let inBlockquote = false;
+  const bqLines: string[] = [];
+
+  const parseTableRow = (row: string): string[] =>
+    row.replace(/^\||\|$/g, '').split('|').map((c) => c.trim());
+
+  const isSeparatorRow = (row: string): boolean =>
+    /^\|[\s:-]+\|/.test(row) && parseTableRow(row).every((c) => /^:?-+:?$/.test(c));
+
+  const flushBlockquote = () => {
+    if (!inBlockquote) return;
+    // Group consecutive blockquote lines into paragraphs split by empty > lines
+    const paragraphs: string[][] = [[]];
+    for (const l of bqLines) {
+      if (l.trim() === '') {
+        if (paragraphs[paragraphs.length - 1].length > 0) paragraphs.push([]);
+      } else {
+        paragraphs[paragraphs.length - 1].push(l);
+      }
+    }
+    out.push('<blockquote>');
+    for (const p of paragraphs) {
+      if (p.length > 0) out.push(`<p>${p.join(' ')}</p>`);
+    }
+    out.push('</blockquote>');
+    bqLines.length = 0;
+    inBlockquote = false;
+  };
 
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
+
+    // Blockquote continuation
+    if (/^&gt; ?/.test(line)) {
+      if (inList) { out.push(`</${listType}>`); inList = false; }
+      inBlockquote = true;
+      bqLines.push(line.replace(/^&gt; ?/, ''));
+      continue;
+    }
+    if (inBlockquote) flushBlockquote();
+
+    // Table detection: line starts with |, next line is a separator row
+    if (/^\|/.test(line) && i + 1 < lines.length && isSeparatorRow(lines[i + 1])) {
+      if (inList) { out.push(`</${listType}>`); inList = false; }
+      const headers = parseTableRow(line);
+      out.push('<table>');
+      out.push('<thead><tr>');
+      for (const h of headers) out.push(`<th>${h}</th>`);
+      out.push('</tr></thead>');
+      i++; // skip separator row
+      out.push('<tbody>');
+      while (i + 1 < lines.length && /^\|/.test(lines[i + 1])) {
+        i++;
+        const cells = parseTableRow(lines[i]);
+        out.push('<tr>');
+        for (const c of cells) out.push(`<td>${c}</td>`);
+        out.push('</tr>');
+      }
+      out.push('</tbody></table>');
+      continue;
+    }
 
     if (/^- /.test(line)) {
       if (!inList || listType !== 'ul') {
@@ -101,15 +208,14 @@ function renderMarkdown(md: string): string {
         out.push(`</${listType}>`);
         inList = false;
       }
-      if (/^> (.+)/.test(line)) {
-        out.push(`<blockquote><p>${line.slice(2)}</p></blockquote>`);
-      } else if (/^<(h[23]|pre|hr|img|ul|ol|blockquote)/.test(line) || line.trim() === '') {
+      if (/^<(h[1-3]|pre|hr|img|ul|ol|blockquote|table|code)/.test(line) || line.trim() === '') {
         out.push(line);
       } else if (line.trim()) {
         out.push(`<p>${line}</p>`);
       }
     }
   }
+  if (inBlockquote) flushBlockquote();
   if (inList) out.push(`</${listType}>`);
 
   return out.join('\n');
@@ -117,10 +223,10 @@ function renderMarkdown(md: string): string {
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const post = getPostBySlug(slug);
+  const post = await getPostBySlug(slug);
   if (!post) notFound();
 
-  const related = getRelatedPosts(slug, 3);
+  const related = await getRelatedPosts(slug, 3);
   const postUrl = `${baseUrl}/blog/${post.slug}`;
   const contentHtml = renderMarkdown(post.content);
 
@@ -161,9 +267,9 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
-      <main className="min-h-screen pt-16">
-        {/* Hero Image */}
-        <div className="relative w-full aspect-[21/9] max-h-[480px] overflow-hidden">
+      <main className="min-h-screen">
+        {/* ===== Immersive Cinematic Hero ===== */}
+        <div className="relative w-full min-h-[50vh] md:min-h-[70vh] overflow-hidden flex items-end">
           <Image
             src={post.coverImage}
             alt={post.coverImageAlt || post.title}
@@ -172,90 +278,93 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             priority
             sizes="100vw"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-black/20" />
-        </div>
+          {/* Multi-layer overlays */}
+          <div className="absolute inset-0 bg-black/50" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-primary/5" />
 
-        {/* Article container */}
-        <div className="container mx-auto px-4 sm:px-6 max-w-7xl">
-          {/* Header card — pulls up over hero image */}
-          <div className="max-w-[720px] mx-auto -mt-24 relative z-10">
-            <div className="bg-white/90 backdrop-blur-xl border border-gray-200 rounded-2xl p-6 sm:p-10 shadow-lg">
-              {/* Breadcrumbs */}
-              <Breadcrumbs
-                items={[
-                  { label: 'Home', href: '/' },
-                  { label: 'Blog', href: '/blog' },
-                  { label: post.category, href: `/blog/category/${post.category.toLowerCase().replace(/\s+/g, '-')}` },
-                  { label: post.title },
-                ]}
-              />
+          {/* Hero content overlay */}
+          <div className="relative z-10 w-full pb-10 md:pb-16 pt-32">
+            <div className="container mx-auto px-4 sm:px-6 max-w-7xl">
+              <div className="max-w-3xl">
+                {/* Breadcrumbs */}
+                <Breadcrumbs
+                  variant="dark"
+                  items={[
+                    { label: 'Home', href: '/' },
+                    { label: 'Blog', href: '/blog' },
+                    { label: post.category, href: `/blog/category/${categorySlug}` },
+                    { label: post.title },
+                  ]}
+                />
 
-              {/* Meta line */}
-              <div className="flex items-center gap-3 text-sm mb-5">
+                {/* Category pill */}
                 <Link
-                  href={`/blog/category/${post.category.toLowerCase().replace(/\s+/g, '-')}`}
-                  className="text-primary font-semibold hover:text-primary-dark transition-colors"
+                  href={`/blog/category/${categorySlug}`}
+                  className="inline-block px-3.5 py-1.5 bg-primary/20 border border-primary/30 text-primary-200 backdrop-blur-sm rounded-full text-sm font-semibold mb-5 hover:bg-primary/30 transition-colors"
                 >
                   {post.category}
                 </Link>
-                <span className="text-slate-400">·</span>
-                <time dateTime={post.date} className="text-slate-500">
-                  {new Date(post.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-                </time>
-                <span className="text-slate-400">·</span>
-                <span className="text-slate-500">{post.readingTime} min read</span>
-              </div>
 
-              {/* Title */}
-              <h1 className="text-3xl sm:text-4xl md:text-[2.75rem] font-bold text-slate-900 leading-[1.15] tracking-tight mb-5">
-                {post.title}
-              </h1>
+                {/* Title */}
+                <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-[3.5rem] font-extrabold text-white leading-[1.1] tracking-tight mb-5">
+                  {post.title}
+                </h1>
 
-              {/* Description */}
-              <p className="text-lg text-slate-600 leading-relaxed mb-6">
-                {post.description}
-              </p>
+                {/* Description */}
+                <p className="text-lg md:text-xl text-white/75 leading-relaxed mb-8 max-w-2xl">
+                  {post.description}
+                </p>
 
-              {/* Author + Share */}
-              <div className="flex items-center justify-between flex-wrap gap-4 pt-5 border-t border-gray-200">
-                <div className="flex items-center gap-3">
-                  <Image
-                    src={post.author.avatar}
-                    alt={post.author.name}
-                    width={40}
-                    height={40}
-                    className="rounded-full ring-2 ring-gray-200"
-                  />
-                  <div>
-                    <p className="font-semibold text-slate-900 text-sm">{post.author.name}</p>
-                    {post.lastUpdated && (
-                      <p className="text-xs text-slate-500">
-                        Updated {new Date(post.lastUpdated).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      </p>
-                    )}
+                {/* Author row + share */}
+                <div className="flex items-center justify-between flex-wrap gap-4">
+                  <div className="flex items-center gap-3">
+                    <Image
+                      src={post.author.avatar}
+                      alt={post.author.name}
+                      width={44}
+                      height={44}
+                      className="rounded-full ring-2 ring-white/20"
+                    />
+                    <div>
+                      <p className="font-semibold text-white text-sm">{post.author.name}</p>
+                      <div className="flex items-center gap-2 text-sm text-white/50">
+                        <time dateTime={post.date}>
+                          {new Date(post.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                        </time>
+                        <span>·</span>
+                        <span>{post.readingTime} min read</span>
+                      </div>
+                    </div>
                   </div>
+                  <ShareButtons variant="dark" url={postUrl} title={post.title} description={post.description} />
                 </div>
-                <ShareButtons url={postUrl} title={post.title} description={post.description} />
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Content + TOC row */}
-          <div className="flex gap-12 max-w-7xl mx-auto mt-12">
+        {/* ===== Decorative gradient separator ===== */}
+        <div className="flex justify-center py-8">
+          <div className="h-1 w-24 bg-gradient-to-r from-primary to-amber-500 rounded-full" />
+        </div>
+
+        {/* ===== Content + TOC ===== */}
+        <div className="container mx-auto px-4 sm:px-6 max-w-7xl">
+          <div className="flex gap-16 max-w-7xl mx-auto mt-8">
             {/* Article content */}
             <article className="max-w-[720px] mx-auto flex-1 min-w-0">
-              <div
-                className="prose prose-lg max-w-none"
-                dangerouslySetInnerHTML={{ __html: contentHtml }}
-              />
+              <ProseWrapper html={contentHtml} />
 
               {/* Tags */}
               <div className="mt-14 pt-6 border-t border-gray-200">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Topics</p>
                 <div className="flex flex-wrap gap-2">
                   {post.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="px-3 py-1.5 bg-gray-50 text-slate-600 rounded-full text-sm border border-gray-200 hover:bg-gray-100 transition-colors"
+                      className="px-3 py-1.5 bg-primary-50 text-primary-700 rounded-full text-sm border border-primary-200 hover:bg-primary-100 transition-colors"
                     >
                       #{tag}
                     </span>
@@ -263,18 +372,30 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
                 </div>
               </div>
 
-              {/* Author Bio */}
-              <div className="mt-10 p-6 bg-gray-50 border border-gray-200 rounded-2xl flex gap-4 items-start">
+              {/* Author Bio — Editorial Card */}
+              <div className="mt-10 p-6 bg-gradient-to-br from-gray-50 to-primary-50/30 border border-gray-200 rounded-2xl flex gap-5 items-start">
                 <Image
                   src={post.author.avatar}
                   alt={post.author.name}
-                  width={52}
-                  height={52}
-                  className="rounded-full flex-shrink-0 ring-2 ring-gray-200"
+                  width={64}
+                  height={64}
+                  className="rounded-2xl flex-shrink-0 ring-2 ring-gray-200"
                 />
                 <div>
-                  <p className="font-bold text-slate-900">{post.author.name}</p>
+                  <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Written by</p>
+                  <p className="font-bold text-slate-900 text-lg">{post.author.name}</p>
                   <p className="text-slate-600 text-sm mt-1.5 leading-relaxed">{post.author.bio}</p>
+                  {post.author.twitter && (
+                    <a
+                      href={`https://twitter.com/${post.author.twitter.replace('@', '')}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 text-sm text-primary-600 hover:text-primary-800 mt-2 transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                      {post.author.twitter}
+                    </a>
+                  )}
                 </div>
               </div>
 
@@ -286,18 +407,34 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
             </article>
 
             {/* Sidebar TOC */}
-            <aside className="hidden xl:block w-64 flex-shrink-0">
+            <aside className="hidden lg:block w-72 flex-shrink-0">
               <TableOfContents content={post.content} />
             </aside>
           </div>
 
-          {/* Related Posts */}
+          {/* ===== Related Posts ===== */}
           {related.length > 0 && (
-            <section className="max-w-7xl mx-auto py-16 mt-8 border-t border-gray-200">
-              <h2 className="text-2xl font-bold text-slate-900 mb-8">You Might Also Like</h2>
+            <section className="max-w-7xl mx-auto py-16 mt-8">
+              {/* Gradient separator */}
+              <div className="flex justify-center mb-12">
+                <div className="h-px w-full bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+              </div>
+
+              {/* Section badge pattern */}
+              <div className="text-center mb-10">
+                <span className="inline-block px-4 py-1.5 bg-primary-50 text-primary-700 rounded-full text-sm font-semibold border border-primary-200 mb-4">
+                  Keep Reading
+                </span>
+                <h2 className="text-3xl font-bold">
+                  <span className="text-gradient">You Might Also Like</span>
+                </h2>
+              </div>
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {related.map((p) => (
-                  <BlogCard key={p.slug} post={p} />
+                {related.map((p, i) => (
+                  <FadeInOnScroll key={p.slug} delay={i * 150}>
+                    <BlogCard post={p} />
+                  </FadeInOnScroll>
                 ))}
               </div>
             </section>

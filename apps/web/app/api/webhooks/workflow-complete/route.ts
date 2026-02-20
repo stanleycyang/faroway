@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient as createSupabaseAdmin } from '@supabase/supabase-js';
+import { getSupabase } from '@/lib/supabase/server';
 import { z } from 'zod';
 
 // Validate webhook payload
@@ -51,10 +51,7 @@ export async function POST(request: NextRequest) {
     const payload = validationResult.data;
     console.log(`[Webhook] Received ${payload.event} for trip ${payload.tripId}`);
 
-    const supabase = createSupabaseAdmin(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const supabase = getSupabase();
 
     if (payload.event === 'itinerary_generated') {
       // Mark workflow as completed

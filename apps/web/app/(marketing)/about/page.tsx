@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -15,7 +15,6 @@ import {
   ChevronDown,
   Download,
   Check,
-  Star,
   Users,
   Compass,
   Target,
@@ -24,47 +23,7 @@ import {
 import { FadeInOnScroll } from '@/components/landing/FadeInOnScroll';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-
-// ─── Animated Counter (same pattern as landing page) ─────────────────────────
-
-function AnimatedCounter({ value, suffix = '' }: { value: number; suffix?: string }) {
-  const [count, setCount] = useState(0);
-  const ref = useRef<HTMLDivElement>(null);
-  const started = useRef(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !started.current) {
-          started.current = true;
-          let start = 0;
-          const increment = value / 100;
-          const timer = setInterval(() => {
-            start += increment;
-            if (start >= value) {
-              setCount(value);
-              clearInterval(timer);
-            } else {
-              setCount(Math.floor(start));
-            }
-          }, 16);
-        }
-      },
-      { threshold: 0.3 },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [value]);
-
-  return (
-    <div ref={ref}>
-      {count.toLocaleString()}
-      {suffix}
-    </div>
-  );
-}
+import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
 
 // ─── App Store Buttons ───────────────────────────────────────────────────────
 
@@ -132,28 +91,28 @@ const approachCards = [
   {
     title: 'Personal, Not Generic',
     description: 'AI learns your travel vibes — whether you crave street food or Michelin stars, sunrise hikes or sunset cocktails.',
-    image: 'https://images.unsplash.com/photo-1530789253388-582c481c54b0?w=800&q=80',
+    image: getImageUrl(IMAGE_PATHS.marketing.travelDiscovery),
     imageAlt: 'Traveler overlooking a tropical valley at sunrise',
     icon: Heart,
   },
   {
     title: 'Seconds, Not Hours',
     description: 'Complete day-by-day itineraries with restaurants, activities, and local tips — generated in under 60 seconds.',
-    image: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80',
+    image: getImageUrl(IMAGE_PATHS.marketing.aerialTravel),
     imageAlt: 'Aerial view of turquoise waters and lush green islands',
     icon: Zap,
   },
   {
     title: 'Local, Not Tourist',
     description: 'Hidden gems and local favorites that most visitors never find. Eat, explore, and experience like a local.',
-    image: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=800&q=80',
+    image: getImageUrl(IMAGE_PATHS.marketing.galleryVenice),
     imageAlt: 'Venice canal at sunset with gondolas',
     icon: MapPin,
   },
   {
     title: 'Offline, Always',
     description: 'Your full itinerary saved on your device. No Wi-Fi at the temple? No problem — everything works offline.',
-    image: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80',
+    image: getImageUrl(IMAGE_PATHS.marketing.travelPlanning),
     imageAlt: 'Traveler with backpack on a scenic mountain path',
     icon: WifiOff,
   },
@@ -188,12 +147,12 @@ const timeline = [
   },
   {
     label: 'First Launch',
-    description: 'Mobile app launched on iOS and Android. Thousands of travelers planned their first AI-generated itinerary — and loved it.',
+    description: 'Mobile app launched on iOS and Android with full offline support. Travelers started generating personalized itineraries in under 60 seconds.',
     icon: Zap,
   },
   {
-    label: 'Growing Fast',
-    description: '50,000+ travelers and counting. Over 120,000 itineraries created across 195+ countries. Featured on Product Hunt and travel blogs worldwide.',
+    label: 'Growing & Improving',
+    description: 'Three specialized AI agents for hotels, activities, and dining. Real affiliate integrations with Booking.com, Viator, and more. A growing blog with 200+ destination guides.',
     icon: Users,
   },
   {
@@ -213,7 +172,7 @@ export default function AboutPage() {
       {/* ─── 1. Hero — "Where Every Journey Begins" ───────────────────── */}
       <section className="relative min-h-screen flex items-center overflow-hidden">
         <Image
-          src="https://images.unsplash.com/photo-1559128010-7c1ad6e1b6a5?w=1920&q=80"
+          src={getImageUrl(IMAGE_PATHS.marketing.oceanHero)}
           alt="Aerial view of stunning turquoise ocean waters and tropical islands"
           fill
           className="object-cover"
@@ -316,7 +275,7 @@ export default function AboutPage() {
             <FadeInOnScroll delay={200}>
               <div className="relative rounded-2xl overflow-hidden shadow-2xl shadow-slate-900/10">
                 <Image
-                  src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=800&q=80"
+                  src={getImageUrl(IMAGE_PATHS.marketing.galleryLakeBled)}
                   alt="Scenic lake surrounded by mountains at sunrise"
                   width={600}
                   height={500}
@@ -376,10 +335,10 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* ─── 5. By the Numbers — Stats ────────────────────────────────── */}
+      {/* ─── 5. What You Get — Capabilities ──────────────────────────── */}
       <section className="relative py-24 lg:py-32 overflow-hidden">
         <Image
-          src="https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=1920&q=80"
+          src={getImageUrl(IMAGE_PATHS.marketing.campingAdventure)}
           alt="Campfire on a cliff overlooking a breathtaking mountain valley at golden hour"
           fill
           className="object-cover"
@@ -391,31 +350,24 @@ export default function AboutPage() {
           <FadeInOnScroll>
             <div className="text-center mb-12">
               <h2 className="text-3xl lg:text-4xl font-bold text-white mb-2">
-                Trusted by travelers worldwide
+                Built for real travelers
               </h2>
-              <p className="text-white/60 text-lg">And growing every day</p>
+              <p className="text-white/60 text-lg">Here&apos;s what TripGenie delivers</p>
             </div>
           </FadeInOnScroll>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {[
-              { value: 50, suffix: 'K+', label: 'Travelers', icon: Users },
-              { value: 120, suffix: 'K+', label: 'Trips Planned', icon: MapPin },
-              { value: 195, suffix: '+', label: 'Countries', icon: Globe },
-              { value: 4.9, suffix: '', label: 'App Rating', icon: Star, isRating: true },
+              { value: '< 60s', label: 'Full Itinerary Generation', icon: Zap },
+              { value: '3 AI Agents', label: 'Hotels, Activities & Dining', icon: Sparkles },
+              { value: '100% Free', label: 'No Account Required', icon: Globe },
+              { value: 'Offline', label: 'Works Without Wi-Fi', icon: WifiOff },
             ].map((stat, i) => (
               <FadeInOnScroll key={stat.label} delay={i * 100}>
                 <div className="bg-white/10 backdrop-blur-xl border border-white/15 rounded-2xl p-6 lg:p-8 text-center">
                   <stat.icon className="w-6 h-6 text-primary-300 mx-auto mb-3" />
-                  <div className="text-3xl lg:text-4xl font-bold text-white mb-1">
-                    {stat.isRating ? (
-                      <div className="flex items-center justify-center gap-2">
-                        <AnimatedCounter value={stat.value} suffix={stat.suffix} />
-                        <Star className="w-6 h-6 fill-amber-400 text-amber-400" />
-                      </div>
-                    ) : (
-                      <AnimatedCounter value={stat.value} suffix={stat.suffix} />
-                    )}
+                  <div className="text-2xl lg:text-3xl font-bold text-white mb-1">
+                    {stat.value}
                   </div>
                   <p className="text-white/60 text-sm font-medium">{stat.label}</p>
                 </div>
@@ -516,7 +468,7 @@ export default function AboutPage() {
       {/* ─── 8. CTA — Download / Start Planning ──────────────────────── */}
       <section className="relative py-24 lg:py-32 overflow-hidden">
         <Image
-          src="https://images.unsplash.com/photo-1494783367193-149034c48e58?w=1920&q=80"
+          src={getImageUrl(IMAGE_PATHS.marketing.ctaBackground)}
           alt="Silhouette of a traveler looking at a stunning colorful sunset over the ocean"
           fill
           className="object-cover"
@@ -532,8 +484,8 @@ export default function AboutPage() {
               <span className="text-gradient-hero">dream trip</span>?
             </h2>
             <p className="text-xl text-white/70 mb-8 leading-relaxed max-w-2xl mx-auto">
-              Join 50,000+ travelers who plan smarter with AI. Your perfect
-              itinerary is just 60 seconds away.
+              A complete, personalized itinerary with hotels, activities, and
+              restaurants — generated in under 60 seconds. No sign-up required.
             </p>
 
             <div className="flex flex-wrap justify-center gap-3 mb-8">

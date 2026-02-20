@@ -31,7 +31,7 @@ export async function POST(
     // Fetch current trip to check ownership and existing token
     const { data: trip, error: fetchError } = await supabase
       .from('trips')
-      .select('id, share_token, is_shared')
+      .select('id, share_token, is_shared, user_id')
       .eq('id', id)
       .eq('user_id', user.id)
       .single()

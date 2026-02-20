@@ -1,17 +1,17 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Compass, Luggage, Calculator, Sun, ArrowRight } from 'lucide-react';
+import { Compass, Luggage, Calculator, Sun, Shield, ArrowLeftRight, ArrowRight } from 'lucide-react';
 import { ToolHero } from '@/components/tools/ToolHero';
 import { ToolCTA } from '@/components/tools/ToolCTA';
 
 export const metadata: Metadata = {
-  title: 'Free Travel Tools — Quiz, Packing List, Cost & More',
+  title: 'Free Travel Tools — Quiz, Packing, Cost, Visa & More',
   description:
-    'Plan smarter with free travel tools: destination quiz, packing list generator, trip cost estimator, and best time to visit guides for 14 destinations.',
+    'Plan smarter with free travel tools: destination quiz, packing list, cost estimator, visa checker, currency converter, and best time to visit guides.',
   alternates: { canonical: '/tools' },
   openGraph: {
     title: 'Free Travel Planning Tools | TripGenie',
-    description: 'Destination quiz, packing lists, cost estimator & climate data — all free.',
+    description: 'Destination quiz, packing lists, cost estimator, visa checker, currency converter & climate data — all free.',
     url: '/tools',
   },
 };
@@ -61,6 +61,28 @@ const TOOLS = [
     bg: 'bg-sky-50',
     border: 'hover:border-sky-300',
   },
+  {
+    slug: 'visa-checker',
+    title: 'Do I Need a Visa?',
+    subtitle: 'Visa Checker',
+    description:
+      'Check visa requirements based on your passport country. Get instant results with stay duration, visa type, and travel tips.',
+    icon: Shield,
+    color: 'text-violet-600',
+    bg: 'bg-violet-50',
+    border: 'hover:border-violet-300',
+  },
+  {
+    slug: 'currency-converter',
+    title: 'Currency Converter',
+    subtitle: 'Travel Money Calculator',
+    description:
+      'Convert between 11 travel currencies with real-time-style rates. Includes destination-specific tips for handling money abroad.',
+    icon: ArrowLeftRight,
+    color: 'text-emerald-600',
+    bg: 'bg-emerald-50',
+    border: 'hover:border-emerald-300',
+  },
 ];
 
 export default function ToolsPage() {
@@ -74,7 +96,7 @@ export default function ToolsPage() {
       />
 
       <section className="max-w-7xl mx-auto px-6 pb-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {TOOLS.map((tool) => (
             <Link
               key={tool.slug}

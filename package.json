@@ -12,11 +12,9 @@
     "dev:mobile": "turbo dev --filter=@tripgenie/mobile",
     "dev:ios": "turbo dev --filter=@tripgenie/mobile -- --ios",
     "dev:android": "turbo dev --filter=@tripgenie/mobile -- --android",
-
     "build": "turbo build",
     "build:web": "turbo build --filter=@tripgenie/web",
     "build:mobile": "turbo build --filter=@tripgenie/mobile",
-
     "lint": "turbo lint",
     "type-check": "turbo type-check",
     "format": "turbo format",
@@ -24,7 +22,6 @@
     "check": "turbo type-check lint format:check",
     "test": "turbo test",
     "test:web": "turbo test --filter=@tripgenie/web",
-
     "db:start": "bunx supabase start",
     "db:stop": "bunx supabase stop",
     "db:reset": "bunx supabase db reset",
@@ -33,7 +30,6 @@
     "db:push": "bunx supabase db push",
     "db:studio": "open http://localhost:54323",
     "db:status": "bunx supabase status",
-
     "deploy:web": "vercel --prod",
     "deploy:web:preview": "vercel",
     "deploy:mobile:dev": "cd apps/mobile && eas build --profile development",
@@ -41,7 +37,6 @@
     "deploy:mobile:prod": "cd apps/mobile && eas build --profile production",
     "deploy:mobile:submit": "cd apps/mobile && eas submit --profile production",
     "deploy:mobile:update": "cd apps/mobile && eas update",
-
     "clean": "turbo clean",
     "clean:all": "turbo clean && rm -rf node_modules apps/*/node_modules packages/*/node_modules",
     "nuke": "turbo clean && rm -rf node_modules apps/*/node_modules packages/*/node_modules bun.lockb && bun install",
@@ -54,6 +49,8 @@
     "@types/react": "~19.1.10"
   },
   "devDependencies": {
+    "@supabase/supabase-js": "^2.97.0",
+    "gray-matter": "^4.0.3",
     "turbo": "^2.5.0",
     "typescript": "^5.5.4"
   },
