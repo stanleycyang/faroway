@@ -42,6 +42,26 @@ export function Footer() {
                 </Link>
               </li>
               <li>
+                <Link href="/tools" className="hover:text-primary transition-colors">
+                  Travel Tools
+                </Link>
+              </li>
+              <li>
+                <Link href="/tools/travel-quiz" className="hover:text-primary transition-colors">
+                  Destination Quiz
+                </Link>
+              </li>
+              <li>
+                <Link href="/tools/packing-list" className="hover:text-primary transition-colors">
+                  Packing List
+                </Link>
+              </li>
+              <li>
+                <Link href="/tools/trip-cost" className="hover:text-primary transition-colors">
+                  Cost Estimator
+                </Link>
+              </li>
+              <li>
                 <Link href="/create" className="hover:text-primary transition-colors">
                   Start Planning
                 </Link>

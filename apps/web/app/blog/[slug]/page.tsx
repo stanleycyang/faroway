@@ -142,11 +142,24 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     mainEntityOfPage: { '@type': 'WebPage', '@id': postUrl },
   };
 
+  const categorySlug = post.category.toLowerCase().replace(/\s+/g, '-');
+  const breadcrumbJsonLd = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: baseUrl },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: `${baseUrl}/blog` },
+      { '@type': 'ListItem', position: 3, name: post.category, item: `${baseUrl}/blog/category/${categorySlug}` },
+      { '@type': 'ListItem', position: 4, name: post.title, item: postUrl },
+    ],
+  };
+
   return (
     <>
       <ReadingProgressBar />
       <ViewTracker slug={post.slug} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
 
       <main className="min-h-screen pt-16">
         {/* Hero Image */}

@@ -153,3 +153,27 @@
   }
 }
 
+/* ===== Print styles for packing list ===== */
+@media print {
+  nav, footer { display: none !important; }
+  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}
+
+@utility print-hidden {
+  @media print {
+    display: none !important;
+  }
+}
+
+@utility print-static {
+  @media print {
+    position: static !important;
+  }
+}
+
+@utility print-border-none {
+  @media print {
+    border: none !important;
+  }
+}
+

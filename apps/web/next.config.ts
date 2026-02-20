@@ -2,6 +2,7 @@ import { withWorkflow } from "workflow/next";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  trailingSlash: false,
   images: {
     remotePatterns: [
       {
@@ -22,6 +23,18 @@ const nextConfig: NextConfig = {
           { key: 'X-Content-Type-Options', value: 'nosniff' },
           { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
           { key: 'Permissions-Policy', value: 'camera=(), microphone=(), geolocation=(self)' },
+        ],
+      },
+      {
+        source: '/icon.png',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=604800, immutable' },
+        ],
+      },
+      {
+        source: '/manifest.json',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=604800' },
         ],
       },
     ];

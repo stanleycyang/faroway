@@ -9,7 +9,7 @@ import { createClient } from '@supabase/supabase-js';
 import { nanoid } from 'nanoid';
 
 // Types
-export type AffiliatePartner = 'viator' | 'booking' | 'getyourguide' | 'tripadvisor';
+export type AffiliatePartner = 'viator' | 'booking' | 'getyourguide' | 'tripadvisor' | 'discovercars' | 'hostelworld';
 
 export interface AffiliateClick {
   id: string;
