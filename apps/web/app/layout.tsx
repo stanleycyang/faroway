@@ -72,16 +72,12 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  icons: {
-    icon: [
-      { url: "/favicon.ico", sizes: "any" },
-      { url: "/icon.png", type: "image/png", sizes: "512x512" },
-    ],
-    apple: [{ url: "/apple-touch-icon.png", sizes: "180x180" }],
-  },
   manifest: "/manifest.json",
   alternates: {
     canonical: baseUrl,
+    types: {
+      'application/rss+xml': `${baseUrl}/blog/feed.xml`,
+    },
   },
   verification: {
     google: process.env.GOOGLE_SITE_VERIFICATION,

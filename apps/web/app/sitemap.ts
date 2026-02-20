@@ -1,6 +1,7 @@
 import { MetadataRoute } from 'next'
 import { getAllPostMetas, getAllCategories } from '@/lib/blog'
 import { getSupabase } from '@/lib/supabase/server'
+import { getGuideSlugs } from '@/lib/destination-guides'
 
 // Static destinations for sitemap
 const popularDestinations = [
@@ -57,6 +58,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: currentDate,
       changeFrequency: 'monthly',
       priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/about`,
+      lastModified: currentDate,
+      changeFrequency: 'monthly',
+      priority: 0.6,
+    },
+    {
+      url: `${baseUrl}/destinations`,
+      lastModified: currentDate,
+      changeFrequency: 'weekly',
+      priority: 0.8,
     },
   ]
   
@@ -116,5 +129,28 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Continue without shared trips if DB is unavailable
   }
 
-  return [...staticPages, ...destinationPages, ...blogIndex, ...blogPosts, ...blogCategories, ...sharedTripPages]
+  // Tools pages
+  const toolSlugs = ['travel-quiz', 'packing-list', 'trip-cost', 'best-time-to-visit']
+  const toolPages: MetadataRoute.Sitemap = [
+    {
+      url: `${baseUrl}/tools`,
+      lastModified: currentDate,
+      changeFrequency: 'weekly',
+      priority: 0.8,
+    },
+    ...toolSlugs.map(slug => ({
+      url: `${baseUrl}/tools/${slug}`,
+      lastModified: currentDate,
+      changeFrequency: 'monthly' as const,
+      priority: 0.7,
+    })),
+    ...getGuideSlugs().map(slug => ({
+      url: `${baseUrl}/tools/best-time-to-visit/${slug}`,
+      lastModified: currentDate,
+      changeFrequency: 'monthly' as const,
+      priority: 0.6,
+    })),
+  ]
+
+  return [...staticPages, ...destinationPages, ...toolPages, ...blogIndex, ...blogPosts, ...blogCategories, ...sharedTripPages]
 }

@@ -20,6 +20,19 @@ export {
   type ViatorAvailability,
 } from './viator';
 
+// GetYourGuide (Tours & Activities)
+export {
+  isGYGConfigured,
+  searchGYGActivities,
+  getGYGActivity,
+  checkGYGAvailability,
+  generateGYGAffiliateUrl,
+  mapGYGCategoryToVibe,
+  type GYGSearchParams,
+  type GYGActivity,
+  type GYGAvailability,
+} from './getyourguide';
+
 // Booking.com (Hotels)
 export {
   isBookingConfigured,

@@ -18,6 +18,12 @@ import {
   mapViatorCategoryToVibe,
   isViatorConfigured,
 } from '@/lib/affiliates/viator';
+import {
+  searchGYGActivities,
+  generateGYGAffiliateUrl,
+  mapGYGCategoryToVibe,
+  isGYGConfigured,
+} from '@/lib/affiliates/getyourguide';
 
 // AI Gateway configuration
 const aiGateway = createOpenAI({
@@ -163,62 +169,150 @@ const searchActivitiesTool = tool({
     vibes: z.array(z.string()).optional().describe('Desired vibes'),
   }),
   execute: async ({ destination, date, category, vibes }) => {
-    // Try real Viator API first
-    if (isViatorConfigured()) {
-      try {
-        const viatorProducts = await searchViatorProducts({
-          destination,
-          startDate: date,
-          categories: category ? [category] : undefined,
-          limit: 15,
-        });
+    // Query Viator and GetYourGuide in parallel
+    const [viatorResult, gygResult] = await Promise.allSettled([
+      isViatorConfigured()
+        ? searchViatorProducts({ destination, startDate: date, categories: category ? [category] : undefined, limit: 10 })
+        : Promise.resolve([]),
+      isGYGConfigured()
+        ? searchGYGActivities({ destination, startDate: date, categories: category ? [category] : undefined, limit: 10 })
+        : Promise.resolve([]),
+    ]);
 
-        if (viatorProducts.length > 0) {
-          const trackingId = `tg_${Date.now()}`;
-          const activities = viatorProducts.map((product) => {
-            const durationHours = product.duration.fixedDurationInMinutes
-              ? Math.round(product.duration.fixedDurationInMinutes / 60)
-              : product.duration.variableDurationFromMinutes
-                ? Math.round(product.duration.variableDurationFromMinutes / 60)
-                : 3;
+    const trackingId = `tg_${Date.now()}`;
+    let activities: any[] = [];
 
-            const categoryVibes = product.categories.length > 0
-              ? mapViatorCategoryToVibe(product.categories[0])
-              : [];
-            const matchedVibes = vibes?.filter(v => categoryVibes.includes(v)) || [];
+    // Normalize Viator results
+    const viatorProducts = viatorResult.status === 'fulfilled' ? viatorResult.value : [];
+    activities.push(...viatorProducts.map(product => normalizeViatorToActivity(product, trackingId, date, category, vibes)));
 
-            return {
-              id: `activity_${product.productCode}`,
-              name: product.title,
-              description: product.shortDescription || product.description.substring(0, 200),
-              duration: durationHours,
-              price: product.price.amount,
-              currency: product.price.currencyCode,
-              rating: product.rating,
-              reviewCount: product.reviewCount,
-              category: category || 'sightseeing',
-              vibeMatch: matchedVibes,
-              affiliateUrl: generateViatorAffiliateUrl(product.productCode, trackingId, {
-                date,
-              }),
-              affiliatePartner: 'viator',
-              images: product.images.slice(0, 2).map(img => img.url),
-              highlights: product.highlights.slice(0, 3),
-            };
-          });
+    // Normalize GYG results
+    const gygActivities = gygResult.status === 'fulfilled' ? gygResult.value : [];
+    activities.push(...gygActivities.map(activity => normalizeGYGToActivity(activity, trackingId, date, category, vibes)));
 
-          return { activities, searchMetadata: { destination, date, totalResults: activities.length, source: 'viator' } };
-        }
-      } catch (error) {
-        console.error('[TravelAgent] Viator search failed, falling back to mock:', error);
-      }
+    if (activities.length > 0) {
+      activities = deduplicateActivities(activities);
+      activities.sort((a, b) => (b.vibeScore || 0) - (a.vibeScore || 0));
+
+      const sources = [
+        viatorProducts.length > 0 ? 'viator' : null,
+        gygActivities.length > 0 ? 'getyourguide' : null,
+      ].filter(Boolean).join('+');
+
+      return { activities: activities.slice(0, 15), searchMetadata: { destination, date, totalResults: activities.length, source: sources || 'api' } };
     }
 
     // Fallback: generate mock activity data
-    const activities = generateMockActivities(destination, category, vibes);
-    return { activities, searchMetadata: { destination, date, totalResults: activities.length, source: 'mock' } };
+    const mockActivities = generateMockActivities(destination, category, vibes);
+    return { activities: mockActivities, searchMetadata: { destination, date, totalResults: mockActivities.length, source: 'mock' } };
   },
 });
+
+// ============================================
+// Activity Normalization Helpers
+// ============================================
+
+function normalizeViatorToActivity(
+  product: any,
+  trackingId: string,
+  date: string,
+  category?: string,
+  vibes?: string[]
+) {
+  const durationHours = product.duration.fixedDurationInMinutes
+    ? Math.round(product.duration.fixedDurationInMinutes / 60)
+    : product.duration.variableDurationFromMinutes
+      ? Math.round(product.duration.variableDurationFromMinutes / 60)
+      : 3;
+
+  const categoryVibes = product.categories.length > 0
+    ? mapViatorCategoryToVibe(product.categories[0])
+    : [];
+  const matchedVibes = vibes?.filter(v => categoryVibes.includes(v)) || [];
+
+  return {
+    id: `activity_${product.productCode}`,
+    name: product.title,
+    description: product.shortDescription || product.description.substring(0, 200),
+    duration: durationHours,
+    price: product.price.amount,
+    currency: product.price.currencyCode,
+    rating: product.rating,
+    reviewCount: product.reviewCount,
+    category: category || 'sightseeing',
+    vibeMatch: matchedVibes,
+    vibeScore: matchedVibes.length * 25,
+    affiliateUrl: generateViatorAffiliateUrl(product.productCode, trackingId, { date }),
+    affiliatePartner: 'viator',
+    images: product.images.slice(0, 2).map((img: any) => img.url),
+    highlights: product.highlights.slice(0, 3),
+  };
+}
+
+function normalizeGYGToActivity(
+  activity: any,
+  trackingId: string,
+  date: string,
+  category?: string,
+  vibes?: string[]
+) {
+  const durationHours = activity.duration.fixedDurationInMinutes
+    ? Math.round(activity.duration.fixedDurationInMinutes / 60)
+    : activity.duration.variableDurationFromMinutes
+      ? Math.round(activity.duration.variableDurationFromMinutes / 60)
+      : 3;
+
+  const categoryVibes = activity.categories.length > 0
+    ? mapGYGCategoryToVibe(activity.categories[0])
+    : [];
+  const matchedVibes = vibes?.filter(v => categoryVibes.includes(v)) || [];
+
+  return {
+    id: `activity_gyg_${activity.activityId}`,
+    name: activity.title,
+    description: activity.shortDescription || activity.description.substring(0, 200),
+    duration: durationHours,
+    price: activity.price.amount,
+    currency: activity.price.currencyCode,
+    rating: activity.rating,
+    reviewCount: activity.reviewCount,
+    category: category || 'sightseeing',
+    vibeMatch: matchedVibes,
+    vibeScore: matchedVibes.length * 25,
+    affiliateUrl: generateGYGAffiliateUrl(activity.activityId, trackingId, { date }),
+    affiliatePartner: 'getyourguide',
+    images: activity.images.slice(0, 2).map((img: any) => img.url),
+    highlights: activity.highlights.slice(0, 3),
+  };
+}
+
+/**
+ * Deduplicate activities from multiple sources.
+ * Normalizes names and keeps the higher-commission source (Viator > GYG) when duplicated.
+ */
+function deduplicateActivities(activities: any[]): any[] {
+  const seen = new Map<string, any>();
+
+  for (const activity of activities) {
+    const normalizedName = activity.name
+      .toLowerCase()
+      .replace(/\b(tour|experience|trip|excursion)\b/g, '')
+      .replace(/[^a-z0-9]/g, '')
+      .trim();
+
+    const existing = seen.get(normalizedName);
+    if (!existing) {
+      seen.set(normalizedName, activity);
+    } else {
+      // Keep Viator (15-20% commission) over GYG (8% commission)
+      if (activity.affiliatePartner === 'viator' && existing.affiliatePartner !== 'viator') {
+        seen.set(normalizedName, activity);
+      }
+    }
+  }
+
+  return Array.from(seen.values());
+}
 
 const searchDiningTool = tool({
   description: 'Search for restaurants and dining options at a destination.',

@@ -10,6 +10,7 @@ import {
   trackClick,
   generateViatorAffiliateUrl,
   generateBookingAffiliateUrl,
+  generateGYGAffiliateUrl,
   type AffiliatePartner,
 } from '@/lib/affiliates';
 import { optionalAuth } from '@/lib/auth/middleware';
@@ -48,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate partner
-    const validPartners: AffiliatePartner[] = ['viator', 'booking', 'getyourguide', 'tripadvisor'];
+    const validPartners: AffiliatePartner[] = ['viator', 'booking', 'getyourguide', 'tripadvisor', 'discovercars', 'hostelworld'];
     if (!validPartners.includes(body.partner)) {
       return NextResponse.json(
         { error: `Invalid partner. Must be one of: ${validPartners.join(', ')}` },
@@ -96,8 +97,7 @@ export async function POST(request: NextRequest) {
         break;
 
       case 'getyourguide':
-        // GetYourGuide URL format
-        redirectUrl = `https://www.getyourguide.com/${body.productId}?partner_id=tripgenie&cmp=${trackingId}`;
+        redirectUrl = generateGYGAffiliateUrl(body.productId, trackingId, { date: body.date });
         break;
 
       case 'tripadvisor':
