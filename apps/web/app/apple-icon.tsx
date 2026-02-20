@@ -18,17 +18,22 @@ export default function Icon() {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
           borderRadius: '40px',
+          fontFamily: 'system-ui, -apple-system, sans-serif',
         }}
       >
         <div
           style={{
-            fontSize: '100px',
+            fontSize: '88px',
+            fontWeight: 700,
+            color: 'rgba(255, 255, 255, 0.97)',
+            letterSpacing: '-2px',
             lineHeight: 1,
+            marginTop: '4px',
           }}
         >
-          ✨
+          TG
         </div>
       </div>
     ),

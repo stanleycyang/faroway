@@ -46,26 +46,29 @@ export function TableOfContents({ content }: { content: string }) {
   if (headings.length < 3) return null;
 
   return (
-    <nav className="hidden xl:block sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto" aria-label="Table of contents">
-      <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-4">On This Page</h2>
-      <ul className="space-y-2 text-sm border-l-2 border-gray-200">
-        {headings.map(({ id, text, level }) => (
-          <li key={id}>
-            <a
-              href={`#${id}`}
-              className={`block py-1 transition-colors ${
-                level === 3 ? 'pl-6' : 'pl-4'
-              } ${
-                activeId === id
-                  ? 'text-primary border-l-2 border-primary -ml-[2px] font-medium'
-                  : 'text-slate-500 hover:text-slate-700'
-              }`}
-            >
-              {text}
-            </a>
-          </li>
-        ))}
-      </ul>
+    <nav className="hidden lg:block sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto" aria-label="Table of contents">
+      <div className="bg-gray-50/80 rounded-2xl p-5 border border-gray-100">
+        <h2 className="text-sm font-semibold text-slate-700 uppercase tracking-wider mb-1">On This Page</h2>
+        <div className="h-0.5 w-12 bg-gradient-to-r from-primary to-amber-500 rounded-full mb-4" />
+        <ul className="space-y-1 text-sm">
+          {headings.map(({ id, text, level }) => (
+            <li key={id}>
+              <a
+                href={`#${id}`}
+                className={`block py-1.5 rounded-lg transition-all duration-200 ${
+                  level === 3 ? 'pl-6' : 'pl-3'
+                } ${
+                  activeId === id
+                    ? 'text-primary-700 font-semibold bg-primary-50 border-l-2 border-primary'
+                    : 'text-slate-500 hover:text-slate-700 hover:bg-gray-100'
+                }`}
+              >
+                {text}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
     </nav>
   );
 }

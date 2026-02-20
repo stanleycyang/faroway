@@ -1,3 +1,6 @@
+import { IMAGE_PATHS } from './images';
+import { getImageUrl } from './storage';
+
 export interface InspirationCategory {
   slug: string;
   emoji: string;
@@ -18,7 +21,7 @@ export const INSPIRATION_CATEGORIES: InspirationCategory[] = [
     emoji: '\u{1F3D6}\uFE0F',
     title: 'Beach Getaway',
     tagline: 'Sun, sand, and endless blue horizons',
-    heroImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80',
+    heroImage: getImageUrl(IMAGE_PATHS.inspirations['beach-getaway']),
     gradientColors: ['#0ea5e9', '#06b6d4'],
     vibes: ['relaxation', 'nature'],
     tags: ['beach', 'relaxation', 'views'],
@@ -31,7 +34,7 @@ export const INSPIRATION_CATEGORIES: InspirationCategory[] = [
     emoji: '\u{1F3D4}\uFE0F',
     title: 'Mountain Escape',
     tagline: 'Fresh air, epic trails, and breathtaking peaks',
-    heroImage: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=1200&q=80',
+    heroImage: getImageUrl(IMAGE_PATHS.inspirations['mountain-escape']),
     gradientColors: ['#059669', '#10b981'],
     vibes: ['adventure', 'nature'],
     tags: ['mountain', 'adventure', 'nature', 'hiking'],
@@ -44,7 +47,7 @@ export const INSPIRATION_CATEGORIES: InspirationCategory[] = [
     emoji: '\u{1F35C}',
     title: 'Foodie Adventure',
     tagline: 'Taste your way through the world\u2019s best flavors',
-    heroImage: 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&q=80',
+    heroImage: getImageUrl(IMAGE_PATHS.inspirations['foodie-adventure']),
     gradientColors: ['#ea580c', '#f59e0b'],
     vibes: ['foodie', 'culture'],
     tags: ['food', 'culture', 'shopping'],
@@ -57,7 +60,7 @@ export const INSPIRATION_CATEGORIES: InspirationCategory[] = [
     emoji: '\u{1F3A8}',
     title: 'Art & Culture',
     tagline: 'Museums, history, and stories around every corner',
-    heroImage: 'https://images.unsplash.com/photo-1499781350541-7783f6c6a0c8?w=1200&q=80',
+    heroImage: getImageUrl(IMAGE_PATHS.inspirations['art-and-culture']),
     gradientColors: ['#7c3aed', '#a855f7'],
     vibes: ['culture', 'romantic'],
     tags: ['culture', 'art', 'heritage', 'architecture'],
@@ -70,7 +73,7 @@ export const INSPIRATION_CATEGORIES: InspirationCategory[] = [
     emoji: '\u{1F389}',
     title: 'Party Weekend',
     tagline: 'Dance till dawn in the world\u2019s hottest spots',
-    heroImage: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=1200&q=80',
+    heroImage: getImageUrl(IMAGE_PATHS.inspirations['party-weekend']),
     gradientColors: ['#e11d48', '#f43f5e'],
     vibes: ['nightlife', 'adventure'],
     tags: ['party', 'nightlife', 'entertainment', 'urban'],
@@ -83,7 +86,7 @@ export const INSPIRATION_CATEGORIES: InspirationCategory[] = [
     emoji: '\u{1F491}',
     title: 'Romantic Trip',
     tagline: 'Unforgettable moments for two',
-    heroImage: 'https://images.unsplash.com/photo-1529154036614-a60975f5c7f6?w=1200&q=80',
+    heroImage: getImageUrl(IMAGE_PATHS.inspirations['romantic-trip']),
     gradientColors: ['#db2777', '#ec4899'],
     vibes: ['romantic', 'luxury'],
     tags: ['romantic', 'views', 'luxury', 'relaxation'],

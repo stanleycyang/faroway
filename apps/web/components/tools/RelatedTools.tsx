@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { Compass, Luggage, Calculator, Sun } from 'lucide-react';
+import { Compass, Luggage, Calculator, Sun, Shield, ArrowLeftRight } from 'lucide-react';
 
 const ALL_TOOLS = [
   {
@@ -33,6 +33,22 @@ const ALL_TOOLS = [
     icon: Sun,
     color: 'text-sky-600',
     bg: 'bg-sky-50',
+  },
+  {
+    slug: 'visa-checker',
+    title: 'Visa Checker',
+    description: 'Check visa requirements for your passport',
+    icon: Shield,
+    color: 'text-violet-600',
+    bg: 'bg-violet-50',
+  },
+  {
+    slug: 'currency-converter',
+    title: 'Currency Converter',
+    description: 'Convert between travel currencies instantly',
+    icon: ArrowLeftRight,
+    color: 'text-emerald-600',
+    bg: 'bg-emerald-50',
   },
 ];
 

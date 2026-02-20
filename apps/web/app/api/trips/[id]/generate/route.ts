@@ -1,6 +1,6 @@
 /**
  * POST /api/trips/[id]/generate
- * 
+ *
  * Triggers AI-powered itinerary generation for a trip.
  * Uses Vercel Workflows for async processing.
  * Returns immediately with workflow ID for status polling.
@@ -9,8 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { start } from 'workflow/api';
 import { generateItineraryWorkflow, GenerateItineraryInput } from '@/workflows/generate-itinerary';
-import { createClient } from '@/lib/supabase/server';
-import { createClient as createSupabaseAdmin } from '@supabase/supabase-js';
+import { createClient, getSupabase } from '@/lib/supabase/server';
 
 type Params = {
   params: Promise<{
@@ -18,31 +17,38 @@ type Params = {
   }>;
 };
 
+/**
+ * Resolve user ID if authenticated, or null for anonymous.
+ */
+async function resolveUser(): Promise<string | null> {
+  try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    return user?.id ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function POST(
   request: NextRequest,
   { params }: Params
 ) {
   try {
     const { id: tripId } = await params;
-    const supabase = await createClient();
-    
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
+    const userId = await resolveUser();
+
+    const adminClient = getSupabase();
+
+    // Fetch trip — allow owned trips or anonymous trips
+    let query = adminClient.from('trips').select('id, destination, start_date, end_date, status, travelers, budget, vibes, interests, dietary_restrictions, mobility_needs, user_id').eq('id', tripId);
+    if (userId) {
+      query = query.or(`user_id.eq.${userId},user_id.is.null`);
+    } else {
+      query = query.is('user_id', null);
     }
 
-    // Fetch trip from database
-    const { data: trip, error: tripError } = await supabase
-      .from('trips')
-      .select('*')
-      .eq('id', tripId)
-      .eq('user_id', user.id)
-      .single();
+    const { data: trip, error: tripError } = await query.single();
 
     if (tripError || !trip) {
       return NextResponse.json(
@@ -53,12 +59,6 @@ export async function POST(
 
     // Check if generation is already in progress
     if (trip.status === 'generating') {
-      // Return existing workflow info if available
-      const adminClient = createSupabaseAdmin(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-      );
-      
       const { data: existingRun } = await adminClient
         .from('workflow_runs')
         .select('id')
@@ -67,9 +67,9 @@ export async function POST(
         .order('started_at', { ascending: false })
         .limit(1)
         .single();
-      
+
       return NextResponse.json(
-        { 
+        {
           error: 'Itinerary generation already in progress',
           workflowId: existingRun?.id,
           statusUrl: existingRun ? `/api/workflows/${existingRun.id}/status` : undefined,
@@ -102,20 +102,15 @@ export async function POST(
         mobilityNeeds: trip.mobility_needs,
         ...bodyPreferences,
       },
-      userId: user.id,
+      userId: userId || undefined,
     };
 
     // Initialize progress tracking
-    const adminClient = createSupabaseAdmin(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-
     await adminClient
       .from('workflow_progress')
       .upsert({
         trip_id: tripId,
-        user_id: user.id,
+        user_id: userId,
         step: 'queued',
         progress: 0,
         message: 'Starting itinerary generation...',
@@ -125,7 +120,7 @@ export async function POST(
     // Update trip status
     await adminClient
       .from('trips')
-      .update({ 
+      .update({
         status: 'generating',
         updated_at: new Date().toISOString(),
       })
@@ -135,8 +130,8 @@ export async function POST(
     const workflowRun = await start(generateItineraryWorkflow, [workflowInput]);
 
     // Get workflow run ID - handle both possible API shapes
-    const workflowRunId = typeof workflowRun === 'object' && workflowRun !== null && 'id' in workflowRun 
-      ? (workflowRun as { id: string }).id 
+    const workflowRunId = typeof workflowRun === 'object' && workflowRun !== null && 'id' in workflowRun
+      ? (workflowRun as { id: string }).id
       : String(workflowRun);
 
     console.log(`[API] Started workflow for trip ${tripId}, run ID: ${workflowRunId}`);
@@ -147,7 +142,7 @@ export async function POST(
       .insert({
         id: workflowRunId,
         trip_id: tripId,
-        user_id: user.id,
+        user_id: userId,
         status: 'running',
         started_at: new Date().toISOString(),
       });
@@ -171,7 +166,7 @@ export async function POST(
 
 /**
  * GET /api/trips/[id]/generate
- * 
+ *
  * Check generation status for a trip
  */
 export async function GET(
@@ -180,31 +175,25 @@ export async function GET(
 ) {
   try {
     const { id: tripId } = await params;
-    const supabase = await createClient();
-    
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      );
-    }
+    const userId = await resolveUser();
 
-    const adminClient = createSupabaseAdmin(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
+    const adminClient = getSupabase();
 
     // Get latest workflow run for this trip
-    const { data: workflowRun, error: runError } = await adminClient
+    let query = adminClient
       .from('workflow_runs')
-      .select('*')
+      .select('id, trip_id, user_id, status, started_at, completed_at, error_message')
       .eq('trip_id', tripId)
-      .eq('user_id', user.id)
       .order('started_at', { ascending: false })
-      .limit(1)
-      .single();
+      .limit(1);
+
+    if (userId) {
+      query = query.or(`user_id.eq.${userId},user_id.is.null`);
+    } else {
+      query = query.is('user_id', null);
+    }
+
+    const { data: workflowRun, error: runError } = await query.single();
 
     if (runError || !workflowRun) {
       return NextResponse.json({
@@ -217,7 +206,7 @@ export async function GET(
     // Get progress
     const { data: progress } = await adminClient
       .from('workflow_progress')
-      .select('*')
+      .select('step, progress, message')
       .eq('trip_id', tripId)
       .single();
 

@@ -5,7 +5,7 @@
  * Stores data in Supabase for analytics and revenue tracking.
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { nanoid } from 'nanoid';
 
 // Types
@@ -57,16 +57,21 @@ export interface ConversionInput {
   currency?: string;
 }
 
-// Supabase client
-function getSupabase() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  
-  if (!url || !key) {
-    throw new Error('Supabase not configured for affiliate tracking');
+// Singleton Supabase client
+let client: SupabaseClient | null = null;
+
+function getSupabase(): SupabaseClient {
+  if (!client) {
+    const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!url || !key) {
+      throw new Error('Supabase not configured for affiliate tracking');
+    }
+
+    client = createClient(url, key);
   }
-  
-  return createClient(url, key);
+  return client;
 }
 
 /**

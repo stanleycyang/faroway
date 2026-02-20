@@ -1,68 +1,112 @@
-import fs from 'fs';
-import path from 'path';
-import matter from 'gray-matter';
 import { BlogPost, BlogPostMeta, AUTHORS, PaginatedResult } from './types';
+import { CLUSTERS, getClusterBySlug, getAllClusterSlugs, getRelatedClusters } from './clusters';
+import type { ClusterDefinition } from './clusters';
+import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
+import { getBlogSupabase } from './supabase';
 
-const CONTENT_DIR = path.join(process.cwd(), 'content/blog');
+// ---------------------------------------------------------------------------
+// Column selections — avoid fetching `content` on listing queries
+// ---------------------------------------------------------------------------
 
-function parseFrontmatter(slug: string): BlogPost | null {
-  const filePath = path.join(CONTENT_DIR, `${slug}.mdx`);
-  if (!fs.existsSync(filePath)) return null;
+const META_COLUMNS =
+  'slug, title, description, author_slug, category, tags, cover_image, cover_image_alt, reading_time, featured, cluster, published_at, last_updated, view_count';
 
-  const raw = fs.readFileSync(filePath, 'utf-8');
-  const { data, content } = matter(raw);
+const FULL_COLUMNS = `${META_COLUMNS}, content`;
 
-  const author = AUTHORS[data.author as string] || AUTHORS['tripgenie-team'];
+// ---------------------------------------------------------------------------
+// Row → type mappers
+// ---------------------------------------------------------------------------
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToMeta(row: any): BlogPostMeta {
   return {
-    slug,
-    title: data.title || '',
-    description: data.description || '',
-    date: data.date || new Date().toISOString(),
-    lastUpdated: data.lastUpdated,
-    author,
-    category: data.category || 'Travel Tips',
-    tags: data.tags || [],
-    coverImage: data.coverImage || 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80',
-    coverImageAlt: data.coverImageAlt || data.title,
-    readingTime: data.readingTime || Math.ceil(content.split(/\s+/).length / 200),
-    featured: data.featured || false,
-    content,
+    slug: row.slug,
+    title: row.title,
+    description: row.description || '',
+    date: row.published_at || new Date().toISOString(),
+    lastUpdated: row.last_updated || undefined,
+    author: AUTHORS[row.author_slug] || AUTHORS['tripgenie-team'],
+    category: row.category || 'Travel Tips',
+    tags: row.tags || [],
+    coverImage: row.cover_image || getImageUrl(IMAGE_PATHS.blog.defaultFallback),
+    coverImageAlt: row.cover_image_alt || row.title,
+    readingTime: row.reading_time || 5,
+    featured: row.featured || false,
+    cluster: row.cluster || undefined,
   };
 }
 
-export function getAllPosts(): BlogPost[] {
-  if (!fs.existsSync(CONTENT_DIR)) return [];
-  
-  const files = fs.readdirSync(CONTENT_DIR).filter((f) => f.endsWith('.mdx'));
-  const posts = files
-    .map((f) => parseFrontmatter(f.replace('.mdx', '')))
-    .filter(Boolean) as BlogPost[];
-
-  return posts.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function rowToPost(row: any): BlogPost {
+  return {
+    ...rowToMeta(row),
+    content: row.content || '',
+  };
 }
 
-export function getAllPostMetas(): BlogPostMeta[] {
-  return getAllPosts().map(({ content, ...meta }) => meta);
+// ---------------------------------------------------------------------------
+// Core queries
+// ---------------------------------------------------------------------------
+
+export async function getAllPostMetas(): Promise<BlogPostMeta[]> {
+  const { data, error } = await getBlogSupabase()
+    .from('blog_posts')
+    .select(META_COLUMNS)
+    .eq('status', 'published')
+    .order('published_at', { ascending: false })
+    .limit(1000);
+
+  if (error) {
+    console.error('getAllPostMetas error:', error.message);
+    return [];
+  }
+  return (data || []).map(rowToMeta);
 }
 
-export function getPostBySlug(slug: string): BlogPost | null {
-  return parseFrontmatter(slug);
+export async function getAllPosts(): Promise<BlogPost[]> {
+  const { data, error } = await getBlogSupabase()
+    .from('blog_posts')
+    .select(FULL_COLUMNS)
+    .eq('status', 'published')
+    .order('published_at', { ascending: false })
+    .limit(1000);
+
+  if (error) {
+    console.error('getAllPosts error:', error.message);
+    return [];
+  }
+  return (data || []).map(rowToPost);
 }
 
-export function getPostsByCategory(category: string): BlogPostMeta[] {
-  return getAllPostMetas().filter(
-    (p) => p.category.toLowerCase().replace(/\s+/g, '-') === category.toLowerCase()
+export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
+  const { data, error } = await getBlogSupabase()
+    .from('blog_posts')
+    .select(FULL_COLUMNS)
+    .eq('slug', slug)
+    .eq('status', 'published')
+    .single();
+
+  if (error || !data) return null;
+  return rowToPost(data);
+}
+
+// ---------------------------------------------------------------------------
+// Derived async helpers
+// ---------------------------------------------------------------------------
+
+export async function getPostsByCategory(category: string): Promise<BlogPostMeta[]> {
+  const all = await getAllPostMetas();
+  return all.filter(
+    (p) => p.category.toLowerCase().replace(/\s+/g, '-') === category.toLowerCase(),
   );
 }
 
-export function getRelatedPosts(slug: string, limit = 3): BlogPostMeta[] {
-  const post = getPostBySlug(slug);
+export async function getRelatedPosts(slug: string, limit = 3): Promise<BlogPostMeta[]> {
+  const post = await getPostBySlug(slug);
   if (!post) return [];
 
-  const all = getAllPostMetas().filter((p) => p.slug !== slug);
+  const all = (await getAllPostMetas()).filter((p) => p.slug !== slug);
 
-  // Score by shared tags and same category
   const scored = all.map((p) => {
     let score = 0;
     if (p.category === post.category) score += 2;
@@ -75,19 +119,39 @@ export function getRelatedPosts(slug: string, limit = 3): BlogPostMeta[] {
     .slice(0, limit);
 }
 
-export function getAllCategories(): string[] {
-  const posts = getAllPostMetas();
+export async function getAllCategories(): Promise<string[]> {
+  const posts = await getAllPostMetas();
   return [...new Set(posts.map((p) => p.category))];
 }
 
-export function getAllTags(): string[] {
-  const posts = getAllPostMetas();
+export async function getAllTags(): Promise<string[]> {
+  const posts = await getAllPostMetas();
   return [...new Set(posts.flatMap((p) => p.tags))];
 }
 
-export function getFeaturedPost(): BlogPostMeta | undefined {
-  return getAllPostMetas().find((p) => p.featured) || getAllPostMetas()[0];
+export async function getFeaturedPost(): Promise<BlogPostMeta | undefined> {
+  const posts = await getAllPostMetas();
+  return posts.find((p) => p.featured) || posts[0];
 }
+
+export async function getPostsByCluster(clusterSlug: string): Promise<BlogPostMeta[]> {
+  const cluster = getClusterBySlug(clusterSlug);
+  if (!cluster) return [];
+
+  const allPosts = await getAllPostMetas();
+
+  return allPosts.filter((post) => {
+    if (post.cluster === clusterSlug) return true;
+    if (cluster.matchCategories.some((cat) => post.category === cat)) return true;
+    const postTagsLower = post.tags.map((t) => t.toLowerCase());
+    if (cluster.matchTags.some((tag) => postTagsLower.includes(tag.toLowerCase()))) return true;
+    return false;
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Pagination (pure, synchronous — no change)
+// ---------------------------------------------------------------------------
 
 export const POSTS_PER_PAGE = 9;
 
@@ -108,5 +172,11 @@ export function paginate<T>(items: T[], page: number, pageSize: number = POSTS_P
   };
 }
 
+// ---------------------------------------------------------------------------
+// Re-exports
+// ---------------------------------------------------------------------------
+
 export { type BlogPost, type BlogPostMeta, type Author, type PaginatedResult } from './types';
 export { AUTHORS, CATEGORIES } from './types';
+export { CLUSTERS, getClusterBySlug, getAllClusterSlugs, getRelatedClusters } from './clusters';
+export type { ClusterDefinition } from './clusters';

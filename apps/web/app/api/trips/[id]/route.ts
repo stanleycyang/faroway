@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClientFromRequest } from '@/lib/supabase/server'
+import { createClientFromRequest, getSupabase } from '@/lib/supabase/server'
 import { z } from 'zod'
 
 const UpdateTripSchema = z.object({
@@ -21,6 +21,19 @@ type Params = {
   }>
 }
 
+/**
+ * Resolve the current user (if authenticated). Returns null for anonymous users.
+ */
+async function resolveUser(request: NextRequest): Promise<string | null> {
+  try {
+    const supabase = await createClientFromRequest(request)
+    const { data: { user } } = await supabase.auth.getUser()
+    return user?.id ?? null
+  } catch {
+    return null
+  }
+}
+
 // GET /api/trips/[id] - Fetch a specific trip with itinerary data
 export async function GET(
   request: NextRequest,
@@ -34,25 +47,22 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 })
     }
 
-    const supabase = await createClientFromRequest(request)
+    const userId = await resolveUser(request)
+    const db = getSupabase()
 
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    // Fetch trip with itinerary in a single joined query
+    let query = db.from('trips')
+      .select('id, destination, start_date, end_date, status, travelers, budget, preferences, vibes, interests, traveler_type, budget_tier, cover_image, user_id, created_at, updated_at, itineraries(days, overview, total_cost, packing_list, general_tips, generated_at)')
+      .eq('id', id)
+    if (userId) {
+      // Authenticated: fetch trips owned by user OR anonymous trips
+      query = query.or(`user_id.eq.${userId},user_id.is.null`)
+    } else {
+      // Anonymous: can only access anonymous trips
+      query = query.is('user_id', null)
     }
 
-    // Fetch trip from database
-    const { data: trip, error } = await supabase
-      .from('trips')
-      .select('*')
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .single()
+    const { data: trip, error } = await query.single()
 
     if (error || !trip) {
       return NextResponse.json(
@@ -61,15 +71,12 @@ export async function GET(
       )
     }
 
-    // Fetch associated itinerary
-    const { data: itinerary } = await supabase
-      .from('itineraries')
-      .select('days, overview, total_cost, packing_list, general_tips, generated_at')
-      .eq('trip_id', id)
-      .single()
+    // Flatten the joined itinerary (Supabase returns array for 1-to-many)
+    const { itineraries, ...tripData } = trip as any
+    const itinerary = Array.isArray(itineraries) ? itineraries[0] || null : itineraries || null
 
     return NextResponse.json({
-      trip: { ...trip, itinerary: itinerary || null },
+      trip: { ...tripData, itinerary },
     })
   } catch (error) {
     console.error('Error fetching trip:', error)
@@ -87,17 +94,8 @@ export async function PATCH(
 ) {
   try {
     const { id } = await params
-    const supabase = await createClientFromRequest(request)
-
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const userId = await resolveUser(request)
+    const db = getSupabase()
 
     const body = await request.json()
     const parseResult = UpdateTripSchema.safeParse(body)
@@ -109,13 +107,19 @@ export async function PATCH(
       )
     }
 
-    const { data: trip, error } = await supabase
+    // Build the update query — scoped to owned or anonymous trips
+    let query = db
       .from('trips')
       .update({ ...parseResult.data, updated_at: new Date().toISOString() })
       .eq('id', id)
-      .eq('user_id', user.id)
-      .select()
-      .single()
+
+    if (userId) {
+      query = query.or(`user_id.eq.${userId},user_id.is.null`)
+    } else {
+      query = query.is('user_id', null)
+    }
+
+    const { data: trip, error } = await query.select().single()
 
     if (error || !trip) {
       return NextResponse.json(
@@ -134,7 +138,7 @@ export async function PATCH(
   }
 }
 
-// DELETE /api/trips/[id] - Delete a specific trip
+// DELETE /api/trips/[id] - Delete a specific trip (requires authentication)
 export async function DELETE(
   request: NextRequest,
   { params }: Params
@@ -143,7 +147,7 @@ export async function DELETE(
     const { id } = await params
     const supabase = await createClientFromRequest(request)
 
-    // Get authenticated user
+    // Delete requires authentication
     const { data: { user }, error: authError } = await supabase.auth.getUser()
 
     if (authError || !user) {

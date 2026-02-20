@@ -5,14 +5,15 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Search, Calendar, Users, ChevronDown, ChevronUp, Sparkles, ArrowLeft, Check, Minus, Plus, X } from 'lucide-react';
+import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
 
 const destinations = [
-  { id: 'tokyo', name: 'Tokyo', country: 'Japan', image: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800&q=80' },
-  { id: 'paris', name: 'Paris', country: 'France', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&q=80' },
-  { id: 'bali', name: 'Bali', country: 'Indonesia', image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=80' },
-  { id: 'new-york', name: 'New York', country: 'USA', image: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800&q=80' },
-  { id: 'santorini', name: 'Santorini', country: 'Greece', image: 'https://images.unsplash.com/photo-1613395877344-13d4a8e0d49e?w=800&q=80' },
-  { id: 'barcelona', name: 'Barcelona', country: 'Spain', image: 'https://images.unsplash.com/photo-1583422409516-2895a77efded?w=800&q=80' },
+  { id: 'tokyo', name: 'Tokyo', country: 'Japan', image: getImageUrl(IMAGE_PATHS.destinations.tokyo) },
+  { id: 'paris', name: 'Paris', country: 'France', image: getImageUrl(IMAGE_PATHS.destinations.paris) },
+  { id: 'bali', name: 'Bali', country: 'Indonesia', image: getImageUrl(IMAGE_PATHS.destinations.bali) },
+  { id: 'new-york', name: 'New York', country: 'USA', image: getImageUrl(IMAGE_PATHS.destinations['new-york']) },
+  { id: 'santorini', name: 'Santorini', country: 'Greece', image: getImageUrl(IMAGE_PATHS.destinations.santorini) },
+  { id: 'barcelona', name: 'Barcelona', country: 'Spain', image: getImageUrl(IMAGE_PATHS.destinations.barcelona) },
 ];
 
 const travelerTypes = [
@@ -112,6 +113,26 @@ export default function CreateTripPage() {
       }
 
       const { trip } = await response.json();
+
+      // Trigger itinerary generation workflow
+      const genResponse = await fetch(`/api/trips/${trip.id}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          preferences: {
+            vibes: selectedVibes,
+          },
+        }),
+      });
+
+      if (!genResponse.ok) {
+        const genData = await genResponse.json().catch(() => ({}));
+        // 409 means generation already in progress — still navigate
+        if (genResponse.status !== 409) {
+          throw new Error(genData.error || 'Failed to start itinerary generation');
+        }
+      }
+
       clearInterval(progressInterval);
       router.push(`/trips/${trip.id}`);
     } catch (err) {

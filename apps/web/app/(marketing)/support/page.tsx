@@ -18,6 +18,7 @@ import {
   Check,
   ArrowRight,
 } from 'lucide-react';
+import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
 import { FadeInOnScroll } from '@/components/landing/FadeInOnScroll';
 import { FAQAccordion } from '@/components/support/FAQAccordion';
 import { Header } from '@/components/Header';
@@ -138,21 +139,21 @@ const quickStartSteps = [
     step: 1,
     title: 'Choose your destination',
     description: 'Pick from 195+ countries worldwide. Set your travel dates and group size.',
-    image: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80',
+    image: getImageUrl(IMAGE_PATHS.marketing.travelPlanning),
     imageAlt: 'Traveler with backpack on scenic mountain path',
   },
   {
     step: 2,
     title: 'Pick your travel vibes',
     description: 'Select what matters to you — foodie, adventure, culture, relaxation, nightlife, and more.',
-    image: 'https://images.unsplash.com/photo-1530789253388-582c481c54b0?w=800&q=80',
+    image: getImageUrl(IMAGE_PATHS.marketing.travelDiscovery),
     imageAlt: 'Traveler overlooking tropical valley at sunrise',
   },
   {
     step: 3,
     title: 'AI builds your itinerary',
     description: 'In under 60 seconds, get a complete day-by-day plan with restaurants, activities, and local tips.',
-    image: 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80',
+    image: getImageUrl(IMAGE_PATHS.marketing.aerialTravel),
     imageAlt: 'Aerial view of turquoise waters and lush green islands',
   },
 ];
@@ -230,7 +231,7 @@ export default function SupportPage() {
       {/* ─── 1. Hero — "How Can We Help?" ───────────────────────────────── */}
       <section className="relative min-h-[85vh] flex items-center overflow-hidden">
         <Image
-          src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=1920&q=80"
+          src={getImageUrl(IMAGE_PATHS.marketing.roadTrip)}
           alt="Traveler with a map on an open road surrounded by scenic mountains"
           fill
           className="object-cover"
@@ -364,7 +365,7 @@ export default function SupportPage() {
       {/* ─── 4. Full-Bleed Scenic Divider ──────────────────────────────── */}
       <section className="relative py-24 lg:py-32 overflow-hidden">
         <Image
-          src="https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=1920&q=80"
+          src={getImageUrl(IMAGE_PATHS.marketing.campingAdventure)}
           alt="Campfire on a cliff overlooking a breathtaking mountain valley at golden hour"
           fill
           className="object-cover"
@@ -486,7 +487,7 @@ export default function SupportPage() {
       {/* ─── 7. Download App CTA ───────────────────────────────────────── */}
       <section className="relative py-24 lg:py-32 overflow-hidden">
         <Image
-          src="https://images.unsplash.com/photo-1494783367193-149034c48e58?w=1920&q=80"
+          src={getImageUrl(IMAGE_PATHS.marketing.ctaBackground)}
           alt="Silhouette of a traveler looking at a stunning colorful sunset over the ocean"
           fill
           className="object-cover"
@@ -509,7 +510,7 @@ export default function SupportPage() {
             <AppStoreButtons className="justify-center mb-8" />
 
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-3">
-              {['100% free', 'Works offline', '4.9 star rating'].map(
+              {['100% free', 'Works offline', 'No account needed'].map(
                 (feature) => (
                   <div
                     key={feature}

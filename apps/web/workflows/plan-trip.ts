@@ -301,11 +301,11 @@ async function saveSearchResults(
   searchId: string,
   result: TravelPlanResult,
 ): Promise<void> {
-  // Save hotels
-  for (const hotel of result.hotels || []) {
-    await getSupabase().from('search_results').insert({
+  // Build all result rows and batch insert
+  const resultRows = [
+    ...(result.hotels || []).map(hotel => ({
       search_id: searchId,
-      category: 'hotel',
+      category: 'hotel' as const,
       name: hotel.name,
       description: `${hotel.rating?.toFixed(1)} stars, ${hotel.reviewCount} reviews`,
       data: hotel,
@@ -314,14 +314,10 @@ async function saveSearchResults(
       price_amount: hotel.pricePerNight,
       price_currency: hotel.currency || 'USD',
       rating: hotel.rating,
-    });
-  }
-
-  // Save activities
-  for (const activity of result.activities || []) {
-    await getSupabase().from('search_results').insert({
+    })),
+    ...(result.activities || []).map(activity => ({
       search_id: searchId,
-      category: 'activity',
+      category: 'activity' as const,
       name: activity.name,
       description: activity.description,
       data: activity,
@@ -330,40 +326,40 @@ async function saveSearchResults(
       price_amount: activity.price,
       price_currency: activity.currency || 'USD',
       rating: activity.rating,
-    });
-  }
-
-  // Save restaurants
-  for (const restaurant of result.restaurants || []) {
-    await getSupabase().from('search_results').insert({
+    })),
+    ...(result.restaurants || []).map(restaurant => ({
       search_id: searchId,
-      category: 'dining',
+      category: 'dining' as const,
       name: restaurant.name,
       description: restaurant.description,
       data: restaurant,
       affiliate_url: restaurant.reservationUrl,
       affiliate_partner: restaurant.affiliatePartner,
       rating: restaurant.rating,
-    });
+    })),
+  ];
+
+  if (resultRows.length > 0) {
+    await getSupabase().from('search_results').insert(resultRows);
   }
 
-  // Save itinerary days
-  if (result.itinerary?.days) {
-    for (const day of result.itinerary.days) {
-      await getSupabase().from('search_itineraries').insert({
-        search_id: searchId,
-        day_number: day.dayNumber,
-        date: day.date,
-        title: day.title,
-        summary: `Day ${day.dayNumber} in ${result.itinerary.destination}`,
-        morning_activities: day.morning?.activities?.map((a: any) => a.id) || [],
-        afternoon_activities: day.afternoon?.activities?.map((a: any) => a.id) || [],
-        evening_activities: day.evening?.activities?.map((a: any) => a.id) || [],
-        meals: [day.morning?.meal?.id, day.afternoon?.meal?.id, day.evening?.meal?.id].filter(Boolean),
-        estimated_cost: day.estimatedCost,
-        cost_currency: day.currency || 'USD',
-        tips: day.tips || [],
-      });
-    }
+  // Save itinerary days (batch)
+  if (result.itinerary?.days?.length) {
+    const itineraryRows = result.itinerary.days.map(day => ({
+      search_id: searchId,
+      day_number: day.dayNumber,
+      date: day.date,
+      title: day.title,
+      summary: `Day ${day.dayNumber} in ${result.itinerary!.destination}`,
+      morning_activities: day.morning?.activities?.map((a: any) => a.id) || [],
+      afternoon_activities: day.afternoon?.activities?.map((a: any) => a.id) || [],
+      evening_activities: day.evening?.activities?.map((a: any) => a.id) || [],
+      meals: [day.morning?.meal?.id, day.afternoon?.meal?.id, day.evening?.meal?.id].filter(Boolean),
+      estimated_cost: day.estimatedCost,
+      cost_currency: day.currency || 'USD',
+      tips: day.tips || [],
+    }));
+
+    await getSupabase().from('search_itineraries').insert(itineraryRows);
   }
 }

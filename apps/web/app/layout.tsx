@@ -17,7 +17,7 @@ export const metadata: Metadata = {
     default: "TripGenie - AI-Powered Travel Planning | Create Itineraries in 60 Seconds",
     template: "%s | TripGenie",
   },
-  description: "Plan your dream trip with AI. Get personalized day-by-day itineraries, find hotels, flights, and activities. Free to use, instant results. Join 50,000+ happy travelers.",
+  description: "Plan your dream trip with AI. Get personalized day-by-day itineraries, find hotels, activities, and restaurants. 100% free, no account needed, works offline.",
   keywords: [
     "AI travel planner",
     "trip planning app",
@@ -140,13 +140,6 @@ const softwareApplicationSchema = {
     "@type": "Offer",
     price: "0",
     priceCurrency: "USD",
-  },
-  aggregateRating: {
-    "@type": "AggregateRating",
-    ratingValue: "4.9",
-    ratingCount: "12000",
-    bestRating: "5",
-    worstRating: "1",
   },
 };
 

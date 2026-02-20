@@ -37,7 +37,7 @@ export const securityHeaders = [
       // TODO: Replace 'unsafe-inline' with nonce-based CSP
       "script-src 'self' 'unsafe-inline'",
       "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https://images.unsplash.com",
+      "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co",
       "font-src 'self' https://fonts.gstatic.com",
       "connect-src 'self' https://*.supabase.co https://ai-gateway.vercel.sh",
       "frame-ancestors 'self'",

@@ -27,64 +27,40 @@ const mockItinerary = {
 }
 
 let mockAuthReturn: { data: { user: any }; error: any }
-let mockSelectReturn: any
-let mockInsertReturn: any
-let mockUpdateReturn: any
-let mockDeleteReturn: any
+let mockTripReturn: any
 let mockItineraryReturn: any
 
-const mockSingle = vi.fn()
-const mockEq = vi.fn()
+// Universal query chain: every method returns the chain itself.
+// The chain has data/error/count getters so `await chain` + destructuring works.
+function createQueryChain(getResult: () => any) {
+  const chain: any = {}
+  const methods = ['select', 'eq', 'or', 'is', 'insert', 'update', 'delete', 'upsert', 'match', 'limit', 'order', 'single']
+  methods.forEach(m => {
+    chain[m] = vi.fn(() => chain)
+  })
+  Object.defineProperty(chain, 'data', { get: () => getResult()?.data, configurable: true, enumerable: true })
+  Object.defineProperty(chain, 'error', { get: () => getResult()?.error, configurable: true, enumerable: true })
+  Object.defineProperty(chain, 'count', { get: () => getResult()?.count, configurable: true, enumerable: true })
+  return chain
+}
+
+const tripsChain = createQueryChain(() => mockTripReturn)
+const itinerariesChain = createQueryChain(() => mockItineraryReturn)
 
 const mockSupabase = {
   auth: {
     getUser: vi.fn(() => mockAuthReturn),
   },
   from: vi.fn((table: string) => {
-    if (table === 'itineraries') {
-      return {
-        select: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            single: vi.fn(() => mockItineraryReturn),
-          })),
-        })),
-      }
-    }
-    // trips table
-    return {
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            single: vi.fn(() => mockSelectReturn),
-          })),
-          order: vi.fn(() => mockSelectReturn),
-        })),
-      })),
-      insert: vi.fn(() => ({
-        select: vi.fn(() => ({
-          single: vi.fn(() => mockInsertReturn),
-        })),
-      })),
-      update: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            select: vi.fn(() => ({
-              single: vi.fn(() => mockUpdateReturn),
-            })),
-          })),
-        })),
-      })),
-      delete: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          eq: vi.fn(() => mockDeleteReturn),
-        })),
-      })),
-    }
+    if (table === 'itineraries') return itinerariesChain
+    return tripsChain
   }),
 }
 
 vi.mock('@/lib/supabase/server', () => ({
   createClient: vi.fn(async () => mockSupabase),
+  createClientFromRequest: vi.fn(async () => mockSupabase),
+  getSupabase: vi.fn(() => mockSupabase),
 }))
 
 // ── Import route handlers after mocking ────────────────────────────────────────
@@ -120,7 +96,7 @@ describe('GET /api/trips', () => {
   })
 
   it('returns user trips array', async () => {
-    mockSelectReturn = { data: [mockTrip], error: null }
+    mockTripReturn = { data: [mockTrip], error: null }
     const req = makeRequest('GET', '/api/trips')
     const res = await getTrips(req)
     const json = await res.json()
@@ -146,7 +122,7 @@ describe('POST /api/trips', () => {
   })
 
   it('creates a trip and returns 201', async () => {
-    mockInsertReturn = { data: mockTrip, error: null }
+    mockTripReturn = { data: mockTrip, error: null }
     const req = makeRequest('POST', '/api/trips', {
       destination: 'Tokyo',
       start_date: '2026-04-01',
@@ -177,8 +153,11 @@ describe('GET /api/trips/[id]', () => {
   })
 
   it('returns trip with itinerary data', async () => {
-    mockSelectReturn = { data: mockTrip, error: null }
-    mockItineraryReturn = { data: mockItinerary, error: null }
+    // Route uses a joined query: trips with itineraries(...)
+    mockTripReturn = {
+      data: { ...mockTrip, itineraries: [mockItinerary] },
+      error: null,
+    }
 
     const req = makeRequest('GET', '/api/trips/trip-1')
     const res = await getTrip(req, makeParams('trip-1'))
@@ -191,7 +170,7 @@ describe('GET /api/trips/[id]', () => {
   })
 
   it('returns 404 for nonexistent trip', async () => {
-    mockSelectReturn = { data: null, error: { code: 'PGRST116', message: 'Not found' } }
+    mockTripReturn = { data: null, error: { code: 'PGRST116', message: 'Not found' } }
 
     const req = makeRequest('GET', '/api/trips/nonexistent')
     const res = await getTrip(req, makeParams('nonexistent'))
@@ -215,7 +194,7 @@ describe('PATCH /api/trips/[id]', () => {
 
   it('updates trip fields', async () => {
     const updatedTrip = { ...mockTrip, destination: 'Osaka' }
-    mockUpdateReturn = { data: updatedTrip, error: null }
+    mockTripReturn = { data: updatedTrip, error: null }
 
     const req = makeRequest('PATCH', '/api/trips/trip-1', {
       destination: 'Osaka',
@@ -237,7 +216,7 @@ describe('PATCH /api/trips/[id]', () => {
   })
 
   it('returns 404 when trip not found', async () => {
-    mockUpdateReturn = { data: null, error: { code: 'PGRST116', message: 'Not found' } }
+    mockTripReturn = { data: null, error: { code: 'PGRST116', message: 'Not found' } }
 
     const req = makeRequest('PATCH', '/api/trips/trip-1', {
       destination: 'Osaka',
@@ -255,7 +234,7 @@ describe('DELETE /api/trips/[id]', () => {
   })
 
   it('deletes trip and returns success', async () => {
-    mockDeleteReturn = { error: null, count: 1 }
+    mockTripReturn = { error: null, count: 1 }
 
     const req = makeRequest('DELETE', '/api/trips/trip-1')
     const res = await DELETE(req, makeParams('trip-1'))
@@ -266,7 +245,7 @@ describe('DELETE /api/trips/[id]', () => {
   })
 
   it('returns 404 for nonexistent trip', async () => {
-    mockDeleteReturn = { error: null, count: 0 }
+    mockTripReturn = { error: null, count: 0 }
 
     const req = makeRequest('DELETE', '/api/trips/nonexistent')
     const res = await DELETE(req, makeParams('nonexistent'))

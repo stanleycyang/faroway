@@ -15,12 +15,6 @@ import {
   mapViatorCategoryToVibe,
   isViatorConfigured,
 } from '@/lib/affiliates/viator';
-import {
-  searchGYGActivities,
-  generateGYGAffiliateUrl,
-  mapGYGCategoryToVibe,
-  isGYGConfigured,
-} from '@/lib/affiliates/getyourguide';
 
 const aiGateway = createOpenAI({
   apiKey: process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_AI_GATEWAY_API_KEY,
@@ -60,12 +54,12 @@ const ActivityListSchema = z.object({
 
 const SYSTEM_PROMPT = `You are a travel activities expert. Generate realistic, bookable activities and attractions for the destination.
 
-When real Viator/GetYourGuide data is provided as context, use those activity names and prices. Only generate synthetic data for categories not covered by the real results.
+When real Viator data is provided as context, use those activity names and prices. Only generate synthetic data for categories not covered by the real results.
 
 For each activity, provide:
 1. Real attraction/tour names that exist at the destination
 2. Accurate descriptions of what visitors will experience
-3. Realistic pricing (use Viator/GetYourGuide as reference)
+3. Realistic pricing (use Viator as reference)
 4. Appropriate duration estimates
 5. Best time of day to visit
 6. How well it matches the traveler's vibes
@@ -77,7 +71,7 @@ Generate diverse options across categories like:
 - Outdoor activities
 - Unique local experiences
 
-Use realistic affiliate URLs (format: https://viator.com/tour/[destination-slug] or https://getyourguide.com/[destination]/[activity])`;
+Use realistic affiliate URLs (format: https://viator.com/tour/[destination-slug])`;
 
 export async function runActivitiesAgent(
   plan: SearchPlan,
@@ -86,23 +80,16 @@ export async function runActivitiesAgent(
   const { destination, dates, activityCriteria, vibeInterpretation } = plan;
   const vibes = vibeInterpretation.vibes;
 
-  // Try Viator + GYG in parallel for real data
+  // Search Viator for real activity data
   let realActivities: ActivityResult[] = [];
 
   try {
-    const [viatorResult, gygResult] = await Promise.allSettled([
-      isViatorConfigured()
-        ? searchViatorProducts({ destination: destination, startDate: dates.start, limit: 10 })
-        : Promise.resolve([]),
-      isGYGConfigured()
-        ? searchGYGActivities({ destination: destination, startDate: dates.start, limit: 10 })
-        : Promise.resolve([]),
-    ]);
+    const viatorProducts = isViatorConfigured()
+      ? await searchViatorProducts({ destination: destination, startDate: dates.start, limit: 15 })
+      : [];
 
     const trackingId = `tg_${Date.now()}`;
 
-    // Normalize Viator results to ActivityResult schema
-    const viatorProducts = viatorResult.status === 'fulfilled' ? viatorResult.value : [];
     for (const product of viatorProducts) {
       const durationMinutes = product.duration.fixedDurationInMinutes
         || product.duration.variableDurationFromMinutes
@@ -140,62 +127,8 @@ export async function runActivitiesAgent(
         bookingRequired: true,
       });
     }
-
-    // Normalize GYG results to ActivityResult schema
-    const gygActivities = gygResult.status === 'fulfilled' ? gygResult.value : [];
-    for (const activity of gygActivities) {
-      const durationMinutes = activity.duration.fixedDurationInMinutes
-        || activity.duration.variableDurationFromMinutes
-        || 180;
-      const categoryVibes = activity.categories.length > 0
-        ? mapGYGCategoryToVibe(activity.categories[0])
-        : [];
-      const { score, matchedVibes } = calculateVibeScore(
-        { name: activity.title, description: activity.description, category: activity.categories[0] || '' },
-        vibes
-      );
-
-      realActivities.push({
-        id: `activity_g_${activity.activityId}`,
-        name: activity.title,
-        description: activity.shortDescription || activity.description.substring(0, 200),
-        category: activity.categories[0] || 'sightseeing',
-        duration: durationMinutes,
-        price: activity.price.amount,
-        currency: activity.price.currencyCode,
-        rating: activity.rating,
-        reviewCount: activity.reviewCount,
-        location: {
-          name: activity.location.city || destination,
-          address: activity.location.address || '',
-          lat: activity.location.coordinates?.latitude || 0,
-          lng: activity.location.coordinates?.longitude || 0,
-        },
-        images: activity.images.slice(0, 3).map((img: any) => img.url),
-        affiliateUrl: generateGYGAffiliateUrl(activity.activityId, trackingId, { date: dates.start }),
-        affiliatePartner: 'getyourguide',
-        bestTimeOfDay: 'any',
-        vibeScore: score || matchedVibes.length * 25,
-        vibeMatch: matchedVibes.length > 0 ? matchedVibes : categoryVibes.filter(v => vibes.includes(v)),
-        bookingRequired: true,
-      });
-    }
-
-    // Deduplicate by fuzzy name match, preferring Viator (higher commission)
-    const seen = new Map<string, ActivityResult>();
-    for (const activity of realActivities) {
-      const key = activity.name
-        .toLowerCase()
-        .replace(/\b(tour|experience|trip|excursion)\b/g, '')
-        .replace(/[^a-z0-9]/g, '');
-      const existing = seen.get(key);
-      if (!existing || (activity.affiliatePartner === 'viator' && existing.affiliatePartner !== 'viator')) {
-        seen.set(key, activity);
-      }
-    }
-    realActivities = Array.from(seen.values());
   } catch (error) {
-    console.error('[Activities Agent] API search error:', error);
+    console.error('[Activities Agent] Viator search error:', error);
   }
 
   // If we have enough real results, return them

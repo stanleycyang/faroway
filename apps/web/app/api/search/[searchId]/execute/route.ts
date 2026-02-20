@@ -111,44 +111,61 @@ export async function POST(
     await updateProgress(searchId, { aggregator: 'done' });
     console.log(`[Search Execute] Aggregator complete: ${days.length} days`);
 
-    // Step 4: Save all results to database
+    // Step 4: Save all results to database (batch inserts)
     console.log(`[Search Execute] Saving results for ${searchId}`);
 
-    // Save hotels
-    for (const hotel of hotels) {
-      await saveResult(searchId, 'hotel', hotel);
+    const toResultRow = (category: string, item: any) => ({
+      search_id: searchId,
+      category,
+      name: item.name,
+      description: item.description,
+      data: item,
+      affiliate_url: item.affiliateUrl || item.reservationUrl,
+      affiliate_partner: item.affiliatePartner,
+      price_amount: item.pricePerNight || item.price || null,
+      price_currency: item.currency || 'USD',
+      vibe_score: item.vibeScore,
+      rating: item.rating || item.userRating,
+      location_name: item.location?.name,
+      location_address: item.location?.address,
+      location_lat: item.location?.lat,
+      location_lng: item.location?.lng,
+      image_url: item.images?.[0],
+      images: item.images || [],
+    });
+
+    const resultRows = [
+      ...hotels.map(h => toResultRow('hotel', h)),
+      ...activities.map(a => toResultRow('activity', a)),
+      ...dining.map(d => toResultRow('dining', d)),
+    ];
+
+    if (resultRows.length > 0) {
+      await getSupabase().from('search_results').insert(resultRows);
     }
 
-    // Save activities
-    for (const activity of activities) {
-      await saveResult(searchId, 'activity', activity);
-    }
+    // Save itinerary days (batch)
+    const itineraryRows = days.map(day => ({
+      search_id: searchId,
+      day_number: day.dayNumber,
+      date: day.date,
+      title: day.title,
+      summary: day.summary,
+      morning_activities: day.morning.activities.map((a: any) => a.id),
+      afternoon_activities: day.afternoon.activities.map((a: any) => a.id),
+      evening_activities: day.evening.activities.map((a: any) => a.id),
+      meals: [
+        day.morning.meal?.id,
+        day.afternoon.meal?.id,
+        day.evening.meal?.id,
+      ].filter(Boolean),
+      estimated_cost: day.estimatedCost,
+      cost_currency: day.currency,
+      tips: day.tips,
+    }));
 
-    // Save dining
-    for (const restaurant of dining) {
-      await saveResult(searchId, 'dining', restaurant);
-    }
-
-    // Save itinerary days
-    for (const day of days) {
-      await getSupabase().from('search_itineraries').insert({
-        search_id: searchId,
-        day_number: day.dayNumber,
-        date: day.date,
-        title: day.title,
-        summary: day.summary,
-        morning_activities: day.morning.activities.map(a => a.id),
-        afternoon_activities: day.afternoon.activities.map(a => a.id),
-        evening_activities: day.evening.activities.map(a => a.id),
-        meals: [
-          day.morning.meal?.id,
-          day.afternoon.meal?.id,
-          day.evening.meal?.id,
-        ].filter(Boolean),
-        estimated_cost: day.estimatedCost,
-        cost_currency: day.currency,
-        tips: day.tips,
-      });
+    if (itineraryRows.length > 0) {
+      await getSupabase().from('search_itineraries').insert(itineraryRows);
     }
 
     // Mark search as completed

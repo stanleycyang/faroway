@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase, API_BASE_URL, getAuthHeaders } from '../lib/supabase';
 import { useTripStore, Trip, TripInput } from '../stores/tripStore';
 import { syncService, networkMonitor, offlineStorage } from '../lib/offline';
+import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
 
 interface ApiTrip {
   id: string;
@@ -34,7 +35,7 @@ function transformApiTrip(apiTrip: ApiTrip): Trip {
     vibes: apiTrip.vibes || [],
     budget: apiTrip.budget,
     days: apiTrip.itinerary?.days || [],
-    coverImage: apiTrip.cover_image || 'https://images.unsplash.com/photo-1488646953014-85cb44e25828',
+    coverImage: apiTrip.cover_image || getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
     createdAt: apiTrip.created_at,
     status: apiTrip.status as Trip['status'],
   };
@@ -121,7 +122,7 @@ export function useTrips() {
         vibes: input.vibes,
         budget: input.budget,
         days: [],
-        coverImage: 'https://images.unsplash.com/photo-1488646953014-85cb44e25828',
+        coverImage: getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
         createdAt: new Date().toISOString(),
         status: 'draft',
       };

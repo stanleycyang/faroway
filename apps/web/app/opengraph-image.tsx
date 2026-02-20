@@ -58,10 +58,13 @@ export default async function Image() {
               borderRadius: '24px',
               background: 'rgba(255, 255, 255, 0.2)',
               marginBottom: '24px',
-              fontSize: '50px',
+              fontSize: '48px',
+              fontWeight: 'bold',
+              color: 'white',
+              letterSpacing: '-1px',
             }}
           >
-            ✨
+            TG
           </div>
 
           {/* Title */}

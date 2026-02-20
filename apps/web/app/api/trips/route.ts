@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClientFromRequest } from '@/lib/supabase/server'
+import { createClientFromRequest, getSupabase } from '@/lib/supabase/server'
 import { z } from 'zod'
 
 const CreateTripSchema = z.object({
@@ -21,10 +21,10 @@ const CreateTripSchema = z.object({
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClientFromRequest(request)
-    
+
     // Get authenticated user
     const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
+
     if (authError || !user) {
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -35,9 +35,10 @@ export async function GET(request: NextRequest) {
     // Fetch user's trips from database (with caching headers for performance)
     const { data: trips, error } = await supabase
       .from('trips')
-      .select('*')
+      .select('id, destination, start_date, end_date, status, travelers, budget, vibes, traveler_type, budget_tier, cover_image, created_at, updated_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
+      .limit(100)
 
     if (error) {
       console.error('Database error:', error)
@@ -65,19 +66,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/trips - Create a new trip
+// POST /api/trips - Create a new trip (works for both authenticated and anonymous users)
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClientFromRequest(request)
-    
-    // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
-    
-    if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+    // Try to get authenticated user (optional — anonymous trip creation is allowed)
+    let userId: string | null = null
+    try {
+      const supabase = await createClientFromRequest(request)
+      const { data: { user } } = await supabase.auth.getUser()
+      userId = user?.id ?? null
+    } catch {
+      // Auth failed — continue as anonymous
     }
 
     const body = await request.json()
@@ -92,11 +91,13 @@ export async function POST(request: NextRequest) {
 
     const { destination, start_date, end_date, travelers, preferences } = parseResult.data
 
-    // Insert trip into database
-    const { data: trip, error } = await supabase
+    // Use service client to bypass RLS (needed for anonymous trip creation)
+    const db = getSupabase()
+
+    const { data: trip, error } = await db
       .from('trips')
       .insert({
-        user_id: user.id,
+        user_id: userId,
         destination,
         start_date,
         end_date,

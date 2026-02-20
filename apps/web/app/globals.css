@@ -153,6 +153,25 @@
   }
 }
 
+/* ===== Editorial Prose Styles ===== */
+@layer components {
+  .prose-editorial > p:first-of-type::first-letter {
+    float: left;
+    font-size: 3.5em;
+    line-height: 0.8;
+    font-weight: 700;
+    color: var(--primary);
+    margin-right: 0.1em;
+    margin-top: 0.05em;
+  }
+
+  .prose-editorial blockquote {
+    border-left: 4px solid transparent;
+    border-image: linear-gradient(to bottom, #F97066, #F59E0B) 1;
+    background: linear-gradient(to right, rgba(249, 112, 102, 0.04), transparent);
+  }
+}
+
 /* ===== Print styles for packing list ===== */
 @media print {
   nav, footer { display: none !important; }

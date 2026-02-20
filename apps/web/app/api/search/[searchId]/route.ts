@@ -16,10 +16,10 @@ export async function GET(
   const { searchId } = await params;
 
   try {
-    // Get search record
+    // Get search record with results and itinerary in a single joined query
     const { data: search, error: searchError } = await getSupabase()
       .from('searches')
-      .select('*')
+      .select('id, status, progress, created_at, completed_at, error_message, json_render_spec, search_results(id, category, data, vibe_score), search_itineraries(day_number, date, title, summary, morning_activities, afternoon_activities, evening_activities, meals, estimated_cost, cost_currency, tips, hotel_id)')
       .eq('id', searchId)
       .single();
 
@@ -41,45 +41,36 @@ export async function GET(
 
     // If completed, include results
     if (search.status === 'completed') {
-      // Get all results
-      const { data: resultsData } = await getSupabase()
-        .from('search_results')
-        .select('*')
-        .eq('search_id', searchId)
-        .order('vibe_score', { ascending: false });
-
-      // Get itinerary
-      const { data: itineraryData } = await getSupabase()
-        .from('search_itineraries')
-        .select('*')
-        .eq('search_id', searchId)
-        .order('day_number', { ascending: true });
+      const resultsData = ((search as any).search_results || [])
+        .sort((a: any, b: any) => (b.vibe_score ?? 0) - (a.vibe_score ?? 0));
+      const itineraryData = ((search as any).search_itineraries || [])
+        .sort((a: any, b: any) => a.day_number - b.day_number);
 
       if (resultsData) {
         // Parse results by category
         const hotels: HotelResult[] = resultsData
-          .filter(r => r.category === 'hotel')
-          .map(r => ({
+          .filter((r: any) => r.category === 'hotel')
+          .map((r: any) => ({
             ...r.data,
             id: r.id,
           }));
 
         const activities: ActivityResult[] = resultsData
-          .filter(r => r.category === 'activity')
-          .map(r => ({
+          .filter((r: any) => r.category === 'activity')
+          .map((r: any) => ({
             ...r.data,
             id: r.id,
           }));
 
         const dining: DiningResult[] = resultsData
-          .filter(r => r.category === 'dining')
-          .map(r => ({
+          .filter((r: any) => r.category === 'dining')
+          .map((r: any) => ({
             ...r.data,
             id: r.id,
           }));
 
         // Build itinerary from stored data
-        const itinerary: SuggestedDay[] = (itineraryData || []).map(day => ({
+        const itinerary: SuggestedDay[] = (itineraryData || []).map((day: any) => ({
           dayNumber: day.day_number,
           date: day.date,
           title: day.title,

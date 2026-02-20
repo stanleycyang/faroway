@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Header } from '@/components/Header';
+import { Footer } from '@/components/Footer';
 import {
   Star,
   Check,
@@ -21,23 +22,24 @@ import {
   Play,
 } from 'lucide-react';
 import { FadeInOnScroll } from '@/components/landing/FadeInOnScroll';
+import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
 
 // ─── Data ───────────────────────────────────────────────────────────────────
 
 const destinations = [
-  { name: 'Tokyo', country: 'Japan', vibe: 'Culture & Tech', image: 'https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?w=800&q=80' },
-  { name: 'Paris', country: 'France', vibe: 'Romance & Art', image: 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=800&q=80' },
-  { name: 'Bali', country: 'Indonesia', vibe: 'Beach & Wellness', image: 'https://images.unsplash.com/photo-1537996194471-e657df975ab4?w=800&q=80' },
-  { name: 'Barcelona', country: 'Spain', vibe: 'Beach & Culture', image: 'https://images.unsplash.com/photo-1583422409516-2895a77efded?w=800&q=80' },
-  { name: 'New York', country: 'USA', vibe: 'Urban & Nightlife', image: 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?w=800&q=80' },
-  { name: 'Santorini', country: 'Greece', vibe: 'Scenic & Romantic', image: 'https://images.unsplash.com/photo-1613395877344-13d4a8e0d49e?w=800&q=80' },
+  { name: 'Tokyo', country: 'Japan', vibe: 'Culture & Tech', image: getImageUrl(IMAGE_PATHS.destinations.tokyo) },
+  { name: 'Paris', country: 'France', vibe: 'Romance & Art', image: getImageUrl(IMAGE_PATHS.destinations.paris) },
+  { name: 'Bali', country: 'Indonesia', vibe: 'Beach & Wellness', image: getImageUrl(IMAGE_PATHS.destinations.bali) },
+  { name: 'Barcelona', country: 'Spain', vibe: 'Beach & Culture', image: getImageUrl(IMAGE_PATHS.destinations.barcelona) },
+  { name: 'New York', country: 'USA', vibe: 'Urban & Nightlife', image: getImageUrl(IMAGE_PATHS.destinations['new-york']) },
+  { name: 'Santorini', country: 'Greece', vibe: 'Scenic & Romantic', image: getImageUrl(IMAGE_PATHS.destinations.santorini) },
 ];
 
 const scenicImages = [
-  { src: 'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=900&q=80', alt: 'Crystal-clear tropical beach with turquoise water', label: 'Maldives' },
-  { src: 'https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?w=900&q=80', alt: 'Majestic mountain peaks at golden hour', label: 'Swiss Alps' },
-  { src: 'https://images.unsplash.com/photo-1523906834658-6e24ef2386f9?w=900&q=80', alt: 'Venice canal at sunset with gondolas', label: 'Venice' },
-  { src: 'https://images.unsplash.com/photo-1501785888041-af3ef285b470?w=900&q=80', alt: 'Scenic lake surrounded by mountains at sunrise', label: 'Lake Bled' },
+  { src: getImageUrl(IMAGE_PATHS.marketing.galleryMaldives), alt: 'Crystal-clear tropical beach with turquoise water', label: 'Maldives' },
+  { src: getImageUrl(IMAGE_PATHS.marketing.gallerySwissAlps), alt: 'Majestic mountain peaks at golden hour', label: 'Swiss Alps' },
+  { src: getImageUrl(IMAGE_PATHS.marketing.galleryVenice), alt: 'Venice canal at sunset with gondolas', label: 'Venice' },
+  { src: getImageUrl(IMAGE_PATHS.marketing.galleryLakeBled), alt: 'Scenic lake surrounded by mountains at sunrise', label: 'Lake Bled' },
 ];
 
 const whyReasons = [
@@ -249,7 +251,7 @@ export default function LandingPage() {
                 {/* Contained travel photo */}
                 <div className="relative rounded-3xl overflow-hidden shadow-2xl shadow-slate-900/10">
                   <Image
-                    src="https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80"
+                    src={getImageUrl(IMAGE_PATHS.marketing.beachHero)}
                     alt="Stunning tropical beach with crystal-clear turquoise water"
                     width={600}
                     height={500}
@@ -394,7 +396,7 @@ export default function LandingPage() {
               <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] hover:border-white/[0.12] transition-all group min-h-[320px] lg:min-h-[360px]">
                 {/* Background travel image */}
                 <Image
-                  src="https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=1200&q=80"
+                  src={getImageUrl(IMAGE_PATHS.marketing.aerialTravel)}
                   alt="Stunning aerial view of turquoise waters and lush green islands"
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-1000"
@@ -426,7 +428,7 @@ export default function LandingPage() {
             <FadeInOnScroll delay={100}>
               <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] hover:border-white/[0.12] transition-all h-full group min-h-[360px]">
                 <Image
-                  src="https://images.unsplash.com/photo-1530789253388-582c481c54b0?w=800&q=80"
+                  src={getImageUrl(IMAGE_PATHS.marketing.travelDiscovery)}
                   alt="Adventurous traveler overlooking a tropical valley at sunrise"
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-1000"
@@ -456,7 +458,7 @@ export default function LandingPage() {
             <FadeInOnScroll delay={200}>
               <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] hover:border-white/[0.12] transition-all h-full group min-h-[360px]">
                 <Image
-                  src="https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&q=80"
+                  src={getImageUrl(IMAGE_PATHS.marketing.hotelFeature)}
                   alt="Luxury hotel room overlooking the ocean"
                   fill
                   className="object-cover group-hover:scale-105 transition-transform duration-1000"
@@ -479,7 +481,7 @@ export default function LandingPage() {
               <div className="grid sm:grid-cols-2 gap-4 lg:gap-5">
                 <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] hover:border-white/[0.12] transition-all group min-h-[220px]">
                   <Image
-                    src="https://images.unsplash.com/photo-1488646953014-85cb44e25828?w=800&q=80"
+                    src={getImageUrl(IMAGE_PATHS.marketing.travelPlanning)}
                     alt="Traveler with backpack walking through a scenic mountain path"
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-1000"
@@ -500,7 +502,7 @@ export default function LandingPage() {
 
                 <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] hover:border-white/[0.12] transition-all group min-h-[220px]">
                   <Image
-                    src="https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?w=800&q=80"
+                    src={getImageUrl(IMAGE_PATHS.marketing.roadTrip)}
                     alt="Map laid out on a table with travel planning accessories"
                     fill
                     className="object-cover group-hover:scale-105 transition-transform duration-1000"
@@ -527,7 +529,7 @@ export default function LandingPage() {
       {/* ─── Full-width scenic divider ────────────────────────────────────── */}
       <section className="relative h-[50vh] lg:h-[60vh]">
         <Image
-          src="https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=1920&q=80"
+          src={getImageUrl(IMAGE_PATHS.marketing.campingAdventure)}
           alt="Campfire on a cliff overlooking a breathtaking mountain valley at golden hour"
           fill
           className="object-cover"
@@ -572,7 +574,7 @@ export default function LandingPage() {
                 desc: 'Pick your destination with Google Places autocomplete. Set your travel dates and number of travelers.',
                 icon: <Compass className="w-7 h-7 text-white" />,
                 gradient: 'from-primary to-primary-600 shadow-primary/20',
-                image: 'https://images.unsplash.com/photo-1452421822248-d4c2b47f0c81?w=600&q=80',
+                image: getImageUrl(IMAGE_PATHS.marketing.travelDesk),
                 imageAlt: 'Flat lay of travel planning essentials including map, camera, and passport',
               },
               {
@@ -581,7 +583,7 @@ export default function LandingPage() {
                 desc: 'Choose from 12 travel vibes and pick your traveler type: solo, couple, family, or friends.',
                 icon: <Heart className="w-7 h-7 text-white" />,
                 gradient: 'from-amber-500 to-amber-600',
-                image: 'https://images.unsplash.com/photo-1527631746610-bca00a040d60?w=600&q=80',
+                image: getImageUrl(IMAGE_PATHS.marketing.passportJourney),
                 imageAlt: 'Friends enjoying a sunset on a tropical beach',
               },
               {
@@ -590,7 +592,7 @@ export default function LandingPage() {
                 desc: 'Watch as AI creates a personalized day-by-day itinerary. Book hotels and activities with one tap.',
                 icon: <Sparkles className="w-7 h-7 text-white" />,
                 gradient: 'from-teal-500 to-teal-600',
-                image: 'https://images.unsplash.com/photo-1503220317375-aaad61436b1b?w=600&q=80',
+                image: getImageUrl(IMAGE_PATHS.marketing.trainJourney),
                 imageAlt: 'Hiker overlooking a stunning scenic vista at sunrise',
               },
             ].map((item, i) => (
@@ -710,7 +712,7 @@ export default function LandingPage() {
       {/* ─── Download CTA — with stunning background ──────────────────────── */}
       <section id="download" className="relative py-24 lg:py-32 overflow-hidden">
         <Image
-          src="https://images.unsplash.com/photo-1494783367193-149034c48e58?w=1920&q=80"
+          src={getImageUrl(IMAGE_PATHS.marketing.ctaBackground)}
           alt="Silhouette of a traveler looking at a stunning colorful sunset over the ocean"
           fill
           className="object-cover"
@@ -790,62 +792,7 @@ export default function LandingPage() {
       </section>
 
       {/* ─── Footer ──────────────────────────────────────────────────────── */}
-      <footer className="bg-surface-950 border-t border-white/[0.04] text-white py-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-            <div>
-              <Link href="/" className="flex items-center gap-2.5 mb-4 group">
-                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-amber-500 flex items-center justify-center shadow-lg shadow-primary/20">
-                  <Sparkles className="w-5 h-5 text-white" />
-                </div>
-                <span className="text-lg font-bold">TripGenie</span>
-              </Link>
-              <p className="text-surface-400 text-sm mb-4 leading-relaxed">
-                Your AI-powered travel genie. Plan your dream trip in seconds, book everything in one place.
-              </p>
-              <AppStoreButtons />
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4 text-surface-200">Product</h4>
-              <ul className="space-y-2.5 text-sm text-surface-400">
-                <li><a href="#features" className="hover:text-primary-400 transition-colors">Features</a></li>
-                <li><a href="#how-it-works" className="hover:text-primary-400 transition-colors">How It Works</a></li>
-                <li><a href="#destinations" className="hover:text-primary-400 transition-colors">Destinations</a></li>
-                <li><a href="#download" className="hover:text-primary-400 transition-colors">Download App</a></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4 text-surface-200">Company</h4>
-              <ul className="space-y-2.5 text-sm text-surface-400">
-                <li><Link href="/about" className="hover:text-primary-400 transition-colors">About</Link></li>
-                <li><Link href="/blog" className="hover:text-primary-400 transition-colors">Blog</Link></li>
-                <li><Link href="/support" className="hover:text-primary-400 transition-colors">Support</Link></li>
-              </ul>
-            </div>
-
-            <div>
-              <h4 className="font-semibold mb-4 text-surface-200">Legal</h4>
-              <ul className="space-y-2.5 text-sm text-surface-400">
-                <li><Link href="/privacy" className="hover:text-primary-400 transition-colors">Privacy Policy</Link></li>
-                <li><Link href="/terms" className="hover:text-primary-400 transition-colors">Terms of Service</Link></li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t border-white/[0.06] pt-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <p className="text-surface-500 text-sm">
-              © {new Date().getFullYear()} TripGenie. All rights reserved.
-            </p>
-            <div className="flex gap-6 text-sm text-surface-400">
-              <a href="https://twitter.com/tripgenie" className="hover:text-primary-400 transition-colors">Twitter</a>
-              <a href="https://instagram.com/tripgenie" className="hover:text-primary-400 transition-colors">Instagram</a>
-              <a href="https://facebook.com/tripgenie" className="hover:text-primary-400 transition-colors">Facebook</a>
-            </div>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

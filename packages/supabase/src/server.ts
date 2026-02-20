@@ -57,20 +57,6 @@ export function getSupabase(): SupabaseClient {
 }
 
 /**
- * Create a new service role client (for cases where you need a fresh instance).
- */
-export function createServiceClient(): SupabaseClient {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!url || !key) {
-    throw new Error('Supabase environment variables not configured');
-  }
-
-  return createSupabaseClient(url, key);
-}
-
-/**
  * Create a Supabase client from an incoming request.
  * Supports Bearer token auth (mobile) and falls back to cookie auth (web).
  */
