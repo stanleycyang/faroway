@@ -4,13 +4,15 @@
  * Usage:
  *   npx tsx scripts/seed-500-blogs/index.ts
  *   npx tsx scripts/seed-500-blogs/index.ts --dry-run
+ *   npx tsx scripts/seed-500-blogs/index.ts --batch 2
+ *   npx tsx scripts/seed-500-blogs/index.ts --batch 2 --dry-run
  *
  * Requires: SUPABASE_URL and SUPABASE_SERVICE_KEY env vars (or .env.local)
  */
 
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { destinations } from './destinations';
-import { generateAllPosts, type BlogEntry } from './templates';
+import type { BlogEntry } from './templates';
 import * as path from 'path';
 import * as fs from 'fs';
 
@@ -51,6 +53,9 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 const isDryRun = process.argv.includes('--dry-run');
 
+const batchArg = process.argv.find(a => a.startsWith('--batch'));
+const batchNum = batchArg ? parseInt(process.argv[process.argv.indexOf(batchArg) + 1] || '1') : 1;
+
 async function downloadWithRetry(
   url: string,
   retries = MAX_DOWNLOAD_RETRIES,
@@ -80,9 +85,15 @@ async function downloadWithRetry(
  * Assign published_at dates distributed across Dec 2025 to Feb 2026.
  * Posts are spread evenly across the date range.
  */
-function assignPublishedDates(count: number): string[] {
-  const start = new Date('2025-12-01T00:00:00Z').getTime();
-  const end = new Date('2026-02-28T23:59:59Z').getTime();
+function assignPublishedDates(count: number, batch: number = 1): string[] {
+  const ranges: Record<number, [string, string]> = {
+    1: ['2025-12-01T00:00:00Z', '2026-02-28T23:59:59Z'],
+    2: ['2026-02-01T00:00:00Z', '2026-04-30T23:59:59Z'],
+    3: ['2026-04-01T00:00:00Z', '2026-06-30T23:59:59Z'],
+  };
+  const [startStr, endStr] = ranges[batch] || ranges[1];
+  const start = new Date(startStr).getTime();
+  const end = new Date(endStr).getTime();
   const step = (end - start) / count;
 
   return Array.from({ length: count }, (_, i) => {
@@ -228,7 +239,7 @@ async function insertPosts(
   posts: BlogEntry[],
   supabaseUrl: string,
 ): Promise<InsertResult> {
-  const publishedDates = assignPublishedDates(posts.length);
+  const publishedDates = assignPublishedDates(posts.length, batchNum);
 
   const rows = posts.map((post, i) => ({
     slug: post.slug,
@@ -256,9 +267,9 @@ async function insertPosts(
 
   for (let i = 0; i < rows.length; i += BATCH_SIZE) {
     const batch = rows.slice(i, i + BATCH_SIZE);
-    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+    const batchIdx = Math.floor(i / BATCH_SIZE) + 1;
 
-    console.log(`Inserting posts... batch ${batchNum}/${totalBatches}`);
+    console.log(`Inserting posts... batch ${batchIdx}/${totalBatches}`);
 
     try {
       const { error } = await supabase.from('blog_posts').upsert(batch, {
@@ -267,14 +278,14 @@ async function insertPosts(
       });
 
       if (error) {
-        console.error(`  Batch ${batchNum} FAILED: ${error.message}`);
+        console.error(`  Batch ${batchIdx} FAILED: ${error.message}`);
         failed += batch.length;
       } else {
-        console.log(`  Batch ${batchNum}: upserted ${batch.length} rows`);
+        console.log(`  Batch ${batchIdx}: upserted ${batch.length} rows`);
         inserted += batch.length;
       }
     } catch (err: any) {
-      console.error(`  Batch ${batchNum} ERROR: ${err.message}`);
+      console.error(`  Batch ${batchIdx} ERROR: ${err.message}`);
       failed += batch.length;
     }
   }
@@ -301,10 +312,22 @@ async function main() {
 
   console.log('=== TripGenie Blog Seeder ===\n');
   console.log(`Supabase URL: ${supabaseUrl}`);
-  console.log(`Dry run:      ${isDryRun}\n`);
+  console.log(`Dry run:      ${isDryRun}`);
+  console.log(`Batch:        ${batchNum}\n`);
+
+  // Dynamically import the correct templates module based on batch
+  const templateModule = batchNum === 3
+    ? await import('./templates-v3')
+    : batchNum === 2
+      ? await import('./templates-v2')
+      : await import('./templates');
+  const { generateAllPosts } = templateModule;
 
   // Load per-template image map if available
-  const imageMapPath = path.resolve(__dirname, 'image-map.json');
+  const imageMapFile = batchNum === 3
+    ? 'image-map-v3.json'
+    : batchNum === 2 ? 'image-map-v2.json' : 'image-map.json';
+  const imageMapPath = path.resolve(__dirname, imageMapFile);
   if (fs.existsSync(imageMapPath)) {
     const imageMap: Record<string, string[]> = JSON.parse(
       fs.readFileSync(imageMapPath, 'utf-8'),

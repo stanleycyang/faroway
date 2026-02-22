@@ -4,16 +4,14 @@
  * Uses AI generation + optional RapidAPI/Google Places integration
  */
 
-import { generateObject } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { generateObject, gateway as defaultGateway, createGateway } from 'ai';
 import { z } from 'zod';
 import { SearchPlan, HotelResult } from '../types';
 import { VIBE_KEYWORDS } from '@tripgenie/constants';
 
-const aiGateway = createOpenAI({
-  apiKey: process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_AI_GATEWAY_API_KEY,
-  baseURL: 'https://ai-gateway.vercel.sh/v1',
-});
+const aiGateway = process.env.AI_GATEWAY_API_KEY
+  ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
+  : defaultGateway;
 
 const MODEL = 'anthropic/claude-sonnet-4-20250514';
 

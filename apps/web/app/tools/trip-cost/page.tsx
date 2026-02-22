@@ -22,8 +22,20 @@ export const metadata: Metadata = {
 export default function TripCostPage() {
   const continents = getContinents().filter((c) => c !== 'All');
 
+  const appSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'Trip Cost Estimator',
+    description: 'Estimate your trip cost with detailed breakdowns for accommodation, food, transport, and activities.',
+    url: 'https://www.tripgenie.ai/tools/trip-cost',
+    applicationCategory: 'TravelApplication',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    operatingSystem: 'All',
+  };
+
   return (
     <main className="min-h-screen">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema).replace(/</g, '\\u003c') }} />
       <CostEstimatorClient />
 
       <section className="max-w-7xl mx-auto px-6 py-16">

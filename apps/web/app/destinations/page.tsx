@@ -27,12 +27,12 @@ export default function DestinationsIndex() {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://tripgenie.ai' },
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.tripgenie.ai' },
       {
         '@type': 'ListItem',
         position: 2,
         name: 'Destinations',
-        item: 'https://tripgenie.ai/destinations',
+        item: 'https://www.tripgenie.ai/destinations',
       },
     ],
   };

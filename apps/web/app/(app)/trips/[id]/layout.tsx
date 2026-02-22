@@ -8,7 +8,7 @@ interface TripLayoutProps {
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tripgenie.ai'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai'
   
   // Default metadata
   let metadata: Metadata = {

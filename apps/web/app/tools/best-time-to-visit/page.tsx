@@ -22,8 +22,20 @@ export const metadata: Metadata = {
 export default function BestTimeToVisitPage() {
   const continents = getContinents().filter((c) => c !== 'All');
 
+  const appSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'Best Time to Visit Guide',
+    description: 'Find the best month to visit any destination with climate data, crowd levels, and seasonal events.',
+    url: 'https://www.tripgenie.ai/tools/best-time-to-visit',
+    applicationCategory: 'TravelApplication',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    operatingSystem: 'All',
+  };
+
   return (
     <main className="min-h-screen">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema).replace(/</g, '\\u003c') }} />
       <ToolHero
         badge="Free Guide"
         title="Best Time to Visit"

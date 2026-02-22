@@ -3,15 +3,8 @@
  * Uses AI SDK ToolLoopAgent with tools for searching hotels, activities, and dining
  */
 
-import { ToolLoopAgent, tool, Output, stepCountIs } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { ToolLoopAgent, tool, Output, stepCountIs, gateway as defaultGateway, createGateway } from 'ai';
 import { z } from 'zod';
-import {
-  searchBookingHotels,
-  generateBookingAffiliateUrl,
-  calculateHotelVibeScore,
-  isBookingConfigured,
-} from '@/lib/affiliates/booking';
 import {
   searchViatorProducts,
   generateViatorAffiliateUrl,
@@ -19,11 +12,11 @@ import {
   isViatorConfigured,
 } from '@/lib/affiliates/viator';
 
-// AI Gateway configuration
-const aiGateway = createOpenAI({
-  apiKey: process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_AI_GATEWAY_API_KEY,
-  baseURL: 'https://ai-gateway.vercel.sh/v1',
-});
+// AI Gateway configuration — use the dedicated gateway provider (not createOpenAI,
+// which defaults to the OpenAI Responses API and doesn't work with the AI Gateway)
+const aiGateway = process.env.AI_GATEWAY_API_KEY
+  ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
+  : defaultGateway;
 
 const MODEL = 'anthropic/claude-sonnet-4-20250514';
 
@@ -86,69 +79,7 @@ const searchHotelsTool = tool({
     vibes: z.array(z.string()).optional().describe('Desired vibes like romantic, adventure, relaxation'),
   }),
   execute: async ({ destination, checkIn, checkOut, guests, budget, vibes }) => {
-    // Try real Booking.com API first
-    if (isBookingConfigured()) {
-      try {
-        const priceRanges = {
-          budget: { min: 0, max: 100 },
-          moderate: { min: 50, max: 300 },
-          luxury: { min: 200, max: undefined },
-        };
-        const range = priceRanges[budget];
-
-        const bookingHotels = await searchBookingHotels({
-          destination,
-          checkIn,
-          checkOut,
-          guests,
-          priceMin: range.min,
-          priceMax: range.max,
-          limit: 10,
-        });
-
-        if (bookingHotels.length > 0) {
-          const trackingId = `tg_${Date.now()}`;
-          const hotels = bookingHotels.map((hotel, i) => {
-            const vibeScore = vibes?.length
-              ? calculateHotelVibeScore(hotel, vibes)
-              : { score: 50, matchedVibes: [] };
-
-            return {
-              id: `hotel_${hotel.hotelId}`,
-              name: hotel.name,
-              rating: hotel.reviewScore || hotel.userRating,
-              reviewCount: hotel.reviewCount,
-              pricePerNight: hotel.price.perNight,
-              currency: hotel.price.currencyCode,
-              amenities: hotel.amenities.slice(0, 6),
-              location: {
-                neighborhood: hotel.location.neighborhood || hotel.location.city,
-              },
-              vibeMatch: vibeScore.matchedVibes,
-              vibeScore: vibeScore.score,
-              affiliateUrl: generateBookingAffiliateUrl(hotel.hotelId, trackingId, {
-                checkIn,
-                checkOut,
-                guests,
-              }),
-              affiliatePartner: 'booking.com',
-              badges: hotel.badges,
-              description: hotel.description?.substring(0, 200),
-              images: hotel.images.slice(0, 3).map(img => img.url),
-            };
-          });
-
-          // Sort by vibe score descending
-          hotels.sort((a, b) => (b.vibeScore || 0) - (a.vibeScore || 0));
-
-          return { hotels, searchMetadata: { destination, checkIn, checkOut, totalResults: hotels.length, source: 'booking.com' } };
-        }
-      } catch (error) {
-        console.error('[TravelAgent] Booking.com search failed, falling back to mock:', error);
-      }
-    }
-
-    // Fallback: generate mock hotel data
+    // TODO: Integrate real hotel API when available
     const hotels = generateMockHotels(destination, budget, vibes);
     return { hotels, searchMetadata: { destination, checkIn, checkOut, totalResults: hotels.length, source: 'mock' } };
   },

@@ -4,7 +4,7 @@ import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 import { z } from 'zod';
 
 const NewsletterSchema = z.object({
-  email: z.string().email(),
+  email: z.string().email().max(254),
   source: z.enum(['blog', 'footer', 'popup', 'landing']).default('blog'),
 });
 
@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 
     if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Invalid request body', details: parseResult.error.issues },
+        { error: 'Invalid request body' },
         { status: 400 }
       );
     }

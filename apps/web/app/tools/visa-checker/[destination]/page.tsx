@@ -73,9 +73,9 @@ export default async function VisaDestinationPage({
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Tools', item: 'https://tripgenie.ai/tools' },
-      { '@type': 'ListItem', position: 2, name: 'Visa Checker', item: 'https://tripgenie.ai/tools/visa-checker' },
-      { '@type': 'ListItem', position: 3, name: dest.name, item: `https://tripgenie.ai/tools/visa-checker/${destination}` },
+      { '@type': 'ListItem', position: 1, name: 'Tools', item: 'https://www.tripgenie.ai/tools' },
+      { '@type': 'ListItem', position: 2, name: 'Visa Checker', item: 'https://www.tripgenie.ai/tools/visa-checker' },
+      { '@type': 'ListItem', position: 3, name: dest.name, item: `https://www.tripgenie.ai/tools/visa-checker/${destination}` },
     ],
   };
 
@@ -88,7 +88,7 @@ export default async function VisaDestinationPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
 
       <main className="min-h-screen">

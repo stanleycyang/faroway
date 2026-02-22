@@ -1,22 +1,30 @@
 /**
  * useItineraryGeneration
  *
- * Poll-based hook that:
- *   1. Calls POST /api/search/start to kick off the Vercel Workflow
- *   2. Polls GET /api/search/[searchId] every 2 s for progress
- *   3. When status === 'completed', extracts the jsonRenderSpec
- *   4. Returns the spec + progress state to the UI
+ * Unified flow that:
+ *   1. Creates a trip via POST /api/trips
+ *   2. Triggers generation via POST /api/trips/[id]/generate
+ *   3. Polls GET /api/trips/[id]/generate for progress (reads from searches table)
+ *   4. When status === 'completed', fetches the jsonRenderSpec from the search
+ *   5. Returns the spec + progress state to the UI
+ *
+ * This ensures trips are stored in the `trips` table for both web and mobile (shared data).
  */
 
 import { useState, useEffect, useRef } from 'react';
-import {
-  startSearch,
-  pollSearchStatus,
-  calculateProgressPercent,
-  getStatusMessage,
-  SearchResults,
-} from '../services/searchService';
-import type { SearchProgress, SearchStatusResponse } from '@tripgenie/types';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_BASE_URL } from '../constants/api';
+import type { SearchProgress } from '@tripgenie/types';
+
+const ANONYMOUS_TRIPS_KEY = '@tripgenie/anonymous_trips';
+
+export interface SearchResults {
+  hotels: any[];
+  activities: any[];
+  dining: any[];
+  itinerary: any[];
+  [key: string]: any;
+}
 
 export interface ItineraryGenerationState {
   /** The json-render component array (null until completed) */
@@ -25,6 +33,8 @@ export interface ItineraryGenerationState {
   results: SearchResults | null;
   /** Current search ID */
   searchId: string | null;
+  /** Created trip ID */
+  tripId: string | null;
   /** Overall progress 0-100 */
   progress: number;
   /** Per-agent progress object */
@@ -56,6 +66,7 @@ export function useItineraryGeneration(
     jsonRenderSpec: null,
     results: null,
     searchId: null,
+    tripId: null,
     progress: 0,
     searchProgress: null,
     statusMessage: 'Starting your search...',
@@ -80,64 +91,135 @@ export function useItineraryGeneration(
         progress: 0,
         jsonRenderSpec: null,
         results: null,
-        statusMessage: 'Starting your search...',
+        searchId: null,
+        tripId: null,
+        statusMessage: 'Creating your trip...',
       }));
 
       try {
-        // 1. Kick off the workflow
-        const { searchId } = await startSearch({
-          destination: input.destination,
-          startDate: input.startDate,
-          endDate: input.endDate,
-          travelers: input.travelers,
-          travelerType: input.travelerType as any,
-          vibes: input.vibes,
-          budget: input.budget as any,
+        // 1. Create a trip via the unified API
+        const tripResponse = await fetch(`${API_BASE_URL}/api/trips`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            destination: input.destination,
+            start_date: input.startDate,
+            end_date: input.endDate,
+            travelers: input.travelers,
+            budget: input.budget || 'moderate',
+            preferences: {
+              travelerType: input.travelerType,
+              vibes: input.vibes,
+            },
+          }),
         });
+
+        if (!tripResponse.ok) {
+          const err = await tripResponse.json().catch(() => ({ error: 'Failed to create trip' }));
+          throw new Error(err.error || 'Failed to create trip');
+        }
+
+        const { trip } = await tripResponse.json();
+        const tripId = trip.id;
+
+        // Store anonymous trip ID so it can be claimed after sign-up
+        if (!trip.user_id) {
+          try {
+            const stored = JSON.parse(await AsyncStorage.getItem(ANONYMOUS_TRIPS_KEY) || '[]');
+            if (!stored.includes(tripId)) {
+              stored.push(tripId);
+              await AsyncStorage.setItem(ANONYMOUS_TRIPS_KEY, JSON.stringify(stored));
+            }
+          } catch {
+            await AsyncStorage.setItem(ANONYMOUS_TRIPS_KEY, JSON.stringify([tripId]));
+          }
+        }
+
+        if (cancelledRef.current) return;
+
+        setState((prev) => ({ ...prev, tripId, statusMessage: 'Starting AI trip planner...' }));
+
+        // 2. Trigger generation via POST /api/trips/[id]/generate
+        const genResponse = await fetch(`${API_BASE_URL}/api/trips/${tripId}/generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        });
+
+        if (!genResponse.ok && genResponse.status !== 409) {
+          const err = await genResponse.json().catch(() => ({ error: 'Failed to start generation' }));
+          throw new Error(err.error || 'Failed to start generation');
+        }
+
+        const genData = await genResponse.json();
+        const searchId = genData.searchId;
 
         if (cancelledRef.current) return;
 
         setState((prev) => ({ ...prev, searchId }));
 
-        // 2. Poll until completed or error
-        const results = await pollSearchStatus(
-          searchId,
-          (status: SearchStatusResponse) => {
-            if (cancelledRef.current) return;
-            const progressPercent = calculateProgressPercent(status.progress);
-            const message = getStatusMessage(status.progress);
+        // 3. Poll GET /api/trips/[id]/generate for progress
+        let attempts = 0;
+        const maxAttempts = 90; // ~3 min at 2s intervals
+
+        while (attempts < maxAttempts) {
+          if (cancelledRef.current) return;
+
+          const statusRes = await fetch(`${API_BASE_URL}/api/trips/${tripId}/generate`);
+          if (!statusRes.ok) {
+            attempts++;
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            continue;
+          }
+
+          const status = await statusRes.json();
+          const progressPercent = status.progress || 0;
+          const searchProgress = status.searchProgress || null;
+          const message = status.message || 'Processing...';
+
+          setState((prev) => ({
+            ...prev,
+            progress: progressPercent,
+            searchProgress,
+            statusMessage: message,
+          }));
+
+          if (status.status === 'completed') {
+            // Fetch the json-render spec from the search
+            if (searchId) {
+              try {
+                const searchRes = await fetch(`${API_BASE_URL}/api/search/${searchId}`);
+                if (searchRes.ok) {
+                  const searchData = await searchRes.json();
+                  setState((prev) => ({
+                    ...prev,
+                    jsonRenderSpec: searchData.jsonRenderSpec || null,
+                    results: searchData.results || null,
+                  }));
+                }
+              } catch {
+                // Non-fatal — we can still navigate to the trip
+              }
+            }
 
             setState((prev) => ({
               ...prev,
-              progress: progressPercent,
-              searchProgress: status.progress,
-              statusMessage: message,
-              // If the spec arrived in a completed poll, grab it
-              jsonRenderSpec: status.jsonRenderSpec
-                ? (status.jsonRenderSpec as unknown[])
-                : prev.jsonRenderSpec,
-              results: status.results || prev.results,
+              progress: 100,
+              isGenerating: false,
+              isComplete: true,
+              statusMessage: 'Your itinerary is ready!',
             }));
-          },
-          2000, // poll every 2 s
-          90,   // max ~3 min
-        );
+            return;
+          }
 
-        if (cancelledRef.current) return;
+          if (status.status === 'failed') {
+            throw new Error(status.message || 'Generation failed');
+          }
 
-        // 3. Final update – the last poll should have the spec, but in case
-        //    pollSearchStatus resolved with results before the onProgress
-        //    callback ran with jsonRenderSpec, we need to fetch one more time.
-        //    The pollSearchStatus return value is the results object, so we
-        //    check state for the spec.
-        setState((prev) => ({
-          ...prev,
-          results: results || prev.results,
-          progress: 100,
-          isGenerating: false,
-          isComplete: true,
-          statusMessage: 'Your itinerary is ready!',
-        }));
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          attempts++;
+        }
+
+        throw new Error('Generation timed out');
       } catch (error) {
         if (cancelledRef.current) return;
         setState((prev) => ({

@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 export default async function GuidesIndexPage() {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tripgenie.ai';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai';
 
   // Pre-fetch cluster post counts in parallel
   const clusterCounts: Record<string, number> = Object.fromEntries(

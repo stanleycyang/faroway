@@ -15,11 +15,11 @@ import { planTrip } from '@/lib/agents/travel-agent';
 export const maxDuration = 60;
 
 const StreamRequestSchema = z.object({
-  destination: z.string(),
-  startDate: z.string(), // YYYY-MM-DD
-  endDate: z.string(),   // YYYY-MM-DD
-  travelers: z.number().min(1).default(1),
-  vibes: z.array(z.string()).optional(),
+  destination: z.string().min(1).max(200),
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  travelers: z.number().int().min(1).max(50).default(1),
+  vibes: z.array(z.string().max(50)).max(10).optional(),
   budget: z.enum(['budget', 'moderate', 'luxury']).optional(),
 });
 
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
 
     if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Invalid request body', details: parseResult.error.issues },
+        { error: 'Invalid request body' },
         { status: 400 }
       );
     }

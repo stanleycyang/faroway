@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tripgenie.ai';
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai';
 
 export const metadata: Metadata = {
   title: 'Support & FAQ — TripGenie Help Center',

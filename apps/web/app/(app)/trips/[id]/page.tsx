@@ -1,13 +1,53 @@
 'use client';
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Loader2, AlertCircle, MapPin, RefreshCw, Sparkles } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { Loader2, AlertCircle, MapPin, RefreshCw, Sparkles, Clock, LogIn, Star, ExternalLink, Hotel, Shield, ChevronUp, Ticket } from 'lucide-react';
+
+/**
+ * Error boundary that prevents a single broken itinerary day from crashing the whole page.
+ */
+class DayErrorBoundary extends React.Component<
+  { children: React.ReactNode; dayNumber: number },
+  { hasError: boolean }
+> {
+  constructor(props: { children: React.ReactNode; dayNumber: number }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error) {
+    console.warn(`[TripDetail] Day ${this.props.dayNumber} failed to render:`, error.message);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-4 text-sm text-yellow-700">
+          Day {this.props.dayNumber} could not be displayed.
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import { TripHeader } from '@/components/trips/TripHeader';
 import { ItineraryDay } from '@/components/trips/ItineraryDay';
 import { ShareButtons } from '@/components/ShareButtons';
-import type { GeneratedItinerary, TripDay } from '@/lib/ai/types';
+import { StreamingItineraryView } from '@/components/trips/StreamingItineraryView';
+import { useItineraryStream, type SearchProgress } from '@/hooks/useItineraryStream';
+import type { GeneratedItinerary } from '@/lib/ai/types';
+
+const ItineraryMap = dynamic(
+  () => import('@/components/trips/ItineraryMap').then(m => ({ default: m.ItineraryMap })),
+  { ssr: false }
+);
 
 interface Trip {
   id: string;
@@ -16,33 +56,26 @@ interface Trip {
   start_date: string;
   end_date: string;
   travelers: number;
-  traveler_type?: string;
+  preferences?: Record<string, unknown>;
   vibes?: string[];
-  status: 'draft' | 'generating' | 'completed' | 'failed';
-  workflow_id?: string;
+  status: 'draft' | 'generating' | 'generated' | 'completed' | 'failed';
+  search_id?: string;
   created_at: string;
   updated_at: string;
-}
-
-interface WorkflowStatus {
-  workflowId: string;
-  tripId: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
-  progress: number;
-  step: string;
-  message: string;
-  startedAt: string;
-  completedAt?: string;
-  result?: {
-    itineraryId?: string;
-    error?: string;
-  };
 }
 
 interface TripResponse {
   trip: Trip;
   itinerary?: GeneratedItinerary;
 }
+
+const GENERATION_STEPS = [
+  { key: 'orchestrator', label: 'Analyzing', emoji: '🔍', description: 'Understanding your preferences' },
+  { key: 'hotels', label: 'Hotels', emoji: '🏨', description: 'Searching for the best hotels' },
+  { key: 'activities', label: 'Activities', emoji: '✨', description: 'Finding activities & attractions' },
+  { key: 'dining', label: 'Dining', emoji: '🍽️', description: 'Discovering restaurants' },
+  { key: 'aggregator', label: 'Composing', emoji: '📝', description: 'Crafting your itinerary' },
+];
 
 export default function TripDetailPage() {
   const params = useParams();
@@ -51,10 +84,23 @@ export default function TripDetailPage() {
 
   const [trip, setTrip] = useState<Trip | null>(null);
   const [itinerary, setItinerary] = useState<GeneratedItinerary | null>(null);
-  const [workflowStatus, setWorkflowStatus] = useState<WorkflowStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [showStickyBar, setShowStickyBar] = useState(false);
+
+  // Determine if we should stream
+  const shouldStream = trip?.status === 'generating' && !!trip?.search_id;
+
+  // SSE streaming hook for real-time generation
+  const stream = useItineraryStream({
+    tripId,
+    enabled: shouldStream,
+    onComplete: () => {
+      // Refetch trip to get updated status
+      fetchTrip();
+    },
+  });
 
   // Fetch trip data
   const fetchTrip = useCallback(async () => {
@@ -81,46 +127,40 @@ export default function TripDetailPage() {
     }
   }, [tripId, router]);
 
-  // Poll workflow status
-  const pollWorkflowStatus = useCallback(async (workflowId: string) => {
-    try {
-      const res = await fetch(`/api/workflows/${workflowId}/status`);
-      if (!res.ok) return null;
-      const status: WorkflowStatus = await res.json();
-      setWorkflowStatus(status);
-      return status;
-    } catch {
-      return null;
-    }
-  }, []);
-
   // Initial load
   useEffect(() => {
     fetchTrip();
   }, [fetchTrip]);
 
-  // Polling for generation status
+  // Sticky booking bar scroll listener
   useEffect(() => {
-    if (!trip?.workflow_id || trip.status === 'completed' || trip.status === 'failed') {
+    const handleScroll = () => {
+      setShowStickyBar(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // For trips in 'generating' state without a search_id (old workflow),
+  // fall back to polling the generate endpoint
+  useEffect(() => {
+    if (!trip || trip.status !== 'generating' || trip.search_id) {
       return;
     }
 
-    // Initial poll
-    pollWorkflowStatus(trip.workflow_id);
-
-    // Set up polling interval
     const interval = setInterval(async () => {
-      const status = await pollWorkflowStatus(trip.workflow_id!);
-      
-      if (status?.status === 'completed' || status?.status === 'failed') {
-        clearInterval(interval);
-        // Refetch trip to get updated data
-        await fetchTrip();
+      const res = await fetch(`/api/trips/${tripId}/generate`);
+      if (res.ok) {
+        const data = await res.json();
+        if (data.status === 'completed' || data.status === 'failed') {
+          clearInterval(interval);
+          await fetchTrip();
+        }
       }
-    }, 3000); // Poll every 3 seconds
+    }, 3000);
 
     return () => clearInterval(interval);
-  }, [trip?.workflow_id, trip?.status, pollWorkflowStatus, fetchTrip]);
+  }, [trip?.status, trip?.search_id, tripId, fetchTrip]);
 
   const handleShare = async () => {
     try {
@@ -150,14 +190,97 @@ export default function TripDetailPage() {
   };
 
   const handleExport = () => {
-    // Placeholder - will implement export later
     alert('Export feature coming soon!');
   };
 
   const handleRetry = async () => {
-    // Placeholder - will implement retry later
-    alert('Retry feature coming soon!');
+    if (!trip) return;
+
+    try {
+      // Reset trip to draft
+      await fetch(`/api/trips/${tripId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'draft' }),
+      });
+
+      // Trigger new generation
+      const genRes = await fetch(`/api/trips/${tripId}/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!genRes.ok) {
+        const data = await genRes.json().catch(() => ({}));
+        throw new Error(data.error || 'Failed to retry generation');
+      }
+
+      // Refetch trip to pick up the new search_id
+      await fetchTrip();
+    } catch (err) {
+      console.error('Retry failed:', err);
+      setError(err instanceof Error ? err.message : 'Retry failed');
+    }
   };
+
+  // Extract top hotel from itinerary days
+  const topHotel = useMemo(() => {
+    if (!itinerary?.days?.length) return null;
+    // Check if any day has hotel info
+    for (const day of itinerary.days) {
+      if ((day as any).hotel) return (day as any).hotel;
+    }
+    return null;
+  }, [itinerary]);
+
+  // Count bookable experiences across itinerary
+  const bookableCount = useMemo(() => {
+    if (!itinerary?.days?.length) return 0;
+    let count = 0;
+    for (const day of itinerary.days) {
+      for (const slot of [day.morning, day.afternoon, day.evening]) {
+        if (!slot) continue;
+        if (Array.isArray(slot.activities)) {
+          count += slot.activities.filter((a: any) => a?.bookingInfo?.bookingUrl).length;
+        }
+      }
+    }
+    return count;
+  }, [itinerary]);
+
+  // Compute budget breakdown
+  const budgetBreakdown = useMemo(() => {
+    if (!itinerary?.days?.length) return null;
+
+    let accommodation = 0;
+    let activities = 0;
+    let dining = 0;
+
+    const nights = itinerary.days.length > 0 ? itinerary.days.length - 1 : 0;
+    if (topHotel?.pricePerNight) {
+      accommodation = topHotel.pricePerNight * nights;
+    }
+
+    for (const day of itinerary.days) {
+      for (const slot of [day.morning, day.afternoon, day.evening]) {
+        if (!slot) continue;
+        if (Array.isArray(slot.activities)) {
+          for (const act of slot.activities) {
+            if (act?.estimatedCost?.amount) activities += act.estimatedCost.amount;
+          }
+        }
+        const meals = Array.isArray((slot as any).meals) ? (slot as any).meals : (slot as any).meal ? [(slot as any).meal] : [];
+        for (const meal of meals) {
+          if (meal?.estimatedCost?.amount) dining += meal.estimatedCost.amount;
+        }
+      }
+    }
+
+    const total = accommodation + activities + dining;
+    if (total === 0) return null;
+
+    return { accommodation, activities, dining, total };
+  }, [itinerary, topHotel]);
 
   // Loading state
   if (loading) {
@@ -192,14 +315,18 @@ export default function TripDetailPage() {
     );
   }
 
-  const tripStatus = trip.status === 'generating' || (workflowStatus && workflowStatus.status !== 'completed' && workflowStatus.status !== 'failed')
-    ? 'generating'
-    : trip.status === 'failed' || workflowStatus?.status === 'failed'
-    ? 'failed'
-    : 'completed';
+  // Determine display status
+  const isGenerating = trip.status === 'generating' || stream.isStreaming;
+  const isFailed = trip.status === 'failed' || !!stream.error;
+  const isComplete = trip.status === 'generated' || trip.status === 'completed' || stream.isComplete;
+  // Show the streaming view only while actively streaming, or as a bridge
+  // when streaming just completed but the post-completion fetch hasn't returned yet.
+  // Once streaming is complete AND the itinerary is loaded, prefer the traditional view.
+  const showStreamingView = stream.blocks.length > 0 && !(stream.isComplete && itinerary);
+  const tripStatus = isGenerating ? 'generating' : isFailed ? 'failed' : 'completed';
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Trip Header */}
       <TripHeader
         destination={trip.destination}
@@ -213,13 +340,18 @@ export default function TripDetailPage() {
       />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {/* Generation Progress */}
-        {tripStatus === 'generating' && workflowStatus && (
-          <GenerationProgress status={workflowStatus} />
+        {/* Generation Progress — real agent progress via SSE */}
+        {isGenerating && !showStreamingView && (
+          <AgentProgress
+            step={stream.step}
+            progress={stream.progress}
+            message={stream.message}
+            searchProgress={stream.searchProgress}
+          />
         )}
 
         {/* Generation Failed */}
-        {tripStatus === 'failed' && (
+        {isFailed && !isGenerating && (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-6 mb-6">
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -228,7 +360,7 @@ export default function TripDetailPage() {
               <div className="flex-1">
                 <h3 className="font-semibold text-red-800 mb-1">Generation Failed</h3>
                 <p className="text-sm text-red-700 mb-4">
-                  {workflowStatus?.result?.error || 'Something went wrong while generating your itinerary. Please try again.'}
+                  {stream.error || 'Something went wrong while generating your itinerary. Please try again.'}
                 </p>
                 <button
                   onClick={handleRetry}
@@ -242,88 +374,133 @@ export default function TripDetailPage() {
           </div>
         )}
 
-        {/* Overview Section */}
-        {itinerary?.overview && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-3">Trip Overview</h2>
-            <p className="text-gray-600">{itinerary.overview}</p>
+        {/* Streaming json-render blocks — progressive reveal during and after generation */}
+        {showStreamingView && (
+          <div className="mb-6">
+            <StreamingItineraryView
+              blocks={stream.blocks}
+              isStreaming={stream.isStreaming}
+            />
           </div>
         )}
 
-        {/* Map Placeholder */}
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
-          <div className="h-48 sm:h-64 bg-gradient-to-br from-gray-100 to-gray-200 flex flex-col items-center justify-center">
-            <MapPin className="w-10 h-10 text-gray-400 mb-2" />
-            <p className="text-gray-500 font-medium">Interactive Map</p>
-            <p className="text-sm text-gray-400">Coming soon</p>
-          </div>
-        </div>
+        {/* Fallback: Traditional itinerary rendering for already-generated trips */}
+        {!showStreamingView && itinerary && (
+          <>
+            {/* Overview Section */}
+            {itinerary.overview && (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
+                <h2 className="text-lg font-bold text-gray-900 mb-3">Trip Overview</h2>
+                <p className="text-gray-600 leading-relaxed">{itinerary.overview}</p>
+              </div>
+            )}
 
-        {/* Day-by-Day Itinerary */}
-        {itinerary?.days && itinerary.days.length > 0 ? (
-          <div className="space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">Day-by-Day Itinerary</h2>
-            {itinerary.days.map((day, index) => (
-              <ItineraryDay
-                key={day.dayNumber}
-                dayNumber={day.dayNumber}
-                date={day.date}
-                title={day.title}
-                summary={day.summary}
-                morning={day.morning}
-                afternoon={day.afternoon}
-                evening={day.evening}
-                totalEstimatedCost={day.totalEstimatedCost}
-                tips={day.tips}
-                defaultExpanded={index === 0}
-              />
-            ))}
-          </div>
-        ) : tripStatus === 'completed' ? (
-          <EmptyItinerary destination={trip.destination} />
-        ) : null}
+            {/* Recommended Hotel */}
+            {topHotel && (
+              <FeaturedHotelCard hotel={topHotel} nights={itinerary.days.length > 0 ? itinerary.days.length - 1 : 0} />
+            )}
 
-        {/* General Tips */}
-        {itinerary?.generalTips && itinerary.generalTips.length > 0 && (
-          <div className="mt-6 bg-primary-50 rounded-2xl p-6">
-            <h3 className="font-semibold text-primary-800 mb-3">💡 Travel Tips for {trip.destination}</h3>
-            <ul className="space-y-2">
-              {itinerary.generalTips.map((tip, i) => (
-                <li key={i} className="text-sm text-primary-700 flex items-start gap-2">
-                  <span className="text-primary-400 mt-0.5">•</span>
-                  <span>{tip}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Packing List */}
-        {itinerary?.packingList && itinerary.packingList.length > 0 && (
-          <div className="mt-6 bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-            <h3 className="font-semibold text-gray-900 mb-3">🧳 Packing Suggestions</h3>
-            <div className="flex flex-wrap gap-2">
-              {itinerary.packingList.map((item, i) => (
-                <span
-                  key={i}
-                  className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-gray-100 text-gray-700"
-                >
-                  {item}
-                </span>
-              ))}
+            {/* Interactive Map */}
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
+              <ItineraryMap itinerary={itinerary} className="h-64 sm:h-80" />
             </div>
-          </div>
+
+            {/* Day-by-Day Itinerary */}
+            {itinerary.days && itinerary.days.length > 0 ? (
+              <div className="space-y-5">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-bold text-gray-900">Your Itinerary</h2>
+                  {bookableCount > 0 && (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 text-primary-700 rounded-full text-xs font-bold">
+                      <Ticket className="w-3.5 h-3.5" />
+                      {bookableCount} bookable experience{bookableCount > 1 ? 's' : ''}
+                    </span>
+                  )}
+                </div>
+                {itinerary.days.map((day, index) => (
+                  <DayErrorBoundary key={day.dayNumber || index} dayNumber={day.dayNumber || index + 1}>
+                    <ItineraryDay
+                      dayNumber={day.dayNumber}
+                      date={day.date}
+                      title={day.title}
+                      summary={day.summary}
+                      morning={day.morning}
+                      afternoon={day.afternoon}
+                      evening={day.evening}
+                      totalEstimatedCost={day.totalEstimatedCost}
+                      tips={day.tips}
+                      defaultExpanded={true}
+                      hotel={index === 0 ? topHotel : undefined}
+                    />
+                  </DayErrorBoundary>
+                ))}
+              </div>
+            ) : isComplete ? (
+              <EmptyItinerary destination={trip.destination} />
+            ) : null}
+
+            {/* Budget Summary */}
+            {budgetBreakdown && (
+              <BudgetSummary breakdown={budgetBreakdown} currency="USD" />
+            )}
+
+            {/* General Tips */}
+            {itinerary.generalTips && itinerary.generalTips.length > 0 && (
+              <div className="mt-6 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl p-6 border border-primary-100/50">
+                <h3 className="font-bold text-primary-800 mb-3 flex items-center gap-2">
+                  <span className="text-lg">💡</span> Travel Tips for {trip.destination}
+                </h3>
+                <ul className="space-y-2">
+                  {itinerary.generalTips.map((tip, i) => (
+                    <li key={i} className="text-sm text-primary-700 flex items-start gap-2">
+                      <span className="text-primary-400 mt-0.5">•</span>
+                      <span>{tip}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Packing List */}
+            {itinerary.packingList && itinerary.packingList.length > 0 && (
+              <div className="mt-6 bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <span className="text-lg">🧳</span> Packing Suggestions
+                </h3>
+                <div className="flex flex-wrap gap-2">
+                  {itinerary.packingList.map((item, i) => (
+                    <span
+                      key={i}
+                      className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-gray-100 text-gray-700 font-medium"
+                    >
+                      {item}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Empty state for completed trips without itinerary or blocks */}
+        {isComplete && !showStreamingView && !itinerary && (
+          <EmptyItinerary destination={trip.destination} />
+        )}
+
+        {/* Save Trip Nudge for anonymous users */}
+        {isComplete && !trip.user_id && (
+          <SaveTripNudge tripId={trip.id} />
         )}
 
         {/* Share This Trip */}
-        {tripStatus === 'completed' && itinerary && (
-          <div className="mt-8 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl p-6 text-center">
-            <h3 className="font-semibold text-gray-900 mb-2">📤 Share Your Adventure</h3>
+        {isComplete && (showStreamingView || itinerary) && (
+          <div className="mt-8 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl p-6 sm:p-8 text-center border border-primary-100/30">
+            <h3 className="font-bold text-gray-900 mb-2 text-lg">Share Your Adventure</h3>
             <p className="text-sm text-gray-600 mb-4">Let friends and family know about your upcoming trip!</p>
             <ShareButtons
               url={shareUrl || undefined}
               title={`My ${trip.destination} Trip Itinerary`}
-              description={`Check out my ${itinerary.days?.length || ''}-day AI-generated itinerary to ${trip.destination}! Created with TripGenie.`}
+              description={`Check out my AI-generated itinerary to ${trip.destination}! Created with TripGenie.`}
               hashtags={['TripGenie', 'Travel', trip.destination.replace(/\s+/g, '')]}
               className="justify-center"
             />
@@ -338,15 +515,238 @@ export default function TripDetailPage() {
           </div>
         )}
       </main>
+
+      {/* Sticky Booking Bar */}
+      {isComplete && bookableCount > 0 && (
+        <div
+          className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 ${
+            showStickyBar ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
+          }`}
+        >
+          <div className="bg-white/95 backdrop-blur-lg border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center flex-shrink-0">
+                  <Ticket className="w-5 h-5 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-sm font-bold text-gray-900 truncate">
+                    {bookableCount} experience{bookableCount > 1 ? 's' : ''} to book
+                  </p>
+                  <p className="text-xs text-gray-500">Secure your spots before they fill up</p>
+                </div>
+              </div>
+              <button
+                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                className="flex-shrink-0 inline-flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-primary to-primary-600 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg hover:shadow-primary/25 transition-all active:scale-[0.98]"
+              >
+                <ChevronUp className="w-4 h-4" />
+                View All
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-interface GenerationProgressProps {
-  status: WorkflowStatus;
+// ── Featured Hotel Card ──────────────────────────────────────────────────────
+
+function FeaturedHotelCard({ hotel, nights }: { hotel: any; nights: number }) {
+  const handleClick = () => {
+    if (!hotel.affiliateUrl) return;
+
+    fetch('/api/track/click', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        itemType: 'hotel',
+        itemId: hotel.id || hotel.name,
+        itemName: hotel.name,
+        affiliatePartner: hotel.affiliatePartner || 'booking',
+        affiliateUrl: hotel.affiliateUrl,
+        source: 'itinerary',
+      }),
+    }).catch(() => {});
+
+    window.open(hotel.affiliateUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6 group hover:shadow-lg transition-shadow">
+      {hotel.images?.[0] && (
+        <div className="relative h-56 sm:h-72 overflow-hidden">
+          <img
+            src={hotel.images[0]}
+            alt={hotel.name}
+            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
+          <div className="absolute top-3 left-3 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full text-xs font-bold text-white flex items-center gap-1.5 shadow-lg">
+            <Sparkles className="w-3.5 h-3.5" />
+            TripGenie Pick
+          </div>
+          {/* Price overlay on image */}
+          <div className="absolute bottom-4 right-4 text-right">
+            <div className="text-3xl font-black text-white drop-shadow-lg">${hotel.pricePerNight}</div>
+            <div className="text-xs text-white/80 font-medium">per night</div>
+          </div>
+        </div>
+      )}
+      <div className="p-5 sm:p-6">
+        <div className="flex items-start justify-between mb-3">
+          <div>
+            <h3 className="font-black text-xl text-gray-900">{hotel.name}</h3>
+            <div className="flex items-center gap-2 mt-1.5">
+              {hotel.starRating && (
+                <span className="text-yellow-500 text-sm">
+                  {'★'.repeat(Math.min(5, hotel.starRating))}
+                </span>
+              )}
+              {hotel.userRating && (
+                <span className="flex items-center gap-1 text-sm">
+                  <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
+                  <span className="font-bold text-gray-700">{hotel.userRating.toFixed(1)}</span>
+                  {hotel.reviewCount && (
+                    <span className="text-gray-400 text-xs">({hotel.reviewCount.toLocaleString()} reviews)</span>
+                  )}
+                </span>
+              )}
+            </div>
+          </div>
+          {!hotel.images?.[0] && (
+            <div className="text-right flex-shrink-0">
+              <div className="text-2xl font-black text-gray-900">${hotel.pricePerNight}</div>
+              <div className="text-xs text-gray-500">per night</div>
+            </div>
+          )}
+        </div>
+
+        {hotel.description && (
+          <p className="text-sm text-gray-600 mb-4 leading-relaxed line-clamp-2">{hotel.description}</p>
+        )}
+
+        {hotel.amenities && hotel.amenities.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-5">
+            {hotel.amenities.slice(0, 6).map((amenity: string, i: number) => (
+              <span key={i} className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs bg-gray-50 text-gray-600 font-medium border border-gray-100">
+                {amenity}
+              </span>
+            ))}
+          </div>
+        )}
+
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-gray-100">
+          <div className="text-sm text-gray-500">
+            {nights > 0 && (
+              <span>Total: <span className="font-black text-lg text-gray-900">${hotel.pricePerNight * nights}</span> for {nights} night{nights !== 1 ? 's' : ''}</span>
+            )}
+          </div>
+          {hotel.affiliateUrl && (
+            <button
+              onClick={handleClick}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-sm hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg hover:shadow-blue-500/25 active:scale-[0.98]"
+            >
+              <Shield className="w-4 h-4" />
+              Check Availability & Prices
+              <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+            </button>
+          )}
+        </div>
+
+        {/* Trust signals */}
+        {hotel.affiliateUrl && (
+          <div className="flex items-center justify-center gap-4 mt-3 text-[11px] text-gray-500">
+            <span className="inline-flex items-center gap-1">
+              <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+              Best price guarantee
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+              Free cancellation
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+              No hidden fees
+            </span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
 
-function GenerationProgress({ status }: GenerationProgressProps) {
+// ── Budget Summary Component ─────────────────────────────────────────────────
+
+function BudgetSummary({
+  breakdown,
+  currency,
+}: {
+  breakdown: { accommodation: number; activities: number; dining: number; total: number };
+  currency: string;
+}) {
+  const formatCost = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency,
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const categories = [
+    { label: 'Accommodation', amount: breakdown.accommodation, color: 'bg-blue-500', bgColor: 'bg-blue-50 text-blue-700', icon: '🏨' },
+    { label: 'Activities & Tours', amount: breakdown.activities, color: 'bg-emerald-500', bgColor: 'bg-emerald-50 text-emerald-700', icon: '🎯' },
+    { label: 'Dining', amount: breakdown.dining, color: 'bg-orange-500', bgColor: 'bg-orange-50 text-orange-700', icon: '🍽️' },
+  ].filter(c => c.amount > 0);
+
+  return (
+    <div className="mt-6 bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+      <h3 className="font-bold text-gray-900 mb-5 text-lg">Budget Summary</h3>
+
+      {/* Stacked bar */}
+      <div className="h-4 rounded-full overflow-hidden flex mb-5 bg-gray-100">
+        {categories.map((cat) => (
+          <div
+            key={cat.label}
+            className={`${cat.color} transition-all first:rounded-l-full last:rounded-r-full`}
+            style={{ width: `${(cat.amount / breakdown.total) * 100}%` }}
+          />
+        ))}
+      </div>
+
+      {/* Category breakdown */}
+      <div className="space-y-3">
+        {categories.map((cat) => (
+          <div key={cat.label} className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className="text-lg">{cat.icon}</span>
+              <span className="text-sm text-gray-600 font-medium">{cat.label}</span>
+            </div>
+            <span className="text-sm font-bold text-gray-900">{formatCost(cat.amount)}</span>
+          </div>
+        ))}
+      </div>
+
+      <div className="mt-5 pt-5 border-t border-gray-100 flex items-center justify-between">
+        <span className="font-bold text-gray-900">Estimated Total</span>
+        <span className="text-2xl font-black text-gray-900">{formatCost(breakdown.total)}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Agent Progress Component ─────────────────────────────────────────────────
+
+interface AgentProgressProps {
+  step: string;
+  progress: number;
+  message: string;
+  searchProgress: SearchProgress | null;
+}
+
+function AgentProgress({ step, progress, message, searchProgress }: AgentProgressProps) {
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
       <div className="flex items-center gap-4 mb-4">
@@ -355,45 +755,49 @@ function GenerationProgress({ status }: GenerationProgressProps) {
         </div>
         <div>
           <h3 className="font-semibold text-gray-900">Creating Your Itinerary</h3>
-          <p className="text-sm text-gray-600">{status.message}</p>
+          <p className="text-sm text-gray-600">{message}</p>
         </div>
       </div>
 
       {/* Progress Bar */}
-      <div className="relative">
+      <div className="relative mb-4">
         <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-primary to-primary-600 rounded-full transition-all duration-500 ease-out"
-            style={{ width: `${Math.max(5, status.progress)}%` }}
+            className="h-full bg-gradient-to-r from-primary to-primary-600 rounded-full transition-all duration-700 ease-out"
+            style={{ width: `${Math.max(5, progress)}%` }}
           />
         </div>
         <div className="flex justify-between mt-2">
-          <span className="text-xs text-gray-500">{status.step}</span>
-          <span className="text-xs text-gray-500">{status.progress}%</span>
+          <span className="text-xs text-gray-500">{step}</span>
+          <span className="text-xs text-gray-500">{progress}%</span>
         </div>
       </div>
 
-      {/* Progress Steps */}
-      <div className="mt-4 grid grid-cols-3 gap-2">
-        {['Research', 'Planning', 'Finalizing'].map((step, i) => {
-          const stepProgress = i === 0 ? 33 : i === 1 ? 66 : 100;
-          const isActive = status.progress >= stepProgress - 33 && status.progress < stepProgress;
-          const isComplete = status.progress >= stepProgress;
-          
+      {/* Agent Steps */}
+      <div className="grid grid-cols-5 gap-2">
+        {GENERATION_STEPS.map((genStep) => {
+          const agentStatus = searchProgress?.[genStep.key];
+          const isActive = agentStatus === 'searching';
+          const isDone = agentStatus === 'done';
+
           return (
             <div
-              key={step}
-              className={`text-center p-2 rounded-lg ${
-                isActive ? 'bg-primary-50' : isComplete ? 'bg-green-50' : 'bg-gray-50'
+              key={genStep.key}
+              className={`text-center p-2 rounded-lg transition-colors ${
+                isActive ? 'bg-primary-50 ring-1 ring-primary-200' :
+                isDone ? 'bg-green-50' :
+                'bg-gray-50'
               }`}
             >
               <div className={`text-lg mb-1 ${isActive ? 'animate-bounce' : ''}`}>
-                {isComplete ? '✅' : i === 0 ? '🔍' : i === 1 ? '📝' : '✨'}
+                {isDone ? '✅' : genStep.emoji}
               </div>
               <p className={`text-xs font-medium ${
-                isActive ? 'text-primary-700' : isComplete ? 'text-green-700' : 'text-gray-500'
+                isActive ? 'text-primary-700' :
+                isDone ? 'text-green-700' :
+                'text-gray-500'
               }`}>
-                {step}
+                {genStep.label}
               </p>
             </div>
           );
@@ -403,11 +807,47 @@ function GenerationProgress({ status }: GenerationProgressProps) {
   );
 }
 
-interface EmptyItineraryProps {
-  destination: string;
+// ── Save Trip Nudge (anonymous users) ─────────────────────────────────────────
+
+function SaveTripNudge({ tripId }: { tripId: string }) {
+  const redirectTo = encodeURIComponent(`/trips/${tripId}`);
+
+  return (
+    <div className="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-6">
+      <div className="flex items-start gap-4">
+        <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
+          <Clock className="w-5 h-5 text-amber-600" />
+        </div>
+        <div className="flex-1">
+          <h3 className="font-semibold text-amber-800 mb-1">Save this trip permanently</h3>
+          <p className="text-sm text-amber-700 mb-4">
+            Sign up to keep this trip forever. Anonymous trips expire after 7 days.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href={`/auth/signup?redirectTo=${redirectTo}`}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary-600 transition-colors"
+            >
+              <Sparkles className="w-4 h-4" />
+              Sign Up Free
+            </Link>
+            <Link
+              href={`/auth/login?redirectTo=${redirectTo}`}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+            >
+              <LogIn className="w-4 h-4" />
+              Log In
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-function EmptyItinerary({ destination }: EmptyItineraryProps) {
+// ── Empty Itinerary ─────────────────────────────────────────────────────────
+
+function EmptyItinerary({ destination }: { destination: string }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center">
       <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">

@@ -1,6 +1,4 @@
-'use client';
-
-import React, { useState, useEffect, useRef } from 'react';
+import React from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Header } from '@/components/Header';
@@ -22,6 +20,7 @@ import {
   Play,
 } from 'lucide-react';
 import { FadeInOnScroll } from '@/components/landing/FadeInOnScroll';
+import { LiveCounter } from '@/components/landing/LiveCounter';
 import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
 
 // ─── Data ───────────────────────────────────────────────────────────────────
@@ -74,59 +73,6 @@ const travelVibes = [
   { label: 'Solo', emoji: '🎒' },
   { label: 'Wellness', emoji: '🧘' },
 ];
-
-// ─── Helpers ────────────────────────────────────────────────────────────────
-
-function LiveCounter() {
-  const [count, setCount] = useState(127);
-  useEffect(() => {
-    const interval = setInterval(
-      () => setCount((prev) => prev + Math.floor(Math.random() * 3) - 1),
-      3000,
-    );
-    return () => clearInterval(interval);
-  }, []);
-  return <>{count}</>;
-}
-
-function AnimatedCounter({ value, suffix = '' }: { value: number; suffix?: string }) {
-  const [count, setCount] = useState(0);
-  const ref = useRef<HTMLDivElement>(null);
-  const started = useRef(false);
-
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting && !started.current) {
-          started.current = true;
-          let start = 0;
-          const increment = value / 100;
-          const timer = setInterval(() => {
-            start += increment;
-            if (start >= value) {
-              setCount(value);
-              clearInterval(timer);
-            } else {
-              setCount(Math.floor(start));
-            }
-          }, 16);
-        }
-      },
-      { threshold: 0.3 },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [value]);
-
-  return (
-    <div ref={ref}>
-      {count.toLocaleString()}
-      {suffix}
-    </div>
-  );
-}
 
 // ─── App Store Buttons ──────────────────────────────────────────────────────
 

@@ -1,12 +1,16 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Alert, Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { supabase } from '../lib/supabase';
 import { useUserStore } from '../stores/userStore';
 import { setAuthToken, getUserProfile } from '../services/api';
+import { API_BASE_URL } from '../constants/api';
 import * as WebBrowser from 'expo-web-browser';
 import * as AuthSession from 'expo-auth-session';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
+
+const ANONYMOUS_TRIPS_KEY = '@tripgenie/anonymous_trips';
 
 // Required for expo-auth-session
 WebBrowser.maybeCompleteAuthSession();
@@ -114,6 +118,28 @@ export function useAuth() {
 
         if (session) {
           await hydrateUser(session);
+
+          // Claim any anonymous trips stored locally
+          try {
+            const stored = await AsyncStorage.getItem(ANONYMOUS_TRIPS_KEY);
+            if (stored) {
+              const tripIds = JSON.parse(stored);
+              if (Array.isArray(tripIds) && tripIds.length > 0) {
+                fetch(`${API_BASE_URL}/api/auth/claim-trips`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session.access_token}`,
+                  },
+                  body: JSON.stringify({ tripIds }),
+                }).finally(() => {
+                  AsyncStorage.removeItem(ANONYMOUS_TRIPS_KEY);
+                });
+              }
+            }
+          } catch {
+            // Non-blocking — don't prevent sign-in flow
+          }
         } else {
           setAuthToken(null);
           clearUserStore();

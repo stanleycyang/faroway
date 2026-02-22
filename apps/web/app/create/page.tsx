@@ -3,17 +3,27 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Search, Calendar, Users, ChevronDown, ChevronUp, Sparkles, ArrowLeft, Check, Minus, Plus, X } from 'lucide-react';
+import { format } from 'date-fns';
 import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
+import { PlacesAutocompleteInput, type PlaceResult } from '@/components/create/PlacesAutocompleteInput';
+import { DatePicker } from '@/components/trips/DatePicker';
+
+// Dynamic import — Leaflet must not run on the server
+const DestinationMap = dynamic(
+  () => import('@/components/create/DestinationMap').then(m => ({ default: m.DestinationMap })),
+  { ssr: false }
+);
 
 const destinations = [
-  { id: 'tokyo', name: 'Tokyo', country: 'Japan', image: getImageUrl(IMAGE_PATHS.destinations.tokyo) },
-  { id: 'paris', name: 'Paris', country: 'France', image: getImageUrl(IMAGE_PATHS.destinations.paris) },
-  { id: 'bali', name: 'Bali', country: 'Indonesia', image: getImageUrl(IMAGE_PATHS.destinations.bali) },
-  { id: 'new-york', name: 'New York', country: 'USA', image: getImageUrl(IMAGE_PATHS.destinations['new-york']) },
-  { id: 'santorini', name: 'Santorini', country: 'Greece', image: getImageUrl(IMAGE_PATHS.destinations.santorini) },
-  { id: 'barcelona', name: 'Barcelona', country: 'Spain', image: getImageUrl(IMAGE_PATHS.destinations.barcelona) },
+  { id: 'tokyo', name: 'Tokyo', country: 'Japan', lat: 35.6762, lng: 139.6503, image: getImageUrl(IMAGE_PATHS.destinations.tokyo) },
+  { id: 'paris', name: 'Paris', country: 'France', lat: 48.8566, lng: 2.3522, image: getImageUrl(IMAGE_PATHS.destinations.paris) },
+  { id: 'bali', name: 'Bali', country: 'Indonesia', lat: -8.3405, lng: 115.0920, image: getImageUrl(IMAGE_PATHS.destinations.bali) },
+  { id: 'new-york', name: 'New York', country: 'USA', lat: 40.7128, lng: -74.0060, image: getImageUrl(IMAGE_PATHS.destinations['new-york']) },
+  { id: 'santorini', name: 'Santorini', country: 'Greece', lat: 36.3932, lng: 25.4615, image: getImageUrl(IMAGE_PATHS.destinations.santorini) },
+  { id: 'barcelona', name: 'Barcelona', country: 'Spain', lat: 41.3874, lng: 2.1686, image: getImageUrl(IMAGE_PATHS.destinations.barcelona) },
 ];
 
 const travelerTypes = [
@@ -37,13 +47,20 @@ const vibes = [
   { id: 'photography', label: 'Photography', emoji: '📸' },
 ];
 
+interface SelectedPlace {
+  name: string;
+  lat: number;
+  lng: number;
+  placeId: string;
+  isRecommended: boolean;
+}
+
 export default function CreateTripPage() {
   const router = useRouter();
-  const [destination, setDestination] = useState('');
-  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(null);
   const [showDestinations, setShowDestinations] = useState(false);
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined);
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [travelers, setTravelers] = useState(2);
   const [travelerType, setTravelerType] = useState('couple');
@@ -52,54 +69,66 @@ export default function CreateTripPage() {
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [progressMessage, setProgressMessage] = useState('');
 
-  const filteredDestinations = searchQuery
-    ? destinations.filter(d => 
-        d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        d.country.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-    : destinations;
+  const selectedRecommendedDest = selectedPlace?.isRecommended
+    ? destinations.find(d => d.name === selectedPlace.name)
+    : null;
 
-  const selectedDest = destinations.find(d => d.name === destination);
-  
   const toggleVibe = (vibeId: string) => {
-    setSelectedVibes(prev => 
-      prev.includes(vibeId) 
+    setSelectedVibes(prev =>
+      prev.includes(vibeId)
         ? prev.filter(v => v !== vibeId)
         : prev.length < 5 ? [...prev, vibeId] : prev
     );
   };
 
-  const canGenerate = destination && startDate && endDate;
+  const canGenerate = selectedPlace && startDate && endDate;
+
+  const handleSelectRecommended = (dest: typeof destinations[number]) => {
+    setSelectedPlace({
+      name: dest.name,
+      lat: dest.lat,
+      lng: dest.lng,
+      placeId: dest.id,
+      isRecommended: true,
+    });
+    setShowDestinations(false);
+  };
+
+  const handleSelectFromAutocomplete = (place: PlaceResult) => {
+    const recommended = destinations.find(
+      d => d.name.toLowerCase() === place.name.toLowerCase()
+    );
+    setSelectedPlace({
+      name: place.name,
+      lat: place.lat,
+      lng: place.lng,
+      placeId: place.placeId,
+      isRecommended: !!recommended,
+    });
+    setShowDestinations(false);
+  };
+
+  const handleChangeDestination = () => {
+    setSelectedPlace(null);
+    setShowDestinations(true);
+  };
 
   const handleGenerate = async () => {
     if (!canGenerate) return;
     setIsGenerating(true);
     setGenerateError(null);
-    setProgressMessage('Analyzing your preferences...');
-    
-    const progressMessages = [
-      'Finding the best spots...',
-      'Crafting your perfect itinerary...',
-      'Adding local recommendations...',
-      'Almost there...',
-    ];
-    let msgIdx = 0;
-    const progressInterval = setInterval(() => {
-      if (msgIdx < progressMessages.length) {
-        setProgressMessage(progressMessages[msgIdx]);
-        msgIdx++;
-      }
-    }, 2500);
-    
+    setProgressMessage('Creating your trip...');
+
     try {
       const response = await fetch('/api/trips', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          destination,
-          start_date: startDate,
-          end_date: endDate,
+          destination: selectedPlace.name,
+          start_date: format(startDate!, 'yyyy-MM-dd'),
+          end_date: format(endDate!, 'yyyy-MM-dd'),
           travelers,
+          budget: 'moderate',
           preferences: {
             travelerType,
             vibes: selectedVibes,
@@ -114,7 +143,21 @@ export default function CreateTripPage() {
 
       const { trip } = await response.json();
 
-      // Trigger itinerary generation workflow
+      // Store anonymous trip ID in localStorage so it can be claimed after sign-up
+      if (!trip.user_id) {
+        try {
+          const stored = JSON.parse(localStorage.getItem('tripgenie_anonymous_trips') || '[]');
+          if (!stored.includes(trip.id)) {
+            stored.push(trip.id);
+            localStorage.setItem('tripgenie_anonymous_trips', JSON.stringify(stored));
+          }
+        } catch {
+          localStorage.setItem('tripgenie_anonymous_trips', JSON.stringify([trip.id]));
+        }
+      }
+
+      setProgressMessage('Starting AI trip planner...');
+
       const genResponse = await fetch(`/api/trips/${trip.id}/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -127,33 +170,91 @@ export default function CreateTripPage() {
 
       if (!genResponse.ok) {
         const genData = await genResponse.json().catch(() => ({}));
-        // 409 means generation already in progress — still navigate
         if (genResponse.status !== 409) {
           throw new Error(genData.error || 'Failed to start itinerary generation');
         }
       }
 
-      clearInterval(progressInterval);
+      // Redirect to trip detail page — real progress happens there via SSE
       router.push(`/trips/${trip.id}`);
     } catch (err) {
-      clearInterval(progressInterval);
       setGenerateError(err instanceof Error ? err.message : 'Something went wrong. Please try again.');
       setIsGenerating(false);
       setProgressMessage('');
     }
   };
 
-  const getTripDuration = () => {
-    if (!startDate || !endDate) return null;
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    return days;
+  const renderSelectedDestination = () => {
+    if (!selectedPlace || showDestinations) return null;
+
+    const hasCoords = selectedPlace.lat !== 0 && selectedPlace.lng !== 0;
+    const country = selectedRecommendedDest?.country;
+
+    return (
+      <div className="relative h-48 rounded-xl overflow-hidden group">
+        {hasCoords ? (
+          <DestinationMap lat={selectedPlace.lat} lng={selectedPlace.lng} name={selectedPlace.name} />
+        ) : (
+          <div className="h-full bg-gradient-to-br from-primary/10 to-primary/5 flex items-center justify-center">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-gray-900">{selectedPlace.name}</p>
+            </div>
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute bottom-4 left-4">
+          {country && <p className="text-primary-300 text-sm font-medium uppercase tracking-wide drop-shadow-lg">{country}</p>}
+          <h3 className="text-2xl font-bold text-white drop-shadow-lg">{selectedPlace.name}</h3>
+        </div>
+        <button
+          onClick={handleChangeDestination}
+          className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-medium text-gray-700 hover:bg-white transition-colors z-10"
+        >
+          Change
+        </button>
+      </div>
+    );
+  };
+
+  const renderDestinationSearch = () => {
+    if (selectedPlace && !showDestinations) return null;
+
+    return (
+      <>
+        <PlacesAutocompleteInput
+          onSelect={handleSelectFromAutocomplete}
+          localDestinations={destinations.map(d => ({ name: d.name, country: d.country }))}
+        />
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
+          {destinations.map((dest) => (
+            <button
+              key={dest.id}
+              aria-label={`Select ${dest.name}, ${dest.country}`}
+              aria-pressed={selectedPlace?.name === dest.name}
+              onClick={() => handleSelectRecommended(dest)}
+              className={`relative h-32 rounded-xl overflow-hidden group ${selectedPlace?.name === dest.name ? 'ring-2 ring-primary ring-offset-2' : ''}`}
+            >
+              <Image src={dest.image} alt={`${dest.name}, ${dest.country}`} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+              <div className="absolute bottom-3 left-3">
+                <p className="text-white font-semibold">{dest.name}</p>
+                <p className="text-white/70 text-xs">{dest.country}</p>
+              </div>
+              {selectedPlace?.name === dest.name && (
+                <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
+                  <Check className="w-4 h-4 text-white" />
+                </div>
+              )}
+            </button>
+          ))}
+        </div>
+      </>
+    );
   };
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <button onClick={() => router.back()} className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors">
@@ -170,14 +271,12 @@ export default function CreateTripPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-        {/* Progress indicator */}
         <div className="flex items-center gap-2 mb-8">
-          <div className={`h-1 flex-1 rounded-full ${destination ? 'bg-primary' : 'bg-gray-200'}`} />
+          <div className={`h-1 flex-1 rounded-full ${selectedPlace ? 'bg-primary' : 'bg-gray-200'}`} />
           <div className={`h-1 flex-1 rounded-full ${startDate && endDate ? 'bg-primary' : 'bg-gray-200'}`} />
           <div className={`h-1 flex-1 rounded-full ${showAdvanced && (selectedVibes.length > 0 || travelerType) ? 'bg-primary' : 'bg-gray-200'}`} />
         </div>
 
-        {/* Destination Section */}
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
@@ -189,65 +288,10 @@ export default function CreateTripPage() {
             </div>
           </div>
 
-          {selectedDest && !showDestinations ? (
-            <div role="button" tabIndex={0} aria-label={`Change destination from ${selectedDest.name}`} onKeyDown={(e) => e.key === 'Enter' && setShowDestinations(true)} className="relative h-48 rounded-xl overflow-hidden group cursor-pointer" onClick={() => setShowDestinations(true)}>
-              <Image src={selectedDest.image} alt={`${selectedDest.name}, ${selectedDest.country}`} fill className="object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              <div className="absolute bottom-4 left-4">
-                <p className="text-primary-300 text-sm font-medium uppercase tracking-wide">{selectedDest.country}</p>
-                <h3 className="text-2xl font-bold text-white">{selectedDest.name}</h3>
-              </div>
-              <button className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm px-3 py-1.5 rounded-full text-sm font-medium text-gray-700 hover:bg-white transition-colors">
-                Change
-              </button>
-            </div>
-          ) : (
-            <>
-              <div className="relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => { setSearchQuery(e.target.value); setShowDestinations(true); }}
-                  onFocus={() => setShowDestinations(true)}
-                  placeholder="Search cities, countries..."
-                  className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-                />
-                {searchQuery && (
-                  <button onClick={() => setSearchQuery('')} className="absolute right-4 top-1/2 -translate-y-1/2">
-                    <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
-                  </button>
-                )}
-              </div>
-              
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
-                {filteredDestinations.map((dest) => (
-                  <button
-                    key={dest.id}
-                    aria-label={`Select ${dest.name}, ${dest.country}`}
-                    aria-pressed={destination === dest.name}
-                    onClick={() => { setDestination(dest.name); setShowDestinations(false); setSearchQuery(''); }}
-                    className={`relative h-32 rounded-xl overflow-hidden group ${destination === dest.name ? 'ring-2 ring-primary ring-offset-2' : ''}`}
-                  >
-                    <Image src={dest.image} alt={`${dest.name}, ${dest.country}`} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-                    <div className="absolute bottom-3 left-3">
-                      <p className="text-white font-semibold">{dest.name}</p>
-                      <p className="text-white/70 text-xs">{dest.country}</p>
-                    </div>
-                    {destination === dest.name && (
-                      <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                        <Check className="w-4 h-4 text-white" />
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+          {renderSelectedDestination()}
+          {renderDestinationSearch()}
         </section>
 
-        {/* Dates Section */}
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center">
@@ -259,43 +303,14 @@ export default function CreateTripPage() {
             </div>
           </div>
 
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="start-date" className="block text-sm font-medium text-gray-700 mb-2">Start date</label>
-              <input
-                id="start-date"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                min={new Date().toISOString().split('T')[0]}
-                aria-label="Trip start date"
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-              />
-            </div>
-            <div>
-              <label htmlFor="end-date" className="block text-sm font-medium text-gray-700 mb-2">End date</label>
-              <input
-                id="end-date"
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                min={startDate || new Date().toISOString().split('T')[0]}
-                aria-label="Trip end date"
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
-              />
-            </div>
-          </div>
-
-          {getTripDuration() && (
-            <div className="mt-4 p-3 bg-primary-50 rounded-lg">
-              <p className="text-sm text-primary-700 font-medium">
-                🎉 {getTripDuration()} day{getTripDuration()! > 1 ? 's' : ''} trip to {destination || 'your destination'}
-              </p>
-            </div>
-          )}
+          <DatePicker
+            startDate={startDate}
+            endDate={endDate}
+            onStartDateChange={setStartDate}
+            onEndDateChange={setEndDate}
+          />
         </section>
 
-        {/* Advanced Options */}
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
@@ -315,7 +330,6 @@ export default function CreateTripPage() {
 
           {showAdvanced && (
             <div className="px-6 pb-6 pt-2 border-t border-gray-100">
-              {/* Travelers count */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-3">Number of travelers</label>
                 <div className="flex items-center justify-between bg-gray-50 rounded-xl p-4">
@@ -342,7 +356,6 @@ export default function CreateTripPage() {
                 </div>
               </div>
 
-              {/* Traveler type */}
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-3">Who's traveling?</label>
                 <div className="flex flex-wrap gap-2">
@@ -363,7 +376,6 @@ export default function CreateTripPage() {
                 </div>
               </div>
 
-              {/* Vibes */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">What's your vibe?</label>
                 <p className="text-sm text-gray-500 mb-3">Select up to 5 that match your travel style</p>
@@ -389,7 +401,6 @@ export default function CreateTripPage() {
           )}
         </section>
 
-        {/* Generate Button */}
         <div className="sticky bottom-0 bg-gray-50 pt-4 pb-8 -mx-4 px-4 sm:-mx-6 sm:px-6">
           <button
             onClick={handleGenerate}

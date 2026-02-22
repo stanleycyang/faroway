@@ -1,6 +1,6 @@
 import { getAllPosts } from '@/lib/blog';
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tripgenie.ai';
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai';
 
 function escapeXml(s: string) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

@@ -5,7 +5,7 @@ import { applyCorsHeaders, handleCorsPreflightResponse } from '@/lib/security/co
 // Routes that require authentication
 const protectedRoutes = [
   '/dashboard',
-  '/trips',
+  '/trips/new',
   '/settings',
   '/profile',
 ]

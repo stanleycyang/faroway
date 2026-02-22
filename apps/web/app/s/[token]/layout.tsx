@@ -64,7 +64,7 @@ function buildTripMeta(trip: TripData, token: string, baseUrl: string) {
 
 export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
   const { token } = await params
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tripgenie.ai'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai'
 
   const trip = await getTrip(token)
 
@@ -112,7 +112,7 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
 
 export default async function SharedTripLayout({ children, params }: SharedTripLayoutProps) {
   const { token } = await params
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tripgenie.ai'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai'
   const trip = await getTrip(token)
 
   return (
@@ -121,7 +121,8 @@ export default async function SharedTripLayout({ children, params }: SharedTripL
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(buildTripMeta(trip, token, baseUrl).jsonLd),
+            __html: JSON.stringify(buildTripMeta(trip, token, baseUrl).jsonLd)
+              .replace(/</g, '\\u003c'),
           }}
         />
       )}

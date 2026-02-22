@@ -209,6 +209,9 @@ export interface ItineraryActivity {
     bookingUrl?: string;
     affiliateId?: string;
   };
+  rating?: number;
+  reviewCount?: number;
+  images?: string[];
 }
 
 export interface Restaurant {
@@ -237,6 +240,8 @@ export interface Restaurant {
     recommended: boolean;
     url?: string;
   };
+  rating?: number;
+  reviewCount?: number;
 }
 
 export interface TripDay {
@@ -414,8 +419,8 @@ export interface ActivityResult {
   reviewCount: number;
   location: LocationInfo;
   images: string[];
-  affiliateUrl: string;
-  affiliatePartner: string;
+  affiliateUrl?: string;
+  affiliatePartner?: string;
   bestTimeOfDay: 'morning' | 'afternoon' | 'evening' | 'any';
   vibeScore: number;
   vibeMatch: string[];

@@ -4,8 +4,8 @@ export const metadata: Metadata = {
   title: 'Sign In',
   description: 'Sign in to TripGenie to access your saved trips and create new AI-powered travel itineraries.',
   robots: {
-    index: true,
-    follow: true,
+    index: false,
+    follow: false,
   },
 }
 

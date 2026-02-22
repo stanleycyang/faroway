@@ -19,6 +19,7 @@ interface HotelInput {
   description?: string;
   affiliateUrl?: string;
   images?: string[];
+  starRating?: number;
 }
 
 interface ActivityInput {
@@ -78,6 +79,7 @@ export interface BuildSpecInput {
   activities: ActivityInput[];
   restaurants: RestaurantInput[];
   days: ItineraryDayInput[];
+  topHotel?: HotelInput;
   totalEstimatedCost?: number;
   currency?: string;
   summary?: string;
@@ -112,14 +114,51 @@ export function buildJsonRenderSpec(input: BuildSpecInput): JsonRenderComponent[
     },
   });
 
-  // 2. Recommended Hotels Section
-  if (input.hotels.length > 0) {
+  // 2. Featured Hotel (top pick)
+  if (input.topHotel) {
     components.push({
       type: 'Section',
-      props: { title: 'Recommended Hotels' },
+      props: { title: 'Your Stay' },
     });
 
-    const topHotels = input.hotels.slice(0, 3);
+    components.push({
+      type: 'HotelCard',
+      props: {
+        name: input.topHotel.name,
+        rating: input.topHotel.rating || 4.5,
+        starRating: input.topHotel.starRating,
+        pricePerNight: input.topHotel.pricePerNight || 150,
+        image: input.topHotel.images?.[0],
+        bookingUrl: input.topHotel.affiliateUrl,
+        amenities: input.topHotel.amenities || [],
+        description: input.topHotel.description,
+        reviewCount: input.topHotel.reviewCount,
+        featured: true,
+      },
+    });
+
+    if (input.topHotel.affiliateUrl) {
+      components.push({
+        type: 'BookingButton',
+        props: {
+          label: `Book ${input.topHotel.name}`,
+          url: input.topHotel.affiliateUrl,
+          provider: 'Booking.com',
+          price: input.topHotel.pricePerNight,
+        },
+      });
+    }
+  }
+
+  // 3. More Hotels Section (remaining hotels)
+  const otherHotels = input.hotels.filter(h => h.id !== input.topHotel?.id);
+  if (otherHotels.length > 0) {
+    components.push({
+      type: 'Section',
+      props: { title: 'Other Hotel Options' },
+    });
+
+    const topHotels = otherHotels.slice(0, 3);
     for (const hotel of topHotels) {
       components.push({
         type: 'HotelCard',
@@ -149,7 +188,7 @@ export function buildJsonRenderSpec(input: BuildSpecInput): JsonRenderComponent[
     }
   }
 
-  // 3. Day-by-day Itinerary
+  // 4. Day-by-day Itinerary
   if (input.days.length > 0) {
     components.push({
       type: 'Section',
@@ -216,6 +255,7 @@ export function buildJsonRenderSpec(input: BuildSpecInput): JsonRenderComponent[
             bookingUrl: activity.affiliateUrl,
             time,
             location: activity.location?.name || activity.location?.neighborhood || activity.location?.city,
+            category: activity.category,
           },
         });
       };
@@ -255,7 +295,7 @@ export function buildJsonRenderSpec(input: BuildSpecInput): JsonRenderComponent[
     }
   }
 
-  // 4. Budget Summary
+  // 5. Budget Summary
   const totalCost = input.totalEstimatedCost || 0;
   if (totalCost > 0) {
     components.push({
@@ -263,19 +303,48 @@ export function buildJsonRenderSpec(input: BuildSpecInput): JsonRenderComponent[
       props: { title: 'Budget Summary' },
     });
 
-    components.push({
-      type: 'PriceTag',
-      props: {
-        amount: totalCost,
-        currency: input.currency || 'USD',
-        period: `total for ${nights} night${nights !== 1 ? 's' : ''}`,
-      },
-    });
+    // Breakdown by category
+    const hotelCost = (input.topHotel?.pricePerNight || 0) * nights;
+    const activityCost = input.activities.reduce((sum, a) => sum + (a.price || 0), 0);
+    const diningCost = totalCost - hotelCost - activityCost;
+
+    if (hotelCost > 0) {
+      components.push({
+        type: 'PriceTag',
+        props: {
+          amount: hotelCost,
+          currency: input.currency || 'USD',
+          period: `accommodation (${nights} night${nights !== 1 ? 's' : ''})`,
+        },
+      });
+    }
+
+    if (activityCost > 0) {
+      components.push({
+        type: 'PriceTag',
+        props: {
+          amount: activityCost,
+          currency: input.currency || 'USD',
+          period: 'activities & tours',
+        },
+      });
+    }
+
+    if (diningCost > 0) {
+      components.push({
+        type: 'PriceTag',
+        props: {
+          amount: Math.max(0, diningCost),
+          currency: input.currency || 'USD',
+          period: 'dining',
+        },
+      });
+    }
 
     components.push({
       type: 'Text',
       props: {
-        content: `Estimated total: $${totalCost.toLocaleString()} ${input.currency || 'USD'}. Includes accommodation, activities, and dining.`,
+        content: `Estimated total: $${totalCost.toLocaleString()} ${input.currency || 'USD'} for ${nights} night${nights !== 1 ? 's' : ''}.`,
         variant: 'caption',
       },
     });

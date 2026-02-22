@@ -1,17 +1,32 @@
 import { useState, useEffect, useRef } from 'react';
 import { API_BASE_URL } from '../constants/api';
 
+export interface StreamingBlock {
+  type: string;
+  props: Record<string, unknown>;
+}
+
 export interface StreamingState {
-  document: any | null; // The json-render document
+  /** Accumulated json-render blocks */
+  blocks: StreamingBlock[];
+  /** The full json-render document (set on complete) */
+  document: any | null;
   isLoading: boolean;
   isStreaming: boolean;
   isComplete: boolean;
   error: string | null;
   progress: number; // 0-100
+  step: string;
+  message: string;
+  searchProgress: Record<string, string> | null;
 }
 
 export interface UseStreamingItineraryOptions {
+  /** Trip ID to stream from the unified endpoint */
+  tripId?: string;
+  /** Legacy: search ID — will be converted to trip-based flow */
   searchId?: string;
+  /** Input to create a new trip + trigger generation (if no tripId/searchId) */
   input?: {
     destination: string;
     startDate: string;
@@ -23,38 +38,48 @@ export interface UseStreamingItineraryOptions {
   };
   onComplete?: (document: any) => void;
   onError?: (error: Error) => void;
-  fallbackToPoll?: boolean; // Whether to fall back to polling if streaming fails
+  fallbackToPoll?: boolean;
 }
 
 /**
- * Hook to stream itinerary generation using json-render
- * 
- * This hook connects to the backend streaming endpoint and progressively
- * builds the json-render document as data arrives.
+ * Hook to stream itinerary generation using the unified SSE endpoint.
+ *
+ * Connects to GET /api/trips/[id]/stream and parses the shared SSE event protocol:
+ *   - event: progress — { step, status, progress, message, searchProgress }
+ *   - event: block    — { type, props }
+ *   - event: complete — { tripId, blockCount }
+ *   - event: error    — { message }
  */
 export function useStreamingItinerary(options: UseStreamingItineraryOptions): StreamingState {
   const {
-    searchId,
+    tripId,
     input,
     onComplete,
     onError,
-    fallbackToPoll = true,
   } = options;
 
   const [state, setState] = useState<StreamingState>({
+    blocks: [],
     document: null,
     isLoading: false,
     isStreaming: false,
     isComplete: false,
     error: null,
     progress: 0,
+    step: 'queued',
+    message: 'Connecting...',
+    searchProgress: null,
   });
 
-  const abortControllerRef = useRef<AbortController | null>(null);
   const eventSourceRef = useRef<EventSource | null>(null);
+  const blocksRef = useRef<StreamingBlock[]>([]);
+  const onCompleteRef = useRef(onComplete);
+  const onErrorRef = useRef(onError);
+  onCompleteRef.current = onComplete;
+  onErrorRef.current = onError;
 
   useEffect(() => {
-    if (!input && !searchId) {
+    if (!tripId && !input) {
       return;
     }
 
@@ -65,45 +90,62 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
           isLoading: true,
           isStreaming: false,
           error: null,
+          blocks: [],
+          progress: 0,
         }));
 
-        let streamSearchId = searchId;
+        blocksRef.current = [];
+        let streamTripId = tripId;
 
-        // If we have input but no searchId, start a new search first
-        if (!searchId && input) {
-          const response = await fetch(`${API_BASE_URL}/api/itinerary/stream`, {
+        // If no tripId, create a trip and trigger generation first
+        if (!streamTripId && input) {
+          // Create trip
+          const tripRes = await fetch(`${API_BASE_URL}/api/trips`, {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(input),
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              destination: input.destination,
+              start_date: input.startDate,
+              end_date: input.endDate,
+              travelers: input.travelers,
+              budget: input.budget || 'moderate',
+              preferences: {
+                travelerType: input.travelerType,
+                vibes: input.vibes,
+              },
+            }),
           });
 
-          if (!response.ok) {
-            throw new Error(`Failed to start streaming: ${response.statusText}`);
+          if (!tripRes.ok) {
+            throw new Error('Failed to create trip');
           }
 
-          const data = await response.json();
-          streamSearchId = data.searchId;
+          const { trip } = await tripRes.json();
+          streamTripId = trip.id;
+
+          // Trigger generation
+          const genRes = await fetch(`${API_BASE_URL}/api/trips/${streamTripId}/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          });
+
+          if (!genRes.ok && genRes.status !== 409) {
+            throw new Error('Failed to start generation');
+          }
         }
 
-        if (!streamSearchId) {
-          throw new Error('No search ID available');
+        if (!streamTripId) {
+          throw new Error('No trip ID available');
         }
 
-        // Check if SSE is supported
+        // Check if EventSource is supported (not available in all RN environments)
         if (typeof EventSource === 'undefined') {
-          console.warn('[useStreamingItinerary] EventSource not supported, falling back to polling');
-          if (fallbackToPoll) {
-            // TODO: Implement fallback to polling
-            throw new Error('Streaming not supported, fallback needed');
-          } else {
-            throw new Error('EventSource not supported');
-          }
+          console.warn('[useStreamingItinerary] EventSource not supported');
+          throw new Error('Streaming not supported on this platform');
         }
 
-        // Connect to the streaming endpoint
-        const streamUrl = `${API_BASE_URL}/api/itinerary/stream/${streamSearchId}`;
+        // Connect to the unified SSE endpoint
+        const streamUrl = `${API_BASE_URL}/api/trips/${streamTripId}/stream`;
         const eventSource = new EventSource(streamUrl);
         eventSourceRef.current = eventSource;
 
@@ -113,80 +155,98 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
           isStreaming: true,
         }));
 
-        // Handle incoming chunks
-        eventSource.onmessage = (event) => {
+        // Handle progress events
+        eventSource.addEventListener('progress', (event: any) => {
           try {
             const data = JSON.parse(event.data);
-
-            if (data.type === 'progress') {
-              // Progress update
-              setState((prev) => ({
-                ...prev,
-                progress: data.progress || 0,
-              }));
-            } else if (data.type === 'chunk') {
-              // Document chunk - merge with existing document
-              setState((prev) => ({
-                ...prev,
-                document: mergeDocument(prev.document, data.chunk),
-              }));
-            } else if (data.type === 'complete') {
-              // Streaming complete
-              const finalDocument = data.document || state.document;
-              setState((prev) => ({
-                ...prev,
-                document: finalDocument,
-                isStreaming: false,
-                isComplete: true,
-                progress: 100,
-              }));
-
-              eventSource.close();
-              eventSourceRef.current = null;
-
-              if (onComplete) {
-                onComplete(finalDocument);
-              }
-            } else if (data.type === 'error') {
-              throw new Error(data.message || 'Streaming error');
-            }
-          } catch (error) {
-            console.error('[useStreamingItinerary] Error processing message:', error);
             setState((prev) => ({
               ...prev,
-              error: error instanceof Error ? error.message : 'Unknown error',
-              isStreaming: false,
+              progress: data.progress ?? prev.progress,
+              step: data.step ?? prev.step,
+              message: data.message ?? prev.message,
+              searchProgress: data.searchProgress ?? prev.searchProgress,
             }));
-            eventSource.close();
-            eventSourceRef.current = null;
-
-            if (onError) {
-              onError(error instanceof Error ? error : new Error('Unknown error'));
-            }
+          } catch (err) {
+            console.error('[useStreamingItinerary] Failed to parse progress:', err);
           }
-        };
+        });
 
-        eventSource.onerror = (error) => {
-          console.error('[useStreamingItinerary] EventSource error:', error);
-          
-          const errorMessage = 'Connection error during streaming';
+        // Handle block events
+        eventSource.addEventListener('block', (event: any) => {
+          try {
+            const block = JSON.parse(event.data) as StreamingBlock;
+            blocksRef.current = [...blocksRef.current, block];
+            setState((prev) => ({
+              ...prev,
+              blocks: blocksRef.current,
+              // Also build document as array of blocks
+              document: blocksRef.current,
+            }));
+          } catch (err) {
+            console.error('[useStreamingItinerary] Failed to parse block:', err);
+          }
+        });
+
+        // Handle complete event
+        eventSource.addEventListener('complete', (event: any) => {
+          const finalDocument = blocksRef.current;
+
           setState((prev) => ({
             ...prev,
-            error: errorMessage,
+            document: finalDocument,
             isStreaming: false,
-            isLoading: false,
+            isComplete: true,
+            progress: 100,
+            step: 'complete',
+            message: 'Your itinerary is ready!',
           }));
 
           eventSource.close();
           eventSourceRef.current = null;
 
-          if (onError) {
-            onError(new Error(errorMessage));
+          onCompleteRef.current?.(finalDocument);
+        });
+
+        // Handle error events
+        eventSource.addEventListener('error', (event: any) => {
+          if (event instanceof MessageEvent && event.data) {
+            try {
+              const data = JSON.parse(event.data);
+              const errorMessage = data.message || 'Generation failed';
+              setState((prev) => ({
+                ...prev,
+                error: errorMessage,
+                isStreaming: false,
+                isLoading: false,
+              }));
+              onErrorRef.current?.(new Error(errorMessage));
+              eventSource.close();
+              eventSourceRef.current = null;
+              return;
+            } catch {
+              // Not a JSON error event
+            }
           }
-        };
+
+          // Generic connection error
+          if (eventSource.readyState === EventSource.CLOSED) {
+            setState((prev) => {
+              if (prev.isComplete) return prev;
+              const errorMessage = 'Connection lost during streaming';
+              onErrorRef.current?.(new Error(errorMessage));
+              return {
+                ...prev,
+                error: errorMessage,
+                isStreaming: false,
+                isLoading: false,
+              };
+            });
+            eventSourceRef.current = null;
+          }
+        });
       } catch (error) {
         console.error('[useStreamingItinerary] Failed to start streaming:', error);
-        
+
         const errorMessage = error instanceof Error ? error.message : 'Failed to start streaming';
         setState((prev) => ({
           ...prev,
@@ -195,9 +255,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
           isStreaming: false,
         }));
 
-        if (onError) {
-          onError(error instanceof Error ? error : new Error('Failed to start streaming'));
-        }
+        onErrorRef.current?.(error instanceof Error ? error : new Error('Failed to start streaming'));
       }
     };
 
@@ -205,47 +263,13 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
 
     // Cleanup
     return () => {
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-        abortControllerRef.current = null;
-      }
       if (eventSourceRef.current) {
         eventSourceRef.current.close();
         eventSourceRef.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchId, JSON.stringify(input)]);
+  }, [tripId, JSON.stringify(input)]);
 
   return state;
-}
-
-/**
- * Merge a document chunk into the existing document
- * This progressively builds the json-render document as chunks arrive
- */
-function mergeDocument(existing: any, chunk: any): any {
-  if (!existing) {
-    return chunk;
-  }
-
-  if (Array.isArray(existing) && Array.isArray(chunk)) {
-    return [...existing, ...chunk];
-  }
-
-  if (typeof existing === 'object' && typeof chunk === 'object') {
-    const merged = { ...existing };
-    for (const key in chunk) {
-      if (Array.isArray(existing[key]) && Array.isArray(chunk[key])) {
-        merged[key] = [...existing[key], ...chunk[key]];
-      } else if (typeof existing[key] === 'object' && typeof chunk[key] === 'object') {
-        merged[key] = mergeDocument(existing[key], chunk[key]);
-      } else {
-        merged[key] = chunk[key];
-      }
-    }
-    return merged;
-  }
-
-  return chunk;
 }

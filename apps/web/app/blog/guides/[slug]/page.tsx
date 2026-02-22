@@ -23,7 +23,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const cluster = getClusterBySlug(slug);
   if (!cluster) return {};
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tripgenie.ai';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai';
 
   return {
     title: cluster.seo.title,
@@ -53,7 +53,7 @@ export default async function ClusterPage({ params }: PageProps) {
   const relatedClusters = getRelatedClusters(slug);
   const displayPosts = posts.slice(0, 9);
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tripgenie.ai';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai';
 
   // JSON-LD schemas
   const breadcrumbSchema = {

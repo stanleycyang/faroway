@@ -99,7 +99,24 @@ export function useUser(): UseUserReturn {
         // Handle specific auth events
         switch (event) {
           case 'SIGNED_IN':
-            // User signed in
+            // Claim any anonymous trips stored in localStorage
+            try {
+              const stored = localStorage.getItem('tripgenie_anonymous_trips')
+              if (stored) {
+                const tripIds = JSON.parse(stored)
+                if (Array.isArray(tripIds) && tripIds.length > 0) {
+                  fetch('/api/auth/claim-trips', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tripIds }),
+                  }).finally(() => {
+                    localStorage.removeItem('tripgenie_anonymous_trips')
+                  })
+                }
+              }
+            } catch {
+              // Non-blocking — don't prevent sign-in flow
+            }
             break
           case 'SIGNED_OUT':
             // User signed out

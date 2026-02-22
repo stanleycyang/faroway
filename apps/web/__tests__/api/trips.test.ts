@@ -165,8 +165,8 @@ describe('GET /api/trips/[id]', () => {
 
     expect(res.status).toBe(200)
     expect(json.trip.id).toBe('trip-1')
-    expect(json.trip.itinerary).toBeDefined()
-    expect(json.trip.itinerary.overview).toBe('A week in Tokyo')
+    expect(json.itinerary).toBeDefined()
+    expect(json.itinerary.overview).toBe('A week in Tokyo')
   })
 
   it('returns 404 for nonexistent trip', async () => {

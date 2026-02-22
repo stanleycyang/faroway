@@ -1,0 +1,177 @@
+/**
+ * Type Bridge: Multi-Agent Search Results → Frontend Itinerary Types
+ *
+ * Maps the structured output from the multi-agent system (ActivityResult,
+ * DiningResult, HotelResult, SuggestedDay) to the frontend's TripDay /
+ * ItineraryActivity / Restaurant format used by ItineraryDay.tsx and the
+ * itineraries table.
+ */
+
+import type {
+  ActivityResult,
+  DiningResult,
+  HotelResult,
+  SuggestedDay,
+  SearchResults,
+  ItineraryActivity,
+  Restaurant,
+  TripDay,
+} from '@tripgenie/types';
+
+// ── Activity Mapper ─────────────────────────────────────────────────────────
+
+function mapActivity(a: ActivityResult, timeOfDay: 'morning' | 'afternoon' | 'evening'): ItineraryActivity {
+  const categoryMap: Record<string, ItineraryActivity['category']> = {
+    sightseeing: 'sightseeing',
+    adventure: 'adventure',
+    cultural: 'cultural',
+    relaxation: 'relaxation',
+    entertainment: 'entertainment',
+    shopping: 'shopping',
+    food: 'cultural',
+    nature: 'adventure',
+    nightlife: 'entertainment',
+  };
+
+  return {
+    id: a.id,
+    name: a.name,
+    description: a.description,
+    duration: a.duration, // already in minutes from activities agent
+    estimatedCost: {
+      amount: a.price,
+      currency: a.currency || 'USD',
+    },
+    timeOfDay: a.bestTimeOfDay === 'any' ? timeOfDay : (a.bestTimeOfDay as 'morning' | 'afternoon' | 'evening'),
+    category: categoryMap[a.category?.toLowerCase()] || 'sightseeing',
+    location: {
+      name: a.location?.name || a.location?.neighborhood || '',
+      address: a.location?.address,
+      coordinates: a.location?.lat != null
+        ? { lat: a.location.lat, lng: a.location.lng }
+        : undefined,
+    },
+    vibeMatch: {
+      matchedVibes: a.vibeMatch || [],
+      reasoning: `Matches your ${a.vibeMatch?.join(', ') || 'travel'} style`,
+    },
+    bookingInfo: {
+      requiresReservation: a.bookingRequired,
+      bookingUrl: a.affiliateUrl || undefined,
+      affiliateId: a.affiliatePartner || undefined,
+    },
+    rating: a.rating,
+    reviewCount: a.reviewCount,
+    images: a.images,
+  };
+}
+
+// ── Dining Mapper ───────────────────────────────────────────────────────────
+
+function mapDining(d: DiningResult, mealType: 'breakfast' | 'lunch' | 'dinner'): Restaurant {
+  const priceLevelCostMap: Record<number, number> = {
+    1: 15,
+    2: 30,
+    3: 55,
+    4: 100,
+  };
+
+  return {
+    id: d.id,
+    name: d.name,
+    cuisineType: d.cuisineTypes || [],
+    priceLevel: d.priceLevel as 1 | 2 | 3 | 4,
+    description: d.description,
+    estimatedCost: {
+      amount: priceLevelCostMap[d.priceLevel] || 30,
+      currency: 'USD',
+      perPerson: true,
+    },
+    mealType,
+    location: {
+      name: d.location?.name || d.location?.neighborhood || '',
+      address: d.location?.address,
+      coordinates: d.location?.lat != null
+        ? { lat: d.location.lat, lng: d.location.lng }
+        : undefined,
+    },
+    dietaryOptions: d.dietaryOptions || [],
+    vibeMatch: {
+      matchedVibes: d.vibeMatch || [],
+      reasoning: `Matches your ${d.vibeMatch?.join(', ') || 'dining'} preferences`,
+    },
+    reservationInfo: d.reservationUrl
+      ? { recommended: true, url: d.reservationUrl }
+      : { recommended: false },
+    rating: d.rating,
+    reviewCount: d.reviewCount,
+  };
+}
+
+// ── Slot Mapper ─────────────────────────────────────────────────────────────
+
+function mapSlot(
+  slot: { activities: ActivityResult[]; meal?: DiningResult },
+  timeOfDay: 'morning' | 'afternoon' | 'evening',
+  mealType: 'breakfast' | 'lunch' | 'dinner',
+): { activities: ItineraryActivity[]; meals: Restaurant[] } {
+  const activities = (slot.activities || []).map(a => mapActivity(a, timeOfDay));
+  const meals = slot.meal ? [mapDining(slot.meal, mealType)] : [];
+  return { activities, meals };
+}
+
+// ── Day Mapper ──────────────────────────────────────────────────────────────
+
+function mapDay(day: SuggestedDay): TripDay {
+  return {
+    dayNumber: day.dayNumber,
+    date: day.date,
+    title: day.title,
+    summary: day.summary,
+    morning: mapSlot(day.morning, 'morning', 'breakfast'),
+    afternoon: mapSlot(day.afternoon, 'afternoon', 'lunch'),
+    evening: mapSlot(day.evening, 'evening', 'dinner'),
+    totalEstimatedCost: {
+      amount: day.estimatedCost || 0,
+      currency: day.currency || 'USD',
+    },
+    tips: day.tips || [],
+  };
+}
+
+// ── Public API ───────────────────────────────────────────────────────────────
+
+export interface MappedItinerary {
+  days: TripDay[];
+  topHotel: HotelResult | null;
+  hotels: HotelResult[];
+  activities: ActivityResult[];
+  dining: DiningResult[];
+  totalEstimatedCost: number;
+  currency: string;
+}
+
+/**
+ * Map the multi-agent SearchResults into the frontend itinerary format.
+ */
+export function mapSearchResultsToItinerary(
+  results: SearchResults,
+  topHotel: HotelResult | null,
+): MappedItinerary {
+  const days = (results.itinerary || []).map(mapDay);
+
+  // Sum daily costs + hotel cost
+  const activityCost = days.reduce((sum, d) => sum + (d.totalEstimatedCost?.amount || 0), 0);
+  const nights = days.length > 0 ? days.length - 1 : 0;
+  const hotelCost = topHotel ? topHotel.pricePerNight * nights : 0;
+
+  return {
+    days,
+    topHotel,
+    hotels: results.hotels || [],
+    activities: results.activities || [],
+    dining: results.dining || [],
+    totalEstimatedCost: activityCost + hotelCost,
+    currency: 'USD',
+  };
+}

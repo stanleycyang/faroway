@@ -6,7 +6,7 @@ import { getGuideSlugs } from '@/lib/destination-guides'
 import { getAllCostProfiles } from '@/lib/tools/cost-data'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tripgenie.ai'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai'
   const currentDate = new Date().toISOString()
   
   // Static pages
@@ -22,18 +22,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: currentDate,
       changeFrequency: 'weekly',
       priority: 0.9,
-    },
-    {
-      url: `${baseUrl}/auth/login`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly',
-      priority: 0.5,
-    },
-    {
-      url: `${baseUrl}/auth/signup`,
-      lastModified: currentDate,
-      changeFrequency: 'monthly',
-      priority: 0.5,
     },
     {
       url: `${baseUrl}/privacy`,

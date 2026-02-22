@@ -1,10 +1,14 @@
 /**
  * Viator Partner API Client
- * 
+ *
  * Viator (TripAdvisor Experiences) provides tours, activities, and attractions.
  * Commission: 15-20% per booking
- * 
- * @see https://developer.viator.com/
+ *
+ * Uses the Partner API endpoints:
+ * - POST /products/search  (v2 — requires Accept: application/json;version=2.0)
+ * - GET  /v1/taxonomy/destinations (v1 — no version header, response wrapped in `data`)
+ *
+ * @see https://github.com/viator-docs/Viator-Partner-API-v2
  */
 
 import { z } from 'zod';
@@ -12,9 +16,96 @@ import { z } from 'zod';
 // Environment variables
 const VIATOR_API_KEY = process.env.VIATOR_API_KEY;
 const VIATOR_PARTNER_ID = process.env.VIATOR_PARTNER_ID;
-const VIATOR_API_BASE = 'https://api.viator.com/partner';
+// VIATOR_SANDBOX=true in .env to use sandbox endpoint (for testing keys)
+const VIATOR_API_BASE = process.env.VIATOR_SANDBOX === 'true'
+  ? 'https://api.sandbox.viator.com/partner'
+  : 'https://api.viator.com/partner';
 
-// Types
+// Headers for v2 endpoints (GET — no Content-Type needed)
+function getV2ReadHeaders(): Record<string, string> {
+  return {
+    'Accept': 'application/json;version=2.0',
+    'Accept-Language': 'en-US',
+    'exp-api-key': VIATOR_API_KEY!,
+  };
+}
+
+// Headers for v2 endpoints (POST — includes Content-Type)
+function getV2WriteHeaders(): Record<string, string> {
+  return {
+    'Accept': 'application/json;version=2.0',
+    'Content-Type': 'application/json',
+    'Accept-Language': 'en-US',
+    'exp-api-key': VIATOR_API_KEY!,
+  };
+}
+
+// ── Destination ID Map ────────────────────────────────────────────────────
+// Viator destination IDs extracted from viator.com URL patterns (e.g. /Tokyo/d334).
+// These IDs are stable and rarely change. This avoids the broken /v1/taxonomy/destinations
+// endpoint which returns 400/404 depending on header version.
+// Source: https://www.viator.com/{City}/d{ID}
+
+const DESTINATION_IDS: Record<string, number> = {
+  // Asia
+  'tokyo': 334, 'kyoto': 332, 'osaka': 4163, 'bangkok': 343,
+  'singapore': 60449, 'hong kong': 35959, 'bali': 98, 'phuket': 349,
+  'seoul': 973, 'taipei': 3643, 'ho chi minh city': 352, 'hanoi': 351,
+  'kuala lumpur': 5765, 'mumbai': 953, 'new delhi': 4540, 'siem reap': 5480,
+  // Europe
+  'paris': 479, 'london': 737, 'rome': 511, 'barcelona': 562,
+  'amsterdam': 525, 'prague': 462, 'lisbon': 538, 'athens': 496,
+  'istanbul': 585, 'florence': 519, 'venice': 522, 'dublin': 503,
+  'berlin': 488, 'madrid': 566, 'vienna': 454, 'budapest': 449,
+  'edinburgh': 905, 'santorini': 959, 'mykonos': 4814, 'dubrovnik': 904,
+  'reykjavik': 4080, 'nice': 483, 'munich': 490, 'zurich': 573,
+  'copenhagen': 4361, 'stockholm': 4195,
+  // Americas
+  'new york city': 687, 'new york': 687, 'los angeles': 645,
+  'san francisco': 651, 'las vegas': 684, 'miami': 672, 'chicago': 669,
+  'washington dc': 657, 'boston': 678, 'cancun': 631, 'mexico city': 628,
+  'rio de janeiro': 712, 'buenos aires': 901, 'lima': 1004,
+  'cartagena': 4988, 'cusco': 918, 'maui': 671, 'oahu': 663,
+  // Middle East & Africa
+  'dubai': 828, 'marrakech': 5408, 'cairo': 782, 'cape town': 318,
+  'tel aviv': 945, 'jerusalem': 946, 'petra': 4892, 'nairobi': 5558,
+  // Oceania
+  'sydney': 357, 'melbourne': 364, 'auckland': 381, 'queenstown': 5523,
+  'fiji': 4249,
+};
+
+/**
+ * Look up a Viator numeric destination ID by city name.
+ * Uses a static map of common destinations. Falls back to normalized
+ * name matching (strips country suffixes like "Tokyo, Japan").
+ */
+function getViatorDestinationId(name: string): number | null {
+  const normalized = name.toLowerCase().trim();
+
+  // Direct match
+  if (DESTINATION_IDS[normalized]) {
+    return DESTINATION_IDS[normalized];
+  }
+
+  // Try without country suffix: "Santorini, Greece" → "santorini"
+  const city = normalized.split(',')[0].trim();
+  if (city !== normalized && DESTINATION_IDS[city]) {
+    return DESTINATION_IDS[city];
+  }
+
+  // Try partial match: find any key that starts with or is contained in the input
+  for (const [key, id] of Object.entries(DESTINATION_IDS)) {
+    if (normalized.includes(key) || key.includes(normalized)) {
+      return id;
+    }
+  }
+
+  console.log(`[Viator] No destination ID found for "${name}" in static map`);
+  return null;
+}
+
+// ── Types ───────────────────────────────────────────────────────────────────
+
 export interface ViatorSearchParams {
   destination: string;
   startDate?: string;
@@ -65,6 +156,7 @@ export interface ViatorProduct {
   highlights: string[];
   inclusions: string[];
   exclusions: string[];
+  productUrl?: string;
 }
 
 export interface ViatorAvailability {
@@ -120,7 +212,12 @@ export function isViatorConfigured(): boolean {
 }
 
 /**
- * Search for products/experiences at a destination
+ * Search for products/experiences at a destination via Viator Partner API v2.
+ *
+ * Strategy:
+ * 1. Look up numeric destination ID from static map
+ * 2. POST /products/search with the destination ID
+ * 3. If lookup fails, return empty (activities agent falls back to AI-generated)
  */
 export async function searchViatorProducts(
   params: ViatorSearchParams
@@ -131,39 +228,67 @@ export async function searchViatorProducts(
   }
 
   try {
-    const queryParams = new URLSearchParams({
-      destName: params.destination,
-      ...(params.startDate && { startDate: params.startDate }),
-      ...(params.endDate && { endDate: params.endDate }),
-      ...(params.rating && { rating: params.rating.toString() }),
-      ...(params.limit && { count: params.limit.toString() }),
-      currency: 'USD',
-      sortBy: 'TOP_SELLERS',
-    });
+    const destId = getViatorDestinationId(params.destination);
 
-    const response = await fetch(
-      `${VIATOR_API_BASE}/products/search?${queryParams}`,
-      {
-        headers: {
-          'Accept': 'application/json',
-          'Accept-Language': 'en-US',
-          'exp-api-key': VIATOR_API_KEY!,
-        },
-      }
-    );
-
-    if (!response.ok) {
-      const error = await response.text();
-      console.error('[Viator] API error:', response.status, error);
-      return [];
+    if (destId) {
+      console.log(`[Viator] Found destination ID ${destId} for "${params.destination}" (${VIATOR_API_BASE})`);
+      const products = await searchByDestinationId(destId, params);
+      if (products.length > 0) return products;
+      console.log(`[Viator] No products found for destId=${destId}, search returned empty`);
+    } else {
+      console.log(`[Viator] No destination ID for "${params.destination}", skipping Viator search`);
     }
 
-    const data = await response.json();
-    return (data.products || []).map(normalizeViatorProduct);
+    return [];
   } catch (error) {
     console.error('[Viator] Search error:', error);
     return [];
   }
+}
+
+/**
+ * Primary search: POST /products/search with numeric destination ID
+ */
+async function searchByDestinationId(
+  destId: number,
+  params: ViatorSearchParams
+): Promise<ViatorProduct[]> {
+  const body: Record<string, unknown> = {
+    filtering: {
+      destination: String(destId),
+      ...(params.startDate && { startDate: params.startDate }),
+      ...(params.endDate && { endDate: params.endDate }),
+      ...(params.rating && { rating: { from: params.rating } }),
+      ...(params.priceRange && {
+        price: { from: params.priceRange.min, to: params.priceRange.max },
+      }),
+    },
+    pagination: {
+      start: 1,
+      count: params.limit || 15,
+    },
+    sorting: {
+      sort: 'DEFAULT',
+      order: 'DESCENDING',
+    },
+    currency: 'USD',
+  };
+
+  const response = await fetch(`${VIATOR_API_BASE}/products/search`, {
+    method: 'POST',
+    headers: getV2WriteHeaders(),
+    body: JSON.stringify(body),
+  });
+
+  if (!response.ok) {
+    const error = await response.text();
+    console.error('[Viator] products/search error:', response.status, error);
+    return [];
+  }
+
+  const data = await response.json();
+  console.log(`[Viator] products/search returned ${data.products?.length || 0} results for destId=${destId}`);
+  return (data.products || []).map(normalizeViatorProduct);
 }
 
 /**
@@ -180,11 +305,7 @@ export async function getViatorProduct(
     const response = await fetch(
       `${VIATOR_API_BASE}/products/${productCode}`,
       {
-        headers: {
-          'Accept': 'application/json',
-          'Accept-Language': 'en-US',
-          'exp-api-key': VIATOR_API_KEY!,
-        },
+        headers: getV2ReadHeaders(),
       }
     );
 
@@ -218,11 +339,7 @@ export async function checkViatorAvailability(
       `${VIATOR_API_BASE}/availability/check`,
       {
         method: 'POST',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json',
-          'exp-api-key': VIATOR_API_KEY!,
-        },
+        headers: getV2WriteHeaders(),
         body: JSON.stringify({
           productCode,
           travelDate: startDate,
@@ -246,7 +363,8 @@ export async function checkViatorAvailability(
 }
 
 /**
- * Generate affiliate booking URL with tracking
+ * Generate affiliate booking URL with tracking.
+ * Prefers the productUrl from the API response when available.
  */
 export function generateViatorAffiliateUrl(
   productCode: string,
@@ -254,8 +372,19 @@ export function generateViatorAffiliateUrl(
   options?: {
     date?: string;
     travelers?: number;
+    productUrl?: string;
   }
 ): string {
+  // Use the API-provided productUrl when available (already has proper structure)
+  if (options?.productUrl) {
+    const url = new URL(options.productUrl);
+    url.searchParams.set('pid', VIATOR_PARTNER_ID || 'tripgenie');
+    url.searchParams.set('mcid', trackingId);
+    url.searchParams.set('medium', 'api');
+    return url.toString();
+  }
+
+  // Fallback: construct from product code
   const baseUrl = `https://www.viator.com/tours/${productCode}`;
   const params = new URLSearchParams({
     pid: VIATOR_PARTNER_ID || 'tripgenie',
@@ -269,31 +398,39 @@ export function generateViatorAffiliateUrl(
 }
 
 /**
- * Normalize Viator API response to our internal format
+ * Normalize Viator API v2 response to our internal format.
+ * Handles both v1 and v2 response shapes gracefully.
  */
 function normalizeViatorProduct(raw: any): ViatorProduct {
+  // v2 images: images[].variants[].url — pick highest res variant
+  const images = (raw.images || []).map((img: any) => {
+    const url = img.url
+      || img.variants?.sort((a: any, b: any) => (b.width || 0) - (a.width || 0))?.[0]?.url
+      || '';
+    return { url, caption: img.caption };
+  }).filter((img: any) => img.url);
+
   return {
     productCode: raw.productCode || raw.code,
     title: raw.title || raw.name,
     description: raw.description || '',
     shortDescription: raw.shortDescription || raw.description?.substring(0, 200) || '',
-    rating: raw.rating || raw.reviews?.combinedAverageRating || 0,
-    reviewCount: raw.reviewCount || raw.reviews?.totalReviews || 0,
+    // v2: reviews.combinedAverageRating / reviews.totalReviews
+    rating: raw.reviews?.combinedAverageRating || raw.rating || 0,
+    reviewCount: raw.reviews?.totalReviews || raw.reviewCount || 0,
     price: {
+      // v2: pricing.summary.fromPrice
       amount: raw.pricing?.summary?.fromPrice || raw.price?.amount || 0,
       currencyCode: raw.pricing?.currency || raw.price?.currencyCode || 'USD',
-      formattedPrice: raw.pricing?.summary?.fromPriceFormatted || `$${raw.price?.amount || 0}`,
+      formattedPrice: raw.pricing?.summary?.fromPriceFormatted || `$${raw.pricing?.summary?.fromPrice || raw.price?.amount || 0}`,
     },
     duration: {
       fixedDurationInMinutes: raw.duration?.fixedDurationInMinutes,
       variableDurationFromMinutes: raw.duration?.variableDurationFromMinutes,
       variableDurationToMinutes: raw.duration?.variableDurationToMinutes,
     },
-    images: (raw.images || []).map((img: any) => ({
-      url: img.url || img.variants?.[0]?.url,
-      caption: img.caption,
-    })),
-    categories: raw.categories || raw.tags || [],
+    images,
+    categories: raw.tags?.map((t: any) => t.tagName || t) || raw.categories || [],
     location: {
       address: raw.location?.address,
       city: raw.location?.city || raw.destinationName,
@@ -301,17 +438,21 @@ function normalizeViatorProduct(raw: any): ViatorProduct {
       coordinates: raw.location?.coordinates ? {
         latitude: raw.location.coordinates.latitude,
         longitude: raw.location.coordinates.longitude,
+      } : raw.geoLocation ? {
+        latitude: raw.geoLocation.latitude,
+        longitude: raw.geoLocation.longitude,
       } : undefined,
     },
     bookingInfo: {
-      confirmationType: raw.bookingInfo?.confirmationType || 'INSTANT',
-      cancellationPolicy: raw.cancellationPolicy?.description || 'Free cancellation',
-      mobileTicket: raw.bookingInfo?.mobileTicket ?? true,
-      instantConfirmation: raw.bookingInfo?.instantConfirmation ?? true,
+      confirmationType: raw.bookingInfo?.confirmationType || raw.confirmationType || 'INSTANT',
+      cancellationPolicy: raw.cancellationPolicy?.description || raw.cancellationPolicy?.type || 'Free cancellation',
+      mobileTicket: raw.bookingInfo?.mobileTicket ?? raw.ticketInfo?.mobileTicketAvailable ?? true,
+      instantConfirmation: raw.bookingInfo?.instantConfirmation ?? raw.flags?.includes('INSTANT_CONFIRMATION') ?? true,
     },
-    highlights: raw.highlights || [],
-    inclusions: raw.inclusions || [],
-    exclusions: raw.exclusions || [],
+    highlights: raw.highlights || raw.productHighlights || [],
+    inclusions: raw.inclusions || raw.itinerary?.inclusions || [],
+    exclusions: raw.exclusions || raw.itinerary?.exclusions || [],
+    productUrl: raw.productUrl || raw.webURL || undefined,
   };
 }
 

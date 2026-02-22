@@ -503,7 +503,6 @@ describe('POST /api/blog/newsletter', () => {
 
     expect(res.status).toBe(400);
     expect(body.error).toBe('Invalid request body');
-    expect(body.details).toBeDefined();
   });
 
   it('returns 400 for missing email', async () => {

@@ -57,8 +57,10 @@ export function TripHeader({
     }).format(amount);
   };
 
+  const duration = getDuration();
+
   return (
-    <div className="bg-white border-b border-gray-200">
+    <div className="bg-gradient-to-b from-gray-50 to-white border-b border-gray-200">
       {/* Top Navigation */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6">
         <div className="flex items-center justify-between h-16">
@@ -71,24 +73,24 @@ export function TripHeader({
           </Link>
           
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center shadow-sm">
               <Sparkles className="w-4 h-4 text-white" />
             </div>
             <span className="text-lg font-bold text-gray-900 hidden sm:inline">TripGenie</span>
           </Link>
 
           {showActions ? (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <button
                 onClick={onShare}
-                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
                 title="Share trip"
               >
                 <Share2 className="w-5 h-5" />
               </button>
               <button
                 onClick={onExport}
-                className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
                 title="Export itinerary"
               >
                 <Download className="w-5 h-5" />
@@ -101,49 +103,49 @@ export function TripHeader({
       </div>
 
       {/* Trip Info */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-6">
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-8">
         {/* Status Badge */}
         {status === 'generating' && (
-          <div className="mb-4 inline-flex items-center gap-2 px-3 py-1.5 bg-primary-50 text-primary-700 rounded-full text-sm font-medium">
+          <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-50 text-primary-700 rounded-full text-sm font-semibold shadow-sm">
             <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse" />
             AI is generating your itinerary...
           </div>
         )}
         
         {status === 'failed' && (
-          <div className="mb-4 inline-flex items-center gap-2 px-3 py-1.5 bg-red-50 text-red-700 rounded-full text-sm font-medium">
+          <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-full text-sm font-semibold">
             <span>⚠️</span>
             Generation failed. Please try again.
           </div>
         )}
 
         {/* Destination */}
-        <div className="flex items-center gap-2 text-gray-500 text-sm mb-1">
+        <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
           <MapPin className="w-4 h-4" />
-          <span>Destination</span>
+          <span className="font-medium">Destination</span>
         </div>
-        <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-4">
+        <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-5 tracking-tight">
           {destination}
         </h1>
 
-        {/* Trip Meta */}
-        <div className="flex flex-wrap gap-4 sm:gap-6">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-5 h-5 text-gray-400" />
+        {/* Trip Meta Pills */}
+        <div className="flex flex-wrap gap-3">
+          <div className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-2xl border border-gray-200 shadow-sm">
+            <Calendar className="w-5 h-5 text-primary" />
             <div>
-              <p className="text-sm font-medium text-gray-900">
-                {formatDate(startDate)} - {formatDate(endDate)}
+              <p className="text-sm font-semibold text-gray-900">
+                {formatDate(startDate)} – {formatDate(endDate)}
               </p>
               <p className="text-xs text-gray-500">
-                {getDuration()} day{getDuration() > 1 ? 's' : ''}
+                {duration} day{duration > 1 ? 's' : ''}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Users className="w-5 h-5 text-gray-400" />
+          <div className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-2xl border border-gray-200 shadow-sm">
+            <Users className="w-5 h-5 text-primary" />
             <div>
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm font-semibold text-gray-900">
                 {travelers} traveler{travelers > 1 ? 's' : ''}
               </p>
               <p className="text-xs text-gray-500">Group size</p>
@@ -151,10 +153,10 @@ export function TripHeader({
           </div>
 
           {totalCost && totalCost.amount > 0 && (
-            <div className="flex items-center gap-2">
-              <DollarSign className="w-5 h-5 text-gray-400" />
+            <div className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-2xl border border-gray-200 shadow-sm">
+              <DollarSign className="w-5 h-5 text-primary" />
               <div>
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-semibold text-gray-900">
                   {formatCost(totalCost.amount, totalCost.currency)}
                 </p>
                 <p className="text-xs text-gray-500">Estimated total</p>
