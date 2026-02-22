@@ -71,9 +71,9 @@ export default async function BestTimeDestinationPage({
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Tools', item: 'https://tripgenie.ai/tools' },
-      { '@type': 'ListItem', position: 2, name: 'Best Time to Visit', item: 'https://tripgenie.ai/tools/best-time-to-visit' },
-      { '@type': 'ListItem', position: 3, name: dest.name, item: `https://tripgenie.ai/tools/best-time-to-visit/${slug}` },
+      { '@type': 'ListItem', position: 1, name: 'Tools', item: 'https://www.tripgenie.ai/tools' },
+      { '@type': 'ListItem', position: 2, name: 'Best Time to Visit', item: 'https://www.tripgenie.ai/tools/best-time-to-visit' },
+      { '@type': 'ListItem', position: 3, name: dest.name, item: `https://www.tripgenie.ai/tools/best-time-to-visit/${slug}` },
     ],
   };
 
@@ -81,7 +81,7 @@ export default async function BestTimeDestinationPage({
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
       />
 
       <main className="min-h-screen">

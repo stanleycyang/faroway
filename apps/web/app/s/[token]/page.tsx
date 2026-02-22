@@ -20,7 +20,7 @@ export default async function SharedTripPage({ params }: SharedTripPageProps) {
   const { data: trip, error } = await supabase
     .from('trips')
     .select(`
-      destination, start_date, end_date, travelers, traveler_type, vibes, budget_tier,
+      destination, start_date, end_date, travelers, preferences, vibes, budget_tier,
       itineraries(days, overview, total_cost, packing_list, general_tips, generated_at)
     `)
     .eq('share_token', token)
@@ -35,13 +35,15 @@ export default async function SharedTripPage({ params }: SharedTripPageProps) {
     ? trip.itineraries[0]
     : trip.itineraries
 
+  const prefs = (trip.preferences || {}) as Record<string, unknown>
+
   return (
     <SharedTripView
       destination={trip.destination}
       startDate={trip.start_date}
       endDate={trip.end_date}
       travelers={trip.travelers}
-      travelerType={trip.traveler_type}
+      travelerType={prefs.travelerType as string | undefined}
       vibes={trip.vibes}
       budgetTier={trip.budget_tier}
       itinerary={itinerary ? {

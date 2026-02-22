@@ -14,5 +14,21 @@ export const metadata: Metadata = {
 };
 
 export default function PackingListPage() {
-  return <PackingListClient />;
+  const appSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'Smart Packing List Generator',
+    description: 'Generate a customized packing checklist based on your destination, trip type, and climate.',
+    url: 'https://www.tripgenie.ai/tools/packing-list',
+    applicationCategory: 'TravelApplication',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    operatingSystem: 'All',
+  };
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema).replace(/</g, '\\u003c') }} />
+      <PackingListClient />
+    </>
+  );
 }

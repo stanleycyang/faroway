@@ -4,7 +4,7 @@ import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
 import { z } from 'zod';
 
 const ViewSchema = z.object({
-  slug: z.string().min(1),
+  slug: z.string().min(1).max(200).regex(/^[a-z0-9][a-z0-9-]*[a-z0-9]$/),
 });
 
 async function hashIP(ip: string): Promise<string> {
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
 
     if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Invalid request body', details: parseResult.error.issues },
+        { error: 'Invalid request body' },
         { status: 400 }
       );
     }

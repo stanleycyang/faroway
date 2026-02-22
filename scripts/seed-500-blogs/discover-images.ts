@@ -3,8 +3,10 @@
  *
  * Usage:
  *   npx tsx scripts/seed-500-blogs/discover-images.ts
+ *   npx tsx scripts/seed-500-blogs/discover-images.ts --batch 2
+ *   npx tsx scripts/seed-500-blogs/discover-images.ts --batch 3
  *
- * Outputs: scripts/seed-500-blogs/image-map.json
+ * Outputs: scripts/seed-500-blogs/image-map.json (or image-map-v2.json / image-map-v3.json)
  */
 
 import * as fs from 'fs';
@@ -13,7 +15,14 @@ import { destinations } from './destinations';
 
 const RESULTS_PER_PAGE = 30;
 const RATE_LIMIT_MS = 350; // be polite to Unsplash
-const OUTPUT = path.resolve(__dirname, 'image-map.json');
+
+const batchArg = process.argv.find(a => a.startsWith('--batch'));
+const batchNum = batchArg ? parseInt(process.argv[process.argv.indexOf(batchArg) + 1] || '1') : 1;
+
+const outputFile = batchNum === 3
+  ? 'image-map-v3.json'
+  : batchNum === 2 ? 'image-map-v2.json' : 'image-map.json';
+const OUTPUT = path.resolve(__dirname, outputFile);
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -30,6 +39,32 @@ const TEMPLATE_QUERIES = [
   'transportation train',  // 8: Transport
   'day trip excursion',    // 9: Day Trips
 ];
+
+const TEMPLATE_QUERIES_V2 = [
+  'weekend trip cityscape',          // 0: 3-Day Itinerary
+  'nightlife bars evening',          // 1: Nightlife
+  'travel packing suitcase',         // 2: Packing List
+  'family kids vacation',            // 3: Family Travel
+  'romantic couple honeymoon',       // 4: Honeymoon
+  'photography instagram scenic',    // 5: Instagram Spots
+  'shopping market souvenirs',       // 6: Shopping
+  'park free outdoor walking',       // 7: Free Things
+  'weather seasons clouds',          // 8: Weather
+  'culture tradition ceremony',      // 9: Cultural Etiquette
+];
+
+const TEMPLATE_QUERIES_V3 = [
+  'travel review destination scenic',  // 0: Is [City] Worth Visiting?
+  'trip planning calendar travel',     // 1: How Many Days
+  'money budget coins travel',         // 2: Trip Cost Breakdown
+  'morning cityscape sunrise urban',   // 3: One Day / 24-Hour Itinerary
+];
+
+const activeQueries = batchNum === 3
+  ? TEMPLATE_QUERIES_V3
+  : batchNum === 2 ? TEMPLATE_QUERIES_V2 : TEMPLATE_QUERIES;
+
+const imageTarget = activeQueries.length;
 
 interface SearchResult {
   urls: { raw: string };
@@ -66,6 +101,25 @@ async function searchUnsplash(query: string, page = 1): Promise<string[]> {
   }
 }
 
+function loadImageMap(filename: string, globalUsed: Set<string>): number {
+  const mapPath = path.resolve(__dirname, filename);
+  if (!fs.existsSync(mapPath)) {
+    console.warn(`WARNING: ${filename} not found. Cross-batch images may overlap.`);
+    return 0;
+  }
+  const map: Record<string, string[]> = JSON.parse(
+    fs.readFileSync(mapPath, 'utf-8'),
+  );
+  let count = 0;
+  for (const ids of Object.values(map)) {
+    for (const id of ids) {
+      globalUsed.add(id);
+      count++;
+    }
+  }
+  return count;
+}
+
 async function main() {
   const globalUsed = new Set<string>();
   const imageMap: Record<string, string[]> = {};
@@ -75,6 +129,19 @@ async function main() {
     globalUsed.add(dest.imgId);
   }
 
+  // Load previous batch image maps to ensure cross-batch uniqueness
+  if (batchNum >= 2) {
+    const count1 = loadImageMap('image-map.json', globalUsed);
+    if (count1 > 0) console.log(`Loaded ${count1} IDs from image-map.json into exclusion set.`);
+  }
+  if (batchNum >= 3) {
+    const count2 = loadImageMap('image-map-v2.json', globalUsed);
+    if (count2 > 0) console.log(`Loaded ${count2} IDs from image-map-v2.json into exclusion set.`);
+  }
+
+  console.log(`Batch: ${batchNum}`);
+  console.log(`Output: ${outputFile}`);
+  console.log(`Templates per destination: ${imageTarget}`);
   console.log(`Discovering images for ${destinations.length} destinations...\n`);
 
   for (let di = 0; di < destinations.length; di++) {
@@ -83,10 +150,10 @@ async function main() {
     console.log(`[${di + 1}/${destinations.length}] ${dest.name} (${dest.country})`);
 
     // For each template, search with a themed query
-    for (let ti = 0; ti < TEMPLATE_QUERIES.length; ti++) {
-      if (destImages.length >= 10) break;
+    for (let ti = 0; ti < activeQueries.length; ti++) {
+      if (destImages.length >= imageTarget) break;
 
-      const query = `${dest.name} ${dest.country} ${TEMPLATE_QUERIES[ti]}`;
+      const query = `${dest.name} ${dest.country} ${activeQueries[ti]}`;
       const ids = await searchUnsplash(query);
       await sleep(RATE_LIMIT_MS);
 
@@ -122,9 +189,9 @@ async function main() {
       }
     }
 
-    // If we still don't have 10, try additional general searches
+    // If we still don't have enough, try additional general searches
     let extraPage = 3;
-    while (destImages.length < 10 && extraPage <= 10) {
+    while (destImages.length < imageTarget && extraPage <= 10) {
       const query = `${dest.name} ${dest.country}`;
       const ids = await searchUnsplash(query, extraPage);
       await sleep(RATE_LIMIT_MS);
@@ -133,14 +200,14 @@ async function main() {
         if (!globalUsed.has(id) && !destImages.includes(id)) {
           destImages.push(id);
           globalUsed.add(id);
-          if (destImages.length >= 10) break;
+          if (destImages.length >= imageTarget) break;
         }
       }
       extraPage++;
     }
 
     imageMap[dest.id] = destImages;
-    console.log(`  Found ${destImages.length}/10 unique images`);
+    console.log(`  Found ${destImages.length}/${imageTarget} unique images`);
   }
 
   // Write output
@@ -153,7 +220,7 @@ async function main() {
   const uniqueIds = new Set(allIds);
   console.log(`Total images: ${totalImages}`);
   console.log(`Unique images: ${uniqueIds.size}`);
-  console.log(`Destinations with <10 images: ${Object.values(imageMap).filter(a => a.length < 10).length}`);
+  console.log(`Destinations with <${imageTarget} images: ${Object.values(imageMap).filter(a => a.length < imageTarget).length}`);
 }
 
 main().catch((err) => {

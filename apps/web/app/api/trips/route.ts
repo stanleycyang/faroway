@@ -7,6 +7,7 @@ const CreateTripSchema = z.object({
   start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
   end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
   travelers: z.number().int().min(1).max(50).optional(),
+  budget: z.enum(['budget', 'moderate', 'luxury']).optional(),
   preferences: z.object({
     travelerType: z.string().max(50).optional(),
     vibes: z.array(z.string().max(50)).max(10).optional(),
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest) {
     // Fetch user's trips from database (with caching headers for performance)
     const { data: trips, error } = await supabase
       .from('trips')
-      .select('id, destination, start_date, end_date, status, travelers, budget, vibes, traveler_type, budget_tier, cover_image, created_at, updated_at')
+      .select('id, destination, start_date, end_date, status, travelers, budget, vibes, budget_tier, preferences, search_id, created_at, updated_at')
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(100)
@@ -69,7 +70,6 @@ export async function GET(request: NextRequest) {
 // POST /api/trips - Create a new trip (works for both authenticated and anonymous users)
 export async function POST(request: NextRequest) {
   try {
-    // Try to get authenticated user (optional — anonymous trip creation is allowed)
     let userId: string | null = null
     try {
       const supabase = await createClientFromRequest(request)
@@ -89,7 +89,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const { destination, start_date, end_date, travelers, preferences } = parseResult.data
+    const { destination, start_date, end_date, travelers, budget, preferences } = parseResult.data
+
+    // Resolve budget: top-level field takes priority, then preferences.budget
+    const budgetTier = budget || (preferences?.budget as 'budget' | 'moderate' | 'luxury') || 'moderate'
 
     // Use service client to bypass RLS (needed for anonymous trip creation)
     const db = getSupabase()
@@ -102,9 +105,13 @@ export async function POST(request: NextRequest) {
         start_date,
         end_date,
         travelers: travelers || 1,
-        traveler_type: preferences?.travelerType,
+        budget_tier: budgetTier,
         vibes: preferences?.vibes,
+        preferences: {
+          travelerType: preferences?.travelerType,
+        },
         status: 'draft',
+        ...(userId ? {} : { expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() }),
       })
       .select()
       .single()

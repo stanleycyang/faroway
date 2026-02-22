@@ -6,6 +6,8 @@ import { CategoryPills } from '@/components/blog/CategoryPills';
 import { NewsletterCTA } from '@/components/blog/NewsletterCTA';
 import { Pagination } from '@/components/blog/Pagination';
 
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai';
+
 export const metadata: Metadata = {
   title: 'Travel Blog — Tips, Guides & Inspiration',
   description: 'Expert travel tips, destination guides, budget hacks, and AI-powered planning advice. Everything you need to plan your next adventure.',
@@ -37,8 +39,30 @@ export default async function BlogIndex({
 
   const { items: posts, totalPages } = paginate(gridPosts, currentPage, POSTS_PER_PAGE);
 
+  const collectionSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    name: 'TripGenie Travel Blog',
+    description: 'Expert travel tips, destination guides, budget hacks, and AI-powered planning advice.',
+    url: `${baseUrl}/blog`,
+    isPartOf: { '@type': 'WebSite', name: 'TripGenie', url: baseUrl },
+  };
+
+  const breadcrumbSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      { '@type': 'ListItem', position: 1, name: 'Home', item: baseUrl },
+      { '@type': 'ListItem', position: 2, name: 'Blog', item: `${baseUrl}/blog` },
+    ],
+  };
+
   return (
     <main className="min-h-screen pt-20">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify([collectionSchema, breadcrumbSchema]).replace(/</g, '\\u003c') }}
+      />
       {/* Hero */}
       <section className="container mx-auto px-6 max-w-7xl pt-8 pb-4">
         <div className="text-center mb-10">

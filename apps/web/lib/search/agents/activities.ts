@@ -4,8 +4,7 @@
  * Uses Google Places API + AI for matching and ranking
  */
 
-import { generateObject } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { generateObject, gateway as defaultGateway, createGateway } from 'ai';
 import { z } from 'zod';
 import { SearchPlan, ActivityResult } from '../types';
 import { VIBE_KEYWORDS } from '@tripgenie/constants';
@@ -16,10 +15,9 @@ import {
   isViatorConfigured,
 } from '@/lib/affiliates/viator';
 
-const aiGateway = createOpenAI({
-  apiKey: process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_AI_GATEWAY_API_KEY,
-  baseURL: 'https://ai-gateway.vercel.sh/v1',
-});
+const aiGateway = process.env.AI_GATEWAY_API_KEY
+  ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
+  : defaultGateway;
 
 const MODEL = 'anthropic/claude-sonnet-4-20250514';
 
@@ -40,8 +38,8 @@ const ActivitySchema = z.object({
     neighborhood: z.string().optional(),
   }),
   images: z.array(z.string()),
-  affiliateUrl: z.string(),
-  affiliatePartner: z.string(),
+  affiliateUrl: z.string().optional(),
+  affiliatePartner: z.string().optional(),
   bestTimeOfDay: z.enum(['morning', 'afternoon', 'evening', 'any']),
   vibeScore: z.number().min(0).max(100),
   vibeMatch: z.array(z.string()),
@@ -71,7 +69,7 @@ Generate diverse options across categories like:
 - Outdoor activities
 - Unique local experiences
 
-Use realistic affiliate URLs (format: https://viator.com/tour/[destination-slug])`;
+Do NOT generate fake affiliate URLs. Leave affiliateUrl and affiliatePartner empty — only real API-sourced activities should have booking links.`;
 
 export async function runActivitiesAgent(
   plan: SearchPlan,
@@ -119,7 +117,7 @@ export async function runActivitiesAgent(
           lng: product.location.coordinates?.longitude || 0,
         },
         images: product.images.slice(0, 3).map((img: any) => img.url),
-        affiliateUrl: generateViatorAffiliateUrl(product.productCode, trackingId, { date: dates.start }),
+        affiliateUrl: generateViatorAffiliateUrl(product.productCode, trackingId, { date: dates.start, productUrl: product.productUrl }),
         affiliatePartner: 'viator',
         bestTimeOfDay: 'any',
         vibeScore: score || matchedVibes.length * 25,

@@ -59,7 +59,7 @@ export async function POST(
       return NextResponse.json({ error: 'Failed to enable sharing' }, { status: 500 })
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tripgenie.ai'
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai'
     const shareUrl = `${baseUrl}/s/${shareToken}`
 
     return NextResponse.json({ shareUrl, shareToken })

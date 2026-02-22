@@ -13,7 +13,7 @@ import { ViewTracker } from '@/components/blog/ViewTracker';
 import { ProseWrapper } from '@/components/blog/MDXComponents';
 import { FadeInOnScroll } from '@/components/landing/FadeInOnScroll';
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://tripgenie.ai';
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai';
 
 export async function generateStaticParams() {
   return (await getAllPosts()).map((p) => ({ slug: p.slug }));
@@ -264,8 +264,8 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     <>
       <ReadingProgressBar />
       <ViewTracker slug={post.slug} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd).replace(/</g, '\\u003c') }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd).replace(/</g, '\\u003c') }} />
 
       <main className="min-h-screen">
         {/* ===== Immersive Cinematic Hero ===== */}

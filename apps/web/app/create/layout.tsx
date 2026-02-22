@@ -1,21 +1,19 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Create Your Trip',
-  description: 'Start planning your perfect trip with TripGenie AI. Enter your destination, dates, and preferences to get a personalized itinerary in seconds.',
+  title: 'Plan Your Trip in 60 Seconds — AI Trip Planner',
+  description: 'Create a personalized day-by-day travel itinerary instantly. Choose your destination, dates, and vibes — get a complete plan with activities, restaurants, and local tips. Free, no signup required.',
+  alternates: { canonical: '/create' },
   openGraph: {
-    title: 'Plan Your Trip | TripGenie',
-    description: 'Create a personalized AI-powered travel itinerary in 60 seconds. Free to use, no signup required.',
+    title: 'Plan Your Trip in 60 Seconds | TripGenie',
+    description: 'AI-powered trip planner that creates personalized itineraries in seconds. Free to use, no signup required.',
     type: 'website',
+    url: '/create',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Plan Your Trip | TripGenie',
-    description: 'Create a personalized AI-powered travel itinerary in 60 seconds.',
-  },
-  robots: {
-    index: true,
-    follow: true,
+    title: 'Plan Your Trip in 60 Seconds | TripGenie',
+    description: 'AI-powered trip planner that creates personalized itineraries in seconds.',
   },
 }
 

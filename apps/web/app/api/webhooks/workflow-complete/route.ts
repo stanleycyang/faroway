@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase/server';
 import { z } from 'zod';
+import { timingSafeEqual } from 'crypto';
 
 // Validate webhook payload
 const WebhookPayloadSchema = z.object({
@@ -22,18 +23,19 @@ const WebhookPayloadSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    // Verify webhook secret (required in production)
+    // Verify webhook secret (required in all environments)
     const webhookSecret = process.env.WORKFLOW_WEBHOOK_SECRET;
     const authHeader = request.headers.get('x-webhook-secret');
-    
-    if (!webhookSecret && process.env.NODE_ENV === 'production') {
-      console.error('[Webhook] WORKFLOW_WEBHOOK_SECRET not configured in production');
+
+    if (!webhookSecret) {
+      console.error('[Webhook] WORKFLOW_WEBHOOK_SECRET not configured');
       return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 });
     }
-    
-    if (webhookSecret && authHeader !== webhookSecret) {
+
+    if (!authHeader || authHeader.length !== webhookSecret.length ||
+        !timingSafeEqual(Buffer.from(authHeader), Buffer.from(webhookSecret))) {
       return NextResponse.json(
-        { error: 'Invalid webhook secret' },
+        { error: 'Unauthorized' },
         { status: 401 }
       );
     }

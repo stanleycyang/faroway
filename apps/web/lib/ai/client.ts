@@ -12,8 +12,7 @@
  * @see https://vercel.com/ai-gateway
  */
 
-import { generateText, generateObject, streamText, StreamTextResult } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { generateText, generateObject, streamText, StreamTextResult, gateway as defaultGateway, createGateway } from 'ai';
 import { z } from 'zod';
 import {
   TripPreferences,
@@ -30,11 +29,11 @@ import {
   buildRestaurantPrompt,
 } from './prompts';
 
-// Configure AI Gateway as OpenAI-compatible provider
-const aiGateway = createOpenAI({
-  apiKey: process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_AI_GATEWAY_API_KEY,
-  baseURL: 'https://ai-gateway.vercel.sh/v1',
-});
+// Configure AI Gateway — use the dedicated gateway provider (not createOpenAI,
+// which defaults to the OpenAI Responses API and doesn't work with the AI Gateway)
+const aiGateway = process.env.AI_GATEWAY_API_KEY
+  ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
+  : defaultGateway;
 
 // Default model via AI Gateway (supports anthropic/, openai/, etc.)
 const DEFAULT_MODEL = 'anthropic/claude-sonnet-4-20250514';

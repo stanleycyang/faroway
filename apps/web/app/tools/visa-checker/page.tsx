@@ -22,8 +22,20 @@ export const metadata: Metadata = {
 export default function VisaCheckerPage() {
   const continents = getContinents().filter((c) => c !== 'All');
 
+  const appSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'Visa Checker',
+    description: 'Check visa requirements for popular destinations based on your passport country.',
+    url: 'https://www.tripgenie.ai/tools/visa-checker',
+    applicationCategory: 'TravelApplication',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    operatingSystem: 'All',
+  };
+
   return (
     <main className="min-h-screen">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema).replace(/</g, '\\u003c') }} />
       <VisaCheckerClient />
 
       <section className="max-w-7xl mx-auto px-6 py-16">

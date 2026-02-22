@@ -9,24 +9,46 @@ import { optionalAuth } from '@/lib/auth';
 import { z } from 'zod';
 
 
+// Allowed affiliate domains — prevents SSRF via user-supplied URLs
+const ALLOWED_AFFILIATE_DOMAINS = [
+  'viator.com', 'www.viator.com',
+  'booking.com', 'www.booking.com',
+  'getyourguide.com', 'www.getyourguide.com',
+  'tripadvisor.com', 'www.tripadvisor.com',
+  'discovercars.com', 'www.discovercars.com',
+  'hostelworld.com', 'www.hostelworld.com',
+];
+
+function isAllowedAffiliateUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') return false;
+    return ALLOWED_AFFILIATE_DOMAINS.some(
+      (d) => parsed.hostname === d || parsed.hostname.endsWith(`.${d}`)
+    );
+  } catch {
+    return false;
+  }
+}
+
 const ClickTrackingSchema = z.object({
   // What was clicked
   itemType: z.enum(['hotel', 'activity', 'restaurant', 'flight']),
-  itemId: z.string(),
-  itemName: z.string(),
-  
+  itemId: z.string().max(500),
+  itemName: z.string().max(500),
+
   // Affiliate info
-  affiliatePartner: z.string(),
-  affiliateUrl: z.string(),
-  
+  affiliatePartner: z.string().max(50),
+  affiliateUrl: z.string().url().max(2000),
+
   // Context
   searchId: z.string().uuid().optional(),
   tripId: z.string().uuid().optional(),
-  
+
   // Pricing
   price: z.number().optional(),
-  currency: z.string().optional(),
-  
+  currency: z.string().max(10).optional(),
+
   // Source
   source: z.enum(['search_results', 'trip_view', 'itinerary', 'email']).optional(),
 });
@@ -38,12 +60,21 @@ export async function POST(request: NextRequest) {
 
     if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Invalid request body', details: parseResult.error.issues },
+        { error: 'Invalid request body' },
         { status: 400 }
       );
     }
 
     const data = parseResult.data;
+
+    // Validate affiliate URL domain to prevent SSRF
+    if (!isAllowedAffiliateUrl(data.affiliateUrl)) {
+      return NextResponse.json(
+        { error: 'Invalid affiliate URL' },
+        { status: 400 }
+      );
+    }
+
     const user = await optionalAuth(request);
 
     // Generate a unique click ID for conversion tracking

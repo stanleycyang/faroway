@@ -72,7 +72,7 @@ export async function generateItineraryWorkflow(input: GenerateItineraryInput): 
   const tripData = await validateAndFetchTrip(input);
   
   // Step 2: Generate itinerary with AI (5% -> 90%)
-  const itinerary = await generateItineraryWithAI(tripData);
+  const itinerary = await generateItineraryWithAI(input.tripId, tripData);
   
   // Step 3: Save to database (90% -> 98%)
   const itineraryId = await saveItineraryToDatabase(input.tripId, input.userId, itinerary);
@@ -151,13 +151,13 @@ async function validateAndFetchTrip(input: GenerateItineraryInput): Promise<Trip
  * Step 2: Generate itinerary using AI
  * This is the most compute-intensive step
  */
-async function generateItineraryWithAI(preferences: TripPreferences): Promise<GeneratedItinerary> {
+async function generateItineraryWithAI(tripId: string, preferences: TripPreferences): Promise<GeneratedItinerary> {
   "use step";
-  
+
   console.log(`[Step 2/4] Generating itinerary for ${preferences.destination}...`);
-  
+
   const supabase = getSupabaseAdmin();
-  
+
   // Update progress to 10%
   await supabase
     .from('workflow_progress')
@@ -167,7 +167,7 @@ async function generateItineraryWithAI(preferences: TripPreferences): Promise<Ge
       message: `AI is creating your ${preferences.destination} itinerary...`,
       updated_at: new Date().toISOString(),
     })
-    .match({ trip_id: preferences.destination }); // Will be fixed with proper trip_id tracking
+    .eq('trip_id', tripId);
   
   try {
     // Call the AI generation function
@@ -175,7 +175,7 @@ async function generateItineraryWithAI(preferences: TripPreferences): Promise<Ge
       onProgress: async (progress) => {
         // Map AI progress to workflow progress (10% -> 90%)
         const mappedProgress = 10 + Math.floor((progress.currentDay || 0) / progress.totalDays * 80);
-        
+
         await supabase
           .from('workflow_progress')
           .update({
@@ -183,7 +183,7 @@ async function generateItineraryWithAI(preferences: TripPreferences): Promise<Ge
             message: progress.message,
             updated_at: new Date().toISOString(),
           })
-          .eq('step', 'generate_itinerary');
+          .eq('trip_id', tripId);
       },
     });
     

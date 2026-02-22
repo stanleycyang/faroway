@@ -14,5 +14,21 @@ export const metadata: Metadata = {
 };
 
 export default function TravelQuizPage() {
-  return <TravelQuizClient />;
+  const appSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'Destination Travel Quiz',
+    description: 'Take a 60-second quiz to discover your perfect travel destination based on your style and interests.',
+    url: 'https://www.tripgenie.ai/tools/travel-quiz',
+    applicationCategory: 'TravelApplication',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    operatingSystem: 'All',
+  };
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema).replace(/</g, '\\u003c') }} />
+      <TravelQuizClient />
+    </>
+  );
 }

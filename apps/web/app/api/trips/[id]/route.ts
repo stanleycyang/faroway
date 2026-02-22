@@ -9,10 +9,8 @@ const UpdateTripSchema = z.object({
   travelers: z.number().int().min(1).max(50).optional(),
   status: z.enum(['draft', 'generating', 'generated', 'failed']).optional(),
   preferences: z.record(z.unknown()).optional(),
-  traveler_type: z.string().max(50).optional(),
   vibes: z.array(z.string().max(50)).max(10).optional(),
   budget_tier: z.string().max(50).optional(),
-  cover_image: z.string().url().optional(),
 }).strict()
 
 type Params = {
@@ -50,15 +48,13 @@ export async function GET(
     const userId = await resolveUser(request)
     const db = getSupabase()
 
-    // Fetch trip with itinerary in a single joined query
+    // Fetch trip with itinerary — strictly scoped to the user's own trips
     let query = db.from('trips')
-      .select('id, destination, start_date, end_date, status, travelers, budget, preferences, vibes, interests, traveler_type, budget_tier, cover_image, user_id, created_at, updated_at, itineraries(days, overview, total_cost, packing_list, general_tips, generated_at)')
+      .select('id, destination, start_date, end_date, status, travelers, budget, preferences, vibes, interests, budget_tier, user_id, search_id, created_at, updated_at, itineraries(days, overview, total_cost, packing_list, general_tips, generated_at)')
       .eq('id', id)
     if (userId) {
-      // Authenticated: fetch trips owned by user OR anonymous trips
-      query = query.or(`user_id.eq.${userId},user_id.is.null`)
+      query = query.eq('user_id', userId)
     } else {
-      // Anonymous: can only access anonymous trips
       query = query.is('user_id', null)
     }
 
@@ -73,10 +69,21 @@ export async function GET(
 
     // Flatten the joined itinerary (Supabase returns array for 1-to-many)
     const { itineraries, ...tripData } = trip as any
-    const itinerary = Array.isArray(itineraries) ? itineraries[0] || null : itineraries || null
+    const rawItinerary = Array.isArray(itineraries) ? itineraries[0] || null : itineraries || null
+
+    // Map snake_case DB columns to camelCase expected by the frontend
+    const itinerary = rawItinerary ? {
+      days: rawItinerary.days,
+      overview: rawItinerary.overview,
+      totalEstimatedCost: rawItinerary.total_cost,
+      packingList: rawItinerary.packing_list,
+      generalTips: rawItinerary.general_tips,
+      generatedAt: rawItinerary.generated_at,
+    } : null
 
     return NextResponse.json({
-      trip: { ...tripData, itinerary },
+      trip: tripData,
+      itinerary,
     })
   } catch (error) {
     console.error('Error fetching trip:', error)
@@ -102,19 +109,19 @@ export async function PATCH(
 
     if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Invalid request body', details: parseResult.error.issues },
+        { error: 'Invalid request body' },
         { status: 400 }
       )
     }
 
-    // Build the update query — scoped to owned or anonymous trips
+    // Build the update query — strictly scoped to user's own trips
     let query = db
       .from('trips')
       .update({ ...parseResult.data, updated_at: new Date().toISOString() })
       .eq('id', id)
 
     if (userId) {
-      query = query.or(`user_id.eq.${userId},user_id.is.null`)
+      query = query.eq('user_id', userId)
     } else {
       query = query.is('user_id', null)
     }

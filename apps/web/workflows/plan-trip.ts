@@ -1,21 +1,25 @@
 /**
  * Trip Planning Workflow
- * Uses Vercel Workflow for durable execution with granular steps.
+ * Uses the multi-agent search system with structured output (generateObject)
+ * for reliable, schema-validated results.
  *
  * Steps:
- *   1. createSearchPlan  – AI analyzes input and creates a search plan
- *   2. searchAffiliates  – Calls Booking.com + Viator (+ dining) in parallel
- *   3. composeItinerary  – AI organizes results into day-by-day plan
- *   4. buildAndSaveSpec  – Builds json-render spec, saves everything to Supabase
+ *   1. createSearchPlan  – Mark search as started
+ *   2. searchAffiliates  – Run multi-agent system (orchestrator → hotels/activities/dining → aggregator)
+ *   3. composeItinerary  – Mark aggregation as done
+ *   4. buildAndSaveSpec  – Build json-render spec, bridge to itineraries table
  */
 
-import { planTrip, TravelPlanResult } from '@/lib/agents/travel-agent';
+import { executeTravelSearch } from '@/lib/search/workflow';
+import { mapSearchResultsToItinerary, type MappedItinerary } from '@/lib/search/bridge';
 import { buildJsonRenderSpec, BuildSpecInput } from '@/lib/json-render/build-spec';
 import { getSupabase } from '@/lib/supabase/server';
+import type { SearchInput, HotelResult } from '@tripgenie/types';
 
 // Types
 interface TripPlanInput {
   searchId: string;
+  tripId?: string;
   destination: string;
   startDate: string;
   endDate: string;
@@ -27,8 +31,9 @@ interface TripPlanInput {
 
 interface TripPlanOutput {
   searchId: string;
+  tripId?: string;
   status: 'completed' | 'error';
-  result?: TravelPlanResult;
+  result?: MappedItinerary;
   error?: string;
 }
 
@@ -38,15 +43,16 @@ interface TripPlanOutput {
 export async function planTripWorkflow(input: TripPlanInput): Promise<TripPlanOutput> {
   'use workflow';
 
-  const { searchId, destination, startDate, endDate, travelers, vibes, budget, userId } = input;
+  const { searchId, tripId, destination, startDate, endDate, travelers, vibes, budget, userId } = input;
 
   try {
     // ── Step 1: Create Search Plan ──────────────────────────────────
-    await createSearchPlan(searchId, { destination, vibes, budget });
+    await createSearchPlan(searchId, tripId, { destination, vibes, budget });
 
     // ── Step 2: Search Affiliates ───────────────────────────────────
     const result = await searchAffiliates({
       searchId,
+      tripId,
       destination,
       startDate,
       endDate,
@@ -55,11 +61,12 @@ export async function planTripWorkflow(input: TripPlanInput): Promise<TripPlanOu
       budget,
     });
 
-    // ── Step 3: Compose Itinerary (already done by the agent) ──────
-    await markItineraryComposed(searchId);
+    // ── Step 3: Compose Itinerary (already done by the aggregator agent) ──────
+    await markItineraryComposed(searchId, tripId);
 
     // ── Step 4: Build spec + save to database ──────────────────────
     await buildAndSaveSpec(searchId, result, {
+      tripId,
       destination,
       startDate,
       endDate,
@@ -70,6 +77,7 @@ export async function planTripWorkflow(input: TripPlanInput): Promise<TripPlanOu
 
     return {
       searchId,
+      tripId,
       status: 'completed',
       result,
     };
@@ -78,8 +86,31 @@ export async function planTripWorkflow(input: TripPlanInput): Promise<TripPlanOu
 
     await updateSearchStatus(searchId, 'error', {}, errorMessage);
 
+    // Also update trip status if we have a tripId
+    if (tripId) {
+      await getSupabase()
+        .from('trips')
+        .update({
+          status: 'failed',
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', tripId);
+
+      // Update workflow_progress for backward compat
+      await getSupabase()
+        .from('workflow_progress')
+        .upsert({
+          trip_id: tripId,
+          step: 'error',
+          progress: 0,
+          message: errorMessage,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'trip_id' });
+    }
+
     return {
       searchId,
+      tripId,
       status: 'error',
       error: errorMessage,
     };
@@ -90,6 +121,7 @@ export async function planTripWorkflow(input: TripPlanInput): Promise<TripPlanOu
 
 async function createSearchPlan(
   searchId: string,
+  tripId: string | undefined,
   params: { destination: string; vibes?: string[]; budget?: string },
 ): Promise<void> {
   'use step';
@@ -110,20 +142,18 @@ async function createSearchPlan(
     })
     .eq('id', searchId);
 
-  // The AI agent will handle the search plan as part of its tool loop,
-  // so this step mainly signals that orchestration has begun.
-  await getSupabase()
-    .from('searches')
-    .update({
-      progress: {
-        orchestrator: 'done',
-        hotels: 'pending',
-        activities: 'pending',
-        dining: 'pending',
-        aggregator: 'pending',
-      },
-    })
-    .eq('id', searchId);
+  // Update workflow_progress for trip-based polling
+  if (tripId) {
+    await getSupabase()
+      .from('workflow_progress')
+      .upsert({
+        trip_id: tripId,
+        step: 'orchestrator',
+        progress: 5,
+        message: 'Analyzing your preferences...',
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'trip_id' });
+  }
 
   console.log(`[Workflow] Step 1 complete for search ${searchId}`);
 }
@@ -132,44 +162,91 @@ async function createSearchPlan(
 
 async function searchAffiliates(params: {
   searchId: string;
+  tripId?: string;
   destination: string;
   startDate: string;
   endDate: string;
   travelers: number;
   vibes?: string[];
   budget?: string;
-}): Promise<TravelPlanResult> {
+}): Promise<MappedItinerary> {
   'use step';
 
-  const { searchId, destination, startDate, endDate, travelers, vibes, budget } = params;
+  const { searchId, tripId, destination, startDate, endDate, travelers, vibes, budget } = params;
 
-  console.log(`[Workflow] Step 2: Running affiliate searches for ${searchId}`);
+  console.log(`[Workflow] Step 2: Running multi-agent search for ${searchId}`);
 
-  // Mark affiliate searches as in-progress
-  await getSupabase()
-    .from('searches')
-    .update({
-      progress: {
-        orchestrator: 'done',
-        hotels: 'searching',
-        activities: 'searching',
-        dining: 'searching',
-        aggregator: 'pending',
-      },
-    })
-    .eq('id', searchId);
-
-  // The travel planning agent internally calls searchHotels, searchActivities,
-  // and searchDining tools which now use real Booking.com + Viator APIs
-  // with graceful fallback to mock data.
-  const result = await planTrip({
+  // Construct SearchInput for the multi-agent system
+  const searchInput: SearchInput = {
     destination,
     startDate,
     endDate,
     travelers,
-    vibes,
-    budget,
-  });
+    vibes: vibes || [],
+    budget: (budget as 'budget' | 'moderate' | 'luxury') || 'moderate',
+  };
+
+  // Progress callback: updates searches + workflow_progress tables
+  const onProgress = async (stage: string, status: 'searching' | 'done') => {
+    const currentProgress = {
+      orchestrator: 'done' as const,
+      hotels: 'pending' as const,
+      activities: 'pending' as const,
+      dining: 'pending' as const,
+      aggregator: 'pending' as const,
+    };
+
+    // Mark the current stage
+    if (stage in currentProgress) {
+      (currentProgress as any)[stage] = status;
+    }
+
+    await getSupabase()
+      .from('searches')
+      .update({ progress: currentProgress })
+      .eq('id', searchId);
+
+    // Map stage → progress percentage for trip polling
+    if (tripId) {
+      const progressMap: Record<string, number> = {
+        orchestrator: 10,
+        hotels: 30,
+        activities: 40,
+        dining: 50,
+        aggregator: 70,
+      };
+      const messageMap: Record<string, string> = {
+        orchestrator: 'Analyzing your preferences...',
+        hotels: 'Searching for the best hotels...',
+        activities: 'Finding activities & attractions...',
+        dining: 'Discovering restaurants...',
+        aggregator: 'Crafting your perfect itinerary...',
+      };
+
+      await getSupabase()
+        .from('workflow_progress')
+        .upsert({
+          trip_id: tripId,
+          step: stage,
+          progress: progressMap[stage] || 30,
+          message: messageMap[stage] || 'Searching...',
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'trip_id' });
+    }
+  };
+
+  // Run the multi-agent system
+  const searchResult = await executeTravelSearch(searchId, searchInput, { onProgress });
+
+  if (searchResult.status === 'error' || !searchResult.results) {
+    throw new Error(searchResult.error || 'Multi-agent search failed');
+  }
+
+  // Extract top hotel from the itinerary days (the aggregator picks it)
+  const topHotel = searchResult.results.itinerary?.[0]?.hotel || searchResult.results.hotels[0] || null;
+
+  // Bridge search results → frontend TripDay format
+  const mapped = mapSearchResultsToItinerary(searchResult.results, topHotel);
 
   // Mark affiliate searches as done
   await getSupabase()
@@ -185,14 +262,14 @@ async function searchAffiliates(params: {
     })
     .eq('id', searchId);
 
-  console.log(`[Workflow] Step 2 complete for search ${searchId}`);
+  console.log(`[Workflow] Step 2 complete for search ${searchId} — ${mapped.days.length} days`);
 
-  return result;
+  return mapped;
 }
 
 // ─── Step 3: Mark Itinerary Composed ────────────────────────────────────────
 
-async function markItineraryComposed(searchId: string): Promise<void> {
+async function markItineraryComposed(searchId: string, tripId?: string): Promise<void> {
   'use step';
 
   console.log(`[Workflow] Step 3: Itinerary composed for ${searchId}`);
@@ -205,18 +282,31 @@ async function markItineraryComposed(searchId: string): Promise<void> {
         hotels: 'done',
         activities: 'done',
         dining: 'done',
-        aggregator: 'searching',
+        aggregator: 'done',
       },
     })
     .eq('id', searchId);
+
+  if (tripId) {
+    await getSupabase()
+      .from('workflow_progress')
+      .upsert({
+        trip_id: tripId,
+        step: 'composing',
+        progress: 85,
+        message: 'Finalizing your itinerary...',
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'trip_id' });
+  }
 }
 
 // ─── Step 4: Build Spec & Save ──────────────────────────────────────────────
 
 async function buildAndSaveSpec(
   searchId: string,
-  result: TravelPlanResult,
+  result: MappedItinerary,
   meta: {
+    tripId?: string;
     destination: string;
     startDate: string;
     endDate: string;
@@ -229,20 +319,163 @@ async function buildAndSaveSpec(
 
   console.log(`[Workflow] Step 4: Building spec and saving for ${searchId}`);
 
-  // Build the json-render spec from the agent's results
+  // Map hotels for build-spec
+  const hotelInputs = result.hotels.map(h => ({
+    id: h.id,
+    name: h.name,
+    rating: h.userRating,
+    reviewCount: h.reviewCount,
+    pricePerNight: h.pricePerNight,
+    currency: h.currency,
+    amenities: h.amenities,
+    description: h.description,
+    affiliateUrl: h.affiliateUrl,
+    images: h.images,
+  }));
+
+  // Map activities for build-spec
+  const activityInputs = result.activities.map(a => ({
+    id: a.id,
+    name: a.name,
+    description: a.description,
+    duration: a.duration,
+    price: a.price,
+    currency: a.currency,
+    rating: a.rating,
+    reviewCount: a.reviewCount,
+    category: a.category,
+    affiliateUrl: a.affiliateUrl,
+    images: a.images,
+    location: {
+      name: a.location?.name,
+      neighborhood: a.location?.neighborhood,
+      city: a.location?.name,
+    },
+  }));
+
+  // Map restaurants for build-spec
+  const restaurantInputs = result.dining.map(d => ({
+    id: d.id,
+    name: d.name,
+    cuisine: d.cuisineTypes.join(', '),
+    priceLevel: d.priceLevel,
+    rating: d.rating,
+    reviewCount: d.reviewCount,
+    description: d.description,
+    reservationUrl: d.reservationUrl,
+    images: d.images,
+  }));
+
+  // Map days for build-spec: each slot's meals[0] → meal
+  const dayInputs = result.days.map(day => ({
+    dayNumber: day.dayNumber,
+    date: day.date,
+    title: day.title,
+    morning: {
+      activities: day.morning.activities.map(a => ({
+        id: a.id,
+        name: a.name,
+        description: a.description,
+        duration: a.duration / 60, // minutes → hours for build-spec
+        price: a.estimatedCost.amount,
+        currency: a.estimatedCost.currency,
+        rating: undefined,
+        category: a.category,
+        affiliateUrl: a.bookingInfo?.bookingUrl,
+        location: { name: a.location.name },
+      })),
+      meal: day.morning.meals[0]
+        ? {
+            name: day.morning.meals[0].name,
+            cuisine: day.morning.meals[0].cuisineType.join(', '),
+            priceLevel: day.morning.meals[0].priceLevel,
+            rating: undefined,
+            description: day.morning.meals[0].description,
+            reservationUrl: day.morning.meals[0].reservationInfo?.url,
+          }
+        : undefined,
+    },
+    afternoon: {
+      activities: day.afternoon.activities.map(a => ({
+        id: a.id,
+        name: a.name,
+        description: a.description,
+        duration: a.duration / 60,
+        price: a.estimatedCost.amount,
+        currency: a.estimatedCost.currency,
+        rating: undefined,
+        category: a.category,
+        affiliateUrl: a.bookingInfo?.bookingUrl,
+        location: { name: a.location.name },
+      })),
+      meal: day.afternoon.meals[0]
+        ? {
+            name: day.afternoon.meals[0].name,
+            cuisine: day.afternoon.meals[0].cuisineType.join(', '),
+            priceLevel: day.afternoon.meals[0].priceLevel,
+            rating: undefined,
+            description: day.afternoon.meals[0].description,
+            reservationUrl: day.afternoon.meals[0].reservationInfo?.url,
+          }
+        : undefined,
+    },
+    evening: {
+      activities: day.evening.activities.map(a => ({
+        id: a.id,
+        name: a.name,
+        description: a.description,
+        duration: a.duration / 60,
+        price: a.estimatedCost.amount,
+        currency: a.estimatedCost.currency,
+        rating: undefined,
+        category: a.category,
+        affiliateUrl: a.bookingInfo?.bookingUrl,
+        location: { name: a.location.name },
+      })),
+      meal: day.evening.meals[0]
+        ? {
+            name: day.evening.meals[0].name,
+            cuisine: day.evening.meals[0].cuisineType.join(', '),
+            priceLevel: day.evening.meals[0].priceLevel,
+            rating: undefined,
+            description: day.evening.meals[0].description,
+            reservationUrl: day.evening.meals[0].reservationInfo?.url,
+          }
+        : undefined,
+    },
+    estimatedCost: day.totalEstimatedCost?.amount,
+    currency: day.totalEstimatedCost?.currency,
+  }));
+
+  // Build the json-render spec
   const specInput: BuildSpecInput = {
     destination: meta.destination,
     startDate: meta.startDate,
     endDate: meta.endDate,
     travelers: meta.travelers,
     budget: meta.budget,
-    hotels: result.hotels || [],
-    activities: result.activities || [],
-    restaurants: result.restaurants || [],
-    days: result.itinerary?.days || [],
-    totalEstimatedCost: result.itinerary?.totalEstimatedCost,
-    currency: result.itinerary?.currency,
-    summary: result.summary,
+    hotels: hotelInputs,
+    activities: activityInputs,
+    restaurants: restaurantInputs,
+    days: dayInputs,
+    topHotel: result.topHotel
+      ? {
+          id: result.topHotel.id,
+          name: result.topHotel.name,
+          rating: result.topHotel.userRating,
+          reviewCount: result.topHotel.reviewCount,
+          pricePerNight: result.topHotel.pricePerNight,
+          currency: result.topHotel.currency,
+          amenities: result.topHotel.amenities,
+          description: result.topHotel.description,
+          affiliateUrl: result.topHotel.affiliateUrl,
+          images: result.topHotel.images,
+          starRating: result.topHotel.starRating,
+        }
+      : undefined,
+    totalEstimatedCost: result.totalEstimatedCost,
+    currency: result.currency,
+    summary: `Your personalized ${result.days.length}-day trip to ${meta.destination}`,
   };
 
   const jsonRenderSpec = buildJsonRenderSpec(specInput);
@@ -267,7 +500,117 @@ async function buildAndSaveSpec(
     })
     .eq('id', searchId);
 
+  // ── Bridge to itineraries table (for web trip detail page) ────────
+  if (meta.tripId) {
+    await bridgeToItineraries(searchId, meta.tripId, meta.userId, result, meta);
+  }
+
   console.log(`[Workflow] Step 4 complete – search ${searchId} done`);
+}
+
+/**
+ * Bridge search results to the itineraries table so the existing web trip
+ * detail page can still render via the traditional itinerary format.
+ * Also marks the trip as 'generated' and sends a completion notification.
+ */
+async function bridgeToItineraries(
+  searchId: string,
+  tripId: string,
+  userId: string | undefined,
+  result: MappedItinerary,
+  meta: { destination: string; startDate: string; endDate: string },
+): Promise<void> {
+  const db = getSupabase();
+
+  // The bridge output (result.days) is already in TripDay format with
+  // proper { activities: ItineraryActivity[], meals: Restaurant[] } structure
+  // thanks to mapSearchResultsToItinerary, so we can use them directly.
+  const itineraryDays = result.days.map(day => ({
+    dayNumber: day.dayNumber,
+    date: day.date,
+    title: day.title,
+    summary: day.summary || `Day ${day.dayNumber} in ${meta.destination}`,
+    morning: day.morning,
+    afternoon: day.afternoon,
+    evening: day.evening,
+    totalEstimatedCost: day.totalEstimatedCost,
+    tips: day.tips || [],
+  }));
+
+  // Insert itinerary
+  const { data: savedItinerary, error: insertError } = await db
+    .from('itineraries')
+    .insert({
+      trip_id: tripId,
+      user_id: userId || null,
+      destination: meta.destination,
+      start_date: meta.startDate,
+      end_date: meta.endDate,
+      overview: `Your personalized trip to ${meta.destination}`,
+      total_cost: result.totalEstimatedCost || 0,
+      days: itineraryDays,
+      packing_list: [],
+      general_tips: [],
+      generated_at: new Date().toISOString(),
+    })
+    .select('id')
+    .single();
+
+  if (insertError) {
+    console.error(`[Workflow] Failed to bridge itinerary: ${insertError.message}`);
+    // Non-fatal — search results are already saved
+  }
+
+  // Update trip status to generated
+  await db
+    .from('trips')
+    .update({
+      status: 'generated',
+      itinerary_id: savedItinerary?.id || null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', tripId);
+
+  // Update workflow_progress to 100%
+  await db
+    .from('workflow_progress')
+    .upsert({
+      trip_id: tripId,
+      step: 'complete',
+      progress: 100,
+      message: 'Your itinerary is ready!',
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'trip_id' });
+
+  // Update workflow run status
+  await db
+    .from('workflow_runs')
+    .update({
+      status: 'completed',
+      completed_at: new Date().toISOString(),
+    })
+    .eq('trip_id', tripId)
+    .eq('status', 'running');
+
+  // Insert notification (only for authenticated users)
+  if (userId && savedItinerary) {
+    await db
+      .from('notifications')
+      .insert({
+        user_id: userId,
+        type: 'itinerary_ready',
+        title: 'Your Itinerary is Ready!',
+        message: `Your trip itinerary to ${meta.destination} has been generated and is ready to view.`,
+        data: {
+          trip_id: tripId,
+          itinerary_id: savedItinerary.id,
+          search_id: searchId,
+        },
+        read: false,
+      });
+  }
+
+  console.log(`[Workflow] Bridged itinerary for trip ${tripId}`);
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -299,7 +642,7 @@ async function updateSearchStatus(
 
 async function saveSearchResults(
   searchId: string,
-  result: TravelPlanResult,
+  result: MappedItinerary,
 ): Promise<void> {
   // Build all result rows and batch insert
   const resultRows = [
@@ -307,13 +650,13 @@ async function saveSearchResults(
       search_id: searchId,
       category: 'hotel' as const,
       name: hotel.name,
-      description: `${hotel.rating?.toFixed(1)} stars, ${hotel.reviewCount} reviews`,
+      description: `${hotel.userRating?.toFixed(1)} stars, ${hotel.reviewCount} reviews`,
       data: hotel,
       affiliate_url: hotel.affiliateUrl,
       affiliate_partner: hotel.affiliatePartner,
       price_amount: hotel.pricePerNight,
       price_currency: hotel.currency || 'USD',
-      rating: hotel.rating,
+      rating: hotel.userRating,
     })),
     ...(result.activities || []).map(activity => ({
       search_id: searchId,
@@ -327,7 +670,7 @@ async function saveSearchResults(
       price_currency: activity.currency || 'USD',
       rating: activity.rating,
     })),
-    ...(result.restaurants || []).map(restaurant => ({
+    ...(result.dining || []).map(restaurant => ({
       search_id: searchId,
       category: 'dining' as const,
       name: restaurant.name,
@@ -344,19 +687,23 @@ async function saveSearchResults(
   }
 
   // Save itinerary days (batch)
-  if (result.itinerary?.days?.length) {
-    const itineraryRows = result.itinerary.days.map(day => ({
+  if (result.days.length > 0) {
+    const itineraryRows = result.days.map(day => ({
       search_id: searchId,
       day_number: day.dayNumber,
       date: day.date,
       title: day.title,
-      summary: `Day ${day.dayNumber} in ${result.itinerary!.destination}`,
-      morning_activities: day.morning?.activities?.map((a: any) => a.id) || [],
-      afternoon_activities: day.afternoon?.activities?.map((a: any) => a.id) || [],
-      evening_activities: day.evening?.activities?.map((a: any) => a.id) || [],
-      meals: [day.morning?.meal?.id, day.afternoon?.meal?.id, day.evening?.meal?.id].filter(Boolean),
-      estimated_cost: day.estimatedCost,
-      cost_currency: day.currency || 'USD',
+      summary: day.summary,
+      morning_activities: day.morning.activities.map(a => a.id),
+      afternoon_activities: day.afternoon.activities.map(a => a.id),
+      evening_activities: day.evening.activities.map(a => a.id),
+      meals: [
+        ...day.morning.meals.map(m => m.id),
+        ...day.afternoon.meals.map(m => m.id),
+        ...day.evening.meals.map(m => m.id),
+      ].filter(Boolean),
+      estimated_cost: day.totalEstimatedCost?.amount || 0,
+      cost_currency: day.totalEstimatedCost?.currency || 'USD',
       tips: day.tips || [],
     }));
 

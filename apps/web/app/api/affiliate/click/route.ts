@@ -135,16 +135,25 @@ export async function POST(request: NextRequest) {
 
 /**
  * GET /api/affiliate/click?trackingId=xxx
- * Get click details by tracking ID
+ * Get click details by tracking ID (requires authentication)
  */
 export async function GET(request: NextRequest) {
   try {
+    // Require authentication to prevent data leakage
+    const authUser = await optionalAuth(request);
+    if (!authUser) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const trackingId = searchParams.get('trackingId');
 
-    if (!trackingId) {
+    if (!trackingId || !/^[a-zA-Z0-9_-]+$/.test(trackingId)) {
       return NextResponse.json(
-        { error: 'Missing trackingId parameter' },
+        { error: 'Missing or invalid trackingId parameter' },
         { status: 400 }
       );
     }
@@ -159,13 +168,21 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Only return click data if the requesting user owns it
+    if (click.userId && click.userId !== authUser.id) {
+      return NextResponse.json(
+        { error: 'Click not found' },
+        { status: 404 }
+      );
+    }
+
     return NextResponse.json({
       success: true,
       click,
     });
   } catch (error) {
     console.error('[Affiliate Click API] Error:', error);
-    
+
     return NextResponse.json(
       { error: 'Failed to get click details' },
       { status: 500 }

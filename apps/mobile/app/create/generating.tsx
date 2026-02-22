@@ -16,9 +16,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useTripStore, Trip, TripDay, Activity } from '../../stores/tripStore';
 import { popularDestinations, IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
 import { colors, borderRadius } from '../../constants/theme';
-import { useItineraryGeneration } from '../../hooks/useItineraryGeneration';
+import { useItineraryGeneration, SearchResults } from '../../hooks/useItineraryGeneration';
 import { registry } from '../../lib/json-render/registry';
-import type { SearchResults } from '../../services/searchService';
 
 const { width, height } = Dimensions.get('window');
 
@@ -47,7 +46,7 @@ function convertResultsToTrip(
     const activities: Activity[] = [];
 
     // Morning activities
-    day.morning.activities.forEach((activity, idx) => {
+    day.morning.activities.forEach((activity: any, idx: number) => {
       activities.push({
         id: activity.id,
         time: `${9 + idx}:00`,
@@ -83,7 +82,7 @@ function convertResultsToTrip(
     }
 
     // Afternoon activities
-    day.afternoon.activities.forEach((activity, idx) => {
+    day.afternoon.activities.forEach((activity: any, idx: number) => {
       activities.push({
         id: activity.id,
         time: `${14 + idx}:00`,
@@ -119,7 +118,7 @@ function convertResultsToTrip(
     }
 
     // Evening activities
-    day.evening.activities.forEach((activity, idx) => {
+    day.evening.activities.forEach((activity: any, idx: number) => {
       activities.push({
         id: activity.id,
         time: `${18 + idx}:00`,
@@ -324,12 +323,21 @@ export default function GeneratingScreen() {
     }
   }, [generation.searchProgress]);
 
-  // Navigate to trip detail when complete (using traditional results path)
+  // Navigate to trip detail when complete
   const handleViewTrip = () => {
-    if (!generation.results || !generation.searchId || !draftInput) return;
-    const trip = convertResultsToTrip(generation.searchId, generation.results, draftInput);
-    finishGeneration(trip);
-    router.replace(`/trip/${trip.id}`);
+    if (!draftInput) return;
+    // Use tripId from the unified flow if available, falling back to searchId
+    const id = generation.tripId || generation.searchId;
+    if (!id) return;
+
+    if (generation.results) {
+      const trip = convertResultsToTrip(id, generation.results, draftInput);
+      finishGeneration(trip);
+      router.replace(`/trip/${trip.id}`);
+    } else {
+      // If no results but complete, navigate directly using tripId
+      router.replace(`/trip/${id}`);
+    }
   };
 
   const rotation = rotateAnim.interpolate({

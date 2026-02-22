@@ -3,8 +3,7 @@
  * Combines results from all agents into a cohesive itinerary
  */
 
-import { generateObject } from 'ai';
-import { createOpenAI } from '@ai-sdk/openai';
+import { generateObject, gateway as defaultGateway, createGateway } from 'ai';
 import { z } from 'zod';
 import {
   SearchPlan,
@@ -14,10 +13,9 @@ import {
   SuggestedDay,
 } from '../types';
 
-const aiGateway = createOpenAI({
-  apiKey: process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_AI_GATEWAY_API_KEY,
-  baseURL: 'https://ai-gateway.vercel.sh/v1',
-});
+const aiGateway = process.env.AI_GATEWAY_API_KEY
+  ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
+  : defaultGateway;
 
 const MODEL = 'anthropic/claude-sonnet-4-20250514';
 
@@ -137,64 +135,182 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
       schema: ItinerarySchema,
     });
 
-    // Map the IDs back to full objects
-    const topHotel = hotels.find(h => h.id === result.topHotelId) || hotels[0] || null;
-    
-    const days: SuggestedDay[] = result.days.map(day => {
-      const morningActivities = day.morning.activityIds
-        .map(id => activities.find(a => a.id === id))
-        .filter((a): a is ActivityResult => a !== undefined);
-      
-      const afternoonActivities = day.afternoon.activityIds
-        .map(id => activities.find(a => a.id === id))
-        .filter((a): a is ActivityResult => a !== undefined);
-      
-      const eveningActivities = day.evening.activityIds
-        .map(id => activities.find(a => a.id === id))
-        .filter((a): a is ActivityResult => a !== undefined);
+    return mapAggregatorResult(result, hotels, activities, dining);
+  } catch (error) {
+    console.error('[Aggregator Agent] generateObject error, attempting recovery...');
 
-      const morningMeal = day.morning.mealId 
-        ? dining.find(d => d.id === day.morning.mealId) 
-        : dining.find(d => d.mealTypes.includes('breakfast'));
-      
-      const afternoonMeal = day.afternoon.mealId
-        ? dining.find(d => d.id === day.afternoon.mealId)
-        : dining.find(d => d.mealTypes.includes('lunch'));
-      
-      const eveningMeal = day.evening.mealId
-        ? dining.find(d => d.id === day.evening.mealId)
-        : dining.find(d => d.mealTypes.includes('dinner'));
+    // Try to recover from schema validation errors by parsing the raw response text.
+    // Common failure: model returns `days` as a JSON string instead of an array,
+    // with topHotelId sometimes embedded inside that string.
+    const rawText = (error as any)?.text;
+    if (rawText) {
+      const recovered = recoverFromRawText(rawText, hotels, activities, dining);
+      if (recovered) {
+        console.log('[Aggregator Agent] Recovered from raw text successfully');
+        return recovered;
+      }
+    }
 
-      return {
-        dayNumber: day.dayNumber,
-        date: day.date,
-        title: day.title,
-        summary: day.summary,
-        hotel: topHotel || undefined,
+    console.error('[Aggregator Agent] Recovery failed, using fallback itinerary');
+    return createFallbackItinerary(plan, hotels, activities, dining);
+  }
+}
+
+/**
+ * Map a validated aggregator result (days + topHotelId) to SuggestedDay[] + topHotel.
+ * Shared between the happy path and the recovery path.
+ */
+function mapAggregatorResult(
+  result: { days: Array<z.infer<typeof SuggestedDaySchema>>; topHotelId?: string },
+  hotels: HotelResult[],
+  activities: ActivityResult[],
+  dining: DiningResult[],
+): { days: SuggestedDay[]; topHotel: HotelResult | null } {
+  const topHotel = (result.topHotelId
+    ? hotels.find(h => h.id === result.topHotelId)
+    : undefined) || hotels[0] || null;
+
+  const days: SuggestedDay[] = result.days.map(day => {
+    const morningActivities = day.morning.activityIds
+      .map(id => activities.find(a => a.id === id))
+      .filter((a): a is ActivityResult => a !== undefined);
+
+    const afternoonActivities = day.afternoon.activityIds
+      .map(id => activities.find(a => a.id === id))
+      .filter((a): a is ActivityResult => a !== undefined);
+
+    const eveningActivities = day.evening.activityIds
+      .map(id => activities.find(a => a.id === id))
+      .filter((a): a is ActivityResult => a !== undefined);
+
+    const morningMeal = day.morning.mealId
+      ? dining.find(d => d.id === day.morning.mealId)
+      : dining.find(d => d.mealTypes.includes('breakfast'));
+
+    const afternoonMeal = day.afternoon.mealId
+      ? dining.find(d => d.id === day.afternoon.mealId)
+      : dining.find(d => d.mealTypes.includes('lunch'));
+
+    const eveningMeal = day.evening.mealId
+      ? dining.find(d => d.id === day.evening.mealId)
+      : dining.find(d => d.mealTypes.includes('dinner'));
+
+    return {
+      dayNumber: day.dayNumber,
+      date: day.date,
+      title: day.title,
+      summary: day.summary,
+      hotel: topHotel || undefined,
+      morning: {
+        activities: morningActivities,
+        meal: morningMeal,
+      },
+      afternoon: {
+        activities: afternoonActivities,
+        meal: afternoonMeal,
+      },
+      evening: {
+        activities: eveningActivities,
+        meal: eveningMeal,
+      },
+      estimatedCost: day.estimatedCost,
+      currency: day.currency,
+      tips: day.tips,
+    };
+  });
+
+  return { days, topHotel };
+}
+
+/**
+ * Attempt to recover a usable result from the raw response text when
+ * `generateObject` fails schema validation.
+ *
+ * Common failure modes:
+ * 1. `days` comes back as a JSON *string* instead of an array
+ * 2. `topHotelId` is embedded inside the `days` string
+ * 3. The entire output is a single JSON string containing both
+ */
+function recoverFromRawText(
+  rawText: string,
+  hotels: HotelResult[],
+  activities: ActivityResult[],
+  dining: DiningResult[],
+): { days: SuggestedDay[]; topHotel: HotelResult | null } | null {
+  try {
+    let parsed: any;
+    try {
+      parsed = JSON.parse(rawText);
+    } catch {
+      // rawText might not be valid JSON at all
+      return null;
+    }
+
+    let daysArray: any[] | null = null;
+    let topHotelId: string | undefined = parsed.topHotelId;
+
+    if (Array.isArray(parsed.days)) {
+      // Days is already an array — shouldn't normally get here, but handle it
+      daysArray = parsed.days;
+    } else if (typeof parsed.days === 'string') {
+      const daysStr = parsed.days;
+
+      // Find where the JSON array ends — the last ']' in the string
+      const arrayEndIdx = daysStr.lastIndexOf(']');
+      if (arrayEndIdx === -1) return null;
+
+      const arrayStr = daysStr.substring(0, arrayEndIdx + 1).trim();
+      const remaining = daysStr.substring(arrayEndIdx + 1);
+
+      try {
+        daysArray = JSON.parse(arrayStr);
+      } catch {
+        return null;
+      }
+
+      // Extract topHotelId from the remaining text if not already present
+      if (!topHotelId) {
+        const hotelMatch = remaining.match(/"topHotelId"\s*:\s*"([^"]+)"/);
+        if (hotelMatch) {
+          topHotelId = hotelMatch[1];
+        }
+      }
+    }
+
+    if (!Array.isArray(daysArray) || daysArray.length === 0) return null;
+
+    // Validate each day has the minimum required fields and normalise shape
+    const validDays = daysArray
+      .filter((d: any) => d && typeof d.dayNumber === 'number' && d.morning && d.afternoon && d.evening)
+      .map((d: any) => ({
+        dayNumber: d.dayNumber,
+        date: d.date || '',
+        title: d.title || `Day ${d.dayNumber}`,
+        summary: d.summary || '',
+        hotelId: d.hotelId,
         morning: {
-          activities: morningActivities,
-          meal: morningMeal,
+          activityIds: d.morning?.activityIds || [],
+          mealId: d.morning?.mealId,
         },
         afternoon: {
-          activities: afternoonActivities,
-          meal: afternoonMeal,
+          activityIds: d.afternoon?.activityIds || [],
+          mealId: d.afternoon?.mealId,
         },
         evening: {
-          activities: eveningActivities,
-          meal: eveningMeal,
+          activityIds: d.evening?.activityIds || [],
+          mealId: d.evening?.mealId,
         },
-        estimatedCost: day.estimatedCost,
-        currency: day.currency,
-        tips: day.tips,
-      };
-    });
+        estimatedCost: d.estimatedCost || 0,
+        currency: d.currency || 'USD',
+        tips: Array.isArray(d.tips) ? d.tips : [],
+      }));
 
-    return { days, topHotel };
-  } catch (error) {
-    console.error('[Aggregator Agent] Error:', error);
-    
-    // Return a basic itinerary structure if AI fails
-    return createFallbackItinerary(plan, hotels, activities, dining);
+    if (validDays.length === 0) return null;
+
+    console.log(`[Aggregator Agent] Recovered ${validDays.length} days from raw text`);
+    return mapAggregatorResult({ days: validDays, topHotelId }, hotels, activities, dining);
+  } catch {
+    return null;
   }
 }
 

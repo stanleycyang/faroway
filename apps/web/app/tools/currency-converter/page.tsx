@@ -14,5 +14,21 @@ export const metadata: Metadata = {
 };
 
 export default function CurrencyConverterPage() {
-  return <CurrencyConverterClient />;
+  const appSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'WebApplication',
+    name: 'Travel Currency Converter',
+    description: 'Convert between travel currencies with destination-specific tips for handling money abroad.',
+    url: 'https://www.tripgenie.ai/tools/currency-converter',
+    applicationCategory: 'TravelApplication',
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    operatingSystem: 'All',
+  };
+
+  return (
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema).replace(/</g, '\\u003c') }} />
+      <CurrencyConverterClient />
+    </>
+  );
 }
