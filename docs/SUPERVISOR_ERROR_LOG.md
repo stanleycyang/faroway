@@ -3,18 +3,18 @@
 ## Critical Error: State Loss & Duplicate Work
 
 **What Happened:**
-The TripGenie supervisor (cron job `d44e6bff-9bb4-41c8-88ae-11be8e278479`) completely lost track of project state and attempted to restart the project from scratch.
+The Faroway supervisor (cron job `d44e6bff-9bb4-41c8-88ae-11be8e278479`) completely lost track of project state and attempted to restart the project from scratch.
 
 **Root Cause:**
-- Looked for TASKS.md at `/Users/stanleyyang/.openclaw/workspace/tripgenie/TASKS.md`
-- Actual location: `/Users/stanleyyang/.openclaw/workspace/tripgenie/docs/TASKS.md`
+- Looked for TASKS.md at `/Users/stanleyyang/.openclaw/workspace/faroway/TASKS.md`
+- Actual location: `/Users/stanleyyang/.openclaw/workspace/faroway/docs/TASKS.md`
 - Did not check for existing project structure before initializing
 
 **Actions Taken (In Error):**
 1. Created duplicate files:
-   - `/tripgenie/TASKS.md` (deleted)
-   - `/tripgenie/README.md` (deleted)
-2. Spawned agent "TripGenie-Backend-Foundation" with 6-hour timeout
+   - `/faroway/TASKS.md` (deleted)
+   - `/faroway/README.md` (deleted)
+2. Spawned agent "Faroway-Backend-Foundation" with 6-hour timeout
 3. Announced incorrect "0% complete, just initialized" status to main session
 
 **Actual Project State:**
@@ -24,7 +24,7 @@ The TripGenie supervisor (cron job `d44e6bff-9bb4-41c8-88ae-11be8e278479`) compl
 - **Remaining:** TASK-023 (affiliate APIs), TASK-024 (tracking), TASK-028 (user testing)
 
 **Damage Assessment:**
-The spawned backend agent (session: `agent:main:subagent:d368a1af-7517-465e-be7b-8acb2b9894b7`) created conflicting files in `/tripgenie/backend/`:
+The spawned backend agent (session: `agent:main:subagent:d368a1af-7517-465e-be7b-8acb2b9894b7`) created conflicting files in `/faroway/backend/`:
 - `.gitignore` (overwrote existing)
 - `.env.example` (overwrote existing)
 - `src/config/logger.ts` (NEW - conflicts with Next.js structure)
@@ -40,10 +40,10 @@ The spawned backend agent (session: `agent:main:subagent:d368a1af-7517-465e-be7b
 - Attempted to message main session with correction (timeout)
 
 **Resolution Needed:**
-1. Manually stop the "TripGenie-Backend-Foundation" agent
-2. Remove conflicting files created in `/tripgenie/backend/src/`
+1. Manually stop the "Faroway-Backend-Foundation" agent
+2. Remove conflicting files created in `/faroway/backend/src/`
 3. Verify existing Next.js backend structure is intact
-4. Fix supervisor to check `/tripgenie/docs/TASKS.md` as source of truth
+4. Fix supervisor to check `/faroway/docs/TASKS.md` as source of truth
 
 **Prevention:**
 - Supervisor should verify project structure exists before initializing
@@ -52,4 +52,4 @@ The spawned backend agent (session: `agent:main:subagent:d368a1af-7517-465e-be7b
 - Add "sanity check" step to verify progress % matches expected state
 
 **Timestamp:** 2026-02-03 23:52:00 PST
-**Reporter:** TripGenie Supervisor (self-documented error)
+**Reporter:** Faroway Supervisor (self-documented error)

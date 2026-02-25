@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-TripGenie is an AI-powered travel planning mobile app built with Expo (SDK 54) and React Native 0.81. Users can browse trips, create AI-generated itineraries via streaming, and manage travel plans with offline support.
+Faroway is an AI-powered travel planning mobile app built with Expo (SDK 54) and React Native 0.81. Users can browse trips, create AI-generated itineraries via streaming, and manage travel plans with offline support.
 
 ## Development Commands
 
@@ -84,7 +84,7 @@ Two stores in `stores/`:
 ## Key Conventions
 
 - TypeScript strict mode enabled
-- Bundle ID: `ai.tripgenie.app`, deep link scheme: `tripgenie://`
+- Bundle ID: `ai.faroway.app`, deep link scheme: `faroway://`
 - Typed routes enabled (`typedRoutes: true` in `app.config.ts`)
 - UI components exported from `components/ui/index.ts` barrel file
 - API URLs use `encodeURIComponent()` for path params (security requirement per audit)

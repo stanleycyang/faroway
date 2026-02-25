@@ -16,7 +16,7 @@ import type {
   ItineraryActivity,
   Restaurant,
   TripDay,
-} from '@tripgenie/types';
+} from '@faroway/types';
 
 // ── Activity Mapper ─────────────────────────────────────────────────────────
 

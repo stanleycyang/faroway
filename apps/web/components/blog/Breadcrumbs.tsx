@@ -14,7 +14,7 @@ export function Breadcrumbs({ items, variant = 'light' }: { items: Crumb[]; vari
       '@type': 'ListItem',
       position: i + 1,
       name: item.label,
-      ...(item.href ? { item: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai'}${item.href}` } : {}),
+      ...(item.href ? { item: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://www.faroway.ai'}${item.href}` } : {}),
     })),
   };
 

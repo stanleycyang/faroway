@@ -5,7 +5,7 @@
 
 ## Summary
 
-Implemented complete Supabase authentication for TripGenie backend with:
+Implemented complete Supabase authentication for Faroway backend with:
 - Email/password authentication
 - Google OAuth integration
 - Apple Sign-In integration
@@ -130,7 +130,7 @@ After configuring OAuth providers in Supabase:
 
 ## Design
 
-- Consistent with TripGenie brand colors (orange primary: #ec7a1c)
+- Consistent with Faroway brand colors (orange primary: #ec7a1c)
 - Rounded corners and modern shadow styling
 - Mobile-responsive
 - Clear error and success messages

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-// Mock @tripgenie/constants before importing modules that depend on it
-vi.mock('@tripgenie/constants', () => ({
+// Mock @faroway/constants before importing modules that depend on it
+vi.mock('@faroway/constants', () => ({
   VIBE_KEYWORDS: {
     adventure: ['hiking', 'trekking', 'outdoor', 'extreme'],
     cultural: ['museum', 'temple', 'history', 'art'],
@@ -152,8 +152,8 @@ describe('generateViatorAffiliateUrl', () => {
     expect(parsed.origin + parsed.pathname).toBe('https://www.viator.com/tours/PROD-123');
     expect(parsed.searchParams.get('mcid')).toBe('track-abc');
     expect(parsed.searchParams.get('medium')).toBe('api');
-    // pid falls back to 'tripgenie' when env var is unset
-    expect(parsed.searchParams.get('pid')).toBe('tripgenie');
+    // pid falls back to 'faroway' when env var is unset
+    expect(parsed.searchParams.get('pid')).toBe('faroway');
   });
 
   it('includes optional date and travelers when provided', () => {

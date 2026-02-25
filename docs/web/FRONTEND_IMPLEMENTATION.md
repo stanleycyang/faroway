@@ -1,9 +1,9 @@
-# TripGenie Frontend Implementation
+# Faroway Frontend Implementation
 
 ## 🎨 Landing Page Complete
 
 ### Overview
-The TripGenie web landing page has been successfully built with a stunning, responsive design that matches the mobile app aesthetic.
+The Faroway web landing page has been successfully built with a stunning, responsive design that matches the mobile app aesthetic.
 
 ### Location
 - **Main page**: `/app/(marketing)/page.tsx`
@@ -16,11 +16,11 @@ Reusable button component with multiple variants:
 - **Variants**: `primary` (orange), `secondary` (white with orange border), `ghost` (transparent)
 - **Sizes**: `sm`, `md`, `lg`
 - **Features**: Full-width option, hover effects, active states
-- **Primary color**: #ec7a1c (TripGenie orange)
+- **Primary color**: #ec7a1c (Faroway orange)
 
 #### 2. Header (`/components/Header.tsx`)
 Fixed navigation header with:
-- TripGenie logo and brand name
+- Faroway logo and brand name
 - Navigation links (Features, Destinations, How It Works)
 - Sign In link
 - Get Started CTA button
@@ -49,7 +49,7 @@ Beautiful destination showcase card with:
 #### 1. Hero Section
 - Full-screen hero with background image
 - Dark gradient overlay
-- TripGenie logo badge
+- Faroway logo badge
 - Main headline: "Plan your dream trip with AI"
 - Subheadline explaining the value proposition
 - Two CTAs: "Start Planning Now" and "Learn More"
@@ -177,7 +177,7 @@ backend/
 │   ├── (marketing)/
 │   │   ├── page.tsx          # Landing page
 │   │   └── layout.tsx        # Marketing layout
-│   ├── globals.css           # Global styles (updated with TripGenie colors)
+│   ├── globals.css           # Global styles (updated with Faroway colors)
 │   └── layout.tsx            # Root layout
 ├── components/
 │   ├── Button.tsx            # Reusable button
@@ -186,7 +186,7 @@ backend/
 │   ├── DestinationCard.tsx   # Destination card
 │   └── index.ts              # Component exports
 └── public/
-    └── icon.png              # TripGenie logo
+    └── icon.png              # Faroway logo
 ```
 
 ### Accessibility
@@ -207,4 +207,4 @@ backend/
 
 **Status**: ✅ COMPLETE
 **Completion Date**: 2026-02-02 20:10 PST
-**Agent**: frontend-agent (tripgenie-frontend)
+**Agent**: frontend-agent (faroway-frontend)

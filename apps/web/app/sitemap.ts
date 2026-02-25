@@ -6,7 +6,7 @@ import { getGuideSlugs } from '@/lib/destination-guides'
 import { getAllCostProfiles } from '@/lib/tools/cost-data'
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.faroway.ai'
   const currentDate = new Date().toISOString()
   
   // Static pages

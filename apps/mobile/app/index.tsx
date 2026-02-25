@@ -5,7 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useUserStore } from '../stores/userStore';
 import { Button } from '../components/ui';
 import { colors } from '../constants/theme';
-import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
+import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 
 const { width, height } = Dimensions.get('window');
 
@@ -128,7 +128,7 @@ export default function WelcomeScreen() {
               },
             ]}
           >
-            TripGenie
+            Faroway
           </Animated.Text>
 
           <Animated.Text style={[styles.subtitle, { opacity: subtitleOpacity }]}>

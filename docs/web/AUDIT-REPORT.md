@@ -1,4 +1,4 @@
-# TripGenie Web Security & UX Audit Report
+# Faroway Web Security & UX Audit Report
 
 **Date:** 2026-02-16  
 **Auditor:** Automated audit via OpenClaw

@@ -39,11 +39,11 @@ export interface BlogPostMeta {
 }
 
 export const AUTHORS: Record<string, Author> = {
-  'tripgenie-team': {
-    name: 'TripGenie Team',
+  'faroway-team': {
+    name: 'Faroway Team',
     avatar: '/icon.png',
-    bio: 'The TripGenie team is passionate about making travel planning effortless with AI. We combine travel expertise with cutting-edge technology to help you explore the world.',
-    twitter: '@tripgenie',
+    bio: 'The Faroway team is passionate about making travel planning effortless with AI. We combine travel expertise with cutting-edge technology to help you explore the world.',
+    twitter: '@faroway',
   },
 };
 

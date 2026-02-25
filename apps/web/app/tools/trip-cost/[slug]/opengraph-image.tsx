@@ -1,9 +1,9 @@
 import { ImageResponse } from 'next/og';
 import { getGuideBySlug, getGuideSlugs } from '@/lib/destination-guides';
 import { getCostProfile, getCostLevel } from '@/lib/tools/cost-data';
-import { BUDGET_RANGES } from '@tripgenie/constants';
+import { BUDGET_RANGES } from '@faroway/constants';
 
-export const alt = 'TripGenie Trip Cost Calculator';
+export const alt = 'Faroway Trip Cost Calculator';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -113,7 +113,7 @@ export default async function OGImage({ params }: { params: Promise<{ slug: stri
             TG
           </div>
           <div style={{ color: '#6b7280', fontSize: '20px', fontWeight: 500, display: 'flex' }}>
-            tripgenie.ai/tools/trip-cost
+            faroway.ai/tools/trip-cost
           </div>
         </div>
       </div>

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     'Plan smarter with free travel tools: destination quiz, packing list, cost estimator, visa checker, currency converter, and best time to visit guides.',
   alternates: { canonical: '/tools' },
   openGraph: {
-    title: 'Free Travel Planning Tools | TripGenie',
+    title: 'Free Travel Planning Tools | Faroway',
     description: 'Destination quiz, packing lists, cost estimator, visa checker, currency converter & climate data — all free.',
     url: '/tools',
   },

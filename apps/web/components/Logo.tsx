@@ -34,7 +34,7 @@ export function Logo({
       >
         <Sparkles className={`${s.icon} text-white`} />
       </div>
-      <span className={`${s.text} font-bold ${textColor}`}>TripGenie</span>
+      <span className={`${s.text} font-bold ${textColor}`}>Faroway</span>
     </>
   );
 

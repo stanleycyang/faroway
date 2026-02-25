@@ -1,5 +1,5 @@
 /**
- * TripGenie Claude API Wrapper
+ * Faroway Claude API Wrapper
  * Handles AI itinerary generation using Anthropic's Claude API
  */
 

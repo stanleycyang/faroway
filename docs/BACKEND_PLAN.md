@@ -1,4 +1,4 @@
-# TripGenie Backend Architecture
+# Faroway Backend Architecture
 
 ## Overview
 
@@ -309,11 +309,11 @@ User clicks "Book Now"
 ## Project Structure
 
 ```
-tripgenie-backend/
+faroway-backend/
 ├── app/
 │   ├── api/              # API routes
 │   ├── layout.tsx
-│   └── page.tsx          # Landing page (tripgenie.ai)
+│   └── page.tsx          # Landing page (faroway.ai)
 ├── lib/
 │   ├── supabase/
 │   │   ├── client.ts     # Browser client
@@ -393,8 +393,8 @@ VERCEL_WORKFLOW_SECRET=xxx
 
 ```bash
 # Clone and setup backend
-npx create-next-app@latest tripgenie-backend --typescript --tailwind --app
-cd tripgenie-backend
+npx create-next-app@latest faroway-backend --typescript --tailwind --app
+cd faroway-backend
 
 # Install dependencies
 npm install @supabase/supabase-js @anthropic-ai/sdk @vercel/workflow

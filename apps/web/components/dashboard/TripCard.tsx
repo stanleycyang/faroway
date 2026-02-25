@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants'
+import { IMAGE_PATHS, getImageUrl } from '@faroway/constants'
 
 export type TripStatus = 'draft' | 'generating' | 'complete'
 

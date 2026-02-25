@@ -13,14 +13,14 @@ export function Footer() {
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-amber-500 flex items-center justify-center shadow-lg shadow-primary/20">
                 <Sparkles className="w-5 h-5 text-white" />
               </div>
-              <span className="text-lg font-bold">TripGenie</span>
+              <span className="text-lg font-bold">Faroway</span>
             </Link>
             <p className="text-surface-400 text-sm mb-4 leading-relaxed">
               Your AI-powered travel genie. Plan your dream trip in seconds, book everything in one place.
             </p>
             <div className="flex flex-wrap gap-3">
               <a
-                href="https://apps.apple.com/app/tripgenie"
+                href="https://apps.apple.com/app/faroway"
                 className="inline-flex items-center gap-3 bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] px-5 py-3 rounded-2xl font-semibold text-white transition-all backdrop-blur-sm hover:-translate-y-0.5"
               >
                 <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
@@ -32,7 +32,7 @@ export function Footer() {
                 </div>
               </a>
               <a
-                href="https://play.google.com/store/apps/details?id=com.tripgenie"
+                href="https://play.google.com/store/apps/details?id=com.faroway"
                 className="inline-flex items-center gap-3 bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] px-5 py-3 rounded-2xl font-semibold text-white transition-all backdrop-blur-sm hover:-translate-y-0.5"
               >
                 <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
@@ -84,12 +84,12 @@ export function Footer() {
         {/* Bottom Bar */}
         <div className="border-t border-white/[0.06] pt-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <p className="text-surface-500 text-sm">
-            © {new Date().getFullYear()} TripGenie. All rights reserved.
+            © {new Date().getFullYear()} Faroway. All rights reserved.
           </p>
           <div className="flex gap-6 text-sm text-surface-400">
-            <a href="https://twitter.com/tripgenie" className="hover:text-primary-400 transition-colors">Twitter</a>
-            <a href="https://instagram.com/tripgenie" className="hover:text-primary-400 transition-colors">Instagram</a>
-            <a href="https://facebook.com/tripgenie" className="hover:text-primary-400 transition-colors">Facebook</a>
+            <a href="https://twitter.com/faroway" className="hover:text-primary-400 transition-colors">Twitter</a>
+            <a href="https://instagram.com/faroway" className="hover:text-primary-400 transition-colors">Instagram</a>
+            <a href="https://facebook.com/faroway" className="hover:text-primary-400 transition-colors">Facebook</a>
           </div>
         </div>
       </div>

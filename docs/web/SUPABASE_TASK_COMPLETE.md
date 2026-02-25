@@ -121,7 +121,7 @@ SUPABASE_SERVICE_ROLE_KEY=       # Placeholder ready
 1. **Pause existing project** (recommended for testing):
    - Go to [Supabase Dashboard](https://supabase.com/dashboard)
    - Pause one of: `operator`, `jobfolio-staging`, `pictionary-party`, or `mealgenie`
-   - Then create `tripgenie-prod`
+   - Then create `faroway-prod`
 
 2. **Upgrade to Pro** ($25/month):
    - [Upgrade here](https://supabase.com/dashboard/org/pvdnxdvjmjgywjxnjrjb/billing)
@@ -133,7 +133,7 @@ SUPABASE_SERVICE_ROLE_KEY=       # Placeholder ready
 
 **After project creation**:
 ```bash
-cd /Users/stanleyyang/.openclaw/workspace/tripgenie/backend
+cd /Users/stanleyyang/.openclaw/workspace/faroway/backend
 
 # Method 1: CLI (recommended)
 supabase link --project-ref <your-project-ref>
@@ -177,7 +177,7 @@ SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ### 5. Test the Setup
 
 ```bash
-cd /Users/stanleyyang/.openclaw/workspace/tripgenie/backend
+cd /Users/stanleyyang/.openclaw/workspace/faroway/backend
 npm run test:db
 ```
 
@@ -186,7 +186,7 @@ npm run test:db
 ### 6. Save Credentials to 1Password
 
 **Create new item**:
-- Title: "TripGenie Supabase Production"
+- Title: "Faroway Supabase Production"
 - Type: Database
 - Fields:
   - Project URL

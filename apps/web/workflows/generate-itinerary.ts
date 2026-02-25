@@ -1,5 +1,5 @@
 /**
- * TripGenie Itinerary Generation Workflow
+ * Faroway Itinerary Generation Workflow
  * 
  * Durable workflow for AI-powered itinerary generation.
  * Handles long-running AI tasks asynchronously with progress tracking.

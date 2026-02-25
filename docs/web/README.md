@@ -1,4 +1,4 @@
-# TripGenie Backend
+# Faroway Backend
 
 AI-powered travel planning app backend built with Node.js, Express, TypeScript, and PostgreSQL.
 
@@ -24,7 +24,7 @@ AI-powered travel planning app backend built with Node.js, Express, TypeScript, 
 ### 1. Clone and Install Dependencies
 
 ```bash
-cd tripgenie/backend
+cd faroway/backend
 npm install
 ```
 
@@ -44,7 +44,7 @@ NODE_ENV=development
 PORT=3000
 
 # Database
-DATABASE_URL=postgresql://postgres:password@localhost:5432/tripgenie
+DATABASE_URL=postgresql://postgres:password@localhost:5432/faroway
 
 # JWT (generate a secure random string for production!)
 JWT_SECRET=your-super-secret-jwt-key-at-least-32-characters
@@ -59,9 +59,9 @@ CORS_ORIGIN=http://localhost:5173
 Create the PostgreSQL database:
 
 ```bash
-createdb tripgenie
+createdb faroway
 # or using psql:
-psql -U postgres -c "CREATE DATABASE tripgenie;"
+psql -U postgres -c "CREATE DATABASE faroway;"
 ```
 
 Run migrations:

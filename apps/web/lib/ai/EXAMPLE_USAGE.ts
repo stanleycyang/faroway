@@ -1,5 +1,5 @@
 /**
- * Example Usage of TripGenie AI Module
+ * Example Usage of Faroway AI Module
  * Copy these patterns into your API routes
  */
 

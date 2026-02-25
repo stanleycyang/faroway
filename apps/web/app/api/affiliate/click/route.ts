@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
 
       case 'tripadvisor':
         // TripAdvisor URL format
-        redirectUrl = `https://www.tripadvisor.com/${body.productId}?m=tripgenie&mcid=${trackingId}`;
+        redirectUrl = `https://www.tripadvisor.com/${body.productId}?m=faroway&mcid=${trackingId}`;
         break;
 
       default:

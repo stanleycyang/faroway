@@ -310,7 +310,7 @@ async function main() {
     process.exit(1);
   }
 
-  console.log('=== TripGenie Blog Seeder ===\n');
+  console.log('=== Faroway Blog Seeder ===\n');
   console.log(`Supabase URL: ${supabaseUrl}`);
   console.log(`Dry run:      ${isDryRun}`);
   console.log(`Batch:        ${batchNum}\n`);

@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     'Convert between 11 travel currencies with approximate rates. Includes destination-specific tips for handling money abroad.',
   alternates: { canonical: '/tools/currency-converter' },
   openGraph: {
-    title: 'Currency Converter | TripGenie',
+    title: 'Currency Converter | Faroway',
     description: 'Free travel currency converter with tips for 14 destinations.',
     url: '/tools/currency-converter',
   },
@@ -19,7 +19,7 @@ export default function CurrencyConverterPage() {
     '@type': 'WebApplication',
     name: 'Travel Currency Converter',
     description: 'Convert between travel currencies with destination-specific tips for handling money abroad.',
-    url: 'https://www.tripgenie.ai/tools/currency-converter',
+    url: 'https://www.faroway.ai/tools/currency-converter',
     applicationCategory: 'TravelApplication',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     operatingSystem: 'All',

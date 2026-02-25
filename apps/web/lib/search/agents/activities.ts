@@ -7,7 +7,7 @@
 import { generateObject, gateway as defaultGateway, createGateway } from 'ai';
 import { z } from 'zod';
 import { SearchPlan, ActivityResult } from '../types';
-import { VIBE_KEYWORDS } from '@tripgenie/constants';
+import { VIBE_KEYWORDS } from '@faroway/constants';
 import {
   searchViatorProducts,
   generateViatorAffiliateUrl,

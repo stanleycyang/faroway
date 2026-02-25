@@ -68,7 +68,7 @@ export default function LoginScreen() {
       <View style={styles.content}>
         {/* Title */}
         <View style={styles.titleSection}>
-          <Text style={styles.title}>Sign in to TripGenie</Text>
+          <Text style={styles.title}>Sign in to Faroway</Text>
           <Text style={styles.subtitle}>
             Sync your trips across devices and unlock personalized recommendations
           </Text>

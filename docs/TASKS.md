@@ -1,4 +1,4 @@
-# TripGenie Engineering Task Board
+# Faroway Engineering Task Board
 
 ## 🎯 Mission
 Build a production-ready AI travel planning app with mobile (Expo) + web (Next.js) + backend (Supabase + Vercel Workflows)
@@ -20,7 +20,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 - [x] **TASK-008**: Build activity recommendation engine ✅ COMPLETED
 - [x] **TASK-009**: Add real-time generation progress updates ✅ COMPLETED
 
-### 🟡 Priority 3: Web App (tripgenie.ai)
+### 🟡 Priority 3: Web App (faroway.ai)
 - [x] **TASK-010**: Build landing page with hero section ✅ COMPLETED
 - [x] **TASK-011**: Create trip creation flow (web) ✅ COMPLETED
 - [x] **TASK-012**: Build itinerary view page ✅ COMPLETED
@@ -54,15 +54,15 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 ### Sprint 3 (Tuesday Morning): Polish & Launch ✅ COMPLETE
 | Task | Agent | Status | Started | Completed |
 |------|-------|--------|---------|-----------|
-| TASK-025 | tripgenie-performance | ✅ DONE | 11:31 | 11:35 |
-| TASK-026 | tripgenie-seo | ✅ DONE | 11:31 | 11:40 |
-| TASK-027 | tripgenie-appstore | ✅ DONE | 11:31 | 11:38 |
+| TASK-025 | faroway-performance | ✅ DONE | 11:31 | 11:35 |
+| TASK-026 | faroway-seo | ✅ DONE | 11:31 | 11:40 |
+| TASK-027 | faroway-appstore | ✅ DONE | 11:31 | 11:38 |
 
 ### Sprint 2 (Morning): Mobile Integration
 | Task | Agent | Status | Started | Completed |
 |------|-------|--------|---------|-----------|
-| TASK-016 | tripgenie-offline-sync | ✅ DONE | 10:59 | 11:01 |
-| TASK-018 | tripgenie-mobile-testing | ✅ DONE | 10:59 | 11:00 |
+| TASK-016 | faroway-offline-sync | ✅ DONE | 10:59 | 11:01 |
+| TASK-018 | faroway-mobile-testing | ✅ DONE | 10:59 | 11:00 |
 
 ### Sprint 1 (Night): Foundation
 | Task | Agent | Status | Started | Completed |
@@ -84,7 +84,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 
 ### 2026-02-03 11:40 PST
 - ✅ **TASK-026 COMPLETE**: SEO Optimization for Web (~10 min)
-  - **Agent**: tripgenie-seo
+  - **Agent**: faroway-seo
   - **Deliverables:**
     - ✅ `app/robots.ts` - Dynamic robots.txt with proper crawl rules
     - ✅ `app/sitemap.ts` - Dynamic sitemap with static + destination pages
@@ -176,7 +176,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 ### 2026-02-04 15:18 PST
 - 🔍 **SUPERVISOR CHECK**: Stable - no active development
   - ✅ **Progress**: 25/28 tasks (89%) - unchanged since Tuesday 12:05 PM
-  - 🚫 **Active Agents**: None (no active TripGenie sub-agents in sessions list)
+  - 🚫 **Active Agents**: None (no active Faroway sub-agents in sessions list)
   - ⏸️ **Blocked**: TASK-023/024 (awaiting partner approvals), TASK-028 (deferred)
   - 📋 **Launch Ready**: MVP production-ready, needs screenshots + EAS config
   - 🌄 **Status**: 3:18 PM - standing by
@@ -184,7 +184,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 ### 2026-02-04 17:20 PST
 - 🔍 **SUPERVISOR CHECK**: Stable - no active development
   - ✅ **Progress**: 25/28 tasks (89%) - unchanged since Tuesday 12:05 PM
-  - 🚫 **Active Agents**: None (no active TripGenie sub-agents in sessions list)
+  - 🚫 **Active Agents**: None (no active Faroway sub-agents in sessions list)
   - ⏸️ **Blocked**: TASK-023/024 (awaiting partner approvals), TASK-028 (deferred)
   - 📋 **Launch Ready**: MVP production-ready, needs screenshots + EAS config
   - 🌄 **Status**: 5:20 PM - standing by
@@ -232,7 +232,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 ### 2026-02-06 14:40 PST
 - 🔍 **SUPERVISOR CHECK**: Stable - no active development (Day 3+)
   - ✅ **Progress**: 25/28 tasks (89%) - unchanged since Tuesday 12:05 PM
-  - 🚫 **Active Agents**: None (verified via sessions_list - no TripGenie sub-agents)
+  - 🚫 **Active Agents**: None (verified via sessions_list - no Faroway sub-agents)
   - ⏸️ **Blocked**: TASK-023/024 (awaiting partner approvals), TASK-028 (deferred)
   - 📋 **Launch Ready**: MVP production-ready for 72+ hours, needs screenshots + EAS config
   - 🌄 **Status**: 2:40 PM Friday - standing by
@@ -240,7 +240,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 ### 2026-02-06 15:41 PST
 - 🔍 **SUPERVISOR CHECK**: Stable - no active development (Day 3+)
   - ✅ **Progress**: 25/28 tasks (89%) - unchanged since Tuesday 12:05 PM
-  - 🚫 **Active Agents**: None (verified via sessions_list - no TripGenie sub-agents)
+  - 🚫 **Active Agents**: None (verified via sessions_list - no Faroway sub-agents)
   - ⏸️ **Blocked**: TASK-023/024 (awaiting partner approvals), TASK-028 (deferred)
   - 📋 **Launch Ready**: MVP production-ready for 72+ hours, needs screenshots + EAS config
   - 🌄 **Status**: 3:41 PM Friday - standing by
@@ -248,7 +248,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 ### 2026-02-06 16:12 PST
 - 🔍 **SUPERVISOR CHECK**: Stable - no active development (Day 3+)
   - ✅ **Progress**: 25/28 tasks (89%) - unchanged since Tuesday 12:05 PM
-  - 🚫 **Active Agents**: None (verified via sessions_list - no TripGenie sub-agents)
+  - 🚫 **Active Agents**: None (verified via sessions_list - no Faroway sub-agents)
   - ⏸️ **Blocked**: TASK-023/024 (awaiting partner approvals), TASK-028 (deferred)
   - 📋 **Launch Ready**: MVP production-ready for 72+ hours, needs screenshots + EAS config
   - 🌄 **Status**: 4:12 PM Friday - standing by
@@ -256,7 +256,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 ### 2026-02-06 17:12 PST
 - 🔍 **SUPERVISOR CHECK**: Stable - no active development (Day 3+)
   - ✅ **Progress**: 25/28 tasks (89%) - unchanged since Tuesday 12:05 PM
-  - 🚫 **Active Agents**: None (verified via sessions_list - no TripGenie sub-agents)
+  - 🚫 **Active Agents**: None (verified via sessions_list - no Faroway sub-agents)
   - ⏸️ **Blocked**: TASK-023/024 (awaiting partner approvals), TASK-028 (deferred)
   - 📋 **Launch Ready**: MVP production-ready for 72+ hours, needs screenshots + EAS config
   - 🌄 **Status**: 5:12 PM Friday - standing by
@@ -329,15 +329,15 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
   - 🔵 **Priority 5 Deferred**: Affiliate APIs pending (waiting on Viator/Booking.com approvals)
   - 🟣 **Priority 6 Active**: 3 agents spawned (TASK-025, 026, 027)
   - **Current Sprint:**
-    - 🏗️ tripgenie-performance → TASK-025 (Performance optimization)
-    - 🏗️ tripgenie-seo → TASK-026 (SEO optimization)
-    - 🏗️ tripgenie-appstore → TASK-027 (App Store prep)
+    - 🏗️ faroway-performance → TASK-025 (Performance optimization)
+    - 🏗️ faroway-seo → TASK-026 (SEO optimization)
+    - 🏗️ faroway-appstore → TASK-027 (App Store prep)
   - **Expected Completion**: 25/28 tasks (89%) when sprint completes
   - **Final Task**: TASK-028 (User testing) will follow after polish tasks complete.
 
 ### 2026-02-03 11:01 PST
 - ✅ **TASK-016 COMPLETE**: Offline-First with Sync implemented
-  - **Subagent:** tripgenie-offline-sync
+  - **Subagent:** faroway-offline-sync
   - **Deliverables:**
     - ✅ `lib/offline/storage.ts` - AsyncStorage wrapper for trips and pending mutations
     - ✅ `lib/offline/network.ts` - Real-time network status monitoring via NetInfo
@@ -367,7 +367,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 
 ### 2026-02-03 11:00 PST
 - ✅ **TASK-018 COMPLETE**: iOS and Android Testing (~30 min)
-  - **Agent**: tripgenie-mobile-testing
+  - **Agent**: faroway-mobile-testing
   - **Deliverables:**
     - ✅ `docs/TESTING.md` - Comprehensive testing documentation (11KB)
     - ✅ `docs/screenshots/` - Directory created for test screenshots
@@ -396,8 +396,8 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 
 ### 2026-02-03 10:59 PST
 - 🚀 **SUPERVISOR ACTION**: Spawned 2 agents for mobile completion
-  - 🏗️ **tripgenie-offline-sync** → TASK-016 (offline-first with sync)
-  - 🏗️ **tripgenie-mobile-testing** → TASK-018 (iOS/Android testing)
+  - 🏗️ **faroway-offline-sync** → TASK-016 (offline-first with sync)
+  - 🏗️ **faroway-mobile-testing** → TASK-018 (iOS/Android testing)
   - ✅ **Progress**: 20/28 tasks (71%) → targeting 22/28 (79%)
   - 📋 **Status**: Morning work resuming. Final mobile push before affiliate APIs.
 
@@ -535,7 +535,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 
 ### 2026-02-03 07:55 PST
 - ✅ **TASK-017 COMPLETE**: Push Notifications implemented
-  - **Subagent:** tripgenie-push-notifications-retry (fixed useRef TypeScript errors)
+  - **Subagent:** faroway-push-notifications-retry (fixed useRef TypeScript errors)
   - **Deliverables:**
     - ✅ `lib/notifications.ts` - Core notification functions
       - Push token registration with Expo
@@ -566,8 +566,8 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 
 ### 2026-02-03 07:54 PST
 - 🔄 **SUPERVISOR ACTION**: Respawned 2 blocked agents
-  - **tripgenie-mobile-supabase-retry** (TASK-015): Resuming Supabase connection work
-  - **tripgenie-push-notifications-retry** (TASK-017): Resuming push notifications fixes
+  - **faroway-mobile-supabase-retry** (TASK-015): Resuming Supabase connection work
+  - **faroway-push-notifications-retry** (TASK-017): Resuming push notifications fixes
   - Previous agents hit Anthropic API 500 errors at 7:28 AM when nearly complete
   - Both agents given context of completed work and remaining tasks
   - **Progress:** 14/26 tasks (54%) — Priority 3 Web App ✅ complete, Priority 4 Mobile ⏳ resuming
@@ -627,14 +627,14 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 
 ### 2026-02-03 07:22 PST
 - 🚀 **SUPERVISOR ACTION**: Spawned 3 agents for Priority 3 (Web App)
-  - 🏗️ **tripgenie-trip-flow** → TASK-011 (trip creation flow)
-  - 🏗️ **tripgenie-itinerary-view** → TASK-012 (itinerary view page)
-  - 🏗️ **tripgenie-dashboard** → TASK-013 (user dashboard)
+  - 🏗️ **faroway-trip-flow** → TASK-011 (trip creation flow)
+  - 🏗️ **faroway-itinerary-view** → TASK-012 (itinerary view page)
+  - 🏗️ **faroway-dashboard** → TASK-013 (user dashboard)
   - ✅ **Progress**: 10/26 tasks complete, 3 in progress (13/26 = 50%)
   - 📋 **Status**: Morning hours - resuming work. Foundation solid, building web MVP.
 
 ### 2026-02-03 06:52 PST
-- 🔍 **SUPERVISOR CHECK**: TripGenie project status verified
+- 🔍 **SUPERVISOR CHECK**: Faroway project status verified
   - ✅ **Progress**: 10/26 tasks complete (38%)
   - ✅ **Priority 1 (Backend Foundation)**: ALL DONE
   - ✅ **Priority 2 (AI Integration)**: ALL DONE
@@ -643,7 +643,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
   - 🌙 **Status**: 6:52 AM - no active agents, foundation solid. Standing down until normal hours.
 
 ### 2026-02-03 06:21 PST
-- 🔍 **SUPERVISOR CHECK**: TripGenie project status verified
+- 🔍 **SUPERVISOR CHECK**: Faroway project status verified
   - ✅ **Progress**: 10/26 tasks complete (38%)
   - ✅ **Priority 1 (Backend Foundation)**: ALL DONE
   - ✅ **Priority 2 (AI Integration)**: ALL DONE
@@ -652,7 +652,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
   - 🌙 **Status**: 6:21 AM - no active agents, foundation solid. Standing down until normal hours.
 
 ### 2026-02-03 05:51 PST
-- 🔍 **SUPERVISOR CHECK**: TripGenie project status verified
+- 🔍 **SUPERVISOR CHECK**: Faroway project status verified
   - ✅ **Progress**: 10/26 tasks complete (38%)
   - ✅ **Priority 1 (Backend Foundation)**: ALL DONE
   - ✅ **Priority 2 (AI Integration)**: ALL DONE
@@ -661,7 +661,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
   - 🌙 **Status**: 5:51 AM - no active agents, foundation solid. Standing down until normal hours.
 
 ### 2026-02-03 05:20 PST
-- 🔍 **SUPERVISOR CHECK**: TripGenie project status verified
+- 🔍 **SUPERVISOR CHECK**: Faroway project status verified
   - ✅ **Progress**: 10/26 tasks complete (38%)
   - ✅ **Priority 1 (Backend Foundation)**: ALL DONE
   - ✅ **Priority 2 (AI Integration)**: ALL DONE
@@ -670,7 +670,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
   - 🌙 **Status**: 5:20 AM - no active agents, foundation solid. Standing down until normal hours.
 
 ### 2026-02-03 04:49 PST
-- 🔍 **SUPERVISOR CHECK**: TripGenie project status verified
+- 🔍 **SUPERVISOR CHECK**: Faroway project status verified
   - ✅ **Progress**: 10/26 tasks complete (38%)
   - ✅ **Priority 1 (Backend Foundation)**: ALL DONE
   - ✅ **Priority 2 (AI Integration)**: ALL DONE
@@ -679,7 +679,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
   - 🌙 **Status**: 4:49 AM - no active agents, last batch completed 2h ago. Standing down until morning.
 
 ### 2026-02-03 04:18 PST
-- 🔍 **SUPERVISOR CHECK**: TripGenie project status verified
+- 🔍 **SUPERVISOR CHECK**: Faroway project status verified
   - ✅ **Progress**: 10/26 tasks complete (38%)
   - ✅ **Priority 1 (Backend Foundation)**: ALL DONE
   - ✅ **Priority 2 (AI Integration)**: ALL DONE
@@ -688,7 +688,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
   - 🌙 **Status**: 4:18 AM - no active agents, foundation solid. Standing down until morning.
 
 ### 2026-02-03 03:47 PST
-- 🔍 **SUPERVISOR CHECK**: TripGenie project status verified
+- 🔍 **SUPERVISOR CHECK**: Faroway project status verified
   - ✅ **Progress**: 10/26 tasks complete (38%)
   - ✅ **Priority 1 (Backend Foundation)**: ALL DONE
   - ✅ **Priority 2 (AI Integration)**: ALL DONE
@@ -697,7 +697,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
   - 🌙 **Status**: 3:47 AM - no active agents, last batch completed 31 min ago. Standing down until morning.
 
 ### 2026-02-03 03:16 PST
-- 🔍 **SUPERVISOR CHECK**: TripGenie project status verified
+- 🔍 **SUPERVISOR CHECK**: Faroway project status verified
   - ✅ **Progress**: 10/26 tasks complete (38%)
   - ✅ **Priority 1 (Backend Foundation)**: ALL DONE
   - ✅ **Priority 2 (AI Integration)**: ALL DONE
@@ -715,7 +715,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
   - **Next wave**: TASK-011 (trip creation), TASK-012 (itinerary view), TASK-013 (dashboard)
 
 ### 2026-02-03 02:44 PST
-- 🔍 **SUPERVISOR CHECK**: TripGenie project status verified
+- 🔍 **SUPERVISOR CHECK**: Faroway project status verified
   - ✅ **TASK-002 UNBLOCKED**: Supabase project created and configured!
   - ✅ Database credentials in .env.local
   - ✅ Build successful (Next.js 16.1.6, TypeScript passing)
@@ -741,7 +741,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
   
 ### 2026-02-02 20:33 PST
 - 🔄 **TASK-002 IN PROGRESS**: Supabase project setup
-  - Supervisor spawned `tripgenie-supabase` agent
+  - Supervisor spawned `faroway-supabase` agent
   - Mission: Create Supabase project, design database schema, configure auth
   - Expected completion: ~30 minutes
 
@@ -792,7 +792,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 
 ### 2026-02-02 20:10 PST
 - ✅ **TASK-010 COMPLETED**: Landing page with hero section
-  - Location: `/Users/stanleyyang/.openclaw/workspace/tripgenie/backend/app/(marketing)/page.tsx`
+  - Location: `/Users/stanleyyang/.openclaw/workspace/faroway/backend/app/(marketing)/page.tsx`
   - Created shared components:
     - `Button.tsx` - Reusable button with primary/secondary/ghost variants
     - `Header.tsx` - Navigation header with logo and menu
@@ -812,11 +812,11 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
     - Consistent with mobile app design
   - Assets:
     - Copied logo to `/backend/public/icon.png`
-    - Updated `globals.css` with TripGenie color scheme
+    - Updated `globals.css` with Faroway color scheme
 
 ### 2026-02-02 20:05 PST
 - ✅ **TASK-001 COMPLETED**: Next.js 15 backend project created
-  - Location: `/Users/stanleyyang/.openclaw/workspace/tripgenie/backend`
+  - Location: `/Users/stanleyyang/.openclaw/workspace/faroway/backend`
   - Tech stack: Next.js 15, TypeScript, Tailwind CSS, ESLint
   - Dependencies installed: @supabase/supabase-js, @supabase/ssr
   - Project structure implemented with App Router
@@ -879,7 +879,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 ## 📁 Project Structure
 
 ```
-tripgenie/
+faroway/
 ├── mobile/              # Expo React Native app (existing)
 ├── backend/             # Next.js backend + web app
 │   ├── app/

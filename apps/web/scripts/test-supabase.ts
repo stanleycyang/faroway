@@ -54,7 +54,7 @@ async function testUserCreation() {
 
   try {
     // Create a test user
-    const testEmail = `test-${Date.now()}@tripgenie.test`
+    const testEmail = `test-${Date.now()}@faroway.test`
     const { data: authData, error: authError } = await adminClient.auth.admin.createUser({
       email: testEmail,
       email_confirm: true,
@@ -235,7 +235,7 @@ async function cleanup(userId: string) {
 // Main test function
 async function runTests() {
   console.log('╔════════════════════════════════════════════╗')
-  console.log('║   TripGenie Supabase Connection Test      ║')
+  console.log('║   Faroway Supabase Connection Test      ║')
   console.log('╚════════════════════════════════════════════╝\n')
 
   let userId: string | null = null

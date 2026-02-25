@@ -14,7 +14,7 @@ import { executeTravelSearch } from '@/lib/search/workflow';
 import { mapSearchResultsToItinerary, type MappedItinerary } from '@/lib/search/bridge';
 import { buildJsonRenderSpec, BuildSpecInput } from '@/lib/json-render/build-spec';
 import { getSupabase } from '@/lib/supabase/server';
-import type { SearchInput, HotelResult } from '@tripgenie/types';
+import type { SearchInput, HotelResult } from '@faroway/types';
 
 // Types
 interface TripPlanInput {

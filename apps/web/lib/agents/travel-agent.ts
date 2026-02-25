@@ -1,5 +1,5 @@
 /**
- * TripGenie Travel Agent
+ * Faroway Travel Agent
  * Uses AI SDK ToolLoopAgent with tools for searching hotels, activities, and dining
  */
 
@@ -273,7 +273,7 @@ const TravelPlanningAgentSchema = z.object({
 
 export const travelPlanningAgent = new ToolLoopAgent({
   model: aiGateway(MODEL),
-  instructions: `You are TripGenie, an expert AI travel planner. Your job is to create personalized travel itineraries.
+  instructions: `You are Faroway, an expert AI travel planner. Your job is to create personalized travel itineraries.
 
 When a user provides trip details:
 1. First, search for hotels that match their budget and vibes

@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     'Find the best month to visit 14 popular destinations. Monthly temperature, rainfall, crowd levels, events, and seasonal tips.',
   alternates: { canonical: '/tools/best-time-to-visit' },
   openGraph: {
-    title: 'Best Time to Visit Any Destination | TripGenie',
+    title: 'Best Time to Visit Any Destination | Faroway',
     description: 'Climate data, crowd levels & events for 14 destinations — find your perfect month.',
     url: '/tools/best-time-to-visit',
   },
@@ -27,7 +27,7 @@ export default function BestTimeToVisitPage() {
     '@type': 'WebApplication',
     name: 'Best Time to Visit Guide',
     description: 'Find the best month to visit any destination with climate data, crowd levels, and seasonal events.',
-    url: 'https://www.tripgenie.ai/tools/best-time-to-visit',
+    url: 'https://www.faroway.ai/tools/best-time-to-visit',
     applicationCategory: 'TravelApplication',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     operatingSystem: 'All',

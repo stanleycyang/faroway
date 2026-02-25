@@ -256,7 +256,7 @@ export function generateBookingAffiliateUrl(
   }
 ): string {
   const params = new URLSearchParams({
-    aid: BOOKING_AFFILIATE_ID || 'tripgenie',
+    aid: BOOKING_AFFILIATE_ID || 'faroway',
     label: trackingId,
     ...(options?.checkIn && { checkin: options.checkIn }),
     ...(options?.checkOut && { checkout: options.checkOut }),
@@ -280,7 +280,7 @@ export function generateBookingSearchUrl(
   }
 ): string {
   const params = new URLSearchParams({
-    aid: BOOKING_AFFILIATE_ID || 'tripgenie',
+    aid: BOOKING_AFFILIATE_ID || 'faroway',
     label: trackingId,
     ss: destination,
     ...(options?.checkIn && { checkin: options.checkIn }),

@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Button } from '../../components/ui';
 import { colors } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
-import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
+import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 
 const { width, height } = Dimensions.get('window');
 

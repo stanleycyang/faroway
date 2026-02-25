@@ -1,8 +1,8 @@
-# TripGenie Offline-First Architecture
+# Faroway Offline-First Architecture
 
 ## Overview
 
-TripGenie implements an offline-first architecture that enables users to view, create, and edit trips even without an internet connection. Changes are automatically synced to Supabase when connectivity is restored.
+Faroway implements an offline-first architecture that enables users to view, create, and edit trips even without an internet connection. Changes are automatically synced to Supabase when connectivity is restored.
 
 ## Architecture
 
@@ -210,7 +210,7 @@ import { OfflineBadge } from '../components/ui/SyncStatusBanner';
 
 ### Conflict Resolution
 
-TripGenie uses a **last-write-wins** strategy:
+Faroway uses a **last-write-wins** strategy:
 
 1. When syncing, pending mutations are processed in order (oldest first)
 2. Server data is fetched after pushing local changes
@@ -317,9 +317,9 @@ All offline data is stored under these AsyncStorage keys:
 
 | Key | Description |
 |-----|-------------|
-| `@tripgenie/trips` | Cached trip data |
-| `@tripgenie/pending_mutations` | Queue of pending changes |
-| `@tripgenie/sync_meta` | Sync metadata (last sync time, status) |
+| `@faroway/trips` | Cached trip data |
+| `@faroway/pending_mutations` | Queue of pending changes |
+| `@faroway/sync_meta` | Sync metadata (last sync time, status) |
 
 ## Best Practices
 
@@ -340,7 +340,7 @@ All offline data is stored under these AsyncStorage keys:
 
 ### Data not persisting
 
-1. Verify AsyncStorage is working: `await AsyncStorage.getItem('@tripgenie/trips')`
+1. Verify AsyncStorage is working: `await AsyncStorage.getItem('@faroway/trips')`
 2. Check for storage errors in console
 3. Clear and re-hydrate: `await offlineStorage.clearAll()`
 

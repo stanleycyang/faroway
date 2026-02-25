@@ -4,9 +4,9 @@ import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy | TripGenie',
+  title: 'Privacy Policy | Faroway',
   description:
-    'Learn how TripGenie collects, uses, and protects your personal information.',
+    'Learn how Faroway collects, uses, and protects your personal information.',
   alternates: {
     canonical: '/privacy',
   },
@@ -32,10 +32,10 @@ export default function PrivacyPolicyPage() {
             {/* 1. Introduction */}
             <h2>1. Introduction</h2>
             <p>
-              TripGenie (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;) operates the website at{' '}
-              <a href="https://tripgenie.ai" target="_blank" rel="noopener noreferrer">tripgenie.ai</a>{' '}
-              and the TripGenie mobile application (iOS and Android, bundle identifier:{' '}
-              <code>ai.tripgenie.app</code>), collectively referred to as the &ldquo;Service.&rdquo;
+              Faroway (&ldquo;we&rdquo;, &ldquo;us&rdquo;, &ldquo;our&rdquo;) operates the website at{' '}
+              <a href="https://faroway.ai" target="_blank" rel="noopener noreferrer">faroway.ai</a>{' '}
+              and the Faroway mobile application (iOS and Android, bundle identifier:{' '}
+              <code>ai.faroway.app</code>), collectively referred to as the &ldquo;Service.&rdquo;
             </p>
             <p>
               This Privacy Policy explains what information we collect, how we use it, who we share it with,
@@ -129,7 +129,7 @@ export default function PrivacyPolicyPage() {
               <li>
                 <strong>Affiliate tracking cookies</strong> &mdash; placed by our affiliate partners
                 (Booking.com, Viator) when you click an affiliate link. These cookies allow the partner to
-                attribute your booking to TripGenie. These cookies are governed by the respective partner&apos;s
+                attribute your booking to Faroway. These cookies are governed by the respective partner&apos;s
                 cookie policy.
               </li>
             </ul>
@@ -211,13 +211,13 @@ export default function PrivacyPolicyPage() {
             <p>We may disclose your information if required to do so by law, or if we believe in good faith that disclosure is necessary to:</p>
             <ul>
               <li>Comply with legal obligations, subpoenas, or court orders.</li>
-              <li>Protect and defend the rights, property, or safety of TripGenie, our users, or the public.</li>
+              <li>Protect and defend the rights, property, or safety of Faroway, our users, or the public.</li>
               <li>Detect, prevent, or address fraud, security issues, or technical problems.</li>
             </ul>
 
             <h3>5.5 Business Transfers</h3>
             <p>
-              If TripGenie is involved in a merger, acquisition, asset sale, or bankruptcy, your information
+              If Faroway is involved in a merger, acquisition, asset sale, or bankruptcy, your information
               may be transferred as part of that transaction. We will notify you via email or prominent notice
               on the Service before your information is transferred and becomes subject to a different privacy
               policy.
@@ -241,7 +241,7 @@ export default function PrivacyPolicyPage() {
             {/* 7. International Data Transfers */}
             <h2>7. International Data Transfers</h2>
             <p>
-              TripGenie is based in the United States. If you access the Service from outside the United
+              Faroway is based in the United States. If you access the Service from outside the United
               States, your information may be transferred to, stored in, and processed in the United States or
               other countries where our service providers operate. These countries may have data protection laws
               that differ from your jurisdiction.
@@ -263,7 +263,7 @@ export default function PrivacyPolicyPage() {
             </ul>
             <p>
               You can delete your account at any time through the app or website settings, or by contacting us
-              at <a href="mailto:support@tripgenie.ai">support@tripgenie.ai</a>. Upon account deletion, your
+              at <a href="mailto:support@faroway.ai">support@faroway.ai</a>. Upon account deletion, your
               personal data will be removed from our active systems within 30 days. Some data may persist in
               encrypted backups for up to 90 days before being permanently deleted.
             </p>
@@ -283,7 +283,7 @@ export default function PrivacyPolicyPage() {
             </ul>
             <p>
               To exercise any of these rights, contact us at{' '}
-              <a href="mailto:privacy@tripgenie.ai">privacy@tripgenie.ai</a>. We will respond within 30 days
+              <a href="mailto:privacy@faroway.ai">privacy@faroway.ai</a>. We will respond within 30 days
               (or within the timeframe required by applicable law). We may ask you to verify your identity
               before processing your request.
             </p>
@@ -313,7 +313,7 @@ export default function PrivacyPolicyPage() {
             </ul>
             <p>
               To submit a request, email{' '}
-              <a href="mailto:privacy@tripgenie.ai">privacy@tripgenie.ai</a> with the subject line
+              <a href="mailto:privacy@faroway.ai">privacy@faroway.ai</a> with the subject line
               &ldquo;CCPA Request.&rdquo; We will verify your identity and respond within 45 days.
             </p>
 
@@ -365,7 +365,7 @@ export default function PrivacyPolicyPage() {
               your jurisdiction). We do not knowingly collect personal information from children under this
               age. If you are a parent or guardian and believe your child has provided us with personal
               information, please contact us at{' '}
-              <a href="mailto:privacy@tripgenie.ai">privacy@tripgenie.ai</a> and we will promptly delete
+              <a href="mailto:privacy@faroway.ai">privacy@faroway.ai</a> and we will promptly delete
               that information.
             </p>
 
@@ -387,8 +387,8 @@ export default function PrivacyPolicyPage() {
               data, contact us:
             </p>
             <ul>
-              <li>Privacy inquiries: <a href="mailto:privacy@tripgenie.ai">privacy@tripgenie.ai</a></li>
-              <li>General support: <a href="mailto:support@tripgenie.ai">support@tripgenie.ai</a></li>
+              <li>Privacy inquiries: <a href="mailto:privacy@faroway.ai">privacy@faroway.ai</a></li>
+              <li>General support: <a href="mailto:support@faroway.ai">support@faroway.ai</a></li>
               <li>Visit our <Link href="/support">Support page</Link></li>
             </ul>
           </div>

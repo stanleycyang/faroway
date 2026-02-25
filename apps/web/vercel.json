@@ -1,7 +1,7 @@
 {
   "framework": "nextjs",
   "installCommand": "cd ../.. && bun install",
-  "buildCommand": "cd ../.. && bun turbo build --filter=@tripgenie/web",
+  "buildCommand": "cd ../.. && bun turbo build --filter=@faroway/web",
   "crons": [
     {
       "path": "/api/cron/cleanup",

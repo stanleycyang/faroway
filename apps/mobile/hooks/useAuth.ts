@@ -10,7 +10,7 @@ import * as AuthSession from 'expo-auth-session';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 
-const ANONYMOUS_TRIPS_KEY = '@tripgenie/anonymous_trips';
+const ANONYMOUS_TRIPS_KEY = '@faroway/anonymous_trips';
 
 // Required for expo-auth-session
 WebBrowser.maybeCompleteAuthSession();
@@ -159,7 +159,7 @@ export function useAuth() {
       setAuthState(prev => ({ ...prev, loading: true }));
       
       const redirectUrl = AuthSession.makeRedirectUri({
-        scheme: 'tripgenie',
+        scheme: 'faroway',
         path: 'auth/callback',
       });
 

@@ -1,8 +1,8 @@
-# TripGenie Web Frontend - Quick Start Guide
+# Faroway Web Frontend - Quick Start Guide
 
 ## 🚀 What Was Built
 
-A complete, production-ready frontend for TripGenie - an AI-powered travel planning app. This includes:
+A complete, production-ready frontend for Faroway - an AI-powered travel planning app. This includes:
 
 - **Award-winning landing page** with social proof, testimonials, and mobile app CTA
 - **Polished auth flow** with forgot password support
@@ -16,7 +16,7 @@ A complete, production-ready frontend for TripGenie - an AI-powered travel plann
 ## 📂 Project Structure
 
 ```
-tripgenie-web/
+faroway-web/
 ├── app/
 │   ├── (marketing)/        # Landing page
 │   │   └── page.tsx         # ✨ Enhanced with new sections

@@ -7,7 +7,7 @@ import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import { Search, Calendar, Users, ChevronDown, ChevronUp, Sparkles, ArrowLeft, Check, Minus, Plus, X } from 'lucide-react';
 import { format } from 'date-fns';
-import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
+import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 import { PlacesAutocompleteInput, type PlaceResult } from '@/components/create/PlacesAutocompleteInput';
 import { DatePicker } from '@/components/trips/DatePicker';
 
@@ -146,13 +146,13 @@ export default function CreateTripPage() {
       // Store anonymous trip ID in localStorage so it can be claimed after sign-up
       if (!trip.user_id) {
         try {
-          const stored = JSON.parse(localStorage.getItem('tripgenie_anonymous_trips') || '[]');
+          const stored = JSON.parse(localStorage.getItem('faroway_anonymous_trips') || '[]');
           if (!stored.includes(trip.id)) {
             stored.push(trip.id);
-            localStorage.setItem('tripgenie_anonymous_trips', JSON.stringify(stored));
+            localStorage.setItem('faroway_anonymous_trips', JSON.stringify(stored));
           }
         } catch {
-          localStorage.setItem('tripgenie_anonymous_trips', JSON.stringify([trip.id]));
+          localStorage.setItem('faroway_anonymous_trips', JSON.stringify([trip.id]));
         }
       }
 

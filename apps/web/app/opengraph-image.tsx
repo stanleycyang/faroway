@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og'
 
 export const runtime = 'edge'
 
-export const alt = 'TripGenie - AI-Powered Travel Planning'
+export const alt = 'Faroway - AI-Powered Travel Planning'
 export const size = {
   width: 1200,
   height: 630,
@@ -77,7 +77,7 @@ export default async function Image() {
               letterSpacing: '-2px',
             }}
           >
-            TripGenie
+            Faroway
           </h1>
 
           {/* Tagline */}
@@ -118,7 +118,7 @@ export default async function Image() {
             fontSize: '20px',
           }}
         >
-          <span>tripgenie.ai</span>
+          <span>faroway.ai</span>
         </div>
       </div>
     ),
