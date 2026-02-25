@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
 import { colors, borderRadius } from '../../constants/theme';
-import { travelVibes } from '@tripgenie/constants';
+import { travelVibes } from '@faroway/constants';
 import { hapticFeedback } from '../../utils/haptics';
 
 interface VibeSelectorProps {

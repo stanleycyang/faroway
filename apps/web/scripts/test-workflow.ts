@@ -63,7 +63,7 @@ async function sleep(ms: number): Promise<void> {
 }
 
 async function testWorkflow() {
-  log('\n🚀 TripGenie Workflow Test Suite\n', colors.blue);
+  log('\n🚀 Faroway Workflow Test Suite\n', colors.blue);
   log('This test demonstrates the async itinerary generation workflow.', colors.dim);
   log(`Target: ${BASE_URL}\n`, colors.dim);
 

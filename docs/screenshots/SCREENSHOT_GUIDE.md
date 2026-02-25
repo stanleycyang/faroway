@@ -1,4 +1,4 @@
-# TripGenie Screenshot Guide
+# Faroway Screenshot Guide
 
 This guide explains how to capture and prepare screenshots for App Store and Google Play submission.
 
@@ -96,7 +96,7 @@ This guide explains how to capture and prepare screenshots for App Store and Goo
 
 ```bash
 # Start the app in development
-cd /Users/stanleyyang/.openclaw/workspace/tripgenie
+cd /Users/stanleyyang/.openclaw/workspace/faroway
 npx expo start
 ```
 
@@ -168,7 +168,7 @@ Add marketing overlays using Figma, Sketch, or similar:
 
 ## Color Palette for Overlays
 
-Based on TripGenie branding:
+Based on Faroway branding:
 
 | Color | Hex | Usage |
 |-------|-----|-------|
@@ -182,13 +182,13 @@ Based on TripGenie branding:
 ## File Naming Convention
 
 ```
-tripgenie_[platform]_[size]_[number]_[screen].png
+faroway_[platform]_[size]_[number]_[screen].png
 
 Examples:
-tripgenie_ios_6.7_01_home.png
-tripgenie_ios_6.7_02_create.png
-tripgenie_android_phone_01_home.png
-tripgenie_android_feature_graphic.png
+faroway_ios_6.7_01_home.png
+faroway_ios_6.7_02_create.png
+faroway_android_phone_01_home.png
+faroway_android_feature_graphic.png
 ```
 
 ---
@@ -225,7 +225,7 @@ docs/screenshots/
 
 ### Content Suggestions
 - App icon on left side
-- App name "TripGenie"
+- App name "Faroway"
 - Tagline: "AI-Powered Travel Planning"
 - Background: Travel imagery (beach, city, mountains)
 - Clean, professional design

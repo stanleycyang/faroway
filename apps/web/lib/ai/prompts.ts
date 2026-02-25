@@ -1,11 +1,11 @@
 /**
- * TripGenie AI Prompt Templates
+ * Faroway AI Prompt Templates
  * Structured prompts for Claude to generate personalized travel itineraries
  */
 
 import { TripPreferences } from './types';
 
-export const SYSTEM_PROMPT = `You are Claude, an expert travel planning AI assistant for TripGenie.
+export const SYSTEM_PROMPT = `You are Claude, an expert travel planning AI assistant for Faroway.
 
 Your expertise includes:
 - Deep knowledge of global destinations, attractions, and hidden gems

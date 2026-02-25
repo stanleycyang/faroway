@@ -378,7 +378,7 @@ export function generateViatorAffiliateUrl(
   // Use the API-provided productUrl when available (already has proper structure)
   if (options?.productUrl) {
     const url = new URL(options.productUrl);
-    url.searchParams.set('pid', VIATOR_PARTNER_ID || 'tripgenie');
+    url.searchParams.set('pid', VIATOR_PARTNER_ID || 'faroway');
     url.searchParams.set('mcid', trackingId);
     url.searchParams.set('medium', 'api');
     return url.toString();
@@ -387,7 +387,7 @@ export function generateViatorAffiliateUrl(
   // Fallback: construct from product code
   const baseUrl = `https://www.viator.com/tours/${productCode}`;
   const params = new URLSearchParams({
-    pid: VIATOR_PARTNER_ID || 'tripgenie',
+    pid: VIATOR_PARTNER_ID || 'faroway',
     mcid: trackingId,
     medium: 'api',
     ...(options?.date && { date: options.date }),

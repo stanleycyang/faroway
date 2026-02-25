@@ -1,6 +1,6 @@
 /**
- * @tripgenie/types
- * Shared type definitions for TripGenie web and mobile apps.
+ * @faroway/types
+ * Shared type definitions for Faroway web and mobile apps.
  * Pure TypeScript interfaces — zero runtime dependencies.
  */
 

@@ -49,7 +49,7 @@ const triggerContent: Record<AuthGateTrigger, { title: string; subtitle: string 
     subtitle: 'Sign in to access your saved trips',
   },
   general: {
-    title: 'Join TripGenie',
+    title: 'Join Faroway',
     subtitle: 'Create a free account to unlock all features',
   },
 };

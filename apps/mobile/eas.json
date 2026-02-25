@@ -29,7 +29,7 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_API_URL": "https://api.tripgenie.ai"
+        "EXPO_PUBLIC_API_URL": "https://api.faroway.ai"
       }
     }
   },

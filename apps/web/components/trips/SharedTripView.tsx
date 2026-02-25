@@ -44,7 +44,7 @@ export function SharedTripView({
 }: SharedTripViewProps) {
   const baseUrl = typeof window !== 'undefined'
     ? window.location.origin
-    : 'https://www.tripgenie.ai';
+    : 'https://www.faroway.ai';
   const shareUrl = `${baseUrl}/s/${shareToken}`;
 
   return (
@@ -152,8 +152,8 @@ export function SharedTripView({
           <ShareButtons
             url={shareUrl}
             title={`${destination} Trip Itinerary`}
-            description={`Check out this ${itinerary?.days?.length || ''}-day AI-generated itinerary to ${destination}! Created with TripGenie.`}
-            hashtags={['TripGenie', 'Travel', destination.replace(/\s+/g, '')]}
+            description={`Check out this ${itinerary?.days?.length || ''}-day AI-generated itinerary to ${destination}! Created with Faroway.`}
+            hashtags={['Faroway', 'Travel', destination.replace(/\s+/g, '')]}
             className="justify-center"
           />
         </div>

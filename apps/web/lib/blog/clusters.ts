@@ -43,7 +43,7 @@ import {
   Star,
   type LucideIcon,
 } from 'lucide-react';
-import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
+import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 
 export interface ClusterTopic {
   title: string;
@@ -424,7 +424,7 @@ export const CLUSTERS: ClusterDefinition[] = [
       {
         title: 'Planning Your Trip with AI',
         description:
-          'How AI travel planners like TripGenie are revolutionizing the way we plan trips — and how to get the most out of them.',
+          'How AI travel planners like Faroway are revolutionizing the way we plan trips — and how to get the most out of them.',
         slug: 'ultimate-guide-planning-trip-with-ai',
       },
       {
@@ -520,13 +520,13 @@ export const CLUSTERS: ClusterDefinition[] = [
       {
         title: 'Shared Itinerary Features',
         description:
-          'How TripGenie\'s shared trip features make collaborative travel planning effortless.',
+          'How Faroway\'s shared trip features make collaborative travel planning effortless.',
       },
     ],
     cta: {
       title: 'Plan Your Group Trip',
       description:
-        'TripGenie makes group travel easy with shared itineraries, collaborative planning, and smart coordination tools.',
+        'Faroway makes group travel easy with shared itineraries, collaborative planning, and smart coordination tools.',
       buttonText: 'Start Planning Together',
       buttonHref: '/create',
     },
@@ -609,7 +609,7 @@ export const CLUSTERS: ClusterDefinition[] = [
     cta: {
       title: 'Let AI Find Your Best Trip',
       description:
-        'TripGenie uses AI to find optimal routes, timing, and deals — so you get insider-level planning without the research.',
+        'Faroway uses AI to find optimal routes, timing, and deals — so you get insider-level planning without the research.',
       buttonText: 'Plan My Trip',
       buttonHref: '/create',
     },

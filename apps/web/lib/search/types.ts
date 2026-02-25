@@ -1,6 +1,6 @@
 /**
- * TripGenie Search Types
- * Re-exported from @tripgenie/types and @tripgenie/constants for backward compatibility.
+ * Faroway Search Types
+ * Re-exported from @faroway/types and @faroway/constants for backward compatibility.
  */
 export type {
   SearchInput,
@@ -17,6 +17,6 @@ export type {
   SuggestedDay,
   StartSearchResponse,
   SearchStatusResponse,
-} from '@tripgenie/types';
+} from '@faroway/types';
 
-export { VIBE_KEYWORDS, BUDGET_RANGES } from '@tripgenie/constants';
+export { VIBE_KEYWORDS, BUDGET_RANGES } from '@faroway/constants';

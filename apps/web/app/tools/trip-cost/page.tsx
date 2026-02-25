@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     'Estimate your trip cost with detailed breakdowns for accommodation, food, transport, and activities. Covers 14 popular destinations with local pricing.',
   alternates: { canonical: '/tools/trip-cost' },
   openGraph: {
-    title: 'Trip Cost Estimator | TripGenie',
+    title: 'Trip Cost Estimator | Faroway',
     description: 'Free travel budget calculator for 14 destinations — see cost breakdowns instantly.',
     url: '/tools/trip-cost',
   },
@@ -27,7 +27,7 @@ export default function TripCostPage() {
     '@type': 'WebApplication',
     name: 'Trip Cost Estimator',
     description: 'Estimate your trip cost with detailed breakdowns for accommodation, food, transport, and activities.',
-    url: 'https://www.tripgenie.ai/tools/trip-cost',
+    url: 'https://www.faroway.ai/tools/trip-cost',
     applicationCategory: 'TravelApplication',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     operatingSystem: 'All',

@@ -117,7 +117,7 @@ function GuestProfileCard() {
         </LinearGradient>
       </View>
 
-      <Text style={styles.guestTitle}>Sign in to TripGenie</Text>
+      <Text style={styles.guestTitle}>Sign in to Faroway</Text>
       <Text style={styles.guestSubtitle}>
         Save trips, sync across devices, and unlock personalized recommendations
       </Text>
@@ -253,20 +253,20 @@ export default function ProfileScreen() {
           <MenuItem
             icon="help-circle-outline"
             label="Help Center"
-            onPress={() => WebBrowser.openBrowserAsync('https://tripgenie.ai/support')}
+            onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/support')}
           />
           <MenuItem
             icon="chatbubble-outline"
             label="Contact Us"
-            onPress={() => Linking.openURL('mailto:support@tripgenie.app')}
+            onPress={() => Linking.openURL('mailto:support@faroway.app')}
           />
           <MenuItem
             icon="star-outline"
             label="Rate the App"
             onPress={() => {
               const url = Platform.OS === 'ios'
-                ? 'https://apps.apple.com/app/tripgenie/id0000000000'
-                : 'https://play.google.com/store/apps/details?id=app.tripgenie';
+                ? 'https://apps.apple.com/app/faroway/id0000000000'
+                : 'https://play.google.com/store/apps/details?id=app.faroway';
               Linking.openURL(url);
             }}
           />
@@ -277,12 +277,12 @@ export default function ProfileScreen() {
           <MenuItem
             icon="document-text-outline"
             label="Terms of Service"
-            onPress={() => WebBrowser.openBrowserAsync('https://tripgenie.ai/terms')}
+            onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/terms')}
           />
           <MenuItem
             icon="shield-outline"
             label="Privacy Policy"
-            onPress={() => WebBrowser.openBrowserAsync('https://tripgenie.ai/privacy')}
+            onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/privacy')}
           />
         </View>
 
@@ -299,7 +299,7 @@ export default function ProfileScreen() {
         )}
 
         {/* App Version */}
-        <Text style={styles.versionText}>TripGenie v1.0.0</Text>
+        <Text style={styles.versionText}>Faroway v1.0.0</Text>
       </ScrollView>
     </SafeAreaView>
   );

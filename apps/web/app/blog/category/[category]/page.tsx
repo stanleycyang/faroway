@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: Promise<{ category:
   const label = CATEGORIES.find((c) => c.toLowerCase().replace(/\s+/g, '-') === category) || category;
   return {
     title: `${label} Articles — Travel Blog`,
-    description: `Browse our best ${label.toLowerCase()} articles. Expert advice, tips, and guides from the TripGenie team.`,
+    description: `Browse our best ${label.toLowerCase()} articles. Expert advice, tips, and guides from the Faroway team.`,
     alternates: { canonical: `/blog/category/${category}` },
   };
 }

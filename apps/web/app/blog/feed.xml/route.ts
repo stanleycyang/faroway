@@ -1,6 +1,6 @@
 import { getAllPosts } from '@/lib/blog';
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai';
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.faroway.ai';
 
 function escapeXml(s: string) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -26,9 +26,9 @@ export async function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>TripGenie Travel Blog</title>
+    <title>Faroway Travel Blog</title>
     <link>${baseUrl}/blog</link>
-    <description>Expert travel tips, destination guides, and AI-powered planning advice from TripGenie.</description>
+    <description>Expert travel tips, destination guides, and AI-powered planning advice from Faroway.</description>
     <language>en-us</language>
     <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
     <atom:link href="${baseUrl}/blog/feed.xml" rel="self" type="application/rss+xml"/>

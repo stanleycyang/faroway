@@ -14,9 +14,9 @@
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../constants/api';
-import type { SearchProgress } from '@tripgenie/types';
+import type { SearchProgress } from '@faroway/types';
 
-const ANONYMOUS_TRIPS_KEY = '@tripgenie/anonymous_trips';
+const ANONYMOUS_TRIPS_KEY = '@faroway/anonymous_trips';
 
 export interface SearchResults {
   hotels: any[];

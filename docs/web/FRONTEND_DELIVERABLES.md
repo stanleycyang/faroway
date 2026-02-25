@@ -1,4 +1,4 @@
-# TripGenie Web Frontend - Implementation Complete
+# Faroway Web Frontend - Implementation Complete
 
 ## 🎉 Overview
 
@@ -426,7 +426,7 @@ hooks/
 
 ## 🏆 Summary
 
-I've transformed TripGenie into a **premium, production-ready web application** that:
+I've transformed Faroway into a **premium, production-ready web application** that:
 
 ✅ **Looks professional** - Y Combinator-worthy design  
 ✅ **Feels premium** - Smooth animations and interactions  

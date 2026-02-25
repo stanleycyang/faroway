@@ -1,8 +1,8 @@
-# ✅ TripGenie UX Polish - Implementation Complete!
+# ✅ Faroway UX Polish - Implementation Complete!
 
 ## 🎉 What Was Done
 
-Your TripGenie mobile app has been transformed into an **award-winning, premium travel planning experience** with comprehensive UX polish.
+Your Faroway mobile app has been transformed into an **award-winning, premium travel planning experience** with comprehensive UX polish.
 
 ---
 
@@ -122,7 +122,7 @@ Your TripGenie mobile app has been transformed into an **award-winning, premium 
 
 ### 1. Install Dependencies
 ```bash
-cd tripgenie-mobile
+cd faroway-mobile
 npm install
 ```
 
@@ -270,7 +270,7 @@ A **production-ready, award-winning** mobile app with:
 
 ## 🎉 Congratulations!
 
-Your TripGenie app is now ready to compete with the best travel apps in the App Store and Play Store.
+Your Faroway app is now ready to compete with the best travel apps in the App Store and Play Store.
 
 **Every tap, every swipe, every interaction** has been polished to perfection.
 

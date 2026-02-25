@@ -1,5 +1,5 @@
 /**
- * TripGenie Search Service
+ * Faroway Search Service
  * Connects mobile app to the backend search API
  */
 
@@ -14,7 +14,7 @@ import type {
   SuggestedDay,
   SearchResults,
   SearchStatusResponse,
-} from '@tripgenie/types';
+} from '@faroway/types';
 
 // Re-export types for backward compatibility
 export type {
@@ -27,7 +27,7 @@ export type {
   SuggestedDay,
   SearchResults,
   SearchStatusResponse,
-} from '@tripgenie/types';
+} from '@faroway/types';
 
 /**
  * Start a new travel search

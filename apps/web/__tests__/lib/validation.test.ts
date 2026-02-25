@@ -9,7 +9,7 @@ import {
   trackClickSchema,
   paginationSchema,
 // @ts-expect-error — package resolves at runtime via workspace alias
-} from '@tripgenie/validation';
+} from '@faroway/validation';
 
 // =============================================================================
 // registerSchema

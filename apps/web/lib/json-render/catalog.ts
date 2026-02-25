@@ -1,5 +1,5 @@
 /**
- * TripGenie json-render Catalog
+ * Faroway json-render Catalog
  * Defines travel UI components for generative UI
  */
 
@@ -131,4 +131,4 @@ export const catalog = (defineCatalog as any)(schema, {
   },
 });
 
-export type TripGenieCatalog = typeof catalog;
+export type FarowayCatalog = typeof catalog;

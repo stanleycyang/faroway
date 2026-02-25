@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * Environment variable validator for TripGenie monorepo.
+ * Environment variable validator for Faroway monorepo.
  * Run with: bun run env:check
  */
 
@@ -143,7 +143,7 @@ function check(label: string, vars: EnvVar[]): number {
   return missing;
 }
 
-console.log(`\n${BOLD}  TripGenie Environment Check${RESET}`);
+console.log(`\n${BOLD}  Faroway Environment Check${RESET}`);
 console.log(`  ${"═".repeat(45)}`);
 
 let totalMissing = 0;

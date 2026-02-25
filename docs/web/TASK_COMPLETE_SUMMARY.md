@@ -1,8 +1,8 @@
-# ✅ TripGenie Web Frontend - Task Complete
+# ✅ Faroway Web Frontend - Task Complete
 
 ## 🎯 Mission Accomplished
 
-I've successfully completed **all frontend tasks** for TripGenie's web application. The app now features a premium, Y Combinator-worthy design with comprehensive UX enhancements.
+I've successfully completed **all frontend tasks** for Faroway's web application. The app now features a premium, Y Combinator-worthy design with comprehensive UX enhancements.
 
 ---
 
@@ -192,7 +192,7 @@ Avoided touching:
 
 ## 🎯 Final Result
 
-The TripGenie web app now features:
+The Faroway web app now features:
 
 ### Landing Page
 🏆 **Award-winning design** with social proof, testimonials, and clear value prop  
@@ -227,6 +227,6 @@ All requested features have been implemented and enhanced beyond requirements. T
 
 ---
 
-**Delivered by:** Subagent (tripgenie-web-ux)  
+**Delivered by:** Subagent (faroway-web-ux)  
 **Date:** February 15, 2026  
 **Status:** ✅ COMPLETE & READY FOR INTEGRATION
