@@ -1,4 +1,4 @@
-# TripGenie Onboarding Redesign
+# Faroway Onboarding Redesign
 
 ## Problem Statement
 Users are being prompted to sign in before experiencing any value. This creates friction and reduces conversion.
@@ -159,7 +159,7 @@ Create a free account to:
 
 ### 3. Local Storage for Anonymous Trips
 - Store draft trips in AsyncStorage
-- Key: `tripgenie_anonymous_trips`
+- Key: `faroway_anonymous_trips`
 - Migrate to account on sign up
 
 ### 4. Update `ActivityCard`

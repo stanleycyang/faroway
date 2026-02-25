@@ -1,7 +1,7 @@
-# TripGenie UX Polish - Complete Summary
+# Faroway UX Polish - Complete Summary
 
 ## 🎯 Overview
-Comprehensive UX polish applied to TripGenie mobile app, transforming it into an award-winning, premium travel planning experience.
+Comprehensive UX polish applied to Faroway mobile app, transforming it into an award-winning, premium travel planning experience.
 
 ---
 
@@ -320,7 +320,7 @@ All transitions feel natural and premium.
 
 ## 🏆 Summary
 
-TripGenie now features:
+Faroway now features:
 - **Premium animations** that rival top travel apps
 - **Haptic feedback** on every interaction
 - **Smooth transitions** between screens

@@ -9,7 +9,7 @@ export const metadata: Metadata = {
   description:
     'Explore our curated travel guide collections covering budget travel, destination guides, vibe-based trips, trip planning, group travel, and insider tips.',
   openGraph: {
-    title: 'Travel Guides — Curated Content Collections | TripGenie',
+    title: 'Travel Guides — Curated Content Collections | Faroway',
     description:
       'Explore our curated travel guide collections covering budget travel, destination guides, vibe-based trips, trip planning, group travel, and insider tips.',
     type: 'website',
@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 export default async function GuidesIndexPage() {
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.faroway.ai';
 
   // Pre-fetch cluster post counts in parallel
   const clusterCounts: Record<string, number> = Object.fromEntries(

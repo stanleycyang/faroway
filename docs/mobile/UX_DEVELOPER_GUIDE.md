@@ -1,6 +1,6 @@
-# TripGenie UX Developer Guide
+# Faroway UX Developer Guide
 
-This guide explains the UX improvements made to TripGenie and how to extend them.
+This guide explains the UX improvements made to Faroway and how to extend them.
 
 ---
 
@@ -25,7 +25,7 @@ UX_DEVELOPER_GUIDE.md                # You are here
 ## 📁 File Structure
 
 ```
-tripgenie-mobile/
+faroway-mobile/
 ├── utils/
 │   └── haptics.ts                    # Haptic feedback wrapper
 ├── components/
@@ -641,7 +641,7 @@ const ExpensiveComponent = lazy(() => import('./ExpensiveComponent'));
 - [Expo Haptics Docs](https://docs.expo.dev/versions/latest/sdk/haptics/)
 - [React Native Animated](https://reactnative.dev/docs/animated)
 - [Expo Router Animations](https://docs.expo.dev/router/advanced/stack/#animation)
-- [TripGenie UX Summary](./UX_POLISH_SUMMARY.md)
+- [Faroway UX Summary](./UX_POLISH_SUMMARY.md)
 - [Testing Checklist](./UX_TESTING_CHECKLIST.md)
 
 ---
@@ -672,7 +672,7 @@ A: The Button component already includes haptics. Only add manually for custom c
 
 ## 🎉 You're Ready!
 
-The TripGenie UX system is now fully set up. Follow these patterns when adding new features, and you'll maintain the award-winning quality throughout the app.
+The Faroway UX system is now fully set up. Follow these patterns when adding new features, and you'll maintain the award-winning quality throughout the app.
 
 **Remember the golden rules:**
 1. **Haptics on every interaction** (but not too much!)

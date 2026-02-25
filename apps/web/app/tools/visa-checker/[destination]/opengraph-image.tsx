@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og';
 import { getGuideBySlug, getGuideSlugs } from '@/lib/destination-guides';
 import { getVisaSummary } from '@/lib/tools/visa-data';
 
-export const alt = 'TripGenie Visa Checker';
+export const alt = 'Faroway Visa Checker';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -123,7 +123,7 @@ export default async function OGImage({ params }: { params: Promise<{ destinatio
             TG
           </div>
           <div style={{ color: '#6b7280', fontSize: '20px', fontWeight: 500, display: 'flex' }}>
-            tripgenie.ai/tools/visa-checker
+            faroway.ai/tools/visa-checker
           </div>
         </div>
       </div>

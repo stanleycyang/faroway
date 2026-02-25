@@ -16,7 +16,7 @@ export function ShareButtons({
   url,
   title,
   description = '',
-  hashtags = ['TripGenie', 'TravelPlanning', 'AI'],
+  hashtags = ['Faroway', 'TravelPlanning', 'AI'],
   className = '',
   compact = false,
 }: ShareButtonsProps) {

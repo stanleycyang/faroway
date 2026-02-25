@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
 
     // Return the click ID and redirect URL with tracking params
     const trackingUrl = new URL(data.affiliateUrl);
-    trackingUrl.searchParams.set('utm_source', 'tripgenie');
+    trackingUrl.searchParams.set('utm_source', 'faroway');
     trackingUrl.searchParams.set('utm_medium', 'affiliate');
     trackingUrl.searchParams.set('utm_campaign', data.itemType);
     trackingUrl.searchParams.set('click_id', clickId);

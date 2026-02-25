@@ -76,7 +76,7 @@ async function searchUnsplash(query: string, page = 1): Promise<string[]> {
     const res = await fetch(url, {
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'TripGenie-BlogImageDiscovery/1.0',
+        'User-Agent': 'Faroway-BlogImageDiscovery/1.0',
       },
     });
     if (!res.ok) {

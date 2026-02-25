@@ -16,7 +16,7 @@ import {
   Check,
   ArrowRight,
 } from 'lucide-react';
-import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
+import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 import { FadeInOnScroll } from '@/components/landing/FadeInOnScroll';
 import { FAQAccordion } from '@/components/support/FAQAccordion';
 import { Header } from '@/components/Header';
@@ -28,7 +28,7 @@ function AppStoreButtons({ className = '' }: { className?: string }) {
   return (
     <div className={`flex flex-wrap gap-3 ${className}`}>
       <a
-        href="https://apps.apple.com/app/tripgenie"
+        href="https://apps.apple.com/app/faroway"
         className="inline-flex items-center gap-3 bg-white/15 hover:bg-white/25 border border-white/20 px-5 py-3 rounded-2xl font-semibold text-white transition-all backdrop-blur-sm hover:-translate-y-0.5"
       >
         <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
@@ -40,7 +40,7 @@ function AppStoreButtons({ className = '' }: { className?: string }) {
         </div>
       </a>
       <a
-        href="https://play.google.com/store/apps/details?id=com.tripgenie"
+        href="https://play.google.com/store/apps/details?id=com.faroway"
         className="inline-flex items-center gap-3 bg-white/15 hover:bg-white/25 border border-white/20 px-5 py-3 rounded-2xl font-semibold text-white transition-all backdrop-blur-sm hover:-translate-y-0.5"
       >
         <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
@@ -102,7 +102,7 @@ const helpCategories = [
     bullets: [
       'Booking.com hotel reservations',
       'Viator tours and activities',
-      'TripGenie is 100% free to use',
+      'Faroway is 100% free to use',
       'Refunds handled by providers',
     ],
   },
@@ -158,9 +158,9 @@ const quickStartSteps = [
 
 const faqItems = [
   {
-    question: 'Is TripGenie really free?',
+    question: 'Is Faroway really free?',
     answer:
-      'Yes! TripGenie is completely free to use. We earn revenue through affiliate commissions \u2014 when you book a hotel or activity through a link in your itinerary, the provider (like Booking.com or Viator) pays us a small referral fee. You pay the same price as if you booked directly. This affiliate model is how we keep the service free for everyone.',
+      'Yes! Faroway is completely free to use. We earn revenue through affiliate commissions \u2014 when you book a hotel or activity through a link in your itinerary, the provider (like Booking.com or Viator) pays us a small referral fee. You pay the same price as if you booked directly. This affiliate model is how we keep the service free for everyone.',
   },
   {
     question: 'How does AI trip planning work?',
@@ -175,22 +175,22 @@ const faqItems = [
   {
     question: 'How do I delete my account?',
     answer:
-      'You can delete your account by going to Settings \u2192 Account \u2192 Delete Account in the mobile app. Your personal data will be removed within 30 days of deletion. If you need help, contact us at support@tripgenie.ai.',
+      'You can delete your account by going to Settings \u2192 Account \u2192 Delete Account in the mobile app. Your personal data will be removed within 30 days of deletion. If you need help, contact us at support@faroway.ai.',
   },
   {
     question: 'Does the app work offline?',
     answer:
-      "Yes! TripGenie uses an offline-first architecture. Your trip itineraries are stored locally on your device so you can access them without an internet connection. Changes sync automatically when you're back online.",
+      "Yes! Faroway uses an offline-first architecture. Your trip itineraries are stored locally on your device so you can access them without an internet connection. Changes sync automatically when you're back online.",
   },
   {
     question: 'What data do you collect?',
     answer:
-      'We collect your account information (email, name via OAuth), travel preferences, trip data, basic usage analytics, and affiliate click/conversion data when you interact with booking links. We never sell your personal data. Affiliate partners only receive a referral ID \u2014 not your name or email. For full details, see our Privacy Policy at tripgenie.ai/privacy.',
+      'We collect your account information (email, name via OAuth), travel preferences, trip data, basic usage analytics, and affiliate click/conversion data when you interact with booking links. We never sell your personal data. Affiliate partners only receive a referral ID \u2014 not your name or email. For full details, see our Privacy Policy at faroway.ai/privacy.',
   },
   {
     question: 'How are bookings handled?',
     answer:
-      'TripGenie is not a travel agency or booking platform. We provide affiliate links to third-party providers like Booking.com (hotels) and Viator (tours and activities). When you click a link and complete a booking, your contract is directly with that provider \u2014 not with us. All pricing, availability, cancellations, refunds, and customer service are handled entirely by the booking provider under their own terms.',
+      'Faroway is not a travel agency or booking platform. We provide affiliate links to third-party providers like Booking.com (hotels) and Viator (tours and activities). When you click a link and complete a booking, your contract is directly with that provider \u2014 not with us. All pricing, availability, cancellations, refunds, and customer service are handled entirely by the booking provider under their own terms.',
   },
   {
     question: 'Is my data secure?',
@@ -198,9 +198,9 @@ const faqItems = [
       'Yes. We use Supabase for secure cloud storage with encryption in transit (TLS) and at rest. On mobile, sensitive tokens are stored using Expo SecureStore. We conduct regular security reviews to protect your data.',
   },
   {
-    question: 'Which countries does TripGenie support?',
+    question: 'Which countries does Faroway support?',
     answer:
-      'TripGenie supports 195+ countries worldwide. Whether you\'re planning a trip to Paris, Tokyo, Cape Town, or a hidden gem off the beaten path, our AI can generate a personalized itinerary for virtually any destination on earth.',
+      'Faroway supports 195+ countries worldwide. Whether you\'re planning a trip to Paris, Tokyo, Cape Town, or a hidden gem off the beaten path, our AI can generate a personalized itinerary for virtually any destination on earth.',
   },
   {
     question: 'Can I plan trips for groups?',
@@ -414,7 +414,7 @@ export default function SupportPage() {
                 <span className="text-gradient">questions</span>
               </h2>
               <p className="text-xl text-slate-500 max-w-2xl mx-auto">
-                Quick answers to the most common questions about TripGenie.
+                Quick answers to the most common questions about Faroway.
               </p>
             </div>
           </FadeInOnScroll>
@@ -458,11 +458,11 @@ export default function SupportPage() {
                   hours. We read every message.
                 </p>
                 <a
-                  href="mailto:support@tripgenie.ai"
+                  href="mailto:support@faroway.ai"
                   className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-amber-500 hover:from-primary-600 hover:to-amber-600 text-white px-6 py-3 rounded-xl font-semibold transition-all hover:-translate-y-0.5 shadow-md"
                 >
                   <Mail className="w-4 h-4" />
-                  support@tripgenie.ai
+                  support@faroway.ai
                 </a>
               </div>
             </FadeInOnScroll>
@@ -477,17 +477,17 @@ export default function SupportPage() {
                 </h3>
                 <p className="text-slate-500 mb-5 text-sm leading-relaxed">
                   Follow us for travel tips, updates, and to connect with other
-                  TripGenie travelers.
+                  Faroway travelers.
                 </p>
                 <div className="flex flex-wrap justify-center gap-3">
                   <a
-                    href="https://twitter.com/tripgenie"
+                    href="https://twitter.com/faroway"
                     className="inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors"
                   >
                     Twitter
                   </a>
                   <a
-                    href="https://instagram.com/tripgenie"
+                    href="https://instagram.com/faroway"
                     className="inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors"
                   >
                     Instagram
@@ -518,7 +518,7 @@ export default function SupportPage() {
               <span className="text-gradient-hero">mobile</span>
             </h2>
             <p className="text-xl text-white/70 mb-8 leading-relaxed max-w-2xl mx-auto">
-              Download TripGenie for offline access, GPS navigation, and
+              Download Faroway for offline access, GPS navigation, and
               real-time trip updates. Your trips, always in your pocket.
             </p>
 

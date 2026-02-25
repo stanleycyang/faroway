@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTripStore, Trip, TripDay, Activity } from '../../stores/tripStore';
-import { popularDestinations, IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
+import { popularDestinations, IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 import { colors, borderRadius } from '../../constants/theme';
 import { useItineraryGeneration, SearchResults } from '../../hooks/useItineraryGeneration';
 import { registry } from '../../lib/json-render/registry';

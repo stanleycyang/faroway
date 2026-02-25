@@ -1,4 +1,4 @@
-# TripGenie Backend Setup Complete ✅
+# Faroway Backend Setup Complete ✅
 
 ## 🎉 What Was Built
 
@@ -61,7 +61,7 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
 ### 2. Run Development Server
 
 ```bash
-cd /Users/stanleyyang/.openclaw/workspace/tripgenie/backend
+cd /Users/stanleyyang/.openclaw/workspace/faroway/backend
 npm run dev
 ```
 
@@ -169,6 +169,6 @@ All routes include authentication checks and are ready for database integration.
 
 ---
 
-**Built by**: TripGenie Backend Engineer (Subagent)  
+**Built by**: Faroway Backend Engineer (Subagent)  
 **Completed**: 2026-02-02 20:05 PST  
 **Status**: ✅ READY FOR DEVELOPMENT

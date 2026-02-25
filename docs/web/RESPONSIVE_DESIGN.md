@@ -1,4 +1,4 @@
-# TripGenie Responsive Design Documentation
+# Faroway Responsive Design Documentation
 
 ## Breakpoints Used
 

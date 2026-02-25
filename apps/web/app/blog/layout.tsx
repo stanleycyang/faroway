@@ -4,8 +4,8 @@ import { Footer } from '@/components/Footer';
 
 export const metadata: Metadata = {
   title: {
-    template: '%s | TripGenie Blog',
-    default: 'TripGenie Blog',
+    template: '%s | Faroway Blog',
+    default: 'Faroway Blog',
   },
 };
 

@@ -1,6 +1,6 @@
 /**
- * @tripgenie/api-client
- * Platform-agnostic API client for TripGenie.
+ * @faroway/api-client
+ * Platform-agnostic API client for Faroway.
  * Accepts baseUrl + getAuthToken for platform injection.
  */
 
@@ -15,9 +15,9 @@ import type {
   SearchStatusResponse,
   SearchResults,
   SearchProgress,
-} from '@tripgenie/types';
+} from '@faroway/types';
 
-export type { ApiResponse } from '@tripgenie/types';
+export type { ApiResponse } from '@faroway/types';
 
 // =============================================================================
 // Client Configuration
@@ -33,7 +33,7 @@ export interface ApiClientConfig {
 // API Client Class
 // =============================================================================
 
-export class TripGenieClient {
+export class FarowayClient {
   private baseUrl: string;
   private getAuthToken: () => string | null | Promise<string | null>;
   private timeout: number;

@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     'Generate a smart packing checklist for your trip. Customized by destination, trip type, and climate. Check items off and save your progress.',
   alternates: { canonical: '/tools/packing-list' },
   openGraph: {
-    title: 'Smart Packing List Generator | TripGenie',
+    title: 'Smart Packing List Generator | Faroway',
     description: 'Customized packing checklists for 14 destinations — free, no sign-up.',
     url: '/tools/packing-list',
   },
@@ -19,7 +19,7 @@ export default function PackingListPage() {
     '@type': 'WebApplication',
     name: 'Smart Packing List Generator',
     description: 'Generate a customized packing checklist based on your destination, trip type, and climate.',
-    url: 'https://www.tripgenie.ai/tools/packing-list',
+    url: 'https://www.faroway.ai/tools/packing-list',
     applicationCategory: 'TravelApplication',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     operatingSystem: 'All',

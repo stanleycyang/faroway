@@ -1,6 +1,6 @@
 /**
- * TripGenie AI Type Definitions
- * Re-exported from @tripgenie/types for backward compatibility.
+ * Faroway AI Type Definitions
+ * Re-exported from @faroway/types for backward compatibility.
  */
 export type {
   TripPreferences,
@@ -11,4 +11,4 @@ export type {
   ItineraryGenerationRequest,
   StreamingProgress,
   AIGenerationError,
-} from '@tripgenie/types';
+} from '@faroway/types';

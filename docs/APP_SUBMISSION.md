@@ -1,4 +1,4 @@
-# TripGenie - App Store Submission Checklist
+# Faroway - App Store Submission Checklist
 
 Last updated: February 3, 2026
 
@@ -8,8 +8,8 @@ Last updated: February 3, 2026
 
 ### ✅ App Configuration
 
-- [x] **Bundle Identifier:** `ai.tripgenie.app` (iOS)
-- [x] **Package Name:** `ai.tripgenie.app` (Android)
+- [x] **Bundle Identifier:** `ai.faroway.app` (iOS)
+- [x] **Package Name:** `ai.faroway.app` (Android)
 - [x] **Version:** 1.0.0
 - [x] **Build Number:** Managed by EAS
 - [x] **App Icons:** All sizes generated (1024x1024 source)
@@ -35,15 +35,15 @@ Last updated: February 3, 2026
 - [ ] Provisioning profiles generated
 
 ### App Store Connect Configuration
-- [ ] **App Name:** TripGenie - AI Travel Planner
+- [ ] **App Name:** Faroway - AI Travel Planner
 - [ ] **Subtitle:** Smart Itineraries in Seconds
 - [ ] **Category:** Primary: Travel, Secondary: Lifestyle
 - [ ] **Keywords:** (100 chars) - See APP_STORE_COPY.md
 - [ ] **Description:** (4000 chars) - See APP_STORE_COPY.md
 - [ ] **Promotional Text:** - See APP_STORE_COPY.md
-- [ ] **Support URL:** https://tripgenie.ai/support
-- [ ] **Marketing URL:** https://tripgenie.ai
-- [ ] **Privacy Policy URL:** https://tripgenie.ai/privacy
+- [ ] **Support URL:** https://faroway.ai/support
+- [ ] **Marketing URL:** https://faroway.ai
+- [ ] **Privacy Policy URL:** https://faroway.ai/privacy
 
 ### Screenshots Required
 All screenshots must be actual app captures, not mockups.
@@ -92,7 +92,7 @@ All screenshots must be actual app captures, not mockups.
 Add notes for Apple reviewers:
 ```
 Demo account for testing:
-Email: demo@tripgenie.ai
+Email: demo@faroway.ai
 Password: DemoTrip2026!
 
 The app uses AI to generate travel itineraries. Test by:
@@ -132,7 +132,7 @@ eas submit --platform ios --latest
 - [ ] Service account JSON for automated submissions
 
 ### Store Listing
-- [ ] **App Name:** TripGenie - AI Travel Planner
+- [ ] **App Name:** Faroway - AI Travel Planner
 - [ ] **Short Description:** (80 chars) - See APP_STORE_COPY.md
 - [ ] **Full Description:** (4000 chars) - See APP_STORE_COPY.md
 - [ ] **Category:** Travel & Local
@@ -157,7 +157,7 @@ eas submit --platform ios --latest
 - Expected rating: Everyone / PEGI 3
 
 ### Privacy & Policies
-- [ ] **Privacy Policy URL:** https://tripgenie.ai/privacy
+- [ ] **Privacy Policy URL:** https://faroway.ai/privacy
 - [ ] **Data Safety form completed:**
   - Location: Optional, shared for navigation
   - Personal info: Email for account
@@ -283,14 +283,14 @@ If rejected, common issues and fixes:
 - **App Store Connect:** https://appstoreconnect.apple.com
 - **Google Play Console:** https://play.google.com/console
 - **EAS Dashboard:** https://expo.dev
-- **App Privacy:** https://tripgenie.ai/privacy
-- **App Terms:** https://tripgenie.ai/terms
-- **Support:** https://tripgenie.ai/support
+- **App Privacy:** https://faroway.ai/privacy
+- **App Terms:** https://faroway.ai/terms
+- **Support:** https://faroway.ai/support
 
 ---
 
 ## Contacts
 
 **Developer Account Owner:** Stanley Yang  
-**Support Email:** support@tripgenie.ai  
-**Technical Contact:** dev@tripgenie.ai
+**Support Email:** support@faroway.ai  
+**Technical Contact:** dev@faroway.ai

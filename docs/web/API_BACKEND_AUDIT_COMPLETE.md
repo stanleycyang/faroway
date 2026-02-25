@@ -1,8 +1,8 @@
-# TripGenie API & Backend Audit - Complete
+# Faroway API & Backend Audit - Complete
 
 ## Summary
 
-I've completed a comprehensive audit and enhancement of the TripGenie API & Backend. Here's what was accomplished:
+I've completed a comprehensive audit and enhancement of the Faroway API & Backend. Here's what was accomplished:
 
 ---
 

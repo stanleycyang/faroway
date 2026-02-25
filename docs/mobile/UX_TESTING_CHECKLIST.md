@@ -1,4 +1,4 @@
-# TripGenie UX Testing Checklist
+# Faroway UX Testing Checklist
 
 Use this checklist to verify all UX improvements are working correctly.
 

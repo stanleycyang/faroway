@@ -1,7 +1,7 @@
 import { ImageResponse } from 'next/og';
 import { getPostBySlug } from '@/lib/blog';
 
-export const alt = 'TripGenie Blog';
+export const alt = 'Faroway Blog';
 export const size = { width: 1200, height: 630 };
 export const contentType = 'image/png';
 
@@ -9,7 +9,7 @@ export default async function OGImage({ params }: { params: Promise<{ slug: stri
   const { slug } = await params;
   const post = await getPostBySlug(slug);
 
-  const title = post?.title || 'TripGenie Blog';
+  const title = post?.title || 'Faroway Blog';
   const category = post?.category || 'Travel';
   const readingTime = post?.readingTime || 5;
 
@@ -100,7 +100,7 @@ export default async function OGImage({ params }: { params: Promise<{ slug: stri
               <path d="M12 19v-8" />
             </svg>
           </div>
-          <span style={{ color: '#9ca3af', fontSize: '20px', fontWeight: 500 }}>tripgenie.ai/blog</span>
+          <span style={{ color: '#9ca3af', fontSize: '20px', fontWeight: 500 }}>faroway.ai/blog</span>
         </div>
       </div>
     ),

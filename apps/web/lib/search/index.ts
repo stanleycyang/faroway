@@ -1,5 +1,5 @@
 /**
- * TripGenie Search Module
+ * Faroway Search Module
  * Exports the complete search system
  */
 

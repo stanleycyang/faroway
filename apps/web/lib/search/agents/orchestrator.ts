@@ -6,7 +6,7 @@
 import { generateObject, gateway as defaultGateway, createGateway } from 'ai';
 import { z } from 'zod';
 import { SearchInput, SearchPlan } from '../types';
-import { VIBE_KEYWORDS, BUDGET_RANGES } from '@tripgenie/constants';
+import { VIBE_KEYWORDS, BUDGET_RANGES } from '@faroway/constants';
 
 const aiGateway = process.env.AI_GATEWAY_API_KEY
   ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })

@@ -35,14 +35,14 @@ export async function generateMetadata({
     description: `Find the best month to visit ${dest.name}, ${dest.country}. Monthly temperature, rainfall, crowd levels, events, and tips. Best months: ${climate.bestMonths.join(', ')}.`,
     alternates: { canonical: `/tools/best-time-to-visit/${slug}` },
     openGraph: {
-      title: `Best Time to Visit ${dest.name} | TripGenie`,
+      title: `Best Time to Visit ${dest.name} | Faroway`,
       description: `Climate data & travel tips for ${dest.name}. Best months: ${climate.bestMonths.join(', ')}.`,
       url: `/tools/best-time-to-visit/${slug}`,
       images: [{ url: dest.heroImage, width: 1920, height: 1080, alt: dest.name }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `Best Time to Visit ${dest.name} | TripGenie`,
+      title: `Best Time to Visit ${dest.name} | Faroway`,
       description: `Climate data & travel tips for ${dest.name}. Best months: ${climate.bestMonths.join(', ')}.`,
       images: [dest.heroImage],
     },
@@ -71,9 +71,9 @@ export default async function BestTimeDestinationPage({
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Tools', item: 'https://www.tripgenie.ai/tools' },
-      { '@type': 'ListItem', position: 2, name: 'Best Time to Visit', item: 'https://www.tripgenie.ai/tools/best-time-to-visit' },
-      { '@type': 'ListItem', position: 3, name: dest.name, item: `https://www.tripgenie.ai/tools/best-time-to-visit/${slug}` },
+      { '@type': 'ListItem', position: 1, name: 'Tools', item: 'https://www.faroway.ai/tools' },
+      { '@type': 'ListItem', position: 2, name: 'Best Time to Visit', item: 'https://www.faroway.ai/tools/best-time-to-visit' },
+      { '@type': 'ListItem', position: 3, name: dest.name, item: `https://www.faroway.ai/tools/best-time-to-visit/${slug}` },
     ],
   };
 
@@ -240,7 +240,7 @@ export default async function BestTimeDestinationPage({
 
         <ToolCTA
           title={`Ready for ${dest.name}?`}
-          description={`Let TripGenie create your personalized ${dest.name} itinerary — completely free.`}
+          description={`Let Faroway create your personalized ${dest.name} itinerary — completely free.`}
         />
         <RelatedTools currentSlug="best-time-to-visit" />
       </main>

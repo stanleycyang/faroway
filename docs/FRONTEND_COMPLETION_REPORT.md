@@ -1,6 +1,6 @@
-# 🎉 TripGenie Frontend - Landing Page Completion Report
+# 🎉 Faroway Frontend - Landing Page Completion Report
 
-**Agent**: frontend-agent (tripgenie-frontend)  
+**Agent**: frontend-agent (faroway-frontend)  
 **Task**: TASK-010 - Build landing page with hero section  
 **Status**: ✅ COMPLETE  
 **Completion Date**: 2026-02-02 20:10 PST
@@ -21,10 +21,10 @@
 2. ✅ **`/backend/app/(marketing)/layout.tsx`** - Marketing layout with SEO metadata
 
 ### Assets
-1. ✅ **`/backend/public/icon.png`** - TripGenie logo (465KB)
+1. ✅ **`/backend/public/icon.png`** - Faroway logo (465KB)
 
 ### Styling
-1. ✅ **`/backend/app/globals.css`** - Updated with TripGenie color scheme
+1. ✅ **`/backend/app/globals.css`** - Updated with Faroway color scheme
 
 ---
 
@@ -139,7 +139,7 @@ backend/
 │   ├── (marketing)/
 │   │   ├── page.tsx          # 11.6KB - Full landing page
 │   │   └── layout.tsx        # 426B - Marketing layout
-│   ├── globals.css           # Updated with TripGenie colors
+│   ├── globals.css           # Updated with Faroway colors
 │   └── layout.tsx            # Root layout
 ├── components/
 │   ├── Button.tsx            # 1.2KB - Reusable button
@@ -148,7 +148,7 @@ backend/
 │   ├── DestinationCard.tsx   # 1.2KB - Destination card
 │   └── index.ts              # 158B - Component exports
 └── public/
-    └── icon.png              # 465KB - TripGenie logo
+    └── icon.png              # 465KB - Faroway logo
 ```
 
 ### Performance
@@ -168,7 +168,7 @@ backend/
 ## 🚀 How to Run
 
 ```bash
-cd /Users/stanleyyang/.openclaw/workspace/tripgenie/backend
+cd /Users/stanleyyang/.openclaw/workspace/faroway/backend
 npm run dev
 ```
 
@@ -183,7 +183,7 @@ Then visit: http://localhost:3000
 - [x] Build Popular destinations carousel
 - [x] Add "Get Started" CTA that links to trip creation
 - [x] Create Footer with links
-- [x] Use TripGenie design system (Primary color: #ec7a1c)
+- [x] Use Faroway design system (Primary color: #ec7a1c)
 - [x] Implement dark backgrounds for hero sections
 - [x] Apply clean, Airbnb-inspired aesthetic
 - [x] Create shared components:
@@ -230,19 +230,19 @@ Then visit: http://localhost:3000
 
 ## 💬 Final Notes
 
-The TripGenie web landing page is now complete and ready for production. The design is:
+The Faroway web landing page is now complete and ready for production. The design is:
 - Visually stunning with professional aesthetics
 - Fully responsive across all devices
 - Consistent with the mobile app branding
 - Conversion-optimized with clear CTAs
 - Built with reusable, maintainable components
 
-The landing page successfully captures the TripGenie brand identity: magical AI-powered travel planning made simple and accessible.
+The landing page successfully captures the Faroway brand identity: magical AI-powered travel planning made simple and accessible.
 
 **Ready for next phase**: Trip creation flow and itinerary builder!
 
 ---
 
 **Report Generated**: 2026-02-02 20:10 PST  
-**Agent**: frontend-agent (tripgenie-frontend)  
+**Agent**: frontend-agent (faroway-frontend)  
 **Session**: agent:main:subagent:5c363371-a6d6-4562-b782-415a1c6d5dcc

@@ -1,6 +1,6 @@
 {
-  "name": "TripGenie - AI Travel Planner",
-  "short_name": "TripGenie",
+  "name": "Faroway - AI Travel Planner",
+  "short_name": "Faroway",
   "description": "Plan your perfect trip with AI. Get personalized day-by-day itineraries, find hotels, flights, and activities.",
   "start_url": "/",
   "display": "standalone",
@@ -44,7 +44,7 @@
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
-      "label": "TripGenie Landing Page"
+      "label": "Faroway Landing Page"
     },
     {
       "src": "/screenshot-2.png",

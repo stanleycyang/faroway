@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { supabase, API_BASE_URL, getAuthHeaders } from '../lib/supabase';
 import { useTripStore, Trip, TripInput } from '../stores/tripStore';
 import { syncService, networkMonitor, offlineStorage } from '../lib/offline';
-import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
+import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 
 interface ApiTrip {
   id: string;

@@ -10,7 +10,7 @@ import {
   ArrowRight,
   Info,
 } from 'lucide-react';
-import { BUDGET_RANGES } from '@tripgenie/constants';
+import { BUDGET_RANGES } from '@faroway/constants';
 import { getGuideBySlug, getGuideSlugs } from '@/lib/destination-guides';
 import { getCostProfile, getCostLevel } from '@/lib/tools/cost-data';
 import { ToolCTA } from '@/components/tools/ToolCTA';
@@ -36,14 +36,14 @@ export async function generateMetadata({
     description: `Plan your ${dest.name} budget: ${level} destination. Daily costs from $${Math.round(BUDGET_RANGES.budget.daily * cost.costMultiplier)} (budget) to $${Math.round(BUDGET_RANGES.luxury.daily * cost.costMultiplier)} (luxury). Currency: ${cost.currency}. Sample prices and detailed breakdowns.`,
     alternates: { canonical: `/tools/trip-cost/${slug}` },
     openGraph: {
-      title: `Trip Cost: ${dest.name} | TripGenie`,
+      title: `Trip Cost: ${dest.name} | Faroway`,
       description: `${dest.name} travel costs — ${level}. Budget from $${Math.round(BUDGET_RANGES.budget.daily * cost.costMultiplier)}/day.`,
       url: `/tools/trip-cost/${slug}`,
       images: [{ url: dest.heroImage, width: 1920, height: 1080, alt: dest.name }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `Trip Cost: ${dest.name} | TripGenie`,
+      title: `Trip Cost: ${dest.name} | Faroway`,
       description: `${dest.name} travel costs — ${level}. Budget from $${Math.round(BUDGET_RANGES.budget.daily * cost.costMultiplier)}/day.`,
       images: [dest.heroImage],
     },
@@ -86,9 +86,9 @@ export default async function TripCostDestinationPage({
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Tools', item: 'https://www.tripgenie.ai/tools' },
-      { '@type': 'ListItem', position: 2, name: 'Trip Cost', item: 'https://www.tripgenie.ai/tools/trip-cost' },
-      { '@type': 'ListItem', position: 3, name: dest.name, item: `https://www.tripgenie.ai/tools/trip-cost/${slug}` },
+      { '@type': 'ListItem', position: 1, name: 'Tools', item: 'https://www.faroway.ai/tools' },
+      { '@type': 'ListItem', position: 2, name: 'Trip Cost', item: 'https://www.faroway.ai/tools/trip-cost' },
+      { '@type': 'ListItem', position: 3, name: dest.name, item: `https://www.faroway.ai/tools/trip-cost/${slug}` },
     ],
   };
 
@@ -303,7 +303,7 @@ export default async function TripCostDestinationPage({
 
         <ToolCTA
           title={`Ready for ${dest.name}?`}
-          description={`Let TripGenie create your personalized ${dest.name} itinerary — completely free.`}
+          description={`Let Faroway create your personalized ${dest.name} itinerary — completely free.`}
         />
         <RelatedTools currentSlug="trip-cost" />
       </main>

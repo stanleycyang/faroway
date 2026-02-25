@@ -267,7 +267,7 @@ export function generateGYGAffiliateUrl(
 ): string {
   const baseUrl = `https://www.getyourguide.com/activity-t${activityId}`;
   const params = new URLSearchParams({
-    partner_id: GYG_PARTNER_ID || 'tripgenie',
+    partner_id: GYG_PARTNER_ID || 'faroway',
     cmp: trackingId,
     ...(options?.date && { date: options.date }),
   });

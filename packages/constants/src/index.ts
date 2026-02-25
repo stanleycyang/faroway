@@ -1,6 +1,6 @@
 /**
- * @tripgenie/constants
- * Shared constants for TripGenie web and mobile apps.
+ * @faroway/constants
+ * Shared constants for Faroway web and mobile apps.
  */
 
 export { popularDestinations, travelVibes, travelerTypes } from './destinations';

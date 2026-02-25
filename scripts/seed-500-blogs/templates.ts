@@ -24,7 +24,7 @@ function estimateReadingTime(content: string): number {
 }
 
 function cta(dest: Destination): string {
-  return `\n\n---\n\n*Planning a trip to ${dest.name}? [Let TripGenie create your perfect itinerary](/) — it's free and takes just 60 seconds.*`;
+  return `\n\n---\n\n*Planning a trip to ${dest.name}? [Let Faroway create your perfect itinerary](/) — it's free and takes just 60 seconds.*`;
 }
 
 function pick<T>(arr: T[], n: number): T[] {
@@ -112,7 +112,7 @@ ${dest.name} has a **${dest.climate}** climate. Here are a few practical pointer
 ## Pro Tips
 
 1. **Book flights midweek** — Tuesday and Wednesday departures are typically cheaper.
-2. **Use TripGenie's AI planner** to automatically optimize your dates based on weather and prices.
+2. **Use Faroway's AI planner** to automatically optimize your dates based on weather and prices.
 3. **Try local dishes** like **${topFoods[0]}** and **${topFoods[1]}** that taste even better when enjoyed without the rush of peak-season dining.
 4. **Travel insurance** is worth it no matter when you go — weather surprises happen in every season.
 
@@ -310,7 +310,7 @@ Transport can eat into your budget if you are not strategic. Here is how to keep
 1. **Travel in shoulder season** — Prices drop 20–40% compared to ${dest.peakSeason}.
 2. **Learn basic phrases in ${dest.lang}** — Locals often offer better prices to travelers who make the effort.
 3. **Use a no-foreign-transaction-fee credit card** to avoid currency conversion charges.
-4. **Book activities through TripGenie** — our AI finds the best-value experiences automatically.
+4. **Book activities through Faroway** — our AI finds the best-value experiences automatically.
 5. **Avoid tourist-trap restaurants** directly facing major attractions. Walk one block back for the same food at half the price.
 
 ## Is ${dest.name} Worth It on a Budget?
@@ -440,7 +440,7 @@ For most first-time visitors, **${areas[0]}** offers the best balance of conveni
     content,
     category: 'Travel Planning',
     tags: [dest.name, 'where to stay', 'neighborhoods', 'hotels', dest.country],
-    author_slug: 'tripgenie-team',
+    author_slug: 'faroway-team',
     reading_time: estimateReadingTime(content),
     cover_image_alt: `Charming neighborhood street in ${dest.name}, ${dest.country} — where to stay guide`,
     cluster: 'trip-planning-packing',
@@ -629,7 +629,7 @@ One of the biggest mistakes first-timers make is cramming too many activities in
 
 - Download offline maps before you arrive.
 - ${tips[0] || 'A local SIM card or eSIM is cheaper than international roaming.'}
-- Use TripGenie to create a flexible itinerary that adapts to your pace.
+- Use Faroway to create a flexible itinerary that adapts to your pace.
 
 ## Common Mistakes to Avoid
 
@@ -656,7 +656,7 @@ ${dest.name} is one of those places that exceeds expectations if you give it the
     content,
     category: 'Travel Tips',
     tags: [dest.name, 'travel tips', 'first time', 'beginner guide', dest.country],
-    author_slug: 'tripgenie-team',
+    author_slug: 'faroway-team',
     reading_time: estimateReadingTime(content),
     cover_image_alt: `First-time visitor exploring ${dest.name}, ${dest.country}`,
     cluster: 'insider-tips',
@@ -740,7 +740,7 @@ ${photoSpots[2] ? `- **${photoSpots[2]}** — A unique perspective on ${dest.nam
 2. **Wander without a map.** Some of the best discoveries happen when you are slightly lost.
 3. **Visit on weekdays.** Even hidden gems can get crowded on weekends.
 4. **Go early or late.** The golden hours — just after sunrise and before sunset — reward the committed.
-5. **Use TripGenie's "off-the-beaten-path" setting** to automatically include hidden gems in your itinerary.
+5. **Use Faroway's "off-the-beaten-path" setting** to automatically include hidden gems in your itinerary.
 
 ## Respecting Hidden Gems
 
@@ -995,7 +995,7 @@ Worth the journey for travelers who want to see a different side of the region. 
 3. **Keep small bills and coins** handy for buses and taxis that do not accept cards.
 4. **Airport pickups** booked through your hotel are often competitively priced and more reliable than random taxis.
 5. ${tips[1] || 'Ask locals for transport tips — they know shortcuts and deals that are not in any app.'}
-6. **Use TripGenie** to plan routes between attractions automatically — it factors in transit times and opening hours.
+6. **Use Faroway** to plan routes between attractions automatically — it factors in transit times and opening hours.
 
 ## Budget Transport Summary
 
@@ -1133,7 +1133,7 @@ The insider's choice. **${dayTrips[4]}** does not show up on most tourist itiner
 2. **Start early, return late** — maximize your time at the destination.
 3. **Learn two phrases** in ${dest.lang}: "How much?" and "Thank you." They work everywhere.
 4. **Take photos of bus schedules and departure points** when you arrive — they are easy to forget later.
-5. **Use TripGenie** to add day trips to your itinerary automatically — the AI optimizes timing so you do not waste hours on logistics.
+5. **Use Faroway** to add day trips to your itinerary automatically — the AI optimizes timing so you do not waste hours on logistics.
 
 ## Our Top Pick
 
@@ -1146,7 +1146,7 @@ If you only have time for one day trip, choose **${dayTrips[0] || 'the most popu
     content,
     category: 'Travel Planning',
     tags: [dest.name, 'day trips', 'excursions', 'nearby', dest.country],
-    author_slug: 'tripgenie-team',
+    author_slug: 'faroway-team',
     reading_time: estimateReadingTime(content),
     cover_image_alt: `Day trip destination near ${dest.name}, ${dest.country} — excursion guide`,
     cluster: 'destination-guides',
@@ -1162,13 +1162,13 @@ const templateGenerators: Array<(dest: Destination) => BlogEntry> = [
   templateBestTimeToVisit,   // 1 — sarah-chen
   templateItinerary,         // 2 — james-miller
   templateBudget,            // 3 — sarah-chen
-  templateWhereToStay,       // 4 — tripgenie-team
+  templateWhereToStay,       // 4 — faroway-team
   templateFood,              // 5 — sarah-chen
-  templateFirstTimeTips,     // 6 — tripgenie-team
+  templateFirstTimeTips,     // 6 — faroway-team
   templateHiddenGems,        // 7 — sarah-chen
   templateSafetyAndSolo,     // 8 — sarah-chen
   templateTransport,         // 9 — james-miller
-  templateDayTrips,          // 10 — tripgenie-team
+  templateDayTrips,          // 10 — faroway-team
 ];
 
 // ---------------------------------------------------------------------------

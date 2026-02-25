@@ -8,10 +8,10 @@ import type { Trip, TripInput } from '../../stores/tripStore';
 
 // Storage keys
 const STORAGE_KEYS = {
-  TRIPS: '@tripgenie/trips',
-  PENDING_MUTATIONS: '@tripgenie/pending_mutations',
-  LAST_SYNC: '@tripgenie/last_sync',
-  SYNC_META: '@tripgenie/sync_meta',
+  TRIPS: '@faroway/trips',
+  PENDING_MUTATIONS: '@faroway/pending_mutations',
+  LAST_SYNC: '@faroway/last_sync',
+  SYNC_META: '@faroway/sync_meta',
 } as const;
 
 // Mutation types for offline queue

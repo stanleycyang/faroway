@@ -1,4 +1,4 @@
-# TripGenie Mobile — Security & UX Audit Report
+# Faroway Mobile — Security & UX Audit Report
 
 **Date:** 2026-02-16  
 **Auditor:** Claude (automated)
@@ -34,7 +34,7 @@
 ### ✅ Already Good
 - **Auth token storage:** Supabase session uses `expo-secure-store` (SecureStore/Keychain) — properly secured
 - **In-memory API token:** `services/api.ts` token is memory-only, not persisted insecurely
-- **Deep linking:** Scheme is `tripgenie://` with proper auth callback handling
+- **Deep linking:** Scheme is `faroway://` with proper auth callback handling
 - **No hardcoded API keys/secrets** in source — all use env vars (`EXPO_PUBLIC_*`)
 - **HTTPS enforced** for Supabase URLs and production API
 

@@ -21,7 +21,7 @@ import {
 import { FadeInOnScroll } from '@/components/landing/FadeInOnScroll';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
-import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
+import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 
 // ─── App Store Buttons ───────────────────────────────────────────────────────
 
@@ -29,7 +29,7 @@ function AppStoreButtons({ className = '' }: { className?: string }) {
   return (
     <div className={`flex flex-wrap gap-3 ${className}`}>
       <a
-        href="https://apps.apple.com/app/tripgenie"
+        href="https://apps.apple.com/app/faroway"
         className="inline-flex items-center gap-3 bg-white/15 hover:bg-white/25 border border-white/20 px-5 py-3 rounded-2xl font-semibold text-white transition-all backdrop-blur-sm hover:-translate-y-0.5"
       >
         <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
@@ -41,7 +41,7 @@ function AppStoreButtons({ className = '' }: { className?: string }) {
         </div>
       </a>
       <a
-        href="https://play.google.com/store/apps/details?id=com.tripgenie"
+        href="https://play.google.com/store/apps/details?id=com.faroway"
         className="inline-flex items-center gap-3 bg-white/15 hover:bg-white/25 border border-white/20 px-5 py-3 rounded-2xl font-semibold text-white transition-all backdrop-blur-sm hover:-translate-y-0.5"
       >
         <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
@@ -121,7 +121,7 @@ const values = [
     icon: Globe,
     gradient: 'from-teal-500 to-emerald-500',
     title: 'Accessibility',
-    description: 'Great travel experiences shouldn\'t be reserved for the privileged few. TripGenie is free forever — because everyone deserves to explore the world.',
+    description: 'Great travel experiences shouldn\'t be reserved for the privileged few. Faroway is free forever — because everyone deserves to explore the world.',
   },
   {
     icon: Shield,
@@ -188,7 +188,7 @@ export default function AboutPage() {
               <span className="text-gradient-hero">shouldn&apos;t take weeks to plan</span>
             </h1>
             <p className="text-lg lg:text-xl text-white/80 mb-8 max-w-2xl leading-relaxed">
-              TripGenie is an AI-powered travel planner that turns your dream
+              Faroway is an AI-powered travel planner that turns your dream
               destination into a complete, personalized itinerary — in seconds,
               not weeks. Because life&apos;s too short to spend it planning instead
               of exploring.
@@ -219,7 +219,7 @@ export default function AboutPage() {
 
               <div className="max-w-2xl mx-auto space-y-4 text-lg text-slate-600 leading-relaxed">
                 <p>
-                  We started TripGenie because we were tired of the same problem
+                  We started Faroway because we were tired of the same problem
                   every traveler faces: spending more time planning the trip than
                   enjoying it. The best travel advice was locked behind expensive
                   agencies or buried in endless blog posts.
@@ -303,7 +303,7 @@ export default function AboutPage() {
                 <span className="text-gradient">how you travel</span>
               </h2>
               <p className="text-xl text-slate-500 max-w-2xl mx-auto">
-                Not another generic recommendation engine. TripGenie learns your style.
+                Not another generic recommendation engine. Faroway learns your style.
               </p>
             </div>
           </FadeInOnScroll>
@@ -350,7 +350,7 @@ export default function AboutPage() {
               <h2 className="text-3xl lg:text-4xl font-bold text-white mb-2">
                 Built for real travelers
               </h2>
-              <p className="text-white/60 text-lg">Here&apos;s what TripGenie delivers</p>
+              <p className="text-white/60 text-lg">Here&apos;s what Faroway delivers</p>
             </div>
           </FadeInOnScroll>
 
@@ -422,7 +422,7 @@ export default function AboutPage() {
                 <span className="text-gradient">your pocket</span>
               </h2>
               <p className="text-xl text-slate-500 max-w-2xl mx-auto">
-                The milestones that brought TripGenie to life.
+                The milestones that brought Faroway to life.
               </p>
             </div>
           </FadeInOnScroll>

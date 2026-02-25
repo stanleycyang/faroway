@@ -1,4 +1,4 @@
-# TripGenie Backend Scripts
+# Faroway Backend Scripts
 
 This directory contains utility scripts for database testing, migrations, and other backend operations.
 
@@ -41,7 +41,7 @@ npx tsx scripts/test-supabase.ts
 **Expected output**:
 ```
 ╔════════════════════════════════════════════╗
-║   TripGenie Supabase Connection Test      ║
+║   Faroway Supabase Connection Test      ║
 ╚════════════════════════════════════════════╝
 
 ✅ Database connection successful!
@@ -153,7 +153,7 @@ const anon = createClient(url, anonKey)
 
 ⚠️ **Important**:
 - Always clean up test data
-- Use test email domains (e.g., `@tripgenie.test`)
+- Use test email domains (e.g., `@faroway.test`)
 - Never commit `.env.local` with real credentials
 - Use service role key only when necessary
 - Add confirmation prompts for destructive operations

@@ -9,7 +9,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, '.'),
-      '@tripgenie/validation': path.resolve(__dirname, '../../packages/validation/src/index.ts'),
+      '@faroway/validation': path.resolve(__dirname, '../../packages/validation/src/index.ts'),
     },
   },
 })

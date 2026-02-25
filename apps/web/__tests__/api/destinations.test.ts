@@ -89,7 +89,7 @@ vi.mock('@/lib/security/rate-limit', () => ({
   getClientIp: vi.fn(() => '127.0.0.1'),
 }));
 
-vi.mock('@tripgenie/constants', () => ({
+vi.mock('@faroway/constants', () => ({
   popularDestinations: [
     {
       id: 'tokyo',
@@ -239,7 +239,7 @@ describe('GET /api/destinations/popular', () => {
 
     expect(res.status).toBe(200);
     expect(body.destinations).toHaveLength(2);
-    // Fallback uses popularDestinations from @tripgenie/constants
+    // Fallback uses popularDestinations from @faroway/constants
     expect(body.destinations[0].name).toBe('Tokyo');
     expect(body.destinations[1].name).toBe('Bali');
     expect(body.total).toBe(2);

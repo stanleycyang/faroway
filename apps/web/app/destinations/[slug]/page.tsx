@@ -38,7 +38,7 @@ export async function generateMetadata({
     description: `Plan your ${dest.name} trip with our complete guide. Discover the best things to do, local travel tips, a 3-day sample itinerary, and practical info for visiting ${dest.name}, ${dest.country}.`,
     alternates: { canonical: `/destinations/${dest.slug}` },
     openGraph: {
-      title: `${dest.name} Travel Guide | TripGenie`,
+      title: `${dest.name} Travel Guide | Faroway`,
       description: dest.tagline,
       type: 'article',
       url: `/destinations/${dest.slug}`,
@@ -46,7 +46,7 @@ export async function generateMetadata({
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${dest.name} Travel Guide | TripGenie`,
+      title: `${dest.name} Travel Guide | Faroway`,
       description: dest.tagline,
       images: [dest.heroImage],
     },
@@ -70,9 +70,9 @@ export default async function DestinationGuidePage({
       '@context': 'https://schema.org',
       '@type': 'BreadcrumbList',
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.tripgenie.ai' },
-        { '@type': 'ListItem', position: 2, name: 'Destinations', item: 'https://www.tripgenie.ai/destinations' },
-        { '@type': 'ListItem', position: 3, name: dest.name, item: `https://www.tripgenie.ai/destinations/${dest.slug}` },
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.faroway.ai' },
+        { '@type': 'ListItem', position: 2, name: 'Destinations', item: 'https://www.faroway.ai/destinations' },
+        { '@type': 'ListItem', position: 3, name: dest.name, item: `https://www.faroway.ai/destinations/${dest.slug}` },
       ],
     },
     {
@@ -217,7 +217,7 @@ export default async function DestinationGuidePage({
               </h2>
             </div>
             <p className="text-slate-500 mb-10">
-              A taste of what TripGenie can create — fully customized to your preferences.
+              A taste of what Faroway can create — fully customized to your preferences.
             </p>
 
             <div className="relative">
@@ -303,7 +303,7 @@ export default async function DestinationGuidePage({
               Ready for {dest.name}?
             </h2>
             <p className="text-lg text-white/80 mb-8 max-w-xl mx-auto">
-              TripGenie creates a personalized {dest.name} itinerary in 60 seconds — completely free and tailored to your style.
+              Faroway creates a personalized {dest.name} itinerary in 60 seconds — completely free and tailored to your style.
             </p>
             <Link
               href="/create"

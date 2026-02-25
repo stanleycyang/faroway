@@ -57,7 +57,7 @@ function parseFile(filePath: string): MdxRow | null {
       description: data.description || '',
       content,
       content_source: 'database',
-      author_slug: data.author || 'tripgenie-team',
+      author_slug: data.author || 'faroway-team',
       category: data.category || 'Travel Tips',
       tags: data.tags || [],
       cover_image: data.coverImage || '',

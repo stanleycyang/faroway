@@ -13,7 +13,7 @@ import { ViewTracker } from '@/components/blog/ViewTracker';
 import { ProseWrapper } from '@/components/blog/MDXComponents';
 import { FadeInOnScroll } from '@/components/landing/FadeInOnScroll';
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai';
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.faroway.ai';
 
 export async function generateStaticParams() {
   return (await getAllPosts()).map((p) => ({ slug: p.slug }));
@@ -242,7 +242,7 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
     author: { '@type': 'Person', name: post.author.name },
     publisher: {
       '@type': 'Organization',
-      name: 'TripGenie',
+      name: 'Faroway',
       logo: { '@type': 'ImageObject', url: `${baseUrl}/icon.png` },
     },
     mainEntityOfPage: { '@type': 'WebPage', '@id': postUrl },

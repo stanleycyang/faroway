@@ -44,7 +44,7 @@ function buildTripMeta(trip: TripData, token: string, baseUrl: string) {
   }
 
   const title = `${duration} ${destination} Trip Itinerary`
-  const description = `Explore this ${duration ? duration + ' ' : ''}AI-generated itinerary to ${destination}${dateRange ? ` (${dateRange})` : ''}. Created with TripGenie for ${travelers} traveler${travelers > 1 ? 's' : ''}.`
+  const description = `Explore this ${duration ? duration + ' ' : ''}AI-generated itinerary to ${destination}${dateRange ? ` (${dateRange})` : ''}. Created with Faroway for ${travelers} traveler${travelers > 1 ? 's' : ''}.`
 
   const jsonLd = {
     '@context': 'https://schema.org',
@@ -64,23 +64,23 @@ function buildTripMeta(trip: TripData, token: string, baseUrl: string) {
 
 export async function generateMetadata({ params }: { params: Promise<{ token: string }> }): Promise<Metadata> {
   const { token } = await params
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.faroway.ai'
 
   const trip = await getTrip(token)
 
   if (!trip) {
     return {
-      title: 'Shared Trip Itinerary | TripGenie',
-      description: 'View this AI-generated travel itinerary on TripGenie',
+      title: 'Shared Trip Itinerary | Faroway',
+      description: 'View this AI-generated travel itinerary on Faroway',
       openGraph: {
-        title: 'Shared Trip Itinerary | TripGenie',
+        title: 'Shared Trip Itinerary | Faroway',
         description: 'View this AI-generated travel itinerary',
         type: 'article',
         url: `${baseUrl}/s/${token}`,
       },
       twitter: {
         card: 'summary_large_image',
-        title: 'Shared Trip Itinerary | TripGenie',
+        title: 'Shared Trip Itinerary | Faroway',
         description: 'View this AI-generated travel itinerary',
       },
       robots: { index: true, follow: true },
@@ -93,14 +93,14 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
     title,
     description,
     openGraph: {
-      title: `${title} | TripGenie`,
+      title: `${title} | Faroway`,
       description,
       type: 'article',
       url: `${baseUrl}/s/${token}`,
     },
     twitter: {
       card: 'summary_large_image',
-      title: `${title} | TripGenie`,
+      title: `${title} | Faroway`,
       description,
     },
     alternates: {
@@ -112,7 +112,7 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
 
 export default async function SharedTripLayout({ children, params }: SharedTripLayoutProps) {
   const { token } = await params
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.faroway.ai'
   const trip = await getTrip(token)
 
   return (

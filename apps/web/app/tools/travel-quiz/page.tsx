@@ -7,7 +7,7 @@ export const metadata: Metadata = {
     'Take our 60-second travel quiz to discover your perfect destination. Answer 6 questions about your style, budget, and interests to get personalized recommendations.',
   alternates: { canonical: '/tools/travel-quiz' },
   openGraph: {
-    title: 'Destination Quiz — Where Should You Travel? | TripGenie',
+    title: 'Destination Quiz — Where Should You Travel? | Faroway',
     description: 'Find your dream destination in 60 seconds with our free travel quiz.',
     url: '/tools/travel-quiz',
   },
@@ -19,7 +19,7 @@ export default function TravelQuizPage() {
     '@type': 'WebApplication',
     name: 'Destination Travel Quiz',
     description: 'Take a 60-second quiz to discover your perfect travel destination based on your style and interests.',
-    url: 'https://www.tripgenie.ai/tools/travel-quiz',
+    url: 'https://www.faroway.ai/tools/travel-quiz',
     applicationCategory: 'TravelApplication',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     operatingSystem: 'All',

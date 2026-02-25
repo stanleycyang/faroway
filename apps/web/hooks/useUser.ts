@@ -101,7 +101,7 @@ export function useUser(): UseUserReturn {
           case 'SIGNED_IN':
             // Claim any anonymous trips stored in localStorage
             try {
-              const stored = localStorage.getItem('tripgenie_anonymous_trips')
+              const stored = localStorage.getItem('faroway_anonymous_trips')
               if (stored) {
                 const tripIds = JSON.parse(stored)
                 if (Array.isArray(tripIds) && tripIds.length > 0) {
@@ -110,7 +110,7 @@ export function useUser(): UseUserReturn {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ tripIds }),
                   }).finally(() => {
-                    localStorage.removeItem('tripgenie_anonymous_trips')
+                    localStorage.removeItem('faroway_anonymous_trips')
                   })
                 }
               }
