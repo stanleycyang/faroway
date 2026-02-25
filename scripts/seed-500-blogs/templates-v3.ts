@@ -11,7 +11,7 @@ function estimateReadingTime(content: string): number {
 }
 
 function cta(dest: Destination): string {
-  return `\n\n---\n\n*Planning a trip to ${dest.name}? [Let TripGenie create your perfect itinerary](/) — it's free and takes just 60 seconds.*`;
+  return `\n\n---\n\n*Planning a trip to ${dest.name}? [Let Faroway create your perfect itinerary](/) — it's free and takes just 60 seconds.*`;
 }
 
 function pick<T>(arr: T[], n: number): T[] {
@@ -521,7 +521,7 @@ Budget travelers can absolutely make it work for ${usd(b[0])}/day with careful p
     content,
     category: 'Budget Travel',
     tags: [dest.name, 'trip cost', 'budget breakdown', 'travel budget 2026', dest.country],
-    author_slug: 'tripgenie-team',
+    author_slug: 'faroway-team',
     reading_time: estimateReadingTime(content),
     cover_image_alt: `${dest.name}, ${dest.country} — trip cost breakdown 2026`,
     cluster: 'budget-travel',
@@ -715,7 +715,7 @@ Either way, 24 hours here is 24 hours well spent.${cta(dest)}`;
 const templateGenerators: Array<(dest: Destination) => BlogEntry> = [
   templateWorthVisiting,  // 1 — sarah-chen
   templateHowManyDays,    // 2 — james-miller
-  templateTripCost,       // 3 — tripgenie-team
+  templateTripCost,       // 3 — faroway-team
   templateOneDay,         // 4 — sarah-chen
 ];
 

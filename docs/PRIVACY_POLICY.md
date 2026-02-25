@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**TripGenie - AI Travel Planner**
+**Faroway - AI Travel Planner**
 
 Last Updated: February 3, 2026
 
@@ -8,7 +8,7 @@ Last Updated: February 3, 2026
 
 ## Introduction
 
-TripGenie ("we," "our," or "us") respects your privacy and is committed to protecting your personal data. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application TripGenie (the "App").
+Faroway ("we," "our," or "us") respects your privacy and is committed to protecting your personal data. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our mobile application Faroway (the "App").
 
 Please read this Privacy Policy carefully. By using the App, you agree to the collection and use of information in accordance with this policy.
 
@@ -156,15 +156,15 @@ Depending on your location, you may have the following rights:
 - Right to opt-out of data "sales" (we don't sell data)
 - Right to non-discrimination
 
-To exercise any of these rights, contact us at privacy@tripgenie.ai.
+To exercise any of these rights, contact us at privacy@faroway.ai.
 
 ---
 
 ## Children's Privacy
 
-TripGenie is not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13. If we discover that a child under 13 has provided us with personal information, we will delete it immediately.
+Faroway is not intended for children under 13 years of age. We do not knowingly collect personal information from children under 13. If we discover that a child under 13 has provided us with personal information, we will delete it immediately.
 
-If you are a parent or guardian and believe your child has provided us with personal information, please contact us at privacy@tripgenie.ai.
+If you are a parent or guardian and believe your child has provided us with personal information, please contact us at privacy@faroway.ai.
 
 ---
 
@@ -215,12 +215,12 @@ Your continued use of the App after changes constitutes acceptance of the update
 
 If you have questions about this Privacy Policy or our data practices:
 
-**Email:** privacy@tripgenie.ai  
-**Support:** support@tripgenie.ai  
-**Website:** https://tripgenie.ai/privacy
+**Email:** privacy@faroway.ai  
+**Support:** support@faroway.ai  
+**Website:** https://faroway.ai/privacy
 
 **Mailing Address:**  
-TripGenie  
+Faroway  
 [Your Business Address]  
 [City, State, ZIP]  
 [Country]
@@ -230,7 +230,7 @@ TripGenie
 ## Data Protection Officer
 
 For GDPR-related inquiries:  
-**Email:** dpo@tripgenie.ai
+**Email:** dpo@faroway.ai
 
 ---
 

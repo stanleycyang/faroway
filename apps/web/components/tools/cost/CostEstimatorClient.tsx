@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Minus, Plus } from 'lucide-react';
 import { getAllGuides, type DestinationGuide } from '@/lib/destination-guides';
 import { getCostProfile } from '@/lib/tools/cost-data';
-import { BUDGET_RANGES } from '@tripgenie/constants';
+import { BUDGET_RANGES } from '@faroway/constants';
 import { CostBreakdown } from './CostBreakdown';
 import { ToolHero } from '@/components/tools/ToolHero';
 import { ToolCTA } from '@/components/tools/ToolCTA';

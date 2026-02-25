@@ -7,10 +7,10 @@ import { getAllGuides, getContinents, getGuidesByContinent } from '@/lib/destina
 export const metadata: Metadata = {
   title: 'Destination Guides — Travel Inspiration & Tips',
   description:
-    'Explore our curated destination guides with local tips, sample itineraries, and must-see highlights. From Tokyo to Cape Town — plan your dream trip with TripGenie.',
+    'Explore our curated destination guides with local tips, sample itineraries, and must-see highlights. From Tokyo to Cape Town — plan your dream trip with Faroway.',
   alternates: { canonical: '/destinations' },
   openGraph: {
-    title: 'TripGenie Destination Guides — Travel Inspiration & Tips',
+    title: 'Faroway Destination Guides — Travel Inspiration & Tips',
     description:
       'Curated destination guides with local tips, sample itineraries, and must-see highlights for 15+ destinations worldwide.',
     type: 'website',
@@ -27,12 +27,12 @@ export default function DestinationsIndex() {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.tripgenie.ai' },
+      { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.faroway.ai' },
       {
         '@type': 'ListItem',
         position: 2,
         name: 'Destinations',
-        item: 'https://www.tripgenie.ai/destinations',
+        item: 'https://www.faroway.ai/destinations',
       },
     ],
   };
@@ -137,7 +137,7 @@ export default function DestinationsIndex() {
               Ready to plan your trip?
             </h2>
             <p className="text-lg text-white/80 mb-8 max-w-xl mx-auto">
-              TripGenie creates a personalized day-by-day itinerary for any destination in 60 seconds — for free.
+              Faroway creates a personalized day-by-day itinerary for any destination in 60 seconds — for free.
             </p>
             <Link
               href="/create"

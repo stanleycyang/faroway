@@ -1,6 +1,6 @@
-# json-render Integration for TripGenie
+# json-render Integration for Faroway
 
-This directory contains the json-render integration for generative UI in TripGenie mobile app.
+This directory contains the json-render integration for generative UI in Faroway mobile app.
 
 ## Overview
 

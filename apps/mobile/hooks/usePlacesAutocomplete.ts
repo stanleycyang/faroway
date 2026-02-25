@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from 'react';
-import { popularDestinations } from '@tripgenie/constants';
+import { popularDestinations } from '@faroway/constants';
 
 export interface PlacePrediction {
   placeId: string;

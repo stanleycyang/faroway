@@ -74,7 +74,7 @@ export default function Error({
         <div className="mt-8 pt-6 border-t border-gray-200">
           <p className="text-sm text-gray-500 mb-2">Still having issues?</p>
           <a
-            href="mailto:support@tripgenie.ai"
+            href="mailto:support@faroway.ai"
             className="inline-flex items-center gap-2 text-primary hover:text-primary-600 font-medium transition-colors"
           >
             <MessageCircle className="w-4 h-4" />

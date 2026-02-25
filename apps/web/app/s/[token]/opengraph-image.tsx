@@ -2,7 +2,7 @@ import { ImageResponse } from 'next/og'
 import { getSupabase } from '@/lib/supabase/server'
 
 export const runtime = 'edge'
-export const alt = 'Shared Trip Itinerary - TripGenie'
+export const alt = 'Shared Trip Itinerary - Faroway'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
 
@@ -157,9 +157,9 @@ export default async function Image({ params }: { params: Promise<{ token: strin
             fontSize: '22px',
           }}
         >
-          <span style={{ fontWeight: 'bold' }}>TripGenie</span>
+          <span style={{ fontWeight: 'bold' }}>Faroway</span>
           <span>•</span>
-          <span>tripgenie.ai</span>
+          <span>faroway.ai</span>
         </div>
       </div>
     ),

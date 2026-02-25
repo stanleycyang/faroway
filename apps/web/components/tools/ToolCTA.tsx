@@ -8,7 +8,7 @@ interface ToolCTAProps {
 
 export function ToolCTA({
   title = 'Ready to Plan Your Trip?',
-  description = 'TripGenie creates a personalized itinerary in 60 seconds — completely free and tailored to your style.',
+  description = 'Faroway creates a personalized itinerary in 60 seconds — completely free and tailored to your style.',
 }: ToolCTAProps) {
   return (
     <section className="bg-gradient-to-br from-primary-600 to-amber-500 py-16">

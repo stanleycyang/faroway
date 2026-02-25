@@ -1,5 +1,5 @@
 /**
- * TripGenie AI Client
+ * Faroway AI Client
  * Uses Vercel AI SDK with AI Gateway for unified model access
  * 
  * Benefits:

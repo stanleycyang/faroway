@@ -21,7 +21,7 @@ import {
 } from 'lucide-react';
 import { FadeInOnScroll } from '@/components/landing/FadeInOnScroll';
 import { LiveCounter } from '@/components/landing/LiveCounter';
-import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
+import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 
 // ─── Data ───────────────────────────────────────────────────────────────────
 
@@ -83,7 +83,7 @@ function AppStoreButtons({ className = '', variant = 'glass' }: { className?: st
   return (
     <div className={`flex flex-wrap gap-3 ${className}`}>
       <a
-        href="https://apps.apple.com/app/tripgenie"
+        href="https://apps.apple.com/app/faroway"
         className={`inline-flex items-center gap-3 ${base} px-5 py-3 rounded-2xl font-semibold text-white transition-all backdrop-blur-sm hover:-translate-y-0.5`}
       >
         <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
@@ -95,7 +95,7 @@ function AppStoreButtons({ className = '', variant = 'glass' }: { className?: st
         </div>
       </a>
       <a
-        href="https://play.google.com/store/apps/details?id=com.tripgenie"
+        href="https://play.google.com/store/apps/details?id=com.faroway"
         className={`inline-flex items-center gap-3 ${base} px-5 py-3 rounded-2xl font-semibold text-white transition-all backdrop-blur-sm hover:-translate-y-0.5`}
       >
         <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
@@ -628,14 +628,14 @@ export default function LandingPage() {
 
 
 
-      {/* ─── Why TripGenie ─────────────────────────────────────────────────── */}
+      {/* ─── Why Faroway ─────────────────────────────────────────────────── */}
       <section className="py-20 lg:py-28 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <FadeInOnScroll>
             <div className="text-center mb-16">
               <h2 className="text-3xl lg:text-5xl font-bold text-slate-900 mb-4">
                 Why{' '}
-                <span className="text-gradient">TripGenie</span>?
+                <span className="text-gradient">Faroway</span>?
               </h2>
               <p className="text-xl text-slate-500">Planning a trip shouldn&apos;t feel like a second job</p>
             </div>
@@ -679,7 +679,7 @@ export default function LandingPage() {
                 <span className="text-gradient-hero">in your pocket</span>
               </h2>
               <p className="text-xl text-white/70 mb-4 leading-relaxed">
-                No Wi-Fi at the temple? No problem. The TripGenie app keeps your
+                No Wi-Fi at the temple? No problem. The Faroway app keeps your
                 full itinerary on your phone — maps, reservations, and daily plans
                 accessible even without a connection.
               </p>

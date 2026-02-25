@@ -20,7 +20,7 @@ import {
   VibeSelector,
 } from '../../components/ui';
 import { useTripStore } from '../../stores/tripStore';
-import { popularDestinations, travelerTypes } from '@tripgenie/constants';
+import { popularDestinations, travelerTypes } from '@faroway/constants';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 

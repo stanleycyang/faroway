@@ -1,4 +1,4 @@
-# TripGenie Performance Audit & Optimization Guide
+# Faroway Performance Audit & Optimization Guide
 
 **Audit Date:** February 3, 2026  
 **Auditor:** Performance Optimization Subagent
@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-This document contains the performance audit findings and applied optimizations for the TripGenie web and mobile applications in preparation for production launch.
+This document contains the performance audit findings and applied optimizations for the Faroway web and mobile applications in preparation for production launch.
 
 ### Overall Status: ✅ Good Foundation
 
@@ -393,7 +393,7 @@ const handlePress = useCallback(() => {
 
 ## Conclusion
 
-TripGenie has a solid performance foundation:
+Faroway has a solid performance foundation:
 - ✅ Images optimized with next/image
 - ✅ Animations use native driver
 - ✅ State management efficient with Zustand

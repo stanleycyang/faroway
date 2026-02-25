@@ -1,5 +1,5 @@
 /**
- * TripGenie AI Module
+ * Faroway AI Module
  * Unified exports for AI-powered features
  * 
  * Architecture: AI SDK + Vercel AI Gateway

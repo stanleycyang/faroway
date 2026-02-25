@@ -1,4 +1,4 @@
-# TripGenie Supervisor Log
+# Faroway Supervisor Log
 
 ## Latest Check: 2026-02-03 22:17 PST
 

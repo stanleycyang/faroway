@@ -1,7 +1,7 @@
 import { BlogPost, BlogPostMeta, AUTHORS, PaginatedResult } from './types';
 import { CLUSTERS, getClusterBySlug, getAllClusterSlugs, getRelatedClusters } from './clusters';
 import type { ClusterDefinition } from './clusters';
-import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
+import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 import { getBlogSupabase } from './supabase';
 
 // ---------------------------------------------------------------------------
@@ -25,7 +25,7 @@ function rowToMeta(row: any): BlogPostMeta {
     description: row.description || '',
     date: row.published_at || new Date().toISOString(),
     lastUpdated: row.last_updated || undefined,
-    author: AUTHORS[row.author_slug] || AUTHORS['tripgenie-team'],
+    author: AUTHORS[row.author_slug] || AUTHORS['faroway-team'],
     category: row.category || 'Travel Tips',
     tags: row.tags || [],
     coverImage: row.cover_image || getImageUrl(IMAGE_PATHS.blog.defaultFallback),

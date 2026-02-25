@@ -1,4 +1,4 @@
-import { IMAGE_PATHS, getImageUrl } from '@tripgenie/constants';
+import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 
 export interface DestinationHighlight {
   title: string;

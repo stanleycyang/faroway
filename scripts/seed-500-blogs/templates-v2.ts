@@ -11,7 +11,7 @@ function estimateReadingTime(content: string): number {
 }
 
 function cta(dest: Destination): string {
-  return `\n\n---\n\n*Planning a trip to ${dest.name}? [Let TripGenie create your perfect itinerary](/) — it's free and takes just 60 seconds.*`;
+  return `\n\n---\n\n*Planning a trip to ${dest.name}? [Let Faroway create your perfect itinerary](/) — it's free and takes just 60 seconds.*`;
 }
 
 function pick<T>(arr: T[], n: number): T[] {
@@ -424,7 +424,7 @@ The best packing strategy for ${dest.name} is simple: pack light, pack smart, an
     content,
     category: 'Travel Tips',
     tags: [dest.name, 'packing list', 'travel essentials', 'what to pack', dest.country],
-    author_slug: 'tripgenie-team',
+    author_slug: 'faroway-team',
     reading_time: estimateReadingTime(content),
     cover_image_alt: `Packing essentials for a trip to ${dest.name}, ${dest.country}`,
     cluster: 'trip-planning-packing',
@@ -573,7 +573,7 @@ ${dest.name} is safe for families, but a few extra precautions help:
 2. **Pack entertainment for transit.** Coloring books, small games, or a pre-downloaded show save your sanity.
 3. **Travel during shoulder season.** Thinner crowds, lower prices, and shorter lines — all critical with kids.
 4. **Book a family-friendly food tour.** It combines sightseeing, eating, and cultural education in one activity.
-5. **Use TripGenie's family mode** to generate an itinerary automatically optimized for traveling with children.
+5. **Use Faroway's family mode** to generate an itinerary automatically optimized for traveling with children.
 
 ## Final Thoughts
 
@@ -586,7 +586,7 @@ ${dest.name} with kids is not just manageable — it is magical. Children see th
     content,
     category: 'Travel Planning',
     tags: [dest.name, 'family travel', 'kids', 'family vacation', dest.country],
-    author_slug: 'tripgenie-team',
+    author_slug: 'faroway-team',
     reading_time: estimateReadingTime(content),
     cover_image_alt: `Family exploring ${dest.name}, ${dest.country} — family travel guide`,
     cluster: 'trip-planning-packing',
@@ -698,7 +698,7 @@ Vacation rentals in quieter neighborhoods like **${areas[3] || areas[1]}** offer
 2. **Build in lazy mornings.** Your honeymoon is not a sightseeing marathon. Sleep in at least twice.
 3. **Take turns planning surprises.** Each partner plans one surprise activity or dinner — the anticipation is half the fun.
 4. **Unplug intentionally.** Agree on phone-free hours. The best honeymoon moments happen when you are fully present.
-5. **Use TripGenie** to plan your itinerary and then customize it together — deciding what to do as a couple is part of the experience.
+5. **Use Faroway** to plan your itinerary and then customize it together — deciding what to do as a couple is part of the experience.
 
 ## Budget Guide for Honeymoons
 
@@ -1179,7 +1179,7 @@ The best free show in ${dest.name} runs every evening. Find **${photoSpots[2] ||
 2. **Carry water and snacks.** Free activities tend to keep you outdoors longer than planned.
 3. **Talk to locals.** The best free experiences are often word-of-mouth. Ask hotel staff, cafe owners, and fellow travelers.
 4. **Check ${dest.name}'s local event calendar.** Festivals, markets, and celebrations are often free and unforgettable.
-5. **Use TripGenie** to mix free and paid activities in your itinerary — the AI balances your budget automatically.
+5. **Use Faroway** to mix free and paid activities in your itinerary — the AI balances your budget automatically.
 
 ## The Bottom Line
 
@@ -1359,7 +1359,7 @@ ${winterDesc}
 1. **Book flights 6–8 weeks before peak season** for the best prices on ${dest.bestTime} travel.
 2. **Shoulder season is the sweet spot.** The weeks just before and after ${dest.peakSeason} offer 80% of the weather quality at 60% of the price.
 3. **Check sunrise and sunset times** when planning your itinerary — daylight hours vary significantly by month.
-4. **Use TripGenie** to automatically optimize your trip dates based on weather forecasts and pricing data.
+4. **Use Faroway** to automatically optimize your trip dates based on weather forecasts and pricing data.
 5. **Weather apps are your friend.** Check a 10-day forecast before packing and a daily forecast each morning.
 
 ## The Bottom Line
@@ -1373,7 +1373,7 @@ There is no objectively "bad" time to visit ${dest.name} — each season offers 
     content,
     category: 'Travel Tips',
     tags: [dest.name, 'weather', 'best time to visit', 'monthly guide', dest.country],
-    author_slug: 'tripgenie-team',
+    author_slug: 'faroway-team',
     reading_time: estimateReadingTime(content),
     cover_image_alt: `${dest.name}, ${dest.country} seasonal weather — month by month guide`,
     cluster: 'insider-tips',
@@ -1557,7 +1557,7 @@ Understanding local customs is also a safety strategy:
 2. **A printed etiquette card** in **${dest.lang}** with key phrases and customs can be invaluable at smaller establishments.
 3. **Read up on recent local news** before your trip — awareness of current events shows respect and helps you avoid sensitive topics.
 4. **Food is a bridge.** Complimenting someone's cooking or a restaurant's **${foods[0]}** is universally appreciated and opens conversations.
-5. **Use TripGenie** to get destination-specific cultural tips automatically included in your trip plan.
+5. **Use Faroway** to get destination-specific cultural tips automatically included in your trip plan.
 
 ## The Bottom Line
 
@@ -1587,13 +1587,13 @@ Travel well, travel respectfully, and ${dest.name} will welcome you with open ar
 const templateGenerators: Array<(dest: Destination) => BlogEntry> = [
   template3DayItinerary,     // 1 — james-miller
   templateNightlife,         // 2 — sarah-chen
-  templatePackingList,       // 3 — tripgenie-team
-  templateFamilyTravel,      // 4 — tripgenie-team
+  templatePackingList,       // 3 — faroway-team
+  templateFamilyTravel,      // 4 — faroway-team
   templateHoneymoon,         // 5 — sarah-chen
   templateInstagramSpots,    // 6 — sarah-chen
   templateShopping,          // 7 — james-miller
   templateFreeThings,        // 8 — sarah-chen
-  templateWeather,           // 9 — tripgenie-team
+  templateWeather,           // 9 — faroway-team
   templateCulturalEtiquette, // 10 — james-miller
 ];
 

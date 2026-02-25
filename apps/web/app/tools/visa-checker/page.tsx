@@ -13,7 +13,7 @@ export const metadata: Metadata = {
     'Check visa requirements for 14 popular destinations based on your passport. Instant results with stay duration, visa type, and travel tips.',
   alternates: { canonical: '/tools/visa-checker' },
   openGraph: {
-    title: 'Visa Checker | TripGenie',
+    title: 'Visa Checker | Faroway',
     description: 'Free visa requirement checker for 14 destinations — know before you go.',
     url: '/tools/visa-checker',
   },
@@ -27,7 +27,7 @@ export default function VisaCheckerPage() {
     '@type': 'WebApplication',
     name: 'Visa Checker',
     description: 'Check visa requirements for popular destinations based on your passport country.',
-    url: 'https://www.tripgenie.ai/tools/visa-checker',
+    url: 'https://www.faroway.ai/tools/visa-checker',
     applicationCategory: 'TravelApplication',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     operatingSystem: 'All',

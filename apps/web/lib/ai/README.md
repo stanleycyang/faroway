@@ -1,4 +1,4 @@
-# TripGenie AI Module
+# Faroway AI Module
 
 AI-powered travel itinerary generation using Anthropic's Claude API.
 

@@ -1,24 +1,24 @@
 import type { Metadata } from 'next';
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai';
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.faroway.ai';
 
 export const metadata: Metadata = {
-  title: 'Support & FAQ — TripGenie Help Center',
+  title: 'Support & FAQ — Faroway Help Center',
   description:
-    'Get help with TripGenie. Browse support topics, read FAQs about AI trip planning, offline access, bookings, privacy, and more. Contact our support team.',
+    'Get help with Faroway. Browse support topics, read FAQs about AI trip planning, offline access, bookings, privacy, and more. Contact our support team.',
   alternates: { canonical: '/support' },
   openGraph: {
-    title: 'Support & FAQ — TripGenie Help Center',
+    title: 'Support & FAQ — Faroway Help Center',
     description:
-      'Get help with TripGenie. Browse support topics, read FAQs about AI trip planning, offline access, bookings, and more.',
+      'Get help with Faroway. Browse support topics, read FAQs about AI trip planning, offline access, bookings, and more.',
     type: 'website',
     url: `${baseUrl}/support`,
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Support & FAQ — TripGenie Help Center',
+    title: 'Support & FAQ — Faroway Help Center',
     description:
-      'Get help with TripGenie. Browse support topics, read FAQs about AI trip planning, offline access, bookings, and more.',
+      'Get help with Faroway. Browse support topics, read FAQs about AI trip planning, offline access, bookings, and more.',
   },
 };
 
@@ -28,10 +28,10 @@ const faqJsonLd = {
   mainEntity: [
     {
       '@type': 'Question',
-      name: 'Is TripGenie really free?',
+      name: 'Is Faroway really free?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Yes! TripGenie is completely free to use. We earn revenue through affiliate commissions — when you book a hotel or activity through a link in your itinerary, the provider (like Booking.com or Viator) pays us a small referral fee. You pay the same price as if you booked directly. This affiliate model is how we keep the service free for everyone.',
+        text: 'Yes! Faroway is completely free to use. We earn revenue through affiliate commissions — when you book a hotel or activity through a link in your itinerary, the provider (like Booking.com or Viator) pays us a small referral fee. You pay the same price as if you booked directly. This affiliate model is how we keep the service free for everyone.',
       },
     },
     {
@@ -55,7 +55,7 @@ const faqJsonLd = {
       name: 'How do I delete my account?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'You can delete your account by going to Settings → Account → Delete Account in the mobile app. Your personal data will be removed within 30 days of deletion. If you need help, contact us at support@tripgenie.ai.',
+        text: 'You can delete your account by going to Settings → Account → Delete Account in the mobile app. Your personal data will be removed within 30 days of deletion. If you need help, contact us at support@faroway.ai.',
       },
     },
     {
@@ -63,7 +63,7 @@ const faqJsonLd = {
       name: 'Does the app work offline?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: "Yes! TripGenie uses an offline-first architecture. Your trip itineraries are stored locally on your device so you can access them without an internet connection. Changes sync automatically when you're back online.",
+        text: "Yes! Faroway uses an offline-first architecture. Your trip itineraries are stored locally on your device so you can access them without an internet connection. Changes sync automatically when you're back online.",
       },
     },
     {
@@ -71,7 +71,7 @@ const faqJsonLd = {
       name: 'What data do you collect?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'We collect your account information (email, name via OAuth), travel preferences, trip data, basic usage analytics, and affiliate click/conversion data when you interact with booking links. We never sell your personal data. Affiliate partners only receive a referral ID — not your name or email. For full details, see our Privacy Policy at tripgenie.ai/privacy.',
+        text: 'We collect your account information (email, name via OAuth), travel preferences, trip data, basic usage analytics, and affiliate click/conversion data when you interact with booking links. We never sell your personal data. Affiliate partners only receive a referral ID — not your name or email. For full details, see our Privacy Policy at faroway.ai/privacy.',
       },
     },
     {
@@ -79,7 +79,7 @@ const faqJsonLd = {
       name: 'How are bookings handled?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'TripGenie is not a travel agency or booking platform. We provide affiliate links to third-party providers like Booking.com (hotels) and Viator (tours and activities). When you click a link and complete a booking, your contract is directly with that provider — not with us. All pricing, availability, cancellations, refunds, and customer service are handled entirely by the booking provider under their own terms.',
+        text: 'Faroway is not a travel agency or booking platform. We provide affiliate links to third-party providers like Booking.com (hotels) and Viator (tours and activities). When you click a link and complete a booking, your contract is directly with that provider — not with us. All pricing, availability, cancellations, refunds, and customer service are handled entirely by the booking provider under their own terms.',
       },
     },
     {
@@ -92,10 +92,10 @@ const faqJsonLd = {
     },
     {
       '@type': 'Question',
-      name: 'Which countries does TripGenie support?',
+      name: 'Which countries does Faroway support?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: "TripGenie supports 195+ countries worldwide. Whether you're planning a trip to Paris, Tokyo, Cape Town, or a hidden gem off the beaten path, our AI can generate a personalized itinerary for virtually any destination on earth.",
+        text: "Faroway supports 195+ countries worldwide. Whether you're planning a trip to Paris, Tokyo, Cape Town, or a hidden gem off the beaten path, our AI can generate a personalized itinerary for virtually any destination on earth.",
       },
     },
     {

@@ -500,8 +500,8 @@ export default function TripDetailPage() {
             <ShareButtons
               url={shareUrl || undefined}
               title={`My ${trip.destination} Trip Itinerary`}
-              description={`Check out my AI-generated itinerary to ${trip.destination}! Created with TripGenie.`}
-              hashtags={['TripGenie', 'Travel', trip.destination.replace(/\s+/g, '')]}
+              description={`Check out my AI-generated itinerary to ${trip.destination}! Created with Faroway.`}
+              hashtags={['Faroway', 'Travel', trip.destination.replace(/\s+/g, '')]}
               className="justify-center"
             />
             {!shareUrl && (
@@ -585,7 +585,7 @@ function FeaturedHotelCard({ hotel, nights }: { hotel: any; nights: number }) {
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
           <div className="absolute top-3 left-3 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full text-xs font-bold text-white flex items-center gap-1.5 shadow-lg">
             <Sparkles className="w-3.5 h-3.5" />
-            TripGenie Pick
+            Faroway Pick
           </div>
           {/* Price overlay on image */}
           <div className="absolute bottom-4 right-4 text-right">

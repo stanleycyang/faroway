@@ -7,13 +7,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase/server';
 import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
-import { popularDestinations } from '@tripgenie/constants';
+import { popularDestinations } from '@faroway/constants';
 import {
   type DestinationRow,
   normalizeDestination,
   computePopularScore,
 } from '@/lib/destinations';
-import type { DestinationInfo, DestinationsResponse } from '@tripgenie/types';
+import type { DestinationInfo, DestinationsResponse } from '@faroway/types';
 import { z } from 'zod';
 
 const QuerySchema = z.object({

@@ -1,4 +1,4 @@
-# TripGenie Web Frontend - Task Completion Checklist
+# Faroway Web Frontend - Task Completion Checklist
 
 ## ✅ Task 1: Read All Existing Code
 - [x] Read `app/` directory structure

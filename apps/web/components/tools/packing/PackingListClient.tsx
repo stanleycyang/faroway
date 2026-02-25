@@ -63,7 +63,7 @@ export function PackingListClient() {
         <div className="print-hidden">
           <ToolCTA
             title={`Ready to Plan Your ${destination.name} Trip?`}
-            description={`Let TripGenie create a personalized ${destination.name} itinerary — completely free.`}
+            description={`Let Faroway create a personalized ${destination.name} itinerary — completely free.`}
           />
           <RelatedTools currentSlug="packing-list" />
         </div>

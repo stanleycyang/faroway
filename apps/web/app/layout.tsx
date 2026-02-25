@@ -9,13 +9,13 @@ const plusJakarta = Plus_Jakarta_Sans({
   weight: ["300", "400", "500", "600", "700", "800"],
 });
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai';
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.faroway.ai';
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: "TripGenie - AI-Powered Travel Planning | Create Itineraries in 60 Seconds",
-    template: "%s | TripGenie",
+    default: "Faroway - AI-Powered Travel Planning | Create Itineraries in 60 Seconds",
+    template: "%s | Faroway",
   },
   description: "Plan your dream trip with AI. Get personalized day-by-day itineraries, find hotels, activities, and restaurants. 100% free, no account needed, works offline.",
   keywords: [
@@ -30,9 +30,9 @@ export const metadata: Metadata = {
     "holiday planner",
     "destination guide",
   ],
-  authors: [{ name: "TripGenie Team" }],
-  creator: "TripGenie",
-  publisher: "TripGenie",
+  authors: [{ name: "Faroway Team" }],
+  creator: "Faroway",
+  publisher: "Faroway",
   formatDetection: {
     email: false,
     address: false,
@@ -42,24 +42,24 @@ export const metadata: Metadata = {
     type: "website",
     locale: "en_US",
     url: baseUrl,
-    siteName: "TripGenie",
-    title: "TripGenie - AI-Powered Travel Planning",
+    siteName: "Faroway",
+    title: "Faroway - AI-Powered Travel Planning",
     description: "Create personalized travel itineraries in 60 seconds with AI. Hotels, flights, activities—all planned for you.",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "TripGenie - Plan Your Perfect Trip with AI",
+        alt: "Faroway - Plan Your Perfect Trip with AI",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
-    title: "TripGenie - AI-Powered Travel Planning",
+    title: "Faroway - AI-Powered Travel Planning",
     description: "Create personalized travel itineraries in 60 seconds with AI.",
     images: ["/og-image.png"],
-    creator: "@tripgenie",
+    creator: "@faroway",
   },
   robots: {
     index: true,
@@ -99,25 +99,25 @@ export const viewport: Viewport = {
 const organizationSchema = {
   "@context": "https://schema.org",
   "@type": "Organization",
-  name: "TripGenie",
+  name: "Faroway",
   url: baseUrl,
   logo: `${baseUrl}/icon.png`,
   sameAs: [
-    "https://twitter.com/tripgenie",
-    "https://instagram.com/tripgenie",
-    "https://facebook.com/tripgenie",
+    "https://twitter.com/faroway",
+    "https://instagram.com/faroway",
+    "https://facebook.com/faroway",
   ],
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer service",
-    email: "support@tripgenie.ai",
+    email: "support@faroway.ai",
   },
 };
 
 const websiteSchema = {
   "@context": "https://schema.org",
   "@type": "WebSite",
-  name: "TripGenie",
+  name: "Faroway",
   url: baseUrl,
   description: "AI-powered travel planning platform that creates personalized itineraries in seconds",
   potentialAction: {
@@ -133,7 +133,7 @@ const websiteSchema = {
 const softwareApplicationSchema = {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  name: "TripGenie",
+  name: "Faroway",
   applicationCategory: "TravelApplication",
   operatingSystem: "Web, iOS, Android",
   offers: {

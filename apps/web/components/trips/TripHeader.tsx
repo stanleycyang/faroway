@@ -76,7 +76,7 @@ export function TripHeader({
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center shadow-sm">
               <Sparkles className="w-4 h-4 text-white" />
             </div>
-            <span className="text-lg font-bold text-gray-900 hidden sm:inline">TripGenie</span>
+            <span className="text-lg font-bold text-gray-900 hidden sm:inline">Faroway</span>
           </Link>
 
           {showActions ? (

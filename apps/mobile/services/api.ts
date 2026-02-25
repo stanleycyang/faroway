@@ -1,13 +1,13 @@
 /**
- * TripGenie API Service
+ * Faroway API Service
  * Centralized API client for the mobile app
  */
 
 import { API_BASE_URL, API_TIMEOUT } from '../constants/api';
-import type { ApiResponse, Trip, UserProfile, TrackClickParams, TrackClickResponse, DestinationsResponse } from '@tripgenie/types';
+import type { ApiResponse, Trip, UserProfile, TrackClickParams, TrackClickResponse, DestinationsResponse } from '@faroway/types';
 
 // Re-export types for backward compatibility
-export type { ApiResponse, Trip, UserProfile, TrackClickParams, TrackClickResponse, DestinationsResponse } from '@tripgenie/types';
+export type { ApiResponse, Trip, UserProfile, TrackClickParams, TrackClickResponse, DestinationsResponse } from '@faroway/types';
 
 // Auth token managed via Supabase SecureStore - this is an in-memory cache only.
 // Do NOT persist this token to AsyncStorage or other insecure storage.

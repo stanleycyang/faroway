@@ -6,14 +6,14 @@ import { CategoryPills } from '@/components/blog/CategoryPills';
 import { NewsletterCTA } from '@/components/blog/NewsletterCTA';
 import { Pagination } from '@/components/blog/Pagination';
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai';
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.faroway.ai';
 
 export const metadata: Metadata = {
   title: 'Travel Blog — Tips, Guides & Inspiration',
   description: 'Expert travel tips, destination guides, budget hacks, and AI-powered planning advice. Everything you need to plan your next adventure.',
   alternates: { canonical: '/blog' },
   openGraph: {
-    title: 'TripGenie Travel Blog — Tips, Guides & Inspiration',
+    title: 'Faroway Travel Blog — Tips, Guides & Inspiration',
     description: 'Expert travel tips, destination guides, and AI-powered planning advice.',
     type: 'website',
     url: '/blog',
@@ -42,10 +42,10 @@ export default async function BlogIndex({
   const collectionSchema = {
     '@context': 'https://schema.org',
     '@type': 'CollectionPage',
-    name: 'TripGenie Travel Blog',
+    name: 'Faroway Travel Blog',
     description: 'Expert travel tips, destination guides, budget hacks, and AI-powered planning advice.',
     url: `${baseUrl}/blog`,
-    isPartOf: { '@type': 'WebSite', name: 'TripGenie', url: baseUrl },
+    isPartOf: { '@type': 'WebSite', name: 'Faroway', url: baseUrl },
   };
 
   const breadcrumbSchema = {

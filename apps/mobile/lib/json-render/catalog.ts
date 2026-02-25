@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 /**
- * TripGenie Component Catalog
+ * Faroway Component Catalog
  * 
  * This catalog defines all the components that can be used in the json-render
  * itinerary generation. Each component has a Zod schema for type safety and

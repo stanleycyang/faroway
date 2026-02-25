@@ -46,7 +46,7 @@ export default function InternalServerError() {
         <p className="mt-8 text-sm text-gray-500">
           If the problem persists,{' '}
           <a
-            href="mailto:support@tripgenie.ai"
+            href="mailto:support@faroway.ai"
             className="text-primary hover:text-primary-600 font-medium underline"
           >
             contact support

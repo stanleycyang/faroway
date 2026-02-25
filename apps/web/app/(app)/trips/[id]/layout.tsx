@@ -8,21 +8,21 @@ interface TripLayoutProps {
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.tripgenie.ai'
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.faroway.ai'
   
   // Default metadata
   let metadata: Metadata = {
     title: 'Trip Itinerary',
-    description: 'View your AI-generated travel itinerary on TripGenie',
+    description: 'View your AI-generated travel itinerary on Faroway',
     openGraph: {
-      title: 'Trip Itinerary | TripGenie',
+      title: 'Trip Itinerary | Faroway',
       description: 'View this AI-generated travel itinerary',
       type: 'article',
       url: `${baseUrl}/trips/${id}`,
     },
     twitter: {
       card: 'summary_large_image',
-      title: 'Trip Itinerary | TripGenie',
+      title: 'Trip Itinerary | Faroway',
       description: 'View this AI-generated travel itinerary',
     },
     robots: {
@@ -55,20 +55,20 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
       }
 
       const title = `${duration} ${destination} Trip${duration ? '' : ' Itinerary'}`
-      const description = `Explore this ${duration ? duration + ' ' : ''}AI-generated itinerary to ${destination}${dateRange ? ` (${dateRange})` : ''}. Created with TripGenie for ${travelers} traveler${travelers > 1 ? 's' : ''}.`
+      const description = `Explore this ${duration ? duration + ' ' : ''}AI-generated itinerary to ${destination}${dateRange ? ` (${dateRange})` : ''}. Created with Faroway for ${travelers} traveler${travelers > 1 ? 's' : ''}.`
 
       metadata = {
         title,
         description,
         openGraph: {
-          title: `${title} | TripGenie`,
+          title: `${title} | Faroway`,
           description,
           type: 'article',
           url: `${baseUrl}/trips/${id}`,
         },
         twitter: {
           card: 'summary_large_image',
-          title: `${title} | TripGenie`,
+          title: `${title} | Faroway`,
           description,
         },
         alternates: {

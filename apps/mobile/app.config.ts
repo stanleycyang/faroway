@@ -2,13 +2,13 @@ import { ExpoConfig, ConfigContext } from 'expo/config';
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'TripGenie',
-  slug: 'tripgenie',
+  name: 'Faroway',
+  slug: 'faroway',
   version: '1.0.0',
   orientation: 'portrait',
   icon: './assets/icon.png',
   userInterfaceStyle: 'automatic',
-  scheme: 'tripgenie',
+  scheme: 'faroway',
   splash: {
     image: './assets/splash.png',
     resizeMode: 'contain',
@@ -17,10 +17,10 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   assetBundlePatterns: ['**/*'],
   ios: {
     supportsTablet: true,
-    bundleIdentifier: 'ai.tripgenie.app',
+    bundleIdentifier: 'ai.faroway.app',
     usesAppleSignIn: true,
     infoPlist: {
-      NSLocationWhenInUseUsageDescription: 'TripGenie uses your location to provide navigation to trip destinations.',
+      NSLocationWhenInUseUsageDescription: 'Faroway uses your location to provide navigation to trip destinations.',
     },
     config: {
       usesNonExemptEncryption: false,
@@ -31,7 +31,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       foregroundImage: './assets/adaptive-icon.png',
       backgroundColor: '#0a0a0a',
     },
-    package: 'ai.tripgenie.app',
+    package: 'ai.faroway.app',
   },
   web: {
     favicon: './assets/favicon.png',

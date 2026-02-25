@@ -1,6 +1,6 @@
 /**
- * @tripgenie/validation
- * Shared Zod validation schemas for TripGenie.
+ * @faroway/validation
+ * Shared Zod validation schemas for Faroway.
  * Uses zod/v3 import for v3/v4 compatibility during transition.
  */
 

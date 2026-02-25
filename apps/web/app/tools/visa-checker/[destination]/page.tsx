@@ -41,14 +41,14 @@ export async function generateMetadata({
     description: `${dest.name} visa requirements for 15 passport countries. ${summaryParts.join('. ')}. Check stay duration and entry notes.`,
     alternates: { canonical: `/tools/visa-checker/${destination}` },
     openGraph: {
-      title: `Visa Requirements: ${dest.name} | TripGenie`,
+      title: `Visa Requirements: ${dest.name} | Faroway`,
       description: `${dest.name} visa info for 15 passports. ${summaryParts[0] || ''}.`,
       url: `/tools/visa-checker/${destination}`,
       images: [{ url: dest.heroImage, width: 1920, height: 1080, alt: dest.name }],
     },
     twitter: {
       card: 'summary_large_image',
-      title: `Visa Requirements: ${dest.name} | TripGenie`,
+      title: `Visa Requirements: ${dest.name} | Faroway`,
       description: `${dest.name} visa info for 15 passports. ${summaryParts[0] || ''}.`,
       images: [dest.heroImage],
     },
@@ -73,9 +73,9 @@ export default async function VisaDestinationPage({
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Tools', item: 'https://www.tripgenie.ai/tools' },
-      { '@type': 'ListItem', position: 2, name: 'Visa Checker', item: 'https://www.tripgenie.ai/tools/visa-checker' },
-      { '@type': 'ListItem', position: 3, name: dest.name, item: `https://www.tripgenie.ai/tools/visa-checker/${destination}` },
+      { '@type': 'ListItem', position: 1, name: 'Tools', item: 'https://www.faroway.ai/tools' },
+      { '@type': 'ListItem', position: 2, name: 'Visa Checker', item: 'https://www.faroway.ai/tools/visa-checker' },
+      { '@type': 'ListItem', position: 3, name: dest.name, item: `https://www.faroway.ai/tools/visa-checker/${destination}` },
     ],
   };
 
@@ -259,7 +259,7 @@ export default async function VisaDestinationPage({
 
         <ToolCTA
           title={`Ready for ${dest.name}?`}
-          description={`Let TripGenie create your personalized ${dest.name} itinerary — completely free.`}
+          description={`Let Faroway create your personalized ${dest.name} itinerary — completely free.`}
         />
         <RelatedTools currentSlug="visa-checker" />
       </main>

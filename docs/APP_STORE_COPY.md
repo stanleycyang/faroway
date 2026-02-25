@@ -1,4 +1,4 @@
-# TripGenie - App Store Marketing Copy
+# Faroway - App Store Marketing Copy
 
 Last updated: February 3, 2026
 
@@ -6,9 +6,9 @@ Last updated: February 3, 2026
 
 ## App Identity
 
-**App Name:** TripGenie - AI Travel Planner  
-**Bundle ID (iOS):** ai.tripgenie.app  
-**Package Name (Android):** ai.tripgenie.app  
+**App Name:** Faroway - AI Travel Planner  
+**Bundle ID (iOS):** ai.faroway.app  
+**Package Name (Android):** ai.faroway.app  
 **Version:** 1.0.0
 
 ---
@@ -17,7 +17,7 @@ Last updated: February 3, 2026
 
 ### App Name (30 chars max)
 ```
-TripGenie - AI Travel Planner
+Faroway - AI Travel Planner
 ```
 (29 characters)
 
@@ -44,7 +44,7 @@ travel,planner,itinerary,AI,trip,vacation,holiday,booking,tours,flights,hotels,a
 ```
 Let AI plan your perfect trip in seconds.
 
-TripGenie uses advanced artificial intelligence to create personalized travel itineraries tailored to your preferences, budget, and travel style. Simply tell us where you want to go and when — we'll handle the rest.
+Faroway uses advanced artificial intelligence to create personalized travel itineraries tailored to your preferences, budget, and travel style. Simply tell us where you want to go and when — we'll handle the rest.
 
 🌟 SMART TRIP PLANNING
 • Enter your destination and dates
@@ -79,7 +79,7 @@ Tell us about your travel style:
 • Traveling solo, as a couple, or with family?
 • Budget-conscious or luxury-minded?
 
-TripGenie learns your preferences and creates itineraries that match your unique travel personality.
+Faroway learns your preferences and creates itineraries that match your unique travel personality.
 
 📱 FEATURES AT A GLANCE
 • AI-generated custom itineraries
@@ -92,7 +92,7 @@ TripGenie learns your preferences and creates itineraries that match your unique
 • Secure iCloud sync
 
 🌍 DISCOVER THE WORLD
-From the streets of Tokyo to the beaches of Bali, from the cafes of Paris to the canyons of Arizona — TripGenie helps you explore it all. Our AI has knowledge of thousands of destinations and millions of attractions, restaurants, and experiences.
+From the streets of Tokyo to the beaches of Bali, from the cafes of Paris to the canyons of Arizona — Faroway helps you explore it all. Our AI has knowledge of thousands of destinations and millions of attractions, restaurants, and experiences.
 
 💡 HOW IT WORKS
 1. Choose your destination
@@ -107,7 +107,7 @@ Your travel plans are private. We never sell your data or share your information
 
 ---
 
-Ready to plan your next adventure? Download TripGenie and let AI be your personal travel planner.
+Ready to plan your next adventure? Download Faroway and let AI be your personal travel planner.
 
 Happy travels! ✈️🌴🗺️
 ```
@@ -117,7 +117,7 @@ Happy travels! ✈️🌴🗺️
 ```
 Version 1.0.0 - Launch Edition
 
-🎉 Welcome to TripGenie!
+🎉 Welcome to Faroway!
 
 We're thrilled to introduce your new AI-powered travel companion. This initial release includes:
 
@@ -131,7 +131,7 @@ We're thrilled to introduce your new AI-powered travel companion. This initial r
 
 We're just getting started! Expect frequent updates with new features, more destinations, and improved AI recommendations.
 
-Questions or feedback? We'd love to hear from you at support@tripgenie.ai
+Questions or feedback? We'd love to hear from you at support@faroway.ai
 ```
 
 ---
@@ -140,7 +140,7 @@ Questions or feedback? We'd love to hear from you at support@tripgenie.ai
 
 ### App Name (50 chars max)
 ```
-TripGenie - AI Travel Planner
+Faroway - AI Travel Planner
 ```
 (29 characters)
 
@@ -155,7 +155,7 @@ Plan perfect trips with AI. Get personalized itineraries in seconds, not hours.
 ```
 🌟 Let AI plan your perfect trip in seconds.
 
-TripGenie uses cutting-edge artificial intelligence to create personalized travel itineraries tailored to your preferences, budget, and travel style. Simply tell us where you want to go and when — we'll handle the rest.
+Faroway uses cutting-edge artificial intelligence to create personalized travel itineraries tailored to your preferences, budget, and travel style. Simply tell us where you want to go and when — we'll handle the rest.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -208,7 +208,7 @@ Tell us about your travel style:
 • Traveling solo, as a couple, or with family?
 • Budget-conscious or luxury-minded?
 
-TripGenie learns your preferences and creates itineraries that match your unique travel personality.
+Faroway learns your preferences and creates itineraries that match your unique travel personality.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
@@ -244,11 +244,11 @@ Your travel plans are private. We never sell your data or share your information
 
 Ready to plan your next adventure?
 
-Download TripGenie and let AI be your personal travel planner.
+Download Faroway and let AI be your personal travel planner.
 
 Happy travels! ✈️🌴🗺️
 
-Questions? Contact us at support@tripgenie.ai
+Questions? Contact us at support@faroway.ai
 ```
 (2,807 characters)
 
@@ -256,11 +256,11 @@ Questions? Contact us at support@tripgenie.ai
 
 ## Support & Contact Information
 
-**Support Email:** support@tripgenie.ai  
-**Support URL:** https://tripgenie.ai/support  
-**Privacy Policy URL:** https://tripgenie.ai/privacy  
-**Terms of Service URL:** https://tripgenie.ai/terms  
-**Marketing Website:** https://tripgenie.ai
+**Support Email:** support@faroway.ai  
+**Support URL:** https://faroway.ai/support  
+**Privacy Policy URL:** https://faroway.ai/privacy  
+**Terms of Service URL:** https://faroway.ai/terms  
+**Marketing Website:** https://faroway.ai
 
 ---
 

@@ -1,5 +1,5 @@
 /**
- * TripGenie json-render Registry (Web)
+ * Faroway json-render Registry (Web)
  * Maps catalog components to React components styled for the web design system.
  * Includes TripSummary and DayTimeline for parity with mobile.
  * Affiliate links route through /api/track/click for tracking.
@@ -390,4 +390,4 @@ export const { registry } = (defineRegistry as any)(catalog, {
   },
 });
 
-export type TripGenieRegistry = typeof registry;
+export type FarowayRegistry = typeof registry;

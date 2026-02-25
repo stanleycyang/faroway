@@ -5,7 +5,7 @@ import { ArrowLeft, Sparkles } from 'lucide-react'
 import { TripForm } from '@/components/trips/TripForm'
 
 export const metadata = {
-  title: 'Create New Trip | TripGenie',
+  title: 'Create New Trip | Faroway',
   description: 'Plan your next adventure with AI-powered itineraries',
 }
 

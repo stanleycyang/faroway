@@ -54,7 +54,7 @@ IMPORTANT: Your output must be valid JSON that follows the json-render spec form
   }
 }
 
-Use the TripGenie catalog components to create a beautiful, informative itinerary:
+Use the Faroway catalog components to create a beautiful, informative itinerary:
 - Use Section for different parts (Overview, Hotels, Daily Itinerary, etc.)
 - Use ItineraryDay for each day
 - Use HotelCard for accommodation options
