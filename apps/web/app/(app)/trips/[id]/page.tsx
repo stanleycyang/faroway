@@ -39,10 +39,11 @@ class DayErrorBoundary extends React.Component<
 }
 import { TripHeader } from '@/components/trips/TripHeader';
 import { ItineraryDay } from '@/components/trips/ItineraryDay';
+import { SkeletonItineraryDay } from '@/components/trips/SkeletonItineraryDay';
 import { ShareButtons } from '@/components/ShareButtons';
-import { StreamingItineraryView } from '@/components/trips/StreamingItineraryView';
-import { useItineraryStream, type SearchProgress } from '@/hooks/useItineraryStream';
+import { useTripGeneration, type SearchProgress } from '@/hooks/useTripGeneration';
 import type { GeneratedItinerary } from '@/lib/ai/types';
+import type { TripDay } from '@tripgenie/types';
 
 const ItineraryMap = dynamic(
   () => import('@/components/trips/ItineraryMap').then(m => ({ default: m.ItineraryMap })),
@@ -92,12 +93,12 @@ export default function TripDetailPage() {
   // Determine if we should stream
   const shouldStream = trip?.status === 'generating' && !!trip?.search_id;
 
-  // SSE streaming hook for real-time generation
-  const stream = useItineraryStream({
+  // SSE progressive generation hook
+  const generation = useTripGeneration({
     tripId,
     enabled: shouldStream,
     onComplete: () => {
-      // Refetch trip to get updated status
+      // Refetch trip to get updated status and DB itinerary
       fetchTrip();
     },
   });
@@ -282,6 +283,25 @@ export default function TripDetailPage() {
     return { accommodation, activities, dining, total };
   }, [itinerary, topHotel]);
 
+  // Compute number of days for skeletons (from trip date range)
+  const skeletonDayCount = useMemo(() => {
+    if (!trip) return 3;
+    const start = new Date(trip.start_date);
+    const end = new Date(trip.end_date);
+    const diff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    return Math.max(1, Math.min(diff, 14));
+  }, [trip]);
+
+  // Compute dates for skeleton days
+  const skeletonDates = useMemo(() => {
+    if (!trip) return [];
+    return Array.from({ length: skeletonDayCount }, (_, i) => {
+      const d = new Date(trip.start_date);
+      d.setDate(d.getDate() + i);
+      return d.toISOString().split('T')[0];
+    });
+  }, [trip, skeletonDayCount]);
+
   // Loading state
   if (loading) {
     return (
@@ -316,14 +336,14 @@ export default function TripDetailPage() {
   }
 
   // Determine display status
-  const isGenerating = trip.status === 'generating' || stream.isStreaming;
-  const isFailed = trip.status === 'failed' || !!stream.error;
-  const isComplete = trip.status === 'generated' || trip.status === 'completed' || stream.isComplete;
-  // Show the streaming view only while actively streaming, or as a bridge
-  // when streaming just completed but the post-completion fetch hasn't returned yet.
-  // Once streaming is complete AND the itinerary is loaded, prefer the traditional view.
-  const showStreamingView = stream.blocks.length > 0 && !(stream.isComplete && itinerary);
+  const isGenerating = trip.status === 'generating' || generation.isStreaming;
+  const isFailed = trip.status === 'failed' || !!generation.error;
+  const isComplete = trip.status === 'generated' || trip.status === 'completed' || generation.isComplete;
   const tripStatus = isGenerating ? 'generating' : isFailed ? 'failed' : 'completed';
+
+  // Progressive data: prefer DB itinerary when available, fall back to streamed days
+  const displayDays: TripDay[] | null = itinerary?.days || generation.days || null;
+  const displayTopHotel = topHotel || generation.topHotel;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -341,12 +361,12 @@ export default function TripDetailPage() {
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Generation Progress — real agent progress via SSE */}
-        {isGenerating && !showStreamingView && (
+        {isGenerating && (
           <AgentProgress
-            step={stream.step}
-            progress={stream.progress}
-            message={stream.message}
-            searchProgress={stream.searchProgress}
+            step={generation.phase}
+            progress={generation.progress}
+            message={generation.message}
+            searchProgress={generation.searchProgress}
           />
         )}
 
@@ -360,7 +380,7 @@ export default function TripDetailPage() {
               <div className="flex-1">
                 <h3 className="font-semibold text-red-800 mb-1">Generation Failed</h3>
                 <p className="text-sm text-red-700 mb-4">
-                  {stream.error || 'Something went wrong while generating your itinerary. Please try again.'}
+                  {generation.error || 'Something went wrong while generating your itinerary. Please try again.'}
                 </p>
                 <button
                   onClick={handleRetry}
@@ -374,116 +394,149 @@ export default function TripDetailPage() {
           </div>
         )}
 
-        {/* Streaming json-render blocks — progressive reveal during and after generation */}
-        {showStreamingView && (
-          <div className="mb-6">
-            <StreamingItineraryView
-              blocks={stream.blocks}
-              isStreaming={stream.isStreaming}
+        {/* Progressive discovery badges during generation */}
+        {isGenerating && (generation.activitiesCount > 0 || generation.diningCount > 0) && (
+          <div className="flex flex-wrap gap-2 mb-6">
+            {generation.activitiesCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-200 animate-in fade-in slide-in-from-bottom-1 duration-300">
+                <Sparkles className="w-3.5 h-3.5" />
+                Found {generation.activitiesCount} activities
+              </span>
+            )}
+            {generation.diningCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-700 rounded-full text-xs font-bold border border-orange-200 animate-in fade-in slide-in-from-bottom-1 duration-300">
+                <Sparkles className="w-3.5 h-3.5" />
+                Found {generation.diningCount} restaurants
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Overview Section */}
+        {itinerary?.overview && !isGenerating && (
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
+            <h2 className="text-lg font-bold text-gray-900 mb-3">Trip Overview</h2>
+            <p className="text-gray-600 leading-relaxed">{itinerary.overview}</p>
+          </div>
+        )}
+
+        {/* Recommended Hotel — fades in from stream or DB */}
+        {displayTopHotel && (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
+            <FeaturedHotelCard
+              hotel={displayTopHotel}
+              nights={displayDays ? Math.max(0, displayDays.length - 1) : (skeletonDayCount > 0 ? skeletonDayCount - 1 : 0)}
             />
           </div>
         )}
 
-        {/* Fallback: Traditional itinerary rendering for already-generated trips */}
-        {!showStreamingView && itinerary && (
-          <>
-            {/* Overview Section */}
-            {itinerary.overview && (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
-                <h2 className="text-lg font-bold text-gray-900 mb-3">Trip Overview</h2>
-                <p className="text-gray-600 leading-relaxed">{itinerary.overview}</p>
-              </div>
-            )}
-
-            {/* Recommended Hotel */}
-            {topHotel && (
-              <FeaturedHotelCard hotel={topHotel} nights={itinerary.days.length > 0 ? itinerary.days.length - 1 : 0} />
-            )}
-
-            {/* Interactive Map */}
-            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
-              <ItineraryMap itinerary={itinerary} className="h-64 sm:h-80" />
-            </div>
-
-            {/* Day-by-Day Itinerary */}
-            {itinerary.days && itinerary.days.length > 0 ? (
-              <div className="space-y-5">
-                <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-bold text-gray-900">Your Itinerary</h2>
-                  {bookableCount > 0 && (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 text-primary-700 rounded-full text-xs font-bold">
-                      <Ticket className="w-3.5 h-3.5" />
-                      {bookableCount} bookable experience{bookableCount > 1 ? 's' : ''}
-                    </span>
-                  )}
-                </div>
-                {itinerary.days.map((day, index) => (
-                  <DayErrorBoundary key={day.dayNumber || index} dayNumber={day.dayNumber || index + 1}>
-                    <ItineraryDay
-                      dayNumber={day.dayNumber}
-                      date={day.date}
-                      title={day.title}
-                      summary={day.summary}
-                      morning={day.morning}
-                      afternoon={day.afternoon}
-                      evening={day.evening}
-                      totalEstimatedCost={day.totalEstimatedCost}
-                      tips={day.tips}
-                      defaultExpanded={true}
-                      hotel={index === 0 ? topHotel : undefined}
-                    />
-                  </DayErrorBoundary>
-                ))}
-              </div>
-            ) : isComplete ? (
-              <EmptyItinerary destination={trip.destination} />
-            ) : null}
-
-            {/* Budget Summary */}
-            {budgetBreakdown && (
-              <BudgetSummary breakdown={budgetBreakdown} currency="USD" />
-            )}
-
-            {/* General Tips */}
-            {itinerary.generalTips && itinerary.generalTips.length > 0 && (
-              <div className="mt-6 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl p-6 border border-primary-100/50">
-                <h3 className="font-bold text-primary-800 mb-3 flex items-center gap-2">
-                  <span className="text-lg">💡</span> Travel Tips for {trip.destination}
-                </h3>
-                <ul className="space-y-2">
-                  {itinerary.generalTips.map((tip, i) => (
-                    <li key={i} className="text-sm text-primary-700 flex items-start gap-2">
-                      <span className="text-primary-400 mt-0.5">•</span>
-                      <span>{tip}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Packing List */}
-            {itinerary.packingList && itinerary.packingList.length > 0 && (
-              <div className="mt-6 bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-                <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-                  <span className="text-lg">🧳</span> Packing Suggestions
-                </h3>
-                <div className="flex flex-wrap gap-2">
-                  {itinerary.packingList.map((item, i) => (
-                    <span
-                      key={i}
-                      className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-gray-100 text-gray-700 font-medium"
-                    >
-                      {item}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
-          </>
+        {/* Interactive Map (only when DB itinerary loaded) */}
+        {itinerary && !isGenerating && (
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
+            <ItineraryMap itinerary={itinerary} className="h-64 sm:h-80" />
+          </div>
         )}
 
-        {/* Empty state for completed trips without itinerary or blocks */}
-        {isComplete && !showStreamingView && !itinerary && (
+        {/* Day-by-Day Itinerary — progressive rendering */}
+        {displayDays && displayDays.length > 0 ? (
+          <div className="space-y-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-bold text-gray-900">Your Itinerary</h2>
+              {bookableCount > 0 && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 text-primary-700 rounded-full text-xs font-bold">
+                  <Ticket className="w-3.5 h-3.5" />
+                  {bookableCount} bookable experience{bookableCount > 1 ? 's' : ''}
+                </span>
+              )}
+            </div>
+            {displayDays.map((day, index) => (
+              <div
+                key={day.dayNumber || index}
+                className="animate-in fade-in slide-in-from-bottom-2 duration-500"
+                style={{ animationDelay: `${index * 150}ms`, animationFillMode: 'both' }}
+              >
+                <DayErrorBoundary dayNumber={day.dayNumber || index + 1}>
+                  <ItineraryDay
+                    dayNumber={day.dayNumber}
+                    date={day.date}
+                    title={day.title}
+                    summary={day.summary}
+                    morning={day.morning}
+                    afternoon={day.afternoon}
+                    evening={day.evening}
+                    totalEstimatedCost={day.totalEstimatedCost}
+                    tips={day.tips}
+                    defaultExpanded={true}
+                    hotel={index === 0 ? displayTopHotel : undefined}
+                  />
+                </DayErrorBoundary>
+              </div>
+            ))}
+          </div>
+        ) : isGenerating && !displayDays ? (
+          /* Skeleton days while generating */
+          <div className="space-y-5">
+            <h2 className="text-xl font-bold text-gray-900">Your Itinerary</h2>
+            {Array.from({ length: skeletonDayCount }, (_, i) => (
+              <div
+                key={i}
+                className="animate-in fade-in slide-in-from-bottom-2 duration-500"
+                style={{ animationDelay: `${i * 100}ms`, animationFillMode: 'both' }}
+              >
+                <SkeletonItineraryDay
+                  dayNumber={i + 1}
+                  date={skeletonDates[i]}
+                />
+              </div>
+            ))}
+          </div>
+        ) : isComplete && !displayDays ? (
+          <EmptyItinerary destination={trip.destination} />
+        ) : null}
+
+        {/* Budget Summary */}
+        {budgetBreakdown && (
+          <BudgetSummary breakdown={budgetBreakdown} currency="USD" />
+        )}
+
+        {/* General Tips */}
+        {itinerary?.generalTips && itinerary.generalTips.length > 0 && (
+          <div className="mt-6 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl p-6 border border-primary-100/50">
+            <h3 className="font-bold text-primary-800 mb-3 flex items-center gap-2">
+              <span className="text-lg">💡</span> Travel Tips for {trip.destination}
+            </h3>
+            <ul className="space-y-2">
+              {itinerary.generalTips.map((tip, i) => (
+                <li key={i} className="text-sm text-primary-700 flex items-start gap-2">
+                  <span className="text-primary-400 mt-0.5">•</span>
+                  <span>{tip}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Packing List */}
+        {itinerary?.packingList && itinerary.packingList.length > 0 && (
+          <div className="mt-6 bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+            <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
+              <span className="text-lg">🧳</span> Packing Suggestions
+            </h3>
+            <div className="flex flex-wrap gap-2">
+              {itinerary.packingList.map((item, i) => (
+                <span
+                  key={i}
+                  className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-gray-100 text-gray-700 font-medium"
+                >
+                  {item}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Empty state for completed trips without itinerary */}
+        {isComplete && !displayDays && !itinerary && (
           <EmptyItinerary destination={trip.destination} />
         )}
 
@@ -493,7 +546,7 @@ export default function TripDetailPage() {
         )}
 
         {/* Share This Trip */}
-        {isComplete && (showStreamingView || itinerary) && (
+        {isComplete && (displayDays || itinerary) && (
           <div className="mt-8 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl p-6 sm:p-8 text-center border border-primary-100/30">
             <h3 className="font-bold text-gray-900 mb-2 text-lg">Share Your Adventure</h3>
             <p className="text-sm text-gray-600 mb-4">Let friends and family know about your upcoming trip!</p>

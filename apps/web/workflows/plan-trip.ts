@@ -235,8 +235,46 @@ async function searchAffiliates(params: {
     }
   };
 
+  // Callback: save intermediate results for progressive SSE streaming
+  const onAgentResult = async (stage: string, data: unknown) => {
+    const db = getSupabase();
+    if (stage === 'hotels') {
+      await db.rpc('merge_intermediate_results', {
+        p_search_id: searchId,
+        p_key: 'hotels',
+        p_value: JSON.stringify(data),
+      });
+    } else if (stage === 'activities') {
+      await db.rpc('merge_intermediate_results', {
+        p_search_id: searchId,
+        p_key: 'activitiesCount',
+        p_value: JSON.stringify((data as any[]).length),
+      });
+    } else if (stage === 'dining') {
+      await db.rpc('merge_intermediate_results', {
+        p_search_id: searchId,
+        p_key: 'diningCount',
+        p_value: JSON.stringify((data as any[]).length),
+      });
+    } else if (stage === 'aggregator') {
+      const { days, topHotel } = data as { days: any[]; topHotel: any };
+      await db.rpc('merge_intermediate_results', {
+        p_search_id: searchId,
+        p_key: 'days',
+        p_value: JSON.stringify(days),
+      });
+      if (topHotel) {
+        await db.rpc('merge_intermediate_results', {
+          p_search_id: searchId,
+          p_key: 'topHotel',
+          p_value: JSON.stringify(topHotel),
+        });
+      }
+    }
+  };
+
   // Run the multi-agent system
-  const searchResult = await executeTravelSearch(searchId, searchInput, { onProgress });
+  const searchResult = await executeTravelSearch(searchId, searchInput, { onProgress, onAgentResult });
 
   if (searchResult.status === 'error' || !searchResult.results) {
     throw new Error(searchResult.error || 'Multi-agent search failed');
@@ -483,13 +521,14 @@ async function buildAndSaveSpec(
   // Save search results to database
   await saveSearchResults(searchId, result);
 
-  // Save the json-render spec and mark as completed
+  // Save the json-render spec, mark as completed, and clear intermediate results
   await getSupabase()
     .from('searches')
     .update({
       status: 'completed',
       completed_at: new Date().toISOString(),
       json_render_spec: jsonRenderSpec,
+      intermediate_results: null,
       progress: {
         orchestrator: 'done',
         hotels: 'done',

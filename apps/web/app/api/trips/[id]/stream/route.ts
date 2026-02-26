@@ -1,16 +1,19 @@
 /**
  * GET /api/trips/[id]/stream
  *
- * SSE endpoint for real-time trip generation progress and json-render block streaming.
+ * SSE endpoint for real-time trip generation progress and progressive data streaming.
  *
- * Phase A: Polls the searches table for agent progress, emits progress events.
- * Phase B: When search is complete, streams json-render spec blocks one at a time.
+ * Polls the searches table for agent progress and intermediate_results,
+ * emitting typed data events as each agent completes.
  *
  * SSE event protocol:
- *   event: progress  — { step, status, progress, message, searchProgress }
- *   event: block     — { type, props } (a json-render component)
- *   event: complete  — { tripId, blockCount }
- *   event: error     — { message }
+ *   event: progress   — { step, status, progress, message, searchProgress }
+ *   event: hotels     — { topHotel, count }
+ *   event: activities — { count }
+ *   event: dining     — { count }
+ *   event: itinerary  — { days, topHotel }
+ *   event: complete   — { tripId }
+ *   event: error      — { message }
  */
 
 import { NextRequest } from 'next/server';
@@ -69,21 +72,10 @@ export async function GET(
       };
 
       try {
-        // If the trip is already generated, skip to streaming the spec
-        if (trip.status === 'generated' && trip.search_id) {
-          const { data: search } = await adminClient
-            .from('searches')
-            .select('json_render_spec')
-            .eq('id', trip.search_id)
-            .single();
-
-          if (search?.json_render_spec) {
-            send('progress', { step: 'complete', status: 'done', progress: 100, message: 'Your itinerary is ready!' });
-            await streamBlocks(search.json_render_spec as unknown[], send);
-            send('complete', { tripId, blockCount: (search.json_render_spec as unknown[]).length });
-          } else {
-            send('complete', { tripId, blockCount: 0 });
-          }
+        // If the trip is already generated, send complete immediately
+        if (trip.status === 'generated') {
+          send('progress', { step: 'complete', status: 'done', progress: 100, message: 'Your itinerary is ready!' });
+          send('complete', { tripId });
           controller.close();
           return;
         }
@@ -95,13 +87,18 @@ export async function GET(
           return;
         }
 
-        // ── Phase A: Poll search progress ──────────────────────────────
         const searchId = trip.search_id;
         if (!searchId) {
           send('error', { message: 'No search linked to this trip' });
           controller.close();
           return;
         }
+
+        // Track what data events we've already sent
+        let sentHotels = false;
+        let sentActivities = false;
+        let sentDining = false;
+        let sentItinerary = false;
 
         let lastProgressJson = '';
         let isComplete = false;
@@ -117,7 +114,7 @@ export async function GET(
 
           const { data: search } = await adminClient
             .from('searches')
-            .select('status, progress, error_message, json_render_spec, completed_at')
+            .select('status, progress, error_message, intermediate_results, completed_at')
             .eq('id', searchId)
             .single();
 
@@ -147,18 +144,36 @@ export async function GET(
             });
           }
 
+          // Stream intermediate results as they appear
+          const ir = (search.intermediate_results || {}) as Record<string, unknown>;
+
+          if (!sentHotels && ir.hotels) {
+            const hotels = ir.hotels as any[];
+            const topHotel = ir.topHotel || hotels[0] || null;
+            send('hotels', { topHotel, count: hotels.length });
+            sentHotels = true;
+          }
+
+          if (!sentActivities && ir.activitiesCount != null) {
+            send('activities', { count: ir.activitiesCount });
+            sentActivities = true;
+          }
+
+          if (!sentDining && ir.diningCount != null) {
+            send('dining', { count: ir.diningCount });
+            sentDining = true;
+          }
+
+          if (!sentItinerary && ir.days) {
+            const topHotel = ir.topHotel || null;
+            send('itinerary', { days: ir.days, topHotel });
+            sentItinerary = true;
+          }
+
           if (search.status === 'completed') {
             isComplete = true;
-
-            // ── Phase B: Stream json-render blocks ───────────────────
             send('progress', { step: 'complete', status: 'done', progress: 100, message: 'Your itinerary is ready!' });
-
-            if (search.json_render_spec && Array.isArray(search.json_render_spec)) {
-              await streamBlocks(search.json_render_spec as unknown[], send);
-              send('complete', { tripId, blockCount: search.json_render_spec.length });
-            } else {
-              send('complete', { tripId, blockCount: 0 });
-            }
+            send('complete', { tripId });
             break;
           }
 
@@ -195,20 +210,6 @@ export async function GET(
       'X-Accel-Buffering': 'no',
     },
   });
-}
-
-/**
- * Stream json-render blocks one at a time with a small delay for progressive reveal.
- */
-async function streamBlocks(
-  spec: unknown[],
-  send: (event: string, data: unknown) => void
-) {
-  for (const block of spec) {
-    send('block', block);
-    // Small delay for progressive reveal effect
-    await new Promise(resolve => setTimeout(resolve, 50));
-  }
 }
 
 /**
