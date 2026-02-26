@@ -1,14 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-
-/**
- * A json-render block from the SSE stream.
- */
-export interface JsonRenderBlock {
-  type: string;
-  props: Record<string, unknown>;
-}
+import type { TripDay, HotelResult } from '@tripgenie/types';
 
 /**
  * Search progress from the backend (per-agent status).
@@ -22,56 +15,60 @@ export interface SearchProgress {
   aggregator?: string;
 }
 
-export interface ItineraryStreamState {
-  /** Accumulated json-render blocks */
-  blocks: JsonRenderBlock[];
-  /** Overall progress 0-100 */
+export interface TripGenerationState {
+  // Progress
+  phase: 'connecting' | 'orchestrator' | 'searching' | 'composing' | 'complete' | 'error';
   progress: number;
-  /** Current step name */
-  step: string;
-  /** Human-readable status message */
   message: string;
-  /** Per-agent progress */
   searchProgress: SearchProgress | null;
-  /** True while SSE connection is active */
+
+  // Progressive data
+  topHotel: HotelResult | null;
+  activitiesCount: number;
+  diningCount: number;
+  days: TripDay[] | null;
+
+  // Status
   isStreaming: boolean;
-  /** True when all blocks have been received */
   isComplete: boolean;
-  /** Error message if something went wrong */
   error: string | null;
 }
 
-interface UseItineraryStreamOptions {
+interface UseTripGenerationOptions {
   /** Trip ID to stream */
   tripId: string;
   /** Whether to start streaming immediately */
   enabled?: boolean;
   /** Callback when streaming completes */
-  onComplete?: (blocks: JsonRenderBlock[]) => void;
+  onComplete?: () => void;
   /** Callback on error */
   onError?: (error: string) => void;
 }
 
+const initialState: TripGenerationState = {
+  phase: 'connecting',
+  progress: 0,
+  message: 'Connecting...',
+  searchProgress: null,
+  topHotel: null,
+  activitiesCount: 0,
+  diningCount: 0,
+  days: null,
+  isStreaming: false,
+  isComplete: false,
+  error: null,
+};
+
 /**
  * React hook that connects to GET /api/trips/[id]/stream via EventSource
- * and accumulates json-render blocks as they arrive.
+ * and accumulates progressive data events for rendering ItineraryDay components.
  */
-export function useItineraryStream(options: UseItineraryStreamOptions): ItineraryStreamState {
+export function useTripGeneration(options: UseTripGenerationOptions): TripGenerationState {
   const { tripId, enabled = true, onComplete, onError } = options;
 
-  const [state, setState] = useState<ItineraryStreamState>({
-    blocks: [],
-    progress: 0,
-    step: 'queued',
-    message: 'Connecting...',
-    searchProgress: null,
-    isStreaming: false,
-    isComplete: false,
-    error: null,
-  });
+  const [state, setState] = useState<TripGenerationState>(initialState);
 
   const eventSourceRef = useRef<EventSource | null>(null);
-  const blocksRef = useRef<JsonRenderBlock[]>([]);
   const onCompleteRef = useRef(onComplete);
   const onErrorRef = useRef(onError);
   onCompleteRef.current = onComplete;
@@ -90,73 +87,109 @@ export function useItineraryStream(options: UseItineraryStreamOptions): Itinerar
     }
 
     cleanup();
-    blocksRef.current = [];
 
     setState({
-      blocks: [],
-      progress: 0,
-      step: 'connecting',
-      message: 'Connecting to generation stream...',
-      searchProgress: null,
+      ...initialState,
       isStreaming: true,
-      isComplete: false,
-      error: null,
+      message: 'Connecting to generation stream...',
     });
 
     const eventSource = new EventSource(`/api/trips/${tripId}/stream`);
     eventSourceRef.current = eventSource;
 
-    // Handle named events
+    // Progress events
     eventSource.addEventListener('progress', (event) => {
       try {
         const data = JSON.parse(event.data);
+
+        // Map step to phase
+        let phase: TripGenerationState['phase'] = 'searching';
+        if (data.step === 'orchestrator') phase = 'orchestrator';
+        else if (data.step === 'aggregator') phase = 'composing';
+        else if (data.step === 'complete') phase = 'complete';
+
         setState(prev => ({
           ...prev,
+          phase,
           progress: data.progress ?? prev.progress,
-          step: data.step ?? prev.step,
           message: data.message ?? prev.message,
           searchProgress: data.searchProgress ?? prev.searchProgress,
         }));
       } catch (err) {
-        console.error('[useItineraryStream] Failed to parse progress event:', err);
+        console.error('[useTripGeneration] Failed to parse progress event:', err);
       }
     });
 
-    eventSource.addEventListener('block', (event) => {
-      try {
-        const block = JSON.parse(event.data) as JsonRenderBlock;
-        blocksRef.current = [...blocksRef.current, block];
-        setState(prev => ({
-          ...prev,
-          blocks: blocksRef.current,
-        }));
-      } catch (err) {
-        console.error('[useItineraryStream] Failed to parse block event:', err);
-      }
-    });
-
-    eventSource.addEventListener('complete', (event) => {
+    // Hotels event
+    eventSource.addEventListener('hotels', (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log(`[useItineraryStream] Stream complete: ${data.blockCount} blocks`);
-      } catch {
-        // Ignore parse errors on complete
+        setState(prev => ({
+          ...prev,
+          topHotel: data.topHotel ?? prev.topHotel,
+        }));
+      } catch (err) {
+        console.error('[useTripGeneration] Failed to parse hotels event:', err);
       }
+    });
 
+    // Activities event
+    eventSource.addEventListener('activities', (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        setState(prev => ({
+          ...prev,
+          activitiesCount: data.count ?? prev.activitiesCount,
+        }));
+      } catch (err) {
+        console.error('[useTripGeneration] Failed to parse activities event:', err);
+      }
+    });
+
+    // Dining event
+    eventSource.addEventListener('dining', (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        setState(prev => ({
+          ...prev,
+          diningCount: data.count ?? prev.diningCount,
+        }));
+      } catch (err) {
+        console.error('[useTripGeneration] Failed to parse dining event:', err);
+      }
+    });
+
+    // Itinerary event (aggregator done)
+    eventSource.addEventListener('itinerary', (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        setState(prev => ({
+          ...prev,
+          days: data.days ?? prev.days,
+          topHotel: data.topHotel ?? prev.topHotel,
+        }));
+      } catch (err) {
+        console.error('[useTripGeneration] Failed to parse itinerary event:', err);
+      }
+    });
+
+    // Complete event
+    eventSource.addEventListener('complete', () => {
       setState(prev => ({
         ...prev,
         isStreaming: false,
         isComplete: true,
+        phase: 'complete',
         progress: 100,
-        step: 'complete',
         message: 'Your itinerary is ready!',
       }));
 
-      onCompleteRef.current?.(blocksRef.current);
+      onCompleteRef.current?.();
       eventSource.close();
       eventSourceRef.current = null;
     });
 
+    // Error event
     eventSource.addEventListener('error', (event) => {
       // Check if it's an SSE error event with data
       if (event instanceof MessageEvent && event.data) {
@@ -166,6 +199,7 @@ export function useItineraryStream(options: UseItineraryStreamOptions): Itinerar
           setState(prev => ({
             ...prev,
             isStreaming: false,
+            phase: 'error',
             error: errorMessage,
           }));
           onErrorRef.current?.(errorMessage);
@@ -178,10 +212,8 @@ export function useItineraryStream(options: UseItineraryStreamOptions): Itinerar
       }
 
       // Generic EventSource connection error
-      // EventSource auto-reconnects, but if CLOSED, handle it
       if (eventSource.readyState === EventSource.CLOSED) {
         setState(prev => {
-          // If we already completed, don't set error
           if (prev.isComplete) return prev;
 
           const errorMessage = 'Connection lost during generation';
@@ -189,16 +221,12 @@ export function useItineraryStream(options: UseItineraryStreamOptions): Itinerar
           return {
             ...prev,
             isStreaming: false,
+            phase: 'error',
             error: errorMessage,
           };
         });
         eventSourceRef.current = null;
       }
-    });
-
-    // Also listen for generic 'error' events that come as named events
-    eventSource.addEventListener('error', () => {
-      // This is the built-in EventSource error handler, already handled above
     });
 
     return () => {

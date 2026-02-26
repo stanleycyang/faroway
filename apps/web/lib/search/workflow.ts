@@ -16,6 +16,7 @@ import {
   SearchResults,
   SuggestedDay,
 } from './types';
+import { mapSearchResultsToItinerary } from './bridge';
 import {
   runOrchestratorAgent,
   runHotelsAgent,
@@ -45,9 +46,11 @@ export async function executeTravelSearch(
   input: SearchInput,
   callbacks?: {
     onProgress?: (stage: string, status: 'searching' | 'done') => Promise<void>;
+    onAgentResult?: (stage: string, data: unknown) => Promise<void>;
   }
 ): Promise<TravelSearchWorkflowOutput> {
   const onProgress = callbacks?.onProgress;
+  const onAgentResult = callbacks?.onAgentResult;
 
   try {
     // Step 1: Orchestrator Agent - Creates the search plan
@@ -65,14 +68,17 @@ export async function executeTravelSearch(
     const [hotels, activities, dining] = await Promise.all([
       runHotelsAgent(searchPlan, 10).then(async (results) => {
         if (onProgress) await onProgress('hotels', 'done');
+        if (onAgentResult) await onAgentResult('hotels', results);
         return results;
       }),
       runActivitiesAgent(searchPlan, 15).then(async (results) => {
         if (onProgress) await onProgress('activities', 'done');
+        if (onAgentResult) await onAgentResult('activities', results);
         return results;
       }),
       runDiningAgent(searchPlan, 12).then(async (results) => {
         if (onProgress) await onProgress('dining', 'done');
+        if (onAgentResult) await onAgentResult('dining', results);
         return results;
       }),
     ]);
@@ -89,6 +95,13 @@ export async function executeTravelSearch(
       dining,
       itinerary: days,
     };
+
+    // Send mapped aggregator results so the client can render TripDay[] progressively
+    if (onAgentResult) {
+      const topHotel = days?.[0]?.hotel || hotels[0] || null;
+      const mapped = mapSearchResultsToItinerary(results, topHotel);
+      await onAgentResult('aggregator', { days: mapped.days, topHotel: mapped.topHotel });
+    }
 
     return {
       searchId,
