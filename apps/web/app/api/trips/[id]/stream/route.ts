@@ -9,19 +9,32 @@
  * Used by mobile clients or when another POST stream is already running.
  *
  * SSE event protocol:
- *   event: progress   — { step, status, progress, message, searchProgress }
- *   event: hotels     — { topHotel, count }
- *   event: activities — { count }
- *   event: dining     — { count }
- *   event: itinerary  — { days, topHotel }
- *   event: complete   — { tripId }
- *   event: error      — { message }
+ *   event: progress     — { step, status, progress, message, searchProgress }
+ *   event: micro        — { stage, message, detail? } (granular progress updates)
+ *   event: hotels       — { topHotel, count }
+ *   event: activities   — { count }
+ *   event: dining       — { count }
+ *   event: itinerary    — { days, topHotel }
+ *   event: spec-block   — { blocks: JsonRenderComponent[] } (progressive for mobile)
+ *   event: spec-complete— { spec: JsonRenderComponent[] } (full spec for caching)
+ *   event: complete     — { tripId }
+ *   event: error        — { message }
  */
 
 import { NextRequest } from 'next/server';
 import { createClient, getSupabase } from '@/lib/supabase/server';
 import { executeTravelSearch } from '@/lib/search/workflow';
 import { mapSearchResultsToItinerary, type MappedItinerary } from '@/lib/search/bridge';
+import {
+  buildSummaryBlocks,
+  buildHotelBlocks,
+  buildItineraryBlocks,
+  buildBudgetBlocks,
+  type JsonRenderComponent,
+  type HotelInput,
+  type ActivityInput,
+  type ItineraryDayInput,
+} from '@/lib/json-render/build-spec';
 import type { SearchInput } from '@faroway/types';
 
 export const maxDuration = 300;
@@ -176,6 +189,20 @@ export async function POST(request: NextRequest, { params }: Params) {
           travelerType: (trip.preferences as Record<string, unknown>)?.travelerType as string | undefined,
         };
 
+        // Track accumulated json-render blocks for progressive mobile streaming
+        const accumulatedBlocks: JsonRenderComponent[] = [];
+
+        // Send initial summary block immediately
+        const summaryBlocks = buildSummaryBlocks({
+          destination: trip.destination,
+          startDate: trip.start_date,
+          endDate: trip.end_date,
+          travelers: trip.travelers || 2,
+          budget: trip.budget_tier || undefined,
+        });
+        accumulatedBlocks.push(...summaryBlocks);
+        send('spec-block', { blocks: summaryBlocks });
+
         const progressState: Record<string, string> = {
           orchestrator: 'pending',
           hotels: 'pending',
@@ -202,24 +229,70 @@ export async function POST(request: NextRequest, { params }: Params) {
             .then(() => {});
         };
 
+        // Micro-progress for more granular feedback
+        const onMicroProgress = (data: { stage: string; message: string; detail?: string }) => {
+          if (request.signal.aborted) return;
+          send('micro', data);
+        };
+
+        // Track agent results for budget calculation
+        let capturedHotels: HotelInput[] = [];
+        let capturedActivities: ActivityInput[] = [];
+        let capturedTopHotel: HotelInput | undefined;
+
         const onAgentResult = async (stage: string, data: unknown) => {
           if (request.signal.aborted) return;
 
           if (stage === 'hotels') {
-            const hotels = data as Record<string, unknown>[];
-            send('hotels', { topHotel: hotels[0] || null, count: hotels.length });
+            const hotels = data as HotelInput[];
+            capturedHotels = hotels;
+            const topHotel = hotels[0] || null;
+            capturedTopHotel = topHotel || undefined;
+
+            send('hotels', { topHotel, count: hotels.length });
+
+            // Send hotel spec-block for mobile
+            const hotelBlocks = buildHotelBlocks({
+              topHotel: topHotel || undefined,
+              otherHotels: hotels.slice(1),
+            });
+            accumulatedBlocks.push(...hotelBlocks);
+            send('spec-block', { blocks: hotelBlocks });
           } else if (stage === 'activities') {
-            send('activities', { count: (data as unknown[]).length });
+            capturedActivities = data as ActivityInput[];
+            send('activities', { count: capturedActivities.length });
           } else if (stage === 'dining') {
             send('dining', { count: (data as unknown[]).length });
           } else if (stage === 'aggregator') {
+            const itineraryData = data as { days?: ItineraryDayInput[]; topHotel?: HotelInput; totalEstimatedCost?: number };
             send('itinerary', data);
+
+            // Send itinerary spec-block for mobile
+            const days = itineraryData.days || [];
+            const itineraryBlocks = buildItineraryBlocks(days);
+            accumulatedBlocks.push(...itineraryBlocks);
+            send('spec-block', { blocks: itineraryBlocks });
+
+            // Send budget spec-block for mobile
+            const nights = Math.ceil(
+              (new Date(trip.end_date).getTime() - new Date(trip.start_date).getTime()) / (1000 * 60 * 60 * 24)
+            );
+            const budgetBlocks = buildBudgetBlocks({
+              topHotel: capturedTopHotel || itineraryData.topHotel,
+              activities: capturedActivities,
+              totalEstimatedCost: itineraryData.totalEstimatedCost || 0,
+              nights,
+              currency: 'USD',
+            });
+            accumulatedBlocks.push(...budgetBlocks);
+            send('spec-block', { blocks: budgetBlocks });
           }
         };
 
         const searchResult = await executeTravelSearch(searchId, searchInput, {
           onProgress,
           onAgentResult,
+          onMicroProgress,
         });
 
         if (searchResult.status === 'error' || !searchResult.results) {
@@ -294,9 +367,13 @@ export async function POST(request: NextRequest, { params }: Params) {
           }).eq('id', tripId),
         ]);
 
-        // Non-critical saves
+        // Send full spec for caching/fallback (mobile can use this if blocks were missed)
+        send('spec-complete', { spec: accumulatedBlocks });
+
+        // Non-critical saves (including json-render spec for mobile polling fallback)
         Promise.allSettled([
           saveSearchResults(db, searchId, mapped),
+          db.from('searches').update({ json_render_spec: accumulatedBlocks }).eq('id', searchId),
           db.from('workflow_progress').upsert({
             trip_id: tripId,
             step: 'complete',
