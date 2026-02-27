@@ -6,9 +6,15 @@
  * via its component registry.
  *
  * Component types match: apps/mobile/lib/json-render/catalog.ts
+ *
+ * For progressive streaming, use the individual builders:
+ *   - buildSummaryBlocks()    — called immediately when stream starts
+ *   - buildHotelBlocks()      — called when hotels agent finishes
+ *   - buildItineraryBlocks()  — called when aggregator finishes
+ *   - buildBudgetBlocks()     — called alongside itinerary
  */
 
-interface HotelInput {
+export interface HotelInput {
   id?: string;
   name: string;
   rating?: number;
@@ -22,7 +28,7 @@ interface HotelInput {
   starRating?: number;
 }
 
-interface ActivityInput {
+export interface ActivityInput {
   id?: string;
   name: string;
   description?: string;
@@ -37,7 +43,7 @@ interface ActivityInput {
   location?: { neighborhood?: string; city?: string; name?: string };
 }
 
-interface RestaurantInput {
+export interface RestaurantInput {
   id?: string;
   name: string;
   cuisine?: string;
@@ -49,7 +55,7 @@ interface RestaurantInput {
   images?: string[];
 }
 
-interface ItineraryDayInput {
+export interface ItineraryDayInput {
   dayNumber: number;
   date: string;
   title: string;
@@ -85,37 +91,62 @@ export interface BuildSpecInput {
   summary?: string;
 }
 
-interface JsonRenderComponent {
+export interface JsonRenderComponent {
   type: string;
   props: Record<string, unknown>;
 }
 
+// ─── Helper ───────────────────────────────────────────────────────────────────
+
+function formatDate(dateStr: string): string {
+  const date = new Date(dateStr);
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+// ─── 1. Summary Blocks ────────────────────────────────────────────────────────
+
+export interface BuildSummaryInput {
+  destination: string;
+  startDate: string;
+  endDate: string;
+  travelers: number;
+  budget?: string;
+}
+
 /**
- * Build a json-render spec (flat array of components) from search results.
- * The mobile app iterates this array and renders each component via registry.
+ * Build the TripSummary block — called immediately when stream starts.
  */
-export function buildJsonRenderSpec(input: BuildSpecInput): JsonRenderComponent[] {
-  const components: JsonRenderComponent[] = [];
-
-  const nights = Math.ceil(
-    (new Date(input.endDate).getTime() - new Date(input.startDate).getTime()) / (1000 * 60 * 60 * 24)
-  );
-
+export function buildSummaryBlocks(input: BuildSummaryInput): JsonRenderComponent[] {
   const dateRange = `${formatDate(input.startDate)} - ${formatDate(input.endDate)}`;
 
-  // 1. TripSummary
-  components.push({
-    type: 'TripSummary',
-    props: {
-      destination: input.destination,
-      dates: dateRange,
-      travelers: input.travelers,
-      budget: input.budget,
+  return [
+    {
+      type: 'TripSummary',
+      props: {
+        destination: input.destination,
+        dates: dateRange,
+        travelers: input.travelers,
+        budget: input.budget,
+      },
     },
-  });
+  ];
+}
 
-  // 2. Featured Hotel (top pick)
-  if (input.topHotel) {
+// ─── 2. Hotel Blocks ──────────────────────────────────────────────────────────
+
+export interface BuildHotelInput {
+  topHotel?: HotelInput;
+  otherHotels?: HotelInput[];
+}
+
+/**
+ * Build hotel section blocks — called when hotels agent finishes.
+ */
+export function buildHotelBlocks(input: BuildHotelInput): JsonRenderComponent[] {
+  const components: JsonRenderComponent[] = [];
+  const { topHotel, otherHotels = [] } = input;
+
+  if (topHotel) {
     components.push({
       type: 'Section',
       props: { title: 'Your Stay' },
@@ -124,42 +155,41 @@ export function buildJsonRenderSpec(input: BuildSpecInput): JsonRenderComponent[
     components.push({
       type: 'HotelCard',
       props: {
-        name: input.topHotel.name,
-        rating: input.topHotel.rating || 4.5,
-        starRating: input.topHotel.starRating,
-        pricePerNight: input.topHotel.pricePerNight || 150,
-        image: input.topHotel.images?.[0],
-        bookingUrl: input.topHotel.affiliateUrl,
-        amenities: input.topHotel.amenities || [],
-        description: input.topHotel.description,
-        reviewCount: input.topHotel.reviewCount,
+        name: topHotel.name,
+        rating: topHotel.rating || 4.5,
+        starRating: topHotel.starRating,
+        pricePerNight: topHotel.pricePerNight || 150,
+        image: topHotel.images?.[0],
+        bookingUrl: topHotel.affiliateUrl,
+        amenities: topHotel.amenities || [],
+        description: topHotel.description,
+        reviewCount: topHotel.reviewCount,
         featured: true,
       },
     });
 
-    if (input.topHotel.affiliateUrl) {
+    if (topHotel.affiliateUrl) {
       components.push({
         type: 'BookingButton',
         props: {
-          label: `Book ${input.topHotel.name}`,
-          url: input.topHotel.affiliateUrl,
+          label: `Book ${topHotel.name}`,
+          url: topHotel.affiliateUrl,
           provider: 'Booking.com',
-          price: input.topHotel.pricePerNight,
+          price: topHotel.pricePerNight,
         },
       });
     }
   }
 
-  // 3. More Hotels Section (remaining hotels)
-  const otherHotels = input.hotels.filter(h => h.id !== input.topHotel?.id);
-  if (otherHotels.length > 0) {
+  const filteredOtherHotels = otherHotels.filter(h => h.id !== topHotel?.id);
+  if (filteredOtherHotels.length > 0) {
     components.push({
       type: 'Section',
       props: { title: 'Other Hotel Options' },
     });
 
-    const topHotels = otherHotels.slice(0, 3);
-    for (const hotel of topHotels) {
+    const topThree = filteredOtherHotels.slice(0, 3);
+    for (const hotel of topThree) {
       components.push({
         type: 'HotelCard',
         props: {
@@ -188,172 +218,227 @@ export function buildJsonRenderSpec(input: BuildSpecInput): JsonRenderComponent[
     }
   }
 
-  // 4. Day-by-day Itinerary
-  if (input.days.length > 0) {
+  return components;
+}
+
+// ─── 3. Itinerary Blocks ──────────────────────────────────────────────────────
+
+/**
+ * Build itinerary day blocks — called when aggregator finishes.
+ */
+export function buildItineraryBlocks(days: ItineraryDayInput[]): JsonRenderComponent[] {
+  const components: JsonRenderComponent[] = [];
+
+  if (days.length === 0) return components;
+
+  components.push({
+    type: 'Section',
+    props: { title: 'Your Itinerary' },
+  });
+
+  for (const day of days) {
     components.push({
-      type: 'Section',
-      props: { title: 'Your Itinerary' },
-    });
-
-    for (const day of input.days) {
-      // Day header
-      components.push({
-        type: 'ItineraryDay',
-        props: {
-          dayNumber: day.dayNumber,
-          date: day.date,
-          title: day.title,
-        },
-      });
-
-      // Build timeline items for this day
-      const timelineItems: Array<{ time: string; title: string; type: string }> = [];
-
-      // Morning
-      if (day.morning?.meal) {
-        timelineItems.push({ time: '08:00', title: day.morning.meal.name, type: 'restaurant' });
-      }
-      day.morning?.activities?.forEach((a, i) => {
-        timelineItems.push({ time: `${9 + i}:00`, title: a.name, type: 'activity' });
-      });
-
-      // Afternoon
-      if (day.afternoon?.meal) {
-        timelineItems.push({ time: '12:30', title: day.afternoon.meal.name, type: 'restaurant' });
-      }
-      day.afternoon?.activities?.forEach((a, i) => {
-        timelineItems.push({ time: `${14 + i}:00`, title: a.name, type: 'activity' });
-      });
-
-      // Evening
-      day.evening?.activities?.forEach((a, i) => {
-        timelineItems.push({ time: `${18 + i}:00`, title: a.name, type: 'activity' });
-      });
-      if (day.evening?.meal) {
-        timelineItems.push({ time: '19:30', title: day.evening.meal.name, type: 'restaurant' });
-      }
-
-      if (timelineItems.length > 0) {
-        components.push({
-          type: 'DayTimeline',
-          props: { items: timelineItems },
-        });
-      }
-
-      // Detailed activity & restaurant cards
-      const addActivityCard = (activity: ActivityInput, time: string) => {
-        components.push({
-          type: 'ActivityCard',
-          props: {
-            name: activity.name,
-            description: activity.description || `Enjoy ${activity.name}`,
-            duration: activity.duration ? `${activity.duration} hours` : '2 hours',
-            price: activity.price || 0,
-            rating: activity.rating,
-            reviewCount: activity.reviewCount,
-            image: activity.images?.[0],
-            bookingUrl: activity.affiliateUrl,
-            time,
-            location: activity.location?.name || activity.location?.neighborhood || activity.location?.city,
-            category: activity.category,
-          },
-        });
-      };
-
-      const addRestaurantCard = (restaurant: RestaurantInput, time: string) => {
-        const priceLevelNum = typeof restaurant.priceLevel === 'number'
-          ? restaurant.priceLevel
-          : (restaurant.priceLevel?.length || 2);
-
-        components.push({
-          type: 'RestaurantCard',
-          props: {
-            name: restaurant.name,
-            cuisine: restaurant.cuisine || 'Local',
-            priceLevel: Math.min(4, Math.max(1, priceLevelNum)),
-            rating: restaurant.rating,
-            reviewCount: restaurant.reviewCount,
-            image: restaurant.images?.[0],
-            reservationUrl: restaurant.reservationUrl,
-            description: restaurant.description,
-            time,
-          },
-        });
-      };
-
-      // Morning details
-      if (day.morning?.meal) addRestaurantCard(day.morning.meal, '08:00');
-      day.morning?.activities?.forEach((a, i) => addActivityCard(a, `${9 + i}:00`));
-
-      // Afternoon details
-      if (day.afternoon?.meal) addRestaurantCard(day.afternoon.meal, '12:30');
-      day.afternoon?.activities?.forEach((a, i) => addActivityCard(a, `${14 + i}:00`));
-
-      // Evening details
-      day.evening?.activities?.forEach((a, i) => addActivityCard(a, `${18 + i}:00`));
-      if (day.evening?.meal) addRestaurantCard(day.evening.meal, '19:30');
-    }
-  }
-
-  // 5. Budget Summary
-  const totalCost = input.totalEstimatedCost || 0;
-  if (totalCost > 0) {
-    components.push({
-      type: 'Section',
-      props: { title: 'Budget Summary' },
-    });
-
-    // Breakdown by category
-    const hotelCost = (input.topHotel?.pricePerNight || 0) * nights;
-    const activityCost = input.activities.reduce((sum, a) => sum + (a.price || 0), 0);
-    const diningCost = totalCost - hotelCost - activityCost;
-
-    if (hotelCost > 0) {
-      components.push({
-        type: 'PriceTag',
-        props: {
-          amount: hotelCost,
-          currency: input.currency || 'USD',
-          period: `accommodation (${nights} night${nights !== 1 ? 's' : ''})`,
-        },
-      });
-    }
-
-    if (activityCost > 0) {
-      components.push({
-        type: 'PriceTag',
-        props: {
-          amount: activityCost,
-          currency: input.currency || 'USD',
-          period: 'activities & tours',
-        },
-      });
-    }
-
-    if (diningCost > 0) {
-      components.push({
-        type: 'PriceTag',
-        props: {
-          amount: Math.max(0, diningCost),
-          currency: input.currency || 'USD',
-          period: 'dining',
-        },
-      });
-    }
-
-    components.push({
-      type: 'Text',
+      type: 'ItineraryDay',
       props: {
-        content: `Estimated total: $${totalCost.toLocaleString()} ${input.currency || 'USD'} for ${nights} night${nights !== 1 ? 's' : ''}.`,
-        variant: 'caption',
+        dayNumber: day.dayNumber,
+        date: day.date,
+        title: day.title,
       },
     });
+
+    const timelineItems: Array<{ time: string; title: string; type: string }> = [];
+
+    if (day.morning?.meal) {
+      timelineItems.push({ time: '08:00', title: day.morning.meal.name, type: 'restaurant' });
+    }
+    day.morning?.activities?.forEach((a, i) => {
+      timelineItems.push({ time: `${9 + i}:00`, title: a.name, type: 'activity' });
+    });
+
+    if (day.afternoon?.meal) {
+      timelineItems.push({ time: '12:30', title: day.afternoon.meal.name, type: 'restaurant' });
+    }
+    day.afternoon?.activities?.forEach((a, i) => {
+      timelineItems.push({ time: `${14 + i}:00`, title: a.name, type: 'activity' });
+    });
+
+    day.evening?.activities?.forEach((a, i) => {
+      timelineItems.push({ time: `${18 + i}:00`, title: a.name, type: 'activity' });
+    });
+    if (day.evening?.meal) {
+      timelineItems.push({ time: '19:30', title: day.evening.meal.name, type: 'restaurant' });
+    }
+
+    if (timelineItems.length > 0) {
+      components.push({
+        type: 'DayTimeline',
+        props: { items: timelineItems },
+      });
+    }
+
+    const addActivityCard = (activity: ActivityInput, time: string) => {
+      components.push({
+        type: 'ActivityCard',
+        props: {
+          name: activity.name,
+          description: activity.description || `Enjoy ${activity.name}`,
+          duration: activity.duration ? `${activity.duration} hours` : '2 hours',
+          price: activity.price || 0,
+          rating: activity.rating,
+          reviewCount: activity.reviewCount,
+          image: activity.images?.[0],
+          bookingUrl: activity.affiliateUrl,
+          time,
+          location: activity.location?.name || activity.location?.neighborhood || activity.location?.city,
+          category: activity.category,
+        },
+      });
+    };
+
+    const addRestaurantCard = (restaurant: RestaurantInput, time: string) => {
+      const priceLevelNum = typeof restaurant.priceLevel === 'number'
+        ? restaurant.priceLevel
+        : (restaurant.priceLevel?.length || 2);
+
+      components.push({
+        type: 'RestaurantCard',
+        props: {
+          name: restaurant.name,
+          cuisine: restaurant.cuisine || 'Local',
+          priceLevel: Math.min(4, Math.max(1, priceLevelNum)),
+          rating: restaurant.rating,
+          reviewCount: restaurant.reviewCount,
+          image: restaurant.images?.[0],
+          reservationUrl: restaurant.reservationUrl,
+          description: restaurant.description,
+          time,
+        },
+      });
+    };
+
+    if (day.morning?.meal) addRestaurantCard(day.morning.meal, '08:00');
+    day.morning?.activities?.forEach((a, i) => addActivityCard(a, `${9 + i}:00`));
+
+    if (day.afternoon?.meal) addRestaurantCard(day.afternoon.meal, '12:30');
+    day.afternoon?.activities?.forEach((a, i) => addActivityCard(a, `${14 + i}:00`));
+
+    day.evening?.activities?.forEach((a, i) => addActivityCard(a, `${18 + i}:00`));
+    if (day.evening?.meal) addRestaurantCard(day.evening.meal, '19:30');
   }
 
   return components;
 }
 
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+// ─── 4. Budget Blocks ─────────────────────────────────────────────────────────
+
+export interface BuildBudgetInput {
+  topHotel?: HotelInput;
+  activities?: ActivityInput[];
+  totalEstimatedCost: number;
+  nights: number;
+  currency?: string;
+}
+
+/**
+ * Build budget summary blocks — called alongside itinerary.
+ */
+export function buildBudgetBlocks(input: BuildBudgetInput): JsonRenderComponent[] {
+  const components: JsonRenderComponent[] = [];
+  const { topHotel, activities = [], totalEstimatedCost, nights, currency = 'USD' } = input;
+
+  if (totalEstimatedCost <= 0) return components;
+
+  components.push({
+    type: 'Section',
+    props: { title: 'Budget Summary' },
+  });
+
+  const hotelCost = (topHotel?.pricePerNight || 0) * nights;
+  const activityCost = activities.reduce((sum, a) => sum + (a.price || 0), 0);
+  const diningCost = totalEstimatedCost - hotelCost - activityCost;
+
+  if (hotelCost > 0) {
+    components.push({
+      type: 'PriceTag',
+      props: {
+        amount: hotelCost,
+        currency,
+        period: `accommodation (${nights} night${nights !== 1 ? 's' : ''})`,
+      },
+    });
+  }
+
+  if (activityCost > 0) {
+    components.push({
+      type: 'PriceTag',
+      props: {
+        amount: activityCost,
+        currency,
+        period: 'activities & tours',
+      },
+    });
+  }
+
+  if (diningCost > 0) {
+    components.push({
+      type: 'PriceTag',
+      props: {
+        amount: Math.max(0, diningCost),
+        currency,
+        period: 'dining',
+      },
+    });
+  }
+
+  components.push({
+    type: 'Text',
+    props: {
+      content: `Estimated total: $${totalEstimatedCost.toLocaleString()} ${currency} for ${nights} night${nights !== 1 ? 's' : ''}.`,
+      variant: 'caption',
+    },
+  });
+
+  return components;
+}
+
+// ─── Full Spec Builder (convenience wrapper) ──────────────────────────────────
+
+/**
+ * Build a complete json-render spec (flat array of components) from search results.
+ * This is a convenience wrapper that calls all section builders.
+ */
+export function buildJsonRenderSpec(input: BuildSpecInput): JsonRenderComponent[] {
+  const nights = Math.ceil(
+    (new Date(input.endDate).getTime() - new Date(input.startDate).getTime()) / (1000 * 60 * 60 * 24)
+  );
+
+  const summaryBlocks = buildSummaryBlocks({
+    destination: input.destination,
+    startDate: input.startDate,
+    endDate: input.endDate,
+    travelers: input.travelers,
+    budget: input.budget,
+  });
+
+  const hotelBlocks = buildHotelBlocks({
+    topHotel: input.topHotel,
+    otherHotels: input.hotels,
+  });
+
+  const itineraryBlocks = buildItineraryBlocks(input.days);
+
+  const budgetBlocks = buildBudgetBlocks({
+    topHotel: input.topHotel,
+    activities: input.activities,
+    totalEstimatedCost: input.totalEstimatedCost || 0,
+    nights,
+    currency: input.currency,
+  });
+
+  return [
+    ...summaryBlocks,
+    ...hotelBlocks,
+    ...itineraryBlocks,
+    ...budgetBlocks,
+  ];
 }

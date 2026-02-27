@@ -32,6 +32,13 @@ export interface TravelSearchWorkflowOutput {
   error?: string;
 }
 
+export interface WorkflowCallbacks {
+  onProgress?: (stage: string, status: 'searching' | 'done') => Promise<void>;
+  onAgentResult?: (stage: string, data: unknown) => Promise<void>;
+  /** Called for micro-progress updates (e.g., "Analyzing your travel style...") */
+  onMicroProgress?: (data: { stage: string; message: string; detail?: string }) => void;
+}
+
 /**
  * Execute the travel search workflow directly
  * This runs all agents in sequence/parallel and returns results
@@ -39,21 +46,28 @@ export interface TravelSearchWorkflowOutput {
 export async function executeTravelSearch(
   searchId: string,
   input: SearchInput,
-  callbacks?: {
-    onProgress?: (stage: string, status: 'searching' | 'done') => Promise<void>;
-    onAgentResult?: (stage: string, data: unknown) => Promise<void>;
-  }
+  callbacks?: WorkflowCallbacks
 ): Promise<TravelSearchWorkflowOutput> {
   const onProgress = callbacks?.onProgress;
   const onAgentResult = callbacks?.onAgentResult;
+  const onMicroProgress = callbacks?.onMicroProgress;
 
   try {
     // Step 1: Orchestrator Agent - Creates the search plan
+    onMicroProgress?.({ stage: 'orchestrator', message: 'Analyzing your travel preferences...' });
     if (onProgress) await onProgress('orchestrator', 'searching');
+    
+    onMicroProgress?.({ stage: 'orchestrator', message: 'Understanding your travel style...', detail: `${input.vibes?.join(', ') || 'adventure'}` });
     const searchPlan = await runOrchestratorAgent(input);
+    
+    onMicroProgress?.({ stage: 'orchestrator', message: 'Created personalized search plan', detail: `${searchPlan.numberOfDays} days in ${input.destination}` });
     if (onProgress) await onProgress('orchestrator', 'done');
 
     // Step 2: Run specialized agents in parallel
+    onMicroProgress?.({ stage: 'hotels', message: 'Searching top-rated hotels...' });
+    onMicroProgress?.({ stage: 'activities', message: 'Finding unique experiences...' });
+    onMicroProgress?.({ stage: 'dining', message: 'Discovering local restaurants...' });
+    
     if (onProgress) {
       await onProgress('hotels', 'searching');
       await onProgress('activities', 'searching');
@@ -62,16 +76,19 @@ export async function executeTravelSearch(
 
     const [hotels, activities, dining] = await Promise.all([
       runHotelsAgent(searchPlan, 10).then(async (results) => {
+        onMicroProgress?.({ stage: 'hotels', message: `Found ${results.length} perfect hotels`, detail: results[0]?.name });
         if (onProgress) await onProgress('hotels', 'done');
         if (onAgentResult) await onAgentResult('hotels', results);
         return results;
       }),
       runActivitiesAgent(searchPlan, 15).then(async (results) => {
+        onMicroProgress?.({ stage: 'activities', message: `Discovered ${results.length} activities`, detail: results[0]?.name });
         if (onProgress) await onProgress('activities', 'done');
         if (onAgentResult) await onAgentResult('activities', results);
         return results;
       }),
       runDiningAgent(searchPlan, 12).then(async (results) => {
+        onMicroProgress?.({ stage: 'dining', message: `Found ${results.length} restaurants`, detail: results[0]?.name });
         if (onProgress) await onProgress('dining', 'done');
         if (onAgentResult) await onAgentResult('dining', results);
         return results;
@@ -79,8 +96,13 @@ export async function executeTravelSearch(
     ]);
 
     // Step 3: Aggregator Agent - Combines results into itinerary
+    onMicroProgress?.({ stage: 'aggregator', message: 'Crafting your perfect day-by-day plan...' });
     if (onProgress) await onProgress('aggregator', 'searching');
+    
+    onMicroProgress?.({ stage: 'aggregator', message: 'Optimizing activities by location...' });
     const { days } = await runAggregatorAgent(searchPlan, hotels, activities, dining);
+    
+    onMicroProgress?.({ stage: 'aggregator', message: `Created ${days.length}-day itinerary`, detail: days[0]?.title });
     if (onProgress) await onProgress('aggregator', 'done');
 
     const results: SearchResults = {
