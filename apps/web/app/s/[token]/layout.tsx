@@ -28,7 +28,7 @@ async function getTrip(token: string): Promise<TripData | null> {
   }
 }
 
-function buildTripMeta(trip: TripData, token: string, baseUrl: string) {
+function buildTripMeta(trip: TripData) {
   const destination = trip.destination
   const startDate = trip.start_date ? new Date(trip.start_date) : null
   const endDate = trip.end_date ? new Date(trip.end_date) : null
@@ -87,7 +87,7 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
     }
   }
 
-  const { title, description } = buildTripMeta(trip, token, baseUrl)
+  const { title, description } = buildTripMeta(trip)
 
   return {
     title,
@@ -112,7 +112,6 @@ export async function generateMetadata({ params }: { params: Promise<{ token: st
 
 export default async function SharedTripLayout({ children, params }: SharedTripLayoutProps) {
   const { token } = await params
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.faroway.ai'
   const trip = await getTrip(token)
 
   return (
@@ -121,7 +120,7 @@ export default async function SharedTripLayout({ children, params }: SharedTripL
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{
-            __html: JSON.stringify(buildTripMeta(trip, token, baseUrl).jsonLd)
+            __html: JSON.stringify(buildTripMeta(trip).jsonLd)
               .replace(/</g, '\\u003c'),
           }}
         />

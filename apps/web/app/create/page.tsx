@@ -5,7 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import { Search, Calendar, Users, ChevronDown, ChevronUp, Sparkles, ArrowLeft, Check, Minus, Plus, X } from 'lucide-react';
+import { Search, Calendar, Users, ChevronDown, ChevronUp, Sparkles, ArrowLeft, Check, Minus, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 import { PlacesAutocompleteInput, type PlaceResult } from '@/components/create/PlacesAutocompleteInput';
@@ -357,7 +357,7 @@ export default function CreateTripPage() {
               </div>
 
               <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-3">Who's traveling?</label>
+                <label className="block text-sm font-medium text-gray-700 mb-3">Who&apos;s traveling?</label>
                 <div className="flex flex-wrap gap-2">
                   {travelerTypes.map((type) => (
                     <button
@@ -377,7 +377,7 @@ export default function CreateTripPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">What's your vibe?</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">What&apos;s your vibe?</label>
                 <p className="text-sm text-gray-500 mb-3">Select up to 5 that match your travel style</p>
                 <div className="flex flex-wrap gap-2">
                   {vibes.map((vibe) => (

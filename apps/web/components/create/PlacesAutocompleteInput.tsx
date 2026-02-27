@@ -100,8 +100,8 @@ export function PlacesAutocompleteInput({ onSelect, localDestinations }: PlacesA
           setPredictions(data.predictions ?? []);
           setIsLoading(false);
         }
-      } catch (err: any) {
-        if (err.name === 'AbortError') return;
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') return;
         setIsLoading(false);
       }
     }, DEBOUNCE_MS);

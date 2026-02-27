@@ -10,6 +10,7 @@ import {
   generateViatorAffiliateUrl,
   mapViatorCategoryToVibe,
   isViatorConfigured,
+  type ViatorProduct,
 } from '@/lib/affiliates/viator';
 
 // AI Gateway configuration — use the dedicated gateway provider (not createOpenAI,
@@ -78,7 +79,7 @@ const searchHotelsTool = tool({
     budget: z.enum(['budget', 'moderate', 'luxury']).describe('Budget level'),
     vibes: z.array(z.string()).optional().describe('Desired vibes like romantic, adventure, relaxation'),
   }),
-  execute: async ({ destination, checkIn, checkOut, guests, budget, vibes }) => {
+  execute: async ({ destination, checkIn, checkOut, budget, vibes }) => {
     // TODO: Integrate real hotel API when available
     const hotels = generateMockHotels(destination, budget, vibes);
     return { hotels, searchMetadata: { destination, checkIn, checkOut, totalResults: hotels.length, source: 'mock' } };
@@ -125,7 +126,7 @@ const searchActivitiesTool = tool({
 // ============================================
 
 function normalizeViatorToActivity(
-  product: any,
+  product: ViatorProduct,
   trackingId: string,
   date: string,
   category?: string,
@@ -156,7 +157,7 @@ function normalizeViatorToActivity(
     vibeScore: matchedVibes.length * 25,
     affiliateUrl: generateViatorAffiliateUrl(product.productCode, trackingId, { date }),
     affiliatePartner: 'viator',
-    images: product.images.slice(0, 2).map((img: any) => img.url),
+    images: product.images.slice(0, 2).map((img: { url: string; caption?: string }) => img.url),
     highlights: product.highlights.slice(0, 3),
   };
 }
@@ -201,7 +202,7 @@ const createItineraryTool = tool({
     restaurants: z.array(z.any()).describe('List of restaurant options'),
     vibes: z.array(z.string()).optional(),
   }),
-  execute: async ({ destination, startDate, endDate, hotels, activities, restaurants, vibes }) => {
+  execute: async ({ destination, startDate, endDate, hotels, activities, restaurants }) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
     const nights = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));

@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     // Also update associated searches to link to the new user
     const searchIds = (claimedTrips || [])
-      .map(t => t.search_id)
+      .map((t: { id: string; search_id: string | null }) => t.search_id)
       .filter((id): id is string => !!id)
 
     if (searchIds.length > 0) {
@@ -57,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       claimed: (claimedTrips || []).length,
-      tripIds: (claimedTrips || []).map(t => t.id),
+      tripIds: (claimedTrips || []).map((t: { id: string; search_id: string | null }) => t.id),
     })
   } catch (error) {
     console.error('Claim trips error:', error)

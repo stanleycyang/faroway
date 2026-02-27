@@ -32,7 +32,7 @@ const HotelSchema = z.object({
     lng: z.number(),
     neighborhood: z.string().optional(),
   }),
-  images: z.array(z.string()),
+  images: z.array(z.string()).default([]),
   affiliateUrl: z.string(),
   affiliatePartner: z.string(),
   vibeScore: z.number().min(0).max(100),
@@ -61,7 +61,9 @@ Price ranges by star rating (per night):
 - 2-star: $40-80
 - 3-star: $80-150
 - 4-star: $150-300
-- 5-star: $300-800+`;
+- 5-star: $300-800+
+
+IMPORTANT: For the "images" field, return an EMPTY array []. Do NOT generate or guess image URLs.`;
 
 export async function runHotelsAgent(
   plan: SearchPlan,
@@ -128,7 +130,7 @@ export async function searchRapidAPIHotels(
   checkIn: string,
   checkOut: string,
   guests: number
-): Promise<any[]> {
+): Promise<Record<string, unknown>[]> {
   const apiKey = process.env.RAPIDAPI_KEY;
   if (!apiKey) {
     console.log('[Hotels Agent] No RapidAPI key, using AI-generated data');

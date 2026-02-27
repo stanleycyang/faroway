@@ -26,14 +26,24 @@ const mockItinerary = {
   generated_at: '2026-01-02T00:00:00Z',
 }
 
-let mockAuthReturn: { data: { user: any }; error: any }
-let mockTripReturn: any
-let mockItineraryReturn: any
+interface QueryResult {
+  data: unknown;
+  error: unknown;
+  count?: unknown;
+}
+
+interface QueryChain {
+  [key: string]: ReturnType<typeof vi.fn>;
+}
+
+let mockAuthReturn: { data: { user: unknown }; error: unknown }
+let mockTripReturn: QueryResult
+const mockItineraryReturn: QueryResult = { data: null, error: null }
 
 // Universal query chain: every method returns the chain itself.
 // The chain has data/error/count getters so `await chain` + destructuring works.
-function createQueryChain(getResult: () => any) {
-  const chain: any = {}
+function createQueryChain(getResult: () => QueryResult | undefined) {
+  const chain: QueryChain = {} as QueryChain
   const methods = ['select', 'eq', 'or', 'is', 'insert', 'update', 'delete', 'upsert', 'match', 'limit', 'order', 'single']
   methods.forEach(m => {
     chain[m] = vi.fn(() => chain)
@@ -75,12 +85,12 @@ import {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function makeRequest(method: string, url: string, body?: object): NextRequest {
-  const init: any = { method }
+  const init: RequestInit = { method }
   if (body) {
     init.body = JSON.stringify(body)
     init.headers = { 'Content-Type': 'application/json' }
   }
-  return new NextRequest(new URL(url, 'http://localhost:3000'), init)
+  return new NextRequest(new URL(url, 'http://localhost:3000'), init as Record<string, unknown>)
 }
 
 function makeParams(id: string) {
@@ -234,7 +244,7 @@ describe('DELETE /api/trips/[id]', () => {
   })
 
   it('deletes trip and returns success', async () => {
-    mockTripReturn = { error: null, count: 1 }
+    mockTripReturn = { data: null, error: null, count: 1 }
 
     const req = makeRequest('DELETE', '/api/trips/trip-1')
     const res = await DELETE(req, makeParams('trip-1'))
@@ -245,7 +255,7 @@ describe('DELETE /api/trips/[id]', () => {
   })
 
   it('returns 404 for nonexistent trip', async () => {
-    mockTripReturn = { error: null, count: 0 }
+    mockTripReturn = { data: null, error: null, count: 0 }
 
     const req = makeRequest('DELETE', '/api/trips/nonexistent')
     const res = await DELETE(req, makeParams('nonexistent'))

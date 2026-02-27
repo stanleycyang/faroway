@@ -69,8 +69,6 @@ async function testWorkflow() {
 
   // For testing, we'll use a mock auth token
   // In production, you'd use actual authentication
-  const AUTH_TOKEN = process.env.TEST_AUTH_TOKEN || 'test-token';
-
   // ============================================================================
   // STEP 1: Trigger Workflow (simulating API call)
   // ============================================================================

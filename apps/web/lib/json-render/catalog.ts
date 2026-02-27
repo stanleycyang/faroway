@@ -7,6 +7,7 @@ import { defineCatalog } from '@json-render/core';
 import { schema } from '@json-render/react';
 import { z } from 'zod/v4';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const catalog = (defineCatalog as any)(schema, {
   components: {
     // Itinerary Components

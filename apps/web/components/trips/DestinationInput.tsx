@@ -36,18 +36,18 @@ export function DestinationInput({ value, onChange, error, className }: Destinat
   const [query, setQuery] = useState(value)
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
-  const [suggestions, setSuggestions] = useState<Destination[]>([])
+  const [suggestions, setSuggestions] = useState<Destination[]>(popularDestinations)
   const inputRef = useRef<HTMLInputElement>(null)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Filter destinations based on query
   useEffect(() => {
     if (!query.trim()) {
-      setSuggestions(popularDestinations)
+      // No need to set suggestions when query is empty;
+      // already initialized to popularDestinations
       return
     }
 
-    setIsLoading(true)
     // Simulate search delay (replace with Google Places API)
     const timer = setTimeout(() => {
       const filtered = popularDestinations.filter(
@@ -55,7 +55,7 @@ export function DestinationInput({ value, onChange, error, className }: Destinat
           d.name.toLowerCase().includes(query.toLowerCase()) ||
           d.country.toLowerCase().includes(query.toLowerCase())
       )
-      
+
       // If no matches and user typed something, allow custom destination
       if (filtered.length === 0 && query.trim()) {
         setSuggestions([{ id: 'custom', name: query, country: 'Custom destination', emoji: '📍' }])
@@ -96,6 +96,7 @@ export function DestinationInput({ value, onChange, error, className }: Destinat
 
   const handleClear = () => {
     setQuery('')
+    setSuggestions(popularDestinations)
     onChange('')
     inputRef.current?.focus()
   }
@@ -114,7 +115,14 @@ export function DestinationInput({ value, onChange, error, className }: Destinat
           spellCheck="false"
           value={query}
           onChange={(e) => {
-            setQuery(e.target.value)
+            const val = e.target.value
+            setQuery(val)
+            if (!val.trim()) {
+              setSuggestions(popularDestinations)
+              setIsLoading(false)
+            } else {
+              setIsLoading(true)
+            }
             setIsOpen(true)
           }}
           onFocus={() => setIsOpen(true)}

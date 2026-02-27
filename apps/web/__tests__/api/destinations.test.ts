@@ -5,8 +5,17 @@ import { NextRequest } from 'next/server';
 // Chainable Supabase mock builder
 // ---------------------------------------------------------------------------
 
-function createQueryChain(getResult: () => any) {
-  const chain: any = {};
+interface QueryResult {
+  data: unknown;
+  error: unknown;
+}
+
+interface QueryChain {
+  [key: string]: ReturnType<typeof vi.fn>;
+}
+
+function createQueryChain(getResult: () => QueryResult | undefined) {
+  const chain: QueryChain = {} as QueryChain;
   const methods = [
     'select', 'eq', 'or', 'is', 'insert', 'update', 'delete',
     'upsert', 'match', 'limit', 'order', 'single', 'rpc',
@@ -31,14 +40,13 @@ function createQueryChain(getResult: () => any) {
 // Shared mock state
 // ---------------------------------------------------------------------------
 
-let destinationsResult: { data: any; error: any };
-let tripCountsResult: { data: any; error: any };
-let searchCountsResult: { data: any; error: any };
-let newsletterResult: { data: any; error: any };
+let destinationsResult: QueryResult;
+let tripCountsResult: QueryResult;
+let searchCountsResult: QueryResult;
+let newsletterResult: QueryResult;
 
 // Separate chains so each `from()` / `rpc()` call resolves its own data
 let destinationsChain: ReturnType<typeof createQueryChain>;
-let rpcChain: ReturnType<typeof createQueryChain>;
 let newsletterChain: ReturnType<typeof createQueryChain>;
 
 let rpcCallCount: number;
@@ -52,12 +60,6 @@ function resetMockState() {
 
   destinationsChain = createQueryChain(() => destinationsResult);
   newsletterChain = createQueryChain(() => newsletterResult);
-
-  // rpc chain alternates between trip and search counts on successive calls
-  rpcChain = createQueryChain(() => {
-    rpcCallCount++;
-    return rpcCallCount === 1 ? tripCountsResult : searchCountsResult;
-  });
 }
 
 resetMockState();
@@ -67,7 +69,7 @@ const mockSupabase = {
     if (table === 'newsletter_subscribers') return newsletterChain;
     return destinationsChain;
   }),
-  rpc: vi.fn((_name: string, _params?: any) => {
+  rpc: vi.fn(() => {
     rpcCallCount++;
     if (rpcCallCount === 1) {
       return { data: tripCountsResult.data, error: tripCountsResult.error };
@@ -133,13 +135,13 @@ import { GET as getTrending } from '@/app/api/destinations/trending/route';
 import { POST as subscribeNewsletter } from '@/app/api/blog/newsletter/route';
 
 import { checkRateLimit } from '@/lib/security/rate-limit';
-import { getCurrentSeason, getSeasonBoost } from '@/lib/destinations';
+import { getCurrentSeason } from '@/lib/destinations';
 
 // ---------------------------------------------------------------------------
 // Test data factories
 // ---------------------------------------------------------------------------
 
-function makeDbDestination(overrides: Record<string, any> = {}) {
+function makeDbDestination(overrides: Record<string, unknown> = {}) {
   return {
     id: 'dest-tokyo',
     slug: 'tokyo',
@@ -160,7 +162,7 @@ function makeDbDestination(overrides: Record<string, any> = {}) {
 }
 
 function makeRequest(path: string, init?: RequestInit) {
-  return new NextRequest(new URL(`http://localhost:3000${path}`), init as any);
+  return new NextRequest(new URL(`http://localhost:3000${path}`), init as Record<string, unknown>);
 }
 
 // ---------------------------------------------------------------------------

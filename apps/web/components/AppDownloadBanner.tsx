@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X } from 'lucide-react';
 
 const DISMISS_KEY = 'faroway_banner_dismissed';
@@ -11,30 +11,40 @@ function isMobileBrowser() {
   return /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 }
 
-export function AppDownloadBanner() {
-  const [visible, setVisible] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
+function shouldShowBanner(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
     const dismissed = localStorage.getItem(DISMISS_KEY);
     if (dismissed) {
       const dismissedAt = parseInt(dismissed, 10);
-      if (Date.now() - dismissedAt < DISMISS_DAYS * 24 * 60 * 60 * 1000) return;
+      if (Date.now() - dismissedAt < DISMISS_DAYS * 24 * 60 * 60 * 1000) return false;
     }
-    setIsMobile(isMobileBrowser());
-    setMounted(true);
-    // Delay for slide-in animation
-    requestAnimationFrame(() => setVisible(true));
-  }, []);
+  } catch {}
+  return true;
+}
+
+export function AppDownloadBanner() {
+  const [visible, setVisible] = useState(false);
+  const [show] = useState(() => shouldShowBanner());
+  const [dismissed, setDismissed] = useState(false);
+  const [isMobile] = useState(() => isMobileBrowser());
+  const animatedRef = useRef(false);
+
+  useEffect(() => {
+    if (show && !animatedRef.current) {
+      animatedRef.current = true;
+      // Delay for slide-in animation
+      requestAnimationFrame(() => setVisible(true));
+    }
+  }, [show]);
 
   const dismiss = () => {
     setVisible(false);
-    setTimeout(() => setMounted(false), 300);
+    setTimeout(() => setDismissed(true), 300);
     localStorage.setItem(DISMISS_KEY, Date.now().toString());
   };
 
-  if (!mounted) return null;
+  if (!show || dismissed) return null;
 
   // Mobile: bottom sticky banner
   if (isMobile) {

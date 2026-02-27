@@ -3,8 +3,6 @@
  * Applied via next.config.ts
  */
 
-import { NextResponse } from 'next/server';
-
 export const securityHeaders = [
   {
     key: 'X-DNS-Prefetch-Control',

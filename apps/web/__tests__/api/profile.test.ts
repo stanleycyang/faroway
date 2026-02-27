@@ -23,8 +23,8 @@ const mockProfile = {
   updated_at: '2026-01-01T00:00:00Z',
 }
 
-let mockSelectReturn: any
-let mockUpdateReturn: any
+let mockSelectReturn: { data: unknown; error: unknown }
+let mockUpdateReturn: { data: unknown; error: unknown }
 
 const mockSupabase = {
   auth: {
@@ -58,8 +58,8 @@ vi.mock('@/lib/auth/middleware', () => ({
     authenticated: true,
     user: mockUser,
   })),
-  validationErrorResponse: vi.fn((message: string, details?: unknown) => {
-    const { NextResponse } = require('next/server')
+  validationErrorResponse: vi.fn(async (message: string, details?: unknown) => {
+    const { NextResponse } = await import('next/server')
     return NextResponse.json(
       { error: message, code: 'VALIDATION_ERROR', details },
       { status: 400 }
@@ -74,12 +74,12 @@ import { GET, PATCH } from '@/app/api/user/profile/route'
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function makeRequest(method: string, url: string, body?: object): NextRequest {
-  const init: any = { method }
+  const init: RequestInit = { method }
   if (body) {
     init.body = JSON.stringify(body)
     init.headers = { 'Content-Type': 'application/json' }
   }
-  return new NextRequest(new URL(url, 'http://localhost:3000'), init)
+  return new NextRequest(new URL(url, 'http://localhost:3000'), init as Record<string, unknown>)
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────────

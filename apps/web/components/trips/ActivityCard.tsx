@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import { MapPin, Clock, DollarSign, ExternalLink, Utensils, Star, Shield, Zap, TrendingUp } from 'lucide-react';
 
 export interface Activity {
@@ -87,7 +88,7 @@ const mealTypeConfig: Record<string, { emoji: string; label: string; gradient: s
 
 interface ActivityCardProps {
   activity: Activity;
-  index: number;
+  index?: number;
 }
 
 function getBadge(rating?: number, reviewCount?: number): { label: string; icon: React.ReactNode } | null {
@@ -100,7 +101,7 @@ function getBadge(rating?: number, reviewCount?: number): { label: string; icon:
   return null;
 }
 
-export function ActivityCard({ activity, index }: ActivityCardProps) {
+export function ActivityCard({ activity }: ActivityCardProps) {
   // Guard against receiving a non-object (e.g. a plain string from inconsistent AI output)
   if (!activity || typeof activity !== 'object' || !activity.name) return null;
 
@@ -153,10 +154,12 @@ export function ActivityCard({ activity, index }: ActivityCardProps) {
       {/* Hero Image */}
       {hasImage && (
         <div className="relative h-40 sm:h-48 overflow-hidden">
-          <img
+          <Image
             src={activity.images![0]}
             alt={activity.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            fill
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            unoptimized
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
           

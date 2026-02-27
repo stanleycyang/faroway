@@ -88,7 +88,6 @@ export function TripForm() {
   const {
     control,
     handleSubmit,
-    watch,
     trigger,
     formState: { errors },
   } = useForm<TripFormData>({
@@ -103,8 +102,6 @@ export function TripForm() {
     },
     mode: 'onChange',
   })
-
-  const watchedValues = watch()
 
   // Validate current step before proceeding
   const validateStep = async (step: number): Promise<boolean> => {

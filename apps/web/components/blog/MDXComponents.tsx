@@ -1,4 +1,5 @@
 import React from 'react';
+import Image from 'next/image';
 
 export function Callout({ type = 'info', children }: { type?: 'info' | 'warning' | 'tip' | 'important'; children: React.ReactNode }) {
   const styles = {
@@ -31,7 +32,7 @@ export function ImageGallery({ images }: { images: { src: string; alt: string; c
     <div className="my-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
       {images.map((img, i) => (
         <figure key={i} className="relative overflow-hidden rounded-xl">
-          <img src={img.src} alt={img.alt} className="w-full h-64 object-cover" loading="lazy" />
+          <Image src={img.src} alt={img.alt} width={600} height={256} className="w-full h-64 object-cover" unoptimized />
           {img.caption && (
             <figcaption className="text-sm text-gray-500 mt-2 text-center">{img.caption}</figcaption>
           )}

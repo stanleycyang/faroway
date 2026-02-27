@@ -4,7 +4,8 @@ import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
-import { Loader2, AlertCircle, MapPin, RefreshCw, Sparkles, Clock, LogIn, Star, ExternalLink, Hotel, Shield, ChevronUp, Ticket } from 'lucide-react';
+import Image from 'next/image';
+import { Loader2, AlertCircle, MapPin, RefreshCw, Sparkles, Clock, LogIn, Star, ExternalLink, Shield, ChevronUp, Ticket } from 'lucide-react';
 
 /**
  * Error boundary that prevents a single broken itinerary day from crashing the whole page.
@@ -161,6 +162,7 @@ export default function TripDetailPage() {
     }, 3000);
 
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- we intentionally depend on trip?.status and trip?.search_id, not the whole trip object
   }, [trip?.status, trip?.search_id, tripId, fetchTrip]);
 
   const handleShare = async () => {
@@ -229,7 +231,8 @@ export default function TripDetailPage() {
     if (!itinerary?.days?.length) return null;
     // Check if any day has hotel info
     for (const day of itinerary.days) {
-      if ((day as any).hotel) return (day as any).hotel;
+      const dayRecord = day as unknown as Record<string, unknown>;
+      if (dayRecord.hotel) return dayRecord.hotel as FeaturedHotel;
     }
     return null;
   }, [itinerary]);
@@ -242,7 +245,7 @@ export default function TripDetailPage() {
       for (const slot of [day.morning, day.afternoon, day.evening]) {
         if (!slot) continue;
         if (Array.isArray(slot.activities)) {
-          count += slot.activities.filter((a: any) => a?.bookingInfo?.bookingUrl).length;
+          count += slot.activities.filter((a) => a?.bookingInfo?.bookingUrl).length;
         }
       }
     }
@@ -270,8 +273,9 @@ export default function TripDetailPage() {
             if (act?.estimatedCost?.amount) activities += act.estimatedCost.amount;
           }
         }
-        const meals = Array.isArray((slot as any).meals) ? (slot as any).meals : (slot as any).meal ? [(slot as any).meal] : [];
-        for (const meal of meals) {
+        const slotRecord = slot as unknown as Record<string, unknown>;
+        const mealsList = Array.isArray(slot.meals) ? slot.meals : slotRecord.meal ? [slotRecord.meal as { estimatedCost?: { amount: number } }] : [];
+        for (const meal of mealsList) {
           if (meal?.estimatedCost?.amount) dining += meal.estimatedCost.amount;
         }
       }
@@ -467,7 +471,14 @@ export default function TripDetailPage() {
                     totalEstimatedCost={day.totalEstimatedCost}
                     tips={day.tips}
                     defaultExpanded={true}
-                    hotel={index === 0 ? displayTopHotel : undefined}
+                    hotel={index === 0 && displayTopHotel ? {
+                      name: displayTopHotel.name,
+                      starRating: displayTopHotel.starRating,
+                      pricePerNight: displayTopHotel.pricePerNight,
+                      amenities: displayTopHotel.amenities,
+                      affiliateUrl: displayTopHotel.affiliateUrl,
+                      image: displayTopHotel.images?.[0],
+                    } : undefined}
                   />
                 </DayErrorBoundary>
               </div>
@@ -606,7 +617,21 @@ export default function TripDetailPage() {
 
 // ── Featured Hotel Card ──────────────────────────────────────────────────────
 
-function FeaturedHotelCard({ hotel, nights }: { hotel: any; nights: number }) {
+interface FeaturedHotel {
+  id?: string;
+  name: string;
+  images?: string[];
+  affiliateUrl?: string;
+  affiliatePartner?: string;
+  pricePerNight: number;
+  starRating?: number;
+  userRating?: number;
+  reviewCount?: number;
+  description?: string;
+  amenities?: string[];
+}
+
+function FeaturedHotelCard({ hotel, nights }: { hotel: FeaturedHotel; nights: number }) {
   const handleClick = () => {
     if (!hotel.affiliateUrl) return;
 
@@ -630,10 +655,12 @@ function FeaturedHotelCard({ hotel, nights }: { hotel: any; nights: number }) {
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6 group hover:shadow-lg transition-shadow">
       {hotel.images?.[0] && (
         <div className="relative h-56 sm:h-72 overflow-hidden">
-          <img
+          <Image
             src={hotel.images[0]}
             alt={hotel.name}
-            className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            fill
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            unoptimized
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
           <div className="absolute top-3 left-3 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full text-xs font-bold text-white flex items-center gap-1.5 shadow-lg">

@@ -67,7 +67,7 @@ export async function runOrchestratorAgent(input: SearchInput): Promise<SearchPl
   const budgetInfo = BUDGET_RANGES[input.budget || 'moderate'];
   
   // Collect keywords from selected vibes
-  const vibeKeywords = input.vibes.flatMap(vibe => VIBE_KEYWORDS[vibe.toLowerCase()] || []);
+  const vibeKeywords = input.vibes.flatMap((vibe: string) => VIBE_KEYWORDS[vibe.toLowerCase()] || []);
 
   const prompt = `Create a search plan for this trip:
 

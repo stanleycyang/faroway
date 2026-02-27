@@ -42,8 +42,8 @@ export function ShareButtons({
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error('Failed to copy:', err);
+    } catch (_err) {
+      console.error('Failed to copy:', _err);
     }
   };
 
@@ -55,7 +55,7 @@ export function ShareButtons({
           text: description,
           url: shareUrl,
         });
-      } catch (err) {
+      } catch {
         // User cancelled or share failed
         console.log('Share cancelled or failed');
       }

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Image from 'next/image';
 import Link from 'next/link';
 import { MapPin, Sparkles } from 'lucide-react';
-import { getAllGuides, getContinents, getGuidesByContinent } from '@/lib/destination-guides';
+import { getAllGuides, getGuidesByContinent } from '@/lib/destination-guides';
 
 export const metadata: Metadata = {
   title: 'Destination Guides — Travel Inspiration & Tips',
@@ -20,7 +20,6 @@ export const metadata: Metadata = {
 
 export default function DestinationsIndex() {
   const guides = getAllGuides();
-  const continents = getContinents();
 
   // JSON-LD BreadcrumbList
   const breadcrumbSchema = {

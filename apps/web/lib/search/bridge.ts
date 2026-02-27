@@ -161,7 +161,7 @@ export function mapSearchResultsToItinerary(
   const days = (results.itinerary || []).map(mapDay);
 
   // Sum daily costs + hotel cost
-  const activityCost = days.reduce((sum, d) => sum + (d.totalEstimatedCost?.amount || 0), 0);
+  const activityCost = days.reduce((sum: number, d: TripDay) => sum + (d.totalEstimatedCost?.amount || 0), 0);
   const nights = days.length > 0 ? days.length - 1 : 0;
   const hotelCost = topHotel ? topHotel.pricePerNight * nights : 0;
 

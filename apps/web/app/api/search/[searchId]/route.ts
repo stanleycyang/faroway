@@ -5,8 +5,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase } from '@/lib/supabase/server';
-import { SearchStatusResponse, SearchResults, HotelResult, ActivityResult, DiningResult, SuggestedDay } from '@/lib/search/types';
-import { checkRateLimit, getClientIp } from '@/lib/security/rate-limit';
+import { SearchStatusResponse, HotelResult, ActivityResult, DiningResult, SuggestedDay } from '@/lib/search/types';
+import { checkRateLimit } from '@/lib/security/rate-limit';
 import { z } from 'zod';
 
 export async function GET(
@@ -41,36 +41,62 @@ export async function GET(
 
     // If completed, include results
     if (search.status === 'completed') {
-      const resultsData = ((search as any).search_results || [])
-        .sort((a: any, b: any) => (b.vibe_score ?? 0) - (a.vibe_score ?? 0));
-      const itineraryData = ((search as any).search_itineraries || [])
-        .sort((a: any, b: any) => a.day_number - b.day_number);
+      interface SearchResultRow {
+        id: string;
+        category: string;
+        data: Record<string, unknown>;
+        vibe_score: number | null;
+      }
+      interface ItineraryRow {
+        day_number: number;
+        date: string;
+        title: string;
+        summary: string;
+        morning_activities: string[] | null;
+        afternoon_activities: string[] | null;
+        evening_activities: string[] | null;
+        meals: string[] | null;
+        estimated_cost: number;
+        cost_currency: string;
+        tips: string[];
+        hotel_id: string | null;
+      }
+
+      const searchWithRelations = search as typeof search & {
+        search_results?: SearchResultRow[];
+        search_itineraries?: ItineraryRow[];
+      };
+
+      const resultsData = (searchWithRelations.search_results || [])
+        .sort((a: SearchResultRow, b: SearchResultRow) => (b.vibe_score ?? 0) - (a.vibe_score ?? 0));
+      const itineraryData = (searchWithRelations.search_itineraries || [])
+        .sort((a: ItineraryRow, b: ItineraryRow) => a.day_number - b.day_number);
 
       if (resultsData) {
         // Parse results by category
         const hotels: HotelResult[] = resultsData
-          .filter((r: any) => r.category === 'hotel')
-          .map((r: any) => ({
+          .filter((r: SearchResultRow) => r.category === 'hotel')
+          .map((r: SearchResultRow) => ({
             ...r.data,
             id: r.id,
-          }));
+          } as unknown as HotelResult));
 
         const activities: ActivityResult[] = resultsData
-          .filter((r: any) => r.category === 'activity')
-          .map((r: any) => ({
+          .filter((r: SearchResultRow) => r.category === 'activity')
+          .map((r: SearchResultRow) => ({
             ...r.data,
             id: r.id,
-          }));
+          } as unknown as ActivityResult));
 
         const dining: DiningResult[] = resultsData
-          .filter((r: any) => r.category === 'dining')
-          .map((r: any) => ({
+          .filter((r: SearchResultRow) => r.category === 'dining')
+          .map((r: SearchResultRow) => ({
             ...r.data,
             id: r.id,
-          }));
+          } as unknown as DiningResult));
 
         // Build itinerary from stored data
-        const itinerary: SuggestedDay[] = (itineraryData || []).map((day: any) => ({
+        const itinerary: SuggestedDay[] = (itineraryData || []).map((day: ItineraryRow) => ({
           dayNumber: day.day_number,
           date: day.date,
           title: day.title,

@@ -158,7 +158,10 @@ export async function GET(request: NextRequest) {
     const paginated = scored.slice(offset, offset + limit);
 
     // Strip internal fields
-    const results: DestinationInfo[] = paginated.map(({ _raw, ...rest }) => rest);
+    const results: DestinationInfo[] = paginated.map(
+      ({ id, slug, name, country, description, image, tags, seasons, currency, language, bestTime, score, tripCount, searchCount }) =>
+        ({ id, slug, name, country, description, image, tags, seasons, currency, language, bestTime, score, tripCount, searchCount })
+    );
 
     const response: DestinationsResponse = {
       destinations: results,

@@ -271,7 +271,7 @@ export async function getAffiliateAnalytics(
       totalConversions: 0,
       conversionRate: 0,
       totalCommission: 0,
-      byPartner: {} as any,
+      byPartner: {} as Record<AffiliatePartner, { clicks: number; conversions: number; commission: number }>,
     };
   }
 
@@ -297,13 +297,14 @@ export async function getAffiliateAnalytics(
     totalConversions,
     conversionRate: totalClicks > 0 ? (totalConversions / totalClicks) * 100 : 0,
     totalCommission,
-    byPartner: byPartner as any,
+    byPartner: byPartner as Record<AffiliatePartner, { clicks: number; conversions: number; commission: number }>,
   };
 }
 
 /**
  * Normalize database row to AffiliateClick type
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeClick(row: any): AffiliateClick {
   return {
     id: row.id,

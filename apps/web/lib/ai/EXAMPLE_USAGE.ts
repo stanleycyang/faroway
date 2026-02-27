@@ -4,7 +4,7 @@
  */
 
 import { generateItinerary, generateActivities, generateRestaurants } from './index';
-import type { TripPreferences } from './types';
+import type { TripPreferences, GeneratedItinerary } from './types';
 
 // ============================================
 // Example 1: Generate Complete Itinerary
@@ -43,7 +43,7 @@ async function exampleGenerateItinerary() {
     console.log(`   Total cost: ${itinerary.totalEstimatedCost.amount} ${itinerary.totalEstimatedCost.currency}`);
     
     // Access individual days
-    itinerary.days.forEach((day) => {
+    itinerary.days.forEach((day: GeneratedItinerary['days'][number]) => {
       console.log(`\n📅 Day ${day.dayNumber}: ${day.title}`);
       console.log(`   Morning: ${day.morning.activities.length} activities`);
       console.log(`   Afternoon: ${day.afternoon.activities.length} activities`);
