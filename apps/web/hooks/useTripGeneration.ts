@@ -1,11 +1,8 @@
 'use client';
 
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { TripDay, HotelResult } from '@tripgenie/types';
+import type { TripDay, HotelResult } from '@faroway/types';
 
-/**
- * Search progress from the backend (per-agent status).
- */
 export interface SearchProgress {
   [key: string]: string | undefined;
   orchestrator?: string;
@@ -16,32 +13,25 @@ export interface SearchProgress {
 }
 
 export interface TripGenerationState {
-  // Progress
   phase: 'connecting' | 'orchestrator' | 'searching' | 'composing' | 'complete' | 'error';
   progress: number;
   message: string;
   searchProgress: SearchProgress | null;
 
-  // Progressive data
   topHotel: HotelResult | null;
   activitiesCount: number;
   diningCount: number;
   days: TripDay[] | null;
 
-  // Status
   isStreaming: boolean;
   isComplete: boolean;
   error: string | null;
 }
 
 interface UseTripGenerationOptions {
-  /** Trip ID to stream */
   tripId: string;
-  /** Whether to start streaming immediately */
   enabled?: boolean;
-  /** Callback when streaming completes */
   onComplete?: () => void;
-  /** Callback on error */
   onError?: (error: string) => void;
 }
 
@@ -59,76 +49,33 @@ const initialState: TripGenerationState = {
   error: null,
 };
 
-const MAX_RECONNECT_ATTEMPTS = 5;
-const RECONNECT_BASE_DELAY_MS = 2000;
-
 /**
- * React hook that connects to GET /api/trips/[id]/stream via EventSource
- * and accumulates progressive data events for rendering ItineraryDay components.
- *
- * Handles transient connection drops with exponential-backoff reconnect
- * instead of immediately entering the error state.
+ * React hook that connects to POST /api/trips/[id]/stream and reads SSE
+ * events via fetch + ReadableStream. This replaces the old EventSource
+ * approach, allowing the server to run agents directly and stream results
+ * without a DB-polling intermediary.
  */
 export function useTripGeneration(options: UseTripGenerationOptions): TripGenerationState {
   const { tripId, enabled = true, onComplete, onError } = options;
 
   const [state, setState] = useState<TripGenerationState>(initialState);
 
-  const eventSourceRef = useRef<EventSource | null>(null);
   const onCompleteRef = useRef(onComplete);
   const onErrorRef = useRef(onError);
-  const reconnectAttemptRef = useRef(0);
-  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
   useEffect(() => {
     onCompleteRef.current = onComplete;
     onErrorRef.current = onError;
   });
 
-  const cleanup = useCallback(() => {
-    if (reconnectTimerRef.current) {
-      clearTimeout(reconnectTimerRef.current);
-      reconnectTimerRef.current = null;
-    }
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
-    }
-  }, []);
+  const processEvent = useCallback((type: string, rawData: string) => {
+    try {
+      const data = JSON.parse(rawData);
 
-  useEffect(() => {
-    if (!enabled || !tripId) {
-      return;
-    }
-
-    cleanup();
-
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- resetting state is part of starting a new EventSource connection
-    setState({
-      ...initialState,
-      isStreaming: true,
-      message: 'Connecting to generation stream...',
-    });
-
-    reconnectAttemptRef.current = 0;
-
-    function connect() {
-      const eventSource = new EventSource(`/api/trips/${tripId}/stream`);
-      eventSourceRef.current = eventSource;
-
-      // Reset reconnect counter on successful connection
-      eventSource.addEventListener('open', () => {
-        reconnectAttemptRef.current = 0;
-      });
-
-      // Progress events
-      eventSource.addEventListener('progress', (event) => {
-        try {
-          const data = JSON.parse(event.data);
-
+      switch (type) {
+        case 'progress': {
           let phase: TripGenerationState['phase'] = 'searching';
           if (data.step === 'orchestrator') phase = 'orchestrator';
-          else if (data.step === 'aggregator') phase = 'composing';
+          else if (data.step === 'aggregator' || data.step === 'saving') phase = 'composing';
           else if (data.step === 'complete') phase = 'complete';
 
           setState(prev => ({
@@ -138,152 +85,150 @@ export function useTripGeneration(options: UseTripGenerationOptions): TripGenera
             message: data.message ?? prev.message,
             searchProgress: data.searchProgress ?? prev.searchProgress,
           }));
-        } catch (err) {
-          console.error('[useTripGeneration] Failed to parse progress event:', err);
+          break;
         }
-      });
 
-      // Hotels event
-      eventSource.addEventListener('hotels', (event) => {
-        try {
-          const data = JSON.parse(event.data);
+        case 'hotels':
           setState(prev => ({
             ...prev,
             topHotel: data.topHotel ?? prev.topHotel,
           }));
-        } catch (err) {
-          console.error('[useTripGeneration] Failed to parse hotels event:', err);
-        }
-      });
+          break;
 
-      // Activities event
-      eventSource.addEventListener('activities', (event) => {
-        try {
-          const data = JSON.parse(event.data);
+        case 'activities':
           setState(prev => ({
             ...prev,
             activitiesCount: data.count ?? prev.activitiesCount,
           }));
-        } catch (err) {
-          console.error('[useTripGeneration] Failed to parse activities event:', err);
-        }
-      });
+          break;
 
-      // Dining event
-      eventSource.addEventListener('dining', (event) => {
-        try {
-          const data = JSON.parse(event.data);
+        case 'dining':
           setState(prev => ({
             ...prev,
             diningCount: data.count ?? prev.diningCount,
           }));
-        } catch (err) {
-          console.error('[useTripGeneration] Failed to parse dining event:', err);
-        }
-      });
+          break;
 
-      // Itinerary event (aggregator done)
-      eventSource.addEventListener('itinerary', (event) => {
-        try {
-          const data = JSON.parse(event.data);
+        case 'itinerary':
           setState(prev => ({
             ...prev,
             days: data.days ?? prev.days,
             topHotel: data.topHotel ?? prev.topHotel,
           }));
-        } catch (err) {
-          console.error('[useTripGeneration] Failed to parse itinerary event:', err);
+          break;
+
+        case 'complete':
+          setState(prev => ({
+            ...prev,
+            isStreaming: false,
+            isComplete: true,
+            phase: 'complete',
+            progress: 100,
+            message: 'Your itinerary is ready!',
+          }));
+          onCompleteRef.current?.();
+          break;
+
+        case 'error': {
+          const errorMessage = data.message || 'Generation failed';
+          setState(prev => ({
+            ...prev,
+            isStreaming: false,
+            phase: 'error',
+            error: errorMessage,
+          }));
+          onErrorRef.current?.(errorMessage);
+          break;
         }
-      });
+      }
+    } catch (err) {
+      console.error(`[useTripGeneration] Failed to parse ${type} event:`, err);
+    }
+  }, []);
 
-      // Complete event
-      eventSource.addEventListener('complete', () => {
-        setState(prev => ({
-          ...prev,
-          isStreaming: false,
-          isComplete: true,
-          phase: 'complete',
-          progress: 100,
-          message: 'Your itinerary is ready!',
-        }));
+  useEffect(() => {
+    if (!enabled || !tripId) return;
 
-        onCompleteRef.current?.();
-        eventSource.close();
-        eventSourceRef.current = null;
-      });
+    const abortController = new AbortController();
 
-      // Error event — handles both server-sent errors and connection drops
-      eventSource.addEventListener('error', (event) => {
-        // Server-sent error event (named SSE event with JSON data)
-        if (event instanceof MessageEvent && event.data) {
-          try {
-            const data = JSON.parse(event.data);
-            const errorMessage = data.message || 'Generation failed';
-            setState(prev => ({
-              ...prev,
-              isStreaming: false,
-              phase: 'error',
-              error: errorMessage,
-            }));
-            onErrorRef.current?.(errorMessage);
-            eventSource.close();
-            eventSourceRef.current = null;
-            return;
-          } catch {
-            // Not a JSON error event — fall through to connection error handling
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setState({
+      ...initialState,
+      isStreaming: true,
+      message: 'Starting trip generation...',
+    });
+
+    (async () => {
+      try {
+        const response = await fetch(`/api/trips/${tripId}/stream`, {
+          method: 'POST',
+          signal: abortController.signal,
+        });
+
+        if (!response.ok || !response.body) {
+          const text = await response.text().catch(() => '');
+          throw new Error(text || `Stream failed (HTTP ${response.status})`);
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        // eslint-disable-next-line no-constant-condition
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // SSE events are separated by double newlines
+          const blocks = buffer.split('\n\n');
+          buffer = blocks.pop() || '';
+
+          for (const block of blocks) {
+            let eventType = 'message';
+            let eventData = '';
+
+            for (const line of block.split('\n')) {
+              if (line.startsWith('event: ')) {
+                eventType = line.slice(7).trim();
+              } else if (line.startsWith('data: ')) {
+                eventData += (eventData ? '\n' : '') + line.slice(6);
+              }
+            }
+
+            if (eventType && eventData) {
+              processEvent(eventType, eventData);
+            }
           }
         }
 
-        // Connection drop — attempt reconnect with exponential backoff
-        // EventSource auto-reconnect sets readyState to CONNECTING (0).
-        // readyState CLOSED (2) means the browser gave up or we called close().
-        if (eventSource.readyState === EventSource.CLOSED || eventSource.readyState === EventSource.CONNECTING) {
-          eventSource.close();
-          eventSourceRef.current = null;
+        // Stream ended naturally — make sure we're in a terminal state
+        setState(prev => {
+          if (prev.isComplete || prev.phase === 'error') return prev;
+          return { ...prev, isStreaming: false };
+        });
+      } catch (error) {
+        if ((error as Error).name === 'AbortError') return;
 
-          // Don't reconnect if we already completed
-          setState(prev => {
-            if (prev.isComplete) return prev;
+        const msg = (error as Error).message || 'Connection failed';
+        console.error('[useTripGeneration] Stream error:', msg);
 
-            const attempt = reconnectAttemptRef.current;
-            if (attempt < MAX_RECONNECT_ATTEMPTS) {
-              reconnectAttemptRef.current = attempt + 1;
-              const delay = RECONNECT_BASE_DELAY_MS * Math.pow(2, attempt);
-              console.log(`[useTripGeneration] Connection lost, reconnecting in ${delay}ms (attempt ${attempt + 1}/${MAX_RECONNECT_ATTEMPTS})`);
+        setState(prev => {
+          if (prev.isComplete) return prev;
+          return {
+            ...prev,
+            isStreaming: false,
+            phase: 'error',
+            error: msg,
+          };
+        });
+        onErrorRef.current?.(msg);
+      }
+    })();
 
-              reconnectTimerRef.current = setTimeout(() => {
-                // Verify we haven't been cleaned up while waiting
-                if (eventSourceRef.current === null) {
-                  connect();
-                }
-              }, delay);
-
-              return {
-                ...prev,
-                message: 'Reconnecting...',
-              };
-            }
-
-            // All retries exhausted
-            const errorMessage = 'Connection lost during generation. Please refresh to check your itinerary.';
-            onErrorRef.current?.(errorMessage);
-            return {
-              ...prev,
-              isStreaming: false,
-              phase: 'error',
-              error: errorMessage,
-            };
-          });
-        }
-      });
-    }
-
-    connect();
-
-    return () => {
-      cleanup();
-    };
-  }, [tripId, enabled, cleanup]);
+    return () => abortController.abort();
+  }, [tripId, enabled, processEvent]);
 
   return state;
 }

@@ -1,8 +1,8 @@
 /**
  * POST /api/trips/[id]/generate
  *
- * Triggers trip planning via planTripWorkflow (multi-agent with real affiliate data).
- * Creates a search record, links it to the trip, and starts the workflow.
+ * Creates a search record, links it to the trip, and marks status as 'generating'.
+ * The actual agent pipeline is triggered by the stream endpoint (POST /api/trips/[id]/stream).
  *
  * GET /api/trips/[id]/generate
  *
@@ -10,8 +10,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { start } from 'workflow/api';
-import { planTripWorkflow } from '@/workflows/plan-trip';
 import { createClient, getSupabase } from '@/lib/supabase/server';
 
 type Params = {
@@ -117,75 +115,14 @@ export async function POST(
       })
       .eq('id', tripId);
 
-    // Initialize workflow progress tracking
-    await adminClient
-      .from('workflow_progress')
-      .upsert({
-        trip_id: tripId,
-        user_id: userId,
-        step: 'queued',
-        progress: 0,
-        message: 'Starting trip planning...',
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'trip_id' });
-
-    // Build workflow input
-    const workflowInput = {
-      searchId,
-      tripId,
-      destination: trip.destination,
-      startDate: trip.start_date,
-      endDate: trip.end_date,
-      travelers: trip.travelers || 2,
-      vibes: trip.vibes || (bodyPreferences.vibes as string[]) || [],
-      budget: trip.budget_tier || 'moderate',
-      userId: userId || undefined,
-    };
-
-    // Start the planTripWorkflow asynchronously
-    const workflowRun = await start(planTripWorkflow, [workflowInput]);
-
-    // Extract workflow run ID — handle various return shapes from the workflow SDK
-    let workflowRunId: string;
-    if (typeof workflowRun === 'string') {
-      workflowRunId = workflowRun;
-    } else if (workflowRun && typeof workflowRun === 'object') {
-      const run = workflowRun as Record<string, unknown>;
-      workflowRunId = String(run.id ?? run.runId ?? run.workflowRunId ?? `wf_${searchId}_${Date.now()}`);
-    } else {
-      workflowRunId = `wf_${searchId}_${Date.now()}`;
-    }
-
-    console.log(`[API] Started planTripWorkflow for trip ${tripId}, search ${searchId}, run ID: ${workflowRunId}`);
-
-    // Store workflow run for status tracking (only for authenticated users,
-    // since workflow_runs.user_id is NOT NULL)
-    if (userId) {
-      await adminClient
-        .from('workflow_runs')
-        .insert({
-          id: workflowRunId,
-          trip_id: tripId,
-          user_id: userId,
-          status: 'running',
-          started_at: new Date().toISOString(),
-        });
-    }
-
-    // Update search with workflow run ID
-    await adminClient
-      .from('searches')
-      .update({ workflow_run_id: workflowRunId })
-      .eq('id', searchId);
+    console.log(`[API] Created search ${searchId} for trip ${tripId} — agents will run via stream`);
 
     return NextResponse.json({
       success: true,
       tripId,
       searchId,
-      workflowId: workflowRunId,
-      message: 'Trip planning started',
+      message: 'Trip planning started — connect to the stream endpoint for real-time updates',
       streamUrl: `/api/trips/${tripId}/stream`,
-      pollInterval: 2000,
     });
   } catch (error) {
     console.error('[API] Error starting trip planning:', error);
