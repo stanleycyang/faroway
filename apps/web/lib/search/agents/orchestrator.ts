@@ -12,7 +12,7 @@ const aiGateway = process.env.AI_GATEWAY_API_KEY
   ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
   : defaultGateway;
 
-const MODEL = 'anthropic/claude-sonnet-4-20250514';
+const MODEL = 'google/gemini-3-flash';
 
 const SearchPlanSchema = z.object({
   destination: z.string(),

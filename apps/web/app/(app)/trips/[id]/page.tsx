@@ -44,7 +44,7 @@ import { SkeletonItineraryDay } from '@/components/trips/SkeletonItineraryDay';
 import { ShareButtons } from '@/components/ShareButtons';
 import { useTripGeneration, type SearchProgress } from '@/hooks/useTripGeneration';
 import type { GeneratedItinerary } from '@/lib/ai/types';
-import type { TripDay } from '@tripgenie/types';
+import type { TripDay } from '@faroway/types';
 
 const ItineraryMap = dynamic(
   () => import('@/components/trips/ItineraryMap').then(m => ({ default: m.ItineraryMap })),
