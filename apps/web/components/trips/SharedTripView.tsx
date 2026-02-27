@@ -91,7 +91,7 @@ export function SharedTripView({
         {itinerary?.days && itinerary.days.length > 0 && (
           <div className="space-y-5">
             <h2 className="text-xl font-bold text-gray-900">Day-by-Day Itinerary</h2>
-            {itinerary.days.map((day, index) => (
+            {itinerary.days.map((day) => (
               <ItineraryDay
                 key={day.dayNumber}
                 dayNumber={day.dayNumber}

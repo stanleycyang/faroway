@@ -1,6 +1,5 @@
 import React from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import {
   Rocket,
   Map,
@@ -12,7 +11,6 @@ import {
   Sparkles,
   Mail,
   MessageCircle,
-  Download,
   Check,
   ArrowRight,
 } from 'lucide-react';

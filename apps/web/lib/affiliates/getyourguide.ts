@@ -8,8 +8,6 @@
  * @see https://partner.getyourguide.com/
  */
 
-import { z } from 'zod';
-
 // Environment variables
 const GYG_API_KEY = process.env.GETYOURGUIDE_API_KEY;
 const GYG_PARTNER_ID = process.env.GETYOURGUIDE_PARTNER_ID;
@@ -77,40 +75,6 @@ export interface GYGAvailability {
     currencyCode: string;
   };
 }
-
-// Zod schema for validation
-const GYGActivitySchema = z.object({
-  activityId: z.string(),
-  title: z.string(),
-  description: z.string().optional(),
-  shortDescription: z.string().optional(),
-  rating: z.number().min(0).max(5),
-  reviewCount: z.number(),
-  price: z.object({
-    amount: z.number(),
-    currencyCode: z.string(),
-    formattedPrice: z.string().optional(),
-  }),
-  duration: z.object({
-    fixedDurationInMinutes: z.number().optional(),
-    variableDurationFromMinutes: z.number().optional(),
-    variableDurationToMinutes: z.number().optional(),
-  }).optional(),
-  images: z.array(z.object({
-    url: z.string(),
-    caption: z.string().optional(),
-  })).optional(),
-  categories: z.array(z.string()).optional(),
-  location: z.object({
-    address: z.string().optional(),
-    city: z.string().optional(),
-    country: z.string().optional(),
-    coordinates: z.object({
-      latitude: z.number(),
-      longitude: z.number(),
-    }).optional(),
-  }).optional(),
-});
 
 /**
  * Check if GetYourGuide API is configured
@@ -239,7 +203,7 @@ export async function checkGYGAvailability(
     const data = await response.json();
     const availabilities = data.data?.availabilities || data.availabilities || [];
 
-    return availabilities.map((avail: any) => ({
+    return availabilities.map((avail: { date?: string; available?: boolean; start_times?: string[]; startTimes?: string[]; price?: { amount?: number; currency?: string }; retail_price?: { amount?: number; currency?: string } }) => ({
       activityId,
       date: avail.date || date,
       available: avail.available ?? true,
@@ -278,6 +242,7 @@ export function generateGYGAffiliateUrl(
 /**
  * Normalize GetYourGuide API response to our internal format
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeGYGActivity(raw: any): GYGActivity {
   return {
     activityId: String(raw.activity_id || raw.activityId || raw.id),
@@ -296,11 +261,11 @@ function normalizeGYGActivity(raw: any): GYGActivity {
       variableDurationFromMinutes: raw.duration_from_minutes || raw.duration?.variableDurationFromMinutes,
       variableDurationToMinutes: raw.duration_to_minutes || raw.duration?.variableDurationToMinutes,
     },
-    images: (raw.pictures || raw.images || []).map((img: any) => ({
+    images: (raw.pictures || raw.images || []).map((img: { url?: string; ssl_url?: string; variants?: Array<{ url?: string }>; caption?: string; alt?: string }) => ({
       url: img.url || img.ssl_url || img.variants?.[0]?.url,
       caption: img.caption || img.alt,
     })),
-    categories: (raw.categories || []).map((cat: any) => typeof cat === 'string' ? cat : cat.name || cat.title),
+    categories: (raw.categories || []).map((cat: string | { name?: string; title?: string }) => typeof cat === 'string' ? cat : cat.name || cat.title),
     location: {
       address: raw.location?.address || raw.meeting_point,
       city: raw.location?.city || raw.locations?.[0]?.city,
@@ -316,7 +281,7 @@ function normalizeGYGActivity(raw: any): GYGActivity {
       mobileTicket: raw.has_mobile_ticket ?? raw.bookingInfo?.mobileTicket ?? true,
       instantConfirmation: raw.instant_confirmation ?? raw.bookingInfo?.instantConfirmation ?? true,
     },
-    highlights: raw.highlights || raw.inclusions?.map((i: any) => typeof i === 'string' ? i : i.text) || [],
+    highlights: raw.highlights || raw.inclusions?.map((i: string | { text?: string }) => typeof i === 'string' ? i : i.text) || [],
   };
 }
 

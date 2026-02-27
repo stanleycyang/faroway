@@ -142,7 +142,7 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
     // Try to recover from schema validation errors by parsing the raw response text.
     // Common failure: model returns `days` as a JSON string instead of an array,
     // with topHotelId sometimes embedded inside that string.
-    const rawText = (error as any)?.text;
+    const rawText = (error as { text?: string })?.text;
     if (rawText) {
       const recovered = recoverFromRawText(rawText, hotels, activities, dining);
       if (recovered) {
@@ -238,7 +238,7 @@ function recoverFromRawText(
   dining: DiningResult[],
 ): { days: SuggestedDay[]; topHotel: HotelResult | null } | null {
   try {
-    let parsed: any;
+    let parsed: Record<string, unknown>;
     try {
       parsed = JSON.parse(rawText);
     } catch {
@@ -246,8 +246,8 @@ function recoverFromRawText(
       return null;
     }
 
-    let daysArray: any[] | null = null;
-    let topHotelId: string | undefined = parsed.topHotelId;
+    let daysArray: Record<string, unknown>[] | null = null;
+    let topHotelId: string | undefined = parsed.topHotelId as string | undefined;
 
     if (Array.isArray(parsed.days)) {
       // Days is already an array — shouldn't normally get here, but handle it
@@ -281,7 +281,8 @@ function recoverFromRawText(
 
     // Validate each day has the minimum required fields and normalise shape
     const validDays = daysArray
-      .filter((d: any) => d && typeof d.dayNumber === 'number' && d.morning && d.afternoon && d.evening)
+      .filter((d: Record<string, unknown>) => d && typeof d.dayNumber === 'number' && d.morning && d.afternoon && d.evening)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .map((d: any) => ({
         dayNumber: d.dayNumber,
         date: d.date || '',

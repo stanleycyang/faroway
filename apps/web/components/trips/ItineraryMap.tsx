@@ -31,17 +31,19 @@ function extractMarkers(itinerary: GeneratedItinerary): MapMarker[] {
     for (const timeOfDay of ['morning', 'afternoon', 'evening'] as const) {
       const slot = day[timeOfDay];
       if (!slot) continue;
+      interface SlotItem { name?: string; location?: { coordinates?: { lat: number; lng: number } } }
       const rawActivities = Array.isArray(slot.activities) ? slot.activities : [];
-      const activities = rawActivities.filter((a: any) => a != null && typeof a === 'object');
-      const rawMeals = Array.isArray((slot as any).meals)
-        ? (slot as any).meals
-        : (slot as any).meal && typeof (slot as any).meal === 'object'
-          ? [(slot as any).meal]
+      const activities = rawActivities.filter((a) => a != null && typeof a === 'object') as SlotItem[];
+      const slotRecord = slot as unknown as Record<string, unknown>;
+      const rawMeals: unknown[] = Array.isArray(slotRecord.meals)
+        ? slotRecord.meals
+        : slotRecord.meal && typeof slotRecord.meal === 'object'
+          ? [slotRecord.meal]
           : [];
-      const meals = rawMeals.filter((m: any) => m != null && typeof m === 'object');
+      const meals = rawMeals.filter((m) => m != null && typeof m === 'object') as SlotItem[];
       for (const activity of activities) {
         const coords = activity.location?.coordinates;
-        if (coords?.lat && coords?.lng) {
+        if (coords?.lat && coords?.lng && activity.name) {
           markers.push({
             lat: coords.lat,
             lng: coords.lng,
@@ -54,7 +56,7 @@ function extractMarkers(itinerary: GeneratedItinerary): MapMarker[] {
       }
       for (const meal of meals) {
         const coords = meal.location?.coordinates;
-        if (coords?.lat && coords?.lng) {
+        if (coords?.lat && coords?.lng && meal.name) {
           markers.push({
             lat: coords.lat,
             lng: coords.lng,

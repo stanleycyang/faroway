@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { Check, Printer } from 'lucide-react';
 import type { PackingCategory } from '@/lib/tools/packing-data';
 
@@ -10,15 +10,14 @@ interface PackingChecklistProps {
 }
 
 export function PackingChecklist({ categories, storageKey }: PackingChecklistProps) {
-  const [checked, setChecked] = useState<Set<string>>(new Set());
-
-  // Load from localStorage
-  useEffect(() => {
+  const [checked, setChecked] = useState<Set<string>>(() => {
+    if (typeof window === 'undefined') return new Set<string>();
     try {
       const saved = localStorage.getItem(storageKey);
-      if (saved) setChecked(new Set(JSON.parse(saved)));
+      if (saved) return new Set<string>(JSON.parse(saved));
     } catch {}
-  }, [storageKey]);
+    return new Set<string>();
+  });
 
   // Save to localStorage
   const persist = useCallback(

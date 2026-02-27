@@ -11,8 +11,6 @@
  * @see https://github.com/viator-docs/Viator-Partner-API-v2
  */
 
-import { z } from 'zod';
-
 // Environment variables
 const VIATOR_API_KEY = process.env.VIATOR_API_KEY;
 const VIATOR_PARTNER_ID = process.env.VIATOR_PARTNER_ID;
@@ -52,6 +50,7 @@ const DESTINATION_IDS: Record<string, number> = {
   'singapore': 60449, 'hong kong': 35959, 'bali': 98, 'phuket': 349,
   'seoul': 973, 'taipei': 3643, 'ho chi minh city': 352, 'hanoi': 351,
   'kuala lumpur': 5765, 'mumbai': 953, 'new delhi': 4540, 'siem reap': 5480,
+  'chiang mai': 6282, 'ubud': 4538, 'da nang': 22399, 'phnom penh': 3644,
   // Europe
   'paris': 479, 'london': 737, 'rome': 511, 'barcelona': 562,
   'amsterdam': 525, 'prague': 462, 'lisbon': 538, 'athens': 496,
@@ -59,19 +58,28 @@ const DESTINATION_IDS: Record<string, number> = {
   'berlin': 488, 'madrid': 566, 'vienna': 454, 'budapest': 449,
   'edinburgh': 905, 'santorini': 959, 'mykonos': 4814, 'dubrovnik': 904,
   'reykjavik': 4080, 'nice': 483, 'munich': 490, 'zurich': 573,
-  'copenhagen': 4361, 'stockholm': 4195,
+  'copenhagen': 4361, 'stockholm': 4195, 'brussels': 531, 'milan': 512,
+  'naples': 515, 'seville': 564, 'krakow': 467, 'split': 906,
   // Americas
   'new york city': 687, 'new york': 687, 'los angeles': 645,
   'san francisco': 651, 'las vegas': 684, 'miami': 672, 'chicago': 669,
   'washington dc': 657, 'boston': 678, 'cancun': 631, 'mexico city': 628,
   'rio de janeiro': 712, 'buenos aires': 901, 'lima': 1004,
-  'cartagena': 4988, 'cusco': 918, 'maui': 671, 'oahu': 663,
+  'cartagena': 4988, 'cusco': 918, 'san diego': 647, 'seattle': 653,
+  'new orleans': 675, 'nashville': 20448, 'austin': 30196, 'denver': 673,
+  'portland': 654, 'savannah': 4985, 'charleston': 4989,
+  'playa del carmen': 4975, 'tulum': 25498, 'san juan': 711,
+  'medellín': 25487, 'medellin': 25487, 'bogota': 5385,
+  // Hawaii (Oahu = 663, Maui = 671, Big Island = 670, Kauai = 668)
+  'honolulu': 663, 'waikiki': 663, 'oahu': 663, 'maui': 671,
+  'kona': 670, 'hilo': 670, 'big island': 670, 'kauai': 668,
   // Middle East & Africa
   'dubai': 828, 'marrakech': 5408, 'cairo': 782, 'cape town': 318,
   'tel aviv': 945, 'jerusalem': 946, 'petra': 4892, 'nairobi': 5558,
+  'abu dhabi': 4832, 'doha': 36743, 'amman': 4891,
   // Oceania
   'sydney': 357, 'melbourne': 364, 'auckland': 381, 'queenstown': 5523,
-  'fiji': 4249,
+  'fiji': 4249, 'gold coast': 362, 'cairns': 355, 'perth': 367,
 };
 
 /**
@@ -169,40 +177,6 @@ export interface ViatorAvailability {
     currencyCode: string;
   };
 }
-
-// Zod schema for validation
-const ViatorProductSchema = z.object({
-  productCode: z.string(),
-  title: z.string(),
-  description: z.string().optional(),
-  shortDescription: z.string().optional(),
-  rating: z.number().min(0).max(5),
-  reviewCount: z.number(),
-  price: z.object({
-    amount: z.number(),
-    currencyCode: z.string(),
-    formattedPrice: z.string().optional(),
-  }),
-  duration: z.object({
-    fixedDurationInMinutes: z.number().optional(),
-    variableDurationFromMinutes: z.number().optional(),
-    variableDurationToMinutes: z.number().optional(),
-  }).optional(),
-  images: z.array(z.object({
-    url: z.string(),
-    caption: z.string().optional(),
-  })).optional(),
-  categories: z.array(z.string()).optional(),
-  location: z.object({
-    address: z.string().optional(),
-    city: z.string().optional(),
-    country: z.string().optional(),
-    coordinates: z.object({
-      latitude: z.number(),
-      longitude: z.number(),
-    }).optional(),
-  }).optional(),
-});
 
 /**
  * Check if Viator API is configured
@@ -401,14 +375,15 @@ export function generateViatorAffiliateUrl(
  * Normalize Viator API v2 response to our internal format.
  * Handles both v1 and v2 response shapes gracefully.
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeViatorProduct(raw: any): ViatorProduct {
   // v2 images: images[].variants[].url — pick highest res variant
-  const images = (raw.images || []).map((img: any) => {
+  const images = (raw.images || []).map((img: { url?: string; variants?: Array<{ url?: string; width?: number }>; caption?: string }) => {
     const url = img.url
-      || img.variants?.sort((a: any, b: any) => (b.width || 0) - (a.width || 0))?.[0]?.url
+      || img.variants?.sort((a: { width?: number }, b: { width?: number }) => (b.width || 0) - (a.width || 0))?.[0]?.url
       || '';
     return { url, caption: img.caption };
-  }).filter((img: any) => img.url);
+  }).filter((img: { url: string }) => img.url);
 
   return {
     productCode: raw.productCode || raw.code,
@@ -430,7 +405,7 @@ function normalizeViatorProduct(raw: any): ViatorProduct {
       variableDurationToMinutes: raw.duration?.variableDurationToMinutes,
     },
     images,
-    categories: raw.tags?.map((t: any) => t.tagName || t) || raw.categories || [],
+    categories: raw.tags?.map((t: string | { tagName?: string }) => (typeof t === 'string' ? t : t.tagName || '')) || raw.categories || [],
     location: {
       address: raw.location?.address,
       city: raw.location?.city || raw.destinationName,

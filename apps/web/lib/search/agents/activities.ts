@@ -37,7 +37,7 @@ const ActivitySchema = z.object({
     lng: z.number(),
     neighborhood: z.string().optional(),
   }),
-  images: z.array(z.string()),
+  images: z.array(z.string()).default([]),
   affiliateUrl: z.string().optional(),
   affiliatePartner: z.string().optional(),
   bestTimeOfDay: z.enum(['morning', 'afternoon', 'evening', 'any']),
@@ -69,7 +69,9 @@ Generate diverse options across categories like:
 - Outdoor activities
 - Unique local experiences
 
-Do NOT generate fake affiliate URLs. Leave affiliateUrl and affiliatePartner empty — only real API-sourced activities should have booking links.`;
+Do NOT generate fake affiliate URLs. Leave affiliateUrl and affiliatePartner empty — only real API-sourced activities should have booking links.
+
+IMPORTANT: For the "images" field, return an EMPTY array []. Do NOT generate or guess image URLs — only real API-sourced activities have valid image URLs.`;
 
 export async function runActivitiesAgent(
   plan: SearchPlan,
@@ -79,7 +81,7 @@ export async function runActivitiesAgent(
   const vibes = vibeInterpretation.vibes;
 
   // Search Viator for real activity data
-  let realActivities: ActivityResult[] = [];
+  const realActivities: ActivityResult[] = [];
 
   try {
     const viatorProducts = isViatorConfigured()
@@ -116,7 +118,7 @@ export async function runActivitiesAgent(
           lat: product.location.coordinates?.latitude || 0,
           lng: product.location.coordinates?.longitude || 0,
         },
-        images: product.images.slice(0, 3).map((img: any) => img.url),
+        images: product.images.slice(0, 3).map((img: { url: string; caption?: string }) => img.url),
         affiliateUrl: generateViatorAffiliateUrl(product.productCode, trackingId, { date: dates.start, productUrl: product.productUrl }),
         affiliatePartner: 'viator',
         bestTimeOfDay: 'any',
@@ -185,7 +187,7 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
 export async function searchGooglePlacesActivities(
   destination: string,
   types: string[]
-): Promise<any[]> {
+): Promise<Record<string, unknown>[]> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
     console.log('[Activities Agent] No Google Places API key, using AI-generated data');
@@ -195,7 +197,7 @@ export async function searchGooglePlacesActivities(
   try {
     // Google Places Text Search
     const searchQueries = types.map(type => `${type} in ${destination}`);
-    const results: any[] = [];
+    const results: Record<string, unknown>[] = [];
 
     for (const query of searchQueries.slice(0, 3)) { // Limit to 3 queries
       const response = await fetch(

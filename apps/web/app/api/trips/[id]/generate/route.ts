@@ -145,10 +145,16 @@ export async function POST(
     // Start the planTripWorkflow asynchronously
     const workflowRun = await start(planTripWorkflow, [workflowInput]);
 
-    // Get workflow run ID
-    const workflowRunId = typeof workflowRun === 'object' && workflowRun !== null && 'id' in workflowRun
-      ? (workflowRun as { id: string }).id
-      : String(workflowRun);
+    // Extract workflow run ID — handle various return shapes from the workflow SDK
+    let workflowRunId: string;
+    if (typeof workflowRun === 'string') {
+      workflowRunId = workflowRun;
+    } else if (workflowRun && typeof workflowRun === 'object') {
+      const run = workflowRun as Record<string, unknown>;
+      workflowRunId = String(run.id ?? run.runId ?? run.workflowRunId ?? `wf_${searchId}_${Date.now()}`);
+    } else {
+      workflowRunId = `wf_${searchId}_${Date.now()}`;
+    }
 
     console.log(`[API] Started planTripWorkflow for trip ${tripId}, search ${searchId}, run ID: ${workflowRunId}`);
 

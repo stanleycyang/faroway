@@ -4,7 +4,6 @@ import { notFound } from 'next/navigation';
 import {
   Calendar,
   ChevronRight,
-  Sparkles,
   ThermometerSun,
   Droplets,
   Users,

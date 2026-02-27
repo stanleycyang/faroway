@@ -16,7 +16,6 @@ import {
 import {
   getGuideBySlug,
   getGuideSlugs,
-  type DestinationGuide,
 } from '@/lib/destination-guides';
 
 // ─── Static Generation ───────────────────────────────────────────────────────

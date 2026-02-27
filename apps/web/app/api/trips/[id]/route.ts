@@ -68,7 +68,15 @@ export async function GET(
     }
 
     // Flatten the joined itinerary (Supabase returns array for 1-to-many)
-    const { itineraries, ...tripData } = trip as any
+    interface ItineraryJoin {
+      days: unknown;
+      overview: string | null;
+      total_cost: number | null;
+      packing_list: string[] | null;
+      general_tips: string[] | null;
+      generated_at: string | null;
+    }
+    const { itineraries, ...tripData } = trip as typeof trip & { itineraries: ItineraryJoin[] | ItineraryJoin | null }
     const rawItinerary = Array.isArray(itineraries) ? itineraries[0] || null : itineraries || null
 
     // Map snake_case DB columns to camelCase expected by the frontend

@@ -3,11 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 
 // ─── Mock Supabase ──────────────────────────────────────────────────────────
 
-let mockGetUserReturn: any;
+let mockGetUserReturn: { data: { user: unknown }; error: unknown };
 
 const mockSupabase = {
   auth: {
-    getUser: vi.fn((token: string) => mockGetUserReturn),
+    getUser: vi.fn(() => mockGetUserReturn),
   },
 };
 

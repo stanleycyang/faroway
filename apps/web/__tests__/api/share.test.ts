@@ -12,14 +12,24 @@ vi.hoisted(() => {
 
 const mockUser = { id: 'user-123', email: 'test@example.com' }
 
-let mockAuthReturn: { data: { user: any }; error: any }
-let mockTripReturn: any
-let mockUpdateReturn: any
+interface QueryResult {
+  data: unknown;
+  error: unknown;
+  count?: unknown;
+}
+
+interface QueryChain {
+  [key: string]: ReturnType<typeof vi.fn>;
+}
+
+let mockAuthReturn: { data: { user: unknown }; error: unknown }
+let mockTripReturn: QueryResult
+let mockUpdateReturn: QueryResult
 
 // Universal query chain: every method returns the chain itself.
 // The chain has data/error/count getters so `await chain` + destructuring works.
-function createQueryChain(getResult: () => any) {
-  const chain: any = {}
+function createQueryChain(getResult: () => QueryResult | undefined) {
+  const chain: QueryChain = {} as QueryChain
   const methods = ['select', 'eq', 'or', 'is', 'insert', 'update', 'delete', 'upsert', 'match', 'limit', 'order', 'single']
   methods.forEach(m => {
     chain[m] = vi.fn(() => chain)
@@ -33,13 +43,12 @@ function createQueryChain(getResult: () => any) {
 // ── Share route mocks ───────────────────────────────────────────────────────
 
 const tripsChain = createQueryChain(() => mockTripReturn)
-const tripsUpdateChain = createQueryChain(() => mockUpdateReturn)
 
 const mockSupabase = {
   auth: {
     getUser: vi.fn(() => mockAuthReturn),
   },
-  from: vi.fn((table: string) => {
+  from: vi.fn(() => {
     // The share route calls .from('trips').select() for fetch, and .from('trips').update() for update.
     // We use a single chain but swap the result based on which operation is being called.
     // The chain's .single() call indicates a select (fetch), while .update() indicates an update.
@@ -58,13 +67,12 @@ vi.mock('nanoid', () => ({
 
 // ── Conversion route mocks ──────────────────────────────────────────────────
 
-let mockClickReturn: any
-let mockInsertReturn: any
-let mockClickUpdateReturn: any
+let mockClickReturn: QueryResult
+let mockInsertReturn: QueryResult
+let mockClickUpdateReturn: QueryResult
 
 const clicksChain = createQueryChain(() => mockClickReturn)
 const conversionsChain = createQueryChain(() => mockInsertReturn)
-const clicksUpdateChain = createQueryChain(() => mockClickUpdateReturn)
 
 const mockConversionSupabase = {
   from: vi.fn((table: string) => {
@@ -86,14 +94,14 @@ import { POST as conversionPost } from '@/app/api/track/conversion/route'
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 function makeRequest(method: string, url: string, body?: string | object, headers?: Record<string, string>): NextRequest {
-  const init: any = { method }
+  const init: RequestInit = { method }
   if (body) {
     init.body = typeof body === 'string' ? body : JSON.stringify(body)
     init.headers = { 'Content-Type': 'application/json', ...headers }
   } else if (headers) {
     init.headers = headers
   }
-  return new NextRequest(new URL(url, 'http://localhost:3000'), init)
+  return new NextRequest(new URL(url, 'http://localhost:3000'), init as Record<string, unknown>)
 }
 
 function makeParams(id: string) {

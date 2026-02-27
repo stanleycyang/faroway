@@ -116,7 +116,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .limit(200)
 
     if (sharedTrips) {
-      sharedTripPages = sharedTrips.map(trip => ({
+      sharedTripPages = sharedTrips.map((trip: { share_token: string | null; updated_at: string | null }) => ({
         url: `${baseUrl}/s/${trip.share_token}`,
         lastModified: trip.updated_at || currentDate,
         changeFrequency: 'weekly' as const,

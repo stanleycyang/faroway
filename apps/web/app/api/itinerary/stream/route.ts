@@ -8,8 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
-import { catalogPrompt } from '@/lib/json-render/catalog-server';
-import { planTrip } from '@/lib/agents/travel-agent';
+import { planTrip, type TravelPlanResult } from '@/lib/agents/travel-agent';
 
 
 export const maxDuration = 60;
@@ -36,40 +35,6 @@ export async function POST(request: NextRequest) {
     }
 
     const params = parseResult.data;
-
-    // Generate the system prompt for the AI that includes the catalog
-    const systemPrompt = `${catalogPrompt}
-
-You are generating a travel itinerary UI using json-render components.
-
-IMPORTANT: Your output must be valid JSON that follows the json-render spec format:
-{
-  "root": "element-id",
-  "elements": {
-    "element-id": {
-      "type": "ComponentName",
-      "props": { ... },
-      "children": ["child-id", ...]
-    }
-  }
-}
-
-Use the Faroway catalog components to create a beautiful, informative itinerary:
-- Use Section for different parts (Overview, Hotels, Daily Itinerary, etc.)
-- Use ItineraryDay for each day
-- Use HotelCard for accommodation options
-- Use ActivityCard for things to do
-- Use RestaurantCard for dining recommendations
-- Use Text for descriptions and tips
-- Include PriceTag and RatingDisplay where appropriate
-
-Create a complete itinerary with:
-1. Overview section with destination intro
-2. Hotel recommendations section
-3. Day-by-day itinerary with activities and meals
-4. Budget summary section
-
-Make sure all element IDs are unique and properly referenced in the children arrays.`;
 
     // Create streaming response
     const encoder = new TextEncoder();
@@ -139,14 +104,64 @@ Make sure all element IDs are unique and properly referenced in the children arr
 /**
  * Convert travel agent result to json-render spec
  */
-function convertToJsonRenderSpec(result: any, params: any) {
-  const elements: Record<string, any> = {};
+
+interface JsonRenderElement {
+  type: string;
+  props: Record<string, unknown>;
+  children: string[];
+}
+
+interface AgentHotel {
+  name: string;
+  rating?: number;
+  pricePerNight?: number;
+  image?: string;
+  affiliateUrl?: string;
+}
+
+interface AgentActivity {
+  name: string;
+  description?: string;
+  duration?: number;
+  price?: number;
+  rating?: number;
+  affiliateUrl?: string;
+}
+
+interface AgentMeal {
+  name: string;
+  cuisine?: string;
+  priceLevel?: string;
+  rating?: number;
+  reservationUrl?: string;
+}
+
+interface AgentDay {
+  dayNumber: number;
+  date: string;
+  title: string;
+  morning?: { activities?: AgentActivity[] };
+  afternoon?: { activities?: AgentActivity[]; meal?: AgentMeal };
+  evening?: { activities?: AgentActivity[] };
+}
+
+interface StreamRequestParams {
+  destination: string;
+  startDate: string;
+  endDate: string;
+  travelers: number;
+  vibes?: string[];
+  budget?: string;
+}
+
+function convertToJsonRenderSpec(result: TravelPlanResult, params: StreamRequestParams) {
+  const elements: Record<string, JsonRenderElement> = {};
   const children: string[] = [];
 
   // Overview Section
   const overviewId = 'section-overview';
   const overviewTextId = 'text-overview';
-  
+
   elements[overviewTextId] = {
     type: 'Text',
     props: {
@@ -167,7 +182,7 @@ function convertToJsonRenderSpec(result: any, params: any) {
   // Hotels Section
   if (result.hotels && result.hotels.length > 0) {
     const hotelsId = 'section-hotels';
-    const hotelCardIds = result.hotels.slice(0, 3).map((hotel: any, idx: number) => {
+    const hotelCardIds = (result.hotels as AgentHotel[]).slice(0, 3).map((hotel: AgentHotel, idx: number) => {
       const id = `hotel-${idx}`;
       elements[id] = {
         type: 'HotelCard',
@@ -194,12 +209,12 @@ function convertToJsonRenderSpec(result: any, params: any) {
   // Daily Itinerary Section
   if (result.itinerary && result.itinerary.days) {
     const itineraryId = 'section-itinerary';
-    const dayIds = result.itinerary.days.map((day: any, dayIdx: number) => {
+    const dayIds = (result.itinerary.days as AgentDay[]).map((day: AgentDay, dayIdx: number) => {
       const dayId = `day-${dayIdx}`;
       const dayChildren: string[] = [];
 
       // Morning activities
-      day.morning?.activities?.forEach((activity: any, idx: number) => {
+      day.morning?.activities?.forEach((activity: AgentActivity, idx: number) => {
         const actId = `day-${dayIdx}-morning-act-${idx}`;
         elements[actId] = {
           type: 'ActivityCard',
@@ -217,7 +232,7 @@ function convertToJsonRenderSpec(result: any, params: any) {
       });
 
       // Afternoon activities
-      day.afternoon?.activities?.forEach((activity: any, idx: number) => {
+      day.afternoon?.activities?.forEach((activity: AgentActivity, idx: number) => {
         const actId = `day-${dayIdx}-afternoon-act-${idx}`;
         elements[actId] = {
           type: 'ActivityCard',

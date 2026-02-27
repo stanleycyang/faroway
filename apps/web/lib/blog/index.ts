@@ -1,6 +1,5 @@
 import { BlogPost, BlogPostMeta, AUTHORS, PaginatedResult } from './types';
-import { CLUSTERS, getClusterBySlug, getAllClusterSlugs, getRelatedClusters } from './clusters';
-import type { ClusterDefinition } from './clusters';
+import { getClusterBySlug } from './clusters';
 import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 import { getBlogSupabase } from './supabase';
 

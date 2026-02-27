@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Calendar, ArrowRight } from 'lucide-react';
-import { getAllGuides, getContinents, getGuidesByContinent } from '@/lib/destination-guides';
+import { getContinents, getGuidesByContinent } from '@/lib/destination-guides';
 import { getClimateData } from '@/lib/tools/climate-data';
 import { ToolHero } from '@/components/tools/ToolHero';
 import { ToolCTA } from '@/components/tools/ToolCTA';

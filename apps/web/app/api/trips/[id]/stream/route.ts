@@ -148,7 +148,7 @@ export async function GET(
           const ir = (search.intermediate_results || {}) as Record<string, unknown>;
 
           if (!sentHotels && ir.hotels) {
-            const hotels = ir.hotels as any[];
+            const hotels = ir.hotels as unknown[];
             const topHotel = ir.topHotel || hotels[0] || null;
             send('hotels', { topHotel, count: hotels.length });
             sentHotels = true;

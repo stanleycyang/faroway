@@ -14,7 +14,7 @@ import { executeTravelSearch } from '@/lib/search/workflow';
 import { mapSearchResultsToItinerary, type MappedItinerary } from '@/lib/search/bridge';
 import { buildJsonRenderSpec, BuildSpecInput } from '@/lib/json-render/build-spec';
 import { getSupabase } from '@/lib/supabase/server';
-import type { SearchInput, HotelResult } from '@faroway/types';
+import type { SearchInput, TripDay, ItineraryActivity, Restaurant as FarowayRestaurant } from '@faroway/types';
 
 // Types
 interface TripPlanInput {
@@ -186,24 +186,21 @@ async function searchAffiliates(params: {
     budget: (budget as 'budget' | 'moderate' | 'luxury') || 'moderate',
   };
 
-  // Progress callback: updates searches + workflow_progress tables
-  const onProgress = async (stage: string, status: 'searching' | 'done') => {
-    const currentProgress = {
-      orchestrator: 'done' as const,
-      hotels: 'pending' as const,
-      activities: 'pending' as const,
-      dining: 'pending' as const,
-      aggregator: 'pending' as const,
-    };
+  // Persistent progress state — survives across parallel onProgress calls
+  const progressState: Record<string, string> = {
+    orchestrator: 'done',
+    hotels: 'pending',
+    activities: 'pending',
+    dining: 'pending',
+    aggregator: 'pending',
+  };
 
-    // Mark the current stage
-    if (stage in currentProgress) {
-      (currentProgress as any)[stage] = status;
-    }
+  const onProgress = async (stage: string, status: 'searching' | 'done') => {
+    progressState[stage] = status;
 
     await getSupabase()
       .from('searches')
-      .update({ progress: currentProgress })
+      .update({ progress: { ...progressState } })
       .eq('id', searchId);
 
     // Map stage → progress percentage for trip polling
@@ -248,16 +245,16 @@ async function searchAffiliates(params: {
       await db.rpc('merge_intermediate_results', {
         p_search_id: searchId,
         p_key: 'activitiesCount',
-        p_value: JSON.stringify((data as any[]).length),
+        p_value: JSON.stringify((data as unknown[]).length),
       });
     } else if (stage === 'dining') {
       await db.rpc('merge_intermediate_results', {
         p_search_id: searchId,
         p_key: 'diningCount',
-        p_value: JSON.stringify((data as any[]).length),
+        p_value: JSON.stringify((data as unknown[]).length),
       });
     } else if (stage === 'aggregator') {
-      const { days, topHotel } = data as { days: any[]; topHotel: any };
+      const { days, topHotel } = data as { days: unknown[]; topHotel: unknown };
       await db.rpc('merge_intermediate_results', {
         p_search_id: searchId,
         p_key: 'days',
@@ -405,12 +402,12 @@ async function buildAndSaveSpec(
   }));
 
   // Map days for build-spec: each slot's meals[0] → meal
-  const dayInputs = result.days.map(day => ({
+  const dayInputs = result.days.map((day: TripDay) => ({
     dayNumber: day.dayNumber,
     date: day.date,
     title: day.title,
     morning: {
-      activities: day.morning.activities.map(a => ({
+      activities: day.morning.activities.map((a: ItineraryActivity) => ({
         id: a.id,
         name: a.name,
         description: a.description,
@@ -434,7 +431,7 @@ async function buildAndSaveSpec(
         : undefined,
     },
     afternoon: {
-      activities: day.afternoon.activities.map(a => ({
+      activities: day.afternoon.activities.map((a: ItineraryActivity) => ({
         id: a.id,
         name: a.name,
         description: a.description,
@@ -458,7 +455,7 @@ async function buildAndSaveSpec(
         : undefined,
     },
     evening: {
-      activities: day.evening.activities.map(a => ({
+      activities: day.evening.activities.map((a: ItineraryActivity) => ({
         id: a.id,
         name: a.name,
         description: a.description,
@@ -727,19 +724,19 @@ async function saveSearchResults(
 
   // Save itinerary days (batch)
   if (result.days.length > 0) {
-    const itineraryRows = result.days.map(day => ({
+    const itineraryRows = result.days.map((day: TripDay) => ({
       search_id: searchId,
       day_number: day.dayNumber,
       date: day.date,
       title: day.title,
       summary: day.summary,
-      morning_activities: day.morning.activities.map(a => a.id),
-      afternoon_activities: day.afternoon.activities.map(a => a.id),
-      evening_activities: day.evening.activities.map(a => a.id),
+      morning_activities: day.morning.activities.map((a: ItineraryActivity) => a.id),
+      afternoon_activities: day.afternoon.activities.map((a: ItineraryActivity) => a.id),
+      evening_activities: day.evening.activities.map((a: ItineraryActivity) => a.id),
       meals: [
-        ...day.morning.meals.map(m => m.id),
-        ...day.afternoon.meals.map(m => m.id),
-        ...day.evening.meals.map(m => m.id),
+        ...day.morning.meals.map((m: FarowayRestaurant) => m.id),
+        ...day.afternoon.meals.map((m: FarowayRestaurant) => m.id),
+        ...day.evening.meals.map((m: FarowayRestaurant) => m.id),
       ].filter(Boolean),
       estimated_cost: day.totalEstimatedCost?.amount || 0,
       cost_currency: day.totalEstimatedCost?.currency || 'USD',

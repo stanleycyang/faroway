@@ -35,7 +35,7 @@ async function testConnection() {
 
   try {
     // Test connection
-    const { data, error } = await adminClient.from('users').select('count').single()
+    const { error } = await adminClient.from('users').select('count').single()
     
     if (error && error.code !== 'PGRST116') {
       throw error

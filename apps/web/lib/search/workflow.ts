@@ -9,12 +9,7 @@
 
 import {
   SearchInput,
-  SearchPlan,
-  HotelResult,
-  ActivityResult,
-  DiningResult,
   SearchResults,
-  SuggestedDay,
 } from './types';
 import { mapSearchResultsToItinerary } from './bridge';
 import {

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Sunrise, Sun, Moon, Lightbulb, DollarSign, Hotel, ExternalLink, Star } from 'lucide-react';
+import { ChevronDown, ChevronUp, Sunrise, Sun, Moon, Lightbulb, DollarSign, Hotel, ExternalLink } from 'lucide-react';
 import { ActivityCard, RestaurantCard, type Activity, type Restaurant } from './ActivityCard';
 
 interface TimeBlock {
@@ -70,10 +70,11 @@ export function ItineraryDay({
 
   const safeBlock = (block: TimeBlock): TimeBlock => {
     const rawActivities = Array.isArray(block?.activities) ? block.activities : [];
+    const blockRecord = block as unknown as Record<string, unknown>;
     const rawMeals = Array.isArray(block?.meals)
       ? block.meals
-      : (block as any)?.meal && typeof (block as any).meal === 'object'
-        ? [(block as any).meal]
+      : blockRecord?.meal && typeof blockRecord.meal === 'object'
+        ? [blockRecord.meal as Restaurant]
         : [];
     return {
       activities: rawActivities.filter((a) => a != null && typeof a === 'object' && typeof a.name === 'string'),
@@ -299,10 +300,11 @@ function TimeBlockSection({ icon, label, color, block }: TimeBlockSectionProps) 
   // Normalize: handle both { meals: [...] } and legacy { meal: {...} } formats
   const rawActivities = Array.isArray(block?.activities) ? block.activities : [];
   const activities = rawActivities.filter((a): a is Activity => a != null && typeof a === 'object' && typeof a.name === 'string');
+  const blockRecord = block as unknown as Record<string, unknown>;
   const rawMeals = Array.isArray(block?.meals)
     ? block.meals
-    : (block as any)?.meal && typeof (block as any).meal === 'object'
-      ? [(block as any).meal]
+    : blockRecord?.meal && typeof blockRecord.meal === 'object'
+      ? [blockRecord.meal as Restaurant]
       : [];
   const meals = rawMeals.filter((m): m is Restaurant => m != null && typeof m === 'object' && typeof m.name === 'string');
 

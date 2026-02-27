@@ -24,7 +24,6 @@ export function useInView<T extends HTMLElement = HTMLDivElement>(
 
     // If triggerOnce and already triggered, skip observer
     if (triggerOnce && hasBeenInView) {
-      setIsInView(true);
       return;
     }
 
@@ -49,5 +48,5 @@ export function useInView<T extends HTMLElement = HTMLDivElement>(
     };
   }, [threshold, rootMargin, triggerOnce, hasBeenInView]);
 
-  return { ref, isInView };
+  return { ref, isInView: triggerOnce ? isInView || hasBeenInView : isInView };
 }

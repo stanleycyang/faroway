@@ -7,8 +7,6 @@
  * @see https://developers.booking.com/
  */
 
-import { z } from 'zod';
-
 // Environment variables
 const BOOKING_USERNAME = process.env.BOOKING_COM_USERNAME;
 const BOOKING_PASSWORD = process.env.BOOKING_COM_PASSWORD;
@@ -128,7 +126,7 @@ export async function getBookingDestinationId(
     }
 
     const data = await response.json();
-    const cityResult = data.results?.find((r: any) => r.dest_type === 'city');
+    const cityResult = data.results?.find((r: { dest_type: string; dest_id?: string }) => r.dest_type === 'city');
     return cityResult?.dest_id || null;
   } catch (error) {
     console.error('[Booking] Destination lookup error:', error);
@@ -188,6 +186,7 @@ export async function searchBookingHotels(
     }
 
     const data = await response.json();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return (data.result || []).map((hotel: any) => normalizeBookingHotel(hotel, params));
   } catch (error) {
     console.error('[Booking] Search error:', error);
@@ -294,6 +293,7 @@ export function generateBookingSearchUrl(
 /**
  * Normalize Booking.com API response to our internal format
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeBookingHotel(raw: any, params: Partial<BookingSearchParams>): BookingHotel {
   const nights = params.checkIn && params.checkOut
     ? Math.ceil((new Date(params.checkOut).getTime() - new Date(params.checkIn).getTime()) / (1000 * 60 * 60 * 24))
@@ -325,12 +325,12 @@ function normalizeBookingHotel(raw: any, params: Partial<BookingSearchParams>): 
       neighborhood: raw.district || raw.neighborhood,
       distanceFromCenter: raw.distance_to_cc,
     },
-    images: (raw.hotel_photos || raw.photos || []).map((photo: any) => ({
+    images: (raw.hotel_photos || raw.photos || []).map((photo: { url_original?: string; url_max?: string; url?: string; caption?: string }) => ({
       url: photo.url_original || photo.url_max || photo.url,
       caption: photo.caption,
     })),
     amenities: raw.hotel_facilities || raw.facilities || [],
-    roomTypes: (raw.rooms || []).map((room: any) => ({
+    roomTypes: (raw.rooms || []).map((room: { room_name?: string; name?: string; max_occupancy?: number; bed_type?: string; price?: number }) => ({
       name: room.room_name || room.name,
       maxOccupancy: room.max_occupancy || 2,
       bedType: room.bed_type || 'Queen',

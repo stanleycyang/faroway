@@ -36,7 +36,7 @@ describe('registerSchema', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const paths = result.error.issues.map((i: any) => i.path.join('.'));
+      const paths = result.error.issues.map((i: { path: (string | number)[] }) => i.path.join('.'));
       expect(paths).toContain('email');
     }
   });
@@ -49,7 +49,7 @@ describe('registerSchema', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const paths = result.error.issues.map((i: any) => i.path.join('.'));
+      const paths = result.error.issues.map((i: { path: (string | number)[] }) => i.path.join('.'));
       expect(paths).toContain('email');
     }
   });
@@ -62,7 +62,7 @@ describe('registerSchema', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const paths = result.error.issues.map((i: any) => i.path.join('.'));
+      const paths = result.error.issues.map((i: { path: (string | number)[] }) => i.path.join('.'));
       expect(paths).toContain('password');
     }
   });
@@ -75,7 +75,7 @@ describe('registerSchema', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const paths = result.error.issues.map((i: any) => i.path.join('.'));
+      const paths = result.error.issues.map((i: { path: (string | number)[] }) => i.path.join('.'));
       expect(paths).toContain('password');
     }
   });
@@ -88,7 +88,7 @@ describe('registerSchema', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const paths = result.error.issues.map((i: any) => i.path.join('.'));
+      const paths = result.error.issues.map((i: { path: (string | number)[] }) => i.path.join('.'));
       expect(paths).toContain('password');
     }
   });
@@ -101,7 +101,7 @@ describe('registerSchema', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const paths = result.error.issues.map((i: any) => i.path.join('.'));
+      const paths = result.error.issues.map((i: { path: (string | number)[] }) => i.path.join('.'));
       expect(paths).toContain('name');
     }
   });
@@ -129,7 +129,7 @@ describe('loginSchema', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const paths = result.error.issues.map((i: any) => i.path.join('.'));
+      const paths = result.error.issues.map((i: { path: (string | number)[] }) => i.path.join('.'));
       expect(paths).toContain('password');
     }
   });
@@ -162,7 +162,7 @@ describe('createTripSchema', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const paths = result.error.issues.map((i: any) => i.path.join('.'));
+      const paths = result.error.issues.map((i: { path: (string | number)[] }) => i.path.join('.'));
       expect(paths).toContain('destination');
     }
   });
@@ -175,7 +175,7 @@ describe('createTripSchema', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const messages = result.error.issues.map((i: any) => i.message);
+      const messages = result.error.issues.map((i: { message: string }) => i.message);
       expect(messages).toContain('End date must be on or after start date');
     }
   });
@@ -227,7 +227,7 @@ describe('updateTripSchema', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const messages = result.error.issues.map((i: any) => i.message);
+      const messages = result.error.issues.map((i: { message: string }) => i.message);
       expect(messages).toContain('End date must be on or after start date');
     }
   });
@@ -265,7 +265,7 @@ describe('activitySchema', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const paths = result.error.issues.map((i: any) => i.path.join('.'));
+      const paths = result.error.issues.map((i: { path: (string | number)[] }) => i.path.join('.'));
       expect(paths).toContain('time');
     }
   });
@@ -276,7 +276,7 @@ describe('activitySchema', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const paths = result.error.issues.map((i: any) => i.path.join('.'));
+      const paths = result.error.issues.map((i: { path: (string | number)[] }) => i.path.join('.'));
       expect(paths).toContain('title');
     }
   });
@@ -309,7 +309,7 @@ describe('searchInputSchema', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const paths = result.error.issues.map((i: any) => i.path.join('.'));
+      const paths = result.error.issues.map((i: { path: (string | number)[] }) => i.path.join('.'));
       expect(paths).toContain('travelers');
     }
   });
@@ -355,7 +355,7 @@ describe('trackClickSchema', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const paths = result.error.issues.map((i: any) => i.path.join('.'));
+      const paths = result.error.issues.map((i: { path: (string | number)[] }) => i.path.join('.'));
       expect(paths).toContain('affiliateUrl');
     }
   });
@@ -366,7 +366,7 @@ describe('trackClickSchema', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const paths = result.error.issues.map((i: any) => i.path.join('.'));
+      const paths = result.error.issues.map((i: { path: (string | number)[] }) => i.path.join('.'));
       expect(paths).toContain('itemId');
       expect(paths).toContain('itemName');
       expect(paths).toContain('affiliatePartner');
@@ -408,7 +408,7 @@ describe('paginationSchema', () => {
     });
     expect(result.success).toBe(false);
     if (!result.success) {
-      const paths = result.error.issues.map((i: any) => i.path.join('.'));
+      const paths = result.error.issues.map((i: { path: (string | number)[] }) => i.path.join('.'));
       expect(paths).toContain('limit');
     }
   });

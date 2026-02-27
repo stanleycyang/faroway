@@ -41,6 +41,12 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-router',
     'expo-secure-store',
     'expo-apple-authentication',
+    ['expo-notifications', {
+      icon: './assets/notification-icon.png',
+      color: '#FF6B6B',
+      sounds: [],
+      defaultChannel: 'default',
+    }],
   ],
   experiments: {
     typedRoutes: true,

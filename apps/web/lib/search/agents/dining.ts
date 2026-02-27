@@ -29,7 +29,7 @@ const DiningSchema = z.object({
     lng: z.number(),
     neighborhood: z.string().optional(),
   }),
-  images: z.array(z.string()),
+  images: z.array(z.string()).default([]),
   reservationUrl: z.string().optional(),
   affiliatePartner: z.string().optional(),
   mealTypes: z.array(z.enum(['breakfast', 'lunch', 'dinner'])),
@@ -59,7 +59,9 @@ Price levels:
 
 Include common dietary options if applicable (vegetarian, vegan, gluten-free, halal, kosher).
 
-For reservation URLs, use format: https://opentable.com/r/[restaurant-slug] or leave empty if not needed.`;
+For reservation URLs, use format: https://opentable.com/r/[restaurant-slug] or leave empty if not needed.
+
+IMPORTANT: For the "images" field, return an EMPTY array []. Do NOT generate or guess image URLs.`;
 
 export async function runDiningAgent(
   plan: SearchPlan,
@@ -69,11 +71,12 @@ export async function runDiningAgent(
   const { cuisineTypes, priceRange, dietaryNeeds, mealPriorities } = diningCriteria;
 
   // Map price range to price levels
-  const priceLevels = {
+  const priceLevelMap: Record<string, number[]> = {
     budget: [1, 2],
     moderate: [2, 3],
     upscale: [3, 4],
-  }[priceRange] || [2, 3];
+  };
+  const priceLevels = priceLevelMap[priceRange] || [2, 3];
 
   const prompt = `Generate ${count} restaurant recommendations for ${destination}.
 
@@ -130,7 +133,7 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
 export async function searchGooglePlacesDining(
   destination: string,
   cuisineTypes: string[]
-): Promise<any[]> {
+): Promise<Record<string, unknown>[]> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
     console.log('[Dining Agent] No Google Places API key, using AI-generated data');
@@ -142,7 +145,7 @@ export async function searchGooglePlacesDining(
       ? cuisineTypes.map(cuisine => `${cuisine} restaurant in ${destination}`)
       : [`restaurant in ${destination}`];
 
-    const results: any[] = [];
+    const results: Record<string, unknown>[] = [];
 
     for (const query of queries.slice(0, 3)) {
       const response = await fetch(

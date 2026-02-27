@@ -6,11 +6,10 @@
  */
 
 import { defineRegistry } from '@json-render/react';
+import Image from 'next/image';
 import { catalog } from './catalog';
 
 // Props types for registry components
-type TripSummaryProps = { destination: string; dates: string; travelers: number; budget?: string };
-type DayTimelineProps = { items: Array<{ time: string; title: string; type: string }> };
 type ItineraryDayProps = { dayNumber: number; date: string; title: string };
 type HotelCardProps = { name: string; rating: number; price: number; pricePerNight?: number; image?: string; bookingUrl?: string; amenities?: string[]; description?: string; reviewCount?: number; starRating?: number; featured?: boolean };
 type ActivityCardProps = { name: string; description: string; duration?: number | string; price?: number; rating?: number; reviewCount?: number; image?: string; bookingUrl?: string; time?: string; location?: string; category?: string };
@@ -56,6 +55,7 @@ function handleAffiliateClick(
 
 // Helper: safely extract props, guarding against the defineRegistry wrapper
 // passing undefined or a different shape than expected.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function safeProps<T>(arg: any): T {
   if (!arg) return {} as T;
   if (typeof arg === 'object' && 'props' in arg) return (arg.props ?? {}) as T;
@@ -74,6 +74,7 @@ const categoryBorderColors: Record<string, string> = {
   nature: 'border-l-emerald-400',
 };
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const { registry } = (defineRegistry as any)(catalog, {
   components: {
     ItineraryDay: (arg: { props: ItineraryDayProps; children?: React.ReactNode }) => {
@@ -105,10 +106,13 @@ export const { registry } = (defineRegistry as any)(catalog, {
         <div className={`bg-white rounded-2xl border ${props.featured ? 'border-primary-200 ring-1 ring-primary-100' : 'border-gray-200'} shadow-sm overflow-hidden hover:shadow-md transition-shadow`}>
           {props.image && (
             <div className="relative">
-              <img
+              <Image
                 src={props.image}
                 alt={props.name}
+                width={600}
+                height={192}
                 className="w-full h-48 object-cover"
+                unoptimized
               />
               {props.featured && (
                 <div className="absolute top-3 left-3 px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-semibold text-primary-700">
@@ -179,7 +183,7 @@ export const { registry } = (defineRegistry as any)(catalog, {
           )}
           <div className="flex p-4 gap-4">
             {props.image && (
-              <img src={props.image} alt={props.name} className="w-24 h-24 rounded-xl object-cover flex-shrink-0" />
+              <Image src={props.image} alt={props.name} width={96} height={96} className="w-24 h-24 rounded-xl object-cover flex-shrink-0" unoptimized />
             )}
             <div className="flex-1 min-w-0">
               <h4 className="font-semibold text-gray-900">{props.name}</h4>
@@ -240,7 +244,7 @@ export const { registry } = (defineRegistry as any)(catalog, {
           )}
           <div className="flex p-4 gap-4">
             {props.image && (
-              <img src={props.image} alt={props.name} className="w-20 h-20 rounded-xl object-cover flex-shrink-0" />
+              <Image src={props.image} alt={props.name} width={80} height={80} className="w-20 h-20 rounded-xl object-cover flex-shrink-0" unoptimized />
             )}
             <div className="flex-1 min-w-0">
               <h4 className="font-semibold text-gray-900">{props.name}</h4>
@@ -380,10 +384,13 @@ export const { registry } = (defineRegistry as any)(catalog, {
       const props = safeProps<ImageProps>(arg);
       if (!props.url) return null;
       return (
-        <img
+        <Image
           src={props.url}
           alt={props.alt || ''}
+          width={800}
+          height={400}
           className="w-full rounded-2xl shadow-sm"
+          unoptimized
         />
       );
     },

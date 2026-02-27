@@ -2,6 +2,7 @@ import { withWorkflow } from "workflow/next";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  transpilePackages: ['@faroway/supabase', '@faroway/constants', '@faroway/types'],
   trailingSlash: false,
   images: {
     remotePatterns: [
@@ -14,6 +15,21 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: '*.supabase.co',
         pathname: '/storage/v1/object/public/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'hare-media-cdn.tripadvisor.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'media-cdn.tripadvisor.com',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'media.tacdn.com',
+        pathname: '/**',
       },
     ],
   },
@@ -34,7 +50,7 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://*.tile.openstreetmap.org",
+              "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://*.tile.openstreetmap.org https://hare-media-cdn.tripadvisor.com https://media-cdn.tripadvisor.com https://media.tacdn.com",
               "font-src 'self' https://fonts.gstatic.com",
               "connect-src 'self' https://*.supabase.co https://ai-gateway.vercel.sh",
               "frame-ancestors 'self'",

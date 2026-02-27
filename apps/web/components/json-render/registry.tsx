@@ -4,9 +4,10 @@
  */
 
 import React from 'react';
-import { MapPin, Clock, DollarSign, Star, Users, Calendar, Utensils, Hotel, Plane } from 'lucide-react';
+import { MapPin, Clock, DollarSign, Star, Calendar, Utensils, Hotel, Plane } from 'lucide-react';
 
 export interface ComponentProps {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   [key: string]: any;
 }
 
@@ -203,6 +204,7 @@ export function FlightInfo({ flight }: ComponentProps) {
 }
 
 // Component Registry Map
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const componentRegistry: Record<string, React.ComponentType<any>> = {
   'activity-card': ActivityCard,
   'restaurant-card': RestaurantCard,

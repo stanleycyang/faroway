@@ -54,7 +54,7 @@ export async function validateAuth(request: NextRequest): Promise<AuthResult> {
         role: user.role,
       },
     };
-  } catch (error) {
+  } catch {
     return {
       authenticated: false,
       user: null,

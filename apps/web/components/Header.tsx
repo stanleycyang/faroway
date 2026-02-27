@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Sparkles, Menu, X, Download } from 'lucide-react';
+import { Sparkles, Menu, X } from 'lucide-react';
 import { Logo } from './Logo';
 
 const NAV_ITEMS = [
