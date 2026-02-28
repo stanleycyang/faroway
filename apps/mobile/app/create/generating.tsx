@@ -15,6 +15,10 @@ import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useTripStore, Trip, TripDay, Activity } from '../../stores/tripStore';
+import { usePromptStore } from '../../stores/promptStore';
+import { useAuthContext } from '../../components/AuthProvider';
+import { AuthGate } from '../../components/AuthGate';
+import { RatingPrompt } from '../../components/RatingPrompt';
 import { popularDestinations, IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 import { colors, borderRadius } from '../../constants/theme';
 import {
@@ -512,15 +516,26 @@ function CelebrationOverlay({ onComplete }: { onComplete: () => void }) {
 export default function GeneratingScreen() {
   const router = useRouter();
   const { draftInput, finishGeneration } = useTripStore();
+  const { isAuthenticated } = useAuthContext();
+  const {
+    tripGenerationCount,
+    incrementTripGeneration,
+    hasDismissedSignUpAfterGeneration,
+    dismissSignUpPrompt,
+    shouldShowRatingPrompt,
+  } = usePromptStore();
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showAuthGate, setShowAuthGate] = useState(false);
+  const [showRatingPrompt, setShowRatingPrompt] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const destinationInfo = popularDestinations.find((d) => d.name === draftInput?.destination);
 
   const handleComplete = useCallback((document: StreamingBlock[]) => {
     console.log('[Generating] Complete with', document.length, 'blocks');
+    incrementTripGeneration();
     setShowCelebration(true);
-  }, []);
+  }, [incrementTripGeneration]);
 
   const handleError = useCallback((error: Error) => {
     console.error('[Generating] Error:', error.message);
@@ -710,7 +725,43 @@ export default function GeneratingScreen() {
       </ScrollView>
 
       {/* Celebration overlay */}
-      {showCelebration && <CelebrationOverlay onComplete={() => setShowCelebration(false)} />}
+      {showCelebration && (
+        <CelebrationOverlay
+          onComplete={() => {
+            setShowCelebration(false);
+            // After celebration: show sign-up prompt for guests, or rating prompt for auth users
+            if (!isAuthenticated && !hasDismissedSignUpAfterGeneration) {
+              setShowAuthGate(true);
+            } else if (
+              isAuthenticated &&
+              tripGenerationCount >= 3 &&
+              shouldShowRatingPrompt()
+            ) {
+              setShowRatingPrompt(true);
+            }
+          }}
+        />
+      )}
+
+      {/* Sign-up prompt for guests */}
+      <AuthGate
+        visible={showAuthGate}
+        trigger="save"
+        tripPreview={
+          draftInput?.destination && destinationInfo
+            ? { destination: draftInput.destination, coverImage: destinationInfo.image }
+            : undefined
+        }
+        onDismiss={() => dismissSignUpPrompt()}
+        onClose={() => setShowAuthGate(false)}
+      />
+
+      {/* Rating prompt for authenticated users */}
+      <RatingPrompt
+        visible={showRatingPrompt}
+        tripCount={tripGenerationCount}
+        onClose={() => setShowRatingPrompt(false)}
+      />
     </View>
   );
 }
