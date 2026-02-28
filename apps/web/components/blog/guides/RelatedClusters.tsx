@@ -1,8 +1,8 @@
-import Link from 'next/link';
-import Image from 'next/image';
-import { ArrowRight } from 'lucide-react';
-import { FadeInOnScroll } from '@/components/landing/FadeInOnScroll';
-import type { ClusterDefinition } from '@/lib/blog/clusters';
+import Link from "next/link";
+import Image from "next/image";
+import { ArrowRight } from "lucide-react";
+import { FadeInOnScroll } from "@/components/landing/FadeInOnScroll";
+import type { ClusterDefinition } from "@/lib/blog/clusters";
 
 interface RelatedClustersProps {
   clusters: ClusterDefinition[];

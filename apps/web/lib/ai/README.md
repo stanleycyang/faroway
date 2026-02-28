@@ -24,14 +24,14 @@ Get your API key from: https://console.anthropic.com/
 ## Quick Start
 
 ```typescript
-import { generateItinerary } from '@/lib/ai';
+import { generateItinerary } from "@/lib/ai";
 
 const itinerary = await generateItinerary({
-  destination: 'Tokyo, Japan',
-  startDate: '2026-03-15',
-  endDate: '2026-03-20',
-  budget: 'moderate',
-  vibes: ['foodie', 'cultural', 'adventure'],
+  destination: "Tokyo, Japan",
+  startDate: "2026-03-15",
+  endDate: "2026-03-20",
+  budget: "moderate",
+  vibes: ["foodie", "cultural", "adventure"],
   travelers: { adults: 2, children: 0 },
 });
 
@@ -45,11 +45,12 @@ console.log(itinerary.days); // Array of TripDay objects
 ✅ Restaurant suggestions with dietary options  
 ✅ Real-time streaming progress updates  
 ✅ Cost estimation utilities  
-✅ Structured TypeScript types  
+✅ Structured TypeScript types
 
 ## Usage Examples
 
 See `EXAMPLE_USAGE.ts` for complete examples including:
+
 - Full itinerary generation
 - Activity-only generation
 - Restaurant recommendations
@@ -79,6 +80,7 @@ See `EXAMPLE_USAGE.ts` for complete examples including:
 Average 5-day itinerary: **$0.15-0.25** per generation
 
 Claude Sonnet 4 pricing:
+
 - Input: $3 per million tokens
 - Output: $15 per million tokens
 

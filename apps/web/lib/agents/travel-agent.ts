@@ -3,15 +3,22 @@
  * Uses AI SDK ToolLoopAgent with tools for searching hotels, activities, and dining
  */
 
-import { ToolLoopAgent, tool, Output, stepCountIs, gateway as defaultGateway, createGateway } from 'ai';
-import { z } from 'zod';
+import {
+  ToolLoopAgent,
+  tool,
+  Output,
+  stepCountIs,
+  gateway as defaultGateway,
+  createGateway,
+} from "ai";
+import { z } from "zod";
 import {
   searchViatorProducts,
   generateViatorAffiliateUrl,
   mapViatorCategoryToVibe,
   isViatorConfigured,
   type ViatorProduct,
-} from '@/lib/affiliates/viator';
+} from "@/lib/affiliates/viator";
 
 // AI Gateway configuration — use the dedicated gateway provider (not createOpenAI,
 // which defaults to the OpenAI Responses API and doesn't work with the AI Gateway)
@@ -19,13 +26,17 @@ const aiGateway = process.env.AI_GATEWAY_API_KEY
   ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
   : defaultGateway;
 
-const MODEL = 'anthropic/claude-sonnet-4-20250514';
+const MODEL = "anthropic/claude-sonnet-4-20250514";
 
 // ============================================
 // Mock Data Generators (fallback)
 // ============================================
 
-function generateMockHotels(destination: string, budget: 'budget' | 'moderate' | 'luxury', vibes?: string[]) {
+function generateMockHotels(
+  destination: string,
+  budget: "budget" | "moderate" | "luxury",
+  vibes?: string[],
+) {
   const priceRanges = {
     budget: { min: 50, max: 100 },
     moderate: { min: 100, max: 250 },
@@ -35,33 +46,45 @@ function generateMockHotels(destination: string, budget: 'budget' | 'moderate' |
 
   return Array.from({ length: 5 }, (_, i) => ({
     id: `hotel_${Date.now()}_${i}`,
-    name: `${['Grand', 'Boutique', 'Modern', 'Historic', 'Luxury'][i]} ${destination} Hotel`,
+    name: `${["Grand", "Boutique", "Modern", "Historic", "Luxury"][i]} ${destination} Hotel`,
     rating: 4 + Math.random(),
     reviewCount: Math.floor(Math.random() * 2000) + 500,
-    pricePerNight: Math.floor(range.min + Math.random() * (range.max - range.min)),
-    currency: 'USD',
-    amenities: ['WiFi', 'Breakfast', 'Pool', 'Gym', 'Spa'].slice(0, 3 + i % 3),
-    location: { neighborhood: ['Downtown', 'Old Town', 'Beach', 'City Center'][i % 4] },
+    pricePerNight: Math.floor(
+      range.min + Math.random() * (range.max - range.min),
+    ),
+    currency: "USD",
+    amenities: ["WiFi", "Breakfast", "Pool", "Gym", "Spa"].slice(
+      0,
+      3 + (i % 3),
+    ),
+    location: {
+      neighborhood: ["Downtown", "Old Town", "Beach", "City Center"][i % 4],
+    },
     vibeMatch: vibes?.slice(0, 2) || [],
     affiliateUrl: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(destination)}`,
-    affiliatePartner: 'booking.com',
+    affiliatePartner: "booking.com",
   }));
 }
 
-function generateMockActivities(destination: string, category?: string, vibes?: string[]) {
+function generateMockActivities(
+  destination: string,
+  category?: string,
+  vibes?: string[],
+) {
   return Array.from({ length: 8 }, (_, i) => ({
     id: `activity_${Date.now()}_${i}`,
-    name: `${destination} ${['Walking Tour', 'Food Tour', 'Museum Visit', 'Day Trip', 'Adventure', 'Cultural Experience', 'Night Tour', 'Cooking Class'][i]}`,
+    name: `${destination} ${["Walking Tour", "Food Tour", "Museum Visit", "Day Trip", "Adventure", "Cultural Experience", "Night Tour", "Cooking Class"][i]}`,
     description: `Experience the best of ${destination} with this popular activity.`,
     duration: [2, 3, 4, 6, 8][i % 5],
     price: Math.floor(30 + Math.random() * 150),
-    currency: 'USD',
+    currency: "USD",
     rating: 4.3 + Math.random() * 0.7,
     reviewCount: Math.floor(Math.random() * 500) + 100,
-    category: category || ['sightseeing', 'cultural', 'food', 'adventure'][i % 4],
+    category:
+      category || ["sightseeing", "cultural", "food", "adventure"][i % 4],
     vibeMatch: vibes?.slice(0, 2) || [],
     affiliateUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`,
-    affiliatePartner: 'viator',
+    affiliatePartner: "viator",
   }));
 }
 
@@ -70,54 +93,107 @@ function generateMockActivities(destination: string, category?: string, vibes?: 
 // ============================================
 
 const searchHotelsTool = tool({
-  description: 'Search for hotels in a destination. Returns a list of hotels with pricing, ratings, and amenities.',
+  description:
+    "Search for hotels in a destination. Returns a list of hotels with pricing, ratings, and amenities.",
   inputSchema: z.object({
-    destination: z.string().describe('City or location to search for hotels'),
-    checkIn: z.string().describe('Check-in date (YYYY-MM-DD)'),
-    checkOut: z.string().describe('Check-out date (YYYY-MM-DD)'),
-    guests: z.number().describe('Number of guests'),
-    budget: z.enum(['budget', 'moderate', 'luxury']).describe('Budget level'),
-    vibes: z.array(z.string()).optional().describe('Desired vibes like romantic, adventure, relaxation'),
+    destination: z.string().describe("City or location to search for hotels"),
+    checkIn: z.string().describe("Check-in date (YYYY-MM-DD)"),
+    checkOut: z.string().describe("Check-out date (YYYY-MM-DD)"),
+    guests: z.number().describe("Number of guests"),
+    budget: z.enum(["budget", "moderate", "luxury"]).describe("Budget level"),
+    vibes: z
+      .array(z.string())
+      .optional()
+      .describe("Desired vibes like romantic, adventure, relaxation"),
   }),
   execute: async ({ destination, checkIn, checkOut, budget, vibes }) => {
     // TODO: Integrate real hotel API when available
     const hotels = generateMockHotels(destination, budget, vibes);
-    return { hotels, searchMetadata: { destination, checkIn, checkOut, totalResults: hotels.length, source: 'mock' } };
+    return {
+      hotels,
+      searchMetadata: {
+        destination,
+        checkIn,
+        checkOut,
+        totalResults: hotels.length,
+        source: "mock",
+      },
+    };
   },
 });
 
 const searchActivitiesTool = tool({
-  description: 'Search for activities and experiences at a destination. Returns tours, attractions, and things to do.',
+  description:
+    "Search for activities and experiences at a destination. Returns tours, attractions, and things to do.",
   inputSchema: z.object({
-    destination: z.string().describe('City or location'),
-    date: z.string().describe('Date for the activity (YYYY-MM-DD)'),
-    category: z.enum(['sightseeing', 'adventure', 'cultural', 'food', 'nature', 'entertainment']).optional(),
-    vibes: z.array(z.string()).optional().describe('Desired vibes'),
+    destination: z.string().describe("City or location"),
+    date: z.string().describe("Date for the activity (YYYY-MM-DD)"),
+    category: z
+      .enum([
+        "sightseeing",
+        "adventure",
+        "cultural",
+        "food",
+        "nature",
+        "entertainment",
+      ])
+      .optional(),
+    vibes: z.array(z.string()).optional().describe("Desired vibes"),
   }),
   execute: async ({ destination, date, category, vibes }) => {
     // Query Viator for activities
     if (isViatorConfigured()) {
       try {
         const viatorProducts = await searchViatorProducts({
-          destination, startDate: date, categories: category ? [category] : undefined, limit: 15,
+          destination,
+          startDate: date,
+          categories: category ? [category] : undefined,
+          limit: 15,
         });
 
         if (viatorProducts.length > 0) {
           const trackingId = `tg_${Date.now()}`;
           const activities = viatorProducts
-            .map(product => normalizeViatorToActivity(product, trackingId, date, category, vibes))
+            .map((product) =>
+              normalizeViatorToActivity(
+                product,
+                trackingId,
+                date,
+                category,
+                vibes,
+              ),
+            )
             .sort((a, b) => (b.vibeScore || 0) - (a.vibeScore || 0));
 
-          return { activities: activities.slice(0, 15), searchMetadata: { destination, date, totalResults: activities.length, source: 'viator' } };
+          return {
+            activities: activities.slice(0, 15),
+            searchMetadata: {
+              destination,
+              date,
+              totalResults: activities.length,
+              source: "viator",
+            },
+          };
         }
       } catch (error) {
-        console.error('[TravelAgent] Viator search failed, falling back to mock:', error);
+        console.error(
+          "[TravelAgent] Viator search failed, falling back to mock:",
+          error,
+        );
       }
     }
 
     // Fallback: generate mock activity data
     const mockActivities = generateMockActivities(destination, category, vibes);
-    return { activities: mockActivities, searchMetadata: { destination, date, totalResults: mockActivities.length, source: 'mock' } };
+    return {
+      activities: mockActivities,
+      searchMetadata: {
+        destination,
+        date,
+        totalResults: mockActivities.length,
+        source: "mock",
+      },
+    };
   },
 });
 
@@ -130,7 +206,7 @@ function normalizeViatorToActivity(
   trackingId: string,
   date: string,
   category?: string,
-  vibes?: string[]
+  vibes?: string[],
 ) {
   const durationHours = product.duration.fixedDurationInMinutes
     ? Math.round(product.duration.fixedDurationInMinutes / 60)
@@ -138,37 +214,46 @@ function normalizeViatorToActivity(
       ? Math.round(product.duration.variableDurationFromMinutes / 60)
       : 3;
 
-  const categoryVibes = product.categories.length > 0
-    ? mapViatorCategoryToVibe(product.categories[0])
-    : [];
-  const matchedVibes = vibes?.filter(v => categoryVibes.includes(v)) || [];
+  const categoryVibes =
+    product.categories.length > 0
+      ? mapViatorCategoryToVibe(product.categories[0])
+      : [];
+  const matchedVibes = vibes?.filter((v) => categoryVibes.includes(v)) || [];
 
   return {
     id: `activity_${product.productCode}`,
     name: product.title,
-    description: product.shortDescription || product.description.substring(0, 200),
+    description:
+      product.shortDescription || product.description.substring(0, 200),
     duration: durationHours,
     price: product.price.amount,
     currency: product.price.currencyCode,
     rating: product.rating,
     reviewCount: product.reviewCount,
-    category: category || 'sightseeing',
+    category: category || "sightseeing",
     vibeMatch: matchedVibes,
     vibeScore: matchedVibes.length * 25,
-    affiliateUrl: generateViatorAffiliateUrl(product.productCode, trackingId, { date }),
-    affiliatePartner: 'viator',
-    images: product.images.slice(0, 2).map((img: { url: string; caption?: string }) => img.url),
+    affiliateUrl: generateViatorAffiliateUrl(product.productCode, trackingId, {
+      date,
+    }),
+    affiliatePartner: "viator",
+    images: product.images
+      .slice(0, 2)
+      .map((img: { url: string; caption?: string }) => img.url),
     highlights: product.highlights.slice(0, 3),
   };
 }
 
 const searchDiningTool = tool({
-  description: 'Search for restaurants and dining options at a destination.',
+  description: "Search for restaurants and dining options at a destination.",
   inputSchema: z.object({
-    destination: z.string().describe('City or location'),
-    cuisine: z.string().optional().describe('Type of cuisine (Italian, Japanese, etc.)'),
-    mealType: z.enum(['breakfast', 'lunch', 'dinner']).describe('Meal type'),
-    priceLevel: z.enum(['$', '$$', '$$$', '$$$$']).optional(),
+    destination: z.string().describe("City or location"),
+    cuisine: z
+      .string()
+      .optional()
+      .describe("Type of cuisine (Italian, Japanese, etc.)"),
+    mealType: z.enum(["breakfast", "lunch", "dinner"]).describe("Meal type"),
+    priceLevel: z.enum(["$", "$$", "$$$", "$$$$"]).optional(),
     vibes: z.array(z.string()).optional(),
   }),
   execute: async ({ destination, cuisine, mealType, priceLevel, vibes }) => {
@@ -176,36 +261,56 @@ const searchDiningTool = tool({
     // For now, generate realistic restaurant data
     const restaurants = Array.from({ length: 6 }, (_, i) => ({
       id: `restaurant_${Date.now()}_${i}`,
-      name: `${['The', 'Le', 'Casa', 'Ristorante', 'Cafe', 'Bistro'][i]} ${['Garden', 'Terrace', 'Corner', 'Place', 'Kitchen', 'Table'][i]}`,
-      cuisine: cuisine || ['Local', 'Italian', 'French', 'Asian', 'Mediterranean', 'American'][i],
-      priceLevel: priceLevel || ['$$', '$$$'][i % 2],
+      name: `${["The", "Le", "Casa", "Ristorante", "Cafe", "Bistro"][i]} ${["Garden", "Terrace", "Corner", "Place", "Kitchen", "Table"][i]}`,
+      cuisine:
+        cuisine ||
+        ["Local", "Italian", "French", "Asian", "Mediterranean", "American"][i],
+      priceLevel: priceLevel || ["$$", "$$$"][i % 2],
       rating: 4.2 + Math.random() * 0.8,
       reviewCount: Math.floor(Math.random() * 800) + 200,
-      description: `Popular ${mealType} spot in ${destination} known for excellent ${cuisine || 'local'} cuisine.`,
+      description: `Popular ${mealType} spot in ${destination} known for excellent ${cuisine || "local"} cuisine.`,
       vibeMatch: vibes?.slice(0, 2) || [],
       reservationUrl: `https://www.opentable.com/s?term=${encodeURIComponent(destination)}`,
-      affiliatePartner: 'opentable',
+      affiliatePartner: "opentable",
     }));
 
-    return { restaurants, searchMetadata: { destination, mealType, totalResults: restaurants.length, source: 'mock' } };
+    return {
+      restaurants,
+      searchMetadata: {
+        destination,
+        mealType,
+        totalResults: restaurants.length,
+        source: "mock",
+      },
+    };
   },
 });
 
 const createItineraryTool = tool({
-  description: 'Create a day-by-day itinerary from the searched hotels, activities, and restaurants.',
+  description:
+    "Create a day-by-day itinerary from the searched hotels, activities, and restaurants.",
   inputSchema: z.object({
     destination: z.string(),
     startDate: z.string(),
     endDate: z.string(),
-    hotels: z.array(z.any()).describe('List of hotel options'),
-    activities: z.array(z.any()).describe('List of activity options'),
-    restaurants: z.array(z.any()).describe('List of restaurant options'),
+    hotels: z.array(z.any()).describe("List of hotel options"),
+    activities: z.array(z.any()).describe("List of activity options"),
+    restaurants: z.array(z.any()).describe("List of restaurant options"),
     vibes: z.array(z.string()).optional(),
   }),
-  execute: async ({ destination, startDate, endDate, hotels, activities, restaurants }) => {
+  execute: async ({
+    destination,
+    startDate,
+    endDate,
+    hotels,
+    activities,
+    restaurants,
+  }) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
-    const nights = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24));
+    const nights = Math.ceil(
+      (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24),
+    );
 
     const topHotel = hotels[0];
     const days = Array.from({ length: nights + 1 }, (_, dayIndex) => {
@@ -214,25 +319,36 @@ const createItineraryTool = tool({
 
       return {
         dayNumber: dayIndex + 1,
-        date: date.toISOString().split('T')[0],
-        title: dayIndex === 0 ? `Arrival in ${destination}` :
-               dayIndex === nights ? `Departure Day` :
-               `Exploring ${destination}`,
+        date: date.toISOString().split("T")[0],
+        title:
+          dayIndex === 0
+            ? `Arrival in ${destination}`
+            : dayIndex === nights
+              ? `Departure Day`
+              : `Exploring ${destination}`,
         morning: {
-          activities: [activities[dayIndex * 2 % activities.length]],
-          meal: restaurants.find(r => r.cuisine?.includes('Local')) || restaurants[0],
+          activities: [activities[(dayIndex * 2) % activities.length]],
+          meal:
+            restaurants.find((r) => r.cuisine?.includes("Local")) ||
+            restaurants[0],
         },
         afternoon: {
           activities: [activities[(dayIndex * 2 + 1) % activities.length]],
           meal: restaurants[dayIndex % restaurants.length],
         },
         evening: {
-          activities: dayIndex < nights ? [activities[(dayIndex + 3) % activities.length]] : [],
+          activities:
+            dayIndex < nights
+              ? [activities[(dayIndex + 3) % activities.length]]
+              : [],
           meal: restaurants[(dayIndex + 2) % restaurants.length],
         },
         estimatedCost: 150 + Math.floor(Math.random() * 100),
-        currency: 'USD',
-        tips: [`Book ${activities[dayIndex % activities.length]?.name} in advance`, 'Stay hydrated'],
+        currency: "USD",
+        tips: [
+          `Book ${activities[dayIndex % activities.length]?.name} in advance`,
+          "Stay hydrated",
+        ],
       };
     });
 
@@ -244,8 +360,10 @@ const createItineraryTool = tool({
         nights,
         topHotel,
         days,
-        totalEstimatedCost: days.reduce((sum, d) => sum + d.estimatedCost, 0) + (topHotel?.pricePerNight || 150) * nights,
-        currency: 'USD',
+        totalEstimatedCost:
+          days.reduce((sum, d) => sum + d.estimatedCost, 0) +
+          (topHotel?.pricePerNight || 150) * nights,
+        currency: "USD",
       },
     };
   },
@@ -316,8 +434,8 @@ export async function planTrip(params: {
   const { destination, startDate, endDate, travelers, vibes, budget } = params;
 
   const prompt = `Plan a trip to ${destination} from ${startDate} to ${endDate} for ${travelers} traveler(s).
-${vibes?.length ? `Vibes: ${vibes.join(', ')}` : ''}
-${budget ? `Budget: ${budget}` : 'Budget: moderate'}
+${vibes?.length ? `Vibes: ${vibes.join(", ")}` : ""}
+${budget ? `Budget: ${budget}` : "Budget: moderate"}
 
 Please search for hotels, activities, and restaurants, then create a complete itinerary.`;
 

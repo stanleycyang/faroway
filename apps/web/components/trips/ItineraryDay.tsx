@@ -1,8 +1,23 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Sunrise, Sun, Moon, Lightbulb, DollarSign, Hotel, ExternalLink } from 'lucide-react';
-import { ActivityCard, RestaurantCard, type Activity, type Restaurant } from './ActivityCard';
+import React, { useState } from "react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Sunrise,
+  Sun,
+  Moon,
+  Lightbulb,
+  DollarSign,
+  Hotel,
+  ExternalLink,
+} from "lucide-react";
+import {
+  ActivityCard,
+  RestaurantCard,
+  type Activity,
+  type Restaurant,
+} from "./ActivityCard";
 
 interface TimeBlock {
   activities: Activity[];
@@ -52,16 +67,16 @@ export function ItineraryDay({
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
-    return d.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'short',
-      day: 'numeric',
+    return d.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
     });
   };
 
   const formatCost = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
       currency: currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
@@ -69,16 +84,22 @@ export function ItineraryDay({
   };
 
   const safeBlock = (block: TimeBlock): TimeBlock => {
-    const rawActivities = Array.isArray(block?.activities) ? block.activities : [];
+    const rawActivities = Array.isArray(block?.activities)
+      ? block.activities
+      : [];
     const blockRecord = block as unknown as Record<string, unknown>;
     const rawMeals = Array.isArray(block?.meals)
       ? block.meals
-      : blockRecord?.meal && typeof blockRecord.meal === 'object'
+      : blockRecord?.meal && typeof blockRecord.meal === "object"
         ? [blockRecord.meal as Restaurant]
         : [];
     return {
-      activities: rawActivities.filter((a) => a != null && typeof a === 'object' && typeof a.name === 'string'),
-      meals: rawMeals.filter((m) => m != null && typeof m === 'object' && typeof m.name === 'string'),
+      activities: rawActivities.filter(
+        (a) => a != null && typeof a === "object" && typeof a.name === "string",
+      ),
+      meals: rawMeals.filter(
+        (m) => m != null && typeof m === "object" && typeof m.name === "string",
+      ),
     };
   };
 
@@ -92,8 +113,8 @@ export function ItineraryDay({
     let count = 0;
     for (const block of [morning, afternoon, evening]) {
       const safe = safeBlock(block);
-      count += safe.activities.filter(a => a.bookingInfo?.bookingUrl).length;
-      count += safe.meals.filter(m => m.reservationInfo?.url).length;
+      count += safe.activities.filter((a) => a.bookingInfo?.bookingUrl).length;
+      count += safe.meals.filter((m) => m.reservationInfo?.url).length;
     }
     return count;
   };
@@ -105,13 +126,13 @@ export function ItineraryDay({
 
   // Day-of-week color mapping for visual variety
   const dayColors = [
-    { gradient: 'from-primary to-primary-600', light: 'from-primary-50/50' },
-    { gradient: 'from-violet-500 to-purple-600', light: 'from-violet-50/50' },
-    { gradient: 'from-blue-500 to-indigo-600', light: 'from-blue-50/50' },
-    { gradient: 'from-emerald-500 to-teal-600', light: 'from-emerald-50/50' },
-    { gradient: 'from-amber-500 to-orange-600', light: 'from-amber-50/50' },
-    { gradient: 'from-pink-500 to-rose-600', light: 'from-pink-50/50' },
-    { gradient: 'from-cyan-500 to-blue-600', light: 'from-cyan-50/50' },
+    { gradient: "from-primary to-primary-600", light: "from-primary-50/50" },
+    { gradient: "from-violet-500 to-purple-600", light: "from-violet-50/50" },
+    { gradient: "from-blue-500 to-indigo-600", light: "from-blue-50/50" },
+    { gradient: "from-emerald-500 to-teal-600", light: "from-emerald-50/50" },
+    { gradient: "from-amber-500 to-orange-600", light: "from-amber-50/50" },
+    { gradient: "from-pink-500 to-rose-600", light: "from-pink-50/50" },
+    { gradient: "from-cyan-500 to-blue-600", light: "from-cyan-50/50" },
   ];
   const dayColor = dayColors[(dayNumber - 1) % dayColors.length];
 
@@ -123,16 +144,27 @@ export function ItineraryDay({
         className={`w-full px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between hover:bg-gray-50/50 transition-colors bg-gradient-to-r ${dayColor.light} to-transparent`}
       >
         <div className="flex items-center gap-3 sm:gap-4">
-          <div className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br ${dayColor.gradient} flex flex-col items-center justify-center text-white flex-shrink-0 shadow-md`}>
-            <span className="text-[10px] font-semibold uppercase tracking-wider leading-none opacity-80">Day</span>
-            <span className="text-2xl sm:text-3xl font-black leading-none">{dayNumber}</span>
+          <div
+            className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br ${dayColor.gradient} flex flex-col items-center justify-center text-white flex-shrink-0 shadow-md`}
+          >
+            <span className="text-[10px] font-semibold uppercase tracking-wider leading-none opacity-80">
+              Day
+            </span>
+            <span className="text-2xl sm:text-3xl font-black leading-none">
+              {dayNumber}
+            </span>
           </div>
           <div className="text-left min-w-0">
-            <p className="text-xs sm:text-sm text-gray-500 font-medium">{formatDate(date)}</p>
-            <h3 className="text-base sm:text-lg font-bold text-gray-900 truncate">{title}</h3>
+            <p className="text-xs sm:text-sm text-gray-500 font-medium">
+              {formatDate(date)}
+            </p>
+            <h3 className="text-base sm:text-lg font-bold text-gray-900 truncate">
+              {title}
+            </h3>
             {bookableCount > 0 && !isExpanded && (
               <p className="text-xs text-primary-600 font-medium mt-0.5">
-                {bookableCount} bookable experience{bookableCount > 1 ? 's' : ''}
+                {bookableCount} bookable experience
+                {bookableCount > 1 ? "s" : ""}
               </p>
             )}
           </div>
@@ -142,7 +174,10 @@ export function ItineraryDay({
           {totalEstimatedCost && totalEstimatedCost.amount > 0 && (
             <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-white/80 rounded-full text-sm text-gray-700 font-semibold shadow-sm">
               <DollarSign className="w-4 h-4 text-gray-400" />
-              {formatCost(totalEstimatedCost.amount, totalEstimatedCost.currency)}
+              {formatCost(
+                totalEstimatedCost.amount,
+                totalEstimatedCost.currency,
+              )}
             </div>
           )}
           <div className="w-8 h-8 rounded-full bg-white/80 flex items-center justify-center shadow-sm">
@@ -159,7 +194,9 @@ export function ItineraryDay({
       {isExpanded && (
         <div className="px-4 sm:px-6 pb-6 border-t border-gray-100">
           {/* Day Summary */}
-          <p className="text-gray-600 text-sm leading-relaxed mt-4 mb-6">{summary}</p>
+          <p className="text-gray-600 text-sm leading-relaxed mt-4 mb-6">
+            {summary}
+          </p>
 
           {/* Hotel Card */}
           {hotel && (
@@ -170,19 +207,28 @@ export function ItineraryDay({
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <h4 className="font-bold text-gray-900 text-sm truncate">{hotel.name}</h4>
+                    <h4 className="font-bold text-gray-900 text-sm truncate">
+                      {hotel.name}
+                    </h4>
                     {hotel.starRating && (
                       <span className="text-xs text-yellow-500 flex-shrink-0">
-                        {'★'.repeat(Math.min(5, hotel.starRating))}
+                        {"★".repeat(Math.min(5, hotel.starRating))}
                       </span>
                     )}
                   </div>
                   <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
                     {hotel.pricePerNight && (
-                      <span className="font-bold text-gray-800 text-sm">${hotel.pricePerNight}<span className="font-normal text-gray-500">/night</span></span>
+                      <span className="font-bold text-gray-800 text-sm">
+                        ${hotel.pricePerNight}
+                        <span className="font-normal text-gray-500">
+                          /night
+                        </span>
+                      </span>
                     )}
                     {hotel.amenities && hotel.amenities.length > 0 && (
-                      <span className="truncate text-gray-500">{hotel.amenities.slice(0, 3).join(' · ')}</span>
+                      <span className="truncate text-gray-500">
+                        {hotel.amenities.slice(0, 3).join(" · ")}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -248,7 +294,10 @@ export function ItineraryDay({
               </div>
               <ul className="space-y-1.5">
                 {tips.map((tip, i) => (
-                  <li key={i} className="text-sm text-primary-700 flex items-start gap-2">
+                  <li
+                    key={i}
+                    className="text-sm text-primary-700 flex items-start gap-2"
+                  >
                     <span className="text-primary-400 mt-0.5">•</span>
                     <span>{tip}</span>
                   </li>
@@ -262,7 +311,10 @@ export function ItineraryDay({
             <div className="sm:hidden mt-4 pt-4 border-t border-gray-100 flex items-center justify-between text-sm">
               <span className="text-gray-500">Day total</span>
               <span className="font-bold text-gray-900">
-                {formatCost(totalEstimatedCost.amount, totalEstimatedCost.currency)}
+                {formatCost(
+                  totalEstimatedCost.amount,
+                  totalEstimatedCost.currency,
+                )}
               </span>
             </div>
           )}
@@ -275,47 +327,64 @@ export function ItineraryDay({
 interface TimeBlockSectionProps {
   icon: React.ReactNode;
   label: string;
-  color: 'amber' | 'orange' | 'primary';
+  color: "amber" | "orange" | "primary";
   block: TimeBlock;
 }
 
-function TimeBlockSection({ icon, label, color, block }: TimeBlockSectionProps) {
+function TimeBlockSection({
+  icon,
+  label,
+  color,
+  block,
+}: TimeBlockSectionProps) {
   const colorClasses = {
     amber: {
-      dot: 'bg-amber-400 ring-amber-100',
-      pill: 'bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 border-amber-200 shadow-amber-100/50',
+      dot: "bg-amber-400 ring-amber-100",
+      pill: "bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 border-amber-200 shadow-amber-100/50",
     },
     orange: {
-      dot: 'bg-orange-400 ring-orange-100',
-      pill: 'bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 border-orange-200 shadow-orange-100/50',
+      dot: "bg-orange-400 ring-orange-100",
+      pill: "bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 border-orange-200 shadow-orange-100/50",
     },
     primary: {
-      dot: 'bg-primary-400 ring-primary-100',
-      pill: 'bg-gradient-to-r from-primary-50 to-primary-100 text-primary-700 border-primary-200 shadow-primary-100/50',
+      dot: "bg-primary-400 ring-primary-100",
+      pill: "bg-gradient-to-r from-primary-50 to-primary-100 text-primary-700 border-primary-200 shadow-primary-100/50",
     },
   };
 
   const colors = colorClasses[color];
 
   // Normalize: handle both { meals: [...] } and legacy { meal: {...} } formats
-  const rawActivities = Array.isArray(block?.activities) ? block.activities : [];
-  const activities = rawActivities.filter((a): a is Activity => a != null && typeof a === 'object' && typeof a.name === 'string');
+  const rawActivities = Array.isArray(block?.activities)
+    ? block.activities
+    : [];
+  const activities = rawActivities.filter(
+    (a): a is Activity =>
+      a != null && typeof a === "object" && typeof a.name === "string",
+  );
   const blockRecord = block as unknown as Record<string, unknown>;
   const rawMeals = Array.isArray(block?.meals)
     ? block.meals
-    : blockRecord?.meal && typeof blockRecord.meal === 'object'
+    : blockRecord?.meal && typeof blockRecord.meal === "object"
       ? [blockRecord.meal as Restaurant]
       : [];
-  const meals = rawMeals.filter((m): m is Restaurant => m != null && typeof m === 'object' && typeof m.name === 'string');
+  const meals = rawMeals.filter(
+    (m): m is Restaurant =>
+      m != null && typeof m === "object" && typeof m.name === "string",
+  );
 
   return (
     <div className="mb-8 last:mb-0 relative pl-10">
       {/* Timeline dot */}
-      <div className={`absolute left-[9px] top-1 w-3.5 h-3.5 rounded-full ${colors.dot} ring-4 z-10`} />
+      <div
+        className={`absolute left-[9px] top-1 w-3.5 h-3.5 rounded-full ${colors.dot} ring-4 z-10`}
+      />
 
       {/* Time block header */}
       <div className="flex items-center gap-2 mb-4">
-        <div className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border shadow-sm ${colors.pill}`}>
+        <div
+          className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border shadow-sm ${colors.pill}`}
+        >
           {icon}
           <span>{label}</span>
         </div>
@@ -323,7 +392,11 @@ function TimeBlockSection({ icon, label, color, block }: TimeBlockSectionProps) 
 
       <div className="space-y-3">
         {activities.map((activity, idx) => (
-          <ActivityCard key={activity.id || idx} activity={activity} index={idx} />
+          <ActivityCard
+            key={activity.id || idx}
+            activity={activity}
+            index={idx}
+          />
         ))}
         {meals.map((meal, idx) => (
           <RestaurantCard key={meal.id || idx} restaurant={meal} />

@@ -9,6 +9,7 @@ This directory contains utility scripts for database testing, migrations, and ot
 Comprehensive test suite for Supabase connection and Row Level Security (RLS) policies.
 
 **Purpose**: Verifies that:
+
 - Database connection works
 - User profiles auto-create via auth trigger
 - All tables are accessible
@@ -16,6 +17,7 @@ Comprehensive test suite for Supabase connection and Row Level Security (RLS) po
 - Foreign key relationships work correctly
 
 **Usage**:
+
 ```bash
 # Using npm script (recommended)
 npm run test:db
@@ -25,11 +27,13 @@ npx tsx scripts/test-supabase.ts
 ```
 
 **Prerequisites**:
+
 - `.env.local` configured with Supabase credentials
 - Database migrations applied
 - Valid `SUPABASE_SERVICE_ROLE_KEY` (for admin operations)
 
 **What it does**:
+
 1. Tests database connection
 2. Creates a test user via Supabase Auth
 3. Verifies user profile auto-creation (via trigger)
@@ -39,6 +43,7 @@ npx tsx scripts/test-supabase.ts
 7. Cleans up all test data
 
 **Expected output**:
+
 ```
 ╔════════════════════════════════════════════╗
 ║   Faroway Supabase Connection Test      ║
@@ -59,6 +64,7 @@ npx tsx scripts/test-supabase.ts
 ```
 
 **Troubleshooting**:
+
 - **Connection failed**: Check `NEXT_PUBLIC_SUPABASE_URL` in `.env.local`
 - **User creation failed**: Verify `SUPABASE_SERVICE_ROLE_KEY` is correct
 - **RLS not working**: Check policies in Supabase Dashboard → Database → Policies
@@ -80,9 +86,9 @@ When adding new scripts to this directory:
 #!/usr/bin/env tsx
 /**
  * Script description
- * 
+ *
  * Usage: npm run script-name
- * 
+ *
  * Prerequisites:
  * - List any requirements
  */
@@ -90,14 +96,14 @@ When adding new scripts to this directory:
 async function main() {
   try {
     // Your script logic here
-    console.log('✅ Success!')
+    console.log("✅ Success!");
   } catch (error) {
-    console.error('❌ Error:', error)
-    process.exit(1)
+    console.error("❌ Error:", error);
+    process.exit(1);
   }
 }
 
-main()
+main();
 ```
 
 ## Future Scripts (TODO)
@@ -126,32 +132,35 @@ NODE_ENV=development DEBUG=* npx tsx scripts/test-supabase.ts
 ### Environment Variables
 
 Scripts can access environment variables from `.env.local`:
-```typescript
-import { config } from 'dotenv'
-config({ path: '.env.local' })
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+```typescript
+import { config } from "dotenv";
+config({ path: ".env.local" });
+
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 ```
 
 ### Database Access
 
 **Use the right client**:
+
 - **Admin/Service Role**: For admin operations, bypasses RLS
 - **Anon/Public Key**: For testing RLS policies
 
 ```typescript
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from "@supabase/supabase-js";
 
 // Admin client (bypasses RLS)
-const admin = createClient(url, serviceRoleKey)
+const admin = createClient(url, serviceRoleKey);
 
 // Regular client (respects RLS)
-const anon = createClient(url, anonKey)
+const anon = createClient(url, anonKey);
 ```
 
 ## Safety Guidelines
 
 ⚠️ **Important**:
+
 - Always clean up test data
 - Use test email domains (e.g., `@faroway.test`)
 - Never commit `.env.local` with real credentials

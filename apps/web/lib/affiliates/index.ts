@@ -1,6 +1,6 @@
 /**
  * Affiliate Partner Integrations
- * 
+ *
  * This module provides integrations with travel affiliate partners:
  * - Viator (tours & experiences) - 15-20% commission
  * - Booking.com (hotels) - 25-40% commission
@@ -18,7 +18,7 @@ export {
   type ViatorSearchParams,
   type ViatorProduct,
   type ViatorAvailability,
-} from './viator';
+} from "./viator";
 
 // GetYourGuide (Tours & Activities)
 export {
@@ -31,7 +31,7 @@ export {
   type GYGSearchParams,
   type GYGActivity,
   type GYGAvailability,
-} from './getyourguide';
+} from "./getyourguide";
 
 // Booking.com (Hotels)
 export {
@@ -46,7 +46,7 @@ export {
   type BookingSearchParams,
   type BookingHotel,
   type BookingAvailability,
-} from './booking';
+} from "./booking";
 
 // Click Tracking
 export {
@@ -62,4 +62,4 @@ export {
   type TrackClickInput,
   type TrackClickResult,
   type ConversionInput,
-} from './tracking';
+} from "./tracking";

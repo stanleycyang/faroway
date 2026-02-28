@@ -1,24 +1,21 @@
 /**
  * Travel Search Workflow
  * Orchestrates the multi-agent search process
- * 
+ *
  * Note: This module defines the workflow logic that is executed
  * by the /api/search/[searchId]/execute endpoint.
  * For production use with Vercel Workflows, see /workflows/
  */
 
-import {
-  SearchInput,
-  SearchResults,
-} from './types';
-import { mapSearchResultsToItinerary } from './bridge';
+import { SearchInput, SearchResults } from "./types";
+import { mapSearchResultsToItinerary } from "./bridge";
 import {
   runOrchestratorAgent,
   runHotelsAgent,
   runActivitiesAgent,
   runDiningAgent,
   runAggregatorAgent,
-} from './agents';
+} from "./agents";
 
 export interface TravelSearchWorkflowInput {
   searchId: string;
@@ -27,16 +24,20 @@ export interface TravelSearchWorkflowInput {
 
 export interface TravelSearchWorkflowOutput {
   searchId: string;
-  status: 'completed' | 'error';
+  status: "completed" | "error";
   results?: SearchResults;
   error?: string;
 }
 
 export interface WorkflowCallbacks {
-  onProgress?: (stage: string, status: 'searching' | 'done') => Promise<void>;
+  onProgress?: (stage: string, status: "searching" | "done") => Promise<void>;
   onAgentResult?: (stage: string, data: unknown) => Promise<void>;
   /** Called for micro-progress updates (e.g., "Analyzing your travel style...") */
-  onMicroProgress?: (data: { stage: string; message: string; detail?: string }) => void;
+  onMicroProgress?: (data: {
+    stage: string;
+    message: string;
+    detail?: string;
+  }) => void;
 }
 
 /**
@@ -46,7 +47,7 @@ export interface WorkflowCallbacks {
 export async function executeTravelSearch(
   searchId: string,
   input: SearchInput,
-  callbacks?: WorkflowCallbacks
+  callbacks?: WorkflowCallbacks,
 ): Promise<TravelSearchWorkflowOutput> {
   const onProgress = callbacks?.onProgress;
   const onAgentResult = callbacks?.onAgentResult;
@@ -54,56 +55,103 @@ export async function executeTravelSearch(
 
   try {
     // Step 1: Orchestrator Agent - Creates the search plan
-    onMicroProgress?.({ stage: 'orchestrator', message: 'Analyzing your travel preferences...' });
-    if (onProgress) await onProgress('orchestrator', 'searching');
-    
-    onMicroProgress?.({ stage: 'orchestrator', message: 'Understanding your travel style...', detail: `${input.vibes?.join(', ') || 'adventure'}` });
+    onMicroProgress?.({
+      stage: "orchestrator",
+      message: "Analyzing your travel preferences...",
+    });
+    if (onProgress) await onProgress("orchestrator", "searching");
+
+    onMicroProgress?.({
+      stage: "orchestrator",
+      message: "Understanding your travel style...",
+      detail: `${input.vibes?.join(", ") || "adventure"}`,
+    });
     const searchPlan = await runOrchestratorAgent(input);
-    
-    onMicroProgress?.({ stage: 'orchestrator', message: 'Created personalized search plan', detail: `${searchPlan.dates.nights} nights in ${input.destination}` });
-    if (onProgress) await onProgress('orchestrator', 'done');
+
+    onMicroProgress?.({
+      stage: "orchestrator",
+      message: "Created personalized search plan",
+      detail: `${searchPlan.dates.nights} nights in ${input.destination}`,
+    });
+    if (onProgress) await onProgress("orchestrator", "done");
 
     // Step 2: Run specialized agents in parallel
-    onMicroProgress?.({ stage: 'hotels', message: 'Searching top-rated hotels...' });
-    onMicroProgress?.({ stage: 'activities', message: 'Finding unique experiences...' });
-    onMicroProgress?.({ stage: 'dining', message: 'Discovering local restaurants...' });
-    
+    onMicroProgress?.({
+      stage: "hotels",
+      message: "Searching top-rated hotels...",
+    });
+    onMicroProgress?.({
+      stage: "activities",
+      message: "Finding unique experiences...",
+    });
+    onMicroProgress?.({
+      stage: "dining",
+      message: "Discovering local restaurants...",
+    });
+
     if (onProgress) {
-      await onProgress('hotels', 'searching');
-      await onProgress('activities', 'searching');
-      await onProgress('dining', 'searching');
+      await onProgress("hotels", "searching");
+      await onProgress("activities", "searching");
+      await onProgress("dining", "searching");
     }
 
     const [hotels, activities, dining] = await Promise.all([
       runHotelsAgent(searchPlan, 10).then(async (results) => {
-        onMicroProgress?.({ stage: 'hotels', message: `Found ${results.length} perfect hotels`, detail: results[0]?.name });
-        if (onProgress) await onProgress('hotels', 'done');
-        if (onAgentResult) await onAgentResult('hotels', results);
+        onMicroProgress?.({
+          stage: "hotels",
+          message: `Found ${results.length} perfect hotels`,
+          detail: results[0]?.name,
+        });
+        if (onProgress) await onProgress("hotels", "done");
+        if (onAgentResult) await onAgentResult("hotels", results);
         return results;
       }),
       runActivitiesAgent(searchPlan, 15).then(async (results) => {
-        onMicroProgress?.({ stage: 'activities', message: `Discovered ${results.length} activities`, detail: results[0]?.name });
-        if (onProgress) await onProgress('activities', 'done');
-        if (onAgentResult) await onAgentResult('activities', results);
+        onMicroProgress?.({
+          stage: "activities",
+          message: `Discovered ${results.length} activities`,
+          detail: results[0]?.name,
+        });
+        if (onProgress) await onProgress("activities", "done");
+        if (onAgentResult) await onAgentResult("activities", results);
         return results;
       }),
       runDiningAgent(searchPlan, 12).then(async (results) => {
-        onMicroProgress?.({ stage: 'dining', message: `Found ${results.length} restaurants`, detail: results[0]?.name });
-        if (onProgress) await onProgress('dining', 'done');
-        if (onAgentResult) await onAgentResult('dining', results);
+        onMicroProgress?.({
+          stage: "dining",
+          message: `Found ${results.length} restaurants`,
+          detail: results[0]?.name,
+        });
+        if (onProgress) await onProgress("dining", "done");
+        if (onAgentResult) await onAgentResult("dining", results);
         return results;
       }),
     ]);
 
     // Step 3: Aggregator Agent - Combines results into itinerary
-    onMicroProgress?.({ stage: 'aggregator', message: 'Crafting your perfect day-by-day plan...' });
-    if (onProgress) await onProgress('aggregator', 'searching');
-    
-    onMicroProgress?.({ stage: 'aggregator', message: 'Optimizing activities by location...' });
-    const { days } = await runAggregatorAgent(searchPlan, hotels, activities, dining);
-    
-    onMicroProgress?.({ stage: 'aggregator', message: `Created ${days.length}-day itinerary`, detail: days[0]?.title });
-    if (onProgress) await onProgress('aggregator', 'done');
+    onMicroProgress?.({
+      stage: "aggregator",
+      message: "Crafting your perfect day-by-day plan...",
+    });
+    if (onProgress) await onProgress("aggregator", "searching");
+
+    onMicroProgress?.({
+      stage: "aggregator",
+      message: "Optimizing activities by location...",
+    });
+    const { days } = await runAggregatorAgent(
+      searchPlan,
+      hotels,
+      activities,
+      dining,
+    );
+
+    onMicroProgress?.({
+      stage: "aggregator",
+      message: `Created ${days.length}-day itinerary`,
+      detail: days[0]?.title,
+    });
+    if (onProgress) await onProgress("aggregator", "done");
 
     const results: SearchResults = {
       searchId,
@@ -117,19 +165,23 @@ export async function executeTravelSearch(
     if (onAgentResult) {
       const topHotel = days?.[0]?.hotel || hotels[0] || null;
       const mapped = mapSearchResultsToItinerary(results, topHotel);
-      await onAgentResult('aggregator', { days: mapped.days, topHotel: mapped.topHotel });
+      await onAgentResult("aggregator", {
+        days: mapped.days,
+        topHotel: mapped.topHotel,
+      });
     }
 
     return {
       searchId,
-      status: 'completed',
+      status: "completed",
       results,
     };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error occurred";
     return {
       searchId,
-      status: 'error',
+      status: "error",
       error: errorMessage,
     };
   }

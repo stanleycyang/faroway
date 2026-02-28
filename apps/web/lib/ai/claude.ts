@@ -3,7 +3,7 @@
  * Handles AI itinerary generation using Anthropic's Claude API
  */
 
-import Anthropic from '@anthropic-ai/sdk';
+import Anthropic from "@anthropic-ai/sdk";
 import {
   TripPreferences,
   GeneratedItinerary,
@@ -12,20 +12,20 @@ import {
   Restaurant,
   StreamingProgress,
   AIGenerationError,
-} from './types';
+} from "./types";
 import {
   SYSTEM_PROMPT,
   buildItineraryPrompt,
   buildActivityRecommendationPrompt,
   buildRestaurantPrompt,
-} from './prompts';
+} from "./prompts";
 
 // Initialize Anthropic client
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
-const DEFAULT_MODEL = 'claude-sonnet-4-20250514';
+const DEFAULT_MODEL = "claude-sonnet-4-20250514";
 const MAX_TOKENS = 16000;
 
 /**
@@ -37,22 +37,24 @@ export async function generateItinerary(
     model?: string;
     onProgress?: (progress: StreamingProgress) => void;
     userId?: string;
-  }
+  },
 ): Promise<GeneratedItinerary> {
   const model = options?.model || DEFAULT_MODEL;
   const onProgress = options?.onProgress;
 
   try {
     // Calculate trip duration
-    const days = Math.ceil(
-      (new Date(preferences.endDate).getTime() - new Date(preferences.startDate).getTime()) /
-        (1000 * 60 * 60 * 24)
-    ) + 1;
+    const days =
+      Math.ceil(
+        (new Date(preferences.endDate).getTime() -
+          new Date(preferences.startDate).getTime()) /
+          (1000 * 60 * 60 * 24),
+      ) + 1;
 
     // Notify start
     if (onProgress) {
       onProgress({
-        status: 'started',
+        status: "started",
         totalDays: days,
         message: `Starting itinerary generation for ${preferences.destination}...`,
       });
@@ -68,19 +70,22 @@ export async function generateItinerary(
       system: SYSTEM_PROMPT,
       messages: [
         {
-          role: 'user',
+          role: "user",
           content: prompt,
         },
       ],
       stream: true,
     });
 
-    let fullResponse = '';
+    let fullResponse = "";
     let currentDay = 0;
 
     // Process streaming response
     for await (const event of stream) {
-      if (event.type === 'content_block_delta' && event.delta.type === 'text_delta') {
+      if (
+        event.type === "content_block_delta" &&
+        event.delta.type === "text_delta"
+      ) {
         fullResponse += event.delta.text;
 
         // Try to parse partial JSON to track progress
@@ -90,7 +95,7 @@ export async function generateItinerary(
             currentDay = partial.days.length;
             if (onProgress) {
               onProgress({
-                status: 'processing',
+                status: "processing",
                 currentDay,
                 totalDays: days,
                 message: `Generated day ${currentDay} of ${days}...`,
@@ -108,7 +113,9 @@ export async function generateItinerary(
 
     // Add metadata
     const itinerary: GeneratedItinerary = {
-      tripId: options?.userId ? `trip_${options.userId}_${Date.now()}` : `trip_${Date.now()}`,
+      tripId: options?.userId
+        ? `trip_${options.userId}_${Date.now()}`
+        : `trip_${Date.now()}`,
       ...parsedResponse,
       generatedAt: new Date().toISOString(),
     };
@@ -116,9 +123,9 @@ export async function generateItinerary(
     // Notify completion
     if (onProgress) {
       onProgress({
-        status: 'completed',
+        status: "completed",
         totalDays: days,
-        message: 'Itinerary generation complete!',
+        message: "Itinerary generation complete!",
         partialItinerary: itinerary,
       });
     }
@@ -126,14 +133,15 @@ export async function generateItinerary(
     return itinerary;
   } catch (error) {
     const aiError: AIGenerationError = {
-      code: 'GENERATION_FAILED',
-      message: error instanceof Error ? error.message : 'Unknown error occurred',
+      code: "GENERATION_FAILED",
+      message:
+        error instanceof Error ? error.message : "Unknown error occurred",
       details: error,
     };
 
     if (onProgress) {
       onProgress({
-        status: 'error',
+        status: "error",
         totalDays: 0,
         message: aiError.message,
       });
@@ -149,11 +157,16 @@ export async function generateItinerary(
 export async function generateActivities(
   destination: string,
   vibes: string[],
-  timeOfDay: 'morning' | 'afternoon' | 'evening',
-  budget: string
+  timeOfDay: "morning" | "afternoon" | "evening",
+  budget: string,
 ): Promise<Activity[]> {
   try {
-    const prompt = buildActivityRecommendationPrompt(destination, vibes, timeOfDay, budget);
+    const prompt = buildActivityRecommendationPrompt(
+      destination,
+      vibes,
+      timeOfDay,
+      budget,
+    );
 
     const response = await anthropic.messages.create({
       model: DEFAULT_MODEL,
@@ -161,22 +174,25 @@ export async function generateActivities(
       system: SYSTEM_PROMPT,
       messages: [
         {
-          role: 'user',
+          role: "user",
           content: prompt,
         },
       ],
     });
 
     const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type from Claude');
+    if (content.type !== "text") {
+      throw new Error("Unexpected response type from Claude");
     }
 
     return parseActivitiesResponse(content.text);
   } catch (error) {
     throw {
-      code: 'ACTIVITY_GENERATION_FAILED',
-      message: error instanceof Error ? error.message : 'Failed to generate activities',
+      code: "ACTIVITY_GENERATION_FAILED",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to generate activities",
       details: error,
     } as AIGenerationError;
   }
@@ -188,12 +204,18 @@ export async function generateActivities(
 export async function generateRestaurants(
   destination: string,
   vibes: string[],
-  mealType: 'breakfast' | 'lunch' | 'dinner',
+  mealType: "breakfast" | "lunch" | "dinner",
   budget: string,
-  dietaryRestrictions?: string[]
+  dietaryRestrictions?: string[],
 ): Promise<Restaurant[]> {
   try {
-    const prompt = buildRestaurantPrompt(destination, vibes, mealType, budget, dietaryRestrictions);
+    const prompt = buildRestaurantPrompt(
+      destination,
+      vibes,
+      mealType,
+      budget,
+      dietaryRestrictions,
+    );
 
     const response = await anthropic.messages.create({
       model: DEFAULT_MODEL,
@@ -201,22 +223,25 @@ export async function generateRestaurants(
       system: SYSTEM_PROMPT,
       messages: [
         {
-          role: 'user',
+          role: "user",
           content: prompt,
         },
       ],
     });
 
     const content = response.content[0];
-    if (content.type !== 'text') {
-      throw new Error('Unexpected response type from Claude');
+    if (content.type !== "text") {
+      throw new Error("Unexpected response type from Claude");
     }
 
     return parseRestaurantsResponse(content.text);
   } catch (error) {
     throw {
-      code: 'RESTAURANT_GENERATION_FAILED',
-      message: error instanceof Error ? error.message : 'Failed to generate restaurants',
+      code: "RESTAURANT_GENERATION_FAILED",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to generate restaurants",
       details: error,
     } as AIGenerationError;
   }
@@ -225,14 +250,16 @@ export async function generateRestaurants(
 /**
  * Parse Claude's itinerary response into structured format
  */
-function parseItineraryResponse(response: string): Omit<GeneratedItinerary, 'tripId' | 'generatedAt'> {
+function parseItineraryResponse(
+  response: string,
+): Omit<GeneratedItinerary, "tripId" | "generatedAt"> {
   try {
     // Extract JSON from response (handle markdown code blocks)
     let jsonStr = response.trim();
-    if (jsonStr.startsWith('```json')) {
-      jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-    } else if (jsonStr.startsWith('```')) {
-      jsonStr = jsonStr.replace(/```\n?/g, '');
+    if (jsonStr.startsWith("```json")) {
+      jsonStr = jsonStr.replace(/```json\n?/g, "").replace(/```\n?/g, "");
+    } else if (jsonStr.startsWith("```")) {
+      jsonStr = jsonStr.replace(/```\n?/g, "");
     }
 
     const parsed = JSON.parse(jsonStr);
@@ -243,38 +270,40 @@ function parseItineraryResponse(response: string): Omit<GeneratedItinerary, 'tri
       morning: {
         activities: day.morning.activities.map((a: Activity) => ({
           ...a,
-          id: generateId('activity'),
+          id: generateId("activity"),
         })),
         meals: day.morning.meals.map((m: Restaurant) => ({
           ...m,
-          id: generateId('restaurant'),
+          id: generateId("restaurant"),
         })),
       },
       afternoon: {
         activities: day.afternoon.activities.map((a: Activity) => ({
           ...a,
-          id: generateId('activity'),
+          id: generateId("activity"),
         })),
         meals: day.afternoon.meals.map((m: Restaurant) => ({
           ...m,
-          id: generateId('restaurant'),
+          id: generateId("restaurant"),
         })),
       },
       evening: {
         activities: day.evening.activities.map((a: Activity) => ({
           ...a,
-          id: generateId('activity'),
+          id: generateId("activity"),
         })),
         meals: day.evening.meals.map((m: Restaurant) => ({
           ...m,
-          id: generateId('restaurant'),
+          id: generateId("restaurant"),
         })),
       },
     }));
 
     return parsed;
   } catch (error) {
-    throw new Error(`Failed to parse itinerary response: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to parse itinerary response: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -284,19 +313,21 @@ function parseItineraryResponse(response: string): Omit<GeneratedItinerary, 'tri
 function parseActivitiesResponse(response: string): Activity[] {
   try {
     let jsonStr = response.trim();
-    if (jsonStr.startsWith('```json')) {
-      jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-    } else if (jsonStr.startsWith('```')) {
-      jsonStr = jsonStr.replace(/```\n?/g, '');
+    if (jsonStr.startsWith("```json")) {
+      jsonStr = jsonStr.replace(/```json\n?/g, "").replace(/```\n?/g, "");
+    } else if (jsonStr.startsWith("```")) {
+      jsonStr = jsonStr.replace(/```\n?/g, "");
     }
 
     const parsed = JSON.parse(jsonStr);
     return parsed.map((a: Activity) => ({
       ...a,
-      id: generateId('activity'),
+      id: generateId("activity"),
     }));
   } catch (error) {
-    throw new Error(`Failed to parse activities response: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to parse activities response: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -306,19 +337,21 @@ function parseActivitiesResponse(response: string): Activity[] {
 function parseRestaurantsResponse(response: string): Restaurant[] {
   try {
     let jsonStr = response.trim();
-    if (jsonStr.startsWith('```json')) {
-      jsonStr = jsonStr.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-    } else if (jsonStr.startsWith('```')) {
-      jsonStr = jsonStr.replace(/```\n?/g, '');
+    if (jsonStr.startsWith("```json")) {
+      jsonStr = jsonStr.replace(/```json\n?/g, "").replace(/```\n?/g, "");
+    } else if (jsonStr.startsWith("```")) {
+      jsonStr = jsonStr.replace(/```\n?/g, "");
     }
 
     const parsed = JSON.parse(jsonStr);
     return parsed.map((r: Restaurant) => ({
       ...r,
-      id: generateId('restaurant'),
+      id: generateId("restaurant"),
     }));
   } catch (error) {
-    throw new Error(`Failed to parse restaurants response: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw new Error(
+      `Failed to parse restaurants response: ${error instanceof Error ? error.message : "Unknown error"}`,
+    );
   }
 }
 
@@ -350,7 +383,10 @@ export function estimateTokens(text: string): number {
  * Input: $3 per million tokens
  * Output: $15 per million tokens
  */
-export function estimateCost(inputTokens: number, outputTokens: number): number {
+export function estimateCost(
+  inputTokens: number,
+  outputTokens: number,
+): number {
   const inputCost = (inputTokens / 1_000_000) * 3;
   const outputCost = (outputTokens / 1_000_000) * 15;
   return inputCost + outputCost;

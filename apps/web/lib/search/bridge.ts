@@ -16,21 +16,24 @@ import type {
   ItineraryActivity,
   Restaurant,
   TripDay,
-} from '@faroway/types';
+} from "@faroway/types";
 
 // ── Activity Mapper ─────────────────────────────────────────────────────────
 
-function mapActivity(a: ActivityResult, timeOfDay: 'morning' | 'afternoon' | 'evening'): ItineraryActivity {
-  const categoryMap: Record<string, ItineraryActivity['category']> = {
-    sightseeing: 'sightseeing',
-    adventure: 'adventure',
-    cultural: 'cultural',
-    relaxation: 'relaxation',
-    entertainment: 'entertainment',
-    shopping: 'shopping',
-    food: 'cultural',
-    nature: 'adventure',
-    nightlife: 'entertainment',
+function mapActivity(
+  a: ActivityResult,
+  timeOfDay: "morning" | "afternoon" | "evening",
+): ItineraryActivity {
+  const categoryMap: Record<string, ItineraryActivity["category"]> = {
+    sightseeing: "sightseeing",
+    adventure: "adventure",
+    cultural: "cultural",
+    relaxation: "relaxation",
+    entertainment: "entertainment",
+    shopping: "shopping",
+    food: "cultural",
+    nature: "adventure",
+    nightlife: "entertainment",
   };
 
   return {
@@ -40,20 +43,24 @@ function mapActivity(a: ActivityResult, timeOfDay: 'morning' | 'afternoon' | 'ev
     duration: a.duration, // already in minutes from activities agent
     estimatedCost: {
       amount: a.price,
-      currency: a.currency || 'USD',
+      currency: a.currency || "USD",
     },
-    timeOfDay: a.bestTimeOfDay === 'any' ? timeOfDay : (a.bestTimeOfDay as 'morning' | 'afternoon' | 'evening'),
-    category: categoryMap[a.category?.toLowerCase()] || 'sightseeing',
+    timeOfDay:
+      a.bestTimeOfDay === "any"
+        ? timeOfDay
+        : (a.bestTimeOfDay as "morning" | "afternoon" | "evening"),
+    category: categoryMap[a.category?.toLowerCase()] || "sightseeing",
     location: {
-      name: a.location?.name || a.location?.neighborhood || '',
+      name: a.location?.name || a.location?.neighborhood || "",
       address: a.location?.address,
-      coordinates: a.location?.lat != null
-        ? { lat: a.location.lat, lng: a.location.lng }
-        : undefined,
+      coordinates:
+        a.location?.lat != null
+          ? { lat: a.location.lat, lng: a.location.lng }
+          : undefined,
     },
     vibeMatch: {
       matchedVibes: a.vibeMatch || [],
-      reasoning: `Matches your ${a.vibeMatch?.join(', ') || 'travel'} style`,
+      reasoning: `Matches your ${a.vibeMatch?.join(", ") || "travel"} style`,
     },
     bookingInfo: {
       requiresReservation: a.bookingRequired,
@@ -68,7 +75,10 @@ function mapActivity(a: ActivityResult, timeOfDay: 'morning' | 'afternoon' | 'ev
 
 // ── Dining Mapper ───────────────────────────────────────────────────────────
 
-function mapDining(d: DiningResult, mealType: 'breakfast' | 'lunch' | 'dinner'): Restaurant {
+function mapDining(
+  d: DiningResult,
+  mealType: "breakfast" | "lunch" | "dinner",
+): Restaurant {
   const priceLevelCostMap: Record<number, number> = {
     1: 15,
     2: 30,
@@ -84,21 +94,22 @@ function mapDining(d: DiningResult, mealType: 'breakfast' | 'lunch' | 'dinner'):
     description: d.description,
     estimatedCost: {
       amount: priceLevelCostMap[d.priceLevel] || 30,
-      currency: 'USD',
+      currency: "USD",
       perPerson: true,
     },
     mealType,
     location: {
-      name: d.location?.name || d.location?.neighborhood || '',
+      name: d.location?.name || d.location?.neighborhood || "",
       address: d.location?.address,
-      coordinates: d.location?.lat != null
-        ? { lat: d.location.lat, lng: d.location.lng }
-        : undefined,
+      coordinates:
+        d.location?.lat != null
+          ? { lat: d.location.lat, lng: d.location.lng }
+          : undefined,
     },
     dietaryOptions: d.dietaryOptions || [],
     vibeMatch: {
       matchedVibes: d.vibeMatch || [],
-      reasoning: `Matches your ${d.vibeMatch?.join(', ') || 'dining'} preferences`,
+      reasoning: `Matches your ${d.vibeMatch?.join(", ") || "dining"} preferences`,
     },
     reservationInfo: d.reservationUrl
       ? { recommended: true, url: d.reservationUrl }
@@ -112,10 +123,12 @@ function mapDining(d: DiningResult, mealType: 'breakfast' | 'lunch' | 'dinner'):
 
 function mapSlot(
   slot: { activities: ActivityResult[]; meal?: DiningResult },
-  timeOfDay: 'morning' | 'afternoon' | 'evening',
-  mealType: 'breakfast' | 'lunch' | 'dinner',
+  timeOfDay: "morning" | "afternoon" | "evening",
+  mealType: "breakfast" | "lunch" | "dinner",
 ): { activities: ItineraryActivity[]; meals: Restaurant[] } {
-  const activities = (slot.activities || []).map(a => mapActivity(a, timeOfDay));
+  const activities = (slot.activities || []).map((a) =>
+    mapActivity(a, timeOfDay),
+  );
   const meals = slot.meal ? [mapDining(slot.meal, mealType)] : [];
   return { activities, meals };
 }
@@ -128,12 +141,12 @@ function mapDay(day: SuggestedDay): TripDay {
     date: day.date,
     title: day.title,
     summary: day.summary,
-    morning: mapSlot(day.morning, 'morning', 'breakfast'),
-    afternoon: mapSlot(day.afternoon, 'afternoon', 'lunch'),
-    evening: mapSlot(day.evening, 'evening', 'dinner'),
+    morning: mapSlot(day.morning, "morning", "breakfast"),
+    afternoon: mapSlot(day.afternoon, "afternoon", "lunch"),
+    evening: mapSlot(day.evening, "evening", "dinner"),
     totalEstimatedCost: {
       amount: day.estimatedCost || 0,
-      currency: day.currency || 'USD',
+      currency: day.currency || "USD",
     },
     tips: day.tips || [],
   };
@@ -161,7 +174,10 @@ export function mapSearchResultsToItinerary(
   const days = (results.itinerary || []).map(mapDay);
 
   // Sum daily costs + hotel cost
-  const activityCost = days.reduce((sum: number, d: TripDay) => sum + (d.totalEstimatedCost?.amount || 0), 0);
+  const activityCost = days.reduce(
+    (sum: number, d: TripDay) => sum + (d.totalEstimatedCost?.amount || 0),
+    0,
+  );
   const nights = days.length > 0 ? days.length - 1 : 0;
   const hotelCost = topHotel ? topHotel.pricePerNight * nights : 0;
 
@@ -172,6 +188,6 @@ export function mapSearchResultsToItinerary(
     activities: results.activities || [],
     dining: results.dining || [],
     totalEstimatedCost: activityCost + hotelCost,
-    currency: 'USD',
+    currency: "USD",
   };
 }

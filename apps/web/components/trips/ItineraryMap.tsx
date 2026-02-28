@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useEffect, useRef, useMemo } from 'react';
-import L from 'leaflet';
-import type { GeneratedItinerary } from '@/lib/ai/types';
+import { useEffect, useRef, useMemo } from "react";
+import L from "leaflet";
+import type { GeneratedItinerary } from "@/lib/ai/types";
 
 interface MapMarker {
   lat: number;
   lng: number;
   name: string;
-  type: 'activity' | 'meal';
+  type: "activity" | "meal";
   dayNumber: number;
   timeOfDay: string;
 }
@@ -19,28 +19,37 @@ interface ItineraryMapProps {
 }
 
 const TIME_COLORS: Record<string, string> = {
-  morning: '#F59E0B',   // amber
-  afternoon: '#F25D3B', // primary/red-orange
-  evening: '#8B5CF6',   // purple
+  morning: "#F59E0B", // amber
+  afternoon: "#F25D3B", // primary/red-orange
+  evening: "#8B5CF6", // purple
 };
 
 function extractMarkers(itinerary: GeneratedItinerary): MapMarker[] {
   const markers: MapMarker[] = [];
 
   for (const day of itinerary.days) {
-    for (const timeOfDay of ['morning', 'afternoon', 'evening'] as const) {
+    for (const timeOfDay of ["morning", "afternoon", "evening"] as const) {
       const slot = day[timeOfDay];
       if (!slot) continue;
-      interface SlotItem { name?: string; location?: { coordinates?: { lat: number; lng: number } } }
-      const rawActivities = Array.isArray(slot.activities) ? slot.activities : [];
-      const activities = rawActivities.filter((a) => a != null && typeof a === 'object') as SlotItem[];
+      interface SlotItem {
+        name?: string;
+        location?: { coordinates?: { lat: number; lng: number } };
+      }
+      const rawActivities = Array.isArray(slot.activities)
+        ? slot.activities
+        : [];
+      const activities = rawActivities.filter(
+        (a) => a != null && typeof a === "object",
+      ) as SlotItem[];
       const slotRecord = slot as unknown as Record<string, unknown>;
       const rawMeals: unknown[] = Array.isArray(slotRecord.meals)
         ? slotRecord.meals
-        : slotRecord.meal && typeof slotRecord.meal === 'object'
+        : slotRecord.meal && typeof slotRecord.meal === "object"
           ? [slotRecord.meal]
           : [];
-      const meals = rawMeals.filter((m) => m != null && typeof m === 'object') as SlotItem[];
+      const meals = rawMeals.filter(
+        (m) => m != null && typeof m === "object",
+      ) as SlotItem[];
       for (const activity of activities) {
         const coords = activity.location?.coordinates;
         if (coords?.lat && coords?.lng && activity.name) {
@@ -48,7 +57,7 @@ function extractMarkers(itinerary: GeneratedItinerary): MapMarker[] {
             lat: coords.lat,
             lng: coords.lng,
             name: activity.name,
-            type: 'activity',
+            type: "activity",
             dayNumber: day.dayNumber,
             timeOfDay,
           });
@@ -61,7 +70,7 @@ function extractMarkers(itinerary: GeneratedItinerary): MapMarker[] {
             lat: coords.lat,
             lng: coords.lng,
             name: meal.name,
-            type: 'meal',
+            type: "meal",
             dayNumber: day.dayNumber,
             timeOfDay,
           });
@@ -94,16 +103,16 @@ export function ItineraryMap({ itinerary, className }: ItineraryMapProps) {
       scrollWheelZoom: true,
     });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
     }).addTo(map);
 
     const bounds = L.latLngBounds([]);
 
     for (const marker of markers) {
-      const color = TIME_COLORS[marker.timeOfDay] || '#F25D3B';
+      const color = TIME_COLORS[marker.timeOfDay] || "#F25D3B";
       const icon = L.divIcon({
-        className: '',
+        className: "",
         html: `<div style="
           width:28px;height:28px;
           background:${color};
@@ -118,9 +127,7 @@ export function ItineraryMap({ itinerary, className }: ItineraryMapProps) {
       });
 
       const label = `<strong>Day ${marker.dayNumber}</strong> &middot; ${marker.timeOfDay}<br/>${marker.name}`;
-      L.marker([marker.lat, marker.lng], { icon })
-        .addTo(map)
-        .bindPopup(label);
+      L.marker([marker.lat, marker.lng], { icon }).addTo(map).bindPopup(label);
 
       bounds.extend([marker.lat, marker.lng]);
     }
@@ -146,15 +153,24 @@ export function ItineraryMap({ itinerary, className }: ItineraryMapProps) {
       <div ref={mapRef} className="h-full w-full" />
       <div className="flex items-center gap-4 px-4 py-2 bg-white border-t border-gray-100 text-xs text-gray-500">
         <span className="flex items-center gap-1.5">
-          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: TIME_COLORS.morning }} />
+          <span
+            className="inline-block w-2.5 h-2.5 rounded-full"
+            style={{ background: TIME_COLORS.morning }}
+          />
           Morning
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: TIME_COLORS.afternoon }} />
+          <span
+            className="inline-block w-2.5 h-2.5 rounded-full"
+            style={{ background: TIME_COLORS.afternoon }}
+          />
           Afternoon
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="inline-block w-2.5 h-2.5 rounded-full" style={{ background: TIME_COLORS.evening }} />
+          <span
+            className="inline-block w-2.5 h-2.5 rounded-full"
+            style={{ background: TIME_COLORS.evening }}
+          />
           Evening
         </span>
       </div>

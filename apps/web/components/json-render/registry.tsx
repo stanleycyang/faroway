@@ -3,8 +3,17 @@
  * Maps catalog component IDs to Tailwind-styled React components
  */
 
-import React from 'react';
-import { MapPin, Clock, DollarSign, Star, Calendar, Utensils, Hotel, Plane } from 'lucide-react';
+import React from "react";
+import {
+  MapPin,
+  Clock,
+  DollarSign,
+  Star,
+  Calendar,
+  Utensils,
+  Hotel,
+  Plane,
+} from "lucide-react";
 
 export interface ComponentProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -69,7 +78,9 @@ export function RestaurantCard({ restaurant }: ComponentProps) {
           <Utensils className="w-5 h-5 text-orange-600" />
         </div>
         <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-gray-900 mb-1">{restaurant.name}</h4>
+          <h4 className="font-semibold text-gray-900 mb-1">
+            {restaurant.name}
+          </h4>
           {restaurant.cuisine && (
             <p className="text-sm text-gray-600 mb-2">{restaurant.cuisine}</p>
           )}
@@ -162,7 +173,9 @@ export function DaySummary({ day }: ComponentProps) {
           <p className="text-sm text-gray-600">{day.date}</p>
         </div>
       </div>
-      {day.title && <h4 className="font-semibold text-gray-900 mb-2">{day.title}</h4>}
+      {day.title && (
+        <h4 className="font-semibold text-gray-900 mb-2">{day.title}</h4>
+      )}
       {day.summary && <p className="text-sm text-gray-600">{day.summary}</p>}
     </div>
   );
@@ -206,21 +219,21 @@ export function FlightInfo({ flight }: ComponentProps) {
 // Component Registry Map
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const componentRegistry: Record<string, React.ComponentType<any>> = {
-  'activity-card': ActivityCard,
-  'restaurant-card': RestaurantCard,
-  'hotel-card': HotelCard,
-  'day-summary': DaySummary,
-  'flight-info': FlightInfo,
+  "activity-card": ActivityCard,
+  "restaurant-card": RestaurantCard,
+  "hotel-card": HotelCard,
+  "day-summary": DaySummary,
+  "flight-info": FlightInfo,
 };
 
 // Helper function to render from catalog
 export function renderComponent(componentId: string, props: ComponentProps) {
   const Component = componentRegistry[componentId];
-  
+
   if (!Component) {
     console.warn(`Component "${componentId}" not found in registry`);
     return null;
   }
-  
+
   return <Component {...props} />;
 }

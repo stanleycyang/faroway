@@ -1,11 +1,24 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import Link from 'next/link';
-import dynamic from 'next/dynamic';
-import Image from 'next/image';
-import { Loader2, AlertCircle, MapPin, RefreshCw, Sparkles, Clock, LogIn, Star, ExternalLink, Shield, ChevronUp, Ticket } from 'lucide-react';
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import dynamic from "next/dynamic";
+import Image from "next/image";
+import {
+  Loader2,
+  AlertCircle,
+  MapPin,
+  RefreshCw,
+  Sparkles,
+  Clock,
+  LogIn,
+  Star,
+  ExternalLink,
+  Shield,
+  ChevronUp,
+  Ticket,
+} from "lucide-react";
 
 /**
  * Error boundary that prevents a single broken itinerary day from crashing the whole page.
@@ -24,7 +37,10 @@ class DayErrorBoundary extends React.Component<
   }
 
   componentDidCatch(error: Error) {
-    console.warn(`[TripDetail] Day ${this.props.dayNumber} failed to render:`, error.message);
+    console.warn(
+      `[TripDetail] Day ${this.props.dayNumber} failed to render:`,
+      error.message,
+    );
   }
 
   render() {
@@ -38,17 +54,23 @@ class DayErrorBoundary extends React.Component<
     return this.props.children;
   }
 }
-import { TripHeader } from '@/components/trips/TripHeader';
-import { ItineraryDay } from '@/components/trips/ItineraryDay';
-import { SkeletonItineraryDay } from '@/components/trips/SkeletonItineraryDay';
-import { ShareButtons } from '@/components/ShareButtons';
-import { useTripGeneration, type SearchProgress } from '@/hooks/useTripGeneration';
-import type { GeneratedItinerary } from '@/lib/ai/types';
-import type { TripDay } from '@faroway/types';
+import { TripHeader } from "@/components/trips/TripHeader";
+import { ItineraryDay } from "@/components/trips/ItineraryDay";
+import { SkeletonItineraryDay } from "@/components/trips/SkeletonItineraryDay";
+import { ShareButtons } from "@/components/ShareButtons";
+import {
+  useTripGeneration,
+  type SearchProgress,
+} from "@/hooks/useTripGeneration";
+import type { GeneratedItinerary } from "@/lib/ai/types";
+import type { TripDay } from "@faroway/types";
 
 const ItineraryMap = dynamic(
-  () => import('@/components/trips/ItineraryMap').then(m => ({ default: m.ItineraryMap })),
-  { ssr: false }
+  () =>
+    import("@/components/trips/ItineraryMap").then((m) => ({
+      default: m.ItineraryMap,
+    })),
+  { ssr: false },
 );
 
 interface Trip {
@@ -60,7 +82,7 @@ interface Trip {
   travelers: number;
   preferences?: Record<string, unknown>;
   vibes?: string[];
-  status: 'draft' | 'generating' | 'generated' | 'completed' | 'failed';
+  status: "draft" | "generating" | "generated" | "completed" | "failed";
   search_id?: string;
   created_at: string;
   updated_at: string;
@@ -72,11 +94,36 @@ interface TripResponse {
 }
 
 const GENERATION_STEPS = [
-  { key: 'orchestrator', label: 'Analyzing', emoji: '🔍', description: 'Understanding your preferences' },
-  { key: 'hotels', label: 'Hotels', emoji: '🏨', description: 'Searching for the best hotels' },
-  { key: 'activities', label: 'Activities', emoji: '✨', description: 'Finding activities & attractions' },
-  { key: 'dining', label: 'Dining', emoji: '🍽️', description: 'Discovering restaurants' },
-  { key: 'aggregator', label: 'Composing', emoji: '📝', description: 'Crafting your itinerary' },
+  {
+    key: "orchestrator",
+    label: "Analyzing",
+    emoji: "🔍",
+    description: "Understanding your preferences",
+  },
+  {
+    key: "hotels",
+    label: "Hotels",
+    emoji: "🏨",
+    description: "Searching for the best hotels",
+  },
+  {
+    key: "activities",
+    label: "Activities",
+    emoji: "✨",
+    description: "Finding activities & attractions",
+  },
+  {
+    key: "dining",
+    label: "Dining",
+    emoji: "🍽️",
+    description: "Discovering restaurants",
+  },
+  {
+    key: "aggregator",
+    label: "Composing",
+    emoji: "📝",
+    description: "Crafting your itinerary",
+  },
 ];
 
 export default function TripDetailPage() {
@@ -92,7 +139,7 @@ export default function TripDetailPage() {
   const [showStickyBar, setShowStickyBar] = useState(false);
 
   // Determine if we should stream
-  const shouldStream = trip?.status === 'generating' && !!trip?.search_id;
+  const shouldStream = trip?.status === "generating" && !!trip?.search_id;
 
   // SSE progressive generation hook
   const generation = useTripGeneration({
@@ -110,10 +157,10 @@ export default function TripDetailPage() {
       const res = await fetch(`/api/trips/${tripId}`);
       if (!res.ok) {
         if (res.status === 401) {
-          router.push('/auth/login?redirectTo=/trips/' + tripId);
+          router.push("/auth/login?redirectTo=/trips/" + tripId);
           return;
         }
-        throw new Error('Failed to fetch trip');
+        throw new Error("Failed to fetch trip");
       }
       const data: TripResponse = await res.json();
       setTrip(data.trip);
@@ -122,7 +169,7 @@ export default function TripDetailPage() {
       }
       return data.trip;
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load trip');
+      setError(err instanceof Error ? err.message : "Failed to load trip");
       return null;
     } finally {
       setLoading(false);
@@ -139,14 +186,14 @@ export default function TripDetailPage() {
     const handleScroll = () => {
       setShowStickyBar(window.scrollY > 400);
     };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   // For trips in 'generating' state without a search_id (old workflow),
   // fall back to polling the generate endpoint
   useEffect(() => {
-    if (!trip || trip.status !== 'generating' || trip.search_id) {
+    if (!trip || trip.status !== "generating" || trip.search_id) {
       return;
     }
 
@@ -154,7 +201,7 @@ export default function TripDetailPage() {
       const res = await fetch(`/api/trips/${tripId}/generate`);
       if (res.ok) {
         const data = await res.json();
-        if (data.status === 'completed' || data.status === 'failed') {
+        if (data.status === "completed" || data.status === "failed") {
           clearInterval(interval);
           await fetchTrip();
         }
@@ -162,15 +209,17 @@ export default function TripDetailPage() {
     }, 3000);
 
     return () => clearInterval(interval);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- we intentionally depend on trip?.status and trip?.search_id, not the whole trip object
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- we intentionally depend on trip?.status and trip?.search_id, not the whole trip object
   }, [trip?.status, trip?.search_id, tripId, fetchTrip]);
 
   const handleShare = async () => {
     try {
       let url = shareUrl;
       if (!url) {
-        const res = await fetch(`/api/trips/${tripId}/share`, { method: 'POST' });
-        if (!res.ok) throw new Error('Failed to enable sharing');
+        const res = await fetch(`/api/trips/${tripId}/share`, {
+          method: "POST",
+        });
+        if (!res.ok) throw new Error("Failed to enable sharing");
         const data = await res.json();
         url = data.shareUrl;
         setShareUrl(url!);
@@ -183,17 +232,17 @@ export default function TripDetailPage() {
         });
       } else {
         await navigator.clipboard.writeText(url!);
-        alert('Share link copied to clipboard!');
+        alert("Share link copied to clipboard!");
       }
     } catch (err) {
-      if (err instanceof Error && err.name !== 'AbortError') {
-        console.error('Share failed:', err);
+      if (err instanceof Error && err.name !== "AbortError") {
+        console.error("Share failed:", err);
       }
     }
   };
 
   const handleExport = () => {
-    alert('Export feature coming soon!');
+    alert("Export feature coming soon!");
   };
 
   const handleRetry = async () => {
@@ -202,27 +251,27 @@ export default function TripDetailPage() {
     try {
       // Reset trip to draft
       await fetch(`/api/trips/${tripId}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'draft' }),
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: "draft" }),
       });
 
       // Trigger new generation
       const genRes = await fetch(`/api/trips/${tripId}/generate`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
       });
 
       if (!genRes.ok) {
         const data = await genRes.json().catch(() => ({}));
-        throw new Error(data.error || 'Failed to retry generation');
+        throw new Error(data.error || "Failed to retry generation");
       }
 
       // Refetch trip to pick up the new search_id
       await fetchTrip();
     } catch (err) {
-      console.error('Retry failed:', err);
-      setError(err instanceof Error ? err.message : 'Retry failed');
+      console.error("Retry failed:", err);
+      setError(err instanceof Error ? err.message : "Retry failed");
     }
   };
 
@@ -245,7 +294,9 @@ export default function TripDetailPage() {
       for (const slot of [day.morning, day.afternoon, day.evening]) {
         if (!slot) continue;
         if (Array.isArray(slot.activities)) {
-          count += slot.activities.filter((a) => a?.bookingInfo?.bookingUrl).length;
+          count += slot.activities.filter(
+            (a) => a?.bookingInfo?.bookingUrl,
+          ).length;
         }
       }
     }
@@ -270,11 +321,16 @@ export default function TripDetailPage() {
         if (!slot) continue;
         if (Array.isArray(slot.activities)) {
           for (const act of slot.activities) {
-            if (act?.estimatedCost?.amount) activities += act.estimatedCost.amount;
+            if (act?.estimatedCost?.amount)
+              activities += act.estimatedCost.amount;
           }
         }
         const slotRecord = slot as unknown as Record<string, unknown>;
-        const mealsList = Array.isArray(slot.meals) ? slot.meals : slotRecord.meal ? [slotRecord.meal as { estimatedCost?: { amount: number } }] : [];
+        const mealsList = Array.isArray(slot.meals)
+          ? slot.meals
+          : slotRecord.meal
+            ? [slotRecord.meal as { estimatedCost?: { amount: number } }]
+            : [];
         for (const meal of mealsList) {
           if (meal?.estimatedCost?.amount) dining += meal.estimatedCost.amount;
         }
@@ -292,7 +348,8 @@ export default function TripDetailPage() {
     if (!trip) return 3;
     const start = new Date(trip.start_date);
     const end = new Date(trip.end_date);
-    const diff = Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const diff =
+      Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     return Math.max(1, Math.min(diff, 14));
   }, [trip]);
 
@@ -302,7 +359,7 @@ export default function TripDetailPage() {
     return Array.from({ length: skeletonDayCount }, (_, i) => {
       const d = new Date(trip.start_date);
       d.setDate(d.getDate() + i);
-      return d.toISOString().split('T')[0];
+      return d.toISOString().split("T")[0];
     });
   }, [trip, skeletonDayCount]);
 
@@ -326,8 +383,13 @@ export default function TripDetailPage() {
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <AlertCircle className="w-8 h-8 text-red-600" />
           </div>
-          <h1 className="text-xl font-semibold text-gray-900 mb-2">Trip not found</h1>
-          <p className="text-gray-600 mb-6">{error || 'This trip may have been deleted or you may not have access to it.'}</p>
+          <h1 className="text-xl font-semibold text-gray-900 mb-2">
+            Trip not found
+          </h1>
+          <p className="text-gray-600 mb-6">
+            {error ||
+              "This trip may have been deleted or you may not have access to it."}
+          </p>
           <Link
             href="/dashboard"
             className="inline-flex items-center px-6 py-3 bg-primary text-white rounded-full font-semibold hover:bg-primary-600 transition-colors"
@@ -340,13 +402,21 @@ export default function TripDetailPage() {
   }
 
   // Determine display status
-  const isGenerating = trip.status === 'generating' || generation.isStreaming;
-  const isFailed = trip.status === 'failed' || !!generation.error;
-  const isComplete = trip.status === 'generated' || trip.status === 'completed' || generation.isComplete;
-  const tripStatus = isGenerating ? 'generating' : isFailed ? 'failed' : 'completed';
+  const isGenerating = trip.status === "generating" || generation.isStreaming;
+  const isFailed = trip.status === "failed" || !!generation.error;
+  const isComplete =
+    trip.status === "generated" ||
+    trip.status === "completed" ||
+    generation.isComplete;
+  const tripStatus = isGenerating
+    ? "generating"
+    : isFailed
+      ? "failed"
+      : "completed";
 
   // Progressive data: prefer DB itinerary when available, fall back to streamed days
-  const displayDays: TripDay[] | null = itinerary?.days || generation.days || null;
+  const displayDays: TripDay[] | null =
+    itinerary?.days || generation.days || null;
   const displayTopHotel = topHotel || generation.topHotel;
 
   return (
@@ -382,9 +452,12 @@ export default function TripDetailPage() {
                 <AlertCircle className="w-5 h-5 text-red-600" />
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-red-800 mb-1">Generation Failed</h3>
+                <h3 className="font-semibold text-red-800 mb-1">
+                  Generation Failed
+                </h3>
                 <p className="text-sm text-red-700 mb-4">
-                  {generation.error || 'Something went wrong while generating your itinerary. Please try again.'}
+                  {generation.error ||
+                    "Something went wrong while generating your itinerary. Please try again."}
                 </p>
                 <button
                   onClick={handleRetry}
@@ -399,28 +472,33 @@ export default function TripDetailPage() {
         )}
 
         {/* Progressive discovery badges during generation */}
-        {isGenerating && (generation.activitiesCount > 0 || generation.diningCount > 0) && (
-          <div className="flex flex-wrap gap-2 mb-6">
-            {generation.activitiesCount > 0 && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-200 animate-in fade-in slide-in-from-bottom-1 duration-300">
-                <Sparkles className="w-3.5 h-3.5" />
-                Found {generation.activitiesCount} activities
-              </span>
-            )}
-            {generation.diningCount > 0 && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-700 rounded-full text-xs font-bold border border-orange-200 animate-in fade-in slide-in-from-bottom-1 duration-300">
-                <Sparkles className="w-3.5 h-3.5" />
-                Found {generation.diningCount} restaurants
-              </span>
-            )}
-          </div>
-        )}
+        {isGenerating &&
+          (generation.activitiesCount > 0 || generation.diningCount > 0) && (
+            <div className="flex flex-wrap gap-2 mb-6">
+              {generation.activitiesCount > 0 && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-200 animate-in fade-in slide-in-from-bottom-1 duration-300">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Found {generation.activitiesCount} activities
+                </span>
+              )}
+              {generation.diningCount > 0 && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-700 rounded-full text-xs font-bold border border-orange-200 animate-in fade-in slide-in-from-bottom-1 duration-300">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Found {generation.diningCount} restaurants
+                </span>
+              )}
+            </div>
+          )}
 
         {/* Overview Section */}
         {itinerary?.overview && !isGenerating && (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-3">Trip Overview</h2>
-            <p className="text-gray-600 leading-relaxed">{itinerary.overview}</p>
+            <h2 className="text-lg font-bold text-gray-900 mb-3">
+              Trip Overview
+            </h2>
+            <p className="text-gray-600 leading-relaxed">
+              {itinerary.overview}
+            </p>
           </div>
         )}
 
@@ -429,7 +507,13 @@ export default function TripDetailPage() {
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
             <FeaturedHotelCard
               hotel={displayTopHotel}
-              nights={displayDays ? Math.max(0, displayDays.length - 1) : (skeletonDayCount > 0 ? skeletonDayCount - 1 : 0)}
+              nights={
+                displayDays
+                  ? Math.max(0, displayDays.length - 1)
+                  : skeletonDayCount > 0
+                    ? skeletonDayCount - 1
+                    : 0
+              }
             />
           </div>
         )}
@@ -445,11 +529,14 @@ export default function TripDetailPage() {
         {displayDays && displayDays.length > 0 ? (
           <div className="space-y-5">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">Your Itinerary</h2>
+              <h2 className="text-xl font-bold text-gray-900">
+                Your Itinerary
+              </h2>
               {bookableCount > 0 && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 text-primary-700 rounded-full text-xs font-bold">
                   <Ticket className="w-3.5 h-3.5" />
-                  {bookableCount} bookable experience{bookableCount > 1 ? 's' : ''}
+                  {bookableCount} bookable experience
+                  {bookableCount > 1 ? "s" : ""}
                 </span>
               )}
             </div>
@@ -457,7 +544,10 @@ export default function TripDetailPage() {
               <div
                 key={day.dayNumber || index}
                 className="animate-in fade-in slide-in-from-bottom-2 duration-500"
-                style={{ animationDelay: `${index * 150}ms`, animationFillMode: 'both' }}
+                style={{
+                  animationDelay: `${index * 150}ms`,
+                  animationFillMode: "both",
+                }}
               >
                 <DayErrorBoundary dayNumber={day.dayNumber || index + 1}>
                   <ItineraryDay
@@ -471,14 +561,18 @@ export default function TripDetailPage() {
                     totalEstimatedCost={day.totalEstimatedCost}
                     tips={day.tips}
                     defaultExpanded={true}
-                    hotel={index === 0 && displayTopHotel ? {
-                      name: displayTopHotel.name,
-                      starRating: displayTopHotel.starRating,
-                      pricePerNight: displayTopHotel.pricePerNight,
-                      amenities: displayTopHotel.amenities,
-                      affiliateUrl: displayTopHotel.affiliateUrl,
-                      image: displayTopHotel.images?.[0],
-                    } : undefined}
+                    hotel={
+                      index === 0 && displayTopHotel
+                        ? {
+                            name: displayTopHotel.name,
+                            starRating: displayTopHotel.starRating,
+                            pricePerNight: displayTopHotel.pricePerNight,
+                            amenities: displayTopHotel.amenities,
+                            affiliateUrl: displayTopHotel.affiliateUrl,
+                            image: displayTopHotel.images?.[0],
+                          }
+                        : undefined
+                    }
                   />
                 </DayErrorBoundary>
               </div>
@@ -492,7 +586,10 @@ export default function TripDetailPage() {
               <div
                 key={i}
                 className="animate-in fade-in slide-in-from-bottom-2 duration-500"
-                style={{ animationDelay: `${i * 100}ms`, animationFillMode: 'both' }}
+                style={{
+                  animationDelay: `${i * 100}ms`,
+                  animationFillMode: "both",
+                }}
               >
                 <SkeletonItineraryDay
                   dayNumber={i + 1}
@@ -514,11 +611,15 @@ export default function TripDetailPage() {
         {itinerary?.generalTips && itinerary.generalTips.length > 0 && (
           <div className="mt-6 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl p-6 border border-primary-100/50">
             <h3 className="font-bold text-primary-800 mb-3 flex items-center gap-2">
-              <span className="text-lg">💡</span> Travel Tips for {trip.destination}
+              <span className="text-lg">💡</span> Travel Tips for{" "}
+              {trip.destination}
             </h3>
             <ul className="space-y-2">
               {itinerary.generalTips.map((tip, i) => (
-                <li key={i} className="text-sm text-primary-700 flex items-start gap-2">
+                <li
+                  key={i}
+                  className="text-sm text-primary-700 flex items-start gap-2"
+                >
                   <span className="text-primary-400 mt-0.5">•</span>
                   <span>{tip}</span>
                 </li>
@@ -552,20 +653,26 @@ export default function TripDetailPage() {
         )}
 
         {/* Save Trip Nudge for anonymous users */}
-        {isComplete && !trip.user_id && (
-          <SaveTripNudge tripId={trip.id} />
-        )}
+        {isComplete && !trip.user_id && <SaveTripNudge tripId={trip.id} />}
 
         {/* Share This Trip */}
         {isComplete && (displayDays || itinerary) && (
           <div className="mt-8 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl p-6 sm:p-8 text-center border border-primary-100/30">
-            <h3 className="font-bold text-gray-900 mb-2 text-lg">Share Your Adventure</h3>
-            <p className="text-sm text-gray-600 mb-4">Let friends and family know about your upcoming trip!</p>
+            <h3 className="font-bold text-gray-900 mb-2 text-lg">
+              Share Your Adventure
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Let friends and family know about your upcoming trip!
+            </p>
             <ShareButtons
               url={shareUrl || undefined}
               title={`My ${trip.destination} Trip Itinerary`}
               description={`Check out my AI-generated itinerary to ${trip.destination}! Created with Faroway.`}
-              hashtags={['Faroway', 'Travel', trip.destination.replace(/\s+/g, '')]}
+              hashtags={[
+                "Faroway",
+                "Travel",
+                trip.destination.replace(/\s+/g, ""),
+              ]}
               className="justify-center"
             />
             {!shareUrl && (
@@ -584,7 +691,9 @@ export default function TripDetailPage() {
       {isComplete && bookableCount > 0 && (
         <div
           className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 ${
-            showStickyBar ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'
+            showStickyBar
+              ? "translate-y-0 opacity-100"
+              : "translate-y-full opacity-0"
           }`}
         >
           <div className="bg-white/95 backdrop-blur-lg border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
@@ -595,13 +704,16 @@ export default function TripDetailPage() {
                 </div>
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-gray-900 truncate">
-                    {bookableCount} experience{bookableCount > 1 ? 's' : ''} to book
+                    {bookableCount} experience{bookableCount > 1 ? "s" : ""} to
+                    book
                   </p>
-                  <p className="text-xs text-gray-500">Secure your spots before they fill up</p>
+                  <p className="text-xs text-gray-500">
+                    Secure your spots before they fill up
+                  </p>
                 </div>
               </div>
               <button
-                onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
                 className="flex-shrink-0 inline-flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-primary to-primary-600 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg hover:shadow-primary/25 transition-all active:scale-[0.98]"
               >
                 <ChevronUp className="w-4 h-4" />
@@ -631,24 +743,30 @@ interface FeaturedHotel {
   amenities?: string[];
 }
 
-function FeaturedHotelCard({ hotel, nights }: { hotel: FeaturedHotel; nights: number }) {
+function FeaturedHotelCard({
+  hotel,
+  nights,
+}: {
+  hotel: FeaturedHotel;
+  nights: number;
+}) {
   const handleClick = () => {
     if (!hotel.affiliateUrl) return;
 
-    fetch('/api/track/click', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    fetch("/api/track/click", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        itemType: 'hotel',
+        itemType: "hotel",
         itemId: hotel.id || hotel.name,
         itemName: hotel.name,
-        affiliatePartner: hotel.affiliatePartner || 'booking',
+        affiliatePartner: hotel.affiliatePartner || "booking",
         affiliateUrl: hotel.affiliateUrl,
-        source: 'itinerary',
+        source: "itinerary",
       }),
     }).catch(() => {});
 
-    window.open(hotel.affiliateUrl, '_blank', 'noopener,noreferrer');
+    window.open(hotel.affiliateUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -669,7 +787,9 @@ function FeaturedHotelCard({ hotel, nights }: { hotel: FeaturedHotel; nights: nu
           </div>
           {/* Price overlay on image */}
           <div className="absolute bottom-4 right-4 text-right">
-            <div className="text-3xl font-black text-white drop-shadow-lg">${hotel.pricePerNight}</div>
+            <div className="text-3xl font-black text-white drop-shadow-lg">
+              ${hotel.pricePerNight}
+            </div>
             <div className="text-xs text-white/80 font-medium">per night</div>
           </div>
         </div>
@@ -681,15 +801,19 @@ function FeaturedHotelCard({ hotel, nights }: { hotel: FeaturedHotel; nights: nu
             <div className="flex items-center gap-2 mt-1.5">
               {hotel.starRating && (
                 <span className="text-yellow-500 text-sm">
-                  {'★'.repeat(Math.min(5, hotel.starRating))}
+                  {"★".repeat(Math.min(5, hotel.starRating))}
                 </span>
               )}
               {hotel.userRating && (
                 <span className="flex items-center gap-1 text-sm">
                   <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
-                  <span className="font-bold text-gray-700">{hotel.userRating.toFixed(1)}</span>
+                  <span className="font-bold text-gray-700">
+                    {hotel.userRating.toFixed(1)}
+                  </span>
                   {hotel.reviewCount && (
-                    <span className="text-gray-400 text-xs">({hotel.reviewCount.toLocaleString()} reviews)</span>
+                    <span className="text-gray-400 text-xs">
+                      ({hotel.reviewCount.toLocaleString()} reviews)
+                    </span>
                   )}
                 </span>
               )}
@@ -697,20 +821,27 @@ function FeaturedHotelCard({ hotel, nights }: { hotel: FeaturedHotel; nights: nu
           </div>
           {!hotel.images?.[0] && (
             <div className="text-right flex-shrink-0">
-              <div className="text-2xl font-black text-gray-900">${hotel.pricePerNight}</div>
+              <div className="text-2xl font-black text-gray-900">
+                ${hotel.pricePerNight}
+              </div>
               <div className="text-xs text-gray-500">per night</div>
             </div>
           )}
         </div>
 
         {hotel.description && (
-          <p className="text-sm text-gray-600 mb-4 leading-relaxed line-clamp-2">{hotel.description}</p>
+          <p className="text-sm text-gray-600 mb-4 leading-relaxed line-clamp-2">
+            {hotel.description}
+          </p>
         )}
 
         {hotel.amenities && hotel.amenities.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-5">
             {hotel.amenities.slice(0, 6).map((amenity: string, i: number) => (
-              <span key={i} className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs bg-gray-50 text-gray-600 font-medium border border-gray-100">
+              <span
+                key={i}
+                className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs bg-gray-50 text-gray-600 font-medium border border-gray-100"
+              >
                 {amenity}
               </span>
             ))}
@@ -720,7 +851,13 @@ function FeaturedHotelCard({ hotel, nights }: { hotel: FeaturedHotel; nights: nu
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-gray-100">
           <div className="text-sm text-gray-500">
             {nights > 0 && (
-              <span>Total: <span className="font-black text-lg text-gray-900">${hotel.pricePerNight * nights}</span> for {nights} night{nights !== 1 ? 's' : ''}</span>
+              <span>
+                Total:{" "}
+                <span className="font-black text-lg text-gray-900">
+                  ${hotel.pricePerNight * nights}
+                </span>{" "}
+                for {nights} night{nights !== 1 ? "s" : ""}
+              </span>
             )}
           </div>
           {hotel.affiliateUrl && (
@@ -739,15 +876,45 @@ function FeaturedHotelCard({ hotel, nights }: { hotel: FeaturedHotel; nights: nu
         {hotel.affiliateUrl && (
           <div className="flex items-center justify-center gap-4 mt-3 text-[11px] text-gray-500">
             <span className="inline-flex items-center gap-1">
-              <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+              <svg
+                className="w-3 h-3 text-green-500"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clipRule="evenodd"
+                />
+              </svg>
               Best price guarantee
             </span>
             <span className="inline-flex items-center gap-1">
-              <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+              <svg
+                className="w-3 h-3 text-green-500"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clipRule="evenodd"
+                />
+              </svg>
               Free cancellation
             </span>
             <span className="inline-flex items-center gap-1">
-              <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+              <svg
+                className="w-3 h-3 text-green-500"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                  clipRule="evenodd"
+                />
+              </svg>
               No hidden fees
             </span>
           </div>
@@ -763,12 +930,17 @@ function BudgetSummary({
   breakdown,
   currency,
 }: {
-  breakdown: { accommodation: number; activities: number; dining: number; total: number };
+  breakdown: {
+    accommodation: number;
+    activities: number;
+    dining: number;
+    total: number;
+  };
   currency: string;
 }) {
   const formatCost = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
       currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
@@ -776,10 +948,28 @@ function BudgetSummary({
   };
 
   const categories = [
-    { label: 'Accommodation', amount: breakdown.accommodation, color: 'bg-blue-500', bgColor: 'bg-blue-50 text-blue-700', icon: '🏨' },
-    { label: 'Activities & Tours', amount: breakdown.activities, color: 'bg-emerald-500', bgColor: 'bg-emerald-50 text-emerald-700', icon: '🎯' },
-    { label: 'Dining', amount: breakdown.dining, color: 'bg-orange-500', bgColor: 'bg-orange-50 text-orange-700', icon: '🍽️' },
-  ].filter(c => c.amount > 0);
+    {
+      label: "Accommodation",
+      amount: breakdown.accommodation,
+      color: "bg-blue-500",
+      bgColor: "bg-blue-50 text-blue-700",
+      icon: "🏨",
+    },
+    {
+      label: "Activities & Tours",
+      amount: breakdown.activities,
+      color: "bg-emerald-500",
+      bgColor: "bg-emerald-50 text-emerald-700",
+      icon: "🎯",
+    },
+    {
+      label: "Dining",
+      amount: breakdown.dining,
+      color: "bg-orange-500",
+      bgColor: "bg-orange-50 text-orange-700",
+      icon: "🍽️",
+    },
+  ].filter((c) => c.amount > 0);
 
   return (
     <div className="mt-6 bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
@@ -802,16 +992,22 @@ function BudgetSummary({
           <div key={cat.label} className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <span className="text-lg">{cat.icon}</span>
-              <span className="text-sm text-gray-600 font-medium">{cat.label}</span>
+              <span className="text-sm text-gray-600 font-medium">
+                {cat.label}
+              </span>
             </div>
-            <span className="text-sm font-bold text-gray-900">{formatCost(cat.amount)}</span>
+            <span className="text-sm font-bold text-gray-900">
+              {formatCost(cat.amount)}
+            </span>
           </div>
         ))}
       </div>
 
       <div className="mt-5 pt-5 border-t border-gray-100 flex items-center justify-between">
         <span className="font-bold text-gray-900">Estimated Total</span>
-        <span className="text-2xl font-black text-gray-900">{formatCost(breakdown.total)}</span>
+        <span className="text-2xl font-black text-gray-900">
+          {formatCost(breakdown.total)}
+        </span>
       </div>
     </div>
   );
@@ -826,7 +1022,12 @@ interface AgentProgressProps {
   searchProgress: SearchProgress | null;
 }
 
-function AgentProgress({ step, progress, message, searchProgress }: AgentProgressProps) {
+function AgentProgress({
+  step,
+  progress,
+  message,
+  searchProgress,
+}: AgentProgressProps) {
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
       <div className="flex items-center gap-4 mb-4">
@@ -834,7 +1035,9 @@ function AgentProgress({ step, progress, message, searchProgress }: AgentProgres
           <Sparkles className="w-6 h-6 text-primary animate-pulse" />
         </div>
         <div>
-          <h3 className="font-semibold text-gray-900">Creating Your Itinerary</h3>
+          <h3 className="font-semibold text-gray-900">
+            Creating Your Itinerary
+          </h3>
           <p className="text-sm text-gray-600">{message}</p>
         </div>
       </div>
@@ -857,26 +1060,34 @@ function AgentProgress({ step, progress, message, searchProgress }: AgentProgres
       <div className="grid grid-cols-5 gap-2">
         {GENERATION_STEPS.map((genStep) => {
           const agentStatus = searchProgress?.[genStep.key];
-          const isActive = agentStatus === 'searching';
-          const isDone = agentStatus === 'done';
+          const isActive = agentStatus === "searching";
+          const isDone = agentStatus === "done";
 
           return (
             <div
               key={genStep.key}
               className={`text-center p-2 rounded-lg transition-colors ${
-                isActive ? 'bg-primary-50 ring-1 ring-primary-200' :
-                isDone ? 'bg-green-50' :
-                'bg-gray-50'
+                isActive
+                  ? "bg-primary-50 ring-1 ring-primary-200"
+                  : isDone
+                    ? "bg-green-50"
+                    : "bg-gray-50"
               }`}
             >
-              <div className={`text-lg mb-1 ${isActive ? 'animate-bounce' : ''}`}>
-                {isDone ? '✅' : genStep.emoji}
+              <div
+                className={`text-lg mb-1 ${isActive ? "animate-bounce" : ""}`}
+              >
+                {isDone ? "✅" : genStep.emoji}
               </div>
-              <p className={`text-xs font-medium ${
-                isActive ? 'text-primary-700' :
-                isDone ? 'text-green-700' :
-                'text-gray-500'
-              }`}>
+              <p
+                className={`text-xs font-medium ${
+                  isActive
+                    ? "text-primary-700"
+                    : isDone
+                      ? "text-green-700"
+                      : "text-gray-500"
+                }`}
+              >
                 {genStep.label}
               </p>
             </div>
@@ -899,9 +1110,12 @@ function SaveTripNudge({ tripId }: { tripId: string }) {
           <Clock className="w-5 h-5 text-amber-600" />
         </div>
         <div className="flex-1">
-          <h3 className="font-semibold text-amber-800 mb-1">Save this trip permanently</h3>
+          <h3 className="font-semibold text-amber-800 mb-1">
+            Save this trip permanently
+          </h3>
           <p className="text-sm text-amber-700 mb-4">
-            Sign up to keep this trip forever. Anonymous trips expire after 7 days.
+            Sign up to keep this trip forever. Anonymous trips expire after 7
+            days.
           </p>
           <div className="flex flex-wrap gap-3">
             <Link
@@ -933,9 +1147,12 @@ function EmptyItinerary({ destination }: { destination: string }) {
       <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
         <MapPin className="w-8 h-8 text-gray-400" />
       </div>
-      <h3 className="text-lg font-semibold text-gray-900 mb-2">No Itinerary Yet</h3>
+      <h3 className="text-lg font-semibold text-gray-900 mb-2">
+        No Itinerary Yet
+      </h3>
       <p className="text-gray-600 mb-6 max-w-md mx-auto">
-        Your trip to {destination} doesn&apos;t have an itinerary yet. Generate one with our AI planner!
+        Your trip to {destination} doesn&apos;t have an itinerary yet. Generate
+        one with our AI planner!
       </p>
       <Link
         href={`/create?destination=${encodeURIComponent(destination)}`}

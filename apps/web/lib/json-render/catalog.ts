@@ -3,9 +3,9 @@
  * Defines travel UI components for generative UI
  */
 
-import { defineCatalog } from '@json-render/core';
-import { schema } from '@json-render/react';
-import { z } from 'zod/v4';
+import { defineCatalog } from "@json-render/core";
+import { schema } from "@json-render/react";
+import { z } from "zod/v4";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const catalog = (defineCatalog as any)(schema, {
@@ -17,7 +17,7 @@ export const catalog = (defineCatalog as any)(schema, {
         date: z.string(),
         title: z.string(),
       }),
-      description: 'A day in the itinerary with a day number, date, and title',
+      description: "A day in the itinerary with a day number, date, and title",
     },
 
     // Hotel/Accommodation
@@ -29,7 +29,7 @@ export const catalog = (defineCatalog as any)(schema, {
         image: z.string().optional(),
         bookingUrl: z.string().optional(),
       }),
-      description: 'Display a hotel with name, rating, price, and booking link',
+      description: "Display a hotel with name, rating, price, and booking link",
     },
 
     // Activities
@@ -43,7 +43,7 @@ export const catalog = (defineCatalog as any)(schema, {
         image: z.string().optional(),
         bookingUrl: z.string().optional(),
       }),
-      description: 'Display an activity or experience with details and booking',
+      description: "Display an activity or experience with details and booking",
     },
 
     // Dining
@@ -51,12 +51,13 @@ export const catalog = (defineCatalog as any)(schema, {
       props: z.object({
         name: z.string(),
         cuisine: z.string(),
-        priceLevel: z.enum(['$', '$$', '$$$', '$$$$']),
+        priceLevel: z.enum(["$", "$$", "$$$", "$$$$"]),
         rating: z.number().min(0).max(5).optional(),
         image: z.string().optional(),
         reservationUrl: z.string().optional(),
       }),
-      description: 'Display a restaurant with cuisine, price level, and reservation link',
+      description:
+        "Display a restaurant with cuisine, price level, and reservation link",
     },
 
     // Interactive Elements
@@ -66,17 +67,18 @@ export const catalog = (defineCatalog as any)(schema, {
         url: z.string(),
         provider: z.string().optional(),
       }),
-      description: 'A button to book or reserve via an external provider',
+      description: "A button to book or reserve via an external provider",
     },
 
     // Display Components
     PriceTag: {
       props: z.object({
         amount: z.number(),
-        currency: z.string().default('USD'),
-        period: z.enum(['night', 'person', 'total', 'hour']).optional(),
+        currency: z.string().default("USD"),
+        period: z.enum(["night", "person", "total", "hour"]).optional(),
       }),
-      description: 'Display a price with currency and optional period (per night, per person, etc.)',
+      description:
+        "Display a price with currency and optional period (per night, per person, etc.)",
     },
 
     RatingDisplay: {
@@ -84,7 +86,7 @@ export const catalog = (defineCatalog as any)(schema, {
         rating: z.number().min(0).max(5),
         reviewCount: z.number().optional(),
       }),
-      description: 'Display a star rating with optional review count',
+      description: "Display a star rating with optional review count",
     },
 
     MapMarker: {
@@ -93,7 +95,7 @@ export const catalog = (defineCatalog as any)(schema, {
         lng: z.number(),
         label: z.string(),
       }),
-      description: 'A map marker for a location with coordinates and label',
+      description: "A map marker for a location with coordinates and label",
     },
 
     // Layout Components
@@ -101,14 +103,14 @@ export const catalog = (defineCatalog as any)(schema, {
       props: z.object({
         title: z.string(),
       }),
-      description: 'A section container with a title',
+      description: "A section container with a title",
     },
 
     Text: {
       props: z.object({
         content: z.string(),
       }),
-      description: 'Display text content',
+      description: "Display text content",
     },
 
     Image: {
@@ -116,18 +118,18 @@ export const catalog = (defineCatalog as any)(schema, {
         url: z.string(),
         alt: z.string(),
       }),
-      description: 'Display an image with alt text',
+      description: "Display an image with alt text",
     },
   },
   actions: {
     trackClick: {
-      description: 'Track affiliate click for booking/reservation links',
+      description: "Track affiliate click for booking/reservation links",
     },
     saveToTrip: {
-      description: 'Save an item (hotel/activity/restaurant) to the trip',
+      description: "Save an item (hotel/activity/restaurant) to the trip",
     },
     shareItinerary: {
-      description: 'Share the itinerary via link or social media',
+      description: "Share the itinerary via link or social media",
     },
   },
 });

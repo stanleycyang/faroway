@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { ServerCrash, Home, RefreshCw } from 'lucide-react'
+import Link from "next/link";
+import { ServerCrash, Home, RefreshCw } from "lucide-react";
 
 export default function InternalServerError() {
   return (
@@ -21,7 +21,8 @@ export default function InternalServerError() {
           Server Error
         </h2>
         <p className="text-gray-600 mb-8 max-w-md mx-auto">
-          We&apos;re experiencing some technical difficulties. Our team has been notified and is working on a fix.
+          We&apos;re experiencing some technical difficulties. Our team has been
+          notified and is working on a fix.
         </p>
 
         {/* Action Buttons */}
@@ -44,7 +45,7 @@ export default function InternalServerError() {
 
         {/* Support Link */}
         <p className="mt-8 text-sm text-gray-500">
-          If the problem persists,{' '}
+          If the problem persists,{" "}
           <a
             href="mailto:support@faroway.ai"
             className="text-primary hover:text-primary-600 font-medium underline"
@@ -54,5 +55,5 @@ export default function InternalServerError() {
         </p>
       </div>
     </div>
-  )
+  );
 }

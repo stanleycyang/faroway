@@ -1,34 +1,35 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Shield, Clock, Info, AlertTriangle } from 'lucide-react';
-import { getAllGuides } from '@/lib/destination-guides';
+import { useState } from "react";
+import { Shield, Clock, Info, AlertTriangle } from "lucide-react";
+import { getAllGuides } from "@/lib/destination-guides";
 import {
   passportCountries,
   getVisaInfo,
   visaStatusConfig,
   type VisaStatus,
-} from '@/lib/tools/visa-data';
-import { ToolHero } from '@/components/tools/ToolHero';
-import { ToolCTA } from '@/components/tools/ToolCTA';
-import { RelatedTools } from '@/components/tools/RelatedTools';
+} from "@/lib/tools/visa-data";
+import { ToolHero } from "@/components/tools/ToolHero";
+import { ToolCTA } from "@/components/tools/ToolCTA";
+import { RelatedTools } from "@/components/tools/RelatedTools";
 
 const guides = getAllGuides();
 
 const STATUS_ICONS: Record<VisaStatus, typeof Shield> = {
-  'visa-free': Shield,
-  'visa-on-arrival': Clock,
-  'e-visa': Info,
-  'visa-required': AlertTriangle,
+  "visa-free": Shield,
+  "visa-on-arrival": Clock,
+  "e-visa": Info,
+  "visa-required": AlertTriangle,
 };
 
 export function VisaCheckerClient() {
-  const [passportCode, setPassportCode] = useState('');
-  const [destinationSlug, setDestinationSlug] = useState('');
+  const [passportCode, setPassportCode] = useState("");
+  const [destinationSlug, setDestinationSlug] = useState("");
 
-  const visaInfo = passportCode && destinationSlug
-    ? getVisaInfo(passportCode, destinationSlug)
-    : null;
+  const visaInfo =
+    passportCode && destinationSlug
+      ? getVisaInfo(passportCode, destinationSlug)
+      : null;
 
   const destination = guides.find((g) => g.slug === destinationSlug);
   const passport = passportCountries.find((p) => p.code === passportCode);
@@ -84,19 +85,27 @@ export function VisaCheckerClient() {
         {/* Result Card */}
         {visaInfo && destination && passport && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
-            <div className={`rounded-2xl border-2 ${visaStatusConfig[visaInfo.status].border} ${visaStatusConfig[visaInfo.status].bg} p-6 mb-6`}>
+            <div
+              className={`rounded-2xl border-2 ${visaStatusConfig[visaInfo.status].border} ${visaStatusConfig[visaInfo.status].bg} p-6 mb-6`}
+            >
               {/* Status Badge */}
               <div className="flex items-center gap-3 mb-4">
                 {(() => {
                   const StatusIcon = STATUS_ICONS[visaInfo.status];
                   return (
-                    <div className={`w-12 h-12 rounded-xl ${visaStatusConfig[visaInfo.status].bg} border ${visaStatusConfig[visaInfo.status].border} flex items-center justify-center`}>
-                      <StatusIcon className={`w-6 h-6 ${visaStatusConfig[visaInfo.status].color}`} />
+                    <div
+                      className={`w-12 h-12 rounded-xl ${visaStatusConfig[visaInfo.status].bg} border ${visaStatusConfig[visaInfo.status].border} flex items-center justify-center`}
+                    >
+                      <StatusIcon
+                        className={`w-6 h-6 ${visaStatusConfig[visaInfo.status].color}`}
+                      />
                     </div>
                   );
                 })()}
                 <div>
-                  <span className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${visaStatusConfig[visaInfo.status].color} ${visaStatusConfig[visaInfo.status].bg} border ${visaStatusConfig[visaInfo.status].border}`}>
+                  <span
+                    className={`inline-block px-3 py-1 rounded-full text-sm font-semibold ${visaStatusConfig[visaInfo.status].color} ${visaStatusConfig[visaInfo.status].bg} border ${visaStatusConfig[visaInfo.status].border}`}
+                  >
                     {visaStatusConfig[visaInfo.status].label}
                   </span>
                 </div>
@@ -111,8 +120,12 @@ export function VisaCheckerClient() {
                 <div className="flex items-start gap-3">
                   <Clock className="w-4 h-4 text-slate-500 mt-0.5 shrink-0" />
                   <div>
-                    <p className="text-sm font-medium text-slate-900">Stay Duration</p>
-                    <p className="text-sm text-slate-600">{visaInfo.duration}</p>
+                    <p className="text-sm font-medium text-slate-900">
+                      Stay Duration
+                    </p>
+                    <p className="text-sm text-slate-600">
+                      {visaInfo.duration}
+                    </p>
                   </div>
                 </div>
 
@@ -120,7 +133,9 @@ export function VisaCheckerClient() {
                   <div className="flex items-start gap-3">
                     <Info className="w-4 h-4 text-slate-500 mt-0.5 shrink-0" />
                     <div>
-                      <p className="text-sm font-medium text-slate-900">Notes</p>
+                      <p className="text-sm font-medium text-slate-900">
+                        Notes
+                      </p>
                       <p className="text-sm text-slate-600">{visaInfo.notes}</p>
                     </div>
                   </div>
@@ -131,9 +146,11 @@ export function VisaCheckerClient() {
             {/* Disclaimer */}
             <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
               <p className="text-xs text-slate-500 leading-relaxed">
-                <strong>Disclaimer:</strong> Visa requirements change frequently. Always verify with your
-                country&apos;s embassy or the destination&apos;s immigration authority before traveling. This
-                tool provides general guidance only and should not be relied upon as legal advice.
+                <strong>Disclaimer:</strong> Visa requirements change
+                frequently. Always verify with your country&apos;s embassy or
+                the destination&apos;s immigration authority before traveling.
+                This tool provides general guidance only and should not be
+                relied upon as legal advice.
               </p>
             </div>
           </div>

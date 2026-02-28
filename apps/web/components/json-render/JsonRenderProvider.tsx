@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { componentRegistry } from './registry';
+import React from "react";
+import { componentRegistry } from "./registry";
 
 interface JsonRenderProviderProps {
   children: React.ReactNode;
@@ -11,7 +11,9 @@ interface JsonRenderProviderProps {
  * Provider component for json-render integration
  * Wraps the app and provides access to the component registry
  */
-export default function JsonRenderProvider({ children }: JsonRenderProviderProps) {
+export default function JsonRenderProvider({
+  children,
+}: JsonRenderProviderProps) {
   return <>{children}</>;
 }
 

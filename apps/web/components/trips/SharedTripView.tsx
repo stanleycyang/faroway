@@ -1,12 +1,12 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { Sparkles } from 'lucide-react';
-import { TripHeader } from '@/components/trips/TripHeader';
-import { ItineraryDay } from '@/components/trips/ItineraryDay';
-import { ShareButtons } from '@/components/ShareButtons';
-import type { TripDay } from '@/lib/ai/types';
+import React from "react";
+import Link from "next/link";
+import { Sparkles } from "lucide-react";
+import { TripHeader } from "@/components/trips/TripHeader";
+import { ItineraryDay } from "@/components/trips/ItineraryDay";
+import { ShareButtons } from "@/components/ShareButtons";
+import type { TripDay } from "@/lib/ai/types";
 
 interface SharedItinerary {
   days: TripDay[];
@@ -42,9 +42,10 @@ export function SharedTripView({
   itinerary,
   shareToken,
 }: SharedTripViewProps) {
-  const baseUrl = typeof window !== 'undefined'
-    ? window.location.origin
-    : 'https://www.faroway.ai';
+  const baseUrl =
+    typeof window !== "undefined"
+      ? window.location.origin
+      : "https://www.faroway.ai";
   const shareUrl = `${baseUrl}/s/${shareToken}`;
 
   return (
@@ -82,15 +83,21 @@ export function SharedTripView({
         {/* Overview */}
         {itinerary?.overview && (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-3">Trip Overview</h2>
-            <p className="text-gray-600 leading-relaxed">{itinerary.overview}</p>
+            <h2 className="text-lg font-bold text-gray-900 mb-3">
+              Trip Overview
+            </h2>
+            <p className="text-gray-600 leading-relaxed">
+              {itinerary.overview}
+            </p>
           </div>
         )}
 
         {/* Day-by-Day Itinerary */}
         {itinerary?.days && itinerary.days.length > 0 && (
           <div className="space-y-5">
-            <h2 className="text-xl font-bold text-gray-900">Day-by-Day Itinerary</h2>
+            <h2 className="text-xl font-bold text-gray-900">
+              Day-by-Day Itinerary
+            </h2>
             {itinerary.days.map((day) => (
               <ItineraryDay
                 key={day.dayNumber}
@@ -117,7 +124,10 @@ export function SharedTripView({
             </h3>
             <ul className="space-y-2">
               {itinerary.generalTips.map((tip, i) => (
-                <li key={i} className="text-sm text-primary-700 flex items-start gap-2">
+                <li
+                  key={i}
+                  className="text-sm text-primary-700 flex items-start gap-2"
+                >
                   <span className="text-primary-400 mt-0.5">•</span>
                   <span>{tip}</span>
                 </li>
@@ -147,13 +157,17 @@ export function SharedTripView({
 
         {/* Share Section */}
         <div className="mt-8 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl p-6 sm:p-8 text-center border border-primary-100/30">
-          <h3 className="font-bold text-gray-900 mb-2 text-lg">📤 Share This Trip</h3>
-          <p className="text-sm text-gray-600 mb-4">Know someone who&apos;d love this itinerary? Spread the word!</p>
+          <h3 className="font-bold text-gray-900 mb-2 text-lg">
+            📤 Share This Trip
+          </h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Know someone who&apos;d love this itinerary? Spread the word!
+          </p>
           <ShareButtons
             url={shareUrl}
             title={`${destination} Trip Itinerary`}
-            description={`Check out this ${itinerary?.days?.length || ''}-day AI-generated itinerary to ${destination}! Created with Faroway.`}
-            hashtags={['Faroway', 'Travel', destination.replace(/\s+/g, '')]}
+            description={`Check out this ${itinerary?.days?.length || ""}-day AI-generated itinerary to ${destination}! Created with Faroway.`}
+            hashtags={["Faroway", "Travel", destination.replace(/\s+/g, "")]}
             className="justify-center"
           />
         </div>
@@ -163,14 +177,16 @@ export function SharedTripView({
           {/* Decorative glow */}
           <div className="absolute -top-20 -right-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
           <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
-          
+
           <div className="relative">
             <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-5 backdrop-blur-sm shadow-lg">
               <Sparkles className="w-8 h-8 text-white" />
             </div>
             <h3 className="text-2xl font-black mb-3">Create Your Own Trip</h3>
             <p className="text-white/80 mb-6 max-w-md mx-auto leading-relaxed">
-              Plan your perfect trip in 60 seconds with our AI-powered travel planner. Get personalized itineraries, hotel picks, and bookable experiences.
+              Plan your perfect trip in 60 seconds with our AI-powered travel
+              planner. Get personalized itineraries, hotel picks, and bookable
+              experiences.
             </p>
             <Link
               href="/create"

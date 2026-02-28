@@ -1,9 +1,13 @@
-import { getAllPosts } from '@/lib/blog';
+import { getAllPosts } from "@/lib/blog";
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.faroway.ai';
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
 function escapeXml(s: string) {
-  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
 }
 
 export async function GET() {
@@ -19,9 +23,9 @@ export async function GET() {
       <pubDate>${new Date(p.date).toUTCString()}</pubDate>
       <category>${escapeXml(p.category)}</category>
       <author>${escapeXml(p.author.name)}</author>
-    </item>`
+    </item>`,
     )
-    .join('\n');
+    .join("\n");
 
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
@@ -38,8 +42,8 @@ ${items}
 
   return new Response(xml, {
     headers: {
-      'Content-Type': 'application/xml; charset=utf-8',
-      'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+      "Content-Type": "application/xml; charset=utf-8",
+      "Cache-Control": "public, max-age=3600, s-maxage=3600",
     },
   });
 }

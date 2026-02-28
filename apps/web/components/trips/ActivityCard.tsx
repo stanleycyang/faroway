@@ -1,8 +1,18 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Image from 'next/image';
-import { MapPin, Clock, DollarSign, ExternalLink, Utensils, Star, Shield, Zap, TrendingUp } from 'lucide-react';
+import React from "react";
+import Image from "next/image";
+import {
+  MapPin,
+  Clock,
+  DollarSign,
+  ExternalLink,
+  Utensils,
+  Star,
+  Shield,
+  Zap,
+  TrendingUp,
+} from "lucide-react";
 
 export interface Activity {
   id: string;
@@ -13,8 +23,14 @@ export interface Activity {
     amount: number;
     currency: string;
   };
-  timeOfDay: 'morning' | 'afternoon' | 'evening';
-  category: 'sightseeing' | 'adventure' | 'cultural' | 'relaxation' | 'entertainment' | 'shopping';
+  timeOfDay: "morning" | "afternoon" | "evening";
+  category:
+    | "sightseeing"
+    | "adventure"
+    | "cultural"
+    | "relaxation"
+    | "entertainment"
+    | "shopping";
   location: {
     name: string;
     address?: string;
@@ -48,7 +64,7 @@ export interface Restaurant {
     currency: string;
     perPerson: boolean;
   };
-  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  mealType: "breakfast" | "lunch" | "dinner" | "snack";
   location: {
     name: string;
     address?: string;
@@ -70,20 +86,84 @@ export interface Restaurant {
   reviewCount?: number;
 }
 
-const categoryConfig: Record<string, { emoji: string; label: string; gradient: string; border: string; badge: string }> = {
-  sightseeing: { emoji: '👀', label: 'Sightseeing', gradient: 'from-amber-500 to-orange-500', border: 'border-l-amber-400', badge: 'bg-amber-50 text-amber-700 ring-amber-200' },
-  adventure: { emoji: '🏔️', label: 'Adventure', gradient: 'from-emerald-500 to-teal-500', border: 'border-l-emerald-400', badge: 'bg-emerald-50 text-emerald-700 ring-emerald-200' },
-  cultural: { emoji: '🏛️', label: 'Cultural', gradient: 'from-violet-500 to-purple-500', border: 'border-l-violet-400', badge: 'bg-violet-50 text-violet-700 ring-violet-200' },
-  relaxation: { emoji: '🧘', label: 'Relaxation', gradient: 'from-sky-500 to-blue-500', border: 'border-l-sky-400', badge: 'bg-sky-50 text-sky-700 ring-sky-200' },
-  entertainment: { emoji: '🎭', label: 'Entertainment', gradient: 'from-pink-500 to-rose-500', border: 'border-l-pink-400', badge: 'bg-pink-50 text-pink-700 ring-pink-200' },
-  shopping: { emoji: '🛍️', label: 'Shopping', gradient: 'from-rose-500 to-red-500', border: 'border-l-rose-400', badge: 'bg-rose-50 text-rose-700 ring-rose-200' },
+const categoryConfig: Record<
+  string,
+  {
+    emoji: string;
+    label: string;
+    gradient: string;
+    border: string;
+    badge: string;
+  }
+> = {
+  sightseeing: {
+    emoji: "👀",
+    label: "Sightseeing",
+    gradient: "from-amber-500 to-orange-500",
+    border: "border-l-amber-400",
+    badge: "bg-amber-50 text-amber-700 ring-amber-200",
+  },
+  adventure: {
+    emoji: "🏔️",
+    label: "Adventure",
+    gradient: "from-emerald-500 to-teal-500",
+    border: "border-l-emerald-400",
+    badge: "bg-emerald-50 text-emerald-700 ring-emerald-200",
+  },
+  cultural: {
+    emoji: "🏛️",
+    label: "Cultural",
+    gradient: "from-violet-500 to-purple-500",
+    border: "border-l-violet-400",
+    badge: "bg-violet-50 text-violet-700 ring-violet-200",
+  },
+  relaxation: {
+    emoji: "🧘",
+    label: "Relaxation",
+    gradient: "from-sky-500 to-blue-500",
+    border: "border-l-sky-400",
+    badge: "bg-sky-50 text-sky-700 ring-sky-200",
+  },
+  entertainment: {
+    emoji: "🎭",
+    label: "Entertainment",
+    gradient: "from-pink-500 to-rose-500",
+    border: "border-l-pink-400",
+    badge: "bg-pink-50 text-pink-700 ring-pink-200",
+  },
+  shopping: {
+    emoji: "🛍️",
+    label: "Shopping",
+    gradient: "from-rose-500 to-red-500",
+    border: "border-l-rose-400",
+    badge: "bg-rose-50 text-rose-700 ring-rose-200",
+  },
 };
 
-const mealTypeConfig: Record<string, { emoji: string; label: string; gradient: string }> = {
-  breakfast: { emoji: '🍳', label: 'Breakfast', gradient: 'from-amber-400 to-yellow-500' },
-  lunch: { emoji: '🥗', label: 'Lunch', gradient: 'from-green-400 to-emerald-500' },
-  dinner: { emoji: '🍽️', label: 'Dinner', gradient: 'from-indigo-400 to-violet-500' },
-  snack: { emoji: '☕', label: 'Café', gradient: 'from-orange-400 to-amber-500' },
+const mealTypeConfig: Record<
+  string,
+  { emoji: string; label: string; gradient: string }
+> = {
+  breakfast: {
+    emoji: "🍳",
+    label: "Breakfast",
+    gradient: "from-amber-400 to-yellow-500",
+  },
+  lunch: {
+    emoji: "🥗",
+    label: "Lunch",
+    gradient: "from-green-400 to-emerald-500",
+  },
+  dinner: {
+    emoji: "🍽️",
+    label: "Dinner",
+    gradient: "from-indigo-400 to-violet-500",
+  },
+  snack: {
+    emoji: "☕",
+    label: "Café",
+    gradient: "from-orange-400 to-amber-500",
+  },
 };
 
 interface ActivityCardProps {
@@ -91,21 +171,35 @@ interface ActivityCardProps {
   index?: number;
 }
 
-function getBadge(rating?: number, reviewCount?: number): { label: string; icon: React.ReactNode } | null {
-  if (typeof rating === 'number' && rating >= 4.5 && typeof reviewCount === 'number' && reviewCount >= 100) {
-    return { label: 'Top Rated', icon: <TrendingUp className="w-3 h-3" /> };
+function getBadge(
+  rating?: number,
+  reviewCount?: number,
+): { label: string; icon: React.ReactNode } | null {
+  if (
+    typeof rating === "number" &&
+    rating >= 4.5 &&
+    typeof reviewCount === "number" &&
+    reviewCount >= 100
+  ) {
+    return { label: "Top Rated", icon: <TrendingUp className="w-3 h-3" /> };
   }
-  if (typeof rating === 'number' && rating >= 4.0 && typeof reviewCount === 'number' && reviewCount >= 50) {
-    return { label: 'Popular', icon: <Zap className="w-3 h-3" /> };
+  if (
+    typeof rating === "number" &&
+    rating >= 4.0 &&
+    typeof reviewCount === "number" &&
+    reviewCount >= 50
+  ) {
+    return { label: "Popular", icon: <Zap className="w-3 h-3" /> };
   }
   return null;
 }
 
 export function ActivityCard({ activity }: ActivityCardProps) {
   // Guard against receiving a non-object (e.g. a plain string from inconsistent AI output)
-  if (!activity || typeof activity !== 'object' || !activity.name) return null;
+  if (!activity || typeof activity !== "object" || !activity.name) return null;
 
-  const config = categoryConfig[activity.category] || categoryConfig.sightseeing;
+  const config =
+    categoryConfig[activity.category] || categoryConfig.sightseeing;
   const rating = activity.rating;
   const reviewCount = activity.reviewCount;
   const badge = getBadge(rating, reviewCount);
@@ -120,8 +214,8 @@ export function ActivityCard({ activity }: ActivityCardProps) {
   };
 
   const formatCost = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
       currency: currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
@@ -133,24 +227,26 @@ export function ActivityCard({ activity }: ActivityCardProps) {
     if (!url) return;
 
     // Fire and forget tracking
-    fetch('/api/track/click', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    fetch("/api/track/click", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        itemType: 'activity',
+        itemType: "activity",
         itemId: activity.id,
         itemName: activity.name,
-        affiliatePartner: activity.bookingInfo?.affiliateId || 'viator',
+        affiliatePartner: activity.bookingInfo?.affiliateId || "viator",
         affiliateUrl: url,
-        source: 'itinerary',
+        source: "itinerary",
       }),
     }).catch(() => {});
 
-    window.open(url, '_blank', 'noopener,noreferrer');
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   return (
-    <div className={`group bg-white border border-gray-100 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 border-l-4 ${config.border}`}>
+    <div
+      className={`group bg-white border border-gray-100 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 border-l-4 ${config.border}`}
+    >
       {/* Hero Image */}
       {hasImage && (
         <div className="relative h-40 sm:h-48 overflow-hidden">
@@ -162,10 +258,12 @@ export function ActivityCard({ activity }: ActivityCardProps) {
             unoptimized
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-          
+
           {/* Category badge on image */}
           <div className="absolute top-3 left-3">
-            <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ring-1 ${config.badge}`}>
+            <span
+              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ring-1 ${config.badge}`}
+            >
               {config.emoji} {config.label}
             </span>
           </div>
@@ -180,12 +278,16 @@ export function ActivityCard({ activity }: ActivityCardProps) {
           )}
 
           {/* Rating overlay on image */}
-          {typeof rating === 'number' && rating > 0 && (
+          {typeof rating === "number" && rating > 0 && (
             <div className="absolute bottom-3 left-3 flex items-center gap-1.5 px-2.5 py-1 bg-white/95 backdrop-blur-sm rounded-full shadow-sm">
               <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
-              <span className="text-sm font-bold text-gray-900">{rating.toFixed(1)}</span>
+              <span className="text-sm font-bold text-gray-900">
+                {rating.toFixed(1)}
+              </span>
               {reviewCount != null && (
-                <span className="text-xs text-gray-500">({reviewCount.toLocaleString()})</span>
+                <span className="text-xs text-gray-500">
+                  ({reviewCount.toLocaleString()})
+                </span>
               )}
             </div>
           )}
@@ -196,12 +298,16 @@ export function ActivityCard({ activity }: ActivityCardProps) {
         {/* No-image header */}
         {!hasImage && (
           <div className="flex items-start gap-3 mb-1">
-            <div className={`flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center text-white text-lg shadow-sm`}>
+            <div
+              className={`flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center text-white text-lg shadow-sm`}
+            >
               {config.emoji}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h4 className="font-bold text-gray-900 text-base">{activity.name}</h4>
+                <h4 className="font-bold text-gray-900 text-base">
+                  {activity.name}
+                </h4>
                 {badge && (
                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 ring-1 ring-amber-200">
                     {badge.icon} {badge.label}
@@ -216,12 +322,16 @@ export function ActivityCard({ activity }: ActivityCardProps) {
         {hasImage && (
           <div className="mb-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="font-bold text-gray-900 text-lg leading-tight">{activity.name}</h4>
+              <h4 className="font-bold text-gray-900 text-lg leading-tight">
+                {activity.name}
+              </h4>
             </div>
           </div>
         )}
 
-        <p className="text-sm text-gray-600 leading-relaxed line-clamp-2 mt-1">{activity.description}</p>
+        <p className="text-sm text-gray-600 leading-relaxed line-clamp-2 mt-1">
+          {activity.description}
+        </p>
 
         {/* Metadata chips */}
         <div className="flex flex-wrap items-center gap-2.5 mt-3 text-xs text-gray-500">
@@ -234,7 +344,10 @@ export function ActivityCard({ activity }: ActivityCardProps) {
           {activity.estimatedCost?.amount != null && (
             <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-lg font-semibold text-gray-700">
               <DollarSign className="w-3.5 h-3.5 text-gray-400" />
-              {formatCost(activity.estimatedCost.amount, activity.estimatedCost.currency || 'USD')}
+              {formatCost(
+                activity.estimatedCost.amount,
+                activity.estimatedCost.currency || "USD",
+              )}
             </span>
           )}
           {activity.location?.name && (
@@ -244,12 +357,16 @@ export function ActivityCard({ activity }: ActivityCardProps) {
             </span>
           )}
           {/* Rating for non-image cards */}
-          {!hasImage && typeof rating === 'number' && rating > 0 && (
+          {!hasImage && typeof rating === "number" && rating > 0 && (
             <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-50 rounded-lg">
               <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
-              <span className="font-bold text-gray-700">{rating.toFixed(1)}</span>
+              <span className="font-bold text-gray-700">
+                {rating.toFixed(1)}
+              </span>
               {reviewCount != null && (
-                <span className="text-gray-400">({reviewCount.toLocaleString()})</span>
+                <span className="text-gray-400">
+                  ({reviewCount.toLocaleString()})
+                </span>
               )}
             </span>
           )}
@@ -282,11 +399,31 @@ export function ActivityCard({ activity }: ActivityCardProps) {
             </button>
             <div className="flex items-center justify-center gap-3 text-[11px] text-gray-500">
               <span className="inline-flex items-center gap-1">
-                <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                <svg
+                  className="w-3 h-3 text-green-500"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
                 Free cancellation
               </span>
               <span className="inline-flex items-center gap-1">
-                <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                <svg
+                  className="w-3 h-3 text-green-500"
+                  fill="currentColor"
+                  viewBox="0 0 20 20"
+                >
+                  <path
+                    fillRule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clipRule="evenodd"
+                  />
+                </svg>
                 Instant confirmation
               </span>
             </div>
@@ -294,11 +431,14 @@ export function ActivityCard({ activity }: ActivityCardProps) {
         )}
 
         {/* Reservation recommended (no URL) */}
-        {activity.bookingInfo?.requiresReservation && !activity.bookingInfo.bookingUrl && (
-          <div className="mt-3 px-3 py-2 bg-amber-50 rounded-lg border border-amber-100">
-            <span className="text-xs text-amber-700 font-semibold">⚡ Reservation recommended — book early to secure your spot</span>
-          </div>
-        )}
+        {activity.bookingInfo?.requiresReservation &&
+          !activity.bookingInfo.bookingUrl && (
+            <div className="mt-3 px-3 py-2 bg-amber-50 rounded-lg border border-amber-100">
+              <span className="text-xs text-amber-700 font-semibold">
+                ⚡ Reservation recommended — book early to secure your spot
+              </span>
+            </div>
+          )}
       </div>
     </div>
   );
@@ -310,17 +450,19 @@ interface RestaurantCardProps {
 
 export function RestaurantCard({ restaurant }: RestaurantCardProps) {
   // Guard against receiving a non-object (e.g. a plain string from inconsistent AI output)
-  if (!restaurant || typeof restaurant !== 'object' || !restaurant.name) return null;
+  if (!restaurant || typeof restaurant !== "object" || !restaurant.name)
+    return null;
 
   const rating = restaurant.rating;
   const reviewCount = restaurant.reviewCount;
-  const mealConfig = mealTypeConfig[restaurant.mealType] || mealTypeConfig.dinner;
+  const mealConfig =
+    mealTypeConfig[restaurant.mealType] || mealTypeConfig.dinner;
   const badge = getBadge(rating, reviewCount);
   const hasReservation = !!restaurant.reservationInfo?.url;
 
   const formatCost = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
       currency: currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
@@ -330,10 +472,10 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
   const renderPriceLevel = (level: number) => {
     return (
       <span className="inline-flex items-center gap-0.5 px-2 py-1 bg-emerald-50 rounded-lg">
-        {[1, 2, 3, 4].map(i => (
+        {[1, 2, 3, 4].map((i) => (
           <span
             key={i}
-            className={`text-xs font-bold ${i <= level ? 'text-emerald-600' : 'text-gray-300'}`}
+            className={`text-xs font-bold ${i <= level ? "text-emerald-600" : "text-gray-300"}`}
           >
             $
           </span>
@@ -346,32 +488,36 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
     const url = restaurant.reservationInfo?.url;
     if (!url) return;
 
-    fetch('/api/track/click', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    fetch("/api/track/click", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        itemType: 'restaurant',
+        itemType: "restaurant",
         itemId: restaurant.id,
         itemName: restaurant.name,
-        affiliatePartner: 'opentable',
+        affiliatePartner: "opentable",
         affiliateUrl: url,
-        source: 'itinerary',
+        source: "itinerary",
       }),
     }).catch(() => {});
 
-    window.open(url, '_blank', 'noopener,noreferrer');
+    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   return (
     <div className="group bg-white border border-gray-100 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 border-l-4 border-l-orange-400">
       <div className="p-4 sm:p-5">
         <div className="flex items-start gap-3">
-          <div className={`flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br ${mealConfig.gradient} flex items-center justify-center text-white text-lg shadow-sm`}>
+          <div
+            className={`flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br ${mealConfig.gradient} flex items-center justify-center text-white text-lg shadow-sm`}
+          >
             {mealConfig.emoji}
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-              <h4 className="font-bold text-gray-900 text-base">{restaurant.name}</h4>
+              <h4 className="font-bold text-gray-900 text-base">
+                {restaurant.name}
+              </h4>
               {badge && (
                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-orange-50 text-orange-700 ring-1 ring-orange-200">
                   {badge.icon} {badge.label}
@@ -379,16 +525,24 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
               )}
             </div>
 
-            <p className="text-sm text-gray-600 leading-relaxed line-clamp-2">{restaurant.description}</p>
+            <p className="text-sm text-gray-600 leading-relaxed line-clamp-2">
+              {restaurant.description}
+            </p>
 
             {/* Metadata chips */}
             <div className="flex flex-wrap items-center gap-2 mt-3 text-xs text-gray-500">
-              {restaurant.priceLevel != null && renderPriceLevel(restaurant.priceLevel)}
+              {restaurant.priceLevel != null &&
+                renderPriceLevel(restaurant.priceLevel)}
               {restaurant.estimatedCost?.amount != null && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-lg font-semibold text-gray-700">
                   <DollarSign className="w-3.5 h-3.5 text-gray-400" />
-                  {formatCost(restaurant.estimatedCost.amount, restaurant.estimatedCost.currency || 'USD')}
-                  {restaurant.estimatedCost.perPerson && <span className="text-gray-400">/pp</span>}
+                  {formatCost(
+                    restaurant.estimatedCost.amount,
+                    restaurant.estimatedCost.currency || "USD",
+                  )}
+                  {restaurant.estimatedCost.perPerson && (
+                    <span className="text-gray-400">/pp</span>
+                  )}
                 </span>
               )}
               {restaurant.location?.name && (
@@ -397,30 +551,35 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
                   <span className="truncate">{restaurant.location.name}</span>
                 </span>
               )}
-              {typeof rating === 'number' && rating > 0 && (
+              {typeof rating === "number" && rating > 0 && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-yellow-50 rounded-lg">
                   <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
-                  <span className="font-bold text-gray-700">{rating.toFixed(1)}</span>
+                  <span className="font-bold text-gray-700">
+                    {rating.toFixed(1)}
+                  </span>
                   {reviewCount != null && (
-                    <span className="text-gray-400">({reviewCount.toLocaleString()})</span>
+                    <span className="text-gray-400">
+                      ({reviewCount.toLocaleString()})
+                    </span>
                   )}
                 </span>
               )}
             </div>
 
             {/* Cuisine pills */}
-            {Array.isArray(restaurant.cuisineType) && restaurant.cuisineType.length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mt-3">
-                {restaurant.cuisineType.slice(0, 3).map((cuisine) => (
-                  <span
-                    key={cuisine}
-                    className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-700 ring-1 ring-orange-200/50"
-                  >
-                    {cuisine}
-                  </span>
-                ))}
-              </div>
-            )}
+            {Array.isArray(restaurant.cuisineType) &&
+              restaurant.cuisineType.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-3">
+                  {restaurant.cuisineType.slice(0, 3).map((cuisine) => (
+                    <span
+                      key={cuisine}
+                      className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-50 text-orange-700 ring-1 ring-orange-200/50"
+                    >
+                      {cuisine}
+                    </span>
+                  ))}
+                </div>
+              )}
 
             {/* Reserve CTA */}
             {hasReservation && (
@@ -435,11 +594,31 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
                 </button>
                 <div className="flex items-center justify-center gap-3 text-[11px] text-gray-500">
                   <span className="inline-flex items-center gap-1">
-                    <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                    <svg
+                      className="w-3 h-3 text-green-500"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
                     Confirmed instantly
                   </span>
                   <span className="inline-flex items-center gap-1">
-                    <svg className="w-3 h-3 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" /></svg>
+                    <svg
+                      className="w-3 h-3 text-green-500"
+                      fill="currentColor"
+                      viewBox="0 0 20 20"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
                     Free to cancel
                   </span>
                 </div>
@@ -447,11 +626,14 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
             )}
 
             {/* Reservation recommended (no URL) */}
-            {restaurant.reservationInfo?.recommended && !restaurant.reservationInfo?.url && (
-              <div className="mt-3 px-3 py-2 bg-amber-50 rounded-lg border border-amber-100">
-                <span className="text-xs text-amber-700 font-semibold">⚡ Reservations recommended — this spot fills up fast</span>
-              </div>
-            )}
+            {restaurant.reservationInfo?.recommended &&
+              !restaurant.reservationInfo?.url && (
+                <div className="mt-3 px-3 py-2 bg-amber-50 rounded-lg border border-amber-100">
+                  <span className="text-xs text-amber-700 font-semibold">
+                    ⚡ Reservations recommended — this spot fills up fast
+                  </span>
+                </div>
+              )}
           </div>
         </div>
       </div>

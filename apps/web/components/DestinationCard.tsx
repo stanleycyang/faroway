@@ -1,5 +1,5 @@
-import React from 'react';
-import Image from 'next/image';
+import React from "react";
+import Image from "next/image";
 
 interface DestinationCardProps {
   name: string;
@@ -8,7 +8,12 @@ interface DestinationCardProps {
   description: string;
 }
 
-export function DestinationCard({ name, country, imageUrl, description }: DestinationCardProps) {
+export function DestinationCard({
+  name,
+  country,
+  imageUrl,
+  description,
+}: DestinationCardProps) {
   return (
     <div className="group relative overflow-hidden rounded-3xl cursor-pointer transition-transform hover:scale-105 duration-300">
       <div className="relative h-80 w-full">
@@ -20,7 +25,7 @@ export function DestinationCard({ name, country, imageUrl, description }: Destin
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />
       </div>
-      
+
       <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
         <h3 className="text-2xl font-bold mb-1">{name}</h3>
         <p className="text-sm text-gray-300 mb-2">{country}</p>
@@ -28,7 +33,7 @@ export function DestinationCard({ name, country, imageUrl, description }: Destin
           {description}
         </p>
       </div>
-      
+
       <div className="absolute top-4 right-4 bg-primary text-white px-4 py-2 rounded-full text-sm font-semibold shadow-lg">
         Explore
       </div>

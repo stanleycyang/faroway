@@ -1,24 +1,26 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { getAllGuides, type DestinationGuide } from '@/lib/destination-guides';
+import { useState } from "react";
+import { getAllGuides, type DestinationGuide } from "@/lib/destination-guides";
 import {
   generatePackingList,
   TRIP_TYPES,
   type TripType,
   type PackingCategory,
-} from '@/lib/tools/packing-data';
-import { PackingChecklist } from './PackingChecklist';
-import { ToolCTA } from '@/components/tools/ToolCTA';
-import { RelatedTools } from '@/components/tools/RelatedTools';
-import { ToolHero } from '@/components/tools/ToolHero';
+} from "@/lib/tools/packing-data";
+import { PackingChecklist } from "./PackingChecklist";
+import { ToolCTA } from "@/components/tools/ToolCTA";
+import { RelatedTools } from "@/components/tools/RelatedTools";
+import { ToolHero } from "@/components/tools/ToolHero";
 
 const guides = getAllGuides();
 
 export function PackingListClient() {
   const [destination, setDestination] = useState<DestinationGuide | null>(null);
   const [tripType, setTripType] = useState<TripType | null>(null);
-  const [packingList, setPackingList] = useState<PackingCategory[] | null>(null);
+  const [packingList, setPackingList] = useState<PackingCategory[] | null>(
+    null,
+  );
 
   const handleGenerate = () => {
     if (!destination || !tripType) return;
@@ -42,7 +44,7 @@ export function PackingListClient() {
                 Packing for {destination.name}
               </h1>
               <p className="text-sm text-slate-500">
-                {TRIP_TYPES.find((t) => t.id === tripType)?.emoji}{' '}
+                {TRIP_TYPES.find((t) => t.id === tripType)?.emoji}{" "}
                 {TRIP_TYPES.find((t) => t.id === tripType)?.label} trip
               </p>
             </div>
@@ -87,7 +89,7 @@ export function PackingListClient() {
             Where are you going?
           </label>
           <select
-            value={destination?.slug || ''}
+            value={destination?.slug || ""}
             onChange={(e) => {
               const guide = guides.find((g) => g.slug === e.target.value);
               setDestination(guide || null);
@@ -115,8 +117,8 @@ export function PackingListClient() {
                 onClick={() => setTripType(type.id)}
                 className={`p-4 rounded-xl border-2 text-center transition-all ${
                   tripType === type.id
-                    ? 'border-primary bg-primary/5 shadow-sm'
-                    : 'border-slate-200 hover:border-primary/30'
+                    ? "border-primary bg-primary/5 shadow-sm"
+                    : "border-slate-200 hover:border-primary/30"
                 }`}
               >
                 <span className="text-2xl block mb-1">{type.emoji}</span>

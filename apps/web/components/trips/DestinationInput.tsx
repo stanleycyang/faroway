@@ -1,51 +1,57 @@
-'use client'
+"use client";
 
-import React, { useState, useRef, useEffect } from 'react'
-import { Search, MapPin, X, Loader2 } from 'lucide-react'
-import { cn } from '@/lib/utils'
+import React, { useState, useRef, useEffect } from "react";
+import { Search, MapPin, X, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Popular destinations for quick selection
 const popularDestinations = [
-  { id: 'tokyo', name: 'Tokyo', country: 'Japan', emoji: '🗼' },
-  { id: 'paris', name: 'Paris', country: 'France', emoji: '🗼' },
-  { id: 'new-york', name: 'New York', country: 'USA', emoji: '🗽' },
-  { id: 'bali', name: 'Bali', country: 'Indonesia', emoji: '🏝️' },
-  { id: 'london', name: 'London', country: 'UK', emoji: '🇬🇧' },
-  { id: 'barcelona', name: 'Barcelona', country: 'Spain', emoji: '🇪🇸' },
-  { id: 'rome', name: 'Rome', country: 'Italy', emoji: '🏛️' },
-  { id: 'dubai', name: 'Dubai', country: 'UAE', emoji: '🏙️' },
-  { id: 'sydney', name: 'Sydney', country: 'Australia', emoji: '🦘' },
-  { id: 'santorini', name: 'Santorini', country: 'Greece', emoji: '🇬🇷' },
-]
+  { id: "tokyo", name: "Tokyo", country: "Japan", emoji: "🗼" },
+  { id: "paris", name: "Paris", country: "France", emoji: "🗼" },
+  { id: "new-york", name: "New York", country: "USA", emoji: "🗽" },
+  { id: "bali", name: "Bali", country: "Indonesia", emoji: "🏝️" },
+  { id: "london", name: "London", country: "UK", emoji: "🇬🇧" },
+  { id: "barcelona", name: "Barcelona", country: "Spain", emoji: "🇪🇸" },
+  { id: "rome", name: "Rome", country: "Italy", emoji: "🏛️" },
+  { id: "dubai", name: "Dubai", country: "UAE", emoji: "🏙️" },
+  { id: "sydney", name: "Sydney", country: "Australia", emoji: "🦘" },
+  { id: "santorini", name: "Santorini", country: "Greece", emoji: "🇬🇷" },
+];
 
 interface Destination {
-  id: string
-  name: string
-  country: string
-  emoji?: string
+  id: string;
+  name: string;
+  country: string;
+  emoji?: string;
 }
 
 interface DestinationInputProps {
-  value: string
-  onChange: (value: string) => void
-  error?: string
-  className?: string
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  className?: string;
 }
 
-export function DestinationInput({ value, onChange, error, className }: DestinationInputProps) {
-  const [query, setQuery] = useState(value)
-  const [isOpen, setIsOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [suggestions, setSuggestions] = useState<Destination[]>(popularDestinations)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const dropdownRef = useRef<HTMLDivElement>(null)
+export function DestinationInput({
+  value,
+  onChange,
+  error,
+  className,
+}: DestinationInputProps) {
+  const [query, setQuery] = useState(value);
+  const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [suggestions, setSuggestions] =
+    useState<Destination[]>(popularDestinations);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Filter destinations based on query
   useEffect(() => {
     if (!query.trim()) {
       // No need to set suggestions when query is empty;
       // already initialized to popularDestinations
-      return
+      return;
     }
 
     // Simulate search delay (replace with Google Places API)
@@ -53,20 +59,27 @@ export function DestinationInput({ value, onChange, error, className }: Destinat
       const filtered = popularDestinations.filter(
         (d) =>
           d.name.toLowerCase().includes(query.toLowerCase()) ||
-          d.country.toLowerCase().includes(query.toLowerCase())
-      )
+          d.country.toLowerCase().includes(query.toLowerCase()),
+      );
 
       // If no matches and user typed something, allow custom destination
       if (filtered.length === 0 && query.trim()) {
-        setSuggestions([{ id: 'custom', name: query, country: 'Custom destination', emoji: '📍' }])
+        setSuggestions([
+          {
+            id: "custom",
+            name: query,
+            country: "Custom destination",
+            emoji: "📍",
+          },
+        ]);
       } else {
-        setSuggestions(filtered)
+        setSuggestions(filtered);
       }
-      setIsLoading(false)
-    }, 200)
+      setIsLoading(false);
+    }, 200);
 
-    return () => clearTimeout(timer)
-  }, [query])
+    return () => clearTimeout(timer);
+  }, [query]);
 
   // Click outside handler
   useEffect(() => {
@@ -77,32 +90,33 @@ export function DestinationInput({ value, onChange, error, className }: Destinat
         inputRef.current &&
         !inputRef.current.contains(event.target as Node)
       ) {
-        setIsOpen(false)
+        setIsOpen(false);
       }
-    }
+    };
 
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleSelect = (destination: Destination) => {
-    const fullValue = destination.id === 'custom' 
-      ? destination.name 
-      : `${destination.name}, ${destination.country}`
-    setQuery(fullValue)
-    onChange(fullValue)
-    setIsOpen(false)
-  }
+    const fullValue =
+      destination.id === "custom"
+        ? destination.name
+        : `${destination.name}, ${destination.country}`;
+    setQuery(fullValue);
+    onChange(fullValue);
+    setIsOpen(false);
+  };
 
   const handleClear = () => {
-    setQuery('')
-    setSuggestions(popularDestinations)
-    onChange('')
-    inputRef.current?.focus()
-  }
+    setQuery("");
+    setSuggestions(popularDestinations);
+    onChange("");
+    inputRef.current?.focus();
+  };
 
   return (
-    <div className={cn('relative', className)}>
+    <div className={cn("relative", className)}>
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
         <input
@@ -115,23 +129,23 @@ export function DestinationInput({ value, onChange, error, className }: Destinat
           spellCheck="false"
           value={query}
           onChange={(e) => {
-            const val = e.target.value
-            setQuery(val)
+            const val = e.target.value;
+            setQuery(val);
             if (!val.trim()) {
-              setSuggestions(popularDestinations)
-              setIsLoading(false)
+              setSuggestions(popularDestinations);
+              setIsLoading(false);
             } else {
-              setIsLoading(true)
+              setIsLoading(true);
             }
-            setIsOpen(true)
+            setIsOpen(true);
           }}
           onFocus={() => setIsOpen(true)}
           placeholder="Search for a destination..."
           className={cn(
-            'w-full pl-12 pr-10 py-4 min-h-[52px] bg-gray-50 border rounded-xl text-base text-gray-900 placeholder-gray-400 outline-none transition-all',
+            "w-full pl-12 pr-10 py-4 min-h-[52px] bg-gray-50 border rounded-xl text-base text-gray-900 placeholder-gray-400 outline-none transition-all",
             error
-              ? 'border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200'
-              : 'border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20'
+              ? "border-red-300 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+              : "border-gray-200 focus:border-primary focus:ring-2 focus:ring-primary/20",
           )}
         />
         {query && (
@@ -175,10 +189,14 @@ export function DestinationInput({ value, onChange, error, className }: Destinat
                     onClick={() => handleSelect(destination)}
                     className="w-full px-4 py-3 min-h-[52px] flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
                   >
-                    <span className="text-xl">{destination.emoji || '📍'}</span>
+                    <span className="text-xl">{destination.emoji || "📍"}</span>
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-900 truncate">{destination.name}</p>
-                      <p className="text-sm text-gray-500 truncate">{destination.country}</p>
+                      <p className="font-medium text-gray-900 truncate">
+                        {destination.name}
+                      </p>
+                      <p className="text-sm text-gray-500 truncate">
+                        {destination.country}
+                      </p>
                     </div>
                     <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
                   </button>
@@ -193,5 +211,5 @@ export function DestinationInput({ value, onChange, error, className }: Destinat
         </div>
       )}
     </div>
-  )
+  );
 }

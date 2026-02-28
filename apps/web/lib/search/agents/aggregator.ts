@@ -3,21 +3,21 @@
  * Combines results from all agents into a cohesive itinerary
  */
 
-import { generateObject, gateway as defaultGateway, createGateway } from 'ai';
-import { z } from 'zod';
+import { generateObject, gateway as defaultGateway, createGateway } from "ai";
+import { z } from "zod";
 import {
   SearchPlan,
   HotelResult,
   ActivityResult,
   DiningResult,
   SuggestedDay,
-} from '../types';
+} from "../types";
 
 const aiGateway = process.env.AI_GATEWAY_API_KEY
   ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
   : defaultGateway;
 
-const MODEL = 'google/gemini-3-flash';
+const MODEL = "google/gemini-3-flash";
 
 const SuggestedDaySchema = z.object({
   dayNumber: z.number(),
@@ -38,7 +38,7 @@ const SuggestedDaySchema = z.object({
     mealId: z.string().optional(),
   }),
   estimatedCost: z.number(),
-  currency: z.string().default('USD'),
+  currency: z.string().default("USD"),
   tips: z.array(z.string()),
 });
 
@@ -63,17 +63,20 @@ export async function runAggregatorAgent(
   plan: SearchPlan,
   hotels: HotelResult[],
   activities: ActivityResult[],
-  dining: DiningResult[]
+  dining: DiningResult[],
 ): Promise<{ days: SuggestedDay[]; topHotel: HotelResult | null }> {
   const { destination, dates } = plan;
-  
+
   // Calculate number of days
   const startDate = new Date(dates.start);
   const endDate = new Date(dates.end);
-  const numDays = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const numDays =
+    Math.ceil(
+      (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
+    ) + 1;
 
   // Format data for the AI
-  const hotelSummary = hotels.slice(0, 5).map(h => ({
+  const hotelSummary = hotels.slice(0, 5).map((h) => ({
     id: h.id,
     name: h.name,
     price: h.pricePerNight,
@@ -82,7 +85,7 @@ export async function runAggregatorAgent(
     neighborhood: h.location.neighborhood || h.location.name,
   }));
 
-  const activitySummary = activities.slice(0, 20).map(a => ({
+  const activitySummary = activities.slice(0, 20).map((a) => ({
     id: a.id,
     name: a.name,
     category: a.category,
@@ -93,10 +96,10 @@ export async function runAggregatorAgent(
     bookingRequired: a.bookingRequired,
   }));
 
-  const diningSummary = dining.slice(0, 15).map(d => ({
+  const diningSummary = dining.slice(0, 15).map((d) => ({
     id: d.id,
     name: d.name,
-    cuisine: d.cuisineTypes.join(', '),
+    cuisine: d.cuisineTypes.join(", "),
     priceLevel: d.priceLevel,
     mealTypes: d.mealTypes,
     vibeScore: d.vibeScore,
@@ -105,7 +108,7 @@ export async function runAggregatorAgent(
   const prompt = `Create a ${numDays}-day itinerary for ${destination} using these search results.
 
 **Trip Dates:** ${dates.start} to ${dates.end}
-**Vibes:** ${plan.vibeInterpretation.vibes.join(', ')}
+**Vibes:** ${plan.vibeInterpretation.vibes.join(", ")}
 **Pace:** ${plan.activityCriteria.pacePreference}
 
 **Available Hotels (pick the best match):**
@@ -137,7 +140,9 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
 
     return mapAggregatorResult(result, hotels, activities, dining);
   } catch (error) {
-    console.error('[Aggregator Agent] generateObject error, attempting recovery...');
+    console.error(
+      "[Aggregator Agent] generateObject error, attempting recovery...",
+    );
 
     // Try to recover from schema validation errors by parsing the raw response text.
     // Common failure: model returns `days` as a JSON string instead of an array,
@@ -146,12 +151,14 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
     if (rawText) {
       const recovered = recoverFromRawText(rawText, hotels, activities, dining);
       if (recovered) {
-        console.log('[Aggregator Agent] Recovered from raw text successfully');
+        console.log("[Aggregator Agent] Recovered from raw text successfully");
         return recovered;
       }
     }
 
-    console.error('[Aggregator Agent] Recovery failed, using fallback itinerary');
+    console.error(
+      "[Aggregator Agent] Recovery failed, using fallback itinerary",
+    );
     return createFallbackItinerary(plan, hotels, activities, dining);
   }
 }
@@ -161,39 +168,45 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
  * Shared between the happy path and the recovery path.
  */
 function mapAggregatorResult(
-  result: { days: Array<z.infer<typeof SuggestedDaySchema>>; topHotelId?: string },
+  result: {
+    days: Array<z.infer<typeof SuggestedDaySchema>>;
+    topHotelId?: string;
+  },
   hotels: HotelResult[],
   activities: ActivityResult[],
   dining: DiningResult[],
 ): { days: SuggestedDay[]; topHotel: HotelResult | null } {
-  const topHotel = (result.topHotelId
-    ? hotels.find(h => h.id === result.topHotelId)
-    : undefined) || hotels[0] || null;
+  const topHotel =
+    (result.topHotelId
+      ? hotels.find((h) => h.id === result.topHotelId)
+      : undefined) ||
+    hotels[0] ||
+    null;
 
-  const days: SuggestedDay[] = result.days.map(day => {
+  const days: SuggestedDay[] = result.days.map((day) => {
     const morningActivities = day.morning.activityIds
-      .map(id => activities.find(a => a.id === id))
+      .map((id) => activities.find((a) => a.id === id))
       .filter((a): a is ActivityResult => a !== undefined);
 
     const afternoonActivities = day.afternoon.activityIds
-      .map(id => activities.find(a => a.id === id))
+      .map((id) => activities.find((a) => a.id === id))
       .filter((a): a is ActivityResult => a !== undefined);
 
     const eveningActivities = day.evening.activityIds
-      .map(id => activities.find(a => a.id === id))
+      .map((id) => activities.find((a) => a.id === id))
       .filter((a): a is ActivityResult => a !== undefined);
 
     const morningMeal = day.morning.mealId
-      ? dining.find(d => d.id === day.morning.mealId)
-      : dining.find(d => d.mealTypes.includes('breakfast'));
+      ? dining.find((d) => d.id === day.morning.mealId)
+      : dining.find((d) => d.mealTypes.includes("breakfast"));
 
     const afternoonMeal = day.afternoon.mealId
-      ? dining.find(d => d.id === day.afternoon.mealId)
-      : dining.find(d => d.mealTypes.includes('lunch'));
+      ? dining.find((d) => d.id === day.afternoon.mealId)
+      : dining.find((d) => d.mealTypes.includes("lunch"));
 
     const eveningMeal = day.evening.mealId
-      ? dining.find(d => d.id === day.evening.mealId)
-      : dining.find(d => d.mealTypes.includes('dinner'));
+      ? dining.find((d) => d.id === day.evening.mealId)
+      : dining.find((d) => d.mealTypes.includes("dinner"));
 
     return {
       dayNumber: day.dayNumber,
@@ -247,16 +260,18 @@ function recoverFromRawText(
     }
 
     let daysArray: Record<string, unknown>[] | null = null;
-    let topHotelId: string | undefined = parsed.topHotelId as string | undefined;
+    let topHotelId: string | undefined = parsed.topHotelId as
+      | string
+      | undefined;
 
     if (Array.isArray(parsed.days)) {
       // Days is already an array — shouldn't normally get here, but handle it
       daysArray = parsed.days;
-    } else if (typeof parsed.days === 'string') {
+    } else if (typeof parsed.days === "string") {
       const daysStr = parsed.days;
 
       // Find where the JSON array ends — the last ']' in the string
-      const arrayEndIdx = daysStr.lastIndexOf(']');
+      const arrayEndIdx = daysStr.lastIndexOf("]");
       if (arrayEndIdx === -1) return null;
 
       const arrayStr = daysStr.substring(0, arrayEndIdx + 1).trim();
@@ -281,13 +296,20 @@ function recoverFromRawText(
 
     // Validate each day has the minimum required fields and normalise shape
     const validDays = daysArray
-      .filter((d: Record<string, unknown>) => d && typeof d.dayNumber === 'number' && d.morning && d.afternoon && d.evening)
+      .filter(
+        (d: Record<string, unknown>) =>
+          d &&
+          typeof d.dayNumber === "number" &&
+          d.morning &&
+          d.afternoon &&
+          d.evening,
+      )
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .map((d: any) => ({
         dayNumber: d.dayNumber,
-        date: d.date || '',
+        date: d.date || "",
         title: d.title || `Day ${d.dayNumber}`,
-        summary: d.summary || '',
+        summary: d.summary || "",
         hotelId: d.hotelId,
         morning: {
           activityIds: d.morning?.activityIds || [],
@@ -302,14 +324,21 @@ function recoverFromRawText(
           mealId: d.evening?.mealId,
         },
         estimatedCost: d.estimatedCost || 0,
-        currency: d.currency || 'USD',
+        currency: d.currency || "USD",
         tips: Array.isArray(d.tips) ? d.tips : [],
       }));
 
     if (validDays.length === 0) return null;
 
-    console.log(`[Aggregator Agent] Recovered ${validDays.length} days from raw text`);
-    return mapAggregatorResult({ days: validDays, topHotelId }, hotels, activities, dining);
+    console.log(
+      `[Aggregator Agent] Recovered ${validDays.length} days from raw text`,
+    );
+    return mapAggregatorResult(
+      { days: validDays, topHotelId },
+      hotels,
+      activities,
+      dining,
+    );
   } catch {
     return null;
   }
@@ -322,24 +351,32 @@ function createFallbackItinerary(
   plan: SearchPlan,
   hotels: HotelResult[],
   activities: ActivityResult[],
-  dining: DiningResult[]
+  dining: DiningResult[],
 ): { days: SuggestedDay[]; topHotel: HotelResult | null } {
   const { dates } = plan;
   const startDate = new Date(dates.start);
   const numDays = dates.nights + 1;
-  
+
   const topHotel = hotels[0] || null;
   const days: SuggestedDay[] = [];
 
   // Sort activities by best time
-  const morningActivities = activities.filter(a => a.bestTimeOfDay === 'morning' || a.bestTimeOfDay === 'any');
-  const afternoonActivities = activities.filter(a => a.bestTimeOfDay === 'afternoon' || a.bestTimeOfDay === 'any');
-  const eveningActivities = activities.filter(a => a.bestTimeOfDay === 'evening' || a.bestTimeOfDay === 'any');
+  const morningActivities = activities.filter(
+    (a) => a.bestTimeOfDay === "morning" || a.bestTimeOfDay === "any",
+  );
+  const afternoonActivities = activities.filter(
+    (a) => a.bestTimeOfDay === "afternoon" || a.bestTimeOfDay === "any",
+  );
+  const eveningActivities = activities.filter(
+    (a) => a.bestTimeOfDay === "evening" || a.bestTimeOfDay === "any",
+  );
 
   // Sort dining by meal type
-  const breakfastSpots = dining.filter(d => d.mealTypes.includes('breakfast'));
-  const lunchSpots = dining.filter(d => d.mealTypes.includes('lunch'));
-  const dinnerSpots = dining.filter(d => d.mealTypes.includes('dinner'));
+  const breakfastSpots = dining.filter((d) =>
+    d.mealTypes.includes("breakfast"),
+  );
+  const lunchSpots = dining.filter((d) => d.mealTypes.includes("lunch"));
+  const dinnerSpots = dining.filter((d) => d.mealTypes.includes("dinner"));
 
   for (let i = 0; i < numDays; i++) {
     const date = new Date(startDate);
@@ -347,7 +384,7 @@ function createFallbackItinerary(
 
     days.push({
       dayNumber: i + 1,
-      date: date.toISOString().split('T')[0],
+      date: date.toISOString().split("T")[0],
       title: `Day ${i + 1} in ${plan.destination}`,
       summary: `Explore ${plan.destination} with a mix of activities and dining.`,
       hotel: topHotel || undefined,
@@ -364,8 +401,11 @@ function createFallbackItinerary(
         meal: dinnerSpots[i % dinnerSpots.length],
       },
       estimatedCost: 200,
-      currency: 'USD',
-      tips: ['Book popular attractions in advance', 'Check opening hours before visiting'],
+      currency: "USD",
+      tips: [
+        "Book popular attractions in advance",
+        "Check opening hours before visiting",
+      ],
     });
   }
 

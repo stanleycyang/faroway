@@ -1,18 +1,18 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
-import { Suspense } from 'react'
-import { EmailPasswordForm } from '@/components/auth/EmailPasswordForm'
-import { GoogleButton } from '@/components/auth/GoogleButton'
-import { AppleButton } from '@/components/auth/AppleButton'
-import { Logo } from '@/components/Logo'
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+import { EmailPasswordForm } from "@/components/auth/EmailPasswordForm";
+import { GoogleButton } from "@/components/auth/GoogleButton";
+import { AppleButton } from "@/components/auth/AppleButton";
+import { Logo } from "@/components/Logo";
 
 function LoginContent() {
-  const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirectTo') || '/dashboard'
-  const error = searchParams.get('error')
-  const message = searchParams.get('message')
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirectTo") || "/dashboard";
+  const error = searchParams.get("error");
+  const message = searchParams.get("message");
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-white px-4">
@@ -33,12 +33,14 @@ function LoginContent() {
         {/* Error/Success Messages */}
         {error && (
           <div className="mb-4 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-            {error === 'auth_code_error' && 'There was an error signing you in. Please try again.'}
-            {error === 'no_code' && 'Invalid authentication request. Please try again.'}
-            {error !== 'auth_code_error' && error !== 'no_code' && error}
+            {error === "auth_code_error" &&
+              "There was an error signing you in. Please try again."}
+            {error === "no_code" &&
+              "Invalid authentication request. Please try again."}
+            {error !== "auth_code_error" && error !== "no_code" && error}
           </div>
         )}
-        
+
         {message && (
           <div className="mb-4 p-4 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
             {message}
@@ -59,7 +61,9 @@ function LoginContent() {
               <div className="w-full border-t border-gray-200" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-500">or continue with email</span>
+              <span className="px-4 bg-white text-gray-500">
+                or continue with email
+              </span>
             </div>
           </div>
 
@@ -68,7 +72,7 @@ function LoginContent() {
 
           {/* Forgot Password Link */}
           <div className="mt-4 text-center">
-            <Link 
+            <Link
               href="/auth/forgot-password"
               className="text-sm text-gray-600 hover:text-primary transition-colors"
             >
@@ -78,9 +82,9 @@ function LoginContent() {
 
           {/* Sign Up Link */}
           <p className="mt-6 text-center text-sm text-gray-600">
-            Don&apos;t have an account?{' '}
-            <Link 
-              href={`/auth/signup${redirectTo !== '/dashboard' ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ''}`}
+            Don&apos;t have an account?{" "}
+            <Link
+              href={`/auth/signup${redirectTo !== "/dashboard" ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`}
               className="font-semibold text-primary hover:text-primary-dark transition-colors"
             >
               Sign up
@@ -90,24 +94,30 @@ function LoginContent() {
 
         {/* Footer */}
         <p className="mt-6 text-center text-xs text-gray-500">
-          By signing in, you agree to our{' '}
-          <Link href="/terms" className="underline hover:text-gray-700">Terms of Service</Link>
-          {' '}and{' '}
-          <Link href="/privacy" className="underline hover:text-gray-700">Privacy Policy</Link>
+          By signing in, you agree to our{" "}
+          <Link href="/terms" className="underline hover:text-gray-700">
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="underline hover:text-gray-700">
+            Privacy Policy
+          </Link>
         </p>
       </div>
     </div>
-  )
+  );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      }
+    >
       <LoginContent />
     </Suspense>
-  )
+  );
 }

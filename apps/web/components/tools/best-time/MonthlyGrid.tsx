@@ -1,14 +1,17 @@
-import type { MonthlyClimate } from '@/lib/tools/climate-data';
-import { Droplets } from 'lucide-react';
+import type { MonthlyClimate } from "@/lib/tools/climate-data";
+import { Droplets } from "lucide-react";
 
 interface MonthlyGridProps {
   months: MonthlyClimate[];
 }
 
-const SEASON_STYLES: Record<string, { label: string; bg: string; text: string }> = {
-  peak: { label: 'Peak', bg: 'bg-primary/10', text: 'text-primary' },
-  shoulder: { label: 'Shoulder', bg: 'bg-amber-50', text: 'text-amber-600' },
-  off: { label: 'Off-Season', bg: 'bg-slate-100', text: 'text-slate-500' },
+const SEASON_STYLES: Record<
+  string,
+  { label: string; bg: string; text: string }
+> = {
+  peak: { label: "Peak", bg: "bg-primary/10", text: "text-primary" },
+  shoulder: { label: "Shoulder", bg: "bg-amber-50", text: "text-amber-600" },
+  off: { label: "Off-Season", bg: "bg-slate-100", text: "text-slate-500" },
 };
 
 export function MonthlyGrid({ months }: MonthlyGridProps) {
@@ -57,9 +60,7 @@ export function MonthlyGrid({ months }: MonthlyGridProps) {
                     <div
                       key={level}
                       className={`w-2.5 h-2.5 rounded-full ${
-                        level <= m.crowdLevel
-                          ? 'bg-primary'
-                          : 'bg-slate-200'
+                        level <= m.crowdLevel ? "bg-primary" : "bg-slate-200"
                       }`}
                     />
                   ))}
@@ -70,10 +71,7 @@ export function MonthlyGrid({ months }: MonthlyGridProps) {
               {m.events.length > 0 && (
                 <div className="pt-2 border-t border-slate-100">
                   {m.events.map((event) => (
-                    <p
-                      key={event}
-                      className="text-xs text-slate-500 truncate"
-                    >
+                    <p key={event} className="text-xs text-slate-500 truncate">
                       {event}
                     </p>
                   ))}

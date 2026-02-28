@@ -4,16 +4,16 @@
  * Uses AI generation + optional Google Places integration
  */
 
-import { generateObject, gateway as defaultGateway, createGateway } from 'ai';
-import { z } from 'zod';
-import { SearchPlan, DiningResult } from '../types';
-import { VIBE_KEYWORDS } from '@faroway/constants';
+import { generateObject, gateway as defaultGateway, createGateway } from "ai";
+import { z } from "zod";
+import { SearchPlan, DiningResult } from "../types";
+import { VIBE_KEYWORDS } from "@faroway/constants";
 
 const aiGateway = process.env.AI_GATEWAY_API_KEY
   ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
   : defaultGateway;
 
-const MODEL = 'google/gemini-3-flash';
+const MODEL = "google/gemini-3-flash";
 
 const DiningSchema = z.object({
   name: z.string(),
@@ -32,7 +32,7 @@ const DiningSchema = z.object({
   images: z.array(z.string()).default([]),
   reservationUrl: z.string().optional(),
   affiliatePartner: z.string().optional(),
-  mealTypes: z.array(z.enum(['breakfast', 'lunch', 'dinner'])),
+  mealTypes: z.array(z.enum(["breakfast", "lunch", "dinner"])),
   vibeScore: z.number().min(0).max(100),
   vibeMatch: z.array(z.string()),
   dietaryOptions: z.array(z.string()),
@@ -65,10 +65,11 @@ IMPORTANT: For the "images" field, return an EMPTY array []. Do NOT generate or 
 
 export async function runDiningAgent(
   plan: SearchPlan,
-  count: number = 12
+  count: number = 12,
 ): Promise<DiningResult[]> {
   const { destination, dates, diningCriteria, vibeInterpretation } = plan;
-  const { cuisineTypes, priceRange, dietaryNeeds, mealPriorities } = diningCriteria;
+  const { cuisineTypes, priceRange, dietaryNeeds, mealPriorities } =
+    diningCriteria;
 
   // Map price range to price levels
   const priceLevelMap: Record<string, number[]> = {
@@ -82,12 +83,12 @@ export async function runDiningAgent(
 
 **Dining Preferences:**
 - ${dates.nights + 1} days of dining
-- Price range: ${priceRange} (levels ${priceLevels.join('-')})
-- Cuisine interests: ${cuisineTypes.join(', ') || 'local cuisine'}
-- Dietary needs: ${dietaryNeeds.join(', ') || 'none specified'}
-- Meal priorities: ${mealPriorities.join(', ')}
+- Price range: ${priceRange} (levels ${priceLevels.join("-")})
+- Cuisine interests: ${cuisineTypes.join(", ") || "local cuisine"}
+- Dietary needs: ${dietaryNeeds.join(", ") || "none specified"}
+- Meal priorities: ${mealPriorities.join(", ")}
 
-**Vibes to match:** ${vibeInterpretation.vibes.join(', ')}
+**Vibes to match:** ${vibeInterpretation.vibes.join(", ")}
 
 Generate a diverse mix of:
 - 3-4 breakfast/brunch spots
@@ -122,7 +123,7 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
       }))
       .sort((a, b) => b.vibeScore - a.vibeScore);
   } catch (error) {
-    console.error('[Dining Agent] Error:', error);
+    console.error("[Dining Agent] Error:", error);
     return [];
   }
 }
@@ -132,25 +133,30 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
  */
 export async function searchGooglePlacesDining(
   destination: string,
-  cuisineTypes: string[]
+  cuisineTypes: string[],
 ): Promise<Record<string, unknown>[]> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY;
   if (!apiKey) {
-    console.log('[Dining Agent] No Google Places API key, using AI-generated data');
+    console.log(
+      "[Dining Agent] No Google Places API key, using AI-generated data",
+    );
     return [];
   }
 
   try {
-    const queries = cuisineTypes.length > 0
-      ? cuisineTypes.map(cuisine => `${cuisine} restaurant in ${destination}`)
-      : [`restaurant in ${destination}`];
+    const queries =
+      cuisineTypes.length > 0
+        ? cuisineTypes.map(
+            (cuisine) => `${cuisine} restaurant in ${destination}`,
+          )
+        : [`restaurant in ${destination}`];
 
     const results: Record<string, unknown>[] = [];
 
     for (const query of queries.slice(0, 3)) {
       const response = await fetch(
         `https://maps.googleapis.com/maps/api/place/textsearch/json?` +
-          `query=${encodeURIComponent(query)}&type=restaurant&key=${apiKey}`
+          `query=${encodeURIComponent(query)}&type=restaurant&key=${apiKey}`,
       );
       const data = await response.json();
 
@@ -161,7 +167,7 @@ export async function searchGooglePlacesDining(
 
     return results;
   } catch (error) {
-    console.error('[Dining Agent] Google Places error:', error);
+    console.error("[Dining Agent] Google Places error:", error);
     return [];
   }
 }
@@ -171,15 +177,18 @@ export async function searchGooglePlacesDining(
  */
 export function calculateDiningVibeScore(
   restaurant: { name: string; description: string; cuisineTypes: string[] },
-  vibes: string[]
+  vibes: string[],
 ): { score: number; matchedVibes: string[] } {
-  const text = `${restaurant.name} ${restaurant.description} ${restaurant.cuisineTypes.join(' ')}`.toLowerCase();
+  const text =
+    `${restaurant.name} ${restaurant.description} ${restaurant.cuisineTypes.join(" ")}`.toLowerCase();
   const matchedVibes: string[] = [];
   let score = 50;
 
   for (const vibe of vibes) {
     const keywords = VIBE_KEYWORDS[vibe.toLowerCase()] || [];
-    const matches = keywords.filter(keyword => text.includes(keyword.toLowerCase()));
+    const matches = keywords.filter((keyword) =>
+      text.includes(keyword.toLowerCase()),
+    );
 
     if (matches.length > 0) {
       matchedVibes.push(vibe);
@@ -188,9 +197,9 @@ export function calculateDiningVibeScore(
   }
 
   // Vibe-specific bonuses
-  if (vibes.includes('Foodie')) score += 15; // Foodies appreciate all good food
-  if (vibes.includes('Romantic') && text.includes('intimate')) score += 20;
-  if (vibes.includes('Cultural') && text.includes('traditional')) score += 20;
+  if (vibes.includes("Foodie")) score += 15; // Foodies appreciate all good food
+  if (vibes.includes("Romantic") && text.includes("intimate")) score += 20;
+  if (vibes.includes("Cultural") && text.includes("traditional")) score += 20;
 
   return {
     score: Math.min(100, score),

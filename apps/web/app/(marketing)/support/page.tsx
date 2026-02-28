@@ -1,5 +1,5 @@
-import React from 'react';
-import Image from 'next/image';
+import React from "react";
+import Image from "next/image";
 import {
   Rocket,
   Map,
@@ -13,16 +13,16 @@ import {
   MessageCircle,
   Check,
   ArrowRight,
-} from 'lucide-react';
-import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
-import { FadeInOnScroll } from '@/components/landing/FadeInOnScroll';
-import { FAQAccordion } from '@/components/support/FAQAccordion';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
+} from "lucide-react";
+import { IMAGE_PATHS, getImageUrl } from "@faroway/constants";
+import { FadeInOnScroll } from "@/components/landing/FadeInOnScroll";
+import { FAQAccordion } from "@/components/support/FAQAccordion";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 
 // ─── App Store Buttons ───────────────────────────────────────────────────────
 
-function AppStoreButtons({ className = '' }: { className?: string }) {
+function AppStoreButtons({ className = "" }: { className?: string }) {
   return (
     <div className={`flex flex-wrap gap-3 ${className}`}>
       <a
@@ -58,74 +58,74 @@ function AppStoreButtons({ className = '' }: { className?: string }) {
 const helpCategories = [
   {
     icon: Rocket,
-    gradient: 'from-blue-500 to-indigo-500',
-    title: 'Getting Started',
-    description: 'Create your first AI-powered trip in seconds.',
+    gradient: "from-blue-500 to-indigo-500",
+    title: "Getting Started",
+    description: "Create your first AI-powered trip in seconds.",
     bullets: [
-      'Creating your first trip',
-      'Choosing travel vibes & preferences',
-      'How AI generates your itinerary',
-      'Saving and organizing trips',
+      "Creating your first trip",
+      "Choosing travel vibes & preferences",
+      "How AI generates your itinerary",
+      "Saving and organizing trips",
     ],
   },
   {
     icon: Map,
-    gradient: 'from-emerald-500 to-teal-500',
-    title: 'Trip Planning',
-    description: 'Edit, customize, and share your itineraries.',
+    gradient: "from-emerald-500 to-teal-500",
+    title: "Trip Planning",
+    description: "Edit, customize, and share your itineraries.",
     bullets: [
-      'Editing your day-by-day itinerary',
-      'Adding or removing activities',
-      'Sharing trips with friends',
-      'Exporting your itinerary',
+      "Editing your day-by-day itinerary",
+      "Adding or removing activities",
+      "Sharing trips with friends",
+      "Exporting your itinerary",
     ],
   },
   {
     icon: User,
-    gradient: 'from-violet-500 to-purple-500',
-    title: 'Account & Login',
-    description: 'Manage your account, profile, and preferences.',
+    gradient: "from-violet-500 to-purple-500",
+    title: "Account & Login",
+    description: "Manage your account, profile, and preferences.",
     bullets: [
-      'Signing up with Google or Apple',
-      'Updating your profile settings',
-      'Resetting your password',
-      'Deleting your account',
+      "Signing up with Google or Apple",
+      "Updating your profile settings",
+      "Resetting your password",
+      "Deleting your account",
     ],
   },
   {
     icon: CreditCard,
-    gradient: 'from-primary to-amber-500',
-    title: 'Bookings & Payments',
-    description: 'How affiliate bookings and pricing work.',
+    gradient: "from-primary to-amber-500",
+    title: "Bookings & Payments",
+    description: "How affiliate bookings and pricing work.",
     bullets: [
-      'Booking.com hotel reservations',
-      'Viator tours and activities',
-      'Faroway is 100% free to use',
-      'Refunds handled by providers',
+      "Booking.com hotel reservations",
+      "Viator tours and activities",
+      "Faroway is 100% free to use",
+      "Refunds handled by providers",
     ],
   },
   {
     icon: WifiOff,
-    gradient: 'from-sky-500 to-blue-500',
-    title: 'Offline & Sync',
-    description: 'Access your trips anywhere, even without Wi-Fi.',
+    gradient: "from-sky-500 to-blue-500",
+    title: "Offline & Sync",
+    description: "Access your trips anywhere, even without Wi-Fi.",
     bullets: [
-      'Using trips offline',
-      'How automatic sync works',
-      'Managing device storage',
-      'Multi-device access',
+      "Using trips offline",
+      "How automatic sync works",
+      "Managing device storage",
+      "Multi-device access",
     ],
   },
   {
     icon: Shield,
-    gradient: 'from-rose-500 to-pink-500',
-    title: 'Privacy & Security',
-    description: 'How we protect your data and respect your privacy.',
+    gradient: "from-rose-500 to-pink-500",
+    title: "Privacy & Security",
+    description: "How we protect your data and respect your privacy.",
     bullets: [
-      'What data we collect',
-      'Encryption and secure storage',
-      'GDPR compliance',
-      'Data deletion requests',
+      "What data we collect",
+      "Encryption and secure storage",
+      "GDPR compliance",
+      "Data deletion requests",
     ],
   },
 ];
@@ -133,87 +133,90 @@ const helpCategories = [
 const quickStartSteps = [
   {
     step: 1,
-    title: 'Choose your destination',
-    description: 'Pick from 195+ countries worldwide. Set your travel dates and group size.',
+    title: "Choose your destination",
+    description:
+      "Pick from 195+ countries worldwide. Set your travel dates and group size.",
     image: getImageUrl(IMAGE_PATHS.marketing.travelPlanning),
-    imageAlt: 'Traveler with backpack on scenic mountain path',
+    imageAlt: "Traveler with backpack on scenic mountain path",
   },
   {
     step: 2,
-    title: 'Pick your travel vibes',
-    description: 'Select what matters to you — foodie, adventure, culture, relaxation, nightlife, and more.',
+    title: "Pick your travel vibes",
+    description:
+      "Select what matters to you — foodie, adventure, culture, relaxation, nightlife, and more.",
     image: getImageUrl(IMAGE_PATHS.marketing.travelDiscovery),
-    imageAlt: 'Traveler overlooking tropical valley at sunrise',
+    imageAlt: "Traveler overlooking tropical valley at sunrise",
   },
   {
     step: 3,
-    title: 'AI builds your itinerary',
-    description: 'In under 60 seconds, get a complete day-by-day plan with restaurants, activities, and local tips.',
+    title: "AI builds your itinerary",
+    description:
+      "In under 60 seconds, get a complete day-by-day plan with restaurants, activities, and local tips.",
     image: getImageUrl(IMAGE_PATHS.marketing.aerialTravel),
-    imageAlt: 'Aerial view of turquoise waters and lush green islands',
+    imageAlt: "Aerial view of turquoise waters and lush green islands",
   },
 ];
 
 const faqItems = [
   {
-    question: 'Is Faroway really free?',
+    question: "Is Faroway really free?",
     answer:
-      'Yes! Faroway is completely free to use. We earn revenue through affiliate commissions \u2014 when you book a hotel or activity through a link in your itinerary, the provider (like Booking.com or Viator) pays us a small referral fee. You pay the same price as if you booked directly. This affiliate model is how we keep the service free for everyone.',
+      "Yes! Faroway is completely free to use. We earn revenue through affiliate commissions \u2014 when you book a hotel or activity through a link in your itinerary, the provider (like Booking.com or Viator) pays us a small referral fee. You pay the same price as if you booked directly. This affiliate model is how we keep the service free for everyone.",
   },
   {
-    question: 'How does AI trip planning work?',
+    question: "How does AI trip planning work?",
     answer:
-      'Simply enter your destination, travel dates, and preferences (like travel style and interests). Our AI analyzes thousands of data points to create a personalized day-by-day itinerary with activities, restaurants, and local tips tailored to your interests.',
+      "Simply enter your destination, travel dates, and preferences (like travel style and interests). Our AI analyzes thousands of data points to create a personalized day-by-day itinerary with activities, restaurants, and local tips tailored to your interests.",
   },
   {
     question: "Can I edit my itinerary after it's generated?",
     answer:
-      'Absolutely! Every generated itinerary is fully editable. You can add, remove, or rearrange activities, change restaurants, adjust timing, and customize every detail to make it perfect for your trip.',
+      "Absolutely! Every generated itinerary is fully editable. You can add, remove, or rearrange activities, change restaurants, adjust timing, and customize every detail to make it perfect for your trip.",
   },
   {
-    question: 'How do I delete my account?',
+    question: "How do I delete my account?",
     answer:
-      'You can delete your account by going to Settings \u2192 Account \u2192 Delete Account in the mobile app. Your personal data will be removed within 30 days of deletion. If you need help, contact us at support@faroway.ai.',
+      "You can delete your account by going to Settings \u2192 Account \u2192 Delete Account in the mobile app. Your personal data will be removed within 30 days of deletion. If you need help, contact us at support@faroway.ai.",
   },
   {
-    question: 'Does the app work offline?',
+    question: "Does the app work offline?",
     answer:
       "Yes! Faroway uses an offline-first architecture. Your trip itineraries are stored locally on your device so you can access them without an internet connection. Changes sync automatically when you're back online.",
   },
   {
-    question: 'What data do you collect?',
+    question: "What data do you collect?",
     answer:
-      'We collect your account information (email, name via OAuth), travel preferences, trip data, basic usage analytics, and affiliate click/conversion data when you interact with booking links. We never sell your personal data. Affiliate partners only receive a referral ID \u2014 not your name or email. For full details, see our Privacy Policy at faroway.ai/privacy.',
+      "We collect your account information (email, name via OAuth), travel preferences, trip data, basic usage analytics, and affiliate click/conversion data when you interact with booking links. We never sell your personal data. Affiliate partners only receive a referral ID \u2014 not your name or email. For full details, see our Privacy Policy at faroway.ai/privacy.",
   },
   {
-    question: 'How are bookings handled?',
+    question: "How are bookings handled?",
     answer:
-      'Faroway is not a travel agency or booking platform. We provide affiliate links to third-party providers like Booking.com (hotels) and Viator (tours and activities). When you click a link and complete a booking, your contract is directly with that provider \u2014 not with us. All pricing, availability, cancellations, refunds, and customer service are handled entirely by the booking provider under their own terms.',
+      "Faroway is not a travel agency or booking platform. We provide affiliate links to third-party providers like Booking.com (hotels) and Viator (tours and activities). When you click a link and complete a booking, your contract is directly with that provider \u2014 not with us. All pricing, availability, cancellations, refunds, and customer service are handled entirely by the booking provider under their own terms.",
   },
   {
-    question: 'Is my data secure?',
+    question: "Is my data secure?",
     answer:
-      'Yes. We use Supabase for secure cloud storage with encryption in transit (TLS) and at rest. On mobile, sensitive tokens are stored using Expo SecureStore. We conduct regular security reviews to protect your data.',
+      "Yes. We use Supabase for secure cloud storage with encryption in transit (TLS) and at rest. On mobile, sensitive tokens are stored using Expo SecureStore. We conduct regular security reviews to protect your data.",
   },
   {
-    question: 'Which countries does Faroway support?',
+    question: "Which countries does Faroway support?",
     answer:
-      'Faroway supports 195+ countries worldwide. Whether you\'re planning a trip to Paris, Tokyo, Cape Town, or a hidden gem off the beaten path, our AI can generate a personalized itinerary for virtually any destination on earth.',
+      "Faroway supports 195+ countries worldwide. Whether you're planning a trip to Paris, Tokyo, Cape Town, or a hidden gem off the beaten path, our AI can generate a personalized itinerary for virtually any destination on earth.",
   },
   {
-    question: 'Can I plan trips for groups?',
+    question: "Can I plan trips for groups?",
     answer:
-      'Group trip planning features are coming soon! Currently, you can create itineraries and share them with your travel companions via a link. Full collaborative group planning with voting and shared editing is on our roadmap.',
+      "Group trip planning features are coming soon! Currently, you can create itineraries and share them with your travel companions via a link. Full collaborative group planning with voting and shared editing is on our roadmap.",
   },
   {
-    question: 'How do I share my itinerary?',
+    question: "How do I share my itinerary?",
     answer:
-      'You can share your itinerary by tapping the share button on any trip. This generates a shareable link that anyone can view. You can also export your itinerary for offline use or share it directly via messaging apps.',
+      "You can share your itinerary by tapping the share button on any trip. This generates a shareable link that anyone can view. You can also export your itinerary for offline use or share it directly via messaging apps.",
   },
   {
-    question: 'What happens if AI generates a bad recommendation?',
+    question: "What happens if AI generates a bad recommendation?",
     answer:
-      'Every AI-generated itinerary is fully editable. If a recommendation doesn\'t fit your style, you can remove it, swap it for something else, or regenerate that part of the itinerary. You can also provide feedback to help our AI learn and improve.',
+      "Every AI-generated itinerary is fully editable. If a recommendation doesn't fit your style, you can remove it, swap it for something else, or regenerate that part of the itinerary. You can also provide feedback to help our AI learn and improve.",
   },
 ];
 
@@ -221,13 +224,13 @@ const faqItems = [
 
 export default function SupportPage() {
   const faqSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
     mainEntity: faqItems.map((item) => ({
-      '@type': 'Question',
+      "@type": "Question",
       name: item.question,
       acceptedAnswer: {
-        '@type': 'Answer',
+        "@type": "Answer",
         text: item.answer,
       },
     })),
@@ -237,7 +240,9 @@ export default function SupportPage() {
     <div className="min-h-screen bg-white antialiased text-slate-900 overflow-x-hidden">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema).replace(/</g, '\\u003c') }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(faqSchema).replace(/</g, "\\u003c"),
+        }}
       />
       <Header />
 
@@ -258,7 +263,7 @@ export default function SupportPage() {
         <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 lg:pt-36 lg:pb-24">
           <div className="max-w-3xl">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold leading-[1.08] mb-6 tracking-tight text-white">
-              We&apos;re here to help you{' '}
+              We&apos;re here to help you{" "}
               <span className="text-gradient-hero">travel smarter</span>
             </h1>
             <p className="text-lg lg:text-xl text-white/80 mb-8 max-w-2xl leading-relaxed">
@@ -286,8 +291,7 @@ export default function SupportPage() {
                 <Sparkles className="w-4 h-4" /> Help Topics
               </div>
               <h2 className="text-3xl lg:text-5xl font-bold text-slate-900 mb-4">
-                Find answers{' '}
-                <span className="text-gradient">fast</span>
+                Find answers <span className="text-gradient">fast</span>
               </h2>
               <p className="text-xl text-slate-500 max-w-2xl mx-auto">
                 Browse by topic to find the help you need.
@@ -337,7 +341,7 @@ export default function SupportPage() {
                 <Rocket className="w-4 h-4" /> Quick Start
               </div>
               <h2 className="text-3xl lg:text-5xl font-bold text-slate-900 mb-4">
-                Plan your first trip in{' '}
+                Plan your first trip in{" "}
                 <span className="text-gradient">3 easy steps</span>
               </h2>
               <p className="text-xl text-slate-500 max-w-2xl mx-auto">
@@ -389,8 +393,8 @@ export default function SupportPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
           <FadeInOnScroll>
             <blockquote className="text-2xl lg:text-4xl font-bold text-white leading-tight mb-6">
-              &ldquo;The best journeys answer questions that in the beginning you
-              didn&apos;t even think to ask.&rdquo;
+              &ldquo;The best journeys answer questions that in the beginning
+              you didn&apos;t even think to ask.&rdquo;
             </blockquote>
             <cite className="text-white/60 text-lg font-medium not-italic">
               &mdash; Jeff Johnson
@@ -408,7 +412,7 @@ export default function SupportPage() {
                 <MessageCircle className="w-4 h-4" /> FAQ
               </div>
               <h2 className="text-3xl lg:text-5xl font-bold text-slate-900 mb-4">
-                Frequently asked{' '}
+                Frequently asked{" "}
                 <span className="text-gradient">questions</span>
               </h2>
               <p className="text-xl text-slate-500 max-w-2xl mx-auto">
@@ -432,8 +436,7 @@ export default function SupportPage() {
                 <Mail className="w-4 h-4" /> Contact Us
               </div>
               <h2 className="text-3xl lg:text-5xl font-bold text-slate-900 mb-4">
-                Still need{' '}
-                <span className="text-gradient">help</span>?
+                Still need <span className="text-gradient">help</span>?
               </h2>
               <p className="text-xl text-slate-500 max-w-2xl mx-auto">
                 Our team is here for you. Reach out and we&apos;ll get back to
@@ -512,18 +515,18 @@ export default function SupportPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
           <FadeInOnScroll>
             <h2 className="text-3xl lg:text-5xl font-bold mb-6 text-white">
-              Better experience on{' '}
+              Better experience on{" "}
               <span className="text-gradient-hero">mobile</span>
             </h2>
             <p className="text-xl text-white/70 mb-8 leading-relaxed max-w-2xl mx-auto">
-              Download Faroway for offline access, GPS navigation, and
-              real-time trip updates. Your trips, always in your pocket.
+              Download Faroway for offline access, GPS navigation, and real-time
+              trip updates. Your trips, always in your pocket.
             </p>
 
             <AppStoreButtons className="justify-center mb-8" />
 
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-3">
-              {['100% free', 'Works offline', 'No account needed'].map(
+              {["100% free", "Works offline", "No account needed"].map(
                 (feature) => (
                   <div
                     key={feature}

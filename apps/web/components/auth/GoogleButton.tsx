@@ -1,35 +1,38 @@
-'use client'
+"use client";
 
-import { createClient } from '@/lib/supabase/client'
+import { createClient } from "@/lib/supabase/client";
 
 interface GoogleButtonProps {
-  mode: 'signin' | 'signup'
-  redirectTo?: string
+  mode: "signin" | "signup";
+  redirectTo?: string;
 }
 
-export function GoogleButton({ mode, redirectTo = '/dashboard' }: GoogleButtonProps) {
+export function GoogleButton({
+  mode,
+  redirectTo = "/dashboard",
+}: GoogleButtonProps) {
   const handleGoogleAuth = async () => {
-    const supabase = createClient()
-    
+    const supabase = createClient();
+
     // Get the current origin for the callback URL
-    const origin = window.location.origin
-    const callbackUrl = `${origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`
-    
+    const origin = window.location.origin;
+    const callbackUrl = `${origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`;
+
     const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
+      provider: "google",
       options: {
         redirectTo: callbackUrl,
         queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
+          access_type: "offline",
+          prompt: "consent",
         },
       },
-    })
-    
+    });
+
     if (error) {
-      console.error('Google auth error:', error.message)
+      console.error("Google auth error:", error.message);
     }
-  }
+  };
 
   return (
     <button
@@ -57,8 +60,8 @@ export function GoogleButton({ mode, redirectTo = '/dashboard' }: GoogleButtonPr
         />
       </svg>
       <span>
-        {mode === 'signin' ? 'Continue with Google' : 'Sign up with Google'}
+        {mode === "signin" ? "Continue with Google" : "Sign up with Google"}
       </span>
     </button>
-  )
+  );
 }
