@@ -35,7 +35,7 @@ import {
   type ActivityInput,
   type ItineraryDayInput,
 } from '@/lib/json-render/build-spec';
-import type { SearchInput } from '@faroway/types';
+import type { SearchInput, TravelerType } from '@faroway/types';
 
 export const maxDuration = 300;
 
@@ -186,7 +186,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           travelers: trip.travelers || 2,
           vibes: trip.vibes || [],
           budget: (trip.budget_tier as 'budget' | 'moderate' | 'luxury') || 'moderate',
-          travelerType: (trip.preferences as Record<string, unknown>)?.travelerType as string | undefined,
+          travelerType: (trip.preferences as Record<string, unknown>)?.travelerType as TravelerType | undefined,
         };
 
         // Track accumulated json-render blocks for progressive mobile streaming

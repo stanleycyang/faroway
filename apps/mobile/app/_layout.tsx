@@ -34,8 +34,8 @@ function RootLayoutNav() {
     
     // Protected routes that require authentication
     const protectedTabRoutes = ['profile'];
-    const currentTab = segments[1];
-    const isProtectedTab = inTabs && protectedTabRoutes.includes(currentTab as string);
+    const currentTab = (segments as string[])[1] as string | undefined;
+    const isProtectedTab = inTabs && currentTab != null && protectedTabRoutes.includes(currentTab);
 
     // Allow access to index (splash) screen
     if (inIndex) return;

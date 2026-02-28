@@ -60,7 +60,7 @@ export async function executeTravelSearch(
     onMicroProgress?.({ stage: 'orchestrator', message: 'Understanding your travel style...', detail: `${input.vibes?.join(', ') || 'adventure'}` });
     const searchPlan = await runOrchestratorAgent(input);
     
-    onMicroProgress?.({ stage: 'orchestrator', message: 'Created personalized search plan', detail: `${searchPlan.numberOfDays} days in ${input.destination}` });
+    onMicroProgress?.({ stage: 'orchestrator', message: 'Created personalized search plan', detail: `${searchPlan.dates.nights} nights in ${input.destination}` });
     if (onProgress) await onProgress('orchestrator', 'done');
 
     // Step 2: Run specialized agents in parallel

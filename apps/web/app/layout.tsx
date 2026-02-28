@@ -7,6 +7,7 @@ const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   display: "swap",
   weight: ["300", "400", "500", "600", "700", "800"],
+  fallback: ["system-ui", "arial"],
 });
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.faroway.ai';

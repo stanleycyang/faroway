@@ -16,8 +16,8 @@ import { scoreDestinations } from '@/lib/tools/quiz-scoring';
 describe('scoreDestinations', () => {
   it('returns top 3 results sorted by score', () => {
     const answers = [
-      [{ label: 'City', tags: { urban: 3, culture: 2 } }],
-      [{ label: 'Food', tags: { foodie: 3 } }],
+      [{ label: 'City', emoji: '🏙️', tags: { urban: 3, culture: 2 } }],
+      [{ label: 'Food', emoji: '🍜', tags: { foodie: 3 } }],
     ];
 
     const results = scoreDestinations(answers);
@@ -29,7 +29,7 @@ describe('scoreDestinations', () => {
 
   it('normalizes top result to ~95%', () => {
     const answers = [
-      [{ label: 'Beach', tags: { beach: 5 } }],
+      [{ label: 'Beach', emoji: '🏖️', tags: { beach: 5 } }],
     ];
 
     const results = scoreDestinations(answers);
@@ -38,7 +38,7 @@ describe('scoreDestinations', () => {
 
   it('includes matchReasons as humanized tags', () => {
     const answers = [
-      [{ label: 'Adventure', tags: { adventure: 3, nature: 2 } }],
+      [{ label: 'Adventure', emoji: '🏔️', tags: { adventure: 3, nature: 2 } }],
     ];
 
     const results = scoreDestinations(answers);
@@ -58,6 +58,7 @@ describe('scoreDestinations', () => {
       [
         {
           label: 'Everything',
+          emoji: '✨',
           tags: { culture: 1, foodie: 1, urban: 1, solo: 1, moderate: 1 },
         },
       ],
@@ -71,8 +72,8 @@ describe('scoreDestinations', () => {
 
   it('aggregates tags from multiple answer sets', () => {
     const answers = [
-      [{ label: 'A', tags: { culture: 2 } }],
-      [{ label: 'B', tags: { culture: 3, foodie: 1 } }],
+      [{ label: 'A', emoji: '🅰️', tags: { culture: 2 } }],
+      [{ label: 'B', emoji: '🅱️', tags: { culture: 3, foodie: 1 } }],
     ];
 
     const results = scoreDestinations(answers);
@@ -91,7 +92,7 @@ describe('scoreDestinations', () => {
 
   it('handles answers with no matching tags', () => {
     const answers = [
-      [{ label: 'Unknown', tags: { nonexistent_tag: 10 } }],
+      [{ label: 'Unknown', emoji: '❓', tags: { nonexistent_tag: 10 } }],
     ];
 
     const results = scoreDestinations(answers);
