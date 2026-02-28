@@ -99,7 +99,7 @@ jobs:
     name: Deploy Web Preview
     runs-on: ubuntu-latest
     needs: build-web
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && secrets.VERCEL_TOKEN != ''
     environment:
       name: preview
       url: ${{ steps.deploy.outputs.url }}
@@ -145,7 +145,7 @@ jobs:
     name: Deploy Web Production
     runs-on: ubuntu-latest
     needs: build-web
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && secrets.VERCEL_TOKEN != ''
     environment:
       name: production
       url: https://faroway.ai
