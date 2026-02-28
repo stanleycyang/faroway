@@ -49,7 +49,10 @@ function rowToPost(row: any): BlogPost {
 // ---------------------------------------------------------------------------
 
 export async function getAllPostMetas(): Promise<BlogPostMeta[]> {
-  const { data, error } = await getBlogSupabase()
+  const supabase = getBlogSupabase();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
     .from("blog_posts")
     .select(META_COLUMNS)
     .eq("status", "published")
@@ -64,7 +67,10 @@ export async function getAllPostMetas(): Promise<BlogPostMeta[]> {
 }
 
 export async function getAllPosts(): Promise<BlogPost[]> {
-  const { data, error } = await getBlogSupabase()
+  const supabase = getBlogSupabase();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
     .from("blog_posts")
     .select(FULL_COLUMNS)
     .eq("status", "published")
@@ -79,7 +85,10 @@ export async function getAllPosts(): Promise<BlogPost[]> {
 }
 
 export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
-  const { data, error } = await getBlogSupabase()
+  const supabase = getBlogSupabase();
+  if (!supabase) return null;
+
+  const { data, error } = await supabase
     .from("blog_posts")
     .select(FULL_COLUMNS)
     .eq("slug", slug)
