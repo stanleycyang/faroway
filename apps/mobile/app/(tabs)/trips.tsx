@@ -16,6 +16,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { TripCard, Button } from '../../components/ui';
 import { useTrips } from '../../hooks/useTrips';
 import { useAuthContext } from '../../components/AuthProvider';
+import { useTripStore } from '../../stores/tripStore';
 import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 
@@ -50,6 +51,7 @@ function FeatureRow({
 function GuestTripsView() {
   const { signInWithGoogle, signInWithApple, loading } = useAuthContext();
   const router = useRouter();
+  const { trips: localTrips } = useTripStore();
   const [authLoading, setAuthLoading] = useState(false);
 
   const isLoading = loading || authLoading;
@@ -96,10 +98,15 @@ function GuestTripsView() {
           </LinearGradient>
         </View>
 
-        <Text style={styles.heroTitle}>Your trips, all in one place</Text>
+        <Text style={styles.heroTitle}>
+          {localTrips.length > 0
+            ? `You have ${localTrips.length} unsaved trip${localTrips.length > 1 ? 's' : ''}`
+            : 'Your trips, all in one place'}
+        </Text>
         <Text style={styles.heroSubtitle}>
-          Sign in to save your itineraries, access them from any device, and
-          never lose a trip plan again.
+          {localTrips.length > 0
+            ? 'Sign in to save them before they\'re gone'
+            : 'Sign in to save your itineraries, access them from any device, and never lose a trip plan again.'}
         </Text>
       </View>
 

@@ -20,6 +20,9 @@ import {
   VibeSelector,
 } from '../../components/ui';
 import { useTripStore } from '../../stores/tripStore';
+import { usePromptStore } from '../../stores/promptStore';
+import { useAuthContext } from '../../components/AuthProvider';
+import { AuthGate } from '../../components/AuthGate';
 import { popularDestinations, travelerTypes } from '@faroway/constants';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
@@ -57,9 +60,15 @@ export default function CreateTripScreen() {
     travelers?: string;
   }>();
   const { draftInput, setDraftInput } = useTripStore();
+  const { isAuthenticated } = useAuthContext();
+  const { tripGenerationCount, hasDismissedCreateBanner, dismissCreateBanner } = usePromptStore();
 
   const [showSearch, setShowSearch] = useState(!params.destination);
   const [mapLoadFailed, setMapLoadFailed] = useState(false);
+  const [showAuthGate, setShowAuthGate] = useState(false);
+
+  const showSignInBanner =
+    !isAuthenticated && tripGenerationCount >= 1 && !hasDismissedCreateBanner;
 
   useEffect(() => {
     if (params.destination) {
@@ -161,6 +170,29 @@ export default function CreateTripScreen() {
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
+          {/* Soft sign-in banner */}
+          {showSignInBanner && (
+            <View style={styles.signInBanner}>
+              <TouchableOpacity
+                style={styles.signInBannerContent}
+                onPress={() => setShowAuthGate(true)}
+                activeOpacity={0.7}
+              >
+                <Ionicons name="cloud-upload-outline" size={18} color={colors.primary[600]} />
+                <Text style={styles.signInBannerText}>
+                  Sign in to sync your trips across devices
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.signInBannerClose}
+                onPress={() => dismissCreateBanner()}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close" size={18} color={colors.primary[400]} />
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Destination Selection */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Where do you want to go?</Text>
@@ -363,6 +395,13 @@ export default function CreateTripScreen() {
             fullWidth
           />
         </View>
+
+        {/* Auth gate from banner */}
+        <AuthGate
+          visible={showAuthGate}
+          trigger="general"
+          onClose={() => setShowAuthGate(false)}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -394,6 +433,32 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '700',
     color: '#0f172a',
+  },
+  signInBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF5F4',
+    marginHorizontal: 24,
+    marginBottom: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: borderRadius.lg,
+  },
+  signInBannerContent: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  signInBannerText: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary[600],
+  },
+  signInBannerClose: {
+    padding: 4,
+    marginLeft: 8,
   },
   scrollContent: {
     paddingVertical: 24,

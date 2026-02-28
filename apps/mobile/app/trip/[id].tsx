@@ -20,6 +20,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
 import { Button, VibeChips } from '../../components/ui';
 import { useTripStore, TripActivity } from '../../stores/tripStore';
+import { usePromptStore } from '../../stores/promptStore';
+import { useAuthContext } from '../../components/AuthProvider';
+import { AuthGate } from '../../components/AuthGate';
+import { RatingPrompt } from '../../components/RatingPrompt';
 import { getTrip, shareTrip } from '../../services/api';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
@@ -172,9 +176,14 @@ export default function TripDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { trips, currentTrip } = useTripStore();
+  const { isAuthenticated } = useAuthContext();
+  const { tripGenerationCount, shouldShowRatingPrompt } = usePromptStore();
   const [selectedDay, setSelectedDay] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
-  
+  const [showAuthGate, setShowAuthGate] = useState(false);
+  const [authGateTrigger, setAuthGateTrigger] = useState<'save' | 'share'>('save');
+  const [showRatingPrompt, setShowRatingPrompt] = useState(false);
+
   const scrollY = useRef(new Animated.Value(0)).current;
   const trip = trips.find((t) => t.id === id) || currentTrip;
 
@@ -183,6 +192,24 @@ export default function TripDetailScreen() {
       router.back();
     }
   }, [trip, id]);
+
+  // Show rating prompt after 10s on completed trips for authenticated users
+  useEffect(() => {
+    if (!isAuthenticated || trip?.status !== 'completed' || !shouldShowRatingPrompt()) return;
+    const timer = setTimeout(() => {
+      setShowRatingPrompt(true);
+    }, 10000);
+    return () => clearTimeout(timer);
+  }, [isAuthenticated, trip?.status]);
+
+  const handleHeartPress = () => {
+    hapticFeedback.light();
+    if (!isAuthenticated) {
+      setAuthGateTrigger('save');
+      setShowAuthGate(true);
+    }
+    // For authenticated users: no-op for now (toggle saved state TBD)
+  };
 
   const onRefresh = async () => {
     if (!id) return;
@@ -204,6 +231,11 @@ export default function TripDetailScreen() {
   const handleShare = async () => {
     if (!id) return;
     hapticFeedback.light();
+    if (!isAuthenticated) {
+      setAuthGateTrigger('share');
+      setShowAuthGate(true);
+      return;
+    }
     try {
       const result = await shareTrip(id);
       if (result.data?.shareUrl) {
@@ -292,7 +324,7 @@ export default function TripDetailScreen() {
                 <Ionicons name="arrow-back" size={24} color="#fff" />
               </TouchableOpacity>
               <View style={styles.heroActions}>
-                <TouchableOpacity style={styles.actionButton}>
+                <TouchableOpacity style={styles.actionButton} onPress={handleHeartPress}>
                   <Ionicons name="heart-outline" size={22} color="#fff" />
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
@@ -400,6 +432,25 @@ export default function TripDetailScreen() {
           style={styles.bookAllButton}
         />
       </View>
+
+      {/* Auth gate for guests */}
+      <AuthGate
+        visible={showAuthGate}
+        trigger={authGateTrigger}
+        tripPreview={
+          trip
+            ? { destination: trip.destination, coverImage: trip.coverImage }
+            : undefined
+        }
+        onClose={() => setShowAuthGate(false)}
+      />
+
+      {/* Rating prompt for authenticated users on completed trips */}
+      <RatingPrompt
+        visible={showRatingPrompt}
+        tripCount={tripGenerationCount}
+        onClose={() => setShowRatingPrompt(false)}
+      />
     </View>
   );
 }

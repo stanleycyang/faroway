@@ -16,6 +16,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
+import * as StoreReview from 'expo-store-review';
 import { useAuthContext } from '../../components/AuthProvider';
 import { useUserStore } from '../../stores/userStore';
 import { useTripStore } from '../../stores/tripStore';
@@ -263,11 +264,16 @@ export default function ProfileScreen() {
           <MenuItem
             icon="star-outline"
             label="Rate the App"
-            onPress={() => {
-              const url = Platform.OS === 'ios'
-                ? 'https://apps.apple.com/app/faroway/id0000000000'
-                : 'https://play.google.com/store/apps/details?id=app.faroway';
-              Linking.openURL(url);
+            onPress={async () => {
+              const available = await StoreReview.isAvailableAsync();
+              if (available) {
+                await StoreReview.requestReview();
+              } else {
+                const url = Platform.OS === 'ios'
+                  ? 'https://apps.apple.com/app/faroway/id0000000000'
+                  : 'https://play.google.com/store/apps/details?id=app.faroway';
+                Linking.openURL(url);
+              }
             }}
           />
         </View>
