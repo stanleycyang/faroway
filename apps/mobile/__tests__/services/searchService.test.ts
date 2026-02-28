@@ -19,7 +19,7 @@ import {
 import type { SearchProgress } from '@faroway/types';
 
 const mockFetch = jest.fn();
-global.fetch = mockFetch;
+(globalThis as any).fetch = mockFetch;
 
 beforeEach(() => {
   jest.clearAllMocks();

@@ -28,7 +28,7 @@ import {
 
 // Mock global fetch
 const mockFetch = jest.fn();
-global.fetch = mockFetch;
+(globalThis as any).fetch = mockFetch;
 
 beforeEach(() => {
   jest.clearAllMocks();
