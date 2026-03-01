@@ -3,16 +3,16 @@
  * Analyzes user input and creates a search plan for other agents
  */
 
-import { generateObject, gateway as defaultGateway, createGateway } from 'ai';
-import { z } from 'zod';
-import { SearchInput, SearchPlan } from '../types';
-import { VIBE_KEYWORDS, BUDGET_RANGES } from '@faroway/constants';
+import { generateObject, gateway as defaultGateway, createGateway } from "ai";
+import { z } from "zod";
+import { SearchInput, SearchPlan } from "../types";
+import { VIBE_KEYWORDS, BUDGET_RANGES } from "@faroway/constants";
 
 const aiGateway = process.env.AI_GATEWAY_API_KEY
   ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
   : defaultGateway;
 
-const MODEL = 'google/gemini-3-flash';
+const MODEL = "google/gemini-3-flash";
 
 const SearchPlanSchema = z.object({
   destination: z.string(),
@@ -22,7 +22,7 @@ const SearchPlanSchema = z.object({
     end: z.string(),
     nights: z.number(),
   }),
-  searchPriorities: z.array(z.enum(['hotels', 'activities', 'dining'])),
+  searchPriorities: z.array(z.enum(["hotels", "activities", "dining"])),
   hotelCriteria: z.object({
     priceRange: z.object({ min: z.number(), max: z.number() }),
     starRating: z.array(z.number()),
@@ -31,15 +31,15 @@ const SearchPlanSchema = z.object({
   }),
   activityCriteria: z.object({
     categories: z.array(z.string()),
-    pacePreference: z.enum(['relaxed', 'moderate', 'packed']),
+    pacePreference: z.enum(["relaxed", "moderate", "packed"]),
     mustSee: z.array(z.string()),
     interests: z.array(z.string()),
   }),
   diningCriteria: z.object({
     cuisineTypes: z.array(z.string()),
-    priceRange: z.enum(['budget', 'moderate', 'upscale']),
+    priceRange: z.enum(["budget", "moderate", "upscale"]),
     dietaryNeeds: z.array(z.string()),
-    mealPriorities: z.array(z.enum(['breakfast', 'lunch', 'dinner'])),
+    mealPriorities: z.array(z.enum(["breakfast", "lunch", "dinner"])),
   }),
   vibeInterpretation: z.object({
     vibes: z.array(z.string()),
@@ -59,29 +59,34 @@ Consider:
 
 Output a comprehensive search plan with specific criteria for hotels, activities, and dining that match the user's preferences.`;
 
-export async function runOrchestratorAgent(input: SearchInput): Promise<SearchPlan> {
+export async function runOrchestratorAgent(
+  input: SearchInput,
+): Promise<SearchPlan> {
   const nights = Math.ceil(
-    (new Date(input.endDate).getTime() - new Date(input.startDate).getTime()) / (1000 * 60 * 60 * 24)
+    (new Date(input.endDate).getTime() - new Date(input.startDate).getTime()) /
+      (1000 * 60 * 60 * 24),
   );
 
-  const budgetInfo = BUDGET_RANGES[input.budget || 'moderate'];
-  
+  const budgetInfo = BUDGET_RANGES[input.budget || "moderate"];
+
   // Collect keywords from selected vibes
-  const vibeKeywords = input.vibes.flatMap((vibe: string) => VIBE_KEYWORDS[vibe.toLowerCase()] || []);
+  const vibeKeywords = input.vibes.flatMap(
+    (vibe: string) => VIBE_KEYWORDS[vibe.toLowerCase()] || [],
+  );
 
   const prompt = `Create a search plan for this trip:
 
 **Destination:** ${input.destination}
 **Dates:** ${input.startDate} to ${input.endDate} (${nights} nights)
-**Travelers:** ${input.travelers} people, ${input.travelerType || 'general'} travel
-**Vibes:** ${input.vibes.join(', ')}
-**Budget:** ${input.budget || 'moderate'}
+**Travelers:** ${input.travelers} people, ${input.travelerType || "general"} travel
+**Vibes:** ${input.vibes.join(", ")}
+**Budget:** ${input.budget || "moderate"}
 
 Budget guidelines:
 - Hotel: $${budgetInfo.hotel.min} - $${budgetInfo.hotel.max} per night
 - Daily activities/food: ~$${budgetInfo.daily} per person
 
-Keywords associated with their vibes: ${vibeKeywords.join(', ')}
+Keywords associated with their vibes: ${vibeKeywords.join(", ")}
 
 Create a detailed search plan with:
 1. Best neighborhoods to stay in ${input.destination}
@@ -100,35 +105,45 @@ Create a detailed search plan with:
 
     return plan;
   } catch (error) {
-    console.error('[Orchestrator Agent] Error:', error);
-    
+    console.error("[Orchestrator Agent] Error:", error);
+
     // Return a reasonable default plan
     return {
       destination: input.destination,
-      country: '', // Will be filled by search
+      country: "", // Will be filled by search
       dates: {
         start: input.startDate,
         end: input.endDate,
         nights,
       },
-      searchPriorities: ['hotels', 'activities', 'dining'],
+      searchPriorities: ["hotels", "activities", "dining"],
       hotelCriteria: {
         priceRange: budgetInfo.hotel,
-        starRating: input.budget === 'luxury' ? [4, 5] : input.budget === 'budget' ? [2, 3] : [3, 4],
-        amenities: ['wifi', 'breakfast'],
+        starRating:
+          input.budget === "luxury"
+            ? [4, 5]
+            : input.budget === "budget"
+              ? [2, 3]
+              : [3, 4],
+        amenities: ["wifi", "breakfast"],
         neighborhoods: [],
       },
       activityCriteria: {
         categories: input.vibes,
-        pacePreference: 'moderate',
+        pacePreference: "moderate",
         mustSee: [],
         interests: vibeKeywords.slice(0, 10),
       },
       diningCriteria: {
-        cuisineTypes: ['local'],
-        priceRange: input.budget === 'luxury' ? 'upscale' : input.budget === 'budget' ? 'budget' : 'moderate',
+        cuisineTypes: ["local"],
+        priceRange:
+          input.budget === "luxury"
+            ? "upscale"
+            : input.budget === "budget"
+              ? "budget"
+              : "moderate",
         dietaryNeeds: [],
-        mealPriorities: ['dinner', 'lunch', 'breakfast'],
+        mealPriorities: ["dinner", "lunch", "breakfast"],
       },
       vibeInterpretation: {
         vibes: input.vibes,

@@ -1,5 +1,5 @@
-import type { MonthlyClimate } from '@/lib/tools/climate-data';
-import { Droplets } from 'lucide-react';
+import type { MonthlyClimate } from "@/lib/tools/climate-data";
+import { Droplets } from "lucide-react";
 
 interface MonthlyClimateChartProps {
   months: MonthlyClimate[];
@@ -17,9 +17,7 @@ export function MonthlyClimateChart({ months }: MonthlyClimateChartProps) {
     <div className="p-6 rounded-2xl bg-white border border-slate-200/80">
       {/* Legend */}
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-bold text-slate-900">
-          Monthly Climate
-        </h3>
+        <h3 className="text-lg font-bold text-slate-900">Monthly Climate</h3>
         <div className="flex items-center gap-4 text-xs text-slate-500">
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-sm bg-gradient-to-t from-primary to-amber-400" />
@@ -43,13 +41,16 @@ export function MonthlyClimateChart({ months }: MonthlyClimateChartProps) {
           // Color: blue for cold, coral-amber for warm
           const barColor =
             tempNorm > 0.65
-              ? 'from-primary to-amber-400'
+              ? "from-primary to-amber-400"
               : tempNorm > 0.35
-                ? 'from-amber-300 to-primary'
-                : 'from-sky-300 to-blue-400';
+                ? "from-amber-300 to-primary"
+                : "from-sky-300 to-blue-400";
 
           return (
-            <div key={m.month} className="flex-1 flex flex-col items-center gap-1 group">
+            <div
+              key={m.month}
+              className="flex-1 flex flex-col items-center gap-1 group"
+            >
               {/* Temp label */}
               <span className="text-[10px] sm:text-xs font-semibold text-slate-700">
                 {m.avgTempC}°
@@ -74,7 +75,9 @@ export function MonthlyClimateChart({ months }: MonthlyClimateChartProps) {
                 {/* Hover tooltip */}
                 <div className="absolute -top-14 left-1/2 -translate-x-1/2 hidden group-hover:block z-10">
                   <div className="bg-slate-800 text-white text-[10px] rounded-lg px-2.5 py-1.5 whitespace-nowrap shadow-lg">
-                    <p className="font-semibold">{m.avgTempC}°C / {m.avgTempF}°F</p>
+                    <p className="font-semibold">
+                      {m.avgTempC}°C / {m.avgTempF}°F
+                    </p>
                     <p className="text-slate-300">{m.rainfallMm}mm rain</p>
                   </div>
                   <div className="w-2 h-2 bg-slate-800 rotate-45 mx-auto -mt-1" />

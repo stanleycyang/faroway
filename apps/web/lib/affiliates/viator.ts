@@ -15,26 +15,27 @@
 const VIATOR_API_KEY = process.env.VIATOR_API_KEY;
 const VIATOR_PARTNER_ID = process.env.VIATOR_PARTNER_ID;
 // VIATOR_SANDBOX=true in .env to use sandbox endpoint (for testing keys)
-const VIATOR_API_BASE = process.env.VIATOR_SANDBOX === 'true'
-  ? 'https://api.sandbox.viator.com/partner'
-  : 'https://api.viator.com/partner';
+const VIATOR_API_BASE =
+  process.env.VIATOR_SANDBOX === "true"
+    ? "https://api.sandbox.viator.com/partner"
+    : "https://api.viator.com/partner";
 
 // Headers for v2 endpoints (GET — no Content-Type needed)
 function getV2ReadHeaders(): Record<string, string> {
   return {
-    'Accept': 'application/json;version=2.0',
-    'Accept-Language': 'en-US',
-    'exp-api-key': VIATOR_API_KEY!,
+    Accept: "application/json;version=2.0",
+    "Accept-Language": "en-US",
+    "exp-api-key": VIATOR_API_KEY!,
   };
 }
 
 // Headers for v2 endpoints (POST — includes Content-Type)
 function getV2WriteHeaders(): Record<string, string> {
   return {
-    'Accept': 'application/json;version=2.0',
-    'Content-Type': 'application/json',
-    'Accept-Language': 'en-US',
-    'exp-api-key': VIATOR_API_KEY!,
+    Accept: "application/json;version=2.0",
+    "Content-Type": "application/json",
+    "Accept-Language": "en-US",
+    "exp-api-key": VIATOR_API_KEY!,
   };
 }
 
@@ -46,40 +47,121 @@ function getV2WriteHeaders(): Record<string, string> {
 
 const DESTINATION_IDS: Record<string, number> = {
   // Asia
-  'tokyo': 334, 'kyoto': 332, 'osaka': 4163, 'bangkok': 343,
-  'singapore': 60449, 'hong kong': 35959, 'bali': 98, 'phuket': 349,
-  'seoul': 973, 'taipei': 3643, 'ho chi minh city': 352, 'hanoi': 351,
-  'kuala lumpur': 5765, 'mumbai': 953, 'new delhi': 4540, 'siem reap': 5480,
-  'chiang mai': 6282, 'ubud': 4538, 'da nang': 22399, 'phnom penh': 3644,
+  tokyo: 334,
+  kyoto: 332,
+  osaka: 4163,
+  bangkok: 343,
+  singapore: 60449,
+  "hong kong": 35959,
+  bali: 98,
+  phuket: 349,
+  seoul: 973,
+  taipei: 3643,
+  "ho chi minh city": 352,
+  hanoi: 351,
+  "kuala lumpur": 5765,
+  mumbai: 953,
+  "new delhi": 4540,
+  "siem reap": 5480,
+  "chiang mai": 6282,
+  ubud: 4538,
+  "da nang": 22399,
+  "phnom penh": 3644,
   // Europe
-  'paris': 479, 'london': 737, 'rome': 511, 'barcelona': 562,
-  'amsterdam': 525, 'prague': 462, 'lisbon': 538, 'athens': 496,
-  'istanbul': 585, 'florence': 519, 'venice': 522, 'dublin': 503,
-  'berlin': 488, 'madrid': 566, 'vienna': 454, 'budapest': 449,
-  'edinburgh': 905, 'santorini': 959, 'mykonos': 4814, 'dubrovnik': 904,
-  'reykjavik': 4080, 'nice': 483, 'munich': 490, 'zurich': 573,
-  'copenhagen': 4361, 'stockholm': 4195, 'brussels': 531, 'milan': 512,
-  'naples': 515, 'seville': 564, 'krakow': 467, 'split': 906,
+  paris: 479,
+  london: 737,
+  rome: 511,
+  barcelona: 562,
+  amsterdam: 525,
+  prague: 462,
+  lisbon: 538,
+  athens: 496,
+  istanbul: 585,
+  florence: 519,
+  venice: 522,
+  dublin: 503,
+  berlin: 488,
+  madrid: 566,
+  vienna: 454,
+  budapest: 449,
+  edinburgh: 905,
+  santorini: 959,
+  mykonos: 4814,
+  dubrovnik: 904,
+  reykjavik: 4080,
+  nice: 483,
+  munich: 490,
+  zurich: 573,
+  copenhagen: 4361,
+  stockholm: 4195,
+  brussels: 531,
+  milan: 512,
+  naples: 515,
+  seville: 564,
+  krakow: 467,
+  split: 906,
   // Americas
-  'new york city': 687, 'new york': 687, 'los angeles': 645,
-  'san francisco': 651, 'las vegas': 684, 'miami': 672, 'chicago': 669,
-  'washington dc': 657, 'boston': 678, 'cancun': 631, 'mexico city': 628,
-  'rio de janeiro': 712, 'buenos aires': 901, 'lima': 1004,
-  'cartagena': 4988, 'cusco': 918, 'san diego': 647, 'seattle': 653,
-  'new orleans': 675, 'nashville': 20448, 'austin': 30196, 'denver': 673,
-  'portland': 654, 'savannah': 4985, 'charleston': 4989,
-  'playa del carmen': 4975, 'tulum': 25498, 'san juan': 711,
-  'medellín': 25487, 'medellin': 25487, 'bogota': 5385,
+  "new york city": 687,
+  "new york": 687,
+  "los angeles": 645,
+  "san francisco": 651,
+  "las vegas": 684,
+  miami: 672,
+  chicago: 669,
+  "washington dc": 657,
+  boston: 678,
+  cancun: 631,
+  "mexico city": 628,
+  "rio de janeiro": 712,
+  "buenos aires": 901,
+  lima: 1004,
+  cartagena: 4988,
+  cusco: 918,
+  "san diego": 647,
+  seattle: 653,
+  "new orleans": 675,
+  nashville: 20448,
+  austin: 30196,
+  denver: 673,
+  portland: 654,
+  savannah: 4985,
+  charleston: 4989,
+  "playa del carmen": 4975,
+  tulum: 25498,
+  "san juan": 711,
+  medellín: 25487,
+  medellin: 25487,
+  bogota: 5385,
   // Hawaii (Oahu = 663, Maui = 671, Big Island = 670, Kauai = 668)
-  'honolulu': 663, 'waikiki': 663, 'oahu': 663, 'maui': 671,
-  'kona': 670, 'hilo': 670, 'big island': 670, 'kauai': 668,
+  honolulu: 663,
+  waikiki: 663,
+  oahu: 663,
+  maui: 671,
+  kona: 670,
+  hilo: 670,
+  "big island": 670,
+  kauai: 668,
   // Middle East & Africa
-  'dubai': 828, 'marrakech': 5408, 'cairo': 782, 'cape town': 318,
-  'tel aviv': 945, 'jerusalem': 946, 'petra': 4892, 'nairobi': 5558,
-  'abu dhabi': 4832, 'doha': 36743, 'amman': 4891,
+  dubai: 828,
+  marrakech: 5408,
+  cairo: 782,
+  "cape town": 318,
+  "tel aviv": 945,
+  jerusalem: 946,
+  petra: 4892,
+  nairobi: 5558,
+  "abu dhabi": 4832,
+  doha: 36743,
+  amman: 4891,
   // Oceania
-  'sydney': 357, 'melbourne': 364, 'auckland': 381, 'queenstown': 5523,
-  'fiji': 4249, 'gold coast': 362, 'cairns': 355, 'perth': 367,
+  sydney: 357,
+  melbourne: 364,
+  auckland: 381,
+  queenstown: 5523,
+  fiji: 4249,
+  "gold coast": 362,
+  cairns: 355,
+  perth: 367,
 };
 
 /**
@@ -96,7 +178,7 @@ function getViatorDestinationId(name: string): number | null {
   }
 
   // Try without country suffix: "Santorini, Greece" → "santorini"
-  const city = normalized.split(',')[0].trim();
+  const city = normalized.split(",")[0].trim();
   if (city !== normalized && DESTINATION_IDS[city]) {
     return DESTINATION_IDS[city];
   }
@@ -194,10 +276,10 @@ export function isViatorConfigured(): boolean {
  * 3. If lookup fails, return empty (activities agent falls back to AI-generated)
  */
 export async function searchViatorProducts(
-  params: ViatorSearchParams
+  params: ViatorSearchParams,
 ): Promise<ViatorProduct[]> {
   if (!isViatorConfigured()) {
-    console.warn('[Viator] API not configured, returning empty results');
+    console.warn("[Viator] API not configured, returning empty results");
     return [];
   }
 
@@ -205,17 +287,23 @@ export async function searchViatorProducts(
     const destId = getViatorDestinationId(params.destination);
 
     if (destId) {
-      console.log(`[Viator] Found destination ID ${destId} for "${params.destination}" (${VIATOR_API_BASE})`);
+      console.log(
+        `[Viator] Found destination ID ${destId} for "${params.destination}" (${VIATOR_API_BASE})`,
+      );
       const products = await searchByDestinationId(destId, params);
       if (products.length > 0) return products;
-      console.log(`[Viator] No products found for destId=${destId}, search returned empty`);
+      console.log(
+        `[Viator] No products found for destId=${destId}, search returned empty`,
+      );
     } else {
-      console.log(`[Viator] No destination ID for "${params.destination}", skipping Viator search`);
+      console.log(
+        `[Viator] No destination ID for "${params.destination}", skipping Viator search`,
+      );
     }
 
     return [];
   } catch (error) {
-    console.error('[Viator] Search error:', error);
+    console.error("[Viator] Search error:", error);
     return [];
   }
 }
@@ -225,7 +313,7 @@ export async function searchViatorProducts(
  */
 async function searchByDestinationId(
   destId: number,
-  params: ViatorSearchParams
+  params: ViatorSearchParams,
 ): Promise<ViatorProduct[]> {
   const body: Record<string, unknown> = {
     filtering: {
@@ -242,26 +330,28 @@ async function searchByDestinationId(
       count: params.limit || 15,
     },
     sorting: {
-      sort: 'DEFAULT',
-      order: 'DESCENDING',
+      sort: "DEFAULT",
+      order: "DESCENDING",
     },
-    currency: 'USD',
+    currency: "USD",
   };
 
   const response = await fetch(`${VIATOR_API_BASE}/products/search`, {
-    method: 'POST',
+    method: "POST",
     headers: getV2WriteHeaders(),
     body: JSON.stringify(body),
   });
 
   if (!response.ok) {
     const error = await response.text();
-    console.error('[Viator] products/search error:', response.status, error);
+    console.error("[Viator] products/search error:", response.status, error);
     return [];
   }
 
   const data = await response.json();
-  console.log(`[Viator] products/search returned ${data.products?.length || 0} results for destId=${destId}`);
+  console.log(
+    `[Viator] products/search returned ${data.products?.length || 0} results for destId=${destId}`,
+  );
   return (data.products || []).map(normalizeViatorProduct);
 }
 
@@ -269,19 +359,16 @@ async function searchByDestinationId(
  * Get detailed product information
  */
 export async function getViatorProduct(
-  productCode: string
+  productCode: string,
 ): Promise<ViatorProduct | null> {
   if (!isViatorConfigured()) {
     return null;
   }
 
   try {
-    const response = await fetch(
-      `${VIATOR_API_BASE}/products/${productCode}`,
-      {
-        headers: getV2ReadHeaders(),
-      }
-    );
+    const response = await fetch(`${VIATOR_API_BASE}/products/${productCode}`, {
+      headers: getV2ReadHeaders(),
+    });
 
     if (!response.ok) {
       return null;
@@ -290,7 +377,7 @@ export async function getViatorProduct(
     const data = await response.json();
     return normalizeViatorProduct(data);
   } catch (error) {
-    console.error('[Viator] Get product error:', error);
+    console.error("[Viator] Get product error:", error);
     return null;
   }
 }
@@ -302,27 +389,24 @@ export async function checkViatorAvailability(
   productCode: string,
   startDate: string,
   endDate: string,
-  travelers: number = 2
+  travelers: number = 2,
 ): Promise<ViatorAvailability[]> {
   if (!isViatorConfigured()) {
     return [];
   }
 
   try {
-    const response = await fetch(
-      `${VIATOR_API_BASE}/availability/check`,
-      {
-        method: 'POST',
-        headers: getV2WriteHeaders(),
-        body: JSON.stringify({
-          productCode,
-          travelDate: startDate,
-          endDate,
-          paxMix: [{ ageBand: 'ADULT', count: travelers }],
-          currency: 'USD',
-        }),
-      }
-    );
+    const response = await fetch(`${VIATOR_API_BASE}/availability/check`, {
+      method: "POST",
+      headers: getV2WriteHeaders(),
+      body: JSON.stringify({
+        productCode,
+        travelDate: startDate,
+        endDate,
+        paxMix: [{ ageBand: "ADULT", count: travelers }],
+        currency: "USD",
+      }),
+    });
 
     if (!response.ok) {
       return [];
@@ -331,7 +415,7 @@ export async function checkViatorAvailability(
     const data = await response.json();
     return data.availability || [];
   } catch (error) {
-    console.error('[Viator] Availability check error:', error);
+    console.error("[Viator] Availability check error:", error);
     return [];
   }
 }
@@ -347,23 +431,23 @@ export function generateViatorAffiliateUrl(
     date?: string;
     travelers?: number;
     productUrl?: string;
-  }
+  },
 ): string {
   // Use the API-provided productUrl when available (already has proper structure)
   if (options?.productUrl) {
     const url = new URL(options.productUrl);
-    url.searchParams.set('pid', VIATOR_PARTNER_ID || 'faroway');
-    url.searchParams.set('mcid', trackingId);
-    url.searchParams.set('medium', 'api');
+    url.searchParams.set("pid", VIATOR_PARTNER_ID || "faroway");
+    url.searchParams.set("mcid", trackingId);
+    url.searchParams.set("medium", "api");
     return url.toString();
   }
 
   // Fallback: construct from product code
   const baseUrl = `https://www.viator.com/tours/${productCode}`;
   const params = new URLSearchParams({
-    pid: VIATOR_PARTNER_ID || 'faroway',
+    pid: VIATOR_PARTNER_ID || "faroway",
     mcid: trackingId,
-    medium: 'api',
+    medium: "api",
     ...(options?.date && { date: options.date }),
     ...(options?.travelers && { travelers: options.travelers.toString() }),
   });
@@ -378,26 +462,41 @@ export function generateViatorAffiliateUrl(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeViatorProduct(raw: any): ViatorProduct {
   // v2 images: images[].variants[].url — pick highest res variant
-  const images = (raw.images || []).map((img: { url?: string; variants?: Array<{ url?: string; width?: number }>; caption?: string }) => {
-    const url = img.url
-      || img.variants?.sort((a: { width?: number }, b: { width?: number }) => (b.width || 0) - (a.width || 0))?.[0]?.url
-      || '';
-    return { url, caption: img.caption };
-  }).filter((img: { url: string }) => img.url);
+  const images = (raw.images || [])
+    .map(
+      (img: {
+        url?: string;
+        variants?: Array<{ url?: string; width?: number }>;
+        caption?: string;
+      }) => {
+        const url =
+          img.url ||
+          img.variants?.sort(
+            (a: { width?: number }, b: { width?: number }) =>
+              (b.width || 0) - (a.width || 0),
+          )?.[0]?.url ||
+          "";
+        return { url, caption: img.caption };
+      },
+    )
+    .filter((img: { url: string }) => img.url);
 
   return {
     productCode: raw.productCode || raw.code,
     title: raw.title || raw.name,
-    description: raw.description || '',
-    shortDescription: raw.shortDescription || raw.description?.substring(0, 200) || '',
+    description: raw.description || "",
+    shortDescription:
+      raw.shortDescription || raw.description?.substring(0, 200) || "",
     // v2: reviews.combinedAverageRating / reviews.totalReviews
     rating: raw.reviews?.combinedAverageRating || raw.rating || 0,
     reviewCount: raw.reviews?.totalReviews || raw.reviewCount || 0,
     price: {
       // v2: pricing.summary.fromPrice
       amount: raw.pricing?.summary?.fromPrice || raw.price?.amount || 0,
-      currencyCode: raw.pricing?.currency || raw.price?.currencyCode || 'USD',
-      formattedPrice: raw.pricing?.summary?.fromPriceFormatted || `$${raw.pricing?.summary?.fromPrice || raw.price?.amount || 0}`,
+      currencyCode: raw.pricing?.currency || raw.price?.currencyCode || "USD",
+      formattedPrice:
+        raw.pricing?.summary?.fromPriceFormatted ||
+        `$${raw.pricing?.summary?.fromPrice || raw.price?.amount || 0}`,
     },
     duration: {
       fixedDurationInMinutes: raw.duration?.fixedDurationInMinutes,
@@ -405,24 +504,43 @@ function normalizeViatorProduct(raw: any): ViatorProduct {
       variableDurationToMinutes: raw.duration?.variableDurationToMinutes,
     },
     images,
-    categories: raw.tags?.map((t: string | { tagName?: string }) => (typeof t === 'string' ? t : t.tagName || '')) || raw.categories || [],
+    categories:
+      raw.tags?.map((t: string | { tagName?: string }) =>
+        typeof t === "string" ? t : t.tagName || "",
+      ) ||
+      raw.categories ||
+      [],
     location: {
       address: raw.location?.address,
       city: raw.location?.city || raw.destinationName,
       country: raw.location?.country,
-      coordinates: raw.location?.coordinates ? {
-        latitude: raw.location.coordinates.latitude,
-        longitude: raw.location.coordinates.longitude,
-      } : raw.geoLocation ? {
-        latitude: raw.geoLocation.latitude,
-        longitude: raw.geoLocation.longitude,
-      } : undefined,
+      coordinates: raw.location?.coordinates
+        ? {
+            latitude: raw.location.coordinates.latitude,
+            longitude: raw.location.coordinates.longitude,
+          }
+        : raw.geoLocation
+          ? {
+              latitude: raw.geoLocation.latitude,
+              longitude: raw.geoLocation.longitude,
+            }
+          : undefined,
     },
     bookingInfo: {
-      confirmationType: raw.bookingInfo?.confirmationType || raw.confirmationType || 'INSTANT',
-      cancellationPolicy: raw.cancellationPolicy?.description || raw.cancellationPolicy?.type || 'Free cancellation',
-      mobileTicket: raw.bookingInfo?.mobileTicket ?? raw.ticketInfo?.mobileTicketAvailable ?? true,
-      instantConfirmation: raw.bookingInfo?.instantConfirmation ?? raw.flags?.includes('INSTANT_CONFIRMATION') ?? true,
+      confirmationType:
+        raw.bookingInfo?.confirmationType || raw.confirmationType || "INSTANT",
+      cancellationPolicy:
+        raw.cancellationPolicy?.description ||
+        raw.cancellationPolicy?.type ||
+        "Free cancellation",
+      mobileTicket:
+        raw.bookingInfo?.mobileTicket ??
+        raw.ticketInfo?.mobileTicketAvailable ??
+        true,
+      instantConfirmation:
+        raw.bookingInfo?.instantConfirmation ??
+        raw.flags?.includes("INSTANT_CONFIRMATION") ??
+        true,
     },
     highlights: raw.highlights || raw.productHighlights || [],
     inclusions: raw.inclusions || raw.itinerary?.inclusions || [],
@@ -436,22 +554,22 @@ function normalizeViatorProduct(raw: any): ViatorProduct {
  */
 export function mapViatorCategoryToVibe(category: string): string[] {
   const mappings: Record<string, string[]> = {
-    'Tours & Sightseeing': ['Cultural', 'Explorer'],
-    'Food & Drink': ['Foodie', 'Cultural'],
-    'Outdoor Activities': ['Adventure', 'Nature'],
-    'Water Sports': ['Adventure', 'Beach'],
-    'Walking & Biking Tours': ['Adventure', 'Cultural'],
-    'Day Trips': ['Explorer', 'Nature'],
-    'Nightlife': ['Nightlife', 'Social'],
-    'Shows & Entertainment': ['Nightlife', 'Cultural'],
-    'Spa & Wellness': ['Wellness', 'Relaxation'],
-    'Classes & Workshops': ['Cultural', 'Creative'],
-    'Museums & Art': ['Cultural', 'Art'],
-    'Historical Tours': ['Cultural', 'History'],
-    'Private Tours': ['Luxury', 'Romantic'],
-    'Family-Friendly': ['Family'],
-    'Romantic': ['Romantic'],
+    "Tours & Sightseeing": ["Cultural", "Explorer"],
+    "Food & Drink": ["Foodie", "Cultural"],
+    "Outdoor Activities": ["Adventure", "Nature"],
+    "Water Sports": ["Adventure", "Beach"],
+    "Walking & Biking Tours": ["Adventure", "Cultural"],
+    "Day Trips": ["Explorer", "Nature"],
+    Nightlife: ["Nightlife", "Social"],
+    "Shows & Entertainment": ["Nightlife", "Cultural"],
+    "Spa & Wellness": ["Wellness", "Relaxation"],
+    "Classes & Workshops": ["Cultural", "Creative"],
+    "Museums & Art": ["Cultural", "Art"],
+    "Historical Tours": ["Cultural", "History"],
+    "Private Tours": ["Luxury", "Romantic"],
+    "Family-Friendly": ["Family"],
+    Romantic: ["Romantic"],
   };
 
-  return mappings[category] || ['Explorer'];
+  return mappings[category] || ["Explorer"];
 }

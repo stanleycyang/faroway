@@ -1,6 +1,6 @@
-import React from 'react';
-import Image from 'next/image';
-import Link from 'next/link';
+import React from "react";
+import Image from "next/image";
+import Link from "next/link";
 import {
   Globe,
   Shield,
@@ -17,15 +17,15 @@ import {
   Compass,
   Target,
   Lightbulb,
-} from 'lucide-react';
-import { FadeInOnScroll } from '@/components/landing/FadeInOnScroll';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
-import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
+} from "lucide-react";
+import { FadeInOnScroll } from "@/components/landing/FadeInOnScroll";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
+import { IMAGE_PATHS, getImageUrl } from "@faroway/constants";
 
 // ─── App Store Buttons ───────────────────────────────────────────────────────
 
-function AppStoreButtons({ className = '' }: { className?: string }) {
+function AppStoreButtons({ className = "" }: { className?: string }) {
   return (
     <div className={`flex flex-wrap gap-3 ${className}`}>
       <a
@@ -61,57 +61,65 @@ function AppStoreButtons({ className = '' }: { className?: string }) {
 const painPoints = [
   {
     icon: Clock,
-    color: 'bg-red-100 text-red-600',
-    title: 'Hours of research',
-    description: 'Spending days scouring blogs, reviews, and forums just to build a basic itinerary.',
+    color: "bg-red-100 text-red-600",
+    title: "Hours of research",
+    description:
+      "Spending days scouring blogs, reviews, and forums just to build a basic itinerary.",
   },
   {
     icon: Compass,
-    color: 'bg-orange-100 text-orange-600',
-    title: 'Tab overload',
-    description: 'Juggling 20+ browser tabs comparing hotels, flights, restaurants, and attractions.',
+    color: "bg-orange-100 text-orange-600",
+    title: "Tab overload",
+    description:
+      "Juggling 20+ browser tabs comparing hotels, flights, restaurants, and attractions.",
   },
   {
     icon: Target,
-    color: 'bg-amber-100 text-amber-600',
-    title: 'Generic recommendations',
-    description: 'Getting the same tourist traps everyone else visits instead of hidden local gems.',
+    color: "bg-amber-100 text-amber-600",
+    title: "Generic recommendations",
+    description:
+      "Getting the same tourist traps everyone else visits instead of hidden local gems.",
   },
   {
     icon: Zap,
-    color: 'bg-yellow-100 text-yellow-600',
-    title: 'Outdated info',
-    description: 'Arriving at a "must-visit" restaurant only to find it closed months ago.',
+    color: "bg-yellow-100 text-yellow-600",
+    title: "Outdated info",
+    description:
+      'Arriving at a "must-visit" restaurant only to find it closed months ago.',
   },
 ];
 
 const approachCards = [
   {
-    title: 'Personal, Not Generic',
-    description: 'AI learns your travel vibes — whether you crave street food or Michelin stars, sunrise hikes or sunset cocktails.',
+    title: "Personal, Not Generic",
+    description:
+      "AI learns your travel vibes — whether you crave street food or Michelin stars, sunrise hikes or sunset cocktails.",
     image: getImageUrl(IMAGE_PATHS.marketing.travelDiscovery),
-    imageAlt: 'Traveler overlooking a tropical valley at sunrise',
+    imageAlt: "Traveler overlooking a tropical valley at sunrise",
     icon: Heart,
   },
   {
-    title: 'Seconds, Not Hours',
-    description: 'Complete day-by-day itineraries with restaurants, activities, and local tips — generated in under 60 seconds.',
+    title: "Seconds, Not Hours",
+    description:
+      "Complete day-by-day itineraries with restaurants, activities, and local tips — generated in under 60 seconds.",
     image: getImageUrl(IMAGE_PATHS.marketing.aerialTravel),
-    imageAlt: 'Aerial view of turquoise waters and lush green islands',
+    imageAlt: "Aerial view of turquoise waters and lush green islands",
     icon: Zap,
   },
   {
-    title: 'Local, Not Tourist',
-    description: 'Hidden gems and local favorites that most visitors never find. Eat, explore, and experience like a local.',
+    title: "Local, Not Tourist",
+    description:
+      "Hidden gems and local favorites that most visitors never find. Eat, explore, and experience like a local.",
     image: getImageUrl(IMAGE_PATHS.marketing.galleryVenice),
-    imageAlt: 'Venice canal at sunset with gondolas',
+    imageAlt: "Venice canal at sunset with gondolas",
     icon: MapPin,
   },
   {
-    title: 'Offline, Always',
-    description: 'Your full itinerary saved on your device. No Wi-Fi at the temple? No problem — everything works offline.',
+    title: "Offline, Always",
+    description:
+      "Your full itinerary saved on your device. No Wi-Fi at the temple? No problem — everything works offline.",
     image: getImageUrl(IMAGE_PATHS.marketing.travelPlanning),
-    imageAlt: 'Traveler with backpack on a scenic mountain path',
+    imageAlt: "Traveler with backpack on a scenic mountain path",
     icon: WifiOff,
   },
 ];
@@ -119,43 +127,50 @@ const approachCards = [
 const values = [
   {
     icon: Globe,
-    gradient: 'from-teal-500 to-emerald-500',
-    title: 'Accessibility',
-    description: 'Great travel experiences shouldn\'t be reserved for the privileged few. Faroway is free forever — because everyone deserves to explore the world.',
+    gradient: "from-teal-500 to-emerald-500",
+    title: "Accessibility",
+    description:
+      "Great travel experiences shouldn't be reserved for the privileged few. Faroway is free forever — because everyone deserves to explore the world.",
   },
   {
     icon: Shield,
-    gradient: 'from-blue-500 to-indigo-500',
-    title: 'Privacy First',
-    description: 'Your travel data stays yours. We never sell personal information, and our offline-first architecture means your trips live on your device.',
+    gradient: "from-blue-500 to-indigo-500",
+    title: "Privacy First",
+    description:
+      "Your travel data stays yours. We never sell personal information, and our offline-first architecture means your trips live on your device.",
   },
   {
     icon: Sparkles,
-    gradient: 'from-primary to-amber-500',
-    title: 'Craftsmanship',
-    description: 'Every itinerary is crafted with care. We obsess over the details — the perfect restaurant order, the best time to visit, the hidden shortcut — so you don\'t have to.',
+    gradient: "from-primary to-amber-500",
+    title: "Craftsmanship",
+    description:
+      "Every itinerary is crafted with care. We obsess over the details — the perfect restaurant order, the best time to visit, the hidden shortcut — so you don't have to.",
   },
 ];
 
 const timeline = [
   {
-    label: 'The Spark',
-    description: 'Founded with a simple idea: what if AI could plan trips better than humans? What if the best travel advice wasn\'t locked behind expensive agencies?',
+    label: "The Spark",
+    description:
+      "Founded with a simple idea: what if AI could plan trips better than humans? What if the best travel advice wasn't locked behind expensive agencies?",
     icon: Lightbulb,
   },
   {
-    label: 'First Launch',
-    description: 'Mobile app launched on iOS and Android with full offline support. Travelers started generating personalized itineraries in under 60 seconds.',
+    label: "First Launch",
+    description:
+      "Mobile app launched on iOS and Android with full offline support. Travelers started generating personalized itineraries in under 60 seconds.",
     icon: Zap,
   },
   {
-    label: 'Growing & Improving',
-    description: 'Three specialized AI agents for hotels, activities, and dining. Real affiliate integrations with Booking.com, Viator, and more. A growing blog with 200+ destination guides.',
+    label: "Growing & Improving",
+    description:
+      "Three specialized AI agents for hotels, activities, and dining. Real affiliate integrations with Booking.com, Viator, and more. A growing blog with 200+ destination guides.",
     icon: Users,
   },
   {
-    label: 'What\'s Next',
-    description: 'Expanding into real-time booking, group trip planning, and AI travel companion features. The best is yet to come.',
+    label: "What's Next",
+    description:
+      "Expanding into real-time booking, group trip planning, and AI travel companion features. The best is yet to come.",
     icon: Compass,
   },
 ];
@@ -184,20 +199,24 @@ export default function AboutPage() {
         <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 lg:pt-36 lg:pb-24">
           <div className="max-w-3xl">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold leading-[1.08] mb-6 tracking-tight text-white">
-              We believe the world&apos;s best trips{' '}
-              <span className="text-gradient-hero">shouldn&apos;t take weeks to plan</span>
+              We believe the world&apos;s best trips{" "}
+              <span className="text-gradient-hero">
+                shouldn&apos;t take weeks to plan
+              </span>
             </h1>
             <p className="text-lg lg:text-xl text-white/80 mb-8 max-w-2xl leading-relaxed">
               Faroway is an AI-powered travel planner that turns your dream
               destination into a complete, personalized itinerary — in seconds,
-              not weeks. Because life&apos;s too short to spend it planning instead
-              of exploring.
+              not weeks. Because life&apos;s too short to spend it planning
+              instead of exploring.
             </p>
           </div>
         </div>
 
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
-          <span className="text-white/60 text-xs font-medium tracking-widest uppercase">Our Story</span>
+          <span className="text-white/60 text-xs font-medium tracking-widest uppercase">
+            Our Story
+          </span>
           <ChevronDown className="w-5 h-5 text-white/40 animate-bounce" />
         </div>
       </section>
@@ -212,17 +231,19 @@ export default function AboutPage() {
               </div>
 
               <blockquote className="text-3xl lg:text-4xl xl:text-5xl font-bold text-slate-900 leading-tight mb-8">
-                &ldquo;To make world-class travel planning{' '}
-                <span className="text-gradient">instant, personal, and accessible</span>{' '}
+                &ldquo;To make world-class travel planning{" "}
+                <span className="text-gradient">
+                  instant, personal, and accessible
+                </span>{" "}
                 to everyone.&rdquo;
               </blockquote>
 
               <div className="max-w-2xl mx-auto space-y-4 text-lg text-slate-600 leading-relaxed">
                 <p>
                   We started Faroway because we were tired of the same problem
-                  every traveler faces: spending more time planning the trip than
-                  enjoying it. The best travel advice was locked behind expensive
-                  agencies or buried in endless blog posts.
+                  every traveler faces: spending more time planning the trip
+                  than enjoying it. The best travel advice was locked behind
+                  expensive agencies or buried in endless blog posts.
                 </p>
                 <p>
                   So we built an AI that combines the knowledge of thousands of
@@ -244,11 +265,11 @@ export default function AboutPage() {
                 <Lightbulb className="w-4 h-4" /> Why We Exist
               </div>
               <h2 className="text-3xl lg:text-5xl font-bold text-slate-900 mb-4">
-                Travel planning is{' '}
-                <span className="text-gradient">broken</span>
+                Travel planning is <span className="text-gradient">broken</span>
               </h2>
               <p className="text-xl text-slate-500 max-w-2xl mx-auto">
-                We love traveling. We just hated everything that came before the actual trip.
+                We love traveling. We just hated everything that came before the
+                actual trip.
               </p>
             </div>
           </FadeInOnScroll>
@@ -258,12 +279,18 @@ export default function AboutPage() {
               {painPoints.map((point, i) => (
                 <FadeInOnScroll key={point.title} delay={i * 100}>
                   <div className="flex items-start gap-4 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm hover:shadow-md hover:border-primary/20 transition-all">
-                    <div className={`w-12 h-12 rounded-xl ${point.color} flex items-center justify-center flex-shrink-0`}>
+                    <div
+                      className={`w-12 h-12 rounded-xl ${point.color} flex items-center justify-center flex-shrink-0`}
+                    >
                       <point.icon className="w-6 h-6" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-slate-900 mb-1">{point.title}</h3>
-                      <p className="text-slate-500 text-sm leading-relaxed">{point.description}</p>
+                      <h3 className="font-bold text-slate-900 mb-1">
+                        {point.title}
+                      </h3>
+                      <p className="text-slate-500 text-sm leading-relaxed">
+                        {point.description}
+                      </p>
                     </div>
                   </div>
                 </FadeInOnScroll>
@@ -281,8 +308,12 @@ export default function AboutPage() {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent" />
                 <div className="absolute bottom-5 left-5">
-                  <p className="text-white font-bold text-lg drop-shadow-lg">This is why you travel.</p>
-                  <p className="text-white/70 text-sm">Let AI handle the planning.</p>
+                  <p className="text-white font-bold text-lg drop-shadow-lg">
+                    This is why you travel.
+                  </p>
+                  <p className="text-white/70 text-sm">
+                    Let AI handle the planning.
+                  </p>
                 </div>
               </div>
             </FadeInOnScroll>
@@ -299,11 +330,12 @@ export default function AboutPage() {
                 <Sparkles className="w-4 h-4" /> Our Approach
               </div>
               <h2 className="text-3xl lg:text-5xl font-bold text-slate-900 mb-4">
-                AI that understands{' '}
+                AI that understands{" "}
                 <span className="text-gradient">how you travel</span>
               </h2>
               <p className="text-xl text-slate-500 max-w-2xl mx-auto">
-                Not another generic recommendation engine. Faroway learns your style.
+                Not another generic recommendation engine. Faroway learns your
+                style.
               </p>
             </div>
           </FadeInOnScroll>
@@ -323,8 +355,12 @@ export default function AboutPage() {
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/30 to-amber-500/30 border border-white/15 flex items-center justify-center mb-4 backdrop-blur-sm">
                       <card.icon className="w-6 h-6 text-primary-300" />
                     </div>
-                    <h3 className="text-xl font-bold text-white mb-2">{card.title}</h3>
-                    <p className="text-white/60 leading-relaxed text-sm">{card.description}</p>
+                    <h3 className="text-xl font-bold text-white mb-2">
+                      {card.title}
+                    </h3>
+                    <p className="text-white/60 leading-relaxed text-sm">
+                      {card.description}
+                    </p>
                   </div>
                 </div>
               </FadeInOnScroll>
@@ -350,16 +386,22 @@ export default function AboutPage() {
               <h2 className="text-3xl lg:text-4xl font-bold text-white mb-2">
                 Built for real travelers
               </h2>
-              <p className="text-white/60 text-lg">Here&apos;s what Faroway delivers</p>
+              <p className="text-white/60 text-lg">
+                Here&apos;s what Faroway delivers
+              </p>
             </div>
           </FadeInOnScroll>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6">
             {[
-              { value: '< 60s', label: 'Full Itinerary Generation', icon: Zap },
-              { value: '3 AI Agents', label: 'Hotels, Activities & Dining', icon: Sparkles },
-              { value: '100% Free', label: 'No Account Required', icon: Globe },
-              { value: 'Offline', label: 'Works Without Wi-Fi', icon: WifiOff },
+              { value: "< 60s", label: "Full Itinerary Generation", icon: Zap },
+              {
+                value: "3 AI Agents",
+                label: "Hotels, Activities & Dining",
+                icon: Sparkles,
+              },
+              { value: "100% Free", label: "No Account Required", icon: Globe },
+              { value: "Offline", label: "Works Without Wi-Fi", icon: WifiOff },
             ].map((stat, i) => (
               <FadeInOnScroll key={stat.label} delay={i * 100}>
                 <div className="bg-white/10 backdrop-blur-xl border border-white/15 rounded-2xl p-6 lg:p-8 text-center">
@@ -367,7 +409,9 @@ export default function AboutPage() {
                   <div className="text-2xl lg:text-3xl font-bold text-white mb-1">
                     {stat.value}
                   </div>
-                  <p className="text-white/60 text-sm font-medium">{stat.label}</p>
+                  <p className="text-white/60 text-sm font-medium">
+                    {stat.label}
+                  </p>
                 </div>
               </FadeInOnScroll>
             ))}
@@ -384,11 +428,11 @@ export default function AboutPage() {
                 <Heart className="w-4 h-4" /> Our Values
               </div>
               <h2 className="text-3xl lg:text-5xl font-bold text-slate-900 mb-4">
-                What drives us{' '}
-                <span className="text-gradient">every day</span>
+                What drives us <span className="text-gradient">every day</span>
               </h2>
               <p className="text-xl text-slate-500 max-w-2xl mx-auto">
-                The principles behind every feature we build and every decision we make.
+                The principles behind every feature we build and every decision
+                we make.
               </p>
             </div>
           </FadeInOnScroll>
@@ -397,11 +441,17 @@ export default function AboutPage() {
             {values.map((value, i) => (
               <FadeInOnScroll key={value.title} delay={i * 150}>
                 <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm hover:shadow-lg hover:border-primary/20 transition-all h-full">
-                  <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${value.gradient} flex items-center justify-center mb-5 shadow-lg`}>
+                  <div
+                    className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${value.gradient} flex items-center justify-center mb-5 shadow-lg`}
+                  >
                     <value.icon className="w-7 h-7 text-white" />
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-3">{value.title}</h3>
-                  <p className="text-slate-500 leading-relaxed">{value.description}</p>
+                  <h3 className="text-xl font-bold text-slate-900 mb-3">
+                    {value.title}
+                  </h3>
+                  <p className="text-slate-500 leading-relaxed">
+                    {value.description}
+                  </p>
                 </div>
               </FadeInOnScroll>
             ))}
@@ -418,8 +468,7 @@ export default function AboutPage() {
                 <Clock className="w-4 h-4" /> Our Journey
               </div>
               <h2 className="text-3xl lg:text-5xl font-bold text-slate-900 mb-4">
-                From idea to{' '}
-                <span className="text-gradient">your pocket</span>
+                From idea to <span className="text-gradient">your pocket</span>
               </h2>
               <p className="text-xl text-slate-500 max-w-2xl mx-auto">
                 The milestones that brought Faroway to life.
@@ -434,23 +483,35 @@ export default function AboutPage() {
             <div className="space-y-12">
               {timeline.map((item, i) => (
                 <FadeInOnScroll key={item.label} delay={i * 150}>
-                  <div className={`relative flex items-start gap-6 lg:gap-12 ${
-                    i % 2 === 0 ? 'lg:flex-row' : 'lg:flex-row-reverse'
-                  }`}>
+                  <div
+                    className={`relative flex items-start gap-6 lg:gap-12 ${
+                      i % 2 === 0 ? "lg:flex-row" : "lg:flex-row-reverse"
+                    }`}
+                  >
                     {/* Dot */}
                     <div className="absolute left-6 lg:left-1/2 w-3 h-3 bg-gradient-to-br from-primary to-amber-500 rounded-full -translate-x-1.5 mt-2 shadow-lg shadow-primary/25 z-10" />
 
                     {/* Content */}
-                    <div className={`ml-14 lg:ml-0 lg:w-[calc(50%-2rem)] ${
-                      i % 2 === 0 ? 'lg:text-right lg:pr-8' : 'lg:text-left lg:pl-8'
-                    }`}>
-                      <div className={`inline-flex items-center gap-2 bg-primary-50 border border-primary-200 rounded-full px-3 py-1 mb-3 ${
-                        i % 2 === 0 ? '' : ''
-                      }`}>
+                    <div
+                      className={`ml-14 lg:ml-0 lg:w-[calc(50%-2rem)] ${
+                        i % 2 === 0
+                          ? "lg:text-right lg:pr-8"
+                          : "lg:text-left lg:pl-8"
+                      }`}
+                    >
+                      <div
+                        className={`inline-flex items-center gap-2 bg-primary-50 border border-primary-200 rounded-full px-3 py-1 mb-3 ${
+                          i % 2 === 0 ? "" : ""
+                        }`}
+                      >
                         <item.icon className="w-3.5 h-3.5 text-primary-600" />
-                        <span className="text-primary-600 text-xs font-semibold">{item.label}</span>
+                        <span className="text-primary-600 text-xs font-semibold">
+                          {item.label}
+                        </span>
                       </div>
-                      <p className="text-slate-600 leading-relaxed">{item.description}</p>
+                      <p className="text-slate-600 leading-relaxed">
+                        {item.description}
+                      </p>
                     </div>
 
                     {/* Spacer for the other side */}
@@ -478,7 +539,7 @@ export default function AboutPage() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
           <FadeInOnScroll>
             <h2 className="text-3xl lg:text-5xl font-bold mb-6 text-white">
-              Ready to plan your{' '}
+              Ready to plan your{" "}
               <span className="text-gradient-hero">dream trip</span>?
             </h2>
             <p className="text-xl text-white/70 mb-8 leading-relaxed max-w-2xl mx-auto">
@@ -508,16 +569,17 @@ export default function AboutPage() {
             </div>
 
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-3">
-              {[
-                '100% free',
-                'No account needed',
-                'Works offline',
-              ].map((feature) => (
-                <div key={feature} className="flex items-center gap-2 text-white/80 text-sm">
-                  <Check className="w-4 h-4 text-accent flex-shrink-0" />
-                  <span>{feature}</span>
-                </div>
-              ))}
+              {["100% free", "No account needed", "Works offline"].map(
+                (feature) => (
+                  <div
+                    key={feature}
+                    className="flex items-center gap-2 text-white/80 text-sm"
+                  >
+                    <Check className="w-4 h-4 text-accent flex-shrink-0" />
+                    <span>{feature}</span>
+                  </div>
+                ),
+              )}
             </div>
           </FadeInOnScroll>
         </div>

@@ -1,40 +1,70 @@
-import React from 'react';
-import Image from 'next/image';
+import React from "react";
+import Image from "next/image";
 
-export function Callout({ type = 'info', children }: { type?: 'info' | 'warning' | 'tip' | 'important'; children: React.ReactNode }) {
+export function Callout({
+  type = "info",
+  children,
+}: {
+  type?: "info" | "warning" | "tip" | "important";
+  children: React.ReactNode;
+}) {
   const styles = {
-    info: 'bg-blue-50 border-blue-400 text-blue-900',
-    warning: 'bg-amber-50 border-amber-400 text-amber-900',
-    tip: 'bg-green-50 border-green-400 text-green-900',
-    important: 'bg-purple-50 border-purple-400 text-purple-900',
+    info: "bg-blue-50 border-blue-400 text-blue-900",
+    warning: "bg-amber-50 border-amber-400 text-amber-900",
+    tip: "bg-green-50 border-green-400 text-green-900",
+    important: "bg-purple-50 border-purple-400 text-purple-900",
   };
-  const icons = { info: 'ℹ️', warning: '⚠️', tip: '💡', important: '🔥' };
+  const icons = { info: "ℹ️", warning: "⚠️", tip: "💡", important: "🔥" };
 
   return (
-    <div className={`my-6 rounded-xl border-l-4 p-4 md:p-6 ${styles[type]}`} role="note">
+    <div
+      className={`my-6 rounded-xl border-l-4 p-4 md:p-6 ${styles[type]}`}
+      role="note"
+    >
       <span className="mr-2">{icons[type]}</span>
       {children}
     </div>
   );
 }
 
-export function TipBox({ title, children }: { title?: string; children: React.ReactNode }) {
+export function TipBox({
+  title,
+  children,
+}: {
+  title?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div className="my-6 rounded-xl bg-primary-50 border border-primary-200 p-4 md:p-6">
-      {title && <p className="font-semibold text-primary-800 mb-2">💡 {title}</p>}
+      {title && (
+        <p className="font-semibold text-primary-800 mb-2">💡 {title}</p>
+      )}
       <div className="text-primary-900">{children}</div>
     </div>
   );
 }
 
-export function ImageGallery({ images }: { images: { src: string; alt: string; caption?: string }[] }) {
+export function ImageGallery({
+  images,
+}: {
+  images: { src: string; alt: string; caption?: string }[];
+}) {
   return (
     <div className="my-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
       {images.map((img, i) => (
         <figure key={i} className="relative overflow-hidden rounded-xl">
-          <Image src={img.src} alt={img.alt} width={600} height={256} className="w-full h-64 object-cover" unoptimized />
+          <Image
+            src={img.src}
+            alt={img.alt}
+            width={600}
+            height={256}
+            className="w-full h-64 object-cover"
+            unoptimized
+          />
           {img.caption && (
-            <figcaption className="text-sm text-gray-500 mt-2 text-center">{img.caption}</figcaption>
+            <figcaption className="text-sm text-gray-500 mt-2 text-center">
+              {img.caption}
+            </figcaption>
           )}
         </figure>
       ))}
@@ -47,7 +77,7 @@ export function EmbeddedMap({ src, title }: { src: string; title?: string }) {
     <div className="my-8 rounded-xl overflow-hidden aspect-video">
       <iframe
         src={src}
-        title={title || 'Map'}
+        title={title || "Map"}
         className="w-full h-full border-0"
         loading="lazy"
         allowFullScreen

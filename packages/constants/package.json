@@ -8,11 +8,13 @@
     ".": "./src/index.ts"
   },
   "scripts": {
+    "test": "vitest run",
     "type-check": "tsc --noEmit",
     "clean": "rm -rf dist .turbo"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",
-    "typescript": "^5.5.4"
+    "typescript": "^5.5.4",
+    "vitest": "^4.0.18"
   }
 }

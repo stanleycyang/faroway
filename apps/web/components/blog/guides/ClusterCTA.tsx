@@ -1,6 +1,6 @@
-import Link from 'next/link';
-import { Sparkles } from 'lucide-react';
-import { ACCENT_COLORS, type ClusterDefinition } from '@/lib/blog/clusters';
+import Link from "next/link";
+import { Sparkles } from "lucide-react";
+import { ACCENT_COLORS, type ClusterDefinition } from "@/lib/blog/clusters";
 
 interface ClusterCTAProps {
   cluster: ClusterDefinition;

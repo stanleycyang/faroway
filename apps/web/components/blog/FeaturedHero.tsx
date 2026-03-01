@@ -1,9 +1,9 @@
-import Link from 'next/link';
-import Image from 'next/image';
-import type { BlogPostMeta } from '@/lib/blog/types';
+import Link from "next/link";
+import Image from "next/image";
+import type { BlogPostMeta } from "@/lib/blog/types";
 
 export function FeaturedHero({ post }: { post: BlogPostMeta }) {
-  const categorySlug = post.category.toLowerCase().replace(/\s+/g, '-');
+  const categorySlug = post.category.toLowerCase().replace(/\s+/g, "-");
 
   return (
     <article className="group relative overflow-hidden rounded-2xl">
@@ -45,7 +45,11 @@ export function FeaturedHero({ post }: { post: BlogPostMeta }) {
               <span>{post.author.name}</span>
               <span className="text-gray-600">·</span>
               <time dateTime={post.date}>
-                {new Date(post.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                {new Date(post.date).toLocaleDateString("en-US", {
+                  month: "long",
+                  day: "numeric",
+                  year: "numeric",
+                })}
               </time>
               <span className="text-gray-600">·</span>
               <span>{post.readingTime} min read</span>

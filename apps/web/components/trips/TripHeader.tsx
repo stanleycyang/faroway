@@ -1,8 +1,17 @@
-'use client';
+"use client";
 
-import React from 'react';
-import Link from 'next/link';
-import { ArrowLeft, Calendar, Users, MapPin, Share2, Download, DollarSign, Sparkles } from 'lucide-react';
+import React from "react";
+import Link from "next/link";
+import {
+  ArrowLeft,
+  Calendar,
+  Users,
+  MapPin,
+  Share2,
+  Download,
+  DollarSign,
+  Sparkles,
+} from "lucide-react";
 
 interface TripHeaderProps {
   destination: string;
@@ -13,7 +22,7 @@ interface TripHeaderProps {
     amount: number;
     currency: string;
   };
-  status?: 'generating' | 'completed' | 'failed';
+  status?: "generating" | "completed" | "failed";
   onShare?: () => void;
   onExport?: () => void;
   backUrl?: string;
@@ -26,31 +35,32 @@ export function TripHeader({
   endDate,
   travelers,
   totalCost,
-  status = 'completed',
+  status = "completed",
   onShare,
   onExport,
-  backUrl = '/dashboard',
+  backUrl = "/dashboard",
   showActions = true,
 }: TripHeaderProps) {
   const formatDate = (dateStr: string) => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
   const getDuration = () => {
     const start = new Date(startDate);
     const end = new Date(endDate);
-    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const days =
+      Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     return days;
   };
 
   const formatCost = (amount: number, currency: string) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
       currency: currency,
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
@@ -71,12 +81,14 @@ export function TripHeader({
             <ArrowLeft className="w-5 h-5" />
             <span className="hidden sm:inline font-medium">Back</span>
           </Link>
-          
+
           <Link href="/" className="flex items-center gap-2">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center shadow-sm">
               <Sparkles className="w-4 h-4 text-white" />
             </div>
-            <span className="text-lg font-bold text-gray-900 hidden sm:inline">Faroway</span>
+            <span className="text-lg font-bold text-gray-900 hidden sm:inline">
+              Faroway
+            </span>
           </Link>
 
           {showActions ? (
@@ -105,14 +117,14 @@ export function TripHeader({
       {/* Trip Info */}
       <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-8">
         {/* Status Badge */}
-        {status === 'generating' && (
+        {status === "generating" && (
           <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-50 text-primary-700 rounded-full text-sm font-semibold shadow-sm">
             <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse" />
             AI is generating your itinerary...
           </div>
         )}
-        
-        {status === 'failed' && (
+
+        {status === "failed" && (
           <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-full text-sm font-semibold">
             <span>⚠️</span>
             Generation failed. Please try again.
@@ -137,7 +149,7 @@ export function TripHeader({
                 {formatDate(startDate)} – {formatDate(endDate)}
               </p>
               <p className="text-xs text-gray-500">
-                {duration} day{duration > 1 ? 's' : ''}
+                {duration} day{duration > 1 ? "s" : ""}
               </p>
             </div>
           </div>
@@ -146,7 +158,7 @@ export function TripHeader({
             <Users className="w-5 h-5 text-primary" />
             <div>
               <p className="text-sm font-semibold text-gray-900">
-                {travelers} traveler{travelers > 1 ? 's' : ''}
+                {travelers} traveler{travelers > 1 ? "s" : ""}
               </p>
               <p className="text-xs text-gray-500">Group size</p>
             </div>

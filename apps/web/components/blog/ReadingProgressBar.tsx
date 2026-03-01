@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 export function ReadingProgressBar() {
   const [progress, setProgress] = useState(0);
@@ -12,8 +12,8 @@ export function ReadingProgressBar() {
       const scrollHeight = el.scrollHeight - el.clientHeight;
       setProgress(scrollHeight > 0 ? (scrollTop / scrollHeight) * 100 : 0);
     };
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   return (

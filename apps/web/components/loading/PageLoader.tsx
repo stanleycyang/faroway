@@ -1,10 +1,10 @@
-import { Loader2 } from 'lucide-react';
+import { Loader2 } from "lucide-react";
 
 interface PageLoaderProps {
   message?: string;
 }
 
-export function PageLoader({ message = 'Loading...' }: PageLoaderProps) {
+export function PageLoader({ message = "Loading..." }: PageLoaderProps) {
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center">
       <div className="text-center">

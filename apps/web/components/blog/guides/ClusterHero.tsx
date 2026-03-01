@@ -1,6 +1,6 @@
-import Image from 'next/image';
-import { ChevronDown } from 'lucide-react';
-import { ACCENT_COLORS, type ClusterDefinition } from '@/lib/blog/clusters';
+import Image from "next/image";
+import { ChevronDown } from "lucide-react";
+import { ACCENT_COLORS, type ClusterDefinition } from "@/lib/blog/clusters";
 
 interface ClusterHeroProps {
   cluster: ClusterDefinition;
@@ -32,13 +32,13 @@ export function ClusterHero({ cluster, postCount }: ClusterHeroProps) {
       <div className="relative z-10 w-full max-w-7xl mx-auto px-6 pb-16 pt-32">
         {/* Post count pill */}
         <span className="inline-flex items-center gap-2 bg-white/15 backdrop-blur-sm border border-white/20 rounded-full px-4 py-1.5 text-white/90 text-sm font-medium mb-6">
-          {postCount} {postCount === 1 ? 'article' : 'articles'}
+          {postCount} {postCount === 1 ? "article" : "articles"}
         </span>
 
         <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 max-w-4xl">
           {titleParts[0]}
           <span className="text-gradient-hero">{cluster.gradientWord}</span>
-          {titleParts[1] || ''}
+          {titleParts[1] || ""}
         </h1>
 
         <p className="text-lg md:text-xl text-white/80 max-w-2xl leading-relaxed mb-8">

@@ -1,7 +1,7 @@
-import Link from 'next/link';
-import Image from 'next/image';
-import { ArrowRight } from 'lucide-react';
-import type { ClusterDefinition } from '@/lib/blog/clusters';
+import Link from "next/link";
+import Image from "next/image";
+import { ArrowRight } from "lucide-react";
+import type { ClusterDefinition } from "@/lib/blog/clusters";
 
 interface ClusterCardProps {
   cluster: ClusterDefinition;
@@ -26,7 +26,7 @@ export function ClusterCard({ cluster, postCount }: ClusterCardProps) {
       <div className="absolute bottom-0 left-0 right-0 p-6">
         <div className="flex items-center gap-2 mb-2">
           <span className="text-xs text-white/70 bg-white/15 backdrop-blur-sm rounded-full px-3 py-1">
-            {postCount} {postCount === 1 ? 'article' : 'articles'}
+            {postCount} {postCount === 1 ? "article" : "articles"}
           </span>
         </div>
         <h3 className="text-xl font-bold text-white mb-1">{cluster.title}</h3>

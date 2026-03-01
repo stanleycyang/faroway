@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef, useCallback } from 'react';
-import type { TripDay, HotelResult } from '@faroway/types';
+import { useState, useEffect, useRef, useCallback } from "react";
+import type { TripDay, HotelResult } from "@faroway/types";
 
 export interface SearchProgress {
   [key: string]: string | undefined;
@@ -13,7 +13,13 @@ export interface SearchProgress {
 }
 
 export interface TripGenerationState {
-  phase: 'connecting' | 'orchestrator' | 'searching' | 'composing' | 'complete' | 'error';
+  phase:
+    | "connecting"
+    | "orchestrator"
+    | "searching"
+    | "composing"
+    | "complete"
+    | "error";
   progress: number;
   message: string;
   searchProgress: SearchProgress | null;
@@ -36,9 +42,9 @@ interface UseTripGenerationOptions {
 }
 
 const initialState: TripGenerationState = {
-  phase: 'connecting',
+  phase: "connecting",
   progress: 0,
-  message: 'Connecting...',
+  message: "Connecting...",
   searchProgress: null,
   topHotel: null,
   activitiesCount: 0,
@@ -55,7 +61,9 @@ const initialState: TripGenerationState = {
  * approach, allowing the server to run agents directly and stream results
  * without a DB-polling intermediary.
  */
-export function useTripGeneration(options: UseTripGenerationOptions): TripGenerationState {
+export function useTripGeneration(
+  options: UseTripGenerationOptions,
+): TripGenerationState {
   const { tripId, enabled = true, onComplete, onError } = options;
 
   const [state, setState] = useState<TripGenerationState>(initialState);
@@ -72,13 +80,14 @@ export function useTripGeneration(options: UseTripGenerationOptions): TripGenera
       const data = JSON.parse(rawData);
 
       switch (type) {
-        case 'progress': {
-          let phase: TripGenerationState['phase'] = 'searching';
-          if (data.step === 'orchestrator') phase = 'orchestrator';
-          else if (data.step === 'aggregator' || data.step === 'saving') phase = 'composing';
-          else if (data.step === 'complete') phase = 'complete';
+        case "progress": {
+          let phase: TripGenerationState["phase"] = "searching";
+          if (data.step === "orchestrator") phase = "orchestrator";
+          else if (data.step === "aggregator" || data.step === "saving")
+            phase = "composing";
+          else if (data.step === "complete") phase = "complete";
 
-          setState(prev => ({
+          setState((prev) => ({
             ...prev,
             phase,
             progress: data.progress ?? prev.progress,
@@ -88,53 +97,53 @@ export function useTripGeneration(options: UseTripGenerationOptions): TripGenera
           break;
         }
 
-        case 'hotels':
-          setState(prev => ({
+        case "hotels":
+          setState((prev) => ({
             ...prev,
             topHotel: data.topHotel ?? prev.topHotel,
           }));
           break;
 
-        case 'activities':
-          setState(prev => ({
+        case "activities":
+          setState((prev) => ({
             ...prev,
             activitiesCount: data.count ?? prev.activitiesCount,
           }));
           break;
 
-        case 'dining':
-          setState(prev => ({
+        case "dining":
+          setState((prev) => ({
             ...prev,
             diningCount: data.count ?? prev.diningCount,
           }));
           break;
 
-        case 'itinerary':
-          setState(prev => ({
+        case "itinerary":
+          setState((prev) => ({
             ...prev,
             days: data.days ?? prev.days,
             topHotel: data.topHotel ?? prev.topHotel,
           }));
           break;
 
-        case 'complete':
-          setState(prev => ({
+        case "complete":
+          setState((prev) => ({
             ...prev,
             isStreaming: false,
             isComplete: true,
-            phase: 'complete',
+            phase: "complete",
             progress: 100,
-            message: 'Your itinerary is ready!',
+            message: "Your itinerary is ready!",
           }));
           onCompleteRef.current?.();
           break;
 
-        case 'error': {
-          const errorMessage = data.message || 'Generation failed';
-          setState(prev => ({
+        case "error": {
+          const errorMessage = data.message || "Generation failed";
+          setState((prev) => ({
             ...prev,
             isStreaming: false,
-            phase: 'error',
+            phase: "error",
             error: errorMessage,
           }));
           onErrorRef.current?.(errorMessage);
@@ -151,30 +160,28 @@ export function useTripGeneration(options: UseTripGenerationOptions): TripGenera
 
     const abortController = new AbortController();
 
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setState({
       ...initialState,
       isStreaming: true,
-      message: 'Starting trip generation...',
+      message: "Starting trip generation...",
     });
 
     (async () => {
       try {
         const response = await fetch(`/api/trips/${tripId}/stream`, {
-          method: 'POST',
+          method: "POST",
           signal: abortController.signal,
         });
 
         if (!response.ok || !response.body) {
-          const text = await response.text().catch(() => '');
+          const text = await response.text().catch(() => "");
           throw new Error(text || `Stream failed (HTTP ${response.status})`);
         }
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let buffer = '';
+        let buffer = "";
 
-        // eslint-disable-next-line no-constant-condition
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
@@ -182,18 +189,18 @@ export function useTripGeneration(options: UseTripGenerationOptions): TripGenera
           buffer += decoder.decode(value, { stream: true });
 
           // SSE events are separated by double newlines
-          const blocks = buffer.split('\n\n');
-          buffer = blocks.pop() || '';
+          const blocks = buffer.split("\n\n");
+          buffer = blocks.pop() || "";
 
           for (const block of blocks) {
-            let eventType = 'message';
-            let eventData = '';
+            let eventType = "message";
+            let eventData = "";
 
-            for (const line of block.split('\n')) {
-              if (line.startsWith('event: ')) {
+            for (const line of block.split("\n")) {
+              if (line.startsWith("event: ")) {
                 eventType = line.slice(7).trim();
-              } else if (line.startsWith('data: ')) {
-                eventData += (eventData ? '\n' : '') + line.slice(6);
+              } else if (line.startsWith("data: ")) {
+                eventData += (eventData ? "\n" : "") + line.slice(6);
               }
             }
 
@@ -204,22 +211,22 @@ export function useTripGeneration(options: UseTripGenerationOptions): TripGenera
         }
 
         // Stream ended naturally — make sure we're in a terminal state
-        setState(prev => {
-          if (prev.isComplete || prev.phase === 'error') return prev;
+        setState((prev) => {
+          if (prev.isComplete || prev.phase === "error") return prev;
           return { ...prev, isStreaming: false };
         });
       } catch (error) {
-        if ((error as Error).name === 'AbortError') return;
+        if ((error as Error).name === "AbortError") return;
 
-        const msg = (error as Error).message || 'Connection failed';
-        console.error('[useTripGeneration] Stream error:', msg);
+        const msg = (error as Error).message || "Connection failed";
+        console.error("[useTripGeneration] Stream error:", msg);
 
-        setState(prev => {
+        setState((prev) => {
           if (prev.isComplete) return prev;
           return {
             ...prev,
             isStreaming: false,
-            phase: 'error',
+            phase: "error",
             error: msg,
           };
         });

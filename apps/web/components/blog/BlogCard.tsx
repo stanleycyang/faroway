@@ -1,15 +1,18 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import Image from 'next/image';
-import type { BlogPostMeta } from '@/lib/blog/types';
+import Link from "next/link";
+import Image from "next/image";
+import type { BlogPostMeta } from "@/lib/blog/types";
 
 export function BlogCard({ post }: { post: BlogPostMeta }) {
-  const categorySlug = post.category.toLowerCase().replace(/\s+/g, '-');
+  const categorySlug = post.category.toLowerCase().replace(/\s+/g, "-");
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl bg-white border border-gray-200 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1">
-      <Link href={`/blog/${post.slug}`} className="relative aspect-[16/10] overflow-hidden">
+      <Link
+        href={`/blog/${post.slug}`}
+        className="relative aspect-[16/10] overflow-hidden"
+      >
         <Image
           src={post.coverImage}
           alt={post.coverImageAlt || post.title}
@@ -29,7 +32,11 @@ export function BlogCard({ post }: { post: BlogPostMeta }) {
           </Link>
           <span className="text-slate-400">·</span>
           <time className="text-gray-500" dateTime={post.date}>
-            {new Date(post.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            {new Date(post.date).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            })}
           </time>
         </div>
         <Link href={`/blog/${post.slug}`} className="group/title">
@@ -37,7 +44,9 @@ export function BlogCard({ post }: { post: BlogPostMeta }) {
             {post.title}
           </h3>
         </Link>
-        <p className="text-slate-600 text-sm line-clamp-2 flex-1">{post.description}</p>
+        <p className="text-slate-600 text-sm line-clamp-2 flex-1">
+          {post.description}
+        </p>
         <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-200">
           <Image
             src={post.author.avatar}
@@ -48,7 +57,9 @@ export function BlogCard({ post }: { post: BlogPostMeta }) {
           />
           <span className="text-sm text-slate-600">{post.author.name}</span>
           <span className="text-slate-400 ml-auto">·</span>
-          <span className="text-sm text-gray-500">{post.readingTime} min read</span>
+          <span className="text-sm text-gray-500">
+            {post.readingTime} min read
+          </span>
         </div>
       </div>
     </article>
@@ -56,7 +67,7 @@ export function BlogCard({ post }: { post: BlogPostMeta }) {
 }
 
 export function FeaturedBlogCard({ post }: { post: BlogPostMeta }) {
-  const categorySlug = post.category.toLowerCase().replace(/\s+/g, '-');
+  const categorySlug = post.category.toLowerCase().replace(/\s+/g, "-");
 
   return (
     <article className="group relative overflow-hidden rounded-3xl bg-gray-900">
@@ -74,7 +85,9 @@ export function FeaturedBlogCard({ post }: { post: BlogPostMeta }) {
         </div>
         <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
           <div className="flex items-center gap-3 text-sm mb-3">
-            <span className="px-3 py-1 bg-gradient-to-r from-primary to-amber-500 text-white rounded-full text-xs font-semibold shadow-lg shadow-primary/25">Featured</span>
+            <span className="px-3 py-1 bg-gradient-to-r from-primary to-amber-500 text-white rounded-full text-xs font-semibold shadow-lg shadow-primary/25">
+              Featured
+            </span>
             <Link
               href={`/blog/category/${categorySlug}`}
               className="text-gray-300 hover:text-white transition-colors"
@@ -86,12 +99,18 @@ export function FeaturedBlogCard({ post }: { post: BlogPostMeta }) {
           <h2 className="text-2xl md:text-4xl font-bold text-white mb-3 max-w-3xl">
             {post.title}
           </h2>
-          <p className="text-gray-300 text-base md:text-lg max-w-2xl line-clamp-2 mb-4">{post.description}</p>
+          <p className="text-gray-300 text-base md:text-lg max-w-2xl line-clamp-2 mb-4">
+            {post.description}
+          </p>
           <div className="flex items-center gap-3 text-sm text-gray-400">
             <span>{post.author.name}</span>
             <span>·</span>
             <time dateTime={post.date}>
-              {new Date(post.date).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              {new Date(post.date).toLocaleDateString("en-US", {
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })}
             </time>
             <span>·</span>
             <span>{post.readingTime} min read</span>

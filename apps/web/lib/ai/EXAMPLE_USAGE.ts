@@ -3,8 +3,12 @@
  * Copy these patterns into your API routes
  */
 
-import { generateItinerary, generateActivities, generateRestaurants } from './index';
-import type { TripPreferences, GeneratedItinerary } from './types';
+import {
+  generateItinerary,
+  generateActivities,
+  generateRestaurants,
+} from "./index";
+import type { TripPreferences, GeneratedItinerary } from "./types";
 
 // ============================================
 // Example 1: Generate Complete Itinerary
@@ -12,47 +16,53 @@ import type { TripPreferences, GeneratedItinerary } from './types';
 
 async function exampleGenerateItinerary() {
   const preferences: TripPreferences = {
-    destination: 'Barcelona, Spain',
-    startDate: '2026-06-15',
-    endDate: '2026-06-20',
-    budget: 'moderate',
-    vibes: ['cultural', 'foodie', 'photography', 'nightlife'],
+    destination: "Barcelona, Spain",
+    startDate: "2026-06-15",
+    endDate: "2026-06-20",
+    budget: "moderate",
+    vibes: ["cultural", "foodie", "photography", "nightlife"],
     travelers: {
       adults: 2,
       children: 0,
     },
-    interests: ['architecture', 'tapas', 'beaches', 'art'],
-    dietaryRestrictions: ['pescatarian'],
+    interests: ["architecture", "tapas", "beaches", "art"],
+    dietaryRestrictions: ["pescatarian"],
   };
 
   try {
-    console.log('🚀 Starting itinerary generation...');
-    
+    console.log("🚀 Starting itinerary generation...");
+
     const itinerary = await generateItinerary(preferences, {
-      userId: 'user_123',
+      userId: "user_123",
       onProgress: (progress) => {
         console.log(`📍 ${progress.message}`);
         if (progress.currentDay) {
-          console.log(`   Day ${progress.currentDay}/${progress.totalDays} complete`);
+          console.log(
+            `   Day ${progress.currentDay}/${progress.totalDays} complete`,
+          );
         }
       },
     });
 
-    console.log('✅ Itinerary generated!');
+    console.log("✅ Itinerary generated!");
     console.log(`   ${itinerary.days.length} days planned`);
-    console.log(`   Total cost: ${itinerary.totalEstimatedCost.amount} ${itinerary.totalEstimatedCost.currency}`);
-    
+    console.log(
+      `   Total cost: ${itinerary.totalEstimatedCost.amount} ${itinerary.totalEstimatedCost.currency}`,
+    );
+
     // Access individual days
-    itinerary.days.forEach((day: GeneratedItinerary['days'][number]) => {
+    itinerary.days.forEach((day: GeneratedItinerary["days"][number]) => {
       console.log(`\n📅 Day ${day.dayNumber}: ${day.title}`);
       console.log(`   Morning: ${day.morning.activities.length} activities`);
-      console.log(`   Afternoon: ${day.afternoon.activities.length} activities`);
+      console.log(
+        `   Afternoon: ${day.afternoon.activities.length} activities`,
+      );
       console.log(`   Evening: ${day.evening.activities.length} activities`);
     });
 
     return itinerary;
   } catch (error) {
-    console.error('❌ Generation failed:', error);
+    console.error("❌ Generation failed:", error);
     throw error;
   }
 }
@@ -64,25 +74,27 @@ async function exampleGenerateItinerary() {
 async function exampleGenerateActivities() {
   try {
     const activities = await generateActivities(
-      'Kyoto, Japan',
-      ['cultural', 'photography', 'relaxed'],
-      'morning',
-      'moderate'
+      "Kyoto, Japan",
+      ["cultural", "photography", "relaxed"],
+      "morning",
+      "moderate",
     );
 
     console.log(`✅ Generated ${activities.length} activities`);
-    
+
     activities.forEach((activity) => {
       console.log(`\n🎯 ${activity.name}`);
       console.log(`   ${activity.description}`);
       console.log(`   Duration: ${activity.duration} minutes`);
-      console.log(`   Cost: ${activity.estimatedCost.amount} ${activity.estimatedCost.currency}`);
+      console.log(
+        `   Cost: ${activity.estimatedCost.amount} ${activity.estimatedCost.currency}`,
+      );
       console.log(`   Vibe match: ${activity.vibeMatch.reasoning}`);
     });
 
     return activities;
   } catch (error) {
-    console.error('❌ Activity generation failed:', error);
+    console.error("❌ Activity generation failed:", error);
     throw error;
   }
 }
@@ -94,27 +106,31 @@ async function exampleGenerateActivities() {
 async function exampleGenerateRestaurants() {
   try {
     const restaurants = await generateRestaurants(
-      'Paris, France',
-      ['foodie', 'romantic', 'luxury'],
-      'dinner',
-      'luxury',
-      ['gluten-free']
+      "Paris, France",
+      ["foodie", "romantic", "luxury"],
+      "dinner",
+      "luxury",
+      ["gluten-free"],
     );
 
-    console.log(`✅ Generated ${restaurants.length} restaurant recommendations`);
-    
+    console.log(
+      `✅ Generated ${restaurants.length} restaurant recommendations`,
+    );
+
     restaurants.forEach((restaurant) => {
       console.log(`\n🍽️  ${restaurant.name}`);
-      console.log(`   Cuisine: ${restaurant.cuisineType.join(', ')}`);
-      console.log(`   Price: ${'$'.repeat(restaurant.priceLevel)}`);
+      console.log(`   Cuisine: ${restaurant.cuisineType.join(", ")}`);
+      console.log(`   Price: ${"$".repeat(restaurant.priceLevel)}`);
       console.log(`   ${restaurant.description}`);
-      console.log(`   ~${restaurant.estimatedCost.amount} ${restaurant.estimatedCost.currency} per person`);
-      console.log(`   Dietary: ${restaurant.dietaryOptions.join(', ')}`);
+      console.log(
+        `   ~${restaurant.estimatedCost.amount} ${restaurant.estimatedCost.currency} per person`,
+      );
+      console.log(`   Dietary: ${restaurant.dietaryOptions.join(", ")}`);
     });
 
     return restaurants;
   } catch (error) {
-    console.error('❌ Restaurant generation failed:', error);
+    console.error("❌ Restaurant generation failed:", error);
     throw error;
   }
 }

@@ -1,7 +1,16 @@
-'use client';
+"use client";
 
-import React, { useState } from 'react';
-import { Share2, Twitter, Facebook, Linkedin, Link2, Check, Mail, MessageCircle } from 'lucide-react';
+import React, { useState } from "react";
+import {
+  Share2,
+  Twitter,
+  Facebook,
+  Linkedin,
+  Link2,
+  Check,
+  Mail,
+  MessageCircle,
+} from "lucide-react";
 
 interface ShareButtonsProps {
   url?: string;
@@ -15,19 +24,20 @@ interface ShareButtonsProps {
 export function ShareButtons({
   url,
   title,
-  description = '',
-  hashtags = ['Faroway', 'TravelPlanning', 'AI'],
-  className = '',
+  description = "",
+  hashtags = ["Faroway", "TravelPlanning", "AI"],
+  className = "",
   compact = false,
 }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const shareUrl = url || (typeof window !== 'undefined' ? window.location.href : '');
+  const shareUrl =
+    url || (typeof window !== "undefined" ? window.location.href : "");
   const encodedUrl = encodeURIComponent(shareUrl);
   const encodedTitle = encodeURIComponent(title);
   const encodedDescription = encodeURIComponent(description);
-  const hashtagString = hashtags.join(',');
+  const hashtagString = hashtags.join(",");
 
   const shareLinks = {
     twitter: `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}&hashtags=${hashtagString}`,
@@ -43,7 +53,7 @@ export function ShareButtons({
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (_err) {
-      console.error('Failed to copy:', _err);
+      console.error("Failed to copy:", _err);
     }
   };
 
@@ -57,7 +67,7 @@ export function ShareButtons({
         });
       } catch {
         // User cancelled or share failed
-        console.log('Share cancelled or failed');
+        console.log("Share cancelled or failed");
       }
     } else {
       setShowDropdown(!showDropdown);
@@ -65,7 +75,7 @@ export function ShareButtons({
   };
 
   const openShareWindow = (url: string) => {
-    window.open(url, '_blank', 'width=600,height=400,scrollbars=yes');
+    window.open(url, "_blank", "width=600,height=400,scrollbars=yes");
     setShowDropdown(false);
   };
 
@@ -145,7 +155,7 @@ export function ShareButtons({
   return (
     <div className={`flex flex-wrap items-center gap-3 ${className}`}>
       <span className="text-sm text-gray-500 mr-1">Share:</span>
-      
+
       <button
         onClick={() => openShareWindow(shareLinks.twitter)}
         className="p-2.5 rounded-full bg-[#1DA1F2] text-white hover:bg-[#1a8cd8] transition-colors"
@@ -153,7 +163,7 @@ export function ShareButtons({
       >
         <Twitter className="w-4 h-4" />
       </button>
-      
+
       <button
         onClick={() => openShareWindow(shareLinks.facebook)}
         className="p-2.5 rounded-full bg-[#1877F2] text-white hover:bg-[#166fe5] transition-colors"
@@ -161,7 +171,7 @@ export function ShareButtons({
       >
         <Facebook className="w-4 h-4" />
       </button>
-      
+
       <button
         onClick={() => openShareWindow(shareLinks.linkedin)}
         className="p-2.5 rounded-full bg-[#0A66C2] text-white hover:bg-[#095196] transition-colors"
@@ -169,7 +179,7 @@ export function ShareButtons({
       >
         <Linkedin className="w-4 h-4" />
       </button>
-      
+
       <button
         onClick={() => openShareWindow(shareLinks.whatsapp)}
         className="p-2.5 rounded-full bg-[#25D366] text-white hover:bg-[#20bd5a] transition-colors"
@@ -177,15 +187,15 @@ export function ShareButtons({
       >
         <MessageCircle className="w-4 h-4" />
       </button>
-      
+
       <button
         onClick={handleCopyLink}
         className={`p-2.5 rounded-full transition-all ${
-          copied 
-            ? 'bg-green-500 text-white' 
-            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+          copied
+            ? "bg-green-500 text-white"
+            : "bg-gray-100 text-gray-600 hover:bg-gray-200"
         }`}
-        aria-label={copied ? 'Link copied' : 'Copy link'}
+        aria-label={copied ? "Link copied" : "Copy link"}
       >
         {copied ? <Check className="w-4 h-4" /> : <Link2 className="w-4 h-4" />}
       </button>
@@ -213,5 +223,8 @@ export function useShare() {
     }
   };
 
-  return { share, canShare: typeof navigator !== 'undefined' && !!navigator.share };
+  return {
+    share,
+    canShare: typeof navigator !== "undefined" && !!navigator.share,
+  };
 }

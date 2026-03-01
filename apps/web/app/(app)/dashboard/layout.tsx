@@ -1,18 +1,19 @@
-import { Metadata } from 'next'
+import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: 'Dashboard',
-  description: 'View and manage your Faroway travel itineraries. See upcoming trips, past adventures, and create new travel plans.',
+  title: "Dashboard",
+  description:
+    "View and manage your Faroway travel itineraries. See upcoming trips, past adventures, and create new travel plans.",
   robots: {
     index: false, // Private user content
     follow: false,
   },
-}
+};
 
 export default function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  return children
+  return children;
 }

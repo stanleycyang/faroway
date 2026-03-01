@@ -11,4 +11,4 @@ export type {
   ItineraryGenerationRequest,
   StreamingProgress,
   AIGenerationError,
-} from '@faroway/types';
+} from "@faroway/types";

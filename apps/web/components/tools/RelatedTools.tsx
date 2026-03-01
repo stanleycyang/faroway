@@ -1,54 +1,61 @@
-import Link from 'next/link';
-import { Compass, Luggage, Calculator, Sun, Shield, ArrowLeftRight } from 'lucide-react';
+import Link from "next/link";
+import {
+  Compass,
+  Luggage,
+  Calculator,
+  Sun,
+  Shield,
+  ArrowLeftRight,
+} from "lucide-react";
 
 const ALL_TOOLS = [
   {
-    slug: 'travel-quiz',
-    title: 'Destination Quiz',
-    description: 'Find your perfect destination in 60 seconds',
+    slug: "travel-quiz",
+    title: "Destination Quiz",
+    description: "Find your perfect destination in 60 seconds",
     icon: Compass,
-    color: 'text-primary',
-    bg: 'bg-primary/10',
+    color: "text-primary",
+    bg: "bg-primary/10",
   },
   {
-    slug: 'packing-list',
-    title: 'Packing List',
-    description: 'Never forget essentials with a smart checklist',
+    slug: "packing-list",
+    title: "Packing List",
+    description: "Never forget essentials with a smart checklist",
     icon: Luggage,
-    color: 'text-teal-600',
-    bg: 'bg-teal-50',
+    color: "text-teal-600",
+    bg: "bg-teal-50",
   },
   {
-    slug: 'trip-cost',
-    title: 'Cost Estimator',
-    description: 'Budget your trip with real cost breakdowns',
+    slug: "trip-cost",
+    title: "Cost Estimator",
+    description: "Budget your trip with real cost breakdowns",
     icon: Calculator,
-    color: 'text-amber-600',
-    bg: 'bg-amber-50',
+    color: "text-amber-600",
+    bg: "bg-amber-50",
   },
   {
-    slug: 'best-time-to-visit',
-    title: 'Best Time to Visit',
-    description: 'Climate data and crowd levels month by month',
+    slug: "best-time-to-visit",
+    title: "Best Time to Visit",
+    description: "Climate data and crowd levels month by month",
     icon: Sun,
-    color: 'text-sky-600',
-    bg: 'bg-sky-50',
+    color: "text-sky-600",
+    bg: "bg-sky-50",
   },
   {
-    slug: 'visa-checker',
-    title: 'Visa Checker',
-    description: 'Check visa requirements for your passport',
+    slug: "visa-checker",
+    title: "Visa Checker",
+    description: "Check visa requirements for your passport",
     icon: Shield,
-    color: 'text-violet-600',
-    bg: 'bg-violet-50',
+    color: "text-violet-600",
+    bg: "bg-violet-50",
   },
   {
-    slug: 'currency-converter',
-    title: 'Currency Converter',
-    description: 'Convert between travel currencies instantly',
+    slug: "currency-converter",
+    title: "Currency Converter",
+    description: "Convert between travel currencies instantly",
     icon: ArrowLeftRight,
-    color: 'text-emerald-600',
-    bg: 'bg-emerald-50',
+    color: "text-emerald-600",
+    bg: "bg-emerald-50",
   },
 ];
 
@@ -72,7 +79,9 @@ export function RelatedTools({ currentSlug }: RelatedToolsProps) {
               href={`/tools/${tool.slug}`}
               className="group p-6 rounded-2xl bg-white border border-slate-200/80 shadow-sm hover:shadow-md hover:border-primary/20 transition-all"
             >
-              <div className={`w-12 h-12 rounded-xl ${tool.bg} ${tool.color} flex items-center justify-center mb-4`}>
+              <div
+                className={`w-12 h-12 rounded-xl ${tool.bg} ${tool.color} flex items-center justify-center mb-4`}
+              >
                 <tool.icon className="w-6 h-6" />
               </div>
               <h3 className="text-lg font-bold text-slate-900 mb-1 group-hover:text-primary transition-colors">

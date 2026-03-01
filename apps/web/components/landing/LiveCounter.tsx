@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from "react";
 
 export function LiveCounter() {
   const [count, setCount] = useState(127);
@@ -14,7 +14,13 @@ export function LiveCounter() {
   return <>{count}</>;
 }
 
-export function AnimatedCounter({ value, suffix = '' }: { value: number; suffix?: string }) {
+export function AnimatedCounter({
+  value,
+  suffix = "",
+}: {
+  value: number;
+  suffix?: string;
+}) {
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLDivElement>(null);
   const started = useRef(false);

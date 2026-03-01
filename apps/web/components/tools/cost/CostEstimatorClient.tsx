@@ -1,28 +1,45 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { Minus, Plus } from 'lucide-react';
-import { getAllGuides, type DestinationGuide } from '@/lib/destination-guides';
-import { getCostProfile } from '@/lib/tools/cost-data';
-import { BUDGET_RANGES } from '@faroway/constants';
-import { CostBreakdown } from './CostBreakdown';
-import { ToolHero } from '@/components/tools/ToolHero';
-import { ToolCTA } from '@/components/tools/ToolCTA';
-import { RelatedTools } from '@/components/tools/RelatedTools';
+import { useState } from "react";
+import { Minus, Plus } from "lucide-react";
+import { getAllGuides, type DestinationGuide } from "@/lib/destination-guides";
+import { getCostProfile } from "@/lib/tools/cost-data";
+import { BUDGET_RANGES } from "@faroway/constants";
+import { CostBreakdown } from "./CostBreakdown";
+import { ToolHero } from "@/components/tools/ToolHero";
+import { ToolCTA } from "@/components/tools/ToolCTA";
+import { RelatedTools } from "@/components/tools/RelatedTools";
 
 const guides = getAllGuides();
 
 const BUDGET_OPTIONS = [
-  { key: 'budget', label: 'Budget', emoji: '🎒', description: 'Hostels, street food, public transit' },
-  { key: 'moderate', label: 'Mid-Range', emoji: '💳', description: 'Hotels, restaurants, some tours' },
-  { key: 'luxury', label: 'Luxury', emoji: '👑', description: 'Top hotels, fine dining, private tours' },
+  {
+    key: "budget",
+    label: "Budget",
+    emoji: "🎒",
+    description: "Hostels, street food, public transit",
+  },
+  {
+    key: "moderate",
+    label: "Mid-Range",
+    emoji: "💳",
+    description: "Hotels, restaurants, some tours",
+  },
+  {
+    key: "luxury",
+    label: "Luxury",
+    emoji: "👑",
+    description: "Top hotels, fine dining, private tours",
+  },
 ] as const;
 
 export function CostEstimatorClient() {
   const [destination, setDestination] = useState<DestinationGuide | null>(null);
   const [days, setDays] = useState(5);
   const [travelers, setTravelers] = useState(2);
-  const [budgetKey, setBudgetKey] = useState<'budget' | 'moderate' | 'luxury'>('moderate');
+  const [budgetKey, setBudgetKey] = useState<"budget" | "moderate" | "luxury">(
+    "moderate",
+  );
   const [showResult, setShowResult] = useState(false);
 
   const profile = destination ? getCostProfile(destination.slug) : null;
@@ -37,7 +54,8 @@ export function CostEstimatorClient() {
 
   if (showResult && destination && profile) {
     const dailyBudget = BUDGET_RANGES[budgetKey].daily;
-    const budgetLabel = BUDGET_OPTIONS.find((o) => o.key === budgetKey)?.label || '';
+    const budgetLabel =
+      BUDGET_OPTIONS.find((o) => o.key === budgetKey)?.label || "";
 
     return (
       <main className="min-h-screen">
@@ -48,7 +66,8 @@ export function CostEstimatorClient() {
                 {destination.name} Trip Cost
               </h1>
               <p className="text-sm text-slate-500">
-                {days} days, {travelers} {travelers === 1 ? 'person' : 'people'}, {budgetLabel.toLowerCase()} budget
+                {days} days, {travelers} {travelers === 1 ? "person" : "people"}
+                , {budgetLabel.toLowerCase()} budget
               </p>
             </div>
             <button
@@ -94,7 +113,7 @@ export function CostEstimatorClient() {
             Destination
           </label>
           <select
-            value={destination?.slug || ''}
+            value={destination?.slug || ""}
             onChange={(e) => {
               const guide = guides.find((g) => g.slug === e.target.value);
               setDestination(guide || null);
@@ -171,15 +190,17 @@ export function CostEstimatorClient() {
                 onClick={() => setBudgetKey(opt.key)}
                 className={`p-4 rounded-xl border-2 text-center transition-all ${
                   budgetKey === opt.key
-                    ? 'border-primary bg-primary/5 shadow-sm'
-                    : 'border-slate-200 hover:border-primary/30'
+                    ? "border-primary bg-primary/5 shadow-sm"
+                    : "border-slate-200 hover:border-primary/30"
                 }`}
               >
                 <span className="text-2xl block mb-1">{opt.emoji}</span>
                 <span className="text-sm font-semibold text-slate-900 block">
                   {opt.label}
                 </span>
-                <span className="text-xs text-slate-500">${BUDGET_RANGES[opt.key].daily}/day</span>
+                <span className="text-xs text-slate-500">
+                  ${BUDGET_RANGES[opt.key].daily}/day
+                </span>
               </button>
             ))}
           </div>

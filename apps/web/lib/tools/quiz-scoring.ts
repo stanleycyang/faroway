@@ -1,23 +1,40 @@
-import { destinationGuides, type DestinationGuide } from '@/lib/destination-guides';
-import type { QuizOption } from './quiz-questions';
+import {
+  destinationGuides,
+  type DestinationGuide,
+} from "@/lib/destination-guides";
+import type { QuizOption } from "./quiz-questions";
 
 // Map destination vibes to scoring tags
 const DESTINATION_TAGS: Record<string, string[]> = {
-  tokyo: ['culture', 'foodie', 'urban', 'solo', 'moderate'],
-  bali: ['beach', 'wellness', 'nature', 'relaxation', 'tropical', 'budget'],
-  bangkok: ['foodie', 'culture', 'nightlife', 'budget', 'adventure', 'tropical'],
-  dubai: ['luxury', 'urban', 'adventure', 'romantic'],
-  paris: ['romantic', 'culture', 'foodie', 'history', 'urban', 'moderate'],
-  barcelona: ['beach', 'culture', 'foodie', 'mediterranean', 'nightlife'],
-  santorini: ['romantic', 'scenic', 'beach', 'relaxation', 'mediterranean', 'luxury'],
-  london: ['culture', 'history', 'urban', 'foodie', 'family'],
-  rome: ['history', 'foodie', 'culture', 'romantic', 'mediterranean'],
-  lisbon: ['culture', 'foodie', 'nightlife', 'budget', 'mediterranean'],
-  reykjavik: ['nature', 'adventure', 'scenic', 'solo'],
-  'new-york': ['urban', 'nightlife', 'culture', 'foodie', 'solo'],
-  marrakech: ['culture', 'adventure', 'foodie', 'budget'],
-  'cape-town': ['nature', 'adventure', 'scenic', 'budget', 'beach'],
-  sydney: ['beach', 'urban', 'nature', 'family', 'moderate'],
+  tokyo: ["culture", "foodie", "urban", "solo", "moderate"],
+  bali: ["beach", "wellness", "nature", "relaxation", "tropical", "budget"],
+  bangkok: [
+    "foodie",
+    "culture",
+    "nightlife",
+    "budget",
+    "adventure",
+    "tropical",
+  ],
+  dubai: ["luxury", "urban", "adventure", "romantic"],
+  paris: ["romantic", "culture", "foodie", "history", "urban", "moderate"],
+  barcelona: ["beach", "culture", "foodie", "mediterranean", "nightlife"],
+  santorini: [
+    "romantic",
+    "scenic",
+    "beach",
+    "relaxation",
+    "mediterranean",
+    "luxury",
+  ],
+  london: ["culture", "history", "urban", "foodie", "family"],
+  rome: ["history", "foodie", "culture", "romantic", "mediterranean"],
+  lisbon: ["culture", "foodie", "nightlife", "budget", "mediterranean"],
+  reykjavik: ["nature", "adventure", "scenic", "solo"],
+  "new-york": ["urban", "nightlife", "culture", "foodie", "solo"],
+  marrakech: ["culture", "adventure", "foodie", "budget"],
+  "cape-town": ["nature", "adventure", "scenic", "budget", "beach"],
+  sydney: ["beach", "urban", "nature", "family", "moderate"],
 };
 
 export interface QuizResult {
@@ -27,9 +44,7 @@ export interface QuizResult {
   matchReasons: string[];
 }
 
-export function scoreDestinations(
-  answers: QuizOption[][]
-): QuizResult[] {
+export function scoreDestinations(answers: QuizOption[][]): QuizResult[] {
   // Aggregate tag weights from all answers
   const tagScores: Record<string, number> = {};
   for (const answerSet of answers) {
@@ -74,25 +89,25 @@ export function scoreDestinations(
 
 function humanizeTag(tag: string): string {
   const map: Record<string, string> = {
-    culture: 'Rich culture',
-    foodie: 'Amazing food scene',
-    urban: 'Vibrant city life',
-    beach: 'Beautiful beaches',
-    nature: 'Stunning nature',
-    adventure: 'Great for adventure',
-    romantic: 'Romantic atmosphere',
-    luxury: 'Luxury experiences',
-    budget: 'Budget-friendly',
-    relaxation: 'Perfect for relaxation',
-    nightlife: 'Exciting nightlife',
-    history: 'Historical landmarks',
-    scenic: 'Breathtaking scenery',
-    wellness: 'Wellness retreats',
-    solo: 'Solo-travel friendly',
-    family: 'Family-friendly',
-    mediterranean: 'Mediterranean charm',
-    tropical: 'Tropical vibes',
-    moderate: 'Mid-range value',
+    culture: "Rich culture",
+    foodie: "Amazing food scene",
+    urban: "Vibrant city life",
+    beach: "Beautiful beaches",
+    nature: "Stunning nature",
+    adventure: "Great for adventure",
+    romantic: "Romantic atmosphere",
+    luxury: "Luxury experiences",
+    budget: "Budget-friendly",
+    relaxation: "Perfect for relaxation",
+    nightlife: "Exciting nightlife",
+    history: "Historical landmarks",
+    scenic: "Breathtaking scenery",
+    wellness: "Wellness retreats",
+    solo: "Solo-travel friendly",
+    family: "Family-friendly",
+    mediterranean: "Mediterranean charm",
+    tropical: "Tropical vibes",
+    moderate: "Mid-range value",
   };
   return map[tag] || tag;
 }

@@ -1,17 +1,17 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
 export async function POST(request: Request) {
-  const supabase = await createClient()
+  const supabase = await createClient();
 
   // Sign out the user
-  await supabase.auth.signOut()
+  await supabase.auth.signOut();
 
   // Get the origin for redirect
-  const { origin } = new URL(request.url)
+  const { origin } = new URL(request.url);
 
   // Redirect to home page after logout
   return NextResponse.redirect(`${origin}/`, {
-    status: 302
-  })
+    status: 302,
+  });
 }

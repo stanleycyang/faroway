@@ -1,22 +1,29 @@
-import type { Metadata } from 'next';
-import { getAllPostMetas, getFeaturedPost, paginate, POSTS_PER_PAGE } from '@/lib/blog';
-import { BlogCard } from '@/components/blog/BlogCard';
-import { FeaturedHero } from '@/components/blog/FeaturedHero';
-import { CategoryPills } from '@/components/blog/CategoryPills';
-import { NewsletterCTA } from '@/components/blog/NewsletterCTA';
-import { Pagination } from '@/components/blog/Pagination';
+import type { Metadata } from "next";
+import {
+  getAllPostMetas,
+  getFeaturedPost,
+  paginate,
+  POSTS_PER_PAGE,
+} from "@/lib/blog";
+import { BlogCard } from "@/components/blog/BlogCard";
+import { FeaturedHero } from "@/components/blog/FeaturedHero";
+import { CategoryPills } from "@/components/blog/CategoryPills";
+import { NewsletterCTA } from "@/components/blog/NewsletterCTA";
+import { Pagination } from "@/components/blog/Pagination";
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.faroway.ai';
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
 export const metadata: Metadata = {
-  title: 'Travel Blog — Tips, Guides & Inspiration',
-  description: 'Expert travel tips, destination guides, budget hacks, and AI-powered planning advice. Everything you need to plan your next adventure.',
-  alternates: { canonical: '/blog' },
+  title: "Travel Blog — Tips, Guides & Inspiration",
+  description:
+    "Expert travel tips, destination guides, budget hacks, and AI-powered planning advice. Everything you need to plan your next adventure.",
+  alternates: { canonical: "/blog" },
   openGraph: {
-    title: 'Faroway Travel Blog — Tips, Guides & Inspiration',
-    description: 'Expert travel tips, destination guides, and AI-powered planning advice.',
-    type: 'website',
-    url: '/blog',
+    title: "Faroway Travel Blog — Tips, Guides & Inspiration",
+    description:
+      "Expert travel tips, destination guides, and AI-powered planning advice.",
+    type: "website",
+    url: "/blog",
   },
 };
 
@@ -26,7 +33,7 @@ export default async function BlogIndex({
   searchParams: Promise<{ page?: string }>;
 }) {
   const { page: pageParam } = await searchParams;
-  const currentPage = Math.max(1, parseInt(pageParam || '1', 10) || 1);
+  const currentPage = Math.max(1, parseInt(pageParam || "1", 10) || 1);
 
   const allPosts = await getAllPostMetas();
   const featured = await getFeaturedPost();
@@ -37,23 +44,33 @@ export default async function BlogIndex({
     ? allPosts.filter((p) => p.slug !== featured?.slug)
     : allPosts;
 
-  const { items: posts, totalPages } = paginate(gridPosts, currentPage, POSTS_PER_PAGE);
+  const { items: posts, totalPages } = paginate(
+    gridPosts,
+    currentPage,
+    POSTS_PER_PAGE,
+  );
 
   const collectionSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'CollectionPage',
-    name: 'Faroway Travel Blog',
-    description: 'Expert travel tips, destination guides, budget hacks, and AI-powered planning advice.',
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name: "Faroway Travel Blog",
+    description:
+      "Expert travel tips, destination guides, budget hacks, and AI-powered planning advice.",
     url: `${baseUrl}/blog`,
-    isPartOf: { '@type': 'WebSite', name: 'Faroway', url: baseUrl },
+    isPartOf: { "@type": "WebSite", name: "Faroway", url: baseUrl },
   };
 
   const breadcrumbSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Home', item: baseUrl },
-      { '@type': 'ListItem', position: 2, name: 'Blog', item: `${baseUrl}/blog` },
+      { "@type": "ListItem", position: 1, name: "Home", item: baseUrl },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Blog",
+        item: `${baseUrl}/blog`,
+      },
     ],
   };
 
@@ -61,7 +78,12 @@ export default async function BlogIndex({
     <main className="min-h-screen pt-20">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify([collectionSchema, breadcrumbSchema]).replace(/</g, '\\u003c') }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify([collectionSchema, breadcrumbSchema]).replace(
+            /</g,
+            "\\u003c",
+          ),
+        }}
       />
       {/* Hero */}
       <section className="container mx-auto px-6 max-w-7xl pt-8 pb-4">
@@ -70,7 +92,8 @@ export default async function BlogIndex({
             Travel Blog
           </h1>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            Expert tips, destination guides, and insights to help you travel smarter with AI.
+            Expert tips, destination guides, and insights to help you travel
+            smarter with AI.
           </p>
         </div>
 
@@ -87,7 +110,7 @@ export default async function BlogIndex({
       <section className="container mx-auto px-6 max-w-7xl py-12">
         <div className="flex items-baseline justify-between mb-8">
           <h2 className="text-2xl font-bold text-slate-900">
-            {isFirstPage ? 'Latest Articles' : `Page ${currentPage}`}
+            {isFirstPage ? "Latest Articles" : `Page ${currentPage}`}
           </h2>
           {totalPages > 1 && (
             <span className="text-sm text-gray-500">
@@ -101,7 +124,11 @@ export default async function BlogIndex({
           ))}
         </div>
 
-        <Pagination currentPage={currentPage} totalPages={totalPages} basePath="/blog" />
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          basePath="/blog"
+        />
       </section>
 
       {/* Newsletter — only on last page or single page */}

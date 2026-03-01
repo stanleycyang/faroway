@@ -3,7 +3,7 @@
  * Structured prompts for Claude to generate personalized travel itineraries
  */
 
-import { TripPreferences } from './types';
+import { TripPreferences } from "./types";
 
 export const SYSTEM_PROMPT = `You are Claude, an expert travel planning AI assistant for Faroway.
 
@@ -32,20 +32,34 @@ Output format:
 - Consider practical factors: walking distances, opening hours, energy levels`;
 
 export function buildItineraryPrompt(preferences: TripPreferences): string {
-  const { destination, startDate, endDate, budget, vibes, travelers, interests, dietaryRestrictions, mobilityNeeds } = preferences;
-  
-  const days = Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)) + 1;
-  
+  const {
+    destination,
+    startDate,
+    endDate,
+    budget,
+    vibes,
+    travelers,
+    interests,
+    dietaryRestrictions,
+    mobilityNeeds,
+  } = preferences;
+
+  const days =
+    Math.ceil(
+      (new Date(endDate).getTime() - new Date(startDate).getTime()) /
+        (1000 * 60 * 60 * 24),
+    ) + 1;
+
   return `Generate a complete ${days}-day travel itinerary for ${destination}.
 
 TRAVELER PROFILE:
 - Dates: ${startDate} to ${endDate} (${days} days)
 - Budget level: ${budget}
 - Travelers: ${travelers.adults} adult(s), ${travelers.children} child(ren)
-- Vibes: ${vibes.join(', ')}
-${interests && interests.length > 0 ? `- Interests: ${interests.join(', ')}` : ''}
-${dietaryRestrictions && dietaryRestrictions.length > 0 ? `- Dietary restrictions: ${dietaryRestrictions.join(', ')}` : ''}
-${mobilityNeeds ? `- Mobility needs: ${mobilityNeeds}` : ''}
+- Vibes: ${vibes.join(", ")}
+${interests && interests.length > 0 ? `- Interests: ${interests.join(", ")}` : ""}
+${dietaryRestrictions && dietaryRestrictions.length > 0 ? `- Dietary restrictions: ${dietaryRestrictions.join(", ")}` : ""}
+${mobilityNeeds ? `- Mobility needs: ${mobilityNeeds}` : ""}
 
 REQUIREMENTS:
 1. Create a day-by-day itinerary with morning, afternoon, and evening sections
@@ -57,7 +71,7 @@ REQUIREMENTS:
 7. Consider practical logistics: travel time between locations, opening hours, rest periods
 8. Balance popular tourist spots with authentic local experiences
 9. Account for the ${budget} budget level throughout
-${travelers.children > 0 ? '10. Ensure all activities are family-friendly and engaging for children' : ''}
+${travelers.children > 0 ? "10. Ensure all activities are family-friendly and engaging for children" : ""}
 
 For each activity, include:
 - Name and detailed description
@@ -115,13 +129,13 @@ Generate the complete itinerary now.`;
 export function buildActivityRecommendationPrompt(
   destination: string,
   vibes: string[],
-  timeOfDay: 'morning' | 'afternoon' | 'evening',
-  budget: string
+  timeOfDay: "morning" | "afternoon" | "evening",
+  budget: string,
 ): string {
   return `Recommend 5 specific activities in ${destination} for ${timeOfDay}.
 
 CRITERIA:
-- Must match these vibes: ${vibes.join(', ')}
+- Must match these vibes: ${vibes.join(", ")}
 - Budget level: ${budget}
 - Time of day: ${timeOfDay}
 
@@ -158,17 +172,17 @@ Return a JSON array of activity objects:
 export function buildRestaurantPrompt(
   destination: string,
   vibes: string[],
-  mealType: 'breakfast' | 'lunch' | 'dinner',
+  mealType: "breakfast" | "lunch" | "dinner",
   budget: string,
-  dietaryRestrictions?: string[]
+  dietaryRestrictions?: string[],
 ): string {
   return `Recommend 5 specific restaurants in ${destination} for ${mealType}.
 
 CRITERIA:
-- Must match these vibes: ${vibes.join(', ')}
+- Must match these vibes: ${vibes.join(", ")}
 - Budget level: ${budget}
 - Meal type: ${mealType}
-${dietaryRestrictions && dietaryRestrictions.length > 0 ? `- Dietary accommodations needed: ${dietaryRestrictions.join(', ')}` : ''}
+${dietaryRestrictions && dietaryRestrictions.length > 0 ? `- Dietary accommodations needed: ${dietaryRestrictions.join(", ")}` : ""}
 
 For each restaurant, provide:
 1. Name and cuisine type
@@ -205,16 +219,24 @@ Return a JSON array of restaurant objects:
 }
 
 export const VIBE_EXAMPLES = {
-  adventure: 'hiking, kayaking, zip-lining, exploring off-the-beaten-path locations',
-  foodie: 'local markets, cooking classes, Michelin restaurants, street food tours',
-  relaxed: 'spa days, beach time, slow-paced sightseeing, sunset watching',
-  cultural: 'museums, historical sites, local traditions, art galleries, theater',
-  nightlife: 'bars, clubs, live music venues, evening entertainment',
-  nature: 'parks, gardens, wildlife, scenic viewpoints, outdoor activities',
-  luxury: 'high-end dining, premium experiences, private tours, upscale accommodations',
-  budget: 'free activities, local eateries, public transportation, self-guided tours',
-  romantic: 'sunset spots, intimate dining, couples activities, scenic walks',
-  family: 'kid-friendly attractions, interactive museums, outdoor play, family restaurants',
-  photography: 'scenic viewpoints, golden hour locations, architectural gems, street scenes',
-  shopping: 'local boutiques, markets, malls, artisan workshops, souvenir hunting'
+  adventure:
+    "hiking, kayaking, zip-lining, exploring off-the-beaten-path locations",
+  foodie:
+    "local markets, cooking classes, Michelin restaurants, street food tours",
+  relaxed: "spa days, beach time, slow-paced sightseeing, sunset watching",
+  cultural:
+    "museums, historical sites, local traditions, art galleries, theater",
+  nightlife: "bars, clubs, live music venues, evening entertainment",
+  nature: "parks, gardens, wildlife, scenic viewpoints, outdoor activities",
+  luxury:
+    "high-end dining, premium experiences, private tours, upscale accommodations",
+  budget:
+    "free activities, local eateries, public transportation, self-guided tours",
+  romantic: "sunset spots, intimate dining, couples activities, scenic walks",
+  family:
+    "kid-friendly attractions, interactive museums, outdoor play, family restaurants",
+  photography:
+    "scenic viewpoints, golden hour locations, architectural gems, street scenes",
+  shopping:
+    "local boutiques, markets, malls, artisan workshops, souvenir hunting",
 };

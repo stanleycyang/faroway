@@ -49,5 +49,8 @@ android/
 # build outputs
 dist/
 
+# test coverage
+coverage/
+
 # lock files (keep bun.lock, ignore bun.lockb binary)
 bun.lockb

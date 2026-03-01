@@ -1,7 +1,7 @@
-import type { Metadata } from 'next';
-import Image from 'next/image';
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
+import type { Metadata } from "next";
+import Image from "next/image";
+import Link from "next/link";
+import { notFound } from "next/navigation";
 import {
   MapPin,
   Clock,
@@ -12,11 +12,8 @@ import {
   Sparkles,
   Lightbulb,
   ChevronRight,
-} from 'lucide-react';
-import {
-  getGuideBySlug,
-  getGuideSlugs,
-} from '@/lib/destination-guides';
+} from "lucide-react";
+import { getGuideBySlug, getGuideSlugs } from "@/lib/destination-guides";
 
 // ─── Static Generation ───────────────────────────────────────────────────────
 export function generateStaticParams() {
@@ -39,12 +36,19 @@ export async function generateMetadata({
     openGraph: {
       title: `${dest.name} Travel Guide | Faroway`,
       description: dest.tagline,
-      type: 'article',
+      type: "article",
       url: `/destinations/${dest.slug}`,
-      images: [{ url: dest.heroImage, width: 1920, height: 1080, alt: `${dest.name}, ${dest.country}` }],
+      images: [
+        {
+          url: dest.heroImage,
+          width: 1920,
+          height: 1080,
+          alt: `${dest.name}, ${dest.country}`,
+        },
+      ],
     },
     twitter: {
-      card: 'summary_large_image',
+      card: "summary_large_image",
       title: `${dest.name} Travel Guide | Faroway`,
       description: dest.tagline,
       images: [dest.heroImage],
@@ -66,23 +70,38 @@ export default async function DestinationGuidePage({
   // JSON-LD
   const jsonLd = [
     {
-      '@context': 'https://schema.org',
-      '@type': 'BreadcrumbList',
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
       itemListElement: [
-        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.faroway.ai' },
-        { '@type': 'ListItem', position: 2, name: 'Destinations', item: 'https://www.faroway.ai/destinations' },
-        { '@type': 'ListItem', position: 3, name: dest.name, item: `https://www.faroway.ai/destinations/${dest.slug}` },
+        {
+          "@type": "ListItem",
+          position: 1,
+          name: "Home",
+          item: "https://www.faroway.ai",
+        },
+        {
+          "@type": "ListItem",
+          position: 2,
+          name: "Destinations",
+          item: "https://www.faroway.ai/destinations",
+        },
+        {
+          "@type": "ListItem",
+          position: 3,
+          name: dest.name,
+          item: `https://www.faroway.ai/destinations/${dest.slug}`,
+        },
       ],
     },
     {
-      '@context': 'https://schema.org',
-      '@type': 'TouristDestination',
+      "@context": "https://schema.org",
+      "@type": "TouristDestination",
       name: dest.name,
       description: dest.description,
       image: dest.heroImage,
       touristType: dest.vibes,
       containedInPlace: {
-        '@type': 'Country',
+        "@type": "Country",
         name: dest.country,
       },
     },
@@ -115,7 +134,10 @@ export default async function DestinationGuidePage({
             <div className="container mx-auto px-6 max-w-7xl pb-12 lg:pb-16">
               {/* Breadcrumb */}
               <nav className="flex items-center gap-2 text-white/70 text-sm mb-4">
-                <Link href="/destinations" className="hover:text-white transition-colors">
+                <Link
+                  href="/destinations"
+                  className="hover:text-white transition-colors"
+                >
                   Destinations
                 </Link>
                 <ChevronRight className="w-3 h-3" />
@@ -162,13 +184,35 @@ export default async function DestinationGuidePage({
         {/* ─── Quick Facts ──────────────────────────────────────────────── */}
         <section className="bg-slate-50 border-y border-slate-200/80">
           <div className="container mx-auto px-6 max-w-7xl py-10">
-            <h2 className="text-xl font-bold text-slate-900 mb-6">Quick Facts</h2>
+            <h2 className="text-xl font-bold text-slate-900 mb-6">
+              Quick Facts
+            </h2>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-6">
-              <QuickFactCard icon={<Calendar className="w-5 h-5" />} label="Best Time" value={dest.quickFacts.bestTime} />
-              <QuickFactCard icon={<Languages className="w-5 h-5" />} label="Language" value={dest.quickFacts.language} />
-              <QuickFactCard icon={<Banknote className="w-5 h-5" />} label="Currency" value={dest.quickFacts.currency} />
-              <QuickFactCard icon={<Clock className="w-5 h-5" />} label="Timezone" value={dest.quickFacts.timezone} />
-              <QuickFactCard icon={<Globe className="w-5 h-5" />} label="Avg Budget" value={dest.quickFacts.avgBudget} />
+              <QuickFactCard
+                icon={<Calendar className="w-5 h-5" />}
+                label="Best Time"
+                value={dest.quickFacts.bestTime}
+              />
+              <QuickFactCard
+                icon={<Languages className="w-5 h-5" />}
+                label="Language"
+                value={dest.quickFacts.language}
+              />
+              <QuickFactCard
+                icon={<Banknote className="w-5 h-5" />}
+                label="Currency"
+                value={dest.quickFacts.currency}
+              />
+              <QuickFactCard
+                icon={<Clock className="w-5 h-5" />}
+                label="Timezone"
+                value={dest.quickFacts.timezone}
+              />
+              <QuickFactCard
+                icon={<Globe className="w-5 h-5" />}
+                label="Avg Budget"
+                value={dest.quickFacts.avgBudget}
+              />
             </div>
           </div>
         </section>
@@ -216,7 +260,8 @@ export default async function DestinationGuidePage({
               </h2>
             </div>
             <p className="text-slate-500 mb-10">
-              A taste of what Faroway can create — fully customized to your preferences.
+              A taste of what Faroway can create — fully customized to your
+              preferences.
             </p>
 
             <div className="relative">
@@ -302,7 +347,8 @@ export default async function DestinationGuidePage({
               Ready for {dest.name}?
             </h2>
             <p className="text-lg text-white/80 mb-8 max-w-xl mx-auto">
-              Faroway creates a personalized {dest.name} itinerary in 60 seconds — completely free and tailored to your style.
+              Faroway creates a personalized {dest.name} itinerary in 60 seconds
+              — completely free and tailored to your style.
             </p>
             <Link
               href="/create"

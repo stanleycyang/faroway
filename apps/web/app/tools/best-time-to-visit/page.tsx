@@ -1,41 +1,48 @@
-import type { Metadata } from 'next';
-import Link from 'next/link';
-import Image from 'next/image';
-import { Calendar, ArrowRight } from 'lucide-react';
-import { getContinents, getGuidesByContinent } from '@/lib/destination-guides';
-import { getClimateData } from '@/lib/tools/climate-data';
-import { ToolHero } from '@/components/tools/ToolHero';
-import { ToolCTA } from '@/components/tools/ToolCTA';
+import type { Metadata } from "next";
+import Link from "next/link";
+import Image from "next/image";
+import { Calendar, ArrowRight } from "lucide-react";
+import { getContinents, getGuidesByContinent } from "@/lib/destination-guides";
+import { getClimateData } from "@/lib/tools/climate-data";
+import { ToolHero } from "@/components/tools/ToolHero";
+import { ToolCTA } from "@/components/tools/ToolCTA";
 
 export const metadata: Metadata = {
-  title: 'Best Time to Visit — Climate & Crowd Data',
+  title: "Best Time to Visit — Climate & Crowd Data",
   description:
-    'Find the best month to visit 14 popular destinations. Monthly temperature, rainfall, crowd levels, events, and seasonal tips.',
-  alternates: { canonical: '/tools/best-time-to-visit' },
+    "Find the best month to visit 14 popular destinations. Monthly temperature, rainfall, crowd levels, events, and seasonal tips.",
+  alternates: { canonical: "/tools/best-time-to-visit" },
   openGraph: {
-    title: 'Best Time to Visit Any Destination | Faroway',
-    description: 'Climate data, crowd levels & events for 14 destinations — find your perfect month.',
-    url: '/tools/best-time-to-visit',
+    title: "Best Time to Visit Any Destination | Faroway",
+    description:
+      "Climate data, crowd levels & events for 14 destinations — find your perfect month.",
+    url: "/tools/best-time-to-visit",
   },
 };
 
 export default function BestTimeToVisitPage() {
-  const continents = getContinents().filter((c) => c !== 'All');
+  const continents = getContinents().filter((c) => c !== "All");
 
   const appSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'WebApplication',
-    name: 'Best Time to Visit Guide',
-    description: 'Find the best month to visit any destination with climate data, crowd levels, and seasonal events.',
-    url: 'https://www.faroway.ai/tools/best-time-to-visit',
-    applicationCategory: 'TravelApplication',
-    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-    operatingSystem: 'All',
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: "Best Time to Visit Guide",
+    description:
+      "Find the best month to visit any destination with climate data, crowd levels, and seasonal events.",
+    url: "https://www.faroway.ai/tools/best-time-to-visit",
+    applicationCategory: "TravelApplication",
+    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    operatingSystem: "All",
   };
 
   return (
     <main className="min-h-screen">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema).replace(/</g, '\\u003c') }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(appSchema).replace(/</g, "\\u003c"),
+        }}
+      />
       <ToolHero
         badge="Free Guide"
         title="Best Time to Visit"
@@ -77,14 +84,16 @@ export default function BestTimeToVisitPage() {
                           <h3 className="text-lg font-bold text-white">
                             {dest.name}
                           </h3>
-                          <p className="text-sm text-white/80">{dest.country}</p>
+                          <p className="text-sm text-white/80">
+                            {dest.country}
+                          </p>
                         </div>
                       </div>
                       <div className="p-4">
                         <div className="flex items-center gap-2 text-sm text-slate-600 mb-2">
                           <Calendar className="w-4 h-4 text-primary" />
                           <span className="font-medium">
-                            Best: {climate?.bestMonths.join(', ')}
+                            Best: {climate?.bestMonths.join(", ")}
                           </span>
                         </div>
                         <p className="text-xs text-slate-500 line-clamp-2">

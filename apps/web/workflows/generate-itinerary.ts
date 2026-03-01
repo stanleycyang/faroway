@@ -1,14 +1,18 @@
 /**
  * Faroway Itinerary Generation Workflow
- * 
+ *
  * Durable workflow for AI-powered itinerary generation.
  * Handles long-running AI tasks asynchronously with progress tracking.
- * 
+ *
  * @see https://useworkflow.dev/docs/foundations
  */
 
 import { FatalError } from "workflow";
-import { generateItinerary, TripPreferences, GeneratedItinerary } from "@/lib/ai";
+import {
+  generateItinerary,
+  TripPreferences,
+  GeneratedItinerary,
+} from "@/lib/ai";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 
 // Types for workflow input/output
@@ -21,7 +25,7 @@ export interface GenerateItineraryInput {
     adults: number;
     children: number;
   };
-  budget: 'budget' | 'moderate' | 'luxury';
+  budget: "budget" | "moderate" | "luxury";
   preferences: {
     vibes: string[];
     interests?: string[];
@@ -41,7 +45,7 @@ export interface WorkflowProgress {
 export interface GenerateItineraryOutput {
   tripId: string;
   itineraryId: string;
-  status: 'completed' | 'failed';
+  status: "completed" | "failed";
   progress: number;
   itinerary?: GeneratedItinerary;
   error?: string;
@@ -51,11 +55,11 @@ export interface GenerateItineraryOutput {
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  
+
   if (!supabaseUrl || !supabaseServiceKey) {
     throw new FatalError("Missing Supabase configuration");
   }
-  
+
   return createSupabaseAdmin(supabaseUrl, supabaseServiceKey);
 }
 
@@ -63,29 +67,39 @@ function getSupabaseAdmin() {
  * Main workflow function for generating itineraries
  * This is a durable workflow that can pause, resume, and survive crashes
  */
-export async function generateItineraryWorkflow(input: GenerateItineraryInput): Promise<GenerateItineraryOutput> {
+export async function generateItineraryWorkflow(
+  input: GenerateItineraryInput,
+): Promise<GenerateItineraryOutput> {
   "use workflow";
 
-  console.log(`[Workflow] Starting itinerary generation for trip ${input.tripId}`);
-  
+  console.log(
+    `[Workflow] Starting itinerary generation for trip ${input.tripId}`,
+  );
+
   // Step 1: Validate trip and fetch details (5%)
   const tripData = await validateAndFetchTrip(input);
-  
+
   // Step 2: Generate itinerary with AI (5% -> 90%)
   const itinerary = await generateItineraryWithAI(input.tripId, tripData);
-  
+
   // Step 3: Save to database (90% -> 98%)
-  const itineraryId = await saveItineraryToDatabase(input.tripId, input.userId, itinerary);
-  
+  const itineraryId = await saveItineraryToDatabase(
+    input.tripId,
+    input.userId,
+    itinerary,
+  );
+
   // Step 4: Send completion notification (98% -> 100%)
   await sendCompletionNotification(input.tripId, itineraryId, input.userId);
-  
-  console.log(`[Workflow] Itinerary generation complete for trip ${input.tripId}`);
-  
+
+  console.log(
+    `[Workflow] Itinerary generation complete for trip ${input.tripId}`,
+  );
+
   return {
     tripId: input.tripId,
     itineraryId,
-    status: 'completed',
+    status: "completed",
     progress: 100,
     itinerary,
   };
@@ -94,55 +108,56 @@ export async function generateItineraryWorkflow(input: GenerateItineraryInput): 
 /**
  * Step 1: Validate trip exists and belongs to user
  */
-async function validateAndFetchTrip(input: GenerateItineraryInput): Promise<TripPreferences> {
+async function validateAndFetchTrip(
+  input: GenerateItineraryInput,
+): Promise<TripPreferences> {
   "use step";
-  
+
   console.log(`[Step 1/4] Validating trip ${input.tripId}...`);
-  
+
   const supabase = getSupabaseAdmin();
-  
+
   // Update progress to 5%
-  await supabase
-    .from('workflow_progress')
-    .upsert({
+  await supabase.from("workflow_progress").upsert(
+    {
       trip_id: input.tripId,
-      step: 'validate_trip',
+      step: "validate_trip",
       progress: 5,
-      message: 'Validating trip details...',
+      message: "Validating trip details...",
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'trip_id' });
-  
+    },
+    { onConflict: "trip_id" },
+  );
+
   // Fetch trip from database to validate ownership
-  let query = supabase
-    .from('trips')
-    .select('*')
-    .eq('id', input.tripId);
+  let query = supabase.from("trips").select("*").eq("id", input.tripId);
 
   if (input.userId) {
     query = query.or(`user_id.eq.${input.userId},user_id.is.null`);
   } else {
-    query = query.is('user_id', null);
+    query = query.is("user_id", null);
   }
 
   const { data: trip, error } = await query.single();
-  
+
   if (error || !trip) {
     throw new FatalError(`Trip not found or access denied: ${input.tripId}`);
   }
-  
+
   // Build TripPreferences from input + database
   const preferences: TripPreferences = {
     destination: input.destination || trip.destination,
     startDate: input.startDate || trip.start_date,
     endDate: input.endDate || trip.end_date,
-    budget: input.budget || trip.budget || 'moderate',
-    vibes: input.preferences?.vibes || trip.vibes || ['adventure', 'cultural'],
+    budget: input.budget || trip.budget || "moderate",
+    vibes: input.preferences?.vibes || trip.vibes || ["adventure", "cultural"],
     travelers: input.travelers || trip.travelers || { adults: 2, children: 0 },
     interests: input.preferences?.interests || trip.interests,
-    dietaryRestrictions: input.preferences?.dietaryRestrictions || trip.dietary_restrictions,
+    dietaryRestrictions:
+      input.preferences?.dietaryRestrictions || trip.dietary_restrictions,
     mobilityNeeds: input.preferences?.mobilityNeeds || trip.mobility_needs,
   };
-  
+
   console.log(`[Step 1/4] Trip validated: ${preferences.destination}`);
   return preferences;
 }
@@ -151,46 +166,55 @@ async function validateAndFetchTrip(input: GenerateItineraryInput): Promise<Trip
  * Step 2: Generate itinerary using AI
  * This is the most compute-intensive step
  */
-async function generateItineraryWithAI(tripId: string, preferences: TripPreferences): Promise<GeneratedItinerary> {
+async function generateItineraryWithAI(
+  tripId: string,
+  preferences: TripPreferences,
+): Promise<GeneratedItinerary> {
   "use step";
 
-  console.log(`[Step 2/4] Generating itinerary for ${preferences.destination}...`);
+  console.log(
+    `[Step 2/4] Generating itinerary for ${preferences.destination}...`,
+  );
 
   const supabase = getSupabaseAdmin();
 
   // Update progress to 10%
   await supabase
-    .from('workflow_progress')
+    .from("workflow_progress")
     .update({
-      step: 'generate_itinerary',
+      step: "generate_itinerary",
       progress: 10,
       message: `AI is creating your ${preferences.destination} itinerary...`,
       updated_at: new Date().toISOString(),
     })
-    .eq('trip_id', tripId);
-  
+    .eq("trip_id", tripId);
+
   try {
     // Call the AI generation function
     const itinerary = await generateItinerary(preferences, {
       onProgress: async (progress) => {
         // Map AI progress to workflow progress (10% -> 90%)
-        const mappedProgress = 10 + Math.floor((progress.currentDay || 0) / progress.totalDays * 80);
+        const mappedProgress =
+          10 +
+          Math.floor(((progress.currentDay || 0) / progress.totalDays) * 80);
 
         await supabase
-          .from('workflow_progress')
+          .from("workflow_progress")
           .update({
             progress: Math.min(mappedProgress, 90),
             message: progress.message,
             updated_at: new Date().toISOString(),
           })
-          .eq('trip_id', tripId);
+          .eq("trip_id", tripId);
       },
     });
-    
-    console.log(`[Step 2/4] Itinerary generated: ${itinerary.days.length} days`);
+
+    console.log(
+      `[Step 2/4] Itinerary generated: ${itinerary.days.length} days`,
+    );
     return itinerary;
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown AI error';
+    const message = error instanceof Error ? error.message : "Unknown AI error";
     console.error(`[Step 2/4] AI generation failed: ${message}`);
     throw new Error(`AI generation failed: ${message}`);
   }
@@ -202,28 +226,28 @@ async function generateItineraryWithAI(tripId: string, preferences: TripPreferen
 async function saveItineraryToDatabase(
   tripId: string,
   userId: string | undefined,
-  itinerary: GeneratedItinerary
+  itinerary: GeneratedItinerary,
 ): Promise<string> {
   "use step";
-  
+
   console.log(`[Step 3/4] Saving itinerary for trip ${tripId}...`);
-  
+
   const supabase = getSupabaseAdmin();
-  
+
   // Update progress to 95%
   await supabase
-    .from('workflow_progress')
+    .from("workflow_progress")
     .update({
-      step: 'save_itinerary',
+      step: "save_itinerary",
       progress: 95,
-      message: 'Saving your itinerary...',
+      message: "Saving your itinerary...",
       updated_at: new Date().toISOString(),
     })
-    .eq('trip_id', tripId);
-  
+    .eq("trip_id", tripId);
+
   // Insert itinerary
   const { data: savedItinerary, error: insertError } = await supabase
-    .from('itineraries')
+    .from("itineraries")
     .insert({
       trip_id: tripId,
       user_id: userId || null,
@@ -237,23 +261,23 @@ async function saveItineraryToDatabase(
       general_tips: itinerary.generalTips,
       generated_at: itinerary.generatedAt,
     })
-    .select('id')
+    .select("id")
     .single();
-  
+
   if (insertError) {
     throw new Error(`Failed to save itinerary: ${insertError.message}`);
   }
-  
+
   // Update trip status
   await supabase
-    .from('trips')
+    .from("trips")
     .update({
-      status: 'generated',
+      status: "generated",
       itinerary_id: savedItinerary.id,
       updated_at: new Date().toISOString(),
     })
-    .eq('id', tripId);
-  
+    .eq("id", tripId);
+
   console.log(`[Step 3/4] Itinerary saved: ${savedItinerary.id}`);
   return savedItinerary.id;
 }
@@ -264,51 +288,49 @@ async function saveItineraryToDatabase(
 async function sendCompletionNotification(
   tripId: string,
   itineraryId: string,
-  userId: string | undefined
+  userId: string | undefined,
 ): Promise<void> {
   "use step";
-  
+
   console.log(`[Step 4/4] Sending completion notification...`);
-  
+
   const supabase = getSupabaseAdmin();
-  
+
   // Update progress to 100%
   await supabase
-    .from('workflow_progress')
+    .from("workflow_progress")
     .update({
-      step: 'complete',
+      step: "complete",
       progress: 100,
-      message: 'Your itinerary is ready!',
+      message: "Your itinerary is ready!",
       updated_at: new Date().toISOString(),
     })
-    .eq('trip_id', tripId);
-  
+    .eq("trip_id", tripId);
+
   // Insert notification (only for authenticated users)
   if (userId) {
-    await supabase
-      .from('notifications')
-      .insert({
-        user_id: userId,
-        type: 'itinerary_ready',
-        title: 'Your Itinerary is Ready!',
-        message: `Your trip itinerary has been generated and is ready to view.`,
-        data: {
-          trip_id: tripId,
-          itinerary_id: itineraryId,
-        },
-        read: false,
-      });
+    await supabase.from("notifications").insert({
+      user_id: userId,
+      type: "itinerary_ready",
+      title: "Your Itinerary is Ready!",
+      message: `Your trip itinerary has been generated and is ready to view.`,
+      data: {
+        trip_id: tripId,
+        itinerary_id: itineraryId,
+      },
+      read: false,
+    });
   }
-  
+
   // Optionally trigger webhook for real-time updates
   const webhookUrl = process.env.WORKFLOW_COMPLETION_WEBHOOK_URL;
   if (webhookUrl) {
     try {
       await fetch(webhookUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          event: 'itinerary_generated',
+          event: "itinerary_generated",
           tripId,
           itineraryId,
           userId,
@@ -317,9 +339,9 @@ async function sendCompletionNotification(
       });
     } catch (error) {
       // Non-critical, don't fail the workflow
-      console.warn('[Step 4/4] Webhook notification failed:', error);
+      console.warn("[Step 4/4] Webhook notification failed:", error);
     }
   }
-  
+
   console.log(`[Step 4/4] Completion notification sent`);
 }

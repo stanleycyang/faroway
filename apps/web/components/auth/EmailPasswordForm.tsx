@@ -1,51 +1,54 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 interface EmailPasswordFormProps {
-  mode: 'signin' | 'signup'
-  redirectTo?: string
+  mode: "signin" | "signup";
+  redirectTo?: string;
 }
 
-export function EmailPasswordForm({ mode, redirectTo = '/dashboard' }: EmailPasswordFormProps) {
-  const router = useRouter()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [message, setMessage] = useState<string | null>(null)
+export function EmailPasswordForm({
+  mode,
+  redirectTo = "/dashboard",
+}: EmailPasswordFormProps) {
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setLoading(true)
-    setError(null)
-    setMessage(null)
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setMessage(null);
 
     // Validate inputs
     if (!email || !password) {
-      setError('Please fill in all fields')
-      setLoading(false)
-      return
+      setError("Please fill in all fields");
+      setLoading(false);
+      return;
     }
 
-    if (mode === 'signup' && password !== confirmPassword) {
-      setError('Passwords do not match')
-      setLoading(false)
-      return
+    if (mode === "signup" && password !== confirmPassword) {
+      setError("Passwords do not match");
+      setLoading(false);
+      return;
     }
 
     if (password.length < 8) {
-      setError('Password must be at least 8 characters')
-      setLoading(false)
-      return
+      setError("Password must be at least 8 characters");
+      setLoading(false);
+      return;
     }
 
-    const supabase = createClient()
+    const supabase = createClient();
 
-    if (mode === 'signup') {
+    if (mode === "signup") {
       // Sign up
       const { error: signUpError } = await supabase.auth.signUp({
         email,
@@ -53,39 +56,41 @@ export function EmailPasswordForm({ mode, redirectTo = '/dashboard' }: EmailPass
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
         },
-      })
+      });
 
       if (signUpError) {
-        setError(signUpError.message)
-        setLoading(false)
-        return
+        setError(signUpError.message);
+        setLoading(false);
+        return;
       }
 
       // Show confirmation message
-      setMessage('Check your email for a confirmation link to complete your signup.')
-      setLoading(false)
+      setMessage(
+        "Check your email for a confirmation link to complete your signup.",
+      );
+      setLoading(false);
     } else {
       // Sign in
       const { error: signInError } = await supabase.auth.signInWithPassword({
         email,
         password,
-      })
+      });
 
       if (signInError) {
-        if (signInError.message === 'Invalid login credentials') {
-          setError('Invalid email or password')
+        if (signInError.message === "Invalid login credentials") {
+          setError("Invalid email or password");
         } else {
-          setError(signInError.message)
+          setError(signInError.message);
         }
-        setLoading(false)
-        return
+        setLoading(false);
+        return;
       }
 
       // Redirect on successful login
-      router.push(redirectTo)
-      router.refresh()
+      router.push(redirectTo);
+      router.refresh();
     }
-  }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -105,7 +110,10 @@ export function EmailPasswordForm({ mode, redirectTo = '/dashboard' }: EmailPass
 
       {/* Email Input */}
       <div>
-        <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="email"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Email address
         </label>
         <input
@@ -126,13 +134,16 @@ export function EmailPasswordForm({ mode, redirectTo = '/dashboard' }: EmailPass
 
       {/* Password Input */}
       <div>
-        <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+        <label
+          htmlFor="password"
+          className="block text-sm font-medium text-gray-700 mb-1"
+        >
           Password
         </label>
         <input
           id="password"
           type="password"
-          autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+          autoComplete={mode === "signin" ? "current-password" : "new-password"}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
@@ -143,9 +154,12 @@ export function EmailPasswordForm({ mode, redirectTo = '/dashboard' }: EmailPass
       </div>
 
       {/* Confirm Password (signup only) */}
-      {mode === 'signup' && (
+      {mode === "signup" && (
         <div>
-          <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 mb-1">
+          <label
+            htmlFor="confirmPassword"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
             Confirm password
           </label>
           <input
@@ -163,25 +177,26 @@ export function EmailPasswordForm({ mode, redirectTo = '/dashboard' }: EmailPass
       )}
 
       {/* Forgot Password Link (signin only) */}
-      {mode === 'signin' && (
+      {mode === "signin" && (
         <div className="text-right">
           <button
             type="button"
             onClick={async () => {
               if (!email) {
-                setError('Please enter your email address first')
-                return
+                setError("Please enter your email address first");
+                return;
               }
-              setLoading(true)
-              const supabase = createClient()
-              const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
-              })
-              setLoading(false)
+              setLoading(true);
+              const supabase = createClient();
+              const { error: resetError } =
+                await supabase.auth.resetPasswordForEmail(email, {
+                  redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
+                });
+              setLoading(false);
               if (resetError) {
-                setError(resetError.message)
+                setError(resetError.message);
               } else {
-                setMessage('Check your email for a password reset link')
+                setMessage("Check your email for a password reset link");
               }
             }}
             className="text-sm text-primary hover:text-primary-dark font-medium transition-colors"
@@ -215,12 +230,12 @@ export function EmailPasswordForm({ mode, redirectTo = '/dashboard' }: EmailPass
                 d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
               />
             </svg>
-            {mode === 'signin' ? 'Signing in...' : 'Creating account...'}
+            {mode === "signin" ? "Signing in..." : "Creating account..."}
           </span>
         ) : (
-          <span>{mode === 'signin' ? 'Sign in' : 'Create account'}</span>
+          <span>{mode === "signin" ? "Sign in" : "Create account"}</span>
         )}
       </button>
     </form>
-  )
+  );
 }

@@ -17,6 +17,6 @@ export type {
   SuggestedDay,
   StartSearchResponse,
   SearchStatusResponse,
-} from '@faroway/types';
+} from "@faroway/types";
 
-export { VIBE_KEYWORDS, BUDGET_RANGES } from '@faroway/constants';
+export { VIBE_KEYWORDS, BUDGET_RANGES } from "@faroway/constants";

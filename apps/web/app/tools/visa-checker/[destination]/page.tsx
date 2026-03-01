@@ -1,21 +1,16 @@
-import type { Metadata } from 'next';
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
-import {
-  ChevronRight,
-  Shield,
-  ArrowRight,
-  Info,
-} from 'lucide-react';
-import { getGuideBySlug, getGuideSlugs } from '@/lib/destination-guides';
+import type { Metadata } from "next";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ChevronRight, Shield, ArrowRight, Info } from "lucide-react";
+import { getGuideBySlug, getGuideSlugs } from "@/lib/destination-guides";
 import {
   getVisaInfoForDestination,
   getVisaSummary,
   visaStatusConfig,
   type VisaStatus,
-} from '@/lib/tools/visa-data';
-import { ToolCTA } from '@/components/tools/ToolCTA';
-import { RelatedTools } from '@/components/tools/RelatedTools';
+} from "@/lib/tools/visa-data";
+import { ToolCTA } from "@/components/tools/ToolCTA";
+import { RelatedTools } from "@/components/tools/RelatedTools";
 
 export function generateStaticParams() {
   return getGuideSlugs().map((slug) => ({ destination: slug }));
@@ -32,30 +27,42 @@ export async function generateMetadata({
 
   const summary = getVisaSummary(destination);
   const summaryParts: string[] = [];
-  if (summary['visa-free'] > 0) summaryParts.push(`Visa-free for ${summary['visa-free']} passport countries`);
-  if (summary['e-visa'] > 0) summaryParts.push(`e-Visa for ${summary['e-visa']}`);
-  if (summary['visa-required'] > 0) summaryParts.push(`Visa required for ${summary['visa-required']}`);
+  if (summary["visa-free"] > 0)
+    summaryParts.push(
+      `Visa-free for ${summary["visa-free"]} passport countries`,
+    );
+  if (summary["e-visa"] > 0)
+    summaryParts.push(`e-Visa for ${summary["e-visa"]}`);
+  if (summary["visa-required"] > 0)
+    summaryParts.push(`Visa required for ${summary["visa-required"]}`);
 
   return {
     title: `Do I Need a Visa for ${dest.name}? — Requirements by Passport`,
-    description: `${dest.name} visa requirements for 15 passport countries. ${summaryParts.join('. ')}. Check stay duration and entry notes.`,
+    description: `${dest.name} visa requirements for 15 passport countries. ${summaryParts.join(". ")}. Check stay duration and entry notes.`,
     alternates: { canonical: `/tools/visa-checker/${destination}` },
     openGraph: {
       title: `Visa Requirements: ${dest.name} | Faroway`,
-      description: `${dest.name} visa info for 15 passports. ${summaryParts[0] || ''}.`,
+      description: `${dest.name} visa info for 15 passports. ${summaryParts[0] || ""}.`,
       url: `/tools/visa-checker/${destination}`,
-      images: [{ url: dest.heroImage, width: 1920, height: 1080, alt: dest.name }],
+      images: [
+        { url: dest.heroImage, width: 1920, height: 1080, alt: dest.name },
+      ],
     },
     twitter: {
-      card: 'summary_large_image',
+      card: "summary_large_image",
       title: `Visa Requirements: ${dest.name} | Faroway`,
-      description: `${dest.name} visa info for 15 passports. ${summaryParts[0] || ''}.`,
+      description: `${dest.name} visa info for 15 passports. ${summaryParts[0] || ""}.`,
       images: [dest.heroImage],
     },
   };
 }
 
-const STATUS_ORDER: VisaStatus[] = ['visa-free', 'visa-on-arrival', 'e-visa', 'visa-required'];
+const STATUS_ORDER: VisaStatus[] = [
+  "visa-free",
+  "visa-on-arrival",
+  "e-visa",
+  "visa-required",
+];
 
 export default async function VisaDestinationPage({
   params,
@@ -70,25 +77,43 @@ export default async function VisaDestinationPage({
   const summary = getVisaSummary(destination);
 
   const jsonLd = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Tools', item: 'https://www.faroway.ai/tools' },
-      { '@type': 'ListItem', position: 2, name: 'Visa Checker', item: 'https://www.faroway.ai/tools/visa-checker' },
-      { '@type': 'ListItem', position: 3, name: dest.name, item: `https://www.faroway.ai/tools/visa-checker/${destination}` },
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Tools",
+        item: "https://www.faroway.ai/tools",
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Visa Checker",
+        item: "https://www.faroway.ai/tools/visa-checker",
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: dest.name,
+        item: `https://www.faroway.ai/tools/visa-checker/${destination}`,
+      },
     ],
   };
 
   // Sort entries by status order
   const sortedEntries = [...entries].sort(
-    (a, b) => STATUS_ORDER.indexOf(a.visa.status) - STATUS_ORDER.indexOf(b.visa.status)
+    (a, b) =>
+      STATUS_ORDER.indexOf(a.visa.status) - STATUS_ORDER.indexOf(b.visa.status),
   );
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, '\\u003c') }}
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c"),
+        }}
       />
 
       <main className="min-h-screen">
@@ -97,7 +122,10 @@ export default async function VisaDestinationPage({
           <div className="max-w-7xl mx-auto px-6">
             {/* Breadcrumb */}
             <nav className="flex items-center gap-2 text-sm text-slate-500 mb-6">
-              <Link href="/tools/visa-checker" className="hover:text-primary transition-colors">
+              <Link
+                href="/tools/visa-checker"
+                className="hover:text-primary transition-colors"
+              >
                 Visa Checker
               </Link>
               <ChevronRight className="w-3 h-3" />
@@ -108,12 +136,13 @@ export default async function VisaDestinationPage({
               {dest.continent}
             </span>
             <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
-              Do I Need a Visa for{' '}
+              Do I Need a Visa for{" "}
               <span className="text-gradient">{dest.name}</span>?
             </h1>
             <p className="text-lg text-slate-600 max-w-3xl leading-relaxed">
-              Visa requirements for {dest.name}, {dest.country} vary by passport.
-              Below you&apos;ll find entry requirements for 15 passport countries including stay duration and important notes.
+              Visa requirements for {dest.name}, {dest.country} vary by
+              passport. Below you&apos;ll find entry requirements for 15
+              passport countries including stay duration and important notes.
             </p>
           </div>
         </section>
@@ -161,15 +190,22 @@ export default async function VisaDestinationPage({
                   <div className="flex items-center gap-3 mb-3">
                     <span className="text-2xl">{passport.flag}</span>
                     <div>
-                      <p className="text-sm font-bold text-slate-900">{passport.name}</p>
-                      <span className={`inline-block px-2 py-0.5 rounded-md text-xs font-semibold ${config.bg} ${config.color}`}>
+                      <p className="text-sm font-bold text-slate-900">
+                        {passport.name}
+                      </p>
+                      <span
+                        className={`inline-block px-2 py-0.5 rounded-md text-xs font-semibold ${config.bg} ${config.color}`}
+                      >
                         {config.label}
                       </span>
                     </div>
                   </div>
                   <div className="space-y-1.5">
                     <p className="text-xs text-slate-600">
-                      <span className="font-medium text-slate-700">Duration:</span> {visa.duration}
+                      <span className="font-medium text-slate-700">
+                        Duration:
+                      </span>{" "}
+                      {visa.duration}
                     </p>
                     {visa.notes && (
                       <p className="text-xs text-slate-500">{visa.notes}</p>
@@ -189,10 +225,16 @@ export default async function VisaDestinationPage({
             </h2>
             <div className="p-5 rounded-xl bg-white border border-slate-200/60 space-y-3">
               <p className="text-sm text-slate-600 leading-relaxed">
-                Visa requirements can change without notice. Always verify current entry requirements with the official embassy or consulate of {dest.name} before traveling. The information above is for general guidance only.
+                Visa requirements can change without notice. Always verify
+                current entry requirements with the official embassy or
+                consulate of {dest.name} before traveling. The information above
+                is for general guidance only.
               </p>
               <p className="text-sm text-slate-600 leading-relaxed">
-                Some countries may require additional documents such as proof of onward travel, sufficient funds, or travel insurance even for visa-free entry. Check airline requirements as they may differ from immigration rules.
+                Some countries may require additional documents such as proof of
+                onward travel, sufficient funds, or travel insurance even for
+                visa-free entry. Check airline requirements as they may differ
+                from immigration rules.
               </p>
             </div>
           </div>
@@ -208,7 +250,8 @@ export default async function VisaDestinationPage({
                   Check Your Specific Passport
                 </h3>
                 <p className="text-sm text-slate-600">
-                  Select your passport country and destination in our interactive Visa Checker for personalized results.
+                  Select your passport country and destination in our
+                  interactive Visa Checker for personalized results.
                 </p>
               </div>
               <Link
@@ -234,7 +277,9 @@ export default async function VisaDestinationPage({
               <p className="text-sm font-semibold text-slate-900 group-hover:text-primary transition-colors">
                 {dest.name} Destination Guide
               </p>
-              <p className="text-xs text-slate-500 mt-1">Highlights, itineraries & tips</p>
+              <p className="text-xs text-slate-500 mt-1">
+                Highlights, itineraries & tips
+              </p>
             </Link>
             <Link
               href={`/tools/best-time-to-visit/${destination}`}
@@ -243,7 +288,9 @@ export default async function VisaDestinationPage({
               <p className="text-sm font-semibold text-slate-900 group-hover:text-primary transition-colors">
                 Best Time to Visit {dest.name}
               </p>
-              <p className="text-xs text-slate-500 mt-1">Climate & crowd data by month</p>
+              <p className="text-xs text-slate-500 mt-1">
+                Climate & crowd data by month
+              </p>
             </Link>
             <Link
               href={`/tools/trip-cost/${destination}`}
@@ -252,7 +299,9 @@ export default async function VisaDestinationPage({
               <p className="text-sm font-semibold text-slate-900 group-hover:text-primary transition-colors">
                 Trip Cost for {dest.name}
               </p>
-              <p className="text-xs text-slate-500 mt-1">Budget breakdowns & sample prices</p>
+              <p className="text-xs text-slate-500 mt-1">
+                Budget breakdowns & sample prices
+              </p>
             </Link>
           </div>
         </section>

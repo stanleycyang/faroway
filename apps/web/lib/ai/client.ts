@@ -1,19 +1,26 @@
 /**
  * Faroway AI Client
  * Uses Vercel AI SDK with AI Gateway for unified model access
- * 
+ *
  * Benefits:
  * - Single API key for all models
  * - Built-in caching & cost optimization
  * - Automatic retries & fallbacks
  * - Usage monitoring via Vercel dashboard
- * 
+ *
  * @see https://ai-sdk.dev
  * @see https://vercel.com/ai-gateway
  */
 
-import { generateText, generateObject, streamText, StreamTextResult, gateway as defaultGateway, createGateway } from 'ai';
-import { z } from 'zod';
+import {
+  generateText,
+  generateObject,
+  streamText,
+  StreamTextResult,
+  gateway as defaultGateway,
+  createGateway,
+} from "ai";
+import { z } from "zod";
 import {
   TripPreferences,
   GeneratedItinerary,
@@ -21,13 +28,13 @@ import {
   Restaurant,
   StreamingProgress,
   AIGenerationError,
-} from './types';
+} from "./types";
 import {
   SYSTEM_PROMPT,
   buildItineraryPrompt,
   buildActivityRecommendationPrompt,
   buildRestaurantPrompt,
-} from './prompts';
+} from "./prompts";
 
 // Configure AI Gateway — use the dedicated gateway provider (not createOpenAI,
 // which defaults to the OpenAI Responses API and doesn't work with the AI Gateway)
@@ -36,16 +43,18 @@ const aiGateway = process.env.AI_GATEWAY_API_KEY
   : defaultGateway;
 
 // Default model via AI Gateway (supports anthropic/, openai/, etc.)
-const DEFAULT_MODEL = 'anthropic/claude-sonnet-4-20250514';
+const DEFAULT_MODEL = "anthropic/claude-sonnet-4-20250514";
 
 // Zod schemas matching the TypeScript types
 const LocationSchema = z.object({
   name: z.string(),
   address: z.string().optional(),
-  coordinates: z.object({
-    lat: z.number(),
-    lng: z.number(),
-  }).optional(),
+  coordinates: z
+    .object({
+      lat: z.number(),
+      lng: z.number(),
+    })
+    .optional(),
 });
 
 const VibeMatchSchema = z.object({
@@ -63,14 +72,23 @@ const ActivitySchema = z.object({
   description: z.string(),
   duration: z.number(), // in minutes
   estimatedCost: CostSchema,
-  timeOfDay: z.enum(['morning', 'afternoon', 'evening']),
-  category: z.enum(['sightseeing', 'adventure', 'cultural', 'relaxation', 'entertainment', 'shopping']),
+  timeOfDay: z.enum(["morning", "afternoon", "evening"]),
+  category: z.enum([
+    "sightseeing",
+    "adventure",
+    "cultural",
+    "relaxation",
+    "entertainment",
+    "shopping",
+  ]),
   location: LocationSchema,
   vibeMatch: VibeMatchSchema,
-  bookingInfo: z.object({
-    requiresReservation: z.boolean(),
-    bookingUrl: z.string().optional(),
-  }).optional(),
+  bookingInfo: z
+    .object({
+      requiresReservation: z.boolean(),
+      bookingUrl: z.string().optional(),
+    })
+    .optional(),
 });
 
 const RestaurantSchema = z.object({
@@ -79,14 +97,16 @@ const RestaurantSchema = z.object({
   priceLevel: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4)]),
   description: z.string(),
   estimatedCost: CostSchema.extend({ perPerson: z.boolean() }),
-  mealType: z.enum(['breakfast', 'lunch', 'dinner', 'snack']),
+  mealType: z.enum(["breakfast", "lunch", "dinner", "snack"]),
   location: LocationSchema,
   dietaryOptions: z.array(z.string()),
   vibeMatch: VibeMatchSchema,
-  reservationInfo: z.object({
-    recommended: z.boolean(),
-    url: z.string().optional(),
-  }).optional(),
+  reservationInfo: z
+    .object({
+      recommended: z.boolean(),
+      url: z.string().optional(),
+    })
+    .optional(),
 });
 
 const TimeSlotSchema = z.object({
@@ -126,20 +146,22 @@ export async function generateItinerary(
     model?: string;
     onProgress?: (progress: StreamingProgress) => void;
     userId?: string;
-  }
+  },
 ): Promise<GeneratedItinerary> {
   const modelName = options?.model || DEFAULT_MODEL;
   const onProgress = options?.onProgress;
 
   try {
-    const days = Math.ceil(
-      (new Date(preferences.endDate).getTime() - new Date(preferences.startDate).getTime()) /
-        (1000 * 60 * 60 * 24)
-    ) + 1;
+    const days =
+      Math.ceil(
+        (new Date(preferences.endDate).getTime() -
+          new Date(preferences.startDate).getTime()) /
+          (1000 * 60 * 60 * 24),
+      ) + 1;
 
     if (onProgress) {
       onProgress({
-        status: 'started',
+        status: "started",
         totalDays: days,
         message: `Starting itinerary generation for ${preferences.destination}...`,
       });
@@ -159,22 +181,42 @@ export async function generateItinerary(
     const processedDays = itineraryData.days.map((day) => ({
       ...day,
       morning: {
-        activities: day.morning.activities.map((a) => ({ ...a, id: generateId('activity') })),
-        meals: day.morning.meals.map((m) => ({ ...m, id: generateId('restaurant') })),
+        activities: day.morning.activities.map((a) => ({
+          ...a,
+          id: generateId("activity"),
+        })),
+        meals: day.morning.meals.map((m) => ({
+          ...m,
+          id: generateId("restaurant"),
+        })),
       },
       afternoon: {
-        activities: day.afternoon.activities.map((a) => ({ ...a, id: generateId('activity') })),
-        meals: day.afternoon.meals.map((m) => ({ ...m, id: generateId('restaurant') })),
+        activities: day.afternoon.activities.map((a) => ({
+          ...a,
+          id: generateId("activity"),
+        })),
+        meals: day.afternoon.meals.map((m) => ({
+          ...m,
+          id: generateId("restaurant"),
+        })),
       },
       evening: {
-        activities: day.evening.activities.map((a) => ({ ...a, id: generateId('activity') })),
-        meals: day.evening.meals.map((m) => ({ ...m, id: generateId('restaurant') })),
+        activities: day.evening.activities.map((a) => ({
+          ...a,
+          id: generateId("activity"),
+        })),
+        meals: day.evening.meals.map((m) => ({
+          ...m,
+          id: generateId("restaurant"),
+        })),
       },
     }));
 
     // Cast to GeneratedItinerary (Zod validates structure, we add IDs)
     const itinerary = {
-      tripId: options?.userId ? `trip_${options.userId}_${Date.now()}` : `trip_${Date.now()}`,
+      tripId: options?.userId
+        ? `trip_${options.userId}_${Date.now()}`
+        : `trip_${Date.now()}`,
       ...itineraryData,
       days: processedDays,
       generatedAt: new Date().toISOString(),
@@ -182,25 +224,26 @@ export async function generateItinerary(
 
     if (onProgress) {
       onProgress({
-        status: 'completed',
+        status: "completed",
         totalDays: days,
-        message: 'Itinerary generation complete!',
+        message: "Itinerary generation complete!",
         partialItinerary: itinerary,
       });
     }
 
-    console.log(`[AI Gateway] Tokens used: ${usage?.totalTokens || 'unknown'}`);
+    console.log(`[AI Gateway] Tokens used: ${usage?.totalTokens || "unknown"}`);
     return itinerary;
   } catch (error) {
     const aiError: AIGenerationError = {
-      code: 'GENERATION_FAILED',
-      message: error instanceof Error ? error.message : 'Unknown error occurred',
+      code: "GENERATION_FAILED",
+      message:
+        error instanceof Error ? error.message : "Unknown error occurred",
       details: error,
     };
 
     if (onProgress) {
       onProgress({
-        status: 'error',
+        status: "error",
         totalDays: 0,
         message: aiError.message,
       });
@@ -216,7 +259,7 @@ export async function generateItinerary(
  */
 export async function streamItinerary(
   preferences: TripPreferences,
-  options?: { model?: string }
+  options?: { model?: string },
 ): Promise<StreamTextResult<Record<string, never>, never>> {
   const modelName = options?.model || DEFAULT_MODEL;
   const prompt = buildItineraryPrompt(preferences);
@@ -234,11 +277,16 @@ export async function streamItinerary(
 export async function generateActivities(
   destination: string,
   vibes: string[],
-  timeOfDay: 'morning' | 'afternoon' | 'evening',
-  budget: string
+  timeOfDay: "morning" | "afternoon" | "evening",
+  budget: string,
 ): Promise<Activity[]> {
   try {
-    const prompt = buildActivityRecommendationPrompt(destination, vibes, timeOfDay, budget);
+    const prompt = buildActivityRecommendationPrompt(
+      destination,
+      vibes,
+      timeOfDay,
+      budget,
+    );
 
     const { object: activities } = await generateObject({
       model: aiGateway(DEFAULT_MODEL),
@@ -247,11 +295,14 @@ export async function generateActivities(
       schema: z.array(ActivitySchema),
     });
 
-    return activities.map((a) => ({ ...a, id: generateId('activity') }));
+    return activities.map((a) => ({ ...a, id: generateId("activity") }));
   } catch (error) {
     throw {
-      code: 'ACTIVITY_GENERATION_FAILED',
-      message: error instanceof Error ? error.message : 'Failed to generate activities',
+      code: "ACTIVITY_GENERATION_FAILED",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to generate activities",
       details: error,
     } as AIGenerationError;
   }
@@ -263,12 +314,18 @@ export async function generateActivities(
 export async function generateRestaurants(
   destination: string,
   vibes: string[],
-  mealType: 'breakfast' | 'lunch' | 'dinner',
+  mealType: "breakfast" | "lunch" | "dinner",
   budget: string,
-  dietaryRestrictions?: string[]
+  dietaryRestrictions?: string[],
 ): Promise<Restaurant[]> {
   try {
-    const prompt = buildRestaurantPrompt(destination, vibes, mealType, budget, dietaryRestrictions);
+    const prompt = buildRestaurantPrompt(
+      destination,
+      vibes,
+      mealType,
+      budget,
+      dietaryRestrictions,
+    );
 
     const { object: restaurants } = await generateObject({
       model: aiGateway(DEFAULT_MODEL),
@@ -277,11 +334,14 @@ export async function generateRestaurants(
       schema: z.array(RestaurantSchema),
     });
 
-    return restaurants.map((r) => ({ ...r, id: generateId('restaurant') }));
+    return restaurants.map((r) => ({ ...r, id: generateId("restaurant") }));
   } catch (error) {
     throw {
-      code: 'RESTAURANT_GENERATION_FAILED',
-      message: error instanceof Error ? error.message : 'Failed to generate restaurants',
+      code: "RESTAURANT_GENERATION_FAILED",
+      message:
+        error instanceof Error
+          ? error.message
+          : "Failed to generate restaurants",
       details: error,
     } as AIGenerationError;
   }
@@ -308,5 +368,7 @@ function generateId(prefix: string): string {
  * Validate AI Gateway API key is configured
  */
 export function validateApiKey(): boolean {
-  return !!(process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_AI_GATEWAY_API_KEY);
+  return !!(
+    process.env.AI_GATEWAY_API_KEY || process.env.VERCEL_AI_GATEWAY_API_KEY
+  );
 }

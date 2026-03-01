@@ -4,22 +4,29 @@
  * PATCH /api/user/profile - Update user profile
  */
 
-import { NextRequest, NextResponse } from 'next/server';
-import { getSupabase } from '@/lib/supabase/server';
-import { requireAuth, validationErrorResponse, AuthResult } from '@/lib/auth/middleware';
-import { checkRateLimit } from '@/lib/security/rate-limit';
-import { z } from 'zod';
-
+import { NextRequest, NextResponse } from "next/server";
+import { getSupabase } from "@/lib/supabase/server";
+import {
+  requireAuth,
+  validationErrorResponse,
+  AuthResult,
+} from "@/lib/auth/middleware";
+import { checkRateLimit } from "@/lib/security/rate-limit";
+import { z } from "zod";
 
 const UpdateProfileSchema = z.object({
   email: z.string().email().optional(),
   display_name: z.string().min(1).max(100).trim().optional(),
   avatar_url: z.string().url().optional(),
-  preferences: z.object({
-    vibes: z.array(z.string().max(50)).max(10).optional(),
-    budget: z.enum(['budget', 'moderate', 'luxury']).optional(),
-    travelerType: z.enum(['solo', 'couple', 'family', 'friends', 'business']).optional(),
-  }).optional(),
+  preferences: z
+    .object({
+      vibes: z.array(z.string().max(50)).max(10).optional(),
+      budget: z.enum(["budget", "moderate", "luxury"]).optional(),
+      travelerType: z
+        .enum(["solo", "couple", "family", "friends", "business"])
+        .optional(),
+    })
+    .optional(),
   notification_settings: z.record(z.boolean()).optional(),
 });
 
@@ -34,16 +41,18 @@ export async function GET(request: NextRequest) {
 
   try {
     const { data: profile, error } = await getSupabase()
-      .from('users')
-      .select('id, email, display_name, avatar_url, auth_provider, subscription_tier, preferences, notification_settings, created_at, updated_at')
-      .eq('id', user!.id)
+      .from("users")
+      .select(
+        "id, email, display_name, avatar_url, auth_provider, subscription_tier, preferences, notification_settings, created_at, updated_at",
+      )
+      .eq("id", user!.id)
       .single();
 
     if (error) {
-      console.error('[User Profile] Database error:', error);
+      console.error("[User Profile] Database error:", error);
       return NextResponse.json(
-        { error: 'Failed to fetch profile' },
-        { status: 500 }
+        { error: "Failed to fetch profile" },
+        { status: 500 },
       );
     }
 
@@ -60,10 +69,10 @@ export async function GET(request: NextRequest) {
       updatedAt: profile.updated_at,
     });
   } catch (error) {
-    console.error('[User Profile] Error:', error);
+    console.error("[User Profile] Error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
 }
@@ -78,9 +87,12 @@ export async function PATCH(request: NextRequest) {
   const { user } = authResult as AuthResult;
 
   // Rate limit: 10 req/min per user
-  const rl = checkRateLimit(`profile-patch:${user!.id}`, { maxRequests: 10, windowMs: 60_000 });
+  const rl = checkRateLimit(`profile-patch:${user!.id}`, {
+    maxRequests: 10,
+    windowMs: 60_000,
+  });
   if (!rl.allowed) {
-    return NextResponse.json({ error: 'Too many requests' }, { status: 429 });
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   }
 
   try {
@@ -88,7 +100,10 @@ export async function PATCH(request: NextRequest) {
     const parseResult = UpdateProfileSchema.safeParse(body);
 
     if (!parseResult.success) {
-      return validationErrorResponse('Invalid request body', parseResult.error.issues);
+      return validationErrorResponse(
+        "Invalid request body",
+        parseResult.error.issues,
+      );
     }
 
     const updates: Record<string, unknown> = {};
@@ -110,21 +125,21 @@ export async function PATCH(request: NextRequest) {
     }
 
     if (Object.keys(updates).length === 0) {
-      return validationErrorResponse('No fields to update');
+      return validationErrorResponse("No fields to update");
     }
 
     const { data: profile, error } = await getSupabase()
-      .from('users')
+      .from("users")
       .update(updates)
-      .eq('id', user!.id)
+      .eq("id", user!.id)
       .select()
       .single();
 
     if (error) {
-      console.error('[User Profile] Update error:', error);
+      console.error("[User Profile] Update error:", error);
       return NextResponse.json(
-        { error: 'Failed to update profile' },
-        { status: 500 }
+        { error: "Failed to update profile" },
+        { status: 500 },
       );
     }
 
@@ -141,10 +156,10 @@ export async function PATCH(request: NextRequest) {
       updatedAt: profile.updated_at,
     });
   } catch (error) {
-    console.error('[User Profile] Error:', error);
+    console.error("[User Profile] Error:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
+      { error: "Internal server error" },
+      { status: 500 },
     );
   }
 }

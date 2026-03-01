@@ -1,20 +1,20 @@
-'use client'
+"use client";
 
-import { useEffect } from 'react'
-import Link from 'next/link'
-import { AlertTriangle, RefreshCw, Home, MessageCircle } from 'lucide-react'
+import { useEffect } from "react";
+import Link from "next/link";
+import { AlertTriangle, RefreshCw, Home, MessageCircle } from "lucide-react";
 
 export default function Error({
   error,
   reset,
 }: {
-  error: Error & { digest?: string }
-  reset: () => void
+  error: Error & { digest?: string };
+  reset: () => void;
 }) {
   useEffect(() => {
     // Log the error to an error reporting service
-    console.error('Application error:', error)
-  }, [error])
+    console.error("Application error:", error);
+  }, [error]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-red-50 flex items-center justify-center p-4">
@@ -35,11 +35,12 @@ export default function Error({
           We hit some turbulence while loading this page.
         </p>
         <p className="text-gray-500 text-sm mb-8">
-          Don&apos;t worry, your trip plans are safe. Try refreshing or head back home.
+          Don&apos;t worry, your trip plans are safe. Try refreshing or head
+          back home.
         </p>
 
         {/* Error Details (only in development) */}
-        {process.env.NODE_ENV === 'development' && (
+        {process.env.NODE_ENV === "development" && (
           <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl text-left">
             <p className="text-sm text-red-800 font-mono break-all">
               {error.message}
@@ -83,5 +84,5 @@ export default function Error({
         </div>
       </div>
     </div>
-  )
+  );
 }

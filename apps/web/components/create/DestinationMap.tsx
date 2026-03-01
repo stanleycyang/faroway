@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect, useRef } from 'react';
-import L from 'leaflet';
+import { useEffect, useRef } from "react";
+import L from "leaflet";
 
 interface DestinationMapProps {
   lat: number;
@@ -29,12 +29,12 @@ export function DestinationMap({ lat, lng, name }: DestinationMapProps) {
       attributionControl: false,
     });
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
     }).addTo(map);
 
     const icon = L.divIcon({
-      className: '',
+      className: "",
       html: `<div style="width:24px;height:24px;background:#F25D3B;border:3px solid white;border-radius:50%;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>`,
       iconSize: [24, 24],
       iconAnchor: [12, 12],

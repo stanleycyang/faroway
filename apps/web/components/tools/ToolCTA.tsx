@@ -1,5 +1,5 @@
-import Link from 'next/link';
-import { Sparkles } from 'lucide-react';
+import Link from "next/link";
+import { Sparkles } from "lucide-react";
 
 interface ToolCTAProps {
   title?: string;
@@ -7,8 +7,8 @@ interface ToolCTAProps {
 }
 
 export function ToolCTA({
-  title = 'Ready to Plan Your Trip?',
-  description = 'Faroway creates a personalized itinerary in 60 seconds — completely free and tailored to your style.',
+  title = "Ready to Plan Your Trip?",
+  description = "Faroway creates a personalized itinerary in 60 seconds — completely free and tailored to your style.",
 }: ToolCTAProps) {
   return (
     <section className="bg-gradient-to-br from-primary-600 to-amber-500 py-16">

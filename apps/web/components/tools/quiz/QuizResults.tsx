@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import Image from 'next/image';
-import Link from 'next/link';
-import { Sparkles, RotateCcw } from 'lucide-react';
-import type { QuizResult } from '@/lib/tools/quiz-scoring';
+import Image from "next/image";
+import Link from "next/link";
+import { Sparkles, RotateCcw } from "lucide-react";
+import type { QuizResult } from "@/lib/tools/quiz-scoring";
 
 interface QuizResultsProps {
   results: QuizResult[];
@@ -11,12 +11,12 @@ interface QuizResultsProps {
 }
 
 const RANK_COLORS = [
-  'from-amber-400 to-amber-500',
-  'from-slate-300 to-slate-400',
-  'from-amber-600 to-amber-700',
+  "from-amber-400 to-amber-500",
+  "from-slate-300 to-slate-400",
+  "from-amber-600 to-amber-700",
 ];
 
-const RANK_LABELS = ['Best Match', '2nd Match', '3rd Match'];
+const RANK_LABELS = ["Best Match", "2nd Match", "3rd Match"];
 
 export function QuizResults({ results, onRestart }: QuizResultsProps) {
   return (
@@ -46,7 +46,9 @@ export function QuizResults({ results, onRestart }: QuizResultsProps) {
                   className="object-cover"
                   sizes="(max-width: 768px) 100vw, 256px"
                 />
-                <div className={`absolute top-3 left-3 px-3 py-1 rounded-full bg-gradient-to-r ${RANK_COLORS[i]} text-white text-xs font-bold shadow-lg`}>
+                <div
+                  className={`absolute top-3 left-3 px-3 py-1 rounded-full bg-gradient-to-r ${RANK_COLORS[i]} text-white text-xs font-bold shadow-lg`}
+                >
                   {RANK_LABELS[i]}
                 </div>
               </div>
