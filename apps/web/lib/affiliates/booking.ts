@@ -1,9 +1,9 @@
 /**
  * Booking.com Affiliate Partner API Client
- * 
+ *
  * Booking.com provides hotel and accommodation inventory.
  * Commission: 25-40% per booking
- * 
+ *
  * @see https://developers.booking.com/
  */
 
@@ -11,7 +11,7 @@
 const BOOKING_USERNAME = process.env.BOOKING_COM_USERNAME;
 const BOOKING_PASSWORD = process.env.BOOKING_COM_PASSWORD;
 const BOOKING_AFFILIATE_ID = process.env.BOOKING_COM_AFFILIATE_ID;
-const BOOKING_API_BASE = 'https://distribution-xml.booking.com/2.9/json';
+const BOOKING_API_BASE = "https://distribution-xml.booking.com/2.9/json";
 
 // Types
 export interface BookingSearchParams {
@@ -96,7 +96,9 @@ export function isBookingConfigured(): boolean {
  * Get Basic Auth header for Booking.com API
  */
 function getAuthHeader(): string {
-  const credentials = Buffer.from(`${BOOKING_USERNAME}:${BOOKING_PASSWORD}`).toString('base64');
+  const credentials = Buffer.from(
+    `${BOOKING_USERNAME}:${BOOKING_PASSWORD}`,
+  ).toString("base64");
   return `Basic ${credentials}`;
 }
 
@@ -104,7 +106,7 @@ function getAuthHeader(): string {
  * Get destination ID from destination name
  */
 export async function getBookingDestinationId(
-  destination: string
+  destination: string,
 ): Promise<string | null> {
   if (!isBookingConfigured()) {
     return null;
@@ -115,10 +117,10 @@ export async function getBookingDestinationId(
       `${BOOKING_API_BASE}/autocomplete?text=${encodeURIComponent(destination)}&language=en`,
       {
         headers: {
-          'Authorization': getAuthHeader(),
-          'Accept': 'application/json',
+          Authorization: getAuthHeader(),
+          Accept: "application/json",
         },
-      }
+      },
     );
 
     if (!response.ok) {
@@ -126,10 +128,12 @@ export async function getBookingDestinationId(
     }
 
     const data = await response.json();
-    const cityResult = data.results?.find((r: { dest_type: string; dest_id?: string }) => r.dest_type === 'city');
+    const cityResult = data.results?.find(
+      (r: { dest_type: string; dest_id?: string }) => r.dest_type === "city",
+    );
     return cityResult?.dest_id || null;
   } catch (error) {
-    console.error('[Booking] Destination lookup error:', error);
+    console.error("[Booking] Destination lookup error:", error);
     return null;
   }
 }
@@ -138,10 +142,10 @@ export async function getBookingDestinationId(
  * Search for hotels at a destination
  */
 export async function searchBookingHotels(
-  params: BookingSearchParams
+  params: BookingSearchParams,
 ): Promise<BookingHotel[]> {
   if (!isBookingConfigured()) {
-    console.warn('[Booking] API not configured, returning empty results');
+    console.warn("[Booking] API not configured, returning empty results");
     return [];
   }
 
@@ -149,47 +153,46 @@ export async function searchBookingHotels(
     // First get destination ID
     const destId = await getBookingDestinationId(params.destination);
     if (!destId) {
-      console.warn('[Booking] Could not find destination:', params.destination);
+      console.warn("[Booking] Could not find destination:", params.destination);
       return [];
     }
 
     const queryParams = new URLSearchParams({
       dest_id: destId,
-      dest_type: 'city',
+      dest_type: "city",
       checkin: params.checkIn,
       checkout: params.checkOut,
       guest_qty: params.guests.toString(),
       room_qty: (params.rooms || 1).toString(),
-      currency: 'USD',
-      language: 'en',
-      order_by: 'popularity',
+      currency: "USD",
+      language: "en",
+      order_by: "popularity",
       rows: (params.limit || 20).toString(),
       ...(params.priceMin && { price_filter_min: params.priceMin.toString() }),
       ...(params.priceMax && { price_filter_max: params.priceMax.toString() }),
-      ...(params.stars?.length && { class_filter: params.stars.join(',') }),
+      ...(params.stars?.length && { class_filter: params.stars.join(",") }),
     });
 
-    const response = await fetch(
-      `${BOOKING_API_BASE}/hotels?${queryParams}`,
-      {
-        headers: {
-          'Authorization': getAuthHeader(),
-          'Accept': 'application/json',
-        },
-      }
-    );
+    const response = await fetch(`${BOOKING_API_BASE}/hotels?${queryParams}`, {
+      headers: {
+        Authorization: getAuthHeader(),
+        Accept: "application/json",
+      },
+    });
 
     if (!response.ok) {
       const error = await response.text();
-      console.error('[Booking] API error:', response.status, error);
+      console.error("[Booking] API error:", response.status, error);
       return [];
     }
 
     const data = await response.json();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (data.result || []).map((hotel: any) => normalizeBookingHotel(hotel, params));
+    return (data.result || []).map((hotel: any) =>
+      normalizeBookingHotel(hotel, params),
+    );
   } catch (error) {
-    console.error('[Booking] Search error:', error);
+    console.error("[Booking] Search error:", error);
     return [];
   }
 }
@@ -201,7 +204,7 @@ export async function getBookingHotel(
   hotelId: string,
   checkIn: string,
   checkOut: string,
-  guests: number
+  guests: number,
 ): Promise<BookingHotel | null> {
   if (!isBookingConfigured()) {
     return null;
@@ -213,21 +216,19 @@ export async function getBookingHotel(
       checkin: checkIn,
       checkout: checkOut,
       guest_qty: guests.toString(),
-      room_qty: '1',
-      currency: 'USD',
-      language: 'en',
-      extras: 'hotel_info,hotel_photos,hotel_description,hotel_facilities,room_info',
+      room_qty: "1",
+      currency: "USD",
+      language: "en",
+      extras:
+        "hotel_info,hotel_photos,hotel_description,hotel_facilities,room_info",
     });
 
-    const response = await fetch(
-      `${BOOKING_API_BASE}/hotels?${queryParams}`,
-      {
-        headers: {
-          'Authorization': getAuthHeader(),
-          'Accept': 'application/json',
-        },
-      }
-    );
+    const response = await fetch(`${BOOKING_API_BASE}/hotels?${queryParams}`, {
+      headers: {
+        Authorization: getAuthHeader(),
+        Accept: "application/json",
+      },
+    });
 
     if (!response.ok) {
       return null;
@@ -235,9 +236,16 @@ export async function getBookingHotel(
 
     const data = await response.json();
     const hotel = data.result?.[0];
-    return hotel ? normalizeBookingHotel(hotel, { checkIn, checkOut, guests, destination: '' }) : null;
+    return hotel
+      ? normalizeBookingHotel(hotel, {
+          checkIn,
+          checkOut,
+          guests,
+          destination: "",
+        })
+      : null;
   } catch (error) {
-    console.error('[Booking] Get hotel error:', error);
+    console.error("[Booking] Get hotel error:", error);
     return null;
   }
 }
@@ -252,10 +260,10 @@ export function generateBookingAffiliateUrl(
     checkIn?: string;
     checkOut?: string;
     guests?: number;
-  }
+  },
 ): string {
   const params = new URLSearchParams({
-    aid: BOOKING_AFFILIATE_ID || 'faroway',
+    aid: BOOKING_AFFILIATE_ID || "faroway",
     label: trackingId,
     ...(options?.checkIn && { checkin: options.checkIn }),
     ...(options?.checkOut && { checkout: options.checkOut }),
@@ -276,10 +284,10 @@ export function generateBookingSearchUrl(
     checkIn?: string;
     checkOut?: string;
     guests?: number;
-  }
+  },
 ): string {
   const params = new URLSearchParams({
-    aid: BOOKING_AFFILIATE_ID || 'faroway',
+    aid: BOOKING_AFFILIATE_ID || "faroway",
     label: trackingId,
     ss: destination,
     ...(options?.checkIn && { checkin: options.checkIn }),
@@ -293,18 +301,26 @@ export function generateBookingSearchUrl(
 /**
  * Normalize Booking.com API response to our internal format
  */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function normalizeBookingHotel(raw: any, params: Partial<BookingSearchParams>): BookingHotel {
-  const nights = params.checkIn && params.checkOut
-    ? Math.ceil((new Date(params.checkOut).getTime() - new Date(params.checkIn).getTime()) / (1000 * 60 * 60 * 24))
-    : 1;
+function normalizeBookingHotel(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  raw: any,
+  params: Partial<BookingSearchParams>,
+): BookingHotel {
+  const nights =
+    params.checkIn && params.checkOut
+      ? Math.ceil(
+          (new Date(params.checkOut).getTime() -
+            new Date(params.checkIn).getTime()) /
+            (1000 * 60 * 60 * 24),
+        )
+      : 1;
 
   const pricePerNight = raw.min_total_price ? raw.min_total_price / nights : 0;
 
   return {
     hotelId: raw.hotel_id?.toString() || raw.id,
     name: raw.hotel_name || raw.name,
-    description: raw.hotel_description || raw.description || '',
+    description: raw.hotel_description || raw.description || "",
     starRating: raw.class || raw.star_rating || 0,
     userRating: raw.review_score || 0,
     reviewScore: raw.review_score || 0,
@@ -312,41 +328,62 @@ function normalizeBookingHotel(raw: any, params: Partial<BookingSearchParams>): 
     price: {
       perNight: Math.round(pricePerNight),
       total: Math.round(raw.min_total_price || 0),
-      currencyCode: raw.currency_code || 'USD',
+      currencyCode: raw.currency_code || "USD",
       formatted: `$${Math.round(pricePerNight)}/night`,
     },
     location: {
-      address: raw.address || '',
-      city: raw.city || raw.city_name || '',
-      country: raw.country || '',
-      countryCode: raw.country_code || raw.cc1 || '',
+      address: raw.address || "",
+      city: raw.city || raw.city_name || "",
+      country: raw.country || "",
+      countryCode: raw.country_code || raw.cc1 || "",
       latitude: raw.latitude || raw.location?.latitude || 0,
       longitude: raw.longitude || raw.location?.longitude || 0,
       neighborhood: raw.district || raw.neighborhood,
       distanceFromCenter: raw.distance_to_cc,
     },
-    images: (raw.hotel_photos || raw.photos || []).map((photo: { url_original?: string; url_max?: string; url?: string; caption?: string }) => ({
-      url: photo.url_original || photo.url_max || photo.url,
-      caption: photo.caption,
-    })),
+    images: (raw.hotel_photos || raw.photos || []).map(
+      (photo: {
+        url_original?: string;
+        url_max?: string;
+        url?: string;
+        caption?: string;
+      }) => ({
+        url: photo.url_original || photo.url_max || photo.url,
+        caption: photo.caption,
+      }),
+    ),
     amenities: raw.hotel_facilities || raw.facilities || [],
-    roomTypes: (raw.rooms || []).map((room: { room_name?: string; name?: string; max_occupancy?: number; bed_type?: string; price?: number }) => ({
-      name: room.room_name || room.name,
-      maxOccupancy: room.max_occupancy || 2,
-      bedType: room.bed_type || 'Queen',
-      price: room.price || pricePerNight,
-    })),
+    roomTypes: (raw.rooms || []).map(
+      (room: {
+        room_name?: string;
+        name?: string;
+        max_occupancy?: number;
+        bed_type?: string;
+        price?: number;
+      }) => ({
+        name: room.room_name || room.name,
+        maxOccupancy: room.max_occupancy || 2,
+        bedType: room.bed_type || "Queen",
+        price: room.price || pricePerNight,
+      }),
+    ),
     policies: {
-      checkIn: raw.checkin?.from || '15:00',
-      checkOut: raw.checkout?.until || '11:00',
-      cancellation: raw.is_free_cancellable ? 'Free cancellation available' : 'Non-refundable',
+      checkIn: raw.checkin?.from || "15:00",
+      checkOut: raw.checkout?.until || "11:00",
+      cancellation: raw.is_free_cancellable
+        ? "Free cancellation available"
+        : "Non-refundable",
       freeCancellationUntil: raw.free_cancellation_until,
     },
     badges: [
-      ...(raw.is_genius_deal ? ['Genius Deal'] : []),
-      ...(raw.is_mobile_deal ? ['Mobile Deal'] : []),
-      ...(raw.preferred ? ['Preferred Partner'] : []),
-      ...(raw.review_score >= 9 ? ['Exceptional'] : raw.review_score >= 8 ? ['Excellent'] : []),
+      ...(raw.is_genius_deal ? ["Genius Deal"] : []),
+      ...(raw.is_mobile_deal ? ["Mobile Deal"] : []),
+      ...(raw.preferred ? ["Preferred Partner"] : []),
+      ...(raw.review_score >= 9
+        ? ["Exceptional"]
+        : raw.review_score >= 8
+          ? ["Excellent"]
+          : []),
     ],
   };
 }
@@ -356,28 +393,28 @@ function normalizeBookingHotel(raw: any, params: Partial<BookingSearchParams>): 
  */
 export function mapBookingAmenitiesToVibe(amenities: string[]): string[] {
   const vibes: string[] = [];
-  const amenityText = amenities.join(' ').toLowerCase();
+  const amenityText = amenities.join(" ").toLowerCase();
 
-  if (amenityText.includes('spa') || amenityText.includes('wellness')) {
-    vibes.push('Wellness', 'Relaxation');
+  if (amenityText.includes("spa") || amenityText.includes("wellness")) {
+    vibes.push("Wellness", "Relaxation");
   }
-  if (amenityText.includes('pool') || amenityText.includes('beach')) {
-    vibes.push('Beach', 'Relaxation');
+  if (amenityText.includes("pool") || amenityText.includes("beach")) {
+    vibes.push("Beach", "Relaxation");
   }
-  if (amenityText.includes('gym') || amenityText.includes('fitness')) {
-    vibes.push('Wellness');
+  if (amenityText.includes("gym") || amenityText.includes("fitness")) {
+    vibes.push("Wellness");
   }
-  if (amenityText.includes('romantic') || amenityText.includes('honeymoon')) {
-    vibes.push('Romantic');
+  if (amenityText.includes("romantic") || amenityText.includes("honeymoon")) {
+    vibes.push("Romantic");
   }
-  if (amenityText.includes('family') || amenityText.includes('kids')) {
-    vibes.push('Family');
+  if (amenityText.includes("family") || amenityText.includes("kids")) {
+    vibes.push("Family");
   }
-  if (amenityText.includes('business') || amenityText.includes('conference')) {
-    vibes.push('Business');
+  if (amenityText.includes("business") || amenityText.includes("conference")) {
+    vibes.push("Business");
   }
-  if (amenityText.includes('bar') || amenityText.includes('nightclub')) {
-    vibes.push('Nightlife');
+  if (amenityText.includes("bar") || amenityText.includes("nightclub")) {
+    vibes.push("Nightlife");
   }
 
   return [...new Set(vibes)];
@@ -388,18 +425,18 @@ export function mapBookingAmenitiesToVibe(amenities: string[]): string[] {
  */
 export function calculateHotelVibeScore(
   hotel: BookingHotel,
-  targetVibes: string[]
+  targetVibes: string[],
 ): { score: number; matchedVibes: string[] } {
   const hotelVibes = mapBookingAmenitiesToVibe(hotel.amenities);
-  const matchedVibes = hotelVibes.filter(v => targetVibes.includes(v));
-  
+  const matchedVibes = hotelVibes.filter((v) => targetVibes.includes(v));
+
   let score = 50; // Base score
   score += matchedVibes.length * 15;
   score += Math.min(hotel.reviewScore * 3, 30); // Up to 30 points for rating
-  
+
   // Bonus for specific matches
-  if (targetVibes.includes('Luxury') && hotel.starRating >= 4) score += 15;
-  if (targetVibes.includes('Budget') && hotel.starRating <= 3) score += 10;
+  if (targetVibes.includes("Luxury") && hotel.starRating >= 4) score += 15;
+  if (targetVibes.includes("Budget") && hotel.starRating <= 3) score += 10;
 
   return {
     score: Math.min(100, score),

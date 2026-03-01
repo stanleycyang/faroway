@@ -1,11 +1,11 @@
-import { Sparkles } from 'lucide-react';
-import Link from 'next/link';
+import { Sparkles } from "lucide-react";
+import Link from "next/link";
 
 interface LogoProps {
   /** Size variant */
-  size?: 'sm' | 'md' | 'lg';
+  size?: "sm" | "md" | "lg";
   /** Text color — use 'light' on dark backgrounds */
-  variant?: 'dark' | 'light';
+  variant?: "dark" | "light";
   /** Whether to wrap in a Link to "/" */
   asLink?: boolean;
   /** Extra className on the outer wrapper */
@@ -13,19 +13,19 @@ interface LogoProps {
 }
 
 const sizes = {
-  sm: { box: 'w-8 h-8 rounded-lg', icon: 'w-4 h-4', text: 'text-base' },
-  md: { box: 'w-9 h-9 rounded-xl', icon: 'w-5 h-5', text: 'text-lg' },
-  lg: { box: 'w-12 h-12 rounded-xl', icon: 'w-6 h-6', text: 'text-2xl' },
+  sm: { box: "w-8 h-8 rounded-lg", icon: "w-4 h-4", text: "text-base" },
+  md: { box: "w-9 h-9 rounded-xl", icon: "w-5 h-5", text: "text-lg" },
+  lg: { box: "w-12 h-12 rounded-xl", icon: "w-6 h-6", text: "text-2xl" },
 };
 
 export function Logo({
-  size = 'md',
-  variant = 'dark',
+  size = "md",
+  variant = "dark",
   asLink = true,
-  className = '',
+  className = "",
 }: LogoProps) {
   const s = sizes[size];
-  const textColor = variant === 'dark' ? 'text-slate-900' : 'text-white';
+  const textColor = variant === "dark" ? "text-slate-900" : "text-white";
 
   const content = (
     <>

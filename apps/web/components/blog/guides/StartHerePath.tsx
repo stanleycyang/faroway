@@ -1,7 +1,7 @@
-import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
-import { FadeInOnScroll } from '@/components/landing/FadeInOnScroll';
-import { ACCENT_COLORS, type ClusterDefinition } from '@/lib/blog/clusters';
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import { FadeInOnScroll } from "@/components/landing/FadeInOnScroll";
+import { ACCENT_COLORS, type ClusterDefinition } from "@/lib/blog/clusters";
 
 interface StartHerePathProps {
   cluster: ClusterDefinition;

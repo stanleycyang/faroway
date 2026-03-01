@@ -1,28 +1,30 @@
-'use client';
+"use client";
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent } from "react";
 
 export function NewsletterCTA() {
-  const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<
+    "idle" | "loading" | "success" | "error"
+  >("idle");
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    setStatus('loading');
+    setStatus("loading");
     try {
-      const res = await fetch('/api/blog/newsletter', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, source: 'blog' }),
+      const res = await fetch("/api/blog/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, source: "blog" }),
       });
       if (res.ok) {
-        setStatus('success');
-        setEmail('');
+        setStatus("success");
+        setEmail("");
       } else {
-        setStatus('error');
+        setStatus("error");
       }
     } catch {
-      setStatus('error');
+      setStatus("error");
     }
   };
 
@@ -34,12 +36,18 @@ export function NewsletterCTA() {
           Get Travel Tips Delivered Weekly
         </h2>
         <p className="text-slate-600 mb-6">
-          Get our best travel tips, destination guides, and exclusive deals delivered straight to your inbox every week.
+          Get our best travel tips, destination guides, and exclusive deals
+          delivered straight to your inbox every week.
         </p>
-        {status === 'success' ? (
-          <p className="text-primary font-semibold text-lg">You&apos;re in! Check your inbox for a welcome email.</p>
+        {status === "success" ? (
+          <p className="text-primary font-semibold text-lg">
+            You&apos;re in! Check your inbox for a welcome email.
+          </p>
         ) : (
-          <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto">
+          <form
+            onSubmit={handleSubmit}
+            className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto"
+          >
             <input
               type="email"
               required
@@ -50,17 +58,21 @@ export function NewsletterCTA() {
             />
             <button
               type="submit"
-              disabled={status === 'loading'}
+              disabled={status === "loading"}
               className="px-6 py-3 bg-gradient-to-r from-primary to-amber-500 hover:from-primary-light hover:to-amber-400 text-white font-semibold rounded-xl transition-all whitespace-nowrap disabled:opacity-50"
             >
-              {status === 'loading' ? 'Subscribing...' : 'Subscribe Free'}
+              {status === "loading" ? "Subscribing..." : "Subscribe Free"}
             </button>
           </form>
         )}
-        {status === 'error' && (
-          <p className="text-red-400 text-sm mt-3">Something went wrong. Please try again.</p>
+        {status === "error" && (
+          <p className="text-red-400 text-sm mt-3">
+            Something went wrong. Please try again.
+          </p>
         )}
-        <p className="text-xs text-slate-500 mt-3">No spam, ever. Unsubscribe anytime.</p>
+        <p className="text-xs text-slate-500 mt-3">
+          No spam, ever. Unsubscribe anytime.
+        </p>
       </div>
     </section>
   );

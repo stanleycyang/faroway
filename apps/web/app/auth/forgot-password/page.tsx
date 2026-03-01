@@ -1,40 +1,40 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
-import Link from 'next/link'
-import { ArrowLeft, Mail, Check } from 'lucide-react'
-import { Logo } from '@/components/Logo'
+import { useState } from "react";
+import Link from "next/link";
+import { ArrowLeft, Mail, Check } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 export default function ForgotPasswordPage() {
-  const [email, setEmail] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [emailSent, setEmailSent] = useState(false)
-  const [error, setError] = useState('')
+  const [email, setEmail] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [emailSent, setEmailSent] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setIsLoading(true)
-    setError('')
+    e.preventDefault();
+    setIsLoading(true);
+    setError("");
 
     try {
-      const res = await fetch('/api/auth/forgot-password', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
-      })
+      });
 
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Failed to send reset email')
+        const data = await res.json();
+        throw new Error(data.error || "Failed to send reset email");
       }
 
-      setEmailSent(true)
+      setEmailSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Something went wrong')
+      setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   if (emailSent) {
     return (
@@ -43,18 +43,19 @@ export default function ForgotPasswordPage() {
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
             <Check className="w-10 h-10 text-green-600" />
           </div>
-          
+
           <h1 className="text-2xl font-semibold text-gray-900 mb-3">
             Check your email
           </h1>
           <p className="text-gray-600 mb-8">
-            We&apos;ve sent a password reset link to <strong>{email}</strong>. 
+            We&apos;ve sent a password reset link to <strong>{email}</strong>.
             Click the link in the email to reset your password.
           </p>
 
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-left">
             <p className="text-sm text-blue-800">
-              <strong>Didn&apos;t receive the email?</strong> Check your spam folder or wait a few minutes and try again.
+              <strong>Didn&apos;t receive the email?</strong> Check your spam
+              folder or wait a few minutes and try again.
             </p>
           </div>
 
@@ -67,7 +68,7 @@ export default function ForgotPasswordPage() {
           </Link>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -106,7 +107,10 @@ export default function ForgotPasswordPage() {
         <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
                 Email address
               </label>
               <div className="relative">
@@ -128,13 +132,13 @@ export default function ForgotPasswordPage() {
               disabled={isLoading || !email}
               className="w-full py-3 bg-primary hover:bg-primary-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors shadow-lg shadow-primary/25"
             >
-              {isLoading ? 'Sending...' : 'Send reset link'}
+              {isLoading ? "Sending..." : "Send reset link"}
             </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-gray-600">
-            Remember your password?{' '}
-            <Link 
+            Remember your password?{" "}
+            <Link
               href="/auth/login"
               className="font-semibold text-primary hover:text-primary-600 transition-colors"
             >
@@ -144,5 +148,5 @@ export default function ForgotPasswordPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }

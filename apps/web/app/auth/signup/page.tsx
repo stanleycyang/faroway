@@ -1,17 +1,17 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { useSearchParams } from 'next/navigation'
-import { Suspense } from 'react'
-import { EmailPasswordForm } from '@/components/auth/EmailPasswordForm'
-import { GoogleButton } from '@/components/auth/GoogleButton'
-import { AppleButton } from '@/components/auth/AppleButton'
-import { Logo } from '@/components/Logo'
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { Suspense } from "react";
+import { EmailPasswordForm } from "@/components/auth/EmailPasswordForm";
+import { GoogleButton } from "@/components/auth/GoogleButton";
+import { AppleButton } from "@/components/auth/AppleButton";
+import { Logo } from "@/components/Logo";
 
 function SignupContent() {
-  const searchParams = useSearchParams()
-  const redirectTo = searchParams.get('redirectTo') || '/dashboard'
-  const error = searchParams.get('error')
+  const searchParams = useSearchParams();
+  const redirectTo = searchParams.get("redirectTo") || "/dashboard";
+  const error = searchParams.get("error");
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-white px-4">
@@ -50,7 +50,9 @@ function SignupContent() {
               <div className="w-full border-t border-gray-200" />
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-500">or sign up with email</span>
+              <span className="px-4 bg-white text-gray-500">
+                or sign up with email
+              </span>
             </div>
           </div>
 
@@ -59,9 +61,9 @@ function SignupContent() {
 
           {/* Sign In Link */}
           <p className="mt-6 text-center text-sm text-gray-600">
-            Already have an account?{' '}
-            <Link 
-              href={`/auth/login${redirectTo !== '/dashboard' ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ''}`}
+            Already have an account?{" "}
+            <Link
+              href={`/auth/login${redirectTo !== "/dashboard" ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`}
               className="font-semibold text-primary hover:text-primary-dark transition-colors"
             >
               Sign in
@@ -71,24 +73,30 @@ function SignupContent() {
 
         {/* Footer */}
         <p className="mt-6 text-center text-xs text-gray-500">
-          By signing up, you agree to our{' '}
-          <Link href="/terms" className="underline hover:text-gray-700">Terms of Service</Link>
-          {' '}and{' '}
-          <Link href="/privacy" className="underline hover:text-gray-700">Privacy Policy</Link>
+          By signing up, you agree to our{" "}
+          <Link href="/terms" className="underline hover:text-gray-700">
+            Terms of Service
+          </Link>{" "}
+          and{" "}
+          <Link href="/privacy" className="underline hover:text-gray-700">
+            Privacy Policy
+          </Link>
         </p>
       </div>
     </div>
-  )
+  );
 }
 
 export default function SignupPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    }>
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      }
+    >
       <SignupContent />
     </Suspense>
-  )
+  );
 }

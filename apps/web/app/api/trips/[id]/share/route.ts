@@ -1,111 +1,124 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { nanoid } from 'nanoid'
+import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { nanoid } from "nanoid";
 
 type Params = {
   params: Promise<{
-    id: string
-  }>
-}
+    id: string;
+  }>;
+};
 
 // POST /api/trips/[id]/share - Enable sharing
-export async function POST(
-  request: NextRequest,
-  { params }: Params
-) {
+export async function POST(request: NextRequest, { params }: Params) {
   try {
-    const { id } = await params
+    const { id } = await params;
 
     if (!/^[a-zA-Z0-9-]+$/.test(id)) {
-      return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 })
+      return NextResponse.json({ error: "Invalid trip ID" }, { status: 400 });
     }
 
-    const supabase = await createClient()
+    const supabase = await createClient();
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Fetch current trip to check ownership and existing token
     const { data: trip, error: fetchError } = await supabase
-      .from('trips')
-      .select('id, share_token, is_shared, user_id')
-      .eq('id', id)
-      .eq('user_id', user.id)
-      .single()
+      .from("trips")
+      .select("id, share_token, is_shared, user_id")
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .single();
 
     if (fetchError || !trip) {
-      return NextResponse.json({ error: 'Trip not found' }, { status: 404 })
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
-    const shareToken = trip.share_token || nanoid(12)
-    const now = new Date().toISOString()
+    const shareToken = trip.share_token || nanoid(12);
+    const now = new Date().toISOString();
 
     const { error: updateError } = await supabase
-      .from('trips')
+      .from("trips")
       .update({
         share_token: shareToken,
         is_shared: true,
         shared_at: trip.share_token ? undefined : now,
         updated_at: now,
       })
-      .eq('id', id)
-      .eq('user_id', user.id)
+      .eq("id", id)
+      .eq("user_id", user.id);
 
     if (updateError) {
-      console.error('Error enabling sharing:', updateError)
-      return NextResponse.json({ error: 'Failed to enable sharing' }, { status: 500 })
+      console.error("Error enabling sharing:", updateError);
+      return NextResponse.json(
+        { error: "Failed to enable sharing" },
+        { status: 500 },
+      );
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.faroway.ai'
-    const shareUrl = `${baseUrl}/s/${shareToken}`
+    const baseUrl =
+      process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
+    const shareUrl = `${baseUrl}/s/${shareToken}`;
 
-    return NextResponse.json({ shareUrl, shareToken })
+    return NextResponse.json({ shareUrl, shareToken });
   } catch (error) {
-    console.error('Error in share POST:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error("Error in share POST:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }
 
 // DELETE /api/trips/[id]/share - Disable sharing
-export async function DELETE(
-  request: NextRequest,
-  { params }: Params
-) {
+export async function DELETE(request: NextRequest, { params }: Params) {
   try {
-    const { id } = await params
+    const { id } = await params;
 
     if (!/^[a-zA-Z0-9-]+$/.test(id)) {
-      return NextResponse.json({ error: 'Invalid trip ID' }, { status: 400 })
+      return NextResponse.json({ error: "Invalid trip ID" }, { status: 400 });
     }
 
-    const supabase = await createClient()
+    const supabase = await createClient();
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const { error: updateError } = await supabase
-      .from('trips')
+      .from("trips")
       .update({
         is_shared: false,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', id)
-      .eq('user_id', user.id)
+      .eq("id", id)
+      .eq("user_id", user.id);
 
     if (updateError) {
-      console.error('Error disabling sharing:', updateError)
-      return NextResponse.json({ error: 'Failed to disable sharing' }, { status: 500 })
+      console.error("Error disabling sharing:", updateError);
+      return NextResponse.json(
+        { error: "Failed to disable sharing" },
+        { status: 500 },
+      );
     }
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error in share DELETE:', error)
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+    console.error("Error in share DELETE:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }

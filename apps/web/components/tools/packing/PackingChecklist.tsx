@@ -1,17 +1,20 @@
-'use client';
+"use client";
 
-import { useState, useCallback } from 'react';
-import { Check, Printer } from 'lucide-react';
-import type { PackingCategory } from '@/lib/tools/packing-data';
+import { useState, useCallback } from "react";
+import { Check, Printer } from "lucide-react";
+import type { PackingCategory } from "@/lib/tools/packing-data";
 
 interface PackingChecklistProps {
   categories: PackingCategory[];
   storageKey: string;
 }
 
-export function PackingChecklist({ categories, storageKey }: PackingChecklistProps) {
+export function PackingChecklist({
+  categories,
+  storageKey,
+}: PackingChecklistProps) {
   const [checked, setChecked] = useState<Set<string>>(() => {
-    if (typeof window === 'undefined') return new Set<string>();
+    if (typeof window === "undefined") return new Set<string>();
     try {
       const saved = localStorage.getItem(storageKey);
       if (saved) return new Set<string>(JSON.parse(saved));
@@ -26,7 +29,7 @@ export function PackingChecklist({ categories, storageKey }: PackingChecklistPro
         localStorage.setItem(storageKey, JSON.stringify([...next]));
       } catch {}
     },
-    [storageKey]
+    [storageKey],
   );
 
   const toggle = (item: string) => {
@@ -41,7 +44,8 @@ export function PackingChecklist({ categories, storageKey }: PackingChecklistPro
 
   const totalItems = categories.reduce((sum, c) => sum + c.items.length, 0);
   const checkedCount = checked.size;
-  const progressPercent = totalItems > 0 ? Math.round((checkedCount / totalItems) * 100) : 0;
+  const progressPercent =
+    totalItems > 0 ? Math.round((checkedCount / totalItems) * 100) : 0;
 
   return (
     <div>
@@ -76,7 +80,7 @@ export function PackingChecklist({ categories, storageKey }: PackingChecklistPro
       <div className="space-y-8">
         {categories.map((category) => {
           const categoryChecked = category.items.filter((i) =>
-            checked.has(`${category.category}:${i.name}`)
+            checked.has(`${category.category}:${i.name}`),
           ).length;
 
           return (
@@ -102,20 +106,18 @@ export function PackingChecklist({ categories, storageKey }: PackingChecklistPro
                       onClick={() => toggle(key)}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition-all ${
                         isChecked
-                          ? 'bg-primary/5 text-slate-400 line-through'
-                          : 'hover:bg-slate-50 text-slate-700'
+                          ? "bg-primary/5 text-slate-400 line-through"
+                          : "hover:bg-slate-50 text-slate-700"
                       }`}
                     >
                       <div
                         className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 transition-all ${
                           isChecked
-                            ? 'bg-primary border-primary'
-                            : 'border-slate-300'
+                            ? "bg-primary border-primary"
+                            : "border-slate-300"
                         }`}
                       >
-                        {isChecked && (
-                          <Check className="w-3 h-3 text-white" />
-                        )}
+                        {isChecked && <Check className="w-3 h-3 text-white" />}
                       </div>
                       <span className="text-sm">
                         {item.name}

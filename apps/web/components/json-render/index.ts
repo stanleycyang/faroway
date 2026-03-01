@@ -1,2 +1,2 @@
-export * from './registry';
-export { default as JsonRenderProvider } from './JsonRenderProvider';
+export * from "./registry";
+export { default as JsonRenderProvider } from "./JsonRenderProvider";

@@ -1,16 +1,16 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 const TOOL_LINKS = [
-  { label: 'All Tools', href: '/tools' },
-  { label: 'Quiz', href: '/tools/travel-quiz' },
-  { label: 'Packing', href: '/tools/packing-list' },
-  { label: 'Cost', href: '/tools/trip-cost' },
-  { label: 'Best Time', href: '/tools/best-time-to-visit' },
-  { label: 'Visa', href: '/tools/visa-checker' },
-  { label: 'Currency', href: '/tools/currency-converter' },
+  { label: "All Tools", href: "/tools" },
+  { label: "Quiz", href: "/tools/travel-quiz" },
+  { label: "Packing", href: "/tools/packing-list" },
+  { label: "Cost", href: "/tools/trip-cost" },
+  { label: "Best Time", href: "/tools/best-time-to-visit" },
+  { label: "Visa", href: "/tools/visa-checker" },
+  { label: "Currency", href: "/tools/currency-converter" },
 ];
 
 export function ToolsNav() {
@@ -22,8 +22,8 @@ export function ToolsNav() {
         <nav className="flex items-center gap-2 py-3 overflow-x-auto scrollbar-hide">
           {TOOL_LINKS.map((link) => {
             const isActive =
-              link.href === '/tools'
-                ? pathname === '/tools'
+              link.href === "/tools"
+                ? pathname === "/tools"
                 : pathname.startsWith(link.href);
 
             return (
@@ -32,8 +32,8 @@ export function ToolsNav() {
                 href={link.href}
                 className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-all ${
                   isActive
-                    ? 'bg-primary text-white shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+                    ? "bg-primary text-white shadow-sm"
+                    : "text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                 }`}
               >
                 {link.label}

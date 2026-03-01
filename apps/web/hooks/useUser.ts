@@ -1,30 +1,30 @@
-'use client'
+"use client";
 
-import { useEffect, useState, useCallback } from 'react'
-import { createClient } from '@/lib/supabase/client'
-import type { User, Session, AuthChangeEvent } from '@supabase/supabase-js'
+import { useEffect, useState, useCallback } from "react";
+import { createClient } from "@/lib/supabase/client";
+import type { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 
 interface UseUserReturn {
-  user: User | null
-  session: Session | null
-  loading: boolean
-  error: Error | null
-  refresh: () => Promise<void>
-  signOut: () => Promise<void>
+  user: User | null;
+  session: Session | null;
+  loading: boolean;
+  error: Error | null;
+  refresh: () => Promise<void>;
+  signOut: () => Promise<void>;
 }
 
 /**
  * React hook to get the current authenticated user
  * Handles loading states, session refresh, and auth state changes
- * 
+ *
  * @example
  * ```tsx
  * function MyComponent() {
  *   const { user, loading, signOut } = useUser()
- *   
+ *
  *   if (loading) return <div>Loading...</div>
  *   if (!user) return <div>Not logged in</div>
- *   
+ *
  *   return (
  *     <div>
  *       <p>Hello, {user.email}</p>
@@ -35,109 +35,114 @@ interface UseUserReturn {
  * ```
  */
 export function useUser(): UseUserReturn {
-  const [user, setUser] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  const supabase = createClient()
+  const supabase = createClient();
 
   // Fetch user data
   const fetchUser = useCallback(async () => {
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true);
+      setError(null);
 
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      
+      const {
+        data: { session },
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
       if (sessionError) {
-        throw sessionError
+        throw sessionError;
       }
 
-      setSession(session)
-      setUser(session?.user ?? null)
+      setSession(session);
+      setUser(session?.user ?? null);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to fetch user'))
-      setUser(null)
-      setSession(null)
+      setError(err instanceof Error ? err : new Error("Failed to fetch user"));
+      setUser(null);
+      setSession(null);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [supabase.auth])
+  }, [supabase.auth]);
 
   // Refresh user data
   const refresh = useCallback(async () => {
-    await fetchUser()
-  }, [fetchUser])
+    await fetchUser();
+  }, [fetchUser]);
 
   // Sign out
   const signOut = useCallback(async () => {
     try {
-      setLoading(true)
-      const { error } = await supabase.auth.signOut()
-      if (error) throw error
-      setUser(null)
-      setSession(null)
+      setLoading(true);
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      setUser(null);
+      setSession(null);
     } catch (err) {
-      setError(err instanceof Error ? err : new Error('Failed to sign out'))
+      setError(err instanceof Error ? err : new Error("Failed to sign out"));
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [supabase.auth])
+  }, [supabase.auth]);
 
   // Initial fetch and subscribe to auth changes
   useEffect(() => {
-    fetchUser()
+    fetchUser();
 
     // Subscribe to auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, session: Session | null) => {
-        setSession(session)
-        setUser(session?.user ?? null)
-        setLoading(false)
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
 
         // Handle specific auth events
         switch (event) {
-          case 'SIGNED_IN':
+          case "SIGNED_IN":
             // Claim any anonymous trips stored in localStorage
             try {
-              const stored = localStorage.getItem('faroway_anonymous_trips')
+              const stored = localStorage.getItem("faroway_anonymous_trips");
               if (stored) {
-                const tripIds = JSON.parse(stored)
+                const tripIds = JSON.parse(stored);
                 if (Array.isArray(tripIds) && tripIds.length > 0) {
-                  fetch('/api/auth/claim-trips', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                  fetch("/api/auth/claim-trips", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ tripIds }),
                   }).finally(() => {
-                    localStorage.removeItem('faroway_anonymous_trips')
-                  })
+                    localStorage.removeItem("faroway_anonymous_trips");
+                  });
                 }
               }
             } catch {
               // Non-blocking — don't prevent sign-in flow
             }
-            break
-          case 'SIGNED_OUT':
+            break;
+          case "SIGNED_OUT":
             // User signed out
-            setUser(null)
-            setSession(null)
-            break
-          case 'TOKEN_REFRESHED':
+            setUser(null);
+            setSession(null);
+            break;
+          case "TOKEN_REFRESHED":
             // Session was refreshed
-            break
-          case 'USER_UPDATED':
+            break;
+          case "USER_UPDATED":
             // User data was updated
-            break
+            break;
         }
-      }
-    )
+      },
+    );
 
     // Cleanup subscription on unmount
     return () => {
-      subscription.unsubscribe()
-    }
-  }, [fetchUser, supabase.auth])
+      subscription.unsubscribe();
+    };
+  }, [fetchUser, supabase.auth]);
 
   return {
     user,
@@ -146,7 +151,7 @@ export function useUser(): UseUserReturn {
     error,
     refresh,
     signOut,
-  }
+  };
 }
 
 /**
@@ -154,53 +159,55 @@ export function useUser(): UseUserReturn {
  * Call this after useUser to get extended profile information
  */
 export function useUserProfile() {
-  const { user, loading: userLoading } = useUser()
+  const { user, loading: userLoading } = useUser();
   const [profile, setProfile] = useState<{
-    id: string
-    email: string
-    auth_provider: string
-    subscription_tier: string
-    created_at: string
-    updated_at: string
-  } | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
+    id: string;
+    email: string;
+    auth_provider: string;
+    subscription_tier: string;
+    created_at: string;
+    updated_at: string;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
 
-  const supabase = createClient()
+  const supabase = createClient();
 
   useEffect(() => {
     async function fetchProfile() {
       if (!user) {
-        setProfile(null)
-        setLoading(false)
-        return
+        setProfile(null);
+        setLoading(false);
+        return;
       }
 
       try {
-        setLoading(true)
+        setLoading(true);
         const { data, error: queryError } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .single()
+          .from("users")
+          .select("*")
+          .eq("id", user.id)
+          .single();
 
-        if (queryError) throw queryError
-        setProfile(data)
+        if (queryError) throw queryError;
+        setProfile(data);
       } catch (err) {
-        setError(err instanceof Error ? err : new Error('Failed to fetch profile'))
+        setError(
+          err instanceof Error ? err : new Error("Failed to fetch profile"),
+        );
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
 
     if (!userLoading) {
-      fetchProfile()
+      fetchProfile();
     }
-  }, [user, userLoading, supabase])
+  }, [user, userLoading, supabase]);
 
   return {
     profile,
     loading: userLoading || loading,
     error,
-  }
+  };
 }

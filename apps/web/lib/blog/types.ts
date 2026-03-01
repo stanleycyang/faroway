@@ -39,20 +39,20 @@ export interface BlogPostMeta {
 }
 
 export const AUTHORS: Record<string, Author> = {
-  'faroway-team': {
-    name: 'Faroway Team',
-    avatar: '/icon.png',
-    bio: 'The Faroway team is passionate about making travel planning effortless with AI. We combine travel expertise with cutting-edge technology to help you explore the world.',
-    twitter: '@faroway',
+  "faroway-team": {
+    name: "Faroway Team",
+    avatar: "/icon.png",
+    bio: "The Faroway team is passionate about making travel planning effortless with AI. We combine travel expertise with cutting-edge technology to help you explore the world.",
+    twitter: "@faroway",
   },
 };
 
 export const CATEGORIES = [
-  'Travel Planning',
-  'Destinations',
-  'Budget Travel',
-  'Travel Tips',
-  'Technology',
+  "Travel Planning",
+  "Destinations",
+  "Budget Travel",
+  "Travel Tips",
+  "Technology",
 ] as const;
 
 export type Category = (typeof CATEGORIES)[number];

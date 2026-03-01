@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { MapPin, Home, Search, ArrowLeft } from 'lucide-react'
+import Link from "next/link";
+import { MapPin, Home, Search, ArrowLeft } from "lucide-react";
 
 export default function NotFound() {
   return (
@@ -21,8 +21,8 @@ export default function NotFound() {
           Looks like you&apos;re lost!
         </h2>
         <p className="text-gray-600 mb-8 max-w-md mx-auto">
-          This destination doesn&apos;t exist in our travel guide. 
-          Let&apos;s get you back on track to plan your perfect trip.
+          This destination doesn&apos;t exist in our travel guide. Let&apos;s
+          get you back on track to plan your perfect trip.
         </p>
 
         {/* Action Buttons */}
@@ -54,9 +54,11 @@ export default function NotFound() {
 
         {/* Popular Destinations Suggestion */}
         <div className="mt-12 pt-8 border-t border-gray-200">
-          <p className="text-sm text-gray-500 mb-4">Popular destinations to explore:</p>
+          <p className="text-sm text-gray-500 mb-4">
+            Popular destinations to explore:
+          </p>
           <div className="flex flex-wrap justify-center gap-2">
-            {['Tokyo', 'Paris', 'Bali', 'New York', 'Barcelona'].map((city) => (
+            {["Tokyo", "Paris", "Bali", "New York", "Barcelona"].map((city) => (
               <Link
                 key={city}
                 href={`/?destination=${encodeURIComponent(city)}`}
@@ -69,5 +71,5 @@ export default function NotFound() {
         </div>
       </div>
     </div>
-  )
+  );
 }

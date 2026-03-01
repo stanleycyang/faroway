@@ -14,7 +14,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { useTripStore, Trip, TripDay, Activity } from '../../stores/tripStore';
+import { useTripStore, Trip, TripDay, TripInput, Activity } from '../../stores/tripStore';
 import { usePromptStore } from '../../stores/promptStore';
 import { useAuthContext } from '../../components/AuthProvider';
 import { AuthGate } from '../../components/AuthGate';
@@ -81,7 +81,7 @@ function convertStreamingDataToTrip(
   tripId: string,
   itineraryDays: unknown[],
   topHotel: Record<string, unknown> | null,
-  input: NonNullable<ReturnType<typeof useTripStore>['draftInput']>
+  input: TripInput
 ): Trip {
   const destinationInfo = popularDestinations.find((d) => d.name === input.destination);
 
@@ -213,7 +213,8 @@ function JsonRenderRenderer({
     <Animated.View style={{ opacity: fadeAnim }}>
       {blocks.map((comp, index) => {
         if (!comp || !comp.type) return null;
-        const Component = registry[comp.type as keyof typeof registry];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const Component = registry[comp.type as keyof typeof registry] as React.ComponentType<any>;
         if (!Component) return null;
         return <Component key={`${comp.type}-${index}`} {...(comp.props || {})} />;
       })}

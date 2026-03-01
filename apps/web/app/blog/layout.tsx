@@ -1,15 +1,19 @@
-import type { Metadata } from 'next';
-import { Header } from '@/components/Header';
-import { Footer } from '@/components/Footer';
+import type { Metadata } from "next";
+import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
   title: {
-    template: '%s | Faroway Blog',
-    default: 'Faroway Blog',
+    template: "%s | Faroway Blog",
+    default: "Faroway Blog",
   },
 };
 
-export default function BlogLayout({ children }: { children: React.ReactNode }) {
+export default function BlogLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
     <div className="bg-white text-slate-900 min-h-screen">
       <Header />

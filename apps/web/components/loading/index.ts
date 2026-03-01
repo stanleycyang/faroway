@@ -1,2 +1,2 @@
-export * from './TripCardSkeleton';
-export * from './PageLoader';
+export * from "./TripCardSkeleton";
+export * from "./PageLoader";

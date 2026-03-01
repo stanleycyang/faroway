@@ -1,1 +1,1 @@
-export { FadeInSection, SlideInSection } from './FadeInSection';
+export { FadeInSection, SlideInSection } from "./FadeInSection";

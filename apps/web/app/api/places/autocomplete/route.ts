@@ -1,9 +1,9 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from "next/server";
 
 const API_KEY = process.env.GOOGLE_PLACES_API_KEY;
 
 export async function GET(request: NextRequest) {
-  const input = request.nextUrl.searchParams.get('input');
+  const input = request.nextUrl.searchParams.get("input");
 
   if (!input || input.length < 2) {
     return NextResponse.json({ predictions: [] });
@@ -23,17 +23,22 @@ export async function GET(request: NextRequest) {
     const res = await fetch(url);
     const data = await res.json();
 
-    if (data.status === 'OK' && data.predictions) {
+    if (data.status === "OK" && data.predictions) {
       return NextResponse.json({
-        predictions: data.predictions.map((p: {
-          place_id: string;
-          description: string;
-          structured_formatting?: { main_text?: string; secondary_text?: string };
-        }) => ({
-          placeId: p.place_id,
-          mainText: p.structured_formatting?.main_text ?? p.description,
-          secondaryText: p.structured_formatting?.secondary_text ?? '',
-        })),
+        predictions: data.predictions.map(
+          (p: {
+            place_id: string;
+            description: string;
+            structured_formatting?: {
+              main_text?: string;
+              secondary_text?: string;
+            };
+          }) => ({
+            placeId: p.place_id,
+            mainText: p.structured_formatting?.main_text ?? p.description,
+            secondaryText: p.structured_formatting?.secondary_text ?? "",
+          }),
+        ),
       });
     }
 

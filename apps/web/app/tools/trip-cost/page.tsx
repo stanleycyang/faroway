@@ -1,41 +1,48 @@
-import type { Metadata } from 'next';
-import Link from 'next/link';
-import Image from 'next/image';
-import { DollarSign, ArrowRight } from 'lucide-react';
-import { getContinents, getGuidesByContinent } from '@/lib/destination-guides';
-import { getCostProfile, getCostLevel } from '@/lib/tools/cost-data';
-import { CostEstimatorClient } from '@/components/tools/cost/CostEstimatorClient';
-import { ToolCTA } from '@/components/tools/ToolCTA';
+import type { Metadata } from "next";
+import Link from "next/link";
+import Image from "next/image";
+import { DollarSign, ArrowRight } from "lucide-react";
+import { getContinents, getGuidesByContinent } from "@/lib/destination-guides";
+import { getCostProfile, getCostLevel } from "@/lib/tools/cost-data";
+import { CostEstimatorClient } from "@/components/tools/cost/CostEstimatorClient";
+import { ToolCTA } from "@/components/tools/ToolCTA";
 
 export const metadata: Metadata = {
-  title: 'Trip Cost Estimator — Budget Your Travel',
+  title: "Trip Cost Estimator — Budget Your Travel",
   description:
-    'Estimate your trip cost with detailed breakdowns for accommodation, food, transport, and activities. Covers 14 popular destinations with local pricing.',
-  alternates: { canonical: '/tools/trip-cost' },
+    "Estimate your trip cost with detailed breakdowns for accommodation, food, transport, and activities. Covers 14 popular destinations with local pricing.",
+  alternates: { canonical: "/tools/trip-cost" },
   openGraph: {
-    title: 'Trip Cost Estimator | Faroway',
-    description: 'Free travel budget calculator for 14 destinations — see cost breakdowns instantly.',
-    url: '/tools/trip-cost',
+    title: "Trip Cost Estimator | Faroway",
+    description:
+      "Free travel budget calculator for 14 destinations — see cost breakdowns instantly.",
+    url: "/tools/trip-cost",
   },
 };
 
 export default function TripCostPage() {
-  const continents = getContinents().filter((c) => c !== 'All');
+  const continents = getContinents().filter((c) => c !== "All");
 
   const appSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'WebApplication',
-    name: 'Trip Cost Estimator',
-    description: 'Estimate your trip cost with detailed breakdowns for accommodation, food, transport, and activities.',
-    url: 'https://www.faroway.ai/tools/trip-cost',
-    applicationCategory: 'TravelApplication',
-    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
-    operatingSystem: 'All',
+    "@context": "https://schema.org",
+    "@type": "WebApplication",
+    name: "Trip Cost Estimator",
+    description:
+      "Estimate your trip cost with detailed breakdowns for accommodation, food, transport, and activities.",
+    url: "https://www.faroway.ai/tools/trip-cost",
+    applicationCategory: "TravelApplication",
+    offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    operatingSystem: "All",
   };
 
   return (
     <main className="min-h-screen">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema).replace(/</g, '\\u003c') }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(appSchema).replace(/</g, "\\u003c"),
+        }}
+      />
       <CostEstimatorClient />
 
       <section className="max-w-7xl mx-auto px-6 py-16">
@@ -44,7 +51,8 @@ export default function TripCostPage() {
             Cost Guides by Destination
           </h2>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            Detailed budget breakdowns, sample prices, and money-saving tips for every destination.
+            Detailed budget breakdowns, sample prices, and money-saving tips for
+            every destination.
           </p>
         </div>
 
@@ -64,13 +72,13 @@ export default function TripCostPage() {
                   if (!cost) return null;
                   const level = getCostLevel(cost.costMultiplier);
                   const levelColor =
-                    level === 'Budget-Friendly'
-                      ? 'bg-emerald-50 text-emerald-700'
-                      : level === 'Moderate'
-                        ? 'bg-amber-50 text-amber-700'
-                        : level === 'Above Average'
-                          ? 'bg-orange-50 text-orange-700'
-                          : 'bg-red-50 text-red-700';
+                    level === "Budget-Friendly"
+                      ? "bg-emerald-50 text-emerald-700"
+                      : level === "Moderate"
+                        ? "bg-amber-50 text-amber-700"
+                        : level === "Above Average"
+                          ? "bg-orange-50 text-orange-700"
+                          : "bg-red-50 text-red-700";
 
                   return (
                     <Link
@@ -91,13 +99,17 @@ export default function TripCostPage() {
                           <h4 className="text-lg font-bold text-white">
                             {dest.name}
                           </h4>
-                          <p className="text-sm text-white/80">{dest.country}</p>
+                          <p className="text-sm text-white/80">
+                            {dest.country}
+                          </p>
                         </div>
                       </div>
                       <div className="p-4">
                         <div className="flex items-center gap-2 text-sm text-slate-600 mb-2">
                           <DollarSign className="w-4 h-4 text-primary" />
-                          <span className={`inline-block px-2 py-0.5 rounded-md text-xs font-semibold ${levelColor}`}>
+                          <span
+                            className={`inline-block px-2 py-0.5 rounded-md text-xs font-semibold ${levelColor}`}
+                          >
                             {level}
                           </span>
                           <span className="text-xs text-slate-500">
@@ -105,7 +117,8 @@ export default function TripCostPage() {
                           </span>
                         </div>
                         <p className="text-xs text-slate-500">
-                          From ~${cost.samplePrices[0]?.priceUSD} for {cost.samplePrices[0]?.item.toLowerCase()}
+                          From ~${cost.samplePrices[0]?.priceUSD} for{" "}
+                          {cost.samplePrices[0]?.item.toLowerCase()}
                         </p>
                         <span className="inline-flex items-center gap-1 text-xs font-semibold text-primary mt-3 group-hover:gap-2 transition-all">
                           View cost guide <ArrowRight className="w-3 h-3" />

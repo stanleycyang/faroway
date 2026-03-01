@@ -1,14 +1,19 @@
-import { notFound } from 'next/navigation';
-import type { Metadata } from 'next';
-import { getClusterBySlug, getAllClusterSlugs, getRelatedClusters, getPostsByCluster } from '@/lib/blog';
-import { BlogCard } from '@/components/blog/BlogCard';
-import { NewsletterCTA } from '@/components/blog/NewsletterCTA';
-import { ClusterHero } from '@/components/blog/guides/ClusterHero';
-import { TopicGrid } from '@/components/blog/guides/TopicGrid';
-import { StartHerePath } from '@/components/blog/guides/StartHerePath';
-import { RelatedClusters } from '@/components/blog/guides/RelatedClusters';
-import { ClusterCTA } from '@/components/blog/guides/ClusterCTA';
-import { FadeInOnScroll } from '@/components/landing/FadeInOnScroll';
+import { notFound } from "next/navigation";
+import type { Metadata } from "next";
+import {
+  getClusterBySlug,
+  getAllClusterSlugs,
+  getRelatedClusters,
+  getPostsByCluster,
+} from "@/lib/blog";
+import { BlogCard } from "@/components/blog/BlogCard";
+import { NewsletterCTA } from "@/components/blog/NewsletterCTA";
+import { ClusterHero } from "@/components/blog/guides/ClusterHero";
+import { TopicGrid } from "@/components/blog/guides/TopicGrid";
+import { StartHerePath } from "@/components/blog/guides/StartHerePath";
+import { RelatedClusters } from "@/components/blog/guides/RelatedClusters";
+import { ClusterCTA } from "@/components/blog/guides/ClusterCTA";
+import { FadeInOnScroll } from "@/components/landing/FadeInOnScroll";
 
 interface PageProps {
   params: Promise<{ slug: string }>;
@@ -18,12 +23,14 @@ export async function generateStaticParams() {
   return getAllClusterSlugs().map((slug) => ({ slug }));
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const cluster = getClusterBySlug(slug);
   if (!cluster) return {};
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.faroway.ai';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
   return {
     title: cluster.seo.title,
@@ -32,11 +39,18 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title: cluster.seo.title,
       description: cluster.seo.description,
       url: `${baseUrl}/blog/guides/${cluster.slug}`,
-      images: [{ url: cluster.heroImage, width: 1200, height: 630, alt: cluster.heroImageAlt }],
-      type: 'website',
+      images: [
+        {
+          url: cluster.heroImage,
+          width: 1200,
+          height: 630,
+          alt: cluster.heroImageAlt,
+        },
+      ],
+      type: "website",
     },
     twitter: {
-      card: 'summary_large_image',
+      card: "summary_large_image",
       title: cluster.seo.title,
       description: cluster.seo.description,
       images: [cluster.heroImage],
@@ -53,30 +67,45 @@ export default async function ClusterPage({ params }: PageProps) {
   const relatedClusters = getRelatedClusters(slug);
   const displayPosts = posts.slice(0, 9);
 
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.faroway.ai';
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
   // JSON-LD schemas
   const breadcrumbSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
     itemListElement: [
-      { '@type': 'ListItem', position: 1, name: 'Blog', item: `${baseUrl}/blog` },
-      { '@type': 'ListItem', position: 2, name: 'Guides', item: `${baseUrl}/blog/guides` },
-      { '@type': 'ListItem', position: 3, name: cluster.title, item: `${baseUrl}/blog/guides/${cluster.slug}` },
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Blog",
+        item: `${baseUrl}/blog`,
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Guides",
+        item: `${baseUrl}/blog/guides`,
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: cluster.title,
+        item: `${baseUrl}/blog/guides/${cluster.slug}`,
+      },
     ],
   };
 
   const collectionSchema = {
-    '@context': 'https://schema.org',
-    '@type': 'CollectionPage',
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
     name: cluster.seo.title,
     description: cluster.seo.description,
     url: `${baseUrl}/blog/guides/${cluster.slug}`,
     mainEntity: {
-      '@type': 'ItemList',
+      "@type": "ItemList",
       numberOfItems: posts.length,
       itemListElement: displayPosts.map((post, i) => ({
-        '@type': 'ListItem',
+        "@type": "ListItem",
         position: i + 1,
         url: `${baseUrl}/blog/${post.slug}`,
         name: post.title,
@@ -129,9 +158,12 @@ export default async function ClusterPage({ params }: PageProps) {
           ) : (
             <FadeInOnScroll>
               <div className="text-center py-16 bg-slate-50 rounded-2xl border border-gray-200">
-                <p className="text-slate-500 text-lg mb-2">Articles coming soon</p>
+                <p className="text-slate-500 text-lg mb-2">
+                  Articles coming soon
+                </p>
                 <p className="text-slate-400 text-sm">
-                  We&apos;re working on in-depth guides for this topic. Check back soon!
+                  We&apos;re working on in-depth guides for this topic. Check
+                  back soon!
                 </p>
               </div>
             </FadeInOnScroll>

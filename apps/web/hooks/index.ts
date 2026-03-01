@@ -1,2 +1,2 @@
-export { useUser, useUserProfile } from './useUser';
-export { useInView } from './useInView';
+export { useUser, useUserProfile } from "./useUser";
+export { useInView } from "./useInView";

@@ -7,17 +7,20 @@ const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
   display: "swap",
   weight: ["300", "400", "500", "600", "700", "800"],
+  fallback: ["system-ui", "arial"],
 });
 
-const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://www.faroway.ai';
+const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default: "Faroway - AI-Powered Travel Planning | Create Itineraries in 60 Seconds",
+    default:
+      "Faroway - AI-Powered Travel Planning | Create Itineraries in 60 Seconds",
     template: "%s | Faroway",
   },
-  description: "Plan your dream trip with AI. Get personalized day-by-day itineraries, find hotels, activities, and restaurants. 100% free, no account needed, works offline.",
+  description:
+    "Plan your dream trip with AI. Get personalized day-by-day itineraries, find hotels, activities, and restaurants. 100% free, no account needed, works offline.",
   keywords: [
     "AI travel planner",
     "trip planning app",
@@ -44,7 +47,8 @@ export const metadata: Metadata = {
     url: baseUrl,
     siteName: "Faroway",
     title: "Faroway - AI-Powered Travel Planning",
-    description: "Create personalized travel itineraries in 60 seconds with AI. Hotels, flights, activities—all planned for you.",
+    description:
+      "Create personalized travel itineraries in 60 seconds with AI. Hotels, flights, activities—all planned for you.",
     images: [
       {
         url: "/og-image.png",
@@ -57,7 +61,8 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: "Faroway - AI-Powered Travel Planning",
-    description: "Create personalized travel itineraries in 60 seconds with AI.",
+    description:
+      "Create personalized travel itineraries in 60 seconds with AI.",
     images: ["/og-image.png"],
     creator: "@faroway",
   },
@@ -76,7 +81,7 @@ export const metadata: Metadata = {
   alternates: {
     canonical: baseUrl,
     types: {
-      'application/rss+xml': `${baseUrl}/blog/feed.xml`,
+      "application/rss+xml": `${baseUrl}/blog/feed.xml`,
     },
   },
   verification: {
@@ -119,7 +124,8 @@ const websiteSchema = {
   "@type": "WebSite",
   name: "Faroway",
   url: baseUrl,
-  description: "AI-powered travel planning platform that creates personalized itineraries in seconds",
+  description:
+    "AI-powered travel planning platform that creates personalized itineraries in seconds",
   potentialAction: {
     "@type": "SearchAction",
     target: {
@@ -171,15 +177,14 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body
-        className={`${plusJakarta.variable} font-sans antialiased`}
-      >
-        <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-primary focus:rounded-lg focus:shadow-lg">
+      <body className={`${plusJakarta.variable} font-sans antialiased`}>
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-primary focus:rounded-lg focus:shadow-lg"
+        >
           Skip to main content
         </a>
-        <div id="main-content">
-          {children}
-        </div>
+        <div id="main-content">{children}</div>
       </body>
     </html>
   );

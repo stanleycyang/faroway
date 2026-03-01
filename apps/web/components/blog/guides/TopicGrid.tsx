@@ -1,5 +1,5 @@
-import { FadeInOnScroll } from '@/components/landing/FadeInOnScroll';
-import { ACCENT_COLORS, type ClusterDefinition } from '@/lib/blog/clusters';
+import { FadeInOnScroll } from "@/components/landing/FadeInOnScroll";
+import { ACCENT_COLORS, type ClusterDefinition } from "@/lib/blog/clusters";
 
 interface TopicGridProps {
   cluster: ClusterDefinition;

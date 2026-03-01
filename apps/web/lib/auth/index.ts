@@ -10,6 +10,6 @@ export {
   forbiddenResponse,
   notFoundResponse,
   validationErrorResponse,
-} from './middleware';
+} from "./middleware";
 
-export type { AuthUser, AuthResult } from './middleware';
+export type { AuthUser, AuthResult } from "./middleware";

@@ -25,7 +25,7 @@ export interface DestinationRow {
  * lower(trim(split_part(raw, ',', 1)))
  */
 export function normalizeDestination(raw: string): string {
-  return raw.split(',')[0].trim().toLowerCase();
+  return raw.split(",")[0].trim().toLowerCase();
 }
 
 /**
@@ -33,13 +33,13 @@ export function normalizeDestination(raw: string): string {
  */
 export function matchDestination(
   raw: string,
-  destinations: DestinationRow[]
+  destinations: DestinationRow[],
 ): DestinationRow | undefined {
   const normalized = normalizeDestination(raw);
   return destinations.find(
     (d) =>
       d.name_normalized === normalized ||
-      d.aliases.some((a) => a.toLowerCase() === normalized)
+      d.aliases.some((a) => a.toLowerCase() === normalized),
   );
 }
 
@@ -50,10 +50,10 @@ export function matchDestination(
 export function getCurrentSeason(): { season: string; month: number } {
   const month = new Date().getMonth() + 1; // 1-12
   let season: string;
-  if (month >= 3 && month <= 5) season = 'spring';
-  else if (month >= 6 && month <= 8) season = 'summer';
-  else if (month >= 9 && month <= 11) season = 'fall';
-  else season = 'winter';
+  if (month >= 3 && month <= 5) season = "spring";
+  else if (month >= 6 && month <= 8) season = "summer";
+  else if (month >= 9 && month <= 11) season = "fall";
+  else season = "winter";
   return { season, month };
 }
 
@@ -64,7 +64,7 @@ export function getCurrentSeason(): { season: string; month: number } {
 export function computePopularScore(
   tripCount: number,
   searchCount: number,
-  baseScore: number
+  baseScore: number,
 ): number {
   return tripCount * 3 + searchCount * 1 + baseScore * 0.5;
 }
@@ -76,7 +76,7 @@ export function computePopularScore(
 export function computeTrendingScore(
   recentTrips: number,
   recentSearches: number,
-  seasonBoost: number
+  seasonBoost: number,
 ): number {
   return recentTrips * 5 + recentSearches * 2 + seasonBoost;
 }
@@ -87,7 +87,7 @@ export function computeTrendingScore(
  */
 export function getSeasonBoost(
   seasons: { peak?: number[]; good?: number[]; off?: number[] },
-  month: number
+  month: number,
 ): number {
   if (seasons.peak?.includes(month)) return 20;
   if (seasons.good?.includes(month)) return 10;

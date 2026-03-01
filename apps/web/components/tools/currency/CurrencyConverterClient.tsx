@@ -1,18 +1,22 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { ArrowLeftRight, Lightbulb } from 'lucide-react';
-import { currencies, convertCurrency, getCurrencyByCode } from '@/lib/tools/currency-data';
-import { ToolHero } from '@/components/tools/ToolHero';
-import { ToolCTA } from '@/components/tools/ToolCTA';
-import { RelatedTools } from '@/components/tools/RelatedTools';
+import { useState } from "react";
+import { ArrowLeftRight, Lightbulb } from "lucide-react";
+import {
+  currencies,
+  convertCurrency,
+  getCurrencyByCode,
+} from "@/lib/tools/currency-data";
+import { ToolHero } from "@/components/tools/ToolHero";
+import { ToolCTA } from "@/components/tools/ToolCTA";
+import { RelatedTools } from "@/components/tools/RelatedTools";
 
 const QUICK_AMOUNTS = [50, 100, 500, 1000];
 
 export function CurrencyConverterClient() {
-  const [fromCode, setFromCode] = useState('USD');
-  const [toCode, setToCode] = useState('EUR');
-  const [amount, setAmount] = useState<string>('100');
+  const [fromCode, setFromCode] = useState("USD");
+  const [toCode, setToCode] = useState("EUR");
+  const [amount, setAmount] = useState<string>("100");
 
   const numericAmount = parseFloat(amount) || 0;
   const converted = convertCurrency(numericAmount, fromCode, toCode);
@@ -25,13 +29,16 @@ export function CurrencyConverterClient() {
   };
 
   const formatNumber = (n: number) => {
-    if (n >= 10000) return n.toLocaleString('en-US', { maximumFractionDigits: 0 });
-    if (n >= 100) return n.toLocaleString('en-US', { maximumFractionDigits: 1 });
-    return n.toLocaleString('en-US', { maximumFractionDigits: 2 });
+    if (n >= 10000)
+      return n.toLocaleString("en-US", { maximumFractionDigits: 0 });
+    if (n >= 100)
+      return n.toLocaleString("en-US", { maximumFractionDigits: 1 });
+    return n.toLocaleString("en-US", { maximumFractionDigits: 2 });
   };
 
   // Show tips for whichever currency is not USD (or the "to" currency by default)
-  const tipsCurrency = toCode !== 'USD' ? toCurrency : fromCode !== 'USD' ? fromCurrency : null;
+  const tipsCurrency =
+    toCode !== "USD" ? toCurrency : fromCode !== "USD" ? fromCurrency : null;
 
   return (
     <main className="min-h-screen">
@@ -46,7 +53,9 @@ export function CurrencyConverterClient() {
         {/* Currency Pickers */}
         <div className="flex items-end gap-3 mb-6">
           <div className="flex-1">
-            <label className="block text-sm font-semibold text-slate-900 mb-3">From</label>
+            <label className="block text-sm font-semibold text-slate-900 mb-3">
+              From
+            </label>
             <select
               value={fromCode}
               onChange={(e) => setFromCode(e.target.value)}
@@ -69,7 +78,9 @@ export function CurrencyConverterClient() {
           </button>
 
           <div className="flex-1">
-            <label className="block text-sm font-semibold text-slate-900 mb-3">To</label>
+            <label className="block text-sm font-semibold text-slate-900 mb-3">
+              To
+            </label>
             <select
               value={toCode}
               onChange={(e) => setToCode(e.target.value)}
@@ -86,7 +97,9 @@ export function CurrencyConverterClient() {
 
         {/* Amount Input */}
         <div className="mb-6">
-          <label className="block text-sm font-semibold text-slate-900 mb-3">Amount</label>
+          <label className="block text-sm font-semibold text-slate-900 mb-3">
+            Amount
+          </label>
           <div className="relative">
             <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 text-sm font-medium">
               {fromCurrency?.symbol}
@@ -111,11 +124,12 @@ export function CurrencyConverterClient() {
               onClick={() => setAmount(qa.toString())}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
                 amount === qa.toString()
-                  ? 'bg-primary/10 text-primary border border-primary/30'
-                  : 'bg-slate-50 text-slate-600 border border-slate-200 hover:border-primary/20'
+                  ? "bg-primary/10 text-primary border border-primary/30"
+                  : "bg-slate-50 text-slate-600 border border-slate-200 hover:border-primary/20"
               }`}
             >
-              {fromCurrency?.symbol}{qa.toLocaleString()}
+              {fromCurrency?.symbol}
+              {qa.toLocaleString()}
             </button>
           ))}
         </div>
@@ -133,9 +147,10 @@ export function CurrencyConverterClient() {
           </p>
           <div className="mt-3 pt-3 border-t border-slate-200/60">
             <p className="text-xs text-slate-400">
-              1 {fromCode} = {formatNumber(convertCurrency(1, fromCode, toCode))} {toCode}
-              {' · '}
-              1 {toCode} = {formatNumber(convertCurrency(1, toCode, fromCode))} {fromCode}
+              1 {fromCode} ={" "}
+              {formatNumber(convertCurrency(1, fromCode, toCode))} {toCode}
+              {" · "}1 {toCode} ={" "}
+              {formatNumber(convertCurrency(1, toCode, fromCode))} {fromCode}
             </p>
           </div>
         </div>
@@ -151,7 +166,10 @@ export function CurrencyConverterClient() {
             </div>
             <ul className="space-y-2">
               {tipsCurrency.tips.map((tip, i) => (
-                <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                <li
+                  key={i}
+                  className="flex items-start gap-2 text-sm text-slate-600"
+                >
                   <span className="text-primary mt-0.5">•</span>
                   {tip}
                 </li>
@@ -163,9 +181,10 @@ export function CurrencyConverterClient() {
         {/* Disclaimer */}
         <div className="rounded-xl bg-slate-50 border border-slate-200 p-4">
           <p className="text-xs text-slate-500 leading-relaxed">
-            <strong>Disclaimer:</strong> Exchange rates are approximate and for reference only. Actual
-            rates may vary depending on your bank, card provider, or exchange service. Always check
-            current rates before making financial decisions.
+            <strong>Disclaimer:</strong> Exchange rates are approximate and for
+            reference only. Actual rates may vary depending on your bank, card
+            provider, or exchange service. Always check current rates before
+            making financial decisions.
           </p>
         </div>
       </section>

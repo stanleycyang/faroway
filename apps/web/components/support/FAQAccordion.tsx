@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 interface FAQItem {
   question: string;
@@ -28,13 +28,13 @@ export function FAQAccordion({ items }: FAQAccordionProps) {
             </span>
             <ChevronDown
               className={`w-5 h-5 text-gray-400 flex-shrink-0 transition-transform duration-200 ${
-                openIndex === index ? 'rotate-180' : ''
+                openIndex === index ? "rotate-180" : ""
               }`}
             />
           </button>
           <div
             className={`overflow-hidden transition-all duration-300 ${
-              openIndex === index ? 'max-h-96 pb-5' : 'max-h-0'
+              openIndex === index ? "max-h-96 pb-5" : "max-h-0"
             }`}
           >
             <p className="text-gray-600 leading-relaxed">{item.answer}</p>

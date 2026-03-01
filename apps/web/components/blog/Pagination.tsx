@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from "next/link";
 
 interface PaginationProps {
   currentPage: number;
@@ -6,7 +6,11 @@ interface PaginationProps {
   basePath: string;
 }
 
-export function Pagination({ currentPage, totalPages, basePath }: PaginationProps) {
+export function Pagination({
+  currentPage,
+  totalPages,
+  basePath,
+}: PaginationProps) {
   if (totalPages <= 1) return null;
 
   function href(page: number) {
@@ -14,7 +18,7 @@ export function Pagination({ currentPage, totalPages, basePath }: PaginationProp
   }
 
   // Build page numbers: always show first, last, current, and neighbors
-  const pages: (number | 'ellipsis')[] = [];
+  const pages: (number | "ellipsis")[] = [];
   for (let i = 1; i <= totalPages; i++) {
     if (
       i === 1 ||
@@ -22,28 +26,51 @@ export function Pagination({ currentPage, totalPages, basePath }: PaginationProp
       (i >= currentPage - 1 && i <= currentPage + 1)
     ) {
       pages.push(i);
-    } else if (pages[pages.length - 1] !== 'ellipsis') {
-      pages.push('ellipsis');
+    } else if (pages[pages.length - 1] !== "ellipsis") {
+      pages.push("ellipsis");
     }
   }
 
   return (
-    <nav aria-label="Pagination" className="flex items-center justify-center gap-2 mt-16">
+    <nav
+      aria-label="Pagination"
+      className="flex items-center justify-center gap-2 mt-16"
+    >
       {/* Previous */}
       {currentPage > 1 ? (
         <Link
           href={href(currentPage - 1)}
           className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:text-slate-900 transition-all"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
           Prev
         </Link>
       ) : (
         <span className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-400 bg-gray-100 border border-gray-200 cursor-not-allowed">
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
           Prev
         </span>
@@ -52,8 +79,11 @@ export function Pagination({ currentPage, totalPages, basePath }: PaginationProp
       {/* Page numbers */}
       <div className="flex items-center gap-1">
         {pages.map((p, i) =>
-          p === 'ellipsis' ? (
-            <span key={`ellipsis-${i}`} className="w-10 text-center text-slate-400 text-sm select-none">
+          p === "ellipsis" ? (
+            <span
+              key={`ellipsis-${i}`}
+              className="w-10 text-center text-slate-400 text-sm select-none"
+            >
               ...
             </span>
           ) : p === currentPage ? (
@@ -71,7 +101,7 @@ export function Pagination({ currentPage, totalPages, basePath }: PaginationProp
             >
               {p}
             </Link>
-          )
+          ),
         )}
       </div>
 
@@ -82,15 +112,35 @@ export function Pagination({ currentPage, totalPages, basePath }: PaginationProp
           className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 bg-gray-50 border border-gray-200 hover:bg-gray-100 hover:text-slate-900 transition-all"
         >
           Next
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
           </svg>
         </Link>
       ) : (
         <span className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-medium text-slate-400 bg-gray-100 border border-gray-200 cursor-not-allowed">
           Next
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          <svg
+            className="w-4 h-4"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
           </svg>
         </span>
       )}

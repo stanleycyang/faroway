@@ -1,6 +1,6 @@
-export { TripCard } from './TripCard'
-export type { Trip, TripStatus } from './TripCard'
-export { TripStats } from './TripStats'
-export { EmptyState } from './EmptyState'
-export { TripFilters } from './TripFilters'
-export type { FilterType, SortType } from './TripFilters'
+export { TripCard } from "./TripCard";
+export type { Trip, TripStatus } from "./TripCard";
+export { TripStats } from "./TripStats";
+export { EmptyState } from "./EmptyState";
+export { TripFilters } from "./TripFilters";
+export type { FilterType, SortType } from "./TripFilters";

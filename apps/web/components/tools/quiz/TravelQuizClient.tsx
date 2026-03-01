@@ -1,22 +1,22 @@
-'use client';
+"use client";
 
-import { useState, useCallback } from 'react';
-import { Compass } from 'lucide-react';
-import { quizQuestions, type QuizOption } from '@/lib/tools/quiz-questions';
-import { scoreDestinations, type QuizResult } from '@/lib/tools/quiz-scoring';
-import { QuizQuestion } from './QuizQuestion';
-import { QuizResults } from './QuizResults';
+import { useState, useCallback } from "react";
+import { Compass } from "lucide-react";
+import { quizQuestions, type QuizOption } from "@/lib/tools/quiz-questions";
+import { scoreDestinations, type QuizResult } from "@/lib/tools/quiz-scoring";
+import { QuizQuestion } from "./QuizQuestion";
+import { QuizResults } from "./QuizResults";
 
-type QuizState = 'intro' | 'questions' | 'calculating' | 'results';
+type QuizState = "intro" | "questions" | "calculating" | "results";
 
 export function TravelQuizClient() {
-  const [state, setState] = useState<QuizState>('intro');
+  const [state, setState] = useState<QuizState>("intro");
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<QuizOption[][]>([]);
   const [results, setResults] = useState<QuizResult[]>([]);
 
   const handleStart = () => {
-    setState('questions');
+    setState("questions");
     setCurrentQuestion(0);
     setAnswers([]);
   };
@@ -29,7 +29,7 @@ export function TravelQuizClient() {
         return next;
       });
     },
-    [currentQuestion]
+    [currentQuestion],
   );
 
   const handleNext = useCallback(() => {
@@ -37,17 +37,17 @@ export function TravelQuizClient() {
       setCurrentQuestion((prev) => prev + 1);
     } else {
       // Calculate results
-      setState('calculating');
+      setState("calculating");
       setTimeout(() => {
         const scored = scoreDestinations(answers);
         setResults(scored);
-        setState('results');
+        setState("results");
       }, 1500);
     }
   }, [currentQuestion, answers]);
 
   const handleRestart = () => {
-    setState('intro');
+    setState("intro");
     setCurrentQuestion(0);
     setAnswers([]);
     setResults([]);
@@ -56,7 +56,7 @@ export function TravelQuizClient() {
   return (
     <main className="min-h-screen">
       <div className="max-w-2xl mx-auto px-6 pt-28 lg:pt-32 pb-16">
-        {state === 'intro' && (
+        {state === "intro" && (
           <div className="text-center animate-fade-in">
             <div className="w-20 h-20 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-6">
               <Compass className="w-10 h-10" />
@@ -65,7 +65,8 @@ export function TravelQuizClient() {
               Where Should <span className="text-gradient">You</span> Go?
             </h1>
             <p className="text-lg text-slate-600 mb-8 max-w-lg mx-auto">
-              Answer 6 quick questions about your travel style and we&apos;ll match you with your perfect destination.
+              Answer 6 quick questions about your travel style and we&apos;ll
+              match you with your perfect destination.
             </p>
             <button
               onClick={handleStart}
@@ -79,7 +80,7 @@ export function TravelQuizClient() {
           </div>
         )}
 
-        {state === 'questions' && (
+        {state === "questions" && (
           <QuizQuestion
             question={quizQuestions[currentQuestion]}
             questionIndex={currentQuestion}
@@ -90,19 +91,17 @@ export function TravelQuizClient() {
           />
         )}
 
-        {state === 'calculating' && (
+        {state === "calculating" && (
           <div className="text-center pt-20 animate-fade-in">
             <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin mx-auto mb-6" />
             <h2 className="text-2xl font-bold text-slate-900 mb-2">
               Finding your perfect match...
             </h2>
-            <p className="text-slate-500">
-              Analyzing your travel personality
-            </p>
+            <p className="text-slate-500">Analyzing your travel personality</p>
           </div>
         )}
 
-        {state === 'results' && (
+        {state === "results" && (
           <QuizResults results={results} onRestart={handleRestart} />
         )}
       </div>

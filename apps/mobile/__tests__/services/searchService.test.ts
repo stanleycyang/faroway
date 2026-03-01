@@ -1,0 +1,343 @@
+jest.mock('expo-constants', () => ({
+  __esModule: true,
+  default: { expoConfig: {} },
+}));
+
+jest.mock('../../constants/api', () => ({
+  API_BASE_URL: 'http://localhost:3000',
+  API_TIMEOUT: 5000,
+}));
+
+import {
+  startSearch,
+  getSearchStatus,
+  pollSearchStatus,
+  calculateProgressPercent,
+  getStatusMessage,
+} from '../../services/searchService';
+
+import type { SearchProgress } from '@faroway/types';
+
+const mockFetch = jest.fn();
+(globalThis as any).fetch = mockFetch;
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
+describe('startSearch', () => {
+  it('sends POST with search input', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          searchId: 's-1',
+          workflowRunId: 'w-1',
+          status: 'started',
+          estimatedTime: 30,
+        }),
+    });
+
+    const result = await startSearch({
+      destination: 'Tokyo',
+      startDate: '2026-04-01',
+      endDate: '2026-04-07',
+      travelers: 2,
+      vibes: ['adventure'],
+    });
+
+    expect(result.searchId).toBe('s-1');
+    const [url, options] = mockFetch.mock.calls[0];
+    expect(url).toBe('http://localhost:3000/api/search/start');
+    expect(options.method).toBe('POST');
+  });
+
+  it('includes auth token when provided', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({ searchId: 's-1', status: 'started' }),
+    });
+
+    await startSearch(
+      { destination: 'Tokyo', startDate: '2026-04-01', endDate: '2026-04-07', travelers: 2, vibes: [] },
+      'my-token',
+    );
+
+    const headers = mockFetch.mock.calls[0][1].headers;
+    expect(headers['Authorization']).toBe('Bearer my-token');
+  });
+
+  it('throws on non-ok response', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      json: () => Promise.resolve({ error: 'Invalid input' }),
+    });
+
+    await expect(
+      startSearch({ destination: '', startDate: '', endDate: '', travelers: 0, vibes: [] }),
+    ).rejects.toThrow('Invalid input');
+  });
+
+  it('handles json parse failure gracefully', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      json: () => Promise.reject(new Error('parse error')),
+    });
+
+    await expect(
+      startSearch({ destination: '', startDate: '', endDate: '', travelers: 0, vibes: [] }),
+    ).rejects.toThrow('Unknown error');
+  });
+});
+
+describe('getSearchStatus', () => {
+  it('fetches search status', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          searchId: 's-1',
+          status: 'searching',
+          progress: {
+            orchestrator: 'done',
+            hotels: 'searching',
+            activities: 'pending',
+            dining: 'pending',
+            aggregator: 'pending',
+          },
+        }),
+    });
+
+    const result = await getSearchStatus('s-1');
+    expect(result.status).toBe('searching');
+  });
+
+  it('rejects invalid search ID with special chars', async () => {
+    await expect(getSearchStatus('invalid id!')).rejects.toThrow('Invalid search ID');
+  });
+
+  it('rejects empty search ID', async () => {
+    await expect(getSearchStatus('')).rejects.toThrow('Invalid search ID');
+  });
+
+  it('throws on non-ok response', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      json: () => Promise.resolve({ error: 'Not found' }),
+    });
+
+    await expect(getSearchStatus('valid-id')).rejects.toThrow('Not found');
+  });
+});
+
+describe('pollSearchStatus', () => {
+  it('returns results when status is completed', async () => {
+    const mockResults = { hotels: [], activities: [], dining: [], suggestedDays: [] };
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          searchId: 's-1',
+          status: 'completed',
+          results: mockResults,
+          progress: { orchestrator: 'done', hotels: 'done', activities: 'done', dining: 'done', aggregator: 'done' },
+        }),
+    });
+
+    const result = await pollSearchStatus('s-1', undefined, 10, 5);
+    expect(result).toEqual(mockResults);
+  });
+
+  it('calls onProgress callback', async () => {
+    const onProgress = jest.fn();
+    const mockResults = { hotels: [], activities: [], dining: [], suggestedDays: [] };
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          searchId: 's-1',
+          status: 'completed',
+          results: mockResults,
+          progress: { orchestrator: 'done', hotels: 'done', activities: 'done', dining: 'done', aggregator: 'done' },
+        }),
+    });
+
+    await pollSearchStatus('s-1', onProgress, 10, 5);
+    expect(onProgress).toHaveBeenCalledTimes(1);
+  });
+
+  it('throws on error status', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          searchId: 's-1',
+          status: 'error',
+          error: 'Search failed',
+          progress: { orchestrator: 'done', hotels: 'done', activities: 'done', dining: 'done', aggregator: 'done' },
+        }),
+    });
+
+    await expect(pollSearchStatus('s-1', undefined, 10, 5)).rejects.toThrow('Search failed');
+  });
+
+  it('throws on timeout (max attempts reached)', async () => {
+    // Always return "searching"
+    mockFetch.mockResolvedValue({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          searchId: 's-1',
+          status: 'searching',
+          progress: { orchestrator: 'searching', hotels: 'pending', activities: 'pending', dining: 'pending', aggregator: 'pending' },
+        }),
+    });
+
+    await expect(pollSearchStatus('s-1', undefined, 10, 2)).rejects.toThrow('Search timed out');
+  }, 10000);
+});
+
+describe('calculateProgressPercent', () => {
+  it('returns 0 when all stages are pending', () => {
+    const progress: SearchProgress = {
+      orchestrator: 'pending',
+      hotels: 'pending',
+      activities: 'pending',
+      dining: 'pending',
+      aggregator: 'pending',
+    };
+    expect(calculateProgressPercent(progress)).toBe(0);
+  });
+
+  it('returns 10 per searching stage', () => {
+    const progress: SearchProgress = {
+      orchestrator: 'searching',
+      hotels: 'pending',
+      activities: 'pending',
+      dining: 'pending',
+      aggregator: 'pending',
+    };
+    expect(calculateProgressPercent(progress)).toBe(10);
+  });
+
+  it('returns 20 per done stage', () => {
+    const progress: SearchProgress = {
+      orchestrator: 'done',
+      hotels: 'pending',
+      activities: 'pending',
+      dining: 'pending',
+      aggregator: 'pending',
+    };
+    expect(calculateProgressPercent(progress)).toBe(20);
+  });
+
+  it('returns 100 when all stages are done', () => {
+    const progress: SearchProgress = {
+      orchestrator: 'done',
+      hotels: 'done',
+      activities: 'done',
+      dining: 'done',
+      aggregator: 'done',
+    };
+    expect(calculateProgressPercent(progress)).toBe(100);
+  });
+
+  it('handles mixed searching and done states', () => {
+    const progress: SearchProgress = {
+      orchestrator: 'done',
+      hotels: 'searching',
+      activities: 'done',
+      dining: 'pending',
+      aggregator: 'pending',
+    };
+    // 20 + 10 + 20 + 0 + 0 = 50
+    expect(calculateProgressPercent(progress)).toBe(50);
+  });
+});
+
+describe('getStatusMessage', () => {
+  it('returns aggregator message when aggregator is searching', () => {
+    expect(
+      getStatusMessage({
+        orchestrator: 'done',
+        hotels: 'done',
+        activities: 'done',
+        dining: 'done',
+        aggregator: 'searching',
+      }),
+    ).toBe('Creating your perfect itinerary...');
+  });
+
+  it('returns aggregator message when aggregator is done', () => {
+    expect(
+      getStatusMessage({
+        orchestrator: 'done',
+        hotels: 'done',
+        activities: 'done',
+        dining: 'done',
+        aggregator: 'done',
+      }),
+    ).toBe('Creating your perfect itinerary...');
+  });
+
+  it('returns dining message when dining is searching', () => {
+    expect(
+      getStatusMessage({
+        orchestrator: 'done',
+        hotels: 'done',
+        activities: 'done',
+        dining: 'searching',
+        aggregator: 'pending',
+      }),
+    ).toBe('Finding the best restaurants...');
+  });
+
+  it('returns activities message when activities is searching', () => {
+    expect(
+      getStatusMessage({
+        orchestrator: 'done',
+        hotels: 'done',
+        activities: 'searching',
+        dining: 'pending',
+        aggregator: 'pending',
+      }),
+    ).toBe('Discovering activities & attractions...');
+  });
+
+  it('returns hotels message when hotels is searching', () => {
+    expect(
+      getStatusMessage({
+        orchestrator: 'done',
+        hotels: 'searching',
+        activities: 'pending',
+        dining: 'pending',
+        aggregator: 'pending',
+      }),
+    ).toBe('Searching for hotels...');
+  });
+
+  it('returns orchestrator message when orchestrator is searching', () => {
+    expect(
+      getStatusMessage({
+        orchestrator: 'searching',
+        hotels: 'pending',
+        activities: 'pending',
+        dining: 'pending',
+        aggregator: 'pending',
+      }),
+    ).toBe('Understanding your preferences...');
+  });
+
+  it('returns default message when all pending', () => {
+    expect(
+      getStatusMessage({
+        orchestrator: 'pending',
+        hotels: 'pending',
+        activities: 'pending',
+        dining: 'pending',
+        aggregator: 'pending',
+      }),
+    ).toBe('Starting your search...');
+  });
+});

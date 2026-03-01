@@ -1,52 +1,56 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { createClientFromRequest, getSupabase } from '@/lib/supabase/server'
-import { z } from 'zod'
+import { NextRequest, NextResponse } from "next/server";
+import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
+import { z } from "zod";
 
 const CreateTripSchema = z.object({
   destination: z.string().min(1).max(200).trim(),
-  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
-  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Must be YYYY-MM-DD'),
+  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD"),
+  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD"),
   travelers: z.number().int().min(1).max(50).optional(),
-  budget: z.enum(['budget', 'moderate', 'luxury']).optional(),
-  preferences: z.object({
-    travelerType: z.string().max(50).optional(),
-    vibes: z.array(z.string().max(50)).max(10).optional(),
-    budget: z.string().max(50).optional(),
-    adults: z.number().int().min(1).max(50).optional(),
-    children: z.number().int().min(0).max(50).optional(),
-    interests: z.array(z.string().max(50)).max(20).optional(),
-  }).optional(),
-})
+  budget: z.enum(["budget", "moderate", "luxury"]).optional(),
+  preferences: z
+    .object({
+      travelerType: z.string().max(50).optional(),
+      vibes: z.array(z.string().max(50)).max(10).optional(),
+      budget: z.string().max(50).optional(),
+      adults: z.number().int().min(1).max(50).optional(),
+      children: z.number().int().min(0).max(50).optional(),
+      interests: z.array(z.string().max(50)).max(20).optional(),
+    })
+    .optional(),
+});
 
 // GET /api/trips - Fetch all trips for the authenticated user
 export async function GET(request: NextRequest) {
   try {
-    const supabase = await createClientFromRequest(request)
+    const supabase = await createClientFromRequest(request);
 
     // Get authenticated user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
 
     if (authError || !user) {
-      return NextResponse.json(
-        { error: 'Unauthorized' },
-        { status: 401 }
-      )
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     // Fetch user's trips from database (with caching headers for performance)
     const { data: trips, error } = await supabase
-      .from('trips')
-      .select('id, destination, start_date, end_date, status, travelers, budget, vibes, budget_tier, preferences, search_id, created_at, updated_at')
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false })
-      .limit(100)
+      .from("trips")
+      .select(
+        "id, destination, start_date, end_date, status, travelers, budget, vibes, budget_tier, preferences, search_id, created_at, updated_at",
+      )
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(100);
 
     if (error) {
-      console.error('Database error:', error)
+      console.error("Database error:", error);
       return NextResponse.json(
-        { error: 'Failed to fetch trips' },
-        { status: 500 }
-      )
+        { error: "Failed to fetch trips" },
+        { status: 500 },
+      );
     }
 
     // Return with cache headers for better performance
@@ -54,51 +58,63 @@ export async function GET(request: NextRequest) {
       { trips: trips || [] },
       {
         headers: {
-          'Cache-Control': 'private, max-age=30, stale-while-revalidate=60'
-        }
-      }
-    )
+          "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+        },
+      },
+    );
   } catch (error) {
-    console.error('Error fetching trips:', error)
+    console.error("Error fetching trips:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }
 
 // POST /api/trips - Create a new trip (works for both authenticated and anonymous users)
 export async function POST(request: NextRequest) {
   try {
-    let userId: string | null = null
+    let userId: string | null = null;
     try {
-      const supabase = await createClientFromRequest(request)
-      const { data: { user } } = await supabase.auth.getUser()
-      userId = user?.id ?? null
+      const supabase = await createClientFromRequest(request);
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      userId = user?.id ?? null;
     } catch {
       // Auth failed — continue as anonymous
     }
 
-    const body = await request.json()
-    const parseResult = CreateTripSchema.safeParse(body)
+    const body = await request.json();
+    const parseResult = CreateTripSchema.safeParse(body);
 
     if (!parseResult.success) {
       return NextResponse.json(
-        { error: 'Invalid request body', details: parseResult.error.issues },
-        { status: 400 }
-      )
+        { error: "Invalid request body", details: parseResult.error.issues },
+        { status: 400 },
+      );
     }
 
-    const { destination, start_date, end_date, travelers, budget, preferences } = parseResult.data
+    const {
+      destination,
+      start_date,
+      end_date,
+      travelers,
+      budget,
+      preferences,
+    } = parseResult.data;
 
     // Resolve budget: top-level field takes priority, then preferences.budget
-    const budgetTier = budget || (preferences?.budget as 'budget' | 'moderate' | 'luxury') || 'moderate'
+    const budgetTier =
+      budget ||
+      (preferences?.budget as "budget" | "moderate" | "luxury") ||
+      "moderate";
 
     // Use service client to bypass RLS (needed for anonymous trip creation)
-    const db = getSupabase()
+    const db = getSupabase();
 
     const { data: trip, error } = await db
-      .from('trips')
+      .from("trips")
       .insert({
         user_id: userId,
         destination,
@@ -110,26 +126,32 @@ export async function POST(request: NextRequest) {
         preferences: {
           travelerType: preferences?.travelerType,
         },
-        status: 'draft',
-        ...(userId ? {} : { expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() }),
+        status: "draft",
+        ...(userId
+          ? {}
+          : {
+              expires_at: new Date(
+                Date.now() + 7 * 24 * 60 * 60 * 1000,
+              ).toISOString(),
+            }),
       })
       .select()
-      .single()
+      .single();
 
     if (error) {
-      console.error('Database error:', error)
+      console.error("Database error:", error);
       return NextResponse.json(
-        { error: 'Failed to create trip' },
-        { status: 500 }
-      )
+        { error: "Failed to create trip" },
+        { status: 500 },
+      );
     }
 
-    return NextResponse.json({ trip }, { status: 201 })
+    return NextResponse.json({ trip }, { status: 201 });
   } catch (error) {
-    console.error('Error creating trip:', error)
+    console.error("Error creating trip:", error);
     return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }
