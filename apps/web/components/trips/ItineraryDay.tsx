@@ -259,31 +259,60 @@ export function ItineraryDay({
                   <Plane className="h-4 w-4 text-blue-600" />
                 </div>
                 <span className="text-sm font-medium text-blue-900">
-                  {transport.type === 'flight' ? 'Flight' : transport.type}
+                  {transport.type === "flight" ? "Flight" : transport.type}
                 </span>
-                <span className="text-xs text-gray-500 ml-auto">{transport.provider}</span>
+                <span className="text-xs text-gray-500 ml-auto">
+                  {transport.provider}
+                </span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="text-center">
-                  <p className="text-sm font-semibold">{transport.departure.airport}</p>
-                  <p className="text-xs text-gray-500">{new Date(transport.departure.dateTime).toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})}</p>
+                  <p className="text-sm font-semibold">
+                    {transport.departure.airport}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(transport.departure.dateTime).toLocaleTimeString(
+                      "en-US",
+                      { hour: "2-digit", minute: "2-digit" },
+                    )}
+                  </p>
                 </div>
                 <div className="flex-1 flex flex-col items-center">
-                  <p className="text-xs text-gray-400">{Math.floor(transport.duration / 60)}h {transport.duration % 60}m</p>
+                  <p className="text-xs text-gray-400">
+                    {Math.floor(transport.duration / 60)}h{" "}
+                    {transport.duration % 60}m
+                  </p>
                   <div className="w-full h-px bg-blue-200 my-1 relative">
                     <Plane className="h-3 w-3 text-blue-400 absolute -top-1.5 left-1/2 -translate-x-1/2" />
                   </div>
-                  <p className="text-xs text-gray-400">{transport.stops === 0 ? 'Direct' : `${transport.stops} stop${transport.stops > 1 ? 's' : ''}`}</p>
+                  <p className="text-xs text-gray-400">
+                    {transport.stops === 0
+                      ? "Direct"
+                      : `${transport.stops} stop${transport.stops > 1 ? "s" : ""}`}
+                  </p>
                 </div>
                 <div className="text-center">
-                  <p className="text-sm font-semibold">{transport.arrival.airport}</p>
-                  <p className="text-xs text-gray-500">{new Date(transport.arrival.dateTime).toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})}</p>
+                  <p className="text-sm font-semibold">
+                    {transport.arrival.airport}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(transport.arrival.dateTime).toLocaleTimeString(
+                      "en-US",
+                      { hour: "2-digit", minute: "2-digit" },
+                    )}
+                  </p>
                 </div>
                 <div className="text-right ml-4">
-                  <p className="text-sm font-bold text-blue-700">${transport.price}</p>
+                  <p className="text-sm font-bold text-blue-700">
+                    ${transport.price}
+                  </p>
                   {transport.affiliateUrl && (
-                    <a href={transport.affiliateUrl} target="_blank" rel="noopener noreferrer"
-                       className="text-xs text-blue-600 hover:text-blue-700 underline">
+                    <a
+                      href={transport.affiliateUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-blue-600 hover:text-blue-700 underline"
+                    >
                       Book
                     </a>
                   )}

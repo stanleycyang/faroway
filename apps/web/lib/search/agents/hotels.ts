@@ -132,14 +132,14 @@ export async function runHotelsAgent(
           priceMin: priceRange.min,
           priceMax: priceRange.max,
           limit: count,
-        }).then((bookingHotels) => {
-          console.log(
-            "[Hotels Agent] Booking.com returned",
-            bookingHotels.length,
-            "hotels",
-          );
-          return bookingHotels.map(
-            (hotel): HotelResult => {
+        })
+          .then((bookingHotels) => {
+            console.log(
+              "[Hotels Agent] Booking.com returned",
+              bookingHotels.length,
+              "hotels",
+            );
+            return bookingHotels.map((hotel): HotelResult => {
               const vibeResult = calculateHotelVibeScore(
                 {
                   name: hotel.name,
@@ -176,9 +176,8 @@ export async function runHotelsAgent(
                 vibeScore: vibeResult.score,
                 vibeMatch: vibeResult.matchedVibes,
               };
-            },
-          );
-        })
+            });
+          })
           .catch((err) => {
             console.error("[Hotels Agent] Booking.com error:", err);
             return [] as HotelResult[];
@@ -195,14 +194,14 @@ export async function runHotelsAgent(
           stars: starRating,
           priceMax: priceRange.max,
           limit: count,
-        }).then((amadeusHotels) => {
-          console.log(
-            "[Hotels Agent] Amadeus returned",
-            amadeusHotels.length,
-            "hotels",
-          );
-          return amadeusHotels.map(
-            (hotel): HotelResult => {
+        })
+          .then((amadeusHotels) => {
+            console.log(
+              "[Hotels Agent] Amadeus returned",
+              amadeusHotels.length,
+              "hotels",
+            );
+            return amadeusHotels.map((hotel): HotelResult => {
               const vibeResult = calculateHotelVibeScore(
                 {
                   name: hotel.name,
@@ -242,9 +241,8 @@ export async function runHotelsAgent(
                 vibeScore: vibeResult.score,
                 vibeMatch: vibeResult.matchedVibes,
               };
-            },
-          );
-        })
+            });
+          })
           .catch((err) => {
             console.error("[Hotels Agent] Amadeus error:", err);
             return [] as HotelResult[];
@@ -342,9 +340,7 @@ For vibes like:
 
   const allHotels = [...realHotels, ...aiHotels];
 
-  return allHotels
-    .sort((a, b) => b.vibeScore - a.vibeScore)
-    .slice(0, count);
+  return allHotels.sort((a, b) => b.vibeScore - a.vibeScore).slice(0, count);
 }
 
 /**

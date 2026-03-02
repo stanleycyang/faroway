@@ -270,19 +270,15 @@ export async function searchAmadeusHotels(
 
     const hotelEntries = hotelListResponse.data || [];
     if (hotelEntries.length === 0) {
-      console.warn(
-        "[Amadeus] No hotels found for city:",
-        params.cityCode,
-      );
+      console.warn("[Amadeus] No hotels found for city:", params.cityCode);
       return [];
     }
 
     // Take first N hotel IDs up to the limit
     const hotelIds = hotelEntries
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       .slice(0, limit)
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map((entry: any) => entry.hotelId as string);
+      .map((entry: any) => entry.hotelId);
 
     // Step 2: Fetch offers for those hotels
     const offersResponse = await client.shopping.hotelOffersSearch.get({

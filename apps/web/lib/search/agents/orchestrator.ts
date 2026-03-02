@@ -22,7 +22,9 @@ const SearchPlanSchema = z.object({
     end: z.string(),
     nights: z.number(),
   }),
-  searchPriorities: z.array(z.enum(["hotels", "activities", "dining", "transport"])),
+  searchPriorities: z.array(
+    z.enum(["hotels", "activities", "dining", "transport"]),
+  ),
   hotelCriteria: z.object({
     priceRange: z.object({ min: z.number(), max: z.number() }),
     starRating: z.array(z.number()),
@@ -135,7 +137,8 @@ Create a detailed search plan with:
         originCity: input.originCity,
         originAirport: input.originAirport,
         cabinClass: input.budget === "luxury" ? "business" : "economy",
-        maxStops: input.budget === "luxury" ? 0 : input.budget === "budget" ? 2 : 1,
+        maxStops:
+          input.budget === "luxury" ? 0 : input.budget === "budget" ? 2 : 1,
       };
     }
 
@@ -196,7 +199,8 @@ Create a detailed search plan with:
             input.budget === "luxury"
               ? ("business" as const)
               : ("economy" as const),
-          maxStops: input.budget === "luxury" ? 0 : input.budget === "budget" ? 2 : 1,
+          maxStops:
+            input.budget === "luxury" ? 0 : input.budget === "budget" ? 2 : 1,
         },
       }),
     };

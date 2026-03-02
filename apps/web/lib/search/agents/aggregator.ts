@@ -422,11 +422,7 @@ function createFallbackItinerary(
     date.setDate(date.getDate() + i);
 
     const dayTransport =
-      i === 0
-        ? outboundFlight
-        : i === numDays - 1
-          ? returnFlight
-          : undefined;
+      i === 0 ? outboundFlight : i === numDays - 1 ? returnFlight : undefined;
 
     days.push({
       dayNumber: i + 1,

@@ -83,9 +83,7 @@ export async function searchTripAdvisorLocations(
   latLong?: string,
 ): Promise<TripAdvisorLocation[]> {
   if (!isTripAdvisorConfigured()) {
-    console.warn(
-      "[TripAdvisor] API not configured, returning empty results",
-    );
+    console.warn("[TripAdvisor] API not configured, returning empty results");
     return [];
   }
 
@@ -192,9 +190,7 @@ export async function getTripAdvisorReviews(
   limit?: number,
 ): Promise<TripAdvisorReview[]> {
   if (!isTripAdvisorConfigured()) {
-    console.warn(
-      "[TripAdvisor] API not configured, returning empty results",
-    );
+    console.warn("[TripAdvisor] API not configured, returning empty results");
     return [];
   }
 
@@ -278,9 +274,7 @@ export async function enrichWithTripAdvisor<
   category: "hotels" | "restaurants" | "attractions",
 ): Promise<T[]> {
   if (!isTripAdvisorConfigured()) {
-    console.warn(
-      "[TripAdvisor] API not configured, skipping enrichment",
-    );
+    console.warn("[TripAdvisor] API not configured, skipping enrichment");
     return items;
   }
 
@@ -293,10 +287,7 @@ export async function enrichWithTripAdvisor<
       batch.map(async (item) => {
         try {
           const query = `${item.name} ${item.location.name}`;
-          const results = await searchTripAdvisorLocations(
-            query,
-            category,
-          );
+          const results = await searchTripAdvisorLocations(query, category);
 
           if (results.length > 0) {
             const match = results[0];
@@ -346,8 +337,7 @@ function normalizeTripAdvisorLocation(raw: any): TripAdvisorLocation {
     numReviews: parseInt(raw.num_reviews, 10) || 0,
     rankingString: raw.ranking_data?.ranking_string || undefined,
     webUrl: raw.web_url || "",
-    category:
-      raw.category?.localized_name || raw.category?.name || "",
+    category: raw.category?.localized_name || raw.category?.name || "",
   };
 }
 

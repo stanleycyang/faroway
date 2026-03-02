@@ -152,6 +152,7 @@ function normalizeOffer(raw: any): DuffelOffer {
       firstSegment?.passengers?.[0]?.cabin_class_marketing_name ||
       firstSegment?.passengers?.[0]?.cabin_class ||
       "economy",
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     segments: segments.map((seg: any) => ({
       carrier:
         seg.marketing_carrier?.iata_code ||
@@ -254,25 +255,21 @@ export async function searchDuffelFlights(
 
     if (!response.ok) {
       const error = await response.text();
-      console.error(
-        "[Duffel] offer_requests error:",
-        response.status,
-        error,
-      );
+      console.error("[Duffel] offer_requests error:", response.status, error);
       return [];
     }
 
     const data = await response.json();
     const rawOffers = data.data?.offers || [];
 
-    console.log(
-      `[Duffel] offer_requests returned ${rawOffers.length} offers`,
-    );
+    console.log(`[Duffel] offer_requests returned ${rawOffers.length} offers`);
 
     // Normalize, sort by price ascending, and limit
     const offers = rawOffers
       .map(normalizeOffer)
-      .sort((a: DuffelOffer, b: DuffelOffer) => a.price.amount - b.price.amount);
+      .sort(
+        (a: DuffelOffer, b: DuffelOffer) => a.price.amount - b.price.amount,
+      );
 
     const limit = params.limit || 20;
     return offers.slice(0, limit);
@@ -323,11 +320,7 @@ export async function generateDuffelLink(
 
     if (!response.ok) {
       const error = await response.text();
-      console.error(
-        "[Duffel] duffel_links error:",
-        response.status,
-        error,
-      );
+      console.error("[Duffel] duffel_links error:", response.status, error);
       return null;
     }
 
