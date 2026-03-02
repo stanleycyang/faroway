@@ -20,3 +20,4 @@ export {
   calculateDiningVibeScore,
 } from "./dining";
 export { runAggregatorAgent } from "./aggregator";
+export { runTransportAgent, calculateTransportVibeScore } from "./transport";

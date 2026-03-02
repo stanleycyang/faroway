@@ -10,6 +10,7 @@ import {
   HotelResult,
   ActivityResult,
   DiningResult,
+  TransportResult,
   SuggestedDay,
 } from "../types";
 
@@ -37,6 +38,7 @@ const SuggestedDaySchema = z.object({
     activityIds: z.array(z.string()),
     mealId: z.string().optional(),
   }),
+  transportId: z.string().optional(),
   estimatedCost: z.number(),
   currency: z.string().default("USD"),
   tips: z.array(z.string()),
@@ -47,7 +49,7 @@ const ItinerarySchema = z.object({
   topHotelId: z.string(),
 });
 
-const SYSTEM_PROMPT = `You are a travel itinerary planner. Your job is to take search results (hotels, activities, dining) and organize them into a coherent day-by-day itinerary.
+const SYSTEM_PROMPT = `You are a travel itinerary planner. Your job is to take search results (hotels, activities, dining, and optionally transport) and organize them into a coherent day-by-day itinerary.
 
 Consider:
 1. Geographic proximity - group nearby activities together
@@ -56,6 +58,7 @@ Consider:
 4. Pacing - don't overload each day
 5. Vibe scores - prioritize higher-scoring options
 6. Practical logistics - museum hours, booking requirements
+7. Transport - if flights are available, assign the outbound flight to Day 1 and the return flight to the last day using transportId
 
 Output should reference items by their IDs and organize them into a sensible flow.`;
 
@@ -64,6 +67,7 @@ export async function runAggregatorAgent(
   hotels: HotelResult[],
   activities: ActivityResult[],
   dining: DiningResult[],
+  transport: TransportResult[] = [],
 ): Promise<{ days: SuggestedDay[]; topHotel: HotelResult | null }> {
   const { destination, dates } = plan;
 
@@ -105,6 +109,22 @@ export async function runAggregatorAgent(
     vibeScore: d.vibeScore,
   }));
 
+  const transportSummary = transport.slice(0, 5).map((t) => ({
+    id: t.id,
+    type: t.type,
+    provider: t.provider,
+    from: `${t.departure.city} (${t.departure.airport})`,
+    to: `${t.arrival.city} (${t.arrival.airport})`,
+    departure: t.departure.dateTime,
+    price: t.price,
+    stops: t.stops,
+  }));
+
+  const transportSection =
+    transportSummary.length > 0
+      ? `\n\n**Available Transport (assign outbound to Day 1, return to last day using transportId):**\n${JSON.stringify(transportSummary, null, 2)}`
+      : "";
+
   const prompt = `Create a ${numDays}-day itinerary for ${destination} using these search results.
 
 **Trip Dates:** ${dates.start} to ${dates.end}
@@ -118,7 +138,7 @@ ${JSON.stringify(hotelSummary, null, 2)}
 ${JSON.stringify(activitySummary, null, 2)}
 
 **Available Dining (assign breakfast/lunch/dinner):**
-${JSON.stringify(diningSummary, null, 2)}
+${JSON.stringify(diningSummary, null, 2)}${transportSection}
 
 Create an itinerary that:
 1. Picks the best hotel based on vibeScore and value
@@ -126,7 +146,7 @@ Create an itinerary that:
 3. Assigns appropriate meals to each time slot
 4. Gives each day a fun title and summary
 5. Estimates daily cost
-6. Includes helpful tips
+6. Includes helpful tips${transportSummary.length > 0 ? "\n7. Assigns the cheapest outbound flight to Day 1 and return flight to the last day via transportId" : ""}
 
 Reference items by their IDs. Morning activities should be morning/any time, afternoon activities in afternoon, etc.`;
 
@@ -138,7 +158,7 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
       schema: ItinerarySchema,
     });
 
-    return mapAggregatorResult(result, hotels, activities, dining);
+    return mapAggregatorResult(result, hotels, activities, dining, transport);
   } catch (error) {
     console.error(
       "[Aggregator Agent] generateObject error, attempting recovery...",
@@ -149,7 +169,13 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
     // with topHotelId sometimes embedded inside that string.
     const rawText = (error as { text?: string })?.text;
     if (rawText) {
-      const recovered = recoverFromRawText(rawText, hotels, activities, dining);
+      const recovered = recoverFromRawText(
+        rawText,
+        hotels,
+        activities,
+        dining,
+        transport,
+      );
       if (recovered) {
         console.log("[Aggregator Agent] Recovered from raw text successfully");
         return recovered;
@@ -159,7 +185,7 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
     console.error(
       "[Aggregator Agent] Recovery failed, using fallback itinerary",
     );
-    return createFallbackItinerary(plan, hotels, activities, dining);
+    return createFallbackItinerary(plan, hotels, activities, dining, transport);
   }
 }
 
@@ -175,6 +201,7 @@ function mapAggregatorResult(
   hotels: HotelResult[],
   activities: ActivityResult[],
   dining: DiningResult[],
+  transport: TransportResult[] = [],
 ): { days: SuggestedDay[]; topHotel: HotelResult | null } {
   const topHotel =
     (result.topHotelId
@@ -208,6 +235,10 @@ function mapAggregatorResult(
       ? dining.find((d) => d.id === day.evening.mealId)
       : dining.find((d) => d.mealTypes.includes("dinner"));
 
+    const dayTransport = day.transportId
+      ? transport.find((t) => t.id === day.transportId)
+      : undefined;
+
     return {
       dayNumber: day.dayNumber,
       date: day.date,
@@ -226,6 +257,7 @@ function mapAggregatorResult(
         activities: eveningActivities,
         meal: eveningMeal,
       },
+      transport: dayTransport,
       estimatedCost: day.estimatedCost,
       currency: day.currency,
       tips: day.tips,
@@ -249,6 +281,7 @@ function recoverFromRawText(
   hotels: HotelResult[],
   activities: ActivityResult[],
   dining: DiningResult[],
+  transport: TransportResult[] = [],
 ): { days: SuggestedDay[]; topHotel: HotelResult | null } | null {
   try {
     let parsed: Record<string, unknown>;
@@ -338,6 +371,7 @@ function recoverFromRawText(
       hotels,
       activities,
       dining,
+      transport,
     );
   } catch {
     return null;
@@ -352,6 +386,7 @@ function createFallbackItinerary(
   hotels: HotelResult[],
   activities: ActivityResult[],
   dining: DiningResult[],
+  transport: TransportResult[] = [],
 ): { days: SuggestedDay[]; topHotel: HotelResult | null } {
   const { dates } = plan;
   const startDate = new Date(dates.start);
@@ -378,9 +413,20 @@ function createFallbackItinerary(
   const lunchSpots = dining.filter((d) => d.mealTypes.includes("lunch"));
   const dinnerSpots = dining.filter((d) => d.mealTypes.includes("dinner"));
 
+  // Assign outbound transport to first day, return to last day
+  const outboundFlight = transport[0];
+  const returnFlight = transport.length > 1 ? transport[1] : undefined;
+
   for (let i = 0; i < numDays; i++) {
     const date = new Date(startDate);
     date.setDate(date.getDate() + i);
+
+    const dayTransport =
+      i === 0
+        ? outboundFlight
+        : i === numDays - 1
+          ? returnFlight
+          : undefined;
 
     days.push({
       dayNumber: i + 1,
@@ -400,6 +446,7 @@ function createFallbackItinerary(
         activities: eveningActivities.slice(i, i + 1),
         meal: dinnerSpots[i % dinnerSpots.length],
       },
+      transport: dayTransport,
       estimatedCost: 200,
       currency: "USD",
       tips: [

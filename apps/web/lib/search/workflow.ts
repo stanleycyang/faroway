@@ -14,6 +14,7 @@ import {
   runHotelsAgent,
   runActivitiesAgent,
   runDiningAgent,
+  runTransportAgent,
   runAggregatorAgent,
 } from "./agents";
 
@@ -88,14 +89,23 @@ export async function executeTravelSearch(
       stage: "dining",
       message: "Discovering local restaurants...",
     });
+    if (searchPlan.transportCriteria?.originAirport) {
+      onMicroProgress?.({
+        stage: "transport",
+        message: "Searching flights...",
+      });
+    }
 
     if (onProgress) {
       await onProgress("hotels", "searching");
       await onProgress("activities", "searching");
       await onProgress("dining", "searching");
+      if (searchPlan.transportCriteria?.originAirport) {
+        await onProgress("transport", "searching");
+      }
     }
 
-    const [hotels, activities, dining] = await Promise.all([
+    const [hotels, activities, dining, transport] = await Promise.all([
       runHotelsAgent(searchPlan, 10).then(async (results) => {
         onMicroProgress?.({
           stage: "hotels",
@@ -126,6 +136,21 @@ export async function executeTravelSearch(
         if (onAgentResult) await onAgentResult("dining", results);
         return results;
       }),
+      runTransportAgent(searchPlan, input.travelers || 1, 5).then(
+        async (results) => {
+          onMicroProgress?.({
+            stage: "transport",
+            message:
+              results.length > 0
+                ? `Found ${results.length} flight options`
+                : "No flights needed",
+            detail: results[0]?.provider,
+          });
+          if (onProgress) await onProgress("transport", "done");
+          if (onAgentResult) await onAgentResult("transport", results);
+          return results;
+        },
+      ),
     ]);
 
     // Step 3: Aggregator Agent - Combines results into itinerary
@@ -144,6 +169,7 @@ export async function executeTravelSearch(
       hotels,
       activities,
       dining,
+      transport,
     );
 
     onMicroProgress?.({
@@ -158,6 +184,7 @@ export async function executeTravelSearch(
       hotels,
       activities,
       dining,
+      transport,
       itinerary: days,
     };
 

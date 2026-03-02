@@ -18,6 +18,7 @@ import {
   Shield,
   ChevronUp,
   Ticket,
+  Plane,
 } from "lucide-react";
 
 /**
@@ -117,6 +118,12 @@ const GENERATION_STEPS = [
     label: "Dining",
     emoji: "🍽️",
     description: "Discovering restaurants",
+  },
+  {
+    key: "transport",
+    label: "Flights",
+    emoji: "✈️",
+    description: "Finding the best flights",
   },
   {
     key: "aggregator",
@@ -310,6 +317,7 @@ export default function TripDetailPage() {
     let accommodation = 0;
     let activities = 0;
     let dining = 0;
+    let transport = 0;
 
     const nights = itinerary.days.length > 0 ? itinerary.days.length - 1 : 0;
     if (topHotel?.pricePerNight) {
@@ -317,6 +325,9 @@ export default function TripDetailPage() {
     }
 
     for (const day of itinerary.days) {
+      if (day.transport?.price) {
+        transport += day.transport.price;
+      }
       for (const slot of [day.morning, day.afternoon, day.evening]) {
         if (!slot) continue;
         if (Array.isArray(slot.activities)) {
@@ -337,10 +348,10 @@ export default function TripDetailPage() {
       }
     }
 
-    const total = accommodation + activities + dining;
+    const total = accommodation + activities + dining + transport;
     if (total === 0) return null;
 
-    return { accommodation, activities, dining, total };
+    return { accommodation, activities, dining, transport, total };
   }, [itinerary, topHotel]);
 
   // Compute number of days for skeletons (from trip date range)
@@ -518,6 +529,43 @@ export default function TripDetailPage() {
           </div>
         )}
 
+        {/* Featured Flight */}
+        {itinerary?.days?.[0]?.transport && (
+          <div className="bg-gradient-to-r from-blue-50 to-sky-50 rounded-2xl p-6 border border-blue-100 mb-6">
+            <div className="flex items-center gap-2 mb-4">
+              <Plane className="h-5 w-5 text-blue-600" />
+              <h3 className="text-lg font-semibold text-blue-900">Your Flight</h3>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-blue-600">{itinerary.days[0].transport.departure.airport}</p>
+                <p className="text-xs text-gray-500">{new Date(itinerary.days[0].transport.departure.dateTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>
+              </div>
+              <div className="flex flex-col items-center px-4">
+                <p className="text-xs text-gray-400">{Math.floor(itinerary.days[0].transport.duration / 60)}h {itinerary.days[0].transport.duration % 60}m</p>
+                <div className="w-24 h-px bg-blue-300 my-1" />
+                <p className="text-xs text-gray-400">{itinerary.days[0].transport.stops === 0 ? 'Direct' : `${itinerary.days[0].transport.stops} stop${itinerary.days[0].transport.stops > 1 ? 's' : ''}`}</p>
+              </div>
+              <div>
+                <p className="text-sm text-blue-600">{itinerary.days[0].transport.arrival.airport}</p>
+                <p className="text-xs text-gray-500">{new Date(itinerary.days[0].transport.arrival.dateTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}</p>
+              </div>
+            </div>
+            <div className="flex items-center justify-between mt-4">
+              <div>
+                <p className="text-sm font-medium">{itinerary.days[0].transport.provider}</p>
+                <p className="text-lg font-bold text-blue-700">${itinerary.days[0].transport.price}</p>
+              </div>
+              {itinerary.days[0].transport.affiliateUrl && (
+                <a href={itinerary.days[0].transport.affiliateUrl} target="_blank" rel="noopener noreferrer"
+                   className="inline-flex items-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-xl hover:bg-blue-700 transition-colors text-sm font-medium">
+                  Book Flight <ExternalLink className="h-4 w-4" />
+                </a>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Interactive Map (only when DB itinerary loaded) */}
         {itinerary && !isGenerating && (
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
@@ -573,6 +621,7 @@ export default function TripDetailPage() {
                           }
                         : undefined
                     }
+                    transport={day.transport}
                   />
                 </DayErrorBoundary>
               </div>
@@ -934,6 +983,7 @@ function BudgetSummary({
     accommodation: number;
     activities: number;
     dining: number;
+    transport: number;
     total: number;
   };
   currency: string;
@@ -968,6 +1018,13 @@ function BudgetSummary({
       color: "bg-orange-500",
       bgColor: "bg-orange-50 text-orange-700",
       icon: "🍽️",
+    },
+    {
+      label: "Transport",
+      amount: breakdown.transport,
+      color: "bg-sky-500",
+      bgColor: "bg-sky-50 text-sky-700",
+      icon: "✈️",
     },
   ].filter((c) => c.amount > 0);
 
@@ -1057,7 +1114,7 @@ function AgentProgress({
       </div>
 
       {/* Agent Steps */}
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-6 gap-2">
         {GENERATION_STEPS.map((genStep) => {
           const agentStatus = searchProgress?.[genStep.key];
           const isActive = agentStatus === "searching";

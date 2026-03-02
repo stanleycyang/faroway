@@ -11,11 +11,13 @@ import type {
   ActivityResult,
   DiningResult,
   HotelResult,
+  TransportResult,
   SuggestedDay,
   SearchResults,
   ItineraryActivity,
   Restaurant,
   TripDay,
+  TripDayTransport,
 } from "@faroway/types";
 
 // ── Activity Mapper ─────────────────────────────────────────────────────────
@@ -133,6 +135,31 @@ function mapSlot(
   return { activities, meals };
 }
 
+// ── Transport Mapper ────────────────────────────────────────────────────────
+
+function mapTransport(t: TransportResult): TripDayTransport {
+  return {
+    type: t.type,
+    provider: t.provider,
+    departure: {
+      airport: t.departure.airport,
+      city: t.departure.city,
+      dateTime: t.departure.dateTime,
+    },
+    arrival: {
+      airport: t.arrival.airport,
+      city: t.arrival.city,
+      dateTime: t.arrival.dateTime,
+    },
+    duration: t.duration,
+    stops: t.stops,
+    price: t.price,
+    currency: t.currency,
+    affiliateUrl: t.affiliateUrl || undefined,
+    affiliatePartner: t.affiliatePartner || undefined,
+  };
+}
+
 // ── Day Mapper ──────────────────────────────────────────────────────────────
 
 function mapDay(day: SuggestedDay): TripDay {
@@ -144,6 +171,7 @@ function mapDay(day: SuggestedDay): TripDay {
     morning: mapSlot(day.morning, "morning", "breakfast"),
     afternoon: mapSlot(day.afternoon, "afternoon", "lunch"),
     evening: mapSlot(day.evening, "evening", "dinner"),
+    transport: day.transport ? mapTransport(day.transport) : undefined,
     totalEstimatedCost: {
       amount: day.estimatedCost || 0,
       currency: day.currency || "USD",
@@ -160,6 +188,7 @@ export interface MappedItinerary {
   hotels: HotelResult[];
   activities: ActivityResult[];
   dining: DiningResult[];
+  transport: TransportResult[];
   totalEstimatedCost: number;
   currency: string;
 }
@@ -173,13 +202,17 @@ export function mapSearchResultsToItinerary(
 ): MappedItinerary {
   const days = (results.itinerary || []).map(mapDay);
 
-  // Sum daily costs + hotel cost
+  // Sum daily costs + hotel cost + transport cost
   const activityCost = days.reduce(
     (sum: number, d: TripDay) => sum + (d.totalEstimatedCost?.amount || 0),
     0,
   );
   const nights = days.length > 0 ? days.length - 1 : 0;
   const hotelCost = topHotel ? topHotel.pricePerNight * nights : 0;
+  const transportCost = days.reduce(
+    (sum: number, d: TripDay) => sum + (d.transport?.price || 0),
+    0,
+  );
 
   return {
     days,
@@ -187,7 +220,8 @@ export function mapSearchResultsToItinerary(
     hotels: results.hotels || [],
     activities: results.activities || [],
     dining: results.dining || [],
-    totalEstimatedCost: activityCost + hotelCost,
+    transport: results.transport || [],
+    totalEstimatedCost: activityCost + hotelCost + transportCost,
     currency: "USD",
   };
 }

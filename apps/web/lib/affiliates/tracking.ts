@@ -15,7 +15,9 @@ export type AffiliatePartner =
   | "getyourguide"
   | "tripadvisor"
   | "discovercars"
-  | "hostelworld";
+  | "hostelworld"
+  | "amadeus"
+  | "duffel";
 
 export interface AffiliateClick {
   id: string;

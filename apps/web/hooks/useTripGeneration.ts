@@ -9,6 +9,7 @@ export interface SearchProgress {
   hotels?: string;
   activities?: string;
   dining?: string;
+  transport?: string;
   aggregator?: string;
 }
 
@@ -27,6 +28,7 @@ export interface TripGenerationState {
   topHotel: HotelResult | null;
   activitiesCount: number;
   diningCount: number;
+  transportCount: number;
   days: TripDay[] | null;
 
   isStreaming: boolean;
@@ -49,6 +51,7 @@ const initialState: TripGenerationState = {
   topHotel: null,
   activitiesCount: 0,
   diningCount: 0,
+  transportCount: 0,
   days: null,
   isStreaming: false,
   isComplete: false,
@@ -115,6 +118,13 @@ export function useTripGeneration(
           setState((prev) => ({
             ...prev,
             diningCount: data.count ?? prev.diningCount,
+          }));
+          break;
+
+        case "transport":
+          setState((prev) => ({
+            ...prev,
+            transportCount: data.count ?? prev.transportCount,
           }));
           break;
 

@@ -22,6 +22,12 @@ const ALLOWED_AFFILIATE_DOMAINS = [
   "www.discovercars.com",
   "hostelworld.com",
   "www.hostelworld.com",
+  "amadeus.com",
+  "www.amadeus.com",
+  "duffel.com",
+  "www.duffel.com",
+  "book.duffel.com",
+  "links.duffel.com",
 ];
 
 function isAllowedAffiliateUrl(url: string): boolean {

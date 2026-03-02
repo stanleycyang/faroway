@@ -11,6 +11,7 @@ import {
   DollarSign,
   Hotel,
   ExternalLink,
+  Plane,
 } from "lucide-react";
 import {
   ActivityCard,
@@ -18,6 +19,7 @@ import {
   type Activity,
   type Restaurant,
 } from "./ActivityCard";
+import type { TripDayTransport } from "@faroway/types";
 
 interface TimeBlock {
   activities: Activity[];
@@ -48,6 +50,7 @@ interface ItineraryDayProps {
   tips?: string[];
   defaultExpanded?: boolean;
   hotel?: HotelInfo;
+  transport?: TripDayTransport;
 }
 
 export function ItineraryDay({
@@ -62,6 +65,7 @@ export function ItineraryDay({
   tips,
   defaultExpanded = true,
   hotel,
+  transport,
 }: ItineraryDayProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
@@ -243,6 +247,47 @@ export function ItineraryDay({
                     <ExternalLink className="w-3 h-3" />
                   </a>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Transport Card */}
+          {transport && (
+            <div className="mb-6 bg-gradient-to-r from-blue-50 to-sky-50 rounded-xl p-4 border border-blue-100">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <Plane className="h-4 w-4 text-blue-600" />
+                </div>
+                <span className="text-sm font-medium text-blue-900">
+                  {transport.type === 'flight' ? 'Flight' : transport.type}
+                </span>
+                <span className="text-xs text-gray-500 ml-auto">{transport.provider}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="text-center">
+                  <p className="text-sm font-semibold">{transport.departure.airport}</p>
+                  <p className="text-xs text-gray-500">{new Date(transport.departure.dateTime).toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})}</p>
+                </div>
+                <div className="flex-1 flex flex-col items-center">
+                  <p className="text-xs text-gray-400">{Math.floor(transport.duration / 60)}h {transport.duration % 60}m</p>
+                  <div className="w-full h-px bg-blue-200 my-1 relative">
+                    <Plane className="h-3 w-3 text-blue-400 absolute -top-1.5 left-1/2 -translate-x-1/2" />
+                  </div>
+                  <p className="text-xs text-gray-400">{transport.stops === 0 ? 'Direct' : `${transport.stops} stop${transport.stops > 1 ? 's' : ''}`}</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-semibold">{transport.arrival.airport}</p>
+                  <p className="text-xs text-gray-500">{new Date(transport.arrival.dateTime).toLocaleTimeString('en-US', {hour: '2-digit', minute: '2-digit'})}</p>
+                </div>
+                <div className="text-right ml-4">
+                  <p className="text-sm font-bold text-blue-700">${transport.price}</p>
+                  {transport.affiliateUrl && (
+                    <a href={transport.affiliateUrl} target="_blank" rel="noopener noreferrer"
+                       className="text-xs text-blue-600 hover:text-blue-700 underline">
+                      Book
+                    </a>
+                  )}
+                </div>
               </div>
             </div>
           )}

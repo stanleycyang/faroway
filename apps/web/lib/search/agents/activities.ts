@@ -14,6 +14,10 @@ import {
   mapViatorCategoryToVibe,
   isViatorConfigured,
 } from "@/lib/affiliates/viator";
+import {
+  enrichWithTripAdvisor,
+  isTripAdvisorConfigured,
+} from "@/lib/affiliates/tripadvisor";
 
 const aiGateway = process.env.AI_GATEWAY_API_KEY
   ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
@@ -193,9 +197,20 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
       id: `activity_${Date.now()}_${index}`,
     }));
 
-    return [...realActivities, ...aiActivities]
+    const allActivities = [...realActivities, ...aiActivities]
       .sort((a, b) => b.vibeScore - a.vibeScore)
       .slice(0, count);
+
+    // Enrich with TripAdvisor ratings and reviews
+    if (isTripAdvisorConfigured()) {
+      try {
+        await enrichWithTripAdvisor(allActivities, "attractions");
+      } catch (e) {
+        console.error("[Activities Agent] TripAdvisor enrichment error:", e);
+      }
+    }
+
+    return allActivities;
   } catch (error) {
     console.error("[Activities Agent] AI generation error:", error);
     return realActivities.sort((a, b) => b.vibeScore - a.vibeScore);

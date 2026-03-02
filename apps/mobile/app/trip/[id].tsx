@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -172,6 +172,120 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
   );
 }
 
+function FeaturedHotelCard({ hotel }: { hotel: NonNullable<import('../../stores/tripStore').Trip['hotel']> }) {
+  return (
+    <View style={styles.hotelCard}>
+      {hotel.images && hotel.images.length > 0 && (
+        <Image source={{ uri: hotel.images[0] }} style={styles.hotelCardImage} />
+      )}
+      <View style={styles.hotelCardContent}>
+        <View style={styles.hotelCardHeader}>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.hotelCardName}>{hotel.name}</Text>
+            <View style={styles.hotelCardRating}>
+              <Ionicons name="star" size={14} color="#fbbf24" />
+              <Text style={styles.hotelCardRatingText}>{hotel.rating}</Text>
+              <Text style={styles.hotelCardReviewCount}>
+                ({hotel.reviewCount.toLocaleString()} reviews)
+              </Text>
+            </View>
+          </View>
+          <View style={styles.hotelCardPriceContainer}>
+            <Text style={styles.hotelCardPrice}>${hotel.pricePerNight}</Text>
+            <Text style={styles.hotelCardPriceLabel}>per night</Text>
+          </View>
+        </View>
+        {hotel.amenities && hotel.amenities.length > 0 && (
+          <View style={styles.hotelCardAmenities}>
+            {hotel.amenities.slice(0, 3).map((amenity, index) => (
+              <View key={index} style={styles.hotelCardAmenityChip}>
+                <Text style={styles.hotelCardAmenityText}>{amenity}</Text>
+              </View>
+            ))}
+          </View>
+        )}
+        <TouchableOpacity
+          style={styles.hotelCardButton}
+          onPress={() => openURL(hotel.bookingUrl)}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.hotelCardButtonText}>Check Availability</Text>
+          <Ionicons name="arrow-forward" size={16} color={colors.primary[500]} />
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+function TransportCard({ transport }: { transport: NonNullable<import('../../stores/tripStore').TripDay['transport']> }) {
+  const formatDuration = (minutes: number) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  };
+
+  const formatTime = (dateTime: string) => {
+    const date = new Date(dateTime);
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+  };
+
+  const stopsLabel = transport.stops === 0 ? 'Direct' : `${transport.stops} stop${transport.stops > 1 ? 's' : ''}`;
+
+  return (
+    <View style={styles.transportCard}>
+      <LinearGradient
+        colors={['#1e40af', '#3b82f6']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.transportCardGradient}
+      >
+        <View style={styles.transportCardHeader}>
+          <View style={styles.transportCardProviderRow}>
+            <Ionicons name="airplane" size={18} color="#fff" />
+            <Text style={styles.transportCardProvider}>{transport.provider}</Text>
+          </View>
+          <Text style={styles.transportCardPrice}>
+            ${transport.price}
+          </Text>
+        </View>
+        <View style={styles.transportCardRoute}>
+          <View style={styles.transportCardEndpoint}>
+            <Text style={styles.transportCardAirport}>{transport.departure.airport}</Text>
+            <Text style={styles.transportCardTime}>{formatTime(transport.departure.dateTime)}</Text>
+            <Text style={styles.transportCardCity}>{transport.departure.city}</Text>
+          </View>
+          <View style={styles.transportCardMiddle}>
+            <Text style={styles.transportCardDuration}>{formatDuration(transport.duration)}</Text>
+            <View style={styles.transportCardLine}>
+              <View style={styles.transportCardLineDot} />
+              <View style={styles.transportCardLinePath} />
+              <Ionicons name="airplane" size={12} color="rgba(255,255,255,0.7)" />
+              <View style={styles.transportCardLinePath} />
+              <View style={styles.transportCardLineDot} />
+            </View>
+            <Text style={styles.transportCardStops}>{stopsLabel}</Text>
+          </View>
+          <View style={styles.transportCardEndpoint}>
+            <Text style={styles.transportCardAirport}>{transport.arrival.airport}</Text>
+            <Text style={styles.transportCardTime}>{formatTime(transport.arrival.dateTime)}</Text>
+            <Text style={styles.transportCardCity}>{transport.arrival.city}</Text>
+          </View>
+        </View>
+        {transport.bookingUrl && (
+          <TouchableOpacity
+            style={styles.transportCardButton}
+            onPress={() => openURL(transport.bookingUrl!)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.transportCardButtonText}>Book Flight</Text>
+            <Ionicons name="arrow-forward" size={16} color="#1e40af" />
+          </TouchableOpacity>
+        )}
+      </LinearGradient>
+    </View>
+  );
+}
+
 export default function TripDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -186,6 +300,21 @@ export default function TripDetailScreen() {
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const trip = trips.find((t) => t.id === id) || currentTrip;
+
+  const estimatedTotal = useMemo(() => {
+    let total = 0;
+    if (trip?.hotel) total += trip.hotel.totalPrice;
+    for (const day of (trip?.days || [])) {
+      if (day.transport) total += day.transport.price;
+      for (const act of day.activities) {
+        if (act.price) {
+          const numPrice = parseFloat(String(act.price).replace(/[^0-9.]/g, ''));
+          if (!isNaN(numPrice)) total += numPrice;
+        }
+      }
+    }
+    return total;
+  }, [trip]);
 
   useEffect(() => {
     if (!trip && id) {
@@ -360,6 +489,11 @@ export default function TripDetailScreen() {
             </View>
           )}
 
+          {/* Featured Hotel */}
+          {trip.hotel && (
+            <FeaturedHotelCard hotel={trip.hotel} />
+          )}
+
           {/* Day Selector */}
           <View style={styles.daySelector}>
             <ScrollView
@@ -410,6 +544,13 @@ export default function TripDetailScreen() {
             </Text>
           </View>
 
+          {/* Transport */}
+          {trip.days[selectedDay]?.transport && (
+            <View style={styles.transportCardWrapper}>
+              <TransportCard transport={trip.days[selectedDay].transport!} />
+            </View>
+          )}
+
           {/* Activities */}
           <View style={styles.activitiesContainer}>
             {trip.days[selectedDay]?.activities.map((activity) => (
@@ -423,7 +564,7 @@ export default function TripDetailScreen() {
       <View style={styles.bottomBar}>
         <View style={styles.bottomBarInfo}>
           <Text style={styles.bottomBarLabel}>Estimated cost</Text>
-          <Text style={styles.bottomBarPrice}>~$2,450</Text>
+          <Text style={styles.bottomBarPrice}>~${estimatedTotal.toLocaleString()}</Text>
         </View>
         <Button
           title="Book All"
@@ -738,5 +879,198 @@ const styles = StyleSheet.create({
   },
   bookAllButton: {
     minWidth: 140,
+  },
+  // Featured Hotel Card
+  hotelCard: {
+    marginHorizontal: 24,
+    marginBottom: 24,
+    borderRadius: borderRadius.lg,
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    overflow: 'hidden',
+    ...shadows.md,
+  },
+  hotelCardImage: {
+    width: '100%',
+    height: 160,
+  },
+  hotelCardContent: {
+    padding: 16,
+  },
+  hotelCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+  },
+  hotelCardName: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 4,
+  },
+  hotelCardRating: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  hotelCardRatingText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#0f172a',
+    marginLeft: 4,
+  },
+  hotelCardReviewCount: {
+    fontSize: 13,
+    color: '#64748b',
+    marginLeft: 4,
+  },
+  hotelCardPriceContainer: {
+    alignItems: 'flex-end',
+  },
+  hotelCardPrice: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  hotelCardPriceLabel: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  hotelCardAmenities: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 12,
+  },
+  hotelCardAmenityChip: {
+    backgroundColor: '#f1f5f9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: borderRadius.sm,
+  },
+  hotelCardAmenityText: {
+    fontSize: 12,
+    color: '#475569',
+    fontWeight: '500',
+  },
+  hotelCardButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#FFF5F4',
+    paddingVertical: 12,
+    borderRadius: borderRadius.md,
+  },
+  hotelCardButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: colors.primary[500],
+  },
+  // Transport Card
+  transportCardWrapper: {
+    paddingHorizontal: 24,
+    marginBottom: 16,
+  },
+  transportCard: {
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
+    ...shadows.md,
+  },
+  transportCardGradient: {
+    padding: 16,
+  },
+  transportCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  transportCardProviderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  transportCardProvider: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
+  },
+  transportCardPrice: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#fff',
+  },
+  transportCardRoute: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  transportCardEndpoint: {
+    alignItems: 'center',
+    width: 70,
+  },
+  transportCardAirport: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#fff',
+    marginBottom: 2,
+  },
+  transportCardTime: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 2,
+  },
+  transportCardCity: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.6)',
+  },
+  transportCardMiddle: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 8,
+  },
+  transportCardDuration: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: 'rgba(255,255,255,0.8)',
+    marginBottom: 4,
+  },
+  transportCardLine: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 4,
+  },
+  transportCardLineDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(255,255,255,0.6)',
+  },
+  transportCardLinePath: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.3)',
+  },
+  transportCardStops: {
+    fontSize: 11,
+    color: 'rgba(255,255,255,0.7)',
+  },
+  transportCardButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#fff',
+    paddingVertical: 12,
+    borderRadius: borderRadius.md,
+  },
+  transportCardButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1e40af',
   },
 });
