@@ -178,21 +178,25 @@ async function searchDuffelProvider(
       passengers: [{ type: "adult", count: travelers }],
     });
 
-    // Generate Duffel Links in parallel for all offers
-    const results: TransportResult[] = [];
-
-    for (const offer of offers) {
-      let affiliateUrl = "";
+    // Generate Duffel Links in parallel for all offers (not sequentially)
+    const linkPromises = offers.map(async (offer) => {
       try {
-        const link = await generateDuffelLink(offer.offerId, 500);
-        affiliateUrl = link || "";
+        return (await generateDuffelLink(offer.offerId, 5)) || "";
       } catch (error) {
         console.error(
           `[Transport Agent] Duffel link generation failed for offer ${offer.offerId}:`,
           error,
         );
-        affiliateUrl = "";
+        return "";
       }
+    });
+    const affiliateUrls = await Promise.all(linkPromises);
+
+    const results: TransportResult[] = [];
+
+    for (let i = 0; i < offers.length; i++) {
+      const offer = offers[i];
+      const affiliateUrl = affiliateUrls[i];
 
       results.push({
         id: `transport_duffel_${offer.offerId}`,

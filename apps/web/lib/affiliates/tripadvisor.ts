@@ -280,22 +280,30 @@ export async function enrichWithTripAdvisor<
 
   const BATCH_SIZE = 3;
 
-  for (let i = 0; i < items.length; i += BATCH_SIZE) {
-    const batch = items.slice(i, i + BATCH_SIZE);
+  // Create a new array to avoid mutating the input
+  const enrichedItems = [...items];
+
+  for (let i = 0; i < enrichedItems.length; i += BATCH_SIZE) {
+    const batchIndices = Array.from(
+      { length: Math.min(BATCH_SIZE, enrichedItems.length - i) },
+      (_, j) => i + j,
+    );
 
     await Promise.all(
-      batch.map(async (item) => {
+      batchIndices.map(async (idx) => {
+        const item = enrichedItems[idx];
         try {
           const query = `${item.name} ${item.location.name}`;
           const results = await searchTripAdvisorLocations(query, category);
 
           if (results.length > 0) {
             const match = results[0];
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const enriched = item as any;
-            enriched.tripadvisorRating = match.rating;
-            enriched.tripadvisorReviewCount = match.numReviews;
-            enriched.tripadvisorUrl = match.webUrl;
+            enrichedItems[idx] = {
+              ...item,
+              tripadvisorRating: match.rating,
+              tripadvisorReviewCount: match.numReviews,
+              tripadvisorUrl: match.webUrl,
+            };
           }
         } catch (error) {
           console.error(
@@ -308,7 +316,7 @@ export async function enrichWithTripAdvisor<
     );
   }
 
-  return items;
+  return enrichedItems;
 }
 
 // ── Normalizers ─────────────────────────────────────────────────────────────

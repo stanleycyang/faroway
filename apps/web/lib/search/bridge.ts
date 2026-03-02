@@ -72,6 +72,9 @@ function mapActivity(
     rating: a.rating,
     reviewCount: a.reviewCount,
     images: a.images,
+    tripadvisorRating: a.tripadvisorRating,
+    tripadvisorReviewCount: a.tripadvisorReviewCount,
+    tripadvisorUrl: a.tripadvisorUrl,
   };
 }
 
@@ -118,6 +121,9 @@ function mapDining(
       : { recommended: false },
     rating: d.rating,
     reviewCount: d.reviewCount,
+    tripadvisorRating: d.tripadvisorRating,
+    tripadvisorReviewCount: d.tripadvisorReviewCount,
+    tripadvisorUrl: d.tripadvisorUrl,
   };
 }
 

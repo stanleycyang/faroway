@@ -70,7 +70,8 @@ export function ItineraryDay({
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
+    // Append T12:00:00 to avoid UTC midnight → previous day in negative-offset timezones
+    const d = new Date(dateStr.includes("T") ? dateStr : `${dateStr}T12:00:00`);
     return d.toLocaleDateString("en-US", {
       weekday: "long",
       month: "short",
@@ -253,70 +254,115 @@ export function ItineraryDay({
 
           {/* Transport Card */}
           {transport && (
-            <div className="mb-6 bg-gradient-to-r from-blue-50 to-sky-50 rounded-xl p-4 border border-blue-100">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <Plane className="h-4 w-4 text-blue-600" />
-                </div>
-                <span className="text-sm font-medium text-blue-900">
-                  {transport.type === "flight" ? "Flight" : transport.type}
-                </span>
-                <span className="text-xs text-gray-500 ml-auto">
-                  {transport.provider}
-                </span>
+            <div className="mb-6 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 text-white shadow-lg shadow-blue-500/20 overflow-hidden relative">
+              {/* Background pattern */}
+              <div className="absolute inset-0 opacity-[0.06]">
+                <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full border-[20px] border-white" />
+                <div className="absolute -left-4 -bottom-4 w-24 h-24 rounded-full border-[12px] border-white" />
               </div>
-              <div className="flex items-center gap-3">
-                <div className="text-center">
-                  <p className="text-sm font-semibold">
-                    {transport.departure.airport}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {new Date(transport.departure.dateTime).toLocaleTimeString(
-                      "en-US",
-                      { hour: "2-digit", minute: "2-digit" },
-                    )}
-                  </p>
-                </div>
-                <div className="flex-1 flex flex-col items-center">
-                  <p className="text-xs text-gray-400">
-                    {Math.floor(transport.duration / 60)}h{" "}
-                    {transport.duration % 60}m
-                  </p>
-                  <div className="w-full h-px bg-blue-200 my-1 relative">
-                    <Plane className="h-3 w-3 text-blue-400 absolute -top-1.5 left-1/2 -translate-x-1/2" />
+
+              <div className="relative">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                      <Plane className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold">{transport.provider}</p>
+                      <p className="text-[11px] text-blue-200">
+                        {transport.type === "flight"
+                          ? "Flight"
+                          : transport.type}
+                      </p>
+                    </div>
                   </div>
-                  <p className="text-xs text-gray-400">
-                    {transport.stops === 0
-                      ? "Direct"
-                      : `${transport.stops} stop${transport.stops > 1 ? "s" : ""}`}
-                  </p>
+                  <div className="text-right">
+                    <p className="text-xl font-black">
+                      {formatCost(transport.price, transport.currency)}
+                    </p>
+                    <p className="text-[11px] text-blue-200">per person</p>
+                  </div>
                 </div>
-                <div className="text-center">
-                  <p className="text-sm font-semibold">
-                    {transport.arrival.airport}
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {new Date(transport.arrival.dateTime).toLocaleTimeString(
-                      "en-US",
-                      { hour: "2-digit", minute: "2-digit" },
-                    )}
-                  </p>
+
+                {/* Route */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="text-center min-w-[60px]">
+                    <p className="text-lg font-bold tracking-wide">
+                      {transport.departure.airport}
+                    </p>
+                    <p className="text-xs text-blue-200">
+                      {new Date(
+                        transport.departure.dateTime,
+                      ).toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
+                  <div className="flex-1 flex flex-col items-center">
+                    <p className="text-[11px] text-blue-200 font-medium">
+                      {Math.floor(transport.duration / 60)}h{" "}
+                      {transport.duration % 60}m
+                    </p>
+                    <div className="w-full flex items-center gap-1 my-1">
+                      <div className="w-2 h-2 rounded-full bg-white/60" />
+                      <div className="flex-1 h-px bg-white/30 relative">
+                        <Plane className="h-3.5 w-3.5 text-white absolute -top-[7px] left-1/2 -translate-x-1/2 rotate-90" />
+                      </div>
+                      <div className="w-2 h-2 rounded-full bg-white/60" />
+                    </div>
+                    <p className="text-[11px] text-blue-200">
+                      {transport.stops === 0
+                        ? "Direct"
+                        : `${transport.stops} stop${transport.stops > 1 ? "s" : ""}`}
+                    </p>
+                  </div>
+                  <div className="text-center min-w-[60px]">
+                    <p className="text-lg font-bold tracking-wide">
+                      {transport.arrival.airport}
+                    </p>
+                    <p className="text-xs text-blue-200">
+                      {new Date(transport.arrival.dateTime).toLocaleTimeString(
+                        "en-US",
+                        {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        },
+                      )}
+                    </p>
+                  </div>
                 </div>
-                <div className="text-right ml-4">
-                  <p className="text-sm font-bold text-blue-700">
-                    ${transport.price}
-                  </p>
-                  {transport.affiliateUrl && (
-                    <a
-                      href={transport.affiliateUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-xs text-blue-600 hover:text-blue-700 underline"
-                    >
-                      Book
-                    </a>
-                  )}
-                </div>
+
+                {/* CTA */}
+                {transport.affiliateUrl && (
+                  <button
+                    onClick={() => {
+                      fetch("/api/track/click", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          itemType: "transport",
+                          itemId: `transport_${transport.departure.airport}_${transport.arrival.airport}`,
+                          itemName: `${transport.provider} ${transport.departure.airport}-${transport.arrival.airport}`,
+                          affiliatePartner:
+                            transport.affiliatePartner || "duffel",
+                          affiliateUrl: transport.affiliateUrl,
+                          source: "itinerary",
+                        }),
+                      }).catch(() => {});
+                      window.open(
+                        transport.affiliateUrl,
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
+                    }}
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 transition-all shadow-md active:scale-[0.98]"
+                  >
+                    Book This Flight
+                    <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                  </button>
+                )}
               </div>
             </div>
           )}

@@ -360,17 +360,18 @@ function normalizeHotelOffer(
 export function generateAmadeusAffiliateUrl(
   type: "flight" | "hotel",
   params: Record<string, string>,
-  trackingId: string,
+  _trackingId: string,
 ): string {
   if (type === "flight") {
+    // Link to Google Flights since Amadeus is B2B — no consumer booking page
     const origin = params.origin || "";
     const destination = params.destination || "";
     const date = params.date || "";
-    return `https://www.amadeus.com/flights?origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&date=${encodeURIComponent(date)}&ref=${encodeURIComponent(trackingId)}`;
+    return `https://www.google.com/travel/flights?q=flights+from+${encodeURIComponent(origin)}+to+${encodeURIComponent(destination)}+on+${encodeURIComponent(date)}`;
   }
 
-  // Hotel
+  // Hotel — link to Google Hotels search
   const hotelId = params.hotelId || "";
   const checkIn = params.checkIn || "";
-  return `https://www.amadeus.com/hotels?hotelId=${encodeURIComponent(hotelId)}&checkIn=${encodeURIComponent(checkIn)}&ref=${encodeURIComponent(trackingId)}`;
+  return `https://www.google.com/travel/hotels?q=${encodeURIComponent(hotelId)}&dates=${encodeURIComponent(checkIn)}`;
 }

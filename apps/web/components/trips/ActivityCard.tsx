@@ -51,6 +51,9 @@ export interface Activity {
   rating?: number;
   reviewCount?: number;
   images?: string[];
+  tripadvisorRating?: number;
+  tripadvisorReviewCount?: number;
+  tripadvisorUrl?: string;
 }
 
 export interface Restaurant {
@@ -84,6 +87,9 @@ export interface Restaurant {
   };
   rating?: number;
   reviewCount?: number;
+  tripadvisorRating?: number;
+  tripadvisorReviewCount?: number;
+  tripadvisorUrl?: string;
 }
 
 const categoryConfig: Record<
@@ -386,6 +392,39 @@ export function ActivityCard({ activity }: ActivityCardProps) {
           </div>
         )}
 
+        {/* TripAdvisor badge */}
+        {activity.tripadvisorRating != null &&
+          activity.tripadvisorRating > 0 && (
+            <div className="flex items-center gap-2 mt-3">
+              {activity.tripadvisorUrl ? (
+                <a
+                  href={activity.tripadvisorUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#34e0a1]/10 rounded-lg text-xs font-semibold text-[#00af87] hover:bg-[#34e0a1]/20 transition-colors"
+                >
+                  <span className="text-sm">&#9679;</span>
+                  {activity.tripadvisorRating.toFixed(1)} on TripAdvisor
+                  {activity.tripadvisorReviewCount != null && (
+                    <span className="text-[#00af87]/70 font-normal">
+                      ({activity.tripadvisorReviewCount.toLocaleString()})
+                    </span>
+                  )}
+                </a>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#34e0a1]/10 rounded-lg text-xs font-semibold text-[#00af87]">
+                  <span className="text-sm">&#9679;</span>
+                  {activity.tripadvisorRating.toFixed(1)} on TripAdvisor
+                  {activity.tripadvisorReviewCount != null && (
+                    <span className="text-[#00af87]/70 font-normal">
+                      ({activity.tripadvisorReviewCount.toLocaleString()})
+                    </span>
+                  )}
+                </span>
+              )}
+            </div>
+          )}
+
         {/* Booking CTA — Primary conversion element */}
         {hasBooking && (
           <div className="mt-4 space-y-2">
@@ -578,6 +617,39 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
                       {cuisine}
                     </span>
                   ))}
+                </div>
+              )}
+
+            {/* TripAdvisor badge */}
+            {restaurant.tripadvisorRating != null &&
+              restaurant.tripadvisorRating > 0 && (
+                <div className="flex items-center gap-2 mt-3">
+                  {restaurant.tripadvisorUrl ? (
+                    <a
+                      href={restaurant.tripadvisorUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#34e0a1]/10 rounded-lg text-xs font-semibold text-[#00af87] hover:bg-[#34e0a1]/20 transition-colors"
+                    >
+                      <span className="text-sm">&#9679;</span>
+                      {restaurant.tripadvisorRating.toFixed(1)} on TripAdvisor
+                      {restaurant.tripadvisorReviewCount != null && (
+                        <span className="text-[#00af87]/70 font-normal">
+                          ({restaurant.tripadvisorReviewCount.toLocaleString()})
+                        </span>
+                      )}
+                    </a>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#34e0a1]/10 rounded-lg text-xs font-semibold text-[#00af87]">
+                      <span className="text-sm">&#9679;</span>
+                      {restaurant.tripadvisorRating.toFixed(1)} on TripAdvisor
+                      {restaurant.tripadvisorReviewCount != null && (
+                        <span className="text-[#00af87]/70 font-normal">
+                          ({restaurant.tripadvisorReviewCount.toLocaleString()})
+                        </span>
+                      )}
+                    </span>
+                  )}
                 </div>
               )}
 

@@ -185,9 +185,11 @@ function FeaturedHotelCard({ hotel }: { hotel: NonNullable<import('../../stores/
             <View style={styles.hotelCardRating}>
               <Ionicons name="star" size={14} color="#fbbf24" />
               <Text style={styles.hotelCardRatingText}>{hotel.rating}</Text>
-              <Text style={styles.hotelCardReviewCount}>
-                ({hotel.reviewCount.toLocaleString()} reviews)
-              </Text>
+              {hotel.reviewCount != null && hotel.reviewCount > 0 && (
+                <Text style={styles.hotelCardReviewCount}>
+                  ({hotel.reviewCount.toLocaleString()} reviews)
+                </Text>
+              )}
             </View>
           </View>
           <View style={styles.hotelCardPriceContainer}>
@@ -206,8 +208,9 @@ function FeaturedHotelCard({ hotel }: { hotel: NonNullable<import('../../stores/
         )}
         <TouchableOpacity
           style={styles.hotelCardButton}
-          onPress={() => openURL(hotel.bookingUrl)}
+          onPress={() => hotel.bookingUrl && openURL(hotel.bookingUrl)}
           activeOpacity={0.7}
+          disabled={!hotel.bookingUrl}
         >
           <Text style={styles.hotelCardButtonText}>Check Availability</Text>
           <Ionicons name="arrow-forward" size={16} color={colors.primary[500]} />
@@ -299,6 +302,8 @@ export default function TripDetailScreen() {
   const [showRatingPrompt, setShowRatingPrompt] = useState(false);
 
   const scrollY = useRef(new Animated.Value(0)).current;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const scrollViewRef = useRef<any>(null);
   const trip = trips.find((t) => t.id === id) || currentTrip;
 
   const estimatedTotal = useMemo(() => {
@@ -318,9 +323,21 @@ export default function TripDetailScreen() {
 
   useEffect(() => {
     if (!trip && id) {
-      router.back();
+      // Delay to allow store hydration before navigating back
+      const timeout = setTimeout(() => {
+        const freshTrip = useTripStore.getState().trips.find((t) => t.id === id) || useTripStore.getState().currentTrip;
+        if (!freshTrip) router.back();
+      }, 500);
+      return () => clearTimeout(timeout);
     }
   }, [trip, id]);
+
+  // Clamp selectedDay when trip days change (e.g. after refresh with fewer days)
+  useEffect(() => {
+    if (trip?.days && selectedDay >= trip.days.length) {
+      setSelectedDay(Math.max(0, trip.days.length - 1));
+    }
+  }, [trip?.days?.length, selectedDay]);
 
   // Show rating prompt after 10s on completed trips for authenticated users
   useEffect(() => {
@@ -350,11 +367,12 @@ export default function TripDetailScreen() {
         const { saveTrip } = useTripStore.getState();
         saveTrip(result.data.trip as any);
       }
+      hapticFeedback.success();
     } catch (error) {
       console.error('Failed to refresh trip:', error);
+      hapticFeedback.error();
     }
     setRefreshing(false);
-    hapticFeedback.success();
   };
 
   const handleShare = async () => {
@@ -418,6 +436,7 @@ export default function TripDetailScreen() {
   return (
     <View style={styles.container}>
       <Animated.ScrollView
+        ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         onScroll={Animated.event(
@@ -564,11 +583,16 @@ export default function TripDetailScreen() {
       <View style={styles.bottomBar}>
         <View style={styles.bottomBarInfo}>
           <Text style={styles.bottomBarLabel}>Estimated cost</Text>
-          <Text style={styles.bottomBarPrice}>~${estimatedTotal.toLocaleString()}</Text>
+          <Text style={styles.bottomBarPrice}>
+            {estimatedTotal > 0 ? `~$${estimatedTotal.toLocaleString()}` : 'Free activities'}
+          </Text>
         </View>
         <Button
-          title="Book All"
-          onPress={() => {}}
+          title="View Bookings"
+          onPress={() => {
+            hapticFeedback.light();
+            scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+          }}
           size="lg"
           style={styles.bookAllButton}
         />

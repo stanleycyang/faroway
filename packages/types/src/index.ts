@@ -212,6 +212,9 @@ export interface ItineraryActivity {
   rating?: number;
   reviewCount?: number;
   images?: string[];
+  tripadvisorRating?: number;
+  tripadvisorReviewCount?: number;
+  tripadvisorUrl?: string;
 }
 
 export interface Restaurant {
@@ -242,6 +245,9 @@ export interface Restaurant {
   };
   rating?: number;
   reviewCount?: number;
+  tripadvisorRating?: number;
+  tripadvisorReviewCount?: number;
+  tripadvisorUrl?: string;
 }
 
 export interface TripDayTransport {
