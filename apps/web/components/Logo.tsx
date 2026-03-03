@@ -15,7 +15,12 @@ interface LogoProps {
 const sizes = {
   sm: { px: 32, box: "w-8 h-8 rounded-lg", icon: "w-4 h-4", text: "text-base" },
   md: { px: 36, box: "w-9 h-9 rounded-xl", icon: "w-5 h-5", text: "text-lg" },
-  lg: { px: 48, box: "w-12 h-12 rounded-xl", icon: "w-6 h-6", text: "text-2xl" },
+  lg: {
+    px: 48,
+    box: "w-12 h-12 rounded-xl",
+    icon: "w-6 h-6",
+    text: "text-2xl",
+  },
 };
 
 export function Logo({

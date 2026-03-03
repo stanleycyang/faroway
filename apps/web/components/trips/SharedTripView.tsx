@@ -181,7 +181,13 @@ export function SharedTripView({
 
           <div className="relative">
             <div className="w-16 h-16 rounded-2xl mx-auto mb-5 shadow-lg overflow-hidden">
-              <Image src="/icon.png" alt="Faroway" width={64} height={64} className="w-full h-full object-cover" />
+              <Image
+                src="/icon.png"
+                alt="Faroway"
+                width={64}
+                height={64}
+                className="w-full h-full object-cover"
+              />
             </div>
             <h3 className="text-2xl font-black mb-3">Create Your Own Trip</h3>
             <p className="text-white/80 mb-6 max-w-md mx-auto leading-relaxed">
