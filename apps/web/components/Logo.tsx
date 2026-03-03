@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 interface LogoProps {
@@ -13,9 +13,14 @@ interface LogoProps {
 }
 
 const sizes = {
-  sm: { box: "w-8 h-8 rounded-lg", icon: "w-4 h-4", text: "text-base" },
-  md: { box: "w-9 h-9 rounded-xl", icon: "w-5 h-5", text: "text-lg" },
-  lg: { box: "w-12 h-12 rounded-xl", icon: "w-6 h-6", text: "text-2xl" },
+  sm: { px: 32, box: "w-8 h-8 rounded-lg", icon: "w-4 h-4", text: "text-base" },
+  md: { px: 36, box: "w-9 h-9 rounded-xl", icon: "w-5 h-5", text: "text-lg" },
+  lg: {
+    px: 48,
+    box: "w-12 h-12 rounded-xl",
+    icon: "w-6 h-6",
+    text: "text-2xl",
+  },
 };
 
 export function Logo({
@@ -29,11 +34,13 @@ export function Logo({
 
   const content = (
     <>
-      <div
-        className={`${s.box} bg-gradient-to-br from-primary-500 via-primary to-amber-500 flex items-center justify-center shadow-lg shadow-primary/25`}
-      >
-        <Sparkles className={`${s.icon} text-white`} />
-      </div>
+      <Image
+        src="/icon.png"
+        alt="Faroway logo"
+        width={s.px}
+        height={s.px}
+        className={`${s.box} object-cover shadow-lg shadow-primary/25`}
+      />
       <span className={`${s.text} font-bold ${textColor}`}>Faroway</span>
     </>
   );

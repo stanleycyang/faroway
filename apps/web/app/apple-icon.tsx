@@ -17,23 +17,44 @@ export default function Icon() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)",
+        background: "linear-gradient(135deg, #FF8A7A 0%, #F97066 100%)",
         borderRadius: "40px",
-        fontFamily: "system-ui, -apple-system, sans-serif",
       }}
     >
-      <div
-        style={{
-          fontSize: "88px",
-          fontWeight: 700,
-          color: "rgba(255, 255, 255, 0.97)",
-          letterSpacing: "-2px",
-          lineHeight: 1,
-          marginTop: "4px",
-        }}
+      {/* Paper airplane SVG as inline */}
+      <svg
+        width="110"
+        height="110"
+        viewBox="0 0 110 110"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
       >
-        TG
-      </div>
+        {/* Dotted trail */}
+        <circle cx="18" cy="72" r="4" fill="white" opacity="0.3" />
+        <circle cx="28" cy="66" r="3.5" fill="white" opacity="0.4" />
+        <circle cx="39" cy="61" r="3" fill="white" opacity="0.5" />
+        <circle cx="50" cy="57" r="2.5" fill="white" opacity="0.55" />
+        <circle cx="61" cy="54" r="2" fill="white" opacity="0.6" />
+        <circle cx="72" cy="52" r="1.5" fill="white" opacity="0.65" />
+        {/* Paper airplane pointing upper-right */}
+        <g transform="translate(58, 52) rotate(-35)">
+          <polygon points="42,0 -22,-16 -14,0" fill="white" />
+          <polygon points="42,0 -22,16 -14,0" fill="white" opacity="0.82" />
+          <polygon points="-14,0 -22,16 -22,4" fill="white" opacity="0.45" />
+        </g>
+        {/* Sparkles */}
+        <path d="M80,22 L82,27 L87,22 L82,17 Z" fill="white" opacity="0.9" />
+        <path
+          d="M88,30 L89.5,33 L93,30 L89.5,27 Z"
+          fill="white"
+          opacity="0.8"
+        />
+        <path
+          d="M76,32 L77,34.5 L80,32 L77,29.5 Z"
+          fill="white"
+          opacity="0.7"
+        />
+      </svg>
     </div>,
     { ...size },
   );

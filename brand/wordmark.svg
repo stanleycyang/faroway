@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="160" viewBox="0 0 600 160">
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF8A7A" />
+      <stop offset="100%" style="stop-color:#F97066" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Icon mark (scaled down) -->
+  <g transform="scale(0.15) translate(10, 10)">
+    
+  <defs>
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FF8A7A;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#F97066;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="planeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#FFFFFF;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#FFE4E1;stop-opacity:1" />
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="rgba(15,23,42,0.3)"/>
+    </filter>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="512" cy="512" r="471.04" fill="url(#bgGrad)"/>
+  
+  <!-- Dotted arc trail (route path) - left to right, slight curve upward -->
+  <circle cx="200" cy="640" r="10" fill="white" opacity="0.3"/>
+  <circle cx="235" cy="601.8853254107928" r="9.2" fill="white" opacity="0.35"/>
+  <circle cx="270" cy="568.4314575050762" r="8.4" fill="white" opacity="0.4"/>
+  <circle cx="305" cy="543.589637399097" r="7.6" fill="white" opacity="0.45"/>
+  <circle cx="340" cy="530" r="6.8" fill="white" opacity="0.5"/>
+  <circle cx="375" cy="528.589637399097" r="6" fill="white" opacity="0.55"/>
+  <circle cx="410" cy="538.4314575050762" r="5.199999999999999" fill="white" opacity="0.6000000000000001"/>
+  
+  <!-- Paper airplane (pointing upper-right) -->
+  <g transform="translate(520, 480) rotate(-35)" filter="url(#shadow)">
+    <!-- Main body -->
+    <polygon points="240,0 -120,-90 -80,0" 
+             fill="url(#planeGrad)" />
+    <!-- Bottom wing -->
+    <polygon points="240,0 -120,90 -80,0" 
+             fill="white" opacity="0.85" />
+    <!-- Center fold line -->
+    <line x1="-80" y1="0" x2="-120" y2="-90" 
+          stroke="rgba(249,112,102,0.3)" stroke-width="3"/>
+    <!-- Tail flap -->
+    <polygon points="-80,0 -120,90 -120,20" 
+             fill="white" opacity="0.5" />
+  </g>
+  
+  <!-- Small AI sparkle stars -->
+  <path d="M720,252 L727,273 L748,280 L727,287 L720,308 L713,287 L692,280 L713,273 Z" fill="white" opacity="0.9"/>
+  <path d="M780,322 L784.5,335.5 L798,340 L784.5,344.5 L780,358 L775.5,344.5 L762,340 L775.5,335.5 Z" fill="white" opacity="0.9"/>
+  <path d="M700,336 L703.5,346.5 L714,350 L703.5,353.5 L700,364 L696.5,353.5 L686,350 L696.5,346.5 Z" fill="white" opacity="0.9"/>
+
+  </g>
+  
+  <!-- Faroway text -->
+  <text x="175" y="108" 
+        font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Helvetica Neue', sans-serif"
+        font-weight="700"
+        font-size="72"
+        letter-spacing="-2"
+        fill="#0F172A">faroway</text>
+  
+  <!-- Tagline -->
+  <text x="177" y="132" 
+        font-family="-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif"
+        font-weight="400"
+        font-size="18"
+        letter-spacing="3"
+        fill="#64748B">AI TRAVEL PLANNER</text>
+</svg>
