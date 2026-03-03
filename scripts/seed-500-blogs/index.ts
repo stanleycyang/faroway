@@ -90,6 +90,7 @@ function assignPublishedDates(count: number, batch: number = 1): string[] {
     1: ['2025-12-01T00:00:00Z', '2026-02-28T23:59:59Z'],
     2: ['2026-02-01T00:00:00Z', '2026-04-30T23:59:59Z'],
     3: ['2026-04-01T00:00:00Z', '2026-06-30T23:59:59Z'],
+    4: ['2026-03-01T00:00:00Z', '2026-05-31T23:59:59Z'],
   };
   const [startStr, endStr] = ranges[batch] || ranges[1];
   const start = new Date(startStr).getTime();
@@ -316,17 +317,21 @@ async function main() {
   console.log(`Batch:        ${batchNum}\n`);
 
   // Dynamically import the correct templates module based on batch
-  const templateModule = batchNum === 3
-    ? await import('./templates-v3')
-    : batchNum === 2
-      ? await import('./templates-v2')
-      : await import('./templates');
+  const templateModule = batchNum === 4
+    ? await import('./templates-v4')
+    : batchNum === 3
+      ? await import('./templates-v3')
+      : batchNum === 2
+        ? await import('./templates-v2')
+        : await import('./templates');
   const { generateAllPosts } = templateModule;
 
   // Load per-template image map if available
-  const imageMapFile = batchNum === 3
-    ? 'image-map-v3.json'
-    : batchNum === 2 ? 'image-map-v2.json' : 'image-map.json';
+  const imageMapFile = batchNum === 4
+    ? 'image-map-v4.json'
+    : batchNum === 3
+      ? 'image-map-v3.json'
+      : batchNum === 2 ? 'image-map-v2.json' : 'image-map.json';
   const imageMapPath = path.resolve(__dirname, imageMapFile);
   if (fs.existsSync(imageMapPath)) {
     const imageMap: Record<string, string[]> = JSON.parse(
