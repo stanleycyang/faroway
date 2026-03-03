@@ -954,7 +954,25 @@ See our [neighborhood guide](/blog/${d.id}-neighborhoods-where-to-base-yourself)
 
 ## Visa Considerations
 
-Research current visa requirements on your country's travel advisory site. ${d.continent === 'Asia' ? 'Many countries in the region offer visa-on-arrival or e-visa options. Digital nomad visas are emerging.' : 'Visa requirements vary significantly by nationality.'} This changes frequently — always check current rules before booking.`;
+Research current visa requirements on your country's travel advisory site. ${d.continent === 'Asia' ? 'Many countries in the region offer visa-on-arrival or e-visa options. Digital nomad visas are emerging.' : 'Visa requirements vary significantly by nationality.'} This changes frequently — always check current rules before booking.
+
+## Social Life & Community
+
+The digital nomad community in ${d.name} is ${d.budget[0] < 40 ? 'well-established. Coworking spaces host regular events, meetups happen weekly, and you will meet other remote workers within your first 48 hours if you put yourself in the right places.' : 'growing. It may take more effort to find your people compared to established nomad hubs, but the quality of connections tends to be higher because the community is smaller.'}
+
+- Join local digital nomad groups online before you arrive
+- Coworking spaces are the fastest way to build a social circle
+- ${d.nightlife.length > 0 ? `**${d.nightlife[0].split('—')[0].trim()}** draws a mix of locals and expats` : 'Evening dining in social neighborhoods is a natural way to meet people'}
+- Language exchange meetups offer a way to connect with locals, not just other foreigners
+
+## Practical Logistics
+
+- **Banking:** ${d.continent === 'Asia' ? 'ATMs are everywhere. Wise or Revolut cards offer the best exchange rates. Some coworking spaces accept crypto.' : 'A travel-friendly bank card with no foreign transaction fees is essential. Open a local bank account if staying 3+ months.'}
+- **Healthcare:** ${d.budget[0] < 50 ? `Private healthcare in ${d.name} is affordable by Western standards. A doctor visit costs ${usd(Math.round(d.budget[0] * 0.5))}–${usd(Math.round(d.budget[0] * 1.5))}. Get international health insurance regardless.` : `Healthcare is good but not cheap. International health insurance is non-negotiable for stays longer than a month.`}
+- **Timezone:** Consider how ${d.name}'s timezone aligns with your team. ${d.continent === 'Asia' ? 'If your team is in the US, expect early morning or late night calls.' : d.continent === 'Europe' ? 'European timezones overlap well with US East Coast mornings and are ideal for UK/EU teams.' : 'Check the timezone overlap with your primary collaborators before committing.'}
+- **SIM/Internet:** Get a local SIM card or eSIM on arrival. Data plans cost ${usd(5)}–${usd(20)}/month. Always have a mobile hotspot as backup for cafe wifi failures.
+
+For complete safety and practical information, see our [${d.name} travel tips](/blog/${d.id}-travel-tips-first-time-visitors).`;
 }
 
 function photographerIntro(d: Destination): string {
