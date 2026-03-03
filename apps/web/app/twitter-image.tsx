@@ -19,7 +19,8 @@ export default async function Image() {
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        background: "linear-gradient(135deg, #0F172A 0%, #1E293B 60%, #0F172A 100%)",
+        background:
+          "linear-gradient(135deg, #0F172A 0%, #1E293B 60%, #0F172A 100%)",
         fontFamily: "system-ui, sans-serif",
         position: "relative",
         overflow: "hidden",
@@ -34,7 +35,8 @@ export default async function Image() {
           transform: "translate(-50%, -60%)",
           width: "500px",
           height: "500px",
-          background: "radial-gradient(circle, rgba(249,112,102,0.18) 0%, transparent 70%)",
+          background:
+            "radial-gradient(circle, rgba(249,112,102,0.18) 0%, transparent 70%)",
           borderRadius: "50%",
         }}
       />
@@ -44,7 +46,8 @@ export default async function Image() {
         style={{
           position: "absolute",
           inset: 0,
-          backgroundImage: "radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)",
+          backgroundImage:
+            "radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
         }}
       />
@@ -75,7 +78,11 @@ export default async function Image() {
             <polygon points="-14,0 -22,16 -22,4" fill="white" opacity="0.45" />
           </g>
           <path d="M80,22 L82,27 L87,22 L82,17 Z" fill="white" opacity="0.9" />
-          <path d="M88,30 L89.5,33 L93,30 L89.5,27 Z" fill="white" opacity="0.8" />
+          <path
+            d="M88,30 L89.5,33 L93,30 L89.5,27 Z"
+            fill="white"
+            opacity="0.8"
+          />
         </svg>
       </div>
 

@@ -8,7 +8,6 @@ import {
   searchInputSchema,
   trackClickSchema,
   paginationSchema,
-  // @ts-expect-error — package resolves at runtime via workspace alias
 } from "@faroway/validation";
 
 // =============================================================================

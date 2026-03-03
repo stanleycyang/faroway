@@ -43,11 +43,7 @@ export default function Icon() {
           <polygon points="-14,0 -22,16 -22,4" fill="white" opacity="0.45" />
         </g>
         {/* Sparkles */}
-        <path
-          d="M80,22 L82,27 L87,22 L82,17 Z"
-          fill="white"
-          opacity="0.9"
-        />
+        <path d="M80,22 L82,27 L87,22 L82,17 Z" fill="white" opacity="0.9" />
         <path
           d="M88,30 L89.5,33 L93,30 L89.5,27 Z"
           fill="white"
