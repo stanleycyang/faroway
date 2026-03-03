@@ -8,6 +8,10 @@ import { generateObject, gateway as defaultGateway, createGateway } from "ai";
 import { z } from "zod";
 import { SearchPlan, DiningResult } from "../types";
 import { VIBE_KEYWORDS } from "@faroway/constants";
+import {
+  enrichWithTripAdvisor,
+  isTripAdvisorConfigured,
+} from "@/lib/affiliates/tripadvisor";
 
 const aiGateway = process.env.AI_GATEWAY_API_KEY
   ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
@@ -115,13 +119,24 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
     });
 
     // Add unique IDs and sort by vibe score
-    return result.restaurants
+    const restaurants = result.restaurants
       .map((restaurant, index) => ({
         ...restaurant,
         id: `dining_${Date.now()}_${index}`,
         priceLevel: restaurant.priceLevel as 1 | 2 | 3 | 4,
       }))
       .sort((a, b) => b.vibeScore - a.vibeScore);
+
+    // Enrich with TripAdvisor ratings and reviews
+    if (isTripAdvisorConfigured()) {
+      try {
+        await enrichWithTripAdvisor(restaurants, "restaurants");
+      } catch (e) {
+        console.error("[Dining Agent] TripAdvisor enrichment error:", e);
+      }
+    }
+
+    return restaurants;
   } catch (error) {
     console.error("[Dining Agent] Error:", error);
     return [];

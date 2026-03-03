@@ -48,6 +48,40 @@ export {
   type BookingAvailability,
 } from "./booking";
 
+// Amadeus (Flights & Hotels)
+export {
+  isAmadeusConfigured,
+  searchAmadeusFlights,
+  searchAmadeusHotels,
+  generateAmadeusAffiliateUrl,
+  type AmadeusFlightSearchParams,
+  type AmadeusFlightOffer,
+  type AmadeusHotelSearchParams,
+  type AmadeusHotel,
+} from "./amadeus";
+
+// Duffel (Flights via Links)
+export {
+  isDuffelConfigured,
+  searchDuffelFlights,
+  generateDuffelLink,
+  type DuffelFlightSearchParams,
+  type DuffelOffer,
+} from "./duffel";
+
+// TripAdvisor Content API (Enrichment)
+export {
+  isTripAdvisorConfigured,
+  searchTripAdvisorLocations,
+  getTripAdvisorDetails,
+  getTripAdvisorReviews,
+  enrichWithTripAdvisor,
+  generateTripAdvisorAffiliateUrl,
+  type TripAdvisorLocation,
+  type TripAdvisorDetails,
+  type TripAdvisorReview,
+} from "./tripadvisor";
+
 // Click Tracking
 export {
   generateTrackingId,

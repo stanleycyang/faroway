@@ -212,6 +212,9 @@ export interface ItineraryActivity {
   rating?: number;
   reviewCount?: number;
   images?: string[];
+  tripadvisorRating?: number;
+  tripadvisorReviewCount?: number;
+  tripadvisorUrl?: string;
 }
 
 export interface Restaurant {
@@ -242,6 +245,22 @@ export interface Restaurant {
   };
   rating?: number;
   reviewCount?: number;
+  tripadvisorRating?: number;
+  tripadvisorReviewCount?: number;
+  tripadvisorUrl?: string;
+}
+
+export interface TripDayTransport {
+  type: 'flight' | 'train' | 'bus' | 'ferry';
+  provider: string;
+  departure: { airport: string; city: string; dateTime: string };
+  arrival: { airport: string; city: string; dateTime: string };
+  duration: number;
+  stops: number;
+  price: number;
+  currency: string;
+  affiliateUrl?: string;
+  affiliatePartner?: string;
 }
 
 export interface TripDay {
@@ -261,6 +280,7 @@ export interface TripDay {
     activities: ItineraryActivity[];
     meals: Restaurant[];
   };
+  transport?: TripDayTransport;
   totalEstimatedCost: {
     amount: number;
     currency: string;
@@ -317,6 +337,8 @@ export interface SearchInput {
   vibes: string[];
   budget?: BudgetLevel;
   userId?: string;
+  originCity?: string;
+  originAirport?: string;
 }
 
 export type SearchStatus = 'pending' | 'searching' | 'completed' | 'error';
@@ -328,6 +350,7 @@ export interface SearchProgress {
   hotels: AgentStatus;
   activities: AgentStatus;
   dining: AgentStatus;
+  transport: AgentStatus;
   aggregator: AgentStatus;
 }
 
@@ -358,7 +381,7 @@ export interface SearchPlan {
     end: string;
     nights: number;
   };
-  searchPriorities: ('hotels' | 'activities' | 'dining')[];
+  searchPriorities: ('hotels' | 'activities' | 'dining' | 'transport')[];
   hotelCriteria: {
     priceRange: { min: number; max: number };
     starRating: number[];
@@ -381,6 +404,15 @@ export interface SearchPlan {
     vibes: string[];
     searchKeywords: string[];
     avoidKeywords: string[];
+  };
+  transportCriteria?: {
+    originCity?: string;
+    originAirport?: string;
+    destinationAirport?: string;
+    cabinClass: 'economy' | 'premium_economy' | 'business' | 'first';
+    maxStops: number;
+    maxPrice?: number;
+    preferredAirlines?: string[];
   };
 }
 
@@ -405,6 +437,10 @@ export interface HotelResult {
   affiliatePartner: string;
   vibeScore: number;
   vibeMatch: string[];
+  tripadvisorRating?: number;
+  tripadvisorReviewCount?: number;
+  tripadvisorUrl?: string;
+  tripadvisorRankingString?: string;
 }
 
 export interface ActivityResult {
@@ -425,6 +461,9 @@ export interface ActivityResult {
   vibeScore: number;
   vibeMatch: string[];
   bookingRequired: boolean;
+  tripadvisorRating?: number;
+  tripadvisorReviewCount?: number;
+  tripadvisorUrl?: string;
 }
 
 export interface DiningResult {
@@ -443,6 +482,52 @@ export interface DiningResult {
   vibeScore: number;
   vibeMatch: string[];
   dietaryOptions: string[];
+  tripadvisorRating?: number;
+  tripadvisorReviewCount?: number;
+  tripadvisorUrl?: string;
+}
+
+// =============================================================================
+// Transport Result Types
+// =============================================================================
+
+export interface TransportSegment {
+  carrier: string;
+  flightNumber?: string;
+  departure: { airport: string; dateTime: string };
+  arrival: { airport: string; dateTime: string };
+  duration: number;
+  cabinClass?: string;
+}
+
+export interface TransportResult {
+  id: string;
+  type: 'flight' | 'train' | 'bus' | 'ferry';
+  provider: string;
+  departure: {
+    airport: string;
+    city: string;
+    dateTime: string;
+    terminal?: string;
+  };
+  arrival: {
+    airport: string;
+    city: string;
+    dateTime: string;
+    terminal?: string;
+  };
+  duration: number;
+  stops: number;
+  price: number;
+  currency: string;
+  cabinClass?: 'economy' | 'premium_economy' | 'business' | 'first';
+  airlines: string[];
+  segments: TransportSegment[];
+  affiliateUrl: string;
+  affiliatePartner: string;
+  source: 'amadeus' | 'duffel';
+  vibeScore: number;
+  vibeMatch: string[];
 }
 
 export interface SearchResults {
@@ -450,6 +535,7 @@ export interface SearchResults {
   hotels: HotelResult[];
   activities: ActivityResult[];
   dining: DiningResult[];
+  transport: TransportResult[];
   itinerary: SuggestedDay[];
 }
 
@@ -471,6 +557,7 @@ export interface SuggestedDay {
     activities: ActivityResult[];
     meal?: DiningResult;
   };
+  transport?: TransportResult;
   estimatedCost: number;
   currency: string;
   tips: string[];
@@ -503,7 +590,7 @@ export interface SearchStatusResponse {
 // =============================================================================
 
 export interface TrackClickParams {
-  itemType: 'hotel' | 'activity' | 'restaurant' | 'flight';
+  itemType: 'hotel' | 'activity' | 'restaurant' | 'flight' | 'transport';
   itemId: string;
   itemName: string;
   affiliatePartner: string;

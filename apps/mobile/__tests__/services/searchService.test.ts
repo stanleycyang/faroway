@@ -205,6 +205,7 @@ describe('calculateProgressPercent', () => {
       hotels: 'pending',
       activities: 'pending',
       dining: 'pending',
+      transport: 'pending',
       aggregator: 'pending',
     };
     expect(calculateProgressPercent(progress)).toBe(0);
@@ -216,6 +217,7 @@ describe('calculateProgressPercent', () => {
       hotels: 'pending',
       activities: 'pending',
       dining: 'pending',
+      transport: 'pending',
       aggregator: 'pending',
     };
     expect(calculateProgressPercent(progress)).toBe(10);
@@ -227,6 +229,7 @@ describe('calculateProgressPercent', () => {
       hotels: 'pending',
       activities: 'pending',
       dining: 'pending',
+      transport: 'pending',
       aggregator: 'pending',
     };
     expect(calculateProgressPercent(progress)).toBe(20);
@@ -238,6 +241,7 @@ describe('calculateProgressPercent', () => {
       hotels: 'done',
       activities: 'done',
       dining: 'done',
+      transport: 'done',
       aggregator: 'done',
     };
     expect(calculateProgressPercent(progress)).toBe(100);
@@ -249,9 +253,10 @@ describe('calculateProgressPercent', () => {
       hotels: 'searching',
       activities: 'done',
       dining: 'pending',
+      transport: 'pending',
       aggregator: 'pending',
     };
-    // 20 + 10 + 20 + 0 + 0 = 50
+    // 20 + 10 + 20 + 0 + 0 + 0 = 50
     expect(calculateProgressPercent(progress)).toBe(50);
   });
 });
@@ -264,6 +269,7 @@ describe('getStatusMessage', () => {
         hotels: 'done',
         activities: 'done',
         dining: 'done',
+        transport: 'done',
         aggregator: 'searching',
       }),
     ).toBe('Creating your perfect itinerary...');
@@ -276,6 +282,7 @@ describe('getStatusMessage', () => {
         hotels: 'done',
         activities: 'done',
         dining: 'done',
+        transport: 'done',
         aggregator: 'done',
       }),
     ).toBe('Creating your perfect itinerary...');
@@ -288,6 +295,7 @@ describe('getStatusMessage', () => {
         hotels: 'done',
         activities: 'done',
         dining: 'searching',
+        transport: 'done',
         aggregator: 'pending',
       }),
     ).toBe('Finding the best restaurants...');
@@ -300,6 +308,7 @@ describe('getStatusMessage', () => {
         hotels: 'done',
         activities: 'searching',
         dining: 'pending',
+        transport: 'pending',
         aggregator: 'pending',
       }),
     ).toBe('Discovering activities & attractions...');
@@ -312,6 +321,7 @@ describe('getStatusMessage', () => {
         hotels: 'searching',
         activities: 'pending',
         dining: 'pending',
+        transport: 'pending',
         aggregator: 'pending',
       }),
     ).toBe('Searching for hotels...');
@@ -324,6 +334,7 @@ describe('getStatusMessage', () => {
         hotels: 'pending',
         activities: 'pending',
         dining: 'pending',
+        transport: 'pending',
         aggregator: 'pending',
       }),
     ).toBe('Understanding your preferences...');
@@ -336,6 +347,7 @@ describe('getStatusMessage', () => {
         hotels: 'pending',
         activities: 'pending',
         dining: 'pending',
+        transport: 'pending',
         aggregator: 'pending',
       }),
     ).toBe('Starting your search...');

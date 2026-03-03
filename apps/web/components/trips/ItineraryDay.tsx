@@ -11,6 +11,7 @@ import {
   DollarSign,
   Hotel,
   ExternalLink,
+  Plane,
 } from "lucide-react";
 import {
   ActivityCard,
@@ -18,6 +19,7 @@ import {
   type Activity,
   type Restaurant,
 } from "./ActivityCard";
+import type { TripDayTransport } from "@faroway/types";
 
 interface TimeBlock {
   activities: Activity[];
@@ -48,6 +50,7 @@ interface ItineraryDayProps {
   tips?: string[];
   defaultExpanded?: boolean;
   hotel?: HotelInfo;
+  transport?: TripDayTransport;
 }
 
 export function ItineraryDay({
@@ -62,11 +65,13 @@ export function ItineraryDay({
   tips,
   defaultExpanded = true,
   hotel,
+  transport,
 }: ItineraryDayProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
   const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
+    // Append T12:00:00 to avoid UTC midnight → previous day in negative-offset timezones
+    const d = new Date(dateStr.includes("T") ? dateStr : `${dateStr}T12:00:00`);
     return d.toLocaleDateString("en-US", {
       weekday: "long",
       month: "short",
@@ -242,6 +247,121 @@ export function ItineraryDay({
                     Check Prices
                     <ExternalLink className="w-3 h-3" />
                   </a>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Transport Card */}
+          {transport && (
+            <div className="mb-6 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 text-white shadow-lg shadow-blue-500/20 overflow-hidden relative">
+              {/* Background pattern */}
+              <div className="absolute inset-0 opacity-[0.06]">
+                <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full border-[20px] border-white" />
+                <div className="absolute -left-4 -bottom-4 w-24 h-24 rounded-full border-[12px] border-white" />
+              </div>
+
+              <div className="relative">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
+                      <Plane className="h-4 w-4 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold">{transport.provider}</p>
+                      <p className="text-[11px] text-blue-200">
+                        {transport.type === "flight"
+                          ? "Flight"
+                          : transport.type}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xl font-black">
+                      {formatCost(transport.price, transport.currency)}
+                    </p>
+                    <p className="text-[11px] text-blue-200">per person</p>
+                  </div>
+                </div>
+
+                {/* Route */}
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="text-center min-w-[60px]">
+                    <p className="text-lg font-bold tracking-wide">
+                      {transport.departure.airport}
+                    </p>
+                    <p className="text-xs text-blue-200">
+                      {new Date(
+                        transport.departure.dateTime,
+                      ).toLocaleTimeString("en-US", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
+                  <div className="flex-1 flex flex-col items-center">
+                    <p className="text-[11px] text-blue-200 font-medium">
+                      {Math.floor(transport.duration / 60)}h{" "}
+                      {transport.duration % 60}m
+                    </p>
+                    <div className="w-full flex items-center gap-1 my-1">
+                      <div className="w-2 h-2 rounded-full bg-white/60" />
+                      <div className="flex-1 h-px bg-white/30 relative">
+                        <Plane className="h-3.5 w-3.5 text-white absolute -top-[7px] left-1/2 -translate-x-1/2 rotate-90" />
+                      </div>
+                      <div className="w-2 h-2 rounded-full bg-white/60" />
+                    </div>
+                    <p className="text-[11px] text-blue-200">
+                      {transport.stops === 0
+                        ? "Direct"
+                        : `${transport.stops} stop${transport.stops > 1 ? "s" : ""}`}
+                    </p>
+                  </div>
+                  <div className="text-center min-w-[60px]">
+                    <p className="text-lg font-bold tracking-wide">
+                      {transport.arrival.airport}
+                    </p>
+                    <p className="text-xs text-blue-200">
+                      {new Date(transport.arrival.dateTime).toLocaleTimeString(
+                        "en-US",
+                        {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        },
+                      )}
+                    </p>
+                  </div>
+                </div>
+
+                {/* CTA */}
+                {transport.affiliateUrl && (
+                  <button
+                    onClick={() => {
+                      fetch("/api/track/click", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          itemType: "transport",
+                          itemId: `transport_${transport.departure.airport}_${transport.arrival.airport}`,
+                          itemName: `${transport.provider} ${transport.departure.airport}-${transport.arrival.airport}`,
+                          affiliatePartner:
+                            transport.affiliatePartner || "duffel",
+                          affiliateUrl: transport.affiliateUrl,
+                          source: "itinerary",
+                        }),
+                      }).catch(() => {});
+                      window.open(
+                        transport.affiliateUrl,
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
+                    }}
+                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 transition-all shadow-md active:scale-[0.98]"
+                  >
+                    Book This Flight
+                    <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                  </button>
                 )}
               </div>
             </div>
