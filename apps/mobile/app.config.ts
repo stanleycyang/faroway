@@ -41,6 +41,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-router',
     'expo-secure-store',
     'expo-apple-authentication',
+    '@react-native-google-signin/google-signin',
     ['expo-notifications', {
       icon: './assets/notification-icon.png',
       color: '#FF6B6B',
