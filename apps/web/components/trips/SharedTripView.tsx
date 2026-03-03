@@ -3,6 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
+import Image from "next/image";
 import { TripHeader } from "@/components/trips/TripHeader";
 import { ItineraryDay } from "@/components/trips/ItineraryDay";
 import { ShareButtons } from "@/components/ShareButtons";
@@ -179,8 +180,14 @@ export function SharedTripView({
           <div className="absolute -bottom-20 -left-20 w-60 h-60 bg-white/10 rounded-full blur-3xl" />
 
           <div className="relative">
-            <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center mx-auto mb-5 backdrop-blur-sm shadow-lg">
-              <Sparkles className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 rounded-2xl mx-auto mb-5 shadow-lg overflow-hidden">
+              <Image
+                src="/icon.png"
+                alt="Faroway"
+                width={64}
+                height={64}
+                className="w-full h-full object-cover"
+              />
             </div>
             <h3 className="text-2xl font-black mb-3">Create Your Own Trip</h3>
             <p className="text-white/80 mb-6 max-w-md mx-auto leading-relaxed">

@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Sparkles } from "lucide-react";
+import { Logo } from "./Logo";
 
 export function Footer() {
   return (
@@ -9,12 +9,9 @@ export function Footer() {
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           {/* Brand */}
           <div>
-            <Link href="/" className="flex items-center gap-2.5 mb-4 group">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-amber-500 flex items-center justify-center shadow-lg shadow-primary/20">
-                <Sparkles className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-lg font-bold">Faroway</span>
-            </Link>
+            <div className="mb-4">
+              <Logo size="md" variant="light" asLink={true} />
+            </div>
             <p className="text-surface-400 text-sm mb-4 leading-relaxed">
               Your AI-powered travel genie. Plan your dream trip in seconds,
               book everything in one place.
