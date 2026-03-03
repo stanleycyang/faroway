@@ -18,6 +18,7 @@ import {
   Shield,
   ChevronUp,
   Ticket,
+  Plane,
 } from "lucide-react";
 
 /**
@@ -119,6 +120,12 @@ const GENERATION_STEPS = [
     description: "Discovering restaurants",
   },
   {
+    key: "transport",
+    label: "Flights",
+    emoji: "✈️",
+    description: "Finding the best flights",
+  },
+  {
     key: "aggregator",
     label: "Composing",
     emoji: "📝",
@@ -137,6 +144,7 @@ export default function TripDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [showStickyBar, setShowStickyBar] = useState(false);
+  const [isRetrying, setIsRetrying] = useState(false);
 
   // Determine if we should stream
   const shouldStream = trip?.status === "generating" && !!trip?.search_id;
@@ -246,7 +254,8 @@ export default function TripDetailPage() {
   };
 
   const handleRetry = async () => {
-    if (!trip) return;
+    if (!trip || isRetrying) return;
+    setIsRetrying(true);
 
     try {
       // Reset trip to draft
@@ -272,6 +281,8 @@ export default function TripDetailPage() {
     } catch (err) {
       console.error("Retry failed:", err);
       setError(err instanceof Error ? err.message : "Retry failed");
+    } finally {
+      setIsRetrying(false);
     }
   };
 
@@ -310,6 +321,7 @@ export default function TripDetailPage() {
     let accommodation = 0;
     let activities = 0;
     let dining = 0;
+    let transport = 0;
 
     const nights = itinerary.days.length > 0 ? itinerary.days.length - 1 : 0;
     if (topHotel?.pricePerNight) {
@@ -317,6 +329,9 @@ export default function TripDetailPage() {
     }
 
     for (const day of itinerary.days) {
+      if (day.transport?.price) {
+        transport += day.transport.price;
+      }
       for (const slot of [day.morning, day.afternoon, day.evening]) {
         if (!slot) continue;
         if (Array.isArray(slot.activities)) {
@@ -337,10 +352,10 @@ export default function TripDetailPage() {
       }
     }
 
-    const total = accommodation + activities + dining;
+    const total = accommodation + activities + dining + transport;
     if (total === 0) return null;
 
-    return { accommodation, activities, dining, total };
+    return { accommodation, activities, dining, transport, total };
   }, [itinerary, topHotel]);
 
   // Compute number of days for skeletons (from trip date range)
@@ -461,10 +476,13 @@ export default function TripDetailPage() {
                 </p>
                 <button
                   onClick={handleRetry}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors"
+                  disabled={isRetrying}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  <RefreshCw className="w-4 h-4" />
-                  Try Again
+                  <RefreshCw
+                    className={`w-4 h-4 ${isRetrying ? "animate-spin" : ""}`}
+                  />
+                  {isRetrying ? "Retrying..." : "Try Again"}
                 </button>
               </div>
             </div>
@@ -473,7 +491,9 @@ export default function TripDetailPage() {
 
         {/* Progressive discovery badges during generation */}
         {isGenerating &&
-          (generation.activitiesCount > 0 || generation.diningCount > 0) && (
+          (generation.activitiesCount > 0 ||
+            generation.diningCount > 0 ||
+            generation.transportCount > 0) && (
             <div className="flex flex-wrap gap-2 mb-6">
               {generation.activitiesCount > 0 && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-200 animate-in fade-in slide-in-from-bottom-1 duration-300">
@@ -485,6 +505,13 @@ export default function TripDetailPage() {
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-orange-50 text-orange-700 rounded-full text-xs font-bold border border-orange-200 animate-in fade-in slide-in-from-bottom-1 duration-300">
                   <Sparkles className="w-3.5 h-3.5" />
                   Found {generation.diningCount} restaurants
+                </span>
+              )}
+              {generation.transportCount > 0 && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 rounded-full text-xs font-bold border border-blue-200 animate-in fade-in slide-in-from-bottom-1 duration-300">
+                  <Plane className="w-3.5 h-3.5" />
+                  Found {generation.transportCount} flight
+                  {generation.transportCount > 1 ? "s" : ""}
                 </span>
               )}
             </div>
@@ -517,6 +544,9 @@ export default function TripDetailPage() {
             />
           </div>
         )}
+
+        {/* Featured Flights */}
+        <FeaturedFlights days={itinerary?.days || null} />
 
         {/* Interactive Map (only when DB itinerary loaded) */}
         {itinerary && !isGenerating && (
@@ -573,6 +603,7 @@ export default function TripDetailPage() {
                           }
                         : undefined
                     }
+                    transport={day.transport}
                   />
                 </DayErrorBoundary>
               </div>
@@ -934,6 +965,7 @@ function BudgetSummary({
     accommodation: number;
     activities: number;
     dining: number;
+    transport: number;
     total: number;
   };
   currency: string;
@@ -968,6 +1000,13 @@ function BudgetSummary({
       color: "bg-orange-500",
       bgColor: "bg-orange-50 text-orange-700",
       icon: "🍽️",
+    },
+    {
+      label: "Transport",
+      amount: breakdown.transport,
+      color: "bg-sky-500",
+      bgColor: "bg-sky-50 text-sky-700",
+      icon: "✈️",
     },
   ].filter((c) => c.amount > 0);
 
@@ -1057,7 +1096,7 @@ function AgentProgress({
       </div>
 
       {/* Agent Steps */}
-      <div className="grid grid-cols-5 gap-2">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
         {GENERATION_STEPS.map((genStep) => {
           const agentStatus = searchProgress?.[genStep.key];
           const isActive = agentStatus === "searching";
@@ -1134,6 +1173,174 @@ function SaveTripNudge({ tripId }: { tripId: string }) {
             </Link>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Featured Flights ────────────────────────────────────────────────────────
+
+function formatFlightCost(amount: number, currency: string) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(amount);
+}
+
+function FlightLeg({
+  transport,
+  label,
+}: {
+  transport: NonNullable<TripDay["transport"]>;
+  label: string;
+}) {
+  return (
+    <div className="flex-1 min-w-0">
+      <p className="text-[11px] font-semibold text-blue-400 uppercase tracking-wider mb-2">
+        {label}
+      </p>
+      <div className="flex items-center gap-3">
+        <div className="text-center min-w-[48px]">
+          <p className="text-lg font-bold text-white">
+            {transport.departure.airport}
+          </p>
+          <p className="text-[11px] text-blue-200">
+            {new Date(transport.departure.dateTime).toLocaleTimeString(
+              "en-US",
+              {
+                hour: "2-digit",
+                minute: "2-digit",
+              },
+            )}
+          </p>
+        </div>
+        <div className="flex-1 flex flex-col items-center">
+          <p className="text-[11px] text-blue-200 font-medium">
+            {Math.floor(transport.duration / 60)}h {transport.duration % 60}m
+          </p>
+          <div className="w-full flex items-center gap-0.5 my-0.5">
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-300" />
+            <div className="flex-1 h-px bg-blue-400/50" />
+            <Plane className="h-3 w-3 text-blue-300 rotate-90" />
+            <div className="flex-1 h-px bg-blue-400/50" />
+            <div className="w-1.5 h-1.5 rounded-full bg-blue-300" />
+          </div>
+          <p className="text-[11px] text-blue-300">
+            {transport.stops === 0
+              ? "Direct"
+              : `${transport.stops} stop${transport.stops > 1 ? "s" : ""}`}
+          </p>
+        </div>
+        <div className="text-center min-w-[48px]">
+          <p className="text-lg font-bold text-white">
+            {transport.arrival.airport}
+          </p>
+          <p className="text-[11px] text-blue-200">
+            {new Date(transport.arrival.dateTime).toLocaleTimeString("en-US", {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center justify-between mt-2">
+        <p className="text-xs text-blue-200">{transport.provider}</p>
+        <p className="text-sm font-bold text-white">
+          {formatFlightCost(transport.price, transport.currency)}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function FeaturedFlights({ days }: { days: TripDay[] | null }) {
+  if (!days?.length) return null;
+
+  // Find outbound (first day with transport) and return (last day with transport)
+  const outbound = days.find((d) => d.transport);
+  const lastDayWithTransport = [...days].reverse().find((d) => d.transport);
+  const returnFlight =
+    lastDayWithTransport &&
+    lastDayWithTransport !== outbound &&
+    lastDayWithTransport.transport
+      ? lastDayWithTransport
+      : null;
+
+  if (!outbound?.transport) return null;
+
+  const handleFlightClick = (transport: TripDay["transport"]) => {
+    if (!transport?.affiliateUrl) return;
+    fetch("/api/track/click", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        itemType: "transport",
+        itemId: `transport_${transport.departure.airport}_${transport.arrival.airport}`,
+        itemName: `${transport.provider} ${transport.departure.airport}-${transport.arrival.airport}`,
+        affiliatePartner: transport.affiliatePartner || "duffel",
+        affiliateUrl: transport.affiliateUrl,
+        source: "itinerary",
+      }),
+    }).catch(() => {});
+    window.open(transport.affiliateUrl, "_blank", "noopener,noreferrer");
+  };
+
+  const totalPrice =
+    (outbound.transport?.price || 0) + (returnFlight?.transport?.price || 0);
+  const currency = outbound.transport?.currency || "USD";
+
+  return (
+    <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-2xl overflow-hidden mb-6 shadow-lg shadow-blue-500/20 relative">
+      {/* Background pattern */}
+      <div className="absolute inset-0 opacity-[0.05]">
+        <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full border-[24px] border-white" />
+        <div className="absolute -left-6 -bottom-6 w-32 h-32 rounded-full border-[16px] border-white" />
+      </div>
+
+      <div className="relative p-6">
+        <div className="flex items-center gap-2 mb-5">
+          <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center backdrop-blur-sm">
+            <Plane className="h-5 w-5 text-white" />
+          </div>
+          <div>
+            <h3 className="text-base font-bold text-white">Your Flights</h3>
+            <p className="text-[11px] text-blue-200">
+              {returnFlight ? "Round trip" : "One way"}
+            </p>
+          </div>
+          <div className="ml-auto text-right">
+            <p className="text-xl font-black text-white">
+              {formatFlightCost(totalPrice, currency)}
+            </p>
+            <p className="text-[11px] text-blue-200">
+              {returnFlight ? "total round trip" : "per person"}
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6">
+          <FlightLeg transport={outbound.transport!} label="Outbound" />
+          {returnFlight?.transport && (
+            <>
+              <div className="hidden sm:block w-px bg-blue-500/30 self-stretch" />
+              <div className="sm:hidden h-px bg-blue-500/30" />
+              <FlightLeg transport={returnFlight.transport} label="Return" />
+            </>
+          )}
+        </div>
+
+        {outbound.transport?.affiliateUrl && (
+          <button
+            onClick={() => handleFlightClick(outbound.transport)}
+            className="w-full mt-5 inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 transition-all shadow-md active:scale-[0.98]"
+          >
+            <Shield className="w-4 h-4" />
+            Book {returnFlight ? "Flights" : "Flight"}
+            <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+          </button>
+        )}
       </div>
     </div>
   );

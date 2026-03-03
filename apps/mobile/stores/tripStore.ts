@@ -47,6 +47,18 @@ export interface TripDay {
   dayNumber: number;
   theme: string;
   activities: Activity[];
+  transport?: {
+    type: 'flight' | 'train' | 'bus' | 'ferry';
+    provider: string;
+    departure: { airport: string; city: string; dateTime: string };
+    arrival: { airport: string; city: string; dateTime: string };
+    duration: number;
+    stops: number;
+    price: number;
+    currency: string;
+    bookingUrl?: string;
+    affiliatePartner?: string;
+  };
 }
 
 export interface Trip {

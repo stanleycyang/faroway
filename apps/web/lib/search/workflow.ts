@@ -14,6 +14,7 @@ import {
   runHotelsAgent,
   runActivitiesAgent,
   runDiningAgent,
+  runTransportAgent,
   runAggregatorAgent,
 } from "./agents";
 
@@ -88,45 +89,92 @@ export async function executeTravelSearch(
       stage: "dining",
       message: "Discovering local restaurants...",
     });
+    if (searchPlan.transportCriteria?.originAirport) {
+      onMicroProgress?.({
+        stage: "transport",
+        message: "Searching flights...",
+      });
+    }
 
     if (onProgress) {
       await onProgress("hotels", "searching");
       await onProgress("activities", "searching");
       await onProgress("dining", "searching");
+      if (searchPlan.transportCriteria?.originAirport) {
+        await onProgress("transport", "searching");
+      }
     }
 
-    const [hotels, activities, dining] = await Promise.all([
-      runHotelsAgent(searchPlan, 10).then(async (results) => {
-        onMicroProgress?.({
-          stage: "hotels",
-          message: `Found ${results.length} perfect hotels`,
-          detail: results[0]?.name,
-        });
-        if (onProgress) await onProgress("hotels", "done");
-        if (onAgentResult) await onAgentResult("hotels", results);
-        return results;
-      }),
-      runActivitiesAgent(searchPlan, 15).then(async (results) => {
-        onMicroProgress?.({
-          stage: "activities",
-          message: `Discovered ${results.length} activities`,
-          detail: results[0]?.name,
-        });
-        if (onProgress) await onProgress("activities", "done");
-        if (onAgentResult) await onAgentResult("activities", results);
-        return results;
-      }),
-      runDiningAgent(searchPlan, 12).then(async (results) => {
-        onMicroProgress?.({
-          stage: "dining",
-          message: `Found ${results.length} restaurants`,
-          detail: results[0]?.name,
-        });
-        if (onProgress) await onProgress("dining", "done");
-        if (onAgentResult) await onAgentResult("dining", results);
-        return results;
-      }),
-    ]);
+    const [hotelsResult, activitiesResult, diningResult, transportResult] =
+      await Promise.allSettled([
+        runHotelsAgent(searchPlan, 10).then(async (results) => {
+          onMicroProgress?.({
+            stage: "hotels",
+            message: `Found ${results.length} perfect hotels`,
+            detail: results[0]?.name,
+          });
+          if (onProgress) await onProgress("hotels", "done");
+          if (onAgentResult) await onAgentResult("hotels", results);
+          return results;
+        }),
+        runActivitiesAgent(searchPlan, 15).then(async (results) => {
+          onMicroProgress?.({
+            stage: "activities",
+            message: `Discovered ${results.length} activities`,
+            detail: results[0]?.name,
+          });
+          if (onProgress) await onProgress("activities", "done");
+          if (onAgentResult) await onAgentResult("activities", results);
+          return results;
+        }),
+        runDiningAgent(searchPlan, 12).then(async (results) => {
+          onMicroProgress?.({
+            stage: "dining",
+            message: `Found ${results.length} restaurants`,
+            detail: results[0]?.name,
+          });
+          if (onProgress) await onProgress("dining", "done");
+          if (onAgentResult) await onAgentResult("dining", results);
+          return results;
+        }),
+        runTransportAgent(searchPlan, input.travelers || 1, 5).then(
+          async (results) => {
+            onMicroProgress?.({
+              stage: "transport",
+              message:
+                results.length > 0
+                  ? `Found ${results.length} flight options`
+                  : "No flights needed",
+              detail: results[0]?.provider,
+            });
+            if (onProgress) await onProgress("transport", "done");
+            if (onAgentResult) await onAgentResult("transport", results);
+            return results;
+          },
+        ),
+      ]);
+
+    // Extract results, falling back to empty arrays if an agent failed
+    const hotels =
+      hotelsResult.status === "fulfilled" ? hotelsResult.value : [];
+    const activities =
+      activitiesResult.status === "fulfilled" ? activitiesResult.value : [];
+    const dining =
+      diningResult.status === "fulfilled" ? diningResult.value : [];
+    const transport =
+      transportResult.status === "fulfilled" ? transportResult.value : [];
+
+    // Log any agent failures
+    for (const [name, result] of [
+      ["hotels", hotelsResult],
+      ["activities", activitiesResult],
+      ["dining", diningResult],
+      ["transport", transportResult],
+    ] as const) {
+      if (result.status === "rejected") {
+        console.error(`[Workflow] ${name} agent failed:`, result.reason);
+      }
+    }
 
     // Step 3: Aggregator Agent - Combines results into itinerary
     onMicroProgress?.({
@@ -144,6 +192,7 @@ export async function executeTravelSearch(
       hotels,
       activities,
       dining,
+      transport,
     );
 
     onMicroProgress?.({
@@ -158,6 +207,7 @@ export async function executeTravelSearch(
       hotels,
       activities,
       dining,
+      transport,
       itinerary: days,
     };
 

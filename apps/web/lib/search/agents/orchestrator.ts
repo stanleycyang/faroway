@@ -22,7 +22,9 @@ const SearchPlanSchema = z.object({
     end: z.string(),
     nights: z.number(),
   }),
-  searchPriorities: z.array(z.enum(["hotels", "activities", "dining"])),
+  searchPriorities: z.array(
+    z.enum(["hotels", "activities", "dining", "transport"]),
+  ),
   hotelCriteria: z.object({
     priceRange: z.object({ min: z.number(), max: z.number() }),
     starRating: z.array(z.number()),
@@ -46,9 +48,20 @@ const SearchPlanSchema = z.object({
     searchKeywords: z.array(z.string()),
     avoidKeywords: z.array(z.string()),
   }),
+  transportCriteria: z
+    .object({
+      originCity: z.string().optional(),
+      originAirport: z.string().optional(),
+      destinationAirport: z.string().optional(),
+      cabinClass: z.enum(["economy", "premium_economy", "business", "first"]),
+      maxStops: z.number(),
+      maxPrice: z.number().optional(),
+      preferredAirlines: z.array(z.string()).optional(),
+    })
+    .optional(),
 });
 
-const SYSTEM_PROMPT = `You are a travel planning expert. Your job is to analyze user travel preferences and create a detailed search plan that will be used by specialized agents to find hotels, activities, and dining options.
+const SYSTEM_PROMPT = `You are a travel planning expert. Your job is to analyze user travel preferences and create a detailed search plan that will be used by specialized agents to find hotels, activities, dining options, and transport.
 
 Consider:
 1. The destination and what it's known for
@@ -56,8 +69,16 @@ Consider:
 3. Who is traveling (solo, couple, family, etc.)
 4. Their selected "vibes" (adventure, relaxation, cultural, etc.)
 5. Budget constraints
+6. Whether the trip requires flights or other transport (if an origin city/airport is provided, include transportCriteria)
 
-Output a comprehensive search plan with specific criteria for hotels, activities, and dining that match the user's preferences.`;
+Output a comprehensive search plan with specific criteria for hotels, activities, dining, and optionally transport.
+
+For transportCriteria:
+- Only include if the user provided an origin city/airport, or the trip clearly requires a flight (international or long-distance)
+- Use IATA airport codes when possible (e.g., JFK, LHR, NRT)
+- Set cabinClass based on budget: budget→economy, moderate→economy, luxury→business
+- Set maxStops based on budget: budget→2, moderate→1, luxury→0
+- If no origin is provided, omit transportCriteria entirely`;
 
 export async function runOrchestratorAgent(
   input: SearchInput,
@@ -74,13 +95,19 @@ export async function runOrchestratorAgent(
     (vibe: string) => VIBE_KEYWORDS[vibe.toLowerCase()] || [],
   );
 
+  const originInfo = input.originAirport
+    ? `\n**Origin:** ${input.originCity || ""} (${input.originAirport})`
+    : input.originCity
+      ? `\n**Origin:** ${input.originCity}`
+      : "";
+
   const prompt = `Create a search plan for this trip:
 
 **Destination:** ${input.destination}
 **Dates:** ${input.startDate} to ${input.endDate} (${nights} nights)
 **Travelers:** ${input.travelers} people, ${input.travelerType || "general"} travel
 **Vibes:** ${input.vibes.join(", ")}
-**Budget:** ${input.budget || "moderate"}
+**Budget:** ${input.budget || "moderate"}${originInfo}
 
 Budget guidelines:
 - Hotel: $${budgetInfo.hotel.min} - $${budgetInfo.hotel.max} per night
@@ -93,7 +120,8 @@ Create a detailed search plan with:
 2. Hotel amenities that match their vibes
 3. Activity categories and must-see attractions
 4. Cuisine types and dining style preferences
-5. Keywords to search for and avoid based on their preferences`;
+5. Keywords to search for and avoid based on their preferences
+6. Transport criteria if an origin city/airport is provided (include IATA codes for origin and destination airports)`;
 
   try {
     const { object: plan } = await generateObject({
@@ -102,6 +130,17 @@ Create a detailed search plan with:
       prompt,
       schema: SearchPlanSchema,
     });
+
+    // Attach origin info from input if AI didn't include it
+    if (input.originAirport && !plan.transportCriteria) {
+      plan.transportCriteria = {
+        originCity: input.originCity,
+        originAirport: input.originAirport,
+        cabinClass: input.budget === "luxury" ? "business" : "economy",
+        maxStops:
+          input.budget === "luxury" ? 0 : input.budget === "budget" ? 2 : 1,
+      };
+    }
 
     return plan;
   } catch (error) {
@@ -116,7 +155,9 @@ Create a detailed search plan with:
         end: input.endDate,
         nights,
       },
-      searchPriorities: ["hotels", "activities", "dining"],
+      searchPriorities: input.originAirport
+        ? ["hotels", "activities", "dining", "transport"]
+        : ["hotels", "activities", "dining"],
       hotelCriteria: {
         priceRange: budgetInfo.hotel,
         starRating:
@@ -150,6 +191,18 @@ Create a detailed search plan with:
         searchKeywords: vibeKeywords,
         avoidKeywords: [],
       },
+      ...(input.originAirport && {
+        transportCriteria: {
+          originCity: input.originCity,
+          originAirport: input.originAirport,
+          cabinClass:
+            input.budget === "luxury"
+              ? ("business" as const)
+              : ("economy" as const),
+          maxStops:
+            input.budget === "luxury" ? 0 : input.budget === "budget" ? 2 : 1,
+        },
+      }),
     };
   }
 }

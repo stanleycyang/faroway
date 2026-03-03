@@ -161,6 +161,7 @@ export async function GET(
           hotels,
           activities,
           dining,
+          transport: [],
           itinerary,
         };
       }

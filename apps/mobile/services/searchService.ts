@@ -115,7 +115,7 @@ export async function pollSearchStatus(
  * Calculate progress percentage from SearchProgress
  */
 export function calculateProgressPercent(progress: SearchProgress): number {
-  const stages = ['orchestrator', 'hotels', 'activities', 'dining', 'aggregator'] as const;
+  const stages = ['orchestrator', 'hotels', 'activities', 'dining', 'transport', 'aggregator'] as const;
   let completed = 0;
 
   for (const stage of stages) {
@@ -135,6 +135,9 @@ export function calculateProgressPercent(progress: SearchProgress): number {
 export function getStatusMessage(progress: SearchProgress): string {
   if (progress.aggregator === 'searching' || progress.aggregator === 'done') {
     return 'Creating your perfect itinerary...';
+  }
+  if (progress.transport === 'searching') {
+    return 'Searching for flights...';
   }
   if (progress.dining === 'searching') {
     return 'Finding the best restaurants...';

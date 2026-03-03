@@ -200,6 +200,7 @@ export async function POST(
       hotels,
       activities,
       dining,
+      transport: [],
       itinerary: days,
     };
 

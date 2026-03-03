@@ -12,6 +12,8 @@ export type {
   HotelResult,
   ActivityResult,
   DiningResult,
+  TransportResult,
+  TransportSegment,
   LocationInfo,
   SearchResults,
   SuggestedDay,
