@@ -51,6 +51,7 @@
   "devDependencies": {
     "@supabase/supabase-js": "^2.97.0",
     "gray-matter": "^4.0.3",
+    "sharp": "^0.34.5",
     "turbo": "^2.5.0",
     "typescript": "^5.5.4"
   },
