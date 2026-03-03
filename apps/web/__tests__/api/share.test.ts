@@ -43,6 +43,7 @@ function createQueryChain(getResult: () => QueryResult | undefined) {
     "limit",
     "order",
     "single",
+    "maybeSingle",
   ];
   methods.forEach((m) => {
     chain[m] = vi.fn(() => chain);

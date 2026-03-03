@@ -18,7 +18,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
-import { Button, VibeChips } from '../../components/ui';
+import { Button, VibeChips, BookingDashboard } from '../../components/ui';
 import { useTripStore, TripActivity } from '../../stores/tripStore';
 import { usePromptStore } from '../../stores/promptStore';
 import { useAuthContext } from '../../components/AuthProvider';
@@ -512,6 +512,9 @@ export default function TripDetailScreen() {
           {trip.hotel && (
             <FeaturedHotelCard hotel={trip.hotel} />
           )}
+
+          {/* Booking Dashboard */}
+          <BookingDashboard tripId={trip.id} />
 
           {/* Day Selector */}
           <View style={styles.daySelector}>

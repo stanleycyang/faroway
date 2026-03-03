@@ -15,6 +15,8 @@ import {
 } from "@/lib/affiliates";
 import { optionalAuth } from "@/lib/auth/middleware";
 import { checkRateLimit, getClientIp } from "@/lib/security/rate-limit";
+import { getSupabase } from "@/lib/supabase/server";
+import type { TripBookingCategory } from "@faroway/types";
 
 interface ClickRequest {
   tripId?: string;
@@ -59,6 +61,7 @@ export async function POST(request: NextRequest) {
       "tripadvisor",
       "discovercars",
       "hostelworld",
+      "duffel",
     ];
     if (!validPartners.includes(body.partner)) {
       return NextResponse.json(
@@ -126,10 +129,54 @@ export async function POST(request: NextRequest) {
         );
     }
 
+    // Create a pending trip_booking for bookable partners
+    let bookingId: string | undefined;
+    const bookablePartnerCategory: Record<string, TripBookingCategory> = {
+      viator: "activity",
+      getyourguide: "activity",
+      duffel: "flight",
+    };
+    const bookingCategory = bookablePartnerCategory[body.partner];
+
+    if (bookingCategory && userId && body.tripId) {
+      try {
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24);
+
+        const { data: booking } = await getSupabase()
+          .from("trip_bookings")
+          .insert({
+            user_id: userId,
+            trip_id: body.tripId,
+            click_id: click.id,
+            category: bookingCategory,
+            item_name: body.productName,
+            item_id: body.productId,
+            partner: body.partner,
+            partner_manage_url: redirectUrl,
+            check_in: body.checkIn || null,
+            check_out: body.checkOut || null,
+            start_time: body.date ? new Date(body.date).toISOString() : null,
+            price: null,
+            currency: "USD",
+            status: "pending",
+            expires_at: expiresAt.toISOString(),
+          })
+          .select("id")
+          .single();
+
+        bookingId = booking?.id;
+      } catch (bookingError) {
+        // Non-blocking: click tracking succeeded, booking creation is best-effort
+        console.error("[Affiliate Click API] Failed to create trip booking:", bookingError);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       trackingId,
       redirectUrl,
+      bookingId,
       click: {
         id: click.id,
         partner: click.partner,

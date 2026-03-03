@@ -52,11 +52,14 @@ export function useNotifications(
       switch (data.type) {
         case 'trip_generation_complete':
         case 'trip_reminder':
+        case 'booking_confirmed':
+        case 'booking_reminder':
           if (isValidTripId) {
             router.push(`/trip/${data.tripId}` as `/trip/${string}`);
           }
           break;
 
+        case 'incomplete_bookings':
         case 'activity_recommendation':
           if (isValidTripId) {
             router.push(`/trip/${data.tripId}` as `/trip/${string}`);

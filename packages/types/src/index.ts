@@ -608,6 +608,50 @@ export interface TrackClickResponse {
 }
 
 // =============================================================================
+// Trip Booking Types
+// =============================================================================
+
+export type TripBookingCategory = 'activity' | 'flight';
+export type TripBookingStatus = 'pending' | 'confirmed' | 'user_confirmed' | 'cancelled' | 'expired';
+
+export interface TripBooking {
+  id: string;
+  userId: string | null;
+  tripId: string;
+  clickId: string | null;
+  category: TripBookingCategory;
+  itemName: string;
+  itemId: string | null;
+  partner: string;
+  partnerBookingRef: string | null;
+  partnerManageUrl: string | null;
+  checkIn: string | null;
+  checkOut: string | null;
+  startTime: string | null;
+  price: number | null;
+  currency: string;
+  status: TripBookingStatus;
+  createdAt: string;
+  confirmedAt: string | null;
+  expiresAt: string | null;
+}
+
+export interface CreateTripBookingParams {
+  tripId: string;
+  clickId?: string;
+  category: TripBookingCategory;
+  itemName: string;
+  itemId?: string;
+  partner: string;
+  partnerManageUrl?: string;
+  checkIn?: string;
+  checkOut?: string;
+  startTime?: string;
+  price?: number;
+  currency?: string;
+}
+
+// =============================================================================
 // Destination Types
 // =============================================================================
 

@@ -152,6 +152,30 @@ export async function deleteTrip(id: string): Promise<ApiResponse<void>> {
 }
 
 // ============================================
+// Trip Bookings APIs
+// ============================================
+
+export async function getTripBookings(tripId: string): Promise<ApiResponse<{ bookings: import('@faroway/types').TripBooking[] }>> {
+  return apiFetch<{ bookings: import('@faroway/types').TripBooking[] }>(
+    `/api/trips/${encodeURIComponent(tripId)}/bookings`
+  );
+}
+
+export async function updateTripBooking(
+  tripId: string,
+  bookingId: string,
+  status: string
+): Promise<ApiResponse<{ booking: import('@faroway/types').TripBooking }>> {
+  return apiFetch<{ booking: import('@faroway/types').TripBooking }>(
+    `/api/trips/${encodeURIComponent(tripId)}/bookings`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ bookingId, status }),
+    }
+  );
+}
+
+// ============================================
 // Trip Sharing APIs
 // ============================================
 

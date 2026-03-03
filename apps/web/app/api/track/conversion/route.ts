@@ -152,6 +152,34 @@ export async function POST(request: NextRequest) {
         .eq("id", data.click_id);
     }
 
+    // Update the corresponding trip_booking to confirmed
+    if (data.status === "confirmed") {
+      const { data: updatedBooking, error: bookingError } = await getSupabase()
+        .from("trip_bookings")
+        .update({
+          status: "confirmed",
+          confirmed_at: new Date().toISOString(),
+          partner_booking_ref: data.booking_reference || data.order_id || null,
+          price: data.booking_value,
+          currency: data.currency,
+        })
+        .eq("click_id", data.click_id)
+        .eq("status", "pending")
+        .select("id, user_id, item_name, partner")
+        .maybeSingle();
+
+      if (bookingError) {
+        console.error("[Conversion Webhook] Failed to update trip booking:", bookingError);
+      } else if (updatedBooking) {
+        console.log(
+          `[Conversion Webhook] Trip booking confirmed: ${updatedBooking.id} - ${updatedBooking.item_name}`,
+        );
+        // TODO: Send push notification to user via Expo Push API
+        // Requires: look up push_tokens for updatedBooking.user_id,
+        // then POST to https://exp.host/--/api/v2/push/send
+      }
+    }
+
     console.log(
       `[Conversion Webhook] Recorded: ${data.click_id} - $${data.commission_value} from ${data.partner}`,
     );

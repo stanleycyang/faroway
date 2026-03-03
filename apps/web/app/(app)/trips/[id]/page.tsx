@@ -58,6 +58,7 @@ class DayErrorBoundary extends React.Component<
 import { TripHeader } from "@/components/trips/TripHeader";
 import { ItineraryDay } from "@/components/trips/ItineraryDay";
 import { SkeletonItineraryDay } from "@/components/trips/SkeletonItineraryDay";
+import { BookingDashboard } from "@/components/trips/BookingDashboard";
 import { ShareButtons } from "@/components/ShareButtons";
 import {
   useTripGeneration,
@@ -547,6 +548,13 @@ export default function TripDetailPage() {
 
         {/* Featured Flights */}
         <FeaturedFlights days={itinerary?.days || null} />
+
+        {/* Booking Dashboard — shows booking status for this trip */}
+        {trip && !isGenerating && (
+          <div className="mb-6">
+            <BookingDashboard tripId={trip.id} />
+          </div>
+        )}
 
         {/* Interactive Map (only when DB itinerary loaded) */}
         {itinerary && !isGenerating && (

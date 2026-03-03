@@ -41,7 +41,10 @@ async function getNotifications() {
 export type NotificationType =
   | 'trip_generation_complete'
   | 'trip_reminder'
-  | 'activity_recommendation';
+  | 'activity_recommendation'
+  | 'booking_confirmed'
+  | 'booking_reminder'
+  | 'incomplete_bookings';
 
 export interface NotificationData {
   type: NotificationType;
