@@ -5,15 +5,15 @@ import { supabase } from '../lib/supabase';
 import { useUserStore } from '../stores/userStore';
 import { setAuthToken, getUserProfile } from '../services/api';
 import { API_BASE_URL } from '../constants/api';
-import * as WebBrowser from 'expo-web-browser';
-import * as AuthSession from 'expo-auth-session';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 
 const ANONYMOUS_TRIPS_KEY = '@faroway/anonymous_trips';
 
-// Required for expo-auth-session
-WebBrowser.maybeCompleteAuthSession();
+GoogleSignin.configure({
+  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+});
 
 interface AuthState {
   user: User | null;
@@ -153,50 +153,26 @@ export function useAuth() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // setUser/clearUserStore are stable zustand selectors
 
-  // Sign in with Google OAuth
+  // Sign in with Google (native SDK)
   const signInWithGoogle = useCallback(async () => {
     try {
       setAuthState(prev => ({ ...prev, loading: true }));
-      
-      const redirectUrl = AuthSession.makeRedirectUri({
-        scheme: 'faroway',
-        path: 'auth/callback',
-      });
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
+      await GoogleSignin.hasPlayServices();
+      const response = await GoogleSignin.signIn();
+
+      if (!response.data?.idToken) {
+        throw new Error('No ID token returned from Google Sign-In');
+      }
+
+      const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'google',
-        options: {
-          redirectTo: redirectUrl,
-          skipBrowserRedirect: true,
-        },
+        token: response.data.idToken,
       });
 
       if (error) throw error;
 
-      if (data?.url) {
-        const result = await WebBrowser.openAuthSessionAsync(
-          data.url,
-          redirectUrl
-        );
-
-        if (result.type === 'success' && result.url) {
-          // Extract the tokens from the URL
-          const url = new URL(result.url);
-          const params = new URLSearchParams(url.hash.substring(1));
-          const access_token = params.get('access_token');
-          const refresh_token = params.get('refresh_token');
-
-          if (access_token && refresh_token) {
-            const { data: sessionData, error: sessionError } = await supabase.auth.setSession({
-              access_token,
-              refresh_token,
-            });
-
-            if (sessionError) throw sessionError;
-            return sessionData;
-          }
-        }
-      }
+      return data;
     } catch (error) {
       console.error('Google sign in error:', error);
       setAuthState(prev => ({ ...prev, loading: false }));
@@ -259,14 +235,21 @@ export function useAuth() {
   // Sign out
   const signOut = useCallback(async () => {
     setAuthState(prev => ({ ...prev, loading: true }));
-    
+
     const { error } = await supabase.auth.signOut();
-    
+
     if (error) {
       setAuthState(prev => ({ ...prev, loading: false }));
       throw error;
     }
-    
+
+    // Clear cached Google credentials so account picker shows on next sign-in
+    try {
+      await GoogleSignin.signOut();
+    } catch {
+      // Non-blocking — Google session may not exist (e.g. Apple sign-in user)
+    }
+
     clearUserStore();
   }, [clearUserStore]);
 
