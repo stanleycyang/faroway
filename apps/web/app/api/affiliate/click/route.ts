@@ -168,7 +168,10 @@ export async function POST(request: NextRequest) {
         bookingId = booking?.id;
       } catch (bookingError) {
         // Non-blocking: click tracking succeeded, booking creation is best-effort
-        console.error("[Affiliate Click API] Failed to create trip booking:", bookingError);
+        console.error(
+          "[Affiliate Click API] Failed to create trip booking:",
+          bookingError,
+        );
       }
     }
 

@@ -169,7 +169,10 @@ export async function POST(request: NextRequest) {
         .maybeSingle();
 
       if (bookingError) {
-        console.error("[Conversion Webhook] Failed to update trip booking:", bookingError);
+        console.error(
+          "[Conversion Webhook] Failed to update trip booking:",
+          bookingError,
+        );
       } else if (updatedBooking) {
         console.log(
           `[Conversion Webhook] Trip booking confirmed: ${updatedBooking.id} - ${updatedBooking.item_name}`,

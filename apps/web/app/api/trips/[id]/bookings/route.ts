@@ -45,10 +45,7 @@ export async function GET(request: NextRequest, { params }: Params) {
     const { id: tripId } = await params;
 
     if (!tripId || !/^[0-9a-f-]{36}$/.test(tripId)) {
-      return NextResponse.json(
-        { error: "Invalid trip ID" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Invalid trip ID" }, { status: 400 });
     }
 
     const supabase = await createClientFromRequest(request);
@@ -95,10 +92,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const { bookingId, status } = body;
 
     if (!tripId || !/^[0-9a-f-]{36}$/.test(tripId)) {
-      return NextResponse.json(
-        { error: "Invalid trip ID" },
-        { status: 400 },
-      );
+      return NextResponse.json({ error: "Invalid trip ID" }, { status: 400 });
     }
 
     if (!bookingId || !status) {
