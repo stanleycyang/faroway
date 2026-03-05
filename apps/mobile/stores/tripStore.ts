@@ -11,6 +11,7 @@ export interface Activity {
   type: 'activity' | 'restaurant' | 'transport' | 'accommodation' | 'attraction' | 'experience';
   price?: string;
   bookingUrl?: string;
+  affiliatePartner?: string;
   image?: string;
   rating?: number;
   reviewCount?: number;

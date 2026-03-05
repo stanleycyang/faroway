@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase, API_BASE_URL, getAuthHeaders } from '../lib/supabase';
-import { useTripStore, Trip, TripInput } from '../stores/tripStore';
+import { useTripStore, Trip, TripInput, TripDay, Activity, Hotel } from '../stores/tripStore';
 import { syncService, networkMonitor, offlineStorage } from '../lib/offline';
 import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 
@@ -22,8 +22,176 @@ interface ApiTrip {
   updated_at: string;
 }
 
-// Transform API trip to app Trip format
-function transformApiTrip(apiTrip: ApiTrip): Trip {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function formatCostValue(cost: any): string | undefined {
+  if (!cost) return undefined;
+  if (typeof cost === 'string') return cost;
+  if (typeof cost === 'number') return `$${cost}`;
+  if (cost.amount != null) {
+    const suffix = cost.perPerson ? '/pp' : '';
+    return `$${cost.amount}${suffix}`;
+  }
+  return undefined;
+}
+
+/**
+ * Transform an API activity (from morning/afternoon/evening blocks) into
+ * the flat Activity type used by mobile UI.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformApiActivity(a: any, timeOfDay: string): Activity {
+  return {
+    id: a.id || `activity_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+    time: a.timeOfDay || timeOfDay,
+    title: a.name || a.title || '',
+    description: a.description || '',
+    location: a.location?.name || (typeof a.location === 'string' ? a.location : ''),
+    duration: typeof a.duration === 'number' ? `${a.duration} min` : (a.duration || ''),
+    type: a.category === 'sightseeing' || a.category === 'adventure' || a.category === 'cultural'
+      ? 'attraction'
+      : a.category === 'entertainment' || a.category === 'shopping'
+        ? 'experience'
+        : (a.type || 'activity'),
+    price: formatCostValue(a.estimatedCost) || formatCostValue(a.price),
+    bookingUrl: a.bookingInfo?.bookingUrl || a.bookingUrl || undefined,
+    affiliatePartner: a.bookingInfo?.affiliateId || a.affiliatePartner || undefined,
+    image: a.images?.[0] || a.image || undefined,
+    rating: a.rating,
+    reviewCount: a.reviewCount,
+    freeCancellation: a.freeCancellation,
+  };
+}
+
+/**
+ * Transform an API restaurant/meal into the flat Activity type with type 'restaurant'.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformApiRestaurant(r: any): Activity {
+  return {
+    id: r.id || `restaurant_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+    time: r.mealType || 'dining',
+    title: r.name || r.title || '',
+    description: r.description || '',
+    location: r.location?.name || (typeof r.location === 'string' ? r.location : ''),
+    duration: '1-2 hours',
+    type: 'restaurant',
+    price: formatCostValue(r.estimatedCost) || formatCostValue(r.price),
+    bookingUrl: r.reservationInfo?.url || r.bookingUrl || undefined,
+    affiliatePartner: 'opentable',
+    rating: r.rating,
+    reviewCount: r.reviewCount,
+  };
+}
+
+/**
+ * Transform API itinerary days (morning/afternoon/evening blocks) into
+ * a flat activities array per day that the mobile UI expects.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformItineraryDays(apiDays: any[]): TripDay[] {
+  if (!Array.isArray(apiDays)) return [];
+
+  return apiDays.map((day) => {
+    const activities: Activity[] = [];
+
+    // If the day already has a flat activities array (pre-transformed or cached), use it directly
+    if (Array.isArray(day.activities) && !day.morning && !day.afternoon && !day.evening) {
+      return day as TripDay;
+    }
+
+    // Flatten morning/afternoon/evening time blocks into a single activities array
+    for (const [timeOfDay] of [
+      ['morning'],
+      ['afternoon'],
+      ['evening'],
+    ] as const) {
+      const block = day[timeOfDay];
+      if (!block) continue;
+
+      // Map activities from this time block
+      if (Array.isArray(block.activities)) {
+        for (const a of block.activities) {
+          if (a && typeof a === 'object' && (a.name || a.title)) {
+            activities.push(transformApiActivity(a, timeOfDay));
+          }
+        }
+      }
+
+      // Map meals/restaurants into activities with type 'restaurant'
+      const meals = Array.isArray(block.meals)
+        ? block.meals
+        : block.meal && typeof block.meal === 'object'
+          ? [block.meal]
+          : [];
+      for (const m of meals) {
+        if (m && typeof m === 'object' && (m.name || m.title)) {
+          activities.push(transformApiRestaurant(m));
+        }
+      }
+    }
+
+    const transport = day.transport
+      ? {
+          type: day.transport.type || 'flight' as const,
+          provider: day.transport.provider || '',
+          departure: day.transport.departure || { airport: '', city: '', dateTime: '' },
+          arrival: day.transport.arrival || { airport: '', city: '', dateTime: '' },
+          duration: day.transport.duration || 0,
+          stops: day.transport.stops || 0,
+          price: day.transport.price || 0,
+          currency: day.transport.currency || 'USD',
+          bookingUrl: day.transport.affiliateUrl || day.transport.bookingUrl || undefined,
+          affiliatePartner: day.transport.affiliatePartner || undefined,
+        }
+      : undefined;
+
+    return {
+      date: day.date || '',
+      dayNumber: day.dayNumber || 1,
+      theme: day.title || day.theme || `Day ${day.dayNumber || 1}`,
+      activities,
+      transport,
+    };
+  });
+}
+
+/**
+ * Transform hotel data from the API response.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function transformApiHotel(h: any): Hotel | undefined {
+  if (!h || typeof h !== 'object' || !h.name) return undefined;
+
+  return {
+    id: h.id || `hotel_${Date.now()}`,
+    name: h.name,
+    description: h.description || '',
+    pricePerNight: h.pricePerNight || h.price || 0,
+    totalPrice: h.totalPrice || (h.pricePerNight || h.price || 0),
+    rating: h.rating || h.starRating || 0,
+    reviewCount: h.reviewCount || 0,
+    amenities: h.amenities || [],
+    images: h.images || (h.image ? [h.image] : []),
+    bookingUrl: h.affiliateUrl || h.bookingUrl || '',
+    location: {
+      name: h.location?.name || h.neighborhood || '',
+      address: h.location?.address || h.address || '',
+      lat: h.location?.lat || h.location?.coordinates?.lat || 0,
+      lng: h.location?.lng || h.location?.coordinates?.lng || 0,
+      neighborhood: h.location?.neighborhood || h.neighborhood,
+    },
+  };
+}
+
+/**
+ * Transform API trip to app Trip format.
+ * The single-trip endpoint returns { trip, itinerary } as separate top-level keys,
+ * so itinerary must be passed explicitly.
+ */
+function transformApiTrip(apiTrip: ApiTrip, itinerary?: any): Trip {
+  const itineraryData = itinerary || apiTrip.itinerary;
+  const rawDays = itineraryData?.days || [];
+
   return {
     id: apiTrip.id,
     destination: apiTrip.destination,
@@ -34,7 +202,8 @@ function transformApiTrip(apiTrip: ApiTrip): Trip {
     travelerType: apiTrip.traveler_type || 'solo',
     vibes: apiTrip.vibes || [],
     budget: apiTrip.budget,
-    days: apiTrip.itinerary?.days || [],
+    days: transformItineraryDays(rawDays),
+    hotel: transformApiHotel(itineraryData?.topHotel),
     coverImage: apiTrip.cover_image || getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
     createdAt: apiTrip.created_at,
     status: apiTrip.status as Trip['status'],
@@ -80,19 +249,19 @@ export function useTrips() {
       }
 
       const data = await response.json();
-      
+
       // Transform and save trips to store and offline storage
-      const transformedTrips = (data.trips || []).map(transformApiTrip);
+      const transformedTrips = (data.trips || []).map((t: ApiTrip) => transformApiTrip(t));
       transformedTrips.forEach((trip: Trip) => saveTrip(trip));
-      
+
       // Save to offline storage for caching
       await offlineStorage.saveTrips(transformedTrips);
-      
+
       return transformedTrips;
     } catch (err: any) {
       setError(err.message);
       console.error('Error fetching trips:', err);
-      
+
       // Fallback to cached trips on error
       const cachedTrips = await offlineStorage.loadTrips();
       return cachedTrips.length > 0 ? cachedTrips : [];
@@ -129,10 +298,10 @@ export function useTrips() {
 
       saveTrip(localTrip);
       setCurrentTrip(localTrip);
-      
+
       // Queue for sync when online
       await syncService.queueCreate(localTrip);
-      
+
       setLoading(false);
       return localTrip;
     }
@@ -165,10 +334,10 @@ export function useTrips() {
 
       const data = await response.json();
       const trip = transformApiTrip(data.trip);
-      
+
       saveTrip(trip);
       setCurrentTrip(trip);
-      
+
       return trip;
     } catch (err: any) {
       setError(err.message);
@@ -202,8 +371,9 @@ export function useTrips() {
       }
 
       const data = await response.json();
-      const trip = transformApiTrip(data.trip);
-      
+      // API returns { trip, itinerary } as separate top-level keys
+      const trip = transformApiTrip(data.trip, data.itinerary);
+
       setCurrentTrip(trip);
       return trip;
     } catch (err: any) {
@@ -248,8 +418,8 @@ export function useTrips() {
       }
 
       const data = await response.json();
-      const trip = transformApiTrip(data.trip);
-      
+      const trip = transformApiTrip(data.trip, data.itinerary);
+
       saveTrip(trip);
       return trip;
     } catch (err: any) {
