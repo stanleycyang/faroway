@@ -6,8 +6,8 @@ import {
 } from "@/lib/blog";
 import { getSupabase } from "@/lib/supabase/server";
 import { getGuideSlugs } from "@/lib/destination-guides";
-
 import { getAllCostProfiles } from "@/lib/tools/cost-data";
+import { getAllMonthSlugs } from "@/lib/tools/best-by-month-data";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
@@ -177,12 +177,39 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly" as const,
       priority: 0.6,
     })),
+    // Packing list per destination
+    ...guideSlugs.map((slug) => ({
+      url: `${baseUrl}/tools/packing-list/${slug}`,
+      lastModified: currentDate,
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
+    })),
   ];
+
+  // Best destinations by month pages
+  const travelPages: MetadataRoute.Sitemap = getAllMonthSlugs().map(
+    (month) => ({
+      url: `${baseUrl}/travel/best-in-${month}`,
+      lastModified: currentDate,
+      changeFrequency: "monthly" as const,
+      priority: 0.7,
+    }),
+  );
+
+  // Things to do per destination
+  const thingsToDoPages: MetadataRoute.Sitemap = guideSlugs.map((slug) => ({
+    url: `${baseUrl}/destinations/${slug}/things-to-do`,
+    lastModified: currentDate,
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  }));
 
   return [
     ...staticPages,
     ...destinationPages,
+    ...thingsToDoPages,
     ...toolPages,
+    ...travelPages,
     ...blogIndex,
     ...blogPosts,
     ...blogCategories,
