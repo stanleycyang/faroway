@@ -12,6 +12,8 @@ import {
   ActivityIndicator,
   Share,
   Alert,
+  Modal,
+  FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -19,15 +21,16 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
 import { Button, VibeChips } from '../../components/ui';
-import { useTripStore, TripActivity } from '../../stores/tripStore';
+import { useTripStore, TripActivity, Activity } from '../../stores/tripStore';
 import { usePromptStore } from '../../stores/promptStore';
 import { useAuthContext } from '../../components/AuthProvider';
 import { AuthGate } from '../../components/AuthGate';
 import { RatingPrompt } from '../../components/RatingPrompt';
-import { getTrip, shareTrip } from '../../services/api';
+import { getTrip, shareTrip, trackAffiliateClick } from '../../services/api';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import { registry } from '../../lib/json-render/registry';
+import { useTrips } from '../../hooks/useTrips';
 
 const { width } = Dimensions.get('window');
 const HEADER_HEIGHT = 300;
@@ -43,6 +46,39 @@ const openURL = async (url: string) => {
     });
   } catch (error) {
     console.error('Failed to open URL:', error);
+  }
+};
+
+/**
+ * Track affiliate click and open the booking URL.
+ * Fires tracking request, then opens the URL (uses tracked URL if available).
+ */
+const trackAndOpen = async (params: {
+  itemType: 'hotel' | 'activity' | 'restaurant' | 'flight';
+  itemId: string;
+  itemName: string;
+  affiliatePartner: string;
+  affiliateUrl: string;
+}) => {
+  hapticFeedback.light();
+
+  // Fire tracking request (non-blocking)
+  const trackingPromise = trackAffiliateClick({
+    itemType: params.itemType,
+    itemId: params.itemId,
+    itemName: params.itemName,
+    affiliatePartner: params.affiliatePartner,
+    affiliateUrl: params.affiliateUrl,
+    source: 'itinerary',
+  });
+
+  // Try to get the tracked redirect URL, fall back to original
+  try {
+    const result = await trackingPromise;
+    const url = result.data?.redirectUrl || params.affiliateUrl;
+    await openURL(url);
+  } catch {
+    await openURL(params.affiliateUrl);
   }
 };
 
@@ -87,6 +123,10 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
         return 'car';
       case 'accommodation':
         return 'bed';
+      case 'attraction':
+        return 'camera';
+      case 'experience':
+        return 'sparkles';
       default:
         return 'location';
     }
@@ -100,9 +140,33 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
         return '#3b82f6';
       case 'accommodation':
         return '#8b5cf6';
+      case 'attraction':
+        return '#f59e0b';
+      case 'experience':
+        return '#10b981';
       default:
         return colors.primary[500];
     }
+  };
+
+  const getBookingLabel = (type: string) => {
+    switch (type) {
+      case 'restaurant':
+        return 'Reserve a Table';
+      default:
+        return 'Reserve Now';
+    }
+  };
+
+  const handleBooking = () => {
+    if (!activity.bookingUrl) return;
+    trackAndOpen({
+      itemType: activity.type === 'restaurant' ? 'restaurant' : 'activity',
+      itemId: activity.id,
+      itemName: activity.title,
+      affiliatePartner: activity.affiliatePartner || 'viator',
+      affiliateUrl: activity.bookingUrl,
+    });
   };
 
   return (
@@ -122,6 +186,10 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
         <View style={styles.activityLine} />
       </View>
       <View style={styles.activityContent}>
+        {/* Activity Image */}
+        {activity.image && (
+          <Image source={{ uri: activity.image }} style={styles.activityImage} />
+        )}
         <View style={styles.activityHeader}>
           <View
             style={[
@@ -160,12 +228,29 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
         {activity.bookingUrl && (
           <TouchableOpacity
             style={styles.bookButton}
-            onPress={() => openURL(activity.bookingUrl!)}
+            onPress={handleBooking}
             activeOpacity={0.7}
           >
-            <Text style={styles.bookButtonText}>Book Now</Text>
-            <Ionicons name="arrow-forward" size={16} color={colors.primary[500]} />
+            <LinearGradient
+              colors={activity.type === 'restaurant' ? ['#f97316', '#ea580c'] : ['#6366f1', '#8b5cf6']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+            <Ionicons
+              name={activity.type === 'restaurant' ? 'restaurant-outline' : 'shield-checkmark-outline'}
+              size={16}
+              color="#fff"
+            />
+            <Text style={styles.bookButtonText}>{getBookingLabel(activity.type)}</Text>
+            <Ionicons name="open-outline" size={14} color="rgba(255,255,255,0.7)" />
           </TouchableOpacity>
+        )}
+        {activity.bookingUrl && activity.freeCancellation && (
+          <View style={styles.freeCancelRow}>
+            <Ionicons name="checkmark-circle" size={12} color="#22c55e" />
+            <Text style={styles.freeCancelText}>Free cancellation</Text>
+          </View>
         )}
       </View>
     </TouchableOpacity>
@@ -173,6 +258,17 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
 }
 
 function FeaturedHotelCard({ hotel }: { hotel: NonNullable<import('../../stores/tripStore').Trip['hotel']> }) {
+  const handleBooking = () => {
+    if (!hotel.bookingUrl) return;
+    trackAndOpen({
+      itemType: 'hotel',
+      itemId: hotel.id,
+      itemName: hotel.name,
+      affiliatePartner: 'booking',
+      affiliateUrl: hotel.bookingUrl,
+    });
+  };
+
   return (
     <View style={styles.hotelCard}>
       {hotel.images && hotel.images.length > 0 && (
@@ -208,7 +304,7 @@ function FeaturedHotelCard({ hotel }: { hotel: NonNullable<import('../../stores/
         )}
         <TouchableOpacity
           style={styles.hotelCardButton}
-          onPress={() => hotel.bookingUrl && openURL(hotel.bookingUrl)}
+          onPress={handleBooking}
           activeOpacity={0.7}
           disabled={!hotel.bookingUrl}
         >
@@ -233,6 +329,17 @@ function TransportCard({ transport }: { transport: NonNullable<import('../../sto
   };
 
   const stopsLabel = transport.stops === 0 ? 'Direct' : `${transport.stops} stop${transport.stops > 1 ? 's' : ''}`;
+
+  const handleBooking = () => {
+    if (!transport.bookingUrl) return;
+    trackAndOpen({
+      itemType: 'flight',
+      itemId: `transport_${transport.departure.airport}_${transport.arrival.airport}`,
+      itemName: `${transport.provider} ${transport.departure.airport}-${transport.arrival.airport}`,
+      affiliatePartner: transport.affiliatePartner || 'duffel',
+      affiliateUrl: transport.bookingUrl,
+    });
+  };
 
   return (
     <View style={styles.transportCard}>
@@ -277,7 +384,7 @@ function TransportCard({ transport }: { transport: NonNullable<import('../../sto
         {transport.bookingUrl && (
           <TouchableOpacity
             style={styles.transportCardButton}
-            onPress={() => openURL(transport.bookingUrl!)}
+            onPress={handleBooking}
             activeOpacity={0.7}
           >
             <Text style={styles.transportCardButtonText}>Book Flight</Text>
@@ -289,10 +396,88 @@ function TransportCard({ transport }: { transport: NonNullable<import('../../sto
   );
 }
 
+/**
+ * Bottom sheet modal showing all bookable items across the trip.
+ */
+function BookingsSheet({
+  visible,
+  onClose,
+  bookableItems,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  bookableItems: { activity: Activity; dayNumber: number }[];
+}) {
+  const renderBookableItem = ({ item }: { item: { activity: Activity; dayNumber: number } }) => {
+    const { activity, dayNumber } = item;
+
+    const handleBook = () => {
+      trackAndOpen({
+        itemType: activity.type === 'restaurant' ? 'restaurant' : 'activity',
+        itemId: activity.id,
+        itemName: activity.title,
+        affiliatePartner: activity.affiliatePartner || 'viator',
+        affiliateUrl: activity.bookingUrl!,
+      });
+    };
+
+    return (
+      <View style={styles.sheetItem}>
+        <View style={styles.sheetItemInfo}>
+          <Text style={styles.sheetItemDay}>Day {dayNumber}</Text>
+          <Text style={styles.sheetItemTitle} numberOfLines={1}>{activity.title}</Text>
+          {activity.price && (
+            <Text style={styles.sheetItemPrice}>{activity.price}</Text>
+          )}
+        </View>
+        <TouchableOpacity
+          style={styles.sheetItemButton}
+          onPress={handleBook}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.sheetItemButtonText}>Book</Text>
+          <Ionicons name="open-outline" size={14} color="#fff" />
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
+  return (
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+    >
+      <SafeAreaView edges={['top']} style={styles.sheetContainer}>
+        <View style={styles.sheetHeader}>
+          <Text style={styles.sheetTitle}>
+            {bookableItems.length} Bookable {bookableItems.length === 1 ? 'Item' : 'Items'}
+          </Text>
+          <TouchableOpacity onPress={onClose} style={styles.sheetClose}>
+            <Ionicons name="close" size={24} color="#0f172a" />
+          </TouchableOpacity>
+        </View>
+        <Text style={styles.sheetSubtitle}>
+          Book directly with our partners. Free cancellation on most items.
+        </Text>
+        <FlatList
+          data={bookableItems}
+          renderItem={renderBookableItem}
+          keyExtractor={(item) => item.activity.id}
+          contentContainerStyle={styles.sheetList}
+          ItemSeparatorComponent={() => <View style={styles.sheetSeparator} />}
+        />
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
 export default function TripDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { trips, currentTrip } = useTripStore();
+  const { getTripById } = useTrips();
   const { isAuthenticated } = useAuthContext();
   const { tripGenerationCount, shouldShowRatingPrompt } = usePromptStore();
   const [selectedDay, setSelectedDay] = useState(0);
@@ -300,6 +485,7 @@ export default function TripDetailScreen() {
   const [showAuthGate, setShowAuthGate] = useState(false);
   const [authGateTrigger, setAuthGateTrigger] = useState<'save' | 'share'>('save');
   const [showRatingPrompt, setShowRatingPrompt] = useState(false);
+  const [showBookingsSheet, setShowBookingsSheet] = useState(false);
 
   const scrollY = useRef(new Animated.Value(0)).current;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -320,6 +506,40 @@ export default function TripDetailScreen() {
     }
     return total;
   }, [trip]);
+
+  // Collect all bookable items across all days
+  const bookableItems = useMemo(() => {
+    if (!trip?.days) return [];
+    const items: { activity: Activity; dayNumber: number }[] = [];
+    for (const day of trip.days) {
+      for (const act of day.activities) {
+        if (act.bookingUrl) {
+          items.push({ activity: act, dayNumber: day.dayNumber });
+        }
+      }
+    }
+    // Include hotel if bookable
+    if (trip.hotel?.bookingUrl) {
+      items.unshift({
+        activity: {
+          id: trip.hotel.id,
+          time: '',
+          title: trip.hotel.name,
+          description: trip.hotel.description,
+          location: trip.hotel.location?.name || '',
+          duration: '',
+          type: 'accommodation',
+          price: `$${trip.hotel.pricePerNight}/night`,
+          bookingUrl: trip.hotel.bookingUrl,
+          affiliatePartner: 'booking',
+        },
+        dayNumber: 0,
+      });
+    }
+    return items;
+  }, [trip]);
+
+  const bookableCount = bookableItems.length;
 
   useEffect(() => {
     if (!trip && id) {
@@ -362,11 +582,8 @@ export default function TripDetailScreen() {
     setRefreshing(true);
     hapticFeedback.light();
     try {
-      const result = await getTrip(id);
-      if (result.data?.trip) {
-        const { saveTrip } = useTripStore.getState();
-        saveTrip(result.data.trip as any);
-      }
+      // Use getTripById which properly transforms itinerary data with booking URLs
+      await getTripById(id);
       hapticFeedback.success();
     } catch (error) {
       console.error('Failed to refresh trip:', error);
@@ -588,15 +805,26 @@ export default function TripDetailScreen() {
           </Text>
         </View>
         <Button
-          title="View Bookings"
+          title={bookableCount > 0 ? `Book ${bookableCount} ${bookableCount === 1 ? 'Item' : 'Items'}` : 'Explore'}
           onPress={() => {
             hapticFeedback.light();
-            scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+            if (bookableCount > 0) {
+              setShowBookingsSheet(true);
+            } else {
+              scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+            }
           }}
           size="lg"
           style={styles.bookAllButton}
         />
       </View>
+
+      {/* Bookings Bottom Sheet */}
+      <BookingsSheet
+        visible={showBookingsSheet}
+        onClose={() => setShowBookingsSheet(false)}
+        bookableItems={bookableItems}
+      />
 
       {/* Auth gate for guests */}
       <AuthGate
@@ -804,14 +1032,20 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#ffffff',
     borderRadius: borderRadius.lg,
-    padding: 16,
+    overflow: 'hidden',
     borderWidth: 1,
     borderColor: '#e2e8f0',
+  },
+  activityImage: {
+    width: '100%',
+    height: 120,
   },
   activityHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 8,
+    paddingHorizontal: 16,
+    paddingTop: 16,
   },
   activityTypeIcon: {
     width: 32,
@@ -844,11 +1078,13 @@ const styles = StyleSheet.create({
     color: '#475569',
     lineHeight: 20,
     marginBottom: 8,
+    paddingHorizontal: 16,
   },
   activityRating: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 12,
+    paddingHorizontal: 16,
   },
   activityRatingText: {
     fontSize: 13,
@@ -865,15 +1101,29 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    backgroundColor: '#FFF5F4',
-    paddingVertical: 10,
-    borderRadius: borderRadius.md,
+    gap: 8,
+    paddingVertical: 14,
+    marginHorizontal: 16,
+    marginBottom: 4,
+    borderRadius: borderRadius.lg,
+    overflow: 'hidden',
   },
   bookButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.primary[400],
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#fff',
+  },
+  freeCancelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingBottom: 12,
+  },
+  freeCancelText: {
+    fontSize: 11,
+    color: '#22c55e',
+    fontWeight: '500',
   },
   bottomBar: {
     position: 'absolute',
@@ -1096,5 +1346,87 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     color: '#1e40af',
+  },
+  // Bookings Sheet
+  sheetContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  sheetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 16,
+    paddingBottom: 4,
+  },
+  sheetTitle: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#0f172a',
+  },
+  sheetClose: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#f1f5f9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sheetSubtitle: {
+    fontSize: 14,
+    color: '#64748b',
+    paddingHorizontal: 24,
+    marginBottom: 16,
+  },
+  sheetList: {
+    paddingHorizontal: 24,
+    paddingBottom: 40,
+  },
+  sheetSeparator: {
+    height: 1,
+    backgroundColor: '#e2e8f0',
+    marginVertical: 12,
+  },
+  sheetItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  sheetItemInfo: {
+    flex: 1,
+  },
+  sheetItemDay: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: colors.primary[400],
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  sheetItemTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 2,
+  },
+  sheetItemPrice: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748b',
+  },
+  sheetItemButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.primary[500],
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: borderRadius.lg,
+  },
+  sheetItemButtonText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#fff',
   },
 });

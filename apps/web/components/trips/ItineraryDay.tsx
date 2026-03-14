@@ -238,15 +238,31 @@ export function ItineraryDay({
                   </div>
                 </div>
                 {hotel.affiliateUrl && (
-                  <a
-                    href={hotel.affiliateUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <button
+                    onClick={() => {
+                      fetch("/api/track/click", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          itemType: "hotel",
+                          itemId: `hotel_${hotel.name?.replace(/\s+/g, "_")}`,
+                          itemName: hotel.name,
+                          affiliatePartner: "booking",
+                          affiliateUrl: hotel.affiliateUrl,
+                          source: "itinerary",
+                        }),
+                      }).catch(() => {});
+                      window.open(
+                        hotel.affiliateUrl,
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
+                    }}
                     className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
                   >
                     Check Prices
                     <ExternalLink className="w-3 h-3" />
-                  </a>
+                  </button>
                 )}
               </div>
             </div>
