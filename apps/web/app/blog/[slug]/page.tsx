@@ -269,6 +269,85 @@ function renderMarkdown(md: string): string {
   return out.join("\n");
 }
 
+// ---- FAQ schema helpers ----
+interface FaqItem {
+  question: string;
+  answer: string;
+}
+
+function extractFaqs(content: string): FaqItem[] {
+  const faqs: FaqItem[] = [];
+  const lines = content.split('\n');
+
+  let inFaqSection = false;
+  let pendingQuestion: string | null = null;
+  const answerLines: string[] = [];
+
+  const flushQA = () => {
+    if (pendingQuestion && answerLines.length > 0) {
+      faqs.push({
+        question: pendingQuestion,
+        answer: answerLines.join(' ').trim(),
+      });
+    }
+    pendingQuestion = null;
+    answerLines.length = 0;
+  };
+
+  for (const rawLine of lines) {
+    const line = rawLine.trim();
+
+    // Detect FAQ section heading
+    if (/^#{1,3}\s+(FAQ|Frequently Asked Questions)/i.test(line)) {
+      inFaqSection = true;
+      continue;
+    }
+
+    // Stop at the next major heading that isn't a question
+    if (inFaqSection && /^#{1,2}\s+/.test(line) && !/\?/.test(line)) {
+      const headingText = line.replace(/^#{1,2}\s+/, '');
+      if (!/^(FAQ|Frequently|Q:|What|How|Is |Are |Can |Does |Do |Why |When |Where )/i.test(headingText)) {
+        flushQA();
+        break;
+      }
+    }
+
+    if (!inFaqSection) continue;
+
+    // Pattern 1: **Q: question text** or **Q:** question
+    const boldQMatch = line.match(/^\*\*Q:\*?\*?\s*(.+?)\*?\*?$/i) || line.match(/^\*\*Q:\s+(.+)\*\*$/i);
+    if (boldQMatch) {
+      flushQA();
+      pendingQuestion = boldQMatch[1].replace(/\*+/g, '').trim();
+      continue;
+    }
+
+    // Pattern 2: ### or ## heading with a question mark
+    const headingQMatch = line.match(/^#{2,3}\s+(.+\?)$/);
+    if (headingQMatch) {
+      flushQA();
+      pendingQuestion = headingQMatch[1].trim();
+      continue;
+    }
+
+    // Pattern 3: **A:** answer prefix — treat as answer line
+    const boldAMatch = line.match(/^\*\*A:\*?\*?\s*(.+)/i);
+    if (boldAMatch && pendingQuestion) {
+      answerLines.push(boldAMatch[1].replace(/\*+/g, '').trim());
+      continue;
+    }
+
+    // Collect non-empty lines as answer content
+    if (pendingQuestion && line && !/^#{1,3}\s/.test(line)) {
+      // Strip markdown bold/italic
+      answerLines.push(line.replace(/\*+([^*]+)\*+/g, '$1'));
+    }
+  }
+
+  flushQA();
+  return faqs.slice(0, 10); // max 10 for schema
+}
+
 export default async function BlogPostPage({
   params,
 }: {
@@ -281,6 +360,23 @@ export default async function BlogPostPage({
   const related = await getRelatedPosts(slug, 3);
   const postUrl = `${baseUrl}/blog/${post.slug}`;
   const contentHtml = renderMarkdown(post.content);
+
+  // FAQ schema
+  const faqs = extractFaqs(post.content);
+  const faqJsonLd = faqs.length > 0
+    ? {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: faqs.map((faq) => ({
+          "@type": "Question",
+          name: faq.question,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: faq.answer,
+          },
+        })),
+      }
+    : null;
 
   // Article JSON-LD
   const articleJsonLd = {
@@ -338,6 +434,14 @@ export default async function BlogPostPage({
           __html: JSON.stringify(breadcrumbJsonLd).replace(/</g, "\\u003c"),
         }}
       />
+      {faqJsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(faqJsonLd).replace(/</g, "\\u003c"),
+          }}
+        />
+      )}
 
       <main className="min-h-screen">
         {/* ===== Immersive Cinematic Hero ===== */}
