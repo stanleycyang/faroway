@@ -26,6 +26,8 @@ import { AuthGate } from '../../components/AuthGate';
 import { popularDestinations, travelerTypes } from '@faroway/constants';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
+import { trackEvent } from '../../lib/analytics/mixpanel';
+import { EVENTS } from '@faroway/analytics';
 
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
 
@@ -104,6 +106,7 @@ export default function CreateTripScreen() {
     setMapLoadFailed(false);
     setDraftInput({ destination: name, country, placeId });
     setShowSearch(false);
+    trackEvent(EVENTS.TRIP_DESTINATION_SELECTED, { destination: name, country });
   };
 
   const handleTravelerTypeSelect = (typeId: string) => {
@@ -133,6 +136,14 @@ export default function CreateTripScreen() {
   const handleContinue = () => {
     if (canProceed) {
       hapticFeedback.success();
+      trackEvent(EVENTS.TRIP_GENERATING, {
+        destination: draftInput?.destination,
+        start_date: draftInput?.startDate,
+        end_date: draftInput?.endDate,
+        travelers: draftInput?.travelers || 2,
+        traveler_type: draftInput?.travelerType,
+        vibes: draftInput?.vibes,
+      });
       router.push('/create/generating');
     } else {
       hapticFeedback.error();

@@ -8,6 +8,8 @@ import { API_BASE_URL } from '../constants/api';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
+import { trackEvent, identifyUser, resetUser } from '../lib/analytics/mixpanel';
+import { EVENTS } from '@faroway/analytics';
 
 const ANONYMOUS_TRIPS_KEY = '@faroway/anonymous_trips';
 
@@ -117,6 +119,16 @@ export function useAuth() {
         });
 
         if (session) {
+          identifyUser(session.user.id, {
+            $email: session.user.email,
+            $name: session.user.user_metadata?.full_name,
+            platform: Platform.OS as 'ios' | 'android',
+          });
+
+          if (event === 'SIGNED_IN') {
+            trackEvent(EVENTS.SIGN_IN, { method: session.user.app_metadata?.provider });
+          }
+
           await hydrateUser(session);
 
           // Claim any anonymous trips stored locally
@@ -141,6 +153,7 @@ export function useAuth() {
             // Non-blocking — don't prevent sign-in flow
           }
         } else {
+          resetUser();
           setAuthToken(null);
           clearUserStore();
         }
@@ -243,6 +256,8 @@ export function useAuth() {
       throw error;
     }
 
+    trackEvent(EVENTS.SIGN_OUT);
+
     // Clear cached Google credentials so account picker shows on next sign-in
     try {
       await GoogleSignin.signOut();
@@ -250,6 +265,7 @@ export function useAuth() {
       // Non-blocking — Google session may not exist (e.g. Apple sign-in user)
     }
 
+    resetUser();
     clearUserStore();
   }, [clearUserStore]);
 

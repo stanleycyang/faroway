@@ -24,6 +24,8 @@ import {
   type PlaceResult,
 } from "@/components/create/PlacesAutocompleteInput";
 import { DatePicker } from "@/components/trips/DatePicker";
+import { trackEvent } from "@/lib/analytics/mixpanel";
+import { EVENTS } from "@faroway/analytics";
 
 // Dynamic import — Leaflet must not run on the server
 const DestinationMap = dynamic(
@@ -155,6 +157,11 @@ export default function CreateTripPage() {
       isRecommended: true,
     });
     setShowDestinations(false);
+    trackEvent(EVENTS.TRIP_DESTINATION_SELECTED, {
+      destination: dest.name,
+      country: dest.country,
+      is_recommended: true,
+    });
   };
 
   const handleSelectFromAutocomplete = (place: PlaceResult) => {
@@ -169,6 +176,10 @@ export default function CreateTripPage() {
       isRecommended: !!recommended,
     });
     setShowDestinations(false);
+    trackEvent(EVENTS.TRIP_DESTINATION_SELECTED, {
+      destination: place.name,
+      is_recommended: !!recommended,
+    });
   };
 
   const handleChangeDestination = () => {
@@ -181,6 +192,15 @@ export default function CreateTripPage() {
     setIsGenerating(true);
     setGenerateError(null);
     setProgressMessage("Creating your trip...");
+
+    trackEvent(EVENTS.TRIP_GENERATING, {
+      destination: selectedPlace.name,
+      start_date: format(startDate!, "yyyy-MM-dd"),
+      end_date: format(endDate!, "yyyy-MM-dd"),
+      travelers,
+      traveler_type: travelerType,
+      vibes: selectedVibes,
+    });
 
     try {
       const response = await fetch("/api/trips", {
@@ -247,6 +267,17 @@ export default function CreateTripPage() {
           );
         }
       }
+
+      trackEvent(EVENTS.TRIP_CREATED, {
+        trip_id: trip.id,
+        destination: selectedPlace.name,
+        duration_days: Math.ceil(
+          (endDate!.getTime() - startDate!.getTime()) / (1000 * 60 * 60 * 24),
+        ),
+        travelers,
+        traveler_type: travelerType,
+        vibes: selectedVibes,
+      });
 
       // Redirect to trip detail page — real progress happens there via SSE
       router.push(`/trips/${trip.id}`);

@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
+    "@faroway/analytics": "*",
     "@faroway/constants": "*",
     "@faroway/supabase": "*",
     "@faroway/types": "*",
@@ -44,6 +45,7 @@
     "expo-status-bar": "~3.0.9",
     "expo-store-review": "~9.0.9",
     "expo-web-browser": "^15.0.10",
+    "mixpanel-react-native": "^3.3.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",

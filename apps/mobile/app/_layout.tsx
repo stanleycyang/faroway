@@ -3,6 +3,7 @@ import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
 import { AuthProvider, useAuthContext } from '../components/AuthProvider';
+import { AnalyticsProvider } from '../components/AnalyticsProvider';
 import { NotificationProvider } from '../components/NotificationProvider';
 import { OfflineProvider } from '../components/OfflineProvider';
 import { SyncStatusBanner } from '../components/ui/SyncStatusBanner';
@@ -135,11 +136,13 @@ function RootLayoutNav() {
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <NotificationProvider>
-        <OfflineProvider autoSync={true} syncOnForeground={true} syncOnMount={true}>
-          <RootLayoutNav />
-        </OfflineProvider>
-      </NotificationProvider>
+      <AnalyticsProvider>
+        <NotificationProvider>
+          <OfflineProvider autoSync={true} syncOnForeground={true} syncOnMount={true}>
+            <RootLayoutNav />
+          </OfflineProvider>
+        </NotificationProvider>
+      </AnalyticsProvider>
     </AuthProvider>
   );
 }

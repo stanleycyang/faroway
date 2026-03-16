@@ -19,6 +19,7 @@
   "dependencies": {
     "@ai-sdk/openai": "^3.0.29",
     "@anthropic-ai/sdk": "^0.74.0",
+    "@faroway/analytics": "*",
     "@faroway/constants": "*",
     "@faroway/supabase": "*",
     "@faroway/types": "*",
@@ -40,6 +41,7 @@
     "leaflet": "^1.9.4",
     "lodash": "^4.17.23",
     "lucide-react": "^0.564.0",
+    "mixpanel-browser": "^2.75.0",
     "nanoid": "^5.1.6",
     "next": "^16.1.6",
     "postcss": "^8.5.6",

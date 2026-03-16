@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
+import { Suspense } from "react";
+import { MixpanelProvider } from "@/components/analytics/MixpanelProvider";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -184,7 +186,11 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
-        <div id="main-content">{children}</div>
+        <Suspense fallback={null}>
+          <MixpanelProvider>
+            <div id="main-content">{children}</div>
+          </MixpanelProvider>
+        </Suspense>
       </body>
     </html>
   );
