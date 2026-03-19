@@ -3,6 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
+import {
+  identifyUser,
+  resetUser,
+  trackEvent,
+} from "@/lib/analytics/mixpanel";
+import { EVENTS } from "@faroway/analytics";
 
 interface UseUserReturn {
   user: User | null;
@@ -101,9 +107,20 @@ export function useUser(): UseUserReturn {
         setUser(session?.user ?? null);
         setLoading(false);
 
+        // Identify or reset user for analytics
+        if (session?.user) {
+          identifyUser(session.user.id, {
+            $email: session.user.email,
+            $name: session.user.user_metadata?.full_name,
+          });
+        }
+
         // Handle specific auth events
         switch (event) {
           case "SIGNED_IN":
+            trackEvent(EVENTS.SIGN_IN, {
+              method: session?.user?.app_metadata?.provider,
+            });
             // Claim any anonymous trips stored in localStorage
             try {
               const stored = localStorage.getItem("faroway_anonymous_trips");
@@ -124,7 +141,8 @@ export function useUser(): UseUserReturn {
             }
             break;
           case "SIGNED_OUT":
-            // User signed out
+            trackEvent(EVENTS.SIGN_OUT);
+            resetUser();
             setUser(null);
             setSession(null);
             break;

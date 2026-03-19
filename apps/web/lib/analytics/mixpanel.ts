@@ -9,7 +9,7 @@ export function initMixpanel() {
   if (initialized || !MIXPANEL_TOKEN || typeof window === "undefined") return;
 
   mixpanel.init(MIXPANEL_TOKEN, {
-    track_pageview: "url-with-path",
+    track_pageview: false,
     persistence: "localStorage",
     ignore_dnt: false,
   });
