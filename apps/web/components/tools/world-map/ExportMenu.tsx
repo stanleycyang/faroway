@@ -2,11 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Download, Image as ImageIcon, Link2, Upload } from "lucide-react";
-import {
-  getAppStateSnapshot,
-  useActiveProfile,
-  useWorldMapStore,
-} from "@/lib/tools/world-map/store";
+import { useActiveProfile } from "@/lib/tools/world-map/store";
+import { downloadBackupJson } from "@/lib/tools/world-map/backup";
 import { toPng } from "html-to-image";
 import { buildShareUrl, encodeProfileToUrl } from "@/lib/tools/world-map/share";
 
@@ -21,7 +18,6 @@ export function ExportMenu({ mapRef, onOpenImport, onOpenShare }: Props) {
   const [busy, setBusy] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const profile = useActiveProfile();
-  const markBackupTaken = useWorldMapStore((s) => s.markBackupTaken);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -34,20 +30,7 @@ export function ExportMenu({ mapRef, onOpenImport, onOpenShare }: Props) {
   }, [open]);
 
   function downloadJson() {
-    const snapshot = getAppStateSnapshot();
-    const blob = new Blob([JSON.stringify(snapshot, null, 2)], {
-      type: "application/json",
-    });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    const today = new Date().toISOString().slice(0, 10);
-    a.href = url;
-    a.download = `world-map-backup-${today}.json`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-    markBackupTaken();
+    downloadBackupJson();
     setOpen(false);
   }
 

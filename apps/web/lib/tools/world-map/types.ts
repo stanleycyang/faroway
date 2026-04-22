@@ -1,9 +1,4 @@
-export type Status =
-  | "lived"
-  | "visited"
-  | "day_trip"
-  | "transit"
-  | "wishlist";
+export type Status = "lived" | "visited" | "day_trip" | "transit" | "wishlist";
 
 export type Theme = "classic" | "vintage" | "dark" | "parchment";
 

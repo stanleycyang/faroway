@@ -5,7 +5,8 @@ import { Trash2, X } from "lucide-react";
 import { useWorldMapStore } from "@/lib/tools/world-map/store";
 import { flagEmoji } from "@/lib/tools/world-map/iso";
 import { CONTINENT_BY_ALPHA3 } from "@/lib/tools/world-map/continents";
-import type { CountryVisit, Status } from "@/lib/tools/world-map/types";
+import { STATUS_ORDER } from "@/lib/tools/world-map/status";
+import type { CountryVisit } from "@/lib/tools/world-map/types";
 import { StatusSelector } from "./StatusSelector";
 import { PhotoUpload } from "./PhotoUpload";
 
@@ -53,19 +54,12 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
       if (e.key === "Escape") {
         onClose();
       } else if (["1", "2", "3", "4", "5"].includes(e.key)) {
-        const map: Status[] = [
-          "lived",
-          "visited",
-          "day_trip",
-          "transit",
-          "wishlist",
-        ];
         const target = document.activeElement as HTMLElement | null;
         const tag = target?.tagName;
         if (tag === "INPUT" || tag === "TEXTAREA") return;
-        setDraft((d) =>
-          d ? { ...d, status: map[Number(e.key) - 1] } : d,
-        );
+        const status = STATUS_ORDER[Number(e.key) - 1];
+        if (!status) return;
+        setDraft((d) => (d ? { ...d, status } : d));
       }
     }
     window.addEventListener("keydown", onKey);

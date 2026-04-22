@@ -20,9 +20,7 @@ export function StatsHeader({
   onHighlightContinent,
   readOnly,
 }: StatsHeaderProps) {
-  const percent = Math.round(
-    (stats.totalVisited / stats.totalCountries) * 100,
-  );
+  const percent = Math.round((stats.totalVisited / stats.totalCountries) * 100);
 
   return (
     <div className="flex flex-col gap-4">

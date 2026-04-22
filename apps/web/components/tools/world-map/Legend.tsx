@@ -27,9 +27,7 @@ export function Legend({ counts, className = "" }: LegendProps) {
                 }`}
                 style={{
                   background: cfg.fill,
-                  border: cfg.dashed
-                    ? `1.5px dashed ${cfg.stroke}`
-                    : undefined,
+                  border: cfg.dashed ? `1.5px dashed ${cfg.stroke}` : undefined,
                 }}
               />
               <span className="text-slate-700">{cfg.label}</span>

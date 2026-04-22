@@ -91,8 +91,8 @@ export function ShareLinkDialog({ open, onClose, initiallyCopied }: Props) {
           </div>
 
           <div className="text-xs text-slate-400 bg-slate-50 rounded-lg px-3 py-2 leading-relaxed">
-            Paste it anywhere — iMessage, Twitter, Slack, an Instagram bio.
-            Old links keep working even if you wipe your browser storage.
+            Paste it anywhere — iMessage, Twitter, Slack, an Instagram bio. Old
+            links keep working even if you wipe your browser storage.
           </div>
         </div>
       </div>

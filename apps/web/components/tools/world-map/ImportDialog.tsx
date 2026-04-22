@@ -20,7 +20,11 @@ function validate(json: unknown): Parsed | null {
   if (Array.isArray(obj.profiles) && typeof obj.activeProfileId === "string") {
     return { kind: "state", state: obj as unknown as AppState };
   }
-  if (typeof obj.id === "string" && obj.visits && typeof obj.visits === "object") {
+  if (
+    typeof obj.id === "string" &&
+    obj.visits &&
+    typeof obj.visits === "object"
+  ) {
     return { kind: "profile", profile: obj as unknown as Profile };
   }
   return null;
@@ -31,6 +35,7 @@ export function ImportDialog({ open, onClose }: Props) {
   const [parsed, setParsed] = useState<Parsed | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mergeProfile = useWorldMapStore((s) => s.mergeProfile);
+  const mergeProfiles = useWorldMapStore((s) => s.mergeProfiles);
   const replaceAll = useWorldMapStore((s) => s.replaceAll);
 
   function reset() {
@@ -66,9 +71,9 @@ export function ImportDialog({ open, onClose }: Props) {
       if (mode === "replace") {
         replaceAll(parsed.state);
       } else {
-        // Merge: take the first profile of incoming state and merge into active.
-        const incoming = parsed.state.profiles[0];
-        if (incoming) mergeProfile(incoming, "merge");
+        // Merge every incoming profile — overlapping IDs merge visits, new IDs
+        // are added as additional profiles.
+        mergeProfiles(parsed.state.profiles, "merge");
       }
     } else {
       mergeProfile(parsed.profile, mode);

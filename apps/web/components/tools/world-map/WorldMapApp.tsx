@@ -1,9 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useActiveProfile, useWorldMapStore } from "@/lib/tools/world-map/store";
+import {
+  useActiveProfile,
+  useWorldMapStore,
+} from "@/lib/tools/world-map/store";
 import { computeStats } from "@/lib/tools/world-map/stats";
-import { CONTINENT_BY_ALPHA3, type Continent } from "@/lib/tools/world-map/continents";
+import {
+  CONTINENT_BY_ALPHA3,
+  type Continent,
+} from "@/lib/tools/world-map/continents";
 import { STATUS_ORDER } from "@/lib/tools/world-map/status";
 import { Logo } from "@/components/Logo";
 import { FirstRunModal } from "./FirstRunModal";
@@ -29,9 +35,10 @@ export function WorldMapApp() {
 
   const profile = useActiveProfile();
 
-  const [selected, setSelected] = useState<{ iso: string; name: string } | null>(
-    null,
-  );
+  const [selected, setSelected] = useState<{
+    iso: string;
+    name: string;
+  } | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState<
     false | { initiallyCopied: boolean }
@@ -88,9 +95,7 @@ export function WorldMapApp() {
   return (
     <>
       {showOnboarding && (
-        <FirstRunModal
-          onSubmit={(name, emoji) => createProfile(name, emoji)}
-        />
+        <FirstRunModal onSubmit={(name, emoji) => createProfile(name, emoji)} />
       )}
 
       {profile && (
@@ -119,7 +124,7 @@ export function WorldMapApp() {
             </div>
           </div>
 
-          <BackupBanner onBackup={() => setImportOpen(false)} />
+          <BackupBanner />
 
           {/* Snapshot target — stats + map combined (for PNG export). */}
           <div
@@ -157,11 +162,7 @@ export function WorldMapApp() {
                 <span className="font-mono bg-slate-100 text-slate-500 px-1 rounded">
                   /
                 </span>{" "}
-                to search ·{" "}
-                <span className="font-mono bg-slate-100 text-slate-500 px-1 rounded">
-                  1–5
-                </span>{" "}
-                to set status
+                to search
               </p>
             </div>
           </div>

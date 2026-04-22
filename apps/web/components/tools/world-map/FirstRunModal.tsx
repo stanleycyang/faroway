@@ -7,7 +7,18 @@ interface Props {
   onSubmit: (name: string, emoji?: string) => void;
 }
 
-const EMOJI_OPTIONS = ["🌍", "🧳", "✈️", "🗺️", "🎒", "🚀", "🧔", "👩", "🏔️", "🌴"];
+const EMOJI_OPTIONS = [
+  "🌍",
+  "🧳",
+  "✈️",
+  "🗺️",
+  "🎒",
+  "🚀",
+  "🧔",
+  "👩",
+  "🏔️",
+  "🌴",
+];
 
 export function FirstRunModal({ onSubmit }: Props) {
   const [name, setName] = useState("");

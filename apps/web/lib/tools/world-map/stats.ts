@@ -23,7 +23,12 @@ export interface Stats {
   byContinent: ContinentStat[];
 }
 
-const COUNTABLE_STATUSES: Status[] = ["lived", "visited", "day_trip", "transit"];
+const COUNTABLE_STATUSES: Status[] = [
+  "lived",
+  "visited",
+  "day_trip",
+  "transit",
+];
 
 export function computeStats(visits: Record<string, CountryVisit>): Stats {
   const byStatus: Record<Status, number> = {

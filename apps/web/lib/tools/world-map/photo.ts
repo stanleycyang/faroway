@@ -8,6 +8,9 @@ export async function compressImageToDataUrl(file: File): Promise<string> {
   if (typeof window === "undefined") {
     throw new Error("Image compression only runs in the browser");
   }
+  if (!file.type.startsWith("image/")) {
+    throw new Error("That file doesn't look like an image");
+  }
   const dataUrl = await readAsDataUrl(file);
   const img = await loadImage(dataUrl);
   const { width, height } = fitWithin(img.width, img.height, MAX_EDGE);

@@ -2,7 +2,11 @@
 
 import { useState, useSyncExternalStore } from "react";
 import { AlertTriangle, X } from "lucide-react";
-import { useActiveProfile, useWorldMapStore } from "@/lib/tools/world-map/store";
+import {
+  useActiveProfile,
+  useWorldMapStore,
+} from "@/lib/tools/world-map/store";
+import { downloadBackupJson } from "@/lib/tools/world-map/backup";
 
 const DISMISS_KEY = "wm:backup-banner-dismissed";
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
@@ -36,7 +40,7 @@ function isStillFresh(
   return false;
 }
 
-export function BackupBanner({ onBackup }: { onBackup: () => void }) {
+export function BackupBanner() {
   const profile = useActiveProfile();
   const settings = useWorldMapStore((s) => s.settings);
   const [locallyDismissed, setLocallyDismissed] = useState(false);
@@ -48,7 +52,9 @@ export function BackupBanner({ onBackup }: { onBackup: () => void }) {
 
   const visits = profile ? Object.keys(profile.visits).length : 0;
   const dismissed =
-    locallyDismissed || visits < MIN_VISITS || isStillFresh(settings.lastBackupAt, persistedDismiss);
+    locallyDismissed ||
+    visits < MIN_VISITS ||
+    isStillFresh(settings.lastBackupAt, persistedDismiss);
 
   if (dismissed) return null;
 
@@ -67,7 +73,7 @@ export function BackupBanner({ onBackup }: { onBackup: () => void }) {
       <div className="flex items-center gap-1 flex-shrink-0">
         <button
           type="button"
-          onClick={onBackup}
+          onClick={() => downloadBackupJson()}
           className="text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-lg px-3 py-1.5 transition-colors"
         >
           Back up now

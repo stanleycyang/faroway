@@ -1,6 +1,7 @@
 // ISO 3166-1 numeric → alpha-3 mapping.
-// The TopoJSON countries-110m.json uses numeric IDs; we convert to alpha-3 for storage.
-// Covers all entries present in world-atlas 110m plus common sovereign & observer states.
+// The bundled TopoJSON countries-110m.json uses numeric IDs; we convert to
+// alpha-3 for storage. Covers all entries in the Natural Earth 110m data
+// plus common sovereign & observer states.
 
 export const NUMERIC_TO_ALPHA3: Record<string, string> = {
   "004": "AFG",

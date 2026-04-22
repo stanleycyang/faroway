@@ -86,8 +86,7 @@ export function CountrySearch({ onPick }: Props) {
     if (!q) return options.slice(0, 8);
     return options
       .filter(
-        (o) =>
-          o.name.toLowerCase().includes(q) || o.iso.toLowerCase() === q,
+        (o) => o.name.toLowerCase().includes(q) || o.iso.toLowerCase() === q,
       )
       .slice(0, 8);
   }, [options, query]);

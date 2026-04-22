@@ -76,6 +76,7 @@ export function decodeProfileFromUrl(encoded: string): DecodedProfile | null {
 }
 
 export function buildShareUrl(encoded: string): string {
-  if (typeof window === "undefined") return `/tools/world-map/view?d=${encoded}`;
+  if (typeof window === "undefined")
+    return `/tools/world-map/view?d=${encoded}`;
   return `${window.location.origin}/tools/world-map/view?d=${encoded}`;
 }

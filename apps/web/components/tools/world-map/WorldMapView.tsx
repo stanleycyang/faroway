@@ -3,9 +3,15 @@
 import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Copy, MapPin } from "lucide-react";
-import { decodeProfileFromUrl, type DecodedProfile } from "@/lib/tools/world-map/share";
+import {
+  decodeProfileFromUrl,
+  type DecodedProfile,
+} from "@/lib/tools/world-map/share";
 import { computeStats } from "@/lib/tools/world-map/stats";
-import { CONTINENT_BY_ALPHA3, type Continent } from "@/lib/tools/world-map/continents";
+import {
+  CONTINENT_BY_ALPHA3,
+  type Continent,
+} from "@/lib/tools/world-map/continents";
 import { useWorldMapStore } from "@/lib/tools/world-map/store";
 import { flagEmoji } from "@/lib/tools/world-map/iso";
 import { STATUS_CONFIG } from "@/lib/tools/world-map/status";
@@ -190,8 +196,8 @@ export function WorldMapView({ encoded }: Props) {
       )}
 
       <div className="text-center text-xs text-slate-400 py-2">
-        This is a read-only share. Photos and notes are never included in
-        share links.
+        This is a read-only share. Photos and notes are never included in share
+        links.
       </div>
     </div>
   );
