@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 const TOOL_LINKS = [
   { label: "All Tools", href: "/tools" },
+  { label: "World Map", href: "/tools/world-map" },
   { label: "Quiz", href: "/tools/travel-quiz" },
   { label: "Packing", href: "/tools/packing-list" },
   { label: "Cost", href: "/tools/trip-cost" },
