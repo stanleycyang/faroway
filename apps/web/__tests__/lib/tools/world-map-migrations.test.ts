@@ -18,24 +18,60 @@ describe("migrate", () => {
       schemaVersion: CURRENT_SCHEMA_VERSION,
       profiles: [],
       activeProfileId: "",
-      settings: { theme: "classic", showLegend: true, quickPin: false },
+      settings: {},
     };
     const result = migrate(state);
     expect(result.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(result.profiles).toEqual([]);
   });
 
-  it("resets to an empty state (not throws) for non-object input", () => {
+  it("v1 → v2: drops wishlist entries and normalizes everything else", () => {
+    const v1 = {
+      schemaVersion: 1,
+      activeProfileId: "p1",
+      settings: { theme: "classic", showLegend: true, quickPin: false },
+      profiles: [
+        {
+          id: "p1",
+          name: "Test",
+          createdAt: "2026-01-01T00:00:00.000Z",
+          updatedAt: "2026-01-01T00:00:00.000Z",
+          visits: {
+            JPN: {
+              iso: "JPN",
+              status: "lived",
+              pinnedCity: "Kyoto",
+              visitCount: 3,
+            },
+            FRA: { iso: "FRA", status: "visited" },
+            DEU: { iso: "DEU", status: "day_trip" },
+            ARG: { iso: "ARG", status: "wishlist" },
+          },
+        },
+      ],
+    };
+    const result = migrate(v1);
+    expect(result.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
+    const visits = result.profiles[0].visits;
+    expect(visits.JPN.status).toBe("visited");
+    expect(visits.JPN.pinnedCity).toBe("Kyoto");
+    expect(visits.JPN.visitCount).toBe(3);
+    expect(visits.FRA.status).toBe("visited");
+    expect(visits.DEU.status).toBe("visited");
+    // Wishlist entry is dropped — wasn't actually a place we'd been.
+    expect(visits.ARG).toBeUndefined();
+  });
+
+  it("resets to an empty state for non-object input", () => {
     const result = migrate(null);
     expect(result.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
     expect(result.profiles).toEqual([]);
     expect(warn).toHaveBeenCalled();
   });
 
-  it("resets to an empty state when no migration path exists", () => {
-    const result = migrate({ schemaVersion: 0, profiles: [] });
+  it("resets to an empty state when the persisted version is unknown", () => {
+    const result = migrate({ schemaVersion: 99, profiles: [] });
     expect(result.schemaVersion).toBe(CURRENT_SCHEMA_VERSION);
-    expect(result.profiles).toEqual([]);
     expect(warn).toHaveBeenCalled();
   });
 });

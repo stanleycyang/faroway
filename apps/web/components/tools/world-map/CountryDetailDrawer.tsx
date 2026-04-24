@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronDown, Trash2, X } from "lucide-react";
+import { ChevronDown, MapPin, Trash2, X } from "lucide-react";
 import { useWorldMapStore } from "@/lib/tools/world-map/store";
 import { flagEmoji } from "@/lib/tools/world-map/iso";
 import { CONTINENT_BY_ALPHA3 } from "@/lib/tools/world-map/continents";
-import { STATUS_ORDER } from "@/lib/tools/world-map/status";
 import type { CountryVisit } from "@/lib/tools/world-map/types";
-import { StatusSelector } from "./StatusSelector";
 import { PhotoUpload } from "./PhotoUpload";
 
 interface Props {
@@ -15,6 +13,11 @@ interface Props {
   name: string | null;
   onClose: () => void;
 }
+
+const EMPTY_DRAFT = (iso: string): CountryVisit => ({
+  iso,
+  status: "visited",
+});
 
 export function CountryDetailDrawer({ iso, name, onClose }: Props) {
   const open = Boolean(iso);
@@ -27,27 +30,16 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
   const deleteVisit = useWorldMapStore((s) => s.deleteVisit);
 
   const [draft, setDraft] = useState<CountryVisit | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
   const [trackedIso, setTrackedIso] = useState<string | null>(null);
   const [moreOpen, setMoreOpen] = useState(false);
 
-  // Sync draft when iso changes — done during render (React recommended pattern).
   if (trackedIso !== iso) {
     setTrackedIso(iso);
     if (iso) {
-      setDraft(
-        visit ?? {
-          iso,
-          status: "visited",
-          visitCount: 1,
-        },
-      );
+      setDraft(visit ?? EMPTY_DRAFT(iso));
     } else {
       setDraft(null);
     }
-    setConfirmDelete(false);
-    // Only auto-expand "More details" if this country already has data beyond
-    // the basic status — otherwise keep the drawer feeling empty on open.
     setMoreOpen(
       Boolean(
         visit?.firstVisit ||
@@ -61,20 +53,10 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
     );
   }
 
-  // Keyboard: close on escape, number keys set status.
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") {
-        onClose();
-      } else if (["1", "2", "3", "4", "5"].includes(e.key)) {
-        const target = document.activeElement as HTMLElement | null;
-        const tag = target?.tagName;
-        if (tag === "INPUT" || tag === "TEXTAREA") return;
-        const status = STATUS_ORDER[Number(e.key) - 1];
-        if (!status) return;
-        setDraft((d) => (d ? { ...d, status } : d));
-      }
+      if (e.key === "Escape") onClose();
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -82,10 +64,11 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
 
   if (!open || !iso || !draft) return null;
 
+  const isPinned = Boolean(visit);
+
   function save() {
     if (!draft || !iso) return;
     upsertVisit(iso, {
-      status: draft.status,
       firstVisit: draft.firstVisit || undefined,
       lastVisit: draft.lastVisit || undefined,
       visitCount: draft.visitCount || undefined,
@@ -97,7 +80,13 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
     onClose();
   }
 
-  function remove() {
+  function pinAndClose() {
+    if (!iso) return;
+    upsertVisit(iso, {});
+    onClose();
+  }
+
+  function unpin() {
     if (!iso) return;
     deleteVisit(iso);
     onClose();
@@ -107,7 +96,6 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
 
   return (
     <>
-      {/* Backdrop */}
       <button
         type="button"
         aria-label="Close"
@@ -115,22 +103,19 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
         onClick={onClose}
       />
 
-      {/* Drawer */}
       <div
         role="dialog"
         aria-modal
         aria-labelledby="country-drawer-title"
         className="fixed z-50 bg-white shadow-2xl overflow-hidden flex flex-col inset-x-0 bottom-0 top-auto rounded-t-2xl max-h-[92vh] md:top-0 md:bottom-0 md:right-0 md:left-auto md:w-[440px] md:max-h-screen md:rounded-none md:rounded-l-2xl animate-slide-up md:animate-slide-in-right"
       >
-        {/* Drag handle on mobile */}
         <div className="md:hidden flex justify-center pt-2.5 pb-1">
           <div className="w-10 h-1 rounded-full bg-slate-300" />
         </div>
 
-        {/* Header */}
         <div className="flex items-start justify-between px-5 pt-4 pb-4 border-b border-slate-100">
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <span className="text-3xl leading-none" aria-hidden>
                 {flagEmoji(iso)}
               </span>
@@ -146,6 +131,11 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
                 {iso}
               </span>
               {continent ? <span>· {continent}</span> : null}
+              {isPinned ? (
+                <span className="inline-flex items-center gap-1 text-red-600 font-semibold ml-1">
+                  <MapPin className="w-3 h-3" /> Pinned
+                </span>
+              ) : null}
             </p>
           </div>
           <button
@@ -158,26 +148,22 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
           </button>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-5">
-          <div>
-            <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-2 block">
-              Status
-            </label>
-            <StatusSelector
-              value={draft.status}
-              onChange={(s) => setDraft({ ...draft, status: s })}
-            />
-          </div>
+        <div className="flex-1 overflow-y-auto px-5 py-5 space-y-4">
+          {!isPinned && (
+            <p className="text-sm text-slate-600 leading-relaxed">
+              You haven&apos;t pinned {name || iso} yet. Pin it now, and
+              optionally add when you went, who you were with, and a photo.
+            </p>
+          )}
 
           <div>
             <button
               type="button"
               onClick={() => setMoreOpen((v) => !v)}
-              className="w-full flex items-center justify-between gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 py-2 border-t border-slate-100 transition-colors"
+              className="w-full flex items-center justify-between gap-2 text-sm font-semibold text-slate-700 hover:text-slate-900 py-2 transition-colors"
               aria-expanded={moreOpen}
             >
-              <span>More details</span>
+              <span>Optional details</span>
               <ChevronDown
                 className={`w-4 h-4 transition-transform ${
                   moreOpen ? "rotate-180" : ""
@@ -186,41 +172,32 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
             </button>
 
             {moreOpen && (
-              <div className="space-y-5 pt-3">
+              <div className="space-y-4 pt-2">
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
-                      First visit
-                    </label>
+                  <Field label="First visit">
                     <input
                       type="date"
                       value={draft.firstVisit || ""}
                       onChange={(e) =>
                         setDraft({ ...draft, firstVisit: e.target.value })
                       }
-                      className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none"
+                      className={inputClass}
                     />
-                  </div>
-                  <div>
-                    <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
-                      Last visit
-                    </label>
+                  </Field>
+                  <Field label="Last visit">
                     <input
                       type="date"
                       value={draft.lastVisit || ""}
                       onChange={(e) =>
                         setDraft({ ...draft, lastVisit: e.target.value })
                       }
-                      className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none"
+                      className={inputClass}
                     />
-                  </div>
+                  </Field>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
-                      Times visited
-                    </label>
+                  <Field label="Times visited">
                     <input
                       type="number"
                       min="0"
@@ -233,14 +210,11 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
                             : undefined,
                         })
                       }
-                      className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-sm tabular-nums focus:ring-2 focus:ring-primary/40 focus:outline-none"
+                      className={`${inputClass} tabular-nums`}
                       placeholder="1"
                     />
-                  </div>
-                  <div>
-                    <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
-                      Rating
-                    </label>
+                  </Field>
+                  <Field label="Rating">
                     <div className="flex items-center gap-1 h-[38px]">
                       {[1, 2, 3, 4, 5].map((r) => {
                         const active = (draft.rating ?? 0) >= r;
@@ -269,13 +243,10 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
                         );
                       })}
                     </div>
-                  </div>
+                  </Field>
                 </div>
 
-                <div>
-                  <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
-                    Memorable city
-                  </label>
+                <Field label="Memorable city">
                   <input
                     type="text"
                     value={draft.pinnedCity || ""}
@@ -283,14 +254,11 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
                       setDraft({ ...draft, pinnedCity: e.target.value })
                     }
                     placeholder="e.g. Kyoto"
-                    className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none"
+                    className={inputClass}
                   />
-                </div>
+                </Field>
 
-                <div>
-                  <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
-                    Notes
-                  </label>
+                <Field label="Notes">
                   <textarea
                     value={draft.notes || ""}
                     onChange={(e) =>
@@ -298,58 +266,35 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
                     }
                     rows={4}
                     placeholder="What did you love? What would you do differently?"
-                    className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-sm leading-relaxed focus:ring-2 focus:ring-primary/40 focus:outline-none resize-none"
+                    className={`${inputClass} leading-relaxed resize-none`}
                   />
-                </div>
+                </Field>
 
-                <div>
-                  <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
-                    Cover photo
-                  </label>
+                <Field label="Cover photo">
                   <PhotoUpload
                     value={draft.photoDataUrl}
                     onChange={(url) =>
                       setDraft({ ...draft, photoDataUrl: url })
                     }
                   />
-                </div>
+                </Field>
               </div>
             )}
           </div>
         </div>
 
-        {/* Footer */}
         <div className="border-t border-slate-100 px-5 py-3.5 flex items-center justify-between gap-3 bg-slate-50/60">
-          {visit ? (
-            confirmDelete ? (
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={remove}
-                  className="text-sm font-semibold text-red-600 hover:text-red-700 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                >
-                  Confirm delete
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmDelete(false)}
-                  className="text-sm font-semibold text-slate-500 hover:text-slate-700 px-3 py-1.5 rounded-lg hover:bg-slate-200/60 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmDelete(true)}
-                className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
-              >
-                <Trash2 className="w-4 h-4" /> Delete
-              </button>
-            )
+          {isPinned ? (
+            <button
+              type="button"
+              onClick={unpin}
+              className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-500 hover:text-red-600 px-3 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" /> Remove pin
+            </button>
           ) : (
             <span className="text-xs text-slate-400">
-              Press 1-5 to set status
+              {moreOpen ? "Save will pin and store details" : ""}
             </span>
           )}
           <div className="flex gap-2">
@@ -360,16 +305,46 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
             >
               Cancel
             </button>
-            <button
-              type="button"
-              onClick={save}
-              className="text-sm font-semibold text-white bg-gradient-to-r from-primary to-amber-500 hover:shadow-lg hover:shadow-primary/25 px-5 py-2 rounded-lg transition-all"
-            >
-              Save
-            </button>
+            {isPinned ? (
+              <button
+                type="button"
+                onClick={save}
+                className="text-sm font-semibold text-white bg-gradient-to-r from-primary to-amber-500 hover:shadow-lg hover:shadow-primary/25 px-5 py-2 rounded-lg transition-all"
+              >
+                Save details
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={moreOpen ? save : pinAndClose}
+                className="inline-flex items-center gap-1.5 text-sm font-semibold text-white bg-gradient-to-r from-primary to-amber-500 hover:shadow-lg hover:shadow-primary/25 px-5 py-2 rounded-lg transition-all"
+              >
+                <MapPin className="w-4 h-4" /> Pin {name || iso}
+              </button>
+            )}
           </div>
         </div>
       </div>
     </>
+  );
+}
+
+const inputClass =
+  "w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none";
+
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
+        {label}
+      </label>
+      {children}
+    </div>
   );
 }

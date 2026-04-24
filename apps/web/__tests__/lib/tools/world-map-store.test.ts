@@ -10,10 +10,10 @@ const { useWorldMapStore } = await import("@/lib/tools/world-map/store");
 
 function resetStore() {
   useWorldMapStore.setState({
-    schemaVersion: 1,
+    schemaVersion: 2,
     profiles: [],
     activeProfileId: "",
-    settings: { theme: "classic", showLegend: true, quickPin: false },
+    settings: {},
     hasHydrated: true,
   });
 }
@@ -61,13 +61,12 @@ describe("useWorldMapStore", () => {
       useWorldMapStore.getState().createProfile("Test");
       const store = useWorldMapStore.getState();
       store.upsertVisit("JPN", {
-        status: "lived",
         pinnedCity: "Kyoto",
         rating: 5,
       });
       store.upsertVisit("JPN", { notes: "Spring trip" });
       const visit = useWorldMapStore.getState().profiles[0].visits.JPN;
-      expect(visit.status).toBe("lived");
+      expect(visit.status).toBe("visited");
       expect(visit.pinnedCity).toBe("Kyoto");
       expect(visit.rating).toBe(5);
       expect(visit.notes).toBe("Spring trip");
@@ -78,7 +77,7 @@ describe("useWorldMapStore", () => {
     it("keeps existing visit data when overlapping, adds new visits", () => {
       useWorldMapStore.getState().createProfile("Test");
       const store = useWorldMapStore.getState();
-      store.upsertVisit("JPN", { status: "lived", pinnedCity: "Kyoto" });
+      store.upsertVisit("JPN", { pinnedCity: "Kyoto" });
 
       const incoming = {
         id: "incoming",
@@ -93,10 +92,9 @@ describe("useWorldMapStore", () => {
       store.mergeProfile(incoming, "merge");
 
       const visits = useWorldMapStore.getState().profiles[0].visits;
-      // Existing JPN data wins on overlap
-      expect(visits.JPN.status).toBe("lived");
+      // Existing JPN data wins on overlap.
       expect(visits.JPN.pinnedCity).toBe("Kyoto");
-      // New FRA is added
+      // New FRA is added.
       expect(visits.FRA.status).toBe("visited");
     });
   });
@@ -127,7 +125,7 @@ describe("useWorldMapStore", () => {
     it("runs incoming state through migration", () => {
       const store = useWorldMapStore.getState();
       store.replaceAll({
-        schemaVersion: 1,
+        schemaVersion: 2,
         profiles: [
           {
             id: "imported",
@@ -138,7 +136,7 @@ describe("useWorldMapStore", () => {
           },
         ],
         activeProfileId: "imported",
-        settings: { theme: "classic", showLegend: true, quickPin: false },
+        settings: {},
       });
       expect(useWorldMapStore.getState().profiles[0].name).toBe("Imported");
       expect(useWorldMapStore.getState().activeProfileId).toBe("imported");

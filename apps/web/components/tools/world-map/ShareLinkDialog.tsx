@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Check, Copy, Link2, MessageCircle, Share2, X } from "lucide-react";
+import { Check, Copy, MessageCircle, Share2, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useActiveProfile } from "@/lib/tools/world-map/store";
 import { buildShareUrl, encodeProfileToUrl } from "@/lib/tools/world-map/share";
@@ -12,6 +12,7 @@ import {
   threadsIntent,
   twitterIntent,
 } from "@/lib/tools/world-map/social";
+import { WorldMap } from "./WorldMap";
 
 interface Props {
   open: boolean;
@@ -22,17 +23,22 @@ interface Props {
 export function ShareLinkDialog({ open, onClose, initiallyCopied }: Props) {
   const profile = useActiveProfile();
 
-  const { url, text } = useMemo(() => {
-    if (!open || !profile) return { url: "", text: "" };
+  const { url, text, stats } = useMemo(() => {
+    if (!open || !profile) {
+      return {
+        url: "",
+        text: "",
+        stats: { totalVisited: 0, continentsVisited: 0 },
+      };
+    }
     const encoded = encodeProfileToUrl(profile);
     const shareUrl = buildShareUrl(encoded);
-    const stats = computeStats(profile.visits);
-    const shareText = socialShareText(
-      profile.name,
-      stats.totalVisited,
-      stats.continentsVisited,
-    );
-    return { url: shareUrl, text: shareText };
+    const s = computeStats(profile.visits);
+    return {
+      url: shareUrl,
+      text: socialShareText(profile.name, s.totalVisited, s.continentsVisited),
+      stats: s,
+    };
   }, [open, profile]);
 
   const [copied, setCopied] = useState(false);
@@ -43,7 +49,7 @@ export function ShareLinkDialog({ open, onClose, initiallyCopied }: Props) {
     setCopied(open ? Boolean(initiallyCopied) : false);
   }
 
-  if (!open) return null;
+  if (!open || !profile) return null;
 
   async function copyNow() {
     try {
@@ -51,7 +57,7 @@ export function ShareLinkDialog({ open, onClose, initiallyCopied }: Props) {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     } catch {
-      // Ignore clipboard errors; link is visible in the input.
+      /* link is visible in the field */
     }
   }
 
@@ -64,7 +70,7 @@ export function ShareLinkDialog({ open, onClose, initiallyCopied }: Props) {
     try {
       await navigator.share({ title: "My World Map", text, url });
     } catch {
-      // User dismissed the share sheet; ignore.
+      /* user dismissed */
     }
   }
 
@@ -72,33 +78,43 @@ export function ShareLinkDialog({ open, onClose, initiallyCopied }: Props) {
     typeof navigator !== "undefined" && typeof navigator.share === "function";
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm animate-fade-in p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-slide-up max-h-[92vh] overflow-y-auto">
-        <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-slate-100 sticky top-0 bg-white z-10">
-          <h3 className="text-lg font-bold text-slate-900 font-serif flex items-center gap-2">
-            <Link2 className="w-5 h-5 text-primary" /> Share your map
-          </h3>
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in p-4">
+      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-slide-up max-h-[92vh] flex flex-col">
+        {/* Visual hero — the actual map */}
+        <div className="relative bg-gradient-to-br from-amber-50 via-white to-rose-50 px-6 pt-6 pb-4">
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 rounded-full hover:bg-slate-100 flex items-center justify-center text-slate-500"
+            className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/80 backdrop-blur hover:bg-white flex items-center justify-center text-slate-500 shadow ring-1 ring-slate-200/50 z-10"
             aria-label="Close"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
+
+          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
+            Share your map
+          </div>
+          <div className="mt-1.5 flex items-baseline gap-2">
+            <div className="text-4xl font-bold tabular-nums text-slate-900 font-serif">
+              {stats.totalVisited}
+            </div>
+            <div className="text-sm text-slate-500">
+              {stats.totalVisited === 1 ? "country" : "countries"} ·{" "}
+              {stats.continentsVisited}{" "}
+              {stats.continentsVisited === 1 ? "continent" : "continents"}
+            </div>
+          </div>
+
+          <div className="mt-3 aspect-[2/1] w-full">
+            <WorldMap visits={profile.visits} readOnly />
+          </div>
         </div>
 
-        <div className="p-6 space-y-5">
-          <p className="text-sm text-slate-600 leading-relaxed">
-            Your pins are encoded directly into the link — no server, no
-            account. Anyone with the link sees a read-only view. Photos and
-            notes stay on your device.
-          </p>
-
-          {/* Primary share row */}
+        <div className="p-5 space-y-4 overflow-y-auto">
+          {/* Primary share buttons */}
           <div className="grid grid-cols-4 gap-2">
             <ShareButton
-              label="Twitter"
+              label="X / Twitter"
               onClick={() => openIntent(twitterIntent(url, text))}
             >
               <XLogo />
@@ -116,7 +132,7 @@ export function ShareLinkDialog({ open, onClose, initiallyCopied }: Props) {
               <MessageCircle className="w-5 h-5" />
             </ShareButton>
             {canNativeShare ? (
-              <ShareButton label="More…" onClick={nativeShare}>
+              <ShareButton label="More" onClick={nativeShare}>
                 <Share2 className="w-5 h-5" />
               </ShareButton>
             ) : (
@@ -130,58 +146,56 @@ export function ShareLinkDialog({ open, onClose, initiallyCopied }: Props) {
             )}
           </div>
 
-          {/* URL + copy */}
-          <div className="flex items-stretch gap-2">
-            <input
-              type="text"
-              value={url}
-              readOnly
-              onFocus={(e) => e.currentTarget.select()}
-              className="flex-1 min-w-0 rounded-lg ring-1 ring-slate-200 px-3 py-2 text-sm font-mono text-slate-700 bg-slate-50 focus:ring-2 focus:ring-primary/40 focus:outline-none"
-            />
-            <button
-              type="button"
-              onClick={copyNow}
-              className={`inline-flex items-center gap-1.5 px-4 rounded-lg text-sm font-semibold transition-colors ${
-                copied
-                  ? "bg-emerald-500 text-white"
-                  : "bg-slate-900 text-white hover:bg-slate-800"
+          {/* Copy URL */}
+          <button
+            type="button"
+            onClick={copyNow}
+            className="w-full flex items-center gap-3 rounded-xl bg-slate-50 hover:bg-slate-100 ring-1 ring-slate-200/70 px-4 py-3 transition-colors text-left"
+          >
+            <div className="flex-1 min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                Link
+              </div>
+              <div className="text-xs font-mono text-slate-700 truncate mt-0.5">
+                {url}
+              </div>
+            </div>
+            <span
+              className={`flex-shrink-0 inline-flex items-center gap-1 text-xs font-bold ${
+                copied ? "text-emerald-600" : "text-slate-700"
               }`}
             >
               {copied ? (
                 <>
-                  <Check className="w-4 h-4" /> Copied
+                  <Check className="w-3.5 h-3.5" /> Copied
                 </>
               ) : (
                 <>
-                  <Copy className="w-4 h-4" /> Copy
+                  <Copy className="w-3.5 h-3.5" /> Copy
                 </>
               )}
-            </button>
-          </div>
+            </span>
+          </button>
 
-          {/* QR */}
-          <div className="flex items-center gap-4 bg-slate-50 rounded-xl p-4 ring-1 ring-slate-200/70">
-            <div className="bg-white p-2 rounded-lg ring-1 ring-slate-200">
+          {/* QR — small, secondary */}
+          <details className="group">
+            <summary className="cursor-pointer text-xs font-semibold text-slate-500 hover:text-slate-700 list-none flex items-center justify-between">
+              <span>QR for in-person hand-off</span>
+              <span className="text-slate-400 group-open:rotate-180 transition-transform">
+                ▾
+              </span>
+            </summary>
+            <div className="mt-3 flex items-center justify-center bg-white p-3 rounded-xl ring-1 ring-slate-200">
               <QRCodeSVG
                 value={url}
-                size={96}
+                size={144}
                 marginSize={0}
                 fgColor="#0f172a"
                 bgColor="#ffffff"
                 level="M"
               />
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-semibold text-slate-900">
-                Hand it off in person
-              </div>
-              <div className="text-xs text-slate-500 leading-relaxed mt-0.5">
-                Scan this with a phone camera — it opens your map in any
-                browser. Link keeps working even if you clear storage.
-              </div>
-            </div>
-          </div>
+          </details>
         </div>
       </div>
     </div>
@@ -201,10 +215,12 @@ function ShareButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl bg-slate-50 hover:bg-slate-100 ring-1 ring-slate-200/70 text-slate-700 transition-colors"
+      className="flex flex-col items-center justify-center gap-1.5 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white transition-colors"
     >
       {children}
-      <span className="text-xs font-semibold">{label}</span>
+      <span className="text-[10px] font-bold uppercase tracking-wide">
+        {label}
+      </span>
     </button>
   );
 }

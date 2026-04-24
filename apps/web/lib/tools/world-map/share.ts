@@ -1,28 +1,31 @@
 import LZString from "lz-string";
-import { STATUS_ORDER } from "./status";
-import type { CountryVisit, Profile, Status } from "./types";
+import type { CountryVisit, Profile } from "./types";
+
+// v=1 (legacy): [iso, statusIdx, firstVisit?, visitCount?, pinnedCity?]
+// v=2:          [iso, firstVisit?, visitCount?, pinnedCity?]
+//
+// We collapsed the multi-status concept — every pin is now just "visited" —
+// so the wire format is one tuple slot smaller. The decoder still reads v=1
+// payloads (statusIdx is silently ignored) so old shared links keep working.
+
+type CompactTupleV1 = [string, number, string?, number?, string?];
+type CompactTupleV2 = [string, string?, number?, string?];
 
 interface CompactPayload {
-  v: number; // payload schema version
+  v: number;
   n?: string;
   e?: string;
-  // Array of [iso, statusIdx, firstVisit?, visitCount?, pinnedCity?].
-  // We strip notes and photos — they don't belong in a URL.
-  d: Array<[string, number, string?, number?, string?]>;
+  d: CompactTupleV1[] | CompactTupleV2[];
 }
 
-const PAYLOAD_VERSION = 1;
+const PAYLOAD_VERSION = 2;
 
 export function encodeProfileToUrl(profile: Profile): string {
-  const d: CompactPayload["d"] = Object.values(profile.visits).map((v) => {
-    const statusIdx = STATUS_ORDER.indexOf(v.status);
-    const tuple: [string, number, string?, number?, string?] = [
-      v.iso,
-      statusIdx,
-    ];
-    if (v.firstVisit) tuple[2] = v.firstVisit;
-    if (v.visitCount) tuple[3] = v.visitCount;
-    if (v.pinnedCity) tuple[4] = v.pinnedCity;
+  const d: CompactTupleV2[] = Object.values(profile.visits).map((v) => {
+    const tuple: CompactTupleV2 = [v.iso];
+    if (v.firstVisit) tuple[1] = v.firstVisit;
+    if (v.visitCount) tuple[2] = v.visitCount;
+    if (v.pinnedCity) tuple[3] = v.pinnedCity;
     return tuple;
   });
   const payload: CompactPayload = {
@@ -45,29 +48,31 @@ export function decodeProfileFromUrl(encoded: string): DecodedProfile | null {
     const raw = LZString.decompressFromEncodedURIComponent(encoded);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CompactPayload;
-    if (!parsed || parsed.v !== PAYLOAD_VERSION || !Array.isArray(parsed.d)) {
-      return null;
-    }
+    if (!parsed || !Array.isArray(parsed.d)) return null;
+
     const visits: Record<string, CountryVisit> = {};
     for (const tuple of parsed.d) {
       if (!Array.isArray(tuple) || typeof tuple[0] !== "string") continue;
       const iso = tuple[0];
-      const statusIdx = tuple[1];
-      const status: Status =
-        typeof statusIdx === "number" && STATUS_ORDER[statusIdx]
-          ? STATUS_ORDER[statusIdx]
-          : "visited";
+      // v=1 has a numeric status index at slot 1; v=2 has firstVisit (string)
+      // or undefined there. Distinguish by type.
+      const isLegacy = typeof tuple[1] === "number";
+      const firstVisit = isLegacy ? tuple[2] : tuple[1];
+      const visitCount = isLegacy ? tuple[3] : tuple[2];
+      const pinnedCity = isLegacy ? tuple[4] : tuple[3];
+
       visits[iso] = {
         iso,
-        status,
-        firstVisit: tuple[2] || undefined,
-        visitCount: typeof tuple[3] === "number" ? tuple[3] : undefined,
-        pinnedCity: tuple[4] || undefined,
+        status: "visited",
+        firstVisit: typeof firstVisit === "string" ? firstVisit : undefined,
+        visitCount: typeof visitCount === "number" ? visitCount : undefined,
+        pinnedCity: typeof pinnedCity === "string" ? pinnedCity : undefined,
       };
     }
+
     return {
-      name: parsed.n || "Traveler",
-      emoji: parsed.e,
+      name: typeof parsed.n === "string" && parsed.n ? parsed.n : "Traveler",
+      emoji: typeof parsed.e === "string" ? parsed.e : undefined,
       visits,
     };
   } catch {

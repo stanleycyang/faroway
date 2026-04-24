@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Copy, MapPin } from "lucide-react";
 import {
@@ -9,19 +9,12 @@ import {
 } from "@/lib/tools/world-map/share";
 import { computeStats } from "@/lib/tools/world-map/stats";
 import {
-  CONTINENT_BY_ALPHA3,
-  type Continent,
-} from "@/lib/tools/world-map/continents";
-import {
   useActiveProfile,
   useWorldMapStore,
 } from "@/lib/tools/world-map/store";
 import { flagEmoji } from "@/lib/tools/world-map/iso";
-import { STATUS_CONFIG } from "@/lib/tools/world-map/status";
 import { nanoid } from "nanoid";
 import { WorldMap } from "./WorldMap";
-import { StatsHeader } from "./StatsHeader";
-import { Legend } from "./Legend";
 
 interface Props {
   encoded: string | null;
@@ -46,8 +39,6 @@ export function WorldMapView({ encoded }: Props) {
   }, [encoded]);
 
   const [importState, setImportState] = useState<"idle" | "imported">("idle");
-  const [highlightContinent, setHighlightContinent] =
-    useState<Continent | null>(null);
 
   const mergeProfile = useWorldMapStore((s) => s.mergeProfile);
   const createProfile = useWorldMapStore((s) => s.createProfile);
@@ -61,14 +52,9 @@ export function WorldMapView({ encoded }: Props) {
 
   const visits = useMemo(() => decoded?.visits ?? {}, [decoded?.visits]);
   const stats = useMemo(() => computeStats(visits), [visits]);
-  const getContinent = useCallback(
-    (iso: string) => CONTINENT_BY_ALPHA3[iso],
-    [],
-  );
 
   function handleImport() {
     if (!decoded) return;
-    // Create an incoming Profile object for the store's merge logic.
     const incoming = {
       id: nanoid(),
       name: decoded.name,
@@ -78,7 +64,6 @@ export function WorldMapView({ encoded }: Props) {
       visits: decoded.visits,
     };
     if (profiles.length === 0) {
-      // Bootstrap a profile named after the sharer — user can rename.
       createProfile(decoded.name, decoded.emoji);
     }
     mergeProfile(incoming, "merge");
@@ -111,10 +96,6 @@ export function WorldMapView({ encoded }: Props) {
     );
   }
 
-  const topCountries = Object.values(visits)
-    .filter((v) => v.status === "lived" || v.status === "visited")
-    .slice(0, 12);
-
   const compareLine =
     hasHydrated && ownProfile && ownStats.totalVisited < stats.totalVisited
       ? ownStats.totalVisited === 0
@@ -124,24 +105,32 @@ export function WorldMapView({ encoded }: Props) {
           } behind.`
       : null;
 
+  const topCountries = Object.values(visits).slice(0, 12);
+  const percent = Math.round((stats.totalVisited / stats.totalCountries) * 100);
+
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-6 space-y-5">
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-6 space-y-5">
       {/* Hero + challenge CTA */}
-      <div className="rounded-2xl bg-gradient-to-br from-primary/5 via-amber-50 to-white ring-1 ring-primary/20 p-6 md:p-8">
+      <div className="rounded-3xl bg-gradient-to-br from-primary/5 via-amber-50 to-white ring-1 ring-primary/20 p-6 md:p-8">
         <div className="flex items-start justify-between gap-4 flex-wrap">
           <div className="min-w-0">
-            <div className="flex items-center gap-2.5 text-sm font-semibold uppercase tracking-wider text-slate-500">
-              <span className="text-2xl leading-none">
+            <div className="flex items-center gap-2.5 text-xs font-bold uppercase tracking-[0.18em] text-slate-500">
+              <span className="text-base leading-none">
                 {decoded.emoji || "🌍"}
               </span>
               <span>{decoded.name}&apos;s World Map</span>
             </div>
-            <h1 className="mt-2 text-3xl md:text-4xl font-bold text-slate-900 font-serif leading-tight">
-              {stats.totalVisited}{" "}
-              {stats.totalVisited === 1 ? "country" : "countries"} across{" "}
-              {stats.continentsVisited}{" "}
-              {stats.continentsVisited === 1 ? "continent" : "continents"}
+            <h1 className="mt-2 text-4xl md:text-5xl font-bold text-slate-900 font-serif leading-tight tabular-nums">
+              {stats.totalVisited}
+              <span className="text-slate-300 text-2xl md:text-3xl font-medium ml-2">
+                / {stats.totalCountries}
+              </span>
             </h1>
+            <p className="mt-1.5 text-sm font-semibold text-slate-500">
+              {stats.totalVisited === 1 ? "country" : "countries"} ·{" "}
+              <span className="text-red-600">{percent}%</span> of the world ·{" "}
+              {stats.continentsVisited}/{stats.continentsTotal} continents
+            </p>
             {compareLine && (
               <p className="mt-2 text-sm text-slate-600">{compareLine}</p>
             )}
@@ -150,7 +139,7 @@ export function WorldMapView({ encoded }: Props) {
             href="/tools/world-map"
             className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-amber-500 text-white px-5 py-3 rounded-full text-sm font-bold shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all"
           >
-            Think you&apos;ve traveled more? Make your map →
+            Make your map →
           </Link>
         </div>
         <div className="mt-4 flex items-center gap-4 text-xs text-slate-500">
@@ -175,71 +164,45 @@ export function WorldMapView({ encoded }: Props) {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl ring-1 ring-slate-200/60 shadow-sm p-4 md:p-6 space-y-4">
-        <StatsHeader
-          profileName={decoded.name}
-          profileEmoji={decoded.emoji}
-          stats={stats}
-          highlightContinent={highlightContinent}
-          onHighlightContinent={setHighlightContinent}
-          readOnly
-        />
-
+      <div className="bg-white rounded-3xl ring-1 ring-slate-200/70 shadow-sm p-5 md:p-8">
         <div className="relative w-full aspect-[2/1] md:aspect-[21/10]">
-          <WorldMap
-            visits={visits}
-            theme="classic"
-            readOnly
-            highlightContinent={highlightContinent ?? undefined}
-            getCountryContinent={getContinent}
-          />
+          <WorldMap visits={visits} readOnly />
         </div>
-
-        <Legend counts={stats.byStatus as unknown as Record<string, number>} />
       </div>
 
       {topCountries.length > 0 && (
-        <div className="bg-white rounded-2xl ring-1 ring-slate-200/60 shadow-sm p-5 md:p-6">
-          <h2 className="text-lg font-bold text-slate-900 font-serif mb-3">
-            Highlights
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
-            {topCountries.map((v) => {
-              const cfg = STATUS_CONFIG[v.status];
-              return (
-                <div
-                  key={v.iso}
-                  className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 ring-1 ring-slate-200/70"
-                >
-                  <span className="text-xl leading-none">
-                    {flagEmoji(v.iso)}
-                  </span>
-                  <div className="min-w-0">
-                    <div className="text-sm font-semibold text-slate-800 truncate flex items-center gap-1.5">
-                      {v.iso}
-                      <span
-                        className="inline-block w-1.5 h-1.5 rounded-full"
-                        style={{ background: cfg.fill }}
-                      />
+        <div className="bg-white rounded-3xl ring-1 ring-slate-200/70 shadow-sm p-5 md:p-6">
+          <div className="text-xs font-bold uppercase tracking-[0.18em] text-slate-400 mb-3">
+            On the map
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {topCountries.map((v) => (
+              <div
+                key={v.iso}
+                className="flex items-center gap-2 px-3 py-2 rounded-xl bg-slate-50 ring-1 ring-slate-200/70"
+              >
+                <span className="text-lg leading-none">{flagEmoji(v.iso)}</span>
+                <div className="text-xs">
+                  <div className="font-semibold text-slate-800">{v.iso}</div>
+                  {v.pinnedCity ? (
+                    <div className="text-slate-500 truncate">
+                      {v.pinnedCity}
                     </div>
-                    {v.pinnedCity ? (
-                      <div className="text-xs text-slate-500 truncate">
-                        {v.pinnedCity}
-                      </div>
-                    ) : (
-                      <div className="text-xs text-slate-400">{cfg.label}</div>
-                    )}
-                  </div>
+                  ) : null}
                 </div>
-              );
-            })}
+              </div>
+            ))}
+            {Object.keys(visits).length > topCountries.length && (
+              <div className="flex items-center px-3 py-2 rounded-xl bg-slate-50 ring-1 ring-slate-200/70 text-xs font-semibold text-slate-500">
+                + {Object.keys(visits).length - topCountries.length} more
+              </div>
+            )}
           </div>
         </div>
       )}
 
       <div className="text-center text-xs text-slate-400 py-2">
-        This is a read-only share. Photos and notes are never included in share
-        links.
+        Read-only share. Photos and notes stay on the sender&apos;s device.
       </div>
     </div>
   );

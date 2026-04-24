@@ -4,13 +4,7 @@ import { create, type StateCreator } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { nanoid } from "nanoid";
 import { CURRENT_SCHEMA_VERSION, migrate } from "./migrations";
-import type {
-  AppState,
-  AppSettings,
-  CountryVisit,
-  Profile,
-  Theme,
-} from "./types";
+import type { AppState, AppSettings, CountryVisit, Profile } from "./types";
 
 const STORAGE_KEY = "wm:app-state";
 
@@ -26,11 +20,7 @@ function createEmptyProfile(name: string, emoji?: string): Profile {
   };
 }
 
-const DEFAULT_SETTINGS: AppSettings = {
-  theme: "classic",
-  showLegend: true,
-  quickPin: false,
-};
+const DEFAULT_SETTINGS: AppSettings = {};
 
 export interface WorldMapStore extends AppState {
   hasHydrated: boolean;
@@ -48,9 +38,6 @@ export interface WorldMapStore extends AppState {
   deleteVisit: (iso: string) => void;
 
   // Settings
-  setTheme: (t: Theme) => void;
-  setShowLegend: (v: boolean) => void;
-  setQuickPin: (v: boolean) => void;
   markBackupTaken: () => void;
 
   // Import
@@ -130,7 +117,7 @@ const creator: StateCreator<
         ...existing,
         ...patch,
         iso,
-        status: patch.status ?? existing?.status ?? "visited",
+        status: "visited",
       };
       const nextProfile: Profile = {
         ...profile,
@@ -189,12 +176,6 @@ const creator: StateCreator<
     });
   },
 
-  setTheme: (t) =>
-    set((s: WorldMapStore) => ({ settings: { ...s.settings, theme: t } })),
-  setShowLegend: (v) =>
-    set((s: WorldMapStore) => ({ settings: { ...s.settings, showLegend: v } })),
-  setQuickPin: (v) =>
-    set((s: WorldMapStore) => ({ settings: { ...s.settings, quickPin: v } })),
   markBackupTaken: () =>
     set((s: WorldMapStore) => ({
       settings: { ...s.settings, lastBackupAt: new Date().toISOString() },

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import LZString from "lz-string";
 import {
   encodeProfileToUrl,
   decodeProfileFromUrl,
@@ -15,7 +16,7 @@ function buildProfile(partial: Partial<Profile> = {}): Profile {
     visits: {
       JPN: {
         iso: "JPN",
-        status: "lived",
+        status: "visited",
         firstVisit: "2015-03-01",
         visitCount: 4,
         pinnedCity: "Kyoto",
@@ -23,7 +24,7 @@ function buildProfile(partial: Partial<Profile> = {}): Profile {
         photoDataUrl: "data:image/jpeg;base64,AAA",
       },
       FRA: { iso: "FRA", status: "visited" },
-      ESP: { iso: "ESP", status: "wishlist" },
+      ESP: { iso: "ESP", status: "visited" },
     },
     ...partial,
   };
@@ -37,12 +38,10 @@ describe("encodeProfileToUrl / decodeProfileFromUrl", () => {
     expect(decoded).not.toBeNull();
     expect(decoded!.name).toBe("Stanley");
     expect(decoded!.emoji).toBe("🧳");
-    expect(decoded!.visits.JPN.status).toBe("lived");
     expect(decoded!.visits.JPN.firstVisit).toBe("2015-03-01");
     expect(decoded!.visits.JPN.visitCount).toBe(4);
     expect(decoded!.visits.JPN.pinnedCity).toBe("Kyoto");
     expect(decoded!.visits.FRA.status).toBe("visited");
-    expect(decoded!.visits.ESP.status).toBe("wishlist");
   });
 
   it("strips private fields (notes, photos) from share payloads", () => {
@@ -58,10 +57,29 @@ describe("encodeProfileToUrl / decodeProfileFromUrl", () => {
     expect(decodeProfileFromUrl("")).toBeNull();
   });
 
-  it("is roughly URL-safe and compact", () => {
-    const encoded = encodeProfileToUrl(buildProfile());
-    // Encoded payload should be a reasonably short URI component.
-    expect(encoded.length).toBeLessThan(400);
-    expect(encoded).not.toContain(" ");
+  it("decodes legacy v=1 share links (with statusIdx)", () => {
+    // Hand-craft a v1 payload as the old encoder would have produced.
+    const legacy = {
+      v: 1,
+      n: "Old",
+      e: "🌍",
+      d: [
+        // [iso, statusIdx, firstVisit?, visitCount?, pinnedCity?]
+        ["JPN", 0, "2015-03-01", 4, "Kyoto"], // statusIdx 0 = "lived" in old order
+        ["FRA", 1], // statusIdx 1 = "visited"
+        ["XXX", 4], // statusIdx 4 = "wishlist" — still decodes (we collapse to visited)
+      ],
+    };
+    const encoded = LZString.compressToEncodedURIComponent(
+      JSON.stringify(legacy),
+    );
+    const decoded = decodeProfileFromUrl(encoded);
+    expect(decoded).not.toBeNull();
+    expect(decoded!.name).toBe("Old");
+    expect(decoded!.visits.JPN.status).toBe("visited");
+    expect(decoded!.visits.JPN.firstVisit).toBe("2015-03-01");
+    expect(decoded!.visits.JPN.visitCount).toBe(4);
+    expect(decoded!.visits.JPN.pinnedCity).toBe("Kyoto");
+    expect(decoded!.visits.FRA.status).toBe("visited");
   });
 });
