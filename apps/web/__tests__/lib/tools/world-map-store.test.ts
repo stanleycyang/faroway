@@ -21,32 +21,38 @@ function resetStore() {
 describe("useWorldMapStore", () => {
   beforeEach(resetStore);
 
-  describe("cycleStatus", () => {
-    it("first click from empty goes to visited (the common case)", () => {
+  describe("toggleVisited", () => {
+    it("first click on an empty country pins it as visited", () => {
       const pid = useWorldMapStore.getState().createProfile("Test", "🌍");
       expect(pid).toBeTruthy();
-      useWorldMapStore.getState().cycleStatus("JPN");
+      useWorldMapStore.getState().toggleVisited("JPN");
       const profile = useWorldMapStore
         .getState()
         .profiles.find((p) => p.id === pid);
       expect(profile?.visits.JPN.status).toBe("visited");
     });
 
-    it("cycles visited → lived → day_trip → transit → wishlist → clear", () => {
+    it("second click clears the pin", () => {
       useWorldMapStore.getState().createProfile("Test");
       const store = useWorldMapStore.getState();
-      store.cycleStatus("JPN"); // visited
-      store.cycleStatus("JPN"); // lived
+      store.toggleVisited("JPN");
       expect(useWorldMapStore.getState().profiles[0].visits.JPN.status).toBe(
-        "lived",
+        "visited",
       );
-      store.cycleStatus("JPN"); // day_trip
-      store.cycleStatus("JPN"); // transit
-      store.cycleStatus("JPN"); // wishlist
-      store.cycleStatus("JPN"); // cleared (back to empty)
+      store.toggleVisited("JPN");
       expect(
         useWorldMapStore.getState().profiles[0].visits.JPN,
       ).toBeUndefined();
+    });
+
+    it("bumps the profile's updatedAt on each toggle", async () => {
+      useWorldMapStore.getState().createProfile("Test");
+      const before = useWorldMapStore.getState().profiles[0].updatedAt;
+      // Sleep a tick so ISO timestamps differ.
+      await new Promise((r) => setTimeout(r, 2));
+      useWorldMapStore.getState().toggleVisited("JPN");
+      const after = useWorldMapStore.getState().profiles[0].updatedAt;
+      expect(after).not.toBe(before);
     });
   });
 

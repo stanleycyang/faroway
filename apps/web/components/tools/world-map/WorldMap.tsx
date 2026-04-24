@@ -7,6 +7,8 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type MouseEvent as ReactMouseEvent,
+  type PointerEvent as ReactPointerEvent,
 } from "react";
 import {
   ComposableMap,
@@ -33,14 +35,22 @@ interface HoverState {
   y: number;
 }
 
+export type CountryClickIntent = "toggle" | "edit";
+
 interface WorldMapProps {
   visits: Record<string, CountryVisit>;
   theme: Theme;
   readOnly?: boolean;
-  onCountryClick?: (iso: string, name: string) => void;
+  onCountryClick?: (
+    iso: string,
+    name: string,
+    intent: CountryClickIntent,
+  ) => void;
   highlightContinent?: string | null;
   getCountryContinent?: (iso: string) => string | undefined;
 }
+
+const LONG_PRESS_MS = 500;
 
 export function WorldMap({
   visits,
@@ -57,6 +67,22 @@ export function WorldMap({
   }>({ coordinates: [10, 20], zoom: 1 });
   const containerRef = useRef<HTMLDivElement>(null);
   const themeCfg = THEMES[theme];
+
+  // Long-press / right-click bookkeeping. A long-press on touch or a
+  // right-click on desktop opens the detail drawer ("edit"); a regular left
+  // click just toggles visited. Suppressing the subsequent click after a
+  // long-press prevents the toggle firing right after the drawer opens.
+  const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressFiredRef = useRef(false);
+  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  const clearLongPress = useCallback(() => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+    pointerStartRef.current = null;
+  }, []);
 
   // Reset hover on unmount / touch.
   useEffect(() => {
@@ -165,11 +191,57 @@ export function WorldMap({
                     onMouseLeave={() => setHover(null)}
                     onClick={() => {
                       if (readOnly || !iso || !onCountryClick) return;
+                      // If a long-press just fired, swallow the click that
+                      // touch devices dispatch on pointerup.
+                      if (longPressFiredRef.current) {
+                        longPressFiredRef.current = false;
+                        return;
+                      }
                       onCountryClick(
                         iso,
                         (geo.properties as { name?: string }).name ?? iso,
+                        "toggle",
                       );
                     }}
+                    onContextMenu={(event: ReactMouseEvent) => {
+                      if (readOnly || !iso || !onCountryClick) return;
+                      event.preventDefault();
+                      onCountryClick(
+                        iso,
+                        (geo.properties as { name?: string }).name ?? iso,
+                        "edit",
+                      );
+                    }}
+                    onPointerDown={(event: ReactPointerEvent) => {
+                      if (
+                        readOnly ||
+                        !iso ||
+                        !onCountryClick ||
+                        event.pointerType !== "touch"
+                      )
+                        return;
+                      pointerStartRef.current = {
+                        x: event.clientX,
+                        y: event.clientY,
+                      };
+                      longPressFiredRef.current = false;
+                      clearLongPress();
+                      const name =
+                        (geo.properties as { name?: string }).name ?? iso;
+                      longPressTimerRef.current = setTimeout(() => {
+                        longPressFiredRef.current = true;
+                        onCountryClick(iso, name, "edit");
+                      }, LONG_PRESS_MS);
+                    }}
+                    onPointerMove={(event: ReactPointerEvent) => {
+                      const start = pointerStartRef.current;
+                      if (!start) return;
+                      const dx = event.clientX - start.x;
+                      const dy = event.clientY - start.y;
+                      if (dx * dx + dy * dy > 100) clearLongPress();
+                    }}
+                    onPointerUp={clearLongPress}
+                    onPointerCancel={clearLongPress}
                     style={{
                       default: {
                         fill,

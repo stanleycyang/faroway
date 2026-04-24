@@ -44,7 +44,7 @@ export interface WorldMapStore extends AppState {
 
   // Visit ops (operate on active profile)
   upsertVisit: (iso: string, patch: Partial<CountryVisit>) => void;
-  cycleStatus: (iso: string) => void;
+  toggleVisited: (iso: string) => void;
   deleteVisit: (iso: string) => void;
 
   // Settings
@@ -62,17 +62,6 @@ export interface WorldMapStore extends AppState {
 function activeProfile(state: AppState): Profile | undefined {
   return state.profiles.find((p) => p.id === state.activeProfileId);
 }
-
-// First click from empty goes to "visited" (the common case); subsequent clicks
-// upgrade to "lived" before cycling through the rarer states and finally clearing.
-const STATUS_CYCLE = [
-  "visited",
-  "lived",
-  "day_trip",
-  "transit",
-  "wishlist",
-  null,
-] as const;
 
 const creator: StateCreator<
   WorldMapStore,
@@ -156,24 +145,15 @@ const creator: StateCreator<
     });
   },
 
-  cycleStatus: (iso) => {
+  toggleVisited: (iso) => {
     set((s: WorldMapStore) => {
       const profile = activeProfile(s);
       if (!profile) return {};
-      const current = profile.visits[iso]?.status;
-      const idx = STATUS_CYCLE.indexOf(
-        (current ?? null) as (typeof STATUS_CYCLE)[number],
-      );
-      const nextStatus = STATUS_CYCLE[(idx + 1) % STATUS_CYCLE.length];
       const nextVisits = { ...profile.visits };
-      if (nextStatus === null) {
+      if (nextVisits[iso]) {
         delete nextVisits[iso];
       } else {
-        nextVisits[iso] = {
-          ...(profile.visits[iso] ?? {}),
-          iso,
-          status: nextStatus,
-        };
+        nextVisits[iso] = { iso, status: "visited" };
       }
       return {
         profiles: s.profiles.map((p) =>

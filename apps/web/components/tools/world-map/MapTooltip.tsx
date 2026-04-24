@@ -43,6 +43,9 @@ export function MapTooltip({ iso, name, x, y }: Props) {
         ) : (
           <div className="text-xs text-slate-400 mt-1">Unpinned</div>
         )}
+        <div className="text-[10px] text-slate-400 mt-1.5 tracking-wide uppercase">
+          Click to pin · right-click for details
+        </div>
       </div>
       <div
         aria-hidden

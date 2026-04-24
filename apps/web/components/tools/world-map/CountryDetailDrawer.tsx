@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Trash2, X } from "lucide-react";
+import { ChevronDown, Trash2, X } from "lucide-react";
 import { useWorldMapStore } from "@/lib/tools/world-map/store";
 import { flagEmoji } from "@/lib/tools/world-map/iso";
 import { CONTINENT_BY_ALPHA3 } from "@/lib/tools/world-map/continents";
@@ -29,6 +29,7 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
   const [draft, setDraft] = useState<CountryVisit | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [trackedIso, setTrackedIso] = useState<string | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
 
   // Sync draft when iso changes — done during render (React recommended pattern).
   if (trackedIso !== iso) {
@@ -45,6 +46,19 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
       setDraft(null);
     }
     setConfirmDelete(false);
+    // Only auto-expand "More details" if this country already has data beyond
+    // the basic status — otherwise keep the drawer feeling empty on open.
+    setMoreOpen(
+      Boolean(
+        visit?.firstVisit ||
+        visit?.lastVisit ||
+        visit?.visitCount ||
+        visit?.rating ||
+        visit?.pinnedCity ||
+        visit?.notes ||
+        visit?.photoDataUrl,
+      ),
+    );
   }
 
   // Keyboard: close on escape, number keys set status.
@@ -156,127 +170,151 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
-                First visit
-              </label>
-              <input
-                type="date"
-                value={draft.firstVisit || ""}
-                onChange={(e) =>
-                  setDraft({ ...draft, firstVisit: e.target.value })
-                }
-                className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none"
+          <div>
+            <button
+              type="button"
+              onClick={() => setMoreOpen((v) => !v)}
+              className="w-full flex items-center justify-between gap-2 text-sm font-semibold text-slate-600 hover:text-slate-900 py-2 border-t border-slate-100 transition-colors"
+              aria-expanded={moreOpen}
+            >
+              <span>More details</span>
+              <ChevronDown
+                className={`w-4 h-4 transition-transform ${
+                  moreOpen ? "rotate-180" : ""
+                }`}
               />
-            </div>
-            <div>
-              <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
-                Last visit
-              </label>
-              <input
-                type="date"
-                value={draft.lastVisit || ""}
-                onChange={(e) =>
-                  setDraft({ ...draft, lastVisit: e.target.value })
-                }
-                className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none"
-              />
-            </div>
-          </div>
+            </button>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
-                Times visited
-              </label>
-              <input
-                type="number"
-                min="0"
-                value={draft.visitCount ?? ""}
-                onChange={(e) =>
-                  setDraft({
-                    ...draft,
-                    visitCount: e.target.value
-                      ? Math.max(0, Number(e.target.value))
-                      : undefined,
-                  })
-                }
-                className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-sm tabular-nums focus:ring-2 focus:ring-primary/40 focus:outline-none"
-                placeholder="1"
-              />
-            </div>
-            <div>
-              <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
-                Rating
-              </label>
-              <div className="flex items-center gap-1 h-[38px]">
-                {[1, 2, 3, 4, 5].map((r) => {
-                  const active = (draft.rating ?? 0) >= r;
-                  return (
-                    <button
-                      key={r}
-                      type="button"
-                      onClick={() =>
+            {moreOpen && (
+              <div className="space-y-5 pt-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
+                      First visit
+                    </label>
+                    <input
+                      type="date"
+                      value={draft.firstVisit || ""}
+                      onChange={(e) =>
+                        setDraft({ ...draft, firstVisit: e.target.value })
+                      }
+                      className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
+                      Last visit
+                    </label>
+                    <input
+                      type="date"
+                      value={draft.lastVisit || ""}
+                      onChange={(e) =>
+                        setDraft({ ...draft, lastVisit: e.target.value })
+                      }
+                      className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
+                      Times visited
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={draft.visitCount ?? ""}
+                      onChange={(e) =>
                         setDraft({
                           ...draft,
-                          rating:
-                            draft.rating === r
-                              ? undefined
-                              : (r as 1 | 2 | 3 | 4 | 5),
+                          visitCount: e.target.value
+                            ? Math.max(0, Number(e.target.value))
+                            : undefined,
                         })
                       }
-                      className={`text-xl leading-none transition-all ${
-                        active
-                          ? "text-amber-400 scale-110"
-                          : "text-slate-300 hover:text-slate-400"
-                      }`}
-                      aria-label={`Rate ${r} out of 5`}
-                    >
-                      ★
-                    </button>
-                  );
-                })}
+                      className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-sm tabular-nums focus:ring-2 focus:ring-primary/40 focus:outline-none"
+                      placeholder="1"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
+                      Rating
+                    </label>
+                    <div className="flex items-center gap-1 h-[38px]">
+                      {[1, 2, 3, 4, 5].map((r) => {
+                        const active = (draft.rating ?? 0) >= r;
+                        return (
+                          <button
+                            key={r}
+                            type="button"
+                            onClick={() =>
+                              setDraft({
+                                ...draft,
+                                rating:
+                                  draft.rating === r
+                                    ? undefined
+                                    : (r as 1 | 2 | 3 | 4 | 5),
+                              })
+                            }
+                            className={`text-xl leading-none transition-all ${
+                              active
+                                ? "text-amber-400 scale-110"
+                                : "text-slate-300 hover:text-slate-400"
+                            }`}
+                            aria-label={`Rate ${r} out of 5`}
+                          >
+                            ★
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
+                    Memorable city
+                  </label>
+                  <input
+                    type="text"
+                    value={draft.pinnedCity || ""}
+                    onChange={(e) =>
+                      setDraft({ ...draft, pinnedCity: e.target.value })
+                    }
+                    placeholder="e.g. Kyoto"
+                    className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
+                    Notes
+                  </label>
+                  <textarea
+                    value={draft.notes || ""}
+                    onChange={(e) =>
+                      setDraft({ ...draft, notes: e.target.value })
+                    }
+                    rows={4}
+                    placeholder="What did you love? What would you do differently?"
+                    className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-sm leading-relaxed focus:ring-2 focus:ring-primary/40 focus:outline-none resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
+                    Cover photo
+                  </label>
+                  <PhotoUpload
+                    value={draft.photoDataUrl}
+                    onChange={(url) =>
+                      setDraft({ ...draft, photoDataUrl: url })
+                    }
+                  />
+                </div>
               </div>
-            </div>
-          </div>
-
-          <div>
-            <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
-              Memorable city
-            </label>
-            <input
-              type="text"
-              value={draft.pinnedCity || ""}
-              onChange={(e) =>
-                setDraft({ ...draft, pinnedCity: e.target.value })
-              }
-              placeholder="e.g. Kyoto"
-              className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-sm focus:ring-2 focus:ring-primary/40 focus:outline-none"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
-              Notes
-            </label>
-            <textarea
-              value={draft.notes || ""}
-              onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
-              rows={4}
-              placeholder="What did you love? What would you do differently?"
-              className="w-full rounded-lg ring-1 ring-slate-200 px-3 py-2 text-sm leading-relaxed focus:ring-2 focus:ring-primary/40 focus:outline-none resize-none"
-            />
-          </div>
-
-          <div>
-            <label className="text-xs uppercase tracking-wider text-slate-500 font-semibold mb-1.5 block">
-              Cover photo
-            </label>
-            <PhotoUpload
-              value={draft.photoDataUrl}
-              onChange={(url) => setDraft({ ...draft, photoDataUrl: url })}
-            />
+            )}
           </div>
         </div>
 
