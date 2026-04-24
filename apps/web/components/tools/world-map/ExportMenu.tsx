@@ -11,28 +11,16 @@ import {
 } from "lucide-react";
 import { useActiveProfile } from "@/lib/tools/world-map/store";
 import { downloadBackupJson } from "@/lib/tools/world-map/backup";
-import { toPng } from "html-to-image";
 import { buildShareUrl, encodeProfileToUrl } from "@/lib/tools/world-map/share";
 
 interface Props {
-  mapRef: React.RefObject<HTMLElement | null>;
   onOpenImport: () => void;
   onOpenShare: (alreadyCopied: boolean) => void;
 }
 
 type Aspect = "landscape" | "square" | "story";
 
-// Target output sizes per aspect ratio. html-to-image scales the captured
-// node's content to fill these — the native landscape snapshot looks best;
-// square and story are optimized for social feeds at the cost of some
-// letterboxing.
-const ASPECT_SIZES: Record<Aspect, { width: number; height: number }> = {
-  landscape: { width: 1600, height: 800 },
-  square: { width: 1080, height: 1080 },
-  story: { width: 1080, height: 1920 },
-};
-
-export function ExportMenu({ mapRef, onOpenImport, onOpenShare }: Props) {
+export function ExportMenu({ onOpenImport, onOpenShare }: Props) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -54,29 +42,27 @@ export function ExportMenu({ mapRef, onOpenImport, onOpenShare }: Props) {
   }
 
   async function downloadPng(aspect: Aspect) {
-    if (!mapRef.current) return;
+    if (!profile) return;
     setBusy(`png-${aspect}`);
     try {
-      const { width, height } = ASPECT_SIZES[aspect];
-      const dataUrl = await toPng(mapRef.current, {
-        pixelRatio: 2,
-        backgroundColor: "#ffffff",
-        cacheBust: true,
-        canvasWidth: width,
-        canvasHeight: height,
-      });
+      const encoded = encodeProfileToUrl(profile);
+      const url = `/api/og/world-map?format=${aspect}&d=${encodeURIComponent(encoded)}`;
+      // Fetch as blob so we can force a download with a friendly filename.
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`OG render failed: ${res.status}`);
+      const blob = await res.blob();
+      const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
       const today = new Date().toISOString().slice(0, 10);
-      a.href = dataUrl;
+      a.href = blobUrl;
       a.download = `world-map-${aspect}-${today}.png`;
       document.body.appendChild(a);
       a.click();
       a.remove();
+      URL.revokeObjectURL(blobUrl);
     } catch (err) {
       console.error("PNG export failed", err);
-      alert(
-        "Couldn't generate the image. Try zooming out so the whole map fits.",
-      );
+      alert("Couldn't generate the image. Try again in a moment.");
     } finally {
       setBusy(null);
       setOpen(false);
@@ -133,22 +119,19 @@ export function ExportMenu({ mapRef, onOpenImport, onOpenShare }: Props) {
             </div>
           </button>
 
-          {/* Image export group */}
           <div className="border-t border-slate-100 px-4 pt-3 pb-2">
             <div className="text-[10px] font-bold tracking-wider uppercase text-slate-400">
-              Download as image
+              Download as poster
             </div>
           </div>
           <AspectButton
-            aspect="landscape"
             label="Landscape"
-            hint="Best for Twitter, blog posts"
+            hint="Best for X / blog headers"
             icon={<ImageIcon className="w-4 h-4" />}
             busy={busy === "png-landscape"}
             onClick={() => downloadPng("landscape")}
           />
           <AspectButton
-            aspect="square"
             label="Square"
             hint="Instagram feed"
             icon={<Square className="w-4 h-4" />}
@@ -156,9 +139,8 @@ export function ExportMenu({ mapRef, onOpenImport, onOpenShare }: Props) {
             onClick={() => downloadPng("square")}
           />
           <AspectButton
-            aspect="story"
             label="Story (9:16)"
-            hint="Instagram / TikTok Stories"
+            hint="Instagram / TikTok stories"
             icon={<Smartphone className="w-4 h-4" />}
             busy={busy === "png-story"}
             onClick={() => downloadPng("story")}
@@ -215,7 +197,6 @@ function AspectButton({
   busy,
   onClick,
 }: {
-  aspect: Aspect;
   label: string;
   hint: string;
   icon: React.ReactNode;

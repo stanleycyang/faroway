@@ -67,7 +67,6 @@ export function WorldMapApp() {
   >(false);
   const [milestone, setMilestone] = useState<Milestone | null>(null);
 
-  const snapshotRef = useRef<HTMLDivElement>(null);
   const prevCountRef = useRef<number | null>(null);
 
   const visits = useMemo(() => profile?.visits ?? {}, [profile?.visits]);
@@ -153,7 +152,6 @@ export function WorldMapApp() {
             <CountrySearch onPick={(iso, name) => setSelected({ iso, name })} />
             <ProfileSwitcher />
             <ExportMenu
-              mapRef={snapshotRef}
               onOpenImport={() => setImportOpen(true)}
               onOpenShare={(copied) =>
                 setShareOpen({ initiallyCopied: copied })
@@ -164,11 +162,7 @@ export function WorldMapApp() {
 
         <BackupBanner />
 
-        {/* Snapshot target — stats + map combined (for PNG export). */}
-        <div
-          ref={snapshotRef}
-          className="bg-white rounded-3xl ring-1 ring-slate-200/70 shadow-sm p-5 md:p-8 space-y-5"
-        >
+        <div className="bg-white rounded-3xl ring-1 ring-slate-200/70 shadow-sm p-5 md:p-8 space-y-5">
           <StatsHeader
             profileName={profile.name}
             profileEmoji={profile.emoji}
