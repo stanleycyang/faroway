@@ -12,7 +12,10 @@ import {
   CONTINENT_BY_ALPHA3,
   type Continent,
 } from "@/lib/tools/world-map/continents";
-import { useWorldMapStore } from "@/lib/tools/world-map/store";
+import {
+  useActiveProfile,
+  useWorldMapStore,
+} from "@/lib/tools/world-map/store";
 import { flagEmoji } from "@/lib/tools/world-map/iso";
 import { STATUS_CONFIG } from "@/lib/tools/world-map/status";
 import { nanoid } from "nanoid";
@@ -50,6 +53,11 @@ export function WorldMapView({ encoded }: Props) {
   const createProfile = useWorldMapStore((s) => s.createProfile);
   const profiles = useWorldMapStore((s) => s.profiles);
   const hasHydrated = useWorldMapStore((s) => s.hasHydrated);
+  const ownProfile = useActiveProfile();
+  const ownStats = useMemo(
+    () => computeStats(ownProfile?.visits ?? {}),
+    [ownProfile?.visits],
+  );
 
   const visits = useMemo(() => decoded?.visits ?? {}, [decoded?.visits]);
   const stats = useMemo(() => computeStats(visits), [visits]);
@@ -107,30 +115,64 @@ export function WorldMapView({ encoded }: Props) {
     .filter((v) => v.status === "lived" || v.status === "visited")
     .slice(0, 12);
 
+  const compareLine =
+    hasHydrated && ownProfile && ownStats.totalVisited < stats.totalVisited
+      ? ownStats.totalVisited === 0
+        ? "You haven't pinned any countries yet."
+        : `You've pinned ${ownStats.totalVisited} so far — ${
+            stats.totalVisited - ownStats.totalVisited
+          } behind.`
+      : null;
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-6 space-y-5">
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <Link
-          href="/tools/world-map"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-900 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" /> Start your own map
-        </Link>
-        <button
-          type="button"
-          onClick={handleImport}
-          disabled={!hasHydrated || importState === "imported"}
-          className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-all shadow-sm ${
-            importState === "imported"
-              ? "bg-emerald-500 text-white"
-              : "bg-gradient-to-r from-primary to-amber-500 text-white hover:shadow-lg hover:shadow-primary/25"
-          }`}
-        >
-          <Copy className="w-4 h-4" />
-          {importState === "imported"
-            ? "Saved to your map"
-            : "Copy these to my map"}
-        </button>
+      {/* Hero + challenge CTA */}
+      <div className="rounded-2xl bg-gradient-to-br from-primary/5 via-amber-50 to-white ring-1 ring-primary/20 p-6 md:p-8">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2.5 text-sm font-semibold uppercase tracking-wider text-slate-500">
+              <span className="text-2xl leading-none">
+                {decoded.emoji || "🌍"}
+              </span>
+              <span>{decoded.name}&apos;s World Map</span>
+            </div>
+            <h1 className="mt-2 text-3xl md:text-4xl font-bold text-slate-900 font-serif leading-tight">
+              {stats.totalVisited}{" "}
+              {stats.totalVisited === 1 ? "country" : "countries"} across{" "}
+              {stats.continentsVisited}{" "}
+              {stats.continentsVisited === 1 ? "continent" : "continents"}
+            </h1>
+            {compareLine && (
+              <p className="mt-2 text-sm text-slate-600">{compareLine}</p>
+            )}
+          </div>
+          <Link
+            href="/tools/world-map"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-amber-500 text-white px-5 py-3 rounded-full text-sm font-bold shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:-translate-y-0.5 transition-all"
+          >
+            Think you&apos;ve traveled more? Make your map →
+          </Link>
+        </div>
+        <div className="mt-4 flex items-center gap-4 text-xs text-slate-500">
+          <Link
+            href="/tools/world-map"
+            className="inline-flex items-center gap-1.5 hover:text-slate-900 transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" /> Start fresh
+          </Link>
+          <span className="text-slate-300">·</span>
+          <button
+            type="button"
+            onClick={handleImport}
+            disabled={!hasHydrated || importState === "imported"}
+            className="inline-flex items-center gap-1.5 hover:text-slate-900 disabled:opacity-60 transition-colors"
+          >
+            <Copy className="w-3.5 h-3.5" />
+            {importState === "imported"
+              ? "Saved to your map"
+              : "Copy these pins into mine"}
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-2xl ring-1 ring-slate-200/60 shadow-sm p-4 md:p-6 space-y-4">

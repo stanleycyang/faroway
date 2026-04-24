@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Download, Image as ImageIcon, Link2, Upload } from "lucide-react";
+import {
+  Download,
+  Image as ImageIcon,
+  Link2,
+  Smartphone,
+  Square,
+  Upload,
+} from "lucide-react";
 import { useActiveProfile } from "@/lib/tools/world-map/store";
 import { downloadBackupJson } from "@/lib/tools/world-map/backup";
 import { toPng } from "html-to-image";
@@ -12,6 +19,18 @@ interface Props {
   onOpenImport: () => void;
   onOpenShare: (alreadyCopied: boolean) => void;
 }
+
+type Aspect = "landscape" | "square" | "story";
+
+// Target output sizes per aspect ratio. html-to-image scales the captured
+// node's content to fill these — the native landscape snapshot looks best;
+// square and story are optimized for social feeds at the cost of some
+// letterboxing.
+const ASPECT_SIZES: Record<Aspect, { width: number; height: number }> = {
+  landscape: { width: 1600, height: 800 },
+  square: { width: 1080, height: 1080 },
+  story: { width: 1080, height: 1920 },
+};
 
 export function ExportMenu({ mapRef, onOpenImport, onOpenShare }: Props) {
   const [open, setOpen] = useState(false);
@@ -34,19 +53,22 @@ export function ExportMenu({ mapRef, onOpenImport, onOpenShare }: Props) {
     setOpen(false);
   }
 
-  async function downloadPng() {
+  async function downloadPng(aspect: Aspect) {
     if (!mapRef.current) return;
-    setBusy("png");
+    setBusy(`png-${aspect}`);
     try {
+      const { width, height } = ASPECT_SIZES[aspect];
       const dataUrl = await toPng(mapRef.current, {
         pixelRatio: 2,
         backgroundColor: "#ffffff",
         cacheBust: true,
+        canvasWidth: width,
+        canvasHeight: height,
       });
       const a = document.createElement("a");
       const today = new Date().toISOString().slice(0, 10);
       a.href = dataUrl;
-      a.download = `world-map-${today}.png`;
+      a.download = `world-map-${aspect}-${today}.png`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -91,7 +113,7 @@ export function ExportMenu({ mapRef, onOpenImport, onOpenShare }: Props) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl shadow-xl ring-1 ring-slate-200/70 overflow-hidden z-40 animate-fade-in">
+        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl ring-1 ring-slate-200/70 overflow-hidden z-40 animate-fade-in">
           <button
             type="button"
             onClick={copyShareLink}
@@ -110,22 +132,39 @@ export function ExportMenu({ mapRef, onOpenImport, onOpenShare }: Props) {
               </div>
             </div>
           </button>
-          <button
-            type="button"
-            onClick={downloadPng}
-            disabled={busy === "png"}
-            className="w-full flex items-start gap-3 text-left px-4 py-3 hover:bg-slate-50 transition-colors disabled:opacity-60"
-          >
-            <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
-              <ImageIcon className="w-4 h-4" />
+
+          {/* Image export group */}
+          <div className="border-t border-slate-100 px-4 pt-3 pb-2">
+            <div className="text-[10px] font-bold tracking-wider uppercase text-slate-400">
+              Download as image
             </div>
-            <div>
-              <div className="text-sm font-semibold text-slate-900">
-                {busy === "png" ? "Rendering…" : "Download as image"}
-              </div>
-              <div className="text-xs text-slate-500">PNG for socials</div>
-            </div>
-          </button>
+          </div>
+          <AspectButton
+            aspect="landscape"
+            label="Landscape"
+            hint="Best for Twitter, blog posts"
+            icon={<ImageIcon className="w-4 h-4" />}
+            busy={busy === "png-landscape"}
+            onClick={() => downloadPng("landscape")}
+          />
+          <AspectButton
+            aspect="square"
+            label="Square"
+            hint="Instagram feed"
+            icon={<Square className="w-4 h-4" />}
+            busy={busy === "png-square"}
+            onClick={() => downloadPng("square")}
+          />
+          <AspectButton
+            aspect="story"
+            label="Story (9:16)"
+            hint="Instagram / TikTok Stories"
+            icon={<Smartphone className="w-4 h-4" />}
+            busy={busy === "png-story"}
+            onClick={() => downloadPng("story")}
+          />
+
+          <div className="border-t border-slate-100" />
           <button
             type="button"
             onClick={downloadJson}
@@ -143,7 +182,6 @@ export function ExportMenu({ mapRef, onOpenImport, onOpenShare }: Props) {
               </div>
             </div>
           </button>
-          <div className="border-t border-slate-100" />
           <button
             type="button"
             onClick={() => {
@@ -167,5 +205,39 @@ export function ExportMenu({ mapRef, onOpenImport, onOpenShare }: Props) {
         </div>
       )}
     </div>
+  );
+}
+
+function AspectButton({
+  label,
+  hint,
+  icon,
+  busy,
+  onClick,
+}: {
+  aspect: Aspect;
+  label: string;
+  hint: string;
+  icon: React.ReactNode;
+  busy: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={busy}
+      className="w-full flex items-start gap-3 text-left px-4 py-2.5 hover:bg-slate-50 transition-colors disabled:opacity-60"
+    >
+      <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">
+        {icon}
+      </div>
+      <div>
+        <div className="text-sm font-semibold text-slate-900">
+          {busy ? "Rendering…" : label}
+        </div>
+        <div className="text-xs text-slate-500">{hint}</div>
+      </div>
+    </button>
   );
 }

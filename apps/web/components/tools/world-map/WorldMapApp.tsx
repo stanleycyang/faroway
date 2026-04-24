@@ -10,6 +10,11 @@ import {
   CONTINENT_BY_ALPHA3,
   type Continent,
 } from "@/lib/tools/world-map/continents";
+import {
+  MILESTONES,
+  nextMilestoneCrossed,
+  type Milestone,
+} from "@/lib/tools/world-map/milestones";
 import { Logo } from "@/components/Logo";
 import { WorldMap, type CountryClickIntent } from "./WorldMap";
 import { StatsHeader } from "./StatsHeader";
@@ -21,6 +26,33 @@ import { ShareLinkDialog } from "./ShareLinkDialog";
 import { ProfileSwitcher } from "./ProfileSwitcher";
 import { BackupBanner } from "./BackupBanner";
 import { CountrySearch } from "./CountrySearch";
+import { MilestoneToast } from "./MilestoneToast";
+
+const MILESTONES_SEEN_KEY = "wm:milestones-seen";
+
+function readSeenMilestones(): Set<number> {
+  if (typeof window === "undefined") return new Set();
+  try {
+    const raw = window.localStorage.getItem(MILESTONES_SEEN_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    return new Set(Array.isArray(parsed) ? parsed.map(Number) : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function writeSeenMilestones(seen: Set<number>) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem(
+      MILESTONES_SEEN_KEY,
+      JSON.stringify(Array.from(seen)),
+    );
+  } catch {
+    // Quota exceeded or similar — non-critical.
+  }
+}
 
 export function WorldMapApp() {
   const hasHydrated = useWorldMapStore((s) => s.hasHydrated);
@@ -42,9 +74,11 @@ export function WorldMapApp() {
   >(false);
   const [highlightContinent, setHighlightContinent] =
     useState<Continent | null>(null);
+  const [milestone, setMilestone] = useState<Milestone | null>(null);
 
   const mapRef = useRef<HTMLDivElement>(null);
   const snapshotRef = useRef<HTMLDivElement>(null);
+  const prevCountRef = useRef<number | null>(null);
 
   const visits = useMemo(() => profile?.visits ?? {}, [profile?.visits]);
   const stats = useMemo(() => computeStats(visits), [visits]);
@@ -73,6 +107,50 @@ export function WorldMapApp() {
     },
     [toggleVisited],
   );
+
+  // Milestone detection: fire a toast when crossing 5/10/25/50/100, once each.
+  useEffect(() => {
+    if (!hasHydrated) return;
+    const total = stats.totalVisited;
+    const prev = prevCountRef.current;
+    prevCountRef.current = total;
+    if (prev === null) return; // first render — just record baseline
+
+    const crossed = nextMilestoneCrossed(prev, total);
+    if (!crossed) return;
+
+    const seen = readSeenMilestones();
+    if (seen.has(crossed)) return;
+    seen.add(crossed);
+    writeSeenMilestones(seen);
+    setMilestone(crossed);
+  }, [hasHydrated, stats.totalVisited]);
+
+  // Auto-dismiss the toast after 10s.
+  useEffect(() => {
+    if (!milestone) return;
+    const t = setTimeout(() => setMilestone(null), 10_000);
+    return () => clearTimeout(t);
+  }, [milestone]);
+
+  // Seed `seen` with milestones already met the first time we hydrate, so a
+  // returning user with 42 countries doesn't get bombarded with toasts.
+  useEffect(() => {
+    if (!hasHydrated) return;
+    const total = stats.totalVisited;
+    const seen = readSeenMilestones();
+    let dirty = false;
+    for (const m of MILESTONES) {
+      if (total >= m && !seen.has(m)) {
+        seen.add(m);
+        dirty = true;
+      }
+    }
+    if (dirty) writeSeenMilestones(seen);
+    // Only run once at hydrate — this effect isn't meant to react to later
+    // visit changes (that's handled by the crossing effect above).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasHydrated]);
 
   // Keyboard shortcut: L toggles legend.
   useEffect(() => {
@@ -147,20 +225,26 @@ export function WorldMapApp() {
             />
           </div>
 
-          {/* Legend below map (always in snapshot for context) */}
+          {/* Legend + watermark below map (always in snapshot for context) */}
           <div className="flex items-center justify-between flex-wrap gap-2">
             <Legend
               counts={stats.byStatus as unknown as Record<string, number>}
             />
-            <p className="text-xs text-slate-400 font-medium">
-              Click to pin · right-click for details ·{" "}
-              <span className="font-mono bg-slate-100 text-slate-500 px-1 rounded">
-                /
-              </span>{" "}
-              to search
-            </p>
+            <div className="text-[10px] font-semibold tracking-[0.18em] uppercase text-slate-400">
+              faroway.ai · world map
+            </div>
           </div>
         </div>
+
+        {/* In-editor shortcut hint — intentionally outside the snapshot so
+            it doesn't end up in exported PNGs. */}
+        <p className="text-xs text-slate-400 font-medium text-center">
+          Click to pin · right-click for details ·{" "}
+          <span className="font-mono bg-slate-100 text-slate-500 px-1 rounded">
+            /
+          </span>{" "}
+          to search
+        </p>
 
         {/* Empty state hint */}
         {Object.keys(visits).length === 0 && (
@@ -194,6 +278,17 @@ export function WorldMapApp() {
         initiallyCopied={shareOpen ? shareOpen.initiallyCopied : false}
         onClose={() => setShareOpen(false)}
       />
+
+      {milestone && (
+        <MilestoneToast
+          milestone={milestone}
+          onShare={() => {
+            setMilestone(null);
+            setShareOpen({ initiallyCopied: false });
+          }}
+          onDismiss={() => setMilestone(null)}
+        />
+      )}
     </>
   );
 }
