@@ -59,24 +59,29 @@ export function BackupBanner() {
   if (dismissed) return null;
 
   return (
-    <div className="rounded-xl bg-amber-50 ring-1 ring-amber-200 px-4 py-3 flex items-start gap-3">
-      <div className="w-8 h-8 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center flex-shrink-0">
+    <div className="border border-ink/15 bg-paper px-4 py-3 flex items-start gap-3">
+      <div className="w-8 h-8 border border-ink/15 text-clay flex items-center justify-center flex-shrink-0">
         <AlertTriangle className="w-4 h-4" />
       </div>
-      <div className="flex-1 text-sm">
-        <div className="font-semibold text-amber-900">Back up your map</div>
-        <div className="text-amber-800 text-xs mt-0.5 leading-relaxed">
-          Your pins live in this browser. Export a JSON backup so you don&apos;t
-          lose them if you clear browser data.
+      <div className="flex-1">
+        <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500">
+          Reminder
+        </div>
+        <div className="font-editorial text-base font-bold text-ink mt-0.5">
+          Back up your atlas
+        </div>
+        <div className="text-[12px] text-slate-600 mt-0.5 leading-relaxed">
+          Your pins live in this browser. Export a JSON file so you don&apos;t
+          lose them if you clear browser data or switch devices.
         </div>
       </div>
       <div className="flex items-center gap-1 flex-shrink-0">
         <button
           type="button"
           onClick={() => downloadBackupJson()}
-          className="text-xs font-semibold bg-amber-600 hover:bg-amber-700 text-white rounded-lg px-3 py-1.5 transition-colors"
+          className="text-[11px] font-bold uppercase tracking-[0.18em] bg-ink hover:bg-slate-700 text-paper px-3 py-2 transition-colors"
         >
-          Back up now
+          Back up
         </button>
         <button
           type="button"
@@ -85,7 +90,7 @@ export function BackupBanner() {
             setLocallyDismissed(true);
           }}
           aria-label="Dismiss"
-          className="w-7 h-7 rounded-lg text-amber-600 hover:bg-amber-100 flex items-center justify-center"
+          className="w-7 h-7 text-slate-500 hover:bg-ink/5 flex items-center justify-center"
         >
           <X className="w-4 h-4" />
         </button>

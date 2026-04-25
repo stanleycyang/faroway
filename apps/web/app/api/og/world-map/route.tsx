@@ -6,6 +6,7 @@ import type { Topology, GeometryCollection } from "topojson-specification";
 import { decodeProfileFromUrl } from "@/lib/tools/world-map/share";
 import { computeStats } from "@/lib/tools/world-map/stats";
 import { numericToAlpha3 } from "@/lib/tools/world-map/iso";
+import { PALETTE } from "@/lib/tools/world-map/palette";
 import topology from "@/lib/tools/world-map/topology.json";
 
 export const runtime = "edge";
@@ -41,15 +42,15 @@ const SIZES: Record<Format, { width: number; height: number }> = {
 };
 
 const COLORS = {
-  bg: "#FAF6EF",
-  bgEdge: "#EDE5D2",
-  ink: "#0F172A",
-  inkSubtle: "#475569",
-  inkFaint: "#94A3B8",
-  visited: "#B91C1C",
-  visitedEdge: "#7F1D1D",
-  unvisitedEdge: "#D6D3CB",
-  hairline: "rgba(15, 23, 42, 0.10)",
+  bg: PALETTE.paper,
+  bgEdge: PALETTE.paperEdge,
+  ink: PALETTE.ink,
+  inkSubtle: PALETTE.inkSubtle,
+  inkFaint: PALETTE.inkFaint,
+  visited: PALETTE.visited,
+  visitedEdge: PALETTE.visitedEdge,
+  unvisitedEdge: PALETTE.unvisitedEdge,
+  hairline: PALETTE.hairline,
 };
 
 const FONTS = {

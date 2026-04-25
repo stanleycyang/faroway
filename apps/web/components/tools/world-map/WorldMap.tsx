@@ -118,10 +118,10 @@ export function WorldMap({ visits, readOnly, onCountryClick }: WorldMapProps) {
   return (
     <div
       ref={containerRef}
-      className="relative w-full h-full overflow-hidden rounded-2xl ring-1 ring-slate-200/70 shadow-inner"
+      className="relative w-full h-full overflow-hidden border border-ink/15"
       style={containerStyle}
     >
-      {/* Subtle paper grain — barely visible, adds atlas texture in PNG exports. */}
+      {/* Paper grain — barely visible, gives the canvas a subtle atlas texture */}
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-[0.04] mix-blend-multiply"
@@ -130,6 +130,14 @@ export function WorldMap({ visits, readOnly, onCountryClick }: WorldMapProps) {
           backgroundSize: "24px 24px",
         }}
       />
+
+      {/* Corner tick marks — modern editorial restraint, four tiny L-shapes */}
+      <CornerTicks />
+
+      {/* Projection caption, bottom-right corner of the map canvas */}
+      <div className="pointer-events-none absolute bottom-3 right-3 z-10 text-[9px] font-bold uppercase tracking-[0.22em] text-slate-500/80">
+        Equal Earth Projection
+      </div>
 
       <ComposableMap
         projection="geoEqualEarth"
@@ -261,40 +269,139 @@ export function WorldMap({ visits, readOnly, onCountryClick }: WorldMapProps) {
         </ZoomableGroup>
       </ComposableMap>
 
-      {/* Zoom controls — explicit buttons only, no wheel/trackpad zoom. */}
-      <div className="absolute top-3 right-3 flex flex-col gap-1 bg-white/95 backdrop-blur rounded-xl p-1 shadow-lg ring-1 ring-slate-200/60">
+      {/* Zoom controls — quiet ivory chip, no wheel/trackpad zoom. */}
+      <div className="absolute top-3 right-3 flex flex-col bg-paper/95 backdrop-blur border border-ink/15">
         <button
           type="button"
           onClick={zoomIn}
           aria-label="Zoom in"
           disabled={position.zoom >= MAX_ZOOM}
-          className="w-8 h-8 flex items-center justify-center text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg transition-colors"
+          className="w-9 h-9 flex items-center justify-center text-ink hover:bg-ink/5 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
         >
-          <Plus className="w-4 h-4" strokeWidth={2.5} />
+          <Plus className="w-4 h-4" strokeWidth={2} />
         </button>
+        <div className="h-px bg-ink/10 mx-1.5" aria-hidden />
         <button
           type="button"
           onClick={zoomOut}
           aria-label="Zoom out"
           disabled={position.zoom <= MIN_ZOOM}
-          className="w-8 h-8 flex items-center justify-center text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg transition-colors"
+          className="w-9 h-9 flex items-center justify-center text-ink hover:bg-ink/5 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
         >
-          <Minus className="w-4 h-4" strokeWidth={2.5} />
+          <Minus className="w-4 h-4" strokeWidth={2} />
         </button>
+        <div className="h-px bg-ink/10 mx-1.5" aria-hidden />
         <button
           type="button"
           onClick={resetZoom}
           aria-label="Reset zoom"
           disabled={position.zoom === 1 && position.coordinates[0] === 10}
-          className="w-8 h-8 flex items-center justify-center text-slate-700 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed rounded-lg transition-colors"
+          className="w-9 h-9 flex items-center justify-center text-ink hover:bg-ink/5 disabled:opacity-25 disabled:cursor-not-allowed transition-colors"
         >
-          <Maximize className="w-4 h-4" strokeWidth={2.5} />
+          <Maximize className="w-4 h-4" strokeWidth={2} />
         </button>
       </div>
 
       {hover && (
         <MapTooltip iso={hover.iso} name={hover.name} x={hover.x} y={hover.y} />
       )}
+    </div>
+  );
+}
+
+// Four small L-shaped tick marks anchored to the corners of the map canvas.
+// A modern, restrained alternative to a full vintage frame.
+function CornerTicks() {
+  const len = 14; // px
+  const inset = 6; // px from edge
+  const stroke = "rgba(15, 23, 42, 0.30)";
+  const w = 1; // hairline thickness
+  return (
+    <div aria-hidden className="pointer-events-none absolute inset-0 z-10">
+      {/* top-left */}
+      <span
+        style={{
+          position: "absolute",
+          top: inset,
+          left: inset,
+          width: len,
+          height: w,
+          background: stroke,
+        }}
+      />
+      <span
+        style={{
+          position: "absolute",
+          top: inset,
+          left: inset,
+          width: w,
+          height: len,
+          background: stroke,
+        }}
+      />
+      {/* top-right */}
+      <span
+        style={{
+          position: "absolute",
+          top: inset,
+          right: inset,
+          width: len,
+          height: w,
+          background: stroke,
+        }}
+      />
+      <span
+        style={{
+          position: "absolute",
+          top: inset,
+          right: inset,
+          width: w,
+          height: len,
+          background: stroke,
+        }}
+      />
+      {/* bottom-left */}
+      <span
+        style={{
+          position: "absolute",
+          bottom: inset,
+          left: inset,
+          width: len,
+          height: w,
+          background: stroke,
+        }}
+      />
+      <span
+        style={{
+          position: "absolute",
+          bottom: inset,
+          left: inset,
+          width: w,
+          height: len,
+          background: stroke,
+        }}
+      />
+      {/* bottom-right */}
+      <span
+        style={{
+          position: "absolute",
+          bottom: inset,
+          right: inset,
+          width: len,
+          height: w,
+          background: stroke,
+        }}
+      />
+      <span
+        style={{
+          position: "absolute",
+          bottom: inset,
+          right: inset,
+          width: w,
+          height: len,
+          background: stroke,
+        }}
+      />
     </div>
   );
 }

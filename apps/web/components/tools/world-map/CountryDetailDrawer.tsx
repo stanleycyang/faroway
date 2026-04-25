@@ -121,7 +121,7 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
               </span>
               <h3
                 id="country-drawer-title"
-                className="text-xl font-bold text-slate-900 font-serif truncate"
+                className="text-2xl font-bold text-ink font-editorial truncate"
               >
                 {name || iso}
               </h3>

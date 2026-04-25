@@ -14,6 +14,7 @@ import {
 import { Logo } from "@/components/Logo";
 import { WorldMap, type CountryClickIntent } from "./WorldMap";
 import { StatsHeader } from "./StatsHeader";
+import { FieldNotes } from "./FieldNotes";
 import { CountryDetailDrawer } from "./CountryDetailDrawer";
 import { ExportMenu } from "./ExportMenu";
 import { ImportDialog } from "./ImportDialog";
@@ -72,7 +73,6 @@ export function WorldMapApp() {
   const visits = useMemo(() => profile?.visits ?? {}, [profile?.visits]);
   const stats = useMemo(() => computeStats(visits), [visits]);
 
-  // Auto-create a default profile on first hydrate.
   useEffect(() => {
     if (hasHydrated && profiles.length === 0) {
       createProfile("Traveler", "🌍");
@@ -139,12 +139,12 @@ export function WorldMapApp() {
 
   return (
     <>
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 lg:py-6 space-y-5">
-        {/* Top action bar */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 lg:py-10 space-y-8 lg:space-y-12">
+        {/* Editorial top bar — quiet, no competing chrome rule */}
+        <header className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
             <Logo size="sm" />
-            <span className="hidden md:inline-block text-xs text-slate-400 font-semibold uppercase tracking-wider border-l border-slate-200 pl-3">
+            <span className="hidden md:inline-block text-[11px] text-slate-500 font-bold uppercase tracking-[0.24em] border-l border-ink/15 pl-3">
               World Map
             </span>
           </div>
@@ -158,58 +158,54 @@ export function WorldMapApp() {
               }
             />
           </div>
-        </div>
+        </header>
 
         <BackupBanner />
 
-        <div className="bg-white rounded-3xl ring-1 ring-slate-200/70 shadow-sm p-5 md:p-8 space-y-5">
-          <StatsHeader
-            profileName={profile.name}
-            profileEmoji={profile.emoji}
-            stats={stats}
-          />
-
-          <div className="relative w-full aspect-[2/1] md:aspect-[21/10]">
-            <WorldMap visits={visits} onCountryClick={handleCountryClick} />
-          </div>
-
-          <div className="flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-            <span>faroway.ai · world map</span>
-            {stats.totalVisited > 0 && (
-              <span className="text-red-500">
-                {stats.totalVisited === 1
-                  ? "1 country pinned"
-                  : `${stats.totalVisited} countries pinned`}
-              </span>
-            )}
-          </div>
+        {/* The map — full-width centerpiece */}
+        <div className="relative w-full aspect-[2/1] md:aspect-[21/10] animate-fade-in">
+          <WorldMap visits={visits} onCountryClick={handleCountryClick} />
         </div>
 
-        {/* Editor hint — outside the snapshot so it doesn't appear in PNG exports. */}
-        <p className="text-xs text-slate-400 font-medium text-center">
+        {/* Editor hint — tiny, sits below the map */}
+        <p className="text-center text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">
           Click any country to pin · right-click for details ·{" "}
-          <span className="font-mono bg-slate-100 text-slate-500 px-1 rounded">
+          <span className="font-mono normal-case tracking-normal text-[12px] text-slate-500">
             /
           </span>{" "}
           to search
         </p>
 
+        {/* Hero (left) + Field Notes (right). Asymmetric only at xl. */}
+        <div className="grid grid-cols-1 xl:grid-cols-12 gap-10 xl:gap-14">
+          <div className="xl:col-span-4">
+            <StatsHeader
+              profileName={profile.name}
+              profileEmoji={profile.emoji}
+              stats={stats}
+            />
+          </div>
+          <div className="xl:col-span-8">
+            <FieldNotes visits={visits} />
+          </div>
+        </div>
+
         {Object.keys(visits).length === 0 && (
-          <div className="rounded-2xl bg-gradient-to-br from-primary/5 via-amber-50 to-white ring-1 ring-primary/20 p-5 md:p-6">
-            <div className="flex items-start gap-4">
-              <div className="text-3xl">👆</div>
-              <div>
-                <div className="font-bold text-slate-900 mb-1">
-                  Click any country to pin it
-                </div>
-                <p className="text-sm text-slate-600 leading-relaxed">
-                  One click and it&apos;s saved. Right-click (or long-press on
-                  mobile) to add dates, notes, or a cover photo.
-                </p>
-              </div>
-            </div>
+          <div className="border-t border-b border-ink/15 py-6 text-center">
+            <p className="font-editorial text-2xl italic text-slate-600">
+              Click any country on the map above to start your atlas.
+            </p>
           </div>
         )}
+
+        {/* Footer mark */}
+        <div className="flex items-center justify-between pt-2 text-[11px] font-bold uppercase tracking-[0.22em] text-slate-400">
+          <span className="inline-flex items-center gap-2">
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-clay" />
+            faroway.ai · world map
+          </span>
+          <span>Equal Earth Projection · Vol. I</span>
+        </div>
       </div>
 
       <CountryDetailDrawer

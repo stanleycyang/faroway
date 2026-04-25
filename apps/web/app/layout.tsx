@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans } from "next/font/google";
+import { Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -8,6 +8,16 @@ const plusJakarta = Plus_Jakarta_Sans({
   display: "swap",
   weight: ["300", "400", "500", "600", "700", "800"],
   fallback: ["system-ui", "arial"],
+});
+
+// Editorial serif for the world-map atlas. latin-ext keeps diacritics in
+// country names readable ("Côte d'Ivoire", "São Tomé").
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+  weight: ["700", "900"],
+  fallback: ["Georgia", "serif"],
 });
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
@@ -177,7 +187,9 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className={`${plusJakarta.variable} font-sans antialiased`}>
+      <body
+        className={`${plusJakarta.variable} ${playfair.variable} font-sans antialiased`}
+      >
         <a
           href="#main-content"
           className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-primary focus:rounded-lg focus:shadow-lg"

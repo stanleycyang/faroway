@@ -35,7 +35,7 @@ export default function WorldMapPage() {
           __html: JSON.stringify(appSchema).replace(/</g, "\\u003c"),
         }}
       />
-      <main className="min-h-screen pt-20 lg:pt-24 pb-16">
+      <main className="min-h-screen bg-paper pt-20 lg:pt-24 pb-16">
         <WorldMapClient />
       </main>
     </>
