@@ -11,12 +11,14 @@ const plusJakarta = Plus_Jakarta_Sans({
 });
 
 // Editorial serif for the world-map atlas. latin-ext keeps diacritics in
-// country names readable ("Côte d'Ivoire", "São Tomé").
+// country names readable ("Côte d'Ivoire", "São Tomé"). Italic style is
+// used by the magazine-cover hero numeral ("Forty-Three") on /tools/world-map.
 const playfair = Playfair_Display({
   variable: "--font-playfair",
   subsets: ["latin", "latin-ext"],
   display: "swap",
   weight: ["700", "900"],
+  style: ["normal", "italic"],
   fallback: ["Georgia", "serif"],
 });
 

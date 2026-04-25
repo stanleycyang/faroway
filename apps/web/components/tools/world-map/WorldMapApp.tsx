@@ -73,6 +73,15 @@ export function WorldMapApp() {
   const visits = useMemo(() => profile?.visits ?? {}, [profile?.visits]);
   const stats = useMemo(() => computeStats(visits), [visits]);
 
+  // 1-indexed plate number for the active profile. Each new profile gets its
+  // own "Plate II" / "Plate III" label so a household sharing one device
+  // (Stanley + wife on the same browser) feels like a multi-plate atlas.
+  const plateNumber = useMemo(() => {
+    if (!profile) return 1;
+    const idx = profiles.findIndex((p) => p.id === profile.id);
+    return idx >= 0 ? idx + 1 : 1;
+  }, [profiles, profile]);
+
   useEffect(() => {
     if (hasHydrated && profiles.length === 0) {
       createProfile("Traveler", "🌍");
@@ -183,6 +192,7 @@ export function WorldMapApp() {
               profileName={profile.name}
               profileEmoji={profile.emoji}
               stats={stats}
+              plateNumber={plateNumber}
             />
           </div>
           <div className="xl:col-span-8">
