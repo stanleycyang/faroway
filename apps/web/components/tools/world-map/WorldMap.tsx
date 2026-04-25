@@ -13,13 +13,18 @@ import {
   ComposableMap,
   Geographies,
   Geography,
+  Graticule,
+  Sphere,
   ZoomableGroup,
 } from "react-simple-maps";
 import { Maximize, Minus, Plus } from "lucide-react";
 import { numericToAlpha3 } from "@/lib/tools/world-map/iso";
 import {
+  GRATICULE_MAJOR_STROKE,
+  GRATICULE_STROKE,
   MAP_BG_BOTTOM,
   MAP_BG_TOP,
+  OCEAN_FILL,
   UNVISITED_FILL,
   UNVISITED_STROKE,
   VISITED_FILL,
@@ -154,116 +159,137 @@ export function WorldMap({ visits, readOnly, onCountryClick }: WorldMapProps) {
           maxZoom={MAX_ZOOM}
           filterZoomEvent={filterZoomEvent}
         >
+          {/* 1. Ocean fill + 2. Graticule. Land paths painted on top below
+              hide grid lines on continents — atmospheric only in oceans. */}
+          <Sphere
+            id="atlas-sphere"
+            fill={OCEAN_FILL}
+            stroke="transparent"
+            strokeWidth={0}
+          />
+          <Graticule
+            stroke={GRATICULE_STROKE}
+            strokeWidth={0.4}
+            step={[15, 15]}
+          />
+          <Graticule
+            stroke={GRATICULE_MAJOR_STROKE}
+            strokeWidth={0.6}
+            step={[90, 180]}
+          />
           <Geographies geography={GEO_URL}>
             {({ geographies }) =>
-              geographies.map((geo) => {
-                const iso = numericToAlpha3(geo.id as string);
-                const visit = iso ? visits[iso] : undefined;
-                const isVisited = Boolean(visit);
-                const fill = isVisited ? VISITED_FILL : UNVISITED_FILL;
-                const stroke = isVisited ? VISITED_STROKE : UNVISITED_STROKE;
-                const name =
-                  (geo.properties as { name?: string }).name ?? iso ?? "";
+              geographies
+                // Antarctica reads as fragmented stripes in Equal Earth — drop it.
+                .filter((geo) => numericToAlpha3(geo.id as string) !== "ATA")
+                .map((geo) => {
+                  const iso = numericToAlpha3(geo.id as string);
+                  const visit = iso ? visits[iso] : undefined;
+                  const isVisited = Boolean(visit);
+                  const fill = isVisited ? VISITED_FILL : UNVISITED_FILL;
+                  const stroke = isVisited ? VISITED_STROKE : UNVISITED_STROKE;
+                  const name =
+                    (geo.properties as { name?: string }).name ?? iso ?? "";
 
-                return (
-                  <Geography
-                    key={geo.rsmKey}
-                    geography={geo}
-                    onMouseEnter={(event: ReactMouseEvent) => {
-                      if (!iso) return;
-                      const rect =
-                        containerRef.current?.getBoundingClientRect();
-                      setHover({
-                        iso,
-                        name,
-                        x: event.clientX - (rect?.left ?? 0),
-                        y: event.clientY - (rect?.top ?? 0),
-                      });
-                    }}
-                    onMouseMove={(event: ReactMouseEvent) => {
-                      const rect =
-                        containerRef.current?.getBoundingClientRect();
-                      setHover((h) =>
-                        h
-                          ? {
-                              ...h,
-                              x: event.clientX - (rect?.left ?? 0),
-                              y: event.clientY - (rect?.top ?? 0),
-                            }
-                          : h,
-                      );
-                    }}
-                    onMouseLeave={() => setHover(null)}
-                    onClick={() => {
-                      if (readOnly || !iso || !onCountryClick) return;
-                      if (longPressFiredRef.current) {
-                        longPressFiredRef.current = false;
-                        return;
-                      }
-                      onCountryClick(iso, name, "toggle");
-                    }}
-                    onContextMenu={(event: ReactMouseEvent) => {
-                      if (readOnly || !iso || !onCountryClick) return;
-                      event.preventDefault();
-                      onCountryClick(iso, name, "edit");
-                    }}
-                    onPointerDown={(event: ReactPointerEvent) => {
-                      if (
-                        readOnly ||
-                        !iso ||
-                        !onCountryClick ||
-                        event.pointerType !== "touch"
-                      )
-                        return;
-                      pointerStartRef.current = {
-                        x: event.clientX,
-                        y: event.clientY,
-                      };
-                      longPressFiredRef.current = false;
-                      clearLongPress();
-                      longPressTimerRef.current = setTimeout(() => {
-                        longPressFiredRef.current = true;
+                  return (
+                    <Geography
+                      key={geo.rsmKey}
+                      geography={geo}
+                      onMouseEnter={(event: ReactMouseEvent) => {
+                        if (!iso) return;
+                        const rect =
+                          containerRef.current?.getBoundingClientRect();
+                        setHover({
+                          iso,
+                          name,
+                          x: event.clientX - (rect?.left ?? 0),
+                          y: event.clientY - (rect?.top ?? 0),
+                        });
+                      }}
+                      onMouseMove={(event: ReactMouseEvent) => {
+                        const rect =
+                          containerRef.current?.getBoundingClientRect();
+                        setHover((h) =>
+                          h
+                            ? {
+                                ...h,
+                                x: event.clientX - (rect?.left ?? 0),
+                                y: event.clientY - (rect?.top ?? 0),
+                              }
+                            : h,
+                        );
+                      }}
+                      onMouseLeave={() => setHover(null)}
+                      onClick={() => {
+                        if (readOnly || !iso || !onCountryClick) return;
+                        if (longPressFiredRef.current) {
+                          longPressFiredRef.current = false;
+                          return;
+                        }
+                        onCountryClick(iso, name, "toggle");
+                      }}
+                      onContextMenu={(event: ReactMouseEvent) => {
+                        if (readOnly || !iso || !onCountryClick) return;
+                        event.preventDefault();
                         onCountryClick(iso, name, "edit");
-                      }, LONG_PRESS_MS);
-                    }}
-                    onPointerMove={(event: ReactPointerEvent) => {
-                      const start = pointerStartRef.current;
-                      if (!start) return;
-                      const dx = event.clientX - start.x;
-                      const dy = event.clientY - start.y;
-                      if (dx * dx + dy * dy > 100) clearLongPress();
-                    }}
-                    onPointerUp={clearLongPress}
-                    onPointerCancel={clearLongPress}
-                    style={{
-                      default: {
-                        fill,
-                        stroke,
-                        strokeWidth: 0.5,
-                        outline: "none",
-                        transition:
-                          "fill 220ms cubic-bezier(0.16, 1, 0.3, 1), filter 200ms ease",
-                      },
-                      hover: {
-                        fill: isVisited ? "#ef4444" : "#e2e8f0",
-                        stroke,
-                        strokeWidth: readOnly ? 0.5 : 0.9,
-                        outline: "none",
-                        cursor: readOnly ? "default" : "pointer",
-                        filter: readOnly
-                          ? undefined
-                          : "drop-shadow(0 2px 6px rgba(220, 38, 38, 0.25))",
-                      },
-                      pressed: {
-                        fill,
-                        stroke,
-                        strokeWidth: 1,
-                        outline: "none",
-                      },
-                    }}
-                  />
-                );
-              })
+                      }}
+                      onPointerDown={(event: ReactPointerEvent) => {
+                        if (
+                          readOnly ||
+                          !iso ||
+                          !onCountryClick ||
+                          event.pointerType !== "touch"
+                        )
+                          return;
+                        pointerStartRef.current = {
+                          x: event.clientX,
+                          y: event.clientY,
+                        };
+                        longPressFiredRef.current = false;
+                        clearLongPress();
+                        longPressTimerRef.current = setTimeout(() => {
+                          longPressFiredRef.current = true;
+                          onCountryClick(iso, name, "edit");
+                        }, LONG_PRESS_MS);
+                      }}
+                      onPointerMove={(event: ReactPointerEvent) => {
+                        const start = pointerStartRef.current;
+                        if (!start) return;
+                        const dx = event.clientX - start.x;
+                        const dy = event.clientY - start.y;
+                        if (dx * dx + dy * dy > 100) clearLongPress();
+                      }}
+                      onPointerUp={clearLongPress}
+                      onPointerCancel={clearLongPress}
+                      style={{
+                        default: {
+                          fill,
+                          stroke,
+                          strokeWidth: 0.5,
+                          outline: "none",
+                          transition:
+                            "fill 220ms cubic-bezier(0.16, 1, 0.3, 1), filter 200ms ease",
+                        },
+                        hover: {
+                          fill: isVisited ? "#dc2626" : "#DDD0A8",
+                          stroke,
+                          strokeWidth: readOnly ? 0.5 : 0.9,
+                          outline: "none",
+                          cursor: readOnly ? "default" : "pointer",
+                          filter: readOnly
+                            ? undefined
+                            : "drop-shadow(0 2px 6px rgba(220, 38, 38, 0.25))",
+                        },
+                        pressed: {
+                          fill,
+                          stroke,
+                          strokeWidth: 1,
+                          outline: "none",
+                        },
+                      }}
+                    />
+                  );
+                })
             }
           </Geographies>
         </ZoomableGroup>

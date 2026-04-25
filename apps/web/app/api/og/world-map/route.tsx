@@ -1,5 +1,5 @@
 import { ImageResponse } from "next/og";
-import { geoEqualEarth, geoPath } from "d3-geo";
+import { geoEqualEarth, geoGraticule, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import type { FeatureCollection, Geometry } from "geojson";
 import type { Topology, GeometryCollection } from "topojson-specification";
@@ -51,6 +51,12 @@ const COLORS = {
   visitedEdge: PALETTE.visitedEdge,
   unvisitedEdge: PALETTE.unvisitedEdge,
   hairline: PALETTE.hairline,
+  // Atlas layers — earned by adding a graticule and a sand land base.
+  ocean: "#F1ECDF", // subtly cooler than paper, visible behind graticule
+  land: "#E8DFC4", // warm sand for unvisited land
+  landEdge: "#D8CDB1",
+  graticule: "rgba(15, 23, 42, 0.05)",
+  graticuleMajor: "rgba(15, 23, 42, 0.10)",
 };
 
 const FONTS = {
@@ -73,35 +79,77 @@ interface MapPath {
   visited: boolean;
 }
 
-function buildMapPaths(
+interface MapData {
+  spherePath: string;
+  graticulePath: string;
+  equatorPath: string;
+  primeMeridianPath: string;
+  countries: MapPath[];
+}
+
+// Build the layered atlas geometry: sphere outline (ocean shape), a sparse
+// graticule, plus all country paths separated into "visited" and base land.
+// Antarctica (ATA) is dropped — Equal Earth flattens it into a fragmented
+// band that reads as visual noise.
+function buildMapData(
   width: number,
   height: number,
   visitedSet: Set<string>,
-): MapPath[] {
+): MapData {
   const projection = geoEqualEarth().fitSize(
     [width, height],
     COUNTRIES_GEOJSON,
   );
   const path = geoPath(projection);
-  const out: MapPath[] = [];
+
+  const spherePath = path({ type: "Sphere" }) ?? "";
+  const graticulePath = path(geoGraticule().step([15, 15])()) ?? "";
+  const equatorPath =
+    path({
+      type: "LineString",
+      coordinates: [
+        [-180, 0],
+        [180, 0],
+      ],
+    }) ?? "";
+  const primeMeridianPath =
+    path({
+      type: "LineString",
+      coordinates: [
+        [0, -90],
+        [0, 90],
+      ],
+    }) ?? "";
+
+  const countries: MapPath[] = [];
   for (const feat of COUNTRIES_GEOJSON.features) {
     const id = String(feat.id ?? "");
     const iso = numericToAlpha3(id);
+    if (iso === "ATA") continue;
     const d = path(feat);
     if (!d) continue;
-    out.push({ d, visited: Boolean(iso && visitedSet.has(iso)) });
+    countries.push({ d, visited: Boolean(iso && visitedSet.has(iso)) });
   }
-  return out.sort((a, b) => Number(a.visited) - Number(b.visited));
+  // Render unvisited first so visited paint cleanly on top.
+  countries.sort((a, b) => Number(a.visited) - Number(b.visited));
+
+  return {
+    spherePath,
+    graticulePath,
+    equatorPath,
+    primeMeridianPath,
+    countries,
+  };
 }
 
 function MapSvg({
   width,
   height,
-  paths,
+  data,
 }: {
   width: number;
   height: number;
-  paths: MapPath[];
+  data: MapData;
 }) {
   return (
     <svg
@@ -111,16 +159,58 @@ function MapSvg({
       xmlns="http://www.w3.org/2000/svg"
       style={{ display: "block" }}
     >
-      {paths.map((p, i) => (
+      {/* 1. Sphere fill — ocean tone behind everything */}
+      {data.spherePath && (
+        <path d={data.spherePath} fill={COLORS.ocean} stroke="none" />
+      )}
+
+      {/* 2. Graticule — only visible in the ocean area (covered by land) */}
+      {data.graticulePath && (
+        <path
+          d={data.graticulePath}
+          fill="none"
+          stroke={COLORS.graticule}
+          strokeWidth={0.4}
+        />
+      )}
+      {data.equatorPath && (
+        <path
+          d={data.equatorPath}
+          fill="none"
+          stroke={COLORS.graticuleMajor}
+          strokeWidth={0.6}
+        />
+      )}
+      {data.primeMeridianPath && (
+        <path
+          d={data.primeMeridianPath}
+          fill="none"
+          stroke={COLORS.graticuleMajor}
+          strokeWidth={0.6}
+        />
+      )}
+
+      {/* 3. Land base + visited countries painted on top */}
+      {data.countries.map((p, i) => (
         <path
           key={i}
           d={p.d}
-          fill={p.visited ? COLORS.visited : "transparent"}
-          stroke={p.visited ? COLORS.visitedEdge : COLORS.unvisitedEdge}
-          strokeWidth={p.visited ? 0.9 : 0.5}
+          fill={p.visited ? COLORS.visited : COLORS.land}
+          stroke={p.visited ? COLORS.visitedEdge : COLORS.landEdge}
+          strokeWidth={p.visited ? 0.8 : 0.45}
           strokeLinejoin="round"
         />
       ))}
+
+      {/* 4. Sphere outline last for a clean horizon edge */}
+      {data.spherePath && (
+        <path
+          d={data.spherePath}
+          fill="none"
+          stroke={COLORS.hairline}
+          strokeWidth={0.8}
+        />
+      )}
     </svg>
   );
 }
@@ -238,7 +328,7 @@ function BrandMark({
 function LandscapeCard({ data }: { data: CardData }) {
   const W = SIZES.landscape.width;
   const H = SIZES.landscape.height;
-  const paths = buildMapPaths(W, H, data.visitedSet);
+  const paths = buildMapData(W, H, data.visitedSet);
 
   return (
     <div
@@ -271,7 +361,7 @@ function LandscapeCard({ data }: { data: CardData }) {
           justifyContent: "center",
         }}
       >
-        <MapSvg width={W} height={H} paths={paths} />
+        <MapSvg width={W} height={H} data={paths} />
       </div>
 
       {/* stat plate — sits on top of the map, top-left corner */}
@@ -401,7 +491,7 @@ function SquareCard({ data }: { data: CardData }) {
   const H = SIZES.square.height;
   const mapW = W - 96;
   const mapH = 540;
-  const paths = buildMapPaths(mapW, mapH, data.visitedSet);
+  const paths = buildMapData(mapW, mapH, data.visitedSet);
 
   return (
     <div
@@ -505,7 +595,7 @@ function SquareCard({ data }: { data: CardData }) {
           height: mapH,
         }}
       >
-        <MapSvg width={mapW} height={mapH} paths={paths} />
+        <MapSvg width={mapW} height={mapH} data={paths} />
       </div>
 
       <div
@@ -527,7 +617,7 @@ function StoryCard({ data }: { data: CardData }) {
   const H = SIZES.story.height;
   const mapW = W - 96;
   const mapH = 920;
-  const paths = buildMapPaths(mapW, mapH, data.visitedSet);
+  const paths = buildMapData(mapW, mapH, data.visitedSet);
 
   return (
     <div
@@ -640,7 +730,7 @@ function StoryCard({ data }: { data: CardData }) {
           height: mapH,
         }}
       >
-        <MapSvg width={mapW} height={mapH} paths={paths} />
+        <MapSvg width={mapW} height={mapH} data={paths} />
       </div>
 
       <div
