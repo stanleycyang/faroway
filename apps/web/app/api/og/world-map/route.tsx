@@ -10,6 +10,28 @@ import topology from "@/lib/tools/world-map/topology.json";
 
 export const runtime = "edge";
 
+// ---- Fonts -------------------------------------------------------------
+// Without a real serif loaded, Satori falls back to whatever system serif
+// the runtime offers — which is exactly why the cards looked generic.
+// Playfair Display (variable) carries the hero numeral; Inter handles all
+// supporting type. Files live next to the route and are bundled into the
+// function via `new URL(..., import.meta.url)`.
+
+const playfairBlackPromise = fetch(
+  new URL("./fonts/playfair-display.woff", import.meta.url),
+).then((r) => r.arrayBuffer());
+const interRegularPromise = fetch(
+  new URL("./fonts/inter-regular.ttf", import.meta.url),
+).then((r) => r.arrayBuffer());
+const interSemiBoldPromise = fetch(
+  new URL("./fonts/inter-semibold.ttf", import.meta.url),
+).then((r) => r.arrayBuffer());
+const interBoldPromise = fetch(
+  new URL("./fonts/inter-bold.ttf", import.meta.url),
+).then((r) => r.arrayBuffer());
+
+// ---- Layout config -----------------------------------------------------
+
 type Format = "landscape" | "square" | "story";
 
 const SIZES: Record<Format, { width: number; height: number }> = {
@@ -18,20 +40,25 @@ const SIZES: Record<Format, { width: number; height: number }> = {
   story: { width: 1080, height: 1920 },
 };
 
-// One palette, no gradients, confident flat color.
 const COLORS = {
   bg: "#FAF6EF",
-  bgEdge: "#F0E9DA",
+  bgEdge: "#EDE5D2",
   ink: "#0F172A",
   inkSubtle: "#475569",
   inkFaint: "#94A3B8",
   visited: "#B91C1C",
   visitedEdge: "#7F1D1D",
-  unvisitedEdge: "#D1D5DB",
-  hairline: "rgba(15, 23, 42, 0.08)",
+  unvisitedEdge: "#D6D3CB",
+  hairline: "rgba(15, 23, 42, 0.10)",
 };
 
-// Parse the topology once per edge instance — cold start amortizes across requests.
+const FONTS = {
+  display: "Playfair Display",
+  ui: "Inter",
+};
+
+// ---- Topology + projection ---------------------------------------------
+
 const TOPO = topology as unknown as Topology<{
   countries: GeometryCollection<{ name?: string }>;
 }>;
@@ -63,7 +90,6 @@ function buildMapPaths(
     if (!d) continue;
     out.push({ d, visited: Boolean(iso && visitedSet.has(iso)) });
   }
-  // Render unvisited first so visited countries paint on top of neighbours.
   return out.sort((a, b) => Number(a.visited) - Number(b.visited));
 }
 
@@ -90,13 +116,15 @@ function MapSvg({
           d={p.d}
           fill={p.visited ? COLORS.visited : "transparent"}
           stroke={p.visited ? COLORS.visitedEdge : COLORS.unvisitedEdge}
-          strokeWidth={p.visited ? 0.8 : 0.55}
+          strokeWidth={p.visited ? 0.9 : 0.5}
           strokeLinejoin="round"
         />
       ))}
     </svg>
   );
 }
+
+// ---- Card data ---------------------------------------------------------
 
 interface CardData {
   name: string;
@@ -110,7 +138,7 @@ interface CardData {
 }
 
 function buildCardData(d: string | null): CardData {
-  let name = "Your World Map";
+  let name = "Your World";
   let visits: Record<string, unknown> = {};
   let visitedSet = new Set<string>();
 
@@ -140,6 +168,70 @@ function buildCardData(d: string | null): CardData {
   };
 }
 
+// ---- Shared bits -------------------------------------------------------
+
+function Eyebrow({
+  children,
+  fontSize = 16,
+  color = COLORS.inkFaint,
+}: {
+  children: React.ReactNode;
+  fontSize?: number;
+  color?: string;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        fontFamily: FONTS.ui,
+        fontWeight: 700,
+        fontSize,
+        letterSpacing: "0.24em",
+        textTransform: "uppercase",
+        color,
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+function BrandMark({
+  fontSize = 14,
+  color = COLORS.inkSubtle,
+}: {
+  fontSize?: number;
+  color?: string;
+}) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 10,
+        fontFamily: FONTS.ui,
+        fontWeight: 700,
+        fontSize,
+        letterSpacing: "0.22em",
+        textTransform: "uppercase",
+        color,
+      }}
+    >
+      <div
+        style={{
+          width: 6,
+          height: 6,
+          borderRadius: 999,
+          background: COLORS.visited,
+          display: "flex",
+        }}
+      />
+      faroway.ai · world map
+    </div>
+  );
+}
+
 // ---- Layouts -----------------------------------------------------------
 
 function LandscapeCard({ data }: { data: CardData }) {
@@ -152,19 +244,23 @@ function LandscapeCard({ data }: { data: CardData }) {
       style={{
         width: W,
         height: H,
-        display: "flex",
         position: "relative",
         background: COLORS.bg,
+        display: "flex",
+        fontFamily: FONTS.ui,
       }}
     >
+      {/* paper vignette */}
       <div
         style={{
           position: "absolute",
           inset: 0,
-          background: `radial-gradient(ellipse at center, transparent 55%, ${COLORS.bgEdge} 100%)`,
+          background: `radial-gradient(ellipse at center, transparent 50%, ${COLORS.bgEdge} 100%)`,
           display: "flex",
         }}
       />
+
+      {/* map fills the whole canvas */}
       <div
         style={{
           position: "absolute",
@@ -177,119 +273,123 @@ function LandscapeCard({ data }: { data: CardData }) {
         <MapSvg width={W} height={H} paths={paths} />
       </div>
 
-      {/* stat plate */}
+      {/* stat plate — sits on top of the map, top-left corner */}
       <div
         style={{
           position: "absolute",
           top: 56,
           left: 56,
-          padding: "32px 36px",
-          background: "rgba(250, 246, 239, 0.92)",
+          padding: "28px 36px 30px",
+          background: "rgba(250, 246, 239, 0.94)",
           border: `1px solid ${COLORS.hairline}`,
-          borderRadius: 20,
+          borderRadius: 24,
+          boxShadow: "0 12px 40px rgba(15, 23, 42, 0.08)",
           display: "flex",
           flexDirection: "column",
-          maxWidth: 460,
+          maxWidth: 480,
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            fontSize: 14,
-            fontWeight: 700,
-            letterSpacing: "0.22em",
-            textTransform: "uppercase",
-            color: COLORS.inkFaint,
-          }}
-        >
-          {data.name}
-        </div>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "baseline",
-            gap: 12,
-            marginTop: 12,
-            color: COLORS.ink,
-          }}
-        >
-          <div
+        <Eyebrow fontSize={13}>
+          <span style={{ display: "flex" }}>{data.name}</span>
+          <span
             style={{
-              fontSize: 128,
-              fontWeight: 700,
-              letterSpacing: "-0.05em",
-              fontFamily: "serif",
-              lineHeight: 0.9,
               display: "flex",
-            }}
-          >
-            {data.totalVisited}
-          </div>
-          <div
-            style={{
-              fontSize: 30,
-              fontWeight: 500,
+              margin: "0 12px",
               color: COLORS.inkFaint,
-              display: "flex",
             }}
           >
-            / {data.totalCountries}
+            ·
+          </span>
+          <span style={{ display: "flex" }}>{data.year}</span>
+        </Eyebrow>
+
+        <div
+          style={{ display: "flex", flexDirection: "column", marginTop: 12 }}
+        >
+          <div
+            style={{
+              display: "flex",
+              alignItems: "baseline",
+              paddingBottom: 32,
+              color: COLORS.ink,
+            }}
+          >
+            <div
+              style={{
+                fontFamily: FONTS.display,
+                fontWeight: 900,
+                fontSize: 168,
+                letterSpacing: "-0.05em",
+                lineHeight: 0.85,
+                display: "flex",
+              }}
+            >
+              {data.totalVisited}
+            </div>
+            <div
+              style={{
+                fontFamily: FONTS.ui,
+                fontSize: 28,
+                fontWeight: 600,
+                color: COLORS.inkFaint,
+                marginLeft: 14,
+                display: "flex",
+              }}
+            >
+              / {data.totalCountries}
+            </div>
           </div>
-        </div>
 
-        <div
-          style={{
-            display: "flex",
-            fontSize: 18,
-            color: COLORS.inkSubtle,
-            marginTop: 8,
-          }}
-        >
-          {data.totalVisited === 1 ? "country" : "countries"} ·{" "}
-          {data.continentsVisited} of {data.continentsTotal} continents
-        </div>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+              marginTop: 16,
+              fontSize: 18,
+              fontWeight: 600,
+              color: COLORS.inkSubtle,
+            }}
+          >
+            <span style={{ display: "flex" }}>
+              {data.totalVisited === 1 ? "country" : "countries"}
+            </span>
+            <span style={{ display: "flex", color: COLORS.inkFaint }}>·</span>
+            <span style={{ display: "flex" }}>
+              {data.continentsVisited}/{data.continentsTotal} continents
+            </span>
+          </div>
 
-        <div
-          style={{
-            display: "flex",
-            marginTop: 18,
-            paddingTop: 14,
-            borderTop: `1px solid ${COLORS.hairline}`,
-            fontSize: 16,
-            color: COLORS.ink,
-            fontWeight: 600,
-          }}
-        >
-          {data.percent}% of the world
+          <div
+            style={{
+              display: "flex",
+              marginTop: 14,
+              paddingTop: 14,
+              borderTop: `1px solid ${COLORS.hairline}`,
+              fontSize: 16,
+              fontWeight: 700,
+              color: COLORS.visited,
+            }}
+          >
+            {data.percent}% of the world
+          </div>
         </div>
       </div>
 
+      {/* brand mark on its own translucent chip, bottom-right */}
       <div
         style={{
           position: "absolute",
           bottom: 32,
           right: 56,
+          padding: "10px 16px",
+          background: "rgba(250, 246, 239, 0.92)",
+          border: `1px solid ${COLORS.hairline}`,
+          borderRadius: 999,
           display: "flex",
-          alignItems: "center",
-          gap: 10,
-          fontSize: 14,
-          color: COLORS.inkSubtle,
-          letterSpacing: "0.18em",
-          textTransform: "uppercase",
-          fontWeight: 700,
         }}
       >
-        <div
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: 4,
-            background: COLORS.visited,
-            display: "flex",
-          }}
-        />
-        faroway.ai · world map
+        <BrandMark fontSize={13} />
       </div>
     </div>
   );
@@ -299,7 +399,7 @@ function SquareCard({ data }: { data: CardData }) {
   const W = SIZES.square.width;
   const H = SIZES.square.height;
   const mapW = W - 96;
-  const mapH = 580;
+  const mapH = 540;
   const paths = buildMapPaths(mapW, mapH, data.visitedSet);
 
   return (
@@ -310,31 +410,93 @@ function SquareCard({ data }: { data: CardData }) {
         background: COLORS.bg,
         display: "flex",
         flexDirection: "column",
-        padding: "56px 48px 48px",
+        padding: "64px 48px 56px",
         position: "relative",
+        fontFamily: FONTS.ui,
       }}
     >
+      {/* eyebrow row */}
       <div
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          fontSize: 18,
-          fontWeight: 700,
-          letterSpacing: "0.22em",
-          textTransform: "uppercase",
-          color: COLORS.inkFaint,
         }}
       >
-        <span style={{ display: "flex" }}>{data.name}</span>
-        <span style={{ display: "flex", color: COLORS.inkSubtle }}>
+        <Eyebrow fontSize={18}>{data.name}</Eyebrow>
+        <Eyebrow fontSize={18} color={COLORS.inkSubtle}>
           {data.year}
+        </Eyebrow>
+      </div>
+
+      {/* hero stat — its own row, with explicit bottom padding so the
+          Playfair Black descender of digits like 3, 4, 7, 9 can't reach
+          into the tagline below. Satori's flex-end alignment + tight
+          line-height makes this otherwise unpredictable. */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "flex-end",
+          marginTop: 24,
+          paddingBottom: 56,
+          color: COLORS.ink,
+        }}
+      >
+        <div
+          style={{
+            fontFamily: FONTS.display,
+            fontWeight: 900,
+            fontSize: 220,
+            letterSpacing: "-0.05em",
+            lineHeight: 0.85,
+            display: "flex",
+          }}
+        >
+          {data.totalVisited}
+        </div>
+        <div
+          style={{
+            fontFamily: FONTS.ui,
+            fontWeight: 600,
+            fontSize: 40,
+            color: COLORS.inkFaint,
+            marginLeft: 14,
+            marginBottom: 18,
+            display: "flex",
+          }}
+        >
+          / {data.totalCountries}
+        </div>
+      </div>
+
+      {/* tagline — own row */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: 12,
+          fontSize: 22,
+          fontWeight: 600,
+          color: COLORS.inkSubtle,
+        }}
+      >
+        <span style={{ display: "flex" }}>
+          {data.totalVisited === 1 ? "country" : "countries"}
+        </span>
+        <span style={{ display: "flex", color: COLORS.inkFaint }}>·</span>
+        <span style={{ display: "flex" }}>
+          {data.continentsVisited}/{data.continentsTotal} continents
+        </span>
+        <span style={{ display: "flex", color: COLORS.inkFaint }}>·</span>
+        <span style={{ display: "flex", color: COLORS.visited }}>
+          {data.percent}% of the world
         </span>
       </div>
 
+      {/* map block */}
       <div
         style={{
-          marginTop: 32,
+          marginTop: 36,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -347,78 +509,13 @@ function SquareCard({ data }: { data: CardData }) {
 
       <div
         style={{
-          display: "flex",
-          alignItems: "flex-end",
-          marginTop: 24,
-          color: COLORS.ink,
-        }}
-      >
-        <div
-          style={{
-            fontSize: 220,
-            fontWeight: 700,
-            letterSpacing: "-0.05em",
-            fontFamily: "serif",
-            lineHeight: 0.85,
-            display: "flex",
-          }}
-        >
-          {data.totalVisited}
-        </div>
-        <div
-          style={{
-            fontSize: 44,
-            fontWeight: 500,
-            color: COLORS.inkFaint,
-            marginLeft: 16,
-            marginBottom: 24,
-            display: "flex",
-          }}
-        >
-          / {data.totalCountries}
-        </div>
-      </div>
-
-      <div
-        style={{
-          display: "flex",
-          fontSize: 26,
-          color: COLORS.inkSubtle,
-          marginTop: 4,
-        }}
-      >
-        {data.totalVisited === 1 ? "country" : "countries"} ·{" "}
-        {data.continentsVisited}/{data.continentsTotal} continents ·{" "}
-        <span style={{ display: "flex", color: COLORS.visited, marginLeft: 8 }}>
-          {data.percent}% of the world
-        </span>
-      </div>
-
-      <div
-        style={{
           position: "absolute",
           bottom: 32,
           right: 48,
           display: "flex",
-          alignItems: "center",
-          gap: 10,
-          fontSize: 16,
-          color: COLORS.inkSubtle,
-          letterSpacing: "0.18em",
-          textTransform: "uppercase",
-          fontWeight: 700,
         }}
       >
-        <div
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: 4,
-            background: COLORS.visited,
-            display: "flex",
-          }}
-        />
-        faroway.ai
+        <BrandMark fontSize={15} />
       </div>
     </div>
   );
@@ -428,7 +525,7 @@ function StoryCard({ data }: { data: CardData }) {
   const W = SIZES.story.width;
   const H = SIZES.story.height;
   const mapW = W - 96;
-  const mapH = 880;
+  const mapH = 920;
   const paths = buildMapPaths(mapW, mapH, data.visitedSet);
 
   return (
@@ -439,39 +536,38 @@ function StoryCard({ data }: { data: CardData }) {
         background: COLORS.bg,
         display: "flex",
         flexDirection: "column",
-        padding: "120px 48px 80px",
+        padding: "140px 48px 100px",
         position: "relative",
+        fontFamily: FONTS.ui,
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          fontSize: 22,
-          fontWeight: 700,
-          letterSpacing: "0.22em",
-          textTransform: "uppercase",
-          color: COLORS.inkFaint,
-        }}
-      >
-        {data.name}
-      </div>
+      <Eyebrow fontSize={22}>{data.name}</Eyebrow>
 
       <div
         style={{
           display: "flex",
           flexDirection: "column",
-          marginTop: 60,
+          marginTop: 56,
           color: COLORS.ink,
         }}
       >
-        <div style={{ display: "flex", alignItems: "baseline", gap: 24 }}>
+        {/* Hero row gets explicit paddingBottom so the Playfair descender
+            of the numeral never clips into the lines below, no matter what
+            digits show up. */}
+        <div
+          style={{
+            display: "flex",
+            alignItems: "baseline",
+            paddingBottom: 110,
+          }}
+        >
           <div
             style={{
-              fontSize: 360,
-              fontWeight: 700,
+              fontFamily: FONTS.display,
+              fontWeight: 900,
+              fontSize: 420,
               letterSpacing: "-0.06em",
-              fontFamily: "serif",
-              lineHeight: 0.85,
+              lineHeight: 0.82,
               display: "flex",
             }}
           >
@@ -479,9 +575,12 @@ function StoryCard({ data }: { data: CardData }) {
           </div>
           <div
             style={{
-              fontSize: 56,
-              fontWeight: 500,
+              fontFamily: FONTS.ui,
+              fontWeight: 600,
+              fontSize: 64,
               color: COLORS.inkFaint,
+              marginLeft: 24,
+              marginBottom: 36,
               display: "flex",
             }}
           >
@@ -492,9 +591,9 @@ function StoryCard({ data }: { data: CardData }) {
         <div
           style={{
             display: "flex",
-            fontSize: 36,
+            fontSize: 38,
+            fontWeight: 600,
             color: COLORS.inkSubtle,
-            marginTop: 20,
           }}
         >
           {data.totalVisited === 1 ? "country" : "countries"}
@@ -502,15 +601,19 @@ function StoryCard({ data }: { data: CardData }) {
         <div
           style={{
             display: "flex",
+            alignItems: "center",
+            gap: 14,
             fontSize: 28,
+            fontWeight: 600,
             color: COLORS.inkSubtle,
-            marginTop: 16,
+            marginTop: 14,
           }}
         >
-          {data.continentsVisited}/{data.continentsTotal} continents ·{" "}
-          <span
-            style={{ display: "flex", color: COLORS.visited, marginLeft: 8 }}
-          >
+          <span style={{ display: "flex" }}>
+            {data.continentsVisited}/{data.continentsTotal} continents
+          </span>
+          <span style={{ display: "flex", color: COLORS.inkFaint }}>·</span>
+          <span style={{ display: "flex", color: COLORS.visited }}>
             {data.percent}% of the world
           </span>
         </div>
@@ -521,8 +624,8 @@ function StoryCard({ data }: { data: CardData }) {
           width: 60,
           height: 3,
           background: COLORS.visited,
-          marginTop: 56,
-          marginBottom: 56,
+          marginTop: 52,
+          marginBottom: 52,
           display: "flex",
         }}
       />
@@ -542,23 +645,16 @@ function StoryCard({ data }: { data: CardData }) {
       <div
         style={{
           position: "absolute",
-          bottom: 60,
+          bottom: 72,
           left: 48,
           right: 48,
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          fontSize: 22,
-          color: COLORS.inkSubtle,
-          letterSpacing: "0.18em",
-          textTransform: "uppercase",
-          fontWeight: 700,
         }}
       >
-        <div style={{ display: "flex" }}>faroway.ai · world map</div>
-        <div style={{ display: "flex", color: COLORS.inkFaint }}>
-          {data.year}
-        </div>
+        <BrandMark fontSize={20} />
+        <Eyebrow fontSize={20}>{data.year}</Eyebrow>
       </div>
     </div>
   );
@@ -585,8 +681,27 @@ export async function GET(req: Request) {
       <LandscapeCard data={data} />
     );
 
+  const [playfairBlack, interRegular, interSemiBold, interBold] =
+    await Promise.all([
+      playfairBlackPromise,
+      interRegularPromise,
+      interSemiBoldPromise,
+      interBoldPromise,
+    ]);
+
   return new ImageResponse(card, {
     ...size,
+    fonts: [
+      {
+        name: "Playfair Display",
+        data: playfairBlack,
+        weight: 900,
+        style: "normal",
+      },
+      { name: "Inter", data: interRegular, weight: 400, style: "normal" },
+      { name: "Inter", data: interSemiBold, weight: 600, style: "normal" },
+      { name: "Inter", data: interBold, weight: 700, style: "normal" },
+    ],
     headers: {
       "Cache-Control":
         "public, max-age=300, s-maxage=86400, stale-while-revalidate=31536000",
