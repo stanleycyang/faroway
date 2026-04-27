@@ -3,3 +3,10 @@ node_modules
 coverage
 dist
 .turbo
+
+# Vendored data files — don't reformat
+public/world-map/countries-110m.json
+lib/tools/world-map/topology.json
+
+# Generated workflow manifest files
+app/.well-known/workflow/v1/**

@@ -3,6 +3,17 @@
 @config "../tailwind.config.ts";
 @plugin "@tailwindcss/typography";
 
+/* Editorial atlas tokens — used by /tools/world-map and the share posters
+ * served from /api/og/world-map. Ivory paper, deep ink, clay accent. */
+@theme {
+  --color-paper: #faf6ef;
+  --color-paper-edge: #ede5d2;
+  --color-clay: #b91c1c;
+  --color-clay-deep: #7f1d1d;
+  --color-ink: #0f172a;
+  --font-editorial: var(--font-playfair), Georgia, "Times New Roman", serif;
+}
+
 /*
  * Base styles — MUST be inside @layer base so Tailwind utilities can override them.
  * In Tailwind v4, unlayered CSS beats ALL layered utilities (including px-*, bg-*, text-*).
