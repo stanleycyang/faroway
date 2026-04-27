@@ -8,6 +8,7 @@ import {
   Shield,
   ArrowLeftRight,
   ArrowRight,
+  Globe2,
 } from "lucide-react";
 import { ToolHero } from "@/components/tools/ToolHero";
 import { ToolCTA } from "@/components/tools/ToolCTA";
@@ -26,6 +27,17 @@ export const metadata: Metadata = {
 };
 
 const TOOLS = [
+  {
+    slug: "world-map",
+    title: "World Map Tracker",
+    subtitle: "Travel Pin Map",
+    description:
+      "Pin every country you've lived in, visited, or still dream of. Beautiful interactive map with photos, stats, and shareable links. No sign-up.",
+    icon: Globe2,
+    color: "text-rose-600",
+    bg: "bg-rose-50",
+    border: "hover:border-rose-300",
+  },
   {
     slug: "travel-quiz",
     title: "Where Should I Go?",
