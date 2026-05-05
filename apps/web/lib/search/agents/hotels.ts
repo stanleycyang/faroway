@@ -18,11 +18,18 @@ import {
   searchAmadeusHotels,
   isAmadeusConfigured,
   generateAmadeusAffiliateUrl,
+  resolveAmadeusCityCode,
 } from "@/lib/affiliates/amadeus";
 import {
   enrichWithTripAdvisor,
   isTripAdvisorConfigured,
 } from "@/lib/affiliates/tripadvisor";
+import {
+  AI_AGENT_TIMEOUT_MS,
+  fetchWithTimeout,
+  isOperationTimeoutError,
+  withAbortTimeout,
+} from "@/lib/search/runtime";
 
 const aiGateway = process.env.AI_GATEWAY_API_KEY
   ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
@@ -117,6 +124,16 @@ export async function runHotelsAgent(
 ): Promise<HotelResult[]> {
   const { destination, dates, hotelCriteria, vibeInterpretation } = plan;
   const { priceRange, starRating, amenities, neighborhoods } = hotelCriteria;
+  const aiFallbackPromise = generateAiHotelFallbacks({
+    destination,
+    dates,
+    priceRange,
+    starRating,
+    amenities,
+    neighborhoods,
+    vibes: vibeInterpretation.vibes,
+    count,
+  });
 
   // ── Step 1: Fetch real data from Booking.com and Amadeus in parallel ──
 
@@ -167,11 +184,16 @@ export async function runHotelsAgent(
                   neighborhood: hotel.location.neighborhood,
                 },
                 images: hotel.images.map((i) => i.url),
-                affiliateUrl: generateBookingAffiliateUrl(
-                  hotel.hotelId,
-                  `tg_${Date.now()}`,
-                  { checkIn: dates.start, checkOut: dates.end },
-                ),
+                affiliateUrl:
+                  hotel.bookingUrl ||
+                  generateBookingAffiliateUrl(
+                    hotel.hotelId,
+                    `tg_${Date.now()}`,
+                    {
+                      checkIn: dates.start,
+                      checkOut: dates.end,
+                    },
+                  ),
                 affiliatePartner: "booking",
                 vibeScore: vibeResult.score,
                 vibeMatch: vibeResult.matchedVibes,
@@ -187,7 +209,7 @@ export async function runHotelsAgent(
     // Amadeus
     isAmadeusConfigured()
       ? searchAmadeusHotels({
-          cityCode: destination.substring(0, 3).toUpperCase(),
+          cityCode: resolveAmadeusCityCode(destination),
           checkIn: dates.start,
           checkOut: dates.end,
           adults: 2,
@@ -277,8 +299,37 @@ export async function runHotelsAgent(
     console.log(
       `[Hotels Agent] Need ${remaining} more hotels, falling back to AI generation`,
     );
+    aiHotels = await aiFallbackPromise;
+  }
 
-    const prompt = `Generate ${remaining} real hotel recommendations for ${destination}.
+  // ── Step 5: Combine, sort by vibeScore descending, return up to count ──
+
+  const allHotels = [...realHotels, ...aiHotels];
+
+  return allHotels.sort((a, b) => b.vibeScore - a.vibeScore).slice(0, count);
+}
+
+async function generateAiHotelFallbacks(params: {
+  destination: string;
+  dates: SearchPlan["dates"];
+  priceRange: SearchPlan["hotelCriteria"]["priceRange"];
+  starRating: number[];
+  amenities: string[];
+  neighborhoods: string[];
+  vibes: string[];
+  count: number;
+}): Promise<HotelResult[]> {
+  const {
+    destination,
+    dates,
+    priceRange,
+    starRating,
+    amenities,
+    neighborhoods,
+    vibes,
+    count,
+  } = params;
+  const prompt = `Generate ${count} real hotel recommendations for ${destination}.
 
 **Stay Details:**
 - ${dates.nights} nights (${dates.start} to ${dates.end})
@@ -287,14 +338,13 @@ export async function runHotelsAgent(
 - Desired amenities: ${amenities.join(", ") || "wifi, breakfast"}
 - Preferred neighborhoods: ${neighborhoods.join(", ") || "central/popular areas"}
 
-**Vibes to match:** ${vibeInterpretation.vibes.join(", ")}
+**Vibes to match:** ${vibes.join(", ")}
 
 Generate hotels matching these criteria:
 - Include actual hotel names that exist in ${destination}
 - Calculate total price (nights × nightly rate)
 - Score each hotel 0-100 on how well it matches the traveler's vibes
 - Include a mix of star ratings within the price range
-${realHotels.length > 0 ? `\n**IMPORTANT: Do NOT include these hotels (already found): ${realHotels.map((h) => h.name).join(", ")}**` : ""}
 
 For vibes like:
 - "Romantic" → boutique hotels, luxury properties
@@ -302,45 +352,46 @@ For vibes like:
 - "Cultural" → historic hotels, local character
 - "Relaxation" → spa hotels, beach resorts`;
 
-    try {
-      console.log("[Hotels Agent] Using AI Gateway with model:", MODEL);
-      console.log(
-        "[Hotels Agent] API Key present:",
-        !!process.env.AI_GATEWAY_API_KEY ||
-          !!process.env.VERCEL_AI_GATEWAY_API_KEY,
+  try {
+    console.log("[Hotels Agent] Using AI Gateway with model:", MODEL);
+    console.log(
+      "[Hotels Agent] API Key present:",
+      !!process.env.AI_GATEWAY_API_KEY ||
+        !!process.env.VERCEL_AI_GATEWAY_API_KEY,
+    );
+
+    const { object: result } = await withAbortTimeout(
+      (abortSignal) =>
+        generateObject({
+          model: aiGateway(MODEL),
+          system: SYSTEM_PROMPT,
+          prompt,
+          schema: HotelListSchema,
+          timeout: AI_AGENT_TIMEOUT_MS,
+          abortSignal,
+          maxRetries: 0,
+        }),
+      AI_AGENT_TIMEOUT_MS,
+      "hotels AI",
+    );
+
+    console.log("[Hotels Agent] AI generated", result.hotels.length, "hotels");
+
+    return result.hotels.map((hotel, index) => ({
+      ...hotel,
+      id: `hotel_${Date.now()}_${index}`,
+    }));
+  } catch (error) {
+    if (isOperationTimeoutError(error)) {
+      console.warn(
+        "[Hotels Agent] AI timed out, returning available hotel results:",
+        error instanceof Error ? error.message : String(error),
       );
-
-      const { object: result } = await generateObject({
-        model: aiGateway(MODEL),
-        system: SYSTEM_PROMPT,
-        prompt,
-        schema: HotelListSchema,
-      });
-
-      console.log(
-        "[Hotels Agent] AI generated",
-        result.hotels.length,
-        "hotels",
-      );
-
-      aiHotels = result.hotels.map((hotel, index) => ({
-        ...hotel,
-        id: `hotel_${Date.now()}_${index}`,
-      }));
-    } catch (error) {
+    } else {
       console.error("[Hotels Agent] AI generation error:", error);
-      // If we have some real results, continue with those; otherwise re-throw
-      if (realHotels.length === 0) {
-        throw error;
-      }
     }
+    return [];
   }
-
-  // ── Step 5: Combine, sort by vibeScore descending, return up to count ──
-
-  const allHotels = [...realHotels, ...aiHotels];
-
-  return allHotels.sort((a, b) => b.vibeScore - a.vibeScore).slice(0, count);
 }
 
 /**
@@ -360,7 +411,7 @@ export async function searchRapidAPIHotels(
 
   try {
     // Booking.com API via RapidAPI
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `https://booking-com.p.rapidapi.com/v1/hotels/search?` +
         `dest_type=city&dest_name=${encodeURIComponent(destination)}&` +
         `checkin_date=${checkIn}&checkout_date=${checkOut}&` +

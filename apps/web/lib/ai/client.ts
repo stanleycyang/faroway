@@ -35,6 +35,7 @@ import {
   buildActivityRecommendationPrompt,
   buildRestaurantPrompt,
 } from "./prompts";
+import { AI_AGENT_TIMEOUT_MS, withAbortTimeout } from "@/lib/search/runtime";
 
 // Configure AI Gateway — use the dedicated gateway provider (not createOpenAI,
 // which defaults to the OpenAI Responses API and doesn't work with the AI Gateway)
@@ -170,12 +171,20 @@ export async function generateItinerary(
     const prompt = buildItineraryPrompt(preferences);
 
     // Use generateObject for structured output with Zod validation
-    const { object: itineraryData, usage } = await generateObject({
-      model: aiGateway(modelName),
-      system: SYSTEM_PROMPT,
-      prompt,
-      schema: ItinerarySchema,
-    });
+    const { object: itineraryData, usage } = await withAbortTimeout(
+      (abortSignal) =>
+        generateObject({
+          model: aiGateway(modelName),
+          system: SYSTEM_PROMPT,
+          prompt,
+          schema: ItinerarySchema,
+          timeout: AI_AGENT_TIMEOUT_MS,
+          abortSignal,
+          maxRetries: 0,
+        }),
+      AI_AGENT_TIMEOUT_MS,
+      "itinerary AI",
+    );
 
     // Add IDs to activities and restaurants
     const processedDays = itineraryData.days.map((day) => ({
@@ -268,6 +277,8 @@ export async function streamItinerary(
     model: aiGateway(modelName),
     system: SYSTEM_PROMPT,
     prompt,
+    timeout: AI_AGENT_TIMEOUT_MS,
+    maxRetries: 0,
   });
 }
 
@@ -288,12 +299,20 @@ export async function generateActivities(
       budget,
     );
 
-    const { object: activities } = await generateObject({
-      model: aiGateway(DEFAULT_MODEL),
-      system: SYSTEM_PROMPT,
-      prompt,
-      schema: z.array(ActivitySchema),
-    });
+    const { object: activities } = await withAbortTimeout(
+      (abortSignal) =>
+        generateObject({
+          model: aiGateway(DEFAULT_MODEL),
+          system: SYSTEM_PROMPT,
+          prompt,
+          schema: z.array(ActivitySchema),
+          timeout: AI_AGENT_TIMEOUT_MS,
+          abortSignal,
+          maxRetries: 0,
+        }),
+      AI_AGENT_TIMEOUT_MS,
+      "activity recommendation AI",
+    );
 
     return activities.map((a) => ({ ...a, id: generateId("activity") }));
   } catch (error) {
@@ -327,12 +346,20 @@ export async function generateRestaurants(
       dietaryRestrictions,
     );
 
-    const { object: restaurants } = await generateObject({
-      model: aiGateway(DEFAULT_MODEL),
-      system: SYSTEM_PROMPT,
-      prompt,
-      schema: z.array(RestaurantSchema),
-    });
+    const { object: restaurants } = await withAbortTimeout(
+      (abortSignal) =>
+        generateObject({
+          model: aiGateway(DEFAULT_MODEL),
+          system: SYSTEM_PROMPT,
+          prompt,
+          schema: z.array(RestaurantSchema),
+          timeout: AI_AGENT_TIMEOUT_MS,
+          abortSignal,
+          maxRetries: 0,
+        }),
+      AI_AGENT_TIMEOUT_MS,
+      "restaurant recommendation AI",
+    );
 
     return restaurants.map((r) => ({ ...r, id: generateId("restaurant") }));
   } catch (error) {
@@ -355,6 +382,8 @@ export async function generateText_AI(prompt: string, systemPrompt?: string) {
     model: aiGateway(DEFAULT_MODEL),
     system: systemPrompt || SYSTEM_PROMPT,
     prompt,
+    timeout: AI_AGENT_TIMEOUT_MS,
+    maxRetries: 0,
   });
 
   return { text, usage };

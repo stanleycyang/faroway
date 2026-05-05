@@ -1,0 +1,477 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+
+describe("Duffel affiliate client", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.resetModules();
+    vi.stubEnv("DUFFEL_API_TOKEN", "test-duffel-token");
+    vi.stubEnv("NEXT_PUBLIC_APP_URL", "https://faroway.test");
+    vi.stubEnv("DUFFEL_SUPPLIER_TIMEOUT_MS", "2000");
+  });
+
+  it("requests offers with current Duffel v2 query parameters", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          data: {
+            offers: [
+              {
+                id: "off_123",
+                total_amount: "129.50",
+                total_currency: "USD",
+                expires_at: "2026-05-01T00:10:00Z",
+                slices: [
+                  {
+                    duration: "PT2H15M",
+                    segments: [
+                      {
+                        origin: {
+                          iata_code: "SFO",
+                          city_name: "San Francisco",
+                        },
+                        destination: {
+                          iata_code: "LAX",
+                          city_name: "Los Angeles",
+                        },
+                        departing_at: "2026-06-01T09:00:00",
+                        arriving_at: "2026-06-01T11:15:00",
+                        marketing_carrier: { iata_code: "UA", name: "United" },
+                        marketing_carrier_flight_number: "123",
+                        passengers: [{ cabin_class: "economy" }],
+                        duration: "PT2H15M",
+                      },
+                    ],
+                  },
+                ],
+              },
+            ],
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    const { searchDuffelFlights } = await import("@/lib/affiliates/duffel");
+    const offers = await searchDuffelFlights({
+      origin: "SFO",
+      destination: "LAX",
+      departureDate: "2026-06-01",
+      passengers: [{ type: "adult", count: 1 }],
+      limit: 1,
+    });
+
+    const url = String(fetchMock.mock.calls[0][0]);
+    expect(url).toContain("/air/offer_requests");
+    expect(url).toContain("return_offers=true");
+    expect(url).toContain("supplier_timeout=2000");
+    expect(offers[0].offerId).toBe("off_123");
+    expect(offers[0].departure.airport).toBe("SFO");
+  });
+
+  it("creates a Duffel Links session with the current endpoint", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          data: { url: "https://links.duffel.com/session_123" },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    const { generateDuffelLink } = await import("@/lib/affiliates/duffel");
+    const link = await generateDuffelLink("off_123");
+
+    expect(String(fetchMock.mock.calls[0][0])).toBe(
+      "https://api.duffel.com/links/sessions",
+    );
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toEqual({
+      data: {
+        reference: "off_123",
+        success_url: "https://faroway.test/trips?duffel=success",
+        failure_url: "https://faroway.test/trips?duffel=failure",
+        abandonment_url: "https://faroway.test/trips?duffel=abandoned",
+        primary_color: "#0f172a",
+        traveller_currency: "USD",
+        markup_amount: "5.00",
+        markup_currency: "USD",
+        flights: { enabled: "true" },
+        stays: { enabled: "false" },
+      },
+    });
+    expect(link).toBe("https://links.duffel.com/session_123");
+  });
+});
+
+describe("Amadeus affiliate client", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.resetModules();
+    vi.doUnmock("amadeus");
+  });
+
+  it("resolves common destination names to Amadeus city codes", async () => {
+    const { resolveAmadeusCityCode } = await import("@/lib/affiliates/amadeus");
+
+    expect(resolveAmadeusCityCode("Tokyo")).toBe("TYO");
+    expect(resolveAmadeusCityCode("Tokyo, Japan")).toBe("TYO");
+    expect(resolveAmadeusCityCode("New York")).toBe("NYC");
+    expect(resolveAmadeusCityCode("Paris")).toBe("PAR");
+  });
+
+  it("requests flight offers with current filters and no-stop mapping", async () => {
+    vi.stubEnv("AMADEUS_CLIENT_ID", "test-client-id");
+    vi.stubEnv("AMADEUS_CLIENT_SECRET", "test-client-secret");
+    vi.stubEnv("AMADEUS_ENV", "test");
+
+    const flightOffersGet = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: "offer-1",
+          price: { total: "199.00", currency: "USD" },
+          itineraries: [
+            {
+              duration: "PT1H30M",
+              segments: [
+                {
+                  carrierCode: "UA",
+                  number: "123",
+                  departure: { iataCode: "SFO", at: "2026-06-01T09:00:00" },
+                  arrival: { iataCode: "LAX", at: "2026-06-01T10:30:00" },
+                  duration: "PT1H30M",
+                },
+              ],
+            },
+          ],
+          travelerPricings: [{ fareDetailsBySegment: [{ cabin: "ECONOMY" }] }],
+        },
+      ],
+    });
+    vi.doMock("amadeus", () => ({
+      default: class MockAmadeus {
+        shopping = {
+          flightOffersSearch: { get: flightOffersGet },
+          hotelOffersSearch: { get: vi.fn() },
+        };
+        referenceData = {
+          locations: { hotels: { byCity: { get: vi.fn() } } },
+        };
+      },
+    }));
+
+    const { searchAmadeusFlights } = await import("@/lib/affiliates/amadeus");
+    const offers = await searchAmadeusFlights({
+      origin: "SFO",
+      destination: "LAX",
+      departureDate: "2026-06-01",
+      adults: 1,
+      maxPrice: 500,
+      maxStops: 0,
+      limit: 1,
+    });
+
+    expect(flightOffersGet).toHaveBeenCalledWith(
+      expect.objectContaining({
+        originLocationCode: "SFO",
+        destinationLocationCode: "LAX",
+        departureDate: "2026-06-01",
+        adults: 1,
+        max: 1,
+        maxPrice: 500,
+        nonStop: true,
+      }),
+    );
+    expect(offers[0]).toMatchObject({
+      offerId: "offer-1",
+      departure: { airport: "SFO" },
+      arrival: { airport: "LAX" },
+      stops: 0,
+    });
+  });
+
+  it("timeboxes Amadeus SDK calls so a slow vendor cannot hang generation", async () => {
+    vi.stubEnv("AMADEUS_CLIENT_ID", "test-client-id");
+    vi.stubEnv("AMADEUS_CLIENT_SECRET", "test-client-secret");
+    vi.stubEnv("ITINERARY_VENDOR_TIMEOUT_MS", "20");
+
+    vi.doMock("amadeus", () => ({
+      default: class MockAmadeus {
+        shopping = {
+          flightOffersSearch: { get: vi.fn(() => new Promise(() => {})) },
+          hotelOffersSearch: { get: vi.fn() },
+        };
+        referenceData = {
+          locations: { hotels: { byCity: { get: vi.fn() } } },
+        };
+      },
+    }));
+
+    const { searchAmadeusFlights } = await import("@/lib/affiliates/amadeus");
+    const startedAt = Date.now();
+    const offers = await searchAmadeusFlights({
+      origin: "SFO",
+      destination: "LAX",
+      departureDate: "2026-06-01",
+      adults: 1,
+      limit: 1,
+    });
+
+    expect(offers).toEqual([]);
+    expect(Date.now() - startedAt).toBeLessThan(1500);
+  });
+});
+
+describe("Booking.com affiliate client", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.resetModules();
+    vi.stubEnv("BOOKING_COM_TOKEN", "test-booking-token");
+    vi.stubEnv("BOOKING_COM_AFFILIATE_ID", "123456");
+    vi.stubEnv("BOOKING_COM_ENV", "sandbox");
+  });
+
+  it("searches current Demand API accommodations endpoints with affiliate headers", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: [
+              {
+                id: 10004,
+                currency: "USD",
+                price: { total: 600 },
+                url: "https://www.booking.com/hotel/jp/tokyo-test.html?aid=123456",
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      )
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            data: [
+              {
+                id: 10004,
+                name: "Tokyo Test Hotel",
+                description: { text: { "en-us": "Central Tokyo stay" } },
+                rating: {
+                  stars: 4,
+                  review_score: 8.9,
+                  number_of_reviews: 321,
+                  preferred: true,
+                },
+                location: {
+                  address: { "en-us": "1 Test Street" },
+                  coordinates: { latitude: 35.68, longitude: 139.76 },
+                  country: "jp",
+                },
+                photos: [
+                  {
+                    url: { standard: "https://booking.test/photo.jpg" },
+                    tags: ["Exterior"],
+                  },
+                ],
+                facilities: [{ id: 107 }],
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+      );
+
+    const { searchBookingHotels } = await import("@/lib/affiliates/booking");
+    const hotels = await searchBookingHotels({
+      destination: "Tokyo",
+      checkIn: "2026-06-01",
+      checkOut: "2026-06-04",
+      guests: 2,
+      stars: [4, 5],
+      priceMax: 500,
+      limit: 1,
+    });
+
+    expect(String(fetchMock.mock.calls[0][0])).toBe(
+      "https://demandapi-sandbox.booking.com/3.1/accommodations/search",
+    );
+    expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({
+      Authorization: "Bearer test-booking-token",
+      "X-Affiliate-Id": "123456",
+    });
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1]?.body))).toMatchObject({
+      booker: { country: "us", platform: "desktop" },
+      checkin: "2026-06-01",
+      checkout: "2026-06-04",
+      coordinates: { latitude: 35.6762, longitude: 139.6503, radius: 25 },
+      guests: { number_of_adults: 2, number_of_rooms: 1 },
+      rating: { stars: [4, 5] },
+      price: { maximum: 500 },
+      rows: 10,
+    });
+    expect(String(fetchMock.mock.calls[1][0])).toBe(
+      "https://demandapi-sandbox.booking.com/3.1/accommodations/details",
+    );
+    expect(JSON.parse(String(fetchMock.mock.calls[1][1]?.body))).toMatchObject({
+      accommodations: [10004],
+      languages: ["en-us"],
+    });
+    expect(hotels[0]).toMatchObject({
+      hotelId: "10004",
+      name: "Tokyo Test Hotel",
+      description: "Central Tokyo stay",
+      starRating: 4,
+      userRating: 8.9,
+      reviewCount: 321,
+      bookingUrl: "https://www.booking.com/hotel/jp/tokyo-test.html?aid=123456",
+    });
+  });
+});
+
+describe("GetYourGuide affiliate client", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.resetModules();
+    vi.stubEnv("GETYOURGUIDE_API_KEY", "test-gyg-token");
+    vi.stubEnv("GETYOURGUIDE_PARTNER_ID", "test-partner");
+  });
+
+  it("searches the current tours endpoint with required partner query parameters", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          data: {
+            tours: [
+              {
+                tour_id: 123,
+                title: "Tokyo Food Tour",
+                abstract: "Taste Tokyo with a local guide",
+                overall_rating: 4.8,
+                number_of_ratings: 240,
+                retail_price: { amount: 95, currency: "USD" },
+                duration: { value: 3, unit: "hour" },
+                pictures: [{ url: "https://gyg.test/photo.jpg" }],
+                categories: [{ name: "Food & Gourmet Tours" }],
+                location: { city: "Tokyo" },
+              },
+            ],
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    const { searchGYGActivities } =
+      await import("@/lib/affiliates/getyourguide");
+    const activities = await searchGYGActivities({
+      destination: "Tokyo",
+      startDate: "2026-06-01",
+      endDate: "2026-06-05",
+      limit: 1,
+    });
+
+    const requestUrl = new URL(String(fetchMock.mock.calls[0][0]));
+    expect(requestUrl.pathname).toBe("/1/tours");
+    expect(requestUrl.searchParams.get("q")).toBe("Tokyo");
+    expect(requestUrl.searchParams.get("cnt_language")).toBe("en");
+    expect(requestUrl.searchParams.get("currency")).toBe("USD");
+    expect(requestUrl.searchParams.get("limit")).toBe("1");
+    expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({
+      "X-ACCESS-TOKEN": "test-gyg-token",
+    });
+    expect(activities[0]).toMatchObject({
+      activityId: "123",
+      title: "Tokyo Food Tour",
+      duration: { fixedDurationInMinutes: 180 },
+    });
+  });
+
+  it("checks availability with current language/date query parameters", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          data: {
+            availabilities: [
+              {
+                date: "2026-06-01",
+                available: true,
+                start_times: ["09:00", "13:00"],
+                retail_price: { amount: 95, currency: "USD" },
+              },
+            ],
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+
+    const { checkGYGAvailability } =
+      await import("@/lib/affiliates/getyourguide");
+    const availability = await checkGYGAvailability("123", "2026-06-01");
+
+    const requestUrl = new URL(String(fetchMock.mock.calls[0][0]));
+    expect(requestUrl.pathname).toBe("/1/tours/123/availability");
+    expect(requestUrl.searchParams.get("cnt_language")).toBe("en");
+    expect(requestUrl.searchParams.get("date[]")).toBe("2026-06-01T00:00:00");
+    expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({
+      "X-ACCESS-TOKEN": "test-gyg-token",
+    });
+    expect(availability[0]).toMatchObject({
+      activityId: "123",
+      date: "2026-06-01",
+      available: true,
+      startTimes: ["09:00", "13:00"],
+      pricing: { amount: 95, currencyCode: "USD" },
+    });
+  });
+});
+
+describe("TripAdvisor affiliate client", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks();
+    vi.resetModules();
+    vi.stubEnv("TRIPADVISOR_API_KEY", "test-tripadvisor-key");
+    vi.stubEnv("TRIPADVISOR_ENRICHMENT_LIMIT", "2");
+    vi.stubEnv("TRIPADVISOR_ENRICHMENT_TIMEOUT_MS", "1000");
+  });
+
+  it("caps enrichment work so TripAdvisor cannot delay every candidate", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () =>
+        new Response(
+          JSON.stringify({
+            data: [
+              {
+                location_id: "ta_1",
+                name: "Matched place",
+                rating: "4.7",
+                num_reviews: "120",
+                web_url: "https://tripadvisor.test/place",
+              },
+            ],
+          }),
+          { status: 200 },
+        ),
+    );
+
+    const { enrichWithTripAdvisor } =
+      await import("@/lib/affiliates/tripadvisor");
+    const items = Array.from({ length: 5 }, (_, index) => ({
+      name: `Candidate ${index + 1}`,
+      location: { name: "Tokyo" },
+    }));
+
+    const enriched = await enrichWithTripAdvisor(items, "attractions");
+
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(enriched[0]).toMatchObject({
+      tripadvisorRating: 4.7,
+      tripadvisorReviewCount: 120,
+      tripadvisorUrl: "https://tripadvisor.test/place",
+    });
+    expect(enriched[1]).toMatchObject({
+      tripadvisorRating: 4.7,
+    });
+    expect(enriched[2]).not.toHaveProperty("tripadvisorRating");
+    expect(enriched[4]).not.toHaveProperty("tripadvisorRating");
+  });
+});

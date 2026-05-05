@@ -57,11 +57,13 @@ class DayErrorBoundary extends React.Component<
 }
 import { TripHeader } from "@/components/trips/TripHeader";
 import { ItineraryDay } from "@/components/trips/ItineraryDay";
-import { SkeletonItineraryDay } from "@/components/trips/SkeletonItineraryDay";
+import { ItineraryGenerationLoader } from "@/components/trips/ItineraryGenerationLoader";
+import { TripReadyScreen } from "@/components/trips/TripReadyScreen";
+import { StreamedSpecPreview } from "@/components/trips/StreamedSpecPreview";
 import { ShareButtons } from "@/components/ShareButtons";
 import {
+  ITINERARY_STREAMING_ENABLED,
   useTripGeneration,
-  type SearchProgress,
 } from "@/hooks/useTripGeneration";
 import type { GeneratedItinerary } from "@/lib/ai/types";
 import type { TripDay } from "@faroway/types";
@@ -94,45 +96,6 @@ interface TripResponse {
   itinerary?: GeneratedItinerary;
 }
 
-const GENERATION_STEPS = [
-  {
-    key: "orchestrator",
-    label: "Analyzing",
-    emoji: "🔍",
-    description: "Understanding your preferences",
-  },
-  {
-    key: "hotels",
-    label: "Hotels",
-    emoji: "🏨",
-    description: "Searching for the best hotels",
-  },
-  {
-    key: "activities",
-    label: "Activities",
-    emoji: "✨",
-    description: "Finding activities & attractions",
-  },
-  {
-    key: "dining",
-    label: "Dining",
-    emoji: "🍽️",
-    description: "Discovering restaurants",
-  },
-  {
-    key: "transport",
-    label: "Flights",
-    emoji: "✈️",
-    description: "Finding the best flights",
-  },
-  {
-    key: "aggregator",
-    label: "Composing",
-    emoji: "📝",
-    description: "Crafting your itinerary",
-  },
-];
-
 export default function TripDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -145,9 +108,15 @@ export default function TripDetailPage() {
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [showReadyScreen, setShowReadyScreen] = useState(false);
+  const [hasSeenGeneratingThisSession, setHasSeenGeneratingThisSession] =
+    useState(false);
 
   // Determine if we should stream
-  const shouldStream = trip?.status === "generating" && !!trip?.search_id;
+  const shouldStream =
+    ITINERARY_STREAMING_ENABLED &&
+    trip?.status === "generating" &&
+    !!trip?.search_id;
 
   // SSE progressive generation hook
   const generation = useTripGeneration({
@@ -198,10 +167,14 @@ export default function TripDetailPage() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // For trips in 'generating' state without a search_id (old workflow),
-  // fall back to polling the generate endpoint
+  // For old workflow trips or when streaming is disabled by rollout flag,
+  // fall back to polling the generate endpoint.
   useEffect(() => {
-    if (!trip || trip.status !== "generating" || trip.search_id) {
+    if (
+      !trip ||
+      trip.status !== "generating" ||
+      (trip.search_id && ITINERARY_STREAMING_ENABLED)
+    ) {
       return;
     }
 
@@ -358,7 +331,7 @@ export default function TripDetailPage() {
     return { accommodation, activities, dining, transport, total };
   }, [itinerary, topHotel]);
 
-  // Compute number of days for skeletons (from trip date range)
+  // Trip length (days) from date range — used for nights estimate during generation / hotel card
   const skeletonDayCount = useMemo(() => {
     if (!trip) return 3;
     const start = new Date(trip.start_date);
@@ -368,15 +341,87 @@ export default function TripDetailPage() {
     return Math.max(1, Math.min(diff, 14));
   }, [trip]);
 
-  // Compute dates for skeleton days
-  const skeletonDates = useMemo(() => {
-    if (!trip) return [];
-    return Array.from({ length: skeletonDayCount }, (_, i) => {
-      const d = new Date(trip.start_date);
-      d.setDate(d.getDate() + i);
-      return d.toISOString().split("T")[0];
-    });
-  }, [trip, skeletonDayCount]);
+  // Determine display status
+  const isGenerating = trip?.status === "generating" || generation.isStreaming;
+  const isFailed = trip?.status === "failed" || !!generation.error;
+  const isComplete =
+    trip?.status === "generated" ||
+    trip?.status === "completed" ||
+    generation.isComplete;
+  const tripStatus = isGenerating
+    ? "generating"
+    : isFailed
+      ? "failed"
+      : "completed";
+
+  // Progressive data: prefer DB itinerary when available, fall back to streamed days
+  const displayDays: TripDay[] | null =
+    itinerary?.days || generation.days || null;
+  const displayTopHotel = topHotel || generation.topHotel;
+  const hasStreamedSpecBlocks = generation.specBlocks.length > 0;
+  const readyScreenStopsCount = useMemo(() => {
+    if (!displayDays?.length) return 0;
+    let totalStops = 0;
+    for (const day of displayDays) {
+      for (const slot of [day.morning, day.afternoon, day.evening]) {
+        if (!slot) continue;
+        if (Array.isArray(slot.activities))
+          totalStops += slot.activities.length;
+        const slotRecord = slot as unknown as Record<string, unknown>;
+        const mealsCount = Array.isArray(slot.meals)
+          ? slot.meals.length
+          : slotRecord.meal
+            ? 1
+            : 0;
+        totalStops += mealsCount;
+      }
+    }
+    return totalStops;
+  }, [displayDays]);
+  const readyScreenEstimatedCost = useMemo(() => {
+    const rawTotal = itinerary?.totalEstimatedCost ?? budgetBreakdown?.total;
+    if (typeof rawTotal === "number") return rawTotal;
+    if (
+      rawTotal &&
+      typeof rawTotal === "object" &&
+      "amount" in rawTotal &&
+      typeof rawTotal.amount === "number"
+    ) {
+      return rawTotal.amount;
+    }
+    return null;
+  }, [itinerary?.totalEstimatedCost, budgetBreakdown?.total]);
+  const readyScreenDescription =
+    itinerary?.overview ||
+    `We've drafted ${Math.max(1, skeletonDayCount)} days in ${trip?.destination || "your destination"}. Every stop is optional — swap, reorder, or ask Faroway to rework anything.`;
+  const readyScreenHeroImage = displayTopHotel?.images?.[0];
+
+  const showFullGenerationLoader =
+    !!trip && isGenerating && !displayDays?.length && !hasStreamedSpecBlocks;
+
+  useEffect(() => {
+    if (isGenerating) {
+      setHasSeenGeneratingThisSession(true);
+      setShowReadyScreen(false);
+    }
+  }, [isGenerating]);
+
+  useEffect(() => {
+    if (
+      hasSeenGeneratingThisSession &&
+      isComplete &&
+      !!displayDays?.length &&
+      !showReadyScreen
+    ) {
+      setShowReadyScreen(true);
+      setHasSeenGeneratingThisSession(false);
+    }
+  }, [
+    hasSeenGeneratingThisSession,
+    isComplete,
+    displayDays?.length,
+    showReadyScreen,
+  ]);
 
   // Loading state
   if (loading) {
@@ -416,23 +461,36 @@ export default function TripDetailPage() {
     );
   }
 
-  // Determine display status
-  const isGenerating = trip.status === "generating" || generation.isStreaming;
-  const isFailed = trip.status === "failed" || !!generation.error;
-  const isComplete =
-    trip.status === "generated" ||
-    trip.status === "completed" ||
-    generation.isComplete;
-  const tripStatus = isGenerating
-    ? "generating"
-    : isFailed
-      ? "failed"
-      : "completed";
+  if (showFullGenerationLoader) {
+    return (
+      <ItineraryGenerationLoader
+        destination={trip.destination}
+        nights={Math.max(0, skeletonDayCount - 1)}
+        travelers={trip.travelers}
+        phase={generation.phase}
+        progress={generation.progress}
+        message={generation.message}
+        searchProgress={generation.searchProgress}
+        activitiesCount={generation.activitiesCount}
+        diningCount={generation.diningCount}
+        transportCount={generation.transportCount}
+      />
+    );
+  }
 
-  // Progressive data: prefer DB itinerary when available, fall back to streamed days
-  const displayDays: TripDay[] | null =
-    itinerary?.days || generation.days || null;
-  const displayTopHotel = topHotel || generation.topHotel;
+  if (showReadyScreen && trip && displayDays?.length) {
+    return (
+      <TripReadyScreen
+        city={trip.destination}
+        heroImageUrl={readyScreenHeroImage}
+        description={readyScreenDescription}
+        days={displayDays.length}
+        stops={readyScreenStopsCount}
+        estimatedCost={readyScreenEstimatedCost}
+        onOpenTrip={() => setShowReadyScreen(false)}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
@@ -449,16 +507,6 @@ export default function TripDetailPage() {
       />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        {/* Generation Progress — real agent progress via SSE */}
-        {isGenerating && (
-          <AgentProgress
-            step={generation.phase}
-            progress={generation.progress}
-            message={generation.message}
-            searchProgress={generation.searchProgress}
-          />
-        )}
-
         {/* Generation Failed */}
         {isFailed && !isGenerating && (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-6 mb-6">
@@ -609,27 +657,12 @@ export default function TripDetailPage() {
               </div>
             ))}
           </div>
-        ) : isGenerating && !displayDays ? (
-          /* Skeleton days while generating */
-          <div className="space-y-5">
-            <h2 className="text-xl font-bold text-gray-900">Your Itinerary</h2>
-            {Array.from({ length: skeletonDayCount }, (_, i) => (
-              <div
-                key={i}
-                className="animate-in fade-in slide-in-from-bottom-2 duration-500"
-                style={{
-                  animationDelay: `${i * 100}ms`,
-                  animationFillMode: "both",
-                }}
-              >
-                <SkeletonItineraryDay
-                  dayNumber={i + 1}
-                  date={skeletonDates[i]}
-                />
-              </div>
-            ))}
-          </div>
-        ) : isComplete && !displayDays ? (
+        ) : hasStreamedSpecBlocks ? (
+          <StreamedSpecPreview
+            blocks={generation.specBlocks}
+            isGenerating={isGenerating}
+          />
+        ) : isComplete && !displayDays?.length ? (
           <EmptyItinerary destination={trip.destination} />
         ) : null}
 
@@ -679,7 +712,7 @@ export default function TripDetailPage() {
         )}
 
         {/* Empty state for completed trips without itinerary */}
-        {isComplete && !displayDays && !itinerary && (
+        {isComplete && !displayDays?.length && !itinerary && (
           <EmptyItinerary destination={trip.destination} />
         )}
 
@@ -687,7 +720,7 @@ export default function TripDetailPage() {
         {isComplete && !trip.user_id && <SaveTripNudge tripId={trip.id} />}
 
         {/* Share This Trip */}
-        {isComplete && (displayDays || itinerary) && (
+        {isComplete && (!!displayDays?.length || itinerary) && (
           <div className="mt-8 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl p-6 sm:p-8 text-center border border-primary-100/30">
             <h3 className="font-bold text-gray-900 mb-2 text-lg">
               Share Your Adventure
@@ -1047,91 +1080,6 @@ function BudgetSummary({
         <span className="text-2xl font-black text-gray-900">
           {formatCost(breakdown.total)}
         </span>
-      </div>
-    </div>
-  );
-}
-
-// ── Agent Progress Component ─────────────────────────────────────────────────
-
-interface AgentProgressProps {
-  step: string;
-  progress: number;
-  message: string;
-  searchProgress: SearchProgress | null;
-}
-
-function AgentProgress({
-  step,
-  progress,
-  message,
-  searchProgress,
-}: AgentProgressProps) {
-  return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
-      <div className="flex items-center gap-4 mb-4">
-        <div className="w-12 h-12 rounded-xl bg-primary-50 flex items-center justify-center">
-          <Sparkles className="w-6 h-6 text-primary animate-pulse" />
-        </div>
-        <div>
-          <h3 className="font-semibold text-gray-900">
-            Creating Your Itinerary
-          </h3>
-          <p className="text-sm text-gray-600">{message}</p>
-        </div>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="relative mb-4">
-        <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-primary to-primary-600 rounded-full transition-all duration-700 ease-out"
-            style={{ width: `${Math.max(5, progress)}%` }}
-          />
-        </div>
-        <div className="flex justify-between mt-2">
-          <span className="text-xs text-gray-500">{step}</span>
-          <span className="text-xs text-gray-500">{progress}%</span>
-        </div>
-      </div>
-
-      {/* Agent Steps */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-        {GENERATION_STEPS.map((genStep) => {
-          const agentStatus = searchProgress?.[genStep.key];
-          const isActive = agentStatus === "searching";
-          const isDone = agentStatus === "done";
-
-          return (
-            <div
-              key={genStep.key}
-              className={`text-center p-2 rounded-lg transition-colors ${
-                isActive
-                  ? "bg-primary-50 ring-1 ring-primary-200"
-                  : isDone
-                    ? "bg-green-50"
-                    : "bg-gray-50"
-              }`}
-            >
-              <div
-                className={`text-lg mb-1 ${isActive ? "animate-bounce" : ""}`}
-              >
-                {isDone ? "✅" : genStep.emoji}
-              </div>
-              <p
-                className={`text-xs font-medium ${
-                  isActive
-                    ? "text-primary-700"
-                    : isDone
-                      ? "text-green-700"
-                      : "text-gray-500"
-                }`}
-              >
-                {genStep.label}
-              </p>
-            </div>
-          );
-        })}
       </div>
     </div>
   );

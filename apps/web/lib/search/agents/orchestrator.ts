@@ -7,6 +7,11 @@ import { generateObject, gateway as defaultGateway, createGateway } from "ai";
 import { z } from "zod";
 import { SearchInput, SearchPlan } from "../types";
 import { VIBE_KEYWORDS, BUDGET_RANGES } from "@faroway/constants";
+import {
+  ORCHESTRATOR_TIMEOUT_MS,
+  isOperationTimeoutError,
+  withAbortTimeout,
+} from "@/lib/search/runtime";
 
 const aiGateway = process.env.AI_GATEWAY_API_KEY
   ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
@@ -80,6 +85,83 @@ For transportCriteria:
 - Set maxStops based on budget: budget→2, moderate→1, luxury→0
 - If no origin is provided, omit transportCriteria entirely`;
 
+const DESTINATION_IATA_CODES: Record<string, string> = {
+  amsterdam: "AMS",
+  athens: "ATH",
+  bali: "DPS",
+  bangkok: "BKK",
+  barcelona: "BCN",
+  berlin: "BER",
+  "buenos aires": "EZE",
+  cancun: "CUN",
+  "cape town": "CPT",
+  chicago: "ORD",
+  copenhagen: "CPH",
+  dubai: "DXB",
+  dublin: "DUB",
+  "hong kong": "HKG",
+  istanbul: "IST",
+  kyoto: "KIX",
+  "las vegas": "LAS",
+  lisbon: "LIS",
+  london: "LON",
+  "los angeles": "LAX",
+  madrid: "MAD",
+  melbourne: "MEL",
+  "mexico city": "MEX",
+  miami: "MIA",
+  milan: "MIL",
+  montreal: "YUL",
+  "new york": "NYC",
+  orlando: "MCO",
+  osaka: "KIX",
+  paris: "PAR",
+  prague: "PRG",
+  reykjavik: "KEF",
+  rome: "ROM",
+  "san francisco": "SFO",
+  seoul: "ICN",
+  singapore: "SIN",
+  sydney: "SYD",
+  taipei: "TPE",
+  tokyo: "TYO",
+  toronto: "YYZ",
+  vancouver: "YVR",
+  venice: "VCE",
+  vienna: "VIE",
+};
+
+function normalizeDestinationKey(destination: string): string {
+  return destination
+    .toLowerCase()
+    .split(",")[0]
+    .replace(/\b(city|japan|france|italy|spain|uk|usa|united states)\b/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function resolveDestinationIata(destination: string): string | undefined {
+  const key = normalizeDestinationKey(destination);
+  return DESTINATION_IATA_CODES[key];
+}
+
+function buildTransportCriteriaFromInput(
+  input: SearchInput,
+): NonNullable<SearchPlan["transportCriteria"]> | undefined {
+  const originAirport =
+    input.originAirport ||
+    (input.originCity ? resolveDestinationIata(input.originCity) : undefined);
+  if (!originAirport) return undefined;
+
+  return {
+    originCity: input.originCity,
+    originAirport,
+    destinationAirport: resolveDestinationIata(input.destination),
+    cabinClass: input.budget === "luxury" ? "business" : "economy",
+    maxStops: input.budget === "luxury" ? 0 : input.budget === "budget" ? 2 : 1,
+  };
+}
+
 export async function runOrchestratorAgent(
   input: SearchInput,
 ): Promise<SearchPlan> {
@@ -89,9 +171,10 @@ export async function runOrchestratorAgent(
   );
 
   const budgetInfo = BUDGET_RANGES[input.budget || "moderate"];
+  const vibes = input.vibes || [];
 
   // Collect keywords from selected vibes
-  const vibeKeywords = input.vibes.flatMap(
+  const vibeKeywords = vibes.flatMap(
     (vibe: string) => VIBE_KEYWORDS[vibe.toLowerCase()] || [],
   );
 
@@ -106,7 +189,7 @@ export async function runOrchestratorAgent(
 **Destination:** ${input.destination}
 **Dates:** ${input.startDate} to ${input.endDate} (${nights} nights)
 **Travelers:** ${input.travelers} people, ${input.travelerType || "general"} travel
-**Vibes:** ${input.vibes.join(", ")}
+**Vibes:** ${vibes.join(", ")}
 **Budget:** ${input.budget || "moderate"}${originInfo}
 
 Budget guidelines:
@@ -124,85 +207,109 @@ Create a detailed search plan with:
 6. Transport criteria if an origin city/airport is provided (include IATA codes for origin and destination airports)`;
 
   try {
-    const { object: plan } = await generateObject({
-      model: aiGateway(MODEL),
-      system: SYSTEM_PROMPT,
-      prompt,
-      schema: SearchPlanSchema,
-    });
+    const { object: plan } = await withAbortTimeout(
+      (abortSignal) =>
+        generateObject({
+          model: aiGateway(MODEL),
+          system: SYSTEM_PROMPT,
+          prompt,
+          schema: SearchPlanSchema,
+          timeout: ORCHESTRATOR_TIMEOUT_MS,
+          abortSignal,
+          maxRetries: 0,
+        }),
+      ORCHESTRATOR_TIMEOUT_MS,
+      "orchestrator AI",
+    );
 
-    // Attach origin info from input if AI didn't include it
-    if (input.originAirport && !plan.transportCriteria) {
+    // Attach deterministic transport fields if the model omitted any of them.
+    const inputTransportCriteria = buildTransportCriteriaFromInput(input);
+    if (inputTransportCriteria) {
       plan.transportCriteria = {
-        originCity: input.originCity,
-        originAirport: input.originAirport,
-        cabinClass: input.budget === "luxury" ? "business" : "economy",
-        maxStops:
-          input.budget === "luxury" ? 0 : input.budget === "budget" ? 2 : 1,
+        ...inputTransportCriteria,
+        ...plan.transportCriteria,
+        originCity:
+          plan.transportCriteria?.originCity ??
+          inputTransportCriteria.originCity,
+        originAirport:
+          plan.transportCriteria?.originAirport ??
+          inputTransportCriteria.originAirport,
+        destinationAirport:
+          plan.transportCriteria?.destinationAirport ??
+          inputTransportCriteria.destinationAirport,
       };
     }
 
     return plan;
   } catch (error) {
-    console.error("[Orchestrator Agent] Error:", error);
-
-    // Return a reasonable default plan
-    return {
-      destination: input.destination,
-      country: "", // Will be filled by search
-      dates: {
-        start: input.startDate,
-        end: input.endDate,
-        nights,
-      },
-      searchPriorities: input.originAirport
-        ? ["hotels", "activities", "dining", "transport"]
-        : ["hotels", "activities", "dining"],
-      hotelCriteria: {
-        priceRange: budgetInfo.hotel,
-        starRating:
-          input.budget === "luxury"
-            ? [4, 5]
-            : input.budget === "budget"
-              ? [2, 3]
-              : [3, 4],
-        amenities: ["wifi", "breakfast"],
-        neighborhoods: [],
-      },
-      activityCriteria: {
-        categories: input.vibes,
-        pacePreference: "moderate",
-        mustSee: [],
-        interests: vibeKeywords.slice(0, 10),
-      },
-      diningCriteria: {
-        cuisineTypes: ["local"],
-        priceRange:
-          input.budget === "luxury"
-            ? "upscale"
-            : input.budget === "budget"
-              ? "budget"
-              : "moderate",
-        dietaryNeeds: [],
-        mealPriorities: ["dinner", "lunch", "breakfast"],
-      },
-      vibeInterpretation: {
-        vibes: input.vibes,
-        searchKeywords: vibeKeywords,
-        avoidKeywords: [],
-      },
-      ...(input.originAirport && {
-        transportCriteria: {
-          originCity: input.originCity,
-          originAirport: input.originAirport,
-          cabinClass:
-            input.budget === "luxury"
-              ? ("business" as const)
-              : ("economy" as const),
-          maxStops:
-            input.budget === "luxury" ? 0 : input.budget === "budget" ? 2 : 1,
-        },
-      }),
-    };
+    if (isOperationTimeoutError(error)) {
+      console.warn(
+        "[Orchestrator Agent] Timed out, using fallback search plan:",
+        error instanceof Error ? error.message : String(error),
+      );
+    } else {
+      console.error("[Orchestrator Agent] Error:", error);
+    }
+    return buildFallbackSearchPlan(input);
   }
+}
+
+export function buildFallbackSearchPlan(input: SearchInput): SearchPlan {
+  const nights = Math.ceil(
+    (new Date(input.endDate).getTime() - new Date(input.startDate).getTime()) /
+      (1000 * 60 * 60 * 24),
+  );
+  const budgetInfo = BUDGET_RANGES[input.budget || "moderate"];
+  const vibes = input.vibes || [];
+  const vibeKeywords = vibes.flatMap(
+    (vibe: string) => VIBE_KEYWORDS[vibe.toLowerCase()] || [],
+  );
+  const transportCriteria = buildTransportCriteriaFromInput(input);
+
+  return {
+    destination: input.destination,
+    country: "",
+    dates: {
+      start: input.startDate,
+      end: input.endDate,
+      nights,
+    },
+    searchPriorities: transportCriteria
+      ? ["hotels", "activities", "dining", "transport"]
+      : ["hotels", "activities", "dining"],
+    hotelCriteria: {
+      priceRange: budgetInfo.hotel,
+      starRating:
+        input.budget === "luxury"
+          ? [4, 5]
+          : input.budget === "budget"
+            ? [2, 3]
+            : [3, 4],
+      amenities: ["wifi", "breakfast"],
+      neighborhoods: [],
+    },
+    activityCriteria: {
+      categories: vibes,
+      pacePreference: "moderate",
+      mustSee: [],
+      interests: vibeKeywords.slice(0, 10),
+    },
+    diningCriteria: {
+      cuisineTypes: ["local"],
+      priceRange:
+        input.budget === "luxury"
+          ? "upscale"
+          : input.budget === "budget"
+            ? "budget"
+            : "moderate",
+      dietaryNeeds: [],
+      mealPriorities: ["dinner", "lunch", "breakfast"],
+    },
+    vibeInterpretation: {
+      vibes,
+      searchKeywords: vibeKeywords,
+      avoidKeywords: [],
+    },
+    ...(transportCriteria && { transportCriteria }),
+  };
 }

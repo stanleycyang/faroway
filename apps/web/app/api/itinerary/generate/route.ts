@@ -1,53 +1,34 @@
 /**
  * Itinerary Generation API Route
- * Uses AI SDK + Vercel AI Gateway for streaming generation
+ * Compatibility route for older clients.
  *
  * POST /api/itinerary/generate
- * - Returns streaming response for real-time progress
- * - Uses Server-Sent Events (SSE) format
+ * - If `tripId` is provided, starts the durable parallel trip workflow
+ * - Otherwise delegates to /api/itinerary/stream, which uses the parallel search workflow
  */
 
 import { NextRequest } from "next/server";
-import { streamItinerary } from "@/lib/ai/client";
-import { TripPreferences } from "@/lib/ai/types";
+import { POST as startTripGeneration } from "@/app/api/trips/[id]/generate/route";
+import { POST as streamItineraryGeneration } from "@/app/api/itinerary/stream/route";
 
-export const runtime = "edge"; // Use edge runtime for better streaming
-export const maxDuration = 60; // Allow up to 60 seconds for generation
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const preferences: TripPreferences = {
-      destination: body.destination,
-      startDate: body.startDate,
-      endDate: body.endDate,
-      travelers: body.travelers || 1,
-      vibes: body.vibes || ["adventure"],
-      budget: body.budget || "moderate",
-      interests: body.interests || [],
-      dietaryRestrictions: body.dietaryRestrictions || [],
-    };
+    const body = await request.clone().json();
 
-    // Validate required fields
-    if (
-      !preferences.destination ||
-      !preferences.startDate ||
-      !preferences.endDate
-    ) {
-      return Response.json(
-        { error: "Missing required fields: destination, startDate, endDate" },
-        { status: 400 },
-      );
+    if (typeof body.tripId === "string" && body.tripId.trim().length > 0) {
+      return startTripGeneration(request, {
+        params: Promise.resolve({ id: body.tripId }),
+      });
     }
 
-    // Stream the response using AI SDK
-    const result = await streamItinerary(preferences, {
-      model: body.model, // Optional model override
-    });
-
-    // Return as streaming response
-    return result.toTextStreamResponse();
+    return streamItineraryGeneration(request);
   } catch (error) {
+    if (error instanceof SyntaxError) {
+      return Response.json({ error: "Invalid request body" }, { status: 400 });
+    }
+
     console.error("[Itinerary Generation Error]", error);
     return Response.json(
       { error: error instanceof Error ? error.message : "Generation failed" },

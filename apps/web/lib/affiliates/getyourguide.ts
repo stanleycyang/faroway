@@ -8,6 +8,8 @@
  * @see https://partner.getyourguide.com/
  */
 
+import { fetchWithTimeout } from "@/lib/search/runtime";
+
 // Environment variables
 const GYG_API_KEY = process.env.GETYOURGUIDE_API_KEY;
 const GYG_PARTNER_ID = process.env.GETYOURGUIDE_PARTNER_ID;
@@ -97,32 +99,53 @@ export async function searchGYGActivities(
   try {
     const queryParams = new URLSearchParams({
       q: params.destination,
-      ...(params.startDate && { date: params.startDate }),
-      ...(params.endDate && { date_end: params.endDate }),
-      ...(params.rating && { rating: params.rating.toString() }),
-      ...(params.limit && { cnt: params.limit.toString() }),
-      ...(params.coordinates && {
-        lat: params.coordinates.lat.toString(),
-        lng: params.coordinates.lng.toString(),
-      }),
+      cnt_language: "en",
       currency: "USD",
+      preformatted: "teaser",
+      ...(params.limit && { limit: params.limit.toString() }),
     });
 
-    if (params.categories?.length) {
-      queryParams.set("category", params.categories.join(","));
+    if (params.startDate && params.endDate) {
+      queryParams.append("date[]", `${params.startDate}T00:00:00`);
+      queryParams.append("date[]", `${params.endDate}T23:59:59`);
+    } else if (params.startDate) {
+      queryParams.append("date[]", `${params.startDate}T00:00:00`);
+    }
+
+    if (params.rating) {
+      queryParams.append("rating[]", params.rating.toString());
     }
 
     if (params.priceRange) {
-      queryParams.set("price_from", params.priceRange.min.toString());
-      queryParams.set("price_to", params.priceRange.max.toString());
+      queryParams.append("price[]", params.priceRange.min.toString());
+      queryParams.append("price[]", params.priceRange.max.toString());
     }
 
-    const response = await fetch(`${GYG_API_BASE}/activities?${queryParams}`, {
-      headers: {
-        Accept: "application/json",
-        "X-Access-Token": GYG_API_KEY!,
+    if (params.coordinates) {
+      queryParams.delete("q");
+      queryParams.append("coordinates[]", params.coordinates.lat.toString());
+      queryParams.append("coordinates[]", params.coordinates.lng.toString());
+      queryParams.append("coordinates[]", "10");
+    }
+
+    if (params.categories?.length) {
+      for (const category of params.categories) {
+        const categoryId = Number(category);
+        if (Number.isFinite(categoryId)) {
+          queryParams.append("categories[]", String(categoryId));
+        }
+      }
+    }
+
+    const response = await fetchWithTimeout(
+      `${GYG_API_BASE}/tours?${queryParams}`,
+      {
+        headers: {
+          Accept: "application/json",
+          "X-ACCESS-TOKEN": GYG_API_KEY!,
+        },
       },
-    });
+    );
 
     if (!response.ok) {
       const error = await response.text();
@@ -131,9 +154,7 @@ export async function searchGYGActivities(
     }
 
     const data = await response.json();
-    return (data.data?.activities || data.activities || []).map(
-      normalizeGYGActivity,
-    );
+    return (data.data?.tours || data.tours || []).map(normalizeGYGActivity);
   } catch (error) {
     console.error("[GYG] Search error:", error);
     return [];
@@ -151,19 +172,22 @@ export async function getGYGActivity(
   }
 
   try {
-    const response = await fetch(`${GYG_API_BASE}/activities/${activityId}`, {
-      headers: {
-        Accept: "application/json",
-        "X-Access-Token": GYG_API_KEY!,
+    const response = await fetchWithTimeout(
+      `${GYG_API_BASE}/tours/${activityId}?cnt_language=en&currency=USD`,
+      {
+        headers: {
+          Accept: "application/json",
+          "X-ACCESS-TOKEN": GYG_API_KEY!,
+        },
       },
-    });
+    );
 
     if (!response.ok) {
       return null;
     }
 
     const data = await response.json();
-    return normalizeGYGActivity(data.data?.activity || data.activity || data);
+    return normalizeGYGActivity(data.data?.tours?.[0] || data.tour || data);
   } catch (error) {
     console.error("[GYG] Get activity error:", error);
     return null;
@@ -182,12 +206,12 @@ export async function checkGYGAvailability(
   }
 
   try {
-    const response = await fetch(
-      `${GYG_API_BASE}/activities/${activityId}/availabilities?date=${date}`,
+    const response = await fetchWithTimeout(
+      `${GYG_API_BASE}/tours/${activityId}/availability?cnt_language=en&date[]=${encodeURIComponent(`${date}T00:00:00`)}`,
       {
         headers: {
           Accept: "application/json",
-          "X-Access-Token": GYG_API_KEY!,
+          "X-ACCESS-TOKEN": GYG_API_KEY!,
         },
       },
     );
@@ -252,7 +276,9 @@ export function generateGYGAffiliateUrl(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeGYGActivity(raw: any): GYGActivity {
   return {
-    activityId: String(raw.activity_id || raw.activityId || raw.id),
+    activityId: String(
+      raw.tour_id || raw.tourId || raw.activity_id || raw.activityId || raw.id,
+    ),
     title: raw.title || raw.name,
     description: raw.description || raw.abstract || "",
     shortDescription:

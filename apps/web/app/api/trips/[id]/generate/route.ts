@@ -2,7 +2,7 @@
  * POST /api/trips/[id]/generate
  *
  * Creates a search record, links it to the trip, and marks status as 'generating'.
- * The actual agent pipeline is triggered by the stream endpoint (POST /api/trips/[id]/stream).
+ * The durable agent pipeline starts here; the stream endpoint observes progress.
  *
  * GET /api/trips/[id]/generate
  *
@@ -11,12 +11,25 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { createClient, getSupabase } from "@/lib/supabase/server";
+import { start } from "workflow/api";
+import { planTripWorkflow } from "@/workflows/plan-trip";
+import { buildInstantPreview } from "@/lib/search/preview";
 
 type Params = {
   params: Promise<{
     id: string;
   }>;
 };
+
+type TravelerType = "solo" | "couple" | "family" | "friends" | "business";
+
+const TRAVELER_TYPES = new Set<TravelerType>([
+  "solo",
+  "couple",
+  "family",
+  "friends",
+  "business",
+]);
 
 /**
  * Resolve user ID if authenticated, or null for anonymous.
@@ -82,6 +95,20 @@ export async function POST(request: NextRequest, { params }: Params) {
       // No body or invalid JSON, use trip defaults
     }
 
+    const tripPreferences = (trip.preferences || {}) as Record<string, unknown>;
+    const bodyVibes = normalizeStringArray(bodyPreferences.vibes, 10, 50);
+    const tripVibes = Array.isArray(trip.vibes) ? trip.vibes : [];
+    const vibes = bodyVibes ?? tripVibes;
+    const travelerType =
+      normalizeTravelerType(bodyPreferences.travelerType) ||
+      normalizeTravelerType(tripPreferences.travelerType);
+    const originCity =
+      normalizeString(bodyPreferences.originCity, 200) ||
+      normalizeString(tripPreferences.originCity, 200);
+    const originAirport =
+      normalizeString(bodyPreferences.originAirport, 10) ||
+      normalizeString(tripPreferences.originAirport, 10);
+
     // Create a search record in the searches table
     const { data: search, error: searchError } = await adminClient
       .from("searches")
@@ -91,10 +118,8 @@ export async function POST(request: NextRequest, { params }: Params) {
         start_date: trip.start_date,
         end_date: trip.end_date,
         travelers: trip.travelers || 2,
-        traveler_type:
-          ((trip.preferences as Record<string, unknown>)
-            ?.travelerType as string) || null,
-        vibes: trip.vibes || (bodyPreferences.vibes as string[]) || [],
+        traveler_type: travelerType || null,
+        vibes,
         budget: trip.budget_tier || "moderate",
         status: "pending",
       })
@@ -121,8 +146,69 @@ export async function POST(request: NextRequest, { params }: Params) {
       })
       .eq("id", tripId);
 
+    // Store instant preview so loader can render within a few seconds.
+    const previewDays = buildInstantPreview({
+      destination: trip.destination,
+      startDate: trip.start_date,
+      endDate: trip.end_date,
+      travelers: trip.travelers || 2,
+      vibes,
+    });
+    await adminClient.rpc("merge_intermediate_results", {
+      p_search_id: searchId,
+      p_key: "days",
+      p_value: previewDays,
+    });
+    await adminClient.rpc("merge_intermediate_results", {
+      p_search_id: searchId,
+      p_key: "previewReady",
+      p_value: true,
+    });
+
+    // Kick off durable workflow immediately (stream route only observes state).
+    try {
+      await start(planTripWorkflow, [
+        {
+          searchId,
+          tripId,
+          destination: trip.destination,
+          startDate: trip.start_date,
+          endDate: trip.end_date,
+          travelers: trip.travelers || 2,
+          travelerType,
+          vibes,
+          budget: trip.budget_tier || "moderate",
+          originCity,
+          originAirport,
+          userId: userId || undefined,
+        },
+      ]);
+    } catch (workflowError) {
+      const message =
+        workflowError instanceof Error
+          ? workflowError.message
+          : "Workflow failed to start";
+      await Promise.allSettled([
+        adminClient
+          .from("searches")
+          .update({
+            status: "error",
+            error_message: message,
+          })
+          .eq("id", searchId),
+        adminClient
+          .from("trips")
+          .update({
+            status: "failed",
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", tripId),
+      ]);
+      throw workflowError;
+    }
+
     console.log(
-      `[API] Created search ${searchId} for trip ${tripId} — agents will run via stream`,
+      `[API] Created search ${searchId} for trip ${tripId} — workflow started`,
     );
 
     return NextResponse.json({
@@ -229,14 +315,18 @@ export async function GET(request: NextRequest, { params }: Params) {
       "hotels",
       "activities",
       "dining",
+      "transport",
+      "enrichment",
       "aggregator",
     ];
+    const doneWeight = 100 / stages.length;
+    const searchingWeight = doneWeight / 2;
     let progressPercent = 0;
     for (const stage of stages) {
       if (searchProgress[stage] === "done") {
-        progressPercent += 20;
+        progressPercent += doneWeight;
       } else if (searchProgress[stage] === "searching") {
-        progressPercent += 10;
+        progressPercent += searchingWeight;
       }
     }
 
@@ -274,7 +364,7 @@ export async function GET(request: NextRequest, { params }: Params) {
           : search.status === "error"
             ? "failed"
             : "running",
-      progress: Math.min(100, progressPercent),
+      progress: Math.min(100, Math.round(progressPercent)),
       step: currentStep,
       searchProgress,
       message,
@@ -308,10 +398,47 @@ function getStepMessage(step: string, status: string): string {
       searching: "Discovering restaurants...",
       done: "Restaurants found",
     },
+    transport: {
+      searching: "Checking transport options...",
+      done: "Transport options ready",
+    },
+    enrichment: {
+      searching: "Adding local picks...",
+      done: "Local picks added",
+    },
     aggregator: {
       searching: "Crafting your perfect itinerary...",
       done: "Itinerary composed",
     },
   };
   return messages[step]?.[status] || "Processing...";
+}
+
+function normalizeTravelerType(value: unknown): TravelerType | undefined {
+  return typeof value === "string" && TRAVELER_TYPES.has(value as TravelerType)
+    ? (value as TravelerType)
+    : undefined;
+}
+
+function normalizeString(
+  value: unknown,
+  maxLength: number,
+): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const trimmed = value.trim();
+  if (!trimmed || trimmed.length > maxLength) return undefined;
+  return trimmed;
+}
+
+function normalizeStringArray(
+  value: unknown,
+  maxItems: number,
+  maxItemLength: number,
+): string[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  return value
+    .filter((item): item is string => typeof item === "string")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0 && item.length <= maxItemLength)
+    .slice(0, maxItems);
 }

@@ -15,9 +15,9 @@ import type {
   SearchStatusResponse,
   SearchResults,
   SearchProgress,
-} from '@faroway/types';
+} from "@faroway/types";
 
-export type { ApiResponse } from '@faroway/types';
+export type { ApiResponse } from "@faroway/types";
 
 // =============================================================================
 // Client Configuration
@@ -46,7 +46,7 @@ export class FarowayClient {
 
   private async fetch<T>(
     endpoint: string,
-    options: RequestInit = {}
+    options: RequestInit = {},
   ): Promise<ApiResponse<T>> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
@@ -54,12 +54,12 @@ export class FarowayClient {
     try {
       const token = await this.getAuthToken();
       const headers: Record<string, string> = {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...(options.headers as Record<string, string>),
       };
 
       if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
+        headers["Authorization"] = `Bearer ${token}`;
       }
 
       const response = await fetch(`${this.baseUrl}${endpoint}`, {
@@ -74,8 +74,8 @@ export class FarowayClient {
 
       if (!response.ok) {
         return {
-          error: data.error || 'Request failed',
-          code: data.code || 'UNKNOWN_ERROR',
+          error: data.error || "Request failed",
+          code: data.code || "UNKNOWN_ERROR",
         };
       }
 
@@ -84,13 +84,13 @@ export class FarowayClient {
       clearTimeout(timeoutId);
 
       if (error instanceof Error) {
-        if (error.name === 'AbortError') {
-          return { error: 'Request timed out', code: 'TIMEOUT' };
+        if (error.name === "AbortError") {
+          return { error: "Request timed out", code: "TIMEOUT" };
         }
-        return { error: error.message, code: 'NETWORK_ERROR' };
+        return { error: error.message, code: "NETWORK_ERROR" };
       }
 
-      return { error: 'Unknown error occurred', code: 'UNKNOWN_ERROR' };
+      return { error: "Unknown error occurred", code: "UNKNOWN_ERROR" };
     }
   }
 
@@ -99,14 +99,14 @@ export class FarowayClient {
   // ===========================================================================
 
   async getUserProfile(): Promise<ApiResponse<UserProfile>> {
-    return this.fetch<UserProfile>('/api/user/profile');
+    return this.fetch<UserProfile>("/api/user/profile");
   }
 
   async updateUserProfile(
-    updates: Partial<Pick<UserProfile, 'email' | 'subscriptionTier'>>
+    updates: Partial<Pick<UserProfile, "email" | "subscriptionTier">>,
   ): Promise<ApiResponse<UserProfile>> {
-    return this.fetch<UserProfile>('/api/user/profile', {
-      method: 'PATCH',
+    return this.fetch<UserProfile>("/api/user/profile", {
+      method: "PATCH",
       body: JSON.stringify(updates),
     });
   }
@@ -116,7 +116,7 @@ export class FarowayClient {
   // ===========================================================================
 
   async getTrips(): Promise<ApiResponse<{ trips: Trip[] }>> {
-    return this.fetch<{ trips: Trip[] }>('/api/trips');
+    return this.fetch<{ trips: Trip[] }>("/api/trips");
   }
 
   async getTrip(id: string): Promise<ApiResponse<{ trip: Trip }>> {
@@ -131,10 +131,12 @@ export class FarowayClient {
     preferences?: {
       travelerType?: string;
       vibes?: string[];
+      originCity?: string;
+      originAirport?: string;
     };
   }): Promise<ApiResponse<{ trip: Trip }>> {
-    return this.fetch<{ trip: Trip }>('/api/trips', {
-      method: 'POST',
+    return this.fetch<{ trip: Trip }>("/api/trips", {
+      method: "POST",
       body: JSON.stringify({
         destination: trip.destination,
         start_date: trip.startDate,
@@ -147,17 +149,17 @@ export class FarowayClient {
 
   async updateTrip(
     id: string,
-    updates: Partial<Trip>
+    updates: Partial<Trip>,
   ): Promise<ApiResponse<{ trip: Trip }>> {
     return this.fetch<{ trip: Trip }>(`/api/trips/${encodeURIComponent(id)}`, {
-      method: 'PATCH',
+      method: "PATCH",
       body: JSON.stringify(updates),
     });
   }
 
   async deleteTrip(id: string): Promise<ApiResponse<void>> {
     return this.fetch<void>(`/api/trips/${encodeURIComponent(id)}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   }
 
@@ -165,25 +167,31 @@ export class FarowayClient {
   // Search
   // ===========================================================================
 
-  async startSearch(input: SearchInput): Promise<ApiResponse<StartSearchResponse>> {
-    return this.fetch<StartSearchResponse>('/api/search/start', {
-      method: 'POST',
+  async startSearch(
+    input: SearchInput,
+  ): Promise<ApiResponse<StartSearchResponse>> {
+    return this.fetch<StartSearchResponse>("/api/search/start", {
+      method: "POST",
       body: JSON.stringify(input),
     });
   }
 
-  async getSearchStatus(searchId: string): Promise<ApiResponse<SearchStatusResponse>> {
+  async getSearchStatus(
+    searchId: string,
+  ): Promise<ApiResponse<SearchStatusResponse>> {
     if (!searchId || /[^a-zA-Z0-9_-]/.test(searchId)) {
-      return { error: 'Invalid search ID', code: 'INVALID_INPUT' };
+      return { error: "Invalid search ID", code: "INVALID_INPUT" };
     }
-    return this.fetch<SearchStatusResponse>(`/api/search/${encodeURIComponent(searchId)}`);
+    return this.fetch<SearchStatusResponse>(
+      `/api/search/${encodeURIComponent(searchId)}`,
+    );
   }
 
   async pollSearchStatus(
     searchId: string,
     onProgress?: (status: SearchStatusResponse) => void,
     pollInterval = 2000,
-    maxAttempts = 60
+    maxAttempts = 60,
   ): Promise<SearchResults> {
     let attempts = 0;
 
@@ -200,19 +208,19 @@ export class FarowayClient {
         onProgress(status);
       }
 
-      if (status.status === 'completed' && status.results) {
+      if (status.status === "completed" && status.results) {
         return status.results;
       }
 
-      if (status.status === 'error') {
-        throw new Error(status.error || 'Search failed');
+      if (status.status === "error") {
+        throw new Error(status.error || "Search failed");
       }
 
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
+      await new Promise((resolve) => setTimeout(resolve, pollInterval));
       attempts++;
     }
 
-    throw new Error('Search timed out');
+    throw new Error("Search timed out");
   }
 
   // ===========================================================================
@@ -220,17 +228,17 @@ export class FarowayClient {
   // ===========================================================================
 
   async trackAffiliateClick(
-    params: TrackClickParams
+    params: TrackClickParams,
   ): Promise<ApiResponse<TrackClickResponse>> {
-    return this.fetch<TrackClickResponse>('/api/track/click', {
-      method: 'POST',
+    return this.fetch<TrackClickResponse>("/api/track/click", {
+      method: "POST",
       body: JSON.stringify(params),
     });
   }
 
   async openAffiliateLink(
     params: TrackClickParams,
-    openUrl: (url: string) => void
+    openUrl: (url: string) => void,
   ): Promise<void> {
     const result = await this.trackAffiliateClick(params);
 
@@ -247,35 +255,51 @@ export class FarowayClient {
 // =============================================================================
 
 export function calculateProgressPercent(progress: SearchProgress): number {
-  const stages = ['orchestrator', 'hotels', 'activities', 'dining', 'aggregator'] as const;
+  const stages = [
+    "orchestrator",
+    "hotels",
+    "activities",
+    "dining",
+    "transport",
+    "enrichment",
+    "aggregator",
+  ] as const;
+  const doneWeight = 100 / stages.length;
+  const searchingWeight = doneWeight / 2;
   let completed = 0;
 
   for (const stage of stages) {
-    if (progress[stage] === 'done') {
-      completed += 20;
-    } else if (progress[stage] === 'searching') {
-      completed += 10;
+    if (progress[stage] === "done") {
+      completed += doneWeight;
+    } else if (progress[stage] === "searching") {
+      completed += searchingWeight;
     }
   }
 
-  return Math.min(100, completed);
+  return Math.min(100, Math.round(completed));
 }
 
 export function getStatusMessage(progress: SearchProgress): string {
-  if (progress.aggregator === 'searching' || progress.aggregator === 'done') {
-    return 'Creating your perfect itinerary...';
+  if (progress.aggregator === "searching" || progress.aggregator === "done") {
+    return "Creating your perfect itinerary...";
   }
-  if (progress.dining === 'searching') {
-    return 'Finding the best restaurants...';
+  if (progress.dining === "searching") {
+    return "Finding the best restaurants...";
   }
-  if (progress.activities === 'searching') {
-    return 'Discovering activities & attractions...';
+  if (progress.enrichment === "searching") {
+    return "Adding local gems...";
   }
-  if (progress.hotels === 'searching') {
-    return 'Searching for hotels...';
+  if (progress.transport === "searching") {
+    return "Searching for flights...";
   }
-  if (progress.orchestrator === 'searching') {
-    return 'Understanding your preferences...';
+  if (progress.activities === "searching") {
+    return "Discovering activities & attractions...";
   }
-  return 'Starting your search...';
+  if (progress.hotels === "searching") {
+    return "Searching for hotels...";
+  }
+  if (progress.orchestrator === "searching") {
+    return "Understanding your preferences...";
+  }
+  return "Starting your search...";
 }
