@@ -34,14 +34,14 @@ export interface User {
   email: string;
   name?: string;
   authProvider?: string;
-  subscriptionTier?: 'free' | 'pro' | 'premium';
+  subscriptionTier?: "free" | "pro" | "premium";
   created_at?: string;
   updated_at?: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
-export type UserPublic = Omit<User, 'password_hash'>;
+export type UserPublic = Omit<User, "password_hash">;
 
 export interface UserProfile {
   id: string;
@@ -49,7 +49,7 @@ export interface UserProfile {
   name?: string;
   avatar?: string;
   authProvider: string;
-  subscriptionTier: 'free' | 'pro' | 'premium';
+  subscriptionTier: "free" | "pro" | "premium";
   preferences?: {
     vibes?: string[];
     budget?: string;
@@ -70,14 +70,17 @@ export interface UserProfile {
  * Mobile statuses: draft, planned, active, completed
  */
 export type TripStatus =
-  | 'draft'
-  | 'planning'
-  | 'planned'
-  | 'booked'
-  | 'active'
-  | 'in_progress'
-  | 'completed'
-  | 'cancelled';
+  | "draft"
+  | "planning"
+  | "planned"
+  | "generating"
+  | "generated"
+  | "failed"
+  | "booked"
+  | "active"
+  | "in_progress"
+  | "completed"
+  | "cancelled";
 
 export interface Trip {
   id: string;
@@ -111,8 +114,10 @@ export interface CreateTripInput {
   status?: TripStatus;
   travelers?: number;
   preferences?: {
-    travelerType?: string;
+    travelerType?: TravelerType;
     vibes?: string[];
+    originCity?: string;
+    originAirport?: string;
   };
 }
 
@@ -128,15 +133,25 @@ export interface UpdateTripInput {
 // Travel Style & Preferences
 // =============================================================================
 
-export type TravelStyle = 'budget' | 'mid_range' | 'luxury' | 'backpacker' | 'business';
+export type TravelStyle =
+  | "budget"
+  | "mid_range"
+  | "luxury"
+  | "backpacker"
+  | "business";
 
-export type BudgetLevel = 'budget' | 'moderate' | 'luxury';
+export type BudgetLevel = "budget" | "moderate" | "luxury";
 
-export type TravelerType = 'solo' | 'couple' | 'family' | 'friends' | 'business';
+export type TravelerType =
+  | "solo"
+  | "couple"
+  | "family"
+  | "friends"
+  | "business";
 
-export type TimeOfDay = 'morning' | 'afternoon' | 'evening';
+export type TimeOfDay = "morning" | "afternoon" | "evening";
 
-export type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+export type MealType = "breakfast" | "lunch" | "dinner" | "snack";
 
 export interface Preferences {
   id: string;
@@ -194,7 +209,13 @@ export interface ItineraryActivity {
     currency: string;
   };
   timeOfDay: TimeOfDay;
-  category: 'sightseeing' | 'adventure' | 'cultural' | 'relaxation' | 'entertainment' | 'shopping';
+  category:
+    | "sightseeing"
+    | "adventure"
+    | "cultural"
+    | "relaxation"
+    | "entertainment"
+    | "shopping";
   location: {
     name: string;
     address?: string;
@@ -251,7 +272,7 @@ export interface Restaurant {
 }
 
 export interface TripDayTransport {
-  type: 'flight' | 'train' | 'bus' | 'ferry';
+  type: "flight" | "train" | "bus" | "ferry";
   provider: string;
   departure: { airport: string; city: string; dateTime: string };
   arrival: { airport: string; city: string; dateTime: string };
@@ -311,7 +332,7 @@ export interface ItineraryGenerationRequest {
 }
 
 export interface StreamingProgress {
-  status: 'started' | 'processing' | 'completed' | 'error';
+  status: "started" | "processing" | "completed" | "error";
   currentDay?: number;
   totalDays: number;
   message: string;
@@ -341,9 +362,9 @@ export interface SearchInput {
   originAirport?: string;
 }
 
-export type SearchStatus = 'pending' | 'searching' | 'completed' | 'error';
+export type SearchStatus = "pending" | "searching" | "completed" | "error";
 
-export type AgentStatus = 'pending' | 'searching' | 'done' | 'error';
+export type AgentStatus = "pending" | "searching" | "done" | "error";
 
 export interface SearchProgress {
   orchestrator: AgentStatus;
@@ -351,6 +372,7 @@ export interface SearchProgress {
   activities: AgentStatus;
   dining: AgentStatus;
   transport: AgentStatus;
+  enrichment?: AgentStatus;
   aggregator: AgentStatus;
 }
 
@@ -381,7 +403,7 @@ export interface SearchPlan {
     end: string;
     nights: number;
   };
-  searchPriorities: ('hotels' | 'activities' | 'dining' | 'transport')[];
+  searchPriorities: ("hotels" | "activities" | "dining" | "transport")[];
   hotelCriteria: {
     priceRange: { min: number; max: number };
     starRating: number[];
@@ -390,15 +412,15 @@ export interface SearchPlan {
   };
   activityCriteria: {
     categories: string[];
-    pacePreference: 'relaxed' | 'moderate' | 'packed';
+    pacePreference: "relaxed" | "moderate" | "packed";
     mustSee: string[];
     interests: string[];
   };
   diningCriteria: {
     cuisineTypes: string[];
-    priceRange: 'budget' | 'moderate' | 'upscale';
+    priceRange: "budget" | "moderate" | "upscale";
     dietaryNeeds: string[];
-    mealPriorities: ('breakfast' | 'lunch' | 'dinner')[];
+    mealPriorities: ("breakfast" | "lunch" | "dinner")[];
   };
   vibeInterpretation: {
     vibes: string[];
@@ -409,7 +431,7 @@ export interface SearchPlan {
     originCity?: string;
     originAirport?: string;
     destinationAirport?: string;
-    cabinClass: 'economy' | 'premium_economy' | 'business' | 'first';
+    cabinClass: "economy" | "premium_economy" | "business" | "first";
     maxStops: number;
     maxPrice?: number;
     preferredAirlines?: string[];
@@ -457,7 +479,7 @@ export interface ActivityResult {
   images: string[];
   affiliateUrl?: string;
   affiliatePartner?: string;
-  bestTimeOfDay: 'morning' | 'afternoon' | 'evening' | 'any';
+  bestTimeOfDay: "morning" | "afternoon" | "evening" | "any";
   vibeScore: number;
   vibeMatch: string[];
   bookingRequired: boolean;
@@ -478,7 +500,7 @@ export interface DiningResult {
   images: string[];
   reservationUrl?: string;
   affiliatePartner?: string;
-  mealTypes: ('breakfast' | 'lunch' | 'dinner')[];
+  mealTypes: ("breakfast" | "lunch" | "dinner")[];
   vibeScore: number;
   vibeMatch: string[];
   dietaryOptions: string[];
@@ -502,7 +524,7 @@ export interface TransportSegment {
 
 export interface TransportResult {
   id: string;
-  type: 'flight' | 'train' | 'bus' | 'ferry';
+  type: "flight" | "train" | "bus" | "ferry";
   provider: string;
   departure: {
     airport: string;
@@ -520,12 +542,12 @@ export interface TransportResult {
   stops: number;
   price: number;
   currency: string;
-  cabinClass?: 'economy' | 'premium_economy' | 'business' | 'first';
+  cabinClass?: "economy" | "premium_economy" | "business" | "first";
   airlines: string[];
   segments: TransportSegment[];
   affiliateUrl: string;
   affiliatePartner: string;
-  source: 'amadeus' | 'duffel';
+  source: "amadeus" | "duffel";
   vibeScore: number;
   vibeMatch: string[];
 }
@@ -570,7 +592,7 @@ export interface SuggestedDay {
 export interface StartSearchResponse {
   searchId: string;
   workflowRunId: string;
-  status: 'started';
+  status: "started";
   estimatedTime: number;
 }
 
@@ -590,7 +612,7 @@ export interface SearchStatusResponse {
 // =============================================================================
 
 export interface TrackClickParams {
-  itemType: 'hotel' | 'activity' | 'restaurant' | 'flight' | 'transport';
+  itemType: "hotel" | "activity" | "restaurant" | "flight" | "transport";
   itemId: string;
   itemName: string;
   affiliatePartner: string;
@@ -599,7 +621,7 @@ export interface TrackClickParams {
   tripId?: string;
   price?: number;
   currency?: string;
-  source?: 'search_results' | 'trip_view' | 'itinerary' | 'email';
+  source?: "search_results" | "trip_view" | "itinerary" | "email";
 }
 
 export interface TrackClickResponse {

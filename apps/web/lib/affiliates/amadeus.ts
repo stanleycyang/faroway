@@ -14,6 +14,7 @@
 
 // @ts-expect-error -- amadeus SDK has no type declarations
 import Amadeus from "amadeus";
+import { withTimeout } from "@/lib/search/runtime";
 
 // Environment variables
 const AMADEUS_CLIENT_ID = process.env.AMADEUS_CLIENT_ID;
@@ -22,6 +23,10 @@ const AMADEUS_ENV = process.env.AMADEUS_ENV || "test";
 
 // Lazy-initialized SDK instance
 let amadeusClient: Amadeus | null = null;
+
+type AmadeusApiResponse<T> = {
+  data?: T[];
+};
 
 /**
  * Get or create the Amadeus SDK client (lazy singleton).
@@ -119,6 +124,82 @@ export function isAmadeusConfigured(): boolean {
   return !!(AMADEUS_CLIENT_ID && AMADEUS_CLIENT_SECRET);
 }
 
+const AMADEUS_CITY_CODES: Record<string, string> = {
+  amsterdam: "AMS",
+  athens: "ATH",
+  bali: "DPS",
+  bangkok: "BKK",
+  barcelona: "BCN",
+  berlin: "BER",
+  boston: "BOS",
+  "buenos aires": "BUE",
+  cairo: "CAI",
+  "cape town": "CPT",
+  chicago: "CHI",
+  copenhagen: "CPH",
+  dubai: "DXB",
+  dublin: "DUB",
+  florence: "FLR",
+  hongkong: "HKG",
+  "hong kong": "HKG",
+  honolulu: "HNL",
+  iceland: "REK",
+  istanbul: "IST",
+  kyoto: "OSA",
+  lisbon: "LIS",
+  london: "LON",
+  "los angeles": "LAX",
+  madrid: "MAD",
+  miami: "MIA",
+  milan: "MIL",
+  montreal: "YMQ",
+  "new york": "NYC",
+  osaka: "OSA",
+  paris: "PAR",
+  prague: "PRG",
+  reykjavik: "REK",
+  rome: "ROM",
+  "san francisco": "SFO",
+  santorini: "JTR",
+  seoul: "SEL",
+  singapore: "SIN",
+  sydney: "SYD",
+  tokyo: "TYO",
+  toronto: "YTO",
+  venice: "VCE",
+  vienna: "VIE",
+  zurich: "ZRH",
+};
+
+function normalizeDestinationName(destination: string): string {
+  return destination
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\([^)]*\)/g, " ")
+    .split(",")[0]
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Resolve the city code Amadeus expects for hotel search.
+ *
+ * Amadeus hotel APIs use metropolitan/IATA city codes, which are not always
+ * the first three letters of the city name (Tokyo is TYO, New York is NYC).
+ */
+export function resolveAmadeusCityCode(destination: string): string {
+  const normalized = normalizeDestinationName(destination);
+  const mapped = AMADEUS_CITY_CODES[normalized];
+  if (mapped) return mapped;
+
+  return normalized
+    .replace(/[^a-z]/g, "")
+    .slice(0, 3)
+    .toUpperCase();
+}
+
 // ──────────────────────────────────────────
 // Flight search
 // ──────────────────────────────────────────
@@ -163,8 +244,20 @@ export async function searchAmadeusFlights(
     if (params.cabinClass) {
       searchParams.travelClass = params.cabinClass;
     }
+    if (params.maxPrice) {
+      searchParams.maxPrice = params.maxPrice;
+    }
+    if (params.maxStops === 0) {
+      searchParams.nonStop = true;
+    }
 
-    const response = await client.shopping.flightOffersSearch.get(searchParams);
+    const response = await withTimeout<AmadeusApiResponse<unknown>>(
+      client.shopping.flightOffersSearch.get(searchParams) as Promise<
+        AmadeusApiResponse<unknown>
+      >,
+      undefined,
+      "Amadeus flight search",
+    );
     const offers = response.data || [];
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -263,10 +356,13 @@ export async function searchAmadeusHotels(
     const limit = params.limit || 20;
 
     // Step 1: Get hotel IDs by city code
-    const hotelListResponse =
-      await client.referenceData.locations.hotels.byCity.get({
+    const hotelListResponse = await withTimeout<AmadeusApiResponse<unknown>>(
+      client.referenceData.locations.hotels.byCity.get({
         cityCode: params.cityCode,
-      });
+      }) as Promise<AmadeusApiResponse<unknown>>,
+      undefined,
+      "Amadeus hotel list search",
+    );
 
     const hotelEntries = hotelListResponse.data || [];
     if (hotelEntries.length === 0) {
@@ -281,12 +377,16 @@ export async function searchAmadeusHotels(
       .map((entry: any) => entry.hotelId);
 
     // Step 2: Fetch offers for those hotels
-    const offersResponse = await client.shopping.hotelOffersSearch.get({
-      hotelIds: hotelIds.join(","),
-      adults: params.adults,
-      checkInDate: params.checkIn,
-      checkOutDate: params.checkOut,
-    });
+    const offersResponse = await withTimeout<AmadeusApiResponse<unknown>>(
+      client.shopping.hotelOffersSearch.get({
+        hotelIds: hotelIds.join(","),
+        adults: params.adults,
+        checkInDate: params.checkIn,
+        checkOutDate: params.checkOut,
+      }) as Promise<AmadeusApiResponse<unknown>>,
+      undefined,
+      "Amadeus hotel offer search",
+    );
 
     const hotelOffers = offersResponse.data || [];
 
@@ -362,6 +462,8 @@ export function generateAmadeusAffiliateUrl(
   params: Record<string, string>,
   _trackingId: string,
 ): string {
+  void _trackingId;
+
   if (type === "flight") {
     // Link to Google Flights since Amadeus is B2B — no consumer booking page
     const origin = params.origin || "";

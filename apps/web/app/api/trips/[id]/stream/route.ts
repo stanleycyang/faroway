@@ -1,8 +1,8 @@
 /**
- * POST /api/trips/[id]/stream — Direct-streaming trip generation
+ * POST /api/trips/[id]/stream — Observe durable generation via SSE
  *
- * Runs the multi-agent pipeline directly and streams SSE events as results
- * arrive. This eliminates the DB-polling latency of the old GET handler.
+ * Streams progress and intermediate results from DB while the durable workflow
+ * runs in the background.
  *
  * GET /api/trips/[id]/stream — Lightweight DB-polling fallback
  *
@@ -23,22 +23,15 @@
 
 import { NextRequest } from "next/server";
 import { createClient, getSupabase } from "@/lib/supabase/server";
-import { executeTravelSearch } from "@/lib/search/workflow";
-import {
-  mapSearchResultsToItinerary,
-  type MappedItinerary,
-} from "@/lib/search/bridge";
 import {
   buildSummaryBlocks,
   buildHotelBlocks,
   buildItineraryBlocks,
   buildBudgetBlocks,
-  type JsonRenderComponent,
   type HotelInput,
   type ActivityInput,
   type ItineraryDayInput,
 } from "@/lib/json-render/build-spec";
-import type { SearchInput, TravelerType } from "@faroway/types";
 
 export const maxDuration = 300;
 
@@ -68,6 +61,8 @@ const STAGES = [
   "hotels",
   "activities",
   "dining",
+  "transport",
+  "enrichment",
   "aggregator",
 ] as const;
 
@@ -88,6 +83,14 @@ const STEP_MESSAGES: Record<string, Record<string, string>> = {
     searching: "Discovering restaurants...",
     done: "Restaurants found",
   },
+  transport: {
+    searching: "Checking transport options...",
+    done: "Transport options ready",
+  },
+  enrichment: {
+    searching: "Adding local non-bookable gems...",
+    done: "Local picks added",
+  },
   aggregator: {
     searching: "Crafting your perfect itinerary...",
     done: "Itinerary composed",
@@ -96,12 +99,14 @@ const STEP_MESSAGES: Record<string, Record<string, string>> = {
 };
 
 function calcPercent(sp: Record<string, string>): number {
+  const doneWeight = 100 / STAGES.length;
+  const searchingWeight = doneWeight / 2;
   let p = 0;
   for (const stage of STAGES) {
-    if (sp[stage] === "done") p += 20;
-    else if (sp[stage] === "searching") p += 10;
+    if (sp[stage] === "done") p += doneWeight;
+    else if (sp[stage] === "searching") p += searchingWeight;
   }
-  return Math.min(100, p);
+  return Math.min(100, Math.round(p));
 }
 
 function getCurrentStage(sp: Record<string, string>): string {
@@ -114,8 +119,26 @@ function getCurrentStage(sp: Record<string, string>): string {
 
 type DB = ReturnType<typeof getSupabase>;
 type SendFn = (event: string, data: unknown) => void;
+type TripStreamMeta = {
+  destination: string;
+  startDate: string;
+  endDate: string;
+  travelers: number;
+  budget?: string;
+};
+type SearchStreamRecord = {
+  status: string;
+  progress: Record<string, string> | null;
+  error_message: string | null;
+  intermediate_results?: Record<string, unknown> | null;
+  json_render_spec?: unknown;
+};
+type SearchQueryResult = {
+  search: SearchStreamRecord | null;
+  error: { code?: string; message?: string } | null;
+};
 
-// ─── POST: Direct streaming generation ────────────────────────────────────────
+// ─── POST: Observe generation state ───────────────────────────────────────────
 
 export async function POST(request: NextRequest, { params }: Params) {
   const { id: tripId } = await params;
@@ -156,33 +179,8 @@ export async function POST(request: NextRequest, { params }: Params) {
       };
 
       try {
-        if (trip.status === "generated") {
-          send("progress", {
-            step: "complete",
-            progress: 100,
-            message: "Your itinerary is ready!",
-          });
-          send("complete", { tripId });
-          controller.close();
-          return;
-        }
-
         const searchId = trip.search_id;
-        if (!searchId) {
-          send("error", {
-            message: "No search linked to this trip. Please try again.",
-          });
-          controller.close();
-          return;
-        }
-
-        const { data: search } = await db
-          .from("searches")
-          .select("status")
-          .eq("id", searchId)
-          .single();
-
-        if (search?.status === "completed") {
+        if (trip.status === "generated" && !searchId) {
           send("progress", {
             step: "complete",
             progress: 100,
@@ -193,56 +191,18 @@ export async function POST(request: NextRequest, { params }: Params) {
           return;
         }
 
-        if (search?.status === "error") {
-          send("error", {
-            message: "Generation previously failed. Please retry.",
+        if (!searchId) {
+          send("progress", {
+            step: "waiting",
+            status: "pending",
+            progress: 0,
+            message: "Waiting for generation to start...",
           });
           controller.close();
           return;
         }
 
-        // Atomic claim — only one stream runs agents at a time
-        const { data: claimed } = await db
-          .from("searches")
-          .update({
-            status: "searching",
-            progress: {
-              orchestrator: "searching",
-              hotels: "pending",
-              activities: "pending",
-              dining: "pending",
-              aggregator: "pending",
-            },
-          })
-          .eq("id", searchId)
-          .eq("status", "pending")
-          .select("id")
-          .single();
-
-        if (!claimed) {
-          await pollAndStream(controller, send, db, searchId, tripId, request);
-          return;
-        }
-
-        // ── Run agents directly ────────────────────────────────────
-
-        const searchInput: SearchInput = {
-          destination: trip.destination,
-          startDate: trip.start_date,
-          endDate: trip.end_date,
-          travelers: trip.travelers || 2,
-          vibes: trip.vibes || [],
-          budget:
-            (trip.budget_tier as "budget" | "moderate" | "luxury") ||
-            "moderate",
-          travelerType: (trip.preferences as Record<string, unknown>)
-            ?.travelerType as TravelerType | undefined,
-        };
-
-        // Track accumulated json-render blocks for progressive mobile streaming
-        const accumulatedBlocks: JsonRenderComponent[] = [];
-
-        // Send initial summary block immediately
+        // Keep mobile progressive contract: emit initial summary block.
         const summaryBlocks = buildSummaryBlocks({
           destination: trip.destination,
           startDate: trip.start_date,
@@ -250,251 +210,24 @@ export async function POST(request: NextRequest, { params }: Params) {
           travelers: trip.travelers || 2,
           budget: trip.budget_tier || undefined,
         });
-        accumulatedBlocks.push(...summaryBlocks);
         send("spec-block", { blocks: summaryBlocks });
 
-        const progressState: Record<string, string> = {
-          orchestrator: "pending",
-          hotels: "pending",
-          activities: "pending",
-          dining: "pending",
-          aggregator: "pending",
-        };
-
-        const onProgress = async (
-          stage: string,
-          status: "searching" | "done",
-        ) => {
-          if (request.signal.aborted) return;
-          progressState[stage] = status;
-
-          send("progress", {
-            step: stage,
-            status,
-            progress: calcPercent(progressState),
-            message: STEP_MESSAGES[stage]?.[status] || "Processing...",
-            searchProgress: { ...progressState },
-          });
-
-          db.from("searches")
-            .update({ progress: { ...progressState } })
-            .eq("id", searchId)
-            .then(() => {});
-        };
-
-        // Micro-progress for more granular feedback
-        const onMicroProgress = (data: {
-          stage: string;
-          message: string;
-          detail?: string;
-        }) => {
-          if (request.signal.aborted) return;
-          send("micro", data);
-        };
-
-        // Track agent results for budget calculation
-        let _capturedHotels: HotelInput[] = [];
-        let capturedActivities: ActivityInput[] = [];
-        let capturedTopHotel: HotelInput | undefined;
-
-        const onAgentResult = async (stage: string, data: unknown) => {
-          if (request.signal.aborted) return;
-
-          if (stage === "hotels") {
-            const hotels = data as HotelInput[];
-            _capturedHotels = hotels;
-            const topHotel = hotels[0] || null;
-            capturedTopHotel = topHotel || undefined;
-
-            send("hotels", { topHotel, count: hotels.length });
-
-            // Send hotel spec-block for mobile
-            const hotelBlocks = buildHotelBlocks({
-              topHotel: topHotel || undefined,
-              otherHotels: hotels.slice(1),
-            });
-            accumulatedBlocks.push(...hotelBlocks);
-            send("spec-block", { blocks: hotelBlocks });
-          } else if (stage === "activities") {
-            capturedActivities = data as ActivityInput[];
-            send("activities", { count: capturedActivities.length });
-          } else if (stage === "dining") {
-            send("dining", { count: (data as unknown[]).length });
-          } else if (stage === "aggregator") {
-            const itineraryData = data as {
-              days?: ItineraryDayInput[];
-              topHotel?: HotelInput;
-              totalEstimatedCost?: number;
-            };
-            send("itinerary", data);
-
-            // Send itinerary spec-block for mobile
-            const days = itineraryData.days || [];
-            const itineraryBlocks = buildItineraryBlocks(days);
-            accumulatedBlocks.push(...itineraryBlocks);
-            send("spec-block", { blocks: itineraryBlocks });
-
-            // Send budget spec-block for mobile
-            const nights = Math.ceil(
-              (new Date(trip.end_date).getTime() -
-                new Date(trip.start_date).getTime()) /
-                (1000 * 60 * 60 * 24),
-            );
-            const budgetBlocks = buildBudgetBlocks({
-              topHotel: capturedTopHotel || itineraryData.topHotel,
-              activities: capturedActivities,
-              totalEstimatedCost: itineraryData.totalEstimatedCost || 0,
-              nights,
-              currency: "USD",
-            });
-            accumulatedBlocks.push(...budgetBlocks);
-            send("spec-block", { blocks: budgetBlocks });
-          }
-        };
-
-        const searchResult = await executeTravelSearch(searchId, searchInput, {
-          onProgress,
-          onAgentResult,
-          onMicroProgress,
-        });
-
-        if (searchResult.status === "error" || !searchResult.results) {
-          const errorMsg = searchResult.error || "Generation failed";
-          send("error", { message: errorMsg });
-
-          await Promise.allSettled([
-            db
-              .from("searches")
-              .update({ status: "error", error_message: errorMsg })
-              .eq("id", searchId),
-            db
-              .from("trips")
-              .update({
-                status: "failed",
-                updated_at: new Date().toISOString(),
-              })
-              .eq("id", tripId),
-          ]);
-
-          controller.close();
-          return;
-        }
-
-        // ── Save results ───────────────────────────────────────────
-
-        send("progress", {
-          step: "saving",
-          progress: 95,
-          message: "Saving your itinerary...",
-          searchProgress: progressState,
-        });
-
-        const results = searchResult.results;
-        const topHotel =
-          results.itinerary?.[0]?.hotel || results.hotels[0] || null;
-        const mapped = mapSearchResultsToItinerary(results, topHotel);
-
-        const itineraryDays = mapped.days.map((day) => ({
-          dayNumber: day.dayNumber,
-          date: day.date,
-          title: day.title,
-          summary: day.summary || `Day ${day.dayNumber}`,
-          morning: day.morning,
-          afternoon: day.afternoon,
-          evening: day.evening,
-          totalEstimatedCost: day.totalEstimatedCost,
-          tips: day.tips || [],
-        }));
-
-        const { data: savedItinerary } = await db
-          .from("itineraries")
-          .insert({
-            trip_id: tripId,
-            user_id: userId || null,
+        await pollAndStream(
+          controller,
+          send,
+          db,
+          searchId,
+          tripId,
+          {
             destination: trip.destination,
-            start_date: trip.start_date,
-            end_date: trip.end_date,
-            overview: `Your personalized trip to ${trip.destination}`,
-            total_cost: mapped.totalEstimatedCost || 0,
-            days: itineraryDays,
-            packing_list: [],
-            general_tips: [],
-            generated_at: new Date().toISOString(),
-          })
-          .select("id")
-          .single();
-
-        await Promise.all([
-          db
-            .from("searches")
-            .update({
-              status: "completed",
-              completed_at: new Date().toISOString(),
-              intermediate_results: null,
-              progress: {
-                orchestrator: "done",
-                hotels: "done",
-                activities: "done",
-                dining: "done",
-                aggregator: "done",
-              },
-            })
-            .eq("id", searchId),
-
-          db
-            .from("trips")
-            .update({
-              status: "generated",
-              itinerary_id: savedItinerary?.id || null,
-              updated_at: new Date().toISOString(),
-            })
-            .eq("id", tripId),
-        ]);
-
-        // Send full spec for caching/fallback (mobile can use this if blocks were missed)
-        send("spec-complete", { spec: accumulatedBlocks });
-
-        // Non-critical saves (including json-render spec for mobile polling fallback)
-        Promise.allSettled([
-          saveSearchResults(db, searchId, mapped),
-          db
-            .from("searches")
-            .update({ json_render_spec: accumulatedBlocks })
-            .eq("id", searchId),
-          db.from("workflow_progress").upsert(
-            {
-              trip_id: tripId,
-              step: "complete",
-              progress: 100,
-              message: "Your itinerary is ready!",
-              updated_at: new Date().toISOString(),
-            },
-            { onConflict: "trip_id" },
-          ),
-          ...(userId && savedItinerary
-            ? [
-                db.from("notifications").insert({
-                  user_id: userId,
-                  type: "itinerary_ready",
-                  title: "Your Itinerary is Ready!",
-                  message: `Your trip itinerary to ${trip.destination} has been generated.`,
-                  data: {
-                    trip_id: tripId,
-                    itinerary_id: savedItinerary.id,
-                    search_id: searchId,
-                  },
-                  read: false,
-                }),
-              ]
-            : []),
-        ]).catch(() => {});
-
-        send("progress", {
-          step: "complete",
-          progress: 100,
-          message: "Your itinerary is ready!",
-        });
-        send("complete", { tripId });
+            startDate: trip.start_date,
+            endDate: trip.end_date,
+            travelers: trip.travelers || 2,
+            budget: trip.budget_tier || undefined,
+          },
+          request,
+        );
+        return;
       } catch (error) {
         const msg = error instanceof Error ? error.message : "Stream error";
         console.error(`[Stream POST] Error for trip ${tripId}:`, error);
@@ -555,7 +288,7 @@ export async function GET(request: NextRequest, { params }: Params) {
       };
 
       try {
-        if (trip.status === "generated") {
+        if (trip.status === "generated" && !trip.search_id) {
           send("progress", {
             step: "complete",
             progress: 100,
@@ -583,6 +316,7 @@ export async function GET(request: NextRequest, { params }: Params) {
           db,
           trip.search_id,
           tripId,
+          null,
           request,
         );
       } catch (error) {
@@ -612,31 +346,44 @@ async function pollAndStream(
   db: DB,
   searchId: string,
   tripId: string,
+  tripMeta: TripStreamMeta | null,
   request: NextRequest,
 ) {
   let lastProgressJson = "";
+  let clientDisconnected = false;
+  let terminalEventSent = false;
   let sentHotels = false;
   let sentActivities = false;
   let sentDining = false;
-  let sentItinerary = false;
+  let sentTransport = false;
+  let sentSpecComplete = false;
+  let lastItineraryJson = "";
   const MAX_POLLS = 180;
 
   for (let i = 0; i < MAX_POLLS; i++) {
-    if (request.signal.aborted) break;
+    if (request.signal.aborted) {
+      clientDisconnected = true;
+      break;
+    }
 
-    const { data: search } = await db
-      .from("searches")
-      .select("status, progress, error_message, intermediate_results")
-      .eq("id", searchId)
-      .single();
+    const { search, error } = await loadSearchForStream(db, searchId);
+
+    if (error) {
+      console.error("[Stream] Failed to read search progress:", error);
+      send("error", { message: "Unable to read search progress" });
+      terminalEventSent = true;
+      break;
+    }
 
     if (!search) {
       send("error", { message: "Search record not found" });
+      terminalEventSent = true;
       break;
     }
 
     if (search.status === "error") {
       send("error", { message: search.error_message || "Generation failed" });
+      terminalEventSent = true;
       break;
     }
 
@@ -657,11 +404,16 @@ async function pollAndStream(
     const ir = (search.intermediate_results || {}) as Record<string, unknown>;
 
     if (!sentHotels && ir.hotels) {
-      const hotels = ir.hotels as unknown[];
+      const hotels = ir.hotels as HotelInput[];
       send("hotels", {
         topHotel: ir.topHotel || hotels[0] || null,
         count: hotels.length,
       });
+      const blocks = buildHotelBlocks({
+        topHotel: (ir.topHotel as HotelInput | undefined) || hotels[0],
+        otherHotels: hotels.slice(1),
+      });
+      if (blocks.length > 0) send("spec-block", { blocks });
       sentHotels = true;
     }
     if (!sentActivities && ir.activitiesCount != null) {
@@ -672,9 +424,52 @@ async function pollAndStream(
       send("dining", { count: ir.diningCount });
       sentDining = true;
     }
-    if (!sentItinerary && ir.days) {
-      send("itinerary", { days: ir.days, topHotel: ir.topHotel || null });
-      sentItinerary = true;
+    if (!sentTransport && ir.transportCount != null) {
+      send("transport", { count: ir.transportCount });
+      sentTransport = true;
+    }
+    if (ir.days != null) {
+      const days = normalizeItineraryDays(ir.days);
+      if (!days) {
+        send("error", { message: "Malformed itinerary partial output" });
+        terminalEventSent = true;
+        break;
+      }
+      const itineraryJson = JSON.stringify(days);
+      if (itineraryJson !== lastItineraryJson) {
+        lastItineraryJson = itineraryJson;
+        send("itinerary", { days, topHotel: ir.topHotel || null });
+        const itineraryBlocks = buildItineraryBlocks(days);
+        if (itineraryBlocks.length > 0) {
+          send("spec-block", { blocks: itineraryBlocks });
+        }
+        if (tripMeta) {
+          const nights = Math.ceil(
+            (new Date(tripMeta.endDate).getTime() -
+              new Date(tripMeta.startDate).getTime()) /
+              (1000 * 60 * 60 * 24),
+          );
+          const budgetBlocks = buildBudgetBlocks({
+            topHotel: (ir.topHotel as HotelInput | undefined) || undefined,
+            activities: ((ir.activities as ActivityInput[]) || []).slice(0, 20),
+            totalEstimatedCost: 0,
+            nights,
+            currency: "USD",
+          });
+          if (budgetBlocks.length > 0) {
+            send("spec-block", { blocks: budgetBlocks });
+          }
+        }
+      }
+    }
+    if (!sentSpecComplete && search.json_render_spec != null) {
+      if (!Array.isArray(search.json_render_spec)) {
+        send("error", { message: "Malformed json-render spec output" });
+        terminalEventSent = true;
+        break;
+      }
+      send("spec-complete", { spec: search.json_render_spec });
+      sentSpecComplete = true;
     }
 
     if (search.status === "completed") {
@@ -688,11 +483,24 @@ async function pollAndStream(
       return;
     }
 
-    await new Promise((r) => setTimeout(r, 1000));
+    const shouldContinue = await waitForNextPoll(1000, request.signal);
+    if (!shouldContinue) {
+      clientDisconnected = true;
+      break;
+    }
   }
 
-  if (!lastProgressJson.includes('"completed"')) {
-    send("error", { message: "Generation timed out" });
+  if (
+    !clientDisconnected &&
+    !terminalEventSent &&
+    !lastProgressJson.includes('"completed"')
+  ) {
+    send("progress", {
+      step: "running",
+      status: "searching",
+      progress: 99,
+      message: "Still generating in background. Reconnect for updates.",
+    });
   }
 
   try {
@@ -702,51 +510,77 @@ async function pollAndStream(
   }
 }
 
-// ─── Save helpers ─────────────────────────────────────────────────────────────
+function normalizeItineraryDays(value: unknown): ItineraryDayInput[] | null {
+  if (Array.isArray(value)) return value as ItineraryDayInput[];
+  if (typeof value !== "string") return null;
 
-async function saveSearchResults(
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return Array.isArray(parsed) ? (parsed as ItineraryDayInput[]) : null;
+  } catch {
+    return null;
+  }
+}
+
+async function loadSearchForStream(
   db: DB,
   searchId: string,
-  result: MappedItinerary,
-) {
-  const rows = [
-    ...(result.hotels || []).map((h) => ({
-      search_id: searchId,
-      category: "hotel" as const,
-      name: h.name,
-      description: `${h.userRating?.toFixed(1) || "?"} stars, ${h.reviewCount || 0} reviews`,
-      data: h,
-      affiliate_url: h.affiliateUrl,
-      affiliate_partner: h.affiliatePartner,
-      price_amount: h.pricePerNight,
-      price_currency: h.currency || "USD",
-      rating: h.userRating,
-    })),
-    ...(result.activities || []).map((a) => ({
-      search_id: searchId,
-      category: "activity" as const,
-      name: a.name,
-      description: a.description,
-      data: a,
-      affiliate_url: a.affiliateUrl,
-      affiliate_partner: a.affiliatePartner,
-      price_amount: a.price,
-      price_currency: a.currency || "USD",
-      rating: a.rating,
-    })),
-    ...(result.dining || []).map((d) => ({
-      search_id: searchId,
-      category: "dining" as const,
-      name: d.name,
-      description: d.description,
-      data: d,
-      affiliate_url: d.reservationUrl,
-      affiliate_partner: d.affiliatePartner,
-      rating: d.rating,
-    })),
+): Promise<SearchQueryResult> {
+  const attempts = [
+    "status, progress, error_message, intermediate_results, json_render_spec",
+    "status, progress, error_message, json_render_spec",
+    "status, progress, error_message, intermediate_results",
+    "status, progress, error_message",
   ];
 
-  if (rows.length > 0) {
-    await db.from("search_results").insert(rows);
+  let lastMissingColumnError: { code?: string; message?: string } | null = null;
+
+  for (const select of attempts) {
+    const { data, error } = await db
+      .from("searches")
+      .select(select)
+      .eq("id", searchId)
+      .single();
+
+    if (!error) {
+      return {
+        search: (data as unknown as SearchStreamRecord | null) ?? null,
+        error: null,
+      };
+    }
+
+    if (isMissingColumnError(error)) {
+      lastMissingColumnError = error;
+      continue;
+    }
+
+    return { search: null, error };
   }
+
+  return { search: null, error: lastMissingColumnError };
+}
+
+function isMissingColumnError(error: { code?: string; message?: string }) {
+  return (
+    error.code === "42703" ||
+    error.message?.toLowerCase().includes("does not exist")
+  );
+}
+
+function waitForNextPoll(ms: number, signal: AbortSignal): Promise<boolean> {
+  if (signal.aborted) return Promise.resolve(false);
+
+  return new Promise((resolve) => {
+    const timeout = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve(true);
+    }, ms);
+
+    const onAbort = () => {
+      clearTimeout(timeout);
+      resolve(false);
+    };
+
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
 }

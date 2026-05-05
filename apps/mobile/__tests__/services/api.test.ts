@@ -123,6 +123,11 @@ describe('createTrip', () => {
       destination: 'Paris',
       startDate: '2026-06-01',
       endDate: '2026-06-10',
+      preferences: {
+        travelerType: 'couple',
+        originCity: 'Los Angeles',
+        originAirport: 'LAX',
+      },
     });
 
     expect(result.data?.trip.destination).toBe('Paris');
@@ -131,6 +136,11 @@ describe('createTrip', () => {
     const body = JSON.parse(options.body);
     expect(body.destination).toBe('Paris');
     expect(body.travelers).toBe(2);
+    expect(body.preferences).toEqual({
+      travelerType: 'couple',
+      originCity: 'Los Angeles',
+      originAirport: 'LAX',
+    });
   });
 });
 

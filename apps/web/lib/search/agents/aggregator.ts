@@ -13,6 +13,11 @@ import {
   TransportResult,
   SuggestedDay,
 } from "../types";
+import {
+  AGGREGATOR_TIMEOUT_MS,
+  isOperationTimeoutError,
+  withAbortTimeout,
+} from "@/lib/search/runtime";
 
 const aiGateway = process.env.AI_GATEWAY_API_KEY
   ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
@@ -151,18 +156,33 @@ Create an itinerary that:
 Reference items by their IDs. Morning activities should be morning/any time, afternoon activities in afternoon, etc.`;
 
   try {
-    const { object: result } = await generateObject({
-      model: aiGateway(MODEL),
-      system: SYSTEM_PROMPT,
-      prompt,
-      schema: ItinerarySchema,
-    });
+    const { object: result } = await withAbortTimeout(
+      (abortSignal) =>
+        generateObject({
+          model: aiGateway(MODEL),
+          system: SYSTEM_PROMPT,
+          prompt,
+          schema: ItinerarySchema,
+          timeout: AGGREGATOR_TIMEOUT_MS,
+          abortSignal,
+          maxRetries: 0,
+        }),
+      AGGREGATOR_TIMEOUT_MS,
+      "aggregator AI",
+    );
 
     return mapAggregatorResult(result, hotels, activities, dining, transport);
   } catch (error) {
-    console.error(
-      "[Aggregator Agent] generateObject error, attempting recovery...",
-    );
+    if (isOperationTimeoutError(error)) {
+      console.warn(
+        "[Aggregator Agent] AI timed out, attempting recovery:",
+        error instanceof Error ? error.message : String(error),
+      );
+    } else {
+      console.error(
+        "[Aggregator Agent] generateObject error, attempting recovery...",
+      );
+    }
 
     // Try to recover from schema validation errors by parsing the raw response text.
     // Common failure: model returns `days` as a JSON string instead of an array,
@@ -356,6 +376,7 @@ function recoverFromRawText(
           activityIds: d.evening?.activityIds || [],
           mealId: d.evening?.mealId,
         },
+        transportId: d.transportId,
         estimatedCost: d.estimatedCost || 0,
         currency: d.currency || "USD",
         tips: Array.isArray(d.tips) ? d.tips : [],

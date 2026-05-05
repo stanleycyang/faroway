@@ -17,6 +17,7 @@ import {
   runTransportAgent,
   runAggregatorAgent,
 } from "./agents";
+import { runSearchEnrichment } from "./enrichment";
 
 export interface TravelSearchWorkflowInput {
   searchId: string;
@@ -53,9 +54,17 @@ export async function executeTravelSearch(
   const onProgress = callbacks?.onProgress;
   const onAgentResult = callbacks?.onAgentResult;
   const onMicroProgress = callbacks?.onMicroProgress;
+  const workflowStart = Date.now();
 
   try {
+    const logStageTiming = (stage: string, startedAt: number) => {
+      console.log(
+        `[WorkflowTiming] search=${searchId} stage=${stage} duration_ms=${Date.now() - startedAt}`,
+      );
+    };
+
     // Step 1: Orchestrator Agent - Creates the search plan
+    const orchestratorStart = Date.now();
     onMicroProgress?.({
       stage: "orchestrator",
       message: "Analyzing your travel preferences...",
@@ -74,6 +83,7 @@ export async function executeTravelSearch(
       message: "Created personalized search plan",
       detail: `${searchPlan.dates.nights} nights in ${input.destination}`,
     });
+    logStageTiming("orchestrator", orchestratorStart);
     if (onProgress) await onProgress("orchestrator", "done");
 
     // Step 2: Run specialized agents in parallel
@@ -95,6 +105,10 @@ export async function executeTravelSearch(
         message: "Searching flights...",
       });
     }
+    onMicroProgress?.({
+      stage: "enrichment",
+      message: "Checking local enrichment sources...",
+    });
 
     if (onProgress) {
       await onProgress("hotels", "searching");
@@ -103,66 +117,95 @@ export async function executeTravelSearch(
       if (searchPlan.transportCriteria?.originAirport) {
         await onProgress("transport", "searching");
       }
+      await onProgress("enrichment", "searching");
     }
 
-    const [hotelsResult, activitiesResult, diningResult, transportResult] =
-      await Promise.allSettled([
-        runHotelsAgent(searchPlan, 10).then(async (results) => {
+    const fanoutStart = Date.now();
+    const [
+      hotelsResult,
+      activitiesResult,
+      diningResult,
+      transportResult,
+      enrichmentResult,
+    ] = await Promise.allSettled([
+      runHotelsAgent(searchPlan, 10).then(async (results) => {
+        logStageTiming("hotels", fanoutStart);
+        onMicroProgress?.({
+          stage: "hotels",
+          message: `Found ${results.length} perfect hotels`,
+          detail: results[0]?.name,
+        });
+        if (onProgress) await onProgress("hotels", "done");
+        if (onAgentResult) await onAgentResult("hotels", results);
+        return results;
+      }),
+      runActivitiesAgent(searchPlan, 15).then(async (results) => {
+        logStageTiming("activities", fanoutStart);
+        onMicroProgress?.({
+          stage: "activities",
+          message: `Discovered ${results.length} activities`,
+          detail: results[0]?.name,
+        });
+        if (onProgress) await onProgress("activities", "done");
+        if (onAgentResult) await onAgentResult("activities", results);
+        return results;
+      }),
+      runDiningAgent(searchPlan, 12).then(async (results) => {
+        logStageTiming("dining", fanoutStart);
+        onMicroProgress?.({
+          stage: "dining",
+          message: `Found ${results.length} restaurants`,
+          detail: results[0]?.name,
+        });
+        if (onProgress) await onProgress("dining", "done");
+        if (onAgentResult) await onAgentResult("dining", results);
+        return results;
+      }),
+      runTransportAgent(searchPlan, input.travelers || 1, 5).then(
+        async (results) => {
+          logStageTiming("transport", fanoutStart);
           onMicroProgress?.({
-            stage: "hotels",
-            message: `Found ${results.length} perfect hotels`,
-            detail: results[0]?.name,
+            stage: "transport",
+            message:
+              results.length > 0
+                ? `Found ${results.length} flight options`
+                : "No flights needed",
+            detail: results[0]?.provider,
           });
-          if (onProgress) await onProgress("hotels", "done");
-          if (onAgentResult) await onAgentResult("hotels", results);
+          if (onProgress) await onProgress("transport", "done");
+          if (onAgentResult) await onAgentResult("transport", results);
           return results;
-        }),
-        runActivitiesAgent(searchPlan, 15).then(async (results) => {
-          onMicroProgress?.({
-            stage: "activities",
-            message: `Discovered ${results.length} activities`,
-            detail: results[0]?.name,
-          });
-          if (onProgress) await onProgress("activities", "done");
-          if (onAgentResult) await onAgentResult("activities", results);
-          return results;
-        }),
-        runDiningAgent(searchPlan, 12).then(async (results) => {
-          onMicroProgress?.({
-            stage: "dining",
-            message: `Found ${results.length} restaurants`,
-            detail: results[0]?.name,
-          });
-          if (onProgress) await onProgress("dining", "done");
-          if (onAgentResult) await onAgentResult("dining", results);
-          return results;
-        }),
-        runTransportAgent(searchPlan, input.travelers || 1, 5).then(
-          async (results) => {
-            onMicroProgress?.({
-              stage: "transport",
-              message:
-                results.length > 0
-                  ? `Found ${results.length} flight options`
-                  : "No flights needed",
-              detail: results[0]?.provider,
-            });
-            if (onProgress) await onProgress("transport", "done");
-            if (onAgentResult) await onAgentResult("transport", results);
-            return results;
-          },
-        ),
-      ]);
+        },
+      ),
+      runSearchEnrichment(searchPlan, searchId).then(async (results) => {
+        logStageTiming("enrichment", fanoutStart);
+        onMicroProgress?.({
+          stage: "enrichment",
+          message: "Added local context",
+          detail: results.notes[0],
+        });
+        if (onProgress) await onProgress("enrichment", "done");
+        if (onAgentResult) await onAgentResult("enrichment", results);
+        return results;
+      }),
+    ]);
+    logStageTiming("parallel_agents", fanoutStart);
 
     // Extract results, falling back to empty arrays if an agent failed
     const hotels =
       hotelsResult.status === "fulfilled" ? hotelsResult.value : [];
-    const activities =
+    const baseActivities =
       activitiesResult.status === "fulfilled" ? activitiesResult.value : [];
-    const dining =
+    const baseDining =
       diningResult.status === "fulfilled" ? diningResult.value : [];
     const transport =
       transportResult.status === "fulfilled" ? transportResult.value : [];
+    const enrichment =
+      enrichmentResult.status === "fulfilled"
+        ? enrichmentResult.value
+        : { activities: [], dining: [], notes: [] };
+    const activities = [...baseActivities, ...enrichment.activities];
+    const dining = [...baseDining, ...enrichment.dining];
 
     // Log any agent failures
     for (const [name, result] of [
@@ -170,6 +213,7 @@ export async function executeTravelSearch(
       ["activities", activitiesResult],
       ["dining", diningResult],
       ["transport", transportResult],
+      ["enrichment", enrichmentResult],
     ] as const) {
       if (result.status === "rejected") {
         console.error(`[Workflow] ${name} agent failed:`, result.reason);
@@ -187,6 +231,7 @@ export async function executeTravelSearch(
       stage: "aggregator",
       message: "Optimizing activities by location...",
     });
+    const aggregatorStart = Date.now();
     const { days } = await runAggregatorAgent(
       searchPlan,
       hotels,
@@ -194,6 +239,7 @@ export async function executeTravelSearch(
       dining,
       transport,
     );
+    logStageTiming("aggregator", aggregatorStart);
 
     onMicroProgress?.({
       stage: "aggregator",
@@ -234,5 +280,9 @@ export async function executeTravelSearch(
       status: "error",
       error: errorMessage,
     };
+  } finally {
+    console.log(
+      `[WorkflowTiming] search=${searchId} stage=total duration_ms=${Date.now() - workflowStart}`,
+    );
   }
 }

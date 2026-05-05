@@ -13,6 +13,11 @@ interface ApiTrip {
   end_date: string;
   travelers: number;
   traveler_type?: string;
+  preferences?: {
+    travelerType?: string;
+    originCity?: string;
+    originAirport?: string;
+  };
   vibes?: string[];
   budget?: string;
   status: string;
@@ -199,7 +204,9 @@ function transformApiTrip(apiTrip: ApiTrip, itinerary?: any): Trip {
     startDate: apiTrip.start_date,
     endDate: apiTrip.end_date,
     travelers: apiTrip.travelers,
-    travelerType: apiTrip.traveler_type || 'solo',
+    travelerType: apiTrip.traveler_type || apiTrip.preferences?.travelerType || 'solo',
+    originCity: apiTrip.preferences?.originCity,
+    originAirport: apiTrip.preferences?.originAirport,
     vibes: apiTrip.vibes || [],
     budget: apiTrip.budget,
     days: transformItineraryDays(rawDays),
@@ -288,6 +295,8 @@ export function useTrips() {
         endDate: input.endDate,
         travelers: input.travelers,
         travelerType: input.travelerType,
+        originCity: input.originCity,
+        originAirport: input.originAirport,
         vibes: input.vibes,
         budget: input.budget,
         days: [],
@@ -318,6 +327,8 @@ export function useTrips() {
           travelers: input.travelers,
           preferences: {
             travelerType: input.travelerType,
+            originCity: input.originCity,
+            originAirport: input.originAirport,
             vibes: input.vibes,
             budget: input.budget,
           },
@@ -475,10 +486,10 @@ export function useTrips() {
 
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/api/itinerary/generate`, {
+      const response = await fetch(`${API_BASE_URL}/api/trips/${tripId}/generate`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ tripId }),
+        body: JSON.stringify({}),
       });
 
       if (!response.ok) {

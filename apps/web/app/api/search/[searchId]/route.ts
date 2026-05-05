@@ -10,6 +10,7 @@ import {
   HotelResult,
   ActivityResult,
   DiningResult,
+  TransportResult,
   SuggestedDay,
 } from "@/lib/search/types";
 import { checkRateLimit } from "@/lib/security/rate-limit";
@@ -88,7 +89,7 @@ export async function GET(
             (r: SearchResultRow) =>
               ({
                 ...r.data,
-                id: r.id,
+                id: typeof r.data.id === "string" ? r.data.id : r.id,
               }) as unknown as HotelResult,
           );
 
@@ -98,7 +99,7 @@ export async function GET(
             (r: SearchResultRow) =>
               ({
                 ...r.data,
-                id: r.id,
+                id: typeof r.data.id === "string" ? r.data.id : r.id,
               }) as unknown as ActivityResult,
           );
 
@@ -108,8 +109,18 @@ export async function GET(
             (r: SearchResultRow) =>
               ({
                 ...r.data,
-                id: r.id,
+                id: typeof r.data.id === "string" ? r.data.id : r.id,
               }) as unknown as DiningResult,
+          );
+
+        const transport: TransportResult[] = resultsData
+          .filter((r: SearchResultRow) => r.category === "transport")
+          .map(
+            (r: SearchResultRow) =>
+              ({
+                ...r.data,
+                id: typeof r.data.id === "string" ? r.data.id : r.id,
+              }) as unknown as TransportResult,
           );
 
         // Build itinerary from stored data
@@ -161,7 +172,7 @@ export async function GET(
           hotels,
           activities,
           dining,
-          transport: [],
+          transport,
           itinerary,
         };
       }

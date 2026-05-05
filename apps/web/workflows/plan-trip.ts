@@ -10,7 +10,13 @@
  *   4. buildAndSaveSpec  – Build json-render spec, bridge to itineraries table
  */
 
-import { executeTravelSearch } from "@/lib/search/workflow";
+import { runOrchestratorAgent } from "@/lib/search/agents/orchestrator";
+import { runHotelsAgent } from "@/lib/search/agents/hotels";
+import { runActivitiesAgent } from "@/lib/search/agents/activities";
+import { runDiningAgent } from "@/lib/search/agents/dining";
+import { runTransportAgent } from "@/lib/search/agents/transport";
+import { runAggregatorAgent } from "@/lib/search/agents/aggregator";
+import { runSearchEnrichment } from "@/lib/search/enrichment";
 import {
   mapSearchResultsToItinerary,
   type MappedItinerary,
@@ -22,6 +28,12 @@ import {
 import { getSupabase } from "@/lib/supabase/server";
 import type {
   SearchInput,
+  SearchPlan,
+  SearchResults,
+  HotelResult,
+  ActivityResult,
+  DiningResult,
+  TransportResult,
   TripDay,
   ItineraryActivity,
   Restaurant as FarowayRestaurant,
@@ -35,8 +47,11 @@ interface TripPlanInput {
   startDate: string;
   endDate: string;
   travelers: number;
+  travelerType?: SearchInput["travelerType"];
   vibes?: string[];
   budget?: string;
+  originCity?: string;
+  originAirport?: string;
   userId?: string;
 }
 
@@ -63,8 +78,11 @@ export async function planTripWorkflow(
     startDate,
     endDate,
     travelers,
+    travelerType,
     vibes,
     budget,
+    originCity,
+    originAirport,
     userId,
   } = input;
 
@@ -72,22 +90,95 @@ export async function planTripWorkflow(
     // ── Step 1: Create Search Plan ──────────────────────────────────
     await createSearchPlan(searchId, tripId, { destination, vibes, budget });
 
-    // ── Step 2: Search Affiliates ───────────────────────────────────
-    const result = await searchAffiliates({
+    // ── Step 2: Build Search Plan ───────────────────────────────────
+    const searchPlan = await buildSearchPlanStep({
       searchId,
       tripId,
       destination,
       startDate,
       endDate,
       travelers,
+      travelerType,
       vibes,
       budget,
+      originCity,
+      originAirport,
     });
 
-    // ── Step 3: Compose Itinerary (already done by the aggregator agent) ──────
+    // ── Step 3: Fan-out specialized sources in parallel ─────────────
+    await setProgressState(
+      searchId,
+      tripId,
+      {
+        orchestrator: "done",
+        hotels: "searching",
+        activities: "searching",
+        dining: "searching",
+        transport: "searching",
+        enrichment: "searching",
+        aggregator: "pending",
+      },
+      {
+        step: "hotels",
+        progress: 25,
+        message: "Searching providers in parallel...",
+      },
+    );
+
+    const [hotelsRes, activitiesRes, diningRes, transportRes, enrichmentRes] =
+      await Promise.allSettled([
+        runHotelsStep(searchId, searchPlan),
+        runActivitiesStep(searchId, searchPlan),
+        runDiningStep(searchId, searchPlan),
+        runTransportStep(searchId, searchPlan, travelers),
+        runEnrichmentStep(searchId, searchPlan),
+      ]);
+
+    const hotels = fulfilledOrEmpty(hotelsRes);
+    const activities = fulfilledOrEmpty(activitiesRes);
+    const dining = fulfilledOrEmpty(diningRes);
+    const transport = fulfilledOrEmpty(transportRes);
+    const enrichment = fulfilledOrFallback(enrichmentRes, {
+      activities: [],
+      dining: [],
+      notes: [],
+    });
+
+    await setProgressState(
+      searchId,
+      tripId,
+      {
+        orchestrator: "done",
+        hotels: hotelsRes.status === "fulfilled" ? "done" : "pending",
+        activities: activitiesRes.status === "fulfilled" ? "done" : "pending",
+        dining: diningRes.status === "fulfilled" ? "done" : "pending",
+        transport: transportRes.status === "fulfilled" ? "done" : "pending",
+        enrichment: enrichmentRes.status === "fulfilled" ? "done" : "pending",
+        aggregator: "searching",
+      },
+      {
+        step: "aggregator",
+        progress: 80,
+        message: "Composing the final itinerary...",
+      },
+    );
+
+    // ── Step 4: Aggregate itinerary from combined candidates ────────
+    const result = await aggregateItineraryStep({
+      searchId,
+      tripId,
+      plan: searchPlan,
+      hotels,
+      activities: [...activities, ...enrichment.activities],
+      dining: [...dining, ...enrichment.dining],
+      transport,
+      enrichmentNotes: enrichment.notes,
+    });
+
+    // ── Step 5: Compose Itinerary (already done by aggregator) ──────
     await markItineraryComposed(searchId, tripId);
 
-    // ── Step 4: Build spec + save to database ──────────────────────
+    // ── Step 6: Build spec + save to database ──────────────────────
     await buildAndSaveSpec(searchId, result, {
       tripId,
       destination,
@@ -164,6 +255,8 @@ async function createSearchPlan(
         hotels: "pending",
         activities: "pending",
         dining: "pending",
+        transport: "pending",
+        enrichment: "pending",
         aggregator: "pending",
       },
     })
@@ -186,20 +279,45 @@ async function createSearchPlan(
   console.log(`[Workflow] Step 1 complete for search ${searchId}`);
 }
 
-// ─── Step 2: Search Affiliates ──────────────────────────────────────────────
+function fulfilledOrEmpty<T>(result: PromiseSettledResult<T[]>): T[] {
+  return result.status === "fulfilled" ? result.value : [];
+}
 
-async function searchAffiliates(params: {
+function fulfilledOrFallback<T>(
+  result: PromiseSettledResult<T>,
+  fallback: T,
+): T {
+  return result.status === "fulfilled" ? result.value : fallback;
+}
+
+async function mergeIntermediateResult(
+  searchId: string,
+  key: string,
+  value: unknown,
+): Promise<void> {
+  "use step";
+  await getSupabase().rpc("merge_intermediate_results", {
+    p_search_id: searchId,
+    p_key: key,
+    p_value: value,
+  });
+}
+
+async function buildSearchPlanStep(params: {
   searchId: string;
   tripId?: string;
   destination: string;
   startDate: string;
   endDate: string;
   travelers: number;
+  travelerType?: SearchInput["travelerType"];
   vibes?: string[];
   budget?: string;
-}): Promise<MappedItinerary> {
+  originCity?: string;
+  originAirport?: string;
+}): Promise<SearchPlan> {
   "use step";
-
+  const startedAt = Date.now();
   const {
     searchId,
     tripId,
@@ -207,146 +325,219 @@ async function searchAffiliates(params: {
     startDate,
     endDate,
     travelers,
+    travelerType,
     vibes,
     budget,
+    originCity,
+    originAirport,
   } = params;
-
-  console.log(`[Workflow] Step 2: Running multi-agent search for ${searchId}`);
-
-  // Construct SearchInput for the multi-agent system
   const searchInput: SearchInput = {
     destination,
     startDate,
     endDate,
     travelers,
+    travelerType,
     vibes: vibes || [],
     budget: (budget as "budget" | "moderate" | "luxury") || "moderate",
+    originCity,
+    originAirport,
   };
 
-  // Persistent progress state — survives across parallel onProgress calls
-  const progressState: Record<string, string> = {
-    orchestrator: "done",
-    hotels: "pending",
-    activities: "pending",
-    dining: "pending",
-    aggregator: "pending",
-  };
+  const plan = await runOrchestratorAgent(searchInput);
 
-  const onProgress = async (stage: string, status: "searching" | "done") => {
-    progressState[stage] = status;
-
-    await getSupabase()
-      .from("searches")
-      .update({ progress: { ...progressState } })
-      .eq("id", searchId);
-
-    // Map stage → progress percentage for trip polling
-    if (tripId) {
-      const progressMap: Record<string, number> = {
-        orchestrator: 10,
-        hotels: 30,
-        activities: 40,
-        dining: 50,
-        aggregator: 70,
-      };
-      const messageMap: Record<string, string> = {
-        orchestrator: "Analyzing your preferences...",
-        hotels: "Searching for the best hotels...",
-        activities: "Finding activities & attractions...",
-        dining: "Discovering restaurants...",
-        aggregator: "Crafting your perfect itinerary...",
-      };
-
-      await getSupabase()
-        .from("workflow_progress")
-        .upsert(
-          {
-            trip_id: tripId,
-            step: stage,
-            progress: progressMap[stage] || 30,
-            message: messageMap[stage] || "Searching...",
-            updated_at: new Date().toISOString(),
-          },
-          { onConflict: "trip_id" },
-        );
-    }
-  };
-
-  // Callback: save intermediate results for progressive SSE streaming
-  const onAgentResult = async (stage: string, data: unknown) => {
-    const db = getSupabase();
-    if (stage === "hotels") {
-      await db.rpc("merge_intermediate_results", {
-        p_search_id: searchId,
-        p_key: "hotels",
-        p_value: JSON.stringify(data),
-      });
-    } else if (stage === "activities") {
-      await db.rpc("merge_intermediate_results", {
-        p_search_id: searchId,
-        p_key: "activitiesCount",
-        p_value: JSON.stringify((data as unknown[]).length),
-      });
-    } else if (stage === "dining") {
-      await db.rpc("merge_intermediate_results", {
-        p_search_id: searchId,
-        p_key: "diningCount",
-        p_value: JSON.stringify((data as unknown[]).length),
-      });
-    } else if (stage === "aggregator") {
-      const { days, topHotel } = data as { days: unknown[]; topHotel: unknown };
-      await db.rpc("merge_intermediate_results", {
-        p_search_id: searchId,
-        p_key: "days",
-        p_value: JSON.stringify(days),
-      });
-      if (topHotel) {
-        await db.rpc("merge_intermediate_results", {
-          p_search_id: searchId,
-          p_key: "topHotel",
-          p_value: JSON.stringify(topHotel),
-        });
-      }
-    }
-  };
-
-  // Run the multi-agent system
-  const searchResult = await executeTravelSearch(searchId, searchInput, {
-    onProgress,
-    onAgentResult,
-  });
-
-  if (searchResult.status === "error" || !searchResult.results) {
-    throw new Error(searchResult.error || "Multi-agent search failed");
-  }
-
-  // Extract top hotel from the itinerary days (the aggregator picks it)
-  const topHotel =
-    searchResult.results.itinerary?.[0]?.hotel ||
-    searchResult.results.hotels[0] ||
-    null;
-
-  // Bridge search results → frontend TripDay format
-  const mapped = mapSearchResultsToItinerary(searchResult.results, topHotel);
-
-  // Mark affiliate searches as done
   await getSupabase()
     .from("searches")
     .update({
       progress: {
         orchestrator: "done",
-        hotels: "done",
-        activities: "done",
-        dining: "done",
+        hotels: "pending",
+        activities: "pending",
+        dining: "pending",
+        transport: "pending",
+        enrichment: "pending",
         aggregator: "pending",
       },
     })
     .eq("id", searchId);
+  await mergeIntermediateResult(searchId, "searchPlan", plan);
 
+  if (tripId) {
+    await getSupabase().from("workflow_progress").upsert(
+      {
+        trip_id: tripId,
+        step: "orchestrator",
+        progress: 15,
+        message: "Search plan ready. Running providers in parallel...",
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "trip_id" },
+    );
+  }
   console.log(
-    `[Workflow] Step 2 complete for search ${searchId} — ${mapped.days.length} days`,
+    `[WorkflowTiming] search=${searchId} stage=build_search_plan duration_ms=${Date.now() - startedAt}`,
+  );
+  return plan;
+}
+
+async function runHotelsStep(
+  searchId: string,
+  plan: SearchPlan,
+): Promise<HotelResult[]> {
+  "use step";
+  const startedAt = Date.now();
+  const hotels = await runHotelsAgent(plan, 10);
+  await Promise.all([
+    mergeIntermediateResult(searchId, "hotels", hotels),
+    mergeIntermediateResult(searchId, "topHotel", hotels[0] || null),
+  ]);
+  console.log(
+    `[WorkflowTiming] search=${searchId} stage=hotels duration_ms=${Date.now() - startedAt}`,
+  );
+  return hotels;
+}
+
+async function runActivitiesStep(
+  searchId: string,
+  plan: SearchPlan,
+): Promise<ActivityResult[]> {
+  "use step";
+  const startedAt = Date.now();
+  const activities = await runActivitiesAgent(plan, 15);
+  await Promise.all([
+    mergeIntermediateResult(searchId, "activitiesCount", activities.length),
+  ]);
+  console.log(
+    `[WorkflowTiming] search=${searchId} stage=activities duration_ms=${Date.now() - startedAt}`,
+  );
+  return activities;
+}
+
+async function runDiningStep(
+  searchId: string,
+  plan: SearchPlan,
+): Promise<DiningResult[]> {
+  "use step";
+  const startedAt = Date.now();
+  const dining = await runDiningAgent(plan, 12);
+  await Promise.all([
+    mergeIntermediateResult(searchId, "diningCount", dining.length),
+  ]);
+  console.log(
+    `[WorkflowTiming] search=${searchId} stage=dining duration_ms=${Date.now() - startedAt}`,
+  );
+  return dining;
+}
+
+async function runTransportStep(
+  searchId: string,
+  plan: SearchPlan,
+  travelers: number,
+): Promise<TransportResult[]> {
+  "use step";
+  const startedAt = Date.now();
+  const transport = await runTransportAgent(plan, travelers || 1, 5);
+  await Promise.all([
+    mergeIntermediateResult(searchId, "transportCount", transport.length),
+  ]);
+  console.log(
+    `[WorkflowTiming] search=${searchId} stage=transport duration_ms=${Date.now() - startedAt}`,
+  );
+  return transport;
+}
+
+async function runEnrichmentStep(
+  searchId: string,
+  plan: SearchPlan,
+): Promise<{
+  activities: ActivityResult[];
+  dining: DiningResult[];
+  notes: string[];
+}> {
+  "use step";
+  const startedAt = Date.now();
+  const merged = await runSearchEnrichment(plan, searchId);
+  await Promise.all([
+    mergeIntermediateResult(
+      searchId,
+      "enrichedActivitiesCount",
+      merged.activities.length,
+    ),
+    mergeIntermediateResult(
+      searchId,
+      "enrichedDiningCount",
+      merged.dining.length,
+    ),
+    mergeIntermediateResult(searchId, "enrichmentNotes", merged.notes),
+  ]);
+  console.log(
+    `[WorkflowTiming] search=${searchId} stage=enrichment duration_ms=${Date.now() - startedAt}`,
+  );
+  return merged;
+}
+
+async function aggregateItineraryStep(params: {
+  searchId: string;
+  tripId?: string;
+  plan: SearchPlan;
+  hotels: HotelResult[];
+  activities: ActivityResult[];
+  dining: DiningResult[];
+  transport: TransportResult[];
+  enrichmentNotes: string[];
+}): Promise<MappedItinerary> {
+  "use step";
+  const startedAt = Date.now();
+  const { days, topHotel } = await runAggregatorAgent(
+    params.plan,
+    params.hotels,
+    params.activities,
+    params.dining,
+    params.transport,
   );
 
+  const searchResults: SearchResults = {
+    searchId: params.searchId,
+    hotels: params.hotels,
+    activities: params.activities,
+    dining: params.dining,
+    transport: params.transport,
+    itinerary: days,
+  };
+  const mapped = mapSearchResultsToItinerary(
+    searchResults,
+    topHotel || params.hotels[0] || null,
+  );
+
+  await Promise.all([
+    mergeIntermediateResult(params.searchId, "days", mapped.days),
+    mergeIntermediateResult(params.searchId, "topHotel", mapped.topHotel),
+    mergeIntermediateResult(
+      params.searchId,
+      "enrichmentNotes",
+      params.enrichmentNotes,
+    ),
+    setProgressState(
+      params.searchId,
+      params.tripId,
+      {
+        orchestrator: "done",
+        hotels: "done",
+        activities: "done",
+        dining: "done",
+        transport: "done",
+        enrichment: "done",
+        aggregator: "done",
+      },
+      {
+        step: "aggregator",
+        progress: 90,
+        message: "Itinerary composed. Saving now...",
+      },
+    ),
+  ]);
+  console.log(
+    `[WorkflowTiming] search=${params.searchId} stage=aggregator duration_ms=${Date.now() - startedAt}`,
+  );
   return mapped;
 }
 
@@ -368,6 +559,8 @@ async function markItineraryComposed(
         hotels: "done",
         activities: "done",
         dining: "done",
+        transport: "done",
+        enrichment: "done",
         aggregator: "done",
       },
     })
@@ -570,19 +763,21 @@ async function buildAndSaveSpec(
   // Save search results to database
   await saveSearchResults(searchId, result);
 
-  // Save the json-render spec, mark as completed, and clear intermediate results
+  // Save the json-render spec and mark as completed. Keep intermediate results
+  // so reconnecting SSE clients can still hydrate final itinerary events.
   await getSupabase()
     .from("searches")
     .update({
       status: "completed",
       completed_at: new Date().toISOString(),
       json_render_spec: jsonRenderSpec,
-      intermediate_results: null,
       progress: {
         orchestrator: "done",
         hotels: "done",
         activities: "done",
         dining: "done",
+        transport: "done",
+        enrichment: "done",
         aggregator: "done",
       },
     })
@@ -625,24 +820,38 @@ async function bridgeToItineraries(
     tips: day.tips || [],
   }));
 
-  // Insert itinerary
-  const { data: savedItinerary, error: insertError } = await db
+  const itineraryPayload = {
+    trip_id: tripId,
+    user_id: userId || null,
+    destination: meta.destination,
+    start_date: meta.startDate,
+    end_date: meta.endDate,
+    overview: `Your personalized trip to ${meta.destination}`,
+    total_cost: result.totalEstimatedCost || 0,
+    days: itineraryDays,
+    packing_list: [],
+    general_tips: [],
+    generated_at: new Date().toISOString(),
+  };
+  const { data: existingItinerary } = await db
     .from("itineraries")
-    .insert({
-      trip_id: tripId,
-      user_id: userId || null,
-      destination: meta.destination,
-      start_date: meta.startDate,
-      end_date: meta.endDate,
-      overview: `Your personalized trip to ${meta.destination}`,
-      total_cost: result.totalEstimatedCost || 0,
-      days: itineraryDays,
-      packing_list: [],
-      general_tips: [],
-      generated_at: new Date().toISOString(),
-    })
     .select("id")
+    .eq("trip_id", tripId)
+    .limit(1)
     .single();
+
+  const { data: savedItinerary, error: insertError } = existingItinerary?.id
+    ? await db
+        .from("itineraries")
+        .update(itineraryPayload)
+        .eq("id", existingItinerary.id)
+        .select("id")
+        .single()
+    : await db
+        .from("itineraries")
+        .insert(itineraryPayload)
+        .select("id")
+        .single();
 
   if (insertError) {
     console.error(
@@ -703,6 +912,33 @@ async function bridgeToItineraries(
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
+
+async function setProgressState(
+  searchId: string,
+  tripId: string | undefined,
+  progress: Record<string, string>,
+  workflow?: {
+    step: string;
+    progress: number;
+    message: string;
+  },
+): Promise<void> {
+  "use step";
+  const db = getSupabase();
+  await db.from("searches").update({ progress }).eq("id", searchId);
+
+  if (!tripId || !workflow) return;
+  await db.from("workflow_progress").upsert(
+    {
+      trip_id: tripId,
+      step: workflow.step,
+      progress: workflow.progress,
+      message: workflow.message,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "trip_id" },
+  );
+}
 
 async function updateSearchStatus(
   searchId: string,
@@ -768,6 +1004,18 @@ async function saveSearchResults(
       affiliate_url: restaurant.reservationUrl,
       affiliate_partner: restaurant.affiliatePartner,
       rating: restaurant.rating,
+    })),
+    ...(result.transport || []).map((transport) => ({
+      search_id: searchId,
+      category: "transport" as const,
+      name: `${transport.departure.airport} to ${transport.arrival.airport}`,
+      description: `${transport.provider}, ${transport.stops} stop${transport.stops === 1 ? "" : "s"}`,
+      data: transport,
+      affiliate_url: transport.affiliateUrl,
+      affiliate_partner: transport.affiliatePartner,
+      price_amount: transport.price,
+      price_currency: transport.currency || "USD",
+      rating: null,
     })),
   ];
 

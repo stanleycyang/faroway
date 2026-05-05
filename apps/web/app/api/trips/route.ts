@@ -10,7 +10,11 @@ const CreateTripSchema = z.object({
   budget: z.enum(["budget", "moderate", "luxury"]).optional(),
   preferences: z
     .object({
-      travelerType: z.string().max(50).optional(),
+      travelerType: z
+        .enum(["solo", "couple", "family", "friends", "business"])
+        .optional(),
+      originCity: z.string().max(200).optional(),
+      originAirport: z.string().max(10).optional(),
       vibes: z.array(z.string().max(50)).max(10).optional(),
       budget: z.string().max(50).optional(),
       adults: z.number().int().min(1).max(50).optional(),
@@ -125,6 +129,8 @@ export async function POST(request: NextRequest) {
         vibes: preferences?.vibes,
         preferences: {
           travelerType: preferences?.travelerType,
+          originCity: preferences?.originCity,
+          originAirport: preferences?.originAirport,
         },
         status: "draft",
         ...(userId

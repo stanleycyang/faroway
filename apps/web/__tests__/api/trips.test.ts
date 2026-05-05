@@ -162,12 +162,26 @@ describe("POST /api/trips", () => {
       start_date: "2026-04-01",
       end_date: "2026-04-07",
       travelers: 2,
+      preferences: {
+        travelerType: "family",
+        originCity: "San Francisco",
+        originAirport: "SFO",
+      },
     });
     const res = await POST(req);
     const json = await res.json();
 
     expect(res.status).toBe(201);
     expect(json.trip.destination).toBe("Tokyo");
+    expect(tripsChain.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        preferences: {
+          travelerType: "family",
+          originCity: "San Francisco",
+          originAirport: "SFO",
+        },
+      }),
+    );
   });
 
   it("returns 400 for invalid input", async () => {

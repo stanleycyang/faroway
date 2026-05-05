@@ -10,7 +10,13 @@ export interface SearchProgress {
   activities?: string;
   dining?: string;
   transport?: string;
+  enrichment?: string;
   aggregator?: string;
+}
+
+export interface StreamingSpecBlock {
+  type: string;
+  props?: Record<string, unknown>;
 }
 
 export interface TripGenerationState {
@@ -30,6 +36,7 @@ export interface TripGenerationState {
   diningCount: number;
   transportCount: number;
   days: TripDay[] | null;
+  specBlocks: StreamingSpecBlock[];
 
   isStreaming: boolean;
   isComplete: boolean;
@@ -53,10 +60,73 @@ const initialState: TripGenerationState = {
   diningCount: 0,
   transportCount: 0,
   days: null,
+  specBlocks: [],
   isStreaming: false,
   isComplete: false,
   error: null,
 };
+
+export const ITINERARY_STREAMING_ENABLED =
+  process.env.NEXT_PUBLIC_ITINERARY_STREAMING_ENABLED !== "false";
+
+export interface ParsedSSEEvent {
+  type: string;
+  data: string;
+}
+
+export function parseSSEBuffer(buffer: string): {
+  events: ParsedSSEEvent[];
+  remaining: string;
+} {
+  const events: ParsedSSEEvent[] = [];
+  const blocks = buffer.split("\n\n");
+  const remaining = blocks.pop() || "";
+
+  for (const block of blocks) {
+    if (!block.trim()) continue;
+
+    let eventType = "message";
+    let eventData = "";
+
+    for (const line of block.split("\n")) {
+      if (line.startsWith("event: ")) {
+        eventType = line.slice(7).trim();
+      } else if (line.startsWith("data: ")) {
+        eventData += (eventData ? "\n" : "") + line.slice(6);
+      }
+    }
+
+    if (eventType && eventData) {
+      events.push({ type: eventType, data: eventData });
+    }
+  }
+
+  return { events, remaining };
+}
+
+export function parseStreamingJson(rawData: string): unknown | null {
+  try {
+    return JSON.parse(rawData);
+  } catch {
+    return null;
+  }
+}
+
+interface StreamingEventData {
+  step?: string;
+  progress?: number;
+  message?: string;
+  searchProgress?: SearchProgress;
+  topHotel?: HotelResult | null;
+  count?: number;
+  days?: TripDay[];
+  blocks?: StreamingSpecBlock[];
+  spec?: StreamingSpecBlock[];
+}
+
+function isStreamingEventData(value: unknown): value is StreamingEventData {
+  return value !== null && typeof value === "object";
+}
 
 /**
  * React hook that connects to POST /api/trips/[id]/stream and reads SSE
@@ -79,9 +149,13 @@ export function useTripGeneration(
   });
 
   const processEvent = useCallback((type: string, rawData: string) => {
-    try {
-      const data = JSON.parse(rawData);
+    const data = parseStreamingJson(rawData);
+    if (!isStreamingEventData(data)) {
+      console.error(`[useTripGeneration] Failed to parse ${type} event`);
+      return;
+    }
 
+    try {
       switch (type) {
         case "progress": {
           let phase: TripGenerationState["phase"] = "searching";
@@ -136,6 +210,26 @@ export function useTripGeneration(
           }));
           break;
 
+        case "spec-block":
+          if (Array.isArray(data.blocks) && data.blocks.length > 0) {
+            const blocks = data.blocks;
+            setState((prev) => ({
+              ...prev,
+              specBlocks: [...prev.specBlocks, ...blocks],
+            }));
+          }
+          break;
+
+        case "spec-complete":
+          if (Array.isArray(data.spec)) {
+            const spec = data.spec;
+            setState((prev) => ({
+              ...prev,
+              specBlocks: spec,
+            }));
+          }
+          break;
+
         case "complete":
           setState((prev) => ({
             ...prev,
@@ -149,7 +243,7 @@ export function useTripGeneration(
           break;
 
         case "error": {
-          const errorMessage = data.message || "Generation failed";
+          const errorMessage = data.message ?? "Generation failed";
           setState((prev) => ({
             ...prev,
             isStreaming: false,
@@ -166,7 +260,7 @@ export function useTripGeneration(
   }, []);
 
   useEffect(() => {
-    if (!enabled || !tripId) return;
+    if (!enabled || !tripId || !ITINERARY_STREAMING_ENABLED) return;
 
     const abortController = new AbortController();
 
@@ -198,25 +292,11 @@ export function useTripGeneration(
 
           buffer += decoder.decode(value, { stream: true });
 
-          // SSE events are separated by double newlines
-          const blocks = buffer.split("\n\n");
-          buffer = blocks.pop() || "";
+          const { events, remaining } = parseSSEBuffer(buffer);
+          buffer = remaining;
 
-          for (const block of blocks) {
-            let eventType = "message";
-            let eventData = "";
-
-            for (const line of block.split("\n")) {
-              if (line.startsWith("event: ")) {
-                eventType = line.slice(7).trim();
-              } else if (line.startsWith("data: ")) {
-                eventData += (eventData ? "\n" : "") + line.slice(6);
-              }
-            }
-
-            if (eventType && eventData) {
-              processEvent(eventType, eventData);
-            }
+          for (const event of events) {
+            processEvent(event.type, event.data);
           }
         }
 

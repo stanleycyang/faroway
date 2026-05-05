@@ -121,6 +121,8 @@ export async function createTrip(trip: {
   preferences?: {
     travelerType?: string;
     vibes?: string[];
+    originCity?: string;
+    originAirport?: string;
   };
 }): Promise<ApiResponse<{ trip: Trip }>> {
   return apiFetch<{ trip: Trip }>('/api/trips', {

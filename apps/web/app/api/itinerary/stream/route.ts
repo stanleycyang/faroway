@@ -8,7 +8,26 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { planTrip, type TravelPlanResult } from "@/lib/agents/travel-agent";
+import { executeTravelSearch } from "@/lib/search/workflow";
+import { mapSearchResultsToItinerary } from "@/lib/search/bridge";
+import {
+  buildJsonRenderSpec,
+  buildSummaryBlocks,
+  type ActivityInput,
+  type BuildSpecInput,
+  type HotelInput,
+  type ItineraryDayInput,
+  type RestaurantInput,
+} from "@/lib/json-render/build-spec";
+import type {
+  ActivityResult,
+  DiningResult,
+  HotelResult,
+  ItineraryActivity,
+  Restaurant,
+  SearchResults,
+  TripDay,
+} from "@faroway/types";
 
 export const maxDuration = 60;
 
@@ -17,6 +36,11 @@ const StreamRequestSchema = z.object({
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   travelers: z.number().int().min(1).max(50).default(1),
+  travelerType: z
+    .enum(["solo", "couple", "family", "friends", "business"])
+    .optional(),
+  originCity: z.string().max(200).optional(),
+  originAirport: z.string().max(10).optional(),
   vibes: z.array(z.string().max(50)).max(10).optional(),
   budget: z.enum(["budget", "moderate", "luxury"]).optional(),
 });
@@ -46,31 +70,80 @@ export async function POST(request: NextRequest) {
               `data: ${JSON.stringify({ status: "started", message: "Planning your trip..." })}\n\n`,
             ),
           );
-
-          // Run the travel planning agent
-          const result = await planTrip({
-            destination: params.destination,
-            startDate: params.startDate,
-            endDate: params.startDate,
-            travelers: params.travelers,
-            vibes: params.vibes || ["adventure"],
-            budget: params.budget || "moderate",
-          });
-
-          // Convert the agent result to json-render spec
-          const spec = convertToJsonRenderSpec(result, params);
-
-          // Stream the spec
           controller.enqueue(
             encoder.encode(
-              `data: ${JSON.stringify({ status: "generating", message: "Building UI..." })}\n\n`,
+              `event: spec-block\ndata: ${JSON.stringify({
+                blocks: buildSummaryBlocks({
+                  destination: params.destination,
+                  startDate: params.startDate,
+                  endDate: params.endDate,
+                  travelers: params.travelers,
+                  budget: params.budget,
+                }),
+              })}\n\n`,
             ),
           );
 
-          // Send the final spec
+          if (request.signal.aborted) {
+            controller.close();
+            return;
+          }
+
+          const result = await executeTravelSearch(
+            `stream_${crypto.randomUUID()}`,
+            {
+              destination: params.destination,
+              startDate: params.startDate,
+              endDate: params.endDate,
+              travelers: params.travelers,
+              travelerType: params.travelerType,
+              originCity: params.originCity,
+              originAirport: params.originAirport,
+              vibes: params.vibes || ["adventure"],
+              budget: params.budget || "moderate",
+            },
+            {
+              onProgress: async (stage, agentStatus) => {
+                if (request.signal.aborted) return;
+                controller.enqueue(
+                  encoder.encode(
+                    `data: ${JSON.stringify({
+                      status: "progress",
+                      stage,
+                      agentStatus,
+                    })}\n\n`,
+                  ),
+                );
+              },
+            },
+          );
+
+          if (result.status !== "completed" || !result.results) {
+            throw new Error(result.error || "Generation failed");
+          }
+
+          if (request.signal.aborted) {
+            controller.close();
+            return;
+          }
+
+          const spec = buildStreamSpec(result.results, params);
+
           controller.enqueue(
             encoder.encode(
-              `data: ${JSON.stringify({ status: "complete", spec })}\n\n`,
+              `data: ${JSON.stringify({
+                status: "generating",
+                message: "Building UI...",
+              })}\n\n`,
+            ),
+          );
+
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({
+                status: "complete",
+                spec,
+              })}\n\n`,
             ),
           );
 
@@ -94,11 +167,19 @@ export async function POST(request: NextRequest) {
     return new Response(stream, {
       headers: {
         "Content-Type": "text/event-stream",
-        "Cache-Control": "no-cache",
+        "Cache-Control": "no-cache, no-transform",
         Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
       },
     });
   } catch (error) {
+    if (error instanceof SyntaxError) {
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 },
+      );
+    }
+
     console.error("[Itinerary Stream] Request error:", error);
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Request failed" },
@@ -107,234 +188,143 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/**
- * Convert travel agent result to json-render spec
- */
-
-interface JsonRenderElement {
-  type: string;
-  props: Record<string, unknown>;
-  children: string[];
-}
-
-interface AgentHotel {
-  name: string;
-  rating?: number;
-  pricePerNight?: number;
-  image?: string;
-  affiliateUrl?: string;
-}
-
-interface AgentActivity {
-  name: string;
-  description?: string;
-  duration?: number;
-  price?: number;
-  rating?: number;
-  affiliateUrl?: string;
-}
-
-interface AgentMeal {
-  name: string;
-  cuisine?: string;
-  priceLevel?: string;
-  rating?: number;
-  reservationUrl?: string;
-}
-
-interface AgentDay {
-  dayNumber: number;
-  date: string;
-  title: string;
-  morning?: { activities?: AgentActivity[] };
-  afternoon?: { activities?: AgentActivity[]; meal?: AgentMeal };
-  evening?: { activities?: AgentActivity[] };
-}
-
 interface StreamRequestParams {
   destination: string;
   startDate: string;
   endDate: string;
   travelers: number;
+  travelerType?: "solo" | "couple" | "family" | "friends" | "business";
+  originCity?: string;
+  originAirport?: string;
   vibes?: string[];
   budget?: string;
 }
 
-function convertToJsonRenderSpec(
-  result: TravelPlanResult,
-  params: StreamRequestParams,
-) {
-  const elements: Record<string, JsonRenderElement> = {};
-  const children: string[] = [];
+function buildStreamSpec(results: SearchResults, params: StreamRequestParams) {
+  const mapped = mapSearchResultsToItinerary(
+    results,
+    results.itinerary?.[0]?.hotel || results.hotels[0] || null,
+  );
 
-  // Overview Section
-  const overviewId = "section-overview";
-  const overviewTextId = "text-overview";
-
-  elements[overviewTextId] = {
-    type: "Text",
-    props: {
-      content: `Welcome to ${params.destination}! Here's your personalized ${Math.ceil(
-        (new Date(params.endDate).getTime() -
-          new Date(params.startDate).getTime()) /
-          (1000 * 60 * 60 * 24),
-      )}-day itinerary featuring the best ${params.vibes?.join(", ") || "experiences"} the destination has to offer.`,
-    },
-    children: [],
+  const specInput: BuildSpecInput = {
+    destination: params.destination,
+    startDate: params.startDate,
+    endDate: params.endDate,
+    travelers: params.travelers,
+    budget: params.budget,
+    hotels: mapped.hotels.map(mapHotel),
+    activities: mapped.activities.map(mapActivity),
+    restaurants: mapped.dining.map(mapDining),
+    days: mapped.days.map(mapDay),
+    topHotel: mapped.topHotel ? mapHotel(mapped.topHotel) : undefined,
+    totalEstimatedCost: mapped.totalEstimatedCost,
+    currency: mapped.currency,
+    summary: `Your personalized ${mapped.days.length}-day trip to ${params.destination}`,
   };
 
-  elements[overviewId] = {
-    type: "Section",
-    props: { title: "Trip Overview" },
-    children: [overviewTextId],
-  };
-  children.push(overviewId);
+  return buildJsonRenderSpec(specInput);
+}
 
-  // Hotels Section
-  if (result.hotels && result.hotels.length > 0) {
-    const hotelsId = "section-hotels";
-    const hotelCardIds = (result.hotels as AgentHotel[])
-      .slice(0, 3)
-      .map((hotel: AgentHotel, idx: number) => {
-        const id = `hotel-${idx}`;
-        elements[id] = {
-          type: "HotelCard",
-          props: {
-            name: hotel.name,
-            rating: hotel.rating || 4.5,
-            price: hotel.pricePerNight || 150,
-            image: hotel.image,
-            bookingUrl: hotel.affiliateUrl,
-          },
-          children: [],
-        };
-        return id;
-      });
-
-    elements[hotelsId] = {
-      type: "Section",
-      props: { title: "Recommended Hotels" },
-      children: hotelCardIds,
-    };
-    children.push(hotelsId);
-  }
-
-  // Daily Itinerary Section
-  if (result.itinerary && result.itinerary.days) {
-    const itineraryId = "section-itinerary";
-    const dayIds = (result.itinerary.days as AgentDay[]).map(
-      (day: AgentDay, dayIdx: number) => {
-        const dayId = `day-${dayIdx}`;
-        const dayChildren: string[] = [];
-
-        // Morning activities
-        day.morning?.activities?.forEach(
-          (activity: AgentActivity, idx: number) => {
-            const actId = `day-${dayIdx}-morning-act-${idx}`;
-            elements[actId] = {
-              type: "ActivityCard",
-              props: {
-                name: activity.name,
-                description: activity.description || `Enjoy ${activity.name}`,
-                duration: activity.duration || 2,
-                price: activity.price,
-                rating: activity.rating,
-                bookingUrl: activity.affiliateUrl,
-              },
-              children: [],
-            };
-            dayChildren.push(actId);
-          },
-        );
-
-        // Afternoon activities
-        day.afternoon?.activities?.forEach(
-          (activity: AgentActivity, idx: number) => {
-            const actId = `day-${dayIdx}-afternoon-act-${idx}`;
-            elements[actId] = {
-              type: "ActivityCard",
-              props: {
-                name: activity.name,
-                description: activity.description || `Explore ${activity.name}`,
-                duration: activity.duration || 3,
-                price: activity.price,
-                rating: activity.rating,
-                bookingUrl: activity.affiliateUrl,
-              },
-              children: [],
-            };
-            dayChildren.push(actId);
-          },
-        );
-
-        // Dining
-        if (day.afternoon?.meal) {
-          const mealId = `day-${dayIdx}-meal`;
-          elements[mealId] = {
-            type: "RestaurantCard",
-            props: {
-              name: day.afternoon.meal.name,
-              cuisine: day.afternoon.meal.cuisine || "Local",
-              priceLevel: day.afternoon.meal.priceLevel || "$$",
-              rating: day.afternoon.meal.rating,
-              reservationUrl: day.afternoon.meal.reservationUrl,
-            },
-            children: [],
-          };
-          dayChildren.push(mealId);
-        }
-
-        elements[dayId] = {
-          type: "ItineraryDay",
-          props: {
-            dayNumber: day.dayNumber,
-            date: day.date,
-            title: day.title,
-          },
-          children: dayChildren,
-        };
-
-        return dayId;
-      },
-    );
-
-    elements[itineraryId] = {
-      type: "Section",
-      props: { title: "Your Itinerary" },
-      children: dayIds,
-    };
-    children.push(itineraryId);
-  }
-
-  // Budget Section
-  const budgetId = "section-budget";
-  const budgetTextId = "text-budget";
-  const totalCost = result.itinerary?.totalEstimatedCost || 1000;
-
-  elements[budgetTextId] = {
-    type: "Text",
-    props: {
-      content: `Estimated total cost for this trip: $${totalCost} ${result.itinerary?.currency || "USD"}. This includes accommodation, activities, and dining.`,
-    },
-    children: [],
-  };
-
-  elements[budgetId] = {
-    type: "Section",
-    props: { title: "Budget Summary" },
-    children: [budgetTextId],
-  };
-  children.push(budgetId);
-
+function mapHotel(hotel: HotelResult): HotelInput {
   return {
-    root: "root",
-    elements: {
-      root: {
-        type: "Section",
-        props: { title: params.destination },
-        children,
-      },
-      ...elements,
+    id: hotel.id,
+    name: hotel.name,
+    rating: hotel.userRating,
+    reviewCount: hotel.reviewCount,
+    pricePerNight: hotel.pricePerNight,
+    currency: hotel.currency,
+    amenities: hotel.amenities,
+    description: hotel.description,
+    affiliateUrl: hotel.affiliateUrl,
+    images: hotel.images,
+    starRating: hotel.starRating,
+  };
+}
+
+function mapActivity(activity: ActivityResult): ActivityInput {
+  return {
+    id: activity.id,
+    name: activity.name,
+    description: activity.description,
+    duration: activity.duration,
+    price: activity.price,
+    currency: activity.currency,
+    rating: activity.rating,
+    reviewCount: activity.reviewCount,
+    category: activity.category,
+    affiliateUrl: activity.affiliateUrl,
+    images: activity.images,
+    location: {
+      name: activity.location?.name,
+      neighborhood: activity.location?.neighborhood,
+      city: activity.location?.name,
     },
+  };
+}
+
+function mapDining(restaurant: DiningResult): RestaurantInput {
+  return {
+    id: restaurant.id,
+    name: restaurant.name,
+    cuisine: restaurant.cuisineTypes.join(", "),
+    priceLevel: restaurant.priceLevel,
+    rating: restaurant.rating,
+    reviewCount: restaurant.reviewCount,
+    description: restaurant.description,
+    reservationUrl: restaurant.reservationUrl,
+    images: restaurant.images,
+  };
+}
+
+function mapDay(day: TripDay): ItineraryDayInput {
+  return {
+    dayNumber: day.dayNumber,
+    date: day.date,
+    title: day.title,
+    morning: {
+      activities: day.morning.activities.map(mapItineraryActivity),
+      meal: day.morning.meals[0]
+        ? mapRestaurant(day.morning.meals[0])
+        : undefined,
+    },
+    afternoon: {
+      activities: day.afternoon.activities.map(mapItineraryActivity),
+      meal: day.afternoon.meals[0]
+        ? mapRestaurant(day.afternoon.meals[0])
+        : undefined,
+    },
+    evening: {
+      activities: day.evening.activities.map(mapItineraryActivity),
+      meal: day.evening.meals[0]
+        ? mapRestaurant(day.evening.meals[0])
+        : undefined,
+    },
+    estimatedCost: day.totalEstimatedCost?.amount,
+    currency: day.totalEstimatedCost?.currency,
+  };
+}
+
+function mapItineraryActivity(activity: ItineraryActivity): ActivityInput {
+  return {
+    id: activity.id,
+    name: activity.name,
+    description: activity.description,
+    duration: activity.duration / 60,
+    price: activity.estimatedCost.amount,
+    currency: activity.estimatedCost.currency,
+    category: activity.category,
+    affiliateUrl: activity.bookingInfo?.bookingUrl,
+    location: { name: activity.location.name },
+  };
+}
+
+function mapRestaurant(restaurant: Restaurant): RestaurantInput {
+  return {
+    id: restaurant.id,
+    name: restaurant.name,
+    cuisine: restaurant.cuisineType.join(", "),
+    priceLevel: restaurant.priceLevel,
+    description: restaurant.description,
+    reservationUrl: restaurant.reservationInfo?.url,
   };
 }
