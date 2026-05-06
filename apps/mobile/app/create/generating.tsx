@@ -27,6 +27,7 @@ import {
   MicroProgress,
 } from '../../hooks/useStreamingItinerary';
 import { registry } from '../../lib/json-render/registry';
+import { e2eIds } from '../../e2e/testIds';
 
 const { width, height } = Dimensions.get('window');
 
@@ -552,6 +553,8 @@ export default function GeneratingScreen() {
             endDate: draftInput.endDate!,
             travelers: draftInput.travelers || 2,
             travelerType: draftInput.travelerType || 'couple',
+            originCity: draftInput.originCity,
+            originAirport: draftInput.originAirport,
             vibes: draftInput.vibes || [],
             budget: draftInput.budget,
           },
@@ -606,7 +609,7 @@ export default function GeneratingScreen() {
   );
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID={e2eIds.generating.screen}>
       {destinationInfo && (
         <Image source={{ uri: destinationInfo.image }} style={styles.bgImage} blurRadius={25} />
       )}
@@ -645,7 +648,9 @@ export default function GeneratingScreen() {
           {/* Main progress area */}
           {!streaming.isComplete && !showProgressiveBlocks && (
             <View style={styles.progressArea}>
-              <ProgressRing progress={streaming.progress} />
+              <View testID={e2eIds.generating.progressRing}>
+                <ProgressRing progress={streaming.progress} />
+              </View>
 
               <Text style={styles.currentMessage}>{streaming.message}</Text>
 
@@ -680,7 +685,7 @@ export default function GeneratingScreen() {
 
           {/* Error state */}
           {streaming.error && (
-            <View style={styles.errorBox}>
+            <View style={styles.errorBox} testID={e2eIds.generating.errorBox}>
               <Text style={styles.errorEmoji}>😔</Text>
               <Text style={styles.errorTitle}>Something went wrong</Text>
               <Text style={styles.errorMessage}>{streaming.error}</Text>
@@ -692,7 +697,7 @@ export default function GeneratingScreen() {
 
           {/* Progressive blocks */}
           {showProgressiveBlocks && (
-            <View style={styles.blocksContainer}>
+            <View style={styles.blocksContainer} testID={e2eIds.generating.progressiveBlocks}>
               {!streaming.isComplete && streaming.isStreaming && (
                 <View style={styles.streamingBanner}>
                   <PulsingDot />
@@ -710,7 +715,12 @@ export default function GeneratingScreen() {
 
           {/* View trip button */}
           {streaming.isComplete && streaming.tripId && !showCelebration && (
-            <TouchableOpacity style={styles.viewButton} onPress={handleViewTrip} activeOpacity={0.9}>
+            <TouchableOpacity
+              style={styles.viewButton}
+              onPress={handleViewTrip}
+              activeOpacity={0.9}
+              testID={e2eIds.generating.viewTripButton}
+            >
               <LinearGradient
                 colors={[colors.primary[500], colors.primary[700]]}
                 start={{ x: 0, y: 0 }}

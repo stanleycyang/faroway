@@ -1,0 +1,11 @@
+appId: ai.faroway.app
+name: FlowB_GuestAuthGateShare
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+- openLink: faroway://trip/e2e-demo
+- tapOn:
+    id: trip_share_button
+- assertVisible:
+    id: auth_gate_modal

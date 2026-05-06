@@ -13,6 +13,7 @@ import {
   TripPreferences,
   GeneratedItinerary,
 } from "@/lib/ai";
+import { fetchWithTimeout } from "@/lib/search/runtime";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 
 // Types for workflow input/output
@@ -44,7 +45,7 @@ export interface WorkflowProgress {
 
 export interface GenerateItineraryOutput {
   tripId: string;
-  itineraryId: string;
+  itineraryId?: string;
   status: "completed" | "failed";
   progress: number;
   itinerary?: GeneratedItinerary;
@@ -76,33 +77,48 @@ export async function generateItineraryWorkflow(
     `[Workflow] Starting itinerary generation for trip ${input.tripId}`,
   );
 
-  // Step 1: Validate trip and fetch details (5%)
-  const tripData = await validateAndFetchTrip(input);
+  try {
+    // Step 1: Validate trip and fetch details (5%)
+    const tripData = await validateAndFetchTrip(input);
 
-  // Step 2: Generate itinerary with AI (5% -> 90%)
-  const itinerary = await generateItineraryWithAI(input.tripId, tripData);
+    // Step 2: Generate itinerary with AI (5% -> 90%)
+    const itinerary = await generateItineraryWithAI(input.tripId, tripData);
 
-  // Step 3: Save to database (90% -> 98%)
-  const itineraryId = await saveItineraryToDatabase(
-    input.tripId,
-    input.userId,
-    itinerary,
-  );
+    // Step 3: Save to database (90% -> 98%)
+    const itineraryId = await saveItineraryToDatabase(
+      input.tripId,
+      input.userId,
+      itinerary,
+    );
 
-  // Step 4: Send completion notification (98% -> 100%)
-  await sendCompletionNotification(input.tripId, itineraryId, input.userId);
+    // Step 4: Send completion notification (98% -> 100%)
+    await sendCompletionNotification(input.tripId, itineraryId, input.userId);
 
-  console.log(
-    `[Workflow] Itinerary generation complete for trip ${input.tripId}`,
-  );
+    console.log(
+      `[Workflow] Itinerary generation complete for trip ${input.tripId}`,
+    );
 
-  return {
-    tripId: input.tripId,
-    itineraryId,
-    status: "completed",
-    progress: 100,
-    itinerary,
-  };
+    return {
+      tripId: input.tripId,
+      itineraryId,
+      status: "completed",
+      progress: 100,
+      itinerary,
+    };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : "Unknown workflow error";
+    console.error(
+      `[Workflow] Itinerary generation failed for trip ${input.tripId}: ${message}`,
+    );
+    await markWorkflowFailed(input.tripId, message);
+    return {
+      tripId: input.tripId,
+      status: "failed",
+      progress: 0,
+      error: message,
+    };
+  }
 }
 
 /**
@@ -326,17 +342,21 @@ async function sendCompletionNotification(
   const webhookUrl = process.env.WORKFLOW_COMPLETION_WEBHOOK_URL;
   if (webhookUrl) {
     try {
-      await fetch(webhookUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          event: "itinerary_generated",
-          tripId,
-          itineraryId,
-          userId,
-          timestamp: new Date().toISOString(),
-        }),
-      });
+      await fetchWithTimeout(
+        webhookUrl,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event: "itinerary_generated",
+            tripId,
+            itineraryId,
+            userId,
+            timestamp: new Date().toISOString(),
+          }),
+        },
+        1000,
+      );
     } catch (error) {
       // Non-critical, don't fail the workflow
       console.warn("[Step 4/4] Webhook notification failed:", error);
@@ -344,4 +364,44 @@ async function sendCompletionNotification(
   }
 
   console.log(`[Step 4/4] Completion notification sent`);
+}
+
+async function markWorkflowFailed(
+  tripId: string,
+  message: string,
+): Promise<void> {
+  "use step";
+
+  try {
+    const supabase = getSupabaseAdmin();
+    const now = new Date().toISOString();
+
+    await Promise.all([
+      supabase.from("workflow_progress").upsert(
+        {
+          trip_id: tripId,
+          step: "error",
+          progress: 0,
+          message,
+          updated_at: now,
+        },
+        { onConflict: "trip_id" },
+      ),
+      supabase
+        .from("trips")
+        .update({ status: "failed", updated_at: now })
+        .eq("id", tripId),
+      supabase
+        .from("workflow_runs")
+        .update({
+          status: "failed",
+          error_message: message,
+          completed_at: now,
+        })
+        .eq("trip_id", tripId)
+        .eq("status", "running"),
+    ]);
+  } catch (updateError) {
+    console.error("[Workflow] Failed to persist failure state:", updateError);
+  }
 }

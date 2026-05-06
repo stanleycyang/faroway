@@ -1,0 +1,10 @@
+appId: ai.faroway.app
+name: FlowA_CreateGenerateView
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+- assertVisible:
+    id: create_screen
+- assertVisible:
+    id: create_continue_button

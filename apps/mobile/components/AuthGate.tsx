@@ -14,6 +14,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthContext } from './AuthProvider';
 import { colors, borderRadius, shadows } from '../constants/theme';
+import { e2eIds } from '../e2e/testIds';
 
 const { height } = Dimensions.get('window');
 
@@ -113,7 +114,7 @@ export function AuthGate({
       animationType="slide"
       statusBarTranslucent
     >
-      <View style={styles.overlay}>
+      <View style={styles.overlay} testID={e2eIds.authGate.modal}>
         {/* Blurred background with trip preview */}
         {tripPreview && (
           <View style={styles.previewContainer}>
@@ -172,6 +173,7 @@ export function AuthGate({
                   style={styles.googleButton}
                   onPress={handleGoogle}
                   activeOpacity={0.9}
+                  testID={e2eIds.authGate.google}
                 >
                   <Ionicons name="logo-google" size={18} color="#DB4437" />
                   <Text style={styles.googleButtonText}>Continue with Google</Text>
@@ -181,6 +183,7 @@ export function AuthGate({
                   style={styles.appleButton}
                   onPress={handleApple}
                   activeOpacity={0.9}
+                  testID={e2eIds.authGate.apple}
                 >
                   <Ionicons name="logo-apple" size={20} color="#fff" />
                   <Text style={styles.appleButtonText}>Continue with Apple</Text>
@@ -192,6 +195,7 @@ export function AuthGate({
             <TouchableOpacity
               style={styles.maybeLaterButton}
               onPress={handleMaybeLater}
+              testID={e2eIds.authGate.maybeLater}
             >
               <Text style={styles.maybeLaterText}>Maybe Later</Text>
             </TouchableOpacity>

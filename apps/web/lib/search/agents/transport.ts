@@ -46,6 +46,12 @@ export async function runTransportAgent(
   const { transportCriteria, dates } = plan;
   const origin = transportCriteria.originAirport!;
   const destination = transportCriteria.destinationAirport || "";
+  if (!destination) {
+    console.warn(
+      "[Transport Agent] No destination airport specified, skipping transport search",
+    );
+    return [];
+  }
 
   console.log(
     `[Transport Agent] Searching flights: ${origin} → ${destination} on ${dates.start}`,
@@ -53,8 +59,17 @@ export async function runTransportAgent(
 
   // Search Amadeus and Duffel in parallel
   const [amadeusResults, duffelResults] = await Promise.all([
-    searchAmadeusProvider(origin, destination, dates, travelers),
-    searchDuffelProvider(origin, destination, dates, travelers),
+    searchAmadeusProvider(origin, destination, dates, travelers, {
+      cabinClass: transportCriteria.cabinClass,
+      maxPrice: transportCriteria.maxPrice,
+      maxStops: transportCriteria.maxStops,
+      limit: count,
+    }),
+    searchDuffelProvider(origin, destination, dates, travelers, {
+      cabinClass: transportCriteria.cabinClass,
+      maxConnections: transportCriteria.maxStops,
+      limit: count,
+    }),
   ]);
 
   console.log(
@@ -86,6 +101,12 @@ async function searchAmadeusProvider(
   destination: string,
   dates: { start: string; end: string; nights: number },
   travelers: number,
+  options: {
+    cabinClass?: "economy" | "premium_economy" | "business" | "first";
+    maxPrice?: number;
+    maxStops?: number;
+    limit?: number;
+  } = {},
 ): Promise<TransportResult[]> {
   if (!isAmadeusConfigured()) {
     console.log("[Transport Agent] Amadeus not configured, skipping");
@@ -99,6 +120,10 @@ async function searchAmadeusProvider(
       departureDate: dates.start,
       returnDate: dates.end,
       adults: travelers,
+      cabinClass: normalizeAmadeusCabinClass(options.cabinClass),
+      maxPrice: options.maxPrice,
+      maxStops: options.maxStops,
+      limit: options.limit,
     });
 
     const trackingId = `tg_${Date.now()}`;
@@ -163,6 +188,11 @@ async function searchDuffelProvider(
   destination: string,
   dates: { start: string; end: string; nights: number },
   travelers: number,
+  options: {
+    cabinClass?: "economy" | "premium_economy" | "business" | "first";
+    maxConnections?: number;
+    limit?: number;
+  } = {},
 ): Promise<TransportResult[]> {
   if (!isDuffelConfigured()) {
     console.log("[Transport Agent] Duffel not configured, skipping");
@@ -176,6 +206,9 @@ async function searchDuffelProvider(
       departureDate: dates.start,
       returnDate: dates.end,
       passengers: [{ type: "adult", count: travelers }],
+      cabinClass: options.cabinClass,
+      maxConnections: options.maxConnections,
+      limit: options.limit,
     });
 
     // Generate Duffel Links in parallel for all offers (not sequentially)
@@ -265,6 +298,17 @@ function normalizeCabinClass(
   if (normalized.includes("economy")) return "economy";
 
   return undefined;
+}
+
+function normalizeAmadeusCabinClass(
+  cabinClass?: "economy" | "premium_economy" | "business" | "first",
+): "ECONOMY" | "PREMIUM_ECONOMY" | "BUSINESS" | "FIRST" | undefined {
+  if (!cabinClass) return undefined;
+  return cabinClass.toUpperCase() as
+    | "ECONOMY"
+    | "PREMIUM_ECONOMY"
+    | "BUSINESS"
+    | "FIRST";
 }
 
 /**

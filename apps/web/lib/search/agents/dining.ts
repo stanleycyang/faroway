@@ -12,6 +12,12 @@ import {
   enrichWithTripAdvisor,
   isTripAdvisorConfigured,
 } from "@/lib/affiliates/tripadvisor";
+import {
+  AI_AGENT_TIMEOUT_MS,
+  fetchWithTimeout,
+  isOperationTimeoutError,
+  withAbortTimeout,
+} from "@/lib/search/runtime";
 
 const aiGateway = process.env.AI_GATEWAY_API_KEY
   ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
@@ -111,15 +117,23 @@ For vibes like:
 Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
 
   try {
-    const { object: result } = await generateObject({
-      model: aiGateway(MODEL),
-      system: SYSTEM_PROMPT,
-      prompt,
-      schema: DiningListSchema,
-    });
+    const { object: result } = await withAbortTimeout(
+      (abortSignal) =>
+        generateObject({
+          model: aiGateway(MODEL),
+          system: SYSTEM_PROMPT,
+          prompt,
+          schema: DiningListSchema,
+          timeout: AI_AGENT_TIMEOUT_MS,
+          abortSignal,
+          maxRetries: 0,
+        }),
+      AI_AGENT_TIMEOUT_MS,
+      "dining AI",
+    );
 
     // Add unique IDs and sort by vibe score
-    const restaurants = result.restaurants
+    let restaurants = result.restaurants
       .map((restaurant, index) => ({
         ...restaurant,
         id: `dining_${Date.now()}_${index}`,
@@ -130,7 +144,7 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
     // Enrich with TripAdvisor ratings and reviews
     if (isTripAdvisorConfigured()) {
       try {
-        await enrichWithTripAdvisor(restaurants, "restaurants");
+        restaurants = await enrichWithTripAdvisor(restaurants, "restaurants");
       } catch (e) {
         console.error("[Dining Agent] TripAdvisor enrichment error:", e);
       }
@@ -138,7 +152,14 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
 
     return restaurants;
   } catch (error) {
-    console.error("[Dining Agent] Error:", error);
+    if (isOperationTimeoutError(error)) {
+      console.warn(
+        "[Dining Agent] AI timed out, returning available dining results:",
+        error instanceof Error ? error.message : String(error),
+      );
+    } else {
+      console.error("[Dining Agent] Error:", error);
+    }
     return [];
   }
 }
@@ -166,21 +187,21 @@ export async function searchGooglePlacesDining(
           )
         : [`restaurant in ${destination}`];
 
-    const results: Record<string, unknown>[] = [];
+    const responses = await Promise.allSettled(
+      queries.slice(0, 3).map(async (query) => {
+        const response = await fetchWithTimeout(
+          `https://maps.googleapis.com/maps/api/place/textsearch/json?` +
+            `query=${encodeURIComponent(query)}&type=restaurant&key=${apiKey}`,
+        );
+        if (!response.ok) return [];
+        const data = await response.json();
+        return Array.isArray(data.results) ? data.results : [];
+      }),
+    );
 
-    for (const query of queries.slice(0, 3)) {
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/textsearch/json?` +
-          `query=${encodeURIComponent(query)}&type=restaurant&key=${apiKey}`,
-      );
-      const data = await response.json();
-
-      if (data.results) {
-        results.push(...data.results);
-      }
-    }
-
-    return results;
+    return responses.flatMap((result) =>
+      result.status === "fulfilled" ? result.value : [],
+    );
   } catch (error) {
     console.error("[Dining Agent] Google Places error:", error);
     return [];

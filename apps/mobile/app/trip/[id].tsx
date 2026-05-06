@@ -31,6 +31,7 @@ import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import { registry } from '../../lib/json-render/registry';
 import { useTrips } from '../../hooks/useTrips';
+import { e2eIds } from '../../e2e/testIds';
 
 const { width } = Dimensions.get('window');
 const HEADER_HEIGHT = 300;
@@ -403,10 +404,12 @@ function BookingsSheet({
   visible,
   onClose,
   bookableItems,
+  testID,
 }: {
   visible: boolean;
   onClose: () => void;
   bookableItems: { activity: Activity; dayNumber: number }[];
+  testID?: string;
 }) {
   const renderBookableItem = ({ item }: { item: { activity: Activity; dayNumber: number } }) => {
     const { activity, dayNumber } = item;
@@ -449,7 +452,7 @@ function BookingsSheet({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <SafeAreaView edges={['top']} style={styles.sheetContainer}>
+      <SafeAreaView edges={['top']} style={styles.sheetContainer} testID={testID}>
         <View style={styles.sheetHeader}>
           <Text style={styles.sheetTitle}>
             {bookableItems.length} Bookable {bookableItems.length === 1 ? 'Item' : 'Items'}
@@ -651,7 +654,7 @@ export default function TripDetailScreen() {
   });
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID={e2eIds.trip.screen}>
       <Animated.ScrollView
         ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
@@ -685,14 +688,23 @@ export default function TripDetailScreen() {
               <TouchableOpacity
                 style={styles.backButton}
                 onPress={() => router.back()}
+                testID={e2eIds.trip.backButton}
               >
                 <Ionicons name="arrow-back" size={24} color="#fff" />
               </TouchableOpacity>
               <View style={styles.heroActions}>
-                <TouchableOpacity style={styles.actionButton} onPress={handleHeartPress}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={handleHeartPress}
+                  testID={e2eIds.trip.saveButton}
+                >
                   <Ionicons name="heart-outline" size={22} color="#fff" />
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={handleShare}
+                  testID={e2eIds.trip.shareButton}
+                >
                   <Ionicons name="share-outline" size={22} color="#fff" />
                 </TouchableOpacity>
               </View>
@@ -748,6 +760,7 @@ export default function TripDetailScreen() {
                     hapticFeedback.selection();
                     setSelectedDay(index);
                   }}
+                  testID={`${e2eIds.trip.dayTabPrefix}${index + 1}`}
                 >
                   <Text
                     style={[
@@ -816,6 +829,7 @@ export default function TripDetailScreen() {
           }}
           size="lg"
           style={styles.bookAllButton}
+          testID={e2eIds.trip.bookAllButton}
         />
       </View>
 
@@ -824,6 +838,7 @@ export default function TripDetailScreen() {
         visible={showBookingsSheet}
         onClose={() => setShowBookingsSheet(false)}
         bookableItems={bookableItems}
+        testID={e2eIds.trip.bookingsSheet}
       />
 
       {/* Auth gate for guests */}

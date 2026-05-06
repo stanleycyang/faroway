@@ -81,6 +81,7 @@ interface TripCardProps {
   status: 'draft' | 'planned' | 'active' | 'completed';
   daysCount: number;
   onPress?: () => void;
+  testID?: string;
 }
 
 export function TripCard({
@@ -91,6 +92,7 @@ export function TripCard({
   status,
   daysCount,
   onPress,
+  testID,
 }: TripCardProps) {
   const statusColors: Record<string, string> = {
     draft: colors.surface[500],
@@ -111,6 +113,7 @@ export function TripCard({
       onPress={onPress}
       activeOpacity={0.9}
       style={[styles.tripCard, shadows.md]}
+      testID={testID}
     >
       <Image source={{ uri: image }} style={styles.tripImage} />
       <LinearGradient

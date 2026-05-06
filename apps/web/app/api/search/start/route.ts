@@ -15,12 +15,18 @@ const SearchInputSchema = z.object({
   startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   travelers: z.number().int().min(1).max(50).optional(),
-  travelerType: z.string().max(50).optional(),
+  travelerType: z
+    .enum(["solo", "couple", "family", "friends", "business"])
+    .optional(),
   vibes: z.array(z.string().max(50)).max(10).optional(),
   budget: z.string().max(50).optional(),
+  originCity: z.string().max(200).optional(),
+  originAirport: z.string().max(10).optional(),
 });
 
 export async function POST(request: NextRequest) {
+  let searchId: string | null = null;
+
   try {
     // Rate limit: 5 searches per minute per IP
     const ip = getClientIp(request);
@@ -35,7 +41,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 },
+      );
+    }
+
     const parseResult = SearchInputSchema.safeParse(body);
 
     if (!parseResult.success) {
@@ -53,6 +68,8 @@ export async function POST(request: NextRequest) {
       travelerType,
       vibes,
       budget,
+      originCity,
+      originAirport,
     } = parseResult.data;
 
     // Get user ID from auth header if present
@@ -85,6 +102,8 @@ export async function POST(request: NextRequest) {
           hotels: "pending",
           activities: "pending",
           dining: "pending",
+          transport: "pending",
+          enrichment: "pending",
           aggregator: "pending",
         },
       })
@@ -99,25 +118,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const searchId = search.id;
+    const createdSearchId = search.id;
+    searchId = createdSearchId;
 
-    // Calculate estimated time
-    const nights = Math.ceil(
-      (new Date(endDate).getTime() - new Date(startDate).getTime()) /
-        (1000 * 60 * 60 * 24),
-    );
-    const estimatedTime = Math.min(60, 20 + nights * 5);
+    // The generation path is now aggressively timeboxed and parallelized.
+    const estimatedTime = 5;
 
     // Start the durable workflow (doesn't block)
     await start(planTripWorkflow, [
       {
-        searchId,
+        searchId: createdSearchId,
         destination,
         startDate,
         endDate,
         travelers: travelers || 2,
+        travelerType,
         vibes: vibes || [],
         budget: budget || "moderate",
+        originCity,
+        originAirport,
         userId: userId || undefined,
       },
     ]);
@@ -126,15 +145,32 @@ export async function POST(request: NextRequest) {
     await getSupabase()
       .from("searches")
       .update({ status: "searching" })
-      .eq("id", searchId);
+      .eq("id", createdSearchId);
 
     return NextResponse.json({
-      searchId,
+      searchId: createdSearchId,
       status: "started",
       estimatedTime,
     });
   } catch (error) {
     console.error("[Search Start] Error:", error);
+    if (searchId) {
+      try {
+        await getSupabase()
+          .from("searches")
+          .update({
+            status: "error",
+            error_message:
+              error instanceof Error ? error.message : "Workflow start failed",
+          })
+          .eq("id", searchId);
+      } catch (updateError) {
+        console.error(
+          "[Search Start] Failed to mark search as errored:",
+          updateError,
+        );
+      }
+    }
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 },

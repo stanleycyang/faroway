@@ -1,7 +1,7 @@
 /**
  * Activities Agent
  * Searches for tours, attractions, and experiences
- * Uses Google Places API + AI for matching and ranking
+ * Uses real activity vendors + AI for matching and ranking
  */
 
 import { generateObject, gateway as defaultGateway, createGateway } from "ai";
@@ -15,9 +15,21 @@ import {
   isViatorConfigured,
 } from "@/lib/affiliates/viator";
 import {
+  searchGYGActivities,
+  generateGYGAffiliateUrl,
+  mapGYGCategoryToVibe,
+  isGYGConfigured,
+} from "@/lib/affiliates/getyourguide";
+import {
   enrichWithTripAdvisor,
   isTripAdvisorConfigured,
 } from "@/lib/affiliates/tripadvisor";
+import {
+  AI_AGENT_TIMEOUT_MS,
+  fetchWithTimeout,
+  isOperationTimeoutError,
+  withAbortTimeout,
+} from "@/lib/search/runtime";
 
 const aiGateway = process.env.AI_GATEWAY_API_KEY
   ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
@@ -84,92 +96,30 @@ export async function runActivitiesAgent(
   const { destination, dates, activityCriteria, vibeInterpretation } = plan;
   const vibes = vibeInterpretation.vibes;
 
-  // Search Viator for real activity data
-  const realActivities: ActivityResult[] = [];
+  const viatorPromise = isViatorConfigured()
+    ? searchViatorProducts({
+        destination,
+        startDate: dates.start,
+        limit: 15,
+      }).catch((error) => {
+        console.error("[Activities Agent] Viator search error:", error);
+        return [];
+      })
+    : Promise.resolve([]);
 
-  try {
-    const viatorProducts = isViatorConfigured()
-      ? await searchViatorProducts({
-          destination: destination,
-          startDate: dates.start,
-          limit: 15,
-        })
-      : [];
+  const gygPromise = isGYGConfigured()
+    ? searchGYGActivities({
+        destination,
+        startDate: dates.start,
+        endDate: dates.end,
+        limit: 15,
+      }).catch((error) => {
+        console.error("[Activities Agent] GetYourGuide search error:", error);
+        return [];
+      })
+    : Promise.resolve([]);
 
-    const trackingId = `tg_${Date.now()}`;
-
-    for (const product of viatorProducts) {
-      const durationMinutes =
-        product.duration.fixedDurationInMinutes ||
-        product.duration.variableDurationFromMinutes ||
-        180;
-      const categoryVibes =
-        product.categories.length > 0
-          ? mapViatorCategoryToVibe(product.categories[0])
-          : [];
-      const { score, matchedVibes } = calculateVibeScore(
-        {
-          name: product.title,
-          description: product.description,
-          category: product.categories[0] || "",
-        },
-        vibes,
-      );
-
-      realActivities.push({
-        id: `activity_v_${product.productCode}`,
-        name: product.title,
-        description:
-          product.shortDescription || product.description.substring(0, 200),
-        category: product.categories[0] || "sightseeing",
-        duration: durationMinutes,
-        price: product.price.amount,
-        currency: product.price.currencyCode,
-        rating: product.rating,
-        reviewCount: product.reviewCount,
-        location: {
-          name: product.location.city || destination,
-          address: product.location.address || "",
-          lat: product.location.coordinates?.latitude || 0,
-          lng: product.location.coordinates?.longitude || 0,
-        },
-        images: product.images
-          .slice(0, 3)
-          .map((img: { url: string; caption?: string }) => img.url),
-        affiliateUrl: generateViatorAffiliateUrl(
-          product.productCode,
-          trackingId,
-          { date: dates.start, productUrl: product.productUrl },
-        ),
-        affiliatePartner: "viator",
-        bestTimeOfDay: "any",
-        vibeScore: score || matchedVibes.length * 25,
-        vibeMatch:
-          matchedVibes.length > 0
-            ? matchedVibes
-            : categoryVibes.filter((v) => vibes.includes(v)),
-        bookingRequired: true,
-      });
-    }
-  } catch (error) {
-    console.error("[Activities Agent] Viator search error:", error);
-  }
-
-  // If we have enough real results, return them
-  if (realActivities.length >= count) {
-    return realActivities
-      .sort((a, b) => b.vibeScore - a.vibeScore)
-      .slice(0, count);
-  }
-
-  // Supplement with AI-generated activities for gaps
-  const remaining = count - realActivities.length;
-  const realContext =
-    realActivities.length > 0
-      ? `\n\n**Already sourced from APIs (do NOT duplicate these):**\n${realActivities.map((a) => `- ${a.name} ($${a.price}, ${a.affiliatePartner})`).join("\n")}`
-      : "";
-
-  const prompt = `Generate ${remaining} bookable activities and attractions for ${destination}.
+  const prompt = `Generate ${count} bookable activities and attractions for ${destination}.
 
 **Trip Details:**
 - Duration: ${dates.nights} nights
@@ -179,42 +129,193 @@ export async function runActivitiesAgent(
 
 **Vibes to match:** ${vibes.join(", ")}
 **Keywords to incorporate:** ${vibeInterpretation.searchKeywords.slice(0, 10).join(", ")}
-**Avoid:** ${vibeInterpretation.avoidKeywords.join(", ") || "nothing specific"}${realContext}
+**Avoid:** ${vibeInterpretation.avoidKeywords.join(", ") || "nothing specific"}
 
-Generate a diverse mix covering categories NOT already represented above.
+Generate a diverse mix across categories.
 Score each activity 0-100 on how well it matches the traveler's vibes.`;
 
-  try {
-    const { object: result } = await generateObject({
-      model: aiGateway(MODEL),
-      system: SYSTEM_PROMPT,
-      prompt,
-      schema: ActivityListSchema,
+  const aiPromise = withAbortTimeout(
+    (abortSignal) =>
+      generateObject({
+        model: aiGateway(MODEL),
+        system: SYSTEM_PROMPT,
+        prompt,
+        schema: ActivityListSchema,
+        timeout: AI_AGENT_TIMEOUT_MS,
+        abortSignal,
+        maxRetries: 0,
+      }),
+    AI_AGENT_TIMEOUT_MS,
+    "activities AI",
+  )
+    .then(({ object: result }) =>
+      result.activities.map((activity, index) => ({
+        ...activity,
+        id: `activity_${Date.now()}_${index}`,
+      })),
+    )
+    .catch((error) => {
+      if (isOperationTimeoutError(error)) {
+        console.warn(
+          "[Activities Agent] AI timed out, using vendor/fallback results:",
+          error.message,
+        );
+      } else {
+        console.error("[Activities Agent] AI generation error:", error);
+      }
+      return [] as ActivityResult[];
     });
 
-    const aiActivities = result.activities.map((activity, index) => ({
-      ...activity,
-      id: `activity_${Date.now()}_${index}`,
-    }));
+  const [viatorProducts, gygActivities, aiActivities] = await Promise.all([
+    viatorPromise,
+    gygPromise,
+    aiPromise,
+  ]);
 
-    const allActivities = [...realActivities, ...aiActivities]
-      .sort((a, b) => b.vibeScore - a.vibeScore)
-      .slice(0, count);
+  const trackingId = `tg_${Date.now()}`;
+  const viatorActivities: ActivityResult[] = viatorProducts.map((product) => {
+    const durationMinutes =
+      product.duration.fixedDurationInMinutes ||
+      product.duration.variableDurationFromMinutes ||
+      180;
+    const categoryVibes =
+      product.categories.length > 0
+        ? mapViatorCategoryToVibe(product.categories[0])
+        : [];
+    const { score, matchedVibes } = calculateVibeScore(
+      {
+        name: product.title,
+        description: product.description,
+        category: product.categories[0] || "",
+      },
+      vibes,
+    );
 
-    // Enrich with TripAdvisor ratings and reviews
-    if (isTripAdvisorConfigured()) {
-      try {
-        await enrichWithTripAdvisor(allActivities, "attractions");
-      } catch (e) {
-        console.error("[Activities Agent] TripAdvisor enrichment error:", e);
-      }
+    return {
+      id: `activity_v_${product.productCode}`,
+      name: product.title,
+      description:
+        product.shortDescription || product.description.substring(0, 200),
+      category: product.categories[0] || "sightseeing",
+      duration: durationMinutes,
+      price: product.price.amount,
+      currency: product.price.currencyCode,
+      rating: product.rating,
+      reviewCount: product.reviewCount,
+      location: {
+        name: product.location.city || destination,
+        address: product.location.address || "",
+        lat: product.location.coordinates?.latitude || 0,
+        lng: product.location.coordinates?.longitude || 0,
+      },
+      images: product.images
+        .slice(0, 3)
+        .map((img: { url: string; caption?: string }) => img.url),
+      affiliateUrl: generateViatorAffiliateUrl(
+        product.productCode,
+        trackingId,
+        {
+          date: dates.start,
+          productUrl: product.productUrl,
+        },
+      ),
+      affiliatePartner: "viator",
+      bestTimeOfDay: "any",
+      vibeScore: score || matchedVibes.length * 25,
+      vibeMatch:
+        matchedVibes.length > 0
+          ? matchedVibes
+          : categoryVibes.filter((v) => vibes.includes(v)),
+      bookingRequired: true,
+    };
+  });
+
+  const getYourGuideActivities: ActivityResult[] = gygActivities.map(
+    (activity) => {
+      const durationMinutes =
+        activity.duration.fixedDurationInMinutes ||
+        activity.duration.variableDurationFromMinutes ||
+        180;
+      const category = activity.categories[0] || "tour";
+      const categoryVibes = mapGYGCategoryToVibe(category);
+      const { score, matchedVibes } = calculateVibeScore(
+        {
+          name: activity.title,
+          description: activity.description,
+          category,
+        },
+        vibes,
+      );
+
+      return {
+        id: `activity_gyg_${activity.activityId}`,
+        name: activity.title,
+        description:
+          activity.shortDescription || activity.description.substring(0, 200),
+        category,
+        duration: durationMinutes,
+        price: activity.price.amount,
+        currency: activity.price.currencyCode,
+        rating: activity.rating,
+        reviewCount: activity.reviewCount,
+        location: {
+          name: activity.location.city || destination,
+          address: activity.location.address || "",
+          lat: activity.location.coordinates?.latitude || 0,
+          lng: activity.location.coordinates?.longitude || 0,
+        },
+        images: activity.images
+          .slice(0, 3)
+          .map((img: { url: string; caption?: string }) => img.url)
+          .filter((url): url is string => Boolean(url)),
+        affiliateUrl: generateGYGAffiliateUrl(activity.activityId, trackingId, {
+          date: dates.start,
+        }),
+        affiliatePartner: "getyourguide",
+        bestTimeOfDay: "any",
+        vibeScore: score || matchedVibes.length * 25,
+        vibeMatch:
+          matchedVibes.length > 0
+            ? matchedVibes
+            : categoryVibes.filter((v) => vibes.includes(v)),
+        bookingRequired: true,
+      };
+    },
+  );
+
+  const realActivities = [...viatorActivities, ...getYourGuideActivities];
+
+  let allActivities = deduplicateActivities([
+    ...realActivities,
+    ...aiActivities,
+  ])
+    .sort((a, b) => b.vibeScore - a.vibeScore)
+    .slice(0, count);
+
+  // Enrich with TripAdvisor ratings and reviews
+  if (isTripAdvisorConfigured() && allActivities.length > 0) {
+    try {
+      allActivities = await enrichWithTripAdvisor(allActivities, "attractions");
+    } catch (e) {
+      console.error("[Activities Agent] TripAdvisor enrichment error:", e);
     }
-
-    return allActivities;
-  } catch (error) {
-    console.error("[Activities Agent] AI generation error:", error);
-    return realActivities.sort((a, b) => b.vibeScore - a.vibeScore);
   }
+
+  return allActivities;
+}
+
+function deduplicateActivities(activities: ActivityResult[]): ActivityResult[] {
+  const seen = new Map<string, ActivityResult>();
+
+  for (const activity of activities) {
+    const key = activity.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const existing = seen.get(key);
+    if (!existing || activity.vibeScore > existing.vibeScore) {
+      seen.set(key, activity);
+    }
+  }
+
+  return Array.from(seen.values());
 }
 
 /**
@@ -233,23 +334,21 @@ export async function searchGooglePlacesActivities(
   }
 
   try {
-    // Google Places Text Search
     const searchQueries = types.map((type) => `${type} in ${destination}`);
-    const results: Record<string, unknown>[] = [];
+    const responses = await Promise.allSettled(
+      searchQueries.slice(0, 3).map(async (query) => {
+        const response = await fetchWithTimeout(
+          `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${apiKey}`,
+        );
+        if (!response.ok) return [];
+        const data = await response.json();
+        return Array.isArray(data.results) ? data.results : [];
+      }),
+    );
 
-    for (const query of searchQueries.slice(0, 3)) {
-      // Limit to 3 queries
-      const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${apiKey}`,
-      );
-      const data = await response.json();
-
-      if (data.results) {
-        results.push(...data.results);
-      }
-    }
-
-    return results;
+    return responses.flatMap((result) =>
+      result.status === "fulfilled" ? result.value : [],
+    );
   } catch (error) {
     console.error("[Activities Agent] Google Places error:", error);
     return [];

@@ -11,6 +11,8 @@
  * @see https://github.com/viator-docs/Viator-Partner-API-v2
  */
 
+import { fetchWithTimeout } from "@/lib/search/runtime";
+
 // Environment variables
 const VIATOR_API_KEY = process.env.VIATOR_API_KEY;
 const VIATOR_PARTNER_ID = process.env.VIATOR_PARTNER_ID;
@@ -336,11 +338,14 @@ async function searchByDestinationId(
     currency: "USD",
   };
 
-  const response = await fetch(`${VIATOR_API_BASE}/products/search`, {
-    method: "POST",
-    headers: getV2WriteHeaders(),
-    body: JSON.stringify(body),
-  });
+  const response = await fetchWithTimeout(
+    `${VIATOR_API_BASE}/products/search`,
+    {
+      method: "POST",
+      headers: getV2WriteHeaders(),
+      body: JSON.stringify(body),
+    },
+  );
 
   if (!response.ok) {
     const error = await response.text();
@@ -366,9 +371,12 @@ export async function getViatorProduct(
   }
 
   try {
-    const response = await fetch(`${VIATOR_API_BASE}/products/${productCode}`, {
-      headers: getV2ReadHeaders(),
-    });
+    const response = await fetchWithTimeout(
+      `${VIATOR_API_BASE}/products/${productCode}`,
+      {
+        headers: getV2ReadHeaders(),
+      },
+    );
 
     if (!response.ok) {
       return null;
@@ -396,17 +404,20 @@ export async function checkViatorAvailability(
   }
 
   try {
-    const response = await fetch(`${VIATOR_API_BASE}/availability/check`, {
-      method: "POST",
-      headers: getV2WriteHeaders(),
-      body: JSON.stringify({
-        productCode,
-        travelDate: startDate,
-        endDate,
-        paxMix: [{ ageBand: "ADULT", count: travelers }],
-        currency: "USD",
-      }),
-    });
+    const response = await fetchWithTimeout(
+      `${VIATOR_API_BASE}/availability/check`,
+      {
+        method: "POST",
+        headers: getV2WriteHeaders(),
+        body: JSON.stringify({
+          productCode,
+          travelDate: startDate,
+          endDate,
+          paxMix: [{ ageBand: "ADULT", count: travelers }],
+          currency: "USD",
+        }),
+      },
+    );
 
     if (!response.ok) {
       return [];

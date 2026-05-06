@@ -57,6 +57,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     apiUrl: process.env.EXPO_PUBLIC_API_URL,
+    e2eMode: process.env.E2E_MODE === 'true',
+    e2eProfile: process.env.E2E_PROFILE || 'default',
     eas: {
       projectId: process.env.EAS_PROJECT_ID,
     },

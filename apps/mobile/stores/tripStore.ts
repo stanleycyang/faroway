@@ -71,6 +71,8 @@ export interface Trip {
   endDate: string;
   travelers: number;
   travelerType: string;
+  originCity?: string;
+  originAirport?: string;
   vibes: string[];
   budget?: string;
   days: TripDay[];
@@ -88,6 +90,8 @@ export interface TripInput {
   endDate: string;
   travelers: number;
   travelerType: string;
+  originCity?: string;
+  originAirport?: string;
   vibes: string[];
   budget?: string;
 }

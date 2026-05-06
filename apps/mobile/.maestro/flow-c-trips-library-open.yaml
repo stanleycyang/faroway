@@ -1,0 +1,9 @@
+appId: ai.faroway.app
+name: FlowC_TripsLibraryOpen
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+- openLink: faroway://(tabs)/trips
+- assertVisible:
+    id: trips_screen

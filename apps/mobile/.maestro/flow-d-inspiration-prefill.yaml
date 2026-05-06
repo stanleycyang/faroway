@@ -1,0 +1,13 @@
+appId: ai.faroway.app
+name: FlowD_InspirationPrefill
+---
+- launchApp:
+    clearState: true
+    stopApp: true
+- openLink: faroway://inspiration/beach-getaway
+- assertVisible:
+    id: inspiration_screen
+- tapOn:
+    id: inspiration_surprise_me_button
+- assertVisible:
+    id: create_screen

@@ -26,6 +26,7 @@ import { AuthGate } from '../../components/AuthGate';
 import { popularDestinations, travelerTypes } from '@faroway/constants';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
+import { e2eIds } from '../../e2e/testIds';
 
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
 
@@ -148,7 +149,7 @@ export default function CreateTripScreen() {
     : null;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top']} testID={e2eIds.create.screen}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -158,6 +159,7 @@ export default function CreateTripScreen() {
           <TouchableOpacity
             style={styles.closeButton}
             onPress={() => router.back()}
+            testID={e2eIds.create.close}
           >
             <Ionicons name="close" size={24} color={colors.neutral[700]} />
           </TouchableOpacity>
@@ -177,6 +179,7 @@ export default function CreateTripScreen() {
                 style={styles.signInBannerContent}
                 onPress={() => setShowAuthGate(true)}
                 activeOpacity={0.7}
+                testID={e2eIds.create.signInBanner}
               >
                 <Ionicons name="cloud-upload-outline" size={18} color={colors.primary[600]} />
                 <Text style={styles.signInBannerText}>
@@ -202,6 +205,7 @@ export default function CreateTripScreen() {
                 style={styles.selectedDestination}
                 onPress={() => setShowSearch(true)}
                 activeOpacity={0.9}
+                testID={e2eIds.create.destinationCard}
               >
                 {mapUrl && !mapLoadFailed ? (
                   <Image
@@ -248,6 +252,7 @@ export default function CreateTripScreen() {
             ) : (
               <>
                 <PlacesAutocomplete onSelect={handleSelectDestination} />
+                <View testID={e2eIds.create.destinationSearch} />
                 <ScrollView
                   horizontal
                   showsHorizontalScrollIndicator={false}
@@ -306,6 +311,7 @@ export default function CreateTripScreen() {
                   style={styles.counterButton}
                   onPress={() => handleTravelersChange(-1)}
                   disabled={(draftInput?.travelers || 2) <= 1}
+                  testID={e2eIds.create.travelerMinus}
                 >
                   <Ionicons
                     name="remove"
@@ -324,6 +330,7 @@ export default function CreateTripScreen() {
                   style={styles.counterButton}
                   onPress={() => handleTravelersChange(1)}
                   disabled={(draftInput?.travelers || 2) >= 10}
+                  testID={e2eIds.create.travelerPlus}
                 >
                   <Ionicons
                     name="add"
@@ -393,6 +400,8 @@ export default function CreateTripScreen() {
             disabled={!canProceed}
             size="lg"
             fullWidth
+            testID={e2eIds.create.continue}
+            accessibilityLabel="Generate itinerary"
           />
         </View>
 

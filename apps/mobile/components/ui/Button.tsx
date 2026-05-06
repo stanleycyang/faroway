@@ -23,6 +23,8 @@ interface ButtonProps {
   fullWidth?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
+  testID?: string;
+  accessibilityLabel?: string;
 }
 
 export function Button({
@@ -36,6 +38,8 @@ export function Button({
   fullWidth = false,
   style,
   textStyle,
+  testID,
+  accessibilityLabel,
 }: ButtonProps) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
 
@@ -143,6 +147,8 @@ export function Button({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled || loading}
+      testID={testID}
+      accessibilityLabel={accessibilityLabel || title}
     >
       <Animated.View
         style={[

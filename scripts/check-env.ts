@@ -36,6 +36,11 @@ const WEB: EnvVar[] = [
     description: "Supabase service role key (server-only)",
   },
   {
+    name: "AI_GATEWAY_API_KEY",
+    required: false,
+    description: "Vercel AI Gateway API key for itinerary generation",
+  },
+  {
     name: "OPENAI_API_KEY",
     required: false,
     description: "OpenAI API key for AI features",
@@ -54,6 +59,77 @@ const WEB: EnvVar[] = [
     name: "NEXT_PUBLIC_GA_MEASUREMENT_ID",
     required: false,
     description: "Google Analytics measurement ID",
+  },
+  {
+    name: "GOOGLE_PLACES_API_KEY",
+    required: false,
+    description:
+      "Google Places API key for itinerary activity and dining enrichment",
+  },
+  {
+    name: "VIATOR_API_KEY",
+    required: false,
+    description: "Viator Partner API key for activities",
+  },
+  {
+    name: "VIATOR_PARTNER_ID",
+    required: false,
+    description: "Viator partner ID for affiliate tracking",
+  },
+  {
+    name: "BOOKING_COM_TOKEN",
+    required: false,
+    description: "Booking.com Demand API bearer token for hotel inventory",
+  },
+  {
+    name: "BOOKING_COM_AFFILIATE_ID",
+    required: false,
+    description: "Booking.com affiliate ID for hotel inventory and links",
+  },
+  {
+    name: "BOOKING_COM_USERNAME",
+    required: false,
+    description: "Legacy Booking.com Distribution API username fallback",
+  },
+  {
+    name: "BOOKING_COM_PASSWORD",
+    required: false,
+    description: "Legacy Booking.com Distribution API password fallback",
+  },
+  {
+    name: "AMADEUS_CLIENT_ID",
+    required: false,
+    description: "Amadeus client ID for hotels and flights",
+  },
+  {
+    name: "AMADEUS_CLIENT_SECRET",
+    required: false,
+    description: "Amadeus client secret for hotels and flights",
+  },
+  {
+    name: "DUFFEL_API_TOKEN",
+    required: false,
+    description: "Duffel token for flight search and links",
+  },
+  {
+    name: "TRIPADVISOR_API_KEY",
+    required: false,
+    description: "TripAdvisor Content API key for enrichment",
+  },
+  {
+    name: "GETYOURGUIDE_API_KEY",
+    required: false,
+    description: "GetYourGuide Partner API key for activities",
+  },
+  {
+    name: "GETYOURGUIDE_PARTNER_ID",
+    required: false,
+    description: "GetYourGuide partner ID for affiliate tracking",
+  },
+  {
+    name: "TAVILY_API_KEY",
+    required: false,
+    description: "Tavily key for local non-affiliate enrichment",
   },
 ];
 
@@ -90,7 +166,10 @@ function loadEnvFile(path: string): Record<string, string> {
     const eqIndex = trimmed.indexOf("=");
     if (eqIndex === -1) continue;
     const key = trimmed.slice(0, eqIndex).trim();
-    const value = trimmed.slice(eqIndex + 1).trim().replace(/^["']|["']$/g, "");
+    const value = trimmed
+      .slice(eqIndex + 1)
+      .trim()
+      .replace(/^["']|["']$/g, "");
     vars[key] = value;
   }
   return vars;
@@ -133,10 +212,14 @@ function check(label: string, vars: EnvVar[]): number {
       const masked = value.slice(0, 8) + "..." + value.slice(-4);
       console.log(`  ${GREEN}✓${RESET} ${v.name} ${DIM}${masked}${RESET}`);
     } else if (v.required) {
-      console.log(`  ${RED}✗${RESET} ${v.name} ${RED}(required)${RESET} ${DIM}— ${v.description}${RESET}`);
+      console.log(
+        `  ${RED}✗${RESET} ${v.name} ${RED}(required)${RESET} ${DIM}— ${v.description}${RESET}`,
+      );
       missing++;
     } else {
-      console.log(`  ${YELLOW}○${RESET} ${v.name} ${DIM}(optional) — ${v.description}${RESET}`);
+      console.log(
+        `  ${YELLOW}○${RESET} ${v.name} ${DIM}(optional) — ${v.description}${RESET}`,
+      );
     }
   }
 
@@ -156,7 +239,11 @@ if (totalMissing === 0) {
   console.log(`  ${GREEN}${BOLD}All required variables are set!${RESET}\n`);
   process.exit(0);
 } else {
-  console.log(`  ${RED}${BOLD}${totalMissing} required variable(s) missing.${RESET}`);
-  console.log(`  ${DIM}Add them to .env.local at the root or in the app directory.${RESET}\n`);
+  console.log(
+    `  ${RED}${BOLD}${totalMissing} required variable(s) missing.${RESET}`,
+  );
+  console.log(
+    `  ${DIM}Add them to .env.local at the root or in the app directory.${RESET}\n`,
+  );
   process.exit(1);
 }

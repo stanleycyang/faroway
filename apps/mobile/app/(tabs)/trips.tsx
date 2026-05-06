@@ -19,6 +19,7 @@ import { useAuthContext } from '../../components/AuthProvider';
 import { useTripStore } from '../../stores/tripStore';
 import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
+import { e2eIds } from '../../e2e/testIds';
 
 type FilterTab = 'all' | 'upcoming' | 'past';
 
@@ -318,6 +319,7 @@ function AuthenticatedTripsView() {
               onPress={() => router.push('/create')}
               size="lg"
               style={styles.emptyStateButton}
+              testID={e2eIds.trips.createFirstTripButton}
             />
           </View>
         ) : (
@@ -339,6 +341,7 @@ function AuthenticatedTripsView() {
                   status={trip.status}
                   daysCount={trip.days.length}
                   onPress={() => handleTripPress(trip.id)}
+                  testID={`${e2eIds.trips.tripCardPrefix}${trip.id}`}
                 />
               ))
             )}
@@ -356,13 +359,14 @@ export default function TripsScreen() {
   const { isAuthenticated } = useAuthContext();
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top']} testID={e2eIds.trips.screen}>
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Trips</Text>
         <TouchableOpacity
           style={styles.addButton}
           onPress={() => router.push('/create')}
+          testID={e2eIds.trips.addButton}
         >
           <Ionicons name="add" size={24} color={colors.primary[500]} />
         </TouchableOpacity>

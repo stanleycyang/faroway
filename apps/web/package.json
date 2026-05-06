@@ -14,6 +14,9 @@
     "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "vendors:check": "ITINERARY_VENDOR_REQUIRE_ALL=true ITINERARY_VENDOR_TIMEOUT_MS=30000 DUFFEL_SUPPLIER_TIMEOUT_MS=30000 DUFFEL_LINK_TIMEOUT_MS=10000 bun --env-file .env scripts/check-itinerary-vendors.ts",
+    "schema:itinerary-streaming": "bun --env-file .env scripts/check-itinerary-streaming-schema.ts",
+    "perf:itinerary": "bun --env-file .env scripts/measure-itinerary-stream.ts",
     "clean": "rm -rf .next .turbo"
   },
   "dependencies": {

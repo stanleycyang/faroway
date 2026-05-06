@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInspirationBySlug, popularDestinations } from '@faroway/constants';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
+import { e2eIds } from '../../e2e/testIds';
 
 const { width, height: screenHeight } = Dimensions.get('window');
 const HERO_HEIGHT = screenHeight * 0.45;
@@ -169,7 +170,7 @@ export default function InspirationDetailScreen() {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.container} testID={e2eIds.inspiration.screen}>
       <Animated.ScrollView
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event(
@@ -238,6 +239,7 @@ export default function InspirationDetailScreen() {
                 style={styles.destCard}
                 activeOpacity={0.9}
                 onPress={() => handleDestinationPress(dest)}
+                testID={`${e2eIds.inspiration.destinationCardPrefix}${dest.id}`}
               >
                 <Image source={{ uri: dest.image }} style={styles.destImage} />
                 <LinearGradient
@@ -275,6 +277,7 @@ export default function InspirationDetailScreen() {
           style={[styles.surpriseButton, { backgroundColor: inspiration.gradientColors[0] }]}
           activeOpacity={0.85}
           onPress={handleSurpriseMe}
+          testID={e2eIds.inspiration.surpriseMeButton}
         >
           <Ionicons name="sparkles" size={20} color="#fff" />
           <Text style={styles.surpriseButtonText}>Surprise Me</Text>

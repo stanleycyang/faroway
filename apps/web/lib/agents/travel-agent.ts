@@ -12,6 +12,7 @@ import {
   createGateway,
 } from "ai";
 import { z } from "zod";
+import { AI_AGENT_TIMEOUT_MS } from "@/lib/search/runtime";
 import {
   searchViatorProducts,
   generateViatorAffiliateUrl,
@@ -313,9 +314,15 @@ const createItineraryTool = tool({
     );
 
     const topHotel = hotels[0];
+    const pickActivity = (offset: number) =>
+      activities.length > 0 ? activities[offset % activities.length] : null;
+    const pickRestaurant = (offset: number) =>
+      restaurants.length > 0 ? restaurants[offset % restaurants.length] : null;
+
     const days = Array.from({ length: nights + 1 }, (_, dayIndex) => {
       const date = new Date(start);
       date.setDate(date.getDate() + dayIndex);
+      const featuredActivity = pickActivity(dayIndex);
 
       return {
         dayNumber: dayIndex + 1,
@@ -327,28 +334,27 @@ const createItineraryTool = tool({
               ? `Departure Day`
               : `Exploring ${destination}`,
         morning: {
-          activities: [activities[(dayIndex * 2) % activities.length]],
+          activities: [pickActivity(dayIndex * 2)].filter(Boolean),
           meal:
             restaurants.find((r) => r.cuisine?.includes("Local")) ||
-            restaurants[0],
+            pickRestaurant(0),
         },
         afternoon: {
-          activities: [activities[(dayIndex * 2 + 1) % activities.length]],
-          meal: restaurants[dayIndex % restaurants.length],
+          activities: [pickActivity(dayIndex * 2 + 1)].filter(Boolean),
+          meal: pickRestaurant(dayIndex),
         },
         evening: {
           activities:
             dayIndex < nights
-              ? [activities[(dayIndex + 3) % activities.length]]
+              ? [pickActivity(dayIndex + 3)].filter(Boolean)
               : [],
-          meal: restaurants[(dayIndex + 2) % restaurants.length],
+          meal: pickRestaurant(dayIndex + 2),
         },
         estimatedCost: 150 + Math.floor(Math.random() * 100),
         currency: "USD",
-        tips: [
-          `Book ${activities[dayIndex % activities.length]?.name} in advance`,
-          "Stay hydrated",
-        ],
+        tips: featuredActivity
+          ? [`Book ${featuredActivity.name} in advance`, "Stay hydrated"]
+          : ["Keep the day flexible", "Stay hydrated"],
       };
     });
 
@@ -439,7 +445,10 @@ ${budget ? `Budget: ${budget}` : "Budget: moderate"}
 
 Please search for hotels, activities, and restaurants, then create a complete itinerary.`;
 
-  const result = await travelPlanningAgent.generate({ prompt });
+  const result = await travelPlanningAgent.generate({
+    prompt,
+    timeout: AI_AGENT_TIMEOUT_MS,
+  });
 
   return result.output!;
 }

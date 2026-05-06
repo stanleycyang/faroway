@@ -1,0 +1,45 @@
+export const e2eIds = {
+  create: {
+    screen: 'create_screen',
+    close: 'create_close_button',
+    continue: 'create_continue_button',
+    destinationCard: 'create_destination_card',
+    destinationSearch: 'create_destination_search',
+    travelerMinus: 'create_travelers_minus',
+    travelerPlus: 'create_travelers_plus',
+    signInBanner: 'create_signin_banner',
+  },
+  generating: {
+    screen: 'generating_screen',
+    progressRing: 'generating_progress_ring',
+    errorBox: 'generating_error_box',
+    viewTripButton: 'generating_view_trip_button',
+    progressiveBlocks: 'generating_progressive_blocks',
+  },
+  trip: {
+    screen: 'trip_screen',
+    backButton: 'trip_back_button',
+    shareButton: 'trip_share_button',
+    saveButton: 'trip_save_button',
+    dayTabPrefix: 'trip_day_tab_',
+    bookAllButton: 'trip_book_all_button',
+    bookingsSheet: 'trip_bookings_sheet',
+  },
+  inspiration: {
+    screen: 'inspiration_screen',
+    surpriseMeButton: 'inspiration_surprise_me_button',
+    destinationCardPrefix: 'inspiration_destination_',
+  },
+  trips: {
+    screen: 'trips_screen',
+    addButton: 'trips_add_button',
+    createFirstTripButton: 'trips_create_first_trip_button',
+    tripCardPrefix: 'trips_trip_card_',
+  },
+  authGate: {
+    modal: 'auth_gate_modal',
+    google: 'auth_gate_google_button',
+    apple: 'auth_gate_apple_button',
+    maybeLater: 'auth_gate_maybe_later_button',
+  },
+} as const;

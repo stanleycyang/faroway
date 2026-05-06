@@ -7,14 +7,25 @@
  *
  * Endpoints used:
  * - POST /air/offer_requests   — search for flight offers
- * - POST /links/duffel_links   — generate a hosted booking page with markup
+ * - POST /links/sessions       — generate a hosted booking session
  *
  * @see https://duffel.com/docs/api
  */
 
+import { fetchWithTimeout, getEnvNumber } from "@/lib/search/runtime";
+
 // Environment variables
 const DUFFEL_API_TOKEN = process.env.DUFFEL_API_TOKEN;
 const DUFFEL_API_BASE = "https://api.duffel.com";
+const DUFFEL_SUPPLIER_TIMEOUT_MS = getEnvNumber(
+  "DUFFEL_SUPPLIER_TIMEOUT_MS",
+  2000,
+  { min: 2000, max: 60000 },
+);
+const DUFFEL_LINK_TIMEOUT_MS = getEnvNumber("DUFFEL_LINK_TIMEOUT_MS", 750, {
+  min: 250,
+  max: 10000,
+});
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -247,11 +258,22 @@ export async function searchDuffelFlights(
       `[Duffel] Searching flights: ${params.origin} → ${params.destination} on ${params.departureDate}`,
     );
 
-    const response = await fetch(`${DUFFEL_API_BASE}/air/offer_requests`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify(body),
-    });
+    const offerRequestUrl = new URL(`${DUFFEL_API_BASE}/air/offer_requests`);
+    offerRequestUrl.searchParams.set("return_offers", "true");
+    offerRequestUrl.searchParams.set(
+      "supplier_timeout",
+      String(DUFFEL_SUPPLIER_TIMEOUT_MS),
+    );
+
+    const response = await fetchWithTimeout(
+      offerRequestUrl,
+      {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify(body),
+      },
+      DUFFEL_SUPPLIER_TIMEOUT_MS + 500,
+    );
 
     if (!response.ok) {
       const error = await response.text();
@@ -280,11 +302,11 @@ export async function searchDuffelFlights(
 }
 
 /**
- * Generate a Duffel Link — a hosted booking page for a specific offer.
+ * Generate a Duffel Links hosted booking page.
  *
- * Duffel Links allow us to earn revenue through markup. Duffel handles the
- * entire booking flow (payment, ticketing, customer support) as Merchant of
- * Record. We add a markup amount that becomes our commission.
+ * Duffel Links currently creates a hosted search/booking session rather than
+ * an offer-specific checkout URL. We still keep the offer ID in logs so click
+ * tracking can tie the link back to the selected recommendation.
  *
  * @param offerId - The Duffel offer ID to create a booking link for
  * @param markupAmount - Markup amount to add (default: "5.00")
@@ -293,8 +315,8 @@ export async function searchDuffelFlights(
  */
 export async function generateDuffelLink(
   offerId: string,
-  markupAmount?: number,
-  markupCurrency?: string,
+  markupAmount = 5,
+  markupCurrency = "USD",
 ): Promise<string | null> {
   if (!isDuffelConfigured()) {
     console.warn("[Duffel] API not configured, cannot generate link");
@@ -302,36 +324,56 @@ export async function generateDuffelLink(
   }
 
   try {
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      process.env.NEXT_PUBLIC_SITE_URL ||
+      "https://faroway.ai";
+    const makeReturnUrl = (status: string) => {
+      const url = new URL("/trips", appUrl);
+      url.searchParams.set("duffel", status);
+      return url.toString();
+    };
     const body = {
       data: {
-        offer_id: offerId,
-        markup_amount: (markupAmount ?? 5.0).toFixed(2),
-        markup_currency: markupCurrency || "USD",
+        reference: offerId,
+        success_url: makeReturnUrl("success"),
+        failure_url: makeReturnUrl("failure"),
+        abandonment_url: makeReturnUrl("abandoned"),
+        primary_color: "#0f172a",
+        traveller_currency: markupCurrency,
+        markup_amount: Math.max(0, markupAmount).toFixed(2),
+        markup_currency: markupCurrency,
+        flights: { enabled: "true" },
+        stays: { enabled: "false" },
       },
     };
 
     console.log(`[Duffel] Generating link for offer ${offerId}`);
 
-    const response = await fetch(`${DUFFEL_API_BASE}/links/duffel_links`, {
-      method: "POST",
-      headers: getHeaders(),
-      body: JSON.stringify(body),
-    });
+    const response = await fetchWithTimeout(
+      `${DUFFEL_API_BASE}/links/sessions`,
+      {
+        method: "POST",
+        headers: getHeaders(),
+        body: JSON.stringify(body),
+      },
+      DUFFEL_LINK_TIMEOUT_MS,
+    );
 
     if (!response.ok) {
       const error = await response.text();
-      console.error("[Duffel] duffel_links error:", response.status, error);
+      console.error("[Duffel] links/sessions error:", response.status, error);
       return null;
     }
 
     const data = await response.json();
-    const url = data.data?.url || null;
+    const url = data.data?.url || data.data?.link_url || null;
 
     if (url) {
       console.log(`[Duffel] Generated link for offer ${offerId}`);
     } else {
       console.warn(
-        `[Duffel] No URL returned in duffel_links response for offer ${offerId}`,
+        `[Duffel] No URL returned in links/sessions response for offer ${offerId}`,
       );
     }
 

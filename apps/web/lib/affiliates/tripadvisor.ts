@@ -14,9 +14,21 @@
  * @see https://tripadvisor-content-api.readme.io/reference
  */
 
+import { fetchWithTimeout, getEnvNumber } from "@/lib/search/runtime";
+
 // Environment variables
 const TRIPADVISOR_API_KEY = process.env.TRIPADVISOR_API_KEY;
 const TRIPADVISOR_API_BASE = "https://api.content.tripadvisor.com/api/v1";
+const TRIPADVISOR_ENRICHMENT_TIMEOUT_MS = getEnvNumber(
+  "TRIPADVISOR_ENRICHMENT_TIMEOUT_MS",
+  500,
+  { min: 250, max: 10000 },
+);
+const TRIPADVISOR_ENRICHMENT_LIMIT = getEnvNumber(
+  "TRIPADVISOR_ENRICHMENT_LIMIT",
+  6,
+  { min: 0, max: 20 },
+);
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -81,6 +93,7 @@ export async function searchTripAdvisorLocations(
   query: string,
   category: "hotels" | "restaurants" | "attractions",
   latLong?: string,
+  timeoutMs?: number,
 ): Promise<TripAdvisorLocation[]> {
   if (!isTripAdvisorConfigured()) {
     console.warn("[TripAdvisor] API not configured, returning empty results");
@@ -99,8 +112,12 @@ export async function searchTripAdvisorLocations(
       params.set("latLong", latLong);
     }
 
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `${TRIPADVISOR_API_BASE}/location/search?${params}`,
+      {
+        headers: { Accept: "application/json" },
+      },
+      timeoutMs,
     );
 
     if (!response.ok) {
@@ -152,8 +169,11 @@ export async function getTripAdvisorDetails(
       key: TRIPADVISOR_API_KEY!,
     });
 
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `${TRIPADVISOR_API_BASE}/location/${locationId}/details?${params}`,
+      {
+        headers: { Accept: "application/json" },
+      },
     );
 
     if (!response.ok) {
@@ -200,8 +220,11 @@ export async function getTripAdvisorReviews(
       key: TRIPADVISOR_API_KEY!,
     });
 
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `${TRIPADVISOR_API_BASE}/location/${locationId}/reviews?${params}`,
+      {
+        headers: { Accept: "application/json" },
+      },
     );
 
     if (!response.ok) {
@@ -260,8 +283,9 @@ export function generateTripAdvisorAffiliateUrl(
  * found (first result), attaches tripadvisorRating, tripadvisorReviewCount,
  * and tripadvisorUrl to the item.
  *
- * Rate limited to process max 3 items concurrently using a simple batching
- * approach. Graceful: never throws, just skips items that fail.
+ * Rate limited to process max 3 items concurrently, capped to a small number
+ * of top items, and timeboxed so enrichment cannot delay itinerary generation.
+ * Graceful: never throws, just skips items that fail.
  *
  * @param items - Array of items with name and location.name properties
  * @param category - TripAdvisor category to search within
@@ -279,22 +303,36 @@ export async function enrichWithTripAdvisor<
   }
 
   const BATCH_SIZE = 3;
+  if (TRIPADVISOR_ENRICHMENT_LIMIT === 0 || items.length === 0) {
+    return items;
+  }
 
   // Create a new array to avoid mutating the input
   const enrichedItems = [...items];
+  const enrichCount = Math.min(
+    TRIPADVISOR_ENRICHMENT_LIMIT,
+    enrichedItems.length,
+  );
+  const deadline = Date.now() + TRIPADVISOR_ENRICHMENT_TIMEOUT_MS;
 
-  for (let i = 0; i < enrichedItems.length; i += BATCH_SIZE) {
+  for (let i = 0; i < enrichCount && Date.now() < deadline; i += BATCH_SIZE) {
     const batchIndices = Array.from(
-      { length: Math.min(BATCH_SIZE, enrichedItems.length - i) },
+      { length: Math.min(BATCH_SIZE, enrichCount - i) },
       (_, j) => i + j,
     );
+    const remainingMs = Math.max(250, deadline - Date.now());
 
     await Promise.all(
       batchIndices.map(async (idx) => {
         const item = enrichedItems[idx];
         try {
           const query = `${item.name} ${item.location.name}`;
-          const results = await searchTripAdvisorLocations(query, category);
+          const results = await searchTripAdvisorLocations(
+            query,
+            category,
+            undefined,
+            remainingMs,
+          );
 
           if (results.length > 0) {
             const match = results[0];

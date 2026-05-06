@@ -1,0 +1,14 @@
+{
+  "detox": {
+    "maxRetriesInCi": 1,
+    "failureWindowDays": 7,
+    "quarantineAfterFlakes": 3
+  },
+  "maestro": {
+    "maxRetriesInCi": 0
+  },
+  "quarantine": {
+    "maxDays": 14,
+    "ownerEscalationRequired": true
+  }
+}
