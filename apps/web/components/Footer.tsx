@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { Logo } from "./Logo";
+import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/store-links";
 
 export function Footer() {
   return (
@@ -13,12 +14,12 @@ export function Footer() {
               <Logo size="md" variant="light" asLink={true} />
             </div>
             <p className="text-surface-400 text-sm mb-4 leading-relaxed">
-              Your AI-powered travel genie. Plan your dream trip in seconds,
-              book everything in one place.
+              AI-powered travel planning with day-by-day itineraries and partner
+              options from one place.
             </p>
             <div className="flex flex-wrap gap-3">
               <a
-                href="https://apps.apple.com/app/faroway"
+                href={APP_STORE_URL}
                 className="inline-flex items-center gap-3 bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] px-5 py-3 rounded-2xl font-semibold text-white transition-all backdrop-blur-sm hover:-translate-y-0.5"
               >
                 <svg
@@ -34,7 +35,7 @@ export function Footer() {
                 </div>
               </a>
               <a
-                href="https://play.google.com/store/apps/details?id=com.faroway"
+                href={PLAY_STORE_URL}
                 className="inline-flex items-center gap-3 bg-white/[0.06] hover:bg-white/[0.12] border border-white/[0.08] px-5 py-3 rounded-2xl font-semibold text-white transition-all backdrop-blur-sm hover:-translate-y-0.5"
               >
                 <svg
@@ -54,7 +55,7 @@ export function Footer() {
 
           {/* Product */}
           <div>
-            <h4 className="font-semibold mb-4 text-surface-200">Product</h4>
+            <h3 className="font-semibold mb-4 text-surface-200">Product</h3>
             <ul className="space-y-2.5 text-sm text-surface-400">
               <li>
                 <Link
@@ -117,7 +118,7 @@ export function Footer() {
 
           {/* Company */}
           <div>
-            <h4 className="font-semibold mb-4 text-surface-200">Company</h4>
+            <h3 className="font-semibold mb-4 text-surface-200">Company</h3>
             <ul className="space-y-2.5 text-sm text-surface-400">
               <li>
                 <Link
@@ -156,7 +157,7 @@ export function Footer() {
 
           {/* Legal */}
           <div>
-            <h4 className="font-semibold mb-4 text-surface-200">Legal</h4>
+            <h3 className="font-semibold mb-4 text-surface-200">Legal</h3>
             <ul className="space-y-2.5 text-sm text-surface-400">
               <li>
                 <Link
@@ -180,28 +181,28 @@ export function Footer() {
 
         {/* Bottom Bar */}
         <div className="border-t border-white/[0.06] pt-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <p className="text-surface-500 text-sm">
+          <p className="text-surface-400 text-sm">
             © {new Date().getFullYear()} Faroway. All rights reserved.
           </p>
           <div className="flex gap-6 text-sm text-surface-400">
-            <a
-              href="https://twitter.com/faroway"
+            <Link
+              href="/support"
               className="hover:text-primary-400 transition-colors"
             >
-              Twitter
-            </a>
-            <a
-              href="https://instagram.com/faroway"
+              Support
+            </Link>
+            <Link
+              href="/privacy"
               className="hover:text-primary-400 transition-colors"
             >
-              Instagram
-            </a>
-            <a
-              href="https://facebook.com/faroway"
+              Privacy
+            </Link>
+            <Link
+              href="/terms"
               className="hover:text-primary-400 transition-colors"
             >
-              Facebook
-            </a>
+              Terms
+            </Link>
           </div>
         </div>
       </div>

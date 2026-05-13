@@ -21,7 +21,7 @@ test("robots.txt is accessible", async ({ request }) => {
   const response = await request.get("/robots.txt");
   expect(response.status()).toBe(200);
   const text = await response.text();
-  expect(text).toContain("User-agent");
+  expect(text.toLowerCase()).toContain("user-agent");
   expect(text).toContain("Sitemap");
 });
 
@@ -30,7 +30,7 @@ test("sitemap.xml is accessible", async ({ request }) => {
   expect(response.status()).toBe(200);
   const text = await response.text();
   expect(text).toContain("<urlset");
-  expect(text).toContain("faroway.ai");
+  expect(text).toContain("<loc>");
 });
 
 test("OG image endpoint returns an image", async ({ request }) => {

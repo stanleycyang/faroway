@@ -20,8 +20,8 @@ import {
   Play,
 } from "lucide-react";
 import { FadeInOnScroll } from "@/components/landing/FadeInOnScroll";
-import { LiveCounter } from "@/components/landing/LiveCounter";
 import { IMAGE_PATHS, getImageUrl } from "@faroway/constants";
+import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/store-links";
 
 // ─── Data ───────────────────────────────────────────────────────────────────
 
@@ -90,7 +90,7 @@ const scenicImages = [
 const whyReasons = [
   {
     title: "No more tab overload",
-    desc: "Stop juggling 20 browser tabs. Get flights, hotels, restaurants, and activities in one organized itinerary.",
+    desc: "Stop juggling 20 browser tabs. Get places to stay, restaurants, and activities in one organized itinerary.",
     emoji: "🧠",
   },
   {
@@ -136,7 +136,7 @@ function AppStoreButtons({
   return (
     <div className={`flex flex-wrap gap-3 ${className}`}>
       <a
-        href="https://apps.apple.com/app/faroway"
+        href={APP_STORE_URL}
         className={`inline-flex items-center gap-3 ${base} px-5 py-3 rounded-2xl font-semibold text-white transition-all backdrop-blur-sm hover:-translate-y-0.5`}
       >
         <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
@@ -148,7 +148,7 @@ function AppStoreButtons({
         </div>
       </a>
       <a
-        href="https://play.google.com/store/apps/details?id=com.faroway"
+        href={PLAY_STORE_URL}
         className={`inline-flex items-center gap-3 ${base} px-5 py-3 rounded-2xl font-semibold text-white transition-all backdrop-blur-sm hover:-translate-y-0.5`}
       >
         <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
@@ -189,16 +189,16 @@ export default function LandingPage() {
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-accent-500" />
                 </span>
                 <span className="text-slate-700 text-sm font-medium">
-                  <LiveCounter /> trips being planned right now
+                  Transparent itinerary generation with live progress
                 </span>
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold leading-[1.08] mb-6 tracking-tight text-slate-900">
                 Your dream trip,
                 <br />
-                planned in{" "}
+                planned around{" "}
                 <span className="bg-gradient-to-r from-primary to-amber-500 bg-clip-text text-transparent">
-                  60 seconds
+                  your style
                 </span>
               </h1>
 
@@ -209,7 +209,7 @@ export default function LandingPage() {
               </p>
 
               <p className="text-sm text-slate-400 mb-8 max-w-xl">
-                No account required. Free forever. Ready in under a minute.
+                No account required to start. Saved trips sync when you sign in.
               </p>
 
               <div className="flex flex-wrap gap-3 mb-8">
@@ -232,7 +232,7 @@ export default function LandingPage() {
               <div className="flex flex-wrap items-center gap-4 text-sm">
                 <div className="flex items-center gap-2 bg-accent/10 text-accent-700 px-3 py-1.5 rounded-full font-medium">
                   <Check className="w-4 h-4" />
-                  Free forever
+                  Free to start
                 </div>
                 <div className="flex items-center gap-2 bg-primary/10 text-primary-700 px-3 py-1.5 rounded-full font-medium">
                   <Check className="w-4 h-4" />
@@ -345,27 +345,28 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
             {scenicImages.map((img, i) => (
-              <FadeInOnScroll key={img.label} delay={i * 100}>
-                <Link
-                  href="/create"
-                  className={`relative overflow-hidden rounded-2xl group cursor-pointer block ${"aspect-[4/3]"}`}
-                >
-                  <Image
-                    src={img.src}
-                    alt={img.alt}
-                    fill
-                    className="object-cover group-hover:scale-110 transition-transform duration-1000 ease-out"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
-                  <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors duration-500" />
-                  <div className="absolute bottom-4 left-4 right-4">
-                    <p className="text-white font-bold text-lg drop-shadow-lg">
-                      {img.label}
-                    </p>
-                    <p className="text-white/70 text-sm">Plan with AI →</p>
-                  </div>
-                </Link>
-              </FadeInOnScroll>
+              <Link
+                key={img.label}
+                href="/create"
+                className={`relative overflow-hidden rounded-2xl group cursor-pointer block ${"aspect-[4/3]"}`}
+              >
+                <Image
+                  src={img.src}
+                  alt={img.alt}
+                  fill
+                  className="object-cover group-hover:scale-110 transition-transform duration-1000 ease-out"
+                  priority={i === 0}
+                  sizes="(max-width: 1024px) 50vw, 25vw"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-60 group-hover:opacity-80 transition-opacity" />
+                <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/10 transition-colors duration-500" />
+                <div className="absolute bottom-4 left-4 right-4">
+                  <p className="text-white font-bold text-lg drop-shadow-lg">
+                    {img.label}
+                  </p>
+                  <p className="text-white/70 text-sm">Plan with AI →</p>
+                </div>
+              </Link>
             ))}
           </div>
         </div>
@@ -377,7 +378,7 @@ export default function LandingPage() {
           {[
             {
               icon: <Check className="w-4 h-4 text-accent" />,
-              label: "100% free",
+              label: "Free to start",
             },
             {
               icon: <Shield className="w-4 h-4 text-accent" />,
@@ -389,11 +390,11 @@ export default function LandingPage() {
             },
             {
               icon: <WifiOff className="w-4 h-4 text-primary-300" />,
-              label: "Works offline",
+              label: "Saved trips offline",
             },
             {
               icon: <Globe className="w-4 h-4 text-amber-400" />,
-              label: "195+ countries",
+              label: "Worldwide planning",
             },
           ].map((item) => (
             <span
@@ -416,7 +417,7 @@ export default function LandingPage() {
               </div>
               <h2 className="text-3xl lg:text-5xl font-bold text-slate-900 mb-4">
                 Everything you need for the{" "}
-                <span className="text-gradient">perfect trip</span>
+                <span className="text-gradient">next trip</span>
               </h2>
               <p className="text-xl text-slate-500 max-w-2xl mx-auto">
                 AI plans it, you enjoy it. From inspiration to booking — one
@@ -449,7 +450,7 @@ export default function LandingPage() {
                     <p className="text-white/70 text-lg leading-relaxed mb-6">
                       Tell us your destination, dates, and travel style. Our AI
                       creates a complete day-by-day itinerary with activities,
-                      restaurants, and local tips — in seconds.
+                      restaurants, and local tips as your plan builds.
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {[
@@ -509,7 +510,7 @@ export default function LandingPage() {
               </div>
             </FadeInOnScroll>
 
-            {/* One-Tap Booking with image */}
+            {/* Partner booking links with image */}
             <FadeInOnScroll delay={200}>
               <div className="relative overflow-hidden rounded-2xl border border-white/[0.08] hover:border-white/[0.12] transition-all h-full group min-h-[360px]">
                 <Image
@@ -524,12 +525,12 @@ export default function LandingPage() {
                     <Zap className="w-6 h-6 text-amber-400" />
                   </div>
                   <h3 className="text-xl font-bold text-white mb-2">
-                    One-Tap Booking
+                    Partner Booking Links
                   </h3>
                   <p className="text-white/60 leading-relaxed text-sm">
-                    Book hotels through Booking.com and activities through
-                    Viator — directly from your itinerary. No extra apps, no
-                    switching tabs.
+                    Open Booking.com hotel options and Viator activities from
+                    your itinerary, then confirm pricing and checkout with the
+                    provider.
                   </p>
                 </div>
               </div>
@@ -555,8 +556,8 @@ export default function LandingPage() {
                         Offline Access
                       </h3>
                       <p className="text-white/60 leading-relaxed text-sm">
-                        Itineraries stored locally. Perfect for international
-                        travel — changes sync when you&apos;re back online.
+                        Saved itineraries are stored locally for limited
+                        connectivity. Changes sync when you&apos;re back online.
                       </p>
                     </div>
                   </div>
@@ -625,11 +626,11 @@ export default function LandingPage() {
                 <Clock className="w-4 h-4" /> 3 Simple Steps
               </div>
               <h2 className="text-3xl lg:text-5xl font-bold text-slate-900 mb-4">
-                Plan your dream trip in{" "}
-                <span className="text-gradient">under a minute</span>
+                Build your trip plan in{" "}
+                <span className="text-gradient">3 simple steps</span>
               </h2>
               <p className="text-xl text-slate-500">
-                From idea to itinerary — faster than ordering coffee
+                From destination idea to a day-by-day itinerary draft
               </p>
             </div>
           </FadeInOnScroll>
@@ -660,7 +661,7 @@ export default function LandingPage() {
               {
                 step: 3,
                 title: "AI generates your plan",
-                desc: "Watch as AI creates a personalized day-by-day itinerary. Book hotels and activities with one tap.",
+                desc: "Watch as AI creates a personalized day-by-day itinerary with partner links for hotels and activities.",
                 icon: <Sparkles className="w-7 h-7 text-white" />,
                 gradient: "from-teal-500 to-teal-600",
                 image: getImageUrl(IMAGE_PATHS.marketing.trainJourney),
@@ -765,7 +766,7 @@ export default function LandingPage() {
           <div className="text-center mt-10">
             <Link
               href="/destinations"
-              className="inline-flex items-center gap-2 text-primary font-semibold hover:text-primary-700 transition-colors"
+              className="inline-flex items-center gap-2 text-primary-700 font-semibold hover:text-primary-800 transition-colors"
             >
               View All Destination Guides
               <span>→</span>
@@ -833,12 +834,13 @@ export default function LandingPage() {
                 <span className="text-gradient-hero">in your pocket</span>
               </h2>
               <p className="text-xl text-white/70 mb-4 leading-relaxed">
-                No Wi-Fi at the temple? No problem. The Faroway app keeps your
-                full itinerary on your phone — maps, reservations, and daily
-                plans accessible even without a connection.
+                No Wi-Fi at the station? Saved Faroway trips keep your
+                day-by-day plan on your phone so you can revisit key details
+                with limited connectivity.
               </p>
               <p className="text-sm text-white/50 mb-8">
-                Plan on the web, carry it on your phone. Changes sync instantly.
+                Plan on the web, carry it on your phone. Signed-in trips sync
+                when you&apos;re online.
               </p>
 
               <AppStoreButtons
@@ -848,10 +850,10 @@ export default function LandingPage() {
 
               <div className="flex flex-wrap justify-center lg:justify-start gap-x-6 gap-y-3">
                 {[
-                  "Full offline access",
-                  "Push notifications",
-                  "One-tap booking",
-                  "Auto-sync across devices",
+                  "Saved trips offline",
+                  "Itinerary-ready alerts",
+                  "Partner options",
+                  "Signed-in sync",
                 ].map((feature) => (
                   <div
                     key={feature}

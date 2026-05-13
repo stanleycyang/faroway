@@ -9,8 +9,8 @@ test.describe("Landing page", () => {
     await page.goto("/");
     // Main heading visible
     await expect(page.locator("h1").first()).toBeVisible();
-    // At least one CTA button/link to /create
-    const ctaLink = page.locator('a[href*="/create"], button').first();
+    // At least one visible CTA button/link to /create (not hidden sm:inline-flex nav items)
+    const ctaLink = page.locator('a[href*="/create"]:visible, button:visible').first();
     await expect(ctaLink).toBeVisible();
   });
 
