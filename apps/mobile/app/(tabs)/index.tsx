@@ -13,12 +13,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { PlacesAutocomplete, DestinationCard, Button } from '../../components/ui';
+import { PlacesAutocomplete, DestinationCard } from '../../components/ui';
 import { popularDestinations } from '@faroway/constants';
 import { getPopularDestinations, getTrendingDestinations } from '../../services/api';
 import type { DestinationInfo } from '@faroway/types';
-import { useAuthContext } from '../../components/AuthProvider';
 import { useTripStore } from '../../stores/tripStore';
+import { useUserStore } from '../../stores/userStore';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 
@@ -35,8 +35,8 @@ const INSPIRATIONS = [
 
 export default function ExploreScreen() {
   const router = useRouter();
-  const { isAuthenticated } = useAuthContext();
   const { trips } = useTripStore();
+  const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   const [greeting, setGreeting] = useState('');
   const [apiPopular, setApiPopular] = useState<DestinationInfo[] | null>(null);
   const [apiTrending, setApiTrending] = useState<DestinationInfo[] | null>(null);
@@ -66,16 +66,24 @@ export default function ExploreScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+  }, [fadeAnim, slideAnim]);
 
   // Fetch destinations from API (swap in when ready, hardcoded shows immediately)
   useEffect(() => {
-    getPopularDestinations({ limit: 5 }).then((res) => {
-      if (res.data?.destinations?.length) setApiPopular(res.data.destinations);
-    });
-    getTrendingDestinations({ limit: 4 }).then((res) => {
-      if (res.data?.destinations?.length) setApiTrending(res.data.destinations);
-    });
+    getPopularDestinations({ limit: 5 })
+      .then((res) => {
+        if (res.data?.destinations?.length) setApiPopular(res.data.destinations);
+      })
+      .catch(() => {
+        // Network failure — hardcoded popularDestinations remain visible
+      });
+    getTrendingDestinations({ limit: 4 })
+      .then((res) => {
+        if (res.data?.destinations?.length) setApiTrending(res.data.destinations);
+      })
+      .catch(() => {
+        // Network failure — section simply stays hidden (no trending fallback data)
+      });
   }, []);
 
   const handleDestinationPress = (name: string, country: string) => {
@@ -103,18 +111,14 @@ export default function ExploreScreen() {
       <Animated.ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true }
-        )}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+          useNativeDriver: true,
+        })}
         scrollEventThrottle={16}
       >
         {/* Header */}
         <Animated.View
-          style={[
-            styles.header,
-            { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
-          ]}
+          style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
         >
           <View>
             <Text style={styles.greeting}>{greeting} 👋</Text>
@@ -122,13 +126,16 @@ export default function ExploreScreen() {
               {hasTrips ? 'Where to next?' : 'Plan your dream trip'}
             </Text>
           </View>
-          <TouchableOpacity style={styles.notificationButton}>
-            <Ionicons
-              name="notifications-outline"
-              size={24}
-              color={'#475569'}
-            />
-          </TouchableOpacity>
+          {isAuthenticated && (
+            <TouchableOpacity
+              style={styles.notificationButton}
+              onPress={() => router.push('/profile/notifications')}
+              accessibilityRole="button"
+              accessibilityLabel="Notification settings"
+            >
+              <Ionicons name="notifications-outline" size={24} color={'#475569'} />
+            </TouchableOpacity>
+          )}
         </Animated.View>
 
         {/* Search */}
@@ -149,7 +156,13 @@ export default function ExploreScreen() {
         </View>
 
         {/* Hero Card - Main CTA */}
-        <TouchableOpacity onPress={handleCreateTrip} activeOpacity={0.95}>
+        <TouchableOpacity
+          onPress={handleCreateTrip}
+          activeOpacity={0.95}
+          accessibilityRole="button"
+          accessibilityLabel="Create your trip"
+          accessibilityHint="Starts the AI trip planning flow"
+        >
           <LinearGradient
             colors={['#F97066', '#F59E0B', '#FBBF24']}
             start={{ x: 0, y: 0 }}
@@ -169,9 +182,9 @@ export default function ExploreScreen() {
                 <Text style={styles.heroBadgeText}>AI-Powered</Text>
               </View>
 
-              <Text style={styles.heroTitle}>Create Your Perfect Trip</Text>
+              <Text style={styles.heroTitle}>Create Your Trip</Text>
               <Text style={styles.heroSubtitle}>
-                Tell us where you want to go, and we'll plan everything in seconds
+                Tell us where you want to go, and we'll build a day-by-day plan step by step
               </Text>
 
               <View style={styles.heroButton}>
@@ -186,7 +199,7 @@ export default function ExploreScreen() {
                 </View>
                 <View style={styles.heroFeature}>
                   <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.8)" />
-                  <Text style={styles.heroFeatureText}>100% free</Text>
+                  <Text style={styles.heroFeatureText}>Free to start</Text>
                 </View>
               </View>
             </View>
@@ -207,6 +220,8 @@ export default function ExploreScreen() {
                 style={styles.inspirationChip}
                 onPress={() => handleInspirationPress(item.slug)}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={item.text}
               >
                 <Text style={styles.inspirationEmoji}>{item.emoji}</Text>
                 <Text style={styles.inspirationText}>{item.text}</Text>
@@ -219,7 +234,11 @@ export default function ExploreScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Popular Destinations</Text>
-            <TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleCreateTrip}
+              accessibilityRole="button"
+              accessibilityLabel="Search all destinations"
+            >
               <Text style={styles.seeAllButton}>See all</Text>
             </TouchableOpacity>
           </View>
@@ -249,16 +268,13 @@ export default function ExploreScreen() {
         <View style={styles.socialProof}>
           <View style={styles.socialProofAvatars}>
             {['👩🏻', '👨🏽', '👩🏼', '👨🏻'].map((emoji, i) => (
-              <View
-                key={i}
-                style={[styles.avatar, { marginLeft: i > 0 ? -10 : 0 }]}
-              >
+              <View key={i} style={[styles.avatar, { marginLeft: i > 0 ? -10 : 0 }]}>
                 <Text style={styles.avatarEmoji}>{emoji}</Text>
               </View>
             ))}
           </View>
           <Text style={styles.socialProofText}>
-            <Text style={styles.socialProofNumber}>10,000+</Text> trips planned this week
+            Trips shaped around your dates, budget, and travel style
           </Text>
         </View>
 
@@ -272,11 +288,11 @@ export default function ExploreScreen() {
                 style={styles.trendingCard}
                 onPress={() => handleDestinationPress(destination.name, destination.country)}
                 activeOpacity={0.9}
+                accessibilityRole="button"
+                accessibilityLabel={`${destination.name}, ${destination.country}`}
+                accessibilityHint="Starts trip planning for this destination"
               >
-                <Image
-                  source={{ uri: destination.image }}
-                  style={styles.trendingImage}
-                />
+                <Image source={{ uri: destination.image }} style={styles.trendingImage} />
                 <LinearGradient
                   colors={['transparent', 'rgba(0,0,0,0.7)']}
                   style={styles.trendingGradient}
