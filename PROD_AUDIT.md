@@ -212,23 +212,23 @@ getPopularDestinations({ limit: 5 }).then((res) => {
 
 | ID | Area | Severity | Status |
 |----|------|----------|--------|
-| P0-1 | OG image missing | P0 | Open |
+| P0-1 | OG image missing | P0 | ✅ Fixed — `/api/og` dynamic route |
 | P0-2 | No error monitoring | P0 | Open |
-| P0-3 | `/generate-itinerary` unrated | P0 | Open |
-| P0-4 | In-memory rate limiter | P0 | Open |
-| P1-1 | README missing | P1 | Open |
-| P1-2 | Auth race condition | P1 | Open |
-| P1-3 | Unhandled rejection home screen | P1 | Open |
-| P1-4 | Analytics claim vs. reality | P1 | Open |
-| P2-1 | `NEXT_PUBLIC_BASE_URL` undocumented | P2 | Open |
-| P2-2 | World-map missing from sitemap | P2 | Open |
+| P0-3 | `/generate-itinerary` unrated | P0 | ✅ Fixed — 5/hr + 20/day per user |
+| P0-4 | In-memory rate limiter | P0 | ✅ Fixed — Vercel KV + in-memory fallback |
+| P1-1 | README missing | P1 | ✅ Fixed — full README.md |
+| P1-2 | Auth race condition | P1 | ✅ Fixed — `initialized` after hydration |
+| P1-3 | Unhandled rejection home screen | P1 | ✅ Fixed — `.catch()` on both fetches |
+| P1-4 | Analytics claim vs. reality | P1 | ✅ Fixed — privacy policy updated |
+| P2-1 | `NEXT_PUBLIC_BASE_URL` undocumented | P2 | ✅ Fixed — in web `.env.example` |
+| P2-2 | World-map missing from sitemap | P2 | ✅ Fixed — added to `toolSlugs` |
 | P2-3 | `as unknown as` casts | P2 | Open |
 | P2-4 | No E2E tests | P2 | Open |
-| P2-5 | CI skips mobile typecheck | P2 | Open |
-| P2-6 | Generate endpoint rate limit scoping | P2 | Open |
+| P2-5 | CI skips mobile typecheck | P2 | N/A — `bun turbo type-check` is monorepo-wide |
+| P2-6 | Generate endpoint rate limit scoping | P2 | ✅ Fixed — user ID scoped |
 | P3-1 | `prefers-reduced-motion` | P3 | Open |
-| P3-2 | Dead GA env var | P3 | Open |
-| P3-3 | Missing Article JSON-LD | P3 | Open |
+| P3-2 | Dead GA env var | P3 | ✅ Fixed — removed from `.env.example` |
+| P3-3 | Missing Article JSON-LD | P3 | N/A — already implemented in blog page |
 | P3-4 | Missing TouristDestination schema | P3 | Open |
 | P3-5 | No preview deploys in CI | P3 | Open |
 | P3-6 | Missing auth/offline sync tests | P3 | Open |
