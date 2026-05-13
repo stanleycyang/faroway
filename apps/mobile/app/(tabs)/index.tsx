@@ -21,6 +21,7 @@ import { useTripStore } from '../../stores/tripStore';
 import { useUserStore } from '../../stores/userStore';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
+import { useReduceMotion } from '../../hooks/useReduceMotion';
 
 const { width } = Dimensions.get('window');
 
@@ -37,6 +38,7 @@ export default function ExploreScreen() {
   const router = useRouter();
   const { trips } = useTripStore();
   const isAuthenticated = useUserStore((state) => state.isAuthenticated);
+  const reduceMotion = useReduceMotion();
   const [greeting, setGreeting] = useState('');
   const [apiPopular, setApiPopular] = useState<DestinationInfo[] | null>(null);
   const [apiTrending, setApiTrending] = useState<DestinationInfo[] | null>(null);
@@ -53,6 +55,12 @@ export default function ExploreScreen() {
     else if (hour < 17) setGreeting('Good afternoon');
     else setGreeting('Good evening');
 
+    if (reduceMotion) {
+      fadeAnim.setValue(1);
+      slideAnim.setValue(0);
+      return;
+    }
+
     // Animate in
     Animated.parallel([
       Animated.timing(fadeAnim, {
@@ -66,7 +74,7 @@ export default function ExploreScreen() {
         useNativeDriver: true,
       }),
     ]).start();
-  }, [fadeAnim, slideAnim]);
+  }, [fadeAnim, slideAnim, reduceMotion]);
 
   // Fetch destinations from API (swap in when ready, hardcoded shows immediately)
   useEffect(() => {

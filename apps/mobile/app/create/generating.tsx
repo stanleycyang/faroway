@@ -20,13 +20,14 @@ import { useAuthContext } from '../../components/AuthProvider';
 import { AuthGate } from '../../components/AuthGate';
 import { RatingPrompt } from '../../components/RatingPrompt';
 import { popularDestinations, IMAGE_PATHS, getImageUrl } from '@faroway/constants';
-import { colors, borderRadius } from '../../constants/theme';
+import { colors } from '../../constants/theme';
+import { useStreamingItinerary, StreamingBlock } from '../../hooks/useStreamingItinerary';
 import {
-  useStreamingItinerary,
-  StreamingBlock,
-  MicroProgress,
-} from '../../hooks/useStreamingItinerary';
+  buildSeededItineraryOutline,
+  type SeededItineraryOutline,
+} from '../../lib/itineraryPreview';
 import { registry } from '../../lib/json-render/registry';
+import { useReduceMotion } from '../../hooks/useReduceMotion';
 
 const { width, height } = Dimensions.get('window');
 
@@ -35,12 +36,15 @@ const GENERATION_STEPS = [
   { key: 'hotels', text: 'Hotels', emoji: '🏨', color: '#F59E0B' },
   { key: 'activities', text: 'Activities', emoji: '✨', color: '#10B981' },
   { key: 'dining', text: 'Dining', emoji: '🍽️', color: '#EF4444' },
+  { key: 'transport', text: 'Transport', emoji: '✈️', color: '#06B6D4' },
+  { key: 'budget', text: 'Budget', emoji: '💳', color: '#14B8A6' },
+  { key: 'enrichment', text: 'Local tips', emoji: '💡', color: '#84CC16' },
   { key: 'aggregator', text: 'Itinerary', emoji: '📝', color: '#3B82F6' },
 ];
 
 const DESTINATION_FACTS: Record<string, string[]> = {
   Paris: [
-    'The Eiffel Tower was meant to be temporary, built for the 1889 World\'s Fair.',
+    "The Eiffel Tower was meant to be temporary, built for the 1889 World's Fair.",
     'Paris has 470+ parks and gardens covering 3,000+ acres.',
     'The Louvre would take 100 days to see every artwork for 30 seconds each.',
     'There are more dogs than children in Paris.',
@@ -53,14 +57,14 @@ const DESTINATION_FACTS: Record<string, string[]> = {
   ],
   Rome: [
     'Rome has more fountains than any other city in the world.',
-    'The Pantheon has the world\'s largest unreinforced concrete dome.',
+    "The Pantheon has the world's largest unreinforced concrete dome.",
     'Trevi Fountain collects €1.5 million in coins annually.',
     'Cats have legal protection at Roman archaeological sites.',
   ],
   London: [
     'Big Ben is actually the name of the bell, not the tower.',
     'London has 170 museums, many of which are free.',
-    'The Underground is the world\'s oldest metro system.',
+    "The Underground is the world's oldest metro system.",
     'There are over 300 languages spoken in London.',
   ],
   'New York': [
@@ -77,6 +81,75 @@ const DESTINATION_FACTS: Record<string, string[]> = {
   ],
 };
 
+interface StreamingLocation {
+  name?: string;
+  neighborhood?: string;
+}
+
+interface StreamingItem {
+  id?: string;
+  name?: string;
+  description?: string;
+  location?: StreamingLocation;
+  duration?: number;
+  price?: number;
+  priceLevel?: number | string;
+  rating?: number;
+  reviewCount?: number;
+  images?: string[];
+  affiliateUrl?: string;
+  reservationUrl?: string;
+}
+
+interface StreamingPeriod {
+  meal?: StreamingItem;
+  activities?: StreamingItem[];
+}
+
+interface StreamingDay {
+  date?: string;
+  dayNumber?: number;
+  title?: string;
+  morning?: StreamingPeriod;
+  afternoon?: StreamingPeriod;
+  evening?: StreamingPeriod;
+}
+
+interface StreamingHotel {
+  id?: string;
+  name?: string;
+  description?: string;
+  pricePerNight?: number;
+  totalPrice?: number;
+  userRating?: number;
+  rating?: number;
+  starRating?: number;
+  reviewCount?: number;
+  amenities?: string[];
+  images?: string[];
+  affiliateUrl?: string;
+  location?: unknown;
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function isHotelLocation(value: unknown): value is NonNullable<Trip['hotel']>['location'] {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'name' in value &&
+    'address' in value &&
+    'lat' in value &&
+    'lng' in value &&
+    typeof value.name === 'string' &&
+    typeof value.address === 'string' &&
+    typeof value.lat === 'number' &&
+    typeof value.lng === 'number'
+  );
+}
+
 function convertStreamingDataToTrip(
   tripId: string,
   itineraryDays: unknown[],
@@ -85,15 +158,17 @@ function convertStreamingDataToTrip(
 ): Trip {
   const destinationInfo = popularDestinations.find((d) => d.name === input.destination);
 
-  const days: TripDay[] = (itineraryDays as any[]).map((day) => {
+  const days: TripDay[] = itineraryDays.map((dayValue, dayIndex) => {
+    const day = dayValue as StreamingDay;
+    const dayNumber = day.dayNumber || dayIndex + 1;
     const activities: Activity[] = [];
 
-    const processActivities = (items: any[] | undefined, startHour: number) => {
-      items?.forEach((activity: any, idx: number) => {
+    const processActivities = (items: StreamingItem[] | undefined, startHour: number) => {
+      items?.forEach((activity, idx) => {
         activities.push({
-          id: activity.id || `activity-${day.dayNumber}-${startHour + idx}`,
+          id: activity.id || `activity-${dayNumber}-${startHour + idx}`,
           time: `${startHour + idx}:00`,
-          title: activity.name,
+          title: activity.name || 'Recommended stop',
           description: activity.description || '',
           location: activity.location?.name || activity.location?.neighborhood || '',
           duration: activity.duration ? `${Math.round(activity.duration / 60)} hours` : '2 hours',
@@ -107,12 +182,12 @@ function convertStreamingDataToTrip(
       });
     };
 
-    const processMeal = (meal: any | undefined, time: string) => {
+    const processMeal = (meal: StreamingItem | undefined, time: string) => {
       if (!meal) return;
       activities.push({
-        id: meal.id || `meal-${day.dayNumber}-${time}`,
+        id: meal.id || `meal-${dayNumber}-${time}`,
         time,
-        title: meal.name,
+        title: meal.name || 'Recommended meal',
         description: meal.description || '',
         location: meal.location?.name || meal.location?.neighborhood || '',
         duration: '1 hour',
@@ -141,44 +216,54 @@ function convertStreamingDataToTrip(
     });
 
     return {
-      date: day.date,
-      dayNumber: day.dayNumber,
-      theme: day.title,
+      date: day.date || input.startDate,
+      dayNumber,
+      theme: day.title || `Day ${dayNumber}`,
       activities,
     };
   });
 
-  const hotel = topHotel as any;
+  const hotel = topHotel as StreamingHotel | null;
+  const hotelImages = isStringArray(hotel?.images) ? hotel.images : [];
+  const hotelAmenities = isStringArray(hotel?.amenities) ? hotel.amenities : [];
+  const hotelLocation = isHotelLocation(hotel?.location)
+    ? hotel.location
+    : {
+        name: input.destination,
+        address: '',
+        lat: 0,
+        lng: 0,
+      };
 
   return {
     id: tripId,
-    destination: input.destination!,
+    destination: input.destination,
     country: input.country || destinationInfo?.country || '',
-    startDate: input.startDate!,
-    endDate: input.endDate!,
+    startDate: input.startDate,
+    endDate: input.endDate,
     travelers: input.travelers || 2,
     travelerType: input.travelerType,
     vibes: input.vibes || [],
     budget: input.budget,
     days,
-    hotel: hotel
+    hotel: hotel?.name
       ? {
           id: hotel.id || 'hotel-1',
           name: hotel.name,
-          description: hotel.description,
-          pricePerNight: hotel.pricePerNight,
-          totalPrice: hotel.totalPrice,
-          rating: hotel.userRating || hotel.rating,
-          reviewCount: hotel.reviewCount,
-          amenities: hotel.amenities || [],
-          images: hotel.images || [],
-          bookingUrl: hotel.affiliateUrl,
-          location: hotel.location,
+          description: hotel.description || '',
+          pricePerNight: hotel.pricePerNight || 0,
+          totalPrice: hotel.totalPrice || 0,
+          rating: hotel.userRating || hotel.rating || 0,
+          reviewCount: hotel.reviewCount || 0,
+          amenities: hotelAmenities,
+          images: hotelImages,
+          bookingUrl: hotel.affiliateUrl || '',
+          location: hotelLocation,
         }
       : undefined,
     coverImage:
       destinationInfo?.image ||
-      hotel?.images?.[0] ||
+      hotelImages[0] ||
       getImageUrl(IMAGE_PATHS.inspirations['beach-getaway']),
     createdAt: new Date().toISOString(),
     status: 'planned',
@@ -213,8 +298,9 @@ function JsonRenderRenderer({
     <Animated.View style={{ opacity: fadeAnim }}>
       {blocks.map((comp, index) => {
         if (!comp || !comp.type) return null;
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const Component = registry[comp.type as keyof typeof registry] as React.ComponentType<any>;
+        const Component = registry[comp.type as keyof typeof registry] as React.ComponentType<
+          Record<string, unknown>
+        >;
         if (!Component) return null;
         return <Component key={`${comp.type}-${index}`} {...(comp.props || {})} />;
       })}
@@ -225,27 +311,25 @@ function JsonRenderRenderer({
 // Pulsing dot for streaming indicator
 function PulsingDot() {
   const [pulseAnim] = useState(new Animated.Value(1));
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
+    if (reduceMotion) return;
     Animated.loop(
       Animated.sequence([
         Animated.timing(pulseAnim, { toValue: 0.4, duration: 600, useNativeDriver: true }),
         Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
       ])
     ).start();
-  }, [pulseAnim]);
+  }, [pulseAnim, reduceMotion]);
 
-  return (
-    <Animated.View style={[styles.streamingDot, { opacity: pulseAnim }]} />
-  );
+  return <Animated.View style={[styles.streamingDot, { opacity: pulseAnim }]} />;
 }
 
 // Animated circular progress ring
 function ProgressRing({ progress, size = 180 }: { progress: number; size?: number }) {
   const animatedProgress = useRef(new Animated.Value(0)).current;
   const strokeWidth = 8;
-  const radius = (size - strokeWidth) / 2;
-  const circumference = 2 * Math.PI * radius;
 
   useEffect(() => {
     Animated.spring(animatedProgress, {
@@ -254,11 +338,6 @@ function ProgressRing({ progress, size = 180 }: { progress: number; size?: numbe
       friction: 8,
     }).start();
   }, [progress, animatedProgress]);
-
-  const strokeDashoffset = animatedProgress.interpolate({
-    inputRange: [0, 100],
-    outputRange: [circumference, 0],
-  });
 
   return (
     <View style={{ width: size, height: size }}>
@@ -282,12 +361,7 @@ function ProgressRing({ progress, size = 180 }: { progress: number; size?: numbe
         />
       </Animated.View>
       {/* Animated progress circle using View */}
-      <View
-        style={[
-          StyleSheet.absoluteFill,
-          { alignItems: 'center', justifyContent: 'center' },
-        ]}
-      >
+      <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
         <LinearGradient
           colors={[colors.primary[400], colors.primary[600]]}
           style={{
@@ -308,8 +382,10 @@ function ProgressRing({ progress, size = 180 }: { progress: number; size?: numbe
 // Skeleton loader for content
 function SkeletonLoader() {
   const [shimmerAnim] = useState(new Animated.Value(0));
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
+    if (reduceMotion) return;
     Animated.loop(
       Animated.timing(shimmerAnim, {
         toValue: 1,
@@ -318,7 +394,7 @@ function SkeletonLoader() {
         useNativeDriver: true,
       })
     ).start();
-  }, [shimmerAnim]);
+  }, [shimmerAnim, reduceMotion]);
 
   const translateX = shimmerAnim.interpolate({
     inputRange: [0, 1],
@@ -326,7 +402,18 @@ function SkeletonLoader() {
   });
 
   const SkeletonBox = ({ w, h, style }: { w: number | string; h: number; style?: object }) => (
-    <View style={[{ width: w, height: h, backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: 8, overflow: 'hidden' }, style]}>
+    <View
+      style={[
+        {
+          width: w,
+          height: h,
+          backgroundColor: 'rgba(255,255,255,0.1)',
+          borderRadius: 8,
+          overflow: 'hidden',
+        },
+        style,
+      ]}
+    >
       <Animated.View
         style={{
           ...StyleSheet.absoluteFillObject,
@@ -364,22 +451,29 @@ function HotelPreviewCard({ hotel }: { hotel: Record<string, unknown> }) {
     ]).start();
   }, [fadeAnim, scaleAnim]);
 
-  const h = hotel as any;
+  const h = hotel as StreamingHotel;
+  const starRating = Math.max(1, Math.min(5, Math.round(h.starRating || 4)));
+  const userRating = h.userRating || h.rating;
 
   return (
-    <Animated.View style={[styles.hotelPreview, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}>
+    <Animated.View
+      style={[styles.hotelPreview, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}
+    >
       <View style={styles.hotelPreviewHeader}>
         <Text style={styles.hotelPreviewLabel}>🏨 Your Top Hotel Match</Text>
       </View>
       <View style={styles.hotelPreviewContent}>
         <View style={styles.hotelPreviewInfo}>
-          <Text style={styles.hotelPreviewName} numberOfLines={2}>{h.name}</Text>
+          <Text style={styles.hotelPreviewName} numberOfLines={2}>
+            {h.name || 'Recommended hotel'}
+          </Text>
           <View style={styles.hotelPreviewRating}>
-            <Text style={styles.hotelPreviewStars}>{'★'.repeat(h.starRating || 4)}</Text>
-            <Text style={styles.hotelPreviewScore}>{h.userRating?.toFixed(1) || '4.5'}</Text>
+            <Text style={styles.hotelPreviewStars}>{'★'.repeat(starRating)}</Text>
+            <Text style={styles.hotelPreviewScore}>{userRating?.toFixed(1) || '4.5'}</Text>
           </View>
           <Text style={styles.hotelPreviewPrice}>
-            ${h.pricePerNight || 200}<Text style={styles.hotelPreviewPriceUnit}>/night</Text>
+            ${h.pricePerNight || 200}
+            <Text style={styles.hotelPreviewPriceUnit}>/night</Text>
           </Text>
         </View>
       </View>
@@ -394,7 +488,7 @@ function StepIndicator({
   count,
   microMessage,
 }: {
-  step: typeof GENERATION_STEPS[0];
+  step: (typeof GENERATION_STEPS)[0];
   status: 'pending' | 'searching' | 'done';
   count?: number;
   microMessage?: string;
@@ -448,7 +542,9 @@ function StepIndicator({
       <View style={styles.stepContent}>
         <Text style={[styles.stepText, status === 'done' && styles.stepTextDone]}>{step.text}</Text>
         {microMessage && status === 'searching' && (
-          <Text style={styles.stepMicro} numberOfLines={1}>{microMessage}</Text>
+          <Text style={styles.stepMicro} numberOfLines={1}>
+            {microMessage}
+          </Text>
         )}
         {count !== undefined && count > 0 && status === 'done' && (
           <Text style={[styles.stepCount, { color: step.color }]}>{count} found</Text>
@@ -482,7 +578,9 @@ function FunFactCard({ destination }: { destination: string }) {
   return (
     <View style={styles.funFact}>
       <Text style={styles.funFactLabel}>💡 Did you know?</Text>
-      <Animated.Text style={[styles.funFactText, { opacity: fadeAnim }]}>{facts[factIndex]}</Animated.Text>
+      <Animated.Text style={[styles.funFactText, { opacity: fadeAnim }]}>
+        {facts[factIndex]}
+      </Animated.Text>
     </View>
   );
 }
@@ -514,6 +612,47 @@ function CelebrationOverlay({ onComplete }: { onComplete: () => void }) {
   );
 }
 
+function SeededOutlineCard({ outline }: { outline: SeededItineraryOutline }) {
+  return (
+    <View
+      style={styles.seededOutline}
+      accessible
+      accessibilityLabel={`${outline.title}. ${outline.dateLabel}. ${outline.travelersLabel}. ${outline.budgetLabel}.`}
+    >
+      <View style={styles.seededOutlineHeader}>
+        <Text style={styles.seededOutlineKicker}>Outline ready</Text>
+        <Text style={styles.seededOutlineTitle}>{outline.title}</Text>
+      </View>
+
+      <View style={styles.seededMetaRow}>
+        {[outline.dateLabel, outline.travelersLabel, outline.budgetLabel, outline.styleLabel].map(
+          (label) => (
+            <View key={label} style={styles.seededMetaPill}>
+              <Text style={styles.seededMetaText}>{label}</Text>
+            </View>
+          )
+        )}
+      </View>
+
+      <View style={styles.seededSection}>
+        <Text style={styles.seededSectionLabel}>Trip focus</Text>
+        <View style={styles.seededChipRow}>
+          {outline.focusAreas.map((area) => (
+            <View key={area} style={styles.seededFocusChip}>
+              <Text style={styles.seededFocusText}>{area}</Text>
+            </View>
+          ))}
+        </View>
+      </View>
+
+      <View style={styles.seededSection}>
+        <Text style={styles.seededSectionLabel}>Planning now</Text>
+        <Text style={styles.seededPlanningText}>{outline.planningAreas.join(' - ')}</Text>
+      </View>
+    </View>
+  );
+}
+
 export default function GeneratingScreen() {
   const router = useRouter();
   const { draftInput, finishGeneration } = useTripStore();
@@ -528,38 +667,73 @@ export default function GeneratingScreen() {
   const [showCelebration, setShowCelebration] = useState(false);
   const [showAuthGate, setShowAuthGate] = useState(false);
   const [showRatingPrompt, setShowRatingPrompt] = useState(false);
+  const [retryTripId, setRetryTripId] = useState<string | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const destinationInfo = popularDestinations.find((d) => d.name === draftInput?.destination);
+  const seededOutline = useMemo(() => buildSeededItineraryOutline(draftInput), [draftInput]);
 
-  const handleComplete = useCallback((document: StreamingBlock[]) => {
-    console.log('[Generating] Complete with', document.length, 'blocks');
-    incrementTripGeneration();
-    setShowCelebration(true);
-  }, [incrementTripGeneration]);
+  useEffect(() => {
+    if (!draftInput) {
+      router.replace('/create');
+    }
+  }, [draftInput, router]);
 
-  const handleError = useCallback((error: Error) => {
-    console.error('[Generating] Error:', error.message);
+  const handleComplete = useCallback(
+    (_document: StreamingBlock[]) => {
+      incrementTripGeneration();
+      setShowCelebration(true);
+    },
+    [incrementTripGeneration]
+  );
+
+  const handleError = useCallback((_error: Error) => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
   }, []);
 
-  const streaming = useStreamingItinerary(
-    draftInput
-      ? {
-          input: {
-            destination: draftInput.destination!,
-            startDate: draftInput.startDate!,
-            endDate: draftInput.endDate!,
+  const streamingInput = useMemo(
+    () =>
+      draftInput
+        ? {
+            destination: draftInput.destination,
+            startDate: draftInput.startDate,
+            endDate: draftInput.endDate,
             travelers: draftInput.travelers || 2,
             travelerType: draftInput.travelerType || 'couple',
+            originCity: draftInput.originCity,
+            originAirport: draftInput.originAirport,
             vibes: draftInput.vibes || [],
             budget: draftInput.budget,
-          },
+          }
+        : undefined,
+    [draftInput]
+  );
+
+  const streaming = useStreamingItinerary(
+    retryTripId
+      ? {
+          tripId: retryTripId,
+          retryKey: retryNonce,
           onComplete: handleComplete,
           onError: handleError,
         }
-      : {}
+      : streamingInput
+        ? {
+            input: streamingInput,
+            retryKey: retryNonce,
+            onComplete: handleComplete,
+            onError: handleError,
+          }
+        : { retryKey: retryNonce, onComplete: handleComplete, onError: handleError }
   );
+
+  const handleReconnect = useCallback(() => {
+    if (streaming.tripId) {
+      setRetryTripId(streaming.tripId);
+    }
+    setRetryNonce((value) => value + 1);
+  }, [streaming.tripId]);
 
   const handleViewTrip = useCallback(() => {
     if (!draftInput || !streaming.tripId) return;
@@ -601,8 +775,9 @@ export default function GeneratingScreen() {
       hotels: streaming.topHotel ? 10 : 0,
       activities: streaming.activitiesCount,
       dining: streaming.diningCount,
+      transport: streaming.transportCount,
     }),
-    [streaming.topHotel, streaming.activitiesCount, streaming.diningCount]
+    [streaming.topHotel, streaming.activitiesCount, streaming.diningCount, streaming.transportCount]
   );
 
   return (
@@ -649,15 +824,23 @@ export default function GeneratingScreen() {
 
               <Text style={styles.currentMessage}>{streaming.message}</Text>
 
+              {seededOutline && <SeededOutlineCard outline={seededOutline} />}
+
               {/* Step indicators */}
               <View style={styles.stepsContainer}>
                 {GENERATION_STEPS.map((step) => {
-                  const status = (searchProgress[step.key] as 'pending' | 'searching' | 'done') || 'pending';
+                  const status =
+                    (searchProgress[step.key] as 'pending' | 'searching' | 'done') || 'pending';
                   const count =
-                    step.key === 'hotels' ? counts.hotels
-                    : step.key === 'activities' ? counts.activities
-                    : step.key === 'dining' ? counts.dining
-                    : undefined;
+                    step.key === 'hotels'
+                      ? counts.hotels
+                      : step.key === 'activities'
+                        ? counts.activities
+                        : step.key === 'dining'
+                          ? counts.dining
+                          : step.key === 'transport'
+                            ? counts.transport
+                            : undefined;
                   return (
                     <StepIndicator
                       key={step.key}
@@ -684,9 +867,28 @@ export default function GeneratingScreen() {
               <Text style={styles.errorEmoji}>😔</Text>
               <Text style={styles.errorTitle}>Something went wrong</Text>
               <Text style={styles.errorMessage}>{streaming.error}</Text>
-              <TouchableOpacity style={styles.errorButton} onPress={() => router.back()}>
-                <Text style={styles.errorButtonText}>Go Back</Text>
-              </TouchableOpacity>
+              <View style={styles.errorActions}>
+                <TouchableOpacity
+                  style={[styles.errorButton, styles.errorButtonPrimary]}
+                  onPress={handleReconnect}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    streaming.tripId ? 'Reconnect to trip generation' : 'Try trip generation again'
+                  }
+                >
+                  <Text style={styles.errorButtonText}>
+                    {streaming.tripId ? 'Reconnect' : 'Try Again'}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.errorButton}
+                  onPress={() => router.back()}
+                  accessibilityRole="button"
+                  accessibilityLabel="Go back to trip setup"
+                >
+                  <Text style={styles.errorButtonText}>Go Back</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
 
@@ -710,7 +912,13 @@ export default function GeneratingScreen() {
 
           {/* View trip button */}
           {streaming.isComplete && streaming.tripId && !showCelebration && (
-            <TouchableOpacity style={styles.viewButton} onPress={handleViewTrip} activeOpacity={0.9}>
+            <TouchableOpacity
+              style={styles.viewButton}
+              onPress={handleViewTrip}
+              activeOpacity={0.9}
+              accessibilityRole="button"
+              accessibilityLabel="View your generated trip"
+            >
               <LinearGradient
                 colors={[colors.primary[500], colors.primary[700]]}
                 start={{ x: 0, y: 0 }}
@@ -733,11 +941,7 @@ export default function GeneratingScreen() {
             // After celebration: show sign-up prompt for guests, or rating prompt for auth users
             if (!isAuthenticated && !hasDismissedSignUpAfterGeneration) {
               setShowAuthGate(true);
-            } else if (
-              isAuthenticated &&
-              tripGenerationCount >= 3 &&
-              shouldShowRatingPrompt()
-            ) {
+            } else if (isAuthenticated && tripGenerationCount >= 3 && shouldShowRatingPrompt()) {
               setShowRatingPrompt(true);
             }
           }}
@@ -872,6 +1076,81 @@ const styles = StyleSheet.create({
   funFactLabel: { fontSize: 12, color: colors.primary[400], fontWeight: '700', marginBottom: 6 },
   funFactText: { fontSize: 14, color: 'rgba(255,255,255,0.85)', lineHeight: 20 },
 
+  // Seeded outline
+  seededOutline: {
+    width: '100%',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.14)',
+    borderRadius: 18,
+    padding: 16,
+    marginBottom: 20,
+  },
+  seededOutlineHeader: {
+    marginBottom: 12,
+  },
+  seededOutlineKicker: {
+    fontSize: 12,
+    color: colors.primary[300],
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    marginBottom: 4,
+  },
+  seededOutlineTitle: {
+    fontSize: 20,
+    color: '#fff',
+    fontWeight: '800',
+  },
+  seededMetaRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+  },
+  seededMetaPill: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  seededMetaText: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.82)',
+    fontWeight: '700',
+  },
+  seededSection: {
+    marginTop: 10,
+  },
+  seededSectionLabel: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.58)',
+    fontWeight: '800',
+    marginBottom: 8,
+    textTransform: 'uppercase',
+  },
+  seededChipRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  seededFocusChip: {
+    backgroundColor: 'rgba(20,184,166,0.18)',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  seededFocusText: {
+    fontSize: 12,
+    color: '#99F6E4',
+    fontWeight: '700',
+  },
+  seededPlanningText: {
+    color: 'rgba(255,255,255,0.84)',
+    fontSize: 14,
+    fontWeight: '700',
+    lineHeight: 20,
+  },
+
   // Skeleton
   skeletonContainer: { padding: 20, marginTop: 20 },
 
@@ -911,12 +1190,25 @@ const styles = StyleSheet.create({
   },
   errorEmoji: { fontSize: 48, marginBottom: 12 },
   errorTitle: { fontSize: 20, fontWeight: '700', color: '#fff', marginBottom: 8 },
-  errorMessage: { fontSize: 14, color: 'rgba(255,255,255,0.7)', textAlign: 'center', marginBottom: 20 },
+  errorMessage: {
+    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  errorActions: {
+    width: '100%',
+    gap: 10,
+  },
   errorButton: {
     backgroundColor: 'rgba(255,255,255,0.15)',
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
+    alignItems: 'center',
+  },
+  errorButtonPrimary: {
+    backgroundColor: colors.primary[600],
   },
   errorButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
 
