@@ -10,10 +10,12 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, getSupabase } from "@/lib/supabase/server";
-import { start } from "workflow/api";
+import { logger } from "@/lib/logger";
+import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
+import { startWorkflow } from "@/lib/workflow/runtime";
 import { planTripWorkflow } from "@/workflows/plan-trip";
 import { buildInstantPreview } from "@/lib/search/preview";
+import { checkRateLimit, getClientIp } from "@/lib/security/rate-limit";
 
 type Params = {
   params: Promise<{
@@ -34,9 +36,9 @@ const TRAVELER_TYPES = new Set<TravelerType>([
 /**
  * Resolve user ID if authenticated, or null for anonymous.
  */
-async function resolveUser(): Promise<string | null> {
+async function resolveUser(request: NextRequest): Promise<string | null> {
   try {
-    const supabase = await createClient();
+    const supabase = await createClientFromRequest(request);
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -49,7 +51,24 @@ async function resolveUser(): Promise<string | null> {
 export async function POST(request: NextRequest, { params }: Params) {
   try {
     const { id: tripId } = await params;
-    const userId = await resolveUser();
+    const userId = await resolveUser(request);
+
+    // Rate limit: 5 per hour, 20 per day. Key on user ID when authenticated,
+    // IP for anonymous users (anonymous trips are short-lived and low-volume).
+    const rateLimitKey = userId ? `generate:hour:${userId}` : `generate:hour:ip:${getClientIp(request)}`;
+    const hourlyLimit = checkRateLimit(rateLimitKey, {
+      maxRequests: 5,
+      windowMs: 60 * 60 * 1000,
+    });
+    if (!hourlyLimit.allowed) {
+      return NextResponse.json(
+        { error: "Too many generation requests. Please wait before generating another trip." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(Math.ceil(hourlyLimit.resetIn / 1000)) },
+        },
+      );
+    }
 
     const adminClient = getSupabase();
 
@@ -127,7 +146,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       .single();
 
     if (searchError || !search) {
-      console.error("[API] Failed to create search record:", searchError);
+      logger.error("[API] Failed to create search record:", searchError);
       return NextResponse.json(
         { error: "Failed to initialize search" },
         { status: 500 },
@@ -167,7 +186,7 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     // Kick off durable workflow immediately (stream route only observes state).
     try {
-      await start(planTripWorkflow, [
+      await startWorkflow(planTripWorkflow, [
         {
           searchId,
           tripId,
@@ -207,7 +226,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       throw workflowError;
     }
 
-    console.log(
+    logger.info(
       `[API] Created search ${searchId} for trip ${tripId} — workflow started`,
     );
 
@@ -220,7 +239,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       streamUrl: `/api/trips/${tripId}/stream`,
     });
   } catch (error) {
-    console.error("[API] Error starting trip planning:", error);
+    logger.error("[API] Error starting trip planning:", error);
     return NextResponse.json(
       { error: "Failed to start trip planning" },
       { status: 500 },
@@ -236,7 +255,7 @@ export async function POST(request: NextRequest, { params }: Params) {
 export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { id: tripId } = await params;
-    const userId = await resolveUser();
+    const userId = await resolveUser(request);
 
     const adminClient = getSupabase();
 
@@ -372,7 +391,7 @@ export async function GET(request: NextRequest, { params }: Params) {
       completedAt: search.completed_at,
     });
   } catch (error) {
-    console.error("[API] Error fetching generation status:", error);
+    logger.error("[API] Error fetching generation status:", error);
     return NextResponse.json(
       { error: "Failed to fetch generation status" },
       { status: 500 },
@@ -407,7 +426,7 @@ function getStepMessage(step: string, status: string): string {
       done: "Local picks added",
     },
     aggregator: {
-      searching: "Crafting your perfect itinerary...",
+      searching: "Crafting your personalized itinerary...",
       done: "Itinerary composed",
     },
   };
