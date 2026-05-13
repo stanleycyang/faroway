@@ -17,42 +17,67 @@
 
 ---
 
-## P0 — Production-Blocking
+## 🚨 P0 — Production-Blocking
+
+### P0-0: REAL CREDENTIALS COMMITTED TO GIT HISTORY — Rotate immediately
+
+**Commits:** `16fe4c92` (`.env.example`), `89946343` (`scripts/seed-quality-blogs/index.ts`), `0082bf28` (`scripts/gsc-service-account.json`)  
+**Impact:** A Supabase service role key (admin-level DB access), Supabase anon key, and Google Cloud service account private key are present in committed git history. Any clone of this repository or any fork can read these from `git log`. The service role key bypasses all RLS policies.  
+**Evidence from gitleaks (git history scan):**
+- `apps/web/.env.example` commit `16fe4c92`: real Supabase URL + anon key + service role key
+- `scripts/seed-quality-blogs/index.ts` commit `89946343`: real `SUPABASE_SERVICE_KEY`
+- `scripts/gsc-service-account.json` commit `0082bf28`: real RSA private key for `gsc-reader@gen-lang-client-0674595232.iam.gserviceaccount.com`
+
+**Required actions (in order):**
+1. **Rotate Supabase service role key** — Supabase Dashboard → Project Settings → API → Regenerate
+2. **Rotate Supabase anon key** — same panel
+3. **Disable Google service account** — Google Cloud Console → IAM → Service accounts → `gsc-reader@...` → Manage keys → delete key `437485894c045ac5fdc0ed4de7ae473bdc46a46a`
+4. Optionally rewrite git history with `git filter-repo` or BFG Repo Cleaner (requires force-push to all remotes; coordinate with team)
+5. Add a `.gitleaks.toml` allowlist for test/example files to reduce future false positives
+
+**Status:** ⚠️ OPEN — Requires immediate manual rotation of credentials
+
+---
 
 ### P0-1: OG/social image (`/og-image.png`) missing from public assets
 
 **File:** `apps/web/app/layout.tsx:75`, `apps/web/app/layout.tsx:88`  
 **Impact:** Every social share (Twitter, LinkedIn, iMessage, Slack) shows a broken image or blank card. OG image is the single most visible first impression.  
-**Evidence:** `apps/web/public/` contains icons and favicons but no `og-image.png`; all OG meta tags point to `/og-image.png`.  
-**Fix:** Create a 1200×630 OG image (static or via `/api/og` dynamic route) and place it at `apps/web/public/og-image.png`. Consider generating it from the brand wordmark. See `/api/og/world-map/route.tsx` for the pattern using `next/og`.
+**Fix:** Created dynamic `/api/og` edge route; updated `layout.tsx` to point to `/api/og`.  
+**Status:** ✅ Fixed
 
 ---
 
 ### P0-2: No error monitoring — zero production visibility
 
-**Files:** searched all `apps/` — no Sentry, Datadog, or equivalent found  
-**Impact:** Silent crashes and server-side exceptions will go completely unnoticed. No stack traces, no user context, no release tracking. The first sign of a production incident will be user churn, not an alert.  
-**Fix:** Add `@sentry/nextjs` to `apps/web` and `@sentry/react-native` to `apps/mobile`. Wire up source maps, user context (anonymized ID), and environment/release tags. Verify Sentry receives a test error end-to-end before launch.
+**Files:** `apps/web/sentry.{client,server,edge}.config.ts`, `apps/web/next.config.ts`, `apps/mobile/app/_layout.tsx`  
+**Impact:** Without Sentry, silent crashes and server-side exceptions go completely unnoticed.  
+**Fix:** Integrated `@sentry/nextjs` (web) and `@sentry/react-native` (mobile). Added:
+- `withSentryConfig` in `next.config.ts` with source map upload and tunnel route
+- `instrumentation.ts` with `onRequestError` hook
+- Global error boundary (`app/global-error.tsx`) that calls `Sentry.captureException`
+- `sentry.client/server/edge.config.ts` with release tracking and PII stripping
+- Mobile: `Sentry.init()` + `Sentry.wrap(RootLayout)` + `Sentry.setUser()` on auth
+- Test endpoint: `/api/sentry-test` (non-production only)
+
+**Remaining action:** Create a Sentry project and set `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` in Vercel environment variables. Hit `GET /api/sentry-test` in staging to verify DSN → source maps end-to-end.  
+**Status:** ✅ Code complete — DSN configuration pending (manual step in Sentry/Vercel dashboard)
 
 ---
 
 ### P0-3: Most expensive API endpoint has no rate limiting
 
 **File:** `apps/web/app/api/workflows/generate-itinerary/route.ts`  
-**Impact:** The itinerary generation endpoint (calls OpenAI/Anthropic + Amadeus + external vendors) has **zero rate limiting**. A single bad actor can exhaust API credits in minutes. Other lighter endpoints (destinations, places, search) have rate limiting; this one was skipped.  
-**Evidence:** `grep -c "checkRateLimit" route.ts` returns `0`.  
-**Fix:** Add `checkRateLimit` call at the top of the POST handler, scoped per authenticated user ID, with a conservative limit (e.g., 5 generations per hour per user, 20 per day).
+**Fix:** Added `checkRateLimitAsync` with 5/hr + 20/day per `user.id`.  
+**Status:** ✅ Fixed
 
 ---
 
 ### P0-4: In-memory rate limiter is non-functional on Vercel serverless
 
-**File:** `apps/web/lib/security/rate-limit.ts:1-60`  
-**Impact:** The rate limiter stores state in a `Map` that lives in process memory. On Vercel, every serverless invocation may spin up a new instance with an empty map, so rate limits **never actually accumulate** across real traffic. All rate-limited endpoints (places autocomplete, destinations, search, blog views, etc.) have no real protection.  
-**Comment in source:** `"For production, use Vercel's built-in rate limiting or Redis."` — this is the fix, but it hasn't been done.  
-**Fix options (in priority order):**
-1. Vercel Rate Limiting (built-in, zero infra) — see Vercel docs for `@vercel/functions` `ipRateLimit`.
-2. Upstash Redis via `@upstash/ratelimit` — requires `UPSTASH_REDIS_REST_URL` + `UPSTASH_REDIS_REST_TOKEN` env vars.
+**File:** `apps/web/lib/security/rate-limit.ts`  
+**Fix:** Added `checkRateLimitAsync()` using Vercel KV REST API (INCR/EXPIRE pipeline) with in-memory fallback when `KV_REST_API_URL` + `KV_REST_API_TOKEN` are not set.  
+**Status:** ✅ Fixed — Vercel KV env vars needed in dashboard for production effectiveness
 
 ---
 
@@ -60,46 +85,31 @@
 
 ### P1-1: Root README is missing
 
-**Impact:** Any new team member, contractor, or reviewer cannot set up or understand the project. No documented architecture, setup steps, scripts, or deploy process.  
-**Fix:** Create `README.md` at repo root covering: prerequisites, `bun install`, local dev (`bun dev`), env setup, Supabase setup (`bun db:start`), mobile run (`bun dev:ios`), deploy, and monorepo package overview.
+**Status:** ✅ Fixed — comprehensive `README.md` written at repo root
 
 ---
 
 ### P1-2: Auth race condition — `initialized: true` set before profile hydration
 
-**File:** `apps/mobile/hooks/useAuth.ts:89-100`  
-**Impact:** `initSession()` sets `initialized: true` and then `await hydrateUser(session)`. Any component that renders based on `isAuthenticated && initialized` will see an authenticated state with an empty user store for the duration of the async profile fetch. This can cause flashes of wrong content or premature redirects.  
-**Code (current):**
-```ts
-setAuthState({ user: session?.user ?? null, session, loading: false, initialized: true }); // ← too early
-if (session) {
-  await hydrateUser(session); // ← user store is empty until this resolves
-}
-```
-**Fix:** Only set `initialized: true` after `hydrateUser` completes (or after a timeout of ~3s to prevent indefinite loading on API failure).
+**File:** `apps/mobile/hooks/useAuth.ts`  
+**Fix:** Moved `setAuthState({ initialized: true })` to after `await hydrateUser(session)` completes.  
+**Status:** ✅ Fixed
 
 ---
 
 ### P1-3: Unhandled promise rejection on home screen destination fetch
 
-**File:** `apps/mobile/app/(tabs)/index.tsx:77-82`  
-**Impact:** Both `getPopularDestinations().then(...)` and `getTrendingDestinations().then(...)` have no `.catch()`. On any network error (timeout, 5xx, offline), the promise rejects silently. React Native will log a warning but no user-facing error state is shown. This is also an unhandled rejection that could crash older React Native versions.  
-**Code (current):**
-```ts
-getPopularDestinations({ limit: 5 }).then((res) => {
-  if (res.data?.destinations?.length) setApiPopular(res.data.destinations);
-});
-// ← no .catch()
-```
-**Fix:** Add `.catch(() => { /* silently fall back to hardcoded popularDestinations */ })` to both calls, and consider showing a subtle error indicator if both fail.
+**File:** `apps/mobile/app/(tabs)/index.tsx`  
+**Fix:** Added `.catch()` handlers on both destination fetches.  
+**Status:** ✅ Fixed
 
 ---
 
 ### P1-4: Privacy policy claims analytics — nothing is integrated
 
 **File:** `apps/web/app/(marketing)/privacy/page.tsx`  
-**Impact:** The privacy policy states "We use privacy-focused analytics." No analytics tool is installed anywhere in the codebase. This is a legal misrepresentation. Conversely, `NEXT_PUBLIC_GA_MEASUREMENT_ID` is documented in `.env.example` but unused — suggesting Google Analytics was planned but never implemented.  
-**Fix:** Either (a) add a privacy-preserving analytics tool (e.g., Plausible, Fathom, or PostHog in cookieless mode) and implement it, or (b) remove the analytics claim from the privacy policy.
+**Fix:** Changed claim to conditional language ("may be used"); removed "basic usage analytics" from support FAQ.  
+**Status:** ✅ Fixed
 
 ---
 
@@ -107,17 +117,13 @@ getPopularDestinations({ limit: 5 }).then((res) => {
 
 ### P2-1: `NEXT_PUBLIC_BASE_URL` missing from `apps/web/.env.example`
 
-**File:** Used in 15+ files (`layout.tsx`, `sitemap.ts`, `robots.ts`, all blog/destination OG tags, share route)  
-**Impact:** Has a production fallback hardcoded to `https://www.faroway.ai`, so it won't break, but staging/preview deployments will generate OG tags and sitemaps pointing to the production URL unless this is explicitly configured. Causes SEO confusion across environments.  
-**Fix:** Add `NEXT_PUBLIC_BASE_URL=https://www.faroway.ai` to `apps/web/.env.example` with a comment explaining staging overrides.
+**Status:** ✅ Fixed — added with comment
 
 ---
 
 ### P2-2: `/tools/world-map` missing from sitemap
 
-**File:** `apps/web/app/sitemap.ts`  
-**Impact:** The world-map tool has full JSON-LD structured data and is a shareable feature, but it is absent from `sitemap.ts` `toolSlugs` and has no direct sitemap entry. Search engines won't discover it.  
-**Fix:** Add `world-map` to `toolSlugs` in `sitemap.ts` or add an explicit entry for the world map.
+**Status:** ✅ Fixed — added to `toolSlugs`
 
 ---
 
@@ -128,34 +134,31 @@ getPopularDestinations({ limit: 5 }).then((res) => {
 - `apps/web/app/api/search/[searchId]/route.ts:113,123,133,143`
 - `apps/web/app/api/trips/[id]/stream/route.ts:574`
 
-**Impact:** If Supabase schema changes or returns unexpected shapes (e.g., a nullable field that wasn't nullable before), these casts will silently produce malformed data that crashes downstream rendering.  
-**Fix:** Replace with Zod schema validation. The `@faroway/validation` package exists and should be the right home for these schemas. At minimum, add narrow type guards before the casts.
+**Status:** Open — low-risk for launch if schema stays stable; add Zod validation per route
 
 ---
 
 ### P2-4: No E2E test coverage on critical flows
 
-**Impact:** Unit tests exist for `useStreamingItinerary`, `api.ts`, `searchService`, and `tripStore`. But there are no end-to-end tests for: auth (Google/Apple sign-in), trip creation and generation, the streaming itinerary view, or the booking affiliate click flow. A regression in any of these would only be caught in manual QA.  
-**Fix:** Add Playwright E2E tests covering:
-1. Unauthenticated trip creation (anonymous flow)
-2. Sign-in via Google (mocked)
-3. Streaming generation with a mocked SSE response
-4. Booking link click (affiliate URL validation)
+**Fix:** Added Playwright E2E specs:
+- `apps/web/e2e/health.spec.ts` — health endpoint, home title, robots.txt, sitemap, OG image
+- `apps/web/e2e/marketing.spec.ts` — landing page, legal pages, create flow, blog, world map
+- `apps/web/e2e/api.spec.ts` — public API endpoints, auth protection, rate limiting
+
+CI `e2e` job added to `.github/workflows/CI.yml` (runs after `build-web`).  
+**Status:** ✅ Tests written and CI wired — not yet verified passing against deployed environment
 
 ---
 
 ### P2-5: CI does not build or type-check mobile app
 
-**File:** `.github/workflows/CI.yml`  
-**Impact:** The `build-web` job only runs `bun turbo build --filter=@faroway/web`. The mobile app's TypeScript and Expo configuration are not checked. A broken mobile type error would only surface locally or in an EAS build.  
-**Fix:** Add `bun turbo type-check --filter=@faroway/mobile` to the `quality` job. Mobile build itself (EAS) is expensive to run in CI, but type checking is cheap.
+**Status:** N/A — `bun turbo type-check` runs across all packages including mobile
 
 ---
 
-### P2-6: Generate-itinerary workflow endpoint missing auth rate limit
+### P2-6: Generate endpoint rate limit scoping
 
-**File:** `apps/web/app/api/workflows/generate-itinerary/route.ts`  
-**Note:** See also P0-3. Even after adding rate limiting, it should be scoped per `user.id`, not per IP, since mobile clients may share IPs (CGNAT/Wi-Fi). The existing search endpoint correctly uses IP; this one should use user ID.
+**Status:** ✅ Fixed — user ID scoped (see P0-3)
 
 ---
 
@@ -163,48 +166,38 @@ getPopularDestinations({ limit: 5 }).then((res) => {
 
 ### P3-1: `prefers-reduced-motion` not respected in animations
 
-**Files:** `apps/mobile/app/create/generating.tsx`, `apps/mobile/app/(tabs)/index.tsx`  
-**Impact:** Users with vestibular disorders who set `prefers-reduced-motion: reduce` will still see full looping animations and parallax effects. Required for WCAG 2.1 AA (success criterion 2.3.3).  
-**Fix:** Use `useReducedMotion()` from `react-native-reanimated` or `AccessibilityInfo.isReduceMotionEnabled()` to gate animations.
+**Fix:** Created `apps/mobile/hooks/useReduceMotion.ts`; applied to looping animations in `generating.tsx` and `index.tsx`.  
+**Status:** ✅ Fixed
 
 ---
 
 ### P3-2: `NEXT_PUBLIC_GA_MEASUREMENT_ID` in `.env.example` but unimplemented
 
-**File:** `apps/web/.env.example`  
-**Impact:** Documented as if GA is present, but no GA snippet, `<Script>` tag, or pageview tracking exists in the codebase. Creates confusion for anyone onboarding.  
-**Fix:** Remove the GA env var from `.env.example` until analytics is actually implemented (see P1-4).
+**Status:** ✅ Fixed — removed from `.env.example`
 
 ---
 
 ### P3-3: Missing `Article` JSON-LD on blog posts
 
-**Files:** `apps/web/app/blog/[slug]/page.tsx`, `apps/web/app/blog/guides/[slug]/page.tsx`  
-**Impact:** The root layout has `Organization`, `WebSite`, and `SiteLinksSearchBox` JSON-LD, but individual blog posts lack `Article` structured data. Google may not surface rich snippets (author, date, breadcrumbs) for blog content.  
-**Fix:** Add per-post `Article` schema using post frontmatter (`title`, `author`, `datePublished`, `dateModified`, `image`).
+**Status:** N/A — already implemented in blog page
 
 ---
 
-### P3-4: Blog article schema and destination `TouristDestination` schema missing
+### P3-4: Missing TouristDestination schema
 
-**Files:** `apps/web/app/destinations/[slug]/page.tsx`  
-**Impact:** Destination guide pages lack `TouristDestination` or `TravelAction` schema. Given the SEO-critical nature of these pages (they target high-intent "travel to X" queries), structured data would meaningfully increase rich result eligibility.
+**Status:** N/A — already implemented in destinations page
 
 ---
 
-### P3-5: CI has no preview deploy step
+### P3-5: No preview deploys in CI
 
-**File:** `.github/workflows/CI.yml`  
-**Impact:** PRs cannot be visually reviewed without pulling and running locally. Vercel preview URLs could be auto-posted to PRs.  
-**Fix:** Add the Vercel GitHub integration or a `deploy-preview` job that posts the preview URL as a PR comment on each push to non-main branches.
+**Status:** Open — configure Vercel GitHub integration in Vercel dashboard (zero-code change required)
 
 ---
 
 ### P3-6: Mobile test suite missing coverage for `useAuth` and offline sync
 
-**Files:** `apps/mobile/__tests__/`  
-**Impact:** The two most critical and complex hooks (`useAuth.ts`, `useOfflineSync.ts`) have no unit tests. Auth flows with multiple providers and offline sync with conflict resolution are high-risk areas.  
-**Fix:** Add unit tests for: Google sign-in cancel, Apple sign-in credential mapping, `deleteAccount` flow, anonymous trip claiming, and offline queue flush/retry logic.
+**Status:** Open
 
 ---
 
@@ -212,26 +205,66 @@ getPopularDestinations({ limit: 5 }).then((res) => {
 
 | ID | Area | Severity | Status |
 |----|------|----------|--------|
-| P0-1 | OG image missing | P0 | ✅ Fixed — `/api/og` dynamic route |
-| P0-2 | No error monitoring | P0 | Open |
-| P0-3 | `/generate-itinerary` unrated | P0 | ✅ Fixed — 5/hr + 20/day per user |
-| P0-4 | In-memory rate limiter | P0 | ✅ Fixed — Vercel KV + in-memory fallback |
-| P1-1 | README missing | P1 | ✅ Fixed — full README.md |
-| P1-2 | Auth race condition | P1 | ✅ Fixed — `initialized` after hydration |
-| P1-3 | Unhandled rejection home screen | P1 | ✅ Fixed — `.catch()` on both fetches |
-| P1-4 | Analytics claim vs. reality | P1 | ✅ Fixed — privacy policy updated |
-| P2-1 | `NEXT_PUBLIC_BASE_URL` undocumented | P2 | ✅ Fixed — in web `.env.example` |
-| P2-2 | World-map missing from sitemap | P2 | ✅ Fixed — added to `toolSlugs` |
+| **P0-0** | **Real credentials in git history** | **P0** | **⚠️ OPEN — rotate now** |
+| P0-1 | OG image missing | P0 | ✅ Fixed |
+| P0-2 | No error monitoring | P0 | ✅ Code done — DSN config pending |
+| P0-3 | `/generate-itinerary` unrated | P0 | ✅ Fixed |
+| P0-4 | In-memory rate limiter | P0 | ✅ Fixed |
+| P1-1 | README missing | P1 | ✅ Fixed |
+| P1-2 | Auth race condition | P1 | ✅ Fixed |
+| P1-3 | Unhandled rejection home screen | P1 | ✅ Fixed |
+| P1-4 | Analytics claim vs. reality | P1 | ✅ Fixed |
+| P2-1 | `NEXT_PUBLIC_BASE_URL` undocumented | P2 | ✅ Fixed |
+| P2-2 | World-map missing from sitemap | P2 | ✅ Fixed |
 | P2-3 | `as unknown as` casts | P2 | Open |
-| P2-4 | No E2E tests | P2 | Open |
-| P2-5 | CI skips mobile typecheck | P2 | N/A — `bun turbo type-check` is monorepo-wide |
-| P2-6 | Generate endpoint rate limit scoping | P2 | ✅ Fixed — user ID scoped |
-| P3-1 | `prefers-reduced-motion` | P3 | ✅ Fixed — `useReduceMotion` hook, looping anims gated |
-| P3-2 | Dead GA env var | P3 | ✅ Fixed — removed from `.env.example` |
-| P3-3 | Missing Article JSON-LD | P3 | N/A — already implemented in blog page |
-| P3-4 | Missing TouristDestination schema | P3 | N/A — already implemented in destinations page |
-| P3-5 | No preview deploys in CI | P3 | Open — configure Vercel GitHub integration in dashboard |
+| P2-4 | No E2E tests | P2 | ✅ Written — pending deploy verify |
+| P2-5 | CI skips mobile typecheck | P2 | N/A |
+| P2-6 | Generate endpoint rate limit scoping | P2 | ✅ Fixed |
+| P3-1 | `prefers-reduced-motion` | P3 | ✅ Fixed |
+| P3-2 | Dead GA env var | P3 | ✅ Fixed |
+| P3-3 | Missing Article JSON-LD | P3 | N/A |
+| P3-4 | Missing TouristDestination schema | P3 | N/A |
+| P3-5 | No preview deploys in CI | P3 | Open |
 | P3-6 | Missing auth/offline sync tests | P3 | Open |
+
+---
+
+## Bundle Size (2026-05-12)
+
+Build: `bun turbo build --filter=@faroway/web` — clean, 0 errors, 0 TS errors, 0 lint warnings.
+
+| Asset | Size |
+|-------|------|
+| JS chunks total | 2.7 MB (uncompressed) |
+| Largest chunk | 220 KB |
+| Next 4 chunks | 204 KB, 148 KB, 136 KB, 136 KB |
+| CSS | < 100 KB |
+| `.next/` total | 170 MB (includes source maps, cache) |
+
+Static pages: 401 generated. All routes compile successfully.  
+One deprecation warning: `@sentry/nextjs` `disableLogger` option (non-fatal; Turbopack does not support tree-shaking of Sentry logger; safe to ignore).
+
+---
+
+## Security Scan Results (2026-05-12)
+
+### gitleaks
+
+**Filesystem scan (--no-git):** 62 findings, **all in gitignored files** (`.env.local`, `.next/` build artifacts) or false positives in example docs. No committed plaintext secrets in working tree.
+
+**Git history scan:** 11 findings — **4 are real credentials** (see P0-0). Remaining 7 are false positives (placeholder text `YOUR_JWT_TOKEN`, truncated JWT examples `eyJ...`).
+
+### bun audit
+
+**Total vulnerabilities: 98** (2 critical, 53 high, 35 moderate, 8 low)
+
+All findings are in **transitive dependencies** — none are in directly-authored code. Key findings:
+- `picomatch < 2.3.2` — ReDoS in extglob quantifiers — from `vitest`, `expo`, `eslint-config-next` (dev/build only)
+- `@xmldom/xmldom < 0.8.12` — XML injection — from `expo`, `react-native` (mobile build toolchain only, not shipped in app bundle)
+- `path-to-regexp >= 8.0.0 < 8.4.0` — ReDoS — from `workflow` package
+- `devalue` — DoS via memory exhaustion — from `workflow` package
+
+**Risk assessment:** None of these affect the runtime web app bundle or mobile APK directly. The `workflow` package vulnerabilities (path-to-regexp, devalue) are in the build/orchestration layer. Monitor for upstream fixes.
 
 ---
 
@@ -251,15 +284,12 @@ The following areas are solid and should be preserved:
 
 ---
 
-## Fix Order Recommendation
+## Remaining Manual Steps Before Launch
 
-1. Create OG image (P0-1) — 1 hour
-2. Add rate limiting to `/generate-itinerary` (P0-3) — 2 hours
-3. Migrate rate limiter to Vercel/Upstash (P0-4) — 4 hours
-4. Add Sentry to web + mobile (P0-2) — 4 hours
-5. Write README (P1-1) — 2 hours
-6. Fix auth race condition (P1-2) — 1 hour
-7. Fix home screen `.catch()` (P1-3) — 30 minutes
-8. Resolve analytics claim (P1-4) — 2 hours (implement or remove)
-9. P2 items in parallel — 1–2 days
-10. P3 items as bandwidth allows
+1. **Rotate Supabase and Google credentials** (P0-0 — blocking)
+2. **Create Sentry project** → set `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` in Vercel
+3. **Set Vercel KV env vars** → `KV_REST_API_URL`, `KV_REST_API_TOKEN` in Vercel (rate limiting only effective with KV)
+4. **Enable Vercel GitHub integration** for preview deploy URLs on PRs
+5. **Run Lighthouse** against deployed staging URL — target: Perf ≥ 90, A11y ≥ 95, Best Practices ≥ 95, SEO = 100
+6. **Verify Playwright E2E** pass against staging deployment
+7. **Manual QA** — iOS Safari, Android Chrome, desktop Chrome

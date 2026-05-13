@@ -12,14 +12,14 @@ export const runtime = "edge";
 
 const interSemiBoldPromise = fetch(
   new URL(
-    "../world-map/fonts/inter-semibold.ttf",
+    "./world-map/fonts/inter-semibold.ttf",
     import.meta.url,
   ),
 ).then((r) => r.arrayBuffer());
 
 const interRegularPromise = fetch(
   new URL(
-    "../world-map/fonts/inter-regular.ttf",
+    "./world-map/fonts/inter-regular.ttf",
     import.meta.url,
   ),
 ).then((r) => r.arrayBuffer());
