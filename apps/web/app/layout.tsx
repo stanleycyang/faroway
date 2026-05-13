@@ -27,12 +27,11 @@ const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
   title: {
-    default:
-      "Faroway - AI-Powered Travel Planning | Create Itineraries in 60 Seconds",
+    default: "Faroway - AI-Powered Travel Planning",
     template: "%s | Faroway",
   },
   description:
-    "Plan your dream trip with AI. Get personalized day-by-day itineraries, find hotels, activities, and restaurants. 100% free, no account needed, works offline.",
+    "Plan trips with AI. Get personalized day-by-day itineraries with places to stay, eat, and explore.",
   keywords: [
     "AI travel planner",
     "trip planning app",
@@ -60,23 +59,21 @@ export const metadata: Metadata = {
     siteName: "Faroway",
     title: "Faroway - AI-Powered Travel Planning",
     description:
-      "Create personalized travel itineraries in 60 seconds with AI. Hotels, flights, activities—all planned for you.",
+      "Create personalized travel itineraries with AI. Review hotels, activities, restaurants, and partner options.",
     images: [
       {
-        url: "/og-image.png",
+        url: "/api/og",
         width: 1200,
         height: 630,
-        alt: "Faroway - Plan Your Perfect Trip with AI",
+        alt: "Faroway - Plan a Trip with AI",
       },
     ],
   },
   twitter: {
     card: "summary_large_image",
     title: "Faroway - AI-Powered Travel Planning",
-    description:
-      "Create personalized travel itineraries in 60 seconds with AI.",
-    images: ["/og-image.png"],
-    creator: "@faroway",
+    description: "Create personalized day-by-day travel itineraries with AI.",
+    images: ["/api/og"],
   },
   robots: {
     index: true,
@@ -119,11 +116,6 @@ const organizationSchema = {
   name: "Faroway",
   url: baseUrl,
   logo: `${baseUrl}/icon.png`,
-  sameAs: [
-    "https://twitter.com/faroway",
-    "https://instagram.com/faroway",
-    "https://facebook.com/faroway",
-  ],
   contactPoint: {
     "@type": "ContactPoint",
     contactType: "customer service",
@@ -137,7 +129,7 @@ const websiteSchema = {
   name: "Faroway",
   url: baseUrl,
   description:
-    "AI-powered travel planning platform that creates personalized itineraries in seconds",
+    "AI-powered travel planning platform for personalized day-by-day itineraries",
   potentialAction: {
     "@type": "SearchAction",
     target: {
