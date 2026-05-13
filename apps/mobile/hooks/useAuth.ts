@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import * as Sentry from '@sentry/react-native';
 import { supabase } from '../lib/supabase';
 import {
   APPLE_SIGN_IN_UNAVAILABLE_MESSAGE,
@@ -48,6 +49,8 @@ export function useAuth() {
     const authUser = session.user;
     // Set auth token for API calls
     setAuthToken(session.access_token);
+    // Set Sentry user context (anonymized ID only — no PII)
+    Sentry.setUser({ id: authUser.id });
 
     // Start with Supabase metadata as fallback
     const fallback: AppUser = {
@@ -133,6 +136,7 @@ export function useAuth() {
           void claimAnonymousTrips(session.access_token);
         } else {
           setAuthToken(null);
+          Sentry.setUser(null);
           clearUserStore();
           if (hadAuthenticatedSessionRef.current) {
             clearTrips();

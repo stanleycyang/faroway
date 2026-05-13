@@ -1,4 +1,5 @@
 import { withWorkflow } from "workflow/next";
+import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -85,4 +86,16 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withWorkflow(nextConfig);
+export default withSentryConfig(withWorkflow(nextConfig), {
+  // Source map upload — requires SENTRY_AUTH_TOKEN in CI
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  silent: !process.env.CI,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+
+  // Automatically tree-shake Sentry debug logging in production
+  disableLogger: true,
+
+  // Tunnels Sentry requests through Next.js to avoid ad-blockers
+  tunnelRoute: "/monitoring",
+});

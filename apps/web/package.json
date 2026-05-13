@@ -28,6 +28,7 @@
     "@hookform/resolvers": "^5.2.2",
     "@json-render/core": "^0.6.1",
     "@json-render/react": "^0.6.1",
+    "@sentry/nextjs": "^10.53.1",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "^2.95.3",
     "@tailwindcss/postcss": "^4.1.18",

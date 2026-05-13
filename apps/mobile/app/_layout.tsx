@@ -1,17 +1,26 @@
 import { useEffect } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator } from 'react-native';
+import * as Sentry from '@sentry/react-native';
 import { AuthProvider, useAuthContext } from '../components/AuthProvider';
 import { NotificationProvider } from '../components/NotificationProvider';
 import { OfflineProvider } from '../components/OfflineProvider';
 import { SyncStatusBanner } from '../components/ui/SyncStatusBanner';
 import { useTripStore } from '../stores/tripStore';
 
+Sentry.init({
+  dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
+  environment: __DEV__ ? 'development' : 'production',
+  tracesSampleRate: __DEV__ ? 1.0 : 0.1,
+  // Attach JS bundle source maps for readable stack traces
+  attachStacktrace: true,
+  // Don't send events in dev unless DSN is explicitly set
+  enabled: !__DEV__ || !!process.env.EXPO_PUBLIC_SENTRY_DSN,
+});
+
 function RootLayoutNav() {
-  const { isAuthenticated, initialized, loading } = useAuthContext();
-  const segments = useSegments();
-  const router = useRouter();
+  const { initialized } = useAuthContext();
   const hydrateFromOffline = useTripStore((state) => state.hydrateFromOffline);
   const isHydrated = useTripStore((state) => state.isHydrated);
 
@@ -22,45 +31,17 @@ function RootLayoutNav() {
     }
   }, [isHydrated, hydrateFromOffline]);
 
-  useEffect(() => {
-    if (!initialized) return;
-
-    const inOnboarding = segments[0] === 'onboarding';
-    const inIndex = (segments as string[]).length === 0 || segments[0] === undefined;
-    const inCreate = segments[0] === 'create';
-    const inTrip = segments[0] === 'trip';
-    const inInspiration = segments[0] === 'inspiration';
-    const inTabs = segments[0] === '(tabs)';
-    
-    // Protected routes that require authentication
-    const protectedTabRoutes = ['profile'];
-    const currentTab = (segments as string[])[1] as string | undefined;
-    const isProtectedTab = inTabs && currentTab != null && protectedTabRoutes.includes(currentTab);
-
-    // Allow access to index (splash) screen
-    if (inIndex) return;
-
-    // CHANGED: Allow anonymous users to access:
-    // - Onboarding
-    // - Create trip flow
-    // - View trips
-    // - Main tabs (except profile)
-    if (inOnboarding || inCreate || inTrip || inInspiration) return;
-    
-    // Allow tabs except protected ones
-    if (inTabs && !isProtectedTab) return;
-    
-    // If user is not authenticated and trying to access protected routes
-    if (!isAuthenticated && isProtectedTab) {
-      // Don't redirect - we'll show AuthGate component instead
-      return;
-    }
-  }, [isAuthenticated, initialized, segments]);
-
   // Show loading screen while initializing
   if (!initialized) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#ffffff' }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: 'center',
+          alignItems: 'center',
+          backgroundColor: '#ffffff',
+        }}
+      >
         <ActivityIndicator size="large" color="#F97066" />
       </View>
     );
@@ -132,7 +113,7 @@ function RootLayoutNav() {
   );
 }
 
-export default function RootLayout() {
+export default Sentry.wrap(function RootLayout() {
   return (
     <AuthProvider>
       <NotificationProvider>
@@ -142,4 +123,4 @@ export default function RootLayout() {
       </NotificationProvider>
     </AuthProvider>
   );
-}
+});
