@@ -15,7 +15,7 @@ import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
 import { startWorkflow } from "@/lib/workflow/runtime";
 import { planTripWorkflow } from "@/workflows/plan-trip";
 import { buildInstantPreview } from "@/lib/search/preview";
-import { checkRateLimit, getClientIp } from "@/lib/security/rate-limit";
+import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 
 type Params = {
   params: Promise<{
@@ -56,7 +56,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     // Rate limit: 5 per hour, 20 per day. Key on user ID when authenticated,
     // IP for anonymous users (anonymous trips are short-lived and low-volume).
     const rateLimitKey = userId ? `generate:hour:${userId}` : `generate:hour:ip:${getClientIp(request)}`;
-    const hourlyLimit = checkRateLimit(rateLimitKey, {
+    const hourlyLimit = await checkRateLimitAsync(rateLimitKey, {
       maxRequests: 5,
       windowMs: 60 * 60 * 1000,
     });

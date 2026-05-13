@@ -12,7 +12,7 @@ import { planTripWorkflow } from "@/workflows/plan-trip";
 import { createClientFromRequest } from "@/lib/supabase/server";
 import { addDateRangeIssue, DateOnlySchema } from "@/lib/api/date";
 import { parseJsonRequest } from "@/lib/api/json";
-import { checkRateLimit } from "@/lib/security/rate-limit";
+import { checkRateLimitAsync } from "@/lib/security/rate-limit";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 import { z } from "zod";
 
@@ -81,10 +81,17 @@ export async function POST(request: NextRequest) {
 
     // Rate limit: 5 generations per hour per user, 20 per day
     // Scoped to user ID (not IP) so mobile clients behind CGNAT aren't blocked collectively.
-    const hourlyLimit = checkRateLimit(`generate-itinerary:hour:${user.id}`, {
-      maxRequests: 5,
-      windowMs: 60 * 60 * 1000,
-    });
+    const [hourlyLimit, dailyLimit] = await Promise.all([
+      checkRateLimitAsync(`generate-itinerary:hour:${user.id}`, {
+        maxRequests: 5,
+        windowMs: 60 * 60 * 1000,
+      }),
+      checkRateLimitAsync(`generate-itinerary:day:${user.id}`, {
+        maxRequests: 20,
+        windowMs: 24 * 60 * 60 * 1000,
+      }),
+    ]);
+
     if (!hourlyLimit.allowed) {
       return NextResponse.json(
         { error: "Too many itinerary requests. Please wait before generating another trip." },
@@ -95,10 +102,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const dailyLimit = checkRateLimit(`generate-itinerary:day:${user.id}`, {
-      maxRequests: 20,
-      windowMs: 24 * 60 * 60 * 1000,
-    });
     if (!dailyLimit.allowed) {
       return NextResponse.json(
         { error: "Daily itinerary generation limit reached. Try again tomorrow." },
