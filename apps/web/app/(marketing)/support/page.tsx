@@ -19,6 +19,7 @@ import { FadeInOnScroll } from "@/components/landing/FadeInOnScroll";
 import { FAQAccordion } from "@/components/support/FAQAccordion";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { APP_STORE_URL, PLAY_STORE_URL } from "@/lib/store-links";
 
 // ─── App Store Buttons ───────────────────────────────────────────────────────
 
@@ -26,7 +27,7 @@ function AppStoreButtons({ className = "" }: { className?: string }) {
   return (
     <div className={`flex flex-wrap gap-3 ${className}`}>
       <a
-        href="https://apps.apple.com/app/faroway"
+        href={APP_STORE_URL}
         className="inline-flex items-center gap-3 bg-white/15 hover:bg-white/25 border border-white/20 px-5 py-3 rounded-2xl font-semibold text-white transition-all backdrop-blur-sm hover:-translate-y-0.5"
       >
         <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
@@ -38,7 +39,7 @@ function AppStoreButtons({ className = "" }: { className?: string }) {
         </div>
       </a>
       <a
-        href="https://play.google.com/store/apps/details?id=com.faroway"
+        href={PLAY_STORE_URL}
         className="inline-flex items-center gap-3 bg-white/15 hover:bg-white/25 border border-white/20 px-5 py-3 rounded-2xl font-semibold text-white transition-all backdrop-blur-sm hover:-translate-y-0.5"
       >
         <svg className="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
@@ -60,7 +61,7 @@ const helpCategories = [
     icon: Rocket,
     gradient: "from-blue-500 to-indigo-500",
     title: "Getting Started",
-    description: "Create your first AI-powered trip in seconds.",
+    description: "Start your first AI-powered trip with guided preferences.",
     bullets: [
       "Creating your first trip",
       "Choosing travel vibes & preferences",
@@ -72,12 +73,12 @@ const helpCategories = [
     icon: Map,
     gradient: "from-emerald-500 to-teal-500",
     title: "Trip Planning",
-    description: "Edit, customize, and share your itineraries.",
+    description: "Review, save, and share generated itineraries.",
     bullets: [
-      "Editing your day-by-day itinerary",
-      "Adding or removing activities",
+      "Reviewing your day-by-day plan",
+      "Saving generated itineraries",
       "Sharing trips with friends",
-      "Exporting your itinerary",
+      "Understanding itinerary limits",
     ],
   },
   {
@@ -100,7 +101,7 @@ const helpCategories = [
     bullets: [
       "Booking.com hotel reservations",
       "Viator tours and activities",
-      "Faroway is 100% free to use",
+      "Faroway is free to start",
       "Refunds handled by providers",
     ],
   },
@@ -108,12 +109,12 @@ const helpCategories = [
     icon: WifiOff,
     gradient: "from-sky-500 to-blue-500",
     title: "Offline & Sync",
-    description: "Access your trips anywhere, even without Wi-Fi.",
+    description: "Revisit saved trips when connectivity is limited.",
     bullets: [
-      "Using trips offline",
-      "How automatic sync works",
+      "Using saved trips offline",
+      "How signed-in sync works",
       "Managing device storage",
-      "Multi-device access",
+      "Signed-in device access",
     ],
   },
   {
@@ -135,7 +136,7 @@ const quickStartSteps = [
     step: 1,
     title: "Choose your destination",
     description:
-      "Pick from 195+ countries worldwide. Set your travel dates and group size.",
+      "Pick a destination, then set your travel dates and group size.",
     image: getImageUrl(IMAGE_PATHS.marketing.travelPlanning),
     imageAlt: "Traveler with backpack on scenic mountain path",
   },
@@ -151,7 +152,7 @@ const quickStartSteps = [
     step: 3,
     title: "AI builds your itinerary",
     description:
-      "In under 60 seconds, get a complete day-by-day plan with restaurants, activities, and local tips.",
+      "Watch your day-by-day plan build with restaurants, activities, and local tips.",
     image: getImageUrl(IMAGE_PATHS.marketing.aerialTravel),
     imageAlt: "Aerial view of turquoise waters and lush green islands",
   },
@@ -161,32 +162,32 @@ const faqItems = [
   {
     question: "Is Faroway really free?",
     answer:
-      "Yes! Faroway is completely free to use. We earn revenue through affiliate commissions \u2014 when you book a hotel or activity through a link in your itinerary, the provider (like Booking.com or Viator) pays us a small referral fee. You pay the same price as if you booked directly. This affiliate model is how we keep the service free for everyone.",
+      "Faroway is free to start. We earn revenue through affiliate commissions when you book a hotel or activity through a partner link in your itinerary. Partner prices, availability, and terms are shown by the provider before you book.",
   },
   {
     question: "How does AI trip planning work?",
     answer:
-      "Simply enter your destination, travel dates, and preferences (like travel style and interests). Our AI analyzes thousands of data points to create a personalized day-by-day itinerary with activities, restaurants, and local tips tailored to your interests.",
+      "Simply enter your destination, travel dates, and preferences (like travel style and interests). Our AI creates a personalized day-by-day itinerary with activities, restaurants, and local tips tailored to your interests.",
   },
   {
-    question: "Can I edit my itinerary after it's generated?",
+    question: "Can I adjust my itinerary after it's generated?",
     answer:
-      "Absolutely! Every generated itinerary is fully editable. You can add, remove, or rearrange activities, change restaurants, adjust timing, and customize every detail to make it perfect for your trip.",
+      "You can review the generated plan, save it, share it, and use it as a starting point for your trip. Individual activity editing and rearranging are not part of the current release.",
   },
   {
     question: "How do I delete my account?",
     answer:
-      "You can delete your account by going to Settings \u2192 Account \u2192 Delete Account in the mobile app. Your personal data will be removed within 30 days of deletion. If you need help, contact us at support@faroway.ai.",
+      "You can delete your account from the mobile app Profile tab by tapping Delete Account. Your personal data will be removed within 30 days of deletion. If you need help, contact us at support@faroway.ai.",
   },
   {
     question: "Does the app work offline?",
     answer:
-      "Yes! Faroway uses an offline-first architecture. Your trip itineraries are stored locally on your device so you can access them without an internet connection. Changes sync automatically when you're back online.",
+      "Saved trip itineraries are stored locally on your device so you can revisit them without an internet connection. Changes sync when you're signed in and back online.",
   },
   {
     question: "What data do you collect?",
     answer:
-      "We collect your account information (email, name via OAuth), travel preferences, trip data, basic usage analytics, and affiliate click/conversion data when you interact with booking links. We never sell your personal data. Affiliate partners only receive a referral ID \u2014 not your name or email. For full details, see our Privacy Policy at faroway.ai/privacy.",
+      "We collect your account information (email, name via OAuth), travel preferences, trip data, and affiliate click/conversion data when you interact with booking links. We never sell your personal data. Affiliate partners only receive a referral ID \u2014 not your name or email. For full details, see our Privacy Policy at faroway.ai/privacy.",
   },
   {
     question: "How are bookings handled?",
@@ -201,22 +202,22 @@ const faqItems = [
   {
     question: "Which countries does Faroway support?",
     answer:
-      "Faroway supports 195+ countries worldwide. Whether you're planning a trip to Paris, Tokyo, Cape Town, or a hidden gem off the beaten path, our AI can generate a personalized itinerary for virtually any destination on earth.",
+      "Faroway can help with many destinations worldwide, including popular cities, regions, and route-based trips. Results depend on available partner inventory and destination data.",
   },
   {
     question: "Can I plan trips for groups?",
     answer:
-      "Group trip planning features are coming soon! Currently, you can create itineraries and share them with your travel companions via a link. Full collaborative group planning with voting and shared editing is on our roadmap.",
+      "You can create itineraries and share them with your travel companions via a link. Collaborative editing, voting, and shared decision tools are not part of the current product.",
   },
   {
     question: "How do I share my itinerary?",
     answer:
-      "You can share your itinerary by tapping the share button on any trip. This generates a shareable link that anyone can view. You can also export your itinerary for offline use or share it directly via messaging apps.",
+      "You can share your itinerary by tapping the share button on any saved trip. This generates a shareable link that anyone with the link can view, and you can send it through your device's share sheet.",
   },
   {
     question: "What happens if AI generates a bad recommendation?",
     answer:
-      "Every AI-generated itinerary is fully editable. If a recommendation doesn't fit your style, you can remove it, swap it for something else, or regenerate that part of the itinerary. You can also provide feedback to help our AI learn and improve.",
+      "AI-generated travel suggestions can be incomplete or occasionally wrong, so verify important details such as hours, prices, safety, and cancellation terms with the venue or booking partner before you rely on them.",
   },
 ];
 
@@ -345,7 +346,7 @@ export default function SupportPage() {
                 <span className="text-gradient">3 easy steps</span>
               </h2>
               <p className="text-xl text-slate-500 max-w-2xl mx-auto">
-                From destination to complete itinerary in under 60 seconds.
+                From destination to a structured itinerary draft.
               </p>
             </div>
           </FadeInOnScroll>
@@ -474,24 +475,24 @@ export default function SupportPage() {
                   <MessageCircle className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="text-xl font-bold text-slate-900 mb-2">
-                  Social & Community
+                  Privacy Requests
                 </h3>
                 <p className="text-slate-500 mb-5 text-sm leading-relaxed">
-                  Follow us for travel tips, updates, and to connect with other
-                  Faroway travelers.
+                  Ask for a copy of your data, request corrections, or get help
+                  with account deletion and privacy rights.
                 </p>
                 <div className="flex flex-wrap justify-center gap-3">
                   <a
-                    href="https://twitter.com/faroway"
+                    href="mailto:privacy@faroway.ai"
                     className="inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors"
                   >
-                    Twitter
+                    privacy@faroway.ai
                   </a>
                   <a
-                    href="https://instagram.com/faroway"
+                    href="/privacy"
                     className="inline-flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-700 px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors"
                   >
-                    Instagram
+                    Privacy Policy
                   </a>
                 </div>
               </div>
@@ -519,24 +520,27 @@ export default function SupportPage() {
               <span className="text-gradient-hero">mobile</span>
             </h2>
             <p className="text-xl text-white/70 mb-8 leading-relaxed max-w-2xl mx-auto">
-              Download Faroway for offline access, GPS navigation, and real-time
-              trip updates. Your trips, always in your pocket.
+              Download Faroway for saved-trip offline access, partner options,
+              and itinerary-ready alerts. Your trips, available when you need
+              them.
             </p>
 
             <AppStoreButtons className="justify-center mb-8" />
 
             <div className="flex flex-wrap justify-center gap-x-6 gap-y-3">
-              {["100% free", "Works offline", "No account needed"].map(
-                (feature) => (
-                  <div
-                    key={feature}
-                    className="flex items-center gap-2 text-white/80 text-sm"
-                  >
-                    <Check className="w-4 h-4 text-accent flex-shrink-0" />
-                    <span>{feature}</span>
-                  </div>
-                ),
-              )}
+              {[
+                "Free to start",
+                "Saved trips offline",
+                "No account needed",
+              ].map((feature) => (
+                <div
+                  key={feature}
+                  className="flex items-center gap-2 text-white/80 text-sm"
+                >
+                  <Check className="w-4 h-4 text-accent flex-shrink-0" />
+                  <span>{feature}</span>
+                </div>
+              ))}
             </div>
           </FadeInOnScroll>
         </div>

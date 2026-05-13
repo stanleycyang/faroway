@@ -24,7 +24,7 @@ export default function PrivacyPolicyPage() {
               Privacy Policy
             </h1>
             <p className="mt-4 text-lg text-gray-500">
-              Last updated: February 18, 2026
+              Last updated: May 12, 2026
             </p>
           </div>
 
@@ -76,7 +76,8 @@ export default function PrivacyPolicyPage() {
               </li>
               <li>
                 <strong>Communications</strong> &mdash; messages you send to our
-                support team.
+                support team, including shared itinerary reports with the report
+                reason, details, shared link, and optional email.
               </li>
             </ul>
 
@@ -98,9 +99,8 @@ export default function PrivacyPolicyPage() {
               </li>
               <li>
                 <strong>Location data</strong> &mdash; approximate location
-                derived from your IP address. Precise location data (GPS) is
-                collected only with your explicit permission on mobile devices
-                and used solely for nearby recommendations.
+                derived from your IP address. The current mobile app does not
+                request precise GPS location permission.
               </li>
               <li>
                 <strong>Push notification tokens</strong> &mdash; device tokens
@@ -148,9 +148,11 @@ export default function PrivacyPolicyPage() {
                 state). These cannot be disabled.
               </li>
               <li>
-                <strong>Analytics cookies</strong> &mdash; help us understand
-                how visitors use the Service (e.g., page views, navigation
-                patterns). We use privacy-focused analytics.
+                <strong>Analytics cookies</strong> &mdash; may be used to help
+                us understand how visitors use the Service (e.g., page views,
+                navigation patterns). When enabled, we use privacy-focused,
+                cookie-less analytics that do not track individual users across
+                sessions or share data with advertising networks.
               </li>
               <li>
                 <strong>Affiliate tracking cookies</strong> &mdash; placed by
@@ -186,8 +188,8 @@ export default function PrivacyPolicyPage() {
               </li>
               <li>
                 <strong>Communications</strong> &mdash; send trip reminders,
-                push notifications (if opted in), and respond to support
-                requests.
+                itinerary-ready push notifications (if opted in), and respond to
+                support requests.
               </li>
               <li>
                 <strong>Improvement</strong> &mdash; analyze usage patterns and
@@ -387,7 +389,7 @@ export default function PrivacyPolicyPage() {
                 purposes, then anonymized or deleted.
               </li>
               <li>
-                <strong>Analytics data</strong> is retained in
+                <strong>Analytics data</strong>, if collected, is retained in
                 anonymized/aggregated form and does not contain personal
                 identifiers.
               </li>
@@ -397,8 +399,8 @@ export default function PrivacyPolicyPage() {
               </li>
             </ul>
             <p>
-              You can delete your account at any time through the app or website
-              settings, or by contacting us at{" "}
+              You can delete your account at any time from the mobile app
+              Profile tab, or by contacting us at{" "}
               <a href="mailto:support@faroway.ai">support@faroway.ai</a>. Upon
               account deletion, your personal data will be removed from our
               active systems within 30 days. Some data may persist in encrypted
@@ -427,10 +429,6 @@ export default function PrivacyPolicyPage() {
               <li>
                 <strong>Data portability</strong> &mdash; request an export of
                 your data in a structured, machine-readable format.
-              </li>
-              <li>
-                <strong>Opt-out of analytics</strong> &mdash; disable analytics
-                tracking in your account settings.
               </li>
               <li>
                 <strong>Withdraw consent</strong> &mdash; where processing is
@@ -473,7 +471,7 @@ export default function PrivacyPolicyPage() {
               </li>
               <li>
                 <strong>Geolocation data</strong> &mdash; approximate location
-                from IP; precise location only with consent.
+                from IP.
               </li>
               <li>
                 <strong>Inferences</strong> &mdash; travel preferences and
@@ -541,8 +539,8 @@ export default function PrivacyPolicyPage() {
               </li>
               <li>
                 <strong>Consent</strong> &mdash; processing based on your
-                explicit consent (e.g., location data access, push
-                notifications, optional marketing communications).
+                explicit consent (e.g., push notifications, optional marketing
+                communications).
               </li>
               <li>
                 <strong>Legal obligation</strong> &mdash; processing necessary
