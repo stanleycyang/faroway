@@ -1,8 +1,26 @@
 # Production Readiness Audit — Faroway
 
-**Date:** 2026-05-12  
+**Date:** 2026-05-12 (updated 2026-05-14)  
 **Auditor:** Claude Sonnet 4.6  
 **Scope:** Full monorepo — `apps/mobile`, `apps/web`, `packages/*`, `supabase/`
+
+## Quality Gate Status (2026-05-14)
+
+| Check | Command | Result |
+|-------|---------|--------|
+| Lint | `bun run lint` | ✅ 0 errors, 0 warnings |
+| Format | `bun run format:check` | ✅ All files use Prettier code style |
+| E2E | `npx playwright test` | ✅ 57/57 — Desktop Chrome + iPhone 14 + Pixel 7 |
+| Console errors | Browser audit — 8 pages | ✅ Zero errors or unhandled rejections |
+| Async UI states | `/create` search, date, CTA | ✅ Loading, validation, disabled states all present |
+| Auth redirect | `/dashboard` → login | ✅ Redirects with `?redirectTo` preserved |
+| gitleaks | `gitleaks detect --source .` | ✅ 0 findings |
+| Lighthouse (prod) | faroway.ai | ✅ Perf=93, A11y≈100, BP=100, SEO=100 |
+
+**Build:** Vercel builds green on `main` (commits `4d64471`, `674b8d6`, `0db6487`, `6c0de2e`).  
+**Typecheck:** `ignoreBuildErrors: true` in `next.config.ts` — tsc runs as separate CI step (OOMs locally at 4GB; passes in CI with 8GB).
+
+---
 
 ---
 
