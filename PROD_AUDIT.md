@@ -248,25 +248,37 @@ One deprecation warning: `@sentry/nextjs` `disableLogger` option (non-fatal; Tur
 
 ---
 
-## Lighthouse Scores (2026-05-12, localhost)
+## Lighthouse Scores
 
-Measured against `http://localhost:3000` (Next.js prod build, no CDN). Images served from Supabase Storage via localhost proxy.
+### Production (faroway.ai, Vercel CDN) — 2026-05-14
+
+Measured against `https://www.faroway.ai` (Vercel Edge Network, pre-CDN-cached assets). Running old code (pre-a11y-fix commits) — a11y fixes deployed after this measurement.
 
 | Run | Perf | A11y | Best Practices | SEO | LCP | Notes |
 |-----|------|------|----------------|-----|-----|-------|
-| 1 | 89 | 100 | 100 | 100 | 3.81s | |
-| 2 | 84 | 100 | 100 | 100 | 4.55s | simulation variance |
-| 3 | 84 | 100 | 100 | 100 | 4.55s | simulation variance |
+| 1 | 93 | 94 | 100 | 100 | 3.2s | old a11y (pre-fix) |
+| 2 | 93 | 94 | 100 | 100 | 3.2s | old a11y (pre-fix) |
 
-**A11y, Best Practices, SEO meet or exceed all targets** (≥95 / ≥95 / =100).
+**Perf=93 ✅, A11y=94 ⚠️ (fix deployed, not measured yet), BP=100 ✅, SEO=100 ✅**
 
-**Performance 82-89 on localhost, expected ≥90 on production CDN.** The variance (±7 pts) is inherent to Lighthouse CPU/network simulation. The dominant factor is image LCP: images are proxied localhost → Next.js image optimizer → Supabase Storage (~500ms round-trip). On Vercel Edge Network, Next.js image optimization and Supabase CDN co-location will cut this to ~50ms. The DoD target of Perf ≥ 90 should be verified against the Vercel preview deploy.
+A11y failing audits on old code:
+- `color-contrast`: `text-primary` link and `text-surface-500` paragraph (fixed in `8ec26bb`)
+- `heading-order`: `h4` in footer (fixed in `8ec26bb`)
+Expected a11y=100 after deployment of `8ec26bb` (confirmed locally).
 
-**Fixes applied to reach these scores:**
-- Removed `FadeInOnScroll` wrapper from scenic gallery (SSR `opacity:0` prevented browser from seeing images until JS hydrated → FCP/LCP regression)
-- Added `priority` + `sizes="(max-width: 1024px) 50vw, 25vw"` to scenic gallery images (reduced image download from 1638 KB → 1052 KB)
-- Footer: `h4→h3` heading order, `text-surface-500→text-surface-400` (contrast 4.28→passes)
-- Marketing page: `text-primary→text-primary-700` link contrast fix (2.78→passes)
+### Localhost baseline (2026-05-12, pre-CDN)
+
+| Run | Perf | A11y | Best Practices | SEO | LCP |
+|-----|------|------|----------------|-----|-----|
+| 1 | 89 | 100 | 100 | 100 | 3.81s |
+| 2 | 84 | 100 | 100 | 100 | 4.55s |
+| 3 | 84 | 100 | 100 | 100 | 4.55s |
+
+**Fixes applied:**
+- Removed `FadeInOnScroll` from scenic gallery (SSR `opacity:0` blocked LCP)
+- Added `priority` + `sizes="(max-width: 1024px) 50vw, 25vw"` to scenic gallery images (1638KB → 1052KB)
+- Footer: `h4→h3` heading order, `text-surface-500→text-surface-400` (contrast fix)
+- Marketing page: `text-primary→text-primary-700` link contrast fix
 
 ---
 
