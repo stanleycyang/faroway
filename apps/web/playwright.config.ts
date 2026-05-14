@@ -23,6 +23,10 @@ export default defineConfig({
       name: "Mobile Safari",
       use: { ...devices["iPhone 14"] },
     },
+    {
+      name: "Mobile Chrome",
+      use: { ...devices["Pixel 7"] },
+    },
   ],
 
   // Start Next.js dev server only in local mode; in CI the server is already running
