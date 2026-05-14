@@ -3,6 +3,15 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  typescript: {
+    // Type-check runs as a dedicated CI step (bun run type-check) to avoid
+    // competing with Turbopack for heap during the static generation phase.
+    ignoreBuildErrors: true,
+  },
+  eslint: {
+    // ESLint also runs as a dedicated CI step.
+    ignoreDuringBuilds: true,
+  },
   transpilePackages: [
     "@faroway/supabase",
     "@faroway/constants",
