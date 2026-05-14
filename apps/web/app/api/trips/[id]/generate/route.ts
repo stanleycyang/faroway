@@ -55,17 +55,24 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     // Rate limit: 5 per hour, 20 per day. Key on user ID when authenticated,
     // IP for anonymous users (anonymous trips are short-lived and low-volume).
-    const rateLimitKey = userId ? `generate:hour:${userId}` : `generate:hour:ip:${getClientIp(request)}`;
+    const rateLimitKey = userId
+      ? `generate:hour:${userId}`
+      : `generate:hour:ip:${getClientIp(request)}`;
     const hourlyLimit = await checkRateLimitAsync(rateLimitKey, {
       maxRequests: 5,
       windowMs: 60 * 60 * 1000,
     });
     if (!hourlyLimit.allowed) {
       return NextResponse.json(
-        { error: "Too many generation requests. Please wait before generating another trip." },
+        {
+          error:
+            "Too many generation requests. Please wait before generating another trip.",
+        },
         {
           status: 429,
-          headers: { "Retry-After": String(Math.ceil(hourlyLimit.resetIn / 1000)) },
+          headers: {
+            "Retry-After": String(Math.ceil(hourlyLimit.resetIn / 1000)),
+          },
         },
       );
     }

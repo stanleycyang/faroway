@@ -1,8 +1,14 @@
 import { useState, useCallback } from 'react';
-import { supabase, API_BASE_URL, getAuthHeaders } from '../lib/supabase';
+import { API_BASE_URL, getAuthHeaders } from '../lib/supabase';
 import { useTripStore, Trip, TripInput, TripDay, Activity, Hotel } from '../stores/tripStore';
 import { syncService, networkMonitor, offlineStorage } from '../lib/offline';
 import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
+
+interface ApiItinerary {
+  days?: unknown[];
+  topHotel?: unknown;
+  [key: string]: unknown;
+}
 
 interface ApiTrip {
   id: string;
@@ -22,7 +28,7 @@ interface ApiTrip {
   budget?: string;
   status: string;
   cover_image?: string;
-  itinerary?: any;
+  itinerary?: ApiItinerary;
   created_at: string;
   updated_at: string;
 }
@@ -51,12 +57,13 @@ function transformApiActivity(a: any, timeOfDay: string): Activity {
     title: a.name || a.title || '',
     description: a.description || '',
     location: a.location?.name || (typeof a.location === 'string' ? a.location : ''),
-    duration: typeof a.duration === 'number' ? `${a.duration} min` : (a.duration || ''),
-    type: a.category === 'sightseeing' || a.category === 'adventure' || a.category === 'cultural'
-      ? 'attraction'
-      : a.category === 'entertainment' || a.category === 'shopping'
-        ? 'experience'
-        : (a.type || 'activity'),
+    duration: typeof a.duration === 'number' ? `${a.duration} min` : a.duration || '',
+    type:
+      a.category === 'sightseeing' || a.category === 'adventure' || a.category === 'cultural'
+        ? 'attraction'
+        : a.category === 'entertainment' || a.category === 'shopping'
+          ? 'experience'
+          : a.type || 'activity',
     price: formatCostValue(a.estimatedCost) || formatCostValue(a.price),
     bookingUrl: a.bookingInfo?.bookingUrl || a.bookingUrl || undefined,
     affiliatePartner: a.bookingInfo?.affiliateId || a.affiliatePartner || undefined,
@@ -105,11 +112,7 @@ function transformItineraryDays(apiDays: any[]): TripDay[] {
     }
 
     // Flatten morning/afternoon/evening time blocks into a single activities array
-    for (const [timeOfDay] of [
-      ['morning'],
-      ['afternoon'],
-      ['evening'],
-    ] as const) {
+    for (const [timeOfDay] of [['morning'], ['afternoon'], ['evening']] as const) {
       const block = day[timeOfDay];
       if (!block) continue;
 
@@ -137,7 +140,7 @@ function transformItineraryDays(apiDays: any[]): TripDay[] {
 
     const transport = day.transport
       ? {
-          type: day.transport.type || 'flight' as const,
+          type: day.transport.type || ('flight' as const),
           provider: day.transport.provider || '',
           departure: day.transport.departure || { airport: '', city: '', dateTime: '' },
           arrival: day.transport.arrival || { airport: '', city: '', dateTime: '' },
@@ -172,7 +175,7 @@ function transformApiHotel(h: any): Hotel | undefined {
     name: h.name,
     description: h.description || '',
     pricePerNight: h.pricePerNight || h.price || 0,
-    totalPrice: h.totalPrice || (h.pricePerNight || h.price || 0),
+    totalPrice: h.totalPrice || h.pricePerNight || h.price || 0,
     rating: h.rating || h.starRating || 0,
     reviewCount: h.reviewCount || 0,
     amenities: h.amenities || [],
@@ -193,7 +196,7 @@ function transformApiHotel(h: any): Hotel | undefined {
  * The single-trip endpoint returns { trip, itinerary } as separate top-level keys,
  * so itinerary must be passed explicitly.
  */
-function transformApiTrip(apiTrip: ApiTrip, itinerary?: any): Trip {
+function transformApiTrip(apiTrip: ApiTrip, itinerary?: ApiItinerary): Trip {
   const itineraryData = itinerary || apiTrip.itinerary;
   const rawDays = itineraryData?.days || [];
 
@@ -211,7 +214,8 @@ function transformApiTrip(apiTrip: ApiTrip, itinerary?: any): Trip {
     budget: apiTrip.budget,
     days: transformItineraryDays(rawDays),
     hotel: transformApiHotel(itineraryData?.topHotel),
-    coverImage: apiTrip.cover_image || getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
+    coverImage:
+      apiTrip.cover_image || getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
     createdAt: apiTrip.created_at,
     status: apiTrip.status as Trip['status'],
   };
@@ -234,7 +238,7 @@ export function useTrips() {
         cachedTrips.forEach((trip: Trip) => saveTrip(trip));
         setLoading(false);
         return cachedTrips;
-      } catch (err: any) {
+      } catch {
         setError('Offline - showing cached trips');
         setLoading(false);
         return trips;
@@ -265,8 +269,8 @@ export function useTrips() {
       await offlineStorage.saveTrips(transformedTrips);
 
       return transformedTrips;
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
       console.error('Error fetching trips:', err);
 
       // Fallback to cached trips on error
@@ -278,206 +282,218 @@ export function useTrips() {
   }, [saveTrip, trips]);
 
   // Create a new trip (with offline support)
-  const createTrip = useCallback(async (input: TripInput) => {
-    setLoading(true);
-    setError(null);
+  const createTrip = useCallback(
+    async (input: TripInput) => {
+      setLoading(true);
+      setError(null);
 
-    // Generate local ID for offline scenario
-    const localId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      // Generate local ID for offline scenario
+      const localId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // If offline, create locally and queue for sync
-    if (!networkMonitor.isOnline()) {
-      const localTrip: Trip = {
-        id: localId,
-        destination: input.destination,
-        country: input.country || '',
-        startDate: input.startDate,
-        endDate: input.endDate,
-        travelers: input.travelers,
-        travelerType: input.travelerType,
-        originCity: input.originCity,
-        originAirport: input.originAirport,
-        vibes: input.vibes,
-        budget: input.budget,
-        days: [],
-        coverImage: getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
-        createdAt: new Date().toISOString(),
-        status: 'draft',
-      };
-
-      saveTrip(localTrip);
-      setCurrentTrip(localTrip);
-
-      // Queue for sync when online
-      await syncService.queueCreate(localTrip);
-
-      setLoading(false);
-      return localTrip;
-    }
-
-    try {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/api/trips`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
+      // If offline, create locally and queue for sync
+      if (!networkMonitor.isOnline()) {
+        const localTrip: Trip = {
+          id: localId,
           destination: input.destination,
-          start_date: input.startDate,
-          end_date: input.endDate,
+          country: input.country || '',
+          startDate: input.startDate,
+          endDate: input.endDate,
           travelers: input.travelers,
-          preferences: {
-            travelerType: input.travelerType,
-            originCity: input.originCity,
-            originAirport: input.originAirport,
-            vibes: input.vibes,
-            budget: input.budget,
-          },
-        }),
-      });
+          travelerType: input.travelerType,
+          originCity: input.originCity,
+          originAirport: input.originAirport,
+          vibes: input.vibes,
+          budget: input.budget,
+          days: [],
+          coverImage: getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
+          createdAt: new Date().toISOString(),
+          status: 'draft',
+        };
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Please sign in to create a trip');
-        }
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to create trip');
+        saveTrip(localTrip);
+        setCurrentTrip(localTrip);
+
+        // Queue for sync when online
+        await syncService.queueCreate(localTrip);
+
+        setLoading(false);
+        return localTrip;
       }
 
-      const data = await response.json();
-      const trip = transformApiTrip(data.trip);
+      try {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_BASE_URL}/api/trips`, {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({
+            destination: input.destination,
+            start_date: input.startDate,
+            end_date: input.endDate,
+            travelers: input.travelers,
+            preferences: {
+              travelerType: input.travelerType,
+              originCity: input.originCity,
+              originAirport: input.originAirport,
+              vibes: input.vibes,
+              budget: input.budget,
+            },
+          }),
+        });
 
-      saveTrip(trip);
-      setCurrentTrip(trip);
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Please sign in to create a trip');
+          }
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to create trip');
+        }
 
-      return trip;
-    } catch (err: any) {
-      setError(err.message);
-      console.error('Error creating trip:', err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [saveTrip, setCurrentTrip]);
+        const data = await response.json();
+        const trip = transformApiTrip(data.trip);
+
+        saveTrip(trip);
+        setCurrentTrip(trip);
+
+        return trip;
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : String(err));
+        console.error('Error creating trip:', err);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [saveTrip, setCurrentTrip]
+  );
 
   // Get trip by ID
-  const getTripById = useCallback(async (id: string) => {
-    setLoading(true);
-    setError(null);
+  const getTripById = useCallback(
+    async (id: string) => {
+      setLoading(true);
+      setError(null);
 
-    try {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
-        method: 'GET',
-        headers,
-      });
+      try {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
+          method: 'GET',
+          headers,
+        });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Please sign in to view this trip');
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Please sign in to view this trip');
+          }
+          if (response.status === 404) {
+            throw new Error('Trip not found');
+          }
+          throw new Error('Failed to fetch trip');
         }
-        if (response.status === 404) {
-          throw new Error('Trip not found');
-        }
-        throw new Error('Failed to fetch trip');
+
+        const data = await response.json();
+        // API returns { trip, itinerary } as separate top-level keys
+        const trip = transformApiTrip(data.trip, data.itinerary);
+
+        setCurrentTrip(trip);
+        return trip;
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : String(err));
+        console.error('Error fetching trip:', err);
+        throw err;
+      } finally {
+        setLoading(false);
       }
-
-      const data = await response.json();
-      // API returns { trip, itinerary } as separate top-level keys
-      const trip = transformApiTrip(data.trip, data.itinerary);
-
-      setCurrentTrip(trip);
-      return trip;
-    } catch (err: any) {
-      setError(err.message);
-      console.error('Error fetching trip:', err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [setCurrentTrip]);
+    },
+    [setCurrentTrip]
+  );
 
   // Update a trip (with offline support)
-  const updateTrip = useCallback(async (id: string, updates: Partial<TripInput>) => {
-    setLoading(true);
-    setError(null);
+  const updateTrip = useCallback(
+    async (id: string, updates: Partial<TripInput>) => {
+      setLoading(true);
+      setError(null);
 
-    // If offline, update locally and queue for sync
-    if (!networkMonitor.isOnline()) {
-      const existingTrip = trips.find(t => t.id === id);
-      if (existingTrip) {
-        const updatedTrip = { ...existingTrip, ...updates } as Trip;
-        saveTrip(updatedTrip);
-        await syncService.queueUpdate(id, updates);
-      }
-      setLoading(false);
-      return existingTrip;
-    }
-
-    try {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
-        method: 'PATCH',
-        headers,
-        body: JSON.stringify(updates),
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Please sign in to update this trip');
+      // If offline, update locally and queue for sync
+      if (!networkMonitor.isOnline()) {
+        const existingTrip = trips.find((t) => t.id === id);
+        if (existingTrip) {
+          const updatedTrip = { ...existingTrip, ...updates } as Trip;
+          saveTrip(updatedTrip);
+          await syncService.queueUpdate(id, updates);
         }
-        throw new Error('Failed to update trip');
+        setLoading(false);
+        return existingTrip;
       }
 
-      const data = await response.json();
-      const trip = transformApiTrip(data.trip, data.itinerary);
+      try {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
+          method: 'PATCH',
+          headers,
+          body: JSON.stringify(updates),
+        });
 
-      saveTrip(trip);
-      return trip;
-    } catch (err: any) {
-      setError(err.message);
-      console.error('Error updating trip:', err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [saveTrip, trips]);
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Please sign in to update this trip');
+          }
+          throw new Error('Failed to update trip');
+        }
+
+        const data = await response.json();
+        const trip = transformApiTrip(data.trip, data.itinerary);
+
+        saveTrip(trip);
+        return trip;
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : String(err));
+        console.error('Error updating trip:', err);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [saveTrip, trips]
+  );
 
   // Delete a trip (with offline support)
-  const deleteTrip = useCallback(async (id: string) => {
-    setLoading(true);
-    setError(null);
+  const deleteTrip = useCallback(
+    async (id: string) => {
+      setLoading(true);
+      setError(null);
 
-    // If offline, delete locally and queue for sync
-    if (!networkMonitor.isOnline()) {
-      removeFromStore(id);
-      await syncService.queueDelete(id);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
-        method: 'DELETE',
-        headers,
-      });
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          throw new Error('Please sign in to delete this trip');
-        }
-        throw new Error('Failed to delete trip');
+      // If offline, delete locally and queue for sync
+      if (!networkMonitor.isOnline()) {
+        removeFromStore(id);
+        await syncService.queueDelete(id);
+        setLoading(false);
+        return;
       }
 
-      removeFromStore(id);
-    } catch (err: any) {
-      setError(err.message);
-      console.error('Error deleting trip:', err);
-      throw err;
-    } finally {
-      setLoading(false);
-    }
-  }, [removeFromStore]);
+      try {
+        const headers = await getAuthHeaders();
+        const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
+          method: 'DELETE',
+          headers,
+        });
+
+        if (!response.ok) {
+          if (response.status === 401) {
+            throw new Error('Please sign in to delete this trip');
+          }
+          throw new Error('Failed to delete trip');
+        }
+
+        removeFromStore(id);
+      } catch (err: unknown) {
+        setError(err instanceof Error ? err.message : String(err));
+        console.error('Error deleting trip:', err);
+        throw err;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [removeFromStore]
+  );
 
   // Generate itinerary for a trip
   const generateItinerary = useCallback(async (tripId: string) => {
@@ -498,8 +514,8 @@ export function useTrips() {
 
       const data = await response.json();
       return data;
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : String(err));
       console.error('Error generating itinerary:', err);
       throw err;
     } finally {

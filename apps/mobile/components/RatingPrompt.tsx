@@ -49,15 +49,11 @@ export function RatingPrompt({ visible, tripCount, onClose }: RatingPromptProps)
             <Text style={styles.subtitle}>
               {tripCount && tripCount > 1
                 ? `You've planned ${tripCount} trips with us!`
-                : 'We\'d love to hear what you think'}
+                : "We'd love to hear what you think"}
             </Text>
 
             {/* Rate Button */}
-            <TouchableOpacity
-              style={styles.rateButton}
-              onPress={handleRate}
-              activeOpacity={0.9}
-            >
+            <TouchableOpacity style={styles.rateButton} onPress={handleRate} activeOpacity={0.9}>
               <Text style={styles.rateButtonText}>Rate on App Store</Text>
             </TouchableOpacity>
 

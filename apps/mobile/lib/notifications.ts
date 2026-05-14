@@ -57,7 +57,9 @@ export interface PushTokenResult {
 }
 
 // Re-export types that consumers need (use `any` for the lazy-loaded module's types)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type NotificationReceivedHandler = (notification: any) => void;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type NotificationResponseHandler = (response: any) => void;
 export type EventSubscription = { remove: () => void };
 
@@ -118,9 +120,7 @@ export async function registerForPushNotificationsAsync(): Promise<PushTokenResu
   }
 
   try {
-    const projectId =
-      Constants.expoConfig?.extra?.eas?.projectId ??
-      Constants.easConfig?.projectId;
+    const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
 
     if (!projectId) {
       console.warn('No projectId found - push notifications may not work in production');
@@ -191,18 +191,17 @@ export async function addNotificationResponseListener(
   return Notifications.addNotificationResponseReceivedListener(handler);
 }
 
-export function parseNotificationData(
-  notification: any
-): NotificationData | null {
+export function parseNotificationData(notification: unknown): NotificationData | null {
   try {
-    const data = notification.request.content.data as NotificationData;
+    const n = notification as { request: { content: { data: NotificationData } } };
+    const data = n.request.content.data;
     return data;
   } catch {
     return null;
   }
 }
 
-export async function getLastNotificationResponse(): Promise<any | null> {
+export async function getLastNotificationResponse(): Promise<unknown> {
   const Notifications = await getNotifications();
   if (!Notifications) return null;
   return Notifications.getLastNotificationResponse();
@@ -216,6 +215,7 @@ export async function scheduleLocalNotification(
   title: string,
   body: string,
   data?: NotificationData,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   trigger?: any
 ): Promise<string> {
   const Notifications = await getNotifications();
@@ -280,7 +280,7 @@ export async function cancelAllNotifications(): Promise<void> {
   await Notifications.cancelAllScheduledNotificationsAsync();
 }
 
-export async function getScheduledNotifications(): Promise<any[]> {
+export async function getScheduledNotifications(): Promise<unknown[]> {
   const Notifications = await getNotifications();
   if (!Notifications) return [];
   return Notifications.getAllScheduledNotificationsAsync();
@@ -309,25 +309,26 @@ export async function clearBadge(): Promise<void> {
 export async function storePushTokenInSupabase(
   supabaseClient: {
     from: (table: string) => {
-      upsert: (data: Record<string, unknown>, options?: Record<string, unknown>) => Promise<{ error: Error | null }>;
+      upsert: (
+        data: Record<string, unknown>,
+        options?: Record<string, unknown>
+      ) => Promise<{ error: Error | null }>;
     };
   },
   userId: string,
   token: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error } = await supabaseClient
-      .from('push_tokens')
-      .upsert(
-        {
-          user_id: userId,
-          token,
-          platform: Platform.OS,
-          device_name: Device.deviceName || 'Unknown',
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,token' }
-      );
+    const { error } = await supabaseClient.from('push_tokens').upsert(
+      {
+        user_id: userId,
+        token,
+        platform: Platform.OS,
+        device_name: Device.deviceName || 'Unknown',
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id,token' }
+    );
 
     if (error) {
       console.error('Error storing push token:', error);
@@ -354,10 +355,7 @@ export async function removePushTokenFromSupabase(
   token: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error } = await supabaseClient
-      .from('push_tokens')
-      .delete()
-      .eq('token', token);
+    const { error } = await supabaseClient.from('push_tokens').delete().eq('token', token);
 
     if (error) {
       console.error('Error removing push token:', error);

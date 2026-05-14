@@ -1,12 +1,5 @@
 import React from 'react';
-import {
-  View,
-  Text,
-  Image,
-  StyleSheet,
-  TouchableOpacity,
-  Dimensions,
-} from 'react-native';
+import { View, Text, Image, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 
@@ -46,10 +39,7 @@ export function DestinationCard({
       style={[styles.cardContainer, dimensions, shadows.md]}
     >
       <Image source={{ uri: image }} style={styles.cardImage} />
-      <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.85)']}
-        style={styles.gradient}
-      />
+      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={styles.gradient} />
       {/* Glassmorphic info overlay */}
       <View style={styles.cardContent}>
         <Text style={styles.cardCountry}>{country}</Text>
@@ -107,16 +97,9 @@ export function TripCard({
   };
 
   return (
-    <TouchableOpacity
-      onPress={onPress}
-      activeOpacity={0.9}
-      style={[styles.tripCard, shadows.md]}
-    >
+    <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={[styles.tripCard, shadows.md]}>
       <Image source={{ uri: image }} style={styles.tripImage} />
-      <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.5)']}
-        style={styles.tripImageOverlay}
-      />
+      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.5)']} style={styles.tripImageOverlay} />
       <View style={styles.tripContent}>
         <View style={styles.tripHeader}>
           <View>

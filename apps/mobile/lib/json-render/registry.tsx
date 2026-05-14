@@ -167,33 +167,29 @@ export const HotelCard: React.FC<HotelCardProps> = ({
 }) => {
   return (
     <View style={[styles.card, styles.hotelCard]}>
-      {image && (
-        <Image source={{ uri: image }} style={styles.hotelCardImage} />
-      )}
+      {image && <Image source={{ uri: image }} style={styles.hotelCardImage} />}
       <View style={styles.hotelCardContent}>
         <View style={styles.hotelCardHeader}>
           <RNText style={styles.hotelCardName}>{name}</RNText>
           <View style={styles.hotelCardRating}>
             <Ionicons name="star" size={16} color="#fbbf24" />
             <RNText style={styles.hotelCardRatingText}>{rating.toFixed(1)}</RNText>
-            {reviewCount && (
-              <RNText style={styles.hotelCardReviewCount}>({reviewCount})</RNText>
-            )}
+            {reviewCount && <RNText style={styles.hotelCardReviewCount}>({reviewCount})</RNText>}
           </View>
         </View>
-        
+
         {description && (
           <RNText style={styles.hotelCardDescription} numberOfLines={3}>
             {description}
           </RNText>
         )}
-        
+
         <View style={styles.hotelCardPrice}>
           <RNText style={styles.hotelCardPriceLabel}>From</RNText>
           <RNText style={styles.hotelCardPriceAmount}>${pricePerNight}</RNText>
           <RNText style={styles.hotelCardPricePeriod}>/ night</RNText>
         </View>
-        
+
         {amenities.length > 0 && (
           <View style={styles.amenitiesContainer}>
             {amenities.slice(0, 6).map((amenity, index) => (
@@ -208,7 +204,7 @@ export const HotelCard: React.FC<HotelCardProps> = ({
             )}
           </View>
         )}
-        
+
         {bookingUrl && (
           <TouchableOpacity
             style={styles.hotelCardButton}
@@ -279,25 +275,23 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
         <Ionicons name="time-outline" size={16} color={colors.primary[600]} />
         <RNText style={styles.activityCardTimeText}>{time}</RNText>
       </View>
-      
+
       <View style={styles.activityCardBody}>
-        {image && (
-          <Image source={{ uri: image }} style={styles.activityCardImage} />
-        )}
+        {image && <Image source={{ uri: image }} style={styles.activityCardImage} />}
         <View style={styles.activityCardContent}>
           <RNText style={styles.activityCardName}>{name}</RNText>
-          
+
           {location && (
             <View style={styles.activityCardLocation}>
               <Ionicons name="location-outline" size={14} color={colors.neutral[500]} />
               <RNText style={styles.activityCardLocationText}>{location}</RNText>
             </View>
           )}
-          
+
           <RNText style={styles.activityCardDescription} numberOfLines={2}>
             {description}
           </RNText>
-          
+
           <View style={styles.activityCardMeta}>
             <View style={styles.activityCardMetaItem}>
               <Ionicons name="time" size={14} color={colors.neutral[500]} />
@@ -314,7 +308,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
             )}
             <RNText style={styles.activityCardPrice}>${price}</RNText>
           </View>
-          
+
           {bookingUrl && (
             <TouchableOpacity
               style={styles.activityCardButton}
@@ -358,25 +352,23 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
           <RNText style={styles.restaurantCardTimeText}>{time}</RNText>
         </View>
       )}
-      
+
       <View style={styles.restaurantCardBody}>
-        {image && (
-          <Image source={{ uri: image }} style={styles.restaurantCardImage} />
-        )}
+        {image && <Image source={{ uri: image }} style={styles.restaurantCardImage} />}
         <View style={styles.restaurantCardContent}>
           <RNText style={styles.restaurantCardName}>{name}</RNText>
-          
+
           <View style={styles.restaurantCardCuisine}>
             <RNText style={styles.restaurantCardCuisineText}>{cuisine}</RNText>
             <RNText style={styles.restaurantCardPriceLevel}>{priceLevelString}</RNText>
           </View>
-          
+
           {description && (
             <RNText style={styles.restaurantCardDescription} numberOfLines={2}>
               {description}
             </RNText>
           )}
-          
+
           {rating && (
             <View style={styles.restaurantCardRating}>
               <Ionicons name="star" size={14} color="#fbbf24" />
@@ -386,7 +378,7 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
               )}
             </View>
           )}
-          
+
           {reservationUrl && (
             <TouchableOpacity
               style={styles.restaurantCardButton}
@@ -448,8 +440,14 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ items }) => {
             {index < items.length - 1 && <View style={styles.timelineLine} />}
           </View>
           <View style={styles.timelineContent}>
-            <View style={[styles.timelineIcon, { backgroundColor: `${getTypeColor(item.type)}15` }]}>
-              <Ionicons name={getTypeIcon(item.type) as any} size={16} color={getTypeColor(item.type)} />
+            <View
+              style={[styles.timelineIcon, { backgroundColor: `${getTypeColor(item.type)}15` }]}
+            >
+              <Ionicons
+                name={getTypeIcon(item.type) as React.ComponentProps<typeof Ionicons>['name']}
+                size={16}
+                color={getTypeColor(item.type)}
+              />
             </View>
             <RNText style={styles.timelineTitle}>{item.title}</RNText>
           </View>
@@ -465,18 +463,9 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ items }) => {
 
 type BookingButtonProps = z.infer<typeof BookingButtonSchema>;
 
-export const BookingButton: React.FC<BookingButtonProps> = ({
-  label,
-  url,
-  provider,
-  price,
-}) => {
+export const BookingButton: React.FC<BookingButtonProps> = ({ label, url, provider, price }) => {
   return (
-    <TouchableOpacity
-      style={styles.bookingButton}
-      onPress={() => openURL(url)}
-      activeOpacity={0.8}
-    >
+    <TouchableOpacity style={styles.bookingButton} onPress={() => openURL(url)} activeOpacity={0.8}>
       <LinearGradient
         colors={[colors.primary[500], colors.primary[700]]}
         start={{ x: 0, y: 0 }}
@@ -485,13 +474,9 @@ export const BookingButton: React.FC<BookingButtonProps> = ({
       >
         <View style={styles.bookingButtonContent}>
           <RNText style={styles.bookingButtonLabel}>{label}</RNText>
-          {provider && (
-            <RNText style={styles.bookingButtonProvider}>via {provider}</RNText>
-          )}
+          {provider && <RNText style={styles.bookingButtonProvider}>via {provider}</RNText>}
         </View>
-        {price && (
-          <RNText style={styles.bookingButtonPrice}>${price}</RNText>
-        )}
+        {price && <RNText style={styles.bookingButtonPrice}>${price}</RNText>}
         <Ionicons name="arrow-forward" size={20} color="#fff" />
       </LinearGradient>
     </TouchableOpacity>
@@ -506,11 +491,12 @@ type PriceTagProps = z.infer<typeof PriceTagSchema>;
 
 export const PriceTag: React.FC<PriceTagProps> = ({ amount, currency = 'USD', period }) => {
   const currencySymbol = currency === 'USD' ? '$' : currency;
-  
+
   return (
     <View style={styles.priceTag}>
       <RNText style={styles.priceTagAmount}>
-        {currencySymbol}{amount.toLocaleString()}
+        {currencySymbol}
+        {amount.toLocaleString()}
       </RNText>
       {period && <RNText style={styles.priceTagPeriod}>{period}</RNText>}
     </View>
@@ -526,7 +512,7 @@ type RatingStarsProps = z.infer<typeof RatingStarsSchema>;
 export const RatingStars: React.FC<RatingStarsProps> = ({ rating, reviewCount }) => {
   const fullStars = Math.floor(rating);
   const hasHalfStar = rating % 1 >= 0.5;
-  
+
   return (
     <View style={styles.ratingStars}>
       <View style={styles.stars}>
@@ -552,11 +538,14 @@ export const RatingStars: React.FC<RatingStarsProps> = ({ rating, reviewCount })
 
 type MapPreviewProps = z.infer<typeof MapPreviewSchema>;
 
-export const MapPreview: React.FC<MapPreviewProps> = ({ markers, center, zoom = 13 }) => {
+export const MapPreview: React.FC<MapPreviewProps> = ({
+  markers,
+  center: _center,
+  zoom: _zoom = 13,
+}) => {
   // For now, we'll show a placeholder for maps
   // In production, you might want to use react-native-maps or Google Maps Static API
-  const centerCoords = center || markers[0];
-  
+
   return (
     <View style={styles.mapPreview}>
       <View style={styles.mapPreviewPlaceholder}>

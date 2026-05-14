@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -79,8 +79,9 @@ export function AuthGate({
       await signInWithGoogle();
       onAuthenticated?.();
       onClose();
-    } catch (err: any) {
-      Alert.alert('Sign In Failed', err.message || 'Please try again');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Please try again';
+      Alert.alert('Sign In Failed', msg);
     } finally {
       setLoading(false);
     }
@@ -92,9 +93,10 @@ export function AuthGate({
       await signInWithApple();
       onAuthenticated?.();
       onClose();
-    } catch (err: any) {
-      if (err.code !== 'ERR_REQUEST_CANCELED') {
-        Alert.alert('Sign In Failed', err.message || 'Please try again');
+    } catch (err: unknown) {
+      const e = err as { code?: string; message?: string };
+      if (e.code !== 'ERR_REQUEST_CANCELED') {
+        Alert.alert('Sign In Failed', e.message || 'Please try again');
       }
     } finally {
       setLoading(false);
@@ -107,12 +109,7 @@ export function AuthGate({
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      statusBarTranslucent
-    >
+    <Modal visible={visible} transparent animationType="slide" statusBarTranslucent>
       <View style={styles.overlay}>
         {/* Blurred background with trip preview */}
         {tripPreview && (
@@ -150,7 +147,7 @@ export function AuthGate({
               {benefits.map((benefit, index) => (
                 <View key={index} style={styles.benefitRow}>
                   <Ionicons
-                    name={benefit.icon as any}
+                    name={benefit.icon as React.ComponentProps<typeof Ionicons>['name']}
                     size={20}
                     color={colors.primary[500]}
                   />
@@ -189,17 +186,13 @@ export function AuthGate({
             )}
 
             {/* Maybe Later */}
-            <TouchableOpacity
-              style={styles.maybeLaterButton}
-              onPress={handleMaybeLater}
-            >
+            <TouchableOpacity style={styles.maybeLaterButton} onPress={handleMaybeLater}>
               <Text style={styles.maybeLaterText}>Maybe Later</Text>
             </TouchableOpacity>
 
             {/* Terms */}
             <Text style={styles.terms}>
-              By continuing, you agree to our{' '}
-              <Text style={styles.termsLink}>Terms</Text> and{' '}
+              By continuing, you agree to our <Text style={styles.termsLink}>Terms</Text> and{' '}
               <Text style={styles.termsLink}>Privacy Policy</Text>
             </Text>
           </View>

@@ -32,17 +32,13 @@ export const usePromptStore = create<PromptStore>()(
       incrementTripGeneration: () =>
         set((state) => ({ tripGenerationCount: state.tripGenerationCount + 1 })),
 
-      markRatingPrompted: () =>
-        set({ lastRatingPromptDate: new Date().toISOString() }),
+      markRatingPrompted: () => set({ lastRatingPromptDate: new Date().toISOString() }),
 
-      markRated: () =>
-        set({ hasRatedApp: true }),
+      markRated: () => set({ hasRatedApp: true }),
 
-      dismissSignUpPrompt: () =>
-        set({ hasDismissedSignUpAfterGeneration: true }),
+      dismissSignUpPrompt: () => set({ hasDismissedSignUpAfterGeneration: true }),
 
-      dismissCreateBanner: () =>
-        set({ hasDismissedCreateBanner: true }),
+      dismissCreateBanner: () => set({ hasDismissedCreateBanner: true }),
 
       shouldShowRatingPrompt: () => {
         const { hasRatedApp, lastRatingPromptDate } = get();

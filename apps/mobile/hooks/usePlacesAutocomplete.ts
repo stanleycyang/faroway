@@ -14,11 +14,7 @@ const DEBOUNCE_MS = 300;
 function filterLocalDestinations(query: string): PlacePrediction[] {
   const q = query.toLowerCase();
   return popularDestinations
-    .filter(
-      (d) =>
-        d.name.toLowerCase().includes(q) ||
-        d.country.toLowerCase().includes(q)
-    )
+    .filter((d) => d.name.toLowerCase().includes(q) || d.country.toLowerCase().includes(q))
     .map((d) => ({
       placeId: d.id,
       city: d.name,
@@ -78,11 +74,17 @@ export function usePlacesAutocomplete() {
 
         if (data.status === 'OK' && data.predictions) {
           setPredictions(
-            data.predictions.map((p: any) => ({
-              placeId: p.place_id,
-              city: p.structured_formatting?.main_text ?? p.description,
-              secondary: p.structured_formatting?.secondary_text ?? '',
-            }))
+            data.predictions.map(
+              (p: {
+                place_id: string;
+                description: string;
+                structured_formatting?: { main_text?: string; secondary_text?: string };
+              }) => ({
+                placeId: p.place_id,
+                city: p.structured_formatting?.main_text ?? p.description,
+                secondary: p.structured_formatting?.secondary_text ?? '',
+              })
+            )
           );
           setError(null);
         } else if (data.status === 'ZERO_RESULTS') {
@@ -93,8 +95,8 @@ export function usePlacesAutocomplete() {
           setPredictions(filterLocalDestinations(query));
           setError(null);
         }
-      } catch (err: any) {
-        if (err.name === 'AbortError') return;
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name === 'AbortError') return;
         // Network error — fall back to local filtering
         setPredictions(filterLocalDestinations(query));
         setError(null);

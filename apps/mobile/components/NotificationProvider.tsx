@@ -39,10 +39,11 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
 
   // Handle notification received in foreground
   const handleNotificationReceived = useCallback(
-    (notification: any, data: NotificationData | null) => {
+    (notification: unknown, data: NotificationData | null) => {
+      const n = notification as { request: { content: { title?: string; body?: string } } };
       console.log('[Notifications] Received in foreground:', {
-        title: notification.request.content.title,
-        body: notification.request.content.body,
+        title: n.request.content.title,
+        body: n.request.content.body,
         data,
       });
 
@@ -53,15 +54,12 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
   );
 
   // Handle notification interaction (user tapped)
-  const handleNotificationResponse = useCallback(
-    (data: NotificationData | null) => {
-      console.log('[Notifications] User interacted with notification:', data);
+  const handleNotificationResponse = useCallback((data: NotificationData | null) => {
+    console.log('[Notifications] User interacted with notification:', data);
 
-      // Navigation is handled automatically by useNotifications hook
-      // Add any additional logic here (analytics, etc.)
-    },
-    []
-  );
+    // Navigation is handled automatically by useNotifications hook
+    // Add any additional logic here (analytics, etc.)
+  }, []);
 
   const { pushToken, isLoading, error, registerForNotifications } = useNotifications({
     autoRequestPermissions: false, // We'll request manually after onboarding
@@ -107,7 +105,10 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     if (isAuthenticated && user?.id && pushToken) {
       // TODO: Implement Supabase storage when client is set up
       // storePushTokenInSupabase(supabaseClient, user.id, pushToken);
-      console.log('[Notifications] Would store existing token for newly authenticated user:', user.id);
+      console.log(
+        '[Notifications] Would store existing token for newly authenticated user:',
+        user.id
+      );
     }
   }, [isAuthenticated, user?.id, pushToken]);
 
@@ -120,9 +121,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
   };
 
   return (
-    <NotificationContext.Provider value={contextValue}>
-      {children}
-    </NotificationContext.Provider>
+    <NotificationContext.Provider value={contextValue}>{children}</NotificationContext.Provider>
   );
 }
 

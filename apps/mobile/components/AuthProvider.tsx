@@ -8,8 +8,8 @@ interface AuthContextType {
   loading: boolean;
   initialized: boolean;
   isAuthenticated: boolean;
-  signInWithGoogle: () => Promise<any>;
-  signInWithApple: () => Promise<any>;
+  signInWithGoogle: () => Promise<unknown>;
+  signInWithApple: () => Promise<unknown>;
   signOut: () => Promise<void>;
 }
 
@@ -18,11 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
 
-  return (
-    <AuthContext.Provider value={auth}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
 }
 
 export function useAuthContext() {

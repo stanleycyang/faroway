@@ -10,7 +10,9 @@ test.describe("Landing page", () => {
     // Main heading visible
     await expect(page.locator("h1").first()).toBeVisible();
     // At least one visible CTA button/link to /create (not hidden sm:inline-flex nav items)
-    const ctaLink = page.locator('a[href*="/create"]:visible, button:visible').first();
+    const ctaLink = page
+      .locator('a[href*="/create"]:visible, button:visible')
+      .first();
     await expect(ctaLink).toBeVisible();
   });
 
@@ -47,7 +49,9 @@ test.describe("Trip creation page", () => {
     await page.goto("/create");
     // Should have a text input for destination search
     const input = page
-      .locator('input[type="text"], input[placeholder*="destina" i], input[placeholder*="where" i]')
+      .locator(
+        'input[type="text"], input[placeholder*="destina" i], input[placeholder*="where" i]',
+      )
       .first();
     await expect(input).toBeVisible({ timeout: 10_000 });
   });
@@ -63,7 +67,9 @@ test.describe("Blog", () => {
 test.describe("Tools", () => {
   test("world map tool loads", async ({ page }) => {
     await page.goto("/tools/world-map");
-    await expect(page.locator("h1, h2, [data-testid='world-map']").first()).toBeVisible({
+    await expect(
+      page.locator("h1, h2, [data-testid='world-map']").first(),
+    ).toBeVisible({
       timeout: 15_000,
     });
   });

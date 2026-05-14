@@ -13,10 +13,15 @@ import * as Sentry from "@sentry/nextjs";
 
 export async function GET() {
   if (process.env.NODE_ENV === "production") {
-    return NextResponse.json({ error: "Not available in production" }, { status: 404 });
+    return NextResponse.json(
+      { error: "Not available in production" },
+      { status: 404 },
+    );
   }
 
-  const testError = new Error("Sentry test error — server-side source maps check");
+  const testError = new Error(
+    "Sentry test error — server-side source maps check",
+  );
   testError.name = "SentryTestError";
 
   Sentry.captureException(testError, {

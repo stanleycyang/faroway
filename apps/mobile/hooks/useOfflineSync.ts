@@ -5,8 +5,8 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
-import { 
-  syncService, 
+import {
+  syncService,
   offlineStorage,
   networkMonitor,
   type SyncState,
@@ -21,13 +21,13 @@ interface UseOfflineSyncOptions {
    * @default true
    */
   autoSync?: boolean;
-  
+
   /**
    * Sync when app returns to foreground
    * @default true
    */
   syncOnForeground?: boolean;
-  
+
   /**
    * Initial sync on mount
    * @default true
@@ -49,7 +49,7 @@ export interface UseOfflineSyncReturn {
   // Actions
   sync: (force?: boolean) => Promise<SyncResult>;
   clearPendingChanges: () => Promise<void>;
-  
+
   // Offline operations
   getTripsOffline: () => Promise<Trip[]>;
   createTripOffline: (trip: Trip) => Promise<void>;
@@ -61,11 +61,7 @@ export interface UseOfflineSyncReturn {
  * Hook for offline-first data management
  */
 export function useOfflineSync(options: UseOfflineSyncOptions = {}): UseOfflineSyncReturn {
-  const {
-    autoSync = true,
-    syncOnForeground = true,
-    syncOnMount = true,
-  } = options;
+  const { autoSync = true, syncOnForeground = true, syncOnMount = true } = options;
 
   const [syncState, setSyncState] = useState<SyncState>({
     status: 'idle',
@@ -86,7 +82,7 @@ export function useOfflineSync(options: UseOfflineSyncOptions = {}): UseOfflineS
     const init = async () => {
       await syncService.initialize();
       syncService.setAutoSync(autoSync);
-      
+
       // Initial sync if enabled
       if (syncOnMount) {
         await syncService.sync();
@@ -108,10 +104,7 @@ export function useOfflineSync(options: UseOfflineSyncOptions = {}): UseOfflineS
     if (!syncOnForeground) return;
 
     const handleAppStateChange = async (nextAppState: AppStateStatus) => {
-      if (
-        appState.current.match(/inactive|background/) &&
-        nextAppState === 'active'
-      ) {
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
         // App came to foreground - sync
         console.log('[useOfflineSync] App foregrounded, syncing...');
         await syncService.sync();
@@ -134,7 +127,7 @@ export function useOfflineSync(options: UseOfflineSyncOptions = {}): UseOfflineS
   // Clear pending changes
   const clearPendingChanges = useCallback(async (): Promise<void> => {
     await offlineStorage.clearPendingMutations();
-    setSyncState(prev => ({ ...prev, pendingCount: 0 }));
+    setSyncState((prev) => ({ ...prev, pendingCount: 0 }));
   }, []);
 
   // Get trips from offline storage
@@ -162,14 +155,17 @@ export function useOfflineSync(options: UseOfflineSyncOptions = {}): UseOfflineS
   }, []);
 
   // Update trip with offline support
-  const updateTripOffline = useCallback(async (tripId: string, updates: Partial<TripInput>): Promise<void> => {
-    if (networkMonitor.isOnline()) {
-      await syncService.queueUpdate(tripId, updates);
-      await syncService.sync();
-    } else {
-      await syncService.queueUpdate(tripId, updates);
-    }
-  }, []);
+  const updateTripOffline = useCallback(
+    async (tripId: string, updates: Partial<TripInput>): Promise<void> => {
+      if (networkMonitor.isOnline()) {
+        await syncService.queueUpdate(tripId, updates);
+        await syncService.sync();
+      } else {
+        await syncService.queueUpdate(tripId, updates);
+      }
+    },
+    []
+  );
 
   // Delete trip with offline support
   const deleteTripOffline = useCallback(async (tripId: string): Promise<void> => {
@@ -195,7 +191,7 @@ export function useOfflineSync(options: UseOfflineSyncOptions = {}): UseOfflineS
     // Actions
     sync,
     clearPendingChanges,
-    
+
     // Offline operations
     getTripsOffline,
     createTripOffline,

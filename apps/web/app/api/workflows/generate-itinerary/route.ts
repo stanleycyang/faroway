@@ -94,20 +94,30 @@ export async function POST(request: NextRequest) {
 
     if (!hourlyLimit.allowed) {
       return NextResponse.json(
-        { error: "Too many itinerary requests. Please wait before generating another trip." },
+        {
+          error:
+            "Too many itinerary requests. Please wait before generating another trip.",
+        },
         {
           status: 429,
-          headers: { "Retry-After": String(Math.ceil(hourlyLimit.resetIn / 1000)) },
+          headers: {
+            "Retry-After": String(Math.ceil(hourlyLimit.resetIn / 1000)),
+          },
         },
       );
     }
 
     if (!dailyLimit.allowed) {
       return NextResponse.json(
-        { error: "Daily itinerary generation limit reached. Try again tomorrow." },
+        {
+          error:
+            "Daily itinerary generation limit reached. Try again tomorrow.",
+        },
         {
           status: 429,
-          headers: { "Retry-After": String(Math.ceil(dailyLimit.resetIn / 1000)) },
+          headers: {
+            "Retry-After": String(Math.ceil(dailyLimit.resetIn / 1000)),
+          },
         },
       );
     }

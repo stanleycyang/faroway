@@ -10,11 +10,7 @@ interface VibeSelectorProps {
   maxSelections?: number;
 }
 
-export function VibeSelector({
-  selected,
-  onSelect,
-  maxSelections = 5,
-}: VibeSelectorProps) {
+export function VibeSelector({ selected, onSelect, maxSelections = 5 }: VibeSelectorProps) {
   const toggleVibe = (vibeId: string) => {
     if (selected.includes(vibeId)) {
       hapticFeedback.light();
@@ -42,19 +38,11 @@ export function VibeSelector({
             <TouchableOpacity
               key={vibe.id}
               onPress={() => toggleVibe(vibe.id)}
-              style={[
-                styles.vibeButton,
-                isSelected && styles.vibeButtonSelected,
-              ]}
+              style={[styles.vibeButton, isSelected && styles.vibeButtonSelected]}
               activeOpacity={0.7}
             >
               <Text style={styles.vibeEmoji}>{vibe.emoji}</Text>
-              <Text
-                style={[
-                  styles.vibeLabel,
-                  isSelected && styles.vibeLabelSelected,
-                ]}
-              >
+              <Text style={[styles.vibeLabel, isSelected && styles.vibeLabelSelected]}>
                 {vibe.label}
               </Text>
             </TouchableOpacity>

@@ -1,11 +1,5 @@
-import { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Image,
-} from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { TripActivity } from '../../stores/tripStore';
@@ -112,18 +106,14 @@ export function ActivityCard({
             {/* Type badge */}
             <View style={[styles.typeBadge, { backgroundColor: typeColor }]}>
               <Ionicons
-                name={getTypeIcon(activity.type) as any}
+                name={getTypeIcon(activity.type) as React.ComponentProps<typeof Ionicons>['name']}
                 size={12}
                 color="#fff"
               />
               <Text style={styles.typeBadgeText}>{getTypeLabel(activity.type)}</Text>
             </View>
             {/* Save button */}
-            <TouchableOpacity
-              style={styles.saveButton}
-              onPress={handleSave}
-              activeOpacity={0.8}
-            >
+            <TouchableOpacity style={styles.saveButton} onPress={handleSave} activeOpacity={0.8}>
               <Ionicons
                 name={saved ? 'heart' : 'heart-outline'}
                 size={20}
@@ -141,7 +131,9 @@ export function ActivityCard({
               {!activity.image && (
                 <View style={[styles.iconCircle, { backgroundColor: `${typeColor}20` }]}>
                   <Ionicons
-                    name={getTypeIcon(activity.type) as any}
+                    name={
+                      getTypeIcon(activity.type) as React.ComponentProps<typeof Ionicons>['name']
+                    }
                     size={16}
                     color={typeColor}
                   />
@@ -154,9 +146,7 @@ export function ActivityCard({
                 <Text style={styles.duration}>{activity.duration}</Text>
               </View>
             </View>
-            {activity.price && (
-              <Text style={styles.price}>{activity.price}</Text>
-            )}
+            {activity.price && <Text style={styles.price}>{activity.price}</Text>}
           </View>
 
           {/* Description */}
@@ -186,11 +176,7 @@ export function ActivityCard({
 
           {/* Action buttons */}
           <View style={styles.actions}>
-            <TouchableOpacity
-              style={styles.bookButton}
-              onPress={onBook}
-              activeOpacity={0.8}
-            >
+            <TouchableOpacity style={styles.bookButton} onPress={onBook} activeOpacity={0.8}>
               <LinearGradient
                 colors={['#6366f1', '#8b5cf6']}
                 start={{ x: 0, y: 0 }}
@@ -204,11 +190,8 @@ export function ActivityCard({
                 </View>
               )}
             </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.detailsButton}
-              activeOpacity={0.8}
-            >
+
+            <TouchableOpacity style={styles.detailsButton} activeOpacity={0.8}>
               <Text style={styles.detailsButtonText}>Details</Text>
               <Ionicons name="chevron-forward" size={16} color={colors.surface[400]} />
             </TouchableOpacity>

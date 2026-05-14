@@ -5,7 +5,9 @@
 import { test, expect } from "@playwright/test";
 
 test.describe("Public API endpoints", () => {
-  test("GET /api/destinations/popular returns destination list", async ({ request }) => {
+  test("GET /api/destinations/popular returns destination list", async ({
+    request,
+  }) => {
     const response = await request.get("/api/destinations/popular?limit=3");
     expect(response.status()).toBe(200);
     const body = await response.json();
@@ -13,7 +15,9 @@ test.describe("Public API endpoints", () => {
     expect(Array.isArray(body.destinations)).toBe(true);
   });
 
-  test("GET /api/destinations/trending returns destination list", async ({ request }) => {
+  test("GET /api/destinations/trending returns destination list", async ({
+    request,
+  }) => {
     const response = await request.get("/api/destinations/trending?limit=3");
     expect(response.status()).toBe(200);
     const body = await response.json();
@@ -37,7 +41,9 @@ test.describe("Public API endpoints", () => {
     expect(response.status()).toBe(401);
   });
 
-  test("rate limit headers present on destinations API", async ({ request }) => {
+  test("rate limit headers present on destinations API", async ({
+    request,
+  }) => {
     const response = await request.get("/api/destinations/popular?limit=1");
     // Should respond normally (not 429) for the first request
     expect(response.status()).toBeLessThan(500);
@@ -45,7 +51,9 @@ test.describe("Public API endpoints", () => {
 });
 
 test.describe("Rate limiting", () => {
-  test("blog newsletter endpoint rejects missing email", async ({ request }) => {
+  test("blog newsletter endpoint rejects missing email", async ({
+    request,
+  }) => {
     const response = await request.post("/api/blog/newsletter", {
       data: {},
     });

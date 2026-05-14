@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,13 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import {
-  Button,
-  PlacesAutocomplete,
-  DateRangePicker,
-  VibeSelector,
-} from '../../components/ui';
-import { useTripStore } from '../../stores/tripStore';
+import { Button, PlacesAutocomplete, DateRangePicker, VibeSelector } from '../../components/ui';
+import { useTripStore, type TripInput } from '../../stores/tripStore';
 import { usePromptStore } from '../../stores/promptStore';
 import { useAuthContext } from '../../components/AuthProvider';
 import { AuthGate } from '../../components/AuthGate';
@@ -72,7 +67,7 @@ export default function CreateTripScreen() {
 
   useEffect(() => {
     if (params.destination) {
-      const updates: Record<string, any> = {
+      const updates: Partial<TripInput> = {
         destination: params.destination,
         country: params.country,
         placeId: params.placeId,
@@ -97,7 +92,17 @@ export default function CreateTripScreen() {
       }
       setDraftInput(updates);
     }
-  }, [params.destination, params.country, params.placeId, params.vibes, params.startDate, params.endDate, params.travelerType, params.travelers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    params.destination,
+    params.country,
+    params.placeId,
+    params.vibes,
+    params.startDate,
+    params.endDate,
+    params.travelerType,
+    params.travelers,
+  ]);
 
   const handleSelectDestination = (name: string, country: string, placeId?: string) => {
     hapticFeedback.selection();
@@ -125,10 +130,7 @@ export default function CreateTripScreen() {
     }
   };
 
-  const canProceed =
-    draftInput?.destination &&
-    draftInput?.startDate &&
-    draftInput?.endDate;
+  const canProceed = draftInput?.destination && draftInput?.startDate && draftInput?.endDate;
 
   const handleContinue = () => {
     if (canProceed) {
@@ -139,9 +141,7 @@ export default function CreateTripScreen() {
     }
   };
 
-  const selectedDestination = popularDestinations.find(
-    (d) => d.name === draftInput?.destination
-  );
+  const selectedDestination = popularDestinations.find((d) => d.name === draftInput?.destination);
 
   const mapUrl = draftInput?.destination
     ? getStaticMapUrl(draftInput.destination, draftInput.country || '')
@@ -155,10 +155,7 @@ export default function CreateTripScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => router.back()}
-          >
+          <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
             <Ionicons name="close" size={24} color={colors.neutral[700]} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Plan Your Trip</Text>
@@ -234,12 +231,8 @@ export default function CreateTripScreen() {
                   />
                 )}
                 <View style={styles.selectedDestinationContent}>
-                  <Text style={styles.selectedDestinationCountry}>
-                    {draftInput.country}
-                  </Text>
-                  <Text style={styles.selectedDestinationName}>
-                    {draftInput.destination}
-                  </Text>
+                  <Text style={styles.selectedDestinationCountry}>{draftInput.country}</Text>
+                  <Text style={styles.selectedDestinationName}>{draftInput.destination}</Text>
                 </View>
                 <View style={styles.changeButton}>
                   <Text style={styles.changeButtonText}>Change</Text>
@@ -258,25 +251,16 @@ export default function CreateTripScreen() {
                     <TouchableOpacity
                       key={dest.id}
                       style={styles.destinationOption}
-                      onPress={() =>
-                        handleSelectDestination(dest.name, dest.country)
-                      }
+                      onPress={() => handleSelectDestination(dest.name, dest.country)}
                     >
-                      <Image
-                        source={{ uri: dest.image }}
-                        style={styles.destinationOptionImage}
-                      />
+                      <Image source={{ uri: dest.image }} style={styles.destinationOptionImage} />
                       <LinearGradient
                         colors={['transparent', 'rgba(0,0,0,0.6)']}
                         style={styles.destinationOptionGradient}
                       />
                       <View style={styles.destinationOptionContent}>
-                        <Text style={styles.destinationOptionName}>
-                          {dest.name}
-                        </Text>
-                        <Text style={styles.destinationOptionCountry}>
-                          {dest.country}
-                        </Text>
+                        <Text style={styles.destinationOptionName}>{dest.name}</Text>
+                        <Text style={styles.destinationOptionCountry}>{dest.country}</Text>
                       </View>
                     </TouchableOpacity>
                   ))}
@@ -311,15 +295,11 @@ export default function CreateTripScreen() {
                     name="remove"
                     size={20}
                     color={
-                      (draftInput?.travelers || 2) <= 1
-                        ? colors.neutral[300]
-                        : colors.neutral[700]
+                      (draftInput?.travelers || 2) <= 1 ? colors.neutral[300] : colors.neutral[700]
                     }
                   />
                 </TouchableOpacity>
-                <Text style={styles.counterValue}>
-                  {draftInput?.travelers || 2}
-                </Text>
+                <Text style={styles.counterValue}>{draftInput?.travelers || 2}</Text>
                 <TouchableOpacity
                   style={styles.counterButton}
                   onPress={() => handleTravelersChange(1)}
@@ -329,9 +309,7 @@ export default function CreateTripScreen() {
                     name="add"
                     size={20}
                     color={
-                      (draftInput?.travelers || 2) >= 10
-                        ? colors.neutral[300]
-                        : colors.neutral[700]
+                      (draftInput?.travelers || 2) >= 10 ? colors.neutral[300] : colors.neutral[700]
                     }
                   />
                 </TouchableOpacity>
@@ -344,13 +322,12 @@ export default function CreateTripScreen() {
                   key={type.id}
                   style={[
                     styles.travelerTypeButton,
-                    draftInput?.travelerType === type.id &&
-                      styles.travelerTypeButtonSelected,
+                    draftInput?.travelerType === type.id && styles.travelerTypeButtonSelected,
                   ]}
                   onPress={() => handleTravelerTypeSelect(type.id)}
                 >
                   <Ionicons
-                    name={type.icon as any}
+                    name={type.icon as React.ComponentProps<typeof Ionicons>['name']}
                     size={20}
                     color={
                       draftInput?.travelerType === type.id
@@ -361,8 +338,7 @@ export default function CreateTripScreen() {
                   <Text
                     style={[
                       styles.travelerTypeLabel,
-                      draftInput?.travelerType === type.id &&
-                        styles.travelerTypeLabelSelected,
+                      draftInput?.travelerType === type.id && styles.travelerTypeLabelSelected,
                     ]}
                   >
                     {type.label}
@@ -397,11 +373,7 @@ export default function CreateTripScreen() {
         </View>
 
         {/* Auth gate from banner */}
-        <AuthGate
-          visible={showAuthGate}
-          trigger="general"
-          onClose={() => setShowAuthGate(false)}
-        />
+        <AuthGate visible={showAuthGate} trigger="general" onClose={() => setShowAuthGate(false)} />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

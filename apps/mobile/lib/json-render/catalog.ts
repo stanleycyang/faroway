@@ -2,7 +2,7 @@ import { z } from 'zod';
 
 /**
  * Faroway Component Catalog
- * 
+ *
  * This catalog defines all the components that can be used in the json-render
  * itinerary generation. Each component has a Zod schema for type safety and
  * a description to help the AI understand when to use it.
@@ -22,7 +22,8 @@ export const TripSummarySchema = z.object({
 export const TripSummary = {
   name: 'TripSummary',
   schema: TripSummarySchema,
-  description: 'Display a summary card at the top of the itinerary with key trip details. Use this once at the beginning of the itinerary.',
+  description:
+    'Display a summary card at the top of the itinerary with key trip details. Use this once at the beginning of the itinerary.',
 };
 
 // =============================================================================
@@ -38,7 +39,8 @@ export const HeroImageSchema = z.object({
 export const HeroImage = {
   name: 'HeroImage',
   schema: HeroImageSchema,
-  description: 'A large hero image showcasing the destination. Use once at the top of the itinerary.',
+  description:
+    'A large hero image showcasing the destination. Use once at the top of the itinerary.',
 };
 
 // =============================================================================
@@ -52,7 +54,8 @@ export const SectionSchema = z.object({
 export const Section = {
   name: 'Section',
   schema: SectionSchema,
-  description: 'A section header to organize content. Use to separate different parts of the itinerary (e.g., "Accommodation", "Day 1", "Transportation").',
+  description:
+    'A section header to organize content. Use to separate different parts of the itinerary (e.g., "Accommodation", "Day 1", "Transportation").',
 };
 
 // =============================================================================
@@ -61,7 +64,10 @@ export const Section = {
 
 export const TextSchema = z.object({
   content: z.string().describe('The text content to display'),
-  variant: z.enum(['body', 'caption', 'subtitle', 'title']).optional().describe('Text style variant'),
+  variant: z
+    .enum(['body', 'caption', 'subtitle', 'title'])
+    .optional()
+    .describe('Text style variant'),
 });
 
 export const Text = {
@@ -88,7 +94,8 @@ export const HotelCardSchema = z.object({
 export const HotelCard = {
   name: 'HotelCard',
   schema: HotelCardSchema,
-  description: 'Display hotel or accommodation details with booking CTA. Use once per trip to show the recommended hotel.',
+  description:
+    'Display hotel or accommodation details with booking CTA. Use once per trip to show the recommended hotel.',
 };
 
 // =============================================================================
@@ -104,7 +111,8 @@ export const ItineraryDaySchema = z.object({
 export const ItineraryDay = {
   name: 'ItineraryDay',
   schema: ItineraryDaySchema,
-  description: 'A container/header for a day in the itinerary. Use before listing activities for each day. Activities should be added after this component.',
+  description:
+    'A container/header for a day in the itinerary. Use before listing activities for each day. Activities should be added after this component.',
 };
 
 // =============================================================================
@@ -127,7 +135,8 @@ export const ActivityCardSchema = z.object({
 export const ActivityCard = {
   name: 'ActivityCard',
   schema: ActivityCardSchema,
-  description: 'Display an activity, attraction, or experience with booking details. Use for tours, museums, attractions, shows, experiences.',
+  description:
+    'Display an activity, attraction, or experience with booking details. Use for tours, museums, attractions, shows, experiences.',
 };
 
 // =============================================================================
@@ -149,7 +158,8 @@ export const RestaurantCardSchema = z.object({
 export const RestaurantCard = {
   name: 'RestaurantCard',
   schema: RestaurantCardSchema,
-  description: 'Display a restaurant recommendation with reservation link. Use for breakfast, lunch, dinner, or cafe recommendations.',
+  description:
+    'Display a restaurant recommendation with reservation link. Use for breakfast, lunch, dinner, or cafe recommendations.',
 };
 
 // =============================================================================
@@ -157,17 +167,24 @@ export const RestaurantCard = {
 // =============================================================================
 
 export const DayTimelineSchema = z.object({
-  items: z.array(z.object({
-    time: z.string().describe('Time (e.g., "09:00")'),
-    title: z.string().describe('Activity/meal title'),
-    type: z.enum(['activity', 'restaurant', 'transport', 'rest']).describe('Type of timeline item'),
-  })).describe('Timeline items for the day'),
+  items: z
+    .array(
+      z.object({
+        time: z.string().describe('Time (e.g., "09:00")'),
+        title: z.string().describe('Activity/meal title'),
+        type: z
+          .enum(['activity', 'restaurant', 'transport', 'rest'])
+          .describe('Type of timeline item'),
+      })
+    )
+    .describe('Timeline items for the day'),
 });
 
 export const DayTimeline = {
   name: 'DayTimeline',
   schema: DayTimelineSchema,
-  description: 'Show a vertical timeline of all events for a day. Use as an overview/summary of a day before showing detailed cards.',
+  description:
+    'Show a vertical timeline of all events for a day. Use as an overview/summary of a day before showing detailed cards.',
 };
 
 // =============================================================================
@@ -184,7 +201,8 @@ export const BookingButtonSchema = z.object({
 export const BookingButton = {
   name: 'BookingButton',
   schema: BookingButtonSchema,
-  description: 'A prominent call-to-action button for booking. Can be used standalone or within other components.',
+  description:
+    'A prominent call-to-action button for booking. Can be used standalone or within other components.',
 };
 
 // =============================================================================
@@ -215,7 +233,8 @@ export const RatingStarsSchema = z.object({
 export const RatingStars = {
   name: 'RatingStars',
   schema: RatingStarsSchema,
-  description: 'Display a star rating with optional review count. Use within other components or standalone.',
+  description:
+    'Display a star rating with optional review count. Use within other components or standalone.',
 };
 
 // =============================================================================
@@ -223,22 +242,30 @@ export const RatingStars = {
 // =============================================================================
 
 export const MapPreviewSchema = z.object({
-  markers: z.array(z.object({
-    lat: z.number().describe('Latitude'),
-    lng: z.number().describe('Longitude'),
-    label: z.string().describe('Marker label'),
-  })).describe('Array of location markers to show on the map'),
-  center: z.object({
-    lat: z.number().describe('Center latitude'),
-    lng: z.number().describe('Center longitude'),
-  }).optional().describe('Map center (defaults to first marker)'),
+  markers: z
+    .array(
+      z.object({
+        lat: z.number().describe('Latitude'),
+        lng: z.number().describe('Longitude'),
+        label: z.string().describe('Marker label'),
+      })
+    )
+    .describe('Array of location markers to show on the map'),
+  center: z
+    .object({
+      lat: z.number().describe('Center latitude'),
+      lng: z.number().describe('Center longitude'),
+    })
+    .optional()
+    .describe('Map center (defaults to first marker)'),
   zoom: z.number().optional().describe('Zoom level (default: 13)'),
 });
 
 export const MapPreview = {
   name: 'MapPreview',
   schema: MapPreviewSchema,
-  description: 'Show a map with location markers. Use to visualize hotel location or day activities on a map.',
+  description:
+    'Show a map with location markers. Use to visualize hotel location or day activities on a map.',
 };
 
 // =============================================================================

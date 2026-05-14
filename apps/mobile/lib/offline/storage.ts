@@ -71,14 +71,14 @@ class OfflineStorage {
   async saveTrip(trip: Trip): Promise<void> {
     try {
       const trips = await this.loadTrips();
-      const existingIndex = trips.findIndex(t => t.id === trip.id);
-      
+      const existingIndex = trips.findIndex((t) => t.id === trip.id);
+
       if (existingIndex >= 0) {
         trips[existingIndex] = trip;
       } else {
         trips.unshift(trip);
       }
-      
+
       await this.saveTrips(trips);
     } catch (error) {
       console.error('[OfflineStorage] Error saving trip:', error);
@@ -92,7 +92,7 @@ class OfflineStorage {
   async deleteTrip(tripId: string): Promise<void> {
     try {
       const trips = await this.loadTrips();
-      const filtered = trips.filter(t => t.id !== tripId);
+      const filtered = trips.filter((t) => t.id !== tripId);
       await this.saveTrips(filtered);
     } catch (error) {
       console.error('[OfflineStorage] Error deleting trip:', error);
@@ -106,7 +106,7 @@ class OfflineStorage {
   async getTrip(tripId: string): Promise<Trip | null> {
     try {
       const trips = await this.loadTrips();
-      return trips.find(t => t.id === tripId) || null;
+      return trips.find((t) => t.id === tripId) || null;
     } catch (error) {
       console.error('[OfflineStorage] Error getting trip:', error);
       return null;
@@ -118,13 +118,15 @@ class OfflineStorage {
   /**
    * Add a mutation to the offline queue
    */
-  async addPendingMutation(mutation: Omit<PendingMutation, 'id' | 'timestamp' | 'retryCount'>): Promise<PendingMutation> {
+  async addPendingMutation(
+    mutation: Omit<PendingMutation, 'id' | 'timestamp' | 'retryCount'>
+  ): Promise<PendingMutation> {
     try {
       const mutations = await this.getPendingMutations();
-      
+
       // Check if there's already a pending mutation for this trip
-      const existingIndex = mutations.findIndex(m => m.tripId === mutation.tripId);
-      
+      const existingIndex = mutations.findIndex((m) => m.tripId === mutation.tripId);
+
       const newMutation: PendingMutation = {
         ...mutation,
         id: `mutation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -135,7 +137,7 @@ class OfflineStorage {
       // If there's an existing mutation, handle conflicts
       if (existingIndex >= 0) {
         const existing = mutations[existingIndex];
-        
+
         // Delete supersedes everything
         if (mutation.type === 'delete') {
           mutations[existingIndex] = newMutation;
@@ -168,7 +170,7 @@ class OfflineStorage {
 
       await this.savePendingMutations(mutations);
       await this.updateSyncMeta({ pendingCount: mutations.length });
-      
+
       return newMutation;
     } catch (error) {
       console.error('[OfflineStorage] Error adding pending mutation:', error);
@@ -208,7 +210,7 @@ class OfflineStorage {
   async removePendingMutation(mutationId: string): Promise<void> {
     try {
       const mutations = await this.getPendingMutations();
-      const filtered = mutations.filter(m => m.id !== mutationId);
+      const filtered = mutations.filter((m) => m.id !== mutationId);
       await this.savePendingMutations(filtered);
       await this.updateSyncMeta({ pendingCount: filtered.length });
     } catch (error) {
@@ -223,7 +225,7 @@ class OfflineStorage {
   async incrementMutationRetry(mutationId: string): Promise<void> {
     try {
       const mutations = await this.getPendingMutations();
-      const index = mutations.findIndex(m => m.id === mutationId);
+      const index = mutations.findIndex((m) => m.id === mutationId);
       if (index >= 0) {
         mutations[index].retryCount++;
         await this.savePendingMutations(mutations);
@@ -335,7 +337,7 @@ class OfflineStorage {
     const trips = await this.loadTrips();
     const mutations = await this.getPendingMutations();
     const meta = await this.getSyncMeta();
-    
+
     return {
       tripCount: trips.length,
       pendingMutations: mutations.length,

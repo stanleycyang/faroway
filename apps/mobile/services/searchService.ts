@@ -3,18 +3,14 @@
  * Connects mobile app to the backend search API
  */
 
-import { API_BASE_URL } from "../constants/api";
+import { API_BASE_URL } from '../constants/api';
 import type {
   SearchInput,
   StartSearchResponse,
   SearchProgress,
-  HotelResult,
-  ActivityResult,
-  DiningResult,
-  SuggestedDay,
   SearchResults,
   SearchStatusResponse,
-} from "@faroway/types";
+} from '@faroway/types';
 
 // Re-export types for backward compatibility
 export type {
@@ -27,34 +23,32 @@ export type {
   SuggestedDay,
   SearchResults,
   SearchStatusResponse,
-} from "@faroway/types";
+} from '@faroway/types';
 
 /**
  * Start a new travel search
  */
 export async function startSearch(
   input: SearchInput,
-  authToken?: string,
+  authToken?: string
 ): Promise<StartSearchResponse> {
   const headers: Record<string, string> = {
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   };
 
   if (authToken) {
-    headers["Authorization"] = `Bearer ${authToken}`;
+    headers['Authorization'] = `Bearer ${authToken}`;
   }
 
   const response = await fetch(`${API_BASE_URL}/api/search/start`, {
-    method: "POST",
+    method: 'POST',
     headers,
     body: JSON.stringify(input),
   });
 
   if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ error: "Unknown error" }));
-    throw new Error(error.error || "Failed to start search");
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || 'Failed to start search');
   }
 
   return response.json();
@@ -63,23 +57,17 @@ export async function startSearch(
 /**
  * Get search status and results
  */
-export async function getSearchStatus(
-  searchId: string,
-): Promise<SearchStatusResponse> {
+export async function getSearchStatus(searchId: string): Promise<SearchStatusResponse> {
   // Validate searchId to prevent path traversal
   if (!searchId || /[^a-zA-Z0-9_-]/.test(searchId)) {
-    throw new Error("Invalid search ID");
+    throw new Error('Invalid search ID');
   }
 
-  const response = await fetch(
-    `${API_BASE_URL}/api/search/${encodeURIComponent(searchId)}`,
-  );
+  const response = await fetch(`${API_BASE_URL}/api/search/${encodeURIComponent(searchId)}`);
 
   if (!response.ok) {
-    const error = await response
-      .json()
-      .catch(() => ({ error: "Unknown error" }));
-    throw new Error(error.error || "Failed to get search status");
+    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+    throw new Error(error.error || 'Failed to get search status');
   }
 
   return response.json();
@@ -92,7 +80,7 @@ export async function pollSearchStatus(
   searchId: string,
   onProgress?: (status: SearchStatusResponse) => void,
   pollInterval: number = 2000,
-  maxAttempts: number = 60,
+  maxAttempts: number = 60
 ): Promise<SearchResults> {
   let attempts = 0;
 
@@ -103,12 +91,12 @@ export async function pollSearchStatus(
       onProgress(status);
     }
 
-    if (status.status === "completed" && status.results) {
+    if (status.status === 'completed' && status.results) {
       return status.results;
     }
 
-    if (status.status === "error") {
-      throw new Error(status.error || "Search failed");
+    if (status.status === 'error') {
+      throw new Error(status.error || 'Search failed');
     }
 
     // Wait before next poll
@@ -116,7 +104,7 @@ export async function pollSearchStatus(
     attempts++;
   }
 
-  throw new Error("Search timed out");
+  throw new Error('Search timed out');
 }
 
 /**
@@ -124,22 +112,22 @@ export async function pollSearchStatus(
  */
 export function calculateProgressPercent(progress: SearchProgress): number {
   const stages = [
-    "orchestrator",
-    "hotels",
-    "activities",
-    "dining",
-    "transport",
-    "enrichment",
-    "aggregator",
+    'orchestrator',
+    'hotels',
+    'activities',
+    'dining',
+    'transport',
+    'enrichment',
+    'aggregator',
   ] as const;
   const doneWeight = 100 / stages.length;
   const searchingWeight = doneWeight / 2;
   let completed = 0;
 
   for (const stage of stages) {
-    if (progress[stage] === "done") {
+    if (progress[stage] === 'done') {
       completed += doneWeight;
-    } else if (progress[stage] === "searching") {
+    } else if (progress[stage] === 'searching') {
       completed += searchingWeight;
     }
   }
@@ -151,26 +139,26 @@ export function calculateProgressPercent(progress: SearchProgress): number {
  * Get human-readable status message
  */
 export function getStatusMessage(progress: SearchProgress): string {
-  if (progress.aggregator === "searching" || progress.aggregator === "done") {
-    return "Creating your perfect itinerary...";
+  if (progress.aggregator === 'searching' || progress.aggregator === 'done') {
+    return 'Creating your perfect itinerary...';
   }
-  if (progress.transport === "searching") {
-    return "Searching for flights...";
+  if (progress.transport === 'searching') {
+    return 'Searching for flights...';
   }
-  if (progress.enrichment === "searching") {
-    return "Adding local gems...";
+  if (progress.enrichment === 'searching') {
+    return 'Adding local gems...';
   }
-  if (progress.dining === "searching") {
-    return "Finding the best restaurants...";
+  if (progress.dining === 'searching') {
+    return 'Finding the best restaurants...';
   }
-  if (progress.activities === "searching") {
-    return "Discovering activities & attractions...";
+  if (progress.activities === 'searching') {
+    return 'Discovering activities & attractions...';
   }
-  if (progress.hotels === "searching") {
-    return "Searching for hotels...";
+  if (progress.hotels === 'searching') {
+    return 'Searching for hotels...';
   }
-  if (progress.orchestrator === "searching") {
-    return "Understanding your preferences...";
+  if (progress.orchestrator === 'searching') {
+    return 'Understanding your preferences...';
   }
-  return "Starting your search...";
+  return 'Starting your search...';
 }

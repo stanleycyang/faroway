@@ -4,24 +4,19 @@
  */
 
 // Storage
-export { 
-  offlineStorage, 
-  type PendingMutation, 
-  type MutationType,
-  type SyncMeta,
-} from './storage';
+export { offlineStorage, type PendingMutation, type MutationType, type SyncMeta } from './storage';
 
 // Network
-export { 
-  networkMonitor, 
-  getNetworkStatus, 
+export {
+  networkMonitor,
+  getNetworkStatus,
   isOnline,
   type NetworkStatus,
   type NetworkState,
 } from './network';
 
 // Sync
-export { 
+export {
   syncService,
   type SyncStatus,
   type SyncResult,

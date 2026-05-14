@@ -19,11 +19,11 @@ import type { SearchProgress } from '@faroway/types';
 const ANONYMOUS_TRIPS_KEY = '@faroway/anonymous_trips';
 
 export interface SearchResults {
-  hotels: any[];
-  activities: any[];
-  dining: any[];
-  itinerary: any[];
-  [key: string]: any;
+  hotels: unknown[];
+  activities: unknown[];
+  dining: unknown[];
+  itinerary: unknown[];
+  [key: string]: unknown;
 }
 
 export interface ItineraryGenerationState {
@@ -60,7 +60,7 @@ export interface UseItineraryGenerationInput {
 }
 
 export function useItineraryGeneration(
-  input: UseItineraryGenerationInput | null,
+  input: UseItineraryGenerationInput | null
 ): ItineraryGenerationState {
   const [state, setState] = useState<ItineraryGenerationState>({
     jsonRenderSpec: null,
@@ -125,7 +125,7 @@ export function useItineraryGeneration(
         // Store anonymous trip ID so it can be claimed after sign-up
         if (!trip.user_id) {
           try {
-            const stored = JSON.parse(await AsyncStorage.getItem(ANONYMOUS_TRIPS_KEY) || '[]');
+            const stored = JSON.parse((await AsyncStorage.getItem(ANONYMOUS_TRIPS_KEY)) || '[]');
             if (!stored.includes(tripId)) {
               stored.push(tripId);
               await AsyncStorage.setItem(ANONYMOUS_TRIPS_KEY, JSON.stringify(stored));
@@ -146,7 +146,9 @@ export function useItineraryGeneration(
         });
 
         if (!genResponse.ok && genResponse.status !== 409) {
-          const err = await genResponse.json().catch(() => ({ error: 'Failed to start generation' }));
+          const err = await genResponse
+            .json()
+            .catch(() => ({ error: 'Failed to start generation' }));
           throw new Error(err.error || 'Failed to start generation');
         }
 
@@ -167,7 +169,7 @@ export function useItineraryGeneration(
           const statusRes = await fetch(`${API_BASE_URL}/api/trips/${tripId}/generate`);
           if (!statusRes.ok) {
             attempts++;
-            await new Promise(resolve => setTimeout(resolve, 2000));
+            await new Promise((resolve) => setTimeout(resolve, 2000));
             continue;
           }
 
@@ -215,7 +217,7 @@ export function useItineraryGeneration(
             throw new Error(status.message || 'Generation failed');
           }
 
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise((resolve) => setTimeout(resolve, 2000));
           attempts++;
         }
 

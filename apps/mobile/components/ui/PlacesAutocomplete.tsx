@@ -12,10 +12,7 @@ import { SearchInput } from './Input';
 import { Skeleton } from './LoadingSkeleton';
 import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
-import {
-  usePlacesAutocomplete,
-  PlacePrediction,
-} from '../../hooks/usePlacesAutocomplete';
+import { usePlacesAutocomplete, PlacePrediction } from '../../hooks/usePlacesAutocomplete';
 
 interface PlacesAutocompleteProps {
   onSelect: (city: string, country: string, placeId?: string) => void;
@@ -75,11 +72,7 @@ export function PlacesAutocomplete({ onSelect }: PlacesAutocompleteProps) {
                   <Skeleton width={18} height={18} borderRadius={9} />
                   <View style={styles.skeletonText}>
                     <Skeleton width="70%" height={14} />
-                    <Skeleton
-                      width="50%"
-                      height={11}
-                      style={{ marginTop: 4 }}
-                    />
+                    <Skeleton width="50%" height={11} style={{ marginTop: 4 }} />
                   </View>
                 </View>
               ))}
@@ -124,14 +117,8 @@ export function PlacesAutocomplete({ onSelect }: PlacesAutocompleteProps) {
                 onPress={handleUseAsDestination}
                 activeOpacity={0.7}
               >
-                <Ionicons
-                  name="add-circle-outline"
-                  size={16}
-                  color={colors.primary[400]}
-                />
-                <Text style={styles.fallbackButtonText}>
-                  Use "{query}" as destination
-                </Text>
+                <Ionicons name="add-circle-outline" size={16} color={colors.primary[400]} />
+                <Text style={styles.fallbackButtonText}>Use "{query}" as destination</Text>
               </TouchableOpacity>
             </View>
           )}

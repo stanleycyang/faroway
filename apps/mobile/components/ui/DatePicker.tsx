@@ -1,12 +1,5 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
-  Dimensions,
-} from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, Modal, Dimensions } from 'react-native';
 import { CalendarList, DateData } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, borderRadius } from '../../constants/theme';
@@ -25,12 +18,15 @@ type SelectionMode = 'start' | 'end';
 
 const TODAY = new Date().toISOString().split('T')[0];
 
-function getMarkedDates(
-  startDate: string,
-  endDate: string,
-  selectionMode: SelectionMode
-) {
-  const marked: Record<string, any> = {};
+type MarkedDate = {
+  startingDay?: boolean;
+  endingDay?: boolean;
+  color: string;
+  textColor: string;
+};
+
+function getMarkedDates(startDate: string, endDate: string, _selectionMode: SelectionMode) {
+  const marked: Record<string, MarkedDate> = {};
   const accentColor = colors.primary[500];
   const fillColor = 'rgba(249, 112, 102, 0.2)';
 
@@ -169,16 +165,10 @@ export function DateRangePicker({
           ]}
           onPress={() => openPicker('start')}
         >
-          <Ionicons
-            name="calendar-outline"
-            size={20}
-            color={colors.primary[400]}
-          />
+          <Ionicons name="calendar-outline" size={20} color={colors.primary[400]} />
           <View style={styles.dateButtonText}>
             <Text style={styles.dateLabel}>Start</Text>
-            <Text style={styles.dateValue}>
-              {formatDisplayDate(startDate)}
-            </Text>
+            <Text style={styles.dateValue}>{formatDisplayDate(startDate)}</Text>
           </View>
         </TouchableOpacity>
 
@@ -191,11 +181,7 @@ export function DateRangePicker({
           ]}
           onPress={() => openPicker('end')}
         >
-          <Ionicons
-            name="calendar-outline"
-            size={20}
-            color={colors.primary[400]}
-          />
+          <Ionicons name="calendar-outline" size={20} color={colors.primary[400]} />
           <View style={styles.dateButtonText}>
             <Text style={styles.dateLabel}>End</Text>
             <Text style={styles.dateValue}>{formatDisplayDate(endDate)}</Text>
@@ -203,12 +189,7 @@ export function DateRangePicker({
         </TouchableOpacity>
       </View>
 
-      <Modal
-        visible={showPicker}
-        transparent
-        animationType="slide"
-        onRequestClose={closePicker}
-      >
+      <Modal visible={showPicker} transparent animationType="slide" onRequestClose={closePicker}>
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
             {/* Drag handle */}
@@ -220,68 +201,36 @@ export function DateRangePicker({
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Dates</Text>
               <TouchableOpacity onPress={closePicker}>
-                <Ionicons
-                  name="close"
-                  size={24}
-                  color={colors.surface[400]}
-                />
+                <Ionicons name="close" size={24} color={colors.surface[400]} />
               </TouchableOpacity>
             </View>
 
             {/* Date summary chips */}
             <View style={styles.chipRow}>
               <TouchableOpacity
-                style={[
-                  styles.chip,
-                  selectionMode === 'start' && styles.chipActive,
-                ]}
+                style={[styles.chip, selectionMode === 'start' && styles.chipActive]}
                 onPress={() => setSelectionMode('start')}
               >
                 <Text
-                  style={[
-                    styles.chipLabel,
-                    selectionMode === 'start' && styles.chipLabelActive,
-                  ]}
+                  style={[styles.chipLabel, selectionMode === 'start' && styles.chipLabelActive]}
                 >
                   Start
                 </Text>
-                <Text
-                  style={[
-                    styles.chipDate,
-                    selectionMode === 'start' && styles.chipDateActive,
-                  ]}
-                >
+                <Text style={[styles.chipDate, selectionMode === 'start' && styles.chipDateActive]}>
                   {startDate ? formatDisplayDate(startDate) : 'Pick a date'}
                 </Text>
               </TouchableOpacity>
 
-              <Ionicons
-                name="arrow-forward"
-                size={16}
-                color={colors.surface[600]}
-              />
+              <Ionicons name="arrow-forward" size={16} color={colors.surface[600]} />
 
               <TouchableOpacity
-                style={[
-                  styles.chip,
-                  selectionMode === 'end' && styles.chipActive,
-                ]}
+                style={[styles.chip, selectionMode === 'end' && styles.chipActive]}
                 onPress={() => setSelectionMode('end')}
               >
-                <Text
-                  style={[
-                    styles.chipLabel,
-                    selectionMode === 'end' && styles.chipLabelActive,
-                  ]}
-                >
+                <Text style={[styles.chipLabel, selectionMode === 'end' && styles.chipLabelActive]}>
                   End
                 </Text>
-                <Text
-                  style={[
-                    styles.chipDate,
-                    selectionMode === 'end' && styles.chipDateActive,
-                  ]}
-                >
+                <Text style={[styles.chipDate, selectionMode === 'end' && styles.chipDateActive]}>
                   {endDate ? formatDisplayDate(endDate) : 'Pick a date'}
                 </Text>
               </TouchableOpacity>
@@ -305,10 +254,7 @@ export function DateRangePicker({
             {/* Done button */}
             {startDate && endDate ? (
               <View style={styles.doneContainer}>
-                <TouchableOpacity
-                  style={styles.doneButton}
-                  onPress={closePicker}
-                >
+                <TouchableOpacity style={styles.doneButton} onPress={closePicker}>
                   <Text style={styles.doneButtonText}>Done</Text>
                 </TouchableOpacity>
               </View>

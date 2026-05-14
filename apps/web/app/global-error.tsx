@@ -34,7 +34,9 @@ export default function GlobalError({
           Something went wrong
         </h1>
         <p style={{ color: "#64748b", margin: 0 }}>
-          {error.digest ? `Error ID: ${error.digest}` : "An unexpected error occurred"}
+          {error.digest
+            ? `Error ID: ${error.digest}`
+            : "An unexpected error occurred"}
         </p>
         <div style={{ display: "flex", gap: "12px" }}>
           <button

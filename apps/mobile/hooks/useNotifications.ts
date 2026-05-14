@@ -15,7 +15,7 @@ import {
 
 interface UseNotificationsOptions {
   autoRequestPermissions?: boolean;
-  onNotificationReceived?: (notification: any, data: NotificationData | null) => void;
+  onNotificationReceived?: (notification: unknown, data: NotificationData | null) => void;
   onNotificationResponse?: (data: NotificationData | null) => void;
 }
 
@@ -27,10 +27,12 @@ interface UseNotificationsReturn {
   handleNotificationNavigation: (data: NotificationData | null) => void;
 }
 
-export function useNotifications(
-  options: UseNotificationsOptions = {}
-): UseNotificationsReturn {
-  const { autoRequestPermissions = false, onNotificationReceived, onNotificationResponse } = options;
+export function useNotifications(options: UseNotificationsOptions = {}): UseNotificationsReturn {
+  const {
+    autoRequestPermissions = false,
+    onNotificationReceived,
+    onNotificationResponse,
+  } = options;
 
   const router = useRouter();
   const [pushToken, setPushToken] = useState<string | null>(null);
@@ -164,10 +166,7 @@ export function useNotifications(
   // Clear badge when app becomes active
   useEffect(() => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
-      if (
-        appStateRef.current.match(/inactive|background/) &&
-        nextAppState === 'active'
-      ) {
+      if (appStateRef.current.match(/inactive|background/) && nextAppState === 'active') {
         clearBadge();
       }
       appStateRef.current = nextAppState;

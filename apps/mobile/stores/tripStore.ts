@@ -103,7 +103,7 @@ interface TripStore {
   isGenerating: boolean;
   generationProgress: number;
   isHydrated: boolean;
-  
+
   // Actions
   setDraftInput: (input: Partial<TripInput>) => void;
   clearDraft: () => void;
@@ -113,7 +113,7 @@ interface TripStore {
   saveTrip: (trip: Trip) => void;
   deleteTrip: (id: string) => void;
   setCurrentTrip: (trip: Trip | null) => void;
-  
+
   // Offline support
   hydrateFromOffline: () => Promise<void>;
   setTrips: (trips: Trip[]) => void;
@@ -129,7 +129,7 @@ const defaultDraft: TripInput = {
   vibes: [],
 };
 
-export const useTripStore = create<TripStore>((set, get) => ({
+export const useTripStore = create<TripStore>((set, _get) => ({
   trips: [],
   currentTrip: null,
   draftInput: { ...defaultDraft },
@@ -153,7 +153,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
   finishGeneration: (trip) => {
     // Save to offline storage
     offlineStorage.saveTrip(trip).catch(console.error);
-    
+
     set((state) => ({
       isGenerating: false,
       generationProgress: 100,
@@ -166,7 +166,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
   saveTrip: (trip) => {
     // Save to offline storage
     offlineStorage.saveTrip(trip).catch(console.error);
-    
+
     set((state) => ({
       trips: state.trips.some((t) => t.id === trip.id)
         ? state.trips.map((t) => (t.id === trip.id ? trip : t))
@@ -177,7 +177,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
   deleteTrip: (id) => {
     // Delete from offline storage
     offlineStorage.deleteTrip(id).catch(console.error);
-    
+
     set((state) => ({
       trips: state.trips.filter((t) => t.id !== id),
       currentTrip: state.currentTrip?.id === id ? null : state.currentTrip,

@@ -5,8 +5,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useOfflineSync, type UseOfflineSyncReturn } from '../hooks/useOfflineSync';
-import type { Trip, TripInput } from '../stores/tripStore';
-import type { SyncState, SyncResult } from '../lib/offline';
+import type { SyncState } from '../lib/offline';
 
 interface OfflineContextValue extends Omit<UseOfflineSyncReturn, 'syncState'> {
   // Re-expose state individually
@@ -35,14 +34,14 @@ interface OfflineProviderProps {
   syncOnMount?: boolean;
 }
 
-export function OfflineProvider({ 
+export function OfflineProvider({
   children,
   autoSync = true,
   syncOnForeground = true,
   syncOnMount = true,
 }: OfflineProviderProps) {
   const [initialized, setInitialized] = useState(false);
-  
+
   const offlineSync = useOfflineSync({
     autoSync,
     syncOnForeground,
@@ -61,11 +60,7 @@ export function OfflineProvider({
     initialized,
   };
 
-  return (
-    <OfflineContext.Provider value={value}>
-      {children}
-    </OfflineContext.Provider>
-  );
+  return <OfflineContext.Provider value={value}>{children}</OfflineContext.Provider>;
 }
 
 /**

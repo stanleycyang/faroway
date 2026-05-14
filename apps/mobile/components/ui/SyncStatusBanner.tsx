@@ -4,11 +4,11 @@
  */
 
 import React, { useEffect, useRef } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  Animated, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  Animated,
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
@@ -41,7 +41,7 @@ export function SyncStatusBanner({
 }: SyncStatusBannerProps) {
   const { isOffline } = useNetworkStatus();
   const { status, pendingCount, isSyncing, hasPending } = useSyncStatus();
-  
+
   const translateY = useRef(new Animated.Value(-100)).current;
   const opacity = useRef(new Animated.Value(0)).current;
 
@@ -61,6 +61,7 @@ export function SyncStatusBanner({
         useNativeDriver: true,
       }),
     ]).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shouldShow, position]);
 
   const handleManualSync = async () => {
@@ -74,13 +75,13 @@ export function SyncStatusBanner({
     if (isOffline) {
       return {
         icon: 'cloud-offline-outline' as const,
-        text: 'You\'re offline',
+        text: "You're offline",
         subtext: hasPending ? `${pendingCount} changes pending` : 'Changes will sync when online',
         color: '#f97316', // orange
         bgColor: 'rgba(249, 115, 22, 0.15)',
       };
     }
-    
+
     if (isSyncing) {
       return {
         icon: 'sync' as const,
@@ -91,7 +92,7 @@ export function SyncStatusBanner({
         showSpinner: true,
       };
     }
-    
+
     if (hasPending) {
       return {
         icon: 'cloud-upload-outline' as const,
@@ -102,7 +103,7 @@ export function SyncStatusBanner({
         canSync: true,
       };
     }
-    
+
     if (status === 'error') {
       return {
         icon: 'warning-outline' as const,
@@ -113,7 +114,7 @@ export function SyncStatusBanner({
         canSync: true,
       };
     }
-    
+
     // Success or idle - don't show anything if autoHide
     return {
       icon: 'checkmark-circle-outline' as const,
@@ -155,23 +156,19 @@ export function SyncStatusBanner({
             <Ionicons name={content.icon} size={20} color={content.color} />
           )}
         </View>
-        
+
         <View style={styles.textContainer}>
-          <Text style={[styles.mainText, { color: content.color }]}>
-            {content.text}
-          </Text>
+          <Text style={[styles.mainText, { color: content.color }]}>{content.text}</Text>
           {content.subtext ? (
-            <Text style={[styles.subText, { color: content.color }]}>
-              {content.subtext}
-            </Text>
+            <Text style={[styles.subText, { color: content.color }]}>{content.subtext}</Text>
           ) : null}
         </View>
 
         {content.canSync && allowManualSync && !isSyncing && (
-          <Ionicons 
-            name="refresh-outline" 
-            size={20} 
-            color={content.color} 
+          <Ionicons
+            name="refresh-outline"
+            size={20}
+            color={content.color}
             style={styles.actionIcon}
           />
         )}
@@ -219,19 +216,19 @@ export function OfflineBadge({ isPending, isLocal }: OfflineBadgeProps) {
   if (!isPending && !isLocal) return null;
 
   return (
-    <View style={[
-      styles.badge,
-      isPending && styles.pendingBadgeSmall,
-      isLocal && styles.localBadgeSmall,
-    ]}>
-      <Ionicons 
-        name={isPending ? 'time-outline' : 'phone-portrait-outline'} 
-        size={10} 
-        color="#fff" 
+    <View
+      style={[
+        styles.badge,
+        isPending && styles.pendingBadgeSmall,
+        isLocal && styles.localBadgeSmall,
+      ]}
+    >
+      <Ionicons
+        name={isPending ? 'time-outline' : 'phone-portrait-outline'}
+        size={10}
+        color="#fff"
       />
-      <Text style={styles.badgeText}>
-        {isPending ? 'Pending' : 'Local'}
-      </Text>
+      <Text style={styles.badgeText}>{isPending ? 'Pending' : 'Local'}</Text>
     </View>
   );
 }

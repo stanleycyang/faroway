@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useRef } from 'react';
 import { View, Text, Image, StyleSheet, Dimensions, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -68,6 +68,7 @@ export default function WelcomeScreen() {
         useNativeDriver: true,
       }),
     ]).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -75,6 +76,7 @@ export default function WelcomeScreen() {
     if (hasCompletedOnboarding && isAuthenticated) {
       setTimeout(() => router.replace('/(tabs)'), 1500);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hasCompletedOnboarding, isAuthenticated]);
 
   const handleGetStarted = () => {
@@ -93,10 +95,7 @@ export default function WelcomeScreen() {
         }}
         style={styles.backgroundImage}
       />
-      <LinearGradient
-        colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
-        style={styles.gradient}
-      />
+      <LinearGradient colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']} style={styles.gradient} />
 
       <View style={styles.content}>
         <View style={styles.header}>

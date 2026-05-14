@@ -20,7 +20,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: 'ai.faroway.app',
     usesAppleSignIn: true,
     infoPlist: {
-      NSLocationWhenInUseUsageDescription: 'Faroway uses your location to provide navigation to trip destinations.',
+      NSLocationWhenInUseUsageDescription:
+        'Faroway uses your location to provide navigation to trip destinations.',
     },
     config: {
       usesNonExemptEncryption: false,
@@ -42,12 +43,15 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     'expo-secure-store',
     'expo-apple-authentication',
     '@react-native-google-signin/google-signin',
-    ['expo-notifications', {
-      icon: './assets/notification-icon.png',
-      color: '#FF6B6B',
-      sounds: [],
-      defaultChannel: 'default',
-    }],
+    [
+      'expo-notifications',
+      {
+        icon: './assets/notification-icon.png',
+        color: '#FF6B6B',
+        sounds: [],
+        defaultChannel: 'default',
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,

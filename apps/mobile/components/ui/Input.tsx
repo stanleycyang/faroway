@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
-import {
-  View,
-  TextInput,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ViewStyle,
-} from 'react-native';
+import { View, TextInput, Text, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, borderRadius } from '../../constants/theme';
 
@@ -95,10 +88,7 @@ export function Input({
           </TouchableOpacity>
         )}
         {rightIcon && !secureTextEntry && (
-          <TouchableOpacity
-            onPress={onRightIconPress}
-            style={styles.rightIconButton}
-          >
+          <TouchableOpacity onPress={onRightIconPress} style={styles.rightIconButton}>
             <Ionicons name={rightIcon} size={20} color={colors.surface[500]} />
           </TouchableOpacity>
         )}
@@ -125,12 +115,7 @@ export function SearchInput({
 }: SearchInputProps) {
   return (
     <View style={[styles.searchContainer, style]}>
-      <Ionicons
-        name="search"
-        size={20}
-        color={colors.surface[500]}
-        style={styles.searchIcon}
-      />
+      <Ionicons name="search" size={20} color={colors.surface[500]} style={styles.searchIcon} />
       <TextInput
         style={styles.searchInput}
         placeholder={placeholder}
@@ -142,11 +127,7 @@ export function SearchInput({
       />
       {value.length > 0 && (
         <TouchableOpacity onPress={() => onChangeText('')}>
-          <Ionicons
-            name="close-circle"
-            size={20}
-            color={colors.surface[500]}
-          />
+          <Ionicons name="close-circle" size={20} color={colors.surface[500]} />
         </TouchableOpacity>
       )}
     </View>

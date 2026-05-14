@@ -1,12 +1,5 @@
 import { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Switch,
-  ScrollView,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -59,9 +52,13 @@ const defaultSettings: Record<string, boolean> = {
 export default function NotificationsScreen() {
   const router = useRouter();
   const { user } = useUserStore();
+  const userWithSettings = user as
+    | (typeof user & { notificationSettings?: Record<string, boolean> })
+    | null;
   const [settings, setSettings] = useState<Record<string, boolean>>(
-    (user as any)?.notificationSettings && Object.keys((user as any).notificationSettings).length > 0
-      ? (user as any).notificationSettings
+    userWithSettings?.notificationSettings &&
+      Object.keys(userWithSettings.notificationSettings).length > 0
+      ? userWithSettings.notificationSettings
       : defaultSettings
   );
 
@@ -77,20 +74,14 @@ export default function NotificationsScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={'#475569'} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
         <View style={{ width: 44 }} />
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <Text style={styles.sectionDescription}>
           Choose which notifications you'd like to receive.
         </Text>
@@ -99,17 +90,11 @@ export default function NotificationsScreen() {
           {notificationSettings.map((setting) => (
             <View key={setting.id} style={styles.settingItem}>
               <View style={styles.settingIconContainer}>
-                <Ionicons
-                  name={setting.icon}
-                  size={20}
-                  color={colors.primary[400]}
-                />
+                <Ionicons name={setting.icon} size={20} color={colors.primary[400]} />
               </View>
               <View style={styles.settingContent}>
                 <Text style={styles.settingTitle}>{setting.title}</Text>
-                <Text style={styles.settingDescription}>
-                  {setting.description}
-                </Text>
+                <Text style={styles.settingDescription}>{setting.description}</Text>
               </View>
               <Switch
                 value={settings[setting.id]}

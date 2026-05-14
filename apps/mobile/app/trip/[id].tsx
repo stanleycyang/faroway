@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import {
   View,
   Text,
@@ -6,7 +6,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  Dimensions,
   Animated,
   RefreshControl,
   ActivityIndicator,
@@ -26,13 +25,11 @@ import { usePromptStore } from '../../stores/promptStore';
 import { useAuthContext } from '../../components/AuthProvider';
 import { AuthGate } from '../../components/AuthGate';
 import { RatingPrompt } from '../../components/RatingPrompt';
-import { getTrip, shareTrip, trackAffiliateClick } from '../../services/api';
+import { shareTrip, trackAffiliateClick } from '../../services/api';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
-import { registry } from '../../lib/json-render/registry';
 import { useTrips } from '../../hooks/useTrips';
 
-const { width } = Dimensions.get('window');
 const HEADER_HEIGHT = 300;
 
 /**
@@ -81,33 +78,6 @@ const trackAndOpen = async (params: {
     await openURL(params.affiliateUrl);
   }
 };
-
-/**
- * Simple json-render Renderer Component
- */
-function JsonRenderRenderer({ document }: { document: any }) {
-  if (!document) return null;
-
-  const renderComponent = (comp: any, index: number) => {
-    if (!comp || !comp.type) return null;
-
-    const Component = registry[comp.type as keyof typeof registry];
-    if (!Component) {
-      console.warn(`[JsonRender] Unknown component type: ${comp.type}`);
-      return null;
-    }
-
-    return <Component key={index} {...(comp.props || {})} />;
-  };
-
-  const components = Array.isArray(document) ? document : [document];
-
-  return (
-    <View>
-      {components.map((comp, index) => renderComponent(comp, index))}
-    </View>
-  );
-}
 
 interface ActivityCardProps {
   activity: TripActivity;
@@ -170,26 +140,15 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
   };
 
   return (
-    <TouchableOpacity
-      style={styles.activityCard}
-      onPress={onPress}
-      activeOpacity={0.8}
-    >
+    <TouchableOpacity style={styles.activityCard} onPress={onPress} activeOpacity={0.8}>
       <View style={styles.activityTime}>
         <Text style={styles.activityTimeText}>{activity.time}</Text>
-        <View
-          style={[
-            styles.activityDot,
-            { backgroundColor: getTypeColor(activity.type) },
-          ]}
-        />
+        <View style={[styles.activityDot, { backgroundColor: getTypeColor(activity.type) }]} />
         <View style={styles.activityLine} />
       </View>
       <View style={styles.activityContent}>
         {/* Activity Image */}
-        {activity.image && (
-          <Image source={{ uri: activity.image }} style={styles.activityImage} />
-        )}
+        {activity.image && <Image source={{ uri: activity.image }} style={styles.activityImage} />}
         <View style={styles.activityHeader}>
           <View
             style={[
@@ -198,7 +157,7 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
             ]}
           >
             <Ionicons
-              name={getTypeIcon(activity.type) as any}
+              name={getTypeIcon(activity.type) as React.ComponentProps<typeof Ionicons>['name']}
               size={16}
               color={getTypeColor(activity.type)}
             />
@@ -207,9 +166,7 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
             <Text style={styles.activityTitle}>{activity.title}</Text>
             <Text style={styles.activityDuration}>{activity.duration}</Text>
           </View>
-          {activity.price && (
-            <Text style={styles.activityPrice}>{activity.price}</Text>
-          )}
+          {activity.price && <Text style={styles.activityPrice}>{activity.price}</Text>}
         </View>
         <Text style={styles.activityDescription} numberOfLines={2}>
           {activity.description}
@@ -226,19 +183,19 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
           </View>
         )}
         {activity.bookingUrl && (
-          <TouchableOpacity
-            style={styles.bookButton}
-            onPress={handleBooking}
-            activeOpacity={0.7}
-          >
+          <TouchableOpacity style={styles.bookButton} onPress={handleBooking} activeOpacity={0.7}>
             <LinearGradient
-              colors={activity.type === 'restaurant' ? ['#f97316', '#ea580c'] : ['#6366f1', '#8b5cf6']}
+              colors={
+                activity.type === 'restaurant' ? ['#f97316', '#ea580c'] : ['#6366f1', '#8b5cf6']
+              }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={StyleSheet.absoluteFill}
             />
             <Ionicons
-              name={activity.type === 'restaurant' ? 'restaurant-outline' : 'shield-checkmark-outline'}
+              name={
+                activity.type === 'restaurant' ? 'restaurant-outline' : 'shield-checkmark-outline'
+              }
               size={16}
               color="#fff"
             />
@@ -257,7 +214,11 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
   );
 }
 
-function FeaturedHotelCard({ hotel }: { hotel: NonNullable<import('../../stores/tripStore').Trip['hotel']> }) {
+function FeaturedHotelCard({
+  hotel,
+}: {
+  hotel: NonNullable<import('../../stores/tripStore').Trip['hotel']>;
+}) {
   const handleBooking = () => {
     if (!hotel.bookingUrl) return;
     trackAndOpen({
@@ -316,7 +277,11 @@ function FeaturedHotelCard({ hotel }: { hotel: NonNullable<import('../../stores/
   );
 }
 
-function TransportCard({ transport }: { transport: NonNullable<import('../../stores/tripStore').TripDay['transport']> }) {
+function TransportCard({
+  transport,
+}: {
+  transport: NonNullable<import('../../stores/tripStore').TripDay['transport']>;
+}) {
   const formatDuration = (minutes: number) => {
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
@@ -328,7 +293,8 @@ function TransportCard({ transport }: { transport: NonNullable<import('../../sto
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
-  const stopsLabel = transport.stops === 0 ? 'Direct' : `${transport.stops} stop${transport.stops > 1 ? 's' : ''}`;
+  const stopsLabel =
+    transport.stops === 0 ? 'Direct' : `${transport.stops} stop${transport.stops > 1 ? 's' : ''}`;
 
   const handleBooking = () => {
     if (!transport.bookingUrl) return;
@@ -354,9 +320,7 @@ function TransportCard({ transport }: { transport: NonNullable<import('../../sto
             <Ionicons name="airplane" size={18} color="#fff" />
             <Text style={styles.transportCardProvider}>{transport.provider}</Text>
           </View>
-          <Text style={styles.transportCardPrice}>
-            ${transport.price}
-          </Text>
+          <Text style={styles.transportCardPrice}>${transport.price}</Text>
         </View>
         <View style={styles.transportCardRoute}>
           <View style={styles.transportCardEndpoint}>
@@ -425,16 +389,12 @@ function BookingsSheet({
       <View style={styles.sheetItem}>
         <View style={styles.sheetItemInfo}>
           <Text style={styles.sheetItemDay}>Day {dayNumber}</Text>
-          <Text style={styles.sheetItemTitle} numberOfLines={1}>{activity.title}</Text>
-          {activity.price && (
-            <Text style={styles.sheetItemPrice}>{activity.price}</Text>
-          )}
+          <Text style={styles.sheetItemTitle} numberOfLines={1}>
+            {activity.title}
+          </Text>
+          {activity.price && <Text style={styles.sheetItemPrice}>{activity.price}</Text>}
         </View>
-        <TouchableOpacity
-          style={styles.sheetItemButton}
-          onPress={handleBook}
-          activeOpacity={0.7}
-        >
+        <TouchableOpacity style={styles.sheetItemButton} onPress={handleBook} activeOpacity={0.7}>
           <Text style={styles.sheetItemButtonText}>Book</Text>
           <Ionicons name="open-outline" size={14} color="#fff" />
         </TouchableOpacity>
@@ -495,7 +455,7 @@ export default function TripDetailScreen() {
   const estimatedTotal = useMemo(() => {
     let total = 0;
     if (trip?.hotel) total += trip.hotel.totalPrice;
-    for (const day of (trip?.days || [])) {
+    for (const day of trip?.days || []) {
       if (day.transport) total += day.transport.price;
       for (const act of day.activities) {
         if (act.price) {
@@ -545,11 +505,14 @@ export default function TripDetailScreen() {
     if (!trip && id) {
       // Delay to allow store hydration before navigating back
       const timeout = setTimeout(() => {
-        const freshTrip = useTripStore.getState().trips.find((t) => t.id === id) || useTripStore.getState().currentTrip;
+        const freshTrip =
+          useTripStore.getState().trips.find((t) => t.id === id) ||
+          useTripStore.getState().currentTrip;
         if (!freshTrip) router.back();
       }, 500);
       return () => clearTimeout(timeout);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trip, id]);
 
   // Clamp selectedDay when trip days change (e.g. after refresh with fewer days)
@@ -557,6 +520,7 @@ export default function TripDetailScreen() {
     if (trip?.days && selectedDay >= trip.days.length) {
       setSelectedDay(Math.max(0, trip.days.length - 1));
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trip?.days?.length, selectedDay]);
 
   // Show rating prompt after 10s on completed trips for authenticated users
@@ -566,6 +530,7 @@ export default function TripDetailScreen() {
       setShowRatingPrompt(true);
     }, 10000);
     return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, trip?.status]);
 
   const handleHeartPress = () => {
@@ -656,21 +621,15 @@ export default function TripDetailScreen() {
         ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true }
-        )}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+          useNativeDriver: true,
+        })}
         scrollEventThrottle={16}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {/* Hero Image */}
         <Animated.View
-          style={[
-            styles.heroContainer,
-            { transform: [{ translateY: headerTranslate }] },
-          ]}
+          style={[styles.heroContainer, { transform: [{ translateY: headerTranslate }] }]}
         >
           <Animated.Image
             source={{ uri: trip.coverImage }}
@@ -682,10 +641,7 @@ export default function TripDetailScreen() {
           />
           <SafeAreaView edges={['top']} style={styles.heroContent}>
             <View style={styles.heroHeader}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => router.back()}
-              >
+              <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
                 <Ionicons name="arrow-back" size={24} color="#fff" />
               </TouchableOpacity>
               <View style={styles.heroActions}>
@@ -726,9 +682,7 @@ export default function TripDetailScreen() {
           )}
 
           {/* Featured Hotel */}
-          {trip.hotel && (
-            <FeaturedHotelCard hotel={trip.hotel} />
-          )}
+          {trip.hotel && <FeaturedHotelCard hotel={trip.hotel} />}
 
           {/* Day Selector */}
           <View style={styles.daySelector}>
@@ -740,10 +694,7 @@ export default function TripDetailScreen() {
               {trip.days.map((day, index) => (
                 <TouchableOpacity
                   key={day.date}
-                  style={[
-                    styles.dayTab,
-                    selectedDay === index && styles.dayTabSelected,
-                  ]}
+                  style={[styles.dayTab, selectedDay === index && styles.dayTabSelected]}
                   onPress={() => {
                     hapticFeedback.selection();
                     setSelectedDay(index);
@@ -758,10 +709,7 @@ export default function TripDetailScreen() {
                     Day {day.dayNumber}
                   </Text>
                   <Text
-                    style={[
-                      styles.dayTabDate,
-                      selectedDay === index && styles.dayTabDateSelected,
-                    ]}
+                    style={[styles.dayTabDate, selectedDay === index && styles.dayTabDateSelected]}
                   >
                     {new Date(day.date).toLocaleDateString('en-US', {
                       month: 'short',
@@ -775,9 +723,7 @@ export default function TripDetailScreen() {
 
           {/* Day Theme */}
           <View style={styles.dayThemeContainer}>
-            <Text style={styles.dayTheme}>
-              {trip.days[selectedDay]?.theme}
-            </Text>
+            <Text style={styles.dayTheme}>{trip.days[selectedDay]?.theme}</Text>
           </View>
 
           {/* Transport */}
@@ -805,7 +751,11 @@ export default function TripDetailScreen() {
           </Text>
         </View>
         <Button
-          title={bookableCount > 0 ? `Book ${bookableCount} ${bookableCount === 1 ? 'Item' : 'Items'}` : 'Explore'}
+          title={
+            bookableCount > 0
+              ? `Book ${bookableCount} ${bookableCount === 1 ? 'Item' : 'Items'}`
+              : 'Explore'
+          }
           onPress={() => {
             hapticFeedback.light();
             if (bookableCount > 0) {
@@ -831,9 +781,7 @@ export default function TripDetailScreen() {
         visible={showAuthGate}
         trigger={authGateTrigger}
         tripPreview={
-          trip
-            ? { destination: trip.destination, coverImage: trip.coverImage }
-            : undefined
+          trip ? { destination: trip.destination, coverImage: trip.coverImage } : undefined
         }
         onClose={() => setShowAuthGate(false)}
       />

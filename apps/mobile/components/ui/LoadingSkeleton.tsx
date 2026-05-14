@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, ViewStyle } from 'react-native';
-import { colors, borderRadius } from '../../constants/theme';
+import { borderRadius } from '../../constants/theme';
 
 interface SkeletonProps {
   width?: number | `${number}%`;
@@ -9,7 +9,12 @@ interface SkeletonProps {
   style?: ViewStyle;
 }
 
-export function Skeleton({ width = '100%', height = 20, borderRadius: radius = 8, style }: SkeletonProps) {
+export function Skeleton({
+  width = '100%',
+  height = 20,
+  borderRadius: radius = 8,
+  style,
+}: SkeletonProps) {
   const animatedValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -27,6 +32,7 @@ export function Skeleton({ width = '100%', height = 20, borderRadius: radius = 8
         }),
       ])
     ).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const opacity = animatedValue.interpolate({

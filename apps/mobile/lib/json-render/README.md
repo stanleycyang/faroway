@@ -27,6 +27,7 @@ Defines all available components with Zod schemas for type safety:
 - **MapPreview** - Location map preview
 
 Each component has:
+
 - Zod schema for props validation
 - Description to guide AI usage
 - Type safety via TypeScript
@@ -77,7 +78,7 @@ const streamingState = useStreamingItinerary({
 });
 
 // Render streaming document
-<JsonRenderRenderer document={streamingState.document} />
+<JsonRenderRenderer document={streamingState.document} />;
 ```
 
 ### Component Renderer
@@ -144,51 +145,52 @@ interface JsonRenderDocument {
 // Example
 [
   {
-    type: "TripSummary",
+    type: 'TripSummary',
     props: {
-      destination: "Paris",
-      dates: "Mar 15 - Mar 22, 2024",
+      destination: 'Paris',
+      dates: 'Mar 15 - Mar 22, 2024',
       travelers: 2,
-      budget: "moderate"
-    }
+      budget: 'moderate',
+    },
   },
   {
-    type: "HotelCard",
+    type: 'HotelCard',
     props: {
-      name: "Hotel Plaza Athénée",
+      name: 'Hotel Plaza Athénée',
       rating: 4.8,
       pricePerNight: 850,
-      amenities: ["WiFi", "Spa", "Restaurant"],
-      bookingUrl: "https://booking.com/..."
-    }
+      amenities: ['WiFi', 'Spa', 'Restaurant'],
+      bookingUrl: 'https://booking.com/...',
+    },
   },
   {
-    type: "ItineraryDay",
+    type: 'ItineraryDay',
     props: {
       dayNumber: 1,
-      date: "2024-03-15",
-      title: "Arrival & Eiffel Tower"
-    }
+      date: '2024-03-15',
+      title: 'Arrival & Eiffel Tower',
+    },
   },
   {
-    type: "ActivityCard",
+    type: 'ActivityCard',
     props: {
-      name: "Eiffel Tower Summit",
-      description: "Skip-the-line access to the summit",
-      duration: "2 hours",
+      name: 'Eiffel Tower Summit',
+      description: 'Skip-the-line access to the summit',
+      duration: '2 hours',
       price: 45,
       rating: 4.9,
       reviewCount: 12847,
-      time: "10:00",
-      bookingUrl: "https://viator.com/..."
-    }
-  }
-]
+      time: '10:00',
+      bookingUrl: 'https://viator.com/...',
+    },
+  },
+];
 ```
 
 ## Fallback Strategy
 
 The app gracefully falls back to the existing polling mechanism if:
+
 1. EventSource is not supported
 2. Streaming endpoint fails
 3. Network errors occur
@@ -209,6 +211,7 @@ This ensures the app works even without streaming support.
 ### Adding New Components
 
 1. Define schema in `catalog.ts`:
+
 ```typescript
 export const MyComponentSchema = z.object({
   title: z.string(),
@@ -223,6 +226,7 @@ export const MyComponent = {
 ```
 
 2. Implement UI in `registry.tsx`:
+
 ```typescript
 export const MyComponent: React.FC<MyComponentProps> = (props) => {
   return (
@@ -238,6 +242,7 @@ export const MyComponent: React.FC<MyComponentProps> = (props) => {
 ### Testing
 
 Test streaming with mock server:
+
 ```bash
 npm run mock-server
 ```
@@ -247,6 +252,7 @@ Then run the app and create a new trip.
 ## Credits
 
 Built with:
+
 - [json-render](https://github.com/json-render/json-render) - Component streaming framework
 - [Zod](https://zod.dev) - Schema validation
 - [Expo](https://expo.dev) - React Native framework

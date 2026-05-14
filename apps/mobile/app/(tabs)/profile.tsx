@@ -44,30 +44,17 @@ function MenuItem({
     hapticFeedback.light();
     onPress();
   };
-  
+
   return (
     <TouchableOpacity style={styles.menuItem} onPress={handlePress} activeOpacity={0.7}>
-      <View
-        style={[
-          styles.menuIconContainer,
-          danger && styles.menuIconContainerDanger,
-        ]}
-      >
-        <Ionicons
-          name={icon}
-          size={20}
-          color={danger ? colors.error : colors.primary[500]}
-        />
+      <View style={[styles.menuIconContainer, danger && styles.menuIconContainerDanger]}>
+        <Ionicons name={icon} size={20} color={danger ? colors.error : colors.primary[500]} />
       </View>
       <View style={styles.menuContent}>
-        <Text style={[styles.menuLabel, danger && styles.menuLabelDanger]}>
-          {label}
-        </Text>
+        <Text style={[styles.menuLabel, danger && styles.menuLabelDanger]}>{label}</Text>
         {value && <Text style={styles.menuValue}>{value}</Text>}
       </View>
-      {showChevron && (
-        <Ionicons name="chevron-forward" size={20} color={colors.surface[500]} />
-      )}
+      {showChevron && <Ionicons name="chevron-forward" size={20} color={colors.surface[500]} />}
     </TouchableOpacity>
   );
 }
@@ -76,7 +63,6 @@ function MenuItem({
 
 function GuestProfileCard() {
   const { signInWithGoogle, signInWithApple, loading } = useAuthContext();
-  const router = useRouter();
   const [authLoading, setAuthLoading] = useState(false);
 
   const handleGoogleSignIn = async () => {
@@ -84,8 +70,9 @@ function GuestProfileCard() {
     try {
       await signInWithGoogle();
       hapticFeedback.success();
-    } catch (error: any) {
-      Alert.alert('Sign In Failed', error.message || 'Please try again');
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Please try again';
+      Alert.alert('Sign In Failed', msg);
     } finally {
       setAuthLoading(false);
     }
@@ -96,9 +83,10 @@ function GuestProfileCard() {
     try {
       await signInWithApple();
       hapticFeedback.success();
-    } catch (error: any) {
-      if (error.code !== 'ERR_REQUEST_CANCELED') {
-        Alert.alert('Sign In Failed', error.message || 'Please try again');
+    } catch (error: unknown) {
+      const e = error as { code?: string; message?: string };
+      if (e.code !== 'ERR_REQUEST_CANCELED') {
+        Alert.alert('Sign In Failed', e.message || 'Please try again');
       }
     } finally {
       setAuthLoading(false);
@@ -110,10 +98,7 @@ function GuestProfileCard() {
   return (
     <View style={styles.guestCard}>
       <View style={styles.guestAvatarContainer}>
-        <LinearGradient
-          colors={['#f1f5f9', '#e2e8f0']}
-          style={styles.guestAvatar}
-        >
+        <LinearGradient colors={['#f1f5f9', '#e2e8f0']} style={styles.guestAvatar}>
           <Ionicons name="person" size={40} color={'#94a3b8'} />
         </LinearGradient>
       </View>
@@ -169,17 +154,15 @@ export default function ProfileScreen() {
     try {
       await signOut();
       hapticFeedback.success();
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to sign out');
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Failed to sign out';
+      Alert.alert('Error', msg);
     }
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Profile</Text>
@@ -236,9 +219,11 @@ export default function ProfileScreen() {
             <MenuItem
               icon="heart-outline"
               label="Travel Preferences"
-              value={user?.preferences?.vibes?.length
-                ? `${user.preferences.vibes.length} vibes selected`
-                : 'Not set'}
+              value={
+                user?.preferences?.vibes?.length
+                  ? `${user.preferences.vibes.length} vibes selected`
+                  : 'Not set'
+              }
               onPress={() => router.push('/profile/preferences')}
             />
             <MenuItem
@@ -269,9 +254,10 @@ export default function ProfileScreen() {
               if (available) {
                 await StoreReview.requestReview();
               } else {
-                const url = Platform.OS === 'ios'
-                  ? 'https://apps.apple.com/app/faroway/id0000000000'
-                  : 'https://play.google.com/store/apps/details?id=app.faroway';
+                const url =
+                  Platform.OS === 'ios'
+                    ? 'https://apps.apple.com/app/faroway/id0000000000'
+                    : 'https://play.google.com/store/apps/details?id=app.faroway';
                 Linking.openURL(url);
               }
             }}

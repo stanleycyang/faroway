@@ -30,6 +30,6 @@ function getDevServerUrl(): string {
 
 export const API_BASE_URL = __DEV__
   ? getDevServerUrl()
-  : (process.env.EXPO_PUBLIC_API_URL || 'https://faroway.vercel.app');
+  : process.env.EXPO_PUBLIC_API_URL || 'https://faroway.vercel.app';
 
 export const API_TIMEOUT = 90000; // 90 seconds for long-running AI searches

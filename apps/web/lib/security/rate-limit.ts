@@ -83,7 +83,11 @@ async function checkRateLimitKv(
 
     if (!res.ok) {
       // KV error — fail open (allow request) to avoid blocking legitimate users
-      return { allowed: true, remaining: config.maxRequests, resetIn: config.windowMs };
+      return {
+        allowed: true,
+        remaining: config.maxRequests,
+        resetIn: config.windowMs,
+      };
     }
 
     const [incrResult] = (await res.json()) as [{ result: number }, unknown];
@@ -97,7 +101,11 @@ async function checkRateLimitKv(
     };
   } catch {
     // Network failure — fail open
-    return { allowed: true, remaining: config.maxRequests, resetIn: config.windowMs };
+    return {
+      allowed: true,
+      remaining: config.maxRequests,
+      resetIn: config.windowMs,
+    };
   }
 }
 

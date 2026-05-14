@@ -29,7 +29,7 @@ class NetworkMonitor {
     type: 'unknown',
     details: null,
   };
-  
+
   private listeners: Set<NetworkListener> = new Set();
   private subscription: NetInfoSubscription | null = null;
   private initialized: boolean = false;
@@ -47,13 +47,13 @@ class NetworkMonitor {
       // Get initial state
       const state = await NetInfo.fetch();
       this.updateState(state);
-      
+
       // Subscribe to changes
       this.subscription = NetInfo.addEventListener(this.handleNetworkChange);
-      
+
       this.initialized = true;
       console.log('[NetworkMonitor] Initialized:', this.currentState.status);
-      
+
       return this.currentState;
     } catch (error) {
       console.error('[NetworkMonitor] Initialization error:', error);
@@ -83,13 +83,15 @@ class NetworkMonitor {
   private updateState(state: NetInfoState): void {
     const isConnected = state.isConnected ?? false;
     const isInternetReachable = state.isInternetReachable;
-    
+
     // Consider offline if explicitly not connected or internet not reachable
-    const status: NetworkStatus = 
-      !isConnected ? 'offline' :
-      isInternetReachable === false ? 'offline' :
-      isInternetReachable === null ? 'unknown' :
-      'online';
+    const status: NetworkStatus = !isConnected
+      ? 'offline'
+      : isInternetReachable === false
+        ? 'offline'
+        : isInternetReachable === null
+          ? 'unknown'
+          : 'online';
 
     this.currentState = {
       status,
@@ -106,7 +108,7 @@ class NetworkMonitor {
    * Notify all listeners of state change
    */
   private notifyListeners(): void {
-    this.listeners.forEach(listener => {
+    this.listeners.forEach((listener) => {
       try {
         listener(this.currentState);
       } catch (error) {
@@ -142,10 +144,10 @@ class NetworkMonitor {
    */
   subscribe(listener: NetworkListener): () => void {
     this.listeners.add(listener);
-    
+
     // Immediately call with current state
     listener(this.currentState);
-    
+
     return () => {
       this.listeners.delete(listener);
     };

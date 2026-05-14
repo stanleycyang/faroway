@@ -61,8 +61,9 @@ function GuestTripsView() {
     try {
       await signInWithGoogle();
       hapticFeedback.success();
-    } catch (error: any) {
-      Alert.alert('Sign In Failed', error.message || 'Please try again');
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Please try again';
+      Alert.alert('Sign In Failed', msg);
     } finally {
       setAuthLoading(false);
     }
@@ -73,9 +74,10 @@ function GuestTripsView() {
     try {
       await signInWithApple();
       hapticFeedback.success();
-    } catch (error: any) {
-      if (error.code !== 'ERR_REQUEST_CANCELED') {
-        Alert.alert('Sign In Failed', error.message || 'Please try again');
+    } catch (error: unknown) {
+      const e = error as { code?: string; message?: string };
+      if (e.code !== 'ERR_REQUEST_CANCELED') {
+        Alert.alert('Sign In Failed', e.message || 'Please try again');
       }
     } finally {
       setAuthLoading(false);
@@ -90,10 +92,7 @@ function GuestTripsView() {
       {/* Hero */}
       <View style={styles.heroSection}>
         <View style={styles.heroIconContainer}>
-          <LinearGradient
-            colors={[colors.primary[50], '#fff']}
-            style={styles.heroIconGradient}
-          >
+          <LinearGradient colors={[colors.primary[50], '#fff']} style={styles.heroIconGradient}>
             <Ionicons name="airplane" size={48} color={colors.primary[500]} />
           </LinearGradient>
         </View>
@@ -105,7 +104,7 @@ function GuestTripsView() {
         </Text>
         <Text style={styles.heroSubtitle}>
           {localTrips.length > 0
-            ? 'Sign in to save them before they\'re gone'
+            ? "Sign in to save them before they're gone"
             : 'Sign in to save your itineraries, access them from any device, and never lose a trip plan again.'}
         </Text>
       </View>
@@ -189,9 +188,7 @@ function GuestTripsView() {
 
       {/* Explore CTA */}
       <View style={styles.exploreCta}>
-        <Text style={styles.exploreText}>
-          Want to explore first?
-        </Text>
+        <Text style={styles.exploreText}>Want to explore first?</Text>
         <Button
           title="Plan a Trip"
           onPress={() => router.push('/create')}
@@ -215,6 +212,7 @@ function AuthenticatedTripsView() {
 
   useEffect(() => {
     fetchTrips().finally(() => setInitialLoad(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onRefresh = useCallback(async () => {
@@ -268,12 +266,7 @@ function AuthenticatedTripsView() {
               setActiveTab(tab.id);
             }}
           >
-            <Text
-              style={[
-                styles.tabText,
-                activeTab === tab.id && styles.tabTextActive,
-              ]}
-            >
+            <Text style={[styles.tabText, activeTab === tab.id && styles.tabTextActive]}>
               {tab.label}
             </Text>
           </TouchableOpacity>
@@ -360,10 +353,7 @@ export default function TripsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Trips</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => router.push('/create')}
-        >
+        <TouchableOpacity style={styles.addButton} onPress={() => router.push('/create')}>
           <Ionicons name="add" size={24} color={colors.primary[500]} />
         </TouchableOpacity>
       </View>

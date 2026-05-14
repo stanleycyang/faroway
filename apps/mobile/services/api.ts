@@ -4,10 +4,24 @@
  */
 
 import { API_BASE_URL, API_TIMEOUT } from '../constants/api';
-import type { ApiResponse, Trip, UserProfile, TrackClickParams, TrackClickResponse, DestinationsResponse } from '@faroway/types';
+import type {
+  ApiResponse,
+  Trip,
+  UserProfile,
+  TrackClickParams,
+  TrackClickResponse,
+  DestinationsResponse,
+} from '@faroway/types';
 
 // Re-export types for backward compatibility
-export type { ApiResponse, Trip, UserProfile, TrackClickParams, TrackClickResponse, DestinationsResponse } from '@faroway/types';
+export type {
+  ApiResponse,
+  Trip,
+  UserProfile,
+  TrackClickParams,
+  TrackClickResponse,
+  DestinationsResponse,
+} from '@faroway/types';
 
 // Auth token managed via Supabase SecureStore - this is an in-memory cache only.
 // Do NOT persist this token to AsyncStorage or other insecure storage.
@@ -24,10 +38,7 @@ export function getAuthToken(): string | null {
 /**
  * Base fetch wrapper with auth and error handling
  */
-async function apiFetch<T>(
-  endpoint: string,
-  options: RequestInit = {}
-): Promise<ApiResponse<T>> {
+async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
@@ -81,20 +92,18 @@ export async function getUserProfile(): Promise<ApiResponse<UserProfile>> {
   return apiFetch<UserProfile>('/api/user/profile');
 }
 
-export async function updateUserProfile(
-  updates: {
-    email?: string;
-    subscription_tier?: string;
-    display_name?: string;
-    avatar_url?: string;
-    preferences?: {
-      vibes?: string[];
-      budget?: string;
-      travelerType?: string;
-    };
-    notification_settings?: Record<string, boolean>;
-  }
-): Promise<ApiResponse<UserProfile>> {
+export async function updateUserProfile(updates: {
+  email?: string;
+  subscription_tier?: string;
+  display_name?: string;
+  avatar_url?: string;
+  preferences?: {
+    vibes?: string[];
+    budget?: string;
+    travelerType?: string;
+  };
+  notification_settings?: Record<string, boolean>;
+}): Promise<ApiResponse<UserProfile>> {
   return apiFetch<UserProfile>('/api/user/profile', {
     method: 'PATCH',
     body: JSON.stringify(updates),
@@ -157,7 +166,9 @@ export async function deleteTrip(id: string): Promise<ApiResponse<void>> {
 // Trip Sharing APIs
 // ============================================
 
-export async function shareTrip(id: string): Promise<ApiResponse<{ shareUrl: string; shareToken: string }>> {
+export async function shareTrip(
+  id: string
+): Promise<ApiResponse<{ shareUrl: string; shareToken: string }>> {
   return apiFetch<{ shareUrl: string; shareToken: string }>(
     `/api/trips/${encodeURIComponent(id)}/share`,
     { method: 'POST' }

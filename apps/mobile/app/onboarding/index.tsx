@@ -13,8 +13,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { Button } from '../../components/ui';
-import { colors } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 
@@ -83,6 +81,7 @@ export default function OnboardingScreen() {
         useNativeDriver: true,
       }),
     ]).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIndex]);
 
   const handleNext = () => {
@@ -104,7 +103,7 @@ export default function OnboardingScreen() {
 
   const currentSlide = SLIDES[currentIndex];
 
-  const renderSlide = ({ item, index }: { item: OnboardingSlide; index: number }) => (
+  const renderSlide = ({ item, index: _index }: { item: OnboardingSlide; index: number }) => (
     <View style={styles.slide}>
       <Image source={{ uri: item.image }} style={styles.slideImage} />
       <LinearGradient
@@ -204,10 +203,7 @@ export default function OnboardingScreen() {
 
         {/* CTA Button */}
         <TouchableOpacity
-          style={[
-            styles.ctaButton,
-            { backgroundColor: currentSlide.gradient[0] },
-          ]}
+          style={[styles.ctaButton, { backgroundColor: currentSlide.gradient[0] }]}
           onPress={handleNext}
           activeOpacity={0.9}
         >
@@ -219,9 +215,7 @@ export default function OnboardingScreen() {
 
         {/* Value prop */}
         {currentIndex === SLIDES.length - 1 && (
-          <Animated.View
-            style={[styles.valueProps, { opacity: fadeAnim }]}
-          >
+          <Animated.View style={[styles.valueProps, { opacity: fadeAnim }]}>
             <View style={styles.valueProp}>
               <Ionicons name="checkmark-circle" size={16} color="#10b981" />
               <Text style={styles.valuePropText}>No account needed</Text>

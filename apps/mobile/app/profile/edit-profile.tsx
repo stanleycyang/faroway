@@ -54,8 +54,9 @@ export default function EditProfileScreen() {
 
       hapticFeedback.success();
       router.back();
-    } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to save profile');
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Failed to save profile';
+      Alert.alert('Error', msg);
     } finally {
       setIsSaving(false);
     }
@@ -69,10 +70,7 @@ export default function EditProfileScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => router.back()}
-          >
+          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
             <Ionicons name="arrow-back" size={24} color={'#475569'} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Profile</Text>
@@ -81,9 +79,7 @@ export default function EditProfileScreen() {
             onPress={handleSave}
             disabled={isSaving}
           >
-            <Text style={styles.saveButtonText}>
-              {isSaving ? 'Saving...' : 'Save'}
-            </Text>
+            <Text style={styles.saveButtonText}>{isSaving ? 'Saving...' : 'Save'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -102,9 +98,7 @@ export default function EditProfileScreen() {
                 </View>
               )}
             </View>
-            <Text style={styles.avatarHint}>
-              Avatar is synced from your Google account
-            </Text>
+            <Text style={styles.avatarHint}>Avatar is synced from your Google account</Text>
           </View>
 
           {/* Form */}
@@ -142,9 +136,7 @@ export default function EditProfileScreen() {
                   {user?.email || authUser?.email || 'Not set'}
                 </Text>
               </View>
-              <Text style={styles.inputHint}>
-                Email cannot be changed here
-              </Text>
+              <Text style={styles.inputHint}>Email cannot be changed here</Text>
             </View>
           </View>
         </ScrollView>

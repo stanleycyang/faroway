@@ -1,11 +1,5 @@
 import { useState } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-} from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,7 +9,7 @@ import { colors, borderRadius } from '../../constants/theme';
 
 export default function PreferencesScreen() {
   const router = useRouter();
-  const { setOnboardingComplete, setUser, updatePreferences } = useUserStore();
+  const { setOnboardingComplete, setUser } = useUserStore();
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
   const [selectedBudget, setSelectedBudget] = useState<string>('');
 
@@ -44,10 +38,7 @@ export default function PreferencesScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.surface[300]} />
         </TouchableOpacity>
         <View style={styles.progress}>
@@ -58,26 +49,18 @@ export default function PreferencesScreen() {
         <View style={{ width: 44 }} />
       </View>
 
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-      >
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Title */}
         <View style={styles.titleSection}>
           <Text style={styles.title}>Personalize your experience</Text>
           <Text style={styles.subtitle}>
-            Tell us about your travel preferences so we can create better
-            recommendations for you.
+            Tell us about your travel preferences so we can create better recommendations for you.
           </Text>
         </View>
 
         {/* Vibes Selection */}
         <View style={styles.section}>
-          <VibeSelector
-            selected={selectedVibes}
-            onSelect={setSelectedVibes}
-            maxSelections={5}
-          />
+          <VibeSelector selected={selectedVibes} onSelect={setSelectedVibes} maxSelections={5} />
         </View>
 
         {/* Budget Selection */}
@@ -89,32 +72,18 @@ export default function PreferencesScreen() {
               return (
                 <TouchableOpacity
                   key={option.id}
-                  style={[
-                    styles.budgetOption,
-                    isSelected && styles.budgetOptionSelected,
-                  ]}
+                  style={[styles.budgetOption, isSelected && styles.budgetOptionSelected]}
                   onPress={() => setSelectedBudget(option.id)}
                   activeOpacity={0.7}
                 >
                   <Text style={styles.budgetEmoji}>{option.emoji}</Text>
-                  <Text
-                    style={[
-                      styles.budgetLabel,
-                      isSelected && styles.budgetLabelSelected,
-                    ]}
-                  >
+                  <Text style={[styles.budgetLabel, isSelected && styles.budgetLabelSelected]}>
                     {option.label}
                   </Text>
-                  <Text style={styles.budgetDescription}>
-                    {option.description}
-                  </Text>
+                  <Text style={styles.budgetDescription}>{option.description}</Text>
                   {isSelected && (
                     <View style={styles.checkmark}>
-                      <Ionicons
-                        name="checkmark-circle"
-                        size={24}
-                        color={colors.primary[500]}
-                      />
+                      <Ionicons name="checkmark-circle" size={24} color={colors.primary[500]} />
                     </View>
                   )}
                 </TouchableOpacity>

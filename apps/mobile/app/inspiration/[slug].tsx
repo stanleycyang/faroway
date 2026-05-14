@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo } from 'react';
+import React, { useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -50,7 +50,7 @@ const HIGHLIGHT_ICONS: Record<string, string> = {
 function getNextFriday(): Date {
   const today = new Date();
   const day = today.getDay();
-  const daysUntilFriday = day === 5 ? 7 : ((5 - day + 7) % 7) || 7;
+  const daysUntilFriday = day === 5 ? 7 : (5 - day + 7) % 7 || 7;
   const friday = new Date(today);
   friday.setDate(today.getDate() + daysUntilFriday);
   return friday;
@@ -75,9 +75,7 @@ export default function InspirationDetailScreen() {
 
   const matchingDestinations = useMemo(() => {
     if (!inspiration) return [];
-    return popularDestinations.filter((d) =>
-      d.tags.some((tag) => inspiration.tags.includes(tag))
-    );
+    return popularDestinations.filter((d) => d.tags.some((tag) => inspiration.tags.includes(tag)));
   }, [inspiration]);
 
   useEffect(() => {
@@ -93,6 +91,7 @@ export default function InspirationDetailScreen() {
       })
     );
     Animated.stagger(120, animations).start();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (!inspiration) {
@@ -132,7 +131,7 @@ export default function InspirationDetailScreen() {
     ],
   });
 
-  const handleDestinationPress = (destination: typeof matchingDestinations[0]) => {
+  const handleDestinationPress = (destination: (typeof matchingDestinations)[0]) => {
     hapticFeedback.medium();
     router.push({
       pathname: '/create',
@@ -172,10 +171,9 @@ export default function InspirationDetailScreen() {
     <View style={styles.container}>
       <Animated.ScrollView
         showsVerticalScrollIndicator={false}
-        onScroll={Animated.event(
-          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true }
-        )}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+          useNativeDriver: true,
+        })}
         scrollEventThrottle={16}
         contentContainerStyle={{ paddingBottom: 120 }}
       >
@@ -186,15 +184,16 @@ export default function InspirationDetailScreen() {
             style={[
               styles.heroImage,
               {
-                transform: [
-                  { translateY: heroTranslateY },
-                  { scale: heroScale },
-                ],
+                transform: [{ translateY: heroTranslateY }, { scale: heroScale }],
               },
             ]}
           />
           <LinearGradient
-            colors={['transparent', inspiration.gradientColors[0] + 'CC', inspiration.gradientColors[1]]}
+            colors={[
+              'transparent',
+              inspiration.gradientColors[0] + 'CC',
+              inspiration.gradientColors[1],
+            ]}
             locations={[0, 0.6, 1]}
             style={styles.heroGradient}
           />
@@ -214,7 +213,11 @@ export default function InspirationDetailScreen() {
             {inspiration.highlights.map((highlight) => (
               <View key={highlight} style={styles.highlightChip}>
                 <Ionicons
-                  name={(HIGHLIGHT_ICONS[highlight] || 'sparkles') as any}
+                  name={
+                    (HIGHLIGHT_ICONS[highlight] || 'sparkles') as React.ComponentProps<
+                      typeof Ionicons
+                    >['name']
+                  }
                   size={16}
                   color={inspiration.gradientColors[0]}
                 />

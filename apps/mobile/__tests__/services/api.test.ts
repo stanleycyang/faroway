@@ -28,6 +28,7 @@ import {
 
 // Mock global fetch
 const mockFetch = jest.fn();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 (globalThis as any).fetch = mockFetch;
 
 beforeEach(() => {
@@ -67,7 +68,7 @@ describe('getUserProfile', () => {
         headers: expect.objectContaining({
           'Content-Type': 'application/json',
         }),
-      }),
+      })
     );
   });
 
@@ -107,7 +108,7 @@ describe('getTrip', () => {
     expect(result.data?.trip.destination).toBe('Tokyo');
     expect(mockFetch).toHaveBeenCalledWith(
       'http://localhost:3000/api/trips/trip-1',
-      expect.anything(),
+      expect.anything()
     );
   });
 });
@@ -151,6 +152,7 @@ describe('updateTrip', () => {
       json: () => Promise.resolve({ trip: { id: 'trip-1', destination: 'Osaka' } }),
     });
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     await updateTrip('trip-1', { destination: 'Osaka' } as any);
     const [url, options] = mockFetch.mock.calls[0];
     expect(url).toBe('http://localhost:3000/api/trips/trip-1');
@@ -182,7 +184,7 @@ describe('shareTrip', () => {
     expect(result.data?.shareToken).toBe('abc');
     expect(mockFetch).toHaveBeenCalledWith(
       'http://localhost:3000/api/trips/trip-1/share',
-      expect.objectContaining({ method: 'POST' }),
+      expect.objectContaining({ method: 'POST' })
     );
   });
 });
@@ -260,7 +262,7 @@ describe('openAffiliateLink', () => {
         affiliatePartner: 'booking.com',
         affiliateUrl: 'https://booking.com/hotel/1',
       },
-      openUrl,
+      openUrl
     );
 
     expect(openUrl).toHaveBeenCalledWith('https://redirect.com');
@@ -281,7 +283,7 @@ describe('openAffiliateLink', () => {
         affiliatePartner: 'booking.com',
         affiliateUrl: 'https://booking.com/original',
       },
-      openUrl,
+      openUrl
     );
 
     expect(openUrl).toHaveBeenCalledWith('https://booking.com/original');
@@ -301,9 +303,7 @@ describe('error handling', () => {
   });
 
   it('returns TIMEOUT error on abort', async () => {
-    mockFetch.mockRejectedValueOnce(
-      Object.assign(new Error('Aborted'), { name: 'AbortError' }),
-    );
+    mockFetch.mockRejectedValueOnce(Object.assign(new Error('Aborted'), { name: 'AbortError' }));
 
     const result = await getTrips();
     expect(result.error).toBe('Request timed out');

@@ -1,11 +1,5 @@
 import { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  ScrollView,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -43,31 +37,19 @@ export default function PreferencesScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={'#475569'} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Travel Preferences</Text>
         <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>
-            {saved ? '✓ Saved' : 'Save'}
-          </Text>
+          <Text style={styles.saveButtonText}>{saved ? '✓ Saved' : 'Save'}</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Vibes */}
         <View style={styles.section}>
-          <VibeSelector
-            selected={selectedVibes}
-            onSelect={setSelectedVibes}
-            maxSelections={5}
-          />
+          <VibeSelector selected={selectedVibes} onSelect={setSelectedVibes} maxSelections={5} />
         </View>
 
         {/* Budget */}
@@ -79,10 +61,7 @@ export default function PreferencesScreen() {
               return (
                 <TouchableOpacity
                   key={option.id}
-                  style={[
-                    styles.budgetOption,
-                    isSelected && styles.budgetOptionSelected,
-                  ]}
+                  style={[styles.budgetOption, isSelected && styles.budgetOptionSelected]}
                   onPress={() => {
                     hapticFeedback.selection();
                     setSelectedBudget(option.id);
@@ -91,24 +70,13 @@ export default function PreferencesScreen() {
                 >
                   <Text style={styles.budgetEmoji}>{option.emoji}</Text>
                   <View style={styles.budgetContent}>
-                    <Text
-                      style={[
-                        styles.budgetLabel,
-                        isSelected && styles.budgetLabelSelected,
-                      ]}
-                    >
+                    <Text style={[styles.budgetLabel, isSelected && styles.budgetLabelSelected]}>
                       {option.label}
                     </Text>
-                    <Text style={styles.budgetDescription}>
-                      {option.description}
-                    </Text>
+                    <Text style={styles.budgetDescription}>{option.description}</Text>
                   </View>
                   {isSelected && (
-                    <Ionicons
-                      name="checkmark-circle"
-                      size={24}
-                      color={colors.primary[500]}
-                    />
+                    <Ionicons name="checkmark-circle" size={24} color={colors.primary[500]} />
                   )}
                 </TouchableOpacity>
               );

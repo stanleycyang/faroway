@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from "react";
-import { API_BASE_URL } from "../constants/api";
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { API_BASE_URL } from '../constants/api';
 
 export interface StreamingBlock {
   type: string;
@@ -72,8 +72,8 @@ const initialState: StreamingState = {
   isComplete: false,
   error: null,
   progress: 0,
-  step: "queued",
-  message: "Connecting...",
+  step: 'queued',
+  message: 'Connecting...',
   searchProgress: null,
   topHotel: null,
   activitiesCount: 0,
@@ -93,20 +93,20 @@ export function parseSSEBuffer(buffer: string): {
   remaining: string;
 } {
   const events: Array<{ type: string; data: string }> = [];
-  const blocks = buffer.split("\n\n");
-  const remaining = blocks.pop() || "";
+  const blocks = buffer.split('\n\n');
+  const remaining = blocks.pop() || '';
 
   for (const block of blocks) {
     if (!block.trim()) continue;
 
-    let eventType = "message";
-    let eventData = "";
+    let eventType = 'message';
+    let eventData = '';
 
-    for (const line of block.split("\n")) {
-      if (line.startsWith("event: ")) {
+    for (const line of block.split('\n')) {
+      if (line.startsWith('event: ')) {
         eventType = line.slice(7).trim();
-      } else if (line.startsWith("data: ")) {
-        eventData += (eventData ? "\n" : "") + line.slice(6);
+      } else if (line.startsWith('data: ')) {
+        eventData += (eventData ? '\n' : '') + line.slice(6);
       }
     }
 
@@ -141,7 +141,7 @@ interface StreamingEventData {
 }
 
 function isStreamingEventData(value: unknown): value is StreamingEventData {
-  return value !== null && typeof value === "object";
+  return value !== null && typeof value === 'object';
 }
 
 /**
@@ -162,14 +162,11 @@ function isStreamingEventData(value: unknown): value is StreamingEventData {
  *   - event: complete     — { tripId }
  *   - event: error        — { message }
  */
-export function useStreamingItinerary(
-  options: UseStreamingItineraryOptions,
-): StreamingState {
+export function useStreamingItinerary(options: UseStreamingItineraryOptions): StreamingState {
   const {
     tripId: providedTripId,
     input,
-    streamingEnabled = process.env.EXPO_PUBLIC_ITINERARY_STREAMING_ENABLED !==
-      "false",
+    streamingEnabled = process.env.EXPO_PUBLIC_ITINERARY_STREAMING_ENABLED !== 'false',
     onComplete,
     onError,
   } = options;
@@ -196,7 +193,7 @@ export function useStreamingItinerary(
 
     try {
       switch (type) {
-        case "progress": {
+        case 'progress': {
           setState((prev) => ({
             ...prev,
             progress: data.progress ?? prev.progress,
@@ -207,35 +204,35 @@ export function useStreamingItinerary(
           break;
         }
 
-        case "hotels":
+        case 'hotels':
           setState((prev) => ({
             ...prev,
             topHotel: data.topHotel ?? prev.topHotel,
           }));
           break;
 
-        case "activities":
+        case 'activities':
           setState((prev) => ({
             ...prev,
             activitiesCount: data.count ?? prev.activitiesCount,
           }));
           break;
 
-        case "dining":
+        case 'dining':
           setState((prev) => ({
             ...prev,
             diningCount: data.count ?? prev.diningCount,
           }));
           break;
 
-        case "transport":
+        case 'transport':
           setState((prev) => ({
             ...prev,
             transportCount: data.count ?? prev.transportCount,
           }));
           break;
 
-        case "itinerary":
+        case 'itinerary':
           setState((prev) => ({
             ...prev,
             days: data.days ?? prev.days,
@@ -243,7 +240,7 @@ export function useStreamingItinerary(
           }));
           break;
 
-        case "spec-block": {
+        case 'spec-block': {
           const newBlocks = data.blocks as StreamingBlock[];
           if (Array.isArray(newBlocks) && newBlocks.length > 0) {
             blocksRef.current = [...blocksRef.current, ...newBlocks];
@@ -256,7 +253,7 @@ export function useStreamingItinerary(
           break;
         }
 
-        case "spec-complete": {
+        case 'spec-complete': {
           const fullSpec = data.spec as StreamingBlock[];
           if (Array.isArray(fullSpec)) {
             blocksRef.current = fullSpec;
@@ -269,22 +266,22 @@ export function useStreamingItinerary(
           break;
         }
 
-        case "complete": {
+        case 'complete': {
           const finalDocument = blocksRef.current;
           setState((prev) => ({
             ...prev,
             isStreaming: false,
             isComplete: true,
             progress: 100,
-            step: "complete",
-            message: "Your itinerary is ready!",
+            step: 'complete',
+            message: 'Your itinerary is ready!',
           }));
           onCompleteRef.current?.(finalDocument);
           break;
         }
 
-        case "error": {
-          const errorMessage = data.message ?? "Generation failed";
+        case 'error': {
+          const errorMessage = data.message ?? 'Generation failed';
           setState((prev) => ({
             ...prev,
             error: errorMessage,
@@ -295,11 +292,8 @@ export function useStreamingItinerary(
           break;
         }
 
-        case "micro": {
-          if (
-            typeof data.stage !== "string" ||
-            typeof data.message !== "string"
-          ) {
+        case 'micro': {
+          if (typeof data.stage !== 'string' || typeof data.message !== 'string') {
             break;
           }
 
@@ -317,12 +311,12 @@ export function useStreamingItinerary(
         }
       }
     } catch (err) {
-      console.error(
-        `[useStreamingItinerary] Failed to parse ${type} event:`,
-        err,
-      );
+      console.error(`[useStreamingItinerary] Failed to parse ${type} event:`, err);
     }
   }, []);
+
+  // Stable serialized key for input object — avoids inline expression in deps array
+  const inputKey = useMemo(() => JSON.stringify(input), [input]);
 
   useEffect(() => {
     if (!providedTripId && !input) {
@@ -330,12 +324,12 @@ export function useStreamingItinerary(
     }
 
     const abortController = new AbortController();
-    let sseBuffer = "";
+    let sseBuffer = '';
 
     setState({
       ...initialState,
       isLoading: true,
-      message: "Starting trip generation...",
+      message: 'Starting trip generation...',
     });
     blocksRef.current = [];
     processedLengthRef.current = 0;
@@ -354,14 +348,14 @@ export function useStreamingItinerary(
         // If no tripId, create a trip and trigger generation first
         if (!streamTripId && input) {
           const tripRes = await fetch(`${API_BASE_URL}/api/trips`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               destination: input.destination,
               start_date: input.startDate,
               end_date: input.endDate,
               travelers: input.travelers,
-              budget: input.budget || "moderate",
+              budget: input.budget || 'moderate',
               preferences: {
                 travelerType: input.travelerType,
                 originCity: input.originCity,
@@ -373,31 +367,28 @@ export function useStreamingItinerary(
           });
 
           if (!tripRes.ok) {
-            const text = await tripRes.text().catch(() => "");
-            throw new Error(text || "Failed to create trip");
+            const text = await tripRes.text().catch(() => '');
+            throw new Error(text || 'Failed to create trip');
           }
 
           const { trip } = await tripRes.json();
           streamTripId = trip.id;
 
           // Trigger generation
-          const genRes = await fetch(
-            `${API_BASE_URL}/api/trips/${streamTripId}/generate`,
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              signal: abortController.signal,
-            },
-          );
+          const genRes = await fetch(`${API_BASE_URL}/api/trips/${streamTripId}/generate`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            signal: abortController.signal,
+          });
 
           if (!genRes.ok && genRes.status !== 409) {
-            const text = await genRes.text().catch(() => "");
-            throw new Error(text || "Failed to start generation");
+            const text = await genRes.text().catch(() => '');
+            throw new Error(text || 'Failed to start generation');
           }
         }
 
         if (!streamTripId) {
-          throw new Error("No trip ID available");
+          throw new Error('No trip ID available');
         }
 
         setState((prev) => ({
@@ -408,10 +399,8 @@ export function useStreamingItinerary(
         }));
 
         if (!streamingEnabled) {
-          await pollGenerationStatus(
-            streamTripId,
-            abortController.signal,
-            (progress) => setState((prev) => ({ ...prev, ...progress })),
+          await pollGenerationStatus(streamTripId, abortController.signal, (progress) =>
+            setState((prev) => ({ ...prev, ...progress }))
           );
           onCompleteRef.current?.(blocksRef.current);
           return;
@@ -425,17 +414,15 @@ export function useStreamingItinerary(
           const xhr = new XMLHttpRequest();
           xhrRef.current = xhr;
 
-          xhr.open("POST", streamUrl, true);
-          xhr.setRequestHeader("Accept", "text/event-stream");
-          xhr.setRequestHeader("Cache-Control", "no-cache");
+          xhr.open('POST', streamUrl, true);
+          xhr.setRequestHeader('Accept', 'text/event-stream');
+          xhr.setRequestHeader('Cache-Control', 'no-cache');
 
           // Process incremental data as it arrives
           xhr.onprogress = () => {
             if (xhr.readyState >= 3 && xhr.responseText) {
               // Get only the new data since last progress event
-              const newData = xhr.responseText.substring(
-                processedLengthRef.current,
-              );
+              const newData = xhr.responseText.substring(processedLengthRef.current);
               processedLengthRef.current = xhr.responseText.length;
 
               if (newData) {
@@ -454,7 +441,7 @@ export function useStreamingItinerary(
             if (xhr.status >= 200 && xhr.status < 300) {
               // Process any remaining data in buffer
               if (sseBuffer.trim()) {
-                const { events } = parseSSEBuffer(sseBuffer + "\n\n");
+                const { events } = parseSSEBuffer(sseBuffer + '\n\n');
                 for (const event of events) {
                   processEvent(event.type, event.data);
                 }
@@ -466,11 +453,11 @@ export function useStreamingItinerary(
           };
 
           xhr.onerror = () => {
-            reject(new Error("Network error during streaming"));
+            reject(new Error('Network error during streaming'));
           };
 
           xhr.ontimeout = () => {
-            reject(new Error("Stream timed out"));
+            reject(new Error('Stream timed out'));
           };
 
           // Set a long timeout for the generation process (5 minutes)
@@ -485,11 +472,11 @@ export function useStreamingItinerary(
           return { ...prev, isStreaming: false };
         });
       } catch (error) {
-        if ((error as Error).name === "AbortError") return;
+        if ((error as Error).name === 'AbortError') return;
         if (abortController.signal.aborted) return;
 
-        const msg = (error as Error).message || "Connection failed";
-        console.error("[useStreamingItinerary] Stream error:", msg);
+        const msg = (error as Error).message || 'Connection failed';
+        console.error('[useStreamingItinerary] Stream error:', msg);
 
         setState((prev) => {
           if (prev.isComplete) return prev;
@@ -508,7 +495,8 @@ export function useStreamingItinerary(
       abortController.abort();
       cleanup();
     };
-  }, [providedTripId, processEvent, streamingEnabled, JSON.stringify(input)]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [providedTripId, processEvent, streamingEnabled, inputKey]);
 
   return state;
 }
@@ -518,51 +506,45 @@ async function pollGenerationStatus(
   signal: AbortSignal,
   update: (
     state: Partial<
-      Pick<
-        StreamingState,
-        "progress" | "step" | "message" | "isComplete" | "isStreaming"
-      >
-    >,
-  ) => void,
+      Pick<StreamingState, 'progress' | 'step' | 'message' | 'isComplete' | 'isStreaming'>
+    >
+  ) => void
 ) {
   for (let attempt = 0; attempt < 150; attempt++) {
     if (signal.aborted) return;
 
-    const response = await fetch(
-      `${API_BASE_URL}/api/trips/${tripId}/generate`,
-      {
-        method: "GET",
-        signal,
-      },
-    );
+    const response = await fetch(`${API_BASE_URL}/api/trips/${tripId}/generate`, {
+      method: 'GET',
+      signal,
+    });
     if (!response.ok) {
       throw new Error(`Polling failed (HTTP ${response.status})`);
     }
 
     const data = await response.json();
     update({
-      progress: typeof data.progress === "number" ? data.progress : 0,
-      step: data.step || "running",
-      message: data.message || "Generating...",
+      progress: typeof data.progress === 'number' ? data.progress : 0,
+      step: data.step || 'running',
+      message: data.message || 'Generating...',
     });
 
-    if (data.status === "completed") {
+    if (data.status === 'completed') {
       update({
         progress: 100,
-        step: "complete",
-        message: "Your itinerary is ready!",
+        step: 'complete',
+        message: 'Your itinerary is ready!',
         isComplete: true,
         isStreaming: false,
       });
       return;
     }
 
-    if (data.status === "failed") {
-      throw new Error(data.message || "Generation failed");
+    if (data.status === 'failed') {
+      throw new Error(data.message || 'Generation failed');
     }
 
     await new Promise((resolve) => setTimeout(resolve, 2000));
   }
 
-  throw new Error("Generation polling timed out");
+  throw new Error('Generation polling timed out');
 }

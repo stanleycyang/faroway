@@ -7,16 +7,13 @@ jest.mock('../../constants/api', () => ({
   API_BASE_URL: 'http://localhost:3000',
 }));
 
-import {
-  parseSSEBuffer,
-  parseStreamingJson,
-} from '../../hooks/useStreamingItinerary';
+import { parseSSEBuffer, parseStreamingJson } from '../../hooks/useStreamingItinerary';
 
 describe('streaming itinerary SSE parsing', () => {
   it('parses complete SSE events and keeps an incomplete trailing event buffered', () => {
     const { events, remaining } = parseSSEBuffer(
       'event: spec-block\ndata: {"blocks":[{"type":"TripSummary"}]}\n\n' +
-        'event: progress\ndata: {"progress":25}',
+        'event: progress\ndata: {"progress":25}'
     );
 
     expect(events).toEqual([

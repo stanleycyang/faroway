@@ -88,7 +88,7 @@ class SyncService {
     this.state.lastSyncTime = meta.lastSyncTime;
     this.state.pendingCount = meta.pendingCount;
     this.state.isOnline = networkMonitor.isOnline();
-    
+
     if (!this.state.isOnline) {
       this.state.status = 'offline';
     }
@@ -109,7 +109,7 @@ class SyncService {
   subscribe(listener: SyncListener): () => void {
     this.listeners.add(listener);
     listener(this.state);
-    
+
     return () => {
       this.listeners.delete(listener);
     };
@@ -119,7 +119,7 @@ class SyncService {
    * Notify listeners of state changes
    */
   private notifyListeners(): void {
-    this.listeners.forEach(listener => {
+    this.listeners.forEach((listener) => {
       try {
         listener(this.state);
       } catch (error) {
@@ -163,7 +163,12 @@ class SyncService {
     // Check network
     if (!networkMonitor.isOnline()) {
       this.updateState({ status: 'offline', error: 'No network connection' });
-      return { success: false, synced: 0, failed: 0, errors: [{ mutationId: '', error: 'Offline' }] };
+      return {
+        success: false,
+        synced: 0,
+        failed: 0,
+        errors: [{ mutationId: '', error: 'Offline' }],
+      };
     }
 
     this.syncInProgress = true;
@@ -197,10 +202,10 @@ class SyncService {
       });
 
       await offlineStorage.recordSuccessfulSync();
-      
+
       console.log('[SyncService] Sync complete:', result);
       return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
       result.success = false;
 
       // Treat network request failures (server unreachable) as temporary offline,
@@ -217,12 +222,13 @@ class SyncService {
         return result;
       }
 
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('[SyncService] Sync failed:', error);
-      result.errors.push({ mutationId: '', error: error.message });
+      result.errors.push({ mutationId: '', error: errorMessage });
 
       this.updateState({
         status: 'error',
-        error: error.message,
+        error: errorMessage,
       });
 
       await offlineStorage.recordFailedSync();
@@ -264,17 +270,18 @@ class SyncService {
         await offlineStorage.removePendingMutation(mutation.id);
         result.synced++;
         console.log(`[SyncService] Mutation ${mutation.id} synced successfully`);
-      } catch (error: any) {
+      } catch (error: unknown) {
         // If backend is unreachable, stop processing the rest of the queue
         const isNetworkError =
           error instanceof TypeError && /network request failed/i.test(error.message);
         if (isNetworkError) {
           throw error; // Let sync() handle this as offline
         }
+        const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`[SyncService] Mutation ${mutation.id} failed:`, error);
         await offlineStorage.incrementMutationRetry(mutation.id);
         result.failed++;
-        result.errors.push({ mutationId: mutation.id, error: error.message });
+        result.errors.push({ mutationId: mutation.id, error: errorMessage });
       }
     }
 
@@ -294,12 +301,12 @@ class SyncService {
           headers,
           body: JSON.stringify(mutation.data),
         });
-        
+
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
           throw new Error(error.error || `HTTP ${response.status}`);
         }
-        
+
         // Update local trip with server-generated ID
         const { trip } = await response.json();
         if (trip && mutation.tripId.startsWith('local_')) {
@@ -316,7 +323,7 @@ class SyncService {
           headers,
           body: JSON.stringify(mutation.data),
         });
-        
+
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
           throw new Error(error.error || `HTTP ${response.status}`);
@@ -329,7 +336,7 @@ class SyncService {
           method: 'DELETE',
           headers,
         });
-        
+
         // 404 is acceptable for delete (already deleted)
         if (!response.ok && response.status !== 404) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -361,13 +368,13 @@ class SyncService {
 
       const data = await response.json();
       const serverTrips: Trip[] = (data.trips || []).map(this.transformApiTrip);
-      
+
       // Get local trips
       const localTrips = await offlineStorage.loadTrips();
-      
+
       // Merge: server wins for existing trips, keep local-only trips
       const mergedTrips = this.mergeTrips(localTrips, serverTrips);
-      
+
       await offlineStorage.saveTrips(mergedTrips);
       console.log(`[SyncService] Pulled ${serverTrips.length} trips from server`);
     } catch (error) {
@@ -387,12 +394,12 @@ class SyncService {
    */
   private mergeTrips(local: Trip[], server: Trip[]): Trip[] {
     const merged: Map<string, Trip> = new Map();
-    
+
     // First, add all server trips (authoritative)
-    server.forEach(trip => merged.set(trip.id, trip));
-    
+    server.forEach((trip) => merged.set(trip.id, trip));
+
     // Then, add local-only trips (those with local_ prefix that haven't synced)
-    local.forEach(trip => {
+    local.forEach((trip) => {
       if (trip.id.startsWith('local_') && !merged.has(trip.id)) {
         merged.set(trip.id, trip);
       }
@@ -404,6 +411,7 @@ class SyncService {
   /**
    * Transform API trip format to local Trip format
    */
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private transformApiTrip(apiTrip: any): Trip {
     return {
       id: apiTrip.id,
@@ -416,7 +424,9 @@ class SyncService {
       vibes: apiTrip.vibes || [],
       budget: apiTrip.budget,
       days: apiTrip.itinerary?.days || [],
-      coverImage: apiTrip.cover_image || getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
+      coverImage:
+        apiTrip.cover_image ||
+        getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
       createdAt: apiTrip.created_at,
       status: apiTrip.status as Trip['status'],
     };
@@ -440,7 +450,7 @@ class SyncService {
         budget: trip.budget,
       },
     });
-    
+
     const meta = await offlineStorage.getSyncMeta();
     this.updateState({ pendingCount: meta.pendingCount });
   }
@@ -454,13 +464,13 @@ class SyncService {
     if (trip) {
       await offlineStorage.saveTrip({ ...trip, ...updates } as Trip);
     }
-    
+
     await offlineStorage.addPendingMutation({
       type: 'update',
       tripId,
       data: updates,
     });
-    
+
     const meta = await offlineStorage.getSyncMeta();
     this.updateState({ pendingCount: meta.pendingCount });
   }
@@ -474,7 +484,7 @@ class SyncService {
       type: 'delete',
       tripId,
     });
-    
+
     const meta = await offlineStorage.getSyncMeta();
     this.updateState({ pendingCount: meta.pendingCount });
   }

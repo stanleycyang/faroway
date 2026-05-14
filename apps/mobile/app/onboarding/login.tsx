@@ -1,12 +1,5 @@
 import { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  ActivityIndicator,
-} from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -26,8 +19,9 @@ export default function LoginScreen() {
       await signInWithGoogle();
       setOnboardingComplete(true);
       router.replace('/(tabs)');
-    } catch (err: any) {
-      Alert.alert('Sign In Failed', err.message || 'Please try again');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Please try again';
+      Alert.alert('Sign In Failed', msg);
     } finally {
       setIsLoading(false);
     }
@@ -39,9 +33,10 @@ export default function LoginScreen() {
       await signInWithApple();
       setOnboardingComplete(true);
       router.replace('/(tabs)');
-    } catch (err: any) {
-      if (err.code !== 'ERR_REQUEST_CANCELED') {
-        Alert.alert('Sign In Failed', err.message || 'Please try again');
+    } catch (err: unknown) {
+      const e = err as { code?: string; message?: string };
+      if (e.code !== 'ERR_REQUEST_CANCELED') {
+        Alert.alert('Sign In Failed', e.message || 'Please try again');
       }
     } finally {
       setIsLoading(false);
@@ -57,10 +52,7 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
           <Ionicons name="arrow-back" size={24} color={colors.surface[300]} />
         </TouchableOpacity>
       </View>
@@ -102,10 +94,7 @@ export default function LoginScreen() {
         )}
 
         {/* Skip */}
-        <TouchableOpacity
-          style={styles.skipButton}
-          onPress={handleSkipLogin}
-        >
+        <TouchableOpacity style={styles.skipButton} onPress={handleSkipLogin}>
           <Text style={styles.skipText}>Continue without an account</Text>
         </TouchableOpacity>
       </View>
