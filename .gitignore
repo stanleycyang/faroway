@@ -54,3 +54,6 @@ coverage/
 
 # lock files (keep bun.lock, ignore bun.lockb binary)
 bun.lockb
+
+# Vercel local project link (machine-specific, not for version control)
+.vercel/
