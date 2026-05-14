@@ -219,7 +219,7 @@ CI `e2e` job added to `.github/workflows/CI.yml` (runs after `build-web`).
 | P2-1 | `NEXT_PUBLIC_BASE_URL` undocumented | P2 | ✅ Fixed |
 | P2-2 | World-map missing from sitemap | P2 | ✅ Fixed |
 | P2-3 | `as unknown as` casts | P2 | Open |
-| P2-4 | No E2E tests | P2 | ✅ Fixed — 38/38 green locally + Vercel build verified |
+| P2-4 | No E2E tests | P2 | ✅ Fixed — 57/57 green (Desktop Chrome + iPhone 14 + Pixel 7) |
 | P2-5 | CI skips mobile typecheck | P2 | N/A |
 | P2-6 | Generate endpoint rate limit scoping | P2 | ✅ Fixed |
 | P3-1 | `prefers-reduced-motion` | P3 | ✅ Fixed |
@@ -330,23 +330,67 @@ The following areas are solid and should be preserved:
 
 ## Manual QA Results (2026-05-14)
 
-| Surface | Page | Result |
-|---------|------|--------|
-| Desktop Chrome | Homepage | ✅ Loads, hero renders, scenic gallery visible |
-| Desktop Chrome | /create | ✅ Destination grid, date pickers, "Generate Itinerary" CTA |
-| Desktop Chrome | /tools/world-map | ✅ SVG world map loads, country pins work |
-| Playwright iPhone 14 viewport | Marketing + legal pages | ✅ 38/38 E2E specs pass |
+| Surface | Platform | Pages | Result |
+|---------|----------|-------|--------|
+| Desktop Chrome | Chromium (Playwright) | Marketing, create, world-map, legal, blog, API | ✅ 19/19 pass |
+| Mobile Safari | iPhone 14 (Playwright) | All E2E suites | ✅ 19/19 pass |
+| Mobile Chrome | Pixel 7 (Playwright) | All E2E suites | ✅ 19/19 pass |
+| Desktop Chrome | Real browser (browser-harness) | Homepage, /create, /tools/world-map | ✅ Visual QA pass |
 
-iOS Safari and Android Chrome: pending (requires real device). Desktop Chrome and mobile viewport simulation verified.
+**57/57 E2E tests pass across Desktop Chrome, iPhone 14, and Pixel 7 viewports.**
+
+Real-device testing (physical iOS Safari, physical Android Chrome) not performed — requires hardware not available in this environment. Playwright device emulation with correct UA, viewport, and touch events is the highest fidelity available without physical devices.
 
 ---
 
 ## Remaining Manual Steps Before Launch
 
-1. **Rotate Supabase and Google credentials** (P0-0 — credentials scrubbed from history but not yet rotated; still must be done before launch)
-   - Supabase Dashboard → Project Settings → API → Regenerate service role + anon keys
-   - Google Cloud Console → IAM → Service accounts → `gsc-reader@gen-lang-client-0674595232` → Manage keys → Delete key `437485894c045ac5fdc0ed4de7ae473bdc46a46a`
-2. **Create Sentry project** → set `NEXT_PUBLIC_SENTRY_DSN`, `SENTRY_DSN`, `SENTRY_AUTH_TOKEN`, `SENTRY_ORG`, `SENTRY_PROJECT` in Vercel
-3. **Set Vercel KV env vars** → `KV_REST_API_URL`, `KV_REST_API_TOKEN` in Vercel (rate limiting only effective with KV)
-4. **Run Lighthouse on production** with all fixes deployed — target: Perf ≥ 90, A11y ≥ 95 (expected 100), BP = 100, SEO = 100
-5. **Manual QA on real devices** — iOS Safari, Android Chrome
+These 4 items require your browser login to external dashboards. All are documented with exact steps.
+
+### 1. Rotate credentials (P0-0 — BLOCKING for launch)
+
+Credentials were scrubbed from git history but the actual keys are still active and must be rotated:
+
+**Supabase** (5 min):
+1. Go to [Supabase Dashboard](https://supabase.com/dashboard) → your project → Project Settings → API
+2. Click "Regenerate" next to **service_role** key → confirm
+3. Click "Regenerate" next to **anon** key → confirm
+4. Update `SUPABASE_SERVICE_ROLE_KEY` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in Vercel → Settings → Environment Variables
+5. Trigger a new Vercel deploy (`git commit --allow-empty -m "chore: post-rotation redeploy" && git push`)
+
+**Google Cloud** (2 min):
+1. Go to [GCP Console](https://console.cloud.google.com) → IAM & Admin → Service Accounts
+2. Click `gsc-reader@gen-lang-client-0674595232.iam.gserviceaccount.com`
+3. Keys tab → find key ID `437485894c045ac5fdc0ed4de7ae473bdc46a46a` → Delete
+
+### 2. Set up Sentry end-to-end (P0-2)
+
+1. Go to [sentry.io](https://sentry.io) → create new project → Next.js
+2. Copy the DSN (looks like `https://xxx@oXXX.ingest.sentry.io/YYY`)
+3. In Vercel → Settings → Environment Variables, add for **Production + Preview**:
+   - `NEXT_PUBLIC_SENTRY_DSN` = DSN from step 2
+   - `SENTRY_DSN` = same DSN
+   - `SENTRY_AUTH_TOKEN` = create at sentry.io → Settings → Auth Tokens → Create New Token (scope: `project:releases`, `org:read`)
+   - `SENTRY_ORG` = your Sentry org slug (visible in Sentry URL: `sentry.io/organizations/<slug>/`)
+   - `SENTRY_PROJECT` = your Sentry project slug
+4. Trigger a redeploy
+5. Visit `https://www.faroway.ai/api/sentry-test` → verify error appears in Sentry Issues within 30s with source-mapped stack trace
+
+### 3. Provision Vercel KV for rate limiting
+
+1. Go to [Vercel Dashboard](https://vercel.com/testimonio/faroway) → Storage tab
+2. Click "Create Database" → KV → name it `faroway-rate-limit` → region `iad1` → Create
+3. Click "Connect to Project" → select `faroway`
+4. Vercel auto-adds `KV_REST_API_URL` and `KV_REST_API_TOKEN` to all environments
+5. No redeploy needed — env vars are picked up on next request
+
+### 4. Real-device QA checklist
+
+Test on a physical iPhone (Safari) and Android device (Chrome):
+- [ ] Homepage loads, hero image visible, CTA works
+- [ ] `/create` — destination search, date picker, tapping "Generate Itinerary" navigates correctly
+- [ ] Auth flow — Google sign-in completes without redirect loop
+- [ ] Trip detail page renders
+- [ ] `/tools/world-map` — map loads, country tap works
+- [ ] Blog page loads
+- [ ] Legal pages (Privacy, Terms, Support) accessible
