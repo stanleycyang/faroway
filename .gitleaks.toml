@@ -1,0 +1,21 @@
+# gitleaks configuration — allowlist for known false positives
+# Real credentials were scrubbed from history via git filter-repo (2026-05-12).
+# The findings below are confirmed placeholder/example strings in documentation.
+
+[allowlist]
+description = "Documentation example values and placeholder tokens"
+
+commits = [
+  # Old backend/ directory docs — truncated JWT examples (eyJhbGc...) and
+  # placeholder strings (YOUR_JWT_TOKEN, GOCSPX-abc123) in markdown docs.
+  # Not real credentials.
+  "931fd20fa027b71c9fbb36f2f0a2c561e9806463",
+]
+
+regexes = [
+  # Placeholder tokens that appear in documentation examples
+  '''YOUR_JWT_TOKEN''',
+  '''GOCSPX-abc123''',
+  # Truncated JWT stubs used in docs (end with literal "...")
+  '''eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\.\.\.$''',
+]
