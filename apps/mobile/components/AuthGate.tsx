@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   View,
   Text,
@@ -9,16 +9,22 @@ import {
   Image,
   Alert,
   ActivityIndicator,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useAuthContext } from './AuthProvider';
-import { colors, borderRadius, shadows } from '../constants/theme';
-import { e2eIds } from '../e2e/testIds';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useAuthContext } from "./AuthProvider";
+import { colors, borderRadius, shadows } from "../constants/theme";
+import { e2eIds } from "../e2e/testIds";
 
-const { height } = Dimensions.get('window');
+const { height } = Dimensions.get("window");
 
-type AuthGateTrigger = 'save' | 'book' | 'share' | 'access' | 'general';
+type AuthGateTrigger =
+  | "save"
+  | "book"
+  | "share"
+  | "access"
+  | "general"
+  | "generate";
 
 interface AuthGateProps {
   visible: boolean;
@@ -32,39 +38,46 @@ interface AuthGateProps {
   onClose: () => void;
 }
 
-const triggerContent: Record<AuthGateTrigger, { title: string; subtitle: string }> = {
+const triggerContent: Record<
+  AuthGateTrigger,
+  { title: string; subtitle: string }
+> = {
   save: {
-    title: 'Save Your Trip',
-    subtitle: 'Create a free account to save this amazing itinerary',
+    title: "Save Your Trip",
+    subtitle: "Create a free account to save this amazing itinerary",
   },
   book: {
-    title: 'Ready to Book?',
-    subtitle: 'Sign in to complete your reservation',
+    title: "Ready to Book?",
+    subtitle: "Sign in to complete your reservation",
   },
   share: {
-    title: 'Share with Friends',
-    subtitle: 'Create an account to share your trip and plan together',
+    title: "Share with Friends",
+    subtitle: "Create an account to share your trip and plan together",
   },
   access: {
-    title: 'Welcome Back!',
-    subtitle: 'Sign in to access your saved trips',
+    title: "Welcome Back!",
+    subtitle: "Sign in to access your saved trips",
   },
   general: {
-    title: 'Join Faroway',
-    subtitle: 'Create a free account to unlock all features',
+    title: "Join Faroway",
+    subtitle: "Create a free account to unlock all features",
+  },
+  generate: {
+    title: "One more step",
+    subtitle: "Sign in so we can save your itinerary as we build it",
   },
 };
 
 const benefits = [
-  { icon: 'cloud-upload-outline', text: 'Save trips & access anywhere' },
-  { icon: 'notifications-outline', text: 'Get price drop alerts' },
-  { icon: 'star-outline', text: 'Build your travel wishlist' },
-  { icon: 'people-outline', text: 'Share & plan with companions' },
+  { icon: "cloud-upload-outline", text: "Save trips & access anywhere" },
+  { icon: "notifications-outline", text: "Get price drop alerts" },
+  { icon: "star-outline", text: "Build your travel wishlist" },
+  { icon: "people-outline", text: "Share & plan with companions" },
 ];
 
 export function AuthGate({
   visible,
-  trigger = 'general',
+  trigger = "general",
   tripPreview,
   onAuthenticated,
   onDismiss,
@@ -81,7 +94,7 @@ export function AuthGate({
       onAuthenticated?.();
       onClose();
     } catch (err: any) {
-      Alert.alert('Sign In Failed', err.message || 'Please try again');
+      Alert.alert("Sign In Failed", err.message || "Please try again");
     } finally {
       setLoading(false);
     }
@@ -94,8 +107,8 @@ export function AuthGate({
       onAuthenticated?.();
       onClose();
     } catch (err: any) {
-      if (err.code !== 'ERR_REQUEST_CANCELED') {
-        Alert.alert('Sign In Failed', err.message || 'Please try again');
+      if (err.code !== "ERR_REQUEST_CANCELED") {
+        Alert.alert("Sign In Failed", err.message || "Please try again");
       }
     } finally {
       setLoading(false);
@@ -124,7 +137,7 @@ export function AuthGate({
               blurRadius={3}
             />
             <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.8)']}
+              colors={["transparent", "rgba(0,0,0,0.8)"]}
               style={styles.previewGradient}
             />
           </View>
@@ -176,7 +189,9 @@ export function AuthGate({
                   testID={e2eIds.authGate.google}
                 >
                   <Ionicons name="logo-google" size={18} color="#DB4437" />
-                  <Text style={styles.googleButtonText}>Continue with Google</Text>
+                  <Text style={styles.googleButtonText}>
+                    Continue with Google
+                  </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
@@ -186,7 +201,9 @@ export function AuthGate({
                   testID={e2eIds.authGate.apple}
                 >
                   <Ionicons name="logo-apple" size={20} color="#fff" />
-                  <Text style={styles.appleButtonText}>Continue with Apple</Text>
+                  <Text style={styles.appleButtonText}>
+                    Continue with Apple
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -202,8 +219,8 @@ export function AuthGate({
 
             {/* Terms */}
             <Text style={styles.terms}>
-              By continuing, you agree to our{' '}
-              <Text style={styles.termsLink}>Terms</Text> and{' '}
+              By continuing, you agree to our{" "}
+              <Text style={styles.termsLink}>Terms</Text> and{" "}
               <Text style={styles.termsLink}>Privacy Policy</Text>
             </Text>
           </View>
@@ -216,26 +233,26 @@ export function AuthGate({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
   },
   previewContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     height: height * 0.4,
   },
   previewImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   previewGradient: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    height: '100%',
+    height: "100%",
   },
   bottomSheet: {
     backgroundColor: colors.surface[800],
@@ -250,20 +267,20 @@ const styles = StyleSheet.create({
     height: 4,
     backgroundColor: colors.surface[600],
     borderRadius: 2,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginBottom: 20,
   },
   content: {
     paddingHorizontal: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   iconContainer: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: 'rgba(99,102,241,0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(99,102,241,0.15)",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 16,
   },
   emoji: {
@@ -271,20 +288,20 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#fff',
+    fontWeight: "800",
+    color: "#fff",
     marginBottom: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
     color: colors.surface[400],
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 24,
     lineHeight: 22,
   },
   benefits: {
-    width: '100%',
+    width: "100%",
     backgroundColor: colors.surface[700],
     borderRadius: borderRadius.lg,
     padding: 16,
@@ -292,51 +309,51 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   benefitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   benefitText: {
     fontSize: 15,
     color: colors.surface[300],
-    fontWeight: '500',
+    fontWeight: "500",
   },
   authButtons: {
-    width: '100%',
+    width: "100%",
     gap: 12,
     marginBottom: 16,
   },
   googleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 10,
     backgroundColor: colors.surface[700],
     paddingVertical: 16,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.06)',
+    borderColor: "rgba(255,255,255,0.06)",
   },
   googleButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    fontWeight: "600",
+    color: "#fff",
   },
   appleButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 10,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
     paddingVertical: 16,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.15)',
+    borderColor: "rgba(255,255,255,0.15)",
   },
   appleButtonText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
+    fontWeight: "600",
+    color: "#fff",
   },
   maybeLaterButton: {
     paddingVertical: 12,
@@ -345,16 +362,16 @@ const styles = StyleSheet.create({
   maybeLaterText: {
     fontSize: 15,
     color: colors.surface[500],
-    fontWeight: '600',
+    fontWeight: "600",
   },
   terms: {
     fontSize: 12,
     color: colors.surface[500],
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 18,
   },
   termsLink: {
     color: colors.primary[400],
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

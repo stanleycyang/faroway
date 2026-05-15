@@ -192,6 +192,18 @@ describe("POST /api/trips", () => {
 
     expect(res.status).toBe(400);
   });
+
+  it("returns 401 when not authenticated (anonymous trip creation removed)", async () => {
+    mockAuthReturn = { data: { user: null }, error: { message: "No session" } };
+    const req = makeRequest("POST", "/api/trips", {
+      destination: "Tokyo",
+      start_date: "2026-04-01",
+      end_date: "2026-04-07",
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(401);
+  });
 });
 
 describe("GET /api/trips/[id]", () => {

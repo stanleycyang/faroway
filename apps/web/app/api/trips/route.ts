@@ -75,18 +75,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/trips - Create a new trip (works for both authenticated and anonymous users)
+// POST /api/trips - Create a new trip (authentication required)
 export async function POST(request: NextRequest) {
   try {
-    let userId: string | null = null;
-    try {
-      const supabase = await createClientFromRequest(request);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      userId = user?.id ?? null;
-    } catch {
-      // Auth failed — continue as anonymous
+    const supabase = await createClientFromRequest(request);
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
@@ -114,13 +113,15 @@ export async function POST(request: NextRequest) {
       (preferences?.budget as "budget" | "moderate" | "luxury") ||
       "moderate";
 
-    // Use service client to bypass RLS (needed for anonymous trip creation)
+    // Service client is fine here because we explicitly scope user_id from the
+    // verified Supabase session — RLS would also enforce, but this keeps the
+    // insert consistent with the rest of the trip lifecycle (generate/stream).
     const db = getSupabase();
 
     const { data: trip, error } = await db
       .from("trips")
       .insert({
-        user_id: userId,
+        user_id: user.id,
         destination,
         start_date,
         end_date,
@@ -133,13 +134,6 @@ export async function POST(request: NextRequest) {
           originAirport: preferences?.originAirport,
         },
         status: "draft",
-        ...(userId
-          ? {}
-          : {
-              expires_at: new Date(
-                Date.now() + 7 * 24 * 60 * 60 * 1000,
-              ).toISOString(),
-            }),
       })
       .select()
       .single();

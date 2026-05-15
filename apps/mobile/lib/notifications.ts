@@ -1,11 +1,12 @@
-import * as Device from 'expo-device';
-import Constants from 'expo-constants';
-import { Platform } from 'react-native';
+import * as Device from "expo-device";
+import Constants from "expo-constants";
+import { Platform } from "react-native";
 
 // Lazy-load expo-notifications to avoid crashes in Expo Go (SDK 53+)
 // where remote notification support was removed.
-let _notifications: typeof import('expo-notifications') | null = null;
-let _initPromise: Promise<typeof import('expo-notifications') | null> | null = null;
+let _notifications: typeof import("expo-notifications") | null = null;
+let _initPromise: Promise<typeof import("expo-notifications") | null> | null =
+  null;
 
 async function getNotifications() {
   if (_notifications) return _notifications;
@@ -13,7 +14,7 @@ async function getNotifications() {
 
   _initPromise = (async () => {
     try {
-      const mod = await import('expo-notifications');
+      const mod = await import("expo-notifications");
       mod.setNotificationHandler({
         handleNotification: async () => ({
           shouldShowAlert: true,
@@ -26,7 +27,7 @@ async function getNotifications() {
       _notifications = mod;
       return mod;
     } catch (e) {
-      console.warn('[Notifications] expo-notifications not available:', e);
+      console.warn("[Notifications] expo-notifications not available:", e);
       return null;
     }
   })();
@@ -39,9 +40,9 @@ async function getNotifications() {
 // ============================================
 
 export type NotificationType =
-  | 'trip_generation_complete'
-  | 'trip_reminder'
-  | 'activity_recommendation';
+  | "trip_generation_complete"
+  | "trip_reminder"
+  | "activity_recommendation";
 
 export interface NotificationData {
   type: NotificationType;
@@ -67,7 +68,7 @@ export type EventSubscription = { remove: () => void };
 
 export async function requestNotificationPermissions(): Promise<boolean> {
   if (!Device.isDevice) {
-    console.log('Notifications require a physical device');
+    console.log("Notifications require a physical device");
     return false;
   }
 
@@ -77,13 +78,13 @@ export async function requestNotificationPermissions(): Promise<boolean> {
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 
-  if (existingStatus !== 'granted') {
+  if (existingStatus !== "granted") {
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
   }
 
-  if (finalStatus !== 'granted') {
-    console.log('Notification permissions not granted');
+  if (finalStatus !== "granted") {
+    console.log("Notification permissions not granted");
     return false;
   }
 
@@ -95,7 +96,7 @@ export async function checkNotificationPermissions(): Promise<boolean> {
   if (!Notifications) return false;
 
   const { status } = await Notifications.getPermissionsAsync();
-  return status === 'granted';
+  return status === "granted";
 }
 
 // ============================================
@@ -104,17 +105,23 @@ export async function checkNotificationPermissions(): Promise<boolean> {
 
 export async function registerForPushNotificationsAsync(): Promise<PushTokenResult> {
   if (!Device.isDevice) {
-    return { token: null, error: 'Push notifications require a physical device' };
+    return {
+      token: null,
+      error: "Push notifications require a physical device",
+    };
   }
 
   const Notifications = await getNotifications();
   if (!Notifications) {
-    return { token: null, error: 'Notifications not available in this environment' };
+    return {
+      token: null,
+      error: "Notifications not available in this environment",
+    };
   }
 
   const permissionGranted = await requestNotificationPermissions();
   if (!permissionGranted) {
-    return { token: null, error: 'Notification permissions not granted' };
+    return { token: null, error: "Notification permissions not granted" };
   }
 
   try {
@@ -123,7 +130,9 @@ export async function registerForPushNotificationsAsync(): Promise<PushTokenResu
       Constants.easConfig?.projectId;
 
     if (!projectId) {
-      console.warn('No projectId found - push notifications may not work in production');
+      console.warn(
+        "No projectId found - push notifications may not work in production",
+      );
     }
 
     const tokenResponse = await Notifications.getExpoPushTokenAsync({
@@ -132,14 +141,15 @@ export async function registerForPushNotificationsAsync(): Promise<PushTokenResu
 
     const token = tokenResponse.data;
 
-    if (Platform.OS === 'android') {
+    if (Platform.OS === "android") {
       await setupAndroidNotificationChannel();
     }
 
     return { token };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Error getting push token:', errorMessage);
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    console.error("Error getting push token:", errorMessage);
     return { token: null, error: errorMessage };
   }
 }
@@ -148,26 +158,26 @@ async function setupAndroidNotificationChannel(): Promise<void> {
   const Notifications = await getNotifications();
   if (!Notifications) return;
 
-  await Notifications.setNotificationChannelAsync('default', {
-    name: 'Default',
+  await Notifications.setNotificationChannelAsync("default", {
+    name: "Default",
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 250, 250, 250],
-    lightColor: '#FF6B6B',
-    sound: 'default',
+    lightColor: "#FF6B6B",
+    sound: "default",
   });
 
-  await Notifications.setNotificationChannelAsync('trip-reminders', {
-    name: 'Trip Reminders',
-    description: 'Reminders about upcoming trips',
+  await Notifications.setNotificationChannelAsync("trip-reminders", {
+    name: "Trip Reminders",
+    description: "Reminders about upcoming trips",
     importance: Notifications.AndroidImportance.HIGH,
-    sound: 'default',
+    sound: "default",
   });
 
-  await Notifications.setNotificationChannelAsync('trip-generation', {
-    name: 'Trip Generation',
-    description: 'Updates about AI trip generation',
+  await Notifications.setNotificationChannelAsync("trip-generation", {
+    name: "Trip Generation",
+    description: "Updates about AI trip generation",
     importance: Notifications.AndroidImportance.DEFAULT,
-    sound: 'default',
+    sound: "default",
   });
 }
 
@@ -176,7 +186,7 @@ async function setupAndroidNotificationChannel(): Promise<void> {
 // ============================================
 
 export async function addNotificationReceivedListener(
-  handler: NotificationReceivedHandler
+  handler: NotificationReceivedHandler,
 ): Promise<EventSubscription> {
   const Notifications = await getNotifications();
   if (!Notifications) return { remove: () => {} };
@@ -184,7 +194,7 @@ export async function addNotificationReceivedListener(
 }
 
 export async function addNotificationResponseListener(
-  handler: NotificationResponseHandler
+  handler: NotificationResponseHandler,
 ): Promise<EventSubscription> {
   const Notifications = await getNotifications();
   if (!Notifications) return { remove: () => {} };
@@ -192,7 +202,7 @@ export async function addNotificationResponseListener(
 }
 
 export function parseNotificationData(
-  notification: any
+  notification: any,
 ): NotificationData | null {
   try {
     const data = notification.request.content.data as NotificationData;
@@ -216,10 +226,10 @@ export async function scheduleLocalNotification(
   title: string,
   body: string,
   data?: NotificationData,
-  trigger?: any
+  trigger?: any,
 ): Promise<string> {
   const Notifications = await getNotifications();
-  if (!Notifications) return '';
+  if (!Notifications) return "";
 
   const notificationId = await Notifications.scheduleNotificationAsync({
     content: {
@@ -237,7 +247,7 @@ export async function scheduleLocalNotification(
 export async function scheduleTripReminder(
   tripId: string,
   tripTitle: string,
-  tripDate: Date
+  tripDate: Date,
 ): Promise<string | null> {
   const Notifications = await getNotifications();
   if (!Notifications) return null;
@@ -247,28 +257,30 @@ export async function scheduleTripReminder(
   reminderDate.setHours(9, 0, 0, 0);
 
   if (reminderDate <= new Date()) {
-    console.log('Trip reminder time has already passed');
+    console.log("Trip reminder time has already passed");
     return null;
   }
 
   const notificationId = await scheduleLocalNotification(
-    '✈️ Trip Tomorrow!',
+    "✈️ Trip Tomorrow!",
     `Your trip "${tripTitle}" starts tomorrow. Make sure you're all set!`,
     {
-      type: 'trip_reminder',
+      type: "trip_reminder",
       tripId,
       title: tripTitle,
     },
     {
       type: Notifications.SchedulableTriggerInputTypes.DATE,
       date: reminderDate,
-    }
+    },
   );
 
   return notificationId;
 }
 
-export async function cancelNotification(notificationId: string): Promise<void> {
+export async function cancelNotification(
+  notificationId: string,
+): Promise<void> {
   const Notifications = await getNotifications();
   if (!Notifications) return;
   await Notifications.cancelScheduledNotificationAsync(notificationId);
@@ -306,69 +318,64 @@ export async function clearBadge(): Promise<void> {
 // Supabase Integration
 // ============================================
 
+interface MinimalSupabaseClient {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  from: (table: string) => any;
+}
+
 export async function storePushTokenInSupabase(
-  supabaseClient: {
-    from: (table: string) => {
-      upsert: (data: Record<string, unknown>, options?: Record<string, unknown>) => Promise<{ error: Error | null }>;
-    };
-  },
+  supabaseClient: MinimalSupabaseClient,
   userId: string,
-  token: string
+  token: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const { error } = await supabaseClient
-      .from('push_tokens')
-      .upsert(
-        {
-          user_id: userId,
-          token,
-          platform: Platform.OS,
-          device_name: Device.deviceName || 'Unknown',
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,token' }
-      );
+    const { error } = await supabaseClient.from("push_tokens").upsert(
+      {
+        user_id: userId,
+        token,
+        platform: Platform.OS,
+        device_name: Device.deviceName || "Unknown",
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: "user_id,token" },
+    );
 
     if (error) {
-      console.error('Error storing push token:', error);
+      console.error("Error storing push token:", error);
       return { success: false, error: error.message };
     }
 
-    console.log('Push token stored successfully');
+    console.log("Push token stored successfully");
     return { success: true };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Error storing push token:', errorMessage);
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    console.error("Error storing push token:", errorMessage);
     return { success: false, error: errorMessage };
   }
 }
 
 export async function removePushTokenFromSupabase(
-  supabaseClient: {
-    from: (table: string) => {
-      delete: () => {
-        eq: (column: string, value: string) => Promise<{ error: Error | null }>;
-      };
-    };
-  },
-  token: string
+  supabaseClient: MinimalSupabaseClient,
+  token: string,
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const { error } = await supabaseClient
-      .from('push_tokens')
+      .from("push_tokens")
       .delete()
-      .eq('token', token);
+      .eq("token", token);
 
     if (error) {
-      console.error('Error removing push token:', error);
+      console.error("Error removing push token:", error);
       return { success: false, error: error.message };
     }
 
-    console.log('Push token removed successfully');
+    console.log("Push token removed successfully");
     return { success: true };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Error removing push token:', errorMessage);
+    const errorMessage =
+      error instanceof Error ? error.message : "Unknown error";
+    console.error("Error removing push token:", errorMessage);
     return { success: false, error: errorMessage };
   }
 }

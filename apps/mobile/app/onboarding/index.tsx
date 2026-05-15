@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,17 +8,17 @@ import {
   FlatList,
   TouchableOpacity,
   Animated,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import { Button } from '../../components/ui';
-import { colors } from '../../constants/theme';
-import { hapticFeedback } from '../../utils/haptics';
-import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import { Button } from "../../components/ui";
+import { colors } from "../../constants/theme";
+import { hapticFeedback } from "../../utils/haptics";
+import { IMAGE_PATHS, getImageUrl } from "@faroway/constants";
 
-const { width, height } = Dimensions.get('window');
+const { width, height } = Dimensions.get("window");
 
 interface OnboardingSlide {
   id: string;
@@ -32,31 +32,31 @@ interface OnboardingSlide {
 
 const SLIDES: OnboardingSlide[] = [
   {
-    id: '1',
-    emoji: '✨',
-    title: 'AI Plans Your\nPerfect Trip',
-    subtitle: 'Tell us where you want to go, and watch magic happen',
-    highlight: 'in seconds',
+    id: "1",
+    emoji: "✨",
+    title: "AI Plans Your\nPerfect Trip",
+    subtitle: "Tell us where you want to go, and watch magic happen",
+    highlight: "in seconds",
     image: getImageUrl(IMAGE_PATHS.marketing.travelPlanning),
-    gradient: ['#F97066', '#F59E0B'],
+    gradient: ["#F97066", "#F59E0B"],
   },
   {
-    id: '2',
-    emoji: '🗺️',
-    title: 'Discover\nHidden Gems',
-    subtitle: 'Local favorites and secret spots that guidebooks miss',
-    highlight: 'curated for you',
+    id: "2",
+    emoji: "🗺️",
+    title: "Discover\nHidden Gems",
+    subtitle: "Local favorites and secret spots that guidebooks miss",
+    highlight: "curated for you",
     image: getImageUrl(IMAGE_PATHS.marketing.aerialTravel),
-    gradient: ['#f59e0b', '#ef4444'],
+    gradient: ["#f59e0b", "#ef4444"],
   },
   {
-    id: '3',
-    emoji: '🎯',
-    title: 'Book Everything\nIn One Tap',
-    subtitle: 'Hotels, restaurants, experiences — all in one place',
-    highlight: 'no more tabs',
+    id: "3",
+    emoji: "🎯",
+    title: "Book Everything\nIn One Tap",
+    subtitle: "Hotels, restaurants, experiences — all in one place",
+    highlight: "no more tabs",
     image: getImageUrl(IMAGE_PATHS.marketing.travelDiscovery),
-    gradient: ['#10b981', '#059669'],
+    gradient: ["#10b981", "#059669"],
   },
 ];
 
@@ -92,23 +92,29 @@ export default function OnboardingScreen() {
     } else {
       hapticFeedback.success();
       // Skip preferences, go straight to creating a trip
-      router.replace('/(tabs)');
+      router.replace("/(tabs)");
     }
   };
 
   const handleSkip = () => {
     hapticFeedback.light();
     // Go straight to the app - let them create a trip immediately
-    router.replace('/(tabs)');
+    router.replace("/(tabs)");
   };
 
   const currentSlide = SLIDES[currentIndex];
 
-  const renderSlide = ({ item, index }: { item: OnboardingSlide; index: number }) => (
+  const renderSlide = ({
+    item,
+    index,
+  }: {
+    item: OnboardingSlide;
+    index: number;
+  }) => (
     <View style={styles.slide}>
       <Image source={{ uri: item.image }} style={styles.slideImage} />
       <LinearGradient
-        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.95)']}
+        colors={["rgba(0,0,0,0)", "rgba(0,0,0,0.7)", "rgba(0,0,0,0.95)"]}
         style={styles.slideGradient}
         locations={[0, 0.5, 1]}
       />
@@ -134,14 +140,14 @@ export default function OnboardingScreen() {
       />
 
       {/* Skip button */}
-      <SafeAreaView edges={['top']} style={styles.skipContainer}>
+      <SafeAreaView edges={["top"]} style={styles.skipContainer}>
         <TouchableOpacity onPress={handleSkip} style={styles.skipButton}>
           <Text style={styles.skipText}>Skip</Text>
         </TouchableOpacity>
       </SafeAreaView>
 
       {/* Content Overlay */}
-      <SafeAreaView edges={['bottom']} style={styles.content}>
+      <SafeAreaView edges={["bottom"]} style={styles.content}>
         {/* Emoji */}
         <Animated.View
           style={[
@@ -179,8 +185,10 @@ export default function OnboardingScreen() {
           ]}
         >
           <Text style={styles.subtitle}>
-            {currentSlide.subtitle}{' '}
-            <Text style={[styles.highlight, { color: currentSlide.gradient[0] }]}>
+            {currentSlide.subtitle}{" "}
+            <Text
+              style={[styles.highlight, { color: currentSlide.gradient[0] }]}
+            >
               {currentSlide.highlight}
             </Text>
           </Text>
@@ -212,23 +220,23 @@ export default function OnboardingScreen() {
           activeOpacity={0.9}
         >
           <Text style={styles.ctaText}>
-            {currentIndex === SLIDES.length - 1 ? 'Start Planning' : 'Next'}
+            {currentIndex === SLIDES.length - 1 ? "Start Planning" : "Next"}
           </Text>
           <Ionicons name="arrow-forward" size={20} color="#fff" />
         </TouchableOpacity>
 
         {/* Value prop */}
         {currentIndex === SLIDES.length - 1 && (
-          <Animated.View
-            style={[styles.valueProps, { opacity: fadeAnim }]}
-          >
+          <Animated.View style={[styles.valueProps, { opacity: fadeAnim }]}>
             <View style={styles.valueProp}>
               <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-              <Text style={styles.valuePropText}>No account needed</Text>
+              <Text style={styles.valuePropText}>
+                Sign in with Apple or Google
+              </Text>
             </View>
             <View style={styles.valueProp}>
               <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-              <Text style={styles.valuePropText}>100% free</Text>
+              <Text style={styles.valuePropText}>Free to plan</Text>
             </View>
             <View style={styles.valueProp}>
               <Ionicons name="checkmark-circle" size={16} color="#10b981" />
@@ -244,26 +252,26 @@ export default function OnboardingScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
   },
   slide: {
     width,
     height,
   },
   slideImage: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
+    width: "100%",
+    height: "100%",
+    position: "absolute",
   },
   slideGradient: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
   },
   skipContainer: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     right: 0,
     zIndex: 10,
@@ -274,11 +282,11 @@ const styles = StyleSheet.create({
   },
   skipText: {
     fontSize: 16,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.7)',
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.7)",
   },
   content: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
@@ -293,8 +301,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 42,
-    fontWeight: '800',
-    color: '#fff',
+    fontWeight: "800",
+    color: "#fff",
     marginBottom: 16,
     lineHeight: 48,
   },
@@ -303,14 +311,14 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 18,
-    color: 'rgba(255,255,255,0.8)',
+    color: "rgba(255,255,255,0.8)",
     lineHeight: 26,
   },
   highlight: {
-    fontWeight: '700',
+    fontWeight: "700",
   },
   pagination: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
     marginBottom: 24,
   },
@@ -318,41 +326,41 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: "rgba(255,255,255,0.3)",
   },
   dotActive: {
     width: 28,
-    backgroundColor: '#F97066',
+    backgroundColor: "#F97066",
   },
   ctaButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
-    backgroundColor: '#F97066',
+    backgroundColor: "#F97066",
     paddingVertical: 18,
     borderRadius: 16,
     marginBottom: 20,
   },
   ctaText: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: "700",
+    color: "#fff",
   },
   valueProps: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
     gap: 12,
   },
   valueProp: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 4,
   },
   valuePropText: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.7)',
-    fontWeight: '500',
+    color: "rgba(255,255,255,0.7)",
+    fontWeight: "500",
   },
 });

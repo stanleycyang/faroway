@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -8,20 +8,20 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { TripCard, Button } from '../../components/ui';
-import { useTrips } from '../../hooks/useTrips';
-import { useAuthContext } from '../../components/AuthProvider';
-import { useTripStore } from '../../stores/tripStore';
-import { colors, borderRadius } from '../../constants/theme';
-import { hapticFeedback } from '../../utils/haptics';
-import { e2eIds } from '../../e2e/testIds';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { TripCard, Button } from "../../components/ui";
+import { useTrips } from "../../hooks/useTrips";
+import { useAuthContext } from "../../components/AuthProvider";
+import { useTripStore } from "../../stores/tripStore";
+import { colors, borderRadius } from "../../constants/theme";
+import { hapticFeedback } from "../../utils/haptics";
+import { e2eIds } from "../../e2e/testIds";
 
-type FilterTab = 'all' | 'upcoming' | 'past';
+type FilterTab = "all" | "upcoming" | "past";
 
 // ─── Feature highlight row ──────────────────────────
 
@@ -63,7 +63,7 @@ function GuestTripsView() {
       await signInWithGoogle();
       hapticFeedback.success();
     } catch (error: any) {
-      Alert.alert('Sign In Failed', error.message || 'Please try again');
+      Alert.alert("Sign In Failed", error.message || "Please try again");
     } finally {
       setAuthLoading(false);
     }
@@ -75,8 +75,8 @@ function GuestTripsView() {
       await signInWithApple();
       hapticFeedback.success();
     } catch (error: any) {
-      if (error.code !== 'ERR_REQUEST_CANCELED') {
-        Alert.alert('Sign In Failed', error.message || 'Please try again');
+      if (error.code !== "ERR_REQUEST_CANCELED") {
+        Alert.alert("Sign In Failed", error.message || "Please try again");
       }
     } finally {
       setAuthLoading(false);
@@ -92,7 +92,7 @@ function GuestTripsView() {
       <View style={styles.heroSection}>
         <View style={styles.heroIconContainer}>
           <LinearGradient
-            colors={[colors.primary[50], '#fff']}
+            colors={[colors.primary[50], "#fff"]}
             style={styles.heroIconGradient}
           >
             <Ionicons name="airplane" size={48} color={colors.primary[500]} />
@@ -101,13 +101,13 @@ function GuestTripsView() {
 
         <Text style={styles.heroTitle}>
           {localTrips.length > 0
-            ? `You have ${localTrips.length} unsaved trip${localTrips.length > 1 ? 's' : ''}`
-            : 'Your trips, all in one place'}
+            ? `You have ${localTrips.length} unsaved trip${localTrips.length > 1 ? "s" : ""}`
+            : "Your trips, all in one place"}
         </Text>
         <Text style={styles.heroSubtitle}>
           {localTrips.length > 0
-            ? 'Sign in to save them before they\'re gone'
-            : 'Sign in to save your itineraries, access them from any device, and never lose a trip plan again.'}
+            ? "Sign in to save them before they're gone"
+            : "Sign in to save your itineraries, access them from any device, and never lose a trip plan again."}
         </Text>
       </View>
 
@@ -124,6 +124,8 @@ function GuestTripsView() {
             style={styles.socialButton}
             onPress={handleGoogleSignIn}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Google"
           >
             <Ionicons name="logo-google" size={20} color="#DB4437" />
             <Text style={styles.socialButtonText}>Continue with Google</Text>
@@ -133,6 +135,8 @@ function GuestTripsView() {
             style={[styles.socialButton, styles.appleButton]}
             onPress={handleAppleSignIn}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Apple"
           >
             <Ionicons name="logo-apple" size={20} color="#fff" />
             <Text style={[styles.socialButtonText, styles.appleButtonText]}>
@@ -168,7 +172,11 @@ function GuestTripsView() {
         <View style={styles.previewCardsContainer}>
           <View style={styles.previewCard}>
             <View style={styles.previewImagePlaceholder}>
-              <Ionicons name="image-outline" size={28} color={colors.surface[300]} />
+              <Ionicons
+                name="image-outline"
+                size={28}
+                color={colors.surface[300]}
+              />
             </View>
             <View style={styles.previewCardBody}>
               <View style={styles.previewPill} />
@@ -178,7 +186,11 @@ function GuestTripsView() {
 
           <View style={styles.previewCard}>
             <View style={styles.previewImagePlaceholder}>
-              <Ionicons name="image-outline" size={28} color={colors.surface[300]} />
+              <Ionicons
+                name="image-outline"
+                size={28}
+                color={colors.surface[300]}
+              />
             </View>
             <View style={styles.previewCardBody}>
               <View style={styles.previewPill} />
@@ -190,12 +202,10 @@ function GuestTripsView() {
 
       {/* Explore CTA */}
       <View style={styles.exploreCta}>
-        <Text style={styles.exploreText}>
-          Want to explore first?
-        </Text>
+        <Text style={styles.exploreText}>Want to explore first?</Text>
         <Button
           title="Plan a Trip"
-          onPress={() => router.push('/create')}
+          onPress={() => router.push("/create")}
           size="md"
           variant="outline"
           style={styles.exploreButton}
@@ -210,7 +220,7 @@ function GuestTripsView() {
 function AuthenticatedTripsView() {
   const router = useRouter();
   const { trips, loading, error, fetchTrips } = useTrips();
-  const [activeTab, setActiveTab] = useState<FilterTab>('all');
+  const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [refreshing, setRefreshing] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
 
@@ -225,29 +235,29 @@ function AuthenticatedTripsView() {
   }, [fetchTrips]);
 
   const filterTabs: { id: FilterTab; label: string }[] = [
-    { id: 'all', label: 'All' },
-    { id: 'upcoming', label: 'Upcoming' },
-    { id: 'past', label: 'Past' },
+    { id: "all", label: "All" },
+    { id: "upcoming", label: "Upcoming" },
+    { id: "past", label: "Past" },
   ];
 
   const filteredTrips = trips.filter((trip) => {
-    if (activeTab === 'all') return true;
-    if (activeTab === 'upcoming') {
-      return ['draft', 'planned', 'active'].includes(trip.status);
+    if (activeTab === "all") return true;
+    if (activeTab === "upcoming") {
+      return ["draft", "planned", "active"].includes(trip.status);
     }
-    return trip.status === 'completed';
+    return trip.status === "completed";
   });
 
   const formatDateRange = (start: string, end: string) => {
     const startDate = new Date(start);
     const endDate = new Date(end);
-    return `${startDate.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    })} - ${endDate.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
+    return `${startDate.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    })} - ${endDate.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     })}`;
   };
 
@@ -268,6 +278,9 @@ function AuthenticatedTripsView() {
               hapticFeedback.selection();
               setActiveTab(tab.id);
             }}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === tab.id }}
+            accessibilityLabel={tab.label}
           >
             <Text
               style={[
@@ -293,7 +306,12 @@ function AuthenticatedTripsView() {
         }
       >
         {error && !loading && (
-          <TouchableOpacity style={styles.errorBanner} onPress={onRefresh}>
+          <TouchableOpacity
+            style={styles.errorBanner}
+            onPress={onRefresh}
+            accessibilityRole="button"
+            accessibilityLabel={`${error}. Tap to retry.`}
+          >
             <Ionicons name="alert-circle-outline" size={18} color="#dc2626" />
             <Text style={styles.errorText}>{error}</Text>
             <Text style={styles.errorRetry}>Tap to retry</Text>
@@ -307,16 +325,20 @@ function AuthenticatedTripsView() {
         ) : trips.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyStateIcon}>
-              <Ionicons name="airplane-outline" size={48} color={colors.surface[400]} />
+              <Ionicons
+                name="airplane-outline"
+                size={48}
+                color={colors.surface[400]}
+              />
             </View>
             <Text style={styles.emptyStateTitle}>No trips yet</Text>
             <Text style={styles.emptyStateSubtitle}>
-              Start planning your next adventure!{'\n'}
+              Start planning your next adventure!{"\n"}
               Our AI will help you create the perfect itinerary.
             </Text>
             <Button
               title="Create Your First Trip"
-              onPress={() => router.push('/create')}
+              onPress={() => router.push("/create")}
               size="lg"
               style={styles.emptyStateButton}
               testID={e2eIds.trips.createFirstTripButton}
@@ -327,7 +349,7 @@ function AuthenticatedTripsView() {
             {filteredTrips.length === 0 ? (
               <View style={styles.noResults}>
                 <Text style={styles.noResultsText}>
-                  No {activeTab === 'upcoming' ? 'upcoming' : 'past'} trips
+                  No {activeTab === "upcoming" ? "upcoming" : "past"} trips
                 </Text>
               </View>
             ) : (
@@ -359,14 +381,20 @@ export default function TripsScreen() {
   const { isAuthenticated } = useAuthContext();
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']} testID={e2eIds.trips.screen}>
+    <SafeAreaView
+      style={styles.container}
+      edges={["top"]}
+      testID={e2eIds.trips.screen}
+    >
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Trips</Text>
         <TouchableOpacity
           style={styles.addButton}
-          onPress={() => router.push('/create')}
+          onPress={() => router.push("/create")}
           testID={e2eIds.trips.addButton}
+          accessibilityRole="button"
+          accessibilityLabel="Plan a new trip"
         >
           <Ionicons name="add" size={24} color={colors.primary[500]} />
         </TouchableOpacity>
@@ -382,28 +410,28 @@ export default function TripsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 24,
     paddingTop: 8,
     paddingBottom: 16,
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontWeight: "800",
+    color: "#0f172a",
   },
   addButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#FFF5F4',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#FFF5F4",
+    justifyContent: "center",
+    alignItems: "center",
   },
 
   // ─── Guest / Signed-Out ──────────
@@ -412,7 +440,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   heroSection: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 16,
     paddingBottom: 8,
   },
@@ -423,20 +451,20 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   heroTitle: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#0f172a',
-    textAlign: 'center',
+    fontWeight: "700",
+    color: "#0f172a",
+    textAlign: "center",
     marginBottom: 12,
   },
   heroSubtitle: {
     fontSize: 15,
-    color: '#475569',
-    textAlign: 'center',
+    color: "#475569",
+    textAlign: "center",
     lineHeight: 22,
     paddingHorizontal: 8,
   },
@@ -446,35 +474,35 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f8fafc',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f8fafc",
     paddingVertical: 14,
     borderRadius: borderRadius.lg,
     gap: 10,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
   },
   appleButton: {
-    backgroundColor: '#000',
-    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: "#000",
+    borderColor: "rgba(255,255,255,0.15)",
   },
   socialButtonText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#0f172a',
+    fontWeight: "600",
+    color: "#0f172a",
   },
   appleButtonText: {
-    color: '#fff',
+    color: "#fff",
   },
   featuresSection: {
     gap: 16,
     marginBottom: 32,
   },
   featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 14,
   },
   featureIcon: {
@@ -482,33 +510,33 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 12,
     backgroundColor: colors.primary[50],
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   featureText: {
     flex: 1,
   },
   featureTitle: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#0f172a',
+    fontWeight: "600",
+    color: "#0f172a",
     marginBottom: 2,
   },
   featureSubtitle: {
     fontSize: 13,
-    color: '#64748b',
+    color: "#64748b",
   },
   previewSection: {
     paddingTop: 24,
     borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
+    borderTopColor: "#f1f5f9",
     marginBottom: 32,
   },
   previewLabel: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#94a3b8',
-    textTransform: 'uppercase',
+    fontWeight: "600",
+    color: "#94a3b8",
+    textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 16,
   },
@@ -517,38 +545,38 @@ const styles = StyleSheet.create({
     opacity: 0.45,
   },
   previewCard: {
-    flexDirection: 'row',
-    backgroundColor: '#f8fafc',
+    flexDirection: "row",
+    backgroundColor: "#f8fafc",
     borderRadius: borderRadius.lg,
-    overflow: 'hidden',
+    overflow: "hidden",
     height: 80,
   },
   previewImagePlaceholder: {
     width: 80,
-    backgroundColor: '#e2e8f0',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#e2e8f0",
+    justifyContent: "center",
+    alignItems: "center",
   },
   previewCardBody: {
     flex: 1,
     padding: 14,
-    justifyContent: 'center',
+    justifyContent: "center",
     gap: 8,
   },
   previewPill: {
     width: 120,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: "#e2e8f0",
   },
   exploreCta: {
-    alignItems: 'center',
+    alignItems: "center",
     gap: 12,
     paddingBottom: 16,
   },
   exploreText: {
     fontSize: 14,
-    color: '#64748b',
+    color: "#64748b",
   },
   exploreButton: {
     minWidth: 160,
@@ -556,7 +584,7 @@ const styles = StyleSheet.create({
 
   // ─── Authenticated ──────────
   tabContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: 24,
     marginBottom: 24,
     gap: 8,
@@ -565,46 +593,46 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderRadius: borderRadius.full,
-    backgroundColor: '#f1f5f9',
+    backgroundColor: "#f1f5f9",
   },
   tabActive: {
     backgroundColor: colors.primary[500],
   },
   tabText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#64748b',
+    fontWeight: "600",
+    color: "#64748b",
   },
   tabTextActive: {
-    color: '#fff',
+    color: "#fff",
   },
   scrollContent: {
     paddingHorizontal: 24,
     paddingBottom: 100,
   },
   emptyState: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 48,
   },
   emptyStateIcon: {
     width: 100,
     height: 100,
     borderRadius: 50,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 24,
   },
   emptyStateTitle: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: "700",
+    color: "#0f172a",
     marginBottom: 12,
   },
   emptyStateSubtitle: {
     fontSize: 16,
-    color: '#475569',
-    textAlign: 'center',
+    color: "#475569",
+    textAlign: "center",
     lineHeight: 24,
     marginBottom: 32,
   },
@@ -613,21 +641,21 @@ const styles = StyleSheet.create({
   },
   noResults: {
     paddingVertical: 48,
-    alignItems: 'center',
+    alignItems: "center",
   },
   noResultsText: {
     fontSize: 16,
-    color: '#64748b',
+    color: "#64748b",
   },
   loadingContainer: {
     paddingVertical: 80,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   errorBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#fef2f2',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#fef2f2",
     borderRadius: borderRadius.lg,
     padding: 12,
     marginBottom: 16,
@@ -636,11 +664,11 @@ const styles = StyleSheet.create({
   errorText: {
     flex: 1,
     fontSize: 14,
-    color: '#dc2626',
+    color: "#dc2626",
   },
   errorRetry: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#dc2626',
+    fontWeight: "600",
+    color: "#dc2626",
   },
 });

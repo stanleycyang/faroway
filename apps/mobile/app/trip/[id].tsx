@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef, useMemo } from 'react';
+import { useEffect, useState, useRef, useMemo } from "react";
 import {
   View,
   Text,
@@ -14,26 +14,26 @@ import {
   Alert,
   Modal,
   FlatList,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as WebBrowser from 'expo-web-browser';
-import { Button, VibeChips } from '../../components/ui';
-import { useTripStore, TripActivity, Activity } from '../../stores/tripStore';
-import { usePromptStore } from '../../stores/promptStore';
-import { useAuthContext } from '../../components/AuthProvider';
-import { AuthGate } from '../../components/AuthGate';
-import { RatingPrompt } from '../../components/RatingPrompt';
-import { getTrip, shareTrip, trackAffiliateClick } from '../../services/api';
-import { colors, borderRadius, shadows } from '../../constants/theme';
-import { hapticFeedback } from '../../utils/haptics';
-import { registry } from '../../lib/json-render/registry';
-import { useTrips } from '../../hooks/useTrips';
-import { e2eIds } from '../../e2e/testIds';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import * as WebBrowser from "expo-web-browser";
+import { Button, VibeChips } from "../../components/ui";
+import { useTripStore, TripActivity, Activity } from "../../stores/tripStore";
+import { usePromptStore } from "../../stores/promptStore";
+import { useAuthContext } from "../../components/AuthProvider";
+import { AuthGate } from "../../components/AuthGate";
+import { RatingPrompt } from "../../components/RatingPrompt";
+import { getTrip, shareTrip, trackAffiliateClick } from "../../services/api";
+import { colors, borderRadius, shadows } from "../../constants/theme";
+import { hapticFeedback } from "../../utils/haptics";
+import { registry } from "../../lib/json-render/registry";
+import { useTrips } from "../../hooks/useTrips";
+import { e2eIds } from "../../e2e/testIds";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 const HEADER_HEIGHT = 300;
 
 /**
@@ -46,7 +46,7 @@ const openURL = async (url: string) => {
       controlsColor: colors.primary[600],
     });
   } catch (error) {
-    console.error('Failed to open URL:', error);
+    console.error("Failed to open URL:", error);
   }
 };
 
@@ -55,7 +55,7 @@ const openURL = async (url: string) => {
  * Fires tracking request, then opens the URL (uses tracked URL if available).
  */
 const trackAndOpen = async (params: {
-  itemType: 'hotel' | 'activity' | 'restaurant' | 'flight';
+  itemType: "hotel" | "activity" | "restaurant" | "flight";
   itemId: string;
   itemName: string;
   affiliatePartner: string;
@@ -70,7 +70,7 @@ const trackAndOpen = async (params: {
     itemName: params.itemName,
     affiliatePartner: params.affiliatePartner,
     affiliateUrl: params.affiliateUrl,
-    source: 'itinerary',
+    source: "itinerary",
   });
 
   // Try to get the tracked redirect URL, fall back to original
@@ -104,9 +104,7 @@ function JsonRenderRenderer({ document }: { document: any }) {
   const components = Array.isArray(document) ? document : [document];
 
   return (
-    <View>
-      {components.map((comp, index) => renderComponent(comp, index))}
-    </View>
+    <View>{components.map((comp, index) => renderComponent(comp, index))}</View>
   );
 }
 
@@ -118,33 +116,33 @@ interface ActivityCardProps {
 function ActivityCard({ activity, onPress }: ActivityCardProps) {
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'restaurant':
-        return 'restaurant';
-      case 'transport':
-        return 'car';
-      case 'accommodation':
-        return 'bed';
-      case 'attraction':
-        return 'camera';
-      case 'experience':
-        return 'sparkles';
+      case "restaurant":
+        return "restaurant";
+      case "transport":
+        return "car";
+      case "accommodation":
+        return "bed";
+      case "attraction":
+        return "camera";
+      case "experience":
+        return "sparkles";
       default:
-        return 'location';
+        return "location";
     }
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'restaurant':
-        return '#ef4444';
-      case 'transport':
-        return '#3b82f6';
-      case 'accommodation':
-        return '#8b5cf6';
-      case 'attraction':
-        return '#f59e0b';
-      case 'experience':
-        return '#10b981';
+      case "restaurant":
+        return "#ef4444";
+      case "transport":
+        return "#3b82f6";
+      case "accommodation":
+        return "#8b5cf6";
+      case "attraction":
+        return "#f59e0b";
+      case "experience":
+        return "#10b981";
       default:
         return colors.primary[500];
     }
@@ -152,20 +150,20 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
 
   const getBookingLabel = (type: string) => {
     switch (type) {
-      case 'restaurant':
-        return 'Reserve a Table';
+      case "restaurant":
+        return "Reserve a Table";
       default:
-        return 'Reserve Now';
+        return "Reserve Now";
     }
   };
 
   const handleBooking = () => {
     if (!activity.bookingUrl) return;
     trackAndOpen({
-      itemType: activity.type === 'restaurant' ? 'restaurant' : 'activity',
+      itemType: activity.type === "restaurant" ? "restaurant" : "activity",
       itemId: activity.id,
       itemName: activity.title,
-      affiliatePartner: activity.affiliatePartner || 'viator',
+      affiliatePartner: activity.affiliatePartner || "viator",
       affiliateUrl: activity.bookingUrl,
     });
   };
@@ -189,7 +187,10 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
       <View style={styles.activityContent}>
         {/* Activity Image */}
         {activity.image && (
-          <Image source={{ uri: activity.image }} style={styles.activityImage} />
+          <Image
+            source={{ uri: activity.image }}
+            style={styles.activityImage}
+          />
         )}
         <View style={styles.activityHeader}>
           <View
@@ -233,18 +234,32 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
             activeOpacity={0.7}
           >
             <LinearGradient
-              colors={activity.type === 'restaurant' ? ['#f97316', '#ea580c'] : ['#6366f1', '#8b5cf6']}
+              colors={
+                activity.type === "restaurant"
+                  ? ["#f97316", "#ea580c"]
+                  : ["#6366f1", "#8b5cf6"]
+              }
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={StyleSheet.absoluteFill}
             />
             <Ionicons
-              name={activity.type === 'restaurant' ? 'restaurant-outline' : 'shield-checkmark-outline'}
+              name={
+                activity.type === "restaurant"
+                  ? "restaurant-outline"
+                  : "shield-checkmark-outline"
+              }
               size={16}
               color="#fff"
             />
-            <Text style={styles.bookButtonText}>{getBookingLabel(activity.type)}</Text>
-            <Ionicons name="open-outline" size={14} color="rgba(255,255,255,0.7)" />
+            <Text style={styles.bookButtonText}>
+              {getBookingLabel(activity.type)}
+            </Text>
+            <Ionicons
+              name="open-outline"
+              size={14}
+              color="rgba(255,255,255,0.7)"
+            />
           </TouchableOpacity>
         )}
         {activity.bookingUrl && activity.freeCancellation && (
@@ -258,14 +273,18 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
   );
 }
 
-function FeaturedHotelCard({ hotel }: { hotel: NonNullable<import('../../stores/tripStore').Trip['hotel']> }) {
+function FeaturedHotelCard({
+  hotel,
+}: {
+  hotel: NonNullable<import("../../stores/tripStore").Trip["hotel"]>;
+}) {
   const handleBooking = () => {
     if (!hotel.bookingUrl) return;
     trackAndOpen({
-      itemType: 'hotel',
+      itemType: "hotel",
       itemId: hotel.id,
       itemName: hotel.name,
-      affiliatePartner: 'booking',
+      affiliatePartner: "booking",
       affiliateUrl: hotel.bookingUrl,
     });
   };
@@ -273,7 +292,10 @@ function FeaturedHotelCard({ hotel }: { hotel: NonNullable<import('../../stores/
   return (
     <View style={styles.hotelCard}>
       {hotel.images && hotel.images.length > 0 && (
-        <Image source={{ uri: hotel.images[0] }} style={styles.hotelCardImage} />
+        <Image
+          source={{ uri: hotel.images[0] }}
+          style={styles.hotelCardImage}
+        />
       )}
       <View style={styles.hotelCardContent}>
         <View style={styles.hotelCardHeader}>
@@ -310,14 +332,22 @@ function FeaturedHotelCard({ hotel }: { hotel: NonNullable<import('../../stores/
           disabled={!hotel.bookingUrl}
         >
           <Text style={styles.hotelCardButtonText}>Check Availability</Text>
-          <Ionicons name="arrow-forward" size={16} color={colors.primary[500]} />
+          <Ionicons
+            name="arrow-forward"
+            size={16}
+            color={colors.primary[500]}
+          />
         </TouchableOpacity>
       </View>
     </View>
   );
 }
 
-function TransportCard({ transport }: { transport: NonNullable<import('../../stores/tripStore').TripDay['transport']> }) {
+function TransportCard({
+  transport,
+}: {
+  transport: NonNullable<import("../../stores/tripStore").TripDay["transport"]>;
+}) {
   const formatDuration = (minutes: number) => {
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
@@ -326,18 +356,25 @@ function TransportCard({ transport }: { transport: NonNullable<import('../../sto
 
   const formatTime = (dateTime: string) => {
     const date = new Date(dateTime);
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
   };
 
-  const stopsLabel = transport.stops === 0 ? 'Direct' : `${transport.stops} stop${transport.stops > 1 ? 's' : ''}`;
+  const stopsLabel =
+    transport.stops === 0
+      ? "Direct"
+      : `${transport.stops} stop${transport.stops > 1 ? "s" : ""}`;
 
   const handleBooking = () => {
     if (!transport.bookingUrl) return;
     trackAndOpen({
-      itemType: 'flight',
+      itemType: "flight",
       itemId: `transport_${transport.departure.airport}_${transport.arrival.airport}`,
       itemName: `${transport.provider} ${transport.departure.airport}-${transport.arrival.airport}`,
-      affiliatePartner: transport.affiliatePartner || 'duffel',
+      affiliatePartner: transport.affiliatePartner || "duffel",
       affiliateUrl: transport.bookingUrl,
     });
   };
@@ -345,7 +382,7 @@ function TransportCard({ transport }: { transport: NonNullable<import('../../sto
   return (
     <View style={styles.transportCard}>
       <LinearGradient
-        colors={['#1e40af', '#3b82f6']}
+        colors={["#1e40af", "#3b82f6"]}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
         style={styles.transportCardGradient}
@@ -353,33 +390,51 @@ function TransportCard({ transport }: { transport: NonNullable<import('../../sto
         <View style={styles.transportCardHeader}>
           <View style={styles.transportCardProviderRow}>
             <Ionicons name="airplane" size={18} color="#fff" />
-            <Text style={styles.transportCardProvider}>{transport.provider}</Text>
+            <Text style={styles.transportCardProvider}>
+              {transport.provider}
+            </Text>
           </View>
-          <Text style={styles.transportCardPrice}>
-            ${transport.price}
-          </Text>
+          <Text style={styles.transportCardPrice}>${transport.price}</Text>
         </View>
         <View style={styles.transportCardRoute}>
           <View style={styles.transportCardEndpoint}>
-            <Text style={styles.transportCardAirport}>{transport.departure.airport}</Text>
-            <Text style={styles.transportCardTime}>{formatTime(transport.departure.dateTime)}</Text>
-            <Text style={styles.transportCardCity}>{transport.departure.city}</Text>
+            <Text style={styles.transportCardAirport}>
+              {transport.departure.airport}
+            </Text>
+            <Text style={styles.transportCardTime}>
+              {formatTime(transport.departure.dateTime)}
+            </Text>
+            <Text style={styles.transportCardCity}>
+              {transport.departure.city}
+            </Text>
           </View>
           <View style={styles.transportCardMiddle}>
-            <Text style={styles.transportCardDuration}>{formatDuration(transport.duration)}</Text>
+            <Text style={styles.transportCardDuration}>
+              {formatDuration(transport.duration)}
+            </Text>
             <View style={styles.transportCardLine}>
               <View style={styles.transportCardLineDot} />
               <View style={styles.transportCardLinePath} />
-              <Ionicons name="airplane" size={12} color="rgba(255,255,255,0.7)" />
+              <Ionicons
+                name="airplane"
+                size={12}
+                color="rgba(255,255,255,0.7)"
+              />
               <View style={styles.transportCardLinePath} />
               <View style={styles.transportCardLineDot} />
             </View>
             <Text style={styles.transportCardStops}>{stopsLabel}</Text>
           </View>
           <View style={styles.transportCardEndpoint}>
-            <Text style={styles.transportCardAirport}>{transport.arrival.airport}</Text>
-            <Text style={styles.transportCardTime}>{formatTime(transport.arrival.dateTime)}</Text>
-            <Text style={styles.transportCardCity}>{transport.arrival.city}</Text>
+            <Text style={styles.transportCardAirport}>
+              {transport.arrival.airport}
+            </Text>
+            <Text style={styles.transportCardTime}>
+              {formatTime(transport.arrival.dateTime)}
+            </Text>
+            <Text style={styles.transportCardCity}>
+              {transport.arrival.city}
+            </Text>
           </View>
         </View>
         {transport.bookingUrl && (
@@ -411,15 +466,19 @@ function BookingsSheet({
   bookableItems: { activity: Activity; dayNumber: number }[];
   testID?: string;
 }) {
-  const renderBookableItem = ({ item }: { item: { activity: Activity; dayNumber: number } }) => {
+  const renderBookableItem = ({
+    item,
+  }: {
+    item: { activity: Activity; dayNumber: number };
+  }) => {
     const { activity, dayNumber } = item;
 
     const handleBook = () => {
       trackAndOpen({
-        itemType: activity.type === 'restaurant' ? 'restaurant' : 'activity',
+        itemType: activity.type === "restaurant" ? "restaurant" : "activity",
         itemId: activity.id,
         itemName: activity.title,
-        affiliatePartner: activity.affiliatePartner || 'viator',
+        affiliatePartner: activity.affiliatePartner || "viator",
         affiliateUrl: activity.bookingUrl!,
       });
     };
@@ -428,7 +487,9 @@ function BookingsSheet({
       <View style={styles.sheetItem}>
         <View style={styles.sheetItemInfo}>
           <Text style={styles.sheetItemDay}>Day {dayNumber}</Text>
-          <Text style={styles.sheetItemTitle} numberOfLines={1}>{activity.title}</Text>
+          <Text style={styles.sheetItemTitle} numberOfLines={1}>
+            {activity.title}
+          </Text>
           {activity.price && (
             <Text style={styles.sheetItemPrice}>{activity.price}</Text>
           )}
@@ -452,10 +513,15 @@ function BookingsSheet({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <SafeAreaView edges={['top']} style={styles.sheetContainer} testID={testID}>
+      <SafeAreaView
+        edges={["top"]}
+        style={styles.sheetContainer}
+        testID={testID}
+      >
         <View style={styles.sheetHeader}>
           <Text style={styles.sheetTitle}>
-            {bookableItems.length} Bookable {bookableItems.length === 1 ? 'Item' : 'Items'}
+            {bookableItems.length} Bookable{" "}
+            {bookableItems.length === 1 ? "Item" : "Items"}
           </Text>
           <TouchableOpacity onPress={onClose} style={styles.sheetClose}>
             <Ionicons name="close" size={24} color="#0f172a" />
@@ -486,7 +552,9 @@ export default function TripDetailScreen() {
   const [selectedDay, setSelectedDay] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [showAuthGate, setShowAuthGate] = useState(false);
-  const [authGateTrigger, setAuthGateTrigger] = useState<'save' | 'share'>('save');
+  const [authGateTrigger, setAuthGateTrigger] = useState<"save" | "share">(
+    "save",
+  );
   const [showRatingPrompt, setShowRatingPrompt] = useState(false);
   const [showBookingsSheet, setShowBookingsSheet] = useState(false);
 
@@ -498,11 +566,13 @@ export default function TripDetailScreen() {
   const estimatedTotal = useMemo(() => {
     let total = 0;
     if (trip?.hotel) total += trip.hotel.totalPrice;
-    for (const day of (trip?.days || [])) {
+    for (const day of trip?.days || []) {
       if (day.transport) total += day.transport.price;
       for (const act of day.activities) {
         if (act.price) {
-          const numPrice = parseFloat(String(act.price).replace(/[^0-9.]/g, ''));
+          const numPrice = parseFloat(
+            String(act.price).replace(/[^0-9.]/g, ""),
+          );
           if (!isNaN(numPrice)) total += numPrice;
         }
       }
@@ -526,15 +596,15 @@ export default function TripDetailScreen() {
       items.unshift({
         activity: {
           id: trip.hotel.id,
-          time: '',
+          time: "",
           title: trip.hotel.name,
           description: trip.hotel.description,
-          location: trip.hotel.location?.name || '',
-          duration: '',
-          type: 'accommodation',
+          location: trip.hotel.location?.name || "",
+          duration: "",
+          type: "accommodation",
           price: `$${trip.hotel.pricePerNight}/night`,
           bookingUrl: trip.hotel.bookingUrl,
-          affiliatePartner: 'booking',
+          affiliatePartner: "booking",
         },
         dayNumber: 0,
       });
@@ -548,7 +618,9 @@ export default function TripDetailScreen() {
     if (!trip && id) {
       // Delay to allow store hydration before navigating back
       const timeout = setTimeout(() => {
-        const freshTrip = useTripStore.getState().trips.find((t) => t.id === id) || useTripStore.getState().currentTrip;
+        const freshTrip =
+          useTripStore.getState().trips.find((t) => t.id === id) ||
+          useTripStore.getState().currentTrip;
         if (!freshTrip) router.back();
       }, 500);
       return () => clearTimeout(timeout);
@@ -564,7 +636,12 @@ export default function TripDetailScreen() {
 
   // Show rating prompt after 10s on completed trips for authenticated users
   useEffect(() => {
-    if (!isAuthenticated || trip?.status !== 'completed' || !shouldShowRatingPrompt()) return;
+    if (
+      !isAuthenticated ||
+      trip?.status !== "completed" ||
+      !shouldShowRatingPrompt()
+    )
+      return;
     const timer = setTimeout(() => {
       setShowRatingPrompt(true);
     }, 10000);
@@ -574,7 +651,7 @@ export default function TripDetailScreen() {
   const handleHeartPress = () => {
     hapticFeedback.light();
     if (!isAuthenticated) {
-      setAuthGateTrigger('save');
+      setAuthGateTrigger("save");
       setShowAuthGate(true);
     }
     // For authenticated users: no-op for now (toggle saved state TBD)
@@ -589,7 +666,7 @@ export default function TripDetailScreen() {
       await getTripById(id);
       hapticFeedback.success();
     } catch (error) {
-      console.error('Failed to refresh trip:', error);
+      console.error("Failed to refresh trip:", error);
       hapticFeedback.error();
     }
     setRefreshing(false);
@@ -599,7 +676,7 @@ export default function TripDetailScreen() {
     if (!id) return;
     hapticFeedback.light();
     if (!isAuthenticated) {
-      setAuthGateTrigger('share');
+      setAuthGateTrigger("share");
       setShowAuthGate(true);
       return;
     }
@@ -612,10 +689,10 @@ export default function TripDetailScreen() {
           title: `${trip?.destination} Trip Itinerary`,
         });
       } else {
-        Alert.alert('Error', result.error || 'Failed to create share link');
+        Alert.alert("Error", result.error || "Failed to create share link");
       }
     } catch (error) {
-      console.error('Share failed:', error);
+      console.error("Share failed:", error);
     }
   };
 
@@ -631,26 +708,26 @@ export default function TripDetailScreen() {
   const formatDateRange = () => {
     const start = new Date(trip.startDate);
     const end = new Date(trip.endDate);
-    return `${start.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    })} - ${end.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
+    return `${start.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    })} - ${end.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     })}`;
   };
 
   const headerTranslate = scrollY.interpolate({
     inputRange: [0, HEADER_HEIGHT],
     outputRange: [0, -HEADER_HEIGHT / 2],
-    extrapolate: 'clamp',
+    extrapolate: "clamp",
   });
 
   const imageScale = scrollY.interpolate({
     inputRange: [-100, 0],
     outputRange: [1.5, 1],
-    extrapolate: 'clamp',
+    extrapolate: "clamp",
   });
 
   return (
@@ -661,7 +738,7 @@ export default function TripDetailScreen() {
         contentContainerStyle={styles.scrollContent}
         onScroll={Animated.event(
           [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-          { useNativeDriver: true }
+          { useNativeDriver: true },
         )}
         scrollEventThrottle={16}
         refreshControl={
@@ -680,15 +757,17 @@ export default function TripDetailScreen() {
             style={[styles.heroImage, { transform: [{ scale: imageScale }] }]}
           />
           <LinearGradient
-            colors={['rgba(0,0,0,0.3)', 'transparent', 'rgba(0,0,0,0.8)']}
+            colors={["rgba(0,0,0,0.3)", "transparent", "rgba(0,0,0,0.8)"]}
             style={styles.heroGradient}
           />
-          <SafeAreaView edges={['top']} style={styles.heroContent}>
+          <SafeAreaView edges={["top"]} style={styles.heroContent}>
             <View style={styles.heroHeader}>
               <TouchableOpacity
                 style={styles.backButton}
                 onPress={() => router.back()}
                 testID={e2eIds.trip.backButton}
+                accessibilityRole="button"
+                accessibilityLabel="Back"
               >
                 <Ionicons name="arrow-back" size={24} color="#fff" />
               </TouchableOpacity>
@@ -697,6 +776,8 @@ export default function TripDetailScreen() {
                   style={styles.actionButton}
                   onPress={handleHeartPress}
                   testID={e2eIds.trip.saveButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Save trip"
                 >
                   <Ionicons name="heart-outline" size={22} color="#fff" />
                 </TouchableOpacity>
@@ -704,6 +785,8 @@ export default function TripDetailScreen() {
                   style={styles.actionButton}
                   onPress={handleShare}
                   testID={e2eIds.trip.shareButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Share trip"
                 >
                   <Ionicons name="share-outline" size={22} color="#fff" />
                 </TouchableOpacity>
@@ -714,13 +797,21 @@ export default function TripDetailScreen() {
               <Text style={styles.heroTitle}>{trip.destination}</Text>
               <View style={styles.heroMeta}>
                 <View style={styles.heroMetaItem}>
-                  <Ionicons name="calendar-outline" size={16} color="rgba(255,255,255,0.8)" />
+                  <Ionicons
+                    name="calendar-outline"
+                    size={16}
+                    color="rgba(255,255,255,0.8)"
+                  />
                   <Text style={styles.heroMetaText}>{formatDateRange()}</Text>
                 </View>
                 <View style={styles.heroMetaItem}>
-                  <Ionicons name="people-outline" size={16} color="rgba(255,255,255,0.8)" />
+                  <Ionicons
+                    name="people-outline"
+                    size={16}
+                    color="rgba(255,255,255,0.8)"
+                  />
                   <Text style={styles.heroMetaText}>
-                    {trip.travelers} traveler{trip.travelers > 1 ? 's' : ''}
+                    {trip.travelers} traveler{trip.travelers > 1 ? "s" : ""}
                   </Text>
                 </View>
               </View>
@@ -738,9 +829,7 @@ export default function TripDetailScreen() {
           )}
 
           {/* Featured Hotel */}
-          {trip.hotel && (
-            <FeaturedHotelCard hotel={trip.hotel} />
-          )}
+          {trip.hotel && <FeaturedHotelCard hotel={trip.hotel} />}
 
           {/* Day Selector */}
           <View style={styles.daySelector}>
@@ -776,9 +865,9 @@ export default function TripDetailScreen() {
                       selectedDay === index && styles.dayTabDateSelected,
                     ]}
                   >
-                    {new Date(day.date).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
+                    {new Date(day.date).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
                     })}
                   </Text>
                 </TouchableOpacity>
@@ -788,9 +877,7 @@ export default function TripDetailScreen() {
 
           {/* Day Theme */}
           <View style={styles.dayThemeContainer}>
-            <Text style={styles.dayTheme}>
-              {trip.days[selectedDay]?.theme}
-            </Text>
+            <Text style={styles.dayTheme}>{trip.days[selectedDay]?.theme}</Text>
           </View>
 
           {/* Transport */}
@@ -814,11 +901,17 @@ export default function TripDetailScreen() {
         <View style={styles.bottomBarInfo}>
           <Text style={styles.bottomBarLabel}>Estimated cost</Text>
           <Text style={styles.bottomBarPrice}>
-            {estimatedTotal > 0 ? `~$${estimatedTotal.toLocaleString()}` : 'Free activities'}
+            {estimatedTotal > 0
+              ? `~$${estimatedTotal.toLocaleString()}`
+              : "Free activities"}
           </Text>
         </View>
         <Button
-          title={bookableCount > 0 ? `Book ${bookableCount} ${bookableCount === 1 ? 'Item' : 'Items'}` : 'Explore'}
+          title={
+            bookableCount > 0
+              ? `Book ${bookableCount} ${bookableCount === 1 ? "Item" : "Items"}`
+              : "Explore"
+          }
           onPress={() => {
             hapticFeedback.light();
             if (bookableCount > 0) {
@@ -866,13 +959,13 @@ export default function TripDetailScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   loadingContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#fff',
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#fff",
   },
   loadingText: {
     marginTop: 12,
@@ -884,52 +977,52 @@ const styles = StyleSheet.create({
   },
   heroContainer: {
     height: HEADER_HEIGHT,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   heroImage: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   heroGradient: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
   },
   heroContent: {
-    position: 'absolute',
+    position: "absolute",
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
     padding: 16,
   },
   heroHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
   },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   heroActions: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   actionButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
   },
   heroInfo: {
     marginBottom: 8,
@@ -937,32 +1030,32 @@ const styles = StyleSheet.create({
   heroCountry: {
     fontSize: 14,
     color: colors.primary[300],
-    fontWeight: '600',
-    textTransform: 'uppercase',
+    fontWeight: "600",
+    textTransform: "uppercase",
     letterSpacing: 1,
     marginBottom: 4,
   },
   heroTitle: {
     fontSize: 32,
-    fontWeight: '800',
-    color: '#fff',
+    fontWeight: "800",
+    color: "#fff",
     marginBottom: 12,
   },
   heroMeta: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 16,
   },
   heroMetaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
   },
   heroMetaText: {
     fontSize: 14,
-    color: 'rgba(255,255,255,0.8)',
+    color: "rgba(255,255,255,0.8)",
   },
   content: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     marginTop: -24,
@@ -983,27 +1076,27 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: borderRadius.lg,
-    backgroundColor: '#f1f5f9',
-    alignItems: 'center',
+    backgroundColor: "#f1f5f9",
+    alignItems: "center",
   },
   dayTabSelected: {
     backgroundColor: colors.primary[500],
   },
   dayTabNumber: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#64748b',
+    fontWeight: "700",
+    color: "#64748b",
     marginBottom: 2,
   },
   dayTabNumberSelected: {
-    color: '#fff',
+    color: "#fff",
   },
   dayTabDate: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: "#94a3b8",
   },
   dayTabDateSelected: {
-    color: 'rgba(255,255,255,0.7)',
+    color: "rgba(255,255,255,0.7)",
   },
   dayThemeContainer: {
     paddingHorizontal: 24,
@@ -1011,25 +1104,25 @@ const styles = StyleSheet.create({
   },
   dayTheme: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: "700",
+    color: "#0f172a",
   },
   activitiesContainer: {
     paddingHorizontal: 24,
   },
   activityCard: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 20,
   },
   activityTime: {
-    alignItems: 'center',
+    alignItems: "center",
     width: 50,
     marginRight: 16,
   },
   activityTimeText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#64748b',
+    fontWeight: "600",
+    color: "#64748b",
     marginBottom: 8,
   },
   activityDot: {
@@ -1040,24 +1133,24 @@ const styles = StyleSheet.create({
   activityLine: {
     flex: 1,
     width: 2,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: "#e2e8f0",
     marginTop: 8,
   },
   activityContent: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: borderRadius.lg,
-    overflow: 'hidden',
+    overflow: "hidden",
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
   },
   activityImage: {
-    width: '100%',
+    width: "100%",
     height: 120,
   },
   activityHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 8,
     paddingHorizontal: 16,
     paddingTop: 16,
@@ -1066,8 +1159,8 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 8,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 12,
   },
   activityInfo: {
@@ -1075,96 +1168,96 @@ const styles = StyleSheet.create({
   },
   activityTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: "700",
+    color: "#0f172a",
   },
   activityDuration: {
     fontSize: 12,
-    color: '#64748b',
+    color: "#64748b",
     marginTop: 2,
   },
   activityPrice: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.primary[400],
   },
   activityDescription: {
     fontSize: 14,
-    color: '#475569',
+    color: "#475569",
     lineHeight: 20,
     marginBottom: 8,
     paddingHorizontal: 16,
   },
   activityRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginBottom: 12,
     paddingHorizontal: 16,
   },
   activityRatingText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#0f172a',
+    fontWeight: "600",
+    color: "#0f172a",
     marginLeft: 4,
   },
   activityReviewCount: {
     fontSize: 13,
-    color: '#64748b',
+    color: "#64748b",
     marginLeft: 4,
   },
   bookButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 8,
     paddingVertical: 14,
     marginHorizontal: 16,
     marginBottom: 4,
     borderRadius: borderRadius.lg,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   bookButtonText: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: "700",
+    color: "#fff",
   },
   freeCancelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 4,
     paddingBottom: 12,
   },
   freeCancelText: {
     fontSize: 11,
-    color: '#22c55e',
-    fontWeight: '500',
+    color: "#22c55e",
+    fontWeight: "500",
   },
   bottomBar: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#ffffff',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#ffffff",
     paddingHorizontal: 24,
     paddingVertical: 16,
     paddingBottom: 40,
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
+    borderTopColor: "#e2e8f0",
   },
   bottomBarInfo: {},
   bottomBarLabel: {
     fontSize: 12,
-    color: '#64748b',
+    color: "#64748b",
     marginBottom: 2,
   },
   bottomBarPrice: {
     fontSize: 24,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontWeight: "800",
+    color: "#0f172a",
   },
   bookAllButton: {
     minWidth: 140,
@@ -1174,87 +1267,87 @@ const styles = StyleSheet.create({
     marginHorizontal: 24,
     marginBottom: 24,
     borderRadius: borderRadius.lg,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderWidth: 1,
-    borderColor: '#e2e8f0',
-    overflow: 'hidden',
+    borderColor: "#e2e8f0",
+    overflow: "hidden",
     ...shadows.md,
   },
   hotelCardImage: {
-    width: '100%',
+    width: "100%",
     height: 160,
   },
   hotelCardContent: {
     padding: 16,
   },
   hotelCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
     marginBottom: 12,
   },
   hotelCardName: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: "700",
+    color: "#0f172a",
     marginBottom: 4,
   },
   hotelCardRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   hotelCardRatingText: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#0f172a',
+    fontWeight: "600",
+    color: "#0f172a",
     marginLeft: 4,
   },
   hotelCardReviewCount: {
     fontSize: 13,
-    color: '#64748b',
+    color: "#64748b",
     marginLeft: 4,
   },
   hotelCardPriceContainer: {
-    alignItems: 'flex-end',
+    alignItems: "flex-end",
   },
   hotelCardPrice: {
     fontSize: 20,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontWeight: "800",
+    color: "#0f172a",
   },
   hotelCardPriceLabel: {
     fontSize: 12,
-    color: '#64748b',
+    color: "#64748b",
   },
   hotelCardAmenities: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 6,
     marginBottom: 12,
   },
   hotelCardAmenityChip: {
-    backgroundColor: '#f1f5f9',
+    backgroundColor: "#f1f5f9",
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: borderRadius.sm,
   },
   hotelCardAmenityText: {
     fontSize: 12,
-    color: '#475569',
-    fontWeight: '500',
+    color: "#475569",
+    fontWeight: "500",
   },
   hotelCardButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 6,
-    backgroundColor: '#FFF5F4',
+    backgroundColor: "#FFF5F4",
     paddingVertical: 12,
     borderRadius: borderRadius.md,
   },
   hotelCardButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.primary[500],
   },
   // Transport Card
@@ -1264,133 +1357,133 @@ const styles = StyleSheet.create({
   },
   transportCard: {
     borderRadius: borderRadius.lg,
-    overflow: 'hidden',
+    overflow: "hidden",
     ...shadows.md,
   },
   transportCardGradient: {
     padding: 16,
   },
   transportCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 16,
   },
   transportCardProviderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 8,
   },
   transportCardProvider: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#fff',
+    fontWeight: "600",
+    color: "#fff",
   },
   transportCardPrice: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#fff',
+    fontWeight: "800",
+    color: "#fff",
   },
   transportCardRoute: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: 16,
   },
   transportCardEndpoint: {
-    alignItems: 'center',
+    alignItems: "center",
     width: 70,
   },
   transportCardAirport: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: "700",
+    color: "#fff",
     marginBottom: 2,
   },
   transportCardTime: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.8)',
+    color: "rgba(255,255,255,0.8)",
     marginBottom: 2,
   },
   transportCardCity: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.6)',
+    color: "rgba(255,255,255,0.6)",
   },
   transportCardMiddle: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
     paddingHorizontal: 8,
   },
   transportCardDuration: {
     fontSize: 12,
-    fontWeight: '600',
-    color: 'rgba(255,255,255,0.8)',
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.8)",
     marginBottom: 4,
   },
   transportCardLine: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
     marginBottom: 4,
   },
   transportCardLineDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: 'rgba(255,255,255,0.6)',
+    backgroundColor: "rgba(255,255,255,0.6)",
   },
   transportCardLinePath: {
     flex: 1,
     height: 1,
-    backgroundColor: 'rgba(255,255,255,0.3)',
+    backgroundColor: "rgba(255,255,255,0.3)",
   },
   transportCardStops: {
     fontSize: 11,
-    color: 'rgba(255,255,255,0.7)',
+    color: "rgba(255,255,255,0.7)",
   },
   transportCardButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: 6,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     paddingVertical: 12,
     borderRadius: borderRadius.md,
   },
   transportCardButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#1e40af',
+    fontWeight: "600",
+    color: "#1e40af",
   },
   // Bookings Sheet
   sheetContainer: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
   },
   sheetHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 4,
   },
   sheetTitle: {
     fontSize: 22,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontWeight: "800",
+    color: "#0f172a",
   },
   sheetClose: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
   },
   sheetSubtitle: {
     fontSize: 14,
-    color: '#64748b',
+    color: "#64748b",
     paddingHorizontal: 24,
     marginBottom: 16,
   },
@@ -1400,12 +1493,12 @@ const styles = StyleSheet.create({
   },
   sheetSeparator: {
     height: 1,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: "#e2e8f0",
     marginVertical: 12,
   },
   sheetItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
   },
   sheetItemInfo: {
@@ -1413,26 +1506,26 @@ const styles = StyleSheet.create({
   },
   sheetItemDay: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.primary[400],
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 2,
   },
   sheetItemTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: "700",
+    color: "#0f172a",
     marginBottom: 2,
   },
   sheetItemPrice: {
     fontSize: 13,
-    fontWeight: '600',
-    color: '#64748b',
+    fontWeight: "600",
+    color: "#64748b",
   },
   sheetItemButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     backgroundColor: colors.primary[500],
     paddingHorizontal: 16,
@@ -1441,7 +1534,7 @@ const styles = StyleSheet.create({
   },
   sheetItemButtonText: {
     fontSize: 14,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: "700",
+    color: "#fff",
   },
 });

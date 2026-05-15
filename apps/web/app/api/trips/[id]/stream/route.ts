@@ -22,7 +22,7 @@
  */
 
 import { NextRequest } from "next/server";
-import { createClient, getSupabase } from "@/lib/supabase/server";
+import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
 import {
   buildSummaryBlocks,
   buildHotelBlocks,
@@ -37,9 +37,9 @@ export const maxDuration = 300;
 
 type Params = { params: Promise<{ id: string }> };
 
-async function resolveUser(): Promise<string | null> {
+async function resolveUserId(request: NextRequest): Promise<string | null> {
   try {
-    const supabase = await createClient();
+    const supabase = await createClientFromRequest(request);
     const {
       data: { user },
     } = await supabase.auth.getUser();
@@ -47,6 +47,13 @@ async function resolveUser(): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+function unauthorizedSseResponse(): Response {
+  return new Response(JSON.stringify({ error: "Unauthorized" }), {
+    status: 401,
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 const SSE_HEADERS = {
@@ -142,19 +149,18 @@ type SearchQueryResult = {
 
 export async function POST(request: NextRequest, { params }: Params) {
   const { id: tripId } = await params;
-  const userId = await resolveUser();
+  const userId = await resolveUserId(request);
+  if (!userId) return unauthorizedSseResponse();
   const db = getSupabase();
 
-  let tripQuery = db
+  const { data: trip, error: tripError } = await db
     .from("trips")
     .select(
       "id, status, search_id, destination, start_date, end_date, travelers, budget_tier, vibes, preferences",
     )
-    .eq("id", tripId);
-  if (userId) tripQuery = tripQuery.eq("user_id", userId);
-  else tripQuery = tripQuery.is("user_id", null);
-
-  const { data: trip, error: tripError } = await tripQuery.single();
+    .eq("id", tripId)
+    .eq("user_id", userId)
+    .single();
 
   if (tripError || !trip) {
     return new Response(
@@ -253,17 +259,16 @@ export async function POST(request: NextRequest, { params }: Params) {
 
 export async function GET(request: NextRequest, { params }: Params) {
   const { id: tripId } = await params;
-  const userId = await resolveUser();
+  const userId = await resolveUserId(request);
+  if (!userId) return unauthorizedSseResponse();
   const db = getSupabase();
 
-  let tripQuery = db
+  const { data: trip, error: tripError } = await db
     .from("trips")
     .select("id, status, search_id")
-    .eq("id", tripId);
-  if (userId) tripQuery = tripQuery.eq("user_id", userId);
-  else tripQuery = tripQuery.is("user_id", null);
-
-  const { data: trip, error: tripError } = await tripQuery.single();
+    .eq("id", tripId)
+    .eq("user_id", userId)
+    .single();
 
   if (tripError || !trip) {
     return new Response(

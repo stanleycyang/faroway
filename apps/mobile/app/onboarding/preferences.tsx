@@ -1,47 +1,60 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   View,
   Text,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { Button, VibeSelector } from '../../components/ui';
-import { useUserStore } from '../../stores/userStore';
-import { colors, borderRadius } from '../../constants/theme';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { Button, VibeSelector } from "../../components/ui";
+import { useUserStore } from "../../stores/userStore";
+import { colors, borderRadius } from "../../constants/theme";
 
 export default function PreferencesScreen() {
   const router = useRouter();
-  const { setOnboardingComplete, setUser, updatePreferences } = useUserStore();
+  const { setOnboardingComplete, updatePreferences } = useUserStore();
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
-  const [selectedBudget, setSelectedBudget] = useState<string>('');
+  const [selectedBudget, setSelectedBudget] = useState<string>("");
 
   const budgetOptions = [
-    { id: 'budget', label: 'Budget', emoji: '💰', description: 'Best value deals' },
-    { id: 'moderate', label: 'Moderate', emoji: '💵', description: 'Balance of comfort & cost' },
-    { id: 'luxury', label: 'Luxury', emoji: '✨', description: 'Premium experiences' },
+    {
+      id: "budget",
+      label: "Budget",
+      emoji: "💰",
+      description: "Best value deals",
+    },
+    {
+      id: "moderate",
+      label: "Moderate",
+      emoji: "💵",
+      description: "Balance of comfort & cost",
+    },
+    {
+      id: "luxury",
+      label: "Luxury",
+      emoji: "✨",
+      description: "Premium experiences",
+    },
   ];
 
   const handleComplete = () => {
-    // Set demo user
-    setUser({
-      id: 'demo-user',
-      name: 'Stanley',
-      email: 'stanley@example.com',
-      preferences: {
-        vibes: selectedVibes,
-        budget: selectedBudget,
-      },
+    // Stash the user's preferences locally so they prefill the generation flow.
+    // We deliberately don't create a fake user identity here — sign-in happens
+    // when the user taps "Generate" (auth-gated) so trips are attached to a
+    // real Supabase user from the start.
+    updatePreferences({
+      vibes: selectedVibes,
+      budget: selectedBudget,
     });
     setOnboardingComplete(true);
-    router.replace('/(tabs)');
+    router.replace("/(tabs)");
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
@@ -52,7 +65,7 @@ export default function PreferencesScreen() {
         </TouchableOpacity>
         <View style={styles.progress}>
           <View style={styles.progressBar}>
-            <View style={[styles.progressFill, { width: '66%' }]} />
+            <View style={[styles.progressFill, { width: "66%" }]} />
           </View>
         </View>
         <View style={{ width: 44 }} />
@@ -147,9 +160,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface[900],
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
   },
@@ -158,8 +171,8 @@ const styles = StyleSheet.create({
     height: 44,
     borderRadius: 22,
     backgroundColor: colors.surface[800],
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   progress: {
     flex: 1,
@@ -171,7 +184,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   progressFill: {
-    height: '100%',
+    height: "100%",
     backgroundColor: colors.primary[500],
     borderRadius: 2,
   },
@@ -184,8 +197,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#fff',
+    fontWeight: "800",
+    color: "#fff",
     marginBottom: 12,
   },
   subtitle: {
@@ -198,24 +211,24 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: "700",
+    color: "#fff",
     marginBottom: 16,
   },
   budgetOptions: {
     gap: 12,
   },
   budgetOption: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     backgroundColor: colors.surface[800],
     padding: 16,
     borderRadius: borderRadius.lg,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   budgetOptionSelected: {
-    backgroundColor: 'rgba(99,102,241,0.15)',
+    backgroundColor: "rgba(99,102,241,0.15)",
     borderColor: colors.primary[500],
   },
   budgetEmoji: {
@@ -224,8 +237,8 @@ const styles = StyleSheet.create({
   },
   budgetLabel: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: "700",
+    color: "#fff",
     marginRight: 8,
   },
   budgetLabelSelected: {
@@ -240,7 +253,7 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   bottomBar: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
@@ -249,13 +262,13 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingBottom: 40,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
-    alignItems: 'center',
+    borderTopColor: "rgba(255,255,255,0.06)",
+    alignItems: "center",
     gap: 16,
   },
   skipText: {
     fontSize: 14,
     color: colors.surface[400],
-    fontWeight: '600',
+    fontWeight: "600",
   },
 });

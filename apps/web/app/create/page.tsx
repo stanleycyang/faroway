@@ -206,27 +206,6 @@ export default function CreateTripPage() {
 
       const { trip } = await response.json();
 
-      // Store anonymous trip ID in localStorage so it can be claimed after sign-up
-      if (!trip.user_id) {
-        try {
-          const stored = JSON.parse(
-            localStorage.getItem("faroway_anonymous_trips") || "[]",
-          );
-          if (!stored.includes(trip.id)) {
-            stored.push(trip.id);
-            localStorage.setItem(
-              "faroway_anonymous_trips",
-              JSON.stringify(stored),
-            );
-          }
-        } catch {
-          localStorage.setItem(
-            "faroway_anonymous_trips",
-            JSON.stringify([trip.id]),
-          );
-        }
-      }
-
       setProgressMessage("Starting AI trip planner...");
 
       const genResponse = await fetch(`/api/trips/${trip.id}/generate`, {

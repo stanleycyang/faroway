@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { API_BASE_URL } from "../constants/api";
+import { getAuthHeaders } from "../lib/supabase";
 
 export interface StreamingBlock {
   type: string;
@@ -353,9 +354,10 @@ export function useStreamingItinerary(
 
         // If no tripId, create a trip and trigger generation first
         if (!streamTripId && input) {
+          const createHeaders = await getAuthHeaders();
           const tripRes = await fetch(`${API_BASE_URL}/api/trips`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: createHeaders,
             body: JSON.stringify({
               destination: input.destination,
               start_date: input.startDate,
@@ -381,11 +383,12 @@ export function useStreamingItinerary(
           streamTripId = trip.id;
 
           // Trigger generation
+          const genHeaders = await getAuthHeaders();
           const genRes = await fetch(
             `${API_BASE_URL}/api/trips/${streamTripId}/generate`,
             {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
+              headers: genHeaders,
               signal: abortController.signal,
             },
           );
@@ -420,6 +423,7 @@ export function useStreamingItinerary(
         // Use XMLHttpRequest for React Native (supports onprogress for incremental data)
         // This is more reliable than fetch for SSE in React Native
         const streamUrl = `${API_BASE_URL}/api/trips/${streamTripId}/stream`;
+        const streamHeaders = await getAuthHeaders();
 
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
@@ -428,6 +432,9 @@ export function useStreamingItinerary(
           xhr.open("POST", streamUrl, true);
           xhr.setRequestHeader("Accept", "text/event-stream");
           xhr.setRequestHeader("Cache-Control", "no-cache");
+          if (streamHeaders.Authorization) {
+            xhr.setRequestHeader("Authorization", streamHeaders.Authorization);
+          }
 
           // Process incremental data as it arrives
           xhr.onprogress = () => {
@@ -528,10 +535,12 @@ async function pollGenerationStatus(
   for (let attempt = 0; attempt < 150; attempt++) {
     if (signal.aborted) return;
 
+    const pollHeaders = await getAuthHeaders();
     const response = await fetch(
       `${API_BASE_URL}/api/trips/${tripId}/generate`,
       {
         method: "GET",
+        headers: pollHeaders,
         signal,
       },
     );

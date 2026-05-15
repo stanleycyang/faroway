@@ -103,36 +103,13 @@ export function useUser(): UseUserReturn {
 
         // Handle specific auth events
         switch (event) {
-          case "SIGNED_IN":
-            // Claim any anonymous trips stored in localStorage
-            try {
-              const stored = localStorage.getItem("faroway_anonymous_trips");
-              if (stored) {
-                const tripIds = JSON.parse(stored);
-                if (Array.isArray(tripIds) && tripIds.length > 0) {
-                  fetch("/api/auth/claim-trips", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ tripIds }),
-                  }).finally(() => {
-                    localStorage.removeItem("faroway_anonymous_trips");
-                  });
-                }
-              }
-            } catch {
-              // Non-blocking — don't prevent sign-in flow
-            }
-            break;
           case "SIGNED_OUT":
-            // User signed out
             setUser(null);
             setSession(null);
             break;
+          case "SIGNED_IN":
           case "TOKEN_REFRESHED":
-            // Session was refreshed
-            break;
           case "USER_UPDATED":
-            // User data was updated
             break;
         }
       },

@@ -3,14 +3,30 @@
  * Centralized API client for the mobile app
  */
 
-import { API_BASE_URL, API_TIMEOUT } from '../constants/api';
-import type { ApiResponse, Trip, UserProfile, TrackClickParams, TrackClickResponse, DestinationsResponse } from '@faroway/types';
+import { API_BASE_URL, API_TIMEOUT } from "../constants/api";
+import { getAuthHeaders } from "../lib/supabase";
+import type {
+  ApiResponse,
+  Trip,
+  UserProfile,
+  TrackClickParams,
+  TrackClickResponse,
+  DestinationsResponse,
+} from "@faroway/types";
 
 // Re-export types for backward compatibility
-export type { ApiResponse, Trip, UserProfile, TrackClickParams, TrackClickResponse, DestinationsResponse } from '@faroway/types';
+export type {
+  ApiResponse,
+  Trip,
+  UserProfile,
+  TrackClickParams,
+  TrackClickResponse,
+  DestinationsResponse,
+} from "@faroway/types";
 
-// Auth token managed via Supabase SecureStore - this is an in-memory cache only.
-// Do NOT persist this token to AsyncStorage or other insecure storage.
+// Hot-path cache of the bearer token. Populated by useAuth after sign-in for
+// synchronous use; apiFetch still falls back to the Supabase session if the
+// cache wasn't primed (e.g., cold start before useAuth has hydrated).
 let authToken: string | null = null;
 
 export function setAuthToken(token: string | null) {
@@ -21,24 +37,39 @@ export function getAuthToken(): string | null {
   return authToken;
 }
 
+async function resolveBearerToken(): Promise<string | null> {
+  if (authToken) return authToken;
+  try {
+    const headers = await getAuthHeaders();
+    const auth = headers.Authorization;
+    if (typeof auth === "string" && auth.startsWith("Bearer ")) {
+      return auth.substring(7);
+    }
+  } catch {
+    // Fall through — caller may proceed without auth (e.g., public endpoints)
+  }
+  return null;
+}
+
 /**
  * Base fetch wrapper with auth and error handling
  */
 async function apiFetch<T>(
   endpoint: string,
-  options: RequestInit = {}
+  options: RequestInit = {},
 ): Promise<ApiResponse<T>> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
 
   try {
     const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...(options.headers as Record<string, string>),
     };
 
-    if (authToken) {
-      headers['Authorization'] = `Bearer ${authToken}`;
+    const token = await resolveBearerToken();
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
     }
 
     const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -53,8 +84,8 @@ async function apiFetch<T>(
 
     if (!response.ok) {
       return {
-        error: data.error || 'Request failed',
-        code: data.code || 'UNKNOWN_ERROR',
+        error: data.error || "Request failed",
+        code: data.code || "UNKNOWN_ERROR",
       };
     }
 
@@ -63,13 +94,13 @@ async function apiFetch<T>(
     clearTimeout(timeoutId);
 
     if (error instanceof Error) {
-      if (error.name === 'AbortError') {
-        return { error: 'Request timed out', code: 'TIMEOUT' };
+      if (error.name === "AbortError") {
+        return { error: "Request timed out", code: "TIMEOUT" };
       }
-      return { error: error.message, code: 'NETWORK_ERROR' };
+      return { error: error.message, code: "NETWORK_ERROR" };
     }
 
-    return { error: 'Unknown error occurred', code: 'UNKNOWN_ERROR' };
+    return { error: "Unknown error occurred", code: "UNKNOWN_ERROR" };
   }
 }
 
@@ -78,26 +109,36 @@ async function apiFetch<T>(
 // ============================================
 
 export async function getUserProfile(): Promise<ApiResponse<UserProfile>> {
-  return apiFetch<UserProfile>('/api/user/profile');
+  return apiFetch<UserProfile>("/api/user/profile");
 }
 
-export async function updateUserProfile(
-  updates: {
-    email?: string;
-    subscription_tier?: string;
-    display_name?: string;
-    avatar_url?: string;
-    preferences?: {
-      vibes?: string[];
-      budget?: string;
-      travelerType?: string;
-    };
-    notification_settings?: Record<string, boolean>;
-  }
-): Promise<ApiResponse<UserProfile>> {
-  return apiFetch<UserProfile>('/api/user/profile', {
-    method: 'PATCH',
+export async function updateUserProfile(updates: {
+  email?: string;
+  subscription_tier?: string;
+  display_name?: string;
+  avatar_url?: string;
+  preferences?: {
+    vibes?: string[];
+    budget?: string;
+    travelerType?: string;
+  };
+  notification_settings?: Record<string, boolean>;
+}): Promise<ApiResponse<UserProfile>> {
+  return apiFetch<UserProfile>("/api/user/profile", {
+    method: "PATCH",
     body: JSON.stringify(updates),
+  });
+}
+
+/**
+ * Permanently delete the signed-in user's account and all owned data.
+ * Caller is responsible for signing the user out and clearing local state.
+ */
+export async function deleteAccount(): Promise<
+  ApiResponse<{ deleted: boolean }>
+> {
+  return apiFetch<{ deleted: boolean }>("/api/user/profile", {
+    method: "DELETE",
   });
 }
 
@@ -106,10 +147,12 @@ export async function updateUserProfile(
 // ============================================
 
 export async function getTrips(): Promise<ApiResponse<{ trips: Trip[] }>> {
-  return apiFetch<{ trips: Trip[] }>('/api/trips');
+  return apiFetch<{ trips: Trip[] }>("/api/trips");
 }
 
-export async function getTrip(id: string): Promise<ApiResponse<{ trip: Trip }>> {
+export async function getTrip(
+  id: string,
+): Promise<ApiResponse<{ trip: Trip }>> {
   return apiFetch<{ trip: Trip }>(`/api/trips/${encodeURIComponent(id)}`);
 }
 
@@ -125,8 +168,8 @@ export async function createTrip(trip: {
     originAirport?: string;
   };
 }): Promise<ApiResponse<{ trip: Trip }>> {
-  return apiFetch<{ trip: Trip }>('/api/trips', {
-    method: 'POST',
+  return apiFetch<{ trip: Trip }>("/api/trips", {
+    method: "POST",
     body: JSON.stringify({
       destination: trip.destination,
       start_date: trip.startDate,
@@ -139,17 +182,17 @@ export async function createTrip(trip: {
 
 export async function updateTrip(
   id: string,
-  updates: Partial<Trip>
+  updates: Partial<Trip>,
 ): Promise<ApiResponse<{ trip: Trip }>> {
   return apiFetch<{ trip: Trip }>(`/api/trips/${encodeURIComponent(id)}`, {
-    method: 'PATCH',
+    method: "PATCH",
     body: JSON.stringify(updates),
   });
 }
 
 export async function deleteTrip(id: string): Promise<ApiResponse<void>> {
   return apiFetch<void>(`/api/trips/${encodeURIComponent(id)}`, {
-    method: 'DELETE',
+    method: "DELETE",
   });
 }
 
@@ -157,10 +200,12 @@ export async function deleteTrip(id: string): Promise<ApiResponse<void>> {
 // Trip Sharing APIs
 // ============================================
 
-export async function shareTrip(id: string): Promise<ApiResponse<{ shareUrl: string; shareToken: string }>> {
+export async function shareTrip(
+  id: string,
+): Promise<ApiResponse<{ shareUrl: string; shareToken: string }>> {
   return apiFetch<{ shareUrl: string; shareToken: string }>(
     `/api/trips/${encodeURIComponent(id)}/share`,
-    { method: 'POST' }
+    { method: "POST" },
   );
 }
 
@@ -169,41 +214,49 @@ export async function shareTrip(id: string): Promise<ApiResponse<{ shareUrl: str
 // ============================================
 
 export async function getPopularDestinations(
-  params: { limit?: number; offset?: number; tags?: string } = {}
+  params: { limit?: number; offset?: number; tags?: string } = {},
 ): Promise<ApiResponse<DestinationsResponse>> {
   const query = new URLSearchParams();
-  if (params.limit) query.set('limit', String(params.limit));
-  if (params.offset) query.set('offset', String(params.offset));
-  if (params.tags) query.set('tags', params.tags);
+  if (params.limit) query.set("limit", String(params.limit));
+  if (params.offset) query.set("offset", String(params.offset));
+  if (params.tags) query.set("tags", params.tags);
   const qs = query.toString();
-  return apiFetch<DestinationsResponse>(`/api/destinations/popular${qs ? `?${qs}` : ''}`);
+  return apiFetch<DestinationsResponse>(
+    `/api/destinations/popular${qs ? `?${qs}` : ""}`,
+  );
 }
 
 export async function getTrendingDestinations(
-  params: { limit?: number; offset?: number } = {}
+  params: { limit?: number; offset?: number } = {},
 ): Promise<ApiResponse<DestinationsResponse>> {
   const query = new URLSearchParams();
-  if (params.limit) query.set('limit', String(params.limit));
-  if (params.offset) query.set('offset', String(params.offset));
+  if (params.limit) query.set("limit", String(params.limit));
+  if (params.offset) query.set("offset", String(params.offset));
   const qs = query.toString();
-  return apiFetch<DestinationsResponse>(`/api/destinations/trending${qs ? `?${qs}` : ''}`);
+  return apiFetch<DestinationsResponse>(
+    `/api/destinations/trending${qs ? `?${qs}` : ""}`,
+  );
 }
 
 // ============================================
 // Search APIs (re-exported from searchService)
 // ============================================
 
-export { startSearch, getSearchStatus, pollSearchStatus } from './searchService';
+export {
+  startSearch,
+  getSearchStatus,
+  pollSearchStatus,
+} from "./searchService";
 
 // ============================================
 // Affiliate Tracking APIs
 // ============================================
 
 export async function trackAffiliateClick(
-  params: TrackClickParams
+  params: TrackClickParams,
 ): Promise<ApiResponse<TrackClickResponse>> {
-  return apiFetch<TrackClickResponse>('/api/track/click', {
-    method: 'POST',
+  return apiFetch<TrackClickResponse>("/api/track/click", {
+    method: "POST",
     body: JSON.stringify(params),
   });
 }
@@ -214,7 +267,7 @@ export async function trackAffiliateClick(
  */
 export async function openAffiliateLink(
   params: TrackClickParams,
-  openUrl: (url: string) => void
+  openUrl: (url: string) => void,
 ): Promise<void> {
   const result = await trackAffiliateClick(params);
 

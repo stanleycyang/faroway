@@ -2,6 +2,7 @@
  * User Profile API
  * GET /api/user/profile - Get current user profile
  * PATCH /api/user/profile - Update user profile
+ * DELETE /api/user/profile - Permanently delete the user's account and all owned data
  */
 
 import { NextRequest, NextResponse } from "next/server";
@@ -156,9 +157,56 @@ export async function PATCH(request: NextRequest) {
       updatedAt: profile.updated_at,
     });
   } catch (error) {
-    console.error("[User Profile] Error:", error);
+    console.error("[User Profile] PATCH error:", error);
     return NextResponse.json(
       { error: "Internal server error" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  const authResult = await requireAuth(request);
+  if (authResult instanceof NextResponse) return authResult;
+  const { user } = authResult as AuthResult;
+  const userId = user!.id;
+
+  // Strict rate limit: 3 delete attempts per hour
+  const rl = checkRateLimit(`account-delete:${userId}`, {
+    maxRequests: 3,
+    windowMs: 60 * 60 * 1000,
+  });
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
+  const db = getSupabase();
+
+  // Order matters: clear leaf rows first, then root. Partial failure is
+  // tolerated — the user can retry — but auth removal is last so a failure
+  // mid-flow does not leave them stranded.
+  try {
+    await db.from("affiliate_clicks").delete().eq("user_id", userId);
+    await db.from("push_tokens").delete().eq("user_id", userId);
+    await db.from("searches").delete().eq("user_id", userId);
+    await db.from("itineraries").delete().eq("user_id", userId);
+    await db.from("trips").delete().eq("user_id", userId);
+    await db.from("users").delete().eq("id", userId);
+
+    const { error: authDeleteError } = await db.auth.admin.deleteUser(userId);
+    if (authDeleteError) {
+      console.error("[Account Delete] auth.admin.deleteUser:", authDeleteError);
+      return NextResponse.json(
+        { error: "Failed to delete account credentials" },
+        { status: 500 },
+      );
+    }
+
+    return NextResponse.json({ deleted: true });
+  } catch (error) {
+    console.error("[Account Delete] Error:", error);
+    return NextResponse.json(
+      { error: "Failed to delete account" },
       { status: 500 },
     );
   }

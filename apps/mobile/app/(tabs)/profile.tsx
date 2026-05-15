@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   View,
   Text,
@@ -10,18 +10,19 @@ import {
   ActivityIndicator,
   Linking,
   Platform,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import * as WebBrowser from 'expo-web-browser';
-import * as StoreReview from 'expo-store-review';
-import { useAuthContext } from '../../components/AuthProvider';
-import { useUserStore } from '../../stores/userStore';
-import { useTripStore } from '../../stores/tripStore';
-import { colors, borderRadius } from '../../constants/theme';
-import { hapticFeedback } from '../../utils/haptics';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import * as WebBrowser from "expo-web-browser";
+import * as StoreReview from "expo-store-review";
+import { useAuthContext } from "../../components/AuthProvider";
+import { useUserStore } from "../../stores/userStore";
+import { useTripStore } from "../../stores/tripStore";
+import { deleteAccount } from "../../services/api";
+import { colors, borderRadius } from "../../constants/theme";
+import { hapticFeedback } from "../../utils/haptics";
 
 interface MenuItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -44,9 +45,16 @@ function MenuItem({
     hapticFeedback.light();
     onPress();
   };
-  
+
   return (
-    <TouchableOpacity style={styles.menuItem} onPress={handlePress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={styles.menuItem}
+      onPress={handlePress}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityHint={value ? value : undefined}
+    >
       <View
         style={[
           styles.menuIconContainer,
@@ -66,7 +74,11 @@ function MenuItem({
         {value && <Text style={styles.menuValue}>{value}</Text>}
       </View>
       {showChevron && (
-        <Ionicons name="chevron-forward" size={20} color={colors.surface[500]} />
+        <Ionicons
+          name="chevron-forward"
+          size={20}
+          color={colors.surface[500]}
+        />
       )}
     </TouchableOpacity>
   );
@@ -85,7 +97,7 @@ function GuestProfileCard() {
       await signInWithGoogle();
       hapticFeedback.success();
     } catch (error: any) {
-      Alert.alert('Sign In Failed', error.message || 'Please try again');
+      Alert.alert("Sign In Failed", error.message || "Please try again");
     } finally {
       setAuthLoading(false);
     }
@@ -97,8 +109,8 @@ function GuestProfileCard() {
       await signInWithApple();
       hapticFeedback.success();
     } catch (error: any) {
-      if (error.code !== 'ERR_REQUEST_CANCELED') {
-        Alert.alert('Sign In Failed', error.message || 'Please try again');
+      if (error.code !== "ERR_REQUEST_CANCELED") {
+        Alert.alert("Sign In Failed", error.message || "Please try again");
       }
     } finally {
       setAuthLoading(false);
@@ -111,10 +123,10 @@ function GuestProfileCard() {
     <View style={styles.guestCard}>
       <View style={styles.guestAvatarContainer}>
         <LinearGradient
-          colors={['#f1f5f9', '#e2e8f0']}
+          colors={["#f1f5f9", "#e2e8f0"]}
           style={styles.guestAvatar}
         >
-          <Ionicons name="person" size={40} color={'#94a3b8'} />
+          <Ionicons name="person" size={40} color={"#94a3b8"} />
         </LinearGradient>
       </View>
 
@@ -124,13 +136,19 @@ function GuestProfileCard() {
       </Text>
 
       {isLoading ? (
-        <ActivityIndicator size="small" color={colors.primary[500]} style={{ marginTop: 20 }} />
+        <ActivityIndicator
+          size="small"
+          color={colors.primary[500]}
+          style={{ marginTop: 20 }}
+        />
       ) : (
         <View style={styles.guestButtons}>
           <TouchableOpacity
             style={styles.socialButton}
             onPress={handleGoogleSignIn}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Google"
           >
             <Ionicons name="logo-google" size={20} color="#DB4437" />
             <Text style={styles.socialButtonText}>Continue with Google</Text>
@@ -140,6 +158,8 @@ function GuestProfileCard() {
             style={[styles.socialButton, styles.appleButton]}
             onPress={handleAppleSignIn}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Apple"
           >
             <Ionicons name="logo-apple" size={20} color="#fff" />
             <Text style={[styles.socialButtonText, styles.appleButtonText]}>
@@ -160,9 +180,9 @@ export default function ProfileScreen() {
   const { user } = useUserStore();
   const { trips } = useTripStore();
 
-  const completedTrips = trips.filter((t) => t.status === 'completed').length;
+  const completedTrips = trips.filter((t) => t.status === "completed").length;
   const upcomingTrips = trips.filter((t) =>
-    ['draft', 'planned', 'active'].includes(t.status)
+    ["draft", "planned", "active"].includes(t.status),
   ).length;
 
   const handleLogout = async () => {
@@ -170,12 +190,40 @@ export default function ProfileScreen() {
       await signOut();
       hapticFeedback.success();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to sign out');
+      Alert.alert("Error", error.message || "Failed to sign out");
     }
   };
 
+  const handleDeleteAccount = () => {
+    hapticFeedback.warning();
+    Alert.alert(
+      "Delete account?",
+      "This permanently erases your account, trips, preferences, and booking history. This cannot be undone.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            const result = await deleteAccount();
+            if (result.error) {
+              Alert.alert("Could not delete account", result.error);
+              return;
+            }
+            try {
+              await signOut();
+            } catch {
+              // signOut errors are non-fatal — the user is server-side gone.
+            }
+            hapticFeedback.success();
+          },
+        },
+      ],
+    );
+  };
+
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={["top"]}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
@@ -183,8 +231,12 @@ export default function ProfileScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Profile</Text>
-          <TouchableOpacity style={styles.settingsButton}>
-            <Ionicons name="settings-outline" size={24} color={'#475569'} />
+          <TouchableOpacity
+            style={styles.settingsButton}
+            accessibilityRole="button"
+            accessibilityLabel="Settings"
+          >
+            <Ionicons name="settings-outline" size={24} color={"#475569"} />
           </TouchableOpacity>
         </View>
 
@@ -231,20 +283,22 @@ export default function ProfileScreen() {
             <MenuItem
               icon="person-outline"
               label="Edit Profile"
-              onPress={() => router.push('/profile/edit-profile')}
+              onPress={() => router.push("/profile/edit-profile")}
             />
             <MenuItem
               icon="heart-outline"
               label="Travel Preferences"
-              value={user?.preferences?.vibes?.length
-                ? `${user.preferences.vibes.length} vibes selected`
-                : 'Not set'}
-              onPress={() => router.push('/profile/preferences')}
+              value={
+                user?.preferences?.vibes?.length
+                  ? `${user.preferences.vibes.length} vibes selected`
+                  : "Not set"
+              }
+              onPress={() => router.push("/profile/preferences")}
             />
             <MenuItem
               icon="notifications-outline"
               label="Notifications"
-              onPress={() => router.push('/profile/notifications')}
+              onPress={() => router.push("/profile/notifications")}
             />
           </View>
         )}
@@ -254,12 +308,14 @@ export default function ProfileScreen() {
           <MenuItem
             icon="help-circle-outline"
             label="Help Center"
-            onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/support')}
+            onPress={() =>
+              WebBrowser.openBrowserAsync("https://faroway.ai/support")
+            }
           />
           <MenuItem
             icon="chatbubble-outline"
             label="Contact Us"
-            onPress={() => Linking.openURL('mailto:support@faroway.app')}
+            onPress={() => Linking.openURL("mailto:support@faroway.app")}
           />
           <MenuItem
             icon="star-outline"
@@ -269,9 +325,10 @@ export default function ProfileScreen() {
               if (available) {
                 await StoreReview.requestReview();
               } else {
-                const url = Platform.OS === 'ios'
-                  ? 'https://apps.apple.com/app/faroway/id0000000000'
-                  : 'https://play.google.com/store/apps/details?id=app.faroway';
+                const url =
+                  Platform.OS === "ios"
+                    ? "https://apps.apple.com/app/faroway/id0000000000"
+                    : "https://play.google.com/store/apps/details?id=app.faroway";
                 Linking.openURL(url);
               }
             }}
@@ -283,12 +340,16 @@ export default function ProfileScreen() {
           <MenuItem
             icon="document-text-outline"
             label="Terms of Service"
-            onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/terms')}
+            onPress={() =>
+              WebBrowser.openBrowserAsync("https://faroway.ai/terms")
+            }
           />
           <MenuItem
             icon="shield-outline"
             label="Privacy Policy"
-            onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/privacy')}
+            onPress={() =>
+              WebBrowser.openBrowserAsync("https://faroway.ai/privacy")
+            }
           />
         </View>
 
@@ -298,6 +359,13 @@ export default function ProfileScreen() {
               icon="log-out-outline"
               label="Log Out"
               onPress={handleLogout}
+              showChevron={false}
+              danger
+            />
+            <MenuItem
+              icon="trash-outline"
+              label="Delete Account"
+              onPress={handleDeleteAccount}
               showChevron={false}
               danger
             />
@@ -314,45 +382,45 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
   },
   scrollContent: {
     paddingBottom: 100,
   },
   header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 24,
     paddingTop: 8,
     paddingBottom: 16,
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#0f172a',
+    fontWeight: "800",
+    color: "#0f172a",
   },
   settingsButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#ffffff",
+    justifyContent: "center",
+    alignItems: "center",
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
   },
 
   // ─── Guest / Logged-Out ──────────
   guestCard: {
-    alignItems: 'center',
+    alignItems: "center",
     padding: 28,
     marginHorizontal: 24,
     marginBottom: 24,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: borderRadius.xl,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
   },
   guestAvatarContainer: {
     marginBottom: 20,
@@ -361,70 +429,70 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   guestTitle: {
     fontSize: 22,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: "700",
+    color: "#0f172a",
     marginBottom: 8,
   },
   guestSubtitle: {
     fontSize: 14,
-    color: '#475569',
-    textAlign: 'center',
+    color: "#475569",
+    textAlign: "center",
     lineHeight: 20,
     marginBottom: 4,
   },
   guestButtons: {
-    width: '100%',
+    width: "100%",
     gap: 10,
     marginTop: 20,
   },
   socialButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#f8fafc',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f8fafc",
     paddingVertical: 14,
     borderRadius: borderRadius.lg,
     gap: 10,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
   },
   appleButton: {
-    backgroundColor: '#000',
-    borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: "#000",
+    borderColor: "rgba(255,255,255,0.15)",
   },
   socialButtonText: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#0f172a',
+    fontWeight: "600",
+    color: "#0f172a",
   },
   appleButtonText: {
-    color: '#fff',
+    color: "#fff",
   },
   emailSignInButton: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 12,
   },
   emailSignInText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.primary[400],
   },
 
   // ─── Logged-In Profile Card ──────────
   profileCard: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingVertical: 24,
     marginHorizontal: 24,
     marginBottom: 24,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: borderRadius.xl,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
   },
   avatar: {
     width: 100,
@@ -435,25 +503,25 @@ const styles = StyleSheet.create({
     borderColor: colors.primary[500],
   },
   avatarPlaceholder: {
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
   },
   userName: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: "700",
+    color: "#0f172a",
     marginBottom: 4,
   },
   userEmail: {
     fontSize: 14,
-    color: '#475569',
+    color: "#475569",
     marginBottom: 24,
   },
   statsContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#f8fafc",
     borderRadius: borderRadius.lg,
     paddingVertical: 16,
     paddingHorizontal: 24,
@@ -461,22 +529,22 @@ const styles = StyleSheet.create({
   },
   statItem: {
     flex: 1,
-    alignItems: 'center',
+    alignItems: "center",
   },
   statValue: {
     fontSize: 24,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: "700",
+    color: "#0f172a",
     marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: '#64748b',
+    color: "#64748b",
   },
   statDivider: {
     width: 1,
     height: 40,
-    backgroundColor: '#e2e8f0',
+    backgroundColor: "#e2e8f0",
   },
 
   // ─── Menu ──────────
@@ -486,54 +554,54 @@ const styles = StyleSheet.create({
   },
   menuSectionTitle: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#64748b',
+    fontWeight: "600",
+    color: "#64748b",
     marginBottom: 12,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
     padding: 16,
     borderRadius: borderRadius.lg,
     marginBottom: 8,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
   },
   menuIconContainer: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FFF5F4',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#FFF5F4",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 16,
   },
   menuIconContainerDanger: {
-    backgroundColor: 'rgba(239,68,68,0.15)',
+    backgroundColor: "rgba(239,68,68,0.15)",
   },
   menuContent: {
     flex: 1,
   },
   menuLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#0f172a',
+    fontWeight: "600",
+    color: "#0f172a",
   },
   menuLabelDanger: {
     color: colors.error,
   },
   menuValue: {
     fontSize: 13,
-    color: '#64748b',
+    color: "#64748b",
     marginTop: 2,
   },
   versionText: {
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: 12,
-    color: '#94a3b8',
+    color: "#94a3b8",
     marginTop: 16,
   },
 });

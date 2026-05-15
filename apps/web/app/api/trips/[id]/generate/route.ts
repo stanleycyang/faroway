@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, getSupabase } from "@/lib/supabase/server";
+import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
 import { start } from "workflow/api";
 import { planTripWorkflow } from "@/workflows/plan-trip";
 import { buildInstantPreview } from "@/lib/search/preview";
@@ -32,41 +32,43 @@ const TRAVELER_TYPES = new Set<TravelerType>([
 ]);
 
 /**
- * Resolve user ID if authenticated, or null for anonymous.
+ * Resolve the authenticated user ID, or return a 401 NextResponse.
+ * All trip generation is authenticated — anonymous flows are not supported.
  */
-async function resolveUser(): Promise<string | null> {
+async function requireUserId(
+  request: NextRequest,
+): Promise<{ userId: string } | NextResponse> {
   try {
-    const supabase = await createClient();
+    const supabase = await createClientFromRequest(request);
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    return user?.id ?? null;
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return { userId: user.id };
   } catch {
-    return null;
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }
 
 export async function POST(request: NextRequest, { params }: Params) {
   try {
     const { id: tripId } = await params;
-    const userId = await resolveUser();
+    const auth = await requireUserId(request);
+    if (auth instanceof NextResponse) return auth;
+    const userId = auth.userId;
 
     const adminClient = getSupabase();
 
-    // Fetch trip — strictly scoped to user's own trips
-    let query = adminClient
+    const { data: trip, error: tripError } = await adminClient
       .from("trips")
       .select(
         "id, destination, start_date, end_date, status, travelers, budget_tier, vibes, interests, dietary_restrictions, mobility_needs, user_id, search_id, preferences",
       )
-      .eq("id", tripId);
-    if (userId) {
-      query = query.eq("user_id", userId);
-    } else {
-      query = query.is("user_id", null);
-    }
-
-    const { data: trip, error: tripError } = await query.single();
+      .eq("id", tripId)
+      .eq("user_id", userId)
+      .single();
 
     if (tripError || !trip) {
       return NextResponse.json(
@@ -180,7 +182,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           budget: trip.budget_tier || "moderate",
           originCity,
           originAirport,
-          userId: userId || undefined,
+          userId,
         },
       ]);
     } catch (workflowError) {
@@ -236,23 +238,18 @@ export async function POST(request: NextRequest, { params }: Params) {
 export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { id: tripId } = await params;
-    const userId = await resolveUser();
+    const auth = await requireUserId(request);
+    if (auth instanceof NextResponse) return auth;
+    const userId = auth.userId;
 
     const adminClient = getSupabase();
 
-    // Get trip to find search_id
-    let tripQuery = adminClient
+    const { data: trip, error: tripError } = await adminClient
       .from("trips")
       .select("id, status, search_id")
-      .eq("id", tripId);
-
-    if (userId) {
-      tripQuery = tripQuery.eq("user_id", userId);
-    } else {
-      tripQuery = tripQuery.is("user_id", null);
-    }
-
-    const { data: trip, error: tripError } = await tripQuery.single();
+      .eq("id", tripId)
+      .eq("user_id", userId)
+      .single();
 
     if (tripError || !trip) {
       return NextResponse.json(

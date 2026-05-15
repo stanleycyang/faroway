@@ -26,12 +26,23 @@ const mockProfile = {
 let mockSelectReturn: { data: unknown; error: unknown };
 let mockUpdateReturn: { data: unknown; error: unknown };
 
+type DeleteUserResult = { error: { message: string } | null };
+const mockDeleteUser = vi.fn(
+  async (_userId: string): Promise<DeleteUserResult> => ({ error: null }),
+);
+const mockTableDelete = vi.fn(() => ({
+  eq: vi.fn(async () => ({ error: null })),
+}));
+
 const mockSupabase = {
   auth: {
     getUser: vi.fn(() => ({
       data: { user: mockUser },
       error: null,
     })),
+    admin: {
+      deleteUser: mockDeleteUser,
+    },
   },
   from: vi.fn(() => ({
     select: vi.fn(() => ({
@@ -46,6 +57,7 @@ const mockSupabase = {
         })),
       })),
     })),
+    delete: mockTableDelete,
   })),
 };
 
@@ -69,7 +81,7 @@ vi.mock("@/lib/auth/middleware", () => ({
 
 // ── Import route handlers after mocking ────────────────────────────────────────
 
-import { GET, PATCH } from "@/app/api/user/profile/route";
+import { GET, PATCH, DELETE } from "@/app/api/user/profile/route";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -206,5 +218,34 @@ describe("PATCH /api/user/profile", () => {
     const res = await PATCH(req);
 
     expect(res.status).toBe(400);
+  });
+});
+
+describe("DELETE /api/user/profile", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockDeleteUser.mockResolvedValue({ error: null });
+  });
+
+  it("deletes user data + auth identity and returns deleted: true", async () => {
+    const req = makeRequest("DELETE", "/api/user/profile");
+    const res = await DELETE(req);
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.deleted).toBe(true);
+    expect(mockDeleteUser).toHaveBeenCalledWith("user-123");
+    // Cascade-leading deletes ran first (one per owned table)
+    expect(mockTableDelete).toHaveBeenCalled();
+  });
+
+  it("returns 500 if auth admin deleteUser fails", async () => {
+    mockDeleteUser.mockResolvedValueOnce({
+      error: { message: "auth service down" },
+    });
+    const req = makeRequest("DELETE", "/api/user/profile");
+    const res = await DELETE(req);
+
+    expect(res.status).toBe(500);
   });
 });

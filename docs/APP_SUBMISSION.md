@@ -24,6 +24,52 @@ Last updated: February 3, 2026
 - [ ] **Apple Developer Account:** Connected to EAS
 - [ ] **Google Play Account:** Service account JSON configured
 
+#### Expected `expo-doctor` warnings
+
+`bunx expo-doctor` currently surfaces two known structural warnings that do
+not block EAS Build:
+
+1. **Duplicate native module installations** (`@expo/vector-icons`, `expo`,
+   `expo-constants`, `expo-font`, `expo-linking`). Bun's symlink layout creates
+   multiple paths to the same package version in monorepos. The packages are
+   the same version — EAS Build's clean install resolves them to a single copy.
+2. **`metro.config.js` enables `unstable_enableSymlinks`.** Required for the
+   Bun monorepo layout. Removing it breaks Metro's resolution of workspace
+   packages (`@faroway/*`).
+
+`@types/jest` and `jest` major-version warnings are silenced via
+`expo.install.exclude` in `apps/mobile/package.json` — we are intentionally on
+jest 30 (Expo SDK 54 pins jest 29 for `jest-expo`, which we do not use).
+
+#### iOS submit credentials (required before App Store upload)
+
+`eas.json` intentionally ships an empty `submit.production.ios` block so no
+placeholder credentials live in version control. Before the first production
+submission, run one of the following on the build machine (or in CI):
+
+- **Recommended (App Store Connect API key):**
+  ```bash
+  eas credentials                        # configure ASC API key under iOS → Submission credentials
+  eas submit --platform ios --profile production
+  ```
+  EAS stores the ASC API key encrypted on the EAS server; nothing is checked
+  into git.
+
+- **Alternative (Apple ID password / app-specific password):**
+  Set the following EAS secrets and pass them at submit time, or fill them in
+  locally for a one-off submit:
+  - `APPLE_ID` – Apple ID email
+  - `ASC_APP_ID` – App Store Connect numeric app ID
+  - `APPLE_TEAM_ID` – Apple developer team ID
+  - `APPLE_APP_SPECIFIC_PASSWORD` – app-specific password from appleid.apple.com
+
+#### Android submit credentials
+
+`submit.production.android.serviceAccountKeyPath` points to
+`./google-service-account.json`. This file is git-ignored — provision it on the
+build machine or set `GOOGLE_SERVICE_ACCOUNT_KEY` as an EAS secret and pass it
+via `--key`.
+
 ---
 
 ## iOS App Store Submission

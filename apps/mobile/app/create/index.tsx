@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -8,31 +8,33 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter, useLocalSearchParams } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import {
   Button,
   PlacesAutocomplete,
   DateRangePicker,
   VibeSelector,
-} from '../../components/ui';
-import { useTripStore } from '../../stores/tripStore';
-import { usePromptStore } from '../../stores/promptStore';
-import { useAuthContext } from '../../components/AuthProvider';
-import { AuthGate } from '../../components/AuthGate';
-import { popularDestinations, travelerTypes } from '@faroway/constants';
-import { colors, borderRadius, shadows } from '../../constants/theme';
-import { hapticFeedback } from '../../utils/haptics';
-import { e2eIds } from '../../e2e/testIds';
+} from "../../components/ui";
+import { useTripStore } from "../../stores/tripStore";
+import { usePromptStore } from "../../stores/promptStore";
+import { useAuthContext } from "../../components/AuthProvider";
+import { AuthGate } from "../../components/AuthGate";
+import { popularDestinations, travelerTypes } from "@faroway/constants";
+import { colors, borderRadius, shadows } from "../../constants/theme";
+import { hapticFeedback } from "../../utils/haptics";
+import { e2eIds } from "../../e2e/testIds";
 
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
 
 function getStaticMapUrl(destination: string, country: string): string | null {
   if (!GOOGLE_API_KEY) return null;
-  const center = encodeURIComponent(`${destination}${country ? `, ${country}` : ''}`);
+  const center = encodeURIComponent(
+    `${destination}${country ? `, ${country}` : ""}`,
+  );
   return (
     `https://maps.googleapis.com/maps/api/staticmap?center=${center}` +
     `&zoom=11&size=600x300&scale=2&maptype=roadmap` +
@@ -62,7 +64,8 @@ export default function CreateTripScreen() {
   }>();
   const { draftInput, setDraftInput } = useTripStore();
   const { isAuthenticated } = useAuthContext();
-  const { tripGenerationCount, hasDismissedCreateBanner, dismissCreateBanner } = usePromptStore();
+  const { tripGenerationCount, hasDismissedCreateBanner, dismissCreateBanner } =
+    usePromptStore();
 
   const [showSearch, setShowSearch] = useState(!params.destination);
   const [mapLoadFailed, setMapLoadFailed] = useState(false);
@@ -79,7 +82,7 @@ export default function CreateTripScreen() {
         placeId: params.placeId,
       };
       if (params.vibes) {
-        updates.vibes = params.vibes.split(',');
+        updates.vibes = params.vibes.split(",");
       }
       if (params.startDate) {
         updates.startDate = params.startDate;
@@ -98,9 +101,22 @@ export default function CreateTripScreen() {
       }
       setDraftInput(updates);
     }
-  }, [params.destination, params.country, params.placeId, params.vibes, params.startDate, params.endDate, params.travelerType, params.travelers]);
+  }, [
+    params.destination,
+    params.country,
+    params.placeId,
+    params.vibes,
+    params.startDate,
+    params.endDate,
+    params.travelerType,
+    params.travelers,
+  ]);
 
-  const handleSelectDestination = (name: string, country: string, placeId?: string) => {
+  const handleSelectDestination = (
+    name: string,
+    country: string,
+    placeId?: string,
+  ) => {
     hapticFeedback.selection();
     setMapLoadFailed(false);
     setDraftInput({ destination: name, country, placeId });
@@ -127,32 +143,46 @@ export default function CreateTripScreen() {
   };
 
   const canProceed =
-    draftInput?.destination &&
-    draftInput?.startDate &&
-    draftInput?.endDate;
+    draftInput?.destination && draftInput?.startDate && draftInput?.endDate;
 
   const handleContinue = () => {
-    if (canProceed) {
-      hapticFeedback.success();
-      router.push('/create/generating');
-    } else {
+    if (!canProceed) {
       hapticFeedback.error();
+      return;
+    }
+    if (!isAuthenticated) {
+      hapticFeedback.light();
+      setShowAuthGate(true);
+      return;
+    }
+    hapticFeedback.success();
+    router.push("/create/generating");
+  };
+
+  const handleAuthenticated = () => {
+    setShowAuthGate(false);
+    if (canProceed) {
+      router.push("/create/generating");
     }
   };
 
   const selectedDestination = popularDestinations.find(
-    (d) => d.name === draftInput?.destination
+    (d) => d.name === draftInput?.destination,
   );
 
   const mapUrl = draftInput?.destination
-    ? getStaticMapUrl(draftInput.destination, draftInput.country || '')
+    ? getStaticMapUrl(draftInput.destination, draftInput.country || "")
     : null;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']} testID={e2eIds.create.screen}>
+    <SafeAreaView
+      style={styles.container}
+      edges={["top"]}
+      testID={e2eIds.create.screen}
+    >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -181,7 +211,11 @@ export default function CreateTripScreen() {
                 activeOpacity={0.7}
                 testID={e2eIds.create.signInBanner}
               >
-                <Ionicons name="cloud-upload-outline" size={18} color={colors.primary[600]} />
+                <Ionicons
+                  name="cloud-upload-outline"
+                  size={18}
+                  color={colors.primary[600]}
+                />
                 <Text style={styles.signInBannerText}>
                   Sign in to sync your trips across devices
                 </Text>
@@ -226,7 +260,7 @@ export default function CreateTripScreen() {
                   />
                 )}
                 <LinearGradient
-                  colors={['transparent', 'rgba(0,0,0,0.7)']}
+                  colors={["transparent", "rgba(0,0,0,0.7)"]}
                   style={styles.selectedDestinationGradient}
                 />
                 {(!mapUrl || mapLoadFailed) && !selectedDestination && (
@@ -272,7 +306,7 @@ export default function CreateTripScreen() {
                         style={styles.destinationOptionImage}
                       />
                       <LinearGradient
-                        colors={['transparent', 'rgba(0,0,0,0.6)']}
+                        colors={["transparent", "rgba(0,0,0,0.6)"]}
                         style={styles.destinationOptionGradient}
                       />
                       <View style={styles.destinationOptionContent}>
@@ -293,8 +327,8 @@ export default function CreateTripScreen() {
           {/* Date Selection */}
           <View style={styles.section}>
             <DateRangePicker
-              startDate={draftInput?.startDate || ''}
-              endDate={draftInput?.endDate || ''}
+              startDate={draftInput?.startDate || ""}
+              endDate={draftInput?.endDate || ""}
               onStartDateChange={(date) => setDraftInput({ startDate: date })}
               onEndDateChange={(date) => setDraftInput({ endDate: date })}
             />
@@ -305,7 +339,9 @@ export default function CreateTripScreen() {
             <Text style={styles.sectionTitle}>Who's traveling?</Text>
 
             <View style={styles.travelerCounter}>
-              <Text style={styles.travelerCounterLabel}>Number of travelers</Text>
+              <Text style={styles.travelerCounterLabel}>
+                Number of travelers
+              </Text>
               <View style={styles.counterControls}>
                 <TouchableOpacity
                   style={styles.counterButton}
@@ -405,10 +441,11 @@ export default function CreateTripScreen() {
           />
         </View>
 
-        {/* Auth gate from banner */}
+        {/* Auth gate — gates both the soft sign-in banner and the Generate CTA */}
         <AuthGate
           visible={showAuthGate}
-          trigger="general"
+          trigger={canProceed && !isAuthenticated ? "generate" : "general"}
+          onAuthenticated={handleAuthenticated}
           onClose={() => setShowAuthGate(false)}
         />
       </KeyboardAvoidingView>
@@ -419,34 +456,34 @@ export default function CreateTripScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: "#e2e8f0",
   },
   closeButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: "700",
+    color: "#0f172a",
   },
   signInBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF5F4',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF5F4",
     marginHorizontal: 24,
     marginBottom: 16,
     paddingVertical: 12,
@@ -455,14 +492,14 @@ const styles = StyleSheet.create({
   },
   signInBannerContent: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 10,
   },
   signInBannerText: {
     flex: 1,
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.primary[600],
   },
   signInBannerClose: {
@@ -478,67 +515,67 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: "700",
+    color: "#0f172a",
     marginBottom: 16,
   },
   selectedDestination: {
     height: 180,
     borderRadius: borderRadius.xl,
-    overflow: 'hidden',
-    backgroundColor: '#f1f5f9',
+    overflow: "hidden",
+    backgroundColor: "#f1f5f9",
     ...shadows.md,
   },
   selectedDestinationImage: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
+    width: "100%",
+    height: "100%",
+    position: "absolute",
   },
   selectedDestinationGradient: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    height: '60%',
+    height: "60%",
   },
   selectedDestinationIcon: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
+    position: "absolute",
+    top: "50%",
+    left: "50%",
     marginTop: -20,
     marginLeft: -20,
   },
   selectedDestinationContent: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 16,
     left: 16,
   },
   selectedDestinationCountry: {
     fontSize: 12,
     color: colors.primary[300],
-    fontWeight: '600',
-    textTransform: 'uppercase',
+    fontWeight: "600",
+    textTransform: "uppercase",
     letterSpacing: 1,
     marginBottom: 4,
   },
   selectedDestinationName: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#fff',
+    fontWeight: "800",
+    color: "#fff",
   },
   changeButton: {
-    position: 'absolute',
+    position: "absolute",
     top: 16,
     right: 16,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: "rgba(0,0,0,0.5)",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: borderRadius.full,
   },
   changeButtonText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: '#fff',
+    fontWeight: "600",
+    color: "#fff",
   },
   destinationList: {
     marginTop: 16,
@@ -552,111 +589,111 @@ const styles = StyleSheet.create({
     width: 140,
     height: 180,
     borderRadius: borderRadius.lg,
-    overflow: 'hidden',
+    overflow: "hidden",
     ...shadows.sm,
   },
   destinationOptionImage: {
-    width: '100%',
-    height: '100%',
-    position: 'absolute',
+    width: "100%",
+    height: "100%",
+    position: "absolute",
   },
   destinationOptionGradient: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    height: '50%',
+    height: "50%",
   },
   destinationOptionContent: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 12,
     left: 12,
     right: 12,
   },
   destinationOptionName: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: "700",
+    color: "#fff",
   },
   destinationOptionCountry: {
     fontSize: 12,
-    color: 'rgba(255,255,255,0.8)',
+    color: "rgba(255,255,255,0.8)",
     marginTop: 2,
   },
   travelerCounter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#ffffff',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "#ffffff",
     padding: 16,
     borderRadius: borderRadius.lg,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
   },
   travelerCounterLabel: {
     fontSize: 16,
-    fontWeight: '600',
-    color: '#475569',
+    fontWeight: "600",
+    color: "#475569",
   },
   counterControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 16,
   },
   counterButton: {
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
   },
   counterValue: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: "700",
+    color: "#0f172a",
     minWidth: 30,
-    textAlign: 'center',
+    textAlign: "center",
   },
   travelerTypes: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   travelerTypeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: borderRadius.full,
     gap: 8,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   travelerTypeButtonSelected: {
-    backgroundColor: '#FFF5F4',
+    backgroundColor: "#FFF5F4",
     borderColor: colors.primary[500],
   },
   travelerTypeLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#64748b',
+    fontWeight: "600",
+    color: "#64748b",
   },
   travelerTypeLabelSelected: {
     color: colors.primary[400],
   },
   bottomBar: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     paddingHorizontal: 24,
     paddingVertical: 16,
     paddingBottom: 40,
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
+    borderTopColor: "#e2e8f0",
   },
 });
