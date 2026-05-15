@@ -36,6 +36,26 @@ import { e2eIds } from "../../e2e/testIds";
 const { width } = Dimensions.get("window");
 const HEADER_HEIGHT = 300;
 
+const TRIP_STATUS_LABELS: Record<string, string> = {
+  draft: "Draft",
+  planned: "Planned",
+  active: "In progress",
+  completed: "Completed",
+};
+
+function TripStatusPill({ status }: { status: string }) {
+  const label = TRIP_STATUS_LABELS[status] ?? status;
+  return (
+    <View
+      style={styles.statusPill}
+      accessibilityRole="text"
+      accessibilityLabel={`Trip status: ${label}`}
+    >
+      <Text style={styles.statusPillText}>{label}</Text>
+    </View>
+  );
+}
+
 /**
  * Helper function to open URLs using expo-web-browser
  */
@@ -793,7 +813,10 @@ export default function TripDetailScreen() {
               </View>
             </View>
             <View style={styles.heroInfo}>
-              <Text style={styles.heroCountry}>{trip.country}</Text>
+              <View style={styles.heroTopRow}>
+                <Text style={styles.heroCountry}>{trip.country}</Text>
+                <TripStatusPill status={trip.status} />
+              </View>
               <Text style={styles.heroTitle}>{trip.destination}</Text>
               <View style={styles.heroMeta}>
                 <View style={styles.heroMetaItem}>
@@ -887,7 +910,18 @@ export default function TripDetailScreen() {
             </View>
           )}
 
-          {/* Activities */}
+          {/* Activities — labeled as recommendations so users understand
+              these aren't confirmed bookings yet. The Book CTAs hand off to
+              affiliate partners; the trip itself stays in 'planned' until
+              the user actually confirms there. */}
+          <View style={styles.recommendationsHeader}>
+            <Text style={styles.recommendationsTitle}>
+              Recommended for this day
+            </Text>
+            <Text style={styles.recommendationsHint}>
+              Tap a card to book with our travel partners
+            </Text>
+          </View>
           <View style={styles.activitiesContainer}>
             {trip.days[selectedDay]?.activities.map((activity) => (
               <ActivityCard key={activity.id} activity={activity} />
@@ -899,7 +933,9 @@ export default function TripDetailScreen() {
       {/* Bottom Bar */}
       <View style={styles.bottomBar}>
         <View style={styles.bottomBarInfo}>
-          <Text style={styles.bottomBarLabel}>Estimated cost</Text>
+          <Text style={styles.bottomBarLabel}>
+            Estimated cost · prices vary
+          </Text>
           <Text style={styles.bottomBarPrice}>
             {estimatedTotal > 0
               ? `~$${estimatedTotal.toLocaleString()}`
@@ -1027,19 +1063,56 @@ const styles = StyleSheet.create({
   heroInfo: {
     marginBottom: 8,
   },
+  heroTopRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 4,
+  },
   heroCountry: {
     fontSize: 14,
     color: colors.primary[300],
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 1,
-    marginBottom: 4,
+  },
+  statusPill: {
+    backgroundColor: "rgba(255,255,255,0.18)",
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+  },
+  statusPillText: {
+    color: "#fff",
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.4,
+    textTransform: "uppercase",
   },
   heroTitle: {
     fontSize: 32,
     fontWeight: "800",
     color: "#fff",
     marginBottom: 12,
+  },
+  recommendationsHeader: {
+    marginTop: 8,
+    marginBottom: 12,
+    paddingHorizontal: 4,
+  },
+  recommendationsTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+    color: colors.surface[600],
+    textTransform: "uppercase",
+    letterSpacing: 0.6,
+  },
+  recommendationsHint: {
+    fontSize: 12,
+    color: colors.surface[500],
+    marginTop: 2,
   },
   heroMeta: {
     flexDirection: "row",
