@@ -11,8 +11,6 @@ import {
   MapPin,
   RefreshCw,
   Sparkles,
-  Clock,
-  LogIn,
   Star,
   ExternalLink,
   Shield,
@@ -716,9 +714,6 @@ export default function TripDetailPage() {
           <EmptyItinerary destination={trip.destination} />
         )}
 
-        {/* Save Trip Nudge for anonymous users */}
-        {isComplete && !trip.user_id && <SaveTripNudge tripId={trip.id} />}
-
         {/* Share This Trip */}
         {isComplete && (!!displayDays?.length || itinerary) && (
           <div className="mt-8 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl p-6 sm:p-8 text-center border border-primary-100/30">
@@ -1080,47 +1075,6 @@ function BudgetSummary({
         <span className="text-2xl font-black text-gray-900">
           {formatCost(breakdown.total)}
         </span>
-      </div>
-    </div>
-  );
-}
-
-// ── Save Trip Nudge (anonymous users) ─────────────────────────────────────────
-
-function SaveTripNudge({ tripId }: { tripId: string }) {
-  const redirectTo = encodeURIComponent(`/trips/${tripId}`);
-
-  return (
-    <div className="mt-6 bg-amber-50 border border-amber-200 rounded-2xl p-6">
-      <div className="flex items-start gap-4">
-        <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center flex-shrink-0">
-          <Clock className="w-5 h-5 text-amber-600" />
-        </div>
-        <div className="flex-1">
-          <h3 className="font-semibold text-amber-800 mb-1">
-            Save this trip permanently
-          </h3>
-          <p className="text-sm text-amber-700 mb-4">
-            Sign up to keep this trip forever. Anonymous trips expire after 7
-            days.
-          </p>
-          <div className="flex flex-wrap gap-3">
-            <Link
-              href={`/auth/signup?redirectTo=${redirectTo}`}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary-600 transition-colors"
-            >
-              <Sparkles className="w-4 h-4" />
-              Sign Up Free
-            </Link>
-            <Link
-              href={`/auth/login?redirectTo=${redirectTo}`}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
-            >
-              <LogIn className="w-4 h-4" />
-              Log In
-            </Link>
-          </div>
-        </div>
       </div>
     </div>
   );

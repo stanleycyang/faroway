@@ -198,6 +198,7 @@ const supabaseMock = {
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => supabaseMock),
+  createClientFromRequest: vi.fn(async () => supabaseMock),
   getSupabase: vi.fn(() => supabaseMock),
 }));
 

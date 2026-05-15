@@ -4,6 +4,23 @@ import { IMAGE_PATHS, getImageUrl } from "@faroway/constants";
 
 export type TripStatus = "draft" | "generating" | "complete";
 
+/**
+ * Backend trip statuses span more values than older clients understood.
+ * Canonicalizes legacy spellings ("complete" → "completed", "cancelled" →
+ * "canceled") and guarantees a non-empty return for any known lifecycle
+ * status, so the card never crashes on a status it doesn't know about.
+ */
+export function normalizeDashboardTripStatus(status: string): string {
+  switch (status) {
+    case "complete":
+      return "completed";
+    case "cancelled":
+      return "canceled";
+    default:
+      return status;
+  }
+}
+
 export interface Trip {
   id: string;
   destination: string;

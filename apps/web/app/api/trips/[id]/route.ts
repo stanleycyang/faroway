@@ -28,17 +28,23 @@ type Params = {
 };
 
 /**
- * Resolve the current user (if authenticated). Returns null for anonymous users.
+ * Resolve the authenticated user, or return a 401 NextResponse if not signed in.
+ * Anonymous trip access has been removed — every trip belongs to a real user.
  */
-async function resolveUser(request: NextRequest): Promise<string | null> {
+async function requireUserId(
+  request: NextRequest,
+): Promise<{ userId: string } | NextResponse> {
   try {
     const supabase = await createClientFromRequest(request);
     const {
       data: { user },
     } = await supabase.auth.getUser();
-    return user?.id ?? null;
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return { userId: user.id };
   } catch {
-    return null;
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 }
 
@@ -52,23 +58,18 @@ export async function GET(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Invalid trip ID" }, { status: 400 });
     }
 
-    const userId = await resolveUser(request);
+    const auth = await requireUserId(request);
+    if (auth instanceof NextResponse) return auth;
     const db = getSupabase();
 
-    // Fetch trip with itinerary — strictly scoped to the user's own trips
-    let query = db
+    const { data: trip, error } = await db
       .from("trips")
       .select(
         "id, destination, start_date, end_date, status, travelers, budget, preferences, vibes, interests, budget_tier, user_id, search_id, created_at, updated_at, itineraries(days, overview, total_cost, packing_list, general_tips, generated_at)",
       )
-      .eq("id", id);
-    if (userId) {
-      query = query.eq("user_id", userId);
-    } else {
-      query = query.is("user_id", null);
-    }
-
-    const { data: trip, error } = await query.single();
+      .eq("id", id)
+      .eq("user_id", auth.userId)
+      .single();
 
     if (error || !trip) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
@@ -119,7 +120,8 @@ export async function GET(request: NextRequest, { params }: Params) {
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
-    const userId = await resolveUser(request);
+    const auth = await requireUserId(request);
+    if (auth instanceof NextResponse) return auth;
     const db = getSupabase();
 
     const body = await request.json();
@@ -132,19 +134,13 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       );
     }
 
-    // Build the update query — strictly scoped to user's own trips
-    let query = db
+    const { data: trip, error } = await db
       .from("trips")
       .update({ ...parseResult.data, updated_at: new Date().toISOString() })
-      .eq("id", id);
-
-    if (userId) {
-      query = query.eq("user_id", userId);
-    } else {
-      query = query.is("user_id", null);
-    }
-
-    const { data: trip, error } = await query.select().single();
+      .eq("id", id)
+      .eq("user_id", auth.userId)
+      .select()
+      .single();
 
     if (error || !trip) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });

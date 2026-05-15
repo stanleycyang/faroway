@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClientFromRequest } from "@/lib/supabase/server";
 import { nanoid } from "nanoid";
 
 type Params = {
@@ -17,7 +17,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Invalid trip ID" }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    const supabase = await createClientFromRequest(request);
 
     const {
       data: { user },
@@ -85,7 +85,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Invalid trip ID" }, { status: 400 });
     }
 
-    const supabase = await createClient();
+    const supabase = await createClientFromRequest(request);
 
     const {
       data: { user },

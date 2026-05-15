@@ -17,7 +17,7 @@ import { colors, borderRadius, shadows } from '../constants/theme';
 
 const { height } = Dimensions.get('window');
 
-type AuthGateTrigger = 'save' | 'book' | 'share' | 'access' | 'general';
+type AuthGateTrigger = 'save' | 'book' | 'share' | 'access' | 'general' | 'generate';
 
 interface AuthGateProps {
   visible: boolean;
@@ -51,6 +51,10 @@ const triggerContent: Record<AuthGateTrigger, { title: string; subtitle: string 
   general: {
     title: 'Join Faroway',
     subtitle: 'Create a free account to unlock all features',
+  },
+  generate: {
+    title: 'Sign in to generate your trip',
+    subtitle: 'Faroway plans trips for signed-in users so your itinerary saves across devices.',
   },
 };
 

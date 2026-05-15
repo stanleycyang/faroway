@@ -16,7 +16,8 @@ import {
 import { GoogleSignin, isCancelledResponse } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
-import { claimAnonymousTrips, clearAnonymousTripIds } from '../services/anonymousTrips';
+// Anonymous-trip claim flow has been removed. Trip generation is auth-gated
+// end-to-end, so trips always belong to a real Supabase user from creation.
 
 GoogleSignin.configure({
   webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
@@ -102,7 +103,6 @@ export function useAuth() {
           // an authenticated-but-empty user state. hydrateUser catches its own
           // errors and always calls setUser() before returning.
           await hydrateUser(session);
-          void claimAnonymousTrips(session.access_token);
         }
 
         setAuthState({
@@ -133,7 +133,6 @@ export function useAuth() {
         if (session) {
           hadAuthenticatedSessionRef.current = true;
           await hydrateUser(session);
-          void claimAnonymousTrips(session.access_token);
         } else {
           setAuthToken(null);
           Sentry.setUser(null);
@@ -277,7 +276,6 @@ export function useAuth() {
     }
 
     setAuthToken(null);
-    await clearAnonymousTripIds();
     clearUserStore();
     clearTrips();
     hadAuthenticatedSessionRef.current = false;

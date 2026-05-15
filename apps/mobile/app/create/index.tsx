@@ -133,11 +133,25 @@ export default function CreateTripScreen() {
   const canProceed = draftInput?.destination && draftInput?.startDate && draftInput?.endDate;
 
   const handleContinue = () => {
-    if (canProceed) {
-      hapticFeedback.success();
-      router.push('/create/generating');
-    } else {
+    if (!canProceed) {
       hapticFeedback.error();
+      return;
+    }
+    // Generation is auth-required end-to-end. Open the sheet first so the
+    // user signs in before we POST /api/trips (which would otherwise 401).
+    if (!isAuthenticated) {
+      hapticFeedback.light();
+      setShowAuthGate(true);
+      return;
+    }
+    hapticFeedback.success();
+    router.push('/create/generating');
+  };
+
+  const handleAuthenticated = () => {
+    setShowAuthGate(false);
+    if (canProceed) {
+      router.push('/create/generating');
     }
   };
 
@@ -373,7 +387,12 @@ export default function CreateTripScreen() {
         </View>
 
         {/* Auth gate from banner */}
-        <AuthGate visible={showAuthGate} trigger="general" onClose={() => setShowAuthGate(false)} />
+        <AuthGate
+          visible={showAuthGate}
+          trigger={canProceed && !isAuthenticated ? 'generate' : 'general'}
+          onAuthenticated={handleAuthenticated}
+          onClose={() => setShowAuthGate(false)}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

@@ -83,6 +83,7 @@ const mockSupabase = {
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => mockSupabase),
+  createClientFromRequest: vi.fn(async () => mockSupabase),
   getSupabase: vi.fn(() => mockConversionSupabase),
 }));
 

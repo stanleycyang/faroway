@@ -95,7 +95,7 @@ export default function LoginScreen() {
 
         {/* Skip */}
         <TouchableOpacity style={styles.skipButton} onPress={handleSkipLogin}>
-          <Text style={styles.skipText}>Continue without an account</Text>
+          <Text style={styles.skipText}>Skip for now</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>

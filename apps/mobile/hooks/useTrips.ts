@@ -26,6 +26,7 @@ interface ApiTrip {
   };
   vibes?: string[];
   budget?: string;
+  budget_tier?: string;
   status: string;
   cover_image?: string;
   itinerary?: ApiItinerary;
@@ -191,6 +192,27 @@ function transformApiHotel(h: any): Hotel | undefined {
   };
 }
 
+// Map backend trip statuses (which include generation lifecycle states like
+// 'generated' and 'failed') onto the narrower mobile UI status enum.
+function normalizeStatus(apiStatus: string | undefined): Trip['status'] {
+  switch (apiStatus) {
+    case 'draft':
+    case 'pending':
+    case 'generating':
+      return 'draft';
+    case 'generated':
+    case 'planned':
+    case 'failed':
+      return 'planned';
+    case 'active':
+      return 'active';
+    case 'completed':
+      return 'completed';
+    default:
+      return 'planned';
+  }
+}
+
 /**
  * Transform API trip to app Trip format.
  * The single-trip endpoint returns { trip, itinerary } as separate top-level keys,
@@ -211,20 +233,20 @@ function transformApiTrip(apiTrip: ApiTrip, itinerary?: ApiItinerary): Trip {
     originCity: apiTrip.preferences?.originCity,
     originAirport: apiTrip.preferences?.originAirport,
     vibes: apiTrip.vibes || [],
-    budget: apiTrip.budget,
+    budget: apiTrip.budget_tier || apiTrip.budget,
     days: transformItineraryDays(rawDays),
     hotel: transformApiHotel(itineraryData?.topHotel),
     coverImage:
       apiTrip.cover_image || getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
     createdAt: apiTrip.created_at,
-    status: apiTrip.status as Trip['status'],
+    status: normalizeStatus(apiTrip.status),
   };
 }
 
 export function useTrips() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { trips, saveTrip, deleteTrip: removeFromStore, setCurrentTrip } = useTripStore();
+  const { trips, saveTrip, setTrips, deleteTrip: removeFromStore, setCurrentTrip } = useTripStore();
 
   // Fetch all trips from backend (with offline fallback)
   const fetchTrips = useCallback(async () => {
@@ -235,7 +257,8 @@ export function useTrips() {
     if (!networkMonitor.isOnline()) {
       try {
         const cachedTrips = await offlineStorage.loadTrips();
-        cachedTrips.forEach((trip: Trip) => saveTrip(trip));
+        setTrips(cachedTrips);
+        await offlineStorage.saveTrips(cachedTrips);
         setLoading(false);
         return cachedTrips;
       } catch {
@@ -261,9 +284,10 @@ export function useTrips() {
 
       const data = await response.json();
 
-      // Transform and save trips to store and offline storage
+      // Transform and replace trips in store + offline cache so stale local
+      // trips don't linger.
       const transformedTrips = (data.trips || []).map((t: ApiTrip) => transformApiTrip(t));
-      transformedTrips.forEach((trip: Trip) => saveTrip(trip));
+      setTrips(transformedTrips);
 
       // Save to offline storage for caching
       await offlineStorage.saveTrips(transformedTrips);
@@ -279,7 +303,7 @@ export function useTrips() {
     } finally {
       setLoading(false);
     }
-  }, [saveTrip, trips]);
+  }, [setTrips, trips]);
 
   // Create a new trip (with offline support)
   const createTrip = useCallback(
@@ -412,16 +436,20 @@ export function useTrips() {
       setLoading(true);
       setError(null);
 
-      // If offline, update locally and queue for sync
+      // If offline, update locally and queue for sync. Read fresh trips from
+      // the store rather than the captured closure value so this works
+      // immediately after a `setTrips` call without an intervening re-render.
       if (!networkMonitor.isOnline()) {
-        const existingTrip = trips.find((t) => t.id === id);
-        if (existingTrip) {
-          const updatedTrip = { ...existingTrip, ...updates } as Trip;
-          saveTrip(updatedTrip);
-          await syncService.queueUpdate(id, updates);
+        const existingTrip = useTripStore.getState().trips.find((t) => t.id === id);
+        if (!existingTrip) {
+          setLoading(false);
+          return undefined;
         }
+        const updatedTrip = { ...existingTrip, ...updates } as Trip;
+        saveTrip(updatedTrip);
+        await syncService.queueUpdate(id, updates);
         setLoading(false);
-        return existingTrip;
+        return updatedTrip;
       }
 
       try {
@@ -452,7 +480,7 @@ export function useTrips() {
         setLoading(false);
       }
     },
-    [saveTrip, trips]
+    [saveTrip]
   );
 
   // Delete a trip (with offline support)

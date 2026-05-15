@@ -12,11 +12,9 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from '../constants/api';
+import { getAuthHeaders } from '../lib/supabase';
 import type { SearchProgress } from '@faroway/types';
-
-const ANONYMOUS_TRIPS_KEY = '@faroway/anonymous_trips';
 
 export interface SearchResults {
   hotels: unknown[];
@@ -97,10 +95,12 @@ export function useItineraryGeneration(
       }));
 
       try {
+        const authHeaders = await getAuthHeaders();
+
         // 1. Create a trip via the unified API
         const tripResponse = await fetch(`${API_BASE_URL}/api/trips`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
           body: JSON.stringify({
             destination: input.destination,
             start_date: input.startDate,
@@ -122,19 +122,6 @@ export function useItineraryGeneration(
         const { trip } = await tripResponse.json();
         const tripId = trip.id;
 
-        // Store anonymous trip ID so it can be claimed after sign-up
-        if (!trip.user_id) {
-          try {
-            const stored = JSON.parse((await AsyncStorage.getItem(ANONYMOUS_TRIPS_KEY)) || '[]');
-            if (!stored.includes(tripId)) {
-              stored.push(tripId);
-              await AsyncStorage.setItem(ANONYMOUS_TRIPS_KEY, JSON.stringify(stored));
-            }
-          } catch {
-            await AsyncStorage.setItem(ANONYMOUS_TRIPS_KEY, JSON.stringify([tripId]));
-          }
-        }
-
         if (cancelledRef.current) return;
 
         setState((prev) => ({ ...prev, tripId, statusMessage: 'Starting AI trip planner...' }));
@@ -142,7 +129,7 @@ export function useItineraryGeneration(
         // 2. Trigger generation via POST /api/trips/[id]/generate
         const genResponse = await fetch(`${API_BASE_URL}/api/trips/${tripId}/generate`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: { 'Content-Type': 'application/json', ...authHeaders },
         });
 
         if (!genResponse.ok && genResponse.status !== 409) {
@@ -166,7 +153,9 @@ export function useItineraryGeneration(
         while (attempts < maxAttempts) {
           if (cancelledRef.current) return;
 
-          const statusRes = await fetch(`${API_BASE_URL}/api/trips/${tripId}/generate`);
+          const statusRes = await fetch(`${API_BASE_URL}/api/trips/${tripId}/generate`, {
+            headers: authHeaders,
+          });
           if (!statusRes.ok) {
             attempts++;
             await new Promise((resolve) => setTimeout(resolve, 2000));
@@ -189,7 +178,9 @@ export function useItineraryGeneration(
             // Fetch the json-render spec from the search
             if (searchId) {
               try {
-                const searchRes = await fetch(`${API_BASE_URL}/api/search/${searchId}`);
+                const searchRes = await fetch(`${API_BASE_URL}/api/search/${searchId}`, {
+                  headers: authHeaders,
+                });
                 if (searchRes.ok) {
                   const searchData = await searchRes.json();
                   setState((prev) => ({

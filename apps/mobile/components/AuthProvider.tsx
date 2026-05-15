@@ -11,6 +11,7 @@ interface AuthContextType {
   signInWithGoogle: () => Promise<unknown>;
   signInWithApple: () => Promise<unknown>;
   signOut: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

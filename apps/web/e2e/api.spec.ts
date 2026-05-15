@@ -24,12 +24,13 @@ test.describe("Public API endpoints", () => {
     expect(body).toHaveProperty("destinations");
   });
 
-  test("POST /api/trips rejects invalid body", async ({ request }) => {
-    // /api/trips supports anonymous users; missing required fields returns 400
+  test("POST /api/trips requires authentication", async ({ request }) => {
+    // /api/trips is auth-gated; unauthenticated requests must be rejected
+    // before any body validation runs.
     const response = await request.post("/api/trips", {
-      data: { destination: "Paris" }, // missing start_date / end_date
+      data: { destination: "Paris" },
     });
-    expect(response.status()).toBe(400);
+    expect(response.status()).toBe(401);
   });
 
   test("POST /api/workflows/generate-itinerary requires authentication", async ({

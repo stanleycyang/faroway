@@ -119,7 +119,7 @@ describe('useTrips', () => {
     const tripsApi = renderUseTrips();
     const trips = await tripsApi.fetchTrips();
 
-    expect(trips.map((trip) => trip.id)).toEqual(['trip-kept']);
+    expect(trips.map((trip: Trip) => trip.id)).toEqual(['trip-kept']);
     expect(useTripStore.getState().trips.map((trip) => trip.id)).toEqual(['trip-kept']);
     expect(trips[0].budget).toBe('luxury');
     expect(offlineStorage.saveTrips).toHaveBeenCalledWith([
