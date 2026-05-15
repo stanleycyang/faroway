@@ -2,16 +2,16 @@ import { withWorkflow } from "workflow/next";
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
-// `eslint.ignoreDuringBuilds` is a real Next runtime option but isn't
-// exported on Next 16's NextConfig type — cast to allow it.
 const nextConfig: NextConfig = {
   typescript: {
     // Type-check runs as a dedicated CI step (bun run type-check) to avoid
     // competing with Turbopack for heap during the static generation phase.
     ignoreBuildErrors: true,
   },
-  // ESLint also runs as a dedicated CI step.
-  ...({ eslint: { ignoreDuringBuilds: true } } as Pick<NextConfig, never>),
+  // ESLint also runs as a dedicated CI step. The option is a real Next 16
+  // runtime config but isn't exported on the NextConfig type yet.
+  // @ts-expect-error eslint.ignoreDuringBuilds is runtime-only on Next 16
+  eslint: { ignoreDuringBuilds: true },
   transpilePackages: [
     "@faroway/supabase",
     "@faroway/constants",

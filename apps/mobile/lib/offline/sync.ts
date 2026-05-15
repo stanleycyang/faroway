@@ -6,6 +6,7 @@
 import { offlineStorage, PendingMutation, PendingMutationData } from './storage';
 import { networkMonitor } from './network';
 import { API_BASE_URL, getAuthHeaders } from '../supabase';
+import { normalizeTripStatus } from '../tripStatus';
 import type { Trip, TripInput } from '../../stores/tripStore';
 import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 
@@ -477,7 +478,7 @@ class SyncService {
         apiTrip.cover_image ||
         getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
       createdAt: apiTrip.created_at,
-      status: apiTrip.status as Trip['status'],
+      status: normalizeTripStatus(apiTrip.status),
     };
   }
 
@@ -489,15 +490,10 @@ class SyncService {
     await offlineStorage.addPendingMutation({
       type: 'create',
       tripId: trip.id,
-      data: {
-        destination: trip.destination,
-        startDate: trip.startDate,
-        endDate: trip.endDate,
-        travelers: trip.travelers,
-        travelerType: trip.travelerType,
-        vibes: trip.vibes,
-        budget: trip.budget,
-      },
+      // Store the snake_case API payload so a later sync can POST it
+      // directly. Anything else would 400 against the backend's
+      // CreateTripSchema.
+      data: buildTripCreatePayload(trip),
     });
 
     const meta = await offlineStorage.getSyncMeta();
@@ -517,7 +513,9 @@ class SyncService {
     await offlineStorage.addPendingMutation({
       type: 'update',
       tripId,
-      data: updates,
+      // Same snake_case contract as create — the API's UpdateTripSchema
+      // is strict() and rejects camelCase keys.
+      data: buildTripUpdatePayload(updates),
     });
 
     const meta = await offlineStorage.getSyncMeta();

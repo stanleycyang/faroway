@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
+import { createClientFromRequest } from "@/lib/supabase/server";
 import { z } from "zod";
 
 const CreateTripSchema = z.object({
@@ -113,12 +113,11 @@ export async function POST(request: NextRequest) {
       (preferences?.budget as "budget" | "moderate" | "luxury") ||
       "moderate";
 
-    // Service client is fine — we explicitly scope user_id from the verified
-    // Supabase session. Anonymous trip creation has been removed; every trip
-    // belongs to a real user from the start.
-    const db = getSupabase();
-
-    const { data: trip, error } = await db
+    // Use the user-scoped client so RLS is enforced as defense-in-depth.
+    // We still explicitly scope user_id from the verified session below, but
+    // any future RLS policy on `trips` will also catch us if the auth check
+    // here is ever bypassed.
+    const { data: trip, error } = await supabase
       .from("trips")
       .insert({
         user_id: user.id,

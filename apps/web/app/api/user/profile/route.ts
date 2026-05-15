@@ -11,7 +11,7 @@ import {
   validationErrorResponse,
   AuthResult,
 } from "@/lib/auth/middleware";
-import { checkRateLimit } from "@/lib/security/rate-limit";
+import { checkRateLimit, checkRateLimitAsync } from "@/lib/security/rate-limit";
 import { z } from "zod";
 
 const UpdateProfileSchema = z.object({
@@ -183,13 +183,21 @@ export async function DELETE(request: NextRequest) {
   const { user } = authResult as AuthResult;
   const userId = user!.id;
 
-  // Strict rate limit: 3 attempts per hour.
-  const rl = checkRateLimit(`account-delete:${userId}`, {
+  // Strict rate limit: 3 attempts per hour. Use the KV-backed async path so
+  // the limit is enforced across serverless instances (the sync helper falls
+  // back to per-instance memory, which barely applies on Vercel).
+  const rl = await checkRateLimitAsync(`account-delete:${userId}`, {
     maxRequests: 3,
     windowMs: 60 * 60 * 1000,
   });
   if (!rl.allowed) {
-    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    return NextResponse.json(
+      { error: "Too many requests" },
+      {
+        status: 429,
+        headers: { "Retry-After": String(Math.ceil(rl.resetIn / 1000)) },
+      },
+    );
   }
 
   const db = getSupabase();

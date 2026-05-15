@@ -72,9 +72,15 @@ const supabaseMock = {
   rpc: rpcMock,
 };
 
+const createClientFromRequestMock = vi.fn(async (request: unknown) => {
+  void request;
+  return supabaseMock;
+});
+
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => supabaseMock),
-  createClientFromRequest: vi.fn(async () => supabaseMock),
+  createClientFromRequest: (request: unknown) =>
+    createClientFromRequestMock(request),
   getSupabase: vi.fn(() => supabaseMock),
 }));
 
@@ -94,6 +100,29 @@ describe("POST /api/trips/[id]/generate", () => {
     mode = null;
     tripStatus = "draft";
     startMock.mockResolvedValue({ runId: "run-1" });
+  });
+
+  it("routes auth through createClientFromRequest so bearer-token mobile clients work", async () => {
+    // Regression guard: this route must invoke createClientFromRequest(request)
+    // so the Authorization header from mobile is honored. Cookie-only
+    // createClient() would silently reject the mobile app with a 401.
+    const req = new NextRequest(
+      "http://localhost:3000/api/trips/trip-1/generate",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer mobile-token",
+        },
+        body: JSON.stringify({}),
+      },
+    );
+    await POST(req, { params: Promise.resolve({ id: "trip-1" }) });
+
+    // Don't assert on response status — the workflow-runtime require() path
+    // isn't mockable from here. The only thing this test guards is that the
+    // request was forwarded to createClientFromRequest at all.
+    expect(createClientFromRequestMock).toHaveBeenCalledWith(req);
   });
 
   it("starts durable workflow and seeds preview results", async () => {

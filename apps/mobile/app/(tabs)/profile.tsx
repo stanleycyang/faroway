@@ -164,7 +164,7 @@ export default function ProfileScreen() {
     hapticFeedback.warning();
     Alert.alert(
       'Delete account?',
-      'This permanently erases your account, trips, preferences, and booking history. This cannot be undone.',
+      'This permanently erases your account, trips, and preferences. Anonymized booking records may be retained for fraud prevention and revenue reconciliation. This cannot be undone.',
       [
         { text: 'Cancel', style: 'cancel' },
         {

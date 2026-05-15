@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { API_BASE_URL, getAuthHeaders } from '../lib/supabase';
 import { useTripStore, Trip, TripInput, TripDay, Activity, Hotel } from '../stores/tripStore';
 import { syncService, networkMonitor, offlineStorage } from '../lib/offline';
+import { normalizeTripStatus } from '../lib/tripStatus';
 import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 
 interface ApiItinerary {
@@ -192,27 +193,6 @@ function transformApiHotel(h: any): Hotel | undefined {
   };
 }
 
-// Map backend trip statuses (which include generation lifecycle states like
-// 'generated' and 'failed') onto the narrower mobile UI status enum.
-function normalizeStatus(apiStatus: string | undefined): Trip['status'] {
-  switch (apiStatus) {
-    case 'draft':
-    case 'pending':
-    case 'generating':
-      return 'draft';
-    case 'generated':
-    case 'planned':
-    case 'failed':
-      return 'planned';
-    case 'active':
-      return 'active';
-    case 'completed':
-      return 'completed';
-    default:
-      return 'planned';
-  }
-}
-
 /**
  * Transform API trip to app Trip format.
  * The single-trip endpoint returns { trip, itinerary } as separate top-level keys,
@@ -239,7 +219,7 @@ function transformApiTrip(apiTrip: ApiTrip, itinerary?: ApiItinerary): Trip {
     coverImage:
       apiTrip.cover_image || getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
     createdAt: apiTrip.created_at,
-    status: normalizeStatus(apiTrip.status),
+    status: normalizeTripStatus(apiTrip.status),
   };
 }
 
@@ -253,18 +233,18 @@ export function useTrips() {
     setLoading(true);
     setError(null);
 
-    // If offline, return cached trips
+    // If offline, return cached trips. setTrips() writes through to
+    // offlineStorage internally, so we don't double-write here.
     if (!networkMonitor.isOnline()) {
       try {
         const cachedTrips = await offlineStorage.loadTrips();
         setTrips(cachedTrips);
-        await offlineStorage.saveTrips(cachedTrips);
         setLoading(false);
         return cachedTrips;
       } catch {
         setError('Offline - showing cached trips');
         setLoading(false);
-        return trips;
+        return useTripStore.getState().trips;
       }
     }
 
@@ -303,7 +283,7 @@ export function useTrips() {
     } finally {
       setLoading(false);
     }
-  }, [setTrips, trips]);
+  }, [setTrips]);
 
   // Create a new trip (with offline support)
   const createTrip = useCallback(

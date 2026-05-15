@@ -11,7 +11,8 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
-import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
+import { getSupabase } from "@/lib/supabase/server";
+import { requireUserIdFromRequest } from "@/lib/auth/middleware";
 import { startWorkflow } from "@/lib/workflow/runtime";
 import { planTripWorkflow } from "@/workflows/plan-trip";
 import { buildInstantPreview } from "@/lib/search/preview";
@@ -33,31 +34,10 @@ const TRAVELER_TYPES = new Set<TravelerType>([
   "business",
 ]);
 
-/**
- * Resolve the authenticated user, or return a 401 NextResponse. Anonymous
- * generation has been removed — every trip belongs to a real user.
- */
-async function requireUserId(
-  request: NextRequest,
-): Promise<{ userId: string } | NextResponse> {
-  try {
-    const supabase = await createClientFromRequest(request);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-    return { userId: user.id };
-  } catch {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-}
-
 export async function POST(request: NextRequest, { params }: Params) {
   try {
     const { id: tripId } = await params;
-    const auth = await requireUserId(request);
+    const auth = await requireUserIdFromRequest(request);
     if (auth instanceof NextResponse) return auth;
     const userId = auth.userId;
 
@@ -260,7 +240,7 @@ export async function POST(request: NextRequest, { params }: Params) {
 export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { id: tripId } = await params;
-    const auth = await requireUserId(request);
+    const auth = await requireUserIdFromRequest(request);
     if (auth instanceof NextResponse) return auth;
     const userId = auth.userId;
 

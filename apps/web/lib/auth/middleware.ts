@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabase } from "@/lib/supabase/server";
+import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
 
 export interface AuthUser {
   id: string;
@@ -134,4 +134,36 @@ export function validationErrorResponse(
     { error: message, code: "VALIDATION_ERROR", details },
     { status: 400 },
   );
+}
+
+/**
+ * Resolve the signed-in user ID via the request's bearer token (mobile) or
+ * cookie session (web). Unlike {@link requireAuth}, this works for both
+ * transports because it delegates to {@link createClientFromRequest}.
+ *
+ * Returns `{ userId }` on success, a 401 NextResponse if there's no valid
+ * session, or a 500 NextResponse if Supabase itself failed. Routes that just
+ * need the user's UUID (and not the full {@link AuthUser} object) should
+ * prefer this over {@link requireAuth}.
+ */
+export async function requireUserIdFromRequest(
+  request: NextRequest,
+): Promise<{ userId: string } | NextResponse> {
+  try {
+    const supabase = await createClientFromRequest(request);
+    const {
+      data: { user },
+      error,
+    } = await supabase.auth.getUser();
+    if (error || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return { userId: user.id };
+  } catch (err) {
+    // A thrown exception here means the Supabase client itself blew up
+    // (network / config) — treat as a 500 so Sentry surfaces it instead of
+    // masquerading as a permissions problem.
+    console.error("[auth] requireUserIdFromRequest threw:", err);
+    return NextResponse.json({ error: "Auth check failed" }, { status: 500 });
+  }
 }

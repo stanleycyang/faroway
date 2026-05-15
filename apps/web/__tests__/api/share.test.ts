@@ -81,9 +81,15 @@ const mockSupabase = {
   }),
 };
 
+const createClientFromRequestMock = vi.fn(async (request: unknown) => {
+  void request;
+  return mockSupabase;
+});
+
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => mockSupabase),
-  createClientFromRequest: vi.fn(async () => mockSupabase),
+  createClientFromRequest: (request: unknown) =>
+    createClientFromRequestMock(request),
   getSupabase: vi.fn(() => mockConversionSupabase),
 }));
 
@@ -190,6 +196,19 @@ describe("POST /api/trips/[id]/share", () => {
     expect(res.status).toBe(200);
     expect(json.shareToken).toBe("test-token-12");
     expect(json.shareUrl).toContain("/s/test-token-12");
+  });
+
+  it("uses request-derived auth so bearer-token mobile clients are accepted", async () => {
+    // Regression: share/route.ts used to call createClient() with no args,
+    // which only checks cookies. Mobile sends Authorization: Bearer ... so we
+    // must route through createClientFromRequest(request) instead.
+    const req = makeRequest("POST", "/api/trips/trip-1/share", undefined, {
+      Authorization: "Bearer mobile-token",
+    });
+    const res = await sharePost(req, makeParams("trip-1"));
+
+    expect(createClientFromRequestMock).toHaveBeenCalledWith(req);
+    expect(res.status).toBe(200);
   });
 
   it("returns 401 when not authenticated", async () => {
