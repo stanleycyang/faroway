@@ -63,8 +63,9 @@ const triggerContent: Record<
     subtitle: "Create a free account to unlock all features",
   },
   generate: {
-    title: "One more step",
-    subtitle: "Sign in so we can save your itinerary as we build it",
+    title: "Sign in to generate your trip",
+    subtitle:
+      "Faroway plans trips for signed-in users so your itinerary saves across devices.",
   },
 };
 

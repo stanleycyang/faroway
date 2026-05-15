@@ -26,13 +26,13 @@ const mockProfile = {
 let mockSelectReturn: { data: unknown; error: unknown };
 let mockUpdateReturn: { data: unknown; error: unknown };
 
-type DeleteUserResult = { error: { message: string } | null };
+type DbError = { message: string } | null;
+type DeleteUserResult = { error: DbError };
 const mockDeleteUser = vi.fn(
   async (_userId: string): Promise<DeleteUserResult> => ({ error: null }),
 );
-const mockTableDelete = vi.fn(() => ({
-  eq: vi.fn(async () => ({ error: null })),
-}));
+const mockUsersDeleteEq = vi.fn(async () => ({ error: null as DbError }));
+const mockTableDelete = vi.fn(() => ({ eq: mockUsersDeleteEq }));
 
 const mockSupabase = {
   auth: {
@@ -225,18 +225,37 @@ describe("DELETE /api/user/profile", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockDeleteUser.mockResolvedValue({ error: null });
+    mockUsersDeleteEq.mockResolvedValue({ error: null });
   });
 
-  it("deletes user data + auth identity and returns deleted: true", async () => {
+  it("deletes the public.users row, then the auth identity, then returns deleted: true", async () => {
+    const fromSpy = mockSupabase.from as ReturnType<typeof vi.fn>;
     const req = makeRequest("DELETE", "/api/user/profile");
     const res = await DELETE(req);
     const json = await res.json();
 
     expect(res.status).toBe(200);
     expect(json.deleted).toBe(true);
+
+    // public.users row first — relies on FK cascade for trips/itineraries/workflows
+    expect(fromSpy).toHaveBeenCalledWith("users");
+    expect(mockTableDelete).toHaveBeenCalledTimes(1);
+    expect(mockUsersDeleteEq).toHaveBeenCalledWith("id", "user-123");
+
+    // auth identity last — cascades push_tokens, SET NULLs affiliate rows
     expect(mockDeleteUser).toHaveBeenCalledWith("user-123");
-    // Cascade-leading deletes ran first (one per owned table)
-    expect(mockTableDelete).toHaveBeenCalled();
+  });
+
+  it("returns 500 and skips auth deletion if the public.users delete fails", async () => {
+    mockUsersDeleteEq.mockResolvedValueOnce({
+      error: { message: "db down" },
+    });
+    const req = makeRequest("DELETE", "/api/user/profile");
+    const res = await DELETE(req);
+
+    expect(res.status).toBe(500);
+    // Auth identity must NOT have been deleted — leaves the user able to retry.
+    expect(mockDeleteUser).not.toHaveBeenCalled();
   });
 
   it("returns 500 if auth admin deleteUser fails", async () => {

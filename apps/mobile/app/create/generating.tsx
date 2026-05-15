@@ -838,7 +838,12 @@ export default function GeneratingScreen() {
             </View>
           )}
 
-          {/* Error state */}
+          {/* Error state. We deliberately route retry back to the form
+              instead of re-running the hook here: a fresh hook invocation
+              would POST /api/trips again and orphan the trip that the first
+              attempt may have already created. The form preserves draft
+              input via tripStore, so the user sees their selections and
+              can tap Generate again. */}
           {streaming.error && (
             <View style={styles.errorBox} testID={e2eIds.generating.errorBox}>
               <Text style={styles.errorEmoji}>😔</Text>
@@ -847,19 +852,11 @@ export default function GeneratingScreen() {
               <View style={styles.errorActions}>
                 <TouchableOpacity
                   style={[styles.errorButton, styles.errorButtonPrimary]}
-                  onPress={() => router.replace("/create/generating")}
+                  onPress={() => router.back()}
                   accessibilityRole="button"
                   accessibilityLabel="Try again"
                 >
                   <Text style={styles.errorButtonText}>Try again</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.errorButton}
-                  onPress={() => router.back()}
-                  accessibilityRole="button"
-                  accessibilityLabel="Go back"
-                >
-                  <Text style={styles.errorButtonText}>Go back</Text>
                 </TouchableOpacity>
               </View>
             </View>

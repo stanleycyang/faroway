@@ -210,11 +210,15 @@ export default function ProfileScreen() {
               Alert.alert("Could not delete account", result.error);
               return;
             }
+            // Server-side identity is gone. Sign out best-effort, then
+            // wipe local state regardless so the app can't render against
+            // a deleted account if signOut's network call failed.
             try {
               await signOut();
             } catch {
-              // signOut errors are non-fatal — the user is server-side gone.
+              // Fall through to local cleanup.
             }
+            useUserStore.getState().logout();
             hapticFeedback.success();
           },
         },

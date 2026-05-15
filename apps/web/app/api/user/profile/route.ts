@@ -182,16 +182,30 @@ export async function DELETE(request: NextRequest) {
 
   const db = getSupabase();
 
-  // Order matters: clear leaf rows first, then root. Partial failure is
-  // tolerated — the user can retry — but auth removal is last so a failure
-  // mid-flow does not leave them stranded.
+  // Two-step deletion leveraging existing FK cascades (see migrations):
+  //   1. DELETE FROM public.users → cascades trips, itineraries,
+  //      workflow_progress, workflow_runs.
+  //   2. auth.admin.deleteUser → cascades push_tokens; sets NULL on
+  //      affiliate_clicks / affiliate_conversions / searches so anonymized
+  //      affiliate-revenue rows survive (intentional for accounting).
+  //
+  // If step 1 fails we bail before step 2 so the user can retry. If step 2
+  // fails after step 1 succeeded, the user's data is gone but the auth
+  // identity remains — they can sign in again and retry the DELETE call,
+  // which will succeed as a no-op cascade and then complete step 2.
   try {
-    await db.from("affiliate_clicks").delete().eq("user_id", userId);
-    await db.from("push_tokens").delete().eq("user_id", userId);
-    await db.from("searches").delete().eq("user_id", userId);
-    await db.from("itineraries").delete().eq("user_id", userId);
-    await db.from("trips").delete().eq("user_id", userId);
-    await db.from("users").delete().eq("id", userId);
+    const { error: userRowError } = await db
+      .from("users")
+      .delete()
+      .eq("id", userId);
+
+    if (userRowError) {
+      console.error("[Account Delete] users delete:", userRowError);
+      return NextResponse.json(
+        { error: "Failed to delete account data" },
+        { status: 500 },
+      );
+    }
 
     const { error: authDeleteError } = await db.auth.admin.deleteUser(userId);
     if (authDeleteError) {

@@ -36,7 +36,9 @@ import { e2eIds } from "../../e2e/testIds";
 const { width } = Dimensions.get("window");
 const HEADER_HEIGHT = 300;
 
-const TRIP_STATUS_LABELS: Record<string, string> = {
+type TripStatusKey = "draft" | "planned" | "active" | "completed";
+
+const TRIP_STATUS_LABELS: Record<TripStatusKey, string> = {
   draft: "Draft",
   planned: "Planned",
   active: "In progress",
@@ -44,7 +46,10 @@ const TRIP_STATUS_LABELS: Record<string, string> = {
 };
 
 function TripStatusPill({ status }: { status: string }) {
-  const label = TRIP_STATUS_LABELS[status] ?? status;
+  // Render nothing for unknown statuses rather than leaking a raw enum
+  // value (e.g. a future "booked") to users.
+  const label = (TRIP_STATUS_LABELS as Record<string, string>)[status];
+  if (!label) return null;
   return (
     <View
       style={styles.statusPill}

@@ -24,6 +24,7 @@ import {
   type PlaceResult,
 } from "@/components/create/PlacesAutocompleteInput";
 import { DatePicker } from "@/components/trips/DatePicker";
+import { useUser } from "@/hooks/useUser";
 
 // Dynamic import — Leaflet must not run on the server
 const DestinationMap = dynamic(
@@ -116,6 +117,7 @@ interface SelectedPlace {
 
 export default function CreateTripPage() {
   const router = useRouter();
+  const { session, loading: authLoading } = useUser();
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(
     null,
   );
@@ -178,6 +180,12 @@ export default function CreateTripPage() {
 
   const handleGenerate = async () => {
     if (!canGenerate) return;
+    // Generation is auth-gated end-to-end (see project_auth_model). Send the
+    // user to login with a redirect back so they pick up where they left off.
+    if (!session) {
+      router.push(`/auth/login?redirectTo=${encodeURIComponent("/create")}`);
+      return;
+    }
     setIsGenerating(true);
     setGenerateError(null);
     setProgressMessage("Creating your trip...");
@@ -532,6 +540,11 @@ export default function CreateTripPage() {
               <>
                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                 {progressMessage || "Creating your itinerary..."}
+              </>
+            ) : !session && !authLoading ? (
+              <>
+                <Sparkles className="w-5 h-5" />
+                Sign in to generate
               </>
             ) : (
               <>
