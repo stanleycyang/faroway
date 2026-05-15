@@ -1,7 +1,7 @@
-import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
-import * as StoreReview from 'expo-store-review';
-import { usePromptStore } from '../stores/promptStore';
-import { colors, borderRadius, shadows } from '../constants/theme';
+import { View, Text, StyleSheet, TouchableOpacity, Modal } from "react-native";
+import * as StoreReview from "expo-store-review";
+import { usePromptStore } from "../stores/promptStore";
+import { colors, borderRadius, shadows } from "../constants/theme";
 
 interface RatingPromptProps {
   visible: boolean;
@@ -9,7 +9,11 @@ interface RatingPromptProps {
   onClose: () => void;
 }
 
-export function RatingPrompt({ visible, tripCount, onClose }: RatingPromptProps) {
+export function RatingPrompt({
+  visible,
+  tripCount,
+  onClose,
+}: RatingPromptProps) {
   const { markRatingPrompted, markRated } = usePromptStore();
 
   const handleRate = async () => {
@@ -32,7 +36,12 @@ export function RatingPrompt({ visible, tripCount, onClose }: RatingPromptProps)
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" statusBarTranslucent>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      statusBarTranslucent
+    >
       <View style={styles.overlay}>
         <View style={styles.bottomSheet}>
           {/* Handle */}
@@ -49,7 +58,7 @@ export function RatingPrompt({ visible, tripCount, onClose }: RatingPromptProps)
             <Text style={styles.subtitle}>
               {tripCount && tripCount > 1
                 ? `You've planned ${tripCount} trips with us!`
-                : 'We\'d love to hear what you think'}
+                : "We'd love to hear what you think"}
             </Text>
 
             {/* Rate Button */}
@@ -62,12 +71,18 @@ export function RatingPrompt({ visible, tripCount, onClose }: RatingPromptProps)
             </TouchableOpacity>
 
             {/* Maybe Later */}
-            <TouchableOpacity style={styles.maybeLaterButton} onPress={handleMaybeLater}>
+            <TouchableOpacity
+              style={styles.maybeLaterButton}
+              onPress={handleMaybeLater}
+            >
               <Text style={styles.maybeLaterText}>Maybe Later</Text>
             </TouchableOpacity>
 
             {/* Don't Ask Again */}
-            <TouchableOpacity style={styles.dontAskButton} onPress={handleDontAskAgain}>
+            <TouchableOpacity
+              style={styles.dontAskButton}
+              onPress={handleDontAskAgain}
+            >
               <Text style={styles.dontAskText}>Don't Ask Again</Text>
             </TouchableOpacity>
           </View>
@@ -79,8 +94,8 @@ export function RatingPrompt({ visible, tripCount, onClose }: RatingPromptProps)
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0,0,0,0.5)",
+    justifyContent: "flex-end",
   },
   bottomSheet: {
     backgroundColor: colors.surface[800],
@@ -95,20 +110,20 @@ const styles = StyleSheet.create({
     height: 4,
     backgroundColor: colors.surface[600],
     borderRadius: 2,
-    alignSelf: 'center',
+    alignSelf: "center",
     marginBottom: 20,
   },
   content: {
     paddingHorizontal: 24,
-    alignItems: 'center',
+    alignItems: "center",
   },
   iconContainer: {
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: 'rgba(245,158,11,0.15)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "rgba(245,158,11,0.15)",
+    justifyContent: "center",
+    alignItems: "center",
     marginBottom: 16,
   },
   emoji: {
@@ -116,30 +131,30 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#fff',
+    fontWeight: "800",
+    color: "#fff",
     marginBottom: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   subtitle: {
     fontSize: 16,
     color: colors.surface[400],
-    textAlign: 'center',
+    textAlign: "center",
     marginBottom: 24,
     lineHeight: 22,
   },
   rateButton: {
-    width: '100%',
+    width: "100%",
     backgroundColor: colors.primary[500],
     paddingVertical: 16,
     borderRadius: borderRadius.lg,
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 12,
   },
   rateButtonText: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: "700",
+    color: "#fff",
   },
   maybeLaterButton: {
     paddingVertical: 12,
@@ -148,7 +163,7 @@ const styles = StyleSheet.create({
   maybeLaterText: {
     fontSize: 15,
     color: colors.surface[500],
-    fontWeight: '600',
+    fontWeight: "600",
   },
   dontAskButton: {
     paddingVertical: 8,
@@ -156,6 +171,6 @@ const styles = StyleSheet.create({
   dontAskText: {
     fontSize: 13,
     color: colors.surface[600],
-    fontWeight: '500',
+    fontWeight: "500",
   },
 });

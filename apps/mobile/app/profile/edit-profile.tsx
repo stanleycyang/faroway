@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   View,
   Text,
@@ -10,27 +10,27 @@ import {
   Platform,
   ScrollView,
   Alert,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { useAuthContext } from '../../components/AuthProvider';
-import { useUserStore } from '../../stores/userStore';
-import { updateUserProfile } from '../../services/api';
-import { supabase } from '../../lib/supabase';
-import { colors, borderRadius } from '../../constants/theme';
-import { hapticFeedback } from '../../utils/haptics';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useAuthContext } from "../../components/AuthProvider";
+import { useUserStore } from "../../stores/userStore";
+import { updateUserProfile } from "../../services/api";
+import { supabase } from "../../lib/supabase";
+import { colors, borderRadius } from "../../constants/theme";
+import { hapticFeedback } from "../../utils/haptics";
 
 export default function EditProfileScreen() {
   const router = useRouter();
   const { user: authUser } = useAuthContext();
   const { user, setUser } = useUserStore();
-  const [name, setName] = useState(user?.name || '');
+  const [name, setName] = useState(user?.name || "");
   const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
     if (!name.trim()) {
-      Alert.alert('Error', 'Name cannot be empty');
+      Alert.alert("Error", "Name cannot be empty");
       return;
     }
 
@@ -55,17 +55,17 @@ export default function EditProfileScreen() {
       hapticFeedback.success();
       router.back();
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to save profile');
+      Alert.alert("Error", error.message || "Failed to save profile");
     } finally {
       setIsSaving(false);
     }
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -73,7 +73,7 @@ export default function EditProfileScreen() {
             style={styles.backButton}
             onPress={() => router.back()}
           >
-            <Ionicons name="arrow-back" size={24} color={'#475569'} />
+            <Ionicons name="arrow-back" size={24} color={"#475569"} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Edit Profile</Text>
           <TouchableOpacity
@@ -82,7 +82,7 @@ export default function EditProfileScreen() {
             disabled={isSaving}
           >
             <Text style={styles.saveButtonText}>
-              {isSaving ? 'Saving...' : 'Save'}
+              {isSaving ? "Saving..." : "Save"}
             </Text>
           </TouchableOpacity>
         </View>
@@ -98,7 +98,11 @@ export default function EditProfileScreen() {
                 <Image source={{ uri: user.avatar }} style={styles.avatar} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
-                  <Ionicons name="person" size={40} color={colors.surface[500]} />
+                  <Ionicons
+                    name="person"
+                    size={40}
+                    color={colors.surface[500]}
+                  />
                 </View>
               )}
             </View>
@@ -139,12 +143,10 @@ export default function EditProfileScreen() {
                   style={styles.inputIcon}
                 />
                 <Text style={styles.inputDisabledText}>
-                  {user?.email || authUser?.email || 'Not set'}
+                  {user?.email || authUser?.email || "Not set"}
                 </Text>
               </View>
-              <Text style={styles.inputHint}>
-                Email cannot be changed here
-              </Text>
+              <Text style={styles.inputHint}>Email cannot be changed here</Text>
             </View>
           </View>
         </ScrollView>
@@ -156,29 +158,29 @@ export default function EditProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: "#e2e8f0",
   },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: "700",
+    color: "#0f172a",
   },
   saveButton: {
     paddingHorizontal: 16,
@@ -191,14 +193,14 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
+    fontWeight: "600",
+    color: "#fff",
   },
   scrollContent: {
     padding: 24,
   },
   avatarSection: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: 40,
   },
   avatarContainer: {
@@ -207,23 +209,23 @@ const styles = StyleSheet.create({
     borderRadius: 50,
     borderWidth: 3,
     borderColor: colors.primary[500],
-    overflow: 'hidden',
+    overflow: "hidden",
     marginBottom: 12,
   },
   avatar: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   avatarPlaceholder: {
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    width: "100%",
+    height: "100%",
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
   },
   avatarHint: {
     fontSize: 13,
-    color: '#94a3b8',
+    color: "#94a3b8",
   },
   formSection: {
     gap: 24,
@@ -233,19 +235,19 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#475569',
-    textTransform: 'uppercase',
+    fontWeight: "600",
+    color: "#475569",
+    textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
     borderRadius: borderRadius.lg,
     paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
   },
   inputDisabled: {
     opacity: 0.6,
@@ -256,17 +258,17 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     height: 52,
-    color: '#0f172a',
+    color: "#0f172a",
     fontSize: 16,
   },
   inputDisabledText: {
     flex: 1,
     paddingVertical: 16,
-    color: '#94a3b8',
+    color: "#94a3b8",
     fontSize: 16,
   },
   inputHint: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: "#94a3b8",
   },
 });

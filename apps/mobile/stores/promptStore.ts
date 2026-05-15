@@ -1,6 +1,6 @@
-import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { create } from "zustand";
+import { persist, createJSONStorage } from "zustand/middleware";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface PromptStore {
   tripGenerationCount: number;
@@ -30,19 +30,19 @@ export const usePromptStore = create<PromptStore>()(
       hasDismissedCreateBanner: false,
 
       incrementTripGeneration: () =>
-        set((state) => ({ tripGenerationCount: state.tripGenerationCount + 1 })),
+        set((state) => ({
+          tripGenerationCount: state.tripGenerationCount + 1,
+        })),
 
       markRatingPrompted: () =>
         set({ lastRatingPromptDate: new Date().toISOString() }),
 
-      markRated: () =>
-        set({ hasRatedApp: true }),
+      markRated: () => set({ hasRatedApp: true }),
 
       dismissSignUpPrompt: () =>
         set({ hasDismissedSignUpAfterGeneration: true }),
 
-      dismissCreateBanner: () =>
-        set({ hasDismissedCreateBanner: true }),
+      dismissCreateBanner: () => set({ hasDismissedCreateBanner: true }),
 
       shouldShowRatingPrompt: () => {
         const { hasRatedApp, lastRatingPromptDate } = get();
@@ -53,8 +53,8 @@ export const usePromptStore = create<PromptStore>()(
       },
     }),
     {
-      name: 'prompt-store',
+      name: "prompt-store",
       storage: createJSONStorage(() => AsyncStorage),
-    }
-  )
+    },
+  ),
 );

@@ -1,5 +1,5 @@
 // Mock AsyncStorage before importing store
-jest.mock('@react-native-async-storage/async-storage', () => ({
+jest.mock("@react-native-async-storage/async-storage", () => ({
   __esModule: true,
   default: {
     getItem: jest.fn(() => Promise.resolve(null)),
@@ -8,7 +8,7 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   },
 }));
 
-import { usePromptStore } from '../../stores/promptStore';
+import { usePromptStore } from "../../stores/promptStore";
 
 beforeEach(() => {
   usePromptStore.setState({
@@ -20,9 +20,9 @@ beforeEach(() => {
   });
 });
 
-describe('usePromptStore', () => {
-  describe('initial state', () => {
-    it('starts with zero generation count and no flags set', () => {
+describe("usePromptStore", () => {
+  describe("initial state", () => {
+    it("starts with zero generation count and no flags set", () => {
       const state = usePromptStore.getState();
       expect(state.tripGenerationCount).toBe(0);
       expect(state.lastRatingPromptDate).toBeNull();
@@ -32,13 +32,13 @@ describe('usePromptStore', () => {
     });
   });
 
-  describe('incrementTripGeneration', () => {
-    it('increments count by 1', () => {
+  describe("incrementTripGeneration", () => {
+    it("increments count by 1", () => {
       usePromptStore.getState().incrementTripGeneration();
       expect(usePromptStore.getState().tripGenerationCount).toBe(1);
     });
 
-    it('increments multiple times', () => {
+    it("increments multiple times", () => {
       usePromptStore.getState().incrementTripGeneration();
       usePromptStore.getState().incrementTripGeneration();
       usePromptStore.getState().incrementTripGeneration();
@@ -46,8 +46,8 @@ describe('usePromptStore', () => {
     });
   });
 
-  describe('markRatingPrompted', () => {
-    it('sets lastRatingPromptDate to an ISO string', () => {
+  describe("markRatingPrompted", () => {
+    it("sets lastRatingPromptDate to an ISO string", () => {
       usePromptStore.getState().markRatingPrompted();
       const date = usePromptStore.getState().lastRatingPromptDate;
       expect(date).not.toBeNull();
@@ -55,44 +55,48 @@ describe('usePromptStore', () => {
     });
   });
 
-  describe('markRated', () => {
-    it('sets hasRatedApp to true', () => {
+  describe("markRated", () => {
+    it("sets hasRatedApp to true", () => {
       usePromptStore.getState().markRated();
       expect(usePromptStore.getState().hasRatedApp).toBe(true);
     });
   });
 
-  describe('dismissSignUpPrompt', () => {
-    it('sets hasDismissedSignUpAfterGeneration to true', () => {
+  describe("dismissSignUpPrompt", () => {
+    it("sets hasDismissedSignUpAfterGeneration to true", () => {
       usePromptStore.getState().dismissSignUpPrompt();
-      expect(usePromptStore.getState().hasDismissedSignUpAfterGeneration).toBe(true);
+      expect(usePromptStore.getState().hasDismissedSignUpAfterGeneration).toBe(
+        true,
+      );
     });
   });
 
-  describe('dismissCreateBanner', () => {
-    it('sets hasDismissedCreateBanner to true', () => {
+  describe("dismissCreateBanner", () => {
+    it("sets hasDismissedCreateBanner to true", () => {
       usePromptStore.getState().dismissCreateBanner();
       expect(usePromptStore.getState().hasDismissedCreateBanner).toBe(true);
     });
   });
 
-  describe('shouldShowRatingPrompt', () => {
-    it('returns true when user has not been prompted', () => {
+  describe("shouldShowRatingPrompt", () => {
+    it("returns true when user has not been prompted", () => {
       expect(usePromptStore.getState().shouldShowRatingPrompt()).toBe(true);
     });
 
-    it('returns false when user has already rated', () => {
+    it("returns false when user has already rated", () => {
       usePromptStore.getState().markRated();
       expect(usePromptStore.getState().shouldShowRatingPrompt()).toBe(false);
     });
 
-    it('returns false when last prompt was recent', () => {
+    it("returns false when last prompt was recent", () => {
       usePromptStore.getState().markRatingPrompted();
       expect(usePromptStore.getState().shouldShowRatingPrompt()).toBe(false);
     });
 
-    it('returns true when last prompt was over 60 days ago', () => {
-      const sixtyOneDaysAgo = new Date(Date.now() - 61 * 24 * 60 * 60 * 1000).toISOString();
+    it("returns true when last prompt was over 60 days ago", () => {
+      const sixtyOneDaysAgo = new Date(
+        Date.now() - 61 * 24 * 60 * 60 * 1000,
+      ).toISOString();
       usePromptStore.setState({ lastRatingPromptDate: sixtyOneDaysAgo });
       expect(usePromptStore.getState().shouldShowRatingPrompt()).toBe(true);
     });

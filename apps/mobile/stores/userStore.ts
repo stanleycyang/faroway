@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+import { create } from "zustand";
 
 interface User {
   id: string;
@@ -17,11 +17,11 @@ interface UserStore {
   user: User | null;
   hasCompletedOnboarding: boolean;
   isAuthenticated: boolean;
-  
+
   // Actions
   setUser: (user: User | null) => void;
   setOnboardingComplete: (complete: boolean) => void;
-  updatePreferences: (preferences: Partial<User['preferences']>) => void;
+  updatePreferences: (preferences: Partial<User["preferences"]>) => void;
   logout: () => void;
 }
 

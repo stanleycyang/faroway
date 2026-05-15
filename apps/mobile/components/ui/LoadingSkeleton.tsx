@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from 'react';
-import { View, StyleSheet, Animated, ViewStyle } from 'react-native';
-import { colors, borderRadius } from '../../constants/theme';
+import React, { useEffect, useRef } from "react";
+import { View, StyleSheet, Animated, ViewStyle } from "react-native";
+import { colors, borderRadius } from "../../constants/theme";
 
 interface SkeletonProps {
   width?: number | `${number}%`;
@@ -9,7 +9,12 @@ interface SkeletonProps {
   style?: ViewStyle;
 }
 
-export function Skeleton({ width = '100%', height = 20, borderRadius: radius = 8, style }: SkeletonProps) {
+export function Skeleton({
+  width = "100%",
+  height = 20,
+  borderRadius: radius = 8,
+  style,
+}: SkeletonProps) {
   const animatedValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -25,7 +30,7 @@ export function Skeleton({ width = '100%', height = 20, borderRadius: radius = 8
           duration: 1000,
           useNativeDriver: true,
         }),
-      ])
+      ]),
     ).start();
   }, []);
 
@@ -92,7 +97,7 @@ export function ActivityCardSkeleton() {
 
 const styles = StyleSheet.create({
   skeleton: {
-    backgroundColor: '#e2e8f0',
+    backgroundColor: "#e2e8f0",
   },
   destinationCard: {
     width: 240,
@@ -102,20 +107,20 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   tripCard: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: 16,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: borderRadius.lg,
     marginBottom: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
   },
   tripCardContent: {
     flex: 1,
     marginLeft: 16,
   },
   activityCard: {
-    flexDirection: 'row',
+    flexDirection: "row",
     marginBottom: 20,
   },
   activityTime: {

@@ -1,8 +1,14 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from 'react-native';
-import { colors, borderRadius } from '../../constants/theme';
-import { travelVibes } from '@faroway/constants';
-import { hapticFeedback } from '../../utils/haptics';
+import React from "react";
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  ScrollView,
+} from "react-native";
+import { colors, borderRadius } from "../../constants/theme";
+import { travelVibes } from "@faroway/constants";
+import { hapticFeedback } from "../../utils/haptics";
 
 interface VibeSelectorProps {
   selected: string[];
@@ -95,8 +101,8 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: "700",
+    color: "#0f172a",
     marginBottom: 4,
   },
   subtitle: {
@@ -104,24 +110,24 @@ const styles = StyleSheet.create({
     color: colors.surface[400],
   },
   grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 10,
   },
   vibeButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderRadius: borderRadius.full,
     borderWidth: 1.5,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
   },
   vibeButtonSelected: {
-    backgroundColor: '#FFF5F4',
+    backgroundColor: "#FFF5F4",
     borderColor: colors.primary[500],
-    shadowColor: '#F97066',
+    shadowColor: "#F97066",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.25,
     shadowRadius: 8,
@@ -132,20 +138,20 @@ const styles = StyleSheet.create({
   },
   vibeLabel: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.surface[600],
   },
   vibeLabelSelected: {
     color: colors.primary[600],
   },
   chipsContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 8,
   },
   chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFF5F4',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#FFF5F4",
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: borderRadius.full,
@@ -158,7 +164,7 @@ const styles = StyleSheet.create({
   },
   chipLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.primary[600],
   },
 });

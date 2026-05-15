@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   View,
   TextInput,
@@ -6,9 +6,9 @@ import {
   StyleSheet,
   TouchableOpacity,
   ViewStyle,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, borderRadius } from '../../constants/theme';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { colors, borderRadius } from "../../constants/theme";
 
 interface InputProps {
   label?: string;
@@ -16,8 +16,8 @@ interface InputProps {
   value: string;
   onChangeText: (text: string) => void;
   secureTextEntry?: boolean;
-  keyboardType?: 'default' | 'email-address' | 'numeric' | 'phone-pad';
-  autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
+  keyboardType?: "default" | "email-address" | "numeric" | "phone-pad";
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
   error?: string;
   icon?: keyof typeof Ionicons.glyphMap;
   rightIcon?: keyof typeof Ionicons.glyphMap;
@@ -34,8 +34,8 @@ export function Input({
   value,
   onChangeText,
   secureTextEntry = false,
-  keyboardType = 'default',
-  autoCapitalize = 'sentences',
+  keyboardType = "default",
+  autoCapitalize = "sentences",
   error,
   icon,
   rightIcon,
@@ -88,7 +88,7 @@ export function Input({
             style={styles.rightIconButton}
           >
             <Ionicons
-              name={isPasswordVisible ? 'eye-off' : 'eye'}
+              name={isPasswordVisible ? "eye-off" : "eye"}
               size={20}
               color={colors.surface[500]}
             />
@@ -117,7 +117,7 @@ interface SearchInputProps {
 }
 
 export function SearchInput({
-  placeholder = 'Search destinations...',
+  placeholder = "Search destinations...",
   value,
   onChangeText,
   onSubmit,
@@ -141,12 +141,8 @@ export function SearchInput({
         returnKeyType="search"
       />
       {value.length > 0 && (
-        <TouchableOpacity onPress={() => onChangeText('')}>
-          <Ionicons
-            name="close-circle"
-            size={20}
-            color={colors.surface[500]}
-          />
+        <TouchableOpacity onPress={() => onChangeText("")}>
+          <Ionicons name="close-circle" size={20} color={colors.surface[500]} />
         </TouchableOpacity>
       )}
     </View>
@@ -159,23 +155,23 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.surface[600],
     marginBottom: 8,
   },
   inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
     borderRadius: borderRadius.md,
     borderWidth: 1.5,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
     paddingHorizontal: 16,
   },
   inputFocused: {
     borderColor: colors.primary[500],
-    backgroundColor: '#ffffff',
-    shadowColor: '#F97066',
+    backgroundColor: "#ffffff",
+    shadowColor: "#F97066",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
@@ -193,11 +189,11 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 16,
-    color: '#0f172a',
+    color: "#0f172a",
     paddingVertical: 14,
   },
   multilineInput: {
-    textAlignVertical: 'top',
+    textAlignVertical: "top",
     minHeight: 100,
   },
   rightIconButton: {
@@ -209,14 +205,14 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
     borderRadius: borderRadius.full,
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
   },
   searchIcon: {
     marginRight: 12,
@@ -224,6 +220,6 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 16,
-    color: '#0f172a',
+    color: "#0f172a",
   },
 });

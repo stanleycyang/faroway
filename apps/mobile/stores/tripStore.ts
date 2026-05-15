@@ -1,5 +1,5 @@
-import { create } from 'zustand';
-import { offlineStorage } from '../lib/offline';
+import { create } from "zustand";
+import { offlineStorage } from "../lib/offline";
 
 export interface Activity {
   id: string;
@@ -8,7 +8,13 @@ export interface Activity {
   description: string;
   location: string;
   duration: string;
-  type: 'activity' | 'restaurant' | 'transport' | 'accommodation' | 'attraction' | 'experience';
+  type:
+    | "activity"
+    | "restaurant"
+    | "transport"
+    | "accommodation"
+    | "attraction"
+    | "experience";
   price?: string;
   bookingUrl?: string;
   affiliatePartner?: string;
@@ -49,7 +55,7 @@ export interface TripDay {
   theme: string;
   activities: Activity[];
   transport?: {
-    type: 'flight' | 'train' | 'bus' | 'ferry';
+    type: "flight" | "train" | "bus" | "ferry";
     provider: string;
     departure: { airport: string; city: string; dateTime: string };
     arrival: { airport: string; city: string; dateTime: string };
@@ -79,7 +85,7 @@ export interface Trip {
   hotel?: Hotel;
   coverImage: string;
   createdAt: string;
-  status: 'draft' | 'planned' | 'active' | 'completed';
+  status: "draft" | "planned" | "active" | "completed";
 }
 
 export interface TripInput {
@@ -103,7 +109,7 @@ interface TripStore {
   isGenerating: boolean;
   generationProgress: number;
   isHydrated: boolean;
-  
+
   // Actions
   setDraftInput: (input: Partial<TripInput>) => void;
   clearDraft: () => void;
@@ -113,7 +119,7 @@ interface TripStore {
   saveTrip: (trip: Trip) => void;
   deleteTrip: (id: string) => void;
   setCurrentTrip: (trip: Trip | null) => void;
-  
+
   // Offline support
   hydrateFromOffline: () => Promise<void>;
   setTrips: (trips: Trip[]) => void;
@@ -121,11 +127,11 @@ interface TripStore {
 }
 
 const defaultDraft: TripInput = {
-  destination: '',
-  startDate: '',
-  endDate: '',
+  destination: "",
+  startDate: "",
+  endDate: "",
   travelers: 2,
-  travelerType: 'couple',
+  travelerType: "couple",
   vibes: [],
 };
 
@@ -153,7 +159,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
   finishGeneration: (trip) => {
     // Save to offline storage
     offlineStorage.saveTrip(trip).catch(console.error);
-    
+
     set((state) => ({
       isGenerating: false,
       generationProgress: 100,
@@ -166,7 +172,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
   saveTrip: (trip) => {
     // Save to offline storage
     offlineStorage.saveTrip(trip).catch(console.error);
-    
+
     set((state) => ({
       trips: state.trips.some((t) => t.id === trip.id)
         ? state.trips.map((t) => (t.id === trip.id ? trip : t))
@@ -177,7 +183,7 @@ export const useTripStore = create<TripStore>((set, get) => ({
   deleteTrip: (id) => {
     // Delete from offline storage
     offlineStorage.deleteTrip(id).catch(console.error);
-    
+
     set((state) => ({
       trips: state.trips.filter((t) => t.id !== id),
       currentTrip: state.currentTrip?.id === id ? null : state.currentTrip,
@@ -191,9 +197,11 @@ export const useTripStore = create<TripStore>((set, get) => ({
     try {
       const trips = await offlineStorage.loadTrips();
       set({ trips, isHydrated: true });
-      console.log(`[TripStore] Hydrated ${trips.length} trips from offline storage`);
+      console.log(
+        `[TripStore] Hydrated ${trips.length} trips from offline storage`,
+      );
     } catch (error) {
-      console.error('[TripStore] Failed to hydrate from offline:', error);
+      console.error("[TripStore] Failed to hydrate from offline:", error);
       set({ isHydrated: true });
     }
   },

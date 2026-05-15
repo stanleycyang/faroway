@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef } from "react";
 import {
   Text,
   StyleSheet,
@@ -7,16 +7,16 @@ import {
   TextStyle,
   Animated,
   Pressable,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { colors, borderRadius } from '../../constants/theme';
-import { hapticFeedback } from '../../utils/haptics';
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { colors, borderRadius } from "../../constants/theme";
+import { hapticFeedback } from "../../utils/haptics";
 
 interface ButtonProps {
   title: string;
   onPress: () => void;
-  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
-  size?: 'sm' | 'md' | 'lg';
+  variant?: "primary" | "secondary" | "outline" | "ghost";
+  size?: "sm" | "md" | "lg";
   disabled?: boolean;
   loading?: boolean;
   icon?: React.ReactNode;
@@ -30,8 +30,8 @@ interface ButtonProps {
 export function Button({
   title,
   onPress,
-  variant = 'primary',
-  size = 'md',
+  variant = "primary",
+  size = "md",
   disabled = false,
   loading = false,
   icon,
@@ -76,15 +76,15 @@ export function Button({
     lg: { fontSize: 18 },
   };
 
-  const isPrimary = variant === 'primary';
+  const isPrimary = variant === "primary";
 
   const getButtonStyles = (): ViewStyle => {
     const baseStyle: ViewStyle = {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'center',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
       borderRadius: borderRadius.lg,
-      overflow: 'hidden',
+      overflow: "hidden",
       ...sizeStyles[size],
     };
 
@@ -92,31 +92,31 @@ export function Button({
       primary: {},
       secondary: { backgroundColor: colors.surface[100] },
       outline: {
-        backgroundColor: 'transparent',
+        backgroundColor: "transparent",
         borderWidth: 1.5,
-        borderColor: '#e2e8f0',
+        borderColor: "#e2e8f0",
       },
-      ghost: { backgroundColor: 'transparent' },
+      ghost: { backgroundColor: "transparent" },
     };
 
     return {
       ...baseStyle,
       ...variantStyles[variant],
       opacity: disabled ? 0.4 : 1,
-      width: fullWidth ? '100%' : undefined,
+      width: fullWidth ? "100%" : undefined,
     };
   };
 
   const getTextStyles = (): TextStyle => {
     const variantStyles: Record<string, TextStyle> = {
-      primary: { color: '#fff' },
-      secondary: { color: '#0f172a' },
-      outline: { color: '#0f172a' },
+      primary: { color: "#fff" },
+      secondary: { color: "#0f172a" },
+      outline: { color: "#0f172a" },
       ghost: { color: colors.surface[600] },
     };
 
     return {
-      fontWeight: '700',
+      fontWeight: "700",
       letterSpacing: 0.3,
       ...textSizeStyles[size],
       ...variantStyles[variant],
@@ -127,13 +127,23 @@ export function Button({
     <>
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' || variant === 'secondary' ? '#fff' : colors.primary[400]}
+          color={
+            variant === "primary" || variant === "secondary"
+              ? "#fff"
+              : colors.primary[400]
+          }
           size="small"
         />
       ) : (
         <>
           {icon && <>{icon}</>}
-          <Text style={[getTextStyles(), icon ? { marginLeft: 8 } : undefined, textStyle]}>
+          <Text
+            style={[
+              getTextStyles(),
+              icon ? { marginLeft: 8 } : undefined,
+              textStyle,
+            ]}
+          >
             {title}
           </Text>
         </>
@@ -160,7 +170,7 @@ export function Button({
       >
         {isPrimary ? (
           <LinearGradient
-            colors={disabled ? ['#cbd5e1', '#cbd5e1'] : ['#F97066', '#F59E0B']}
+            colors={disabled ? ["#cbd5e1", "#cbd5e1"] : ["#F97066", "#F59E0B"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[StyleSheet.absoluteFill, { borderRadius: borderRadius.lg }]}
@@ -174,7 +184,7 @@ export function Button({
 
 const styles = StyleSheet.create({
   primaryGlow: {
-    shadowColor: '#FA8C84',
+    shadowColor: "#FA8C84",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
     shadowRadius: 16,

@@ -3,9 +3,12 @@
  * Monitors connectivity and provides real-time network state
  */
 
-import NetInfo, { NetInfoState, NetInfoSubscription } from '@react-native-community/netinfo';
+import NetInfo, {
+  NetInfoState,
+  NetInfoSubscription,
+} from "@react-native-community/netinfo";
 
-export type NetworkStatus = 'online' | 'offline' | 'unknown';
+export type NetworkStatus = "online" | "offline" | "unknown";
 
 export interface NetworkState {
   status: NetworkStatus;
@@ -23,13 +26,13 @@ type NetworkListener = (state: NetworkState) => void;
  */
 class NetworkMonitor {
   private currentState: NetworkState = {
-    status: 'unknown',
+    status: "unknown",
     isConnected: true,
     isInternetReachable: null,
-    type: 'unknown',
+    type: "unknown",
     details: null,
   };
-  
+
   private listeners: Set<NetworkListener> = new Set();
   private subscription: NetInfoSubscription | null = null;
   private initialized: boolean = false;
@@ -47,22 +50,22 @@ class NetworkMonitor {
       // Get initial state
       const state = await NetInfo.fetch();
       this.updateState(state);
-      
+
       // Subscribe to changes
       this.subscription = NetInfo.addEventListener(this.handleNetworkChange);
-      
+
       this.initialized = true;
-      console.log('[NetworkMonitor] Initialized:', this.currentState.status);
-      
+      console.log("[NetworkMonitor] Initialized:", this.currentState.status);
+
       return this.currentState;
     } catch (error) {
-      console.error('[NetworkMonitor] Initialization error:', error);
+      console.error("[NetworkMonitor] Initialization error:", error);
       // Default to online if we can't determine
       this.currentState = {
-        status: 'online',
+        status: "online",
         isConnected: true,
         isInternetReachable: true,
-        type: 'unknown',
+        type: "unknown",
         details: null,
       };
       return this.currentState;
@@ -83,13 +86,15 @@ class NetworkMonitor {
   private updateState(state: NetInfoState): void {
     const isConnected = state.isConnected ?? false;
     const isInternetReachable = state.isInternetReachable;
-    
+
     // Consider offline if explicitly not connected or internet not reachable
-    const status: NetworkStatus = 
-      !isConnected ? 'offline' :
-      isInternetReachable === false ? 'offline' :
-      isInternetReachable === null ? 'unknown' :
-      'online';
+    const status: NetworkStatus = !isConnected
+      ? "offline"
+      : isInternetReachable === false
+        ? "offline"
+        : isInternetReachable === null
+          ? "unknown"
+          : "online";
 
     this.currentState = {
       status,
@@ -99,18 +104,18 @@ class NetworkMonitor {
       details: state,
     };
 
-    console.log('[NetworkMonitor] State changed:', status, state.type);
+    console.log("[NetworkMonitor] State changed:", status, state.type);
   }
 
   /**
    * Notify all listeners of state change
    */
   private notifyListeners(): void {
-    this.listeners.forEach(listener => {
+    this.listeners.forEach((listener) => {
       try {
         listener(this.currentState);
       } catch (error) {
-        console.error('[NetworkMonitor] Listener error:', error);
+        console.error("[NetworkMonitor] Listener error:", error);
       }
     });
   }
@@ -126,14 +131,14 @@ class NetworkMonitor {
    * Check if currently online
    */
   isOnline(): boolean {
-    return this.currentState.status === 'online';
+    return this.currentState.status === "online";
   }
 
   /**
    * Check if currently offline
    */
   isOffline(): boolean {
-    return this.currentState.status === 'offline';
+    return this.currentState.status === "offline";
   }
 
   /**
@@ -142,10 +147,10 @@ class NetworkMonitor {
    */
   subscribe(listener: NetworkListener): () => void {
     this.listeners.add(listener);
-    
+
     // Immediately call with current state
     listener(this.currentState);
-    
+
     return () => {
       this.listeners.delete(listener);
     };
@@ -161,7 +166,7 @@ class NetworkMonitor {
       this.notifyListeners();
       return this.currentState;
     } catch (error) {
-      console.error('[NetworkMonitor] Refresh error:', error);
+      console.error("[NetworkMonitor] Refresh error:", error);
       return this.currentState;
     }
   }
@@ -182,7 +187,7 @@ class NetworkMonitor {
       }, timeoutMs);
 
       const unsubscribe = this.subscribe((state) => {
-        if (state.status === 'online') {
+        if (state.status === "online") {
           clearTimeout(timeout);
           unsubscribe();
           resolve(true);

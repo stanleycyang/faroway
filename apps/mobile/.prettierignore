@@ -1,0 +1,11 @@
+node_modules
+.expo
+.turbo
+dist
+ios
+android
+coverage
+*.lock
+*.lockb
+expo-env.d.ts
+nativewind-env.d.ts

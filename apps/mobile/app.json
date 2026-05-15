@@ -12,16 +12,12 @@
       "resizeMode": "contain",
       "backgroundColor": "#0a0a0a"
     },
-    "assetBundlePatterns": [
-      "**/*"
-    ],
+    "assetBundlePatterns": ["**/*"],
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "ai.faroway.app",
       "infoPlist": {
-        "UIBackgroundModes": [
-          "remote-notification"
-        ]
+        "UIBackgroundModes": ["remote-notification"]
       }
     },
     "android": {
@@ -31,9 +27,7 @@
       },
       "package": "ai.faroway.app",
       "googleServicesFile": "./google-services.json",
-      "permissions": [
-        "android.permission.RECEIVE_BOOT_COMPLETED"
-      ]
+      "permissions": ["android.permission.RECEIVE_BOOT_COMPLETED"]
     },
     "web": {
       "favicon": "./assets/favicon.png",

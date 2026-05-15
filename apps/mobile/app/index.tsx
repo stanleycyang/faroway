@@ -1,13 +1,20 @@
-import { useEffect, useState, useRef } from 'react';
-import { View, Text, Image, StyleSheet, Dimensions, Animated } from 'react-native';
-import { useRouter } from 'expo-router';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useUserStore } from '../stores/userStore';
-import { Button } from '../components/ui';
-import { colors } from '../constants/theme';
-import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
+import { useEffect, useState, useRef } from "react";
+import {
+  View,
+  Text,
+  Image,
+  StyleSheet,
+  Dimensions,
+  Animated,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
+import { useUserStore } from "../stores/userStore";
+import { Button } from "../components/ui";
+import { colors } from "../constants/theme";
+import { IMAGE_PATHS, getImageUrl } from "@faroway/constants";
 
-const { width, height } = Dimensions.get('window');
+const { width, height } = Dimensions.get("window");
 
 export default function WelcomeScreen() {
   const router = useRouter();
@@ -73,15 +80,15 @@ export default function WelcomeScreen() {
   useEffect(() => {
     // Auto-redirect if already onboarded
     if (hasCompletedOnboarding && isAuthenticated) {
-      setTimeout(() => router.replace('/(tabs)'), 1500);
+      setTimeout(() => router.replace("/(tabs)"), 1500);
     }
   }, [hasCompletedOnboarding, isAuthenticated]);
 
   const handleGetStarted = () => {
     if (hasCompletedOnboarding) {
-      router.replace('/(tabs)');
+      router.replace("/(tabs)");
     } else {
-      router.push('/onboarding');
+      router.push("/onboarding");
     }
   };
 
@@ -89,12 +96,12 @@ export default function WelcomeScreen() {
     <View style={styles.container}>
       <Image
         source={{
-          uri: getImageUrl(IMAGE_PATHS.inspirations['beach-getaway']),
+          uri: getImageUrl(IMAGE_PATHS.inspirations["beach-getaway"]),
         }}
         style={styles.backgroundImage}
       />
       <LinearGradient
-        colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
+        colors={["rgba(0,0,0,0.3)", "rgba(0,0,0,0.7)"]}
         style={styles.gradient}
       />
 
@@ -110,7 +117,7 @@ export default function WelcomeScreen() {
             ]}
           >
             <LinearGradient
-              colors={[colors.primary[500], '#f59e0b']}
+              colors={[colors.primary[500], "#f59e0b"]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.logoGradient}
@@ -131,13 +138,17 @@ export default function WelcomeScreen() {
             Faroway
           </Animated.Text>
 
-          <Animated.Text style={[styles.subtitle, { opacity: subtitleOpacity }]}>
-            Your AI-powered travel genie.{'\n'}
+          <Animated.Text
+            style={[styles.subtitle, { opacity: subtitleOpacity }]}
+          >
+            Your AI-powered travel genie.{"\n"}
             Wish for the perfect trip. We'll make it happen.
           </Animated.Text>
         </View>
 
-        <Animated.View style={[styles.buttonContainer, { opacity: buttonOpacity }]}>
+        <Animated.View
+          style={[styles.buttonContainer, { opacity: buttonOpacity }]}
+        >
           <Button
             title="Get Started"
             onPress={handleGetStarted}
@@ -147,7 +158,7 @@ export default function WelcomeScreen() {
           />
           <Button
             title="I already have an account"
-            onPress={() => router.push('/onboarding/login')}
+            onPress={() => router.push("/onboarding/login")}
             variant="ghost"
             size="md"
             fullWidth
@@ -162,27 +173,27 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#000',
+    backgroundColor: "#000",
   },
   backgroundImage: {
-    position: 'absolute',
+    position: "absolute",
     width,
     height,
   },
   gradient: {
-    position: 'absolute',
+    position: "absolute",
     width,
     height,
   },
   content: {
     flex: 1,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
     paddingHorizontal: 24,
     paddingTop: 120,
     paddingBottom: 60,
   },
   header: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   logoContainer: {
     marginBottom: 24,
@@ -191,25 +202,25 @@ const styles = StyleSheet.create({
     width: 100,
     height: 100,
     borderRadius: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   logoIcon: {
     fontSize: 48,
-    color: '#fff',
-    fontWeight: '700',
+    color: "#fff",
+    fontWeight: "700",
   },
   title: {
     fontSize: 44,
-    fontWeight: '800',
-    color: '#fff',
+    fontWeight: "800",
+    color: "#fff",
     marginBottom: 16,
     letterSpacing: -1,
   },
   subtitle: {
     fontSize: 18,
-    color: 'rgba(255,255,255,0.85)',
-    textAlign: 'center',
+    color: "rgba(255,255,255,0.85)",
+    textAlign: "center",
     lineHeight: 26,
   },
   buttonContainer: {
@@ -217,6 +228,6 @@ const styles = StyleSheet.create({
   },
   primaryButton: {},
   ghostButtonText: {
-    color: 'rgba(255,255,255,0.8)',
+    color: "rgba(255,255,255,0.8)",
   },
 });

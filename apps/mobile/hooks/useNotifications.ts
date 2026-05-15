@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useEffect, useRef, useState, useCallback } from "react";
+import { AppState, AppStateStatus } from "react-native";
+import { useRouter } from "expo-router";
 import {
   registerForPushNotificationsAsync,
   addNotificationReceivedListener,
@@ -11,11 +11,14 @@ import {
   NotificationData,
   PushTokenResult,
   EventSubscription,
-} from '../lib/notifications';
+} from "../lib/notifications";
 
 interface UseNotificationsOptions {
   autoRequestPermissions?: boolean;
-  onNotificationReceived?: (notification: any, data: NotificationData | null) => void;
+  onNotificationReceived?: (
+    notification: any,
+    data: NotificationData | null,
+  ) => void;
   onNotificationResponse?: (data: NotificationData | null) => void;
 }
 
@@ -28,9 +31,13 @@ interface UseNotificationsReturn {
 }
 
 export function useNotifications(
-  options: UseNotificationsOptions = {}
+  options: UseNotificationsOptions = {},
 ): UseNotificationsReturn {
-  const { autoRequestPermissions = false, onNotificationReceived, onNotificationResponse } = options;
+  const {
+    autoRequestPermissions = false,
+    onNotificationReceived,
+    onNotificationResponse,
+  } = options;
 
   const router = useRouter();
   const [pushToken, setPushToken] = useState<string | null>(null);
@@ -46,48 +53,50 @@ export function useNotifications(
       if (!data) return;
 
       // Validate tripId is a valid UUID before navigating
-      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const UUID_REGEX =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
       const isValidTripId = data.tripId && UUID_REGEX.test(data.tripId);
 
       switch (data.type) {
-        case 'trip_generation_complete':
-        case 'trip_reminder':
+        case "trip_generation_complete":
+        case "trip_reminder":
           if (isValidTripId) {
             router.push(`/trip/${data.tripId}` as `/trip/${string}`);
           }
           break;
 
-        case 'activity_recommendation':
+        case "activity_recommendation":
           if (isValidTripId) {
             router.push(`/trip/${data.tripId}` as `/trip/${string}`);
           } else {
-            router.push('/(tabs)');
+            router.push("/(tabs)");
           }
           break;
 
         default:
-          console.log('Unknown notification type:', data.type);
+          console.log("Unknown notification type:", data.type);
           break;
       }
     },
-    [router]
+    [router],
   );
 
-  const registerForNotifications = useCallback(async (): Promise<PushTokenResult> => {
-    setIsLoading(true);
-    setError(null);
+  const registerForNotifications =
+    useCallback(async (): Promise<PushTokenResult> => {
+      setIsLoading(true);
+      setError(null);
 
-    const result = await registerForPushNotificationsAsync();
+      const result = await registerForPushNotificationsAsync();
 
-    if (result.token) {
-      setPushToken(result.token);
-    } else if (result.error) {
-      setError(result.error);
-    }
+      if (result.token) {
+        setPushToken(result.token);
+      } else if (result.error) {
+        setError(result.error);
+      }
 
-    setIsLoading(false);
-    return result;
-  }, []);
+      setIsLoading(false);
+      return result;
+    }, []);
 
   // Initialize notifications on mount
   useEffect(() => {
@@ -122,17 +131,19 @@ export function useNotifications(
     let mounted = true;
 
     const setupListeners = async () => {
-      const receivedSub = await addNotificationReceivedListener((notification) => {
-        const data = parseNotificationData(notification);
-        console.log('Notification received:', data);
-        if (onNotificationReceived) {
-          onNotificationReceived(notification, data);
-        }
-      });
+      const receivedSub = await addNotificationReceivedListener(
+        (notification) => {
+          const data = parseNotificationData(notification);
+          console.log("Notification received:", data);
+          if (onNotificationReceived) {
+            onNotificationReceived(notification, data);
+          }
+        },
+      );
 
       const responseSub = await addNotificationResponseListener((response) => {
         const data = parseNotificationData(response.notification);
-        console.log('Notification response:', data);
+        console.log("Notification response:", data);
         if (onNotificationResponse) {
           onNotificationResponse(data);
         }
@@ -159,21 +170,28 @@ export function useNotifications(
         notificationResponseRef.current.remove();
       }
     };
-  }, [onNotificationReceived, onNotificationResponse, handleNotificationNavigation]);
+  }, [
+    onNotificationReceived,
+    onNotificationResponse,
+    handleNotificationNavigation,
+  ]);
 
   // Clear badge when app becomes active
   useEffect(() => {
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (
         appStateRef.current.match(/inactive|background/) &&
-        nextAppState === 'active'
+        nextAppState === "active"
       ) {
         clearBadge();
       }
       appStateRef.current = nextAppState;
     };
 
-    const subscription = AppState.addEventListener('change', handleAppStateChange);
+    const subscription = AppState.addEventListener(
+      "change",
+      handleAppStateChange,
+    );
 
     return () => {
       subscription.remove();

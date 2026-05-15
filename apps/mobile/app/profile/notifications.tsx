@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   View,
   Text,
@@ -6,14 +6,14 @@ import {
   TouchableOpacity,
   Switch,
   ScrollView,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
-import { useUserStore } from '../../stores/userStore';
-import { updateUserProfile } from '../../services/api';
-import { colors, borderRadius } from '../../constants/theme';
-import { hapticFeedback } from '../../utils/haptics';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
+import { Ionicons } from "@expo/vector-icons";
+import { useUserStore } from "../../stores/userStore";
+import { updateUserProfile } from "../../services/api";
+import { colors, borderRadius } from "../../constants/theme";
+import { hapticFeedback } from "../../utils/haptics";
 
 interface NotificationSetting {
   id: string;
@@ -24,28 +24,28 @@ interface NotificationSetting {
 
 const notificationSettings: NotificationSetting[] = [
   {
-    id: 'trip_reminders',
-    icon: 'airplane-outline',
-    title: 'Trip Reminders',
-    description: 'Get notified about upcoming trips and packing lists',
+    id: "trip_reminders",
+    icon: "airplane-outline",
+    title: "Trip Reminders",
+    description: "Get notified about upcoming trips and packing lists",
   },
   {
-    id: 'deals',
-    icon: 'pricetag-outline',
-    title: 'Travel Deals',
-    description: 'Exclusive deals and discounts on activities',
+    id: "deals",
+    icon: "pricetag-outline",
+    title: "Travel Deals",
+    description: "Exclusive deals and discounts on activities",
   },
   {
-    id: 'itinerary_updates',
-    icon: 'calendar-outline',
-    title: 'Itinerary Updates',
-    description: 'Changes or suggestions for your planned trips',
+    id: "itinerary_updates",
+    icon: "calendar-outline",
+    title: "Itinerary Updates",
+    description: "Changes or suggestions for your planned trips",
   },
   {
-    id: 'app_updates',
-    icon: 'sparkles-outline',
-    title: 'New Features',
-    description: 'Be the first to know about new app features',
+    id: "app_updates",
+    icon: "sparkles-outline",
+    title: "New Features",
+    description: "Be the first to know about new app features",
   },
 ];
 
@@ -60,9 +60,10 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const { user } = useUserStore();
   const [settings, setSettings] = useState<Record<string, boolean>>(
-    (user as any)?.notificationSettings && Object.keys((user as any).notificationSettings).length > 0
+    (user as any)?.notificationSettings &&
+      Object.keys((user as any).notificationSettings).length > 0
       ? (user as any).notificationSettings
-      : defaultSettings
+      : defaultSettings,
   );
 
   const toggleSetting = (id: string) => {
@@ -74,14 +75,14 @@ export default function NotificationsScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+    <SafeAreaView style={styles.container} edges={["top", "bottom"]}>
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
-          <Ionicons name="arrow-back" size={24} color={'#475569'} />
+          <Ionicons name="arrow-back" size={24} color={"#475569"} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Notifications</Text>
         <View style={{ width: 44 }} />
@@ -132,36 +133,36 @@ export default function NotificationsScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: "#e2e8f0",
   },
   backButton: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#f1f5f9',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#f1f5f9",
+    justifyContent: "center",
+    alignItems: "center",
   },
   headerTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: "700",
+    color: "#0f172a",
   },
   scrollContent: {
     padding: 24,
   },
   sectionDescription: {
     fontSize: 15,
-    color: '#475569',
+    color: "#475569",
     lineHeight: 22,
     marginBottom: 24,
   },
@@ -169,21 +170,21 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   settingItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
     padding: 16,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
   },
   settingIconContainer: {
     width: 40,
     height: 40,
     borderRadius: 12,
-    backgroundColor: '#FFF5F4',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: "#FFF5F4",
+    justifyContent: "center",
+    alignItems: "center",
     marginRight: 14,
   },
   settingContent: {
@@ -192,13 +193,13 @@ const styles = StyleSheet.create({
   },
   settingTitle: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#0f172a',
+    fontWeight: "600",
+    color: "#0f172a",
     marginBottom: 2,
   },
   settingDescription: {
     fontSize: 13,
-    color: '#64748b',
+    color: "#64748b",
     lineHeight: 18,
   },
 });

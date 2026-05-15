@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,23 +6,23 @@ import {
   TouchableOpacity,
   StyleSheet,
   Keyboard,
-} from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import { SearchInput } from './Input';
-import { Skeleton } from './LoadingSkeleton';
-import { colors, borderRadius } from '../../constants/theme';
-import { hapticFeedback } from '../../utils/haptics';
+} from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { SearchInput } from "./Input";
+import { Skeleton } from "./LoadingSkeleton";
+import { colors, borderRadius } from "../../constants/theme";
+import { hapticFeedback } from "../../utils/haptics";
 import {
   usePlacesAutocomplete,
   PlacePrediction,
-} from '../../hooks/usePlacesAutocomplete';
+} from "../../hooks/usePlacesAutocomplete";
 
 interface PlacesAutocompleteProps {
   onSelect: (city: string, country: string, placeId?: string) => void;
 }
 
 export function PlacesAutocomplete({ onSelect }: PlacesAutocompleteProps) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const { predictions, isLoading, search, clear } = usePlacesAutocomplete();
 
   const handleChangeText = useCallback(
@@ -34,7 +34,7 @@ export function PlacesAutocomplete({ onSelect }: PlacesAutocompleteProps) {
         search(text);
       }
     },
-    [search, clear]
+    [search, clear],
   );
 
   const handleSelect = useCallback(
@@ -42,17 +42,17 @@ export function PlacesAutocomplete({ onSelect }: PlacesAutocompleteProps) {
       hapticFeedback.selection();
       Keyboard.dismiss();
       onSelect(item.city, item.secondary, item.placeId);
-      setQuery('');
+      setQuery("");
       clear();
     },
-    [onSelect, clear]
+    [onSelect, clear],
   );
 
   const handleUseAsDestination = useCallback(() => {
     hapticFeedback.selection();
     Keyboard.dismiss();
-    onSelect(query.trim(), '');
-    setQuery('');
+    onSelect(query.trim(), "");
+    setQuery("");
     clear();
   }, [query, onSelect, clear]);
 
@@ -143,32 +143,32 @@ export function PlacesAutocomplete({ onSelect }: PlacesAutocompleteProps) {
 
 const styles = StyleSheet.create({
   wrapper: {
-    position: 'relative',
+    position: "relative",
     zIndex: 50,
   },
   dropdown: {
-    position: 'absolute',
-    top: '100%',
+    position: "absolute",
+    top: "100%",
     left: 0,
     right: 0,
     marginTop: 4,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderRadius: borderRadius.lg,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
     maxHeight: 280,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   list: {
     maxHeight: 280,
   },
   row: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 14,
     paddingVertical: 12,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: "#e2e8f0",
   },
   rowIcon: {
     marginRight: 12,
@@ -178,8 +178,8 @@ const styles = StyleSheet.create({
   },
   city: {
     fontSize: 15,
-    fontWeight: '600',
-    color: '#0f172a',
+    fontWeight: "600",
+    color: "#0f172a",
   },
   secondary: {
     fontSize: 13,
@@ -191,8 +191,8 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   skeletonRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   skeletonText: {
@@ -200,7 +200,7 @@ const styles = StyleSheet.create({
   },
   emptyContainer: {
     padding: 20,
-    alignItems: 'center',
+    alignItems: "center",
     gap: 12,
   },
   emptyText: {
@@ -208,17 +208,17 @@ const styles = StyleSheet.create({
     color: colors.surface[400],
   },
   fallbackButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 8,
-    backgroundColor: '#FFF5F4',
+    backgroundColor: "#FFF5F4",
     borderRadius: borderRadius.full,
   },
   fallbackButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.primary[400],
   },
 });

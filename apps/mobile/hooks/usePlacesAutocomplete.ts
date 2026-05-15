@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback } from 'react';
-import { popularDestinations } from '@faroway/constants';
+import { useState, useRef, useCallback } from "react";
+import { popularDestinations } from "@faroway/constants";
 
 export interface PlacePrediction {
   placeId: string;
@@ -16,8 +16,7 @@ function filterLocalDestinations(query: string): PlacePrediction[] {
   return popularDestinations
     .filter(
       (d) =>
-        d.name.toLowerCase().includes(q) ||
-        d.country.toLowerCase().includes(q)
+        d.name.toLowerCase().includes(q) || d.country.toLowerCase().includes(q),
     )
     .map((d) => ({
       placeId: d.id,
@@ -76,16 +75,16 @@ export function usePlacesAutocomplete() {
         const res = await fetch(url, { signal: controller.signal });
         const data = await res.json();
 
-        if (data.status === 'OK' && data.predictions) {
+        if (data.status === "OK" && data.predictions) {
           setPredictions(
             data.predictions.map((p: any) => ({
               placeId: p.place_id,
               city: p.structured_formatting?.main_text ?? p.description,
-              secondary: p.structured_formatting?.secondary_text ?? '',
-            }))
+              secondary: p.structured_formatting?.secondary_text ?? "",
+            })),
           );
           setError(null);
-        } else if (data.status === 'ZERO_RESULTS') {
+        } else if (data.status === "ZERO_RESULTS") {
           setPredictions([]);
           setError(null);
         } else {
@@ -94,7 +93,7 @@ export function usePlacesAutocomplete() {
           setError(null);
         }
       } catch (err: any) {
-        if (err.name === 'AbortError') return;
+        if (err.name === "AbortError") return;
         // Network error — fall back to local filtering
         setPredictions(filterLocalDestinations(query));
         setError(null);

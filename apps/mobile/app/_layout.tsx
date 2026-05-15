@@ -1,12 +1,12 @@
-import { useEffect } from 'react';
-import { Stack, useRouter, useSegments } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator } from 'react-native';
-import { AuthProvider, useAuthContext } from '../components/AuthProvider';
-import { NotificationProvider } from '../components/NotificationProvider';
-import { OfflineProvider } from '../components/OfflineProvider';
-import { SyncStatusBanner } from '../components/ui/SyncStatusBanner';
-import { useTripStore } from '../stores/tripStore';
+import { useEffect } from "react";
+import { Stack, useRouter, useSegments } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { View, ActivityIndicator } from "react-native";
+import { AuthProvider, useAuthContext } from "../components/AuthProvider";
+import { NotificationProvider } from "../components/NotificationProvider";
+import { OfflineProvider } from "../components/OfflineProvider";
+import { SyncStatusBanner } from "../components/ui/SyncStatusBanner";
+import { useTripStore } from "../stores/tripStore";
 
 function RootLayoutNav() {
   const { isAuthenticated, initialized, loading } = useAuthContext();
@@ -25,17 +25,19 @@ function RootLayoutNav() {
   useEffect(() => {
     if (!initialized) return;
 
-    const inOnboarding = segments[0] === 'onboarding';
-    const inIndex = (segments as string[]).length === 0 || segments[0] === undefined;
-    const inCreate = segments[0] === 'create';
-    const inTrip = segments[0] === 'trip';
-    const inInspiration = segments[0] === 'inspiration';
-    const inTabs = segments[0] === '(tabs)';
-    
+    const inOnboarding = segments[0] === "onboarding";
+    const inIndex =
+      (segments as string[]).length === 0 || segments[0] === undefined;
+    const inCreate = segments[0] === "create";
+    const inTrip = segments[0] === "trip";
+    const inInspiration = segments[0] === "inspiration";
+    const inTabs = segments[0] === "(tabs)";
+
     // Protected routes that require authentication
-    const protectedTabRoutes = ['profile'];
+    const protectedTabRoutes = ["profile"];
     const currentTab = (segments as string[])[1] as string | undefined;
-    const isProtectedTab = inTabs && currentTab != null && protectedTabRoutes.includes(currentTab);
+    const isProtectedTab =
+      inTabs && currentTab != null && protectedTabRoutes.includes(currentTab);
 
     // Allow access to index (splash) screen
     if (inIndex) return;
@@ -46,10 +48,10 @@ function RootLayoutNav() {
     // - View trips
     // - Main tabs (except profile)
     if (inOnboarding || inCreate || inTrip || inInspiration) return;
-    
+
     // Allow tabs except protected ones
     if (inTabs && !isProtectedTab) return;
-    
+
     // If user is not authenticated and trying to access protected routes
     if (!isAuthenticated && isProtectedTab) {
       // Don't redirect - we'll show AuthGate component instead
@@ -60,7 +62,14 @@ function RootLayoutNav() {
   // Show loading screen while initializing
   if (!initialized) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#ffffff' }}>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#ffffff",
+        }}
+      >
         <ActivityIndicator size="large" color="#F97066" />
       </View>
     );
@@ -73,57 +82,57 @@ function RootLayoutNav() {
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#ffffff' },
-          animation: 'slide_from_right',
+          contentStyle: { backgroundColor: "#ffffff" },
+          animation: "slide_from_right",
           animationDuration: 300,
         }}
       >
         <Stack.Screen
           name="index"
           options={{
-            animation: 'fade',
+            animation: "fade",
           }}
         />
         <Stack.Screen
           name="onboarding"
           options={{
-            animation: 'fade',
+            animation: "fade",
             animationDuration: 200,
           }}
         />
         <Stack.Screen
           name="(tabs)"
           options={{
-            animation: 'fade',
+            animation: "fade",
             animationDuration: 250,
           }}
         />
         <Stack.Screen
           name="create"
           options={{
-            presentation: 'modal',
-            animation: 'slide_from_bottom',
+            presentation: "modal",
+            animation: "slide_from_bottom",
             animationDuration: 350,
           }}
         />
         <Stack.Screen
           name="trip/[id]"
           options={{
-            animation: 'slide_from_right',
+            animation: "slide_from_right",
             animationDuration: 300,
           }}
         />
         <Stack.Screen
           name="inspiration/[slug]"
           options={{
-            animation: 'slide_from_bottom',
+            animation: "slide_from_bottom",
             animationDuration: 350,
           }}
         />
         <Stack.Screen
           name="profile"
           options={{
-            animation: 'slide_from_right',
+            animation: "slide_from_right",
             animationDuration: 300,
           }}
         />
@@ -136,7 +145,11 @@ export default function RootLayout() {
   return (
     <AuthProvider>
       <NotificationProvider>
-        <OfflineProvider autoSync={true} syncOnForeground={true} syncOnMount={true}>
+        <OfflineProvider
+          autoSync={true}
+          syncOnForeground={true}
+          syncOnMount={true}
+        >
           <RootLayoutNav />
         </OfflineProvider>
       </NotificationProvider>

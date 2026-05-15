@@ -1,4 +1,4 @@
-import React from 'react';
+import React from "react";
 import {
   View,
   Text as RNText,
@@ -7,12 +7,18 @@ import {
   TouchableOpacity,
   Linking,
   Platform,
-} from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
-import { colors, borderRadius, shadows, spacing, typography } from '../../constants/theme';
-import { z } from 'zod';
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons } from "@expo/vector-icons";
+import * as WebBrowser from "expo-web-browser";
+import {
+  colors,
+  borderRadius,
+  shadows,
+  spacing,
+  typography,
+} from "../../constants/theme";
+import { z } from "zod";
 import {
   TripSummarySchema,
   HeroImageSchema,
@@ -27,7 +33,7 @@ import {
   PriceTagSchema,
   RatingStarsSchema,
   MapPreviewSchema,
-} from './catalog';
+} from "./catalog";
 
 // =============================================================================
 // Helper Functions
@@ -35,8 +41,8 @@ import {
 
 const openURL = async (url: string) => {
   try {
-    if (Platform.OS === 'web') {
-      window.open(url, '_blank');
+    if (Platform.OS === "web") {
+      window.open(url, "_blank");
     } else {
       await WebBrowser.openBrowserAsync(url, {
         presentationStyle: WebBrowser.WebBrowserPresentationStyle.AUTOMATIC,
@@ -44,7 +50,7 @@ const openURL = async (url: string) => {
       });
     }
   } catch (error) {
-    console.error('Failed to open URL:', error);
+    console.error("Failed to open URL:", error);
     Linking.openURL(url);
   }
 };
@@ -75,18 +81,30 @@ export const TripSummary: React.FC<TripSummaryProps> = ({
         <RNText style={styles.tripSummaryDestination}>{destination}</RNText>
         <View style={styles.tripSummaryDetails}>
           <View style={styles.tripSummaryDetail}>
-            <Ionicons name="calendar-outline" size={16} color="rgba(255,255,255,0.9)" />
+            <Ionicons
+              name="calendar-outline"
+              size={16}
+              color="rgba(255,255,255,0.9)"
+            />
             <RNText style={styles.tripSummaryDetailText}>{dates}</RNText>
           </View>
           <View style={styles.tripSummaryDetail}>
-            <Ionicons name="people-outline" size={16} color="rgba(255,255,255,0.9)" />
+            <Ionicons
+              name="people-outline"
+              size={16}
+              color="rgba(255,255,255,0.9)"
+            />
             <RNText style={styles.tripSummaryDetailText}>
-              {travelers} traveler{travelers > 1 ? 's' : ''}
+              {travelers} traveler{travelers > 1 ? "s" : ""}
             </RNText>
           </View>
           {budget && (
             <View style={styles.tripSummaryDetail}>
-              <Ionicons name="wallet-outline" size={16} color="rgba(255,255,255,0.9)" />
+              <Ionicons
+                name="wallet-outline"
+                size={16}
+                color="rgba(255,255,255,0.9)"
+              />
               <RNText style={styles.tripSummaryDetailText}>{budget}</RNText>
             </View>
           )}
@@ -102,13 +120,21 @@ export const TripSummary: React.FC<TripSummaryProps> = ({
 
 type HeroImageProps = z.infer<typeof HeroImageSchema>;
 
-export const HeroImage: React.FC<HeroImageProps> = ({ url, alt, overlay = true }) => {
+export const HeroImage: React.FC<HeroImageProps> = ({
+  url,
+  alt,
+  overlay = true,
+}) => {
   return (
     <View style={styles.heroImage}>
-      <Image source={{ uri: url }} style={styles.heroImageImg} accessibilityLabel={alt} />
+      <Image
+        source={{ uri: url }}
+        style={styles.heroImageImg}
+        accessibilityLabel={alt}
+      />
       {overlay && (
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.3)']}
+          colors={["transparent", "rgba(0,0,0,0.3)"]}
           style={styles.heroImageOverlay}
         />
       )}
@@ -138,7 +164,7 @@ export const Section: React.FC<SectionProps> = ({ title }) => {
 
 type TextProps = z.infer<typeof TextSchema>;
 
-export const Text: React.FC<TextProps> = ({ content, variant = 'body' }) => {
+export const Text: React.FC<TextProps> = ({ content, variant = "body" }) => {
   const textStyles = {
     body: styles.textBody,
     caption: styles.textCaption,
@@ -167,33 +193,35 @@ export const HotelCard: React.FC<HotelCardProps> = ({
 }) => {
   return (
     <View style={[styles.card, styles.hotelCard]}>
-      {image && (
-        <Image source={{ uri: image }} style={styles.hotelCardImage} />
-      )}
+      {image && <Image source={{ uri: image }} style={styles.hotelCardImage} />}
       <View style={styles.hotelCardContent}>
         <View style={styles.hotelCardHeader}>
           <RNText style={styles.hotelCardName}>{name}</RNText>
           <View style={styles.hotelCardRating}>
             <Ionicons name="star" size={16} color="#fbbf24" />
-            <RNText style={styles.hotelCardRatingText}>{rating.toFixed(1)}</RNText>
+            <RNText style={styles.hotelCardRatingText}>
+              {rating.toFixed(1)}
+            </RNText>
             {reviewCount && (
-              <RNText style={styles.hotelCardReviewCount}>({reviewCount})</RNText>
+              <RNText style={styles.hotelCardReviewCount}>
+                ({reviewCount})
+              </RNText>
             )}
           </View>
         </View>
-        
+
         {description && (
           <RNText style={styles.hotelCardDescription} numberOfLines={3}>
             {description}
           </RNText>
         )}
-        
+
         <View style={styles.hotelCardPrice}>
           <RNText style={styles.hotelCardPriceLabel}>From</RNText>
           <RNText style={styles.hotelCardPriceAmount}>${pricePerNight}</RNText>
           <RNText style={styles.hotelCardPricePeriod}>/ night</RNText>
         </View>
-        
+
         {amenities.length > 0 && (
           <View style={styles.amenitiesContainer}>
             {amenities.slice(0, 6).map((amenity, index) => (
@@ -203,12 +231,14 @@ export const HotelCard: React.FC<HotelCardProps> = ({
             ))}
             {amenities.length > 6 && (
               <View style={styles.amenityPill}>
-                <RNText style={styles.amenityText}>+{amenities.length - 6} more</RNText>
+                <RNText style={styles.amenityText}>
+                  +{amenities.length - 6} more
+                </RNText>
               </View>
             )}
           </View>
         )}
-        
+
         {bookingUrl && (
           <TouchableOpacity
             style={styles.hotelCardButton}
@@ -237,11 +267,15 @@ export const HotelCard: React.FC<HotelCardProps> = ({
 
 type ItineraryDayProps = z.infer<typeof ItineraryDaySchema>;
 
-export const ItineraryDay: React.FC<ItineraryDayProps> = ({ dayNumber, date, title }) => {
-  const formattedDate = new Date(date).toLocaleDateString('en-US', {
-    weekday: 'short',
-    month: 'short',
-    day: 'numeric',
+export const ItineraryDay: React.FC<ItineraryDayProps> = ({
+  dayNumber,
+  date,
+  title,
+}) => {
+  const formattedDate = new Date(date).toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
   });
 
   return (
@@ -279,25 +313,31 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
         <Ionicons name="time-outline" size={16} color={colors.primary[600]} />
         <RNText style={styles.activityCardTimeText}>{time}</RNText>
       </View>
-      
+
       <View style={styles.activityCardBody}>
         {image && (
           <Image source={{ uri: image }} style={styles.activityCardImage} />
         )}
         <View style={styles.activityCardContent}>
           <RNText style={styles.activityCardName}>{name}</RNText>
-          
+
           {location && (
             <View style={styles.activityCardLocation}>
-              <Ionicons name="location-outline" size={14} color={colors.neutral[500]} />
-              <RNText style={styles.activityCardLocationText}>{location}</RNText>
+              <Ionicons
+                name="location-outline"
+                size={14}
+                color={colors.neutral[500]}
+              />
+              <RNText style={styles.activityCardLocationText}>
+                {location}
+              </RNText>
             </View>
           )}
-          
+
           <RNText style={styles.activityCardDescription} numberOfLines={2}>
             {description}
           </RNText>
-          
+
           <View style={styles.activityCardMeta}>
             <View style={styles.activityCardMetaItem}>
               <Ionicons name="time" size={14} color={colors.neutral[500]} />
@@ -306,23 +346,33 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
             {rating && (
               <View style={styles.activityCardMetaItem}>
                 <Ionicons name="star" size={14} color="#fbbf24" />
-                <RNText style={styles.activityCardMetaText}>{rating.toFixed(1)}</RNText>
+                <RNText style={styles.activityCardMetaText}>
+                  {rating.toFixed(1)}
+                </RNText>
                 {reviewCount && (
-                  <RNText style={styles.activityCardReviewCount}>({reviewCount})</RNText>
+                  <RNText style={styles.activityCardReviewCount}>
+                    ({reviewCount})
+                  </RNText>
                 )}
               </View>
             )}
             <RNText style={styles.activityCardPrice}>${price}</RNText>
           </View>
-          
+
           {bookingUrl && (
             <TouchableOpacity
               style={styles.activityCardButton}
               onPress={() => openURL(bookingUrl)}
               activeOpacity={0.8}
             >
-              <RNText style={styles.activityCardButtonText}>View Details</RNText>
-              <Ionicons name="arrow-forward" size={16} color={colors.primary[600]} />
+              <RNText style={styles.activityCardButtonText}>
+                View Details
+              </RNText>
+              <Ionicons
+                name="arrow-forward"
+                size={16}
+                color={colors.primary[600]}
+              />
             </TouchableOpacity>
           )}
         </View>
@@ -348,7 +398,7 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
   description,
   time,
 }) => {
-  const priceLevelString = '$'.repeat(priceLevel);
+  const priceLevelString = "$".repeat(priceLevel);
 
   return (
     <View style={[styles.card, styles.restaurantCard]}>
@@ -358,42 +408,50 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
           <RNText style={styles.restaurantCardTimeText}>{time}</RNText>
         </View>
       )}
-      
+
       <View style={styles.restaurantCardBody}>
         {image && (
           <Image source={{ uri: image }} style={styles.restaurantCardImage} />
         )}
         <View style={styles.restaurantCardContent}>
           <RNText style={styles.restaurantCardName}>{name}</RNText>
-          
+
           <View style={styles.restaurantCardCuisine}>
             <RNText style={styles.restaurantCardCuisineText}>{cuisine}</RNText>
-            <RNText style={styles.restaurantCardPriceLevel}>{priceLevelString}</RNText>
+            <RNText style={styles.restaurantCardPriceLevel}>
+              {priceLevelString}
+            </RNText>
           </View>
-          
+
           {description && (
             <RNText style={styles.restaurantCardDescription} numberOfLines={2}>
               {description}
             </RNText>
           )}
-          
+
           {rating && (
             <View style={styles.restaurantCardRating}>
               <Ionicons name="star" size={14} color="#fbbf24" />
-              <RNText style={styles.restaurantCardRatingText}>{rating.toFixed(1)}</RNText>
+              <RNText style={styles.restaurantCardRatingText}>
+                {rating.toFixed(1)}
+              </RNText>
               {reviewCount && (
-                <RNText style={styles.restaurantCardReviewCount}>({reviewCount} reviews)</RNText>
+                <RNText style={styles.restaurantCardReviewCount}>
+                  ({reviewCount} reviews)
+                </RNText>
               )}
             </View>
           )}
-          
+
           {reservationUrl && (
             <TouchableOpacity
               style={styles.restaurantCardButton}
               onPress={() => openURL(reservationUrl)}
               activeOpacity={0.8}
             >
-              <RNText style={styles.restaurantCardButtonText}>Reserve Table</RNText>
+              <RNText style={styles.restaurantCardButtonText}>
+                Reserve Table
+              </RNText>
               <Ionicons name="arrow-forward" size={16} color="#ef4444" />
             </TouchableOpacity>
           )}
@@ -412,12 +470,12 @@ type DayTimelineProps = z.infer<typeof DayTimelineSchema>;
 export const DayTimeline: React.FC<DayTimelineProps> = ({ items }) => {
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'restaurant':
-        return '#ef4444';
-      case 'transport':
-        return '#3b82f6';
-      case 'rest':
-        return '#8b5cf6';
+      case "restaurant":
+        return "#ef4444";
+      case "transport":
+        return "#3b82f6";
+      case "rest":
+        return "#8b5cf6";
       default:
         return colors.primary[500];
     }
@@ -425,14 +483,14 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ items }) => {
 
   const getTypeIcon = (type: string) => {
     switch (type) {
-      case 'restaurant':
-        return 'restaurant';
-      case 'transport':
-        return 'car';
-      case 'rest':
-        return 'bed';
+      case "restaurant":
+        return "restaurant";
+      case "transport":
+        return "car";
+      case "rest":
+        return "bed";
       default:
-        return 'location';
+        return "location";
     }
   };
 
@@ -444,12 +502,26 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ items }) => {
             <RNText style={styles.timelineTimeText}>{item.time}</RNText>
           </View>
           <View style={styles.timelineDot}>
-            <View style={[styles.timelineDotInner, { backgroundColor: getTypeColor(item.type) }]} />
+            <View
+              style={[
+                styles.timelineDotInner,
+                { backgroundColor: getTypeColor(item.type) },
+              ]}
+            />
             {index < items.length - 1 && <View style={styles.timelineLine} />}
           </View>
           <View style={styles.timelineContent}>
-            <View style={[styles.timelineIcon, { backgroundColor: `${getTypeColor(item.type)}15` }]}>
-              <Ionicons name={getTypeIcon(item.type) as any} size={16} color={getTypeColor(item.type)} />
+            <View
+              style={[
+                styles.timelineIcon,
+                { backgroundColor: `${getTypeColor(item.type)}15` },
+              ]}
+            >
+              <Ionicons
+                name={getTypeIcon(item.type) as any}
+                size={16}
+                color={getTypeColor(item.type)}
+              />
             </View>
             <RNText style={styles.timelineTitle}>{item.title}</RNText>
           </View>
@@ -489,9 +561,7 @@ export const BookingButton: React.FC<BookingButtonProps> = ({
             <RNText style={styles.bookingButtonProvider}>via {provider}</RNText>
           )}
         </View>
-        {price && (
-          <RNText style={styles.bookingButtonPrice}>${price}</RNText>
-        )}
+        {price && <RNText style={styles.bookingButtonPrice}>${price}</RNText>}
         <Ionicons name="arrow-forward" size={20} color="#fff" />
       </LinearGradient>
     </TouchableOpacity>
@@ -504,13 +574,18 @@ export const BookingButton: React.FC<BookingButtonProps> = ({
 
 type PriceTagProps = z.infer<typeof PriceTagSchema>;
 
-export const PriceTag: React.FC<PriceTagProps> = ({ amount, currency = 'USD', period }) => {
-  const currencySymbol = currency === 'USD' ? '$' : currency;
-  
+export const PriceTag: React.FC<PriceTagProps> = ({
+  amount,
+  currency = "USD",
+  period,
+}) => {
+  const currencySymbol = currency === "USD" ? "$" : currency;
+
   return (
     <View style={styles.priceTag}>
       <RNText style={styles.priceTagAmount}>
-        {currencySymbol}{amount.toLocaleString()}
+        {currencySymbol}
+        {amount.toLocaleString()}
       </RNText>
       {period && <RNText style={styles.priceTagPeriod}>{period}</RNText>}
     </View>
@@ -523,10 +598,13 @@ export const PriceTag: React.FC<PriceTagProps> = ({ amount, currency = 'USD', pe
 
 type RatingStarsProps = z.infer<typeof RatingStarsSchema>;
 
-export const RatingStars: React.FC<RatingStarsProps> = ({ rating, reviewCount }) => {
+export const RatingStars: React.FC<RatingStarsProps> = ({
+  rating,
+  reviewCount,
+}) => {
   const fullStars = Math.floor(rating);
   const hasHalfStar = rating % 1 >= 0.5;
-  
+
   return (
     <View style={styles.ratingStars}>
       <View style={styles.stars}>
@@ -535,12 +613,19 @@ export const RatingStars: React.FC<RatingStarsProps> = ({ rating, reviewCount })
         ))}
         {hasHalfStar && <Ionicons name="star-half" size={16} color="#fbbf24" />}
         {[...Array(5 - fullStars - (hasHalfStar ? 1 : 0))].map((_, i) => (
-          <Ionicons key={`empty-${i}`} name="star-outline" size={16} color="#fbbf24" />
+          <Ionicons
+            key={`empty-${i}`}
+            name="star-outline"
+            size={16}
+            color="#fbbf24"
+          />
         ))}
       </View>
       <RNText style={styles.ratingValue}>{rating.toFixed(1)}</RNText>
       {reviewCount && (
-        <RNText style={styles.reviewCount}>({reviewCount.toLocaleString()} reviews)</RNText>
+        <RNText style={styles.reviewCount}>
+          ({reviewCount.toLocaleString()} reviews)
+        </RNText>
       )}
     </View>
   );
@@ -552,11 +637,15 @@ export const RatingStars: React.FC<RatingStarsProps> = ({ rating, reviewCount })
 
 type MapPreviewProps = z.infer<typeof MapPreviewSchema>;
 
-export const MapPreview: React.FC<MapPreviewProps> = ({ markers, center, zoom = 13 }) => {
+export const MapPreview: React.FC<MapPreviewProps> = ({
+  markers,
+  center,
+  zoom = 13,
+}) => {
   // For now, we'll show a placeholder for maps
   // In production, you might want to use react-native-maps or Google Maps Static API
   const centerCoords = center || markers[0];
-  
+
   return (
     <View style={styles.mapPreview}>
       <View style={styles.mapPreviewPlaceholder}>
@@ -566,7 +655,7 @@ export const MapPreview: React.FC<MapPreviewProps> = ({ markers, center, zoom = 
       <View style={styles.mapPreviewOverlay}>
         <Ionicons name="location" size={24} color={colors.primary[600]} />
         <RNText style={styles.mapPreviewLabel}>
-          {markers.length} location{markers.length > 1 ? 's' : ''}
+          {markers.length} location{markers.length > 1 ? "s" : ""}
         </RNText>
       </View>
     </View>
@@ -602,37 +691,37 @@ const styles = StyleSheet.create({
   tripSummary: {
     marginVertical: spacing.md,
     borderRadius: borderRadius.lg,
-    overflow: 'hidden',
+    overflow: "hidden",
     ...shadows.md,
   },
   tripSummaryGradient: {
     padding: spacing.lg,
-    alignItems: 'center',
+    alignItems: "center",
   },
   tripSummaryIcon: {
     marginBottom: spacing.sm,
   },
   tripSummaryDestination: {
     ...typography.h1,
-    color: '#fff',
+    color: "#fff",
     marginBottom: spacing.md,
-    textAlign: 'center',
+    textAlign: "center",
   },
   tripSummaryDetails: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
+    flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "center",
     gap: spacing.md,
   },
   tripSummaryDetail: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
   },
   tripSummaryDetailText: {
-    color: 'rgba(255,255,255,0.9)',
+    color: "rgba(255,255,255,0.9)",
     fontSize: 14,
-    fontWeight: '500',
+    fontWeight: "500",
   },
 
   // HeroImage
@@ -640,24 +729,24 @@ const styles = StyleSheet.create({
     height: 250,
     marginVertical: spacing.md,
     borderRadius: borderRadius.lg,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   heroImageImg: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
   },
   heroImageOverlay: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
-    height: '50%',
+    height: "50%",
   },
 
   // Section
   section: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     marginVertical: spacing.lg,
     gap: spacing.sm,
   },
@@ -669,7 +758,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     ...typography.h3,
     color: colors.neutral[900],
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 1,
   },
 
@@ -688,7 +777,7 @@ const styles = StyleSheet.create({
   textSubtitle: {
     ...typography.bodySmall,
     color: colors.neutral[600],
-    fontWeight: '600',
+    fontWeight: "600",
   },
   textTitle: {
     ...typography.h3,
@@ -697,17 +786,17 @@ const styles = StyleSheet.create({
 
   // Shared Card
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: borderRadius.lg,
     marginVertical: spacing.md,
-    overflow: 'hidden',
+    overflow: "hidden",
     ...shadows.md,
   },
 
   // HotelCard
   hotelCard: {},
   hotelCardImage: {
-    width: '100%',
+    width: "100%",
     height: 200,
   },
   hotelCardContent: {
@@ -722,13 +811,13 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   hotelCardRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
   },
   hotelCardRatingText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.neutral[700],
   },
   hotelCardReviewCount: {
@@ -741,8 +830,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.md,
   },
   hotelCardPrice: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    alignItems: "baseline",
     marginBottom: spacing.md,
   },
   hotelCardPriceLabel: {
@@ -752,7 +841,7 @@ const styles = StyleSheet.create({
   },
   hotelCardPriceAmount: {
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: "800",
     color: colors.primary[600],
   },
   hotelCardPricePeriod: {
@@ -761,8 +850,8 @@ const styles = StyleSheet.create({
     marginLeft: spacing.xs,
   },
   amenitiesContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: spacing.xs,
     marginBottom: spacing.md,
   },
@@ -775,23 +864,23 @@ const styles = StyleSheet.create({
   amenityText: {
     fontSize: 12,
     color: colors.neutral[700],
-    fontWeight: '500',
+    fontWeight: "500",
   },
   hotelCardButton: {
     borderRadius: borderRadius.md,
-    overflow: 'hidden',
+    overflow: "hidden",
   },
   hotelCardButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: spacing.md,
     gap: spacing.sm,
   },
   hotelCardButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 
   // ItineraryDay
@@ -802,7 +891,7 @@ const styles = StyleSheet.create({
     borderBottomColor: colors.primary[500],
   },
   itineraryDayBadge: {
-    alignSelf: 'flex-start',
+    alignSelf: "flex-start",
     backgroundColor: colors.primary[500],
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
@@ -810,10 +899,10 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   itineraryDayNumber: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 12,
-    fontWeight: '700',
-    textTransform: 'uppercase',
+    fontWeight: "700",
+    textTransform: "uppercase",
     letterSpacing: 1,
   },
   itineraryDayDate: {
@@ -829,8 +918,8 @@ const styles = StyleSheet.create({
   // ActivityCard
   activityCard: {},
   activityCardTime: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
     padding: spacing.sm,
     backgroundColor: colors.primary[50],
@@ -839,11 +928,11 @@ const styles = StyleSheet.create({
   },
   activityCardTimeText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.primary[700],
   },
   activityCardBody: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: spacing.md,
   },
   activityCardImage: {
@@ -861,8 +950,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   activityCardLocation: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
     marginBottom: spacing.xs,
   },
@@ -876,14 +965,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   activityCardMeta: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.md,
     marginBottom: spacing.sm,
   },
   activityCardMetaItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
   },
   activityCardMetaText: {
@@ -896,14 +985,14 @@ const styles = StyleSheet.create({
   },
   activityCardPrice: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.primary[600],
-    marginLeft: 'auto',
+    marginLeft: "auto",
   },
   activityCardButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: spacing.xs,
     backgroundColor: colors.primary[50],
     paddingVertical: spacing.sm,
@@ -911,28 +1000,28 @@ const styles = StyleSheet.create({
   },
   activityCardButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.primary[600],
   },
 
   // RestaurantCard
   restaurantCard: {},
   restaurantCardTime: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
     padding: spacing.sm,
-    backgroundColor: '#fef2f2',
+    backgroundColor: "#fef2f2",
     borderBottomWidth: 1,
-    borderBottomColor: '#fecaca',
+    borderBottomColor: "#fecaca",
   },
   restaurantCardTimeText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#dc2626',
+    fontWeight: "600",
+    color: "#dc2626",
   },
   restaurantCardBody: {
-    flexDirection: 'row',
+    flexDirection: "row",
     padding: spacing.md,
   },
   restaurantCardImage: {
@@ -950,8 +1039,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   restaurantCardCuisine: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
     marginBottom: spacing.xs,
   },
@@ -961,7 +1050,7 @@ const styles = StyleSheet.create({
   },
   restaurantCardPriceLevel: {
     fontSize: 14,
-    fontWeight: '700',
+    fontWeight: "700",
     color: colors.primary[600],
   },
   restaurantCardDescription: {
@@ -970,14 +1059,14 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   restaurantCardRating: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
     marginBottom: spacing.sm,
   },
   restaurantCardRatingText: {
     fontSize: 13,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.neutral[700],
   },
   restaurantCardReviewCount: {
@@ -985,18 +1074,18 @@ const styles = StyleSheet.create({
     color: colors.neutral[500],
   },
   restaurantCardButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
     gap: spacing.xs,
-    backgroundColor: '#fef2f2',
+    backgroundColor: "#fef2f2",
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.md,
   },
   restaurantCardButtonText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#ef4444',
+    fontWeight: "600",
+    color: "#ef4444",
   },
 
   // DayTimeline
@@ -1005,8 +1094,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
   },
   timelineItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+    flexDirection: "row",
+    alignItems: "flex-start",
   },
   timelineTime: {
     width: 60,
@@ -1014,11 +1103,11 @@ const styles = StyleSheet.create({
   },
   timelineTimeText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.neutral[500],
   },
   timelineDot: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingHorizontal: spacing.sm,
   },
   timelineDotInner: {
@@ -1034,8 +1123,8 @@ const styles = StyleSheet.create({
   },
   timelineContent: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
     paddingBottom: spacing.lg,
   },
@@ -1043,8 +1132,8 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: borderRadius.sm,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   timelineTitle: {
     ...typography.body,
@@ -1056,13 +1145,13 @@ const styles = StyleSheet.create({
   bookingButton: {
     marginVertical: spacing.md,
     borderRadius: borderRadius.lg,
-    overflow: 'hidden',
+    overflow: "hidden",
     ...shadows.md,
   },
   bookingButtonGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     paddingVertical: spacing.lg,
     paddingHorizontal: spacing.lg,
   },
@@ -1070,31 +1159,31 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   bookingButtonLabel: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: '700',
+    fontWeight: "700",
     marginBottom: spacing.xs,
   },
   bookingButtonProvider: {
-    color: 'rgba(255,255,255,0.8)',
+    color: "rgba(255,255,255,0.8)",
     fontSize: 12,
   },
   bookingButtonPrice: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 20,
-    fontWeight: '800',
+    fontWeight: "800",
     marginRight: spacing.md,
   },
 
   // PriceTag
   priceTag: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
+    flexDirection: "row",
+    alignItems: "baseline",
     gap: spacing.xs,
   },
   priceTagAmount: {
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: "800",
     color: colors.primary[600],
   },
   priceTagPeriod: {
@@ -1104,17 +1193,17 @@ const styles = StyleSheet.create({
 
   // RatingStars
   ratingStars: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.sm,
   },
   stars: {
-    flexDirection: 'row',
+    flexDirection: "row",
     gap: 2,
   },
   ratingValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.neutral[700],
   },
   reviewCount: {
@@ -1127,38 +1216,38 @@ const styles = StyleSheet.create({
     height: 200,
     marginVertical: spacing.md,
     borderRadius: borderRadius.lg,
-    overflow: 'hidden',
+    overflow: "hidden",
     ...shadows.md,
   },
   mapPreviewPlaceholder: {
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
     backgroundColor: colors.neutral[100],
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
   },
   mapPreviewPlaceholderText: {
     marginTop: spacing.sm,
     fontSize: 14,
     color: colors.neutral[500],
-    fontWeight: '500',
+    fontWeight: "500",
   },
   mapPreviewOverlay: {
-    position: 'absolute',
+    position: "absolute",
     bottom: spacing.md,
     left: spacing.md,
-    backgroundColor: 'rgba(255,255,255,0.95)',
+    backgroundColor: "rgba(255,255,255,0.95)",
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: spacing.xs,
     ...shadows.sm,
   },
   mapPreviewLabel: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.neutral[900],
   },
 });

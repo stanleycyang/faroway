@@ -2,33 +2,33 @@
 module.exports = {
   testRunner: {
     args: {
-      $0: 'jest',
-      config: 'e2e/jest.config.js',
+      $0: "jest",
+      config: "e2e/jest.config.js",
     },
     jest: {
       setupTimeout: 180000,
     },
   },
   apps: {
-    'ios.debug': {
-      type: 'ios.app',
-      binaryPath: 'ios/build/Build/Products/Debug-iphonesimulator/Faroway.app',
+    "ios.debug": {
+      type: "ios.app",
+      binaryPath: "ios/build/Build/Products/Debug-iphonesimulator/Faroway.app",
       build:
-        'xcodebuild -workspace ios/Faroway.xcworkspace -scheme Faroway -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build',
+        "xcodebuild -workspace ios/Faroway.xcworkspace -scheme Faroway -configuration Debug -sdk iphonesimulator -derivedDataPath ios/build",
     },
   },
   devices: {
     simulator: {
-      type: 'ios.simulator',
+      type: "ios.simulator",
       device: {
-        type: 'iPhone 16',
+        type: "iPhone 16",
       },
     },
   },
   configurations: {
-    'ios.sim.debug': {
-      device: 'simulator',
-      app: 'ios.debug',
+    "ios.sim.debug": {
+      device: "simulator",
+      app: "ios.debug",
     },
   },
 };

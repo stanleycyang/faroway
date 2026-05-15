@@ -3,5 +3,9 @@ export {
   popularDestinations,
   travelVibes,
   travelerTypes,
-} from '@faroway/constants';
-export type { Destination, TravelVibe, TravelerTypeOption } from '@faroway/constants';
+} from "@faroway/constants";
+export type {
+  Destination,
+  TravelVibe,
+  TravelerTypeOption,
+} from "@faroway/constants";

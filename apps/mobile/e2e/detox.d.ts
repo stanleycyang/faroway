@@ -1,4 +1,4 @@
-declare module 'detox' {
+declare module "detox" {
   export const device: any;
   export const element: any;
   export const by: any;

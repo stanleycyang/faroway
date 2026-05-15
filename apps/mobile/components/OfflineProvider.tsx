@@ -3,18 +3,29 @@
  * Context provider for offline-first functionality
  */
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
-import { useOfflineSync, type UseOfflineSyncReturn } from '../hooks/useOfflineSync';
-import type { Trip, TripInput } from '../stores/tripStore';
-import type { SyncState, SyncResult } from '../lib/offline';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from "react";
+import {
+  useOfflineSync,
+  type UseOfflineSyncReturn,
+} from "../hooks/useOfflineSync";
+import type { Trip, TripInput } from "../stores/tripStore";
+import type { SyncState, SyncResult } from "../lib/offline";
 
-interface OfflineContextValue extends Omit<UseOfflineSyncReturn, 'syncState'> {
+interface OfflineContextValue extends Omit<UseOfflineSyncReturn, "syncState"> {
   // Re-expose state individually
   syncState: SyncState;
   initialized: boolean;
 }
 
-const OfflineContext = createContext<OfflineContextValue | undefined>(undefined);
+const OfflineContext = createContext<OfflineContextValue | undefined>(
+  undefined,
+);
 
 interface OfflineProviderProps {
   children: ReactNode;
@@ -35,14 +46,14 @@ interface OfflineProviderProps {
   syncOnMount?: boolean;
 }
 
-export function OfflineProvider({ 
+export function OfflineProvider({
   children,
   autoSync = true,
   syncOnForeground = true,
   syncOnMount = true,
 }: OfflineProviderProps) {
   const [initialized, setInitialized] = useState(false);
-  
+
   const offlineSync = useOfflineSync({
     autoSync,
     syncOnForeground,
@@ -51,7 +62,10 @@ export function OfflineProvider({
 
   // Mark as initialized once we have a sync state
   useEffect(() => {
-    if (offlineSync.syncState.status !== 'idle' || offlineSync.syncState.isOnline !== undefined) {
+    if (
+      offlineSync.syncState.status !== "idle" ||
+      offlineSync.syncState.isOnline !== undefined
+    ) {
       setInitialized(true);
     }
   }, [offlineSync.syncState]);
@@ -62,9 +76,7 @@ export function OfflineProvider({
   };
 
   return (
-    <OfflineContext.Provider value={value}>
-      {children}
-    </OfflineContext.Provider>
+    <OfflineContext.Provider value={value}>{children}</OfflineContext.Provider>
   );
 }
 
@@ -74,7 +86,7 @@ export function OfflineProvider({
 export function useOfflineContext(): OfflineContextValue {
   const context = useContext(OfflineContext);
   if (context === undefined) {
-    throw new Error('useOfflineContext must be used within an OfflineProvider');
+    throw new Error("useOfflineContext must be used within an OfflineProvider");
   }
   return context;
 }

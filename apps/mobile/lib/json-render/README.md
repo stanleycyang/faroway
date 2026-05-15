@@ -27,6 +27,7 @@ Defines all available components with Zod schemas for type safety:
 - **MapPreview** - Location map preview
 
 Each component has:
+
 - Zod schema for props validation
 - Description to guide AI usage
 - Type safety via TypeScript
@@ -54,19 +55,19 @@ Handles streaming itinerary data from backend:
 ### In Generating Screen
 
 ```tsx
-import { useStreamingItinerary } from '../../hooks/useStreamingItinerary';
-import { registry } from '../../lib/json-render/registry';
+import { useStreamingItinerary } from "../../hooks/useStreamingItinerary";
+import { registry } from "../../lib/json-render/registry";
 
 // Hook usage
 const streamingState = useStreamingItinerary({
   input: {
-    destination: 'Paris',
-    startDate: '2024-03-15',
-    endDate: '2024-03-22',
+    destination: "Paris",
+    startDate: "2024-03-15",
+    endDate: "2024-03-22",
     travelers: 2,
-    travelerType: 'couple',
-    vibes: ['romantic', 'culture'],
-    budget: 'moderate',
+    travelerType: "couple",
+    vibes: ["romantic", "culture"],
+    budget: "moderate",
   },
   onComplete: (document) => {
     // Handle completion
@@ -77,7 +78,7 @@ const streamingState = useStreamingItinerary({
 });
 
 // Render streaming document
-<JsonRenderRenderer document={streamingState.document} />
+<JsonRenderRenderer document={streamingState.document} />;
 ```
 
 ### Component Renderer
@@ -149,8 +150,8 @@ interface JsonRenderDocument {
       destination: "Paris",
       dates: "Mar 15 - Mar 22, 2024",
       travelers: 2,
-      budget: "moderate"
-    }
+      budget: "moderate",
+    },
   },
   {
     type: "HotelCard",
@@ -159,16 +160,16 @@ interface JsonRenderDocument {
       rating: 4.8,
       pricePerNight: 850,
       amenities: ["WiFi", "Spa", "Restaurant"],
-      bookingUrl: "https://booking.com/..."
-    }
+      bookingUrl: "https://booking.com/...",
+    },
   },
   {
     type: "ItineraryDay",
     props: {
       dayNumber: 1,
       date: "2024-03-15",
-      title: "Arrival & Eiffel Tower"
-    }
+      title: "Arrival & Eiffel Tower",
+    },
   },
   {
     type: "ActivityCard",
@@ -180,15 +181,16 @@ interface JsonRenderDocument {
       rating: 4.9,
       reviewCount: 12847,
       time: "10:00",
-      bookingUrl: "https://viator.com/..."
-    }
-  }
-]
+      bookingUrl: "https://viator.com/...",
+    },
+  },
+];
 ```
 
 ## Fallback Strategy
 
 The app gracefully falls back to the existing polling mechanism if:
+
 1. EventSource is not supported
 2. Streaming endpoint fails
 3. Network errors occur
@@ -209,6 +211,7 @@ This ensures the app works even without streaming support.
 ### Adding New Components
 
 1. Define schema in `catalog.ts`:
+
 ```typescript
 export const MyComponentSchema = z.object({
   title: z.string(),
@@ -216,13 +219,14 @@ export const MyComponentSchema = z.object({
 });
 
 export const MyComponent = {
-  name: 'MyComponent',
+  name: "MyComponent",
   schema: MyComponentSchema,
-  description: 'What this component does...',
+  description: "What this component does...",
 };
 ```
 
 2. Implement UI in `registry.tsx`:
+
 ```typescript
 export const MyComponent: React.FC<MyComponentProps> = (props) => {
   return (
@@ -238,6 +242,7 @@ export const MyComponent: React.FC<MyComponentProps> = (props) => {
 ### Testing
 
 Test streaming with mock server:
+
 ```bash
 npm run mock-server
 ```
@@ -247,6 +252,7 @@ Then run the app and create a new trip.
 ## Credits
 
 Built with:
+
 - [json-render](https://github.com/json-render/json-render) - Component streaming framework
 - [Zod](https://zod.dev) - Schema validation
 - [Expo](https://expo.dev) - React Native framework

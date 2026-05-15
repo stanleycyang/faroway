@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback } from "react";
 import {
   View,
   Text,
@@ -6,13 +6,13 @@ import {
   StyleSheet,
   Modal,
   Dimensions,
-} from 'react-native';
-import { CalendarList, DateData } from 'react-native-calendars';
-import { Ionicons } from '@expo/vector-icons';
-import { colors, borderRadius } from '../../constants/theme';
-import { hapticFeedback } from '../../utils/haptics';
+} from "react-native";
+import { CalendarList, DateData } from "react-native-calendars";
+import { Ionicons } from "@expo/vector-icons";
+import { colors, borderRadius } from "../../constants/theme";
+import { hapticFeedback } from "../../utils/haptics";
 
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+const { height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 interface DateRangePickerProps {
   startDate: string;
@@ -21,43 +21,43 @@ interface DateRangePickerProps {
   onEndDateChange: (date: string) => void;
 }
 
-type SelectionMode = 'start' | 'end';
+type SelectionMode = "start" | "end";
 
-const TODAY = new Date().toISOString().split('T')[0];
+const TODAY = new Date().toISOString().split("T")[0];
 
 function getMarkedDates(
   startDate: string,
   endDate: string,
-  selectionMode: SelectionMode
+  selectionMode: SelectionMode,
 ) {
   const marked: Record<string, any> = {};
   const accentColor = colors.primary[500];
-  const fillColor = 'rgba(249, 112, 102, 0.2)';
+  const fillColor = "rgba(249, 112, 102, 0.2)";
 
   if (startDate && !endDate) {
     marked[startDate] = {
       startingDay: true,
       endingDay: true,
       color: accentColor,
-      textColor: '#fff',
+      textColor: "#fff",
     };
     return marked;
   }
 
   if (!startDate || !endDate) return marked;
 
-  const start = new Date(startDate + 'T00:00:00');
-  const end = new Date(endDate + 'T00:00:00');
+  const start = new Date(startDate + "T00:00:00");
+  const end = new Date(endDate + "T00:00:00");
   const cursor = new Date(start);
 
   while (cursor <= end) {
-    const dateStr = cursor.toISOString().split('T')[0];
+    const dateStr = cursor.toISOString().split("T")[0];
     const isStart = dateStr === startDate;
     const isEnd = dateStr === endDate;
 
     marked[dateStr] = {
       color: isStart || isEnd ? accentColor : fillColor,
-      textColor: isStart || isEnd ? '#fff' : colors.surface[600],
+      textColor: isStart || isEnd ? "#fff" : colors.surface[600],
       startingDay: isStart,
       endingDay: isEnd,
     };
@@ -75,21 +75,21 @@ export function DateRangePicker({
   onEndDateChange,
 }: DateRangePickerProps) {
   const [showPicker, setShowPicker] = useState(false);
-  const [selectionMode, setSelectionMode] = useState<SelectionMode>('start');
+  const [selectionMode, setSelectionMode] = useState<SelectionMode>("start");
 
   const formatDisplayDate = (dateStr: string) => {
-    if (!dateStr) return 'Select date';
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
+    if (!dateStr) return "Select date";
+    const date = new Date(dateStr + "T00:00:00");
+    return date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
     });
   };
 
   const markedDates = useMemo(
     () => getMarkedDates(startDate, endDate, selectionMode),
-    [startDate, endDate, selectionMode]
+    [startDate, endDate, selectionMode],
   );
 
   const onDayPress = useCallback(
@@ -97,12 +97,12 @@ export function DateRangePicker({
       hapticFeedback.selection();
       const picked = day.dateString;
 
-      if (selectionMode === 'start') {
+      if (selectionMode === "start") {
         onStartDateChange(picked);
         if (endDate && picked > endDate) {
-          onEndDateChange('');
+          onEndDateChange("");
         }
-        setSelectionMode('end');
+        setSelectionMode("end");
       } else {
         if (picked < startDate) {
           // Picked before start — swap: new start = picked, new end = old start
@@ -111,10 +111,10 @@ export function DateRangePicker({
         } else {
           onEndDateChange(picked);
         }
-        setSelectionMode('start');
+        setSelectionMode("start");
       }
     },
-    [selectionMode, startDate, endDate, onStartDateChange, onEndDateChange]
+    [selectionMode, startDate, endDate, onStartDateChange, onEndDateChange],
   );
 
   const openPicker = (mode: SelectionMode) => {
@@ -132,17 +132,17 @@ export function DateRangePicker({
 
   const calendarTheme = useMemo(
     () => ({
-      calendarBackground: '#ffffff',
-      dayTextColor: '#0f172a',
-      monthTextColor: '#0f172a',
+      calendarBackground: "#ffffff",
+      dayTextColor: "#0f172a",
+      monthTextColor: "#0f172a",
       textMonthFontSize: 18,
-      textMonthFontWeight: '600' as const,
+      textMonthFontWeight: "600" as const,
       todayTextColor: colors.primary[400],
       textDisabledColor: colors.surface[600],
       textSectionTitleColor: colors.surface[400],
       textDayHeaderFontSize: 12,
-      textDayHeaderFontWeight: '600' as const,
-      'stylesheet.calendar.header': {
+      textDayHeaderFontWeight: "600" as const,
+      "stylesheet.calendar.header": {
         dayTextAtIndex0: { color: colors.surface[400] },
         dayTextAtIndex1: { color: colors.surface[400] },
         dayTextAtIndex2: { color: colors.surface[400] },
@@ -152,7 +152,7 @@ export function DateRangePicker({
         dayTextAtIndex6: { color: colors.surface[400] },
       },
     }),
-    []
+    [],
   );
 
   // Scroll to the start date's month, or today if no start date
@@ -165,9 +165,9 @@ export function DateRangePicker({
         <TouchableOpacity
           style={[
             styles.dateButton,
-            selectionMode === 'start' && showPicker && styles.dateButtonActive,
+            selectionMode === "start" && showPicker && styles.dateButtonActive,
           ]}
-          onPress={() => openPicker('start')}
+          onPress={() => openPicker("start")}
         >
           <Ionicons
             name="calendar-outline"
@@ -176,9 +176,7 @@ export function DateRangePicker({
           />
           <View style={styles.dateButtonText}>
             <Text style={styles.dateLabel}>Start</Text>
-            <Text style={styles.dateValue}>
-              {formatDisplayDate(startDate)}
-            </Text>
+            <Text style={styles.dateValue}>{formatDisplayDate(startDate)}</Text>
           </View>
         </TouchableOpacity>
 
@@ -187,9 +185,9 @@ export function DateRangePicker({
         <TouchableOpacity
           style={[
             styles.dateButton,
-            selectionMode === 'end' && showPicker && styles.dateButtonActive,
+            selectionMode === "end" && showPicker && styles.dateButtonActive,
           ]}
-          onPress={() => openPicker('end')}
+          onPress={() => openPicker("end")}
         >
           <Ionicons
             name="calendar-outline"
@@ -220,11 +218,7 @@ export function DateRangePicker({
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Select Dates</Text>
               <TouchableOpacity onPress={closePicker}>
-                <Ionicons
-                  name="close"
-                  size={24}
-                  color={colors.surface[400]}
-                />
+                <Ionicons name="close" size={24} color={colors.surface[400]} />
               </TouchableOpacity>
             </View>
 
@@ -233,14 +227,14 @@ export function DateRangePicker({
               <TouchableOpacity
                 style={[
                   styles.chip,
-                  selectionMode === 'start' && styles.chipActive,
+                  selectionMode === "start" && styles.chipActive,
                 ]}
-                onPress={() => setSelectionMode('start')}
+                onPress={() => setSelectionMode("start")}
               >
                 <Text
                   style={[
                     styles.chipLabel,
-                    selectionMode === 'start' && styles.chipLabelActive,
+                    selectionMode === "start" && styles.chipLabelActive,
                   ]}
                 >
                   Start
@@ -248,10 +242,10 @@ export function DateRangePicker({
                 <Text
                   style={[
                     styles.chipDate,
-                    selectionMode === 'start' && styles.chipDateActive,
+                    selectionMode === "start" && styles.chipDateActive,
                   ]}
                 >
-                  {startDate ? formatDisplayDate(startDate) : 'Pick a date'}
+                  {startDate ? formatDisplayDate(startDate) : "Pick a date"}
                 </Text>
               </TouchableOpacity>
 
@@ -264,14 +258,14 @@ export function DateRangePicker({
               <TouchableOpacity
                 style={[
                   styles.chip,
-                  selectionMode === 'end' && styles.chipActive,
+                  selectionMode === "end" && styles.chipActive,
                 ]}
-                onPress={() => setSelectionMode('end')}
+                onPress={() => setSelectionMode("end")}
               >
                 <Text
                   style={[
                     styles.chipLabel,
-                    selectionMode === 'end' && styles.chipLabelActive,
+                    selectionMode === "end" && styles.chipLabelActive,
                   ]}
                 >
                   End
@@ -279,10 +273,10 @@ export function DateRangePicker({
                 <Text
                   style={[
                     styles.chipDate,
-                    selectionMode === 'end' && styles.chipDateActive,
+                    selectionMode === "end" && styles.chipDateActive,
                   ]}
                 >
-                  {endDate ? formatDisplayDate(endDate) : 'Pick a date'}
+                  {endDate ? formatDisplayDate(endDate) : "Pick a date"}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -326,28 +320,28 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: "700",
+    color: "#0f172a",
     marginBottom: 12,
   },
   dateButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
   },
   dateButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#ffffff',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#ffffff",
     padding: 16,
     borderRadius: borderRadius.md,
     borderWidth: 1.5,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
   },
   dateButtonActive: {
     borderColor: colors.primary[500],
-    backgroundColor: '#FFF5F4',
+    backgroundColor: "#FFF5F4",
   },
   dateButtonText: {
     marginLeft: 12,
@@ -359,25 +353,25 @@ const styles = StyleSheet.create({
   },
   dateValue: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#0f172a',
+    fontWeight: "600",
+    color: "#0f172a",
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'flex-end',
+    backgroundColor: "rgba(0,0,0,0.7)",
+    justifyContent: "flex-end",
   },
   modalContent: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
     height: SCREEN_HEIGHT * 0.9,
     borderWidth: 1,
-    borderColor: '#e2e8f0',
+    borderColor: "#e2e8f0",
     borderBottomWidth: 0,
   },
   dragHandleContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     paddingTop: 12,
     paddingBottom: 4,
   },
@@ -388,21 +382,21 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface[300],
   },
   modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     paddingHorizontal: 24,
     paddingTop: 8,
     paddingBottom: 16,
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#0f172a',
+    fontWeight: "700",
+    color: "#0f172a",
   },
   chipRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
     gap: 12,
     paddingHorizontal: 24,
     paddingBottom: 16,
@@ -412,20 +406,20 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 14,
     borderRadius: borderRadius.md,
-    backgroundColor: '#f8fafc',
+    backgroundColor: "#f8fafc",
     borderWidth: 1.5,
-    borderColor: 'transparent',
+    borderColor: "transparent",
   },
   chipActive: {
     borderColor: colors.primary[500],
-    backgroundColor: '#FFF5F4',
+    backgroundColor: "#FFF5F4",
   },
   chipLabel: {
     fontSize: 11,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.surface[400],
     marginBottom: 2,
-    textTransform: 'uppercase',
+    textTransform: "uppercase",
     letterSpacing: 0.5,
   },
   chipLabelActive: {
@@ -433,36 +427,36 @@ const styles = StyleSheet.create({
   },
   chipDate: {
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
     color: colors.surface[600],
   },
   chipDateActive: {
     color: colors.primary[600],
   },
   calendar: {
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
   },
   doneContainer: {
-    position: 'absolute',
+    position: "absolute",
     bottom: 0,
     left: 0,
     right: 0,
     paddingHorizontal: 24,
     paddingTop: 12,
     paddingBottom: 40,
-    backgroundColor: '#ffffff',
+    backgroundColor: "#ffffff",
     borderTopWidth: 1,
-    borderTopColor: '#e2e8f0',
+    borderTopColor: "#e2e8f0",
   },
   doneButton: {
     backgroundColor: colors.primary[500],
     paddingVertical: 16,
     borderRadius: borderRadius.md,
-    alignItems: 'center',
+    alignItems: "center",
   },
   doneButtonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: "700",
   },
 });

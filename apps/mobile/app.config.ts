@@ -1,26 +1,27 @@
-import { ExpoConfig, ConfigContext } from 'expo/config';
+import { ExpoConfig, ConfigContext } from "expo/config";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: 'Faroway',
-  slug: 'faroway',
-  version: '1.0.0',
-  orientation: 'portrait',
-  icon: './assets/icon.png',
-  userInterfaceStyle: 'automatic',
-  scheme: 'faroway',
+  name: "Faroway",
+  slug: "faroway",
+  version: "1.0.0",
+  orientation: "portrait",
+  icon: "./assets/icon.png",
+  userInterfaceStyle: "automatic",
+  scheme: "faroway",
   splash: {
-    image: './assets/splash.png',
-    resizeMode: 'contain',
-    backgroundColor: '#0a0a0a',
+    image: "./assets/splash.png",
+    resizeMode: "contain",
+    backgroundColor: "#0a0a0a",
   },
-  assetBundlePatterns: ['**/*'],
+  assetBundlePatterns: ["**/*"],
   ios: {
     supportsTablet: true,
-    bundleIdentifier: 'ai.faroway.app',
+    bundleIdentifier: "ai.faroway.app",
     usesAppleSignIn: true,
     infoPlist: {
-      NSLocationWhenInUseUsageDescription: 'Faroway uses your location to provide navigation to trip destinations.',
+      NSLocationWhenInUseUsageDescription:
+        "Faroway uses your location to provide navigation to trip destinations.",
     },
     config: {
       usesNonExemptEncryption: false,
@@ -28,26 +29,29 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     adaptiveIcon: {
-      foregroundImage: './assets/adaptive-icon.png',
-      backgroundColor: '#0a0a0a',
+      foregroundImage: "./assets/adaptive-icon.png",
+      backgroundColor: "#0a0a0a",
     },
-    package: 'ai.faroway.app',
+    package: "ai.faroway.app",
   },
   web: {
-    favicon: './assets/favicon.png',
-    bundler: 'metro',
+    favicon: "./assets/favicon.png",
+    bundler: "metro",
   },
   plugins: [
-    'expo-router',
-    'expo-secure-store',
-    'expo-apple-authentication',
-    '@react-native-google-signin/google-signin',
-    ['expo-notifications', {
-      icon: './assets/notification-icon.png',
-      color: '#FF6B6B',
-      sounds: [],
-      defaultChannel: 'default',
-    }],
+    "expo-router",
+    "expo-secure-store",
+    "expo-apple-authentication",
+    "@react-native-google-signin/google-signin",
+    [
+      "expo-notifications",
+      {
+        icon: "./assets/notification-icon.png",
+        color: "#FF6B6B",
+        sounds: [],
+        defaultChannel: "default",
+      },
+    ],
   ],
   experiments: {
     typedRoutes: true,
@@ -57,8 +61,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
     supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
     apiUrl: process.env.EXPO_PUBLIC_API_URL,
-    e2eMode: process.env.E2E_MODE === 'true',
-    e2eProfile: process.env.E2E_PROFILE || 'default',
+    e2eMode: process.env.E2E_MODE === "true",
+    e2eProfile: process.env.E2E_PROFILE || "default",
     eas: {
       projectId: process.env.EAS_PROJECT_ID,
     },
