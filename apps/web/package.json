@@ -11,7 +11,7 @@
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,css,md}\"",
-    "type-check": "NODE_OPTIONS=--max-old-space-size=4096 tsc --noEmit",
+    "type-check": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "vendors:check": "ITINERARY_VENDOR_REQUIRE_ALL=true ITINERARY_VENDOR_TIMEOUT_MS=30000 DUFFEL_SUPPLIER_TIMEOUT_MS=30000 DUFFEL_LINK_TIMEOUT_MS=10000 bun --env-file .env scripts/check-itinerary-vendors.ts",
