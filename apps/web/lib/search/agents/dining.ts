@@ -4,7 +4,11 @@
  * Uses AI generation + optional Google Places integration
  */
 
-import { generateObject, gateway as defaultGateway, createGateway } from "ai";
+import {
+  generateObject,
+  gateway as defaultGateway,
+  createGateway,
+} from "@/lib/ai/sdk";
 import { z } from "zod";
 import { SearchPlan, DiningResult } from "../types";
 import { VIBE_KEYWORDS } from "@faroway/constants";
@@ -51,6 +55,14 @@ const DiningSchema = z.object({
 const DiningListSchema = z.object({
   restaurants: z.array(DiningSchema),
 });
+
+type GeneratedDining = Omit<DiningResult, "id" | "priceLevel"> & {
+  priceLevel: number;
+};
+
+interface DiningListResult {
+  restaurants: GeneratedDining[];
+}
 
 const SYSTEM_PROMPT = `You are a food and restaurant expert. Generate realistic restaurant recommendations for travelers.
 
@@ -119,7 +131,7 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
   try {
     const { object: result } = await withAbortTimeout(
       (abortSignal) =>
-        generateObject({
+        generateObject<DiningListResult>({
           model: aiGateway(MODEL),
           system: SYSTEM_PROMPT,
           prompt,

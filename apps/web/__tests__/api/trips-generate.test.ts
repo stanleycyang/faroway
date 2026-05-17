@@ -3,8 +3,8 @@ import { NextRequest } from "next/server";
 
 const startMock = vi.fn();
 
-vi.mock("workflow/api", () => ({
-  start: (...args: unknown[]) => startMock(...args),
+vi.mock("@/lib/workflow/runtime", () => ({
+  startWorkflow: (...args: unknown[]) => startMock(...args),
 }));
 
 vi.mock("@/workflows/plan-trip", () => ({

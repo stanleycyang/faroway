@@ -10,7 +10,7 @@ import {
   stepCountIs,
   gateway as defaultGateway,
   createGateway,
-} from "ai";
+} from "@/lib/ai/sdk";
 import { z } from "zod";
 import { AI_AGENT_TIMEOUT_MS } from "@/lib/search/runtime";
 import {
@@ -28,6 +28,78 @@ const aiGateway = process.env.AI_GATEWAY_API_KEY
   : defaultGateway;
 
 const MODEL = "anthropic/claude-sonnet-4-20250514";
+
+interface SearchHotelsInput {
+  destination: string;
+  checkIn: string;
+  checkOut: string;
+  guests: number;
+  budget: "budget" | "moderate" | "luxury";
+  vibes?: string[];
+}
+
+interface SearchActivitiesInput {
+  destination: string;
+  date: string;
+  category?:
+    | "sightseeing"
+    | "adventure"
+    | "cultural"
+    | "food"
+    | "nature"
+    | "entertainment";
+  vibes?: string[];
+}
+
+interface SearchDiningInput {
+  destination: string;
+  cuisine?: string;
+  mealType: "breakfast" | "lunch" | "dinner";
+  priceLevel?: "$" | "$$" | "$$$" | "$$$$";
+  vibes?: string[];
+}
+
+interface ItinerarySourceHotel {
+  pricePerNight?: number;
+  [key: string]: unknown;
+}
+
+interface ItinerarySourceActivity {
+  name?: string;
+  [key: string]: unknown;
+}
+
+interface ItinerarySourceRestaurant {
+  cuisine?: string;
+  [key: string]: unknown;
+}
+
+interface CreateItineraryInput {
+  destination: string;
+  startDate: string;
+  endDate: string;
+  hotels: ItinerarySourceHotel[];
+  activities: ItinerarySourceActivity[];
+  restaurants: ItinerarySourceRestaurant[];
+  vibes?: string[];
+}
+
+export interface TravelPlanResult {
+  itinerary: {
+    destination: string;
+    startDate: string;
+    endDate: string;
+    nights: number;
+    topHotel: unknown;
+    days: unknown[];
+    totalEstimatedCost: number;
+    currency: string;
+  };
+  hotels: unknown[];
+  activities: unknown[];
+  restaurants: unknown[];
+  summary: string;
+}
 
 // ============================================
 // Mock Data Generators (fallback)
@@ -107,7 +179,13 @@ const searchHotelsTool = tool({
       .optional()
       .describe("Desired vibes like romantic, adventure, relaxation"),
   }),
-  execute: async ({ destination, checkIn, checkOut, budget, vibes }) => {
+  execute: async ({
+    destination,
+    checkIn,
+    checkOut,
+    budget,
+    vibes,
+  }: SearchHotelsInput) => {
     // TODO: Integrate real hotel API when available
     const hotels = generateMockHotels(destination, budget, vibes);
     return {
@@ -141,7 +219,12 @@ const searchActivitiesTool = tool({
       .optional(),
     vibes: z.array(z.string()).optional().describe("Desired vibes"),
   }),
-  execute: async ({ destination, date, category, vibes }) => {
+  execute: async ({
+    destination,
+    date,
+    category,
+    vibes,
+  }: SearchActivitiesInput) => {
     // Query Viator for activities
     if (isViatorConfigured()) {
       try {
@@ -257,7 +340,13 @@ const searchDiningTool = tool({
     priceLevel: z.enum(["$", "$$", "$$$", "$$$$"]).optional(),
     vibes: z.array(z.string()).optional(),
   }),
-  execute: async ({ destination, cuisine, mealType, priceLevel, vibes }) => {
+  execute: async ({
+    destination,
+    cuisine,
+    mealType,
+    priceLevel,
+    vibes,
+  }: SearchDiningInput) => {
     // TODO: Integrate OpenTable/Yelp API when available
     // For now, generate realistic restaurant data
     const restaurants = Array.from({ length: 6 }, (_, i) => ({
@@ -306,7 +395,7 @@ const createItineraryTool = tool({
     hotels,
     activities,
     restaurants,
-  }) => {
+  }: CreateItineraryInput) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
     const nights = Math.ceil(
@@ -396,7 +485,7 @@ const TravelPlanningAgentSchema = z.object({
   summary: z.string(),
 });
 
-export const travelPlanningAgent = new ToolLoopAgent({
+export const travelPlanningAgent = new ToolLoopAgent<TravelPlanResult>({
   model: aiGateway(MODEL),
   instructions: `You are Faroway, an expert AI travel planner. Your job is to create personalized travel itineraries.
 
@@ -426,8 +515,6 @@ Be thorough - search multiple categories and create a complete itinerary.`,
 // ============================================
 // Export for use in workflows
 // ============================================
-
-export type TravelPlanResult = z.infer<typeof TravelPlanningAgentSchema>;
 
 export async function planTrip(params: {
   destination: string;

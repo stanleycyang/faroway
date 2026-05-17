@@ -3,8 +3,8 @@ import { NextRequest } from "next/server";
 
 const startMock = vi.fn();
 
-vi.mock("workflow/api", () => ({
-  start: (...args: unknown[]) => startMock(...args),
+vi.mock("@/lib/workflow/runtime", () => ({
+  startWorkflow: (...args: unknown[]) => startMock(...args),
 }));
 
 const planTripWorkflowMock = vi.hoisted(() => vi.fn(async () => ({})));
@@ -70,6 +70,7 @@ const adminClient = {
 
 vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => userClient),
+  createClientFromRequest: vi.fn(async () => userClient),
 }));
 
 vi.mock("@supabase/supabase-js", () => ({

@@ -3,7 +3,11 @@
  * Analyzes user input and creates a search plan for other agents
  */
 
-import { generateObject, gateway as defaultGateway, createGateway } from "ai";
+import {
+  generateObject,
+  gateway as defaultGateway,
+  createGateway,
+} from "@/lib/ai/sdk";
 import { z } from "zod";
 import { SearchInput, SearchPlan } from "../types";
 import { VIBE_KEYWORDS, BUDGET_RANGES } from "@faroway/constants";
@@ -209,7 +213,7 @@ Create a detailed search plan with:
   try {
     const { object: plan } = await withAbortTimeout(
       (abortSignal) =>
-        generateObject({
+        generateObject<SearchPlan>({
           model: aiGateway(MODEL),
           system: SYSTEM_PROMPT,
           prompt,

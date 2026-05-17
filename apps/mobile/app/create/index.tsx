@@ -61,6 +61,7 @@ export default function CreateTripScreen() {
   const [showSearch, setShowSearch] = useState(!params.destination);
   const [mapLoadFailed, setMapLoadFailed] = useState(false);
   const [showAuthGate, setShowAuthGate] = useState(false);
+  const [authGateAction, setAuthGateAction] = useState<'banner' | 'generate'>('generate');
 
   const showSignInBanner =
     !isAuthenticated && tripGenerationCount >= 1 && !hasDismissedCreateBanner;
@@ -141,6 +142,7 @@ export default function CreateTripScreen() {
     // user signs in before we POST /api/trips (which would otherwise 401).
     if (!isAuthenticated) {
       hapticFeedback.light();
+      setAuthGateAction('generate');
       setShowAuthGate(true);
       return;
     }
@@ -150,7 +152,7 @@ export default function CreateTripScreen() {
 
   const handleAuthenticated = () => {
     setShowAuthGate(false);
-    if (canProceed) {
+    if (authGateAction === 'generate' && canProceed) {
       router.push('/create/generating');
     }
   };
@@ -186,7 +188,10 @@ export default function CreateTripScreen() {
             <View style={styles.signInBanner}>
               <TouchableOpacity
                 style={styles.signInBannerContent}
-                onPress={() => setShowAuthGate(true)}
+                onPress={() => {
+                  setAuthGateAction('banner');
+                  setShowAuthGate(true);
+                }}
                 activeOpacity={0.7}
               >
                 <Ionicons name="cloud-upload-outline" size={18} color={colors.primary[600]} />
@@ -389,9 +394,12 @@ export default function CreateTripScreen() {
         {/* Auth gate from banner */}
         <AuthGate
           visible={showAuthGate}
-          trigger={canProceed && !isAuthenticated ? 'generate' : 'general'}
+          trigger={authGateAction === 'generate' && !isAuthenticated ? 'generate' : 'general'}
           onAuthenticated={handleAuthenticated}
-          onClose={() => setShowAuthGate(false)}
+          onClose={() => {
+            setShowAuthGate(false);
+            setAuthGateAction('generate');
+          }}
         />
       </KeyboardAvoidingView>
     </SafeAreaView>

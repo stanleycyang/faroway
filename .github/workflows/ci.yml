@@ -34,25 +34,8 @@ jobs:
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
-      - name: Diagnose tsc OOM (temporary)
-        run: |
-          echo "=== node ==="
-          node --version
-          echo "=== bun ==="
-          bun --version
-          echo "=== runner mem ==="
-          free -h
-          echo "=== runner cpu ==="
-          nproc
-          echo "=== apps/web/app/.well-known (should be absent) ==="
-          ls -la apps/web/app/.well-known 2>/dev/null || echo "(absent — good)"
-          echo "=== cold tsc, standalone (no turbo), extendedDiagnostics ==="
-          cd apps/web
-          rm -f tsconfig.tsbuildinfo
-          NODE_OPTIONS=--max-old-space-size=8192 bun x tsc --noEmit --extendedDiagnostics 2>&1 | tail -40 || echo "(tsc exited non-zero)"
-
-      - name: Type check (serial — diagnostic)
-        run: bun turbo type-check --concurrency=1
+      - name: Type check
+        run: bun turbo type-check
 
       - name: Lint
         run: bun turbo lint

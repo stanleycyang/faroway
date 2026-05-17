@@ -6,7 +6,7 @@ const mocks = vi.hoisted(() => ({
   streamText: vi.fn(),
 }));
 
-vi.mock("ai", () => ({
+vi.mock("@/lib/ai/sdk", () => ({
   generateObject: mocks.generateObject,
   generateText: mocks.generateText,
   streamText: mocks.streamText,

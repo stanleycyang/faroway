@@ -5,7 +5,11 @@
  * falling back to AI generation for remaining slots.
  */
 
-import { generateObject, gateway as defaultGateway, createGateway } from "ai";
+import {
+  generateObject,
+  gateway as defaultGateway,
+  createGateway,
+} from "@/lib/ai/sdk";
 import { z } from "zod";
 import { SearchPlan, HotelResult } from "../types";
 import { VIBE_KEYWORDS } from "@faroway/constants";
@@ -64,6 +68,12 @@ const HotelSchema = z.object({
 const HotelListSchema = z.object({
   hotels: z.array(HotelSchema),
 });
+
+type GeneratedHotel = Omit<HotelResult, "id">;
+
+interface HotelListResult {
+  hotels: GeneratedHotel[];
+}
 
 const SYSTEM_PROMPT = `You are a hotel booking expert. Generate realistic hotel recommendations for travelers.
 
@@ -362,7 +372,7 @@ For vibes like:
 
     const { object: result } = await withAbortTimeout(
       (abortSignal) =>
-        generateObject({
+        generateObject<HotelListResult>({
           model: aiGateway(MODEL),
           system: SYSTEM_PROMPT,
           prompt,

@@ -5,7 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase/server";
-import { start } from "workflow/api";
+import { startWorkflow } from "@/lib/workflow/runtime";
 import { planTripWorkflow } from "@/workflows/plan-trip";
 import { checkRateLimit, getClientIp } from "@/lib/security/rate-limit";
 import { z } from "zod";
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
     const estimatedTime = 5;
 
     // Start the durable workflow (doesn't block)
-    await start(planTripWorkflow, [
+    await startWorkflow(planTripWorkflow, [
       {
         searchId: createdSearchId,
         destination,

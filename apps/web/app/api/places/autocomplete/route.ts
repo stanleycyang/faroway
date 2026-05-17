@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-
-const API_KEY = process.env.GOOGLE_PLACES_API_KEY;
+import { checkRateLimit, getClientIp } from "@/lib/security/rate-limit";
 
 export async function GET(request: NextRequest) {
   const input = request.nextUrl.searchParams.get("input");
@@ -9,6 +8,20 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ predictions: [] });
   }
 
+  if (input.length > 120) {
+    return NextResponse.json({ error: "Input too long" }, { status: 400 });
+  }
+
+  const ip = getClientIp(request);
+  const rl = checkRateLimit(`places-autocomplete:${ip}`, {
+    maxRequests: 120,
+    windowMs: 60_000,
+  });
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
+  const API_KEY = process.env.GOOGLE_PLACES_API_KEY;
   if (!API_KEY) {
     return NextResponse.json({ predictions: [] }, { status: 501 });
   }
