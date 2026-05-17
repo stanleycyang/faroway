@@ -4,7 +4,7 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabase } from "@/lib/supabase/server";
+import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
 import {
   SearchStatusResponse,
   HotelResult,
@@ -23,16 +23,27 @@ export async function GET(
   const { searchId } = await params;
 
   try {
+    const requestClient = await createClientFromRequest(request);
+    const {
+      data: { user },
+      error: authError,
+    } = await requestClient.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     // Get search record with results and itinerary in a single joined query
     const { data: search, error: searchError } = await getSupabase()
       .from("searches")
       .select(
-        "id, status, progress, created_at, completed_at, error_message, json_render_spec, search_results(id, category, data, vibe_score), search_itineraries(day_number, date, title, summary, morning_activities, afternoon_activities, evening_activities, meals, estimated_cost, cost_currency, tips, hotel_id)",
+        "id, user_id, status, progress, created_at, completed_at, error_message, json_render_spec, search_results(id, category, data, vibe_score), search_itineraries(day_number, date, title, summary, morning_activities, afternoon_activities, evening_activities, meals, estimated_cost, cost_currency, tips, hotel_id)",
       )
       .eq("id", searchId)
+      .eq("user_id", user.id)
       .single();
 
-    if (searchError || !search) {
+    if (searchError || !search || search.user_id !== user.id) {
       return NextResponse.json({ error: "Search not found" }, { status: 404 });
     }
 

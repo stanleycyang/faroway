@@ -16,10 +16,9 @@ import {
   generateText,
   generateObject,
   streamText,
-  StreamTextResult,
   gateway as defaultGateway,
   createGateway,
-} from "ai";
+} from "@/lib/ai/sdk";
 import { z } from "zod";
 import {
   TripPreferences,
@@ -138,6 +137,14 @@ const ItinerarySchema = z.object({
   generalTips: z.array(z.string()).optional(),
 });
 
+type GeneratedItineraryObject = Omit<
+  GeneratedItinerary,
+  "tripId" | "generatedAt"
+>;
+type GeneratedActivityObject = Omit<Activity, "id">;
+type GeneratedRestaurantObject = Omit<Restaurant, "id">;
+type StreamTextResult = unknown;
+
 /**
  * Generate a complete travel itinerary using AI SDK + AI Gateway
  */
@@ -173,7 +180,7 @@ export async function generateItinerary(
     // Use generateObject for structured output with Zod validation
     const { object: itineraryData, usage } = await withAbortTimeout(
       (abortSignal) =>
-        generateObject({
+        generateObject<GeneratedItineraryObject>({
           model: aiGateway(modelName),
           system: SYSTEM_PROMPT,
           prompt,
@@ -269,7 +276,7 @@ export async function generateItinerary(
 export async function streamItinerary(
   preferences: TripPreferences,
   options?: { model?: string },
-): Promise<StreamTextResult<Record<string, never>, never>> {
+): Promise<StreamTextResult> {
   const modelName = options?.model || DEFAULT_MODEL;
   const prompt = buildItineraryPrompt(preferences);
 
@@ -301,7 +308,7 @@ export async function generateActivities(
 
     const { object: activities } = await withAbortTimeout(
       (abortSignal) =>
-        generateObject({
+        generateObject<GeneratedActivityObject[]>({
           model: aiGateway(DEFAULT_MODEL),
           system: SYSTEM_PROMPT,
           prompt,
@@ -348,7 +355,7 @@ export async function generateRestaurants(
 
     const { object: restaurants } = await withAbortTimeout(
       (abortSignal) =>
-        generateObject({
+        generateObject<GeneratedRestaurantObject[]>({
           model: aiGateway(DEFAULT_MODEL),
           system: SYSTEM_PROMPT,
           prompt,

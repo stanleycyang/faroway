@@ -8,10 +8,10 @@ const nextConfig: NextConfig = {
     // competing with Turbopack for heap during the static generation phase.
     ignoreBuildErrors: true,
   },
-  eslint: {
-    // ESLint also runs as a dedicated CI step.
-    ignoreDuringBuilds: true,
-  },
+  // ESLint also runs as a dedicated CI step. The option is a real Next 16
+  // runtime config but isn't exported on the NextConfig type yet.
+  // @ts-expect-error eslint.ignoreDuringBuilds is runtime-only on Next 16
+  eslint: { ignoreDuringBuilds: true },
   transpilePackages: [
     "@faroway/supabase",
     "@faroway/constants",

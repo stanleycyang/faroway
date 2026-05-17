@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
+import { useUser } from "@/hooks/useUser";
 import {
   Search,
   Calendar,
@@ -116,6 +117,7 @@ interface SelectedPlace {
 
 export default function CreateTripPage() {
   const router = useRouter();
+  const { session, loading: authLoading } = useUser();
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(
     null,
   );
@@ -178,6 +180,10 @@ export default function CreateTripPage() {
 
   const handleGenerate = async () => {
     if (!canGenerate) return;
+    if (!session) {
+      router.push(`/auth/login?redirectTo=${encodeURIComponent("/create")}`);
+      return;
+    }
     setIsGenerating(true);
     setGenerateError(null);
     setProgressMessage("Creating your trip...");
@@ -205,27 +211,6 @@ export default function CreateTripPage() {
       }
 
       const { trip } = await response.json();
-
-      // Store anonymous trip ID in localStorage so it can be claimed after sign-up
-      if (!trip.user_id) {
-        try {
-          const stored = JSON.parse(
-            localStorage.getItem("faroway_anonymous_trips") || "[]",
-          );
-          if (!stored.includes(trip.id)) {
-            stored.push(trip.id);
-            localStorage.setItem(
-              "faroway_anonymous_trips",
-              JSON.stringify(stored),
-            );
-          }
-        } catch {
-          localStorage.setItem(
-            "faroway_anonymous_trips",
-            JSON.stringify([trip.id]),
-          );
-        }
-      }
 
       setProgressMessage("Starting AI trip planner...");
 
@@ -542,9 +527,9 @@ export default function CreateTripPage() {
         <div className="sticky bottom-0 bg-gray-50 pt-4 pb-8 -mx-4 px-4 sm:-mx-6 sm:px-6">
           <button
             onClick={handleGenerate}
-            disabled={!canGenerate || isGenerating}
+            disabled={!canGenerate || isGenerating || authLoading}
             className={`w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 transition-all ${
-              canGenerate && !isGenerating
+              canGenerate && !isGenerating && !authLoading
                 ? "bg-primary hover:bg-primary-600 text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
@@ -557,7 +542,7 @@ export default function CreateTripPage() {
             ) : (
               <>
                 <Sparkles className="w-5 h-5" />
-                Generate Itinerary
+                {session ? "Generate Itinerary" : "Sign in & Generate"}
               </>
             )}
           </button>

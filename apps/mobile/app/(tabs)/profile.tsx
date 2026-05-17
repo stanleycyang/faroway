@@ -141,7 +141,7 @@ function GuestProfileCard() {
 
 export default function ProfileScreen() {
   const router = useRouter();
-  const { isAuthenticated, signOut } = useAuthContext();
+  const { isAuthenticated, signOut, deleteAccount } = useAuthContext();
   const { user } = useUserStore();
   const { trips } = useTripStore();
 
@@ -158,6 +158,30 @@ export default function ProfileScreen() {
       const msg = error instanceof Error ? error.message : 'Failed to sign out';
       Alert.alert('Error', msg);
     }
+  };
+
+  const handleDeleteAccount = () => {
+    hapticFeedback.warning();
+    Alert.alert(
+      'Delete account?',
+      'This permanently erases your account, trips, and preferences. Anonymized booking records may be retained for fraud prevention and revenue reconciliation. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await deleteAccount();
+              hapticFeedback.success();
+            } catch (error: unknown) {
+              const msg = error instanceof Error ? error.message : 'Could not delete account';
+              Alert.alert('Could not delete account', msg);
+            }
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -284,6 +308,13 @@ export default function ProfileScreen() {
               icon="log-out-outline"
               label="Log Out"
               onPress={handleLogout}
+              showChevron={false}
+              danger
+            />
+            <MenuItem
+              icon="trash-outline"
+              label="Delete Account"
+              onPress={handleDeleteAccount}
               showChevron={false}
               danger
             />

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
+import { createClientFromRequest } from "@/lib/supabase/server";
 import { z } from "zod";
 
 const CreateTripSchema = z.object({
@@ -75,18 +75,17 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST /api/trips - Create a new trip (works for both authenticated and anonymous users)
+// POST /api/trips - Create a new trip (authentication required)
 export async function POST(request: NextRequest) {
   try {
-    let userId: string | null = null;
-    try {
-      const supabase = await createClientFromRequest(request);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      userId = user?.id ?? null;
-    } catch {
-      // Auth failed — continue as anonymous
+    const supabase = await createClientFromRequest(request);
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
+
+    if (authError || !user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
@@ -114,13 +113,14 @@ export async function POST(request: NextRequest) {
       (preferences?.budget as "budget" | "moderate" | "luxury") ||
       "moderate";
 
-    // Use service client to bypass RLS (needed for anonymous trip creation)
-    const db = getSupabase();
-
-    const { data: trip, error } = await db
+    // Use the user-scoped client so RLS is enforced as defense-in-depth.
+    // We still explicitly scope user_id from the verified session below, but
+    // any future RLS policy on `trips` will also catch us if the auth check
+    // here is ever bypassed.
+    const { data: trip, error } = await supabase
       .from("trips")
       .insert({
-        user_id: userId,
+        user_id: user.id,
         destination,
         start_date,
         end_date,
@@ -133,13 +133,6 @@ export async function POST(request: NextRequest) {
           originAirport: preferences?.originAirport,
         },
         status: "draft",
-        ...(userId
-          ? {}
-          : {
-              expires_at: new Date(
-                Date.now() + 7 * 24 * 60 * 60 * 1000,
-              ).toISOString(),
-            }),
       })
       .select()
       .single();

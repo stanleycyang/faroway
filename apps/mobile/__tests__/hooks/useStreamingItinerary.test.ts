@@ -7,6 +7,11 @@ jest.mock('../../constants/api', () => ({
   API_BASE_URL: 'http://localhost:3000',
 }));
 
+jest.mock('../../lib/supabase', () => ({
+  __esModule: true,
+  getAuthHeaders: jest.fn(async () => ({})),
+}));
+
 import { parseSSEBuffer, parseStreamingJson } from '../../hooks/useStreamingItinerary';
 
 describe('streaming itinerary SSE parsing', () => {

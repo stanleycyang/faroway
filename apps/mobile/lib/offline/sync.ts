@@ -3,11 +3,61 @@
  * Handles background synchronization between local storage and Supabase
  */
 
-import { offlineStorage, PendingMutation } from './storage';
+import { offlineStorage, PendingMutation, PendingMutationData } from './storage';
 import { networkMonitor } from './network';
 import { API_BASE_URL, getAuthHeaders } from '../supabase';
+import { normalizeTripStatus } from '../tripStatus';
 import type { Trip, TripInput } from '../../stores/tripStore';
 import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
+
+/**
+ * Serialize a locally-created Trip into the snake_case body that
+ * `POST /api/trips` expects. Used by the offline mutation queue and by
+ * the unit tests that document the contract.
+ */
+export function buildTripCreatePayload(trip: Trip): PendingMutationData {
+  return {
+    destination: trip.destination,
+    start_date: trip.startDate,
+    end_date: trip.endDate,
+    travelers: trip.travelers,
+    budget: trip.budget,
+    preferences: {
+      travelerType: trip.travelerType,
+      originCity: trip.originCity,
+      originAirport: trip.originAirport,
+      vibes: trip.vibes,
+      budget: trip.budget,
+    },
+  };
+}
+
+/**
+ * Serialize a Trip update (partial fields) into the snake_case body that
+ * `PATCH /api/trips/[id]` expects. Only present fields are included so we
+ * don't accidentally overwrite untouched server fields with undefined.
+ */
+export function buildTripUpdatePayload(patch: Partial<TripInput>): PendingMutationData {
+  const body: PendingMutationData = {};
+  const preferences: Record<string, unknown> = {};
+
+  if (patch.startDate !== undefined) body.start_date = patch.startDate;
+  if (patch.endDate !== undefined) body.end_date = patch.endDate;
+  if (patch.travelers !== undefined) body.travelers = patch.travelers;
+  if (patch.vibes !== undefined) body.vibes = patch.vibes;
+  if (patch.budget !== undefined) {
+    body.budget_tier = patch.budget;
+    preferences.budget = patch.budget;
+  }
+  if (patch.travelerType !== undefined) preferences.travelerType = patch.travelerType;
+  if (patch.originCity !== undefined) preferences.originCity = patch.originCity;
+  if (patch.originAirport !== undefined) preferences.originAirport = patch.originAirport;
+
+  if (Object.keys(preferences).length > 0) {
+    body.preferences = preferences;
+  }
+  return body;
+}
 
 export type SyncStatus = 'idle' | 'syncing' | 'success' | 'error' | 'offline';
 
@@ -428,7 +478,7 @@ class SyncService {
         apiTrip.cover_image ||
         getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
       createdAt: apiTrip.created_at,
-      status: apiTrip.status as Trip['status'],
+      status: normalizeTripStatus(apiTrip.status),
     };
   }
 
@@ -440,15 +490,10 @@ class SyncService {
     await offlineStorage.addPendingMutation({
       type: 'create',
       tripId: trip.id,
-      data: {
-        destination: trip.destination,
-        startDate: trip.startDate,
-        endDate: trip.endDate,
-        travelers: trip.travelers,
-        travelerType: trip.travelerType,
-        vibes: trip.vibes,
-        budget: trip.budget,
-      },
+      // Store the snake_case API payload so a later sync can POST it
+      // directly. Anything else would 400 against the backend's
+      // CreateTripSchema.
+      data: buildTripCreatePayload(trip),
     });
 
     const meta = await offlineStorage.getSyncMeta();
@@ -468,7 +513,9 @@ class SyncService {
     await offlineStorage.addPendingMutation({
       type: 'update',
       tripId,
-      data: updates,
+      // Same snake_case contract as create — the API's UpdateTripSchema
+      // is strict() and rejects camelCase keys.
+      data: buildTripUpdatePayload(updates),
     });
 
     const meta = await offlineStorage.getSyncMeta();

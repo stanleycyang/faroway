@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   isAmadeusConfigured: vi.fn(),
 }));
 
-vi.mock("ai", () => ({
+vi.mock("@/lib/ai/sdk", () => ({
   generateObject: mocks.generateObject,
   gateway: (model: string) => ({ model }),
   createGateway: () => (model: string) => ({ model }),

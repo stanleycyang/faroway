@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     environment: "node",
     globals: true,
+    exclude: ["node_modules/**", "dist/**", "e2e/**", "playwright-report/**"],
     coverage: {
       provider: "v8",
       reporter: ["text", "text-summary", "lcov"],

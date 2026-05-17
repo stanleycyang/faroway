@@ -61,6 +61,7 @@ export default function CreateTripScreen() {
   const [showSearch, setShowSearch] = useState(!params.destination);
   const [mapLoadFailed, setMapLoadFailed] = useState(false);
   const [showAuthGate, setShowAuthGate] = useState(false);
+  const [authGateAction, setAuthGateAction] = useState<'banner' | 'generate'>('generate');
 
   const showSignInBanner =
     !isAuthenticated && tripGenerationCount >= 1 && !hasDismissedCreateBanner;
@@ -133,11 +134,26 @@ export default function CreateTripScreen() {
   const canProceed = draftInput?.destination && draftInput?.startDate && draftInput?.endDate;
 
   const handleContinue = () => {
-    if (canProceed) {
-      hapticFeedback.success();
-      router.push('/create/generating');
-    } else {
+    if (!canProceed) {
       hapticFeedback.error();
+      return;
+    }
+    // Generation is auth-required end-to-end. Open the sheet first so the
+    // user signs in before we POST /api/trips (which would otherwise 401).
+    if (!isAuthenticated) {
+      hapticFeedback.light();
+      setAuthGateAction('generate');
+      setShowAuthGate(true);
+      return;
+    }
+    hapticFeedback.success();
+    router.push('/create/generating');
+  };
+
+  const handleAuthenticated = () => {
+    setShowAuthGate(false);
+    if (authGateAction === 'generate' && canProceed) {
+      router.push('/create/generating');
     }
   };
 
@@ -172,7 +188,10 @@ export default function CreateTripScreen() {
             <View style={styles.signInBanner}>
               <TouchableOpacity
                 style={styles.signInBannerContent}
-                onPress={() => setShowAuthGate(true)}
+                onPress={() => {
+                  setAuthGateAction('banner');
+                  setShowAuthGate(true);
+                }}
                 activeOpacity={0.7}
               >
                 <Ionicons name="cloud-upload-outline" size={18} color={colors.primary[600]} />
@@ -373,7 +392,15 @@ export default function CreateTripScreen() {
         </View>
 
         {/* Auth gate from banner */}
-        <AuthGate visible={showAuthGate} trigger="general" onClose={() => setShowAuthGate(false)} />
+        <AuthGate
+          visible={showAuthGate}
+          trigger={authGateAction === 'generate' && !isAuthenticated ? 'generate' : 'general'}
+          onAuthenticated={handleAuthenticated}
+          onClose={() => {
+            setShowAuthGate(false);
+            setAuthGateAction('generate');
+          }}
+        />
       </KeyboardAvoidingView>
     </SafeAreaView>
   );

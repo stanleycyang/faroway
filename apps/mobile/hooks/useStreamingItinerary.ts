@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { API_BASE_URL } from '../constants/api';
+import { getAuthHeaders } from '../lib/supabase';
 
 export interface StreamingBlock {
   type: string;
@@ -59,6 +60,11 @@ export interface UseStreamingItineraryOptions {
     budget?: string;
   };
   streamingEnabled?: boolean;
+  /**
+   * Bump this value to force the hook to re-run its effect (e.g. on retry).
+   * Included in the effect's dependency array; the value itself is not used.
+   */
+  retryKey?: number;
   onComplete?: (document: StreamingBlock[]) => void;
   onError?: (error: Error) => void;
 }
@@ -167,6 +173,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
     tripId: providedTripId,
     input,
     streamingEnabled = process.env.EXPO_PUBLIC_ITINERARY_STREAMING_ENABLED !== 'false',
+    retryKey,
     onComplete,
     onError,
   } = options;
@@ -345,11 +352,13 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
       try {
         let streamTripId = providedTripId;
 
-        // If no tripId, create a trip and trigger generation first
+        // If no tripId, create a trip and trigger generation first.
+        // All three endpoints below now require Supabase bearer auth.
         if (!streamTripId && input) {
+          const createHeaders = await getAuthHeaders();
           const tripRes = await fetch(`${API_BASE_URL}/api/trips`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: createHeaders,
             body: JSON.stringify({
               destination: input.destination,
               start_date: input.startDate,
@@ -374,10 +383,10 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
           const { trip } = await tripRes.json();
           streamTripId = trip.id;
 
-          // Trigger generation
+          const genHeaders = await getAuthHeaders();
           const genRes = await fetch(`${API_BASE_URL}/api/trips/${streamTripId}/generate`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: genHeaders,
             signal: abortController.signal,
           });
 
@@ -409,6 +418,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
         // Use XMLHttpRequest for React Native (supports onprogress for incremental data)
         // This is more reliable than fetch for SSE in React Native
         const streamUrl = `${API_BASE_URL}/api/trips/${streamTripId}/stream`;
+        const streamHeaders = await getAuthHeaders();
 
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
@@ -417,6 +427,9 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
           xhr.open('POST', streamUrl, true);
           xhr.setRequestHeader('Accept', 'text/event-stream');
           xhr.setRequestHeader('Cache-Control', 'no-cache');
+          if (streamHeaders.Authorization) {
+            xhr.setRequestHeader('Authorization', streamHeaders.Authorization);
+          }
 
           // Process incremental data as it arrives
           xhr.onprogress = () => {
@@ -496,7 +509,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
       cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [providedTripId, processEvent, streamingEnabled, inputKey]);
+  }, [providedTripId, processEvent, streamingEnabled, inputKey, retryKey]);
 
   return state;
 }
@@ -513,8 +526,10 @@ async function pollGenerationStatus(
   for (let attempt = 0; attempt < 150; attempt++) {
     if (signal.aborted) return;
 
+    const pollHeaders = await getAuthHeaders();
     const response = await fetch(`${API_BASE_URL}/api/trips/${tripId}/generate`, {
       method: 'GET',
+      headers: pollHeaders,
       signal,
     });
     if (!response.ok) {

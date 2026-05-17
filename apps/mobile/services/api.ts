@@ -110,6 +110,46 @@ export async function updateUserProfile(updates: {
   });
 }
 
+/**
+ * Permanently delete the signed-in user's account and all owned data.
+ * Caller is responsible for clearing local state and signing out.
+ */
+export async function deleteAccount(): Promise<ApiResponse<{ deleted: boolean }>> {
+  return apiFetch<{ deleted: boolean }>('/api/user/profile', {
+    method: 'DELETE',
+  });
+}
+
+// ============================================
+// Affiliate URL allowlist
+// ============================================
+
+// Mirror of the backend allowlist (apps/web/app/api/track/click/route.ts).
+// Mobile validates before showing the confirm sheet so we don't ship a
+// trustworthy-looking CTA for a URL the backend will reject as SSRF.
+const ALLOWED_AFFILIATE_DOMAINS = [
+  'viator.com',
+  'booking.com',
+  'getyourguide.com',
+  'tripadvisor.com',
+  'discovercars.com',
+  'hostelworld.com',
+  'amadeus.com',
+  'duffel.com',
+];
+
+export function isAllowedAffiliateUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol !== 'https:') return false;
+    return ALLOWED_AFFILIATE_DOMAINS.some(
+      (d) => parsed.hostname === d || parsed.hostname.endsWith(`.${d}`)
+    );
+  } catch {
+    return false;
+  }
+}
+
 // ============================================
 // Trips APIs
 // ============================================

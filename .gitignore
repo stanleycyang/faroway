@@ -8,6 +8,11 @@ node_modules/
 .next/
 out/
 
+# Vercel Workflow plugin auto-generates these at build time. They are
+# multi-megabyte minified JS files that, if tsc picks them up via
+# allowJs, blow the type-checker's heap past 4GB.
+apps/web/app/.well-known/
+
 # Expo
 .expo/
 dist/

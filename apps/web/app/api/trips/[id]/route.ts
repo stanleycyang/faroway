@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
+import { requireUserIdFromRequest } from "@/lib/auth/middleware";
 import { z } from "zod";
 
 const UpdateTripSchema = z
@@ -27,21 +28,6 @@ type Params = {
   }>;
 };
 
-/**
- * Resolve the current user (if authenticated). Returns null for anonymous users.
- */
-async function resolveUser(request: NextRequest): Promise<string | null> {
-  try {
-    const supabase = await createClientFromRequest(request);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    return user?.id ?? null;
-  } catch {
-    return null;
-  }
-}
-
 // GET /api/trips/[id] - Fetch a specific trip with itinerary data
 export async function GET(request: NextRequest, { params }: Params) {
   try {
@@ -52,23 +38,18 @@ export async function GET(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Invalid trip ID" }, { status: 400 });
     }
 
-    const userId = await resolveUser(request);
+    const auth = await requireUserIdFromRequest(request);
+    if (auth instanceof NextResponse) return auth;
     const db = getSupabase();
 
-    // Fetch trip with itinerary — strictly scoped to the user's own trips
-    let query = db
+    const { data: trip, error } = await db
       .from("trips")
       .select(
         "id, destination, start_date, end_date, status, travelers, budget, preferences, vibes, interests, budget_tier, user_id, search_id, created_at, updated_at, itineraries(days, overview, total_cost, packing_list, general_tips, generated_at)",
       )
-      .eq("id", id);
-    if (userId) {
-      query = query.eq("user_id", userId);
-    } else {
-      query = query.is("user_id", null);
-    }
-
-    const { data: trip, error } = await query.single();
+      .eq("id", id)
+      .eq("user_id", auth.userId)
+      .single();
 
     if (error || !trip) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
@@ -119,7 +100,8 @@ export async function GET(request: NextRequest, { params }: Params) {
 export async function PATCH(request: NextRequest, { params }: Params) {
   try {
     const { id } = await params;
-    const userId = await resolveUser(request);
+    const auth = await requireUserIdFromRequest(request);
+    if (auth instanceof NextResponse) return auth;
     const db = getSupabase();
 
     const body = await request.json();
@@ -132,19 +114,13 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       );
     }
 
-    // Build the update query — strictly scoped to user's own trips
-    let query = db
+    const { data: trip, error } = await db
       .from("trips")
       .update({ ...parseResult.data, updated_at: new Date().toISOString() })
-      .eq("id", id);
-
-    if (userId) {
-      query = query.eq("user_id", userId);
-    } else {
-      query = query.is("user_id", null);
-    }
-
-    const { data: trip, error } = await query.select().single();
+      .eq("id", id)
+      .eq("user_id", auth.userId)
+      .select()
+      .single();
 
     if (error || !trip) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });

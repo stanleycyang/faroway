@@ -28,6 +28,8 @@ const ALLOWED_AFFILIATE_DOMAINS = [
   "www.duffel.com",
   "book.duffel.com",
   "links.duffel.com",
+  "opentable.com",
+  "www.opentable.com",
 ];
 
 function isAllowedAffiliateUrl(url: string): boolean {
@@ -43,8 +45,10 @@ function isAllowedAffiliateUrl(url: string): boolean {
 }
 
 const ClickTrackingSchema = z.object({
+  clickId: z.string().max(200).optional(),
+
   // What was clicked
-  itemType: z.enum(["hotel", "activity", "restaurant", "flight"]),
+  itemType: z.enum(["hotel", "activity", "restaurant", "flight", "transport"]),
   itemId: z.string().max(500),
   itemName: z.string().max(500),
 
@@ -57,7 +61,7 @@ const ClickTrackingSchema = z.object({
   tripId: z.string().uuid().optional(),
 
   // Pricing
-  price: z.number().optional(),
+  price: z.number().nonnegative().optional(),
   currency: z.string().max(10).optional(),
 
   // Source
@@ -68,7 +72,13 @@ const ClickTrackingSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
     const parseResult = ClickTrackingSchema.safeParse(body);
 
     if (!parseResult.success) {
@@ -91,7 +101,9 @@ export async function POST(request: NextRequest) {
     const user = await optionalAuth(request);
 
     // Generate a unique click ID for conversion tracking
-    const clickId = `click_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const clickId =
+      data.clickId ||
+      `click_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Store click in database
     const { error } = await getSupabase()
@@ -106,7 +118,7 @@ export async function POST(request: NextRequest) {
         affiliate_url: data.affiliateUrl,
         search_id: data.searchId || null,
         trip_id: data.tripId || null,
-        price: data.price || null,
+        price: data.price ?? null,
         currency: data.currency || "USD",
         source: data.source || "search_results",
         clicked_at: new Date().toISOString(),

@@ -4,7 +4,11 @@
  * Uses real activity vendors + AI for matching and ranking
  */
 
-import { generateObject, gateway as defaultGateway, createGateway } from "ai";
+import {
+  generateObject,
+  gateway as defaultGateway,
+  createGateway,
+} from "@/lib/ai/sdk";
 import { z } from "zod";
 import { SearchPlan, ActivityResult } from "../types";
 import { VIBE_KEYWORDS } from "@faroway/constants";
@@ -65,6 +69,12 @@ const ActivitySchema = z.object({
 const ActivityListSchema = z.object({
   activities: z.array(ActivitySchema),
 });
+
+type GeneratedActivity = Omit<ActivityResult, "id">;
+
+interface ActivityListResult {
+  activities: GeneratedActivity[];
+}
 
 const SYSTEM_PROMPT = `You are a travel activities expert. Generate realistic, bookable activities and attractions for the destination.
 
@@ -136,7 +146,7 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
 
   const aiPromise = withAbortTimeout(
     (abortSignal) =>
-      generateObject({
+      generateObject<ActivityListResult>({
         model: aiGateway(MODEL),
         system: SYSTEM_PROMPT,
         prompt,

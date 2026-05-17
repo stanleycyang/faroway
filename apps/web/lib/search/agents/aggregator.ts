@@ -3,7 +3,11 @@
  * Combines results from all agents into a cohesive itinerary
  */
 
-import { generateObject, gateway as defaultGateway, createGateway } from "ai";
+import {
+  generateObject,
+  gateway as defaultGateway,
+  createGateway,
+} from "@/lib/ai/sdk";
 import { z } from "zod";
 import {
   SearchPlan,
@@ -53,6 +57,35 @@ const ItinerarySchema = z.object({
   days: z.array(SuggestedDaySchema),
   topHotelId: z.string(),
 });
+
+interface GeneratedSuggestedDay {
+  dayNumber: number;
+  date: string;
+  title: string;
+  summary: string;
+  hotelId?: string;
+  morning: {
+    activityIds: string[];
+    mealId?: string;
+  };
+  afternoon: {
+    activityIds: string[];
+    mealId?: string;
+  };
+  evening: {
+    activityIds: string[];
+    mealId?: string;
+  };
+  transportId?: string;
+  estimatedCost: number;
+  currency: string;
+  tips: string[];
+}
+
+interface ItineraryResult {
+  days: GeneratedSuggestedDay[];
+  topHotelId?: string;
+}
 
 const SYSTEM_PROMPT = `You are a travel itinerary planner. Your job is to take search results (hotels, activities, dining, and optionally transport) and organize them into a coherent day-by-day itinerary.
 
@@ -158,7 +191,7 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
   try {
     const { object: result } = await withAbortTimeout(
       (abortSignal) =>
-        generateObject({
+        generateObject<ItineraryResult>({
           model: aiGateway(MODEL),
           system: SYSTEM_PROMPT,
           prompt,
@@ -214,10 +247,7 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
  * Shared between the happy path and the recovery path.
  */
 function mapAggregatorResult(
-  result: {
-    days: Array<z.infer<typeof SuggestedDaySchema>>;
-    topHotelId?: string;
-  },
+  result: ItineraryResult,
   hotels: HotelResult[],
   activities: ActivityResult[],
   dining: DiningResult[],

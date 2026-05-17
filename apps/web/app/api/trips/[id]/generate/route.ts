@@ -11,11 +11,12 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
-import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
+import { getSupabase } from "@/lib/supabase/server";
+import { requireUserIdFromRequest } from "@/lib/auth/middleware";
 import { startWorkflow } from "@/lib/workflow/runtime";
 import { planTripWorkflow } from "@/workflows/plan-trip";
 import { buildInstantPreview } from "@/lib/search/preview";
-import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
+import { checkRateLimitAsync } from "@/lib/security/rate-limit";
 
 type Params = {
   params: Promise<{
@@ -33,32 +34,15 @@ const TRAVELER_TYPES = new Set<TravelerType>([
   "business",
 ]);
 
-/**
- * Resolve user ID if authenticated, or null for anonymous.
- */
-async function resolveUser(request: NextRequest): Promise<string | null> {
-  try {
-    const supabase = await createClientFromRequest(request);
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    return user?.id ?? null;
-  } catch {
-    return null;
-  }
-}
-
 export async function POST(request: NextRequest, { params }: Params) {
   try {
     const { id: tripId } = await params;
-    const userId = await resolveUser(request);
+    const auth = await requireUserIdFromRequest(request);
+    if (auth instanceof NextResponse) return auth;
+    const userId = auth.userId;
 
-    // Rate limit: 5 per hour, 20 per day. Key on user ID when authenticated,
-    // IP for anonymous users (anonymous trips are short-lived and low-volume).
-    const rateLimitKey = userId
-      ? `generate:hour:${userId}`
-      : `generate:hour:ip:${getClientIp(request)}`;
-    const hourlyLimit = await checkRateLimitAsync(rateLimitKey, {
+    // Rate limit: 5 per hour per user.
+    const hourlyLimit = await checkRateLimitAsync(`generate:hour:${userId}`, {
       maxRequests: 5,
       windowMs: 60 * 60 * 1000,
     });
@@ -79,20 +63,14 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     const adminClient = getSupabase();
 
-    // Fetch trip — strictly scoped to user's own trips
-    let query = adminClient
+    const { data: trip, error: tripError } = await adminClient
       .from("trips")
       .select(
         "id, destination, start_date, end_date, status, travelers, budget_tier, vibes, interests, dietary_restrictions, mobility_needs, user_id, search_id, preferences",
       )
-      .eq("id", tripId);
-    if (userId) {
-      query = query.eq("user_id", userId);
-    } else {
-      query = query.is("user_id", null);
-    }
-
-    const { data: trip, error: tripError } = await query.single();
+      .eq("id", tripId)
+      .eq("user_id", userId)
+      .single();
 
     if (tripError || !trip) {
       return NextResponse.json(
@@ -206,7 +184,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           budget: trip.budget_tier || "moderate",
           originCity,
           originAirport,
-          userId: userId || undefined,
+          userId,
         },
       ]);
     } catch (workflowError) {
@@ -262,23 +240,18 @@ export async function POST(request: NextRequest, { params }: Params) {
 export async function GET(request: NextRequest, { params }: Params) {
   try {
     const { id: tripId } = await params;
-    const userId = await resolveUser(request);
+    const auth = await requireUserIdFromRequest(request);
+    if (auth instanceof NextResponse) return auth;
+    const userId = auth.userId;
 
     const adminClient = getSupabase();
 
-    // Get trip to find search_id
-    let tripQuery = adminClient
+    const { data: trip, error: tripError } = await adminClient
       .from("trips")
       .select("id, status, search_id")
-      .eq("id", tripId);
-
-    if (userId) {
-      tripQuery = tripQuery.eq("user_id", userId);
-    } else {
-      tripQuery = tripQuery.is("user_id", null);
-    }
-
-    const { data: trip, error: tripError } = await tripQuery.single();
+      .eq("id", tripId)
+      .eq("user_id", userId)
+      .single();
 
     if (tripError || !trip) {
       return NextResponse.json(

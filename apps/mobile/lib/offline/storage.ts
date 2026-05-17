@@ -4,7 +4,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import type { Trip, TripInput } from '../../stores/tripStore';
+import type { Trip } from '../../stores/tripStore';
 
 // Storage keys
 const STORAGE_KEYS = {
@@ -17,11 +17,45 @@ const STORAGE_KEYS = {
 // Mutation types for offline queue
 export type MutationType = 'create' | 'update' | 'delete';
 
+// Deep-merge two mutation payloads so nested objects (e.g. `preferences`)
+// don't get clobbered when a later update only changes a single sub-key.
+function mergeMutationData(
+  base: PendingMutationData | undefined,
+  patch: PendingMutationData | undefined
+): PendingMutationData {
+  const result: PendingMutationData = { ...(base ?? {}) };
+  if (!patch) return result;
+  for (const [key, value] of Object.entries(patch)) {
+    const existing = result[key];
+    if (
+      existing &&
+      value &&
+      typeof existing === 'object' &&
+      typeof value === 'object' &&
+      !Array.isArray(existing) &&
+      !Array.isArray(value)
+    ) {
+      result[key] = mergeMutationData(
+        existing as PendingMutationData,
+        value as PendingMutationData
+      );
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
+// `data` is the API request body for the mutation (e.g. POST /api/trips or
+// PATCH /api/trips/[id]). It's snake_case-shaped to match the backend, not
+// the camelCase TripInput, so we type it loosely here.
+export type PendingMutationData = Record<string, unknown>;
+
 export interface PendingMutation {
   id: string;
   type: MutationType;
   tripId: string;
-  data?: Partial<TripInput> | TripInput;
+  data?: PendingMutationData;
   timestamp: number;
   retryCount: number;
 }
@@ -146,19 +180,17 @@ class OfflineStorage {
         else if (existing.type === 'create' && mutation.type === 'update') {
           mutations[existingIndex] = {
             ...existing,
-            data: { ...existing.data, ...mutation.data },
+            data: mergeMutationData(existing.data, mutation.data),
             timestamp: Date.now(),
           };
-          return mutations[existingIndex];
         }
         // Update + Update = Merge updates
         else if (existing.type === 'update' && mutation.type === 'update') {
           mutations[existingIndex] = {
             ...existing,
-            data: { ...existing.data, ...mutation.data },
+            data: mergeMutationData(existing.data, mutation.data),
             timestamp: Date.now(),
           };
-          return mutations[existingIndex];
         }
         // Otherwise replace
         else {
@@ -171,7 +203,8 @@ class OfflineStorage {
       await this.savePendingMutations(mutations);
       await this.updateSyncMeta({ pendingCount: mutations.length });
 
-      return newMutation;
+      // If we merged into an existing mutation, return that merged entry; otherwise the new one.
+      return existingIndex >= 0 ? mutations[existingIndex] : newMutation;
     } catch (error) {
       console.error('[OfflineStorage] Error adding pending mutation:', error);
       throw error;

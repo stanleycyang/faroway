@@ -4,6 +4,56 @@ import { IMAGE_PATHS, getImageUrl } from "@faroway/constants";
 
 export type TripStatus = "draft" | "generating" | "complete";
 
+/**
+ * Backend trip statuses span more values than the dashboard's three display
+ * buckets understand (draft / generating / complete). This collapses every
+ * known lifecycle status onto one of those buckets so the card never crashes
+ * on a status it hasn't seen — and canonicalizes legacy spellings on the way
+ * through ("complete" → "completed", "cancelled" → "canceled").
+ *
+ * Returns the canonicalized status string (used by callers that just need a
+ * non-empty label); use {@link toDashboardTripStatus} when you need a value
+ * keyed into `statusConfig` directly.
+ */
+export function normalizeDashboardTripStatus(status: string): string {
+  switch (status) {
+    case "complete":
+      return "completed";
+    case "cancelled":
+      return "canceled";
+    default:
+      return status;
+  }
+}
+
+/**
+ * Map any backend lifecycle status onto one of the card's three display
+ * buckets. Anything we don't recognize falls back to "complete" — which is
+ * also the implicit pre-PR default, so this is the most conservative choice.
+ */
+function toDashboardTripStatus(status: string | undefined): TripStatus {
+  switch (normalizeDashboardTripStatus(status ?? "")) {
+    case "draft":
+    case "planning":
+      return "draft";
+    case "generating":
+    case "pending":
+      return "generating";
+    case "generated":
+    case "planned":
+    case "active":
+    case "in_progress":
+    case "booked":
+    case "paid":
+    case "completed":
+    case "canceled":
+    case "failed":
+      return "complete";
+    default:
+      return "complete";
+  }
+}
+
 export interface Trip {
   id: string;
   destination: string;
@@ -97,7 +147,7 @@ function getDaysUntil(startDate: string): {
 }
 
 export function TripCard({ trip }: TripCardProps) {
-  const status = trip.status || "complete";
+  const status = toDashboardTripStatus(trip.status);
   const statusInfo = statusConfig[status];
   const daysInfo = getDaysUntil(trip.start_date);
 
