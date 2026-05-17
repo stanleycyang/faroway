@@ -40,14 +40,13 @@ export function useUser(): UseUserReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const supabase = createClient();
-
   // Fetch user data
   const fetchUser = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
 
+      const supabase = createClient();
       const {
         data: { session },
         error: sessionError,
@@ -66,7 +65,7 @@ export function useUser(): UseUserReturn {
     } finally {
       setLoading(false);
     }
-  }, [supabase.auth]);
+  }, []);
 
   // Refresh user data
   const refresh = useCallback(async () => {
@@ -77,6 +76,7 @@ export function useUser(): UseUserReturn {
   const signOut = useCallback(async () => {
     try {
       setLoading(true);
+      const supabase = createClient();
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       setUser(null);
@@ -86,11 +86,13 @@ export function useUser(): UseUserReturn {
     } finally {
       setLoading(false);
     }
-  }, [supabase.auth]);
+  }, []);
 
   // Initial fetch and subscribe to auth changes
   useEffect(() => {
     fetchUser();
+
+    const supabase = createClient();
 
     // Subscribe to auth state changes
     const {
@@ -118,7 +120,7 @@ export function useUser(): UseUserReturn {
     return () => {
       subscription.unsubscribe();
     };
-  }, [fetchUser, supabase.auth]);
+  }, [fetchUser]);
 
   return {
     user,
@@ -147,8 +149,6 @@ export function useUserProfile() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  const supabase = createClient();
-
   useEffect(() => {
     async function fetchProfile() {
       if (!user) {
@@ -159,6 +159,7 @@ export function useUserProfile() {
 
       try {
         setLoading(true);
+        const supabase = createClient();
         const { data, error: queryError } = await supabase
           .from("users")
           .select("*")
@@ -179,7 +180,7 @@ export function useUserProfile() {
     if (!userLoading) {
       fetchProfile();
     }
-  }, [user, userLoading, supabase]);
+  }, [user, userLoading]);
 
   return {
     profile,
