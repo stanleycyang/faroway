@@ -183,9 +183,9 @@ requireCondition(
 requireCondition(
   hasText(
     apiConfigPath,
-    /PRODUCTION_API_URL\s*=\s*['"]https:\/\/api\.faroway\.ai['"]/,
+    /PRODUCTION_API_URL\s*=\s*['"]https:\/\/faroway\.ai['"]/,
   ),
-  "Mobile production API fallback must be the release API origin.",
+  "Mobile production API fallback must be the live web/API origin.",
 );
 requireCondition(
   !hasText(apiConfigPath, /faroway\.vercel\.app/i),

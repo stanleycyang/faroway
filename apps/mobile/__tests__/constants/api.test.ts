@@ -8,6 +8,10 @@ jest.mock('expo-constants', () => ({
 import { PRODUCTION_API_URL, resolveApiBaseUrl } from '../../constants/api';
 
 describe('API configuration', () => {
+  it('ships with the release API origin as the production fallback', () => {
+    expect(PRODUCTION_API_URL).toBe('https://faroway.ai');
+  });
+
   it('uses an explicit API URL when provided', () => {
     expect(
       resolveApiBaseUrl({

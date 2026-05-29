@@ -9,6 +9,8 @@ import { readFileSync, existsSync } from "fs";
 import { resolve } from "path";
 
 const ROOT = resolve(import.meta.dirname, "..");
+const args = new Set(process.argv.slice(2));
+const mobileReleaseMode = args.has("--mobile-release");
 
 interface EnvVar {
   name: string;
@@ -156,6 +158,54 @@ const MOBILE: EnvVar[] = [
   },
 ];
 
+const MOBILE_RELEASE: EnvVar[] = [
+  {
+    name: "EXPO_PUBLIC_SUPABASE_URL",
+    required: true,
+    description: "Supabase project URL (Expo)",
+  },
+  {
+    name: "EXPO_PUBLIC_SUPABASE_ANON_KEY",
+    required: true,
+    description: "Supabase anonymous key (Expo)",
+  },
+  {
+    name: "EXPO_PUBLIC_API_URL",
+    required: true,
+    description: "Production web/API origin",
+  },
+  {
+    name: "EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID",
+    required: true,
+    description: "Google OAuth web client ID",
+  },
+  {
+    name: "EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID",
+    required: true,
+    description: "Google OAuth iOS client ID",
+  },
+  {
+    name: "EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME",
+    required: true,
+    description: "Reversed Google iOS client ID URL scheme",
+  },
+  {
+    name: "EAS_PROJECT_ID",
+    required: true,
+    description: "Expo/EAS project ID",
+  },
+  {
+    name: "EXPO_PUBLIC_SENTRY_DSN",
+    required: false,
+    description: "Sentry DSN for mobile crash reporting",
+  },
+  {
+    name: "EXPO_PUBLIC_GOOGLE_PLACES_API_KEY",
+    required: false,
+    description: "Google Places API key",
+  },
+];
+
 function loadEnvFile(path: string): Record<string, string> {
   if (!existsSync(path)) return {};
   const content = readFileSync(path, "utf-8");
@@ -175,6 +225,20 @@ function loadEnvFile(path: string): Record<string, string> {
   return vars;
 }
 
+function loadEasProductionEnv(): Record<string, string> {
+  const easPath = resolve(ROOT, "apps/mobile/eas.json");
+  if (!existsSync(easPath)) return {};
+
+  try {
+    const eas = JSON.parse(readFileSync(easPath, "utf-8")) as {
+      build?: { production?: { env?: Record<string, string> } };
+    };
+    return eas.build?.production?.env ?? {};
+  } catch {
+    return {};
+  }
+}
+
 // Load env files from multiple locations
 const envSources = [
   resolve(ROOT, ".env"),
@@ -188,6 +252,9 @@ const envSources = [
 const allVars: Record<string, string> = {};
 for (const source of envSources) {
   Object.assign(allVars, loadEnvFile(source));
+}
+if (mobileReleaseMode) {
+  Object.assign(allVars, loadEasProductionEnv());
 }
 
 // Also include process.env
@@ -230,9 +297,13 @@ console.log(`\n${BOLD}  Faroway Environment Check${RESET}`);
 console.log(`  ${"═".repeat(45)}`);
 
 let totalMissing = 0;
-totalMissing += check("Shared (Supabase)", SHARED);
-totalMissing += check("Web App", WEB);
-totalMissing += check("Mobile App", MOBILE);
+if (mobileReleaseMode) {
+  totalMissing += check("Mobile Release", MOBILE_RELEASE);
+} else {
+  totalMissing += check("Shared (Supabase)", SHARED);
+  totalMissing += check("Web App", WEB);
+  totalMissing += check("Mobile App", MOBILE);
+}
 
 console.log(`\n  ${"═".repeat(45)}`);
 if (totalMissing === 0) {

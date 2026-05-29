@@ -173,6 +173,15 @@ export function SharedTripView({
           />
         </div>
 
+        <div className="mt-6 text-center">
+          <Link
+            href={`/report?type=shared_trip&token=${encodeURIComponent(shareToken)}`}
+            className="text-sm font-semibold text-gray-500 underline-offset-4 hover:text-gray-800 hover:underline"
+          >
+            Report this itinerary
+          </Link>
+        </div>
+
         {/* CTA Banner */}
         <div className="mt-8 bg-gradient-to-br from-primary to-primary-700 rounded-2xl p-8 sm:p-10 text-center text-white overflow-hidden relative">
           {/* Decorative glow */}

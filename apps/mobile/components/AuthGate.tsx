@@ -42,7 +42,7 @@ const triggerContent: Record<AuthGateTrigger, { title: string; subtitle: string 
   },
   share: {
     title: 'Share with Friends',
-    subtitle: 'Create an account to share your trip and plan together',
+    subtitle: 'Create an account to save this trip before sharing',
   },
   access: {
     title: 'Welcome Back!',
@@ -54,15 +54,15 @@ const triggerContent: Record<AuthGateTrigger, { title: string; subtitle: string 
   },
   generate: {
     title: 'Sign in to generate your trip',
-    subtitle: 'Faroway plans trips for signed-in users so your itinerary saves across devices.',
+    subtitle: 'Faroway plans trips for signed-in users so your itinerary is saved to your account.',
   },
 };
 
 const benefits = [
-  { icon: 'cloud-upload-outline', text: 'Save trips & access anywhere' },
-  { icon: 'notifications-outline', text: 'Get price drop alerts' },
+  { icon: 'cloud-upload-outline', text: 'Save trips to your account' },
+  { icon: 'notifications-outline', text: 'Get itinerary-ready alerts' },
   { icon: 'star-outline', text: 'Build your travel wishlist' },
-  { icon: 'people-outline', text: 'Share & plan with companions' },
+  { icon: 'people-outline', text: 'Share itinerary links' },
 ];
 
 export function AuthGate({

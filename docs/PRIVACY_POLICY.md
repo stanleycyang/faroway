@@ -19,18 +19,21 @@ Please read this Privacy Policy carefully. By using the App, you agree to the co
 ### Information You Provide
 
 **Account Information**
+
 - Email address
 - Name (optional)
 - Profile picture (optional)
 - Authentication credentials (encrypted)
 
 **Trip Information**
+
 - Destinations you search for
 - Travel dates and preferences
 - Saved itineraries
 - Trip notes and modifications
 
 **Preferences**
+
 - Travel style preferences
 - Budget preferences
 - Dietary restrictions
@@ -39,18 +42,21 @@ Please read this Privacy Policy carefully. By using the App, you agree to the co
 ### Information Collected Automatically
 
 **Device Information**
+
 - Device type and model
 - Operating system version
 - Unique device identifiers
 - App version
 
 **Usage Information**
+
 - Features used within the App
 - Time spent on different screens
 - Crash logs and performance data
 - Search queries (anonymized)
 
 **Location Information (Optional)**
+
 - With your explicit permission, we may collect location data to provide navigation features
 - You can disable location access at any time in your device settings
 
@@ -139,18 +145,21 @@ We retain your data for as long as your account is active or as needed to provid
 Depending on your location, you may have the following rights:
 
 ### All Users
+
 - **Access:** Request a copy of your data
 - **Correction:** Update inaccurate information
 - **Deletion:** Delete your account and associated data
 - **Opt-out:** Unsubscribe from marketing communications
 
 ### European Users (GDPR)
+
 - Right to data portability
 - Right to restrict processing
 - Right to object to processing
 - Right to lodge a complaint with a supervisory authority
 
 ### California Users (CCPA)
+
 - Right to know what data we collect
 - Right to delete your data
 - Right to opt-out of data "sales" (we don't sell data)
@@ -187,6 +196,7 @@ The App may contain links to third-party websites and services (e.g., booking pl
 ## Push Notifications
 
 With your permission, we may send push notifications about:
+
 - Trip reminders
 - Travel updates
 - App features and tips
@@ -221,9 +231,8 @@ If you have questions about this Privacy Policy or our data practices:
 
 **Mailing Address:**  
 Faroway  
-[Your Business Address]  
-[City, State, ZIP]  
-[Country]
+Privacy contact available upon verified request
+United States
 
 ---
 
@@ -234,4 +243,4 @@ For GDPR-related inquiries:
 
 ---
 
-*This Privacy Policy is effective as of February 3, 2026.*
+_This Privacy Policy is effective as of February 3, 2026._

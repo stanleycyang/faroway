@@ -7,7 +7,7 @@ second `app.json`; it can drift from the release config.
 
 Required production environment variables or EAS environment values:
 
-- `EXPO_PUBLIC_API_URL`: public web/API origin, for example `https://api.faroway.ai`.
+- `EXPO_PUBLIC_API_URL`: public web/API origin, for example `https://faroway.ai`.
 - `EXPO_PUBLIC_SUPABASE_URL`: Supabase project URL.
 - `EXPO_PUBLIC_SUPABASE_ANON_KEY`: Supabase anon key.
 - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`: Google Sign-In web client ID.
@@ -23,6 +23,12 @@ Run `bun run env:check:mobile-release` from the repo root, or
 The local check reads the `production.env` values from `eas.json`, validates the
 release-shaped EAS profile, and runs Expo Doctor. Verify any remote-only EAS
 secrets in EAS before submitting.
+
+From the repo root, the equivalent command is:
+
+```bash
+bun run release:check:mobile
+```
 
 ## EAS Submit
 

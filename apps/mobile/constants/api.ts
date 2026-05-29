@@ -10,7 +10,7 @@
 
 import Constants from 'expo-constants';
 
-export const PRODUCTION_API_URL = 'https://faroway.vercel.app';
+export const PRODUCTION_API_URL = 'https://faroway.ai';
 
 export interface ResolveApiBaseUrlOptions {
   isDev: boolean;

@@ -105,7 +105,7 @@ function GuestTripsView() {
         <Text style={styles.heroSubtitle}>
           {localTrips.length > 0
             ? "Sign in to save them before they're gone"
-            : 'Sign in to save your itineraries, access them from any device, and never lose a trip plan again.'}
+            : 'Sign in to save your itineraries to your account and revisit your trip plans.'}
         </Text>
       </View>
 
@@ -140,12 +140,16 @@ function GuestTripsView() {
         </View>
       )}
 
+      <Text style={styles.termsText}>
+        By continuing, you agree to our Terms and Privacy Policy.
+      </Text>
+
       {/* Feature highlights */}
       <View style={styles.featuresSection}>
         <FeatureRow
           icon="cloud-outline"
-          title="Synced everywhere"
-          subtitle="Access your trips on any device, anytime"
+          title="Saved trips"
+          subtitle="Keep generated plans tied to your account"
         />
         <FeatureRow
           icon="sparkles-outline"
@@ -154,8 +158,8 @@ function GuestTripsView() {
         />
         <FeatureRow
           icon="people-outline"
-          title="Share with friends"
-          subtitle="Collaborate on trips with your travel companions"
+          title="Share links"
+          subtitle="Send completed itineraries when sharing is enabled"
         />
       </View>
 
@@ -429,7 +433,14 @@ const styles = StyleSheet.create({
   authButtons: {
     gap: 10,
     marginTop: 24,
-    marginBottom: 32,
+    marginBottom: 12,
+  },
+  termsText: {
+    fontSize: 12,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 18,
+    marginBottom: 28,
   },
   socialButton: {
     flexDirection: 'row',

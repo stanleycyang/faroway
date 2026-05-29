@@ -13,16 +13,35 @@ import {
   getUserProfile,
   deleteAccount as deleteAccountRequest,
 } from '../services/api';
-import { GoogleSignin, isCancelledResponse } from '@react-native-google-signin/google-signin';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 // Anonymous-trip claim flow has been removed. Trip generation is auth-gated
 // end-to-end, so trips always belong to a real Supabase user from creation.
 
-GoogleSignin.configure({
-  webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
-  iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
-});
+type GoogleSignInModule = typeof import('@react-native-google-signin/google-signin');
+
+let googleSignInModule: GoogleSignInModule | null | undefined;
+
+async function getGoogleSignInModule(): Promise<GoogleSignInModule | null> {
+  if (googleSignInModule !== undefined) {
+    return googleSignInModule;
+  }
+
+  try {
+    googleSignInModule = await import('@react-native-google-signin/google-signin');
+    googleSignInModule.GoogleSignin.configure({
+      webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID,
+      iosClientId: process.env.EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID,
+    });
+  } catch {
+    googleSignInModule = null;
+  }
+
+  return googleSignInModule;
+}
+
+const GOOGLE_SIGN_IN_NATIVE_MODULE_UNAVAILABLE_MESSAGE =
+  'Google Sign-In requires a development or production build with the native Google Sign-In module installed.';
 
 interface AuthState {
   user: User | null;
@@ -156,6 +175,12 @@ export function useAuth() {
     try {
       setAuthState((prev) => ({ ...prev, loading: true }));
 
+      const googleSignIn = await getGoogleSignInModule();
+      if (!googleSignIn) {
+        throw new Error(GOOGLE_SIGN_IN_NATIVE_MODULE_UNAVAILABLE_MESSAGE);
+      }
+
+      const { GoogleSignin, isCancelledResponse } = googleSignIn;
       await GoogleSignin.hasPlayServices();
       const response = await GoogleSignin.signIn();
 
@@ -241,7 +266,8 @@ export function useAuth() {
 
     // Clear cached Google credentials so account picker shows on next sign-in
     try {
-      await GoogleSignin.signOut();
+      const googleSignIn = await getGoogleSignInModule();
+      await googleSignIn?.GoogleSignin.signOut();
     } catch {
       // Non-blocking — Google session may not exist (e.g. Apple sign-in user)
     }
@@ -270,7 +296,8 @@ export function useAuth() {
     }
 
     try {
-      await GoogleSignin.signOut();
+      const googleSignIn = await getGoogleSignInModule();
+      await googleSignIn?.GoogleSignin.signOut();
     } catch {
       // Non-blocking — Google session may not exist (e.g. Apple sign-in user)
     }

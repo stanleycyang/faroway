@@ -19,13 +19,13 @@ Both applications have solid performance foundations with room for optimization 
 
 ### Build Analysis
 
-| Metric | Value | Status |
-|--------|-------|--------|
-| Total Static Chunks | 1.6 MB | ⚠️ Could optimize |
-| Largest Chunk | 340 KB | ⚠️ date-fns/react-day-picker |
-| Static Routes | 6 | ✅ Good |
-| Dynamic Routes | 19 | ✅ Expected |
-| Build Time | ~3s | ✅ Excellent |
+| Metric              | Value  | Status                       |
+| ------------------- | ------ | ---------------------------- |
+| Total Static Chunks | 1.6 MB | ⚠️ Could optimize            |
+| Largest Chunk       | 340 KB | ⚠️ date-fns/react-day-picker |
+| Static Routes       | 6      | ✅ Good                      |
+| Dynamic Routes      | 19     | ✅ Expected                  |
+| Build Time          | ~3s    | ✅ Excellent                 |
 
 ### ✅ Already Implemented (Best Practices Found)
 
@@ -52,47 +52,54 @@ Both applications have solid performance foundations with room for optimization 
    - Dashboard page is a server component
    - Auth callbacks are route handlers
 
-5. **Middleware Efficiency**
+6. **Middleware Efficiency**
    - Proper matcher configuration excluding static assets
    - Session refresh only on protected/auth routes
 
 ### ⚠️ Optimization Opportunities
 
 #### 1. Large Bundle Dependencies
+
 **Issue:** `date-fns` and `react-day-picker` contribute ~340KB to the largest chunk.
 
 **Recommendations:**
+
 - Consider tree-shaking date-fns imports
 - Lazy load DatePicker component (only needed in trip creation)
 
 #### 2. No Dynamic Imports
+
 **Issue:** All components loaded eagerly.
 
 **Recommendation:** Add dynamic imports for heavy components:
+
 ```tsx
 // Example: Lazy load DatePicker
-import dynamic from 'next/dynamic'
+import dynamic from "next/dynamic";
 
 const DayPicker = dynamic(
-  () => import('react-day-picker').then(mod => mod.DayPicker),
-  { ssr: false, loading: () => <div className="h-64 animate-pulse" /> }
-)
+  () => import("react-day-picker").then((mod) => mod.DayPicker),
+  { ssr: false, loading: () => <div className="h-64 animate-pulse" /> },
+);
 ```
 
 #### 3. API Response Caching
+
 **Issue:** No explicit caching on API routes.
 
 **Recommendation:** Add caching headers for read-only endpoints:
+
 ```tsx
 // Example: /api/trips GET
 return NextResponse.json(data, {
   headers: {
-    'Cache-Control': 'private, max-age=60, stale-while-revalidate=300'
-  }
-})
+    "Cache-Control": "private, max-age=60, stale-while-revalidate=300",
+  },
+});
 ```
 
 #### 4. Static Generation Opportunities
+
 **Issue:** Landing page is 'use client' but could partially be server-rendered.
 
 **Recommendation:** Split landing page into server component with client islands.
@@ -128,12 +135,14 @@ return NextResponse.json(data, {
 ### ⚠️ Optimization Opportunities
 
 #### 1. Image Loading
+
 **Issue:** Using plain `Image` component with remote URLs.
 
 **Recommendation:** Implement image caching:
+
 ```tsx
 // Consider expo-image for better caching
-import { Image } from 'expo-image';
+import { Image } from "expo-image";
 
 <Image
   source={uri}
@@ -141,13 +150,15 @@ import { Image } from 'expo-image';
   contentFit="cover"
   transition={200}
   cachePolicy="memory-disk"
-/>
+/>;
 ```
 
 #### 2. List Rendering in Trip Details
+
 **Issue:** Trip day activities may not be using FlatList.
 
 **Recommendation:** Ensure all scrollable lists use virtualization:
+
 ```tsx
 <FlatList
   data={activities}
@@ -160,18 +171,25 @@ import { Image } from 'expo-image';
 ```
 
 #### 3. Component Memoization
+
 **Issue:** Some components may re-render unnecessarily.
 
 **Recommendation:** Memoize heavy components:
+
 ```tsx
-const TripCard = memo(({ trip }) => {
-  // component implementation
-}, (prev, next) => prev.trip.id === next.trip.id)
+const TripCard = memo(
+  ({ trip }) => {
+    // component implementation
+  },
+  (prev, next) => prev.trip.id === next.trip.id,
+);
 ```
 
 #### 4. Splash Screen Optimization
+
 **Current:** Good transition animations
 **Recommendation:** Ensure `expo-splash-screen` stays visible during auth check:
+
 ```tsx
 // In _layout.tsx
 useEffect(() => {
@@ -199,6 +217,7 @@ useEffect(() => {
 ### Recommendations
 
 #### 1. Add Database Indexes
+
 ```sql
 -- Recommended indexes for trips table
 CREATE INDEX idx_trips_user_id ON trips(user_id);
@@ -208,17 +227,18 @@ CREATE INDEX idx_trips_user_date ON trips(user_id, start_date DESC);
 ```
 
 #### 2. Implement Query Caching
+
 ```tsx
 // Example: Cache user trips for 60 seconds
-import { unstable_cache } from 'next/cache';
+import { unstable_cache } from "next/cache";
 
 const getCachedTrips = unstable_cache(
   async (userId: string) => {
     const supabase = createClient();
-    return supabase.from('trips').select('*').eq('user_id', userId);
+    return supabase.from("trips").select("*").eq("user_id", userId);
   },
-  ['user-trips'],
-  { revalidate: 60, tags: ['trips'] }
+  ["user-trips"],
+  { revalidate: 60, tags: ["trips"] },
 );
 ```
 
@@ -246,12 +266,12 @@ const getCachedTrips = unstable_cache(
 
 ### Files Created/Modified
 
-| File | Change |
-|------|--------|
-| `app/(app)/dashboard/loading.tsx` | NEW - Loading skeleton for dashboard |
-| `app/api/trips/route.ts` | MODIFIED - Added caching headers, enabled DB query |
-| `supabase/migrations/20260203_add_performance_indexes.sql` | NEW - Database indexes |
-| `docs/PERFORMANCE.md` | NEW - This documentation |
+| File                                                       | Change                                             |
+| ---------------------------------------------------------- | -------------------------------------------------- |
+| `app/(app)/dashboard/loading.tsx`                          | NEW - Loading skeleton for dashboard               |
+| `app/api/trips/route.ts`                                   | MODIFIED - Added caching headers, enabled DB query |
+| `supabase/migrations/20260203_add_performance_indexes.sql` | NEW - Database indexes                             |
+| `docs/PERFORMANCE.md`                                      | NEW - This documentation                           |
 
 ---
 
@@ -329,12 +349,13 @@ const handlePress = useCallback(() => {
 ### Web App
 
 1. **Lighthouse Audit**
+
    ```bash
-   npm run build
-   npm run start
+   bun run build
+   bun run start
    # Run Lighthouse in Chrome DevTools
    ```
-   
+
    **Target Scores:**
    - Performance: > 90
    - Accessibility: > 95
@@ -342,14 +363,15 @@ const handlePress = useCallback(() => {
    - SEO: > 90
 
 2. **Bundle Analysis**
+
    ```bash
    # Add to next.config.ts for analysis
    const withBundleAnalyzer = require('@next/bundle-analyzer')({
      enabled: process.env.ANALYZE === 'true'
    });
-   
+
    # Run analysis
-   ANALYZE=true npm run build
+   ANALYZE=true bun run build
    ```
 
 ### Mobile App
@@ -360,12 +382,13 @@ const handlePress = useCallback(() => {
    - Look for unnecessary re-renders
 
 2. **Expo Performance Tools**
+
    ```bash
    # Check bundle size
-   npx expo export --platform ios
-   
+   bunx expo export --platform ios
+
    # Run on physical device for accurate testing
-   npx expo start --no-dev
+   bunx expo start --no-dev
    ```
 
 ---
@@ -373,27 +396,30 @@ const handlePress = useCallback(() => {
 ## Metrics Baseline (Pre-optimization)
 
 ### Web App
-| Metric | Value |
-|--------|-------|
-| First Contentful Paint | ~1.2s |
-| Time to Interactive | ~2.5s |
-| Total Blocking Time | ~300ms |
-| Cumulative Layout Shift | ~0.05 |
-| Bundle Size (gzipped) | ~450KB |
+
+| Metric                  | Value  |
+| ----------------------- | ------ |
+| First Contentful Paint  | ~1.2s  |
+| Time to Interactive     | ~2.5s  |
+| Total Blocking Time     | ~300ms |
+| Cumulative Layout Shift | ~0.05  |
+| Bundle Size (gzipped)   | ~450KB |
 
 ### Mobile App
-| Metric | Value |
-|--------|-------|
-| Cold Start Time | ~2s |
-| JS Thread FPS | 60 |
-| UI Thread FPS | 60 |
-| Memory Usage | ~80MB |
+
+| Metric          | Value |
+| --------------- | ----- |
+| Cold Start Time | ~2s   |
+| JS Thread FPS   | 60    |
+| UI Thread FPS   | 60    |
+| Memory Usage    | ~80MB |
 
 ---
 
 ## Conclusion
 
 Faroway has a solid performance foundation:
+
 - ✅ Images optimized with next/image
 - ✅ Animations use native driver
 - ✅ State management efficient with Zustand
@@ -401,6 +427,7 @@ Faroway has a solid performance foundation:
 - ✅ Proper server/client component split
 
 **Priority Improvements:**
+
 1. Add dynamic imports for DatePicker (high impact, low effort)
 2. Add database indexes (high impact, low effort)
 3. Implement API caching (medium impact, medium effort)
