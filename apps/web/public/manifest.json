@@ -1,7 +1,7 @@
 {
   "name": "Faroway - AI Travel Planner",
   "short_name": "Faroway",
-  "description": "Plan your perfect trip with AI. Get personalized day-by-day itineraries, find hotels, flights, and activities.",
+  "description": "Plan your perfect trip with AI. Get personalized day-by-day itineraries with stays, restaurants, and activities.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -21,7 +21,7 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["travel", "lifestyle", "navigation"],
+  "categories": ["travel", "lifestyle"],
   "shortcuts": [
     {
       "name": "Plan New Trip",

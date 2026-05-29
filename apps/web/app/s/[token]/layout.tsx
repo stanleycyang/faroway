@@ -90,7 +90,7 @@ export async function generateMetadata({
         title: "Shared Trip Itinerary | Faroway",
         description: "View this AI-generated travel itinerary",
       },
-      robots: { index: true, follow: true },
+      robots: { index: false, follow: true },
     };
   }
 
@@ -113,7 +113,7 @@ export async function generateMetadata({
     alternates: {
       canonical: `${baseUrl}/s/${token}`,
     },
-    robots: { index: true, follow: true },
+    robots: { index: false, follow: true },
   };
 }
 

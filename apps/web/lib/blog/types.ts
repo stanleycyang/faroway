@@ -43,7 +43,6 @@ export const AUTHORS: Record<string, Author> = {
     name: "Faroway Team",
     avatar: "/icon.png",
     bio: "The Faroway team is passionate about making travel planning effortless with AI. We combine travel expertise with cutting-edge technology to help you explore the world.",
-    twitter: "@faroway",
   },
 };
 

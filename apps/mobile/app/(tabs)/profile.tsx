@@ -105,7 +105,7 @@ function GuestProfileCard() {
 
       <Text style={styles.guestTitle}>Sign in to Faroway</Text>
       <Text style={styles.guestSubtitle}>
-        Save trips, sync across devices, and unlock personalized recommendations
+        Save trips to your account and keep your recommendations personalized.
       </Text>
 
       {isLoading ? (
@@ -133,6 +133,10 @@ function GuestProfileCard() {
           </TouchableOpacity>
         </View>
       )}
+
+      <Text style={styles.guestTerms}>
+        By continuing, you agree to our Terms and Privacy Policy.
+      </Text>
     </View>
   );
 }
@@ -268,7 +272,7 @@ export default function ProfileScreen() {
           <MenuItem
             icon="chatbubble-outline"
             label="Contact Us"
-            onPress={() => Linking.openURL('mailto:support@faroway.app')}
+            onPress={() => Linking.openURL('mailto:support@faroway.ai')}
           />
           <MenuItem
             icon="star-outline"
@@ -398,6 +402,13 @@ const styles = StyleSheet.create({
     width: '100%',
     gap: 10,
     marginTop: 20,
+  },
+  guestTerms: {
+    marginTop: 14,
+    fontSize: 12,
+    color: '#64748b',
+    textAlign: 'center',
+    lineHeight: 18,
   },
   socialButton: {
     flexDirection: 'row',

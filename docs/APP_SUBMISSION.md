@@ -1,296 +1,194 @@
-# Faroway - App Store Submission Checklist
+# Faroway App Store Submission Checklist
 
-Last updated: February 3, 2026
-
----
+Last updated: May 28, 2026
 
 ## Pre-Submission Requirements
 
-### ✅ App Configuration
+### App Configuration
 
-- [x] **Bundle Identifier:** `ai.faroway.app` (iOS)
-- [x] **Package Name:** `ai.faroway.app` (Android)
-- [x] **Version:** 1.0.0
-- [x] **Build Number:** Managed by EAS
-- [x] **App Icons:** All sizes generated (1024x1024 source)
-- [x] **Splash Screen:** Configured with brand colors
-- [x] **Orientation:** Portrait only
-- [x] **Supported Devices:** iPhone, iPad (iOS), Phone, Tablet (Android)
+- [x] Bundle Identifier: `ai.faroway.app` (iOS)
+- [x] Package Name: `ai.faroway.app` (Android)
+- [x] Version: 1.0.0
+- [x] Build Number: Managed by EAS remote app versioning
+- [x] App Icons: Required assets present in `apps/mobile/assets`
+- [x] Splash Screen: Configured in `apps/mobile/app.config.ts`
+- [x] Orientation: Portrait only
+- [x] Supported Devices: iPhone, iPad, Android phone, Android tablet
+- [ ] EAS Project ID: Set `EAS_PROJECT_ID` in EAS/build environment
+- [ ] Apple Developer Account: Connected through EAS credentials or submit flow
+- [ ] Google Play Account: Service-account credentials configured through EAS credentials or submit flow
 
-### ✅ EAS Configuration
+### Required Local Checks
 
-- [x] **eas.json:** Created with development/preview/production profiles
-- [ ] **EAS Project ID:** Link project with `eas init`
-- [ ] **Apple Developer Account:** Connected to EAS
-- [ ] **Google Play Account:** Service account JSON configured
+Run from the repo root:
 
----
+```bash
+bun install
+bun run type-check
+bun run lint
+bun run format:check
+bun run test
+bun run build
+bun run release:check:mobile
+```
+
+Run from `apps/web`:
+
+```bash
+bunx playwright test
+```
 
 ## iOS App Store Submission
 
 ### Developer Account Setup
-- [ ] Apple Developer Program membership active ($99/year)
-- [ ] App Store Connect app record created
+
+- [ ] Apple Developer Program membership active
+- [ ] App Store Connect app record created for `ai.faroway.app`
+- [ ] App Store Connect app ID for `ai.faroway.app` recorded in the credential manager
+- [ ] Apple Team ID recorded in the credential manager
 - [ ] Bundle ID registered in Apple Developer Portal
-- [ ] Provisioning profiles generated
+- [ ] Provisioning profiles/certificates managed by EAS credentials
+
+Do not commit Apple account identifiers, App Store Connect IDs, Apple Team IDs, or account emails to this repository.
 
 ### App Store Connect Configuration
-- [ ] **App Name:** Faroway - AI Travel Planner
-- [ ] **Subtitle:** Smart Itineraries in Seconds
-- [ ] **Category:** Primary: Travel, Secondary: Lifestyle
-- [ ] **Keywords:** (100 chars) - See APP_STORE_COPY.md
-- [ ] **Description:** (4000 chars) - See APP_STORE_COPY.md
-- [ ] **Promotional Text:** - See APP_STORE_COPY.md
-- [ ] **Support URL:** https://faroway.ai/support
-- [ ] **Marketing URL:** https://faroway.ai
-- [ ] **Privacy Policy URL:** https://faroway.ai/privacy
+
+- [ ] App Name: Faroway - AI Travel Planner
+- [ ] Subtitle: Smart Itineraries in Seconds
+- [ ] Category: Primary Travel, Secondary Lifestyle
+- [ ] Keywords: See `docs/APP_STORE_COPY.md`
+- [ ] Description: See `docs/APP_STORE_COPY.md`
+- [ ] Promotional Text: See `docs/APP_STORE_COPY.md`
+- [ ] Support URL: https://faroway.ai/support
+- [ ] Marketing URL: https://faroway.ai
+- [ ] Privacy Policy URL: https://faroway.ai/privacy
 
 ### Screenshots Required
+
 All screenshots must be actual app captures, not mockups.
 
-#### iPhone Screenshots (Required)
-| Size | Dimensions | Device |
-|------|------------|--------|
-| 6.9" | 1320 x 2868 | iPhone 16 Pro Max |
-| 6.7" | 1290 x 2796 | iPhone 15 Pro Max |
-| 6.5" | 1284 x 2778 | iPhone 14 Plus / 13 Pro Max |
-| 5.5" | 1242 x 2208 | iPhone 8 Plus |
+Recommended capture set:
 
-#### iPad Screenshots (Required if supporting iPad)
-| Size | Dimensions | Device |
-|------|------------|--------|
-| 13" | 2064 x 2752 | iPad Pro 13" |
-| 12.9" | 2048 x 2732 | iPad Pro 12.9" |
-
-**Screenshots to capture:**
 1. Home/Explore screen with destinations
-2. Trip creation flow
-3. AI-generated itinerary
-4. Day-by-day view
-5. Map view with pins
-6. Offline mode indicator
-7. My Trips list
-8. Profile/Settings
-
-### App Preview Video (Optional but Recommended)
-- 15-30 seconds showing key features
-- No hands or device frames
-- Proper dimensions for each device size
-
-### Age Rating
-- [ ] Questionnaire completed (Target: 4+)
-- No violence, sexual content, gambling, or mature themes
+2. Trip creation destination step
+3. Trip creation preferences step
+4. AI itinerary generation progress
+5. Completed itinerary day detail
+6. Trips list
+7. Profile/account screen
+8. Shared itinerary/reporting handoff or a real loading/error state
 
 ### App Privacy
-- [ ] Privacy nutrition labels configured
-- [ ] Data collection disclosure:
-  - Email address (Account features)
-  - Location (Optional, for navigation)
-  - Identifiers (Device ID for analytics)
+
+Disclose only data that is actually collected in the shipping build:
+
+- Email address: account features
+- User ID: account/session management
+- Product interaction: only if analytics is enabled in production
+- User content: shared itinerary links and reports
+- Data deletion: available in the mobile Profile tab
+
+Do not disclose platform location collection unless native location permission is added back and verified.
 
 ### Review Notes
-Add notes for Apple reviewers:
-```
-Demo account for testing:
-Email: demo@faroway.ai
-Password: DemoTrip2026!
 
-The app uses AI to generate travel itineraries. Test by:
-1. Select a destination (e.g., Tokyo, Japan)
-2. Set travel dates
-3. Tap "Generate Itinerary"
-4. View the AI-created day-by-day plan
+Add reviewer notes after credentials and a reviewable build exist:
 
-Offline mode can be tested by enabling Airplane mode after generating an itinerary.
+```text
+Faroway uses AI to generate travel itineraries.
+
+Suggested review path:
+1. Open the app and continue with Apple or Google sign-in.
+2. Create a trip for Tokyo, Paris, or Bali.
+3. Select dates, travelers, and travel vibes.
+4. Generate the itinerary and review the day-by-day plan.
+5. Open Trips to confirm the itinerary is saved.
+6. Open Profile to review account deletion, Terms, and Privacy links.
+
+Shared itinerary links can be reported through the "Report this itinerary" link on a shared itinerary page.
 ```
+
+Provide temporary reviewer credentials only through App Store Connect if OAuth review requires them. Do not commit reviewer credentials to this repository.
 
 ### Build & Submit
+
 ```bash
-# Install EAS CLI
-npm install -g eas-cli
-
-# Login to Expo
-eas login
-
-# Configure project (first time only)
-eas init
-
-# Build for iOS production
-eas build --platform ios --profile production
-
-# Submit to App Store
-eas submit --platform ios --latest
+cd apps/mobile
+bunx eas login
+bunx eas build --platform ios --profile production
+bunx eas submit --platform ios --latest
 ```
-
----
 
 ## Google Play Store Submission
 
 ### Developer Account Setup
-- [ ] Google Play Developer account active ($25 one-time)
-- [ ] App created in Google Play Console
-- [ ] Service account JSON for automated submissions
+
+- [ ] Google Play Developer account active
+- [ ] App created in Google Play Console for `ai.faroway.app`
+- [ ] Android service-account credentials configured through EAS credentials or local submit flow
 
 ### Store Listing
-- [ ] **App Name:** Faroway - AI Travel Planner
-- [ ] **Short Description:** (80 chars) - See APP_STORE_COPY.md
-- [ ] **Full Description:** (4000 chars) - See APP_STORE_COPY.md
-- [ ] **Category:** Travel & Local
-- [ ] **Tags:** Travel, Planner, Itinerary, AI, Vacation
+
+- [ ] App Name: Faroway - AI Travel Planner
+- [ ] Short Description: See `docs/APP_STORE_COPY.md`
+- [ ] Full Description: See `docs/APP_STORE_COPY.md`
+- [ ] Category: Travel & Local
+- [ ] Tags: Travel, Planner, Itinerary, Vacation
 
 ### Graphics Assets Required
 
-| Asset | Dimensions | Format |
-|-------|------------|--------|
-| App Icon | 512 x 512 | PNG (32-bit with alpha) |
-| Feature Graphic | 1024 x 500 | PNG or JPG |
-| Phone Screenshots | 16:9 or 9:16 | PNG or JPG |
-| 7" Tablet Screenshots | 16:9 or 9:16 | PNG or JPG |
+| Asset                  | Dimensions   | Format     |
+| ---------------------- | ------------ | ---------- |
+| App Icon               | 512 x 512    | PNG        |
+| Feature Graphic        | 1024 x 500   | PNG or JPG |
+| Phone Screenshots      | 16:9 or 9:16 | PNG or JPG |
+| 7" Tablet Screenshots  | 16:9 or 9:16 | PNG or JPG |
 | 10" Tablet Screenshots | 16:9 or 9:16 | PNG or JPG |
 
-### Screenshots (2-8 per device type)
-- Same screens as iOS
-- Add marketing text overlays
-
-### Content Rating
-- [ ] IARC questionnaire completed
-- Expected rating: Everyone / PEGI 3
-
 ### Privacy & Policies
-- [ ] **Privacy Policy URL:** https://faroway.ai/privacy
-- [ ] **Data Safety form completed:**
-  - Location: Optional, shared for navigation
-  - Personal info: Email for account
-  - Identifiers: Device ID for analytics
-  - Data encrypted in transit: Yes
-  - Data deletion request: Available
 
-### Target Audience
-- [ ] **Target Age:** All ages (not primarily for children)
-- [ ] App is not designed for children under 13
+- [ ] Privacy Policy URL: https://faroway.ai/privacy
+- [ ] Data Safety form completed from current implementation
+- [ ] Data encrypted in transit: Yes
+- [ ] Data deletion request: Available in mobile Profile tab
+- [ ] Shared itinerary reporting disclosed
 
 ### Build & Submit
+
 ```bash
-# Build for Android production
-eas build --platform android --profile production
-
-# Submit to Google Play
-eas submit --platform android --latest
-
-# Or upload manually:
-# Build outputs an .aab file - upload to Play Console > Release > Production
+cd apps/mobile
+bunx eas build --platform android --profile production
+bunx eas submit --platform android --latest
 ```
-
----
 
 ## Compliance Checklist
 
 ### iOS-Specific
-- [x] **App Tracking Transparency:** Not using IDFA, no ATT prompt needed
-- [x] **Sign in with Apple:** Implemented (required if any social login)
-- [x] **Camera/Photo Permissions:** Proper usage descriptions in Info.plist
-- [ ] **Push Notifications:** APNs certificate configured
+
+- [x] App Tracking Transparency: No IDFA use in current code
+- [x] Sign in with Apple: Enabled
+- [x] Export compliance: `usesNonExemptEncryption` is explicit
+- [ ] Push Notifications: APNs credentials configured and physical-device production build verified
 
 ### Android-Specific
-- [x] **Adaptive Icon:** Configured with foreground/background
-- [x] **Target SDK:** API 34 (Android 14)
-- [ ] **Google Services:** google-services.json configured
-- [ ] **Push Notifications:** FCM configured
+
+- [x] Adaptive Icon: Configured
+- [ ] FCM credentials configured for production push
+- [ ] Play internal testing install verified
 
 ### Both Platforms
-- [x] **Privacy Policy:** Created and hosted
-- [x] **Terms of Service:** Created and hosted
-- [x] **GDPR Compliance:**
-  - Data export functionality
-  - Account deletion option
-  - Consent for data collection
-  - EU data processing disclosure
-- [x] **CCPA Compliance:**
-  - "Do Not Sell My Data" option
-  - California privacy notice
-- [x] **Children's Privacy (COPPA):**
-  - App is not directed at children
-  - No data collection from users under 13
 
----
+- [x] Privacy Policy hosted
+- [x] Terms of Service hosted
+- [x] Account deletion option in mobile Profile tab
+- [x] Shared itinerary reporting flow present
+- [ ] Physical iOS device QA
+- [ ] Physical Android device QA
+- [ ] Push notification foreground/background/cold-start tap QA
 
-## Testing Checklist
+## Rejection Risk Checklist
 
-### Pre-submission Testing
-- [ ] Test on physical iPhone device
-- [ ] Test on physical Android device
-- [ ] Test on iPad
-- [ ] Test on Android tablet
-- [ ] Test offline mode (airplane mode)
-- [ ] Test push notifications
-- [ ] Test sign in / sign up flow
-- [ ] Test itinerary generation
-- [ ] Test all navigation paths
-- [ ] Test dark mode
-- [ ] Test accessibility (VoiceOver/TalkBack)
-
-### TestFlight (iOS)
-- [ ] Upload build to TestFlight
-- [ ] Add internal testers
-- [ ] Add external testers (optional)
-- [ ] Collect feedback before public release
-
-### Play Console Internal Testing
-- [ ] Upload build to internal testing track
-- [ ] Add internal testers
-- [ ] Test in-app updates (if applicable)
-- [ ] Verify play store listing preview
-
----
-
-## Post-Submission
-
-### After Approval
-- [ ] Announce on social media
-- [ ] Update website with download links
-- [ ] Set up app analytics monitoring
-- [ ] Prepare for first bug fix release
-- [ ] Monitor reviews and ratings
-
-### Review Rejection Handling
-If rejected, common issues and fixes:
-1. **Metadata issues:** Update descriptions/screenshots
-2. **Crashes:** Fix and resubmit build
-3. **Missing functionality:** Ensure all advertised features work
-4. **Privacy issues:** Update privacy policy or disclosures
-5. **Login issues:** Provide demo account or fix auth flow
-
----
-
-## Timeline Estimate
-
-| Task | Duration |
-|------|----------|
-| Account setup | 1-2 days |
-| Screenshots & assets | 2-3 hours |
-| Store listing copy | 1-2 hours |
-| Build submission | 30 mins |
-| Apple review | 1-7 days |
-| Google review | 1-3 days |
-
-**Total estimated time to stores:** 3-10 days
-
----
-
-## Important URLs
-
-- **Apple Developer Portal:** https://developer.apple.com
-- **App Store Connect:** https://appstoreconnect.apple.com
-- **Google Play Console:** https://play.google.com/console
-- **EAS Dashboard:** https://expo.dev
-- **App Privacy:** https://faroway.ai/privacy
-- **App Terms:** https://faroway.ai/terms
-- **Support:** https://faroway.ai/support
-
----
-
-## Contacts
-
-**Developer Account Owner:** Stanley Yang  
-**Support Email:** support@faroway.ai  
-**Technical Contact:** dev@faroway.ai
+1. Advertised feature unavailable: keep store copy matched to verified app behavior.
+2. OAuth review blocked: provide reviewer access through store dashboards only.
+3. Push notification claim unverified: do not claim full push support until physical-device testing passes.
+4. Privacy mismatch: update store privacy disclosures whenever analytics, location, or partner data collection changes.

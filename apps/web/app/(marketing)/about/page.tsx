@@ -71,7 +71,7 @@ const painPoints = [
     color: "bg-orange-100 text-orange-600",
     title: "Tab overload",
     description:
-      "Juggling 20+ browser tabs comparing hotels, flights, restaurants, and attractions.",
+      "Juggling 20+ browser tabs comparing stays, restaurants, and attractions.",
   },
   {
     icon: Target,
@@ -170,7 +170,7 @@ const timeline = [
   {
     label: "What's Next",
     description:
-      "Expanding into real-time booking, group trip planning, and AI travel companion features. The best is yet to come.",
+      "Expanding destination coverage, itinerary quality, and partner handoff reliability. The best is yet to come.",
     icon: Compass,
   },
 ];
