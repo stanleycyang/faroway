@@ -34,6 +34,7 @@
     "@tailwindcss/postcss": "^4.1.18",
     "@tailwindcss/typography": "^0.5.19",
     "@types/lodash": "^4.17.23",
+    "@vercel/analytics": "^2.0.1",
     "ai": "^6.0.86",
     "amadeus": "^11.0.0",
     "autoprefixer": "^10.4.24",
