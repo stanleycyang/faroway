@@ -12,7 +12,7 @@ vi.mock("@/workflows/plan-trip", () => ({
 }));
 
 vi.mock("@/lib/security/rate-limit", () => ({
-  checkRateLimit: vi.fn(() => ({ allowed: true })),
+  checkRateLimitAsync: vi.fn(async () => ({ allowed: true })),
   getClientIp: vi.fn(() => "127.0.0.1"),
 }));
 
@@ -138,6 +138,24 @@ describe("POST /api/search/start", () => {
 
     expect(res.status).toBe(400);
     expect(json.error).toBe("Invalid request body");
+    expect(startMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects searches with an end date before the start date", async () => {
+    const res = await POST(
+      new NextRequest("http://localhost:3000/api/search/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          destination: "Tokyo",
+          startDate: "2026-06-05",
+          endDate: "2026-06-01",
+          travelers: 2,
+        }),
+      }),
+    );
+
+    expect(res.status).toBe(400);
     expect(startMock).not.toHaveBeenCalled();
   });
 });

@@ -203,11 +203,11 @@ export default function ExploreScreen() {
               <View style={styles.heroFeatures}>
                 <View style={styles.heroFeature}>
                   <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.8)" />
-                  <Text style={styles.heroFeatureText}>No account needed</Text>
+                  <Text style={styles.heroFeatureText}>Saved to your account</Text>
                 </View>
                 <View style={styles.heroFeature}>
                   <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.8)" />
-                  <Text style={styles.heroFeatureText}>Free to start</Text>
+                  <Text style={styles.heroFeatureText}>Personalized plans</Text>
                 </View>
               </View>
             </View>

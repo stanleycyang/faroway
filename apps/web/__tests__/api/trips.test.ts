@@ -192,6 +192,30 @@ describe("POST /api/trips", () => {
 
     expect(res.status).toBe(400);
   });
+
+  it("returns 400 when end date is before start date", async () => {
+    const req = makeRequest("POST", "/api/trips", {
+      destination: "Tokyo",
+      start_date: "2026-04-07",
+      end_date: "2026-04-01",
+      travelers: 2,
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for malformed calendar dates", async () => {
+    const req = makeRequest("POST", "/api/trips", {
+      destination: "Tokyo",
+      start_date: "2026-02-31",
+      end_date: "2026-03-02",
+      travelers: 2,
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(400);
+  });
 });
 
 describe("GET /api/trips/[id]", () => {

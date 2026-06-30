@@ -13,6 +13,7 @@ import { executeTravelSearch } from "@/lib/search/workflow";
 import { mapSearchResultsToItinerary } from "@/lib/search/bridge";
 import { createClient } from "@/lib/supabase/server";
 import { checkRateLimit, getClientIp } from "@/lib/security/rate-limit";
+import { isValidDateOnly, isValidDateRange } from "@/lib/api/date-range";
 import type { GeneratedItinerary } from "@faroway/types";
 
 export const maxDuration = 60;
@@ -25,22 +26,31 @@ const TravelerInputSchema = z.union([
   }),
 ]);
 
-const ItineraryRequestSchema = z.object({
-  destination: z.string().min(1).max(200).trim(),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  travelers: TravelerInputSchema.optional(),
-  travelerType: z
-    .enum(["solo", "couple", "family", "friends", "business"])
-    .optional(),
-  originCity: z.string().max(200).optional(),
-  originAirport: z.string().max(10).optional(),
-  vibes: z.array(z.string().max(50)).max(10).optional(),
-  budget: z.enum(["budget", "moderate", "luxury"]).optional(),
-  interests: z.array(z.string().max(100)).max(20).optional(),
-  dietaryRestrictions: z.array(z.string().max(100)).max(20).optional(),
-  save: z.boolean().optional(),
-});
+const DateOnlySchema = z
+  .string()
+  .refine(isValidDateOnly, "Must be a valid YYYY-MM-DD date");
+
+const ItineraryRequestSchema = z
+  .object({
+    destination: z.string().min(1).max(200).trim(),
+    startDate: DateOnlySchema,
+    endDate: DateOnlySchema,
+    travelers: TravelerInputSchema.optional(),
+    travelerType: z
+      .enum(["solo", "couple", "family", "friends", "business"])
+      .optional(),
+    originCity: z.string().max(200).optional(),
+    originAirport: z.string().max(10).optional(),
+    vibes: z.array(z.string().max(50)).max(10).optional(),
+    budget: z.enum(["budget", "moderate", "luxury"]).optional(),
+    interests: z.array(z.string().max(100)).max(20).optional(),
+    dietaryRestrictions: z.array(z.string().max(100)).max(20).optional(),
+    save: z.boolean().optional(),
+  })
+  .refine((data) => isValidDateRange(data.startDate, data.endDate), {
+    message: "End date must be on or after start date",
+    path: ["endDate"],
+  });
 
 export async function POST(request: NextRequest) {
   try {

@@ -218,11 +218,11 @@ export default function OnboardingScreen() {
           <Animated.View style={[styles.valueProps, { opacity: fadeAnim }]}>
             <View style={styles.valueProp}>
               <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-              <Text style={styles.valuePropText}>No account needed</Text>
+              <Text style={styles.valuePropText}>Saved to your account</Text>
             </View>
             <View style={styles.valueProp}>
               <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-              <Text style={styles.valuePropText}>100% free</Text>
+              <Text style={styles.valuePropText}>Personalized plans</Text>
             </View>
             <View style={styles.valueProp}>
               <Ionicons name="checkmark-circle" size={16} color="#10b981" />
