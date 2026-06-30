@@ -12,6 +12,7 @@ import {
   PushTokenResult,
   EventSubscription,
 } from '../lib/notifications';
+import { logger } from '../lib/logger';
 
 interface UseNotificationsOptions {
   autoRequestPermissions?: boolean;
@@ -68,7 +69,7 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
           break;
 
         default:
-          console.log('Unknown notification type:', data.type);
+          logger.debug('[Notifications] Unknown notification type:', data.type);
           break;
       }
     },
@@ -126,7 +127,10 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
     const setupListeners = async () => {
       const receivedSub = await addNotificationReceivedListener((notification) => {
         const data = parseNotificationData(notification);
-        console.log('Notification received:', data);
+        logger.debug('[Notifications] Notification received:', {
+          type: data?.type,
+          tripId: data?.tripId,
+        });
         if (onNotificationReceived) {
           onNotificationReceived(notification, data);
         }
@@ -134,7 +138,10 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
 
       const responseSub = await addNotificationResponseListener((response) => {
         const data = parseNotificationData(response.notification);
-        console.log('Notification response:', data);
+        logger.debug('[Notifications] Notification response:', {
+          type: data?.type,
+          tripId: data?.tripId,
+        });
         if (onNotificationResponse) {
           onNotificationResponse(data);
         }

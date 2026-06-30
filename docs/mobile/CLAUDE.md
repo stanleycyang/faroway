@@ -13,11 +13,21 @@ bun install              # Install dependencies
 bun start                # Start Expo dev server (press 'i' for iOS, 'a' for Android)
 bun run ios              # Start directly on iOS
 bun run android          # Start directly on Android
+bun run test             # Run mobile Jest tests
+bun run type-check       # Run TypeScript checks
+bun run lint             # Run ESLint
+bun run format:check     # Check Prettier formatting
+bun run release:check    # Validate mobile release env/EAS/Expo Doctor
 ```
 
-No test runner or linter is currently configured.
+The monorepo also exposes the mobile release gate from the root:
+
+```bash
+bun run release:check:mobile
+```
 
 **EAS Build** (cloud builds):
+
 ```bash
 eas build --profile development --platform ios   # Dev build (simulator)
 eas build --profile preview --platform ios        # Preview build (device)
@@ -26,6 +36,7 @@ eas build --profile preview --platform ios        # Preview build (device)
 ## Environment Setup
 
 Copy `.env.example` to `.env.local` with:
+
 - `EXPO_PUBLIC_SUPABASE_URL` / `EXPO_PUBLIC_SUPABASE_ANON_KEY` - Supabase project credentials
 - `EXPO_PUBLIC_API_URL` - Backend URL (`http://localhost:3000` for dev)
 - For physical device testing, use machine's local IP instead of `localhost`
@@ -35,6 +46,7 @@ Copy `.env.example` to `.env.local` with:
 ### Routing (Expo Router - file-based)
 
 Routes live in `app/` using file-system conventions similar to Next.js:
+
 - `app/_layout.tsx` - Root layout: provider stack (Auth → Notifications → Offline), auth guards, screen transitions
 - `app/(tabs)/` - Bottom tab navigation (Explore, My Trips, Profile)
 - `app/auth/` - Login, signup, forgot-password screens
@@ -47,6 +59,7 @@ Auth guard logic: anonymous users can browse/create trips; only the Profile tab 
 ### State Management (Zustand)
 
 Two stores in `stores/`:
+
 - **tripStore** - Trips CRUD, draft form state (`draftInput`), generation progress, offline hydration
 - **userStore** - User profile, onboarding status, travel preferences
 
@@ -60,6 +73,7 @@ Two stores in `stores/`:
 ### Offline-First System
 
 `lib/offline/` implements full offline support:
+
 - `storage.ts` - AsyncStorage persistence + mutation queue
 - `network.ts` - Network status monitoring
 - `sync.ts` - Push/pull sync strategies

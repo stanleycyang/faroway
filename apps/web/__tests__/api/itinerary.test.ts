@@ -118,4 +118,20 @@ describe("POST /api/itinerary", () => {
     expect(json.error).toBe("Invalid request body");
     expect(executeTravelSearchMock).not.toHaveBeenCalled();
   });
+
+  it("returns 400 when endDate is before startDate", async () => {
+    const res = await POST(
+      makeReq({
+        destination: "Tokyo",
+        startDate: "2026-06-05",
+        endDate: "2026-06-01",
+        travelers: 2,
+      }),
+    );
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.error).toBe("Invalid request body");
+    expect(executeTravelSearchMock).not.toHaveBeenCalled();
+  });
 });

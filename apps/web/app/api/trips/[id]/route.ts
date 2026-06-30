@@ -1,26 +1,35 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
 import { requireUserIdFromRequest } from "@/lib/auth/middleware";
+import { isValidDateOnly, isValidDateRange } from "@/lib/api/date-range";
 import { z } from "zod";
+
+const DateOnlySchema = z
+  .string()
+  .refine(isValidDateOnly, "Must be a valid YYYY-MM-DD date");
 
 const UpdateTripSchema = z
   .object({
     destination: z.string().min(1).max(200).trim().optional(),
-    start_date: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .optional(),
-    end_date: z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/)
-      .optional(),
+    start_date: DateOnlySchema.optional(),
+    end_date: DateOnlySchema.optional(),
     travelers: z.number().int().min(1).max(50).optional(),
     status: z.enum(["draft", "generating", "generated", "failed"]).optional(),
     preferences: z.record(z.unknown()).optional(),
     vibes: z.array(z.string().max(50)).max(10).optional(),
     budget_tier: z.string().max(50).optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (data) =>
+      !data.start_date ||
+      !data.end_date ||
+      isValidDateRange(data.start_date, data.end_date),
+    {
+      message: "End date must be on or after start date",
+      path: ["end_date"],
+    },
+  );
 
 type Params = {
   params: Promise<{
@@ -154,7 +163,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
     const { error, count } = await supabase
       .from("trips")
-      .delete()
+      .delete({ count: "exact" })
       .eq("id", id)
       .eq("user_id", user.id);
 

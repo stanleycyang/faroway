@@ -1,6 +1,7 @@
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
+import { logger } from './logger';
 
 // Lazy-load expo-notifications to avoid crashes in Expo Go (SDK 53+)
 // where remote notification support was removed.
@@ -26,7 +27,7 @@ async function getNotifications() {
       _notifications = mod;
       return mod;
     } catch (e) {
-      console.warn('[Notifications] expo-notifications not available:', e);
+      logger.warn('[Notifications] expo-notifications not available:', e);
       return null;
     }
   })();
@@ -69,7 +70,7 @@ export type EventSubscription = { remove: () => void };
 
 export async function requestNotificationPermissions(): Promise<boolean> {
   if (!Device.isDevice) {
-    console.log('Notifications require a physical device');
+    logger.info('[Notifications] Push notifications require a physical device');
     return false;
   }
 
@@ -85,7 +86,7 @@ export async function requestNotificationPermissions(): Promise<boolean> {
   }
 
   if (finalStatus !== 'granted') {
-    console.log('Notification permissions not granted');
+    logger.info('[Notifications] Notification permissions not granted');
     return false;
   }
 
@@ -123,7 +124,7 @@ export async function registerForPushNotificationsAsync(): Promise<PushTokenResu
     const projectId = Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
 
     if (!projectId) {
-      console.warn('No projectId found - push notifications may not work in production');
+      logger.warn('[Notifications] No EAS projectId found');
     }
 
     const tokenResponse = await Notifications.getExpoPushTokenAsync({
@@ -139,7 +140,7 @@ export async function registerForPushNotificationsAsync(): Promise<PushTokenResu
     return { token };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Error getting push token:', errorMessage);
+    logger.error('[Notifications] Error getting push token:', errorMessage);
     return { token: null, error: errorMessage };
   }
 }
@@ -247,7 +248,7 @@ export async function scheduleTripReminder(
   reminderDate.setHours(9, 0, 0, 0);
 
   if (reminderDate <= new Date()) {
-    console.log('Trip reminder time has already passed');
+    logger.info('[Notifications] Trip reminder time has already passed');
     return null;
   }
 
@@ -331,15 +332,15 @@ export async function storePushTokenInSupabase(
     );
 
     if (error) {
-      console.error('Error storing push token:', error);
+      logger.error('[Notifications] Error storing push token:', error);
       return { success: false, error: error.message };
     }
 
-    console.log('Push token stored successfully');
+    logger.info('[Notifications] Push token stored successfully');
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Error storing push token:', errorMessage);
+    logger.error('[Notifications] Error storing push token:', errorMessage);
     return { success: false, error: errorMessage };
   }
 }
@@ -358,15 +359,15 @@ export async function removePushTokenFromSupabase(
     const { error } = await supabaseClient.from('push_tokens').delete().eq('token', token);
 
     if (error) {
-      console.error('Error removing push token:', error);
+      logger.error('[Notifications] Error removing push token:', error);
       return { success: false, error: error.message };
     }
 
-    console.log('Push token removed successfully');
+    logger.info('[Notifications] Push token removed successfully');
     return { success: true };
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Error removing push token:', errorMessage);
+    logger.error('[Notifications] Error removing push token:', errorMessage);
     return { success: false, error: errorMessage };
   }
 }

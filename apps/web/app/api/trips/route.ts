@@ -1,28 +1,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClientFromRequest } from "@/lib/supabase/server";
+import { isValidDateOnly, isValidDateRange } from "@/lib/api/date-range";
 import { z } from "zod";
 
-const CreateTripSchema = z.object({
-  destination: z.string().min(1).max(200).trim(),
-  start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD"),
-  end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Must be YYYY-MM-DD"),
-  travelers: z.number().int().min(1).max(50).optional(),
-  budget: z.enum(["budget", "moderate", "luxury"]).optional(),
-  preferences: z
-    .object({
-      travelerType: z
-        .enum(["solo", "couple", "family", "friends", "business"])
-        .optional(),
-      originCity: z.string().max(200).optional(),
-      originAirport: z.string().max(10).optional(),
-      vibes: z.array(z.string().max(50)).max(10).optional(),
-      budget: z.string().max(50).optional(),
-      adults: z.number().int().min(1).max(50).optional(),
-      children: z.number().int().min(0).max(50).optional(),
-      interests: z.array(z.string().max(50)).max(20).optional(),
-    })
-    .optional(),
-});
+const DateOnlySchema = z
+  .string()
+  .refine(isValidDateOnly, "Must be a valid YYYY-MM-DD date");
+
+const CreateTripSchema = z
+  .object({
+    destination: z.string().min(1).max(200).trim(),
+    start_date: DateOnlySchema,
+    end_date: DateOnlySchema,
+    travelers: z.number().int().min(1).max(50).optional(),
+    budget: z.enum(["budget", "moderate", "luxury"]).optional(),
+    preferences: z
+      .object({
+        travelerType: z
+          .enum(["solo", "couple", "family", "friends", "business"])
+          .optional(),
+        originCity: z.string().max(200).optional(),
+        originAirport: z.string().max(10).optional(),
+        vibes: z.array(z.string().max(50)).max(10).optional(),
+        budget: z.string().max(50).optional(),
+        adults: z.number().int().min(1).max(50).optional(),
+        children: z.number().int().min(0).max(50).optional(),
+        interests: z.array(z.string().max(50)).max(20).optional(),
+      })
+      .optional(),
+  })
+  .refine((data) => isValidDateRange(data.start_date, data.end_date), {
+    message: "End date must be on or after start date",
+    path: ["end_date"],
+  });
 
 // GET /api/trips - Fetch all trips for the authenticated user
 export async function GET(request: NextRequest) {

@@ -1,7 +1,11 @@
-import React, { useEffect, useCallback, createContext, useContext, useState } from 'react';
+import React, { useEffect, useCallback, createContext, useContext, useRef, useState } from 'react';
+import * as Device from 'expo-device';
+import { Platform } from 'react-native';
 import { useNotifications } from '../hooks/useNotifications';
 import { useUserStore } from '../stores/userStore';
 import { NotificationData } from '../lib/notifications';
+import { logger } from '../lib/logger';
+import { registerPushToken } from '../services/api';
 
 // ============================================
 // Context
@@ -36,15 +40,15 @@ interface NotificationProviderProps {
 export function NotificationProvider({ children }: NotificationProviderProps) {
   const { isAuthenticated, user } = useUserStore();
   const [hasRequestedPermissions, setHasRequestedPermissions] = useState(false);
+  const registeredTokenRef = useRef<string | null>(null);
 
   // Handle notification received in foreground
   const handleNotificationReceived = useCallback(
     (notification: unknown, data: NotificationData | null) => {
-      const n = notification as { request: { content: { title?: string; body?: string } } };
-      console.log('[Notifications] Received in foreground:', {
-        title: n.request.content.title,
-        body: n.request.content.body,
-        data,
+      logger.debug('[Notifications] Received in foreground:', {
+        type: data?.type,
+        tripId: data?.tripId,
+        hasNotification: !!notification,
       });
 
       // Optionally show custom in-app notification UI here
@@ -55,7 +59,10 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
 
   // Handle notification interaction (user tapped)
   const handleNotificationResponse = useCallback((data: NotificationData | null) => {
-    console.log('[Notifications] User interacted with notification:', data);
+    logger.debug('[Notifications] User interacted with notification:', {
+      type: data?.type,
+      tripId: data?.tripId,
+    });
 
     // Navigation is handled automatically by useNotifications hook
     // Add any additional logic here (analytics, etc.)
@@ -67,6 +74,30 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     onNotificationResponse: handleNotificationResponse,
   });
 
+  const registerTokenForCurrentUser = useCallback(
+    async (token: string) => {
+      if (!isAuthenticated || !user?.id) return;
+
+      const registrationKey = `${user.id}:${token}`;
+      if (registeredTokenRef.current === registrationKey) return;
+
+      const result = await registerPushToken({
+        token,
+        platform: Platform.OS === 'ios' || Platform.OS === 'android' ? Platform.OS : 'unknown',
+        deviceName: Device.deviceName || null,
+      });
+
+      if (result.error) {
+        logger.warn('[Notifications] Failed to register push token:', result.error);
+        return;
+      }
+
+      registeredTokenRef.current = registrationKey;
+      logger.info('[Notifications] Push token registered for current user');
+    },
+    [isAuthenticated, user?.id]
+  );
+
   // Request permissions (called after onboarding or first auth)
   const requestPermissions = useCallback(async () => {
     if (hasRequestedPermissions) return;
@@ -75,18 +106,11 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     setHasRequestedPermissions(true);
 
     if (result.token) {
-      console.log('[Notifications] Push token obtained:', result.token);
-
-      // Store token in Supabase if user is authenticated
-      if (isAuthenticated && user?.id) {
-        // TODO: Implement Supabase storage when client is set up
-        // await storePushTokenInSupabase(supabaseClient, user.id, result.token);
-        console.log('[Notifications] Would store token for user:', user.id);
-      }
+      await registerTokenForCurrentUser(result.token);
     } else if (result.error) {
-      console.log('[Notifications] Failed to get push token:', result.error);
+      logger.warn('[Notifications] Failed to get push token:', result.error);
     }
-  }, [hasRequestedPermissions, registerForNotifications, isAuthenticated, user?.id]);
+  }, [hasRequestedPermissions, registerForNotifications, registerTokenForCurrentUser]);
 
   // Register for notifications when user becomes authenticated
   useEffect(() => {
@@ -103,14 +127,9 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
   // Store push token when user authenticates (if we already have a token)
   useEffect(() => {
     if (isAuthenticated && user?.id && pushToken) {
-      // TODO: Implement Supabase storage when client is set up
-      // storePushTokenInSupabase(supabaseClient, user.id, pushToken);
-      console.log(
-        '[Notifications] Would store existing token for newly authenticated user:',
-        user.id
-      );
+      registerTokenForCurrentUser(pushToken);
     }
-  }, [isAuthenticated, user?.id, pushToken]);
+  }, [isAuthenticated, user?.id, pushToken, registerTokenForCurrentUser]);
 
   const contextValue: NotificationContextType = {
     pushToken,
