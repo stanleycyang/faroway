@@ -9,7 +9,11 @@ vi.mock("@/lib/search/workflow", () => ({
 
 vi.mock("@/lib/security/rate-limit", () => ({
   getClientIp: vi.fn(() => "127.0.0.1"),
-  checkRateLimit: vi.fn(() => ({ allowed: true, remaining: 9 })),
+  checkRateLimitAsync: vi.fn(async () => ({
+    allowed: true,
+    remaining: 9,
+    resetIn: 60_000,
+  })),
 }));
 
 const supabaseMock = {

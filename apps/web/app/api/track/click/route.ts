@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase/server";
 import { optionalAuth } from "@/lib/auth";
+import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 import { z } from "zod";
 
 // Allowed affiliate domains — prevents SSRF via user-supplied URLs
@@ -72,6 +73,16 @@ const ClickTrackingSchema = z.object({
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request);
+    const rateLimit = await checkRateLimitAsync(`affiliate-click:${ip}`, {
+      maxRequests: 30,
+      windowMs: 60_000,
+      failClosed: true,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     let body: unknown;
     try {
       body = await request.json();

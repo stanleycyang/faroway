@@ -1,6 +1,6 @@
 # Faroway Credential Setup Runbook
 
-Last updated: May 28, 2026
+Last updated: July 24, 2026
 
 This runbook lists required production credentials and where to configure them. Do not commit credential values, service-account files, private keys, or reviewer login credentials to this repository.
 
@@ -35,8 +35,7 @@ Configure these in Vercel project environment variables:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `NEXT_PUBLIC_BASE_URL`
-- `KV_REST_API_URL`
-- `KV_REST_API_TOKEN`
+- `IP_HASH_SALT` (at least 32 random characters; never expose to clients)
 - `NEXT_PUBLIC_SENTRY_DSN`
 - `SENTRY_DSN`
 - `SENTRY_AUTH_TOKEN`
@@ -79,9 +78,11 @@ Configure public mobile values in EAS environment variables or `eas.json` only w
 - `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME`
 - `EXPO_PUBLIC_GOOGLE_PLACES_API_KEY`
 - `EXPO_PUBLIC_SENTRY_DSN`
-- `EAS_PROJECT_ID`
 
-Do not put Apple IDs, App Store Connect IDs, team IDs, service-account files, private keys, API tokens, or passwords in `eas.json`.
+The public EAS project ID and `testimonio` owner are committed in
+`apps/mobile/app.config.ts`, as required for EAS CLI project resolution. Do not
+put Apple IDs, App Store Connect IDs, team IDs, service-account files, private
+keys, API tokens, or passwords in `eas.json`.
 
 ## OAuth Setup
 
@@ -100,6 +101,16 @@ Do not put Apple IDs, App Store Connect IDs, team IDs, service-account files, pr
 2. Configure Sign in with Apple in Apple Developer and Supabase Auth.
 3. Keep Apple private key material in Supabase or the credential manager, not in this repo.
 4. Verify Apple sign-in on an iOS simulator where supported and on a physical device before store submission.
+
+The monthly GitHub Actions rotation requires these repository settings:
+
+- Actions variables: `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_CLIENT_ID`
+- Actions secrets: `APPLE_P8_PRIVATE_KEY`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`
+
+The workflow runs `scripts/rotate-apple-secret.ts`. It generates the ES256
+client secret without logging it and updates Supabase through the Management
+API. Trigger the workflow manually after changing any Apple credential and
+confirm the run succeeds.
 
 ## Push Notifications
 

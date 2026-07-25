@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Suspense } from "react";
 import { TripCard, TripStats, EmptyState, Trip } from "@/components/dashboard";
 import {
   TripFilters,
@@ -11,27 +10,6 @@ import {
 
 interface DashboardPageProps {
   searchParams: Promise<{ filter?: string; sort?: string }>;
-}
-
-// Loading skeleton for the trip grid
-function TripGridSkeleton() {
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-      {[1, 2, 3].map((i) => (
-        <div
-          key={i}
-          className="bg-white rounded-2xl border border-gray-200 overflow-hidden animate-pulse"
-        >
-          <div className="h-48 bg-gray-200" />
-          <div className="p-4 space-y-3">
-            <div className="h-5 bg-gray-200 rounded w-3/4" />
-            <div className="h-4 bg-gray-200 rounded w-1/2" />
-            <div className="h-4 bg-gray-200 rounded w-1/4" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
 }
 
 export default async function DashboardPage({
@@ -170,17 +148,11 @@ export default async function DashboardPage({
             </h2>
 
             {trips.length > 0 && (
-              <Suspense
-                fallback={
-                  <div className="h-12 bg-gray-100 rounded-xl animate-pulse" />
-                }
-              >
-                <TripFilters
-                  currentFilter={filter}
-                  currentSort={sort}
-                  tripCounts={tripCounts}
-                />
-              </Suspense>
+              <TripFilters
+                currentFilter={filter}
+                currentSort={sort}
+                tripCounts={tripCounts}
+              />
             )}
           </div>
 
@@ -198,13 +170,11 @@ export default async function DashboardPage({
               showCTA={filter === "upcoming"}
             />
           ) : (
-            <Suspense fallback={<TripGridSkeleton />}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredTrips.map((trip) => (
-                  <TripCard key={trip.id} trip={trip} />
-                ))}
-              </div>
-            </Suspense>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredTrips.map((trip) => (
+                <TripCard key={trip.id} trip={trip} />
+              ))}
+            </div>
           )}
         </section>
 

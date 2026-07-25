@@ -1,16 +1,21 @@
-"use client";
-
 import Link from "next/link";
 import Image from "next/image";
 import type { BlogPostMeta } from "@/lib/blog/types";
 
-export function BlogCard({ post }: { post: BlogPostMeta }) {
+export function BlogCard({
+  post,
+  eager = false,
+}: {
+  post: BlogPostMeta;
+  eager?: boolean;
+}) {
   const categorySlug = post.category.toLowerCase().replace(/\s+/g, "-");
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl bg-white border border-gray-200 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1">
       <Link
         href={`/blog/${post.slug}`}
+        prefetch={false}
         className="relative aspect-[16/10] overflow-hidden"
       >
         <Image
@@ -19,6 +24,8 @@ export function BlogCard({ post }: { post: BlogPostMeta }) {
           fill
           className="object-cover transition-transform duration-500 group-hover:scale-105"
           sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+          loading={eager ? "eager" : "lazy"}
+          fetchPriority={eager ? "high" : "auto"}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
       </Link>
@@ -26,6 +33,7 @@ export function BlogCard({ post }: { post: BlogPostMeta }) {
         <div className="flex items-center gap-3 text-sm mb-3">
           <Link
             href={`/blog/category/${categorySlug}`}
+            prefetch={false}
             className="text-primary font-medium hover:text-primary-dark transition-colors"
           >
             {post.category}
@@ -39,7 +47,11 @@ export function BlogCard({ post }: { post: BlogPostMeta }) {
             })}
           </time>
         </div>
-        <Link href={`/blog/${post.slug}`} className="group/title">
+        <Link
+          href={`/blog/${post.slug}`}
+          prefetch={false}
+          className="group/title"
+        >
           <h3 className="text-lg font-bold text-slate-900 group-hover/title:text-primary transition-colors line-clamp-2 mb-2">
             {post.title}
           </h3>
@@ -67,8 +79,6 @@ export function BlogCard({ post }: { post: BlogPostMeta }) {
 }
 
 export function FeaturedBlogCard({ post }: { post: BlogPostMeta }) {
-  const categorySlug = post.category.toLowerCase().replace(/\s+/g, "-");
-
   return (
     <article className="group relative overflow-hidden rounded-3xl bg-gray-900">
       <Link href={`/blog/${post.slug}`} className="block">
@@ -88,13 +98,7 @@ export function FeaturedBlogCard({ post }: { post: BlogPostMeta }) {
             <span className="px-3 py-1 bg-gradient-to-r from-primary to-amber-500 text-white rounded-full text-xs font-semibold shadow-lg shadow-primary/25">
               Featured
             </span>
-            <Link
-              href={`/blog/category/${categorySlug}`}
-              className="text-gray-300 hover:text-white transition-colors"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {post.category}
-            </Link>
+            <span className="text-gray-300">{post.category}</span>
           </div>
           <h2 className="text-2xl md:text-4xl font-bold text-white mb-3 max-w-3xl">
             {post.title}

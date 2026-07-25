@@ -59,8 +59,22 @@ test.describe("Trip creation page", () => {
 
 test.describe("Blog", () => {
   test("blog index loads", async ({ page }) => {
+    const browserErrors: string[] = [];
+    page.on("console", (message) => {
+      const isExpectedDevelopmentCspError = message
+        .text()
+        .includes("eval() is not supported in this environment");
+      if (message.type() === "error" && !isExpectedDevelopmentCspError) {
+        browserErrors.push(message.text());
+      }
+    });
+    page.on("pageerror", (error) => {
+      browserErrors.push(error.message);
+    });
+
     await page.goto("/blog");
     await expect(page.locator("h1, h2").first()).toBeVisible();
+    expect(browserErrors).toEqual([]);
   });
 });
 

@@ -84,6 +84,7 @@ export default function TripCostPage() {
                     <Link
                       key={dest.slug}
                       href={`/tools/trip-cost/${dest.slug}`}
+                      prefetch={false}
                       className="group overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm hover:shadow-md transition-all"
                     >
                       <div className="relative h-40">

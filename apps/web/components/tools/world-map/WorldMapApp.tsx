@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import {
   useActiveProfile,
   useWorldMapStore,
@@ -15,14 +16,27 @@ import { Logo } from "@/components/Logo";
 import { WorldMap, type CountryClickIntent } from "./WorldMap";
 import { StatsHeader } from "./StatsHeader";
 import { FieldNotes } from "./FieldNotes";
-import { CountryDetailDrawer } from "./CountryDetailDrawer";
 import { ExportMenu } from "./ExportMenu";
-import { ImportDialog } from "./ImportDialog";
-import { ShareLinkDialog } from "./ShareLinkDialog";
 import { ProfileSwitcher } from "./ProfileSwitcher";
 import { BackupBanner } from "./BackupBanner";
 import { CountrySearch } from "./CountrySearch";
 import { MilestoneToast } from "./MilestoneToast";
+
+const CountryDetailDrawer = dynamic(
+  () =>
+    import("./CountryDetailDrawer").then(
+      (module) => module.CountryDetailDrawer,
+    ),
+  { ssr: false },
+);
+const ImportDialog = dynamic(
+  () => import("./ImportDialog").then((module) => module.ImportDialog),
+  { ssr: false },
+);
+const ShareLinkDialog = dynamic(
+  () => import("./ShareLinkDialog").then((module) => module.ShareLinkDialog),
+  { ssr: false },
+);
 
 const MILESTONES_SEEN_KEY = "wm:milestones-seen";
 
@@ -218,18 +232,22 @@ export function WorldMapApp() {
         </div>
       </div>
 
-      <CountryDetailDrawer
-        iso={selected?.iso ?? null}
-        name={selected?.name ?? null}
-        onClose={() => setSelected(null)}
-      />
+      {selected && (
+        <CountryDetailDrawer
+          iso={selected.iso}
+          name={selected.name}
+          onClose={() => setSelected(null)}
+        />
+      )}
 
-      <ImportDialog open={importOpen} onClose={() => setImportOpen(false)} />
-      <ShareLinkDialog
-        open={Boolean(shareOpen)}
-        initiallyCopied={shareOpen ? shareOpen.initiallyCopied : false}
-        onClose={() => setShareOpen(false)}
-      />
+      {importOpen && <ImportDialog open onClose={() => setImportOpen(false)} />}
+      {shareOpen && (
+        <ShareLinkDialog
+          open
+          initiallyCopied={shareOpen.initiallyCopied}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
 
       {milestone && (
         <MilestoneToast

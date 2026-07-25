@@ -11,6 +11,7 @@ import { z } from "zod";
 import { executeTravelSearch } from "@/lib/search/workflow";
 import { mapSearchResultsToItinerary } from "@/lib/search/bridge";
 import { isValidDateOnly, isValidDateRange } from "@/lib/api/date-range";
+import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 import {
   buildJsonRenderSpec,
   buildSummaryBlocks,
@@ -57,6 +58,24 @@ const StreamRequestSchema = z
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request);
+    const rateLimit = await checkRateLimitAsync(`itinerary-stream:${ip}`, {
+      maxRequests: 5,
+      windowMs: 60_000,
+      failClosed: true,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil(rateLimit.resetIn / 1000)),
+          },
+        },
+      );
+    }
+
     const body = await request.json();
     const parseResult = StreamRequestSchema.safeParse(body);
 

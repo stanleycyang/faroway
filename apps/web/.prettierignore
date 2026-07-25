@@ -3,6 +3,8 @@ node_modules
 coverage
 dist
 .turbo
+.swc
+test-results
 
 # Vendored data files — don't reformat
 public/world-map/countries-110m.json

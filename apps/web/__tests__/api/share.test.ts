@@ -319,12 +319,12 @@ describe("POST /api/track/conversion", () => {
     // Reset the conversion supabase mock for each test
     // The conversion route calls getSupabase() multiple times:
     // 1. getSupabase().from('affiliate_clicks').select().eq().single() - find click
-    // 2. getSupabase().from('affiliate_conversions').insert() - record conversion
+    // 2. getSupabase().from('affiliate_conversions').upsert() - record conversion
     // 3. getSupabase().from('affiliate_clicks').update().eq() - mark converted
     let clickCallCount = 0;
     mockConversionSupabase.from = vi.fn((table: string) => {
       if (table === "affiliate_conversions") {
-        return createQueryChain(() => mockInsertReturn);
+        return conversionsChain;
       }
       if (table === "affiliate_clicks") {
         clickCallCount++;
@@ -360,6 +360,13 @@ describe("POST /api/track/conversion", () => {
     expect(mockConversionSupabase.from).toHaveBeenCalledWith(
       "affiliate_conversions",
     );
+    expect(conversionsChain.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        click_id: "click-abc",
+        partner: "viator",
+      }),
+      { onConflict: "partner,conversion_key" },
+    );
   });
 
   it("returns 400 for invalid/missing fields", async () => {
@@ -381,6 +388,17 @@ describe("POST /api/track/conversion", () => {
 
     const req = makeRequest("POST", "/api/track/conversion", payload, {
       "x-webhook-signature": wrongSignature,
+    });
+    const res = await conversionPost(req);
+
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 401 for a malformed signature without throwing", async () => {
+    const payload = JSON.stringify(validConversion);
+
+    const req = makeRequest("POST", "/api/track/conversion", payload, {
+      "x-webhook-signature": "too-short",
     });
     const res = await conversionPost(req);
 
@@ -418,6 +436,10 @@ describe("POST /api/track/conversion", () => {
     // Should still insert the conversion
     expect(mockConversionSupabase.from).toHaveBeenCalledWith(
       "affiliate_conversions",
+    );
+    expect(conversionsChain.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({ click_id: null }),
+      { onConflict: "partner,conversion_key" },
     );
   });
 });

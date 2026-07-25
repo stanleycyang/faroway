@@ -45,6 +45,7 @@ export async function fetchWithTimeout(
 
   try {
     return await fetch(input, {
+      cache: "no-store",
       ...init,
       signal: controller.signal,
     });

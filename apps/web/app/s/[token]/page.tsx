@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
-import { getSupabase } from "@/lib/supabase/server";
 import { SharedTripView } from "@/components/trips/SharedTripView";
+import { loadSharedTrip } from "@/lib/trips/load-shared-trip";
 
 export const revalidate = 3600;
 
@@ -10,34 +10,16 @@ interface SharedTripPageProps {
 
 export default async function SharedTripPage({ params }: SharedTripPageProps) {
   const { token } = await params;
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
-  if (!/^[a-zA-Z0-9_-]+$/.test(token)) {
-    notFound();
-  }
-
-  const supabase = getSupabase();
-
-  const { data: trip, error } = await supabase
-    .from("trips")
-    .select(
-      `
-      destination, start_date, end_date, travelers, preferences, vibes, budget_tier,
-      itineraries(days, overview, total_cost, packing_list, general_tips, generated_at)
-    `,
-    )
-    .eq("share_token", token)
-    .eq("is_shared", true)
-    .single();
-
-  if (error || !trip) {
-    notFound();
-  }
+  const trip = await loadSharedTrip(token);
+  if (!trip) notFound();
 
   const itinerary = Array.isArray(trip.itineraries)
     ? trip.itineraries[0]
     : trip.itineraries;
 
-  const prefs = (trip.preferences || {}) as Record<string, unknown>;
+  const prefs = trip.preferences || {};
 
   return (
     <SharedTripView
@@ -46,21 +28,22 @@ export default async function SharedTripPage({ params }: SharedTripPageProps) {
       endDate={trip.end_date}
       travelers={trip.travelers}
       travelerType={prefs.travelerType as string | undefined}
-      vibes={trip.vibes}
-      budgetTier={trip.budget_tier}
+      vibes={trip.vibes ?? undefined}
+      budgetTier={trip.budget_tier ?? undefined}
       itinerary={
         itinerary
           ? {
               days: itinerary.days,
-              overview: itinerary.overview,
-              totalEstimatedCost: itinerary.total_cost,
-              packingList: itinerary.packing_list,
-              generalTips: itinerary.general_tips,
-              generatedAt: itinerary.generated_at,
+              overview: itinerary.overview ?? "",
+              totalEstimatedCost: itinerary.total_cost ?? undefined,
+              packingList: itinerary.packing_list ?? undefined,
+              generalTips: itinerary.general_tips ?? undefined,
+              generatedAt: itinerary.generated_at ?? "",
             }
           : null
       }
       shareToken={token}
+      shareUrl={`${baseUrl}/s/${token}`}
     />
   );
 }

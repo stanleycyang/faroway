@@ -1,5 +1,3 @@
-"use client";
-
 interface TripStatsProps {
   totalTrips: number;
   upcomingTrips: number;

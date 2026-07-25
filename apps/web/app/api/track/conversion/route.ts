@@ -18,23 +18,26 @@ const WEBHOOK_SECRETS: Record<string, string | undefined> = {
 
 const ConversionSchema = z.object({
   // Required fields
-  click_id: z.string(),
-  partner: z.string(),
+  click_id: z.string().min(1).max(200),
+  partner: z.enum(["viator", "booking", "getyourguide", "klook"]),
 
   // Conversion details
-  order_id: z.string().optional(),
-  booking_reference: z.string().optional(),
+  order_id: z.string().min(1).max(200).optional(),
+  booking_reference: z.string().min(1).max(200).optional(),
 
   // Financial
-  booking_value: z.number(),
-  commission_value: z.number(),
-  currency: z.string().default("USD"),
+  booking_value: z.number().finite().nonnegative(),
+  commission_value: z.number().finite().nonnegative(),
+  currency: z
+    .string()
+    .regex(/^[A-Z]{3}$/)
+    .default("USD"),
 
   // Status
   status: z.enum(["confirmed", "pending", "cancelled"]).default("confirmed"),
 
   // Timing
-  conversion_date: z.string().optional(),
+  conversion_date: z.string().datetime({ offset: true }).optional(),
 });
 
 /**
@@ -55,7 +58,7 @@ function verifyWebhookSignature(
     return false;
   }
 
-  if (!signature) {
+  if (!signature || !/^[a-f0-9]{64}$/i.test(signature)) {
     return false;
   }
 
@@ -67,8 +70,8 @@ function verifyWebhookSignature(
 
   // Constant-time comparison
   return crypto.timingSafeEqual(
-    Buffer.from(signature),
-    Buffer.from(expectedSignature),
+    Buffer.from(signature, "hex"),
+    Buffer.from(expectedSignature, "hex"),
   );
 }
 
@@ -117,21 +120,25 @@ export async function POST(request: NextRequest) {
       // Still record the conversion, but log the issue
     }
 
-    // Record the conversion
+    // Record the conversion idempotently. Partner webhooks are retried and may
+    // advance a booking from pending to confirmed or cancelled.
     const { error: insertError } = await getSupabase()
       .from("affiliate_conversions")
-      .insert({
-        click_id: data.click_id,
-        partner: data.partner,
-        order_id: data.order_id,
-        booking_reference: data.booking_reference,
-        booking_value: data.booking_value,
-        commission_value: data.commission_value,
-        currency: data.currency,
-        status: data.status,
-        user_id: click?.user_id || null,
-        conversion_date: data.conversion_date || new Date().toISOString(),
-      });
+      .upsert(
+        {
+          click_id: click?.id || null,
+          partner: data.partner,
+          order_id: data.order_id,
+          booking_reference: data.booking_reference,
+          booking_value: data.booking_value,
+          commission_value: data.commission_value,
+          currency: data.currency,
+          status: data.status,
+          user_id: click?.user_id || null,
+          conversion_date: data.conversion_date || new Date().toISOString(),
+        },
+        { onConflict: "partner,conversion_key" },
+      );
 
     if (insertError) {
       console.error("[Conversion Webhook] Database error:", insertError);
@@ -146,8 +153,9 @@ export async function POST(request: NextRequest) {
       await getSupabase()
         .from("affiliate_clicks")
         .update({
-          converted: true,
-          conversion_value: data.commission_value,
+          converted: data.status === "confirmed",
+          conversion_value:
+            data.status === "confirmed" ? data.commission_value : null,
         })
         .eq("id", data.click_id);
     }

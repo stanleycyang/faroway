@@ -794,7 +794,7 @@ async function buildAndSaveSpec(
 /**
  * Bridge search results to the itineraries table so the existing web trip
  * detail page can still render via the traditional itinerary format.
- * Also marks the trip as 'generated' and sends a completion notification.
+ * Also marks the trip as 'planned' and sends a completion notification.
  */
 async function bridgeToItineraries(
   searchId: string,
@@ -860,11 +860,11 @@ async function bridgeToItineraries(
     // Non-fatal — search results are already saved
   }
 
-  // Update trip status to generated
+  // Update trip status to the canonical itinerary-ready state.
   await db
     .from("trips")
     .update({
-      status: "generated",
+      status: "planned",
       itinerary_id: savedItinerary?.id || null,
       updated_at: new Date().toISOString(),
     })

@@ -1,24 +1,24 @@
+import { createHmac } from "node:crypto";
+
 /**
- * Rate limiter — uses Vercel KV (Redis) when KV_REST_API_URL + KV_REST_API_TOKEN
- * are set, otherwise falls back to an in-memory Map.
+ * Rate limiter — uses an atomic Supabase RPC in production and an in-memory
+ * fallback for local development and tests.
  *
- * In-memory is fine for local dev but does NOT persist across Vercel serverless
- * invocations. For production, provision a Vercel KV store and set the two env vars.
- *
- * Setup: vercel storage add (type: KV) → env vars are auto-populated in Vercel dashboard.
- * Add KV_REST_API_URL and KV_REST_API_TOKEN to apps/web/.env.local for local testing.
+ * Identifiers are HMAC-hashed before storage so IP addresses and user IDs are
+ * not persisted in plaintext.
  */
 
-const KV_URL = process.env.KV_REST_API_URL;
-const KV_TOKEN = process.env.KV_REST_API_TOKEN;
-const useKv = !!(KV_URL && KV_TOKEN);
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const RATE_LIMIT_SALT = process.env.IP_HASH_SALT;
+const useSupabase = !!(SUPABASE_URL && SUPABASE_SERVICE_KEY && RATE_LIMIT_SALT);
 
 // ── In-memory fallback ────────────────────────────────────────────────────────
 
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
 
 // Cleanup old entries every 5 minutes to prevent unbounded growth in long-lived processes.
-setInterval(
+const cleanupTimer = setInterval(
   () => {
     const now = Date.now();
     for (const [key, value] of rateLimitMap) {
@@ -29,6 +29,7 @@ setInterval(
   },
   5 * 60 * 1000,
 );
+cleanupTimer.unref?.();
 
 function checkRateLimitMemory(
   identifier: string,
@@ -58,54 +59,62 @@ function checkRateLimitMemory(
   };
 }
 
-// ── Vercel KV (Redis) backend ─────────────────────────────────────────────────
+// ── Supabase backend ──────────────────────────────────────────────────────────
 
-async function checkRateLimitKv(
+async function checkRateLimitSupabase(
   identifier: string,
   config: RateLimitConfig,
 ): Promise<{ allowed: boolean; remaining: number; resetIn: number }> {
-  const ttlSeconds = Math.ceil(config.windowMs / 1000);
-  const key = `rl:${identifier}`;
+  const key = createHmac("sha256", RATE_LIMIT_SALT!)
+    .update(identifier)
+    .digest("hex");
 
   try {
-    // Pipeline: INCR then EXPIRE (only sets TTL on the first call within the window)
-    const res = await fetch(`${KV_URL}/pipeline`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${KV_TOKEN}`,
-        "Content-Type": "application/json",
+    const response = await fetch(
+      `${SUPABASE_URL}/rest/v1/rpc/consume_rate_limit`,
+      {
+        method: "POST",
+        cache: "no-store",
+        headers: {
+          apikey: SUPABASE_SERVICE_KEY!,
+          Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          p_key: key,
+          p_max_requests: config.maxRequests,
+          p_window_ms: config.windowMs,
+        }),
+        signal: AbortSignal.timeout(2_000),
       },
-      body: JSON.stringify([
-        ["INCR", key],
-        ["EXPIRE", key, ttlSeconds, "NX"],
-      ]),
-    });
+    );
 
-    if (!res.ok) {
-      // KV error — fail open (allow request) to avoid blocking legitimate users
-      return {
-        allowed: true,
-        remaining: config.maxRequests,
-        resetIn: config.windowMs,
-      };
+    if (!response.ok) {
+      throw new Error(`Rate-limit backend returned ${response.status}`);
     }
 
-    const [incrResult] = (await res.json()) as [{ result: number }, unknown];
-    const count = incrResult.result;
-    const remaining = Math.max(0, config.maxRequests - count);
+    const rows = (await response.json()) as Array<{
+      allowed: boolean;
+      remaining: number;
+      reset_in_ms: number;
+    }>;
+    const result = rows[0];
+
+    if (!result) {
+      throw new Error("Rate-limit backend returned no result");
+    }
 
     return {
-      allowed: count <= config.maxRequests,
-      remaining,
-      resetIn: config.windowMs, // approximate; exact TTL requires an extra GET
+      allowed: result.allowed,
+      remaining: result.remaining,
+      resetIn: result.reset_in_ms,
     };
-  } catch {
-    // Network failure — fail open
-    return {
-      allowed: true,
-      remaining: config.maxRequests,
-      resetIn: config.windowMs,
-    };
+  } catch (error) {
+    console.error("[Rate Limit] Distributed backend unavailable:", error);
+    if (config.failClosed) {
+      return { allowed: false, remaining: 0, resetIn: config.windowMs };
+    }
+    return checkRateLimitMemory(identifier, config);
   }
 }
 
@@ -114,32 +123,31 @@ async function checkRateLimitKv(
 export interface RateLimitConfig {
   maxRequests: number;
   windowMs: number;
+  failClosed?: boolean;
 }
 
 export function checkRateLimit(
   identifier: string,
   config: RateLimitConfig = { maxRequests: 60, windowMs: 60_000 },
 ): { allowed: boolean; remaining: number; resetIn: number } {
-  if (useKv) {
-    // KV path is async but callers currently expect sync. We return the
-    // in-memory result for the synchronous contract and fire the KV check
-    // asynchronously so it still increments the distributed counter.
-    // For a fully async refactor, callers should await checkRateLimitAsync().
-    checkRateLimitKv(identifier, config).catch(() => undefined);
-  }
   return checkRateLimitMemory(identifier, config);
 }
 
 /**
- * Async version — use this in new code for correct distributed rate limiting.
- * Returns the KV-backed result when KV is configured, in-memory otherwise.
+ * Async version — required for production-sensitive routes.
  */
 export async function checkRateLimitAsync(
   identifier: string,
   config: RateLimitConfig = { maxRequests: 60, windowMs: 60_000 },
 ): Promise<{ allowed: boolean; remaining: number; resetIn: number }> {
-  if (useKv) {
-    return checkRateLimitKv(identifier, config);
+  if (useSupabase) {
+    return checkRateLimitSupabase(identifier, config);
+  }
+  if (process.env.NODE_ENV === "production" && config.failClosed) {
+    console.error(
+      "[Rate Limit] Missing Supabase service credentials or IP_HASH_SALT",
+    );
+    return { allowed: false, remaining: 0, resetIn: config.windowMs };
   }
   return checkRateLimitMemory(identifier, config);
 }

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { checkRateLimit, getClientIp } from "@/lib/security/rate-limit";
+import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 
 export async function GET(request: NextRequest) {
   const input = request.nextUrl.searchParams.get("input");
@@ -13,9 +13,10 @@ export async function GET(request: NextRequest) {
   }
 
   const ip = getClientIp(request);
-  const rl = checkRateLimit(`places-autocomplete:${ip}`, {
+  const rl = await checkRateLimitAsync(`places-autocomplete:${ip}`, {
     maxRequests: 120,
     windowMs: 60_000,
+    failClosed: true,
   });
   if (!rl.allowed) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
@@ -33,7 +34,7 @@ export async function GET(request: NextRequest) {
       `&types=(cities)` +
       `&key=${encodeURIComponent(API_KEY)}`;
 
-    const res = await fetch(url);
+    const res = await fetch(url, { cache: "no-store" });
     const data = await res.json();
 
     if (data.status === "OK" && data.predictions) {

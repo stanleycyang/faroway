@@ -186,7 +186,10 @@ export async function POST(request: NextRequest, { params }: Params) {
 
       try {
         const searchId = trip.search_id;
-        if (trip.status === "generated" && !searchId) {
+        if (
+          (trip.status === "planned" || trip.status === "generated") &&
+          !searchId
+        ) {
           send("progress", {
             step: "complete",
             progress: 100,
@@ -293,7 +296,10 @@ export async function GET(request: NextRequest, { params }: Params) {
       };
 
       try {
-        if (trip.status === "generated" && !trip.search_id) {
+        if (
+          (trip.status === "planned" || trip.status === "generated") &&
+          !trip.search_id
+        ) {
           send("progress", {
             step: "complete",
             progress: 100,

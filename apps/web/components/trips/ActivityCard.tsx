@@ -260,6 +260,7 @@ export function ActivityCard({ activity }: ActivityCardProps) {
             src={activity.images![0]}
             alt={activity.name}
             fill
+            sizes="(max-width: 768px) 100vw, 33vw"
             className="object-cover transition-transform duration-500 group-hover:scale-105"
             unoptimized
           />

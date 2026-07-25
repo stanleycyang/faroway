@@ -85,10 +85,12 @@ export async function POST(request: NextRequest) {
       checkRateLimitAsync(`generate-itinerary:hour:${user.id}`, {
         maxRequests: 5,
         windowMs: 60 * 60 * 1000,
+        failClosed: true,
       }),
       checkRateLimitAsync(`generate-itinerary:day:${user.id}`, {
         maxRequests: 20,
         windowMs: 24 * 60 * 60 * 1000,
+        failClosed: true,
       }),
     ]);
 

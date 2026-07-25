@@ -69,6 +69,7 @@ export default function BestTimeToVisitPage() {
                     <Link
                       key={dest.slug}
                       href={`/tools/best-time-to-visit/${dest.slug}`}
+                      prefetch={false}
                       className="group overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm hover:shadow-md transition-all"
                     >
                       <div className="relative h-40">

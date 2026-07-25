@@ -38,6 +38,7 @@ export function TripReadyScreen({
             src={heroImageUrl}
             alt={city}
             fill
+            sizes="100vw"
             className="object-cover"
             unoptimized
             priority

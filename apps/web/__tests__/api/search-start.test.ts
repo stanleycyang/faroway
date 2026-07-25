@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const startMock = vi.fn();
 
@@ -9,6 +9,17 @@ vi.mock("@/lib/workflow/runtime", () => ({
 
 vi.mock("@/workflows/plan-trip", () => ({
   planTripWorkflow: vi.fn(async () => ({})),
+}));
+
+const authMock = vi.fn(
+  async (request: unknown): Promise<{ userId: string } | NextResponse> => {
+    void request;
+    return { userId: "user-1" };
+  },
+);
+
+vi.mock("@/lib/auth/middleware", () => ({
+  requireUserIdFromRequest: (request: unknown) => authMock(request),
 }));
 
 vi.mock("@/lib/security/rate-limit", () => ({
@@ -35,9 +46,6 @@ function createTableChain(table: string) {
 }
 
 const supabaseMock = {
-  auth: {
-    getUser: vi.fn(async () => ({ data: { user: null } })),
-  },
   from: vi.fn((table: string) => createTableChain(table)),
 };
 
@@ -66,6 +74,7 @@ describe("POST /api/search/start", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     updates.length = 0;
+    authMock.mockResolvedValue({ userId: "user-1" });
   });
 
   it("starts the durable workflow with a fast generation estimate", async () => {
@@ -79,6 +88,17 @@ describe("POST /api/search/start", () => {
       estimatedTime: 5,
     });
     expect(startMock).toHaveBeenCalledOnce();
+  });
+
+  it("requires an authenticated user", async () => {
+    authMock.mockResolvedValueOnce(
+      NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    );
+
+    const res = await POST(makeReq());
+
+    expect(res.status).toBe(401);
+    expect(startMock).not.toHaveBeenCalled();
   });
 
   it("passes origin fields through to the durable workflow", async () => {

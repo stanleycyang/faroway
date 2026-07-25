@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
@@ -31,6 +29,7 @@ interface SharedTripViewProps {
   budgetTier?: string;
   itinerary: SharedItinerary | null;
   shareToken: string;
+  shareUrl: string;
 }
 
 export function SharedTripView({
@@ -42,13 +41,8 @@ export function SharedTripView({
   vibes,
   itinerary,
   shareToken,
+  shareUrl,
 }: SharedTripViewProps) {
-  const baseUrl =
-    typeof window !== "undefined"
-      ? window.location.origin
-      : "https://www.faroway.ai";
-  const shareUrl = `${baseUrl}/s/${shareToken}`;
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <TripHeader

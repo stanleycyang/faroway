@@ -14,6 +14,9 @@ CHECK (
     'draft',
     'planning',
     'planned',
+    -- Retained for zero-downtime deploys and old clients; current code emits
+    -- "planned" and read paths normalize this legacy value.
+    'generated',
     'generating',
     'failed',
     'active',

@@ -13,7 +13,7 @@
   },
   "dependencies": {
     "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "^2.95.3"
+    "@supabase/supabase-js": "2.110.8"
   },
   "peerDependencies": {
     "next": ">=14.0.0",
@@ -22,10 +22,18 @@
     "react-native-url-polyfill": ">=3.0.0"
   },
   "peerDependenciesMeta": {
-    "next": { "optional": true },
-    "expo-secure-store": { "optional": true },
-    "react-native": { "optional": true },
-    "react-native-url-polyfill": { "optional": true }
+    "next": {
+      "optional": true
+    },
+    "expo-secure-store": {
+      "optional": true
+    },
+    "react-native": {
+      "optional": true
+    },
+    "react-native-url-polyfill": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "typescript": "^5.5.4",

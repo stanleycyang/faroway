@@ -90,7 +90,7 @@ describe('dateSchema', () => {
 
 describe('tripStatusSchema', () => {
   it('accepts all valid statuses', () => {
-    const statuses = ['draft', 'planning', 'planned', 'booked', 'active', 'in_progress', 'completed', 'cancelled'];
+    const statuses = ['draft', 'planning', 'planned', 'generating', 'failed', 'booked', 'active', 'in_progress', 'paid', 'completed', 'canceled'];
     for (const status of statuses) {
       expect(tripStatusSchema.safeParse(status).success).toBe(true);
     }

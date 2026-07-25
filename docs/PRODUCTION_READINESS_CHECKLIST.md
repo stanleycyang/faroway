@@ -14,7 +14,7 @@ Use this before a launch candidate is promoted.
 
 ## Mobile Release
 
-- Required env vars are set for release: `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME`, `EAS_PROJECT_ID`.
+- Required env vars are set for release: `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `EXPO_PUBLIC_API_URL`, `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`, `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME`.
 - Native iOS simulator or device QA covers onboarding, auth, trip creation, itinerary generation/streaming, trips list, trip detail, profile/preferences, push notifications, and offline/restore behavior.
 - User-facing copy matches the actual auth and save model.
 - Buttons that submit network actions prevent duplicate submissions and show loading/error states.
