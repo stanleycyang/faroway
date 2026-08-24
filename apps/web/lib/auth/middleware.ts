@@ -89,8 +89,20 @@ export async function requireAuth(
 export async function optionalAuth(
   request: NextRequest,
 ): Promise<AuthUser | null> {
-  const result = await validateAuth(request);
-  return result.authenticated ? result.user : null;
+  try {
+    const supabase = await createClientFromRequest(request);
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
+    return {
+      id: user.id,
+      email: user.email || "",
+      role: user.role,
+    };
+  } catch {
+    return null;
+  }
 }
 
 /**

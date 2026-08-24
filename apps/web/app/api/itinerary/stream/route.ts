@@ -10,6 +10,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { executeTravelSearch } from "@/lib/search/workflow";
 import { mapSearchResultsToItinerary } from "@/lib/search/bridge";
+import { isValidDateOnly, isValidDateRange } from "@/lib/api/date-range";
+import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 import {
   buildJsonRenderSpec,
   buildSummaryBlocks,
@@ -31,22 +33,49 @@ import type {
 
 export const maxDuration = 60;
 
-const StreamRequestSchema = z.object({
-  destination: z.string().min(1).max(200),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  travelers: z.number().int().min(1).max(50).default(1),
-  travelerType: z
-    .enum(["solo", "couple", "family", "friends", "business"])
-    .optional(),
-  originCity: z.string().max(200).optional(),
-  originAirport: z.string().max(10).optional(),
-  vibes: z.array(z.string().max(50)).max(10).optional(),
-  budget: z.enum(["budget", "moderate", "luxury"]).optional(),
-});
+const DateOnlySchema = z
+  .string()
+  .refine(isValidDateOnly, "Must be a valid YYYY-MM-DD date");
+
+const StreamRequestSchema = z
+  .object({
+    destination: z.string().min(1).max(200),
+    startDate: DateOnlySchema,
+    endDate: DateOnlySchema,
+    travelers: z.number().int().min(1).max(50).default(1),
+    travelerType: z
+      .enum(["solo", "couple", "family", "friends", "business"])
+      .optional(),
+    originCity: z.string().max(200).optional(),
+    originAirport: z.string().max(10).optional(),
+    vibes: z.array(z.string().max(50)).max(10).optional(),
+    budget: z.enum(["budget", "moderate", "luxury"]).optional(),
+  })
+  .refine((data) => isValidDateRange(data.startDate, data.endDate), {
+    message: "End date must be on or after start date",
+    path: ["endDate"],
+  });
 
 export async function POST(request: NextRequest) {
   try {
+    const ip = getClientIp(request);
+    const rateLimit = await checkRateLimitAsync(`itinerary-stream:${ip}`, {
+      maxRequests: 5,
+      windowMs: 60_000,
+      failClosed: true,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil(rateLimit.resetIn / 1000)),
+          },
+        },
+      );
+    }
+
     const body = await request.json();
     const parseResult = StreamRequestSchema.safeParse(body);
 

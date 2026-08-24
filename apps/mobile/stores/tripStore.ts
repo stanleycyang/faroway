@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { offlineStorage } from '../lib/offline';
+import { logger } from '../lib/logger';
 
 export interface Activity {
   id: string;
@@ -152,7 +153,9 @@ export const useTripStore = create<TripStore>((set, _get) => ({
 
   finishGeneration: (trip) => {
     // Save to offline storage
-    offlineStorage.saveTrip(trip).catch(console.error);
+    offlineStorage.saveTrip(trip).catch((error) => {
+      logger.warn('[TripStore] Failed to save generated trip offline:', error);
+    });
 
     set((state) => ({
       isGenerating: false,
@@ -165,7 +168,9 @@ export const useTripStore = create<TripStore>((set, _get) => ({
 
   saveTrip: (trip) => {
     // Save to offline storage
-    offlineStorage.saveTrip(trip).catch(console.error);
+    offlineStorage.saveTrip(trip).catch((error) => {
+      logger.warn('[TripStore] Failed to save trip offline:', error);
+    });
 
     set((state) => ({
       trips: state.trips.some((t) => t.id === trip.id)
@@ -176,7 +181,9 @@ export const useTripStore = create<TripStore>((set, _get) => ({
 
   deleteTrip: (id) => {
     // Delete from offline storage
-    offlineStorage.deleteTrip(id).catch(console.error);
+    offlineStorage.deleteTrip(id).catch((error) => {
+      logger.warn('[TripStore] Failed to delete trip offline:', error);
+    });
 
     set((state) => ({
       trips: state.trips.filter((t) => t.id !== id),
@@ -191,9 +198,9 @@ export const useTripStore = create<TripStore>((set, _get) => ({
     try {
       const trips = await offlineStorage.loadTrips();
       set({ trips, isHydrated: true });
-      console.log(`[TripStore] Hydrated ${trips.length} trips from offline storage`);
+      logger.info(`[TripStore] Hydrated ${trips.length} trips from offline storage`);
     } catch (error) {
-      console.error('[TripStore] Failed to hydrate from offline:', error);
+      logger.warn('[TripStore] Failed to hydrate from offline:', error);
       set({ isHydrated: true });
     }
   },
@@ -201,13 +208,17 @@ export const useTripStore = create<TripStore>((set, _get) => ({
   // Set trips directly (used by sync)
   setTrips: (trips) => {
     // Also save to offline storage
-    offlineStorage.saveTrips(trips).catch(console.error);
+    offlineStorage.saveTrips(trips).catch((error) => {
+      logger.warn('[TripStore] Failed to save trips offline:', error);
+    });
     set({ trips });
   },
 
   // Clear all data (for logout)
   clearAll: () => {
-    offlineStorage.clearAll().catch(console.error);
+    offlineStorage.clearAll().catch((error) => {
+      logger.warn('[TripStore] Failed to clear offline trips:', error);
+    });
     set({
       trips: [],
       currentTrip: null,

@@ -60,16 +60,24 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
 
     clearTimeout(timeoutId);
 
-    const data = await response.json();
+    const parsed = await parseApiResponseBody(response);
 
-    if (!response.ok) {
+    if (!parsed.ok) {
       return {
-        error: data.error || 'Request failed',
-        code: data.code || 'UNKNOWN_ERROR',
+        error: parsed.error,
+        code: parsed.code,
       };
     }
 
-    return { data };
+    if (!response.ok) {
+      const errorData = parsed.data as Record<string, unknown> | null;
+      return {
+        error: typeof errorData?.error === 'string' ? errorData.error : 'Request failed',
+        code: typeof errorData?.code === 'string' ? errorData.code : 'UNKNOWN_ERROR',
+      };
+    }
+
+    return { data: parsed.data as T };
   } catch (error) {
     clearTimeout(timeoutId);
 
@@ -81,6 +89,33 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
     }
 
     return { error: 'Unknown error occurred', code: 'UNKNOWN_ERROR' };
+  }
+}
+
+async function parseApiResponseBody(
+  response: Response
+): Promise<{ ok: true; data: unknown } | { ok: false; error: string; code: string }> {
+  try {
+    if (typeof response.text === 'function') {
+      const text = await response.text();
+      if (!text.trim()) {
+        return { ok: true, data: null };
+      }
+      return { ok: true, data: JSON.parse(text) };
+    }
+
+    // Test mocks and older React Native fetch shims may expose json() only.
+    if (typeof response.json === 'function') {
+      return { ok: true, data: await response.json() };
+    }
+
+    return { ok: true, data: null };
+  } catch {
+    return {
+      ok: false,
+      error: 'Invalid server response',
+      code: 'INVALID_RESPONSE',
+    };
   }
 }
 
@@ -117,6 +152,42 @@ export async function updateUserProfile(updates: {
 export async function deleteAccount(): Promise<ApiResponse<{ deleted: boolean }>> {
   return apiFetch<{ deleted: boolean }>('/api/user/profile', {
     method: 'DELETE',
+  });
+}
+
+// ============================================
+// Push Notification APIs
+// ============================================
+
+type PushTokenPlatform = 'ios' | 'android' | 'web' | 'unknown';
+
+export async function registerPushToken(params: {
+  token: string;
+  platform?: PushTokenPlatform;
+  deviceName?: string | null;
+}): Promise<
+  ApiResponse<{
+    token: string;
+    platform: PushTokenPlatform;
+    deviceName: string | null;
+    updatedAt: string;
+    lastSeenAt: string;
+  }>
+> {
+  return apiFetch('/api/user/push-token', {
+    method: 'POST',
+    body: JSON.stringify({
+      token: params.token,
+      platform: params.platform || 'unknown',
+      deviceName: params.deviceName || null,
+    }),
+  });
+}
+
+export async function removePushToken(token?: string): Promise<ApiResponse<{ deleted: boolean }>> {
+  return apiFetch('/api/user/push-token', {
+    method: 'DELETE',
+    body: JSON.stringify(token ? { token } : {}),
   });
 }
 

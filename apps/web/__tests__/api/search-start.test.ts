@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 const startMock = vi.fn();
 
@@ -11,8 +11,19 @@ vi.mock("@/workflows/plan-trip", () => ({
   planTripWorkflow: vi.fn(async () => ({})),
 }));
 
+const authMock = vi.fn(
+  async (request: unknown): Promise<{ userId: string } | NextResponse> => {
+    void request;
+    return { userId: "user-1" };
+  },
+);
+
+vi.mock("@/lib/auth/middleware", () => ({
+  requireUserIdFromRequest: (request: unknown) => authMock(request),
+}));
+
 vi.mock("@/lib/security/rate-limit", () => ({
-  checkRateLimit: vi.fn(() => ({ allowed: true })),
+  checkRateLimitAsync: vi.fn(async () => ({ allowed: true })),
   getClientIp: vi.fn(() => "127.0.0.1"),
 }));
 
@@ -35,9 +46,6 @@ function createTableChain(table: string) {
 }
 
 const supabaseMock = {
-  auth: {
-    getUser: vi.fn(async () => ({ data: { user: null } })),
-  },
   from: vi.fn((table: string) => createTableChain(table)),
 };
 
@@ -66,6 +74,7 @@ describe("POST /api/search/start", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     updates.length = 0;
+    authMock.mockResolvedValue({ userId: "user-1" });
   });
 
   it("starts the durable workflow with a fast generation estimate", async () => {
@@ -79,6 +88,17 @@ describe("POST /api/search/start", () => {
       estimatedTime: 5,
     });
     expect(startMock).toHaveBeenCalledOnce();
+  });
+
+  it("requires an authenticated user", async () => {
+    authMock.mockResolvedValueOnce(
+      NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    );
+
+    const res = await POST(makeReq());
+
+    expect(res.status).toBe(401);
+    expect(startMock).not.toHaveBeenCalled();
   });
 
   it("passes origin fields through to the durable workflow", async () => {
@@ -138,6 +158,24 @@ describe("POST /api/search/start", () => {
 
     expect(res.status).toBe(400);
     expect(json.error).toBe("Invalid request body");
+    expect(startMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects searches with an end date before the start date", async () => {
+    const res = await POST(
+      new NextRequest("http://localhost:3000/api/search/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          destination: "Tokyo",
+          startDate: "2026-06-05",
+          endDate: "2026-06-01",
+          travelers: 2,
+        }),
+      }),
+    );
+
+    expect(res.status).toBe(400);
     expect(startMock).not.toHaveBeenCalled();
   });
 });

@@ -259,8 +259,15 @@ requireCondition(
   "Expo config must not declare unused iOS privacy prompts.",
 );
 requireCondition(
-  hasText(appConfigPath, /projectId:\s*process\.env\.EAS_PROJECT_ID/),
-  "Expo projectId must come from EAS_PROJECT_ID.",
+  hasText(
+    appConfigPath,
+    /const EAS_PROJECT_ID = ['"]b4813d98-52ec-4985-a462-3d30a7f681b9['"]/,
+  ) && hasText(appConfigPath, /projectId:\s*EAS_PROJECT_ID/),
+  "Expo projectId must reference the production Faroway EAS project.",
+);
+requireCondition(
+  hasText(appConfigPath, /owner:\s*['"]testimonio['"]/),
+  "Expo owner must be the testimonio organization.",
 );
 
 requireCondition(

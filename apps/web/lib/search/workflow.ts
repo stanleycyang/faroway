@@ -2,9 +2,8 @@
  * Travel Search Workflow
  * Orchestrates the multi-agent search process
  *
- * Note: This module defines the workflow logic that is executed
- * by the /api/search/[searchId]/execute endpoint.
- * For production use with Vercel Workflows, see /workflows/
+ * Note: This module defines reusable inline workflow logic.
+ * The production durable workflow lives in /workflows/.
  */
 
 import { SearchInput, SearchResults } from "./types";

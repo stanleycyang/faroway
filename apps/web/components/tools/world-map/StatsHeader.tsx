@@ -1,5 +1,3 @@
-"use client";
-
 import type { Stats } from "@/lib/tools/world-map/stats";
 import { toRoman, toWords } from "@/lib/tools/world-map/typography";
 

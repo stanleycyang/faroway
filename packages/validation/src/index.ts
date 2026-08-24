@@ -58,11 +58,14 @@ export const tripStatusSchema = z.enum([
   'draft',
   'planning',
   'planned',
+  'generating',
+  'failed',
   'booked',
   'active',
   'in_progress',
+  'paid',
   'completed',
-  'cancelled',
+  'canceled',
 ]);
 
 export const budgetLevelSchema = z.enum(['budget', 'moderate', 'luxury']);

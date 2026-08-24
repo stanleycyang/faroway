@@ -18,10 +18,6 @@ const serverEnvSchema = z.object({
     .optional(),
   AI_GATEWAY_API_KEY: z.string().min(1).optional(),
   VERCEL_AI_GATEWAY_API_KEY: z.string().min(1).optional(),
-  WORKFLOW_WEBHOOK_SECRET: z
-    .string()
-    .min(16, "WORKFLOW_WEBHOOK_SECRET must be at least 16 chars")
-    .optional(),
   NODE_ENV: z
     .enum(["development", "production", "test"])
     .default("development"),

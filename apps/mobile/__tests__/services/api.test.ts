@@ -24,6 +24,8 @@ import {
   getTrendingDestinations,
   trackAffiliateClick,
   openAffiliateLink,
+  registerPushToken,
+  removePushToken,
 } from '../../services/api';
 
 // Mock global fetch
@@ -246,6 +248,53 @@ describe('trackAffiliateClick', () => {
   });
 });
 
+describe('push token APIs', () => {
+  it('registers the current device push token through the backend', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () =>
+        Promise.resolve({
+          token: 'ExpoPushToken[abc123]',
+          platform: 'ios',
+          deviceName: 'iPhone',
+          updatedAt: '2026-06-01T00:00:00Z',
+          lastSeenAt: '2026-06-01T00:00:00Z',
+        }),
+    });
+
+    const result = await registerPushToken({
+      token: 'ExpoPushToken[abc123]',
+      platform: 'ios',
+      deviceName: 'iPhone',
+    });
+
+    expect(result.data?.token).toBe('ExpoPushToken[abc123]');
+    const [url, options] = mockFetch.mock.calls[0];
+    expect(url).toBe('http://localhost:3000/api/user/push-token');
+    expect(options.method).toBe('POST');
+    expect(JSON.parse(options.body)).toEqual({
+      token: 'ExpoPushToken[abc123]',
+      platform: 'ios',
+      deviceName: 'iPhone',
+    });
+  });
+
+  it('removes a registered push token through the backend', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ deleted: true }),
+    });
+
+    const result = await removePushToken('ExpoPushToken[abc123]');
+
+    expect(result.data?.deleted).toBe(true);
+    const [url, options] = mockFetch.mock.calls[0];
+    expect(url).toBe('http://localhost:3000/api/user/push-token');
+    expect(options.method).toBe('DELETE');
+    expect(JSON.parse(options.body)).toEqual({ token: 'ExpoPushToken[abc123]' });
+  });
+});
+
 describe('openAffiliateLink', () => {
   it('opens redirect URL from tracking response', async () => {
     mockFetch.mockResolvedValueOnce({
@@ -324,5 +373,26 @@ describe('error handling', () => {
     const result = await getTrips();
     expect(result.error).toBe('Unknown error occurred');
     expect(result.code).toBe('UNKNOWN_ERROR');
+  });
+
+  it('handles an empty success response body', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      text: () => Promise.resolve(''),
+    });
+
+    const result = await getTrips();
+    expect(result.data).toBeNull();
+  });
+
+  it('returns INVALID_RESPONSE for malformed server JSON', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      text: () => Promise.resolve('{not-json'),
+    });
+
+    const result = await getTrips();
+    expect(result.error).toBe('Invalid server response');
+    expect(result.code).toBe('INVALID_RESPONSE');
   });
 });

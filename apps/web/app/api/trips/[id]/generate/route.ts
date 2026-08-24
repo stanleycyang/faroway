@@ -45,6 +45,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const hourlyLimit = await checkRateLimitAsync(`generate:hour:${userId}`, {
       maxRequests: 5,
       windowMs: 60 * 60 * 1000,
+      failClosed: true,
     });
     if (!hourlyLimit.allowed) {
       return NextResponse.json(

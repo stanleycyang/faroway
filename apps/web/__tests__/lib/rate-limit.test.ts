@@ -95,6 +95,82 @@ describe("checkRateLimit", () => {
   });
 });
 
+describe("checkRateLimitAsync", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
+  });
+
+  it("uses the shared Supabase backend without storing the raw identifier", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service-role-key");
+    vi.stubEnv("IP_HASH_SALT", "a-production-length-rate-limit-salt");
+    const fetchMock = vi.fn(
+      async (input: RequestInfo | URL, init?: RequestInit) => {
+        void input;
+        void init;
+        return {
+          ok: true,
+          json: async () => [
+            { allowed: true, remaining: 4, reset_in_ms: 59_000 },
+          ],
+        };
+      },
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    vi.resetModules();
+
+    const { checkRateLimitAsync } = await import("@/lib/security/rate-limit");
+    const result = await checkRateLimitAsync("search:203.0.113.50", {
+      maxRequests: 5,
+      windowMs: 60_000,
+      failClosed: true,
+    });
+
+    expect(result).toEqual({
+      allowed: true,
+      remaining: 4,
+      resetIn: 59_000,
+    });
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toBe(
+      "https://example.supabase.co/rest/v1/rpc/consume_rate_limit",
+    );
+    const body = JSON.parse((init as RequestInit).body as string);
+    expect(body.p_key).toMatch(/^[a-f0-9]{64}$/);
+    expect(body.p_key).not.toContain("203.0.113.50");
+    expect(body.p_max_requests).toBe(5);
+    expect(body.p_window_ms).toBe(60_000);
+  });
+
+  it("fails closed when the distributed backend is unavailable", async () => {
+    vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service-role-key");
+    vi.stubEnv("IP_HASH_SALT", "a-production-length-rate-limit-salt");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 503 })),
+    );
+    vi.resetModules();
+
+    const { checkRateLimitAsync } = await import("@/lib/security/rate-limit");
+    const result = await checkRateLimitAsync("itinerary:203.0.113.50", {
+      maxRequests: 5,
+      windowMs: 60_000,
+      failClosed: true,
+    });
+
+    expect(result).toEqual({
+      allowed: false,
+      remaining: 0,
+      resetIn: 60_000,
+    });
+  });
+});
+
 // ─── getClientIp ─────────────────────────────────────────────────────────────
 
 describe("getClientIp", () => {

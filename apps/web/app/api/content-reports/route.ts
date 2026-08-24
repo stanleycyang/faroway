@@ -7,7 +7,7 @@ import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { getSupabase } from "@/lib/supabase/server";
 import { parseJsonRequest } from "@/lib/api/json";
-import { checkRateLimit, getClientIp } from "@/lib/security/rate-limit";
+import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 
 const ContentReportSchema = z.object({
   contentType: z.literal("shared_trip"),
@@ -29,9 +29,10 @@ const ContentReportSchema = z.object({
 
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
-  const rateLimit = checkRateLimit(`content-report:${ip}`, {
+  const rateLimit = await checkRateLimitAsync(`content-report:${ip}`, {
     maxRequests: 5,
     windowMs: 60_000,
+    failClosed: true,
   });
 
   if (!rateLimit.allowed) {

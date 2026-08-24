@@ -14,7 +14,7 @@ Last updated: May 28, 2026
 - [x] Splash Screen: Configured in `apps/mobile/app.config.ts`
 - [x] Orientation: Portrait only
 - [x] Supported Devices: iPhone, iPad, Android phone, Android tablet
-- [ ] EAS Project ID: Set `EAS_PROJECT_ID` in EAS/build environment
+- [x] EAS project linked in `app.config.ts`
 - [ ] Apple Developer Account: Connected through EAS credentials or submit flow
 - [ ] Google Play Account: Service-account credentials configured through EAS credentials or submit flow
 

@@ -1,17 +1,19 @@
 import { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
+import { Alert, View, Text, ScrollView, StyleSheet, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, VibeSelector } from '../../components/ui';
 import { useUserStore } from '../../stores/userStore';
+import { updateUserProfile } from '../../services/api';
 import { colors, borderRadius } from '../../constants/theme';
 
 export default function PreferencesScreen() {
   const router = useRouter();
-  const { setOnboardingComplete, setUser } = useUserStore();
+  const { setOnboardingComplete, updatePreferences, user } = useUserStore();
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
   const [selectedBudget, setSelectedBudget] = useState<string>('');
+  const [isSaving, setIsSaving] = useState(false);
 
   const budgetOptions = [
     { id: 'budget', label: 'Budget', emoji: '💰', description: 'Best value deals' },
@@ -19,18 +21,29 @@ export default function PreferencesScreen() {
     { id: 'luxury', label: 'Luxury', emoji: '✨', description: 'Premium experiences' },
   ];
 
-  const handleComplete = () => {
-    // Set demo user
-    setUser({
-      id: 'demo-user',
-      name: 'Stanley',
-      email: 'stanley@example.com',
-      preferences: {
-        vibes: selectedVibes,
-        budget: selectedBudget,
-      },
-    });
+  const handleComplete = async () => {
+    if (isSaving) return;
+
+    const preferences = {
+      vibes: selectedVibes,
+      ...(selectedBudget ? { budget: selectedBudget } : {}),
+    };
+
+    setIsSaving(true);
+    updatePreferences(preferences);
+
+    if (user) {
+      const result = await updateUserProfile({ preferences });
+      if (result.error) {
+        Alert.alert(
+          'Preferences saved on this device',
+          'We could not sync them to your account yet. You can update them again from Profile.'
+        );
+      }
+    }
+
     setOnboardingComplete(true);
+    setIsSaving(false);
     router.replace('/(tabs)');
   };
 
@@ -96,13 +109,14 @@ export default function PreferencesScreen() {
       {/* Bottom Bar */}
       <View style={styles.bottomBar}>
         <Button
-          title="Continue"
+          title={isSaving ? 'Saving' : 'Continue'}
           onPress={handleComplete}
           size="lg"
           fullWidth
-          disabled={selectedVibes.length === 0}
+          disabled={selectedVibes.length === 0 || isSaving}
+          loading={isSaving}
         />
-        <TouchableOpacity onPress={handleComplete}>
+        <TouchableOpacity onPress={handleComplete} disabled={isSaving}>
           <Text style={styles.skipText}>Skip for now</Text>
         </TouchableOpacity>
       </View>

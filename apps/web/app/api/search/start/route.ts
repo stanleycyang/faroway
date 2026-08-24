@@ -5,34 +5,50 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase/server";
+import { requireUserIdFromRequest } from "@/lib/auth/middleware";
 import { startWorkflow } from "@/lib/workflow/runtime";
 import { planTripWorkflow } from "@/workflows/plan-trip";
-import { checkRateLimit, getClientIp } from "@/lib/security/rate-limit";
+import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
+import { isValidDateOnly, isValidDateRange } from "@/lib/api/date-range";
 import { z } from "zod";
 
-const SearchInputSchema = z.object({
-  destination: z.string().min(1).max(200).trim(),
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  endDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  travelers: z.number().int().min(1).max(50).optional(),
-  travelerType: z
-    .enum(["solo", "couple", "family", "friends", "business"])
-    .optional(),
-  vibes: z.array(z.string().max(50)).max(10).optional(),
-  budget: z.string().max(50).optional(),
-  originCity: z.string().max(200).optional(),
-  originAirport: z.string().max(10).optional(),
-});
+const DateOnlySchema = z
+  .string()
+  .refine(isValidDateOnly, "Must be a valid YYYY-MM-DD date");
+
+const SearchInputSchema = z
+  .object({
+    destination: z.string().min(1).max(200).trim(),
+    startDate: DateOnlySchema,
+    endDate: DateOnlySchema,
+    travelers: z.number().int().min(1).max(50).optional(),
+    travelerType: z
+      .enum(["solo", "couple", "family", "friends", "business"])
+      .optional(),
+    vibes: z.array(z.string().max(50)).max(10).optional(),
+    budget: z.string().max(50).optional(),
+    originCity: z.string().max(200).optional(),
+    originAirport: z.string().max(10).optional(),
+  })
+  .refine((data) => isValidDateRange(data.startDate, data.endDate), {
+    message: "End date must be on or after start date",
+    path: ["endDate"],
+  });
 
 export async function POST(request: NextRequest) {
   let searchId: string | null = null;
 
   try {
+    const auth = await requireUserIdFromRequest(request);
+    if (auth instanceof NextResponse) return auth;
+    const userId = auth.userId;
+
     // Rate limit: 5 searches per minute per IP
     const ip = getClientIp(request);
-    const { allowed } = checkRateLimit(`search:${ip}`, {
+    const { allowed } = await checkRateLimitAsync(`search:${ip}`, {
       maxRequests: 5,
       windowMs: 60_000,
+      failClosed: true,
     });
     if (!allowed) {
       return NextResponse.json(
@@ -71,18 +87,6 @@ export async function POST(request: NextRequest) {
       originCity,
       originAirport,
     } = parseResult.data;
-
-    // Get user ID from auth header if present
-    const authHeader = request.headers.get("Authorization");
-    let userId: string | null = null;
-
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.substring(7);
-      const {
-        data: { user },
-      } = await getSupabase().auth.getUser(token);
-      userId = user?.id || null;
-    }
 
     // Create search record
     const { data: search, error: insertError } = await getSupabase()
@@ -137,7 +141,7 @@ export async function POST(request: NextRequest) {
         budget: budget || "moderate",
         originCity,
         originAirport,
-        userId: userId || undefined,
+        userId,
       },
     ]);
 

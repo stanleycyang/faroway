@@ -7,7 +7,7 @@ import {
 } from "@/lib/security/cors";
 
 // Routes that require authentication
-const protectedRoutes = ["/dashboard", "/trips/new", "/settings", "/profile"];
+const protectedRoutes = ["/dashboard", "/trips", "/settings", "/profile"];
 
 // Routes that should redirect to dashboard if already authenticated
 const authRoutes = ["/auth/login", "/auth/signup"];

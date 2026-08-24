@@ -66,6 +66,37 @@ export async function getAllPostMetas(): Promise<BlogPostMeta[]> {
   return (data || []).map(rowToMeta);
 }
 
+/**
+ * Fetch every published post for sitemap discovery. Listing pages intentionally
+ * cap their working set, but the sitemap must not silently omit long-tail posts.
+ */
+export async function getAllSitemapPostMetas(): Promise<BlogPostMeta[]> {
+  const supabase = getBlogSupabase();
+  if (!supabase) return [];
+
+  const posts: BlogPostMeta[] = [];
+  const pageSize = 1000;
+
+  for (let from = 0; ; from += pageSize) {
+    const { data, error } = await supabase
+      .from("blog_posts")
+      .select(META_COLUMNS)
+      .eq("status", "published")
+      .order("published_at", { ascending: false })
+      .range(from, from + pageSize - 1);
+
+    if (error) {
+      console.error("getAllSitemapPostMetas error:", error.message);
+      return posts;
+    }
+
+    posts.push(...(data || []).map(rowToMeta));
+    if (!data || data.length < pageSize) break;
+  }
+
+  return posts;
+}
+
 export async function getAllPosts(): Promise<BlogPost[]> {
   const supabase = getBlogSupabase();
   if (!supabase) return [];

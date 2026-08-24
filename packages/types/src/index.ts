@@ -66,7 +66,7 @@ export interface UserProfile {
 
 /**
  * Unified Trip status superset.
- * Web statuses: draft, planning, booked, in_progress, completed, cancelled
+ * Web statuses: draft, planning, booked, in_progress, completed, canceled
  * Mobile statuses: draft, planned, active, completed
  */
 export type TripStatus =
@@ -80,7 +80,9 @@ export type TripStatus =
   | "active"
   | "in_progress"
   | "completed"
-  | "cancelled";
+  | "canceled"
+  | "cancelled"
+  | "paid";
 
 export interface Trip {
   id: string;

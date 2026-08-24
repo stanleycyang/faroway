@@ -3,15 +3,6 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  typescript: {
-    // Type-check runs as a dedicated CI step (bun run type-check) to avoid
-    // competing with Turbopack for heap during the static generation phase.
-    ignoreBuildErrors: true,
-  },
-  // ESLint also runs as a dedicated CI step. The option is a real Next 16
-  // runtime config but isn't exported on the NextConfig type yet.
-  // @ts-expect-error eslint.ignoreDuringBuilds is runtime-only on Next 16
-  eslint: { ignoreDuringBuilds: true },
   transpilePackages: [
     "@faroway/supabase",
     "@faroway/constants",
@@ -101,9 +92,6 @@ export default withSentryConfig(withWorkflow(nextConfig), {
   project: process.env.SENTRY_PROJECT,
   silent: !process.env.CI,
   authToken: process.env.SENTRY_AUTH_TOKEN,
-
-  // Automatically tree-shake Sentry debug logging in production
-  disableLogger: true,
 
   // Tunnels Sentry requests through Next.js to avoid ad-blockers
   tunnelRoute: "/monitoring",

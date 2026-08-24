@@ -21,6 +21,7 @@ export function DestinationCard({
           src={imageUrl}
           alt={`${name}, ${country}`}
           fill
+          sizes="(max-width: 768px) 100vw, 33vw"
           className="object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent" />

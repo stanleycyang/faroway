@@ -66,8 +66,7 @@ bun dev:ios      # Open iOS simulator directly
 | `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role key (server-only) |
 | `OPENAI_API_KEY` | For AI | OpenAI GPT-4o for itinerary generation |
 | `GOOGLE_AI_API_KEY` | For AI | Google Gemini (fallback) |
-| `KV_REST_API_URL` | Prod | Vercel KV — distributed rate limiting |
-| `KV_REST_API_TOKEN` | Prod | Vercel KV token |
+| `IP_HASH_SALT` | Prod | Server-only HMAC salt for privacy-preserving distributed rate limits |
 | `NEXT_PUBLIC_BASE_URL` | Prod | Production URL for OG tags/sitemap |
 
 See `apps/web/.env.example` for the full list including travel vendor API keys.
@@ -175,7 +174,7 @@ bun deploy:web:preview  # Deploy preview
 
 # Required Vercel environment variables (set in Vercel dashboard):
 # - All variables from apps/web/.env.example marked as required
-# - KV_REST_API_URL + KV_REST_API_TOKEN (provision via `vercel storage add`)
+# - Apply all Supabase migrations before deploying
 ```
 
 ### Mobile (EAS)

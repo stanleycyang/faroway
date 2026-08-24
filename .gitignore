@@ -6,6 +6,7 @@ node_modules/
 
 # Next.js
 .next/
+.swc/
 out/
 
 # Vercel Workflow plugin auto-generates these at build time. They are
@@ -56,9 +57,18 @@ dist/
 
 # test coverage
 coverage/
+test-results/
 
 # lock files (keep bun.lock, ignore bun.lockb binary)
 bun.lockb
 
 # Vercel local project link (machine-specific, not for version control)
 .vercel/
+
+# Local agent state
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.codex/
+
+# Supabase CLI cache
+supabase/.temp/

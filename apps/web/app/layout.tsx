@@ -146,7 +146,11 @@ const softwareApplicationSchema = {
   "@type": "SoftwareApplication",
   name: "Faroway",
   applicationCategory: "TravelApplication",
-  operatingSystem: "Web, iOS, Android",
+  operatingSystem: [
+    "Web",
+    ...(process.env.NEXT_PUBLIC_APP_STORE_URL ? ["iOS"] : []),
+    ...(process.env.NEXT_PUBLIC_PLAY_STORE_URL ? ["Android"] : []),
+  ].join(", "),
   offers: {
     "@type": "Offer",
     price: "0",

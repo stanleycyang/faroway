@@ -9,7 +9,11 @@ vi.mock("@/lib/search/workflow", () => ({
 
 vi.mock("@/lib/security/rate-limit", () => ({
   getClientIp: vi.fn(() => "127.0.0.1"),
-  checkRateLimit: vi.fn(() => ({ allowed: true, remaining: 9 })),
+  checkRateLimitAsync: vi.fn(async () => ({
+    allowed: true,
+    remaining: 9,
+    resetIn: 60_000,
+  })),
 }));
 
 const supabaseMock = {
@@ -112,6 +116,22 @@ describe("POST /api/itinerary", () => {
 
   it("returns 400 for malformed JSON", async () => {
     const res = await POST(makeRawReq("{"));
+    const json = await res.json();
+
+    expect(res.status).toBe(400);
+    expect(json.error).toBe("Invalid request body");
+    expect(executeTravelSearchMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when endDate is before startDate", async () => {
+    const res = await POST(
+      makeReq({
+        destination: "Tokyo",
+        startDate: "2026-06-05",
+        endDate: "2026-06-01",
+        travelers: 2,
+      }),
+    );
     const json = await res.json();
 
     expect(res.status).toBe(400);
