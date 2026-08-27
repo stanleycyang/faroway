@@ -191,7 +191,9 @@ export function AuthGate({
 
             {/* Maybe Later */}
             <TouchableOpacity style={styles.maybeLaterButton} onPress={handleMaybeLater}>
-              <Text style={styles.maybeLaterText}>Maybe Later</Text>
+              <Text style={styles.maybeLaterText}>
+                {trigger === 'generate' ? 'Keep editing' : 'Maybe Later'}
+              </Text>
             </TouchableOpacity>
 
             {/* Terms */}
@@ -320,11 +322,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    backgroundColor: '#000',
+    backgroundColor: colors.surface[700],
     paddingVertical: 16,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
+    backgroundColor: '#000',
   },
   appleButtonText: {
     fontSize: 16,

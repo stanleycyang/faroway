@@ -15,8 +15,10 @@ jest.mock('../../lib/supabase', () => ({
 import {
   extractApiErrorMessage,
   getIncompleteStreamMessage,
+  isUnauthorizedStatus,
   parseSSEBuffer,
   parseStreamingJson,
+  UNAUTHORIZED_GENERATE_MESSAGE,
 } from '../../hooks/useStreamingItinerary';
 
 describe('streaming itinerary SSE parsing', () => {
@@ -59,5 +61,12 @@ describe('streaming itinerary SSE parsing', () => {
     expect(getIncompleteStreamMessage('Searching for the best hotels...')).toBe(
       'The connection closed before your itinerary was ready. Reconnect to continue planning.'
     );
+  });
+
+  it('classifies 401 generate failures as unauthorized, not a generic stream error', () => {
+    expect(isUnauthorizedStatus(401)).toBe(true);
+    expect(isUnauthorizedStatus(500)).toBe(false);
+    expect(UNAUTHORIZED_GENERATE_MESSAGE).toMatch(/sign in/i);
+    expect(UNAUTHORIZED_GENERATE_MESSAGE.toLowerCase()).not.toContain('something went wrong');
   });
 });
