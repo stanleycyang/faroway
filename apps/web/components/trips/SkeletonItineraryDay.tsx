@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import { Sunrise, Sun, Moon } from "lucide-react";
 

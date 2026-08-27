@@ -1,34 +1,15 @@
 import { Metadata } from "next";
-import { getSupabase } from "@/lib/supabase/server";
+import {
+  loadSharedTrip,
+  type SharedTripData,
+} from "@/lib/trips/load-shared-trip";
 
 interface SharedTripLayoutProps {
   children: React.ReactNode;
   params: Promise<{ token: string }>;
 }
 
-interface TripData {
-  destination: string;
-  start_date: string | null;
-  end_date: string | null;
-  travelers: number | null;
-}
-
-async function getTrip(token: string): Promise<TripData | null> {
-  try {
-    const supabase = getSupabase();
-    const { data: trip } = await supabase
-      .from("trips")
-      .select("destination, start_date, end_date, travelers")
-      .eq("share_token", token)
-      .eq("is_shared", true)
-      .single();
-    return trip;
-  } catch {
-    return null;
-  }
-}
-
-function buildTripMeta(trip: TripData) {
+function buildTripMeta(trip: SharedTripData) {
   const destination = trip.destination;
   const startDate = trip.start_date ? new Date(trip.start_date) : null;
   const endDate = trip.end_date ? new Date(trip.end_date) : null;
@@ -73,7 +54,7 @@ export async function generateMetadata({
   const { token } = await params;
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
-  const trip = await getTrip(token);
+  const trip = await loadSharedTrip(token);
 
   if (!trip) {
     return {
@@ -122,7 +103,7 @@ export default async function SharedTripLayout({
   params,
 }: SharedTripLayoutProps) {
   const { token } = await params;
-  const trip = await getTrip(token);
+  const trip = await loadSharedTrip(token);
 
   return (
     <>

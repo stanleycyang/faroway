@@ -13,16 +13,27 @@ export async function GET(request: NextRequest) {
   try {
     const db = getSupabase();
 
-    const { data, error } = await db.rpc("cleanup_expired_anonymous_trips");
+    const [tripsResult, rateLimitsResult, generationResult] = await Promise.all(
+      [
+        db.rpc("cleanup_expired_anonymous_trips"),
+        db.rpc("cleanup_expired_rate_limits"),
+        db.rpc("cleanup_stale_generation_state"),
+      ],
+    );
 
-    if (error) {
-      console.error("Cleanup error:", error);
+    if (tripsResult.error || rateLimitsResult.error || generationResult.error) {
+      console.error(
+        "Cleanup error:",
+        tripsResult.error || rateLimitsResult.error || generationResult.error,
+      );
       return NextResponse.json({ error: "Cleanup failed" }, { status: 500 });
     }
 
     return NextResponse.json({
       success: true,
-      deletedTrips: data,
+      deletedTrips: tripsResult.data,
+      deletedRateLimitBuckets: rateLimitsResult.data,
+      repairedGenerationState: generationResult.data,
     });
   } catch (error) {
     console.error("Cron cleanup error:", error);

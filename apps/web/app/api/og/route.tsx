@@ -12,10 +12,12 @@ export const runtime = "edge";
 
 const interSemiBoldPromise = fetch(
   new URL("./world-map/fonts/inter-semibold.ttf", import.meta.url),
+  { cache: "force-cache" },
 ).then((r) => r.arrayBuffer());
 
 const interRegularPromise = fetch(
   new URL("./world-map/fonts/inter-regular.ttf", import.meta.url),
+  { cache: "force-cache" },
 ).then((r) => r.arrayBuffer());
 
 export async function GET(request: Request) {

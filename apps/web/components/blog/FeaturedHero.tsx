@@ -3,8 +3,6 @@ import Image from "next/image";
 import type { BlogPostMeta } from "@/lib/blog/types";
 
 export function FeaturedHero({ post }: { post: BlogPostMeta }) {
-  const categorySlug = post.category.toLowerCase().replace(/\s+/g, "-");
-
   return (
     <article className="group relative overflow-hidden rounded-2xl">
       <Link href={`/blog/${post.slug}`} className="block">
@@ -28,12 +26,9 @@ export function FeaturedHero({ post }: { post: BlogPostMeta }) {
               <span className="px-3 py-1 bg-gradient-to-r from-primary to-amber-500 text-white rounded-full text-xs font-semibold shadow-lg shadow-primary/25">
                 Featured
               </span>
-              <Link
-                href={`/blog/category/${categorySlug}`}
-                className="text-primary-light hover:text-white transition-colors font-medium relative z-10"
-              >
+              <span className="text-primary-light font-medium">
                 {post.category}
-              </Link>
+              </span>
             </div>
             <h2 className="text-2xl md:text-4xl lg:text-5xl font-bold text-gray-100 mb-3 leading-tight">
               {post.title}

@@ -13,7 +13,6 @@ import {
   TripPreferences,
   GeneratedItinerary,
 } from "@/lib/ai";
-import { fetchWithTimeout } from "@/lib/search/runtime";
 import { createClient as createSupabaseAdmin } from "@supabase/supabase-js";
 
 // Types for workflow input/output
@@ -33,7 +32,7 @@ export interface GenerateItineraryInput {
     dietaryRestrictions?: string[];
     mobilityNeeds?: string;
   };
-  userId?: string;
+  userId: string;
 }
 
 export interface WorkflowProgress {
@@ -145,16 +144,13 @@ async function validateAndFetchTrip(
     { onConflict: "trip_id" },
   );
 
-  // Fetch trip from database to validate ownership
-  let query = supabase.from("trips").select("*").eq("id", input.tripId);
-
-  if (input.userId) {
-    query = query.or(`user_id.eq.${input.userId},user_id.is.null`);
-  } else {
-    query = query.is("user_id", null);
-  }
-
-  const { data: trip, error } = await query.single();
+  // Fetch trip from database and enforce exact ownership.
+  const { data: trip, error } = await supabase
+    .from("trips")
+    .select("*")
+    .eq("id", input.tripId)
+    .eq("user_id", input.userId)
+    .single();
 
   if (error || !trip) {
     throw new FatalError(`Trip not found or access denied: ${input.tripId}`);
@@ -241,7 +237,7 @@ async function generateItineraryWithAI(
  */
 async function saveItineraryToDatabase(
   tripId: string,
-  userId: string | undefined,
+  userId: string,
   itinerary: GeneratedItinerary,
 ): Promise<string> {
   "use step";
@@ -266,7 +262,7 @@ async function saveItineraryToDatabase(
     .from("itineraries")
     .insert({
       trip_id: tripId,
-      user_id: userId || null,
+      user_id: userId,
       destination: itinerary.destination,
       start_date: itinerary.startDate,
       end_date: itinerary.endDate,
@@ -288,7 +284,7 @@ async function saveItineraryToDatabase(
   await supabase
     .from("trips")
     .update({
-      status: "generated",
+      status: "planned",
       itinerary_id: savedItinerary.id,
       updated_at: new Date().toISOString(),
     })
@@ -304,7 +300,7 @@ async function saveItineraryToDatabase(
 async function sendCompletionNotification(
   tripId: string,
   itineraryId: string,
-  userId: string | undefined,
+  userId: string,
 ): Promise<void> {
   "use step";
 
@@ -323,45 +319,17 @@ async function sendCompletionNotification(
     })
     .eq("trip_id", tripId);
 
-  // Insert notification (only for authenticated users)
-  if (userId) {
-    await supabase.from("notifications").insert({
-      user_id: userId,
-      type: "itinerary_ready",
-      title: "Your Itinerary is Ready!",
-      message: `Your trip itinerary has been generated and is ready to view.`,
-      data: {
-        trip_id: tripId,
-        itinerary_id: itineraryId,
-      },
-      read: false,
-    });
-  }
-
-  // Optionally trigger webhook for real-time updates
-  const webhookUrl = process.env.WORKFLOW_COMPLETION_WEBHOOK_URL;
-  if (webhookUrl) {
-    try {
-      await fetchWithTimeout(
-        webhookUrl,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            event: "itinerary_generated",
-            tripId,
-            itineraryId,
-            userId,
-            timestamp: new Date().toISOString(),
-          }),
-        },
-        1000,
-      );
-    } catch (error) {
-      // Non-critical, don't fail the workflow
-      console.warn("[Step 4/4] Webhook notification failed:", error);
-    }
-  }
+  await supabase.from("notifications").insert({
+    user_id: userId,
+    type: "itinerary_ready",
+    title: "Your Itinerary is Ready!",
+    message: `Your trip itinerary has been generated and is ready to view.`,
+    data: {
+      trip_id: tripId,
+      itinerary_id: itineraryId,
+    },
+    read: false,
+  });
 
   console.log(`[Step 4/4] Completion notification sent`);
 }

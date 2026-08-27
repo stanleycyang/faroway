@@ -290,6 +290,15 @@ describe("PATCH /api/trips/[id]", () => {
     expect(res.status).toBe(400);
   });
 
+  it("rejects client-controlled generation state transitions", async () => {
+    const req = makeRequest("PATCH", "/api/trips/trip-1", {
+      status: "planned",
+    });
+    const res = await PATCH(req, makeParams("trip-1"));
+
+    expect(res.status).toBe(400);
+  });
+
   it("returns 404 when trip not found", async () => {
     mockTripReturn = {
       data: null,

@@ -1,5 +1,7 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
 
+const EAS_PROJECT_ID = 'b4813d98-52ec-4985-a462-3d30a7f681b9';
+
 export default ({ config }: ConfigContext): ExpoConfig => {
   const googleIosUrlScheme = process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME;
   const plugins: NonNullable<ExpoConfig['plugins']> = [
@@ -31,6 +33,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     ...config,
     name: 'Faroway',
     slug: 'faroway',
+    owner: 'testimonio',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
@@ -56,6 +59,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         backgroundColor: '#0a0a0a',
       },
       package: 'ai.faroway.app',
+      blockedPermissions: [
+        'android.permission.READ_EXTERNAL_STORAGE',
+        'android.permission.WRITE_EXTERNAL_STORAGE',
+        'android.permission.SYSTEM_ALERT_WINDOW',
+      ],
     },
     web: {
       favicon: './assets/favicon.png',
@@ -71,7 +79,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
       apiUrl: process.env.EXPO_PUBLIC_API_URL,
       eas: {
-        projectId: process.env.EAS_PROJECT_ID,
+        projectId: EAS_PROJECT_ID,
       },
     },
   };

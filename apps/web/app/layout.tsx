@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const plusJakarta = Plus_Jakarta_Sans({
@@ -145,7 +146,11 @@ const softwareApplicationSchema = {
   "@type": "SoftwareApplication",
   name: "Faroway",
   applicationCategory: "TravelApplication",
-  operatingSystem: "Web, iOS, Android",
+  operatingSystem: [
+    "Web",
+    ...(process.env.NEXT_PUBLIC_APP_STORE_URL ? ["iOS"] : []),
+    ...(process.env.NEXT_PUBLIC_PLAY_STORE_URL ? ["Android"] : []),
+  ].join(", "),
   offers: {
     "@type": "Offer",
     price: "0",
@@ -191,6 +196,7 @@ export default function RootLayout({
           Skip to main content
         </a>
         <div id="main-content">{children}</div>
+        <Analytics />
       </body>
     </html>
   );

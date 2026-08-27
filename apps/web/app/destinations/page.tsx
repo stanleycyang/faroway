@@ -93,6 +93,7 @@ export default function DestinationsIndex() {
                       <Link
                         key={dest.slug}
                         href={`/destinations/${dest.slug}`}
+                        prefetch={false}
                         className="group rounded-2xl overflow-hidden bg-white border border-slate-200/80 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
                       >
                         <div className="relative aspect-[4/3] overflow-hidden">

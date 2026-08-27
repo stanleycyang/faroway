@@ -267,7 +267,6 @@ async function testWorkflow() {
   log("   GET  /api/trips/{id}/generate    - Check trip status");
   log("   GET  /api/workflows/{id}/status  - Poll workflow progress");
   log("   POST /api/workflows/generate-itinerary - Direct workflow trigger");
-  log("   POST /api/webhooks/workflow-complete   - Completion webhook");
 
   log("\n✅ Workflow Architecture:", colors.green);
   log("   1. Validate trip (5%)");

@@ -190,11 +190,6 @@ const MOBILE_RELEASE: EnvVar[] = [
     description: "Reversed Google iOS client ID URL scheme",
   },
   {
-    name: "EAS_PROJECT_ID",
-    required: true,
-    description: "Expo/EAS project ID",
-  },
-  {
     name: "EXPO_PUBLIC_SENTRY_DSN",
     required: false,
     description: "Sentry DSN for mobile crash reporting",
@@ -276,8 +271,7 @@ function check(label: string, vars: EnvVar[]): number {
   for (const v of vars) {
     const value = allVars[v.name];
     if (value) {
-      const masked = value.slice(0, 8) + "..." + value.slice(-4);
-      console.log(`  ${GREEN}✓${RESET} ${v.name} ${DIM}${masked}${RESET}`);
+      console.log(`  ${GREEN}✓${RESET} ${v.name} ${DIM}(configured)${RESET}`);
     } else if (v.required) {
       console.log(
         `  ${RED}✗${RESET} ${v.name} ${RED}(required)${RESET} ${DIM}— ${v.description}${RESET}`,

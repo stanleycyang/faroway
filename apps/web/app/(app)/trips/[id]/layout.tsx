@@ -1,5 +1,6 @@
 import { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { loadTripForUser } from "@/lib/trips/load-trip";
 
 interface TripLayoutProps {
   children: React.ReactNode;
@@ -37,11 +38,11 @@ export async function generateMetadata({
 
   try {
     const supabase = await createClient();
-    const { data: trip } = await supabase
-      .from("trips")
-      .select("destination, start_date, end_date, travelers")
-      .eq("id", id)
-      .single();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    const result = user ? await loadTripForUser(id, user.id) : null;
+    const trip = result?.trip;
 
     if (trip) {
       const destination = trip.destination;

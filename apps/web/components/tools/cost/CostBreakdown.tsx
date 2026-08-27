@@ -1,5 +1,3 @@
-"use client";
-
 import type { CostProfile } from "@/lib/tools/cost-data";
 import {
   Bed,

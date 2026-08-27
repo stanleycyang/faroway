@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import {
   getPostsByCategory,
   getAllCategories,
@@ -17,6 +18,8 @@ export async function generateStaticParams() {
     category: cat.toLowerCase().replace(/\s+/g, "-"),
   }));
 }
+
+export const dynamicParams = false;
 
 export async function generateMetadata({
   params,
@@ -44,11 +47,12 @@ export default async function CategoryPage({
   const { category } = await params;
   const { page: pageParam } = await searchParams;
   const currentPage = Math.max(1, parseInt(pageParam || "1", 10) || 1);
+  const label = CATEGORIES.find(
+    (candidate) => candidate.toLowerCase().replace(/\s+/g, "-") === category,
+  );
+  if (!label) notFound();
 
   const allPosts = await getPostsByCategory(category);
-  const label =
-    CATEGORIES.find((c) => c.toLowerCase().replace(/\s+/g, "-") === category) ||
-    category;
 
   const {
     items: posts,

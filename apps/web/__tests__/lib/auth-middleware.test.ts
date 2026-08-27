@@ -13,6 +13,7 @@ const mockSupabase = {
 
 vi.mock("@/lib/supabase/server", () => ({
   getSupabase: vi.fn(() => mockSupabase),
+  createClientFromRequest: vi.fn(async () => mockSupabase),
 }));
 
 // ─── Imports under test ─────────────────────────────────────────────────────
@@ -194,6 +195,7 @@ describe("optionalAuth", () => {
   });
 
   it("returns null for a missing or invalid token", async () => {
+    mockGetUserReturn = { data: { user: null }, error: null };
     const request = makeRequest();
     const result = await optionalAuth(request);
 

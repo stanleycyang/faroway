@@ -5,6 +5,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase/server";
+import { requireUserIdFromRequest } from "@/lib/auth/middleware";
 import { startWorkflow } from "@/lib/workflow/runtime";
 import { planTripWorkflow } from "@/workflows/plan-trip";
 import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
@@ -38,11 +39,16 @@ export async function POST(request: NextRequest) {
   let searchId: string | null = null;
 
   try {
+    const auth = await requireUserIdFromRequest(request);
+    if (auth instanceof NextResponse) return auth;
+    const userId = auth.userId;
+
     // Rate limit: 5 searches per minute per IP
     const ip = getClientIp(request);
     const { allowed } = await checkRateLimitAsync(`search:${ip}`, {
       maxRequests: 5,
       windowMs: 60_000,
+      failClosed: true,
     });
     if (!allowed) {
       return NextResponse.json(
@@ -81,18 +87,6 @@ export async function POST(request: NextRequest) {
       originCity,
       originAirport,
     } = parseResult.data;
-
-    // Get user ID from auth header if present
-    const authHeader = request.headers.get("Authorization");
-    let userId: string | null = null;
-
-    if (authHeader?.startsWith("Bearer ")) {
-      const token = authHeader.substring(7);
-      const {
-        data: { user },
-      } = await getSupabase().auth.getUser(token);
-      userId = user?.id || null;
-    }
 
     // Create search record
     const { data: search, error: insertError } = await getSupabase()
@@ -147,7 +141,7 @@ export async function POST(request: NextRequest) {
         budget: budget || "moderate",
         originCity,
         originAirport,
-        userId: userId || undefined,
+        userId,
       },
     ]);
 

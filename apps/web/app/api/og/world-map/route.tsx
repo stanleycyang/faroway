@@ -20,15 +20,19 @@ export const runtime = "edge";
 
 const playfairBlackPromise = fetch(
   new URL("./fonts/playfair-display.woff", import.meta.url),
+  { cache: "force-cache" },
 ).then((r) => r.arrayBuffer());
 const interRegularPromise = fetch(
   new URL("./fonts/inter-regular.ttf", import.meta.url),
+  { cache: "force-cache" },
 ).then((r) => r.arrayBuffer());
 const interSemiBoldPromise = fetch(
   new URL("./fonts/inter-semibold.ttf", import.meta.url),
+  { cache: "force-cache" },
 ).then((r) => r.arrayBuffer());
 const interBoldPromise = fetch(
   new URL("./fonts/inter-bold.ttf", import.meta.url),
+  { cache: "force-cache" },
 ).then((r) => r.arrayBuffer());
 
 // ---- Layout config -----------------------------------------------------

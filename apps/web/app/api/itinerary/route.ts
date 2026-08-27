@@ -12,7 +12,7 @@ import { z } from "zod";
 import { executeTravelSearch } from "@/lib/search/workflow";
 import { mapSearchResultsToItinerary } from "@/lib/search/bridge";
 import { createClient } from "@/lib/supabase/server";
-import { checkRateLimit, getClientIp } from "@/lib/security/rate-limit";
+import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 import { isValidDateOnly, isValidDateRange } from "@/lib/api/date-range";
 import type { GeneratedItinerary } from "@faroway/types";
 
@@ -56,10 +56,14 @@ export async function POST(request: NextRequest) {
   try {
     // Rate limit: 10 generations per minute per IP
     const ip = getClientIp(request);
-    const { allowed, remaining } = checkRateLimit(`itinerary:${ip}`, {
-      maxRequests: 10,
-      windowMs: 60_000,
-    });
+    const { allowed, remaining } = await checkRateLimitAsync(
+      `itinerary:${ip}`,
+      {
+        maxRequests: 10,
+        windowMs: 60_000,
+        failClosed: true,
+      },
+    );
     if (!allowed) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
