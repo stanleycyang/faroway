@@ -21,6 +21,10 @@ import { AuthGate } from '../../components/AuthGate';
 import { popularDestinations, travelerTypes } from '@faroway/constants';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
+import {
+  formatMissingTripRequirements,
+  getMissingTripRequirements,
+} from '../../lib/tripRequirements';
 
 const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
 
@@ -131,7 +135,8 @@ export default function CreateTripScreen() {
     }
   };
 
-  const canProceed = draftInput?.destination && draftInput?.startDate && draftInput?.endDate;
+  const missingRequirements = getMissingTripRequirements(draftInput);
+  const canProceed = missingRequirements.length === 0;
 
   const handleContinue = () => {
     if (!canProceed) {
@@ -389,6 +394,9 @@ export default function CreateTripScreen() {
             size="lg"
             fullWidth
           />
+          {!canProceed && (
+            <Text style={styles.missingHint}>{formatMissingTripRequirements(missingRequirements)}</Text>
+          )}
         </View>
 
         {/* Auth gate from banner */}
@@ -648,5 +656,12 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
+  },
+  missingHint: {
+    marginTop: 10,
+    textAlign: 'center',
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748b',
   },
 });
