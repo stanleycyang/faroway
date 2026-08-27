@@ -28,7 +28,7 @@ const { width } = Dimensions.get('window');
 const INSPIRATIONS = [
   { emoji: '🏖️', text: 'Beach getaway', slug: 'beach-getaway' },
   { emoji: '🏔️', text: 'Mountain escape', slug: 'mountain-escape' },
-  { emoji: '🁜', text: 'Foodie adventure', slug: 'foodie-adventure' },
+  { emoji: '🍜', text: 'Foodie adventure', slug: 'foodie-adventure' },
   { emoji: '🎨', text: 'Art & culture', slug: 'art-and-culture' },
   { emoji: '🎉', text: 'Party weekend', slug: 'party-weekend' },
   { emoji: '💑', text: 'Romantic trip', slug: 'romantic-trip' },
