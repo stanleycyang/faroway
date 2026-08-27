@@ -322,12 +322,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    backgroundColor: colors.surface[700],
+    backgroundColor: '#000',
     paddingVertical: 16,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.15)',
-    backgroundColor: '#000',
   },
   appleButtonText: {
     fontSize: 16,
