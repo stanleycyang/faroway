@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -25,6 +25,16 @@ import {
   type PlaceResult,
 } from "@/components/create/PlacesAutocompleteInput";
 import { DatePicker } from "@/components/trips/DatePicker";
+import {
+  buildCreateResumePath,
+  consumeCreateResume,
+  createDraftFromQuery,
+  loadCreateDraft,
+  markCreateResume,
+  mergeCreateDrafts,
+  saveCreateDraft,
+  type CreateDraft,
+} from "@/lib/trips/create-draft";
 
 // Dynamic import — Leaflet must not run on the server
 const DestinationMap = dynamic(
@@ -87,24 +97,24 @@ const destinations = [
 ];
 
 const travelerTypes = [
-  { id: "solo", label: "Solo", icon: "🧑" },
-  { id: "couple", label: "Couple", icon: "💑" },
-  { id: "family", label: "Family", icon: "👨‍👩‍👧‍👦" },
-  { id: "friends", label: "Friends", icon: "👯" },
-  { id: "business", label: "Business", icon: "💼" },
+  { id: "solo", label: "Solo", icon: "\ud83e\uddd1" },
+  { id: "couple", label: "Couple", icon: "\ud83d\udc91" },
+  { id: "family", label: "Family", icon: "\ud83d\udc68\u200d\ud83d\udc69\u200d\ud83d\udc67\u200d\ud83d\udc66" },
+  { id: "friends", label: "Friends", icon: "\ud83d\udc6f" },
+  { id: "business", label: "Business", icon: "\ud83d\udcbc" },
 ];
 
 const vibes = [
-  { id: "adventure", label: "Adventure", emoji: "🏔️" },
-  { id: "relaxation", label: "Relaxation", emoji: "🏖️" },
-  { id: "cultural", label: "Cultural", emoji: "🏛️" },
-  { id: "foodie", label: "Foodie", emoji: "🍜" },
-  { id: "nightlife", label: "Nightlife", emoji: "🌃" },
-  { id: "romantic", label: "Romantic", emoji: "💕" },
-  { id: "nature", label: "Nature", emoji: "🌿" },
-  { id: "shopping", label: "Shopping", emoji: "🛍️" },
-  { id: "wellness", label: "Wellness", emoji: "🧘" },
-  { id: "photography", label: "Photography", emoji: "📸" },
+  { id: "adventure", label: "Adventure", emoji: "\ud83c\udfd4\ufe0f" },
+  { id: "relaxation", label: "Relaxation", emoji: "\ud83c\udfd6\ufe0f" },
+  { id: "cultural", label: "Cultural", emoji: "\ud83c\udfdb\ufe0f" },
+  { id: "foodie", label: "Foodie", emoji: "\ud83c\udf5c" },
+  { id: "nightlife", label: "Nightlife", emoji: "\ud83c\udf03" },
+  { id: "romantic", label: "Romantic", emoji: "\ud83d\udc95" },
+  { id: "nature", label: "Nature", emoji: "\ud83c\udf3f" },
+  { id: "shopping", label: "Shopping", emoji: "\ud83d\udecd\ufe0f" },
+  { id: "wellness", label: "Wellness", emoji: "\ud83e\uddd8" },
+  { id: "photography", label: "Photography", emoji: "\ud83d\udcf8" },
 ];
 
 interface SelectedPlace {
@@ -124,13 +134,15 @@ export default function CreateTripPage() {
   const [showDestinations, setShowDestinations] = useState(false);
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(true);
   const [travelers, setTravelers] = useState(2);
   const [travelerType, setTravelerType] = useState("couple");
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [progressMessage, setProgressMessage] = useState("");
+  const [draftHydrated, setDraftHydrated] = useState(false);
+  const autoGenerateRef = useRef(false);
 
   const selectedRecommendedDest = selectedPlace?.isRecommended
     ? destinations.find((d) => d.name === selectedPlace.name)
@@ -146,7 +158,61 @@ export default function CreateTripPage() {
     );
   };
 
-  const canGenerate = selectedPlace && startDate && endDate;
+  const canGenerate = Boolean(selectedPlace && startDate && endDate);
+
+  const currentDraft = (): CreateDraft => ({
+    destination: selectedPlace,
+    startDate: startDate ? format(startDate, "yyyy-MM-dd") : null,
+    endDate: endDate ? format(endDate, "yyyy-MM-dd") : null,
+    travelers,
+    travelerType,
+    vibes: selectedVibes,
+  });
+
+  const persistDraft = useCallback(() => {
+    saveCreateDraft({
+      destination: selectedPlace,
+      startDate: startDate ? format(startDate, "yyyy-MM-dd") : null,
+      endDate: endDate ? format(endDate, "yyyy-MM-dd") : null,
+      travelers,
+      travelerType,
+      vibes: selectedVibes,
+    });
+  }, [
+    selectedPlace,
+    startDate,
+    endDate,
+    travelers,
+    travelerType,
+    selectedVibes,
+  ]);
+
+  useEffect(() => {
+    if (!draftHydrated) return;
+    persistDraft();
+  }, [draftHydrated, persistDraft]);
+
+  useEffect(() => {
+    const stored = loadCreateDraft();
+    const query =
+      typeof window === "undefined"
+        ? null
+        : createDraftFromQuery(new URLSearchParams(window.location.search));
+    const draft = mergeCreateDrafts(query, stored);
+    if (draft.destination) {
+      setSelectedPlace(draft.destination);
+      setShowDestinations(false);
+    }
+    if (draft.startDate) setStartDate(new Date(`${draft.startDate}T00:00:00`));
+    if (draft.endDate) setEndDate(new Date(`${draft.endDate}T00:00:00`));
+    if (typeof draft.travelers === "number") setTravelers(draft.travelers);
+    if (draft.travelerType) setTravelerType(draft.travelerType);
+    if (draft.vibes) setSelectedVibes(draft.vibes);
+    if (draft.vibes?.length || draft.travelerType || draft.travelers) {
+      setShowAdvanced(true);
+    }
+    setDraftHydrated(true);
+  }, []);
 
   const handleSelectRecommended = (dest: (typeof destinations)[number]) => {
     setSelectedPlace({
@@ -179,9 +245,15 @@ export default function CreateTripPage() {
   };
 
   const handleGenerate = async () => {
-    if (!canGenerate) return;
+    if (!canGenerate || !selectedPlace || !startDate || !endDate) return;
     if (!session) {
-      router.push(`/auth/login?redirectTo=${encodeURIComponent("/create")}`);
+      const draft = currentDraft();
+      saveCreateDraft(draft);
+      markCreateResume();
+      const resumePath = buildCreateResumePath(draft);
+      router.push(
+        `/auth/login?redirectTo=${encodeURIComponent(resumePath)}`,
+      );
       return;
     }
     setIsGenerating(true);
@@ -245,6 +317,19 @@ export default function CreateTripPage() {
       setProgressMessage("");
     }
   };
+
+  useEffect(() => {
+    if (!draftHydrated || authLoading || autoGenerateRef.current) return;
+    if (!session || !canGenerate) return;
+    const queryResume =
+      typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("resume") === "1";
+    if (!queryResume && !consumeCreateResume()) return;
+    autoGenerateRef.current = true;
+    void handleGenerate();
+    // handleGenerate is recreated each render; gate with autoGenerateRef.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [draftHydrated, authLoading, session, canGenerate]);
 
   const renderSelectedDestination = () => {
     if (!selectedPlace || showDestinations) return null;
@@ -358,18 +443,36 @@ export default function CreateTripPage() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-        <div className="flex items-center gap-2 mb-8">
-          <div
-            className={`h-1 flex-1 rounded-full ${selectedPlace ? "bg-primary" : "bg-gray-200"}`}
-          />
-          <div
-            className={`h-1 flex-1 rounded-full ${startDate && endDate ? "bg-primary" : "bg-gray-200"}`}
-          />
-          <div
-            className={`h-1 flex-1 rounded-full ${showAdvanced && (selectedVibes.length > 0 || travelerType) ? "bg-primary" : "bg-gray-200"}`}
-          />
-        </div>
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8 pb-40">
+        <ol
+          className="grid grid-cols-3 gap-2 mb-8"
+          aria-label="Trip planning steps"
+        >
+          {[
+            { label: "Destination", done: Boolean(selectedPlace) },
+            { label: "Dates", done: Boolean(startDate && endDate) },
+            {
+              label: "Customize",
+              done:
+                selectedVibes.length > 0 ||
+                travelerType !== "couple" ||
+                travelers !== 2,
+            },
+          ].map((step) => (
+            <li key={step.label} className="flex flex-col gap-2">
+              <div
+                className={`h-1 rounded-full ${step.done ? "bg-primary" : "bg-gray-200"}`}
+                aria-hidden
+              />
+              <span
+                className={`text-xs font-medium ${step.done ? "text-primary-700" : "text-gray-400"}`}
+              >
+                {step.label}
+                {step.done ? " · done" : ""}
+              </span>
+            </li>
+          ))}
+        </ol>
 
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
           <div className="flex items-center gap-3 mb-4">
@@ -411,7 +514,7 @@ export default function CreateTripPage() {
           />
         </section>
 
-        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
+        <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-28">
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
             className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
@@ -556,9 +659,11 @@ export default function CreateTripPage() {
             </div>
           )}
           <p className="text-center text-sm text-gray-500 mt-3">
-            {canGenerate
-              ? "AI will create a personalized day-by-day plan"
-              : "Select a destination and dates to continue"}
+            {!canGenerate
+              ? "Select a destination and dates to continue"
+              : session
+                ? "AI will create a personalized day-by-day plan"
+                : "Next: sign in to generate this itinerary. Your details stay saved."}
           </p>
         </div>
       </main>
