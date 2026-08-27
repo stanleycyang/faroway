@@ -28,7 +28,7 @@ const { width } = Dimensions.get('window');
 const INSPIRATIONS = [
   { emoji: '🏖️', text: 'Beach getaway', slug: 'beach-getaway' },
   { emoji: '🏔️', text: 'Mountain escape', slug: 'mountain-escape' },
-  { emoji: '🍜', text: 'Foodie adventure', slug: 'foodie-adventure' },
+  { emoji: '🁜', text: 'Foodie adventure', slug: 'foodie-adventure' },
   { emoji: '🎨', text: 'Art & culture', slug: 'art-and-culture' },
   { emoji: '🎉', text: 'Party weekend', slug: 'party-weekend' },
   { emoji: '💑', text: 'Romantic trip', slug: 'romantic-trip' },
@@ -203,7 +203,9 @@ export default function ExploreScreen() {
               <View style={styles.heroFeatures}>
                 <View style={styles.heroFeature}>
                   <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.8)" />
-                  <Text style={styles.heroFeatureText}>Saved to your account</Text>
+                  <Text style={styles.heroFeatureText}>
+                    {isAuthenticated ? 'Saved to your account' : 'Sign in to generate'}
+                  </Text>
                 </View>
                 <View style={styles.heroFeature}>
                   <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.8)" />
