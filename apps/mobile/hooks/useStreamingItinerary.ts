@@ -90,6 +90,59 @@ const initialState: StreamingState = {
   microHistory: [],
 };
 
+function isObjectRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+
+export function extractApiErrorMessage(body: string, fallback: string): string {
+  const trimmed = body.trim();
+  if (!trimmed) return fallback;
+
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (isObjectRecord(parsed)) {
+      const error = parsed.error;
+      if (typeof error === 'string' && error.trim()) {
+        return error.trim();
+      }
+
+      const message = parsed.message;
+      if (typeof message === 'string' && message.trim()) {
+        return message.trim();
+      }
+    }
+  } catch {
+    // Plain-text responses are handled below.
+  }
+
+  const lower = trimmed.toLowerCase();
+  if (lower.startsWith('<!doctype') || lower.startsWith('<html')) {
+    return fallback;
+  }
+
+  return trimmed.length > 240 ? `${trimmed.slice(0, 237)}...` : trimmed;
+}
+
+async function readApiErrorMessage(response: Response, fallback: string): Promise<string> {
+  const text = await response.text().catch(() => '');
+  return extractApiErrorMessage(text, fallback);
+}
+
+function getTripIdFromCreateResponse(payload: unknown): string | null {
+  if (!isObjectRecord(payload)) return null;
+  const trip = payload.trip;
+  if (!isObjectRecord(trip)) return null;
+  return typeof trip.id === 'string' && trip.id.trim() ? trip.id : null;
+}
+
+export function getIncompleteStreamMessage(message: string): string {
+  if (message.toLowerCase().includes('still generating')) {
+    return 'Faroway is still planning in the background. Reconnect for updates.';
+  }
+
+  return 'The connection closed before your itinerary was ready. Reconnect to continue planning.';
+}
+
 /**
  * Parse SSE events from a text buffer.
  * Returns array of { type, data } objects and remaining unparsed buffer.
@@ -376,12 +429,15 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
           });
 
           if (!tripRes.ok) {
-            const text = await tripRes.text().catch(() => '');
-            throw new Error(text || 'Failed to create trip');
+            throw new Error(await readApiErrorMessage(tripRes, 'Failed to create trip'));
           }
 
-          const { trip } = await tripRes.json();
-          streamTripId = trip.id;
+          const createPayload = await tripRes.json().catch(() => null);
+          const createdTripId = getTripIdFromCreateResponse(createPayload);
+          if (!createdTripId) {
+            throw new Error('Trip was created, but the server response was incomplete.');
+          }
+          streamTripId = createdTripId;
 
           const genHeaders = await getAuthHeaders();
           const genRes = await fetch(`${API_BASE_URL}/api/trips/${streamTripId}/generate`, {
@@ -391,8 +447,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
           });
 
           if (!genRes.ok && genRes.status !== 409) {
-            const text = await genRes.text().catch(() => '');
-            throw new Error(text || 'Failed to start generation');
+            throw new Error(await readApiErrorMessage(genRes, 'Failed to start generation'));
           }
         }
 
@@ -482,7 +537,12 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
         // Stream ended naturally
         setState((prev) => {
           if (prev.isComplete || prev.error) return prev;
-          return { ...prev, isStreaming: false };
+          return {
+            ...prev,
+            isLoading: false,
+            isStreaming: false,
+            error: getIncompleteStreamMessage(prev.message),
+          };
         });
       } catch (error) {
         if ((error as Error).name === 'AbortError') return;
@@ -533,7 +593,9 @@ async function pollGenerationStatus(
       signal,
     });
     if (!response.ok) {
-      throw new Error(`Polling failed (HTTP ${response.status})`);
+      throw new Error(
+        await readApiErrorMessage(response, `Polling failed (HTTP ${response.status})`)
+      );
     }
 
     const data = await response.json();

@@ -45,9 +45,9 @@ Maps catalog components to beautiful React Native implementations:
 
 Handles streaming itinerary data from backend:
 
-- Connects to `/api/itinerary/stream` endpoint
+- Creates or reuses a trip, then connects to `/api/trips/{tripId}/stream`
 - Progressive document building as chunks arrive
-- Graceful fallback to polling if streaming fails
+- Reconnectable copy when a stream closes before completion
 - Loading/error states and progress tracking
 
 ## Usage
@@ -104,19 +104,9 @@ The backend should stream json-render documents via Server-Sent Events (SSE):
 
 ### Streaming Endpoint
 
-**POST** `/api/itinerary/stream`
+**GET** `/api/trips/{tripId}/stream`
 
-```json
-{
-  "destination": "Paris",
-  "startDate": "2024-03-15",
-  "endDate": "2024-03-22",
-  "travelers": 2,
-  "travelerType": "couple",
-  "vibes": ["romantic", "culture"],
-  "budget": "moderate"
-}
-```
+The mobile hook creates a trip with `POST /api/trips` when needed, starts generation with `POST /api/trips/{tripId}/generate`, then opens the trip-scoped SSE stream.
 
 **Response**: SSE stream with events:
 
@@ -187,15 +177,9 @@ interface JsonRenderDocument {
 ];
 ```
 
-## Fallback Strategy
+## Recovery Strategy
 
-The app gracefully falls back to the existing polling mechanism if:
-
-1. EventSource is not supported
-2. Streaming endpoint fails
-3. Network errors occur
-
-This ensures the app works even without streaming support.
+When a stream closes before completion, the hook preserves the created `tripId` and returns reconnect-oriented error copy so the user can retry without creating a duplicate trip. Network/setup failures are surfaced as user-facing errors instead of silently falling back to stale polling semantics.
 
 ## Future Enhancements
 

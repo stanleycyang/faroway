@@ -9,8 +9,10 @@ Faroway is an AI-powered travel planning mobile app built with Expo (SDK 54) and
 ## Development Commands
 
 ```bash
-bun install              # Install dependencies
-bun start                # Start Expo dev server (press 'i' for iOS, 'a' for Android)
+bun install              # Install dependencies from the repo root
+bun dev:mobile           # Start Expo dev server through Turbo
+cd apps/mobile
+bun start                # Start Expo dev server directly (press 'i' for iOS, 'a' for Android)
 bun run ios              # Start directly on iOS
 bun run android          # Start directly on Android
 bun run test             # Run mobile Jest tests
@@ -81,7 +83,7 @@ Two stores in `stores/`:
 
 ### Streaming Itinerary Generation
 
-- `hooks/useStreamingItinerary.ts` - SSE connection to `/api/itinerary/stream` for progressive document building
+- `hooks/useStreamingItinerary.ts` - SSE connection to `/api/trips/${tripId}/stream` for progressive document building
 - `lib/json-render/` - Component catalog (13 types: HotelCard, ActivityCard, etc.) with Zod schemas and React Native renderers
 - Used in `app/create/generating.tsx` for real-time trip display during AI generation
 
