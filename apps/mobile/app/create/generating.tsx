@@ -31,14 +31,14 @@ import { useReduceMotion } from '../../hooks/useReduceMotion';
 const { width, height } = Dimensions.get('window');
 
 const GENERATION_STEPS = [
-  { key: 'orchestrator', text: 'Planning', emoji: '\ud83d\udd0d', color: '#8B5CF6' },
-  { key: 'hotels', text: 'Hotels', emoji: '\ud83c\udfe8', color: '#F59E0B' },
-  { key: 'activities', text: 'Activities', emoji: '\u2728', color: '#10B981' },
-  { key: 'dining', text: 'Dining', emoji: '\ud83c\udf7d\ufe0f', color: '#EF4444' },
-  { key: 'transport', text: 'Transport', emoji: '\u2708\ufe0f', color: '#06B6D4' },
-  { key: 'budget', text: 'Budget', emoji: '\ud83d\udcb3', color: '#14B8A6' },
-  { key: 'enrichment', text: 'Local tips', emoji: '\ud83d\udca1', color: '#84CC16' },
-  { key: 'aggregator', text: 'Itinerary', emoji: '\ud83d\udcdd', color: '#3B82F6' },
+  { key: 'orchestrator', text: 'Planning', emoji: '🔍', color: '#8B5CF6' },
+  { key: 'hotels', text: 'Hotels', emoji: '🏨', color: '#F59E0B' },
+  { key: 'activities', text: 'Activities', emoji: '✨', color: '#10B981' },
+  { key: 'dining', text: 'Dining', emoji: '🍽️', color: '#EF4444' },
+  { key: 'transport', text: 'Transport', emoji: '✈️', color: '#06B6D4' },
+  { key: 'budget', text: 'Budget', emoji: '💳', color: '#14B8A6' },
+  { key: 'enrichment', text: 'Local tips', emoji: '💡', color: '#84CC16' },
+  { key: 'aggregator', text: 'Itinerary', emoji: '📝', color: '#3B82F6' },
 ];
 
 const DESTINATION_FACTS: Record<string, string[]> = {
@@ -57,7 +57,7 @@ const DESTINATION_FACTS: Record<string, string[]> = {
   Rome: [
     'Rome has more fountains than any other city in the world.',
     "The Pantheon has the world's largest unreinforced concrete dome.",
-    'Trevi Fountain collects \u20ac1.5 million in coins annually.',
+    'Trevi Fountain collects €1.5 million in coins annually.',
     'Cats have legal protection at Roman archaeological sites.',
   ],
   London: [
@@ -79,3 +79,72 @@ const DESTINATION_FACTS: Record<string, string[]> = {
     'Every recommendation is curated for your preferences.',
   ],
 };
+
+interface StreamingLocation {
+  name?: string;
+  neighborhood?: string;
+}
+
+interface StreamingItem {
+  id?: string;
+  name?: string;
+  description?: string;
+  location?: StreamingLocation;
+  duration?: number;
+  price?: number;
+  priceLevel?: number | string;
+  rating?: number;
+  reviewCount?: number;
+  images?: string[];
+  affiliateUrl?: string;
+  reservationUrl?: string;
+}
+
+interface StreamingPeriod {
+  meal?: StreamingItem;
+  activities?: StreamingItem[];
+}
+
+interface StreamingDay {
+  date?: string;
+  dayNumber?: number;
+  title?: string;
+  morning?: StreamingPeriod;
+  afternoon?: StreamingPeriod;
+  evening?: StreamingPeriod;
+}
+
+interface StreamingHotel {
+  id?: string;
+  name?: string;
+  description?: string;
+  pricePerNight?: number;
+  totalPrice?: number;
+  userRating?: number;
+  rating?: number;
+  starRating?: number;
+  reviewCount?: number;
+  amenities?: string[];
+  images?: string[];
+  affiliateUrl?: string;
+  location?: unknown;
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string');
+}
+
+function isHotelLocation(value: unknown): value is NonNullable<Trip['hotel']>['location'] {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'name' in value &&
+    'address' in value &&
+    'lat' in value &&
+    'lng' in value &&
+    typeof value.name === 'string' &&
+    typeof value.address === 'string' &&
+    typeof value.lat === 'number' &&
+    typeof value.lng === 'number'
+  );
+}
