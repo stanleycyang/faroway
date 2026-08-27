@@ -33,8 +33,8 @@ const SLIDES: OnboardingSlide[] = [
     id: '1',
     emoji: '✨',
     title: 'AI Plans Your\nPerfect Trip',
-    subtitle: 'Tell us where you want to go, and watch magic happen',
-    highlight: 'in seconds',
+    subtitle: 'Tell us where you want to go, then sign in to generate a plan',
+    highlight: 'for your style',
     image: getImageUrl(IMAGE_PATHS.marketing.travelPlanning),
     gradient: ['#F97066', '#F59E0B'],
   },
@@ -50,9 +50,9 @@ const SLIDES: OnboardingSlide[] = [
   {
     id: '3',
     emoji: '🎯',
-    title: 'Book Everything\nIn One Tap',
-    subtitle: 'Hotels, restaurants, experiences — all in one place',
-    highlight: 'no more tabs',
+    title: 'Hotels and activities\nIn one place',
+    subtitle: 'Open partner links for stays, food, and experiences',
+    highlight: 'from your itinerary',
     image: getImageUrl(IMAGE_PATHS.marketing.travelDiscovery),
     gradient: ['#10b981', '#059669'],
   },
@@ -218,7 +218,7 @@ export default function OnboardingScreen() {
           <Animated.View style={[styles.valueProps, { opacity: fadeAnim }]}>
             <View style={styles.valueProp}>
               <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-              <Text style={styles.valuePropText}>Saved to your account</Text>
+              <Text style={styles.valuePropText}>Sign in to generate</Text>
             </View>
             <View style={styles.valueProp}>
               <Ionicons name="checkmark-circle" size={16} color="#10b981" />
@@ -226,7 +226,7 @@ export default function OnboardingScreen() {
             </View>
             <View style={styles.valueProp}>
               <Ionicons name="checkmark-circle" size={16} color="#10b981" />
-              <Text style={styles.valuePropText}>Takes 30 seconds</Text>
+              <Text style={styles.valuePropText}>Saved to your trips</Text>
             </View>
           </Animated.View>
         )}
