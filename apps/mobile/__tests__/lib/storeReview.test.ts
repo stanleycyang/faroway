@@ -23,6 +23,7 @@ jest.mock('expo-store-review', () => ({
 
 import {
   getStoreReviewFallbackUrl,
+  hasRealStoreListing,
   isValidStoreUrl,
   requestStoreReview,
   STORE_REVIEW_SUPPORT_URL,
@@ -56,6 +57,15 @@ describe('store review utilities', () => {
 
   it('uses support when no real store URL is configured', () => {
     expect(getStoreReviewFallbackUrl('ios')).toBe(STORE_REVIEW_SUPPORT_URL);
+    expect(hasRealStoreListing('ios')).toBe(false);
+  });
+
+  it('rejects placeholder App Store ids as a real listing', () => {
+    mockStoreUrl.mockReturnValue('https://apps.apple.com/app/faroway/id0000000000');
+    expect(isValidStoreUrl('https://apps.apple.com/app/faroway/id0000000000', 'ios')).toBe(
+      false
+    );
+    expect(hasRealStoreListing('ios')).toBe(false);
   });
 
   it('uses configured store URLs from Expo config before env values', async () => {

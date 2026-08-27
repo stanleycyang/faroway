@@ -22,11 +22,14 @@ export function isValidStoreUrl(url: string, platform: typeof Platform.OS = Plat
     const parsed = new URL(url);
 
     if (platform === 'ios') {
-      return (
+      const isAppleHost =
         parsed.protocol === 'itms-apps:' ||
         parsed.hostname === 'apps.apple.com' ||
-        parsed.hostname === 'itunes.apple.com'
-      );
+        parsed.hostname === 'itunes.apple.com';
+      if (!isAppleHost) return false;
+      // Placeholder App Store ids must not be treated as a real listing.
+      if (/id0{6,}/i.test(url)) return false;
+      return true;
     }
 
     if (platform === 'android') {
@@ -39,8 +42,17 @@ export function isValidStoreUrl(url: string, platform: typeof Platform.OS = Plat
   }
 }
 
+export function getConfiguredStoreUrl(platform: typeof Platform.OS = Platform.OS) {
+  return StoreReview.storeUrl() || envStoreUrl(platform) || undefined;
+}
+
+export function hasRealStoreListing(platform: typeof Platform.OS = Platform.OS) {
+  const configuredUrl = getConfiguredStoreUrl(platform);
+  return Boolean(configuredUrl && isValidStoreUrl(configuredUrl, platform));
+}
+
 export function getStoreReviewFallbackUrl(platform: typeof Platform.OS = Platform.OS) {
-  const configuredUrl = StoreReview.storeUrl() || envStoreUrl(platform);
+  const configuredUrl = getConfiguredStoreUrl(platform);
 
   if (configuredUrl && isValidStoreUrl(configuredUrl, platform)) {
     return configuredUrl;

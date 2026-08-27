@@ -7,12 +7,14 @@ import { EmailPasswordForm } from "@/components/auth/EmailPasswordForm";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 import { AppleButton } from "@/components/auth/AppleButton";
 import { Logo } from "@/components/Logo";
+import { getLoginCopy } from "@/lib/auth/login-copy";
 
 function LoginContent() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") || "/dashboard";
   const error = searchParams.get("error");
   const message = searchParams.get("message");
+  const copy = getLoginCopy(redirectTo);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-white px-4">
@@ -23,11 +25,9 @@ function LoginContent() {
             <Logo size="lg" variant="dark" />
           </div>
           <h1 className="mt-6 text-2xl font-semibold text-gray-900">
-            Welcome back
+            {copy.title}
           </h1>
-          <p className="mt-2 text-gray-600">
-            Sign in to continue planning your adventures
-          </p>
+          <p className="mt-2 text-gray-600">{copy.subtitle}</p>
         </div>
 
         {/* Error/Success Messages */}
@@ -81,15 +81,30 @@ function LoginContent() {
           </div>
 
           {/* Sign Up Link */}
-          <p className="mt-6 text-center text-sm text-gray-600">
-            Don&apos;t have an account?{" "}
-            <Link
-              href={`/auth/signup${redirectTo !== "/dashboard" ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`}
-              className="font-semibold text-primary hover:text-primary-dark transition-colors"
-            >
-              Sign up
-            </Link>
-          </p>
+          {copy.emphasizeSignup ? (
+            <div className="mt-6 rounded-xl border border-primary/20 bg-primary-50 px-4 py-3 text-center">
+              <p className="text-sm font-medium text-primary-800">
+                First time here? A free account is required to generate this
+                trip.
+              </p>
+              <Link
+                href={`/auth/signup?redirectTo=${encodeURIComponent(redirectTo)}`}
+                className="mt-2 inline-block font-semibold text-primary hover:text-primary-dark transition-colors"
+              >
+                {copy.signupCta}
+              </Link>
+            </div>
+          ) : (
+            <p className="mt-6 text-center text-sm text-gray-600">
+              Don&apos;t have an account?{" "}
+              <Link
+                href={`/auth/signup${redirectTo !== "/dashboard" ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`}
+                className="font-semibold text-primary hover:text-primary-dark transition-colors"
+              >
+                Sign up
+              </Link>
+            </p>
+          )}
         </div>
 
         {/* Footer */}

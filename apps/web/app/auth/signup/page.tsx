@@ -7,11 +7,13 @@ import { EmailPasswordForm } from "@/components/auth/EmailPasswordForm";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 import { AppleButton } from "@/components/auth/AppleButton";
 import { Logo } from "@/components/Logo";
+import { getSignupCopy } from "@/lib/auth/login-copy";
 
 function SignupContent() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo") || "/dashboard";
   const error = searchParams.get("error");
+  const copy = getSignupCopy(redirectTo);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-white px-4">
@@ -22,11 +24,9 @@ function SignupContent() {
             <Logo size="lg" variant="dark" />
           </div>
           <h1 className="mt-6 text-2xl font-semibold text-gray-900">
-            Create your account
+            {copy.title}
           </h1>
-          <p className="mt-2 text-gray-600">
-            Start planning your perfect trips with AI
-          </p>
+          <p className="mt-2 text-gray-600">{copy.subtitle}</p>
         </div>
 
         {/* Error Message */}
