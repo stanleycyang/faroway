@@ -53,7 +53,7 @@ interface UseTripGenerationOptions {
 const initialState: TripGenerationState = {
   phase: "connecting",
   progress: 0,
-  message: "Connecting...",
+  message: "Getting your trip started...",
   searchProgress: null,
   topHotel: null,
   activitiesCount: 0,
@@ -267,7 +267,7 @@ export function useTripGeneration(
     setState({
       ...initialState,
       isStreaming: true,
-      message: "Starting trip generation...",
+      message: "Getting your trip started...",
     });
 
     (async () => {
