@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { View, Text, StyleSheet, Animated, Easing, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors } from '../../constants/theme';
-import { useStreamingItinerary, StreamingBlock } from '../../hooks/useStreamingItinerary';
+import { StreamingBlock } from '../../hooks/useStreamingItinerary';
 import { registry } from '../../lib/json-render/registry';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { styles } from './_generatingStyles';
