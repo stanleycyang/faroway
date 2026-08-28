@@ -395,7 +395,9 @@ export default function CreateTripScreen() {
             fullWidth
           />
           {!canProceed && (
-            <Text style={styles.missingHint}>{formatMissingTripRequirements(missingRequirements)}</Text>
+            <Text style={styles.missingHint}>
+              {formatMissingTripRequirements(missingRequirements)}
+            </Text>
           )}
         </View>
 
