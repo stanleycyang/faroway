@@ -12,12 +12,7 @@ export const styles = StyleSheet.create({
   safeArea: { flex: 1, paddingHorizontal: 24, paddingVertical: 16 },
   header: { alignItems: 'center', marginBottom: 24 },
   headerLabel: { fontSize: 14, color: 'rgba(255,255,255,0.6)', marginBottom: 4 },
-  headerDestination: {
-    fontSize: 32,
-    fontWeight: '800',
-    color: '#fff',
-    textAlign: 'center',
-  },
+  headerDestination: { fontSize: 32, fontWeight: '800', color: '#fff', textAlign: 'center' },
   headerMeta: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
   headerMetaText: { fontSize: 14, color: 'rgba(255,255,255,0.7)' },
   headerMetaDot: { fontSize: 14, color: 'rgba(255,255,255,0.4)', marginHorizontal: 8 },
@@ -92,11 +87,7 @@ export const styles = StyleSheet.create({
     fontWeight: '600',
   },
   hotelPreviewPrice: { fontSize: 22, fontWeight: '800', color: colors.primary[400] },
-  hotelPreviewPriceUnit: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: 'rgba(255,255,255,0.6)',
-  },
+  hotelPreviewPriceUnit: { fontSize: 14, fontWeight: '500', color: 'rgba(255,255,255,0.6)' },
   funFact: {
     width: '100%',
     backgroundColor: 'rgba(255,255,255,0.08)',
@@ -104,12 +95,7 @@ export const styles = StyleSheet.create({
     padding: 16,
     marginTop: 8,
   },
-  funFactLabel: {
-    fontSize: 12,
-    color: colors.primary[400],
-    fontWeight: '700',
-    marginBottom: 6,
-  },
+  funFactLabel: { fontSize: 12, color: colors.primary[400], fontWeight: '700', marginBottom: 6 },
   funFactText: { fontSize: 14, color: 'rgba(255,255,255,0.85)', lineHeight: 20 },
   seededOutline: {
     width: '100%',
