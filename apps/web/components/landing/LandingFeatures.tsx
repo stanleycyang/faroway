@@ -1,11 +1,5 @@
 import Image from "next/image";
-import {
-  Sparkles,
-  Zap,
-  Heart,
-  WifiOff,
-  MapPin,
-} from "lucide-react";
+import { Sparkles, Zap, Heart, WifiOff, MapPin } from "lucide-react";
 import { FadeInOnScroll } from "@/components/landing/FadeInOnScroll";
 import { IMAGE_PATHS, getImageUrl } from "@faroway/constants";
 import { travelVibes } from "@/components/landing/landing-data";
@@ -228,7 +222,6 @@ export function LandingFeatures() {
           </FadeInOnScroll>
         </div>
       </section>
-
     </>
   );
 }
