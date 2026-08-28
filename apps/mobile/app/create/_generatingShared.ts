@@ -105,9 +105,7 @@ export function isStringArray(value: unknown): value is string[] {
   return Array.isArray(value) && value.every((item) => typeof item === 'string');
 }
 
-export function isHotelLocation(
-  value: unknown
-): value is NonNullable<Trip['hotel']>['location'] {
+export function isHotelLocation(value: unknown): value is NonNullable<Trip['hotel']>['location'] {
   return (
     typeof value === 'object' &&
     value !== null &&
@@ -143,9 +141,7 @@ export function convertStreamingDataToTrip(
           title: activity.name || 'Recommended stop',
           description: activity.description || '',
           location: activity.location?.name || activity.location?.neighborhood || '',
-          duration: activity.duration
-            ? `${Math.round(activity.duration / 60)} hours`
-            : '2 hours',
+          duration: activity.duration ? `${Math.round(activity.duration / 60)} hours` : '2 hours',
           type: 'activity',
           price: activity.price ? `$${activity.price}` : undefined,
           rating: activity.rating,
