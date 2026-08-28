@@ -7,6 +7,7 @@ import {
   Heart,
   Download,
   Clock,
+  Check,
 } from "lucide-react";
 import { FadeInOnScroll } from "@/components/landing/FadeInOnScroll";
 import { AppStoreButtons } from "@/components/AppStoreButtons";
@@ -17,7 +18,7 @@ import { destinations, whyReasons } from "@/components/landing/landing-data";
 export function LandingBottom() {
   return (
     <>
-      {/* ─── How It Works ─────────────────────────────────────────────────── */}
+      {/* ─── How It Works ─────────────────────────────────────────────────────── */}
       <section id="how-it-works" className="py-20 lg:py-28 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <FadeInOnScroll>
@@ -177,7 +178,7 @@ export function LandingBottom() {
         </div>
       </section>
 
-      {/* ─── Why Faroway ─────────────────────────────────────────────────── */}
+      {/* ─── Why Faroway ───────────────────────────────────────────────── */}
       <section className="py-20 lg:py-28 bg-slate-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <FadeInOnScroll>
@@ -310,7 +311,6 @@ export function LandingBottom() {
           </div>
         </div>
       </section>
-
     </>
   );
 }
