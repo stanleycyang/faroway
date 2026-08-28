@@ -2,11 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { View, Text, Animated } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { styles } from './_generatingStyles';
-import {
-  GENERATION_STEPS,
-  DESTINATION_FACTS,
-  StreamingHotel,
-} from './_generatingShared';
+import { GENERATION_STEPS, DESTINATION_FACTS, StreamingHotel } from './_generatingShared';
 import type { SeededItineraryOutline } from '../../lib/itineraryPreview';
 
 export function HotelPreviewCard({ hotel }: { hotel: Record<string, unknown> }) {
