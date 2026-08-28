@@ -148,3 +148,123 @@ function isHotelLocation(value: unknown): value is NonNullable<Trip['hotel']>['l
     typeof value.lng === 'number'
   );
 }
+
+function convertStreamingDataToTrip(
+  tripId: string,
+  itineraryDays: unknown[],
+  topHotel: Record<string, unknown> | null,
+  input: TripInput
+): Trip {
+  const destinationInfo = popularDestinations.find((d) => d.name === input.destination);
+
+  const days: TripDay[] = itineraryDays.map((dayValue, dayIndex) => {
+    const day = dayValue as StreamingDay;
+    const dayNumber = day.dayNumber || dayIndex + 1;
+    const activities: Activity[] = [];
+
+    const processActivities = (items: StreamingItem[] | undefined, startHour: number) => {
+      items?.forEach((activity, idx) => {
+        activities.push({
+          id: activity.id || `activity-${dayNumber}-${startHour + idx}`,
+          time: `${startHour + idx}:00`,
+          title: activity.name || 'Recommended stop',
+          description: activity.description || '',
+          location: activity.location?.name || activity.location?.neighborhood || '',
+          duration: activity.duration ? `${Math.round(activity.duration / 60)} hours` : '2 hours',
+          type: 'activity',
+          price: activity.price ? `$${activity.price}` : undefined,
+          rating: activity.rating,
+          reviewCount: activity.reviewCount,
+          image: activity.images?.[0],
+          bookingUrl: activity.affiliateUrl,
+        });
+      });
+    };
+
+    const processMeal = (meal: StreamingItem | undefined, time: string) => {
+      if (!meal) return;
+      activities.push({
+        id: meal.id || `meal-${dayNumber}-${time}`,
+        time,
+        title: meal.name || 'Recommended meal',
+        description: meal.description || '',
+        location: meal.location?.name || meal.location?.neighborhood || '',
+        duration: '1 hour',
+        type: 'restaurant',
+        price: meal.priceLevel
+          ? '$'.repeat(typeof meal.priceLevel === 'number' ? meal.priceLevel : 2)
+          : undefined,
+        rating: meal.rating,
+        reviewCount: meal.reviewCount,
+        image: meal.images?.[0],
+        bookingUrl: meal.reservationUrl,
+      });
+    };
+
+    processMeal(day.morning?.meal, '08:00');
+    processActivities(day.morning?.activities, 9);
+    processMeal(day.afternoon?.meal, '12:30');
+    processActivities(day.afternoon?.activities, 14);
+    processActivities(day.evening?.activities, 18);
+    processMeal(day.evening?.meal, '19:30');
+
+    activities.sort((a, b) => {
+      const timeA = parseInt(a.time.split(':')[0]);
+      const timeB = parseInt(b.time.split(':')[0]);
+      return timeA - timeB;
+    });
+
+    return {
+      date: day.date || input.startDate,
+      dayNumber,
+      theme: day.title || `Day ${dayNumber}`,
+      activities,
+    };
+  });
+
+  const hotel = topHotel as StreamingHotel | null;
+  const hotelImages = isStringArray(hotel?.images) ? hotel.images : [];
+  const hotelAmenities = isStringArray(hotel?.amenities) ? hotel.amenities : [];
+  const hotelLocation = isHotelLocation(hotel?.location)
+    ? hotel.location
+    : {
+        name: input.destination,
+        address: '',
+        lat: 0,
+        lng: 0,
+      };
+
+  return {
+    id: tripId,
+    destination: input.destination,
+    country: input.country || destinationInfo?.country || '',
+    startDate: input.startDate,
+    endDate: input.endDate,
+    travelers: input.travelers || 2,
+    travelerType: input.travelerType,
+    vibes: input.vibes || [],
+    budget: input.budget,
+    days,
+    hotel: hotel?.name
+      ? {
+          id: hotel.id || 'hotel-1',
+          name: hotel.name,
+          description: hotel.description || '',
+          pricePerNight: hotel.pricePerNight || 0,
+          totalPrice: hotel.totalPrice || 0,
+          rating: hotel.userRating || hotel.rating || 0,
+          reviewCount: hotel.reviewCount || 0,
+          amenities: hotelAmenities,
+          images: hotelImages,
+          bookingUrl: hotel.affiliateUrl || '',
+          location: hotelLocation,
+        }
+      : undefined,
+    coverImage:
+      destinationInfo?.image ||
+      hotelImages[0] ||
+      getImageUrl(IMAGE_PATHS.inspirations['beach-getaway']),
+    createdAt: new Date().toISOString(),
+    status: 'planned',
+  };
+}
