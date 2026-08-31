@@ -11,7 +11,7 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
         unstable_enablePackageExports: false,
       },
       moduleName,
-      platform,
+      platform
     );
   }
 

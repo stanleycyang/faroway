@@ -814,57 +814,60 @@ export default function TripDetailScreen() {
             <>
               {/* Day Selector */}
               <View style={styles.daySelector}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.daySelectorContent}
-            >
-              {trip.days.map((day, index) => (
-                <TouchableOpacity
-                  key={day.date}
-                  style={[styles.dayTab, selectedDay === index && styles.dayTabSelected]}
-                  onPress={() => {
-                    hapticFeedback.selection();
-                    setSelectedDay(index);
-                  }}
-                  accessibilityRole="tab"
-                  accessibilityState={{ selected: selectedDay === index }}
-                  accessibilityLabel={`Day ${day.dayNumber}, ${new Date(day.date).toLocaleDateString()}`}
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.daySelectorContent}
                 >
-                  <Text
-                    style={[
-                      styles.dayTabNumber,
-                      selectedDay === index && styles.dayTabNumberSelected,
-                    ]}
-                  >
-                    Day {day.dayNumber}
-                  </Text>
-                  <Text
-                    style={[styles.dayTabDate, selectedDay === index && styles.dayTabDateSelected]}
-                  >
-                    {new Date(day.date).toLocaleDateString('en-US', {
-                      month: 'short',
-                      day: 'numeric',
-                    })}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
+                  {trip.days.map((day, index) => (
+                    <TouchableOpacity
+                      key={day.date}
+                      style={[styles.dayTab, selectedDay === index && styles.dayTabSelected]}
+                      onPress={() => {
+                        hapticFeedback.selection();
+                        setSelectedDay(index);
+                      }}
+                      accessibilityRole="tab"
+                      accessibilityState={{ selected: selectedDay === index }}
+                      accessibilityLabel={`Day ${day.dayNumber}, ${new Date(day.date).toLocaleDateString()}`}
+                    >
+                      <Text
+                        style={[
+                          styles.dayTabNumber,
+                          selectedDay === index && styles.dayTabNumberSelected,
+                        ]}
+                      >
+                        Day {day.dayNumber}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.dayTabDate,
+                          selectedDay === index && styles.dayTabDateSelected,
+                        ]}
+                      >
+                        {new Date(day.date).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
               </View>
 
-          {/* Day Theme */}
+              {/* Day Theme */}
               <View style={styles.dayThemeContainer}>
                 <Text style={styles.dayTheme}>{trip.days[selectedDay]?.theme}</Text>
               </View>
 
-          {/* Transport */}
+              {/* Transport */}
               {trip.days[selectedDay]?.transport && (
                 <View style={styles.transportCardWrapper}>
                   <TransportCard transport={trip.days[selectedDay].transport!} />
                 </View>
               )}
 
-          {/* Activities */}
+              {/* Activities */}
               <View style={styles.activitiesContainer}>
                 {trip.days[selectedDay]?.activities.map((activity) => (
                   <ActivityCard key={activity.id} activity={activity} />

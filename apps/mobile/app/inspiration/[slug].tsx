@@ -488,9 +488,7 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingVertical: 16,
     borderRadius: borderRadius.lg,
-    ...(Platform.OS === 'web'
-      ? { boxShadow: '0 0 16px rgba(250, 140, 132, 0.35)' }
-      : shadows.glow),
+    ...(Platform.OS === 'web' ? { boxShadow: '0 0 16px rgba(250, 140, 132, 0.35)' } : shadows.glow),
   },
   surpriseButtonText: {
     fontSize: 17,

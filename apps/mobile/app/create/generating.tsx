@@ -731,11 +731,7 @@ export default function GeneratingScreen() {
   const router = useRouter();
   const { draftInput, finishGeneration } = useTripStore();
   const { initialized, isAuthenticated } = useAuthContext();
-  const {
-    tripGenerationCount,
-    incrementTripGeneration,
-    shouldShowRatingPrompt,
-  } = usePromptStore();
+  const { tripGenerationCount, incrementTripGeneration, shouldShowRatingPrompt } = usePromptStore();
   const [showCelebration, setShowCelebration] = useState(false);
   const [showRatingPrompt, setShowRatingPrompt] = useState(false);
   const [retryTripId, setRetryTripId] = useState<string | null>(null);
