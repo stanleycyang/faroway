@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface TOCItem {
   id: string;
@@ -11,22 +11,26 @@ interface TOCItem {
 export function TableOfContents({ content }: { content: string }) {
   const [activeId, setActiveId] = useState("");
 
-  const headings: TOCItem[] = content
-    .split("\n")
-    .filter((line) => /^#{2,3}\s/.test(line))
-    .map((line) => {
-      const match = line.match(/^(#{2,3})\s+(.+)$/);
-      if (!match) return null;
-      const text = match[2]
-        .replace(/\*\*/g, "")
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
-      const id = text
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/(^-|-$)/g, "");
-      return { id, text, level: match[1].length };
-    })
-    .filter(Boolean) as TOCItem[];
+  const headings = useMemo(
+    () =>
+      content
+        .split("\n")
+        .filter((line) => /^#{2,3}\s/.test(line))
+        .map((line) => {
+          const match = line.match(/^(#{2,3})\s+(.+)$/);
+          if (!match) return null;
+          const text = match[2]
+            .replace(/\*\*/g, "")
+            .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1");
+          const id = text
+            .toLowerCase()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/(^-|-$)/g, "");
+          return { id, text, level: match[1].length };
+        })
+        .filter(Boolean) as TOCItem[],
+    [content],
+  );
 
   useEffect(() => {
     const observer = new IntersectionObserver(

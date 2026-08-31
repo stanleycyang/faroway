@@ -44,7 +44,22 @@ export function CountrySearch({ onPick }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (open) loadCountries().then(setOptions).catch(console.error);
+    if (!open) return;
+    let cancelled = false;
+    loadCountries()
+      .then((countries) => {
+        if (!cancelled) setOptions(countries);
+      })
+      .catch(console.error);
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const frame = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => cancelAnimationFrame(frame);
   }, [open]);
 
   useEffect(() => {
@@ -60,7 +75,6 @@ export function CountrySearch({ onPick }: Props) {
       ) {
         e.preventDefault();
         setOpen(true);
-        setTimeout(() => inputRef.current?.focus(), 50);
       }
       if (e.key === "Escape") setOpen(false);
     }
@@ -98,7 +112,8 @@ export function CountrySearch({ onPick }: Props) {
           <Search className="w-4 h-4 text-slate-400 ml-1" />
           <input
             ref={inputRef}
-            type="text"
+            type="search"
+            aria-label="Search countries"
             placeholder="Find a country…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -126,9 +141,9 @@ export function CountrySearch({ onPick }: Props) {
       ) : (
         <button
           type="button"
+          aria-label="Search countries (keyboard shortcut slash)"
           onClick={() => {
             setOpen(true);
-            setTimeout(() => inputRef.current?.focus(), 50);
           }}
           className="inline-flex items-center gap-2 bg-white ring-1 ring-slate-200 hover:ring-slate-300 text-slate-500 px-3 py-2 rounded-full text-sm font-medium transition-all"
         >
@@ -141,7 +156,11 @@ export function CountrySearch({ onPick }: Props) {
       )}
 
       {open && filtered.length > 0 && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl ring-1 ring-slate-200/70 overflow-hidden z-50 animate-fade-in">
+        <div
+          id="country-search-results"
+          aria-label="Country search results"
+          className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-xl ring-1 ring-slate-200/70 overflow-hidden z-50 animate-fade-in"
+        >
           {filtered.map((o) => (
             <button
               key={o.iso}

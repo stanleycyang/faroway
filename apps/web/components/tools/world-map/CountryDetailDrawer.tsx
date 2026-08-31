@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useRef, useState } from "react";
 import { ChevronDown, MapPin, Trash2, X } from "lucide-react";
+import { useModalFocusTrap } from "@/hooks/useModalFocusTrap";
 import { useWorldMapStore } from "@/lib/tools/world-map/store";
 import { flagEmoji } from "@/lib/tools/world-map/iso";
 import { CONTINENT_BY_ALPHA3 } from "@/lib/tools/world-map/continents";
@@ -29,38 +30,23 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
   const upsertVisit = useWorldMapStore((s) => s.upsertVisit);
   const deleteVisit = useWorldMapStore((s) => s.deleteVisit);
 
-  const [draft, setDraft] = useState<CountryVisit | null>(null);
-  const [trackedIso, setTrackedIso] = useState<string | null>(null);
-  const [moreOpen, setMoreOpen] = useState(false);
+  const [draft, setDraft] = useState<CountryVisit | null>(() =>
+    iso ? (visit ?? EMPTY_DRAFT(iso)) : null,
+  );
+  const [moreOpen, setMoreOpen] = useState(() =>
+    Boolean(
+      visit?.firstVisit ||
+      visit?.lastVisit ||
+      visit?.visitCount ||
+      visit?.rating ||
+      visit?.pinnedCity ||
+      visit?.notes ||
+      visit?.photoDataUrl,
+    ),
+  );
+  const dialogRef = useRef<HTMLDivElement>(null);
 
-  if (trackedIso !== iso) {
-    setTrackedIso(iso);
-    if (iso) {
-      setDraft(visit ?? EMPTY_DRAFT(iso));
-    } else {
-      setDraft(null);
-    }
-    setMoreOpen(
-      Boolean(
-        visit?.firstVisit ||
-        visit?.lastVisit ||
-        visit?.visitCount ||
-        visit?.rating ||
-        visit?.pinnedCity ||
-        visit?.notes ||
-        visit?.photoDataUrl,
-      ),
-    );
-  }
-
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose]);
+  useModalFocusTrap({ open, dialogRef, onClose });
 
   if (!open || !iso || !draft) return null;
 
@@ -104,9 +90,11 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
       />
 
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal
         aria-labelledby="country-drawer-title"
+        tabIndex={-1}
         className="fixed z-50 bg-white shadow-2xl overflow-hidden flex flex-col inset-x-0 bottom-0 top-auto rounded-t-2xl max-h-[92vh] md:top-0 md:bottom-0 md:right-0 md:left-auto md:w-[440px] md:max-h-screen md:rounded-none md:rounded-l-2xl animate-slide-up md:animate-slide-in-right"
       >
         <div className="md:hidden flex justify-center pt-2.5 pb-1">
@@ -119,12 +107,12 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
               <span className="text-3xl leading-none" aria-hidden>
                 {flagEmoji(iso)}
               </span>
-              <h3
+              <h2
                 id="country-drawer-title"
                 className="text-2xl font-bold text-ink font-editorial truncate"
               >
                 {name || iso}
-              </h3>
+              </h2>
             </div>
             <p className="text-xs text-slate-500 mt-1 flex items-center gap-1.5">
               <span className="font-mono bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded">
@@ -162,6 +150,7 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
               onClick={() => setMoreOpen((v) => !v)}
               className="w-full flex items-center justify-between gap-2 text-sm font-semibold text-slate-700 hover:text-slate-900 py-2 transition-colors"
               aria-expanded={moreOpen}
+              aria-controls="country-optional-details"
             >
               <span>Optional details</span>
               <ChevronDown
@@ -172,11 +161,12 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
             </button>
 
             {moreOpen && (
-              <div className="space-y-4 pt-2">
+              <div id="country-optional-details" className="space-y-4 pt-2">
                 <div className="grid grid-cols-2 gap-3">
                   <Field label="First visit">
                     <input
                       type="date"
+                      aria-label="First visit"
                       value={draft.firstVisit || ""}
                       onChange={(e) =>
                         setDraft({ ...draft, firstVisit: e.target.value })
@@ -187,6 +177,7 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
                   <Field label="Last visit">
                     <input
                       type="date"
+                      aria-label="Last visit"
                       value={draft.lastVisit || ""}
                       onChange={(e) =>
                         setDraft({ ...draft, lastVisit: e.target.value })
@@ -200,6 +191,7 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
                   <Field label="Times visited">
                     <input
                       type="number"
+                      aria-label="Times visited"
                       min="0"
                       value={draft.visitCount ?? ""}
                       onChange={(e) =>
@@ -249,6 +241,7 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
                 <Field label="Memorable city">
                   <input
                     type="text"
+                    aria-label="Memorable city"
                     value={draft.pinnedCity || ""}
                     onChange={(e) =>
                       setDraft({ ...draft, pinnedCity: e.target.value })
@@ -260,6 +253,7 @@ export function CountryDetailDrawer({ iso, name, onClose }: Props) {
 
                 <Field label="Notes">
                   <textarea
+                    aria-label="Notes"
                     value={draft.notes || ""}
                     onChange={(e) =>
                       setDraft({ ...draft, notes: e.target.value })

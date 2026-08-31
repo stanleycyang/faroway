@@ -8,6 +8,7 @@ import {
   RefreshControl,
   ActivityIndicator,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -19,32 +20,9 @@ import { useAuthContext } from '../../components/AuthProvider';
 import { useTripStore } from '../../stores/tripStore';
 import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
+import * as WebBrowser from 'expo-web-browser';
 
 type FilterTab = 'all' | 'upcoming' | 'past';
-
-// ─── Feature highlight row ──────────────────────────
-
-function FeatureRow({
-  icon,
-  title,
-  subtitle,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  subtitle: string;
-}) {
-  return (
-    <View style={styles.featureRow}>
-      <View style={styles.featureIcon}>
-        <Ionicons name={icon} size={20} color={colors.primary[500]} />
-      </View>
-      <View style={styles.featureText}>
-        <Text style={styles.featureTitle}>{title}</Text>
-        <Text style={styles.featureSubtitle}>{subtitle}</Text>
-      </View>
-    </View>
-  );
-}
 
 // ─── Guest CTA (signed-out state) ──────────────────────────
 
@@ -91,21 +69,17 @@ function GuestTripsView() {
     >
       {/* Hero */}
       <View style={styles.heroSection}>
-        <View style={styles.heroIconContainer}>
+        <View style={styles.heroIconContainer} accessible={false}>
           <LinearGradient colors={[colors.primary[50], '#fff']} style={styles.heroIconGradient}>
             <Ionicons name="airplane" size={48} color={colors.primary[500]} />
           </LinearGradient>
         </View>
 
-        <Text style={styles.heroTitle}>
-          {localTrips.length > 0
-            ? `You have ${localTrips.length} unsaved trip${localTrips.length > 1 ? 's' : ''}`
-            : 'Your trips, all in one place'}
-        </Text>
+        <Text style={styles.heroTitle}>Sign in to save your trips</Text>
         <Text style={styles.heroSubtitle}>
           {localTrips.length > 0
-            ? "Sign in to save them before they're gone"
-            : 'Sign in to save your itineraries to your account and revisit your trip plans.'}
+            ? `Keep ${localTrips.length} trip${localTrips.length > 1 ? 's' : ''} backed up and ready on every device.`
+            : 'Keep every itinerary backed up and ready on all your devices.'}
         </Text>
       </View>
 
@@ -122,83 +96,58 @@ function GuestTripsView() {
             style={styles.socialButton}
             onPress={handleGoogleSignIn}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Google"
           >
             <Ionicons name="logo-google" size={20} color="#DB4437" />
             <Text style={styles.socialButtonText}>Continue with Google</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.socialButton, styles.appleButton]}
-            onPress={handleAppleSignIn}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="logo-apple" size={20} color="#fff" />
-            <Text style={[styles.socialButtonText, styles.appleButtonText]}>
-              Continue with Apple
-            </Text>
-          </TouchableOpacity>
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity
+              style={[styles.socialButton, styles.appleButton]}
+              onPress={handleAppleSignIn}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Continue with Apple"
+            >
+              <Ionicons name="logo-apple" size={20} color="#fff" />
+              <Text style={[styles.socialButtonText, styles.appleButtonText]}>
+                Continue with Apple
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
       <Text style={styles.termsText}>
-        By continuing, you agree to our Terms and Privacy Policy.
+        By continuing, you agree to our{' '}
+        <Text
+          style={styles.termsLink}
+          onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/terms')}
+          accessibilityRole="link"
+        >
+          Terms
+        </Text>{' '}
+        and{' '}
+        <Text
+          style={styles.termsLink}
+          onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/privacy')}
+          accessibilityRole="link"
+        >
+          Privacy Policy
+        </Text>
+        .
       </Text>
 
-      {/* Feature highlights */}
-      <View style={styles.featuresSection}>
-        <FeatureRow
-          icon="cloud-outline"
-          title="Saved trips"
-          subtitle="Keep generated plans tied to your account"
-        />
-        <FeatureRow
-          icon="sparkles-outline"
-          title="AI itineraries saved"
-          subtitle="Generated plans stored and ready to revisit"
-        />
-        <FeatureRow
-          icon="people-outline"
-          title="Share links"
-          subtitle="Send completed itineraries when sharing is enabled"
-        />
-      </View>
-
-      {/* Preview teaser */}
-      <View style={styles.previewSection}>
-        <Text style={styles.previewLabel}>What your trips will look like</Text>
-
-        <View style={styles.previewCardsContainer}>
-          <View style={styles.previewCard}>
-            <View style={styles.previewImagePlaceholder}>
-              <Ionicons name="image-outline" size={28} color={colors.surface[300]} />
-            </View>
-            <View style={styles.previewCardBody}>
-              <View style={styles.previewPill} />
-              <View style={[styles.previewPill, { width: 80 }]} />
-            </View>
-          </View>
-
-          <View style={styles.previewCard}>
-            <View style={styles.previewImagePlaceholder}>
-              <Ionicons name="image-outline" size={28} color={colors.surface[300]} />
-            </View>
-            <View style={styles.previewCardBody}>
-              <View style={styles.previewPill} />
-              <View style={[styles.previewPill, { width: 60 }]} />
-            </View>
-          </View>
-        </View>
-      </View>
-
-      {/* Explore CTA */}
       <View style={styles.exploreCta}>
-        <Text style={styles.exploreText}>Want to explore first?</Text>
         <Button
-          title="Plan a Trip"
+          title="Start planning"
           onPress={() => router.push('/create')}
           size="md"
           variant="outline"
           style={styles.exploreButton}
+          accessibilityHint="Choose a destination and dates before signing in to generate"
         />
       </View>
     </ScrollView>
@@ -269,6 +218,9 @@ function AuthenticatedTripsView() {
               hapticFeedback.selection();
               setActiveTab(tab.id);
             }}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: activeTab === tab.id }}
+            accessibilityLabel={`${tab.label} trips`}
           >
             <Text style={[styles.tabText, activeTab === tab.id && styles.tabTextActive]}>
               {tab.label}
@@ -289,7 +241,12 @@ function AuthenticatedTripsView() {
         }
       >
         {error && !loading && (
-          <TouchableOpacity style={styles.errorBanner} onPress={onRefresh}>
+          <TouchableOpacity
+            style={styles.errorBanner}
+            onPress={onRefresh}
+            accessibilityRole="button"
+            accessibilityLabel={`${error}. Retry loading trips`}
+          >
             <Ionicons name="alert-circle-outline" size={18} color="#dc2626" />
             <Text style={styles.errorText}>{error}</Text>
             <Text style={styles.errorRetry}>Tap to retry</Text>
@@ -356,8 +313,15 @@ export default function TripsScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>My Trips</Text>
-        <TouchableOpacity style={styles.addButton} onPress={() => router.push('/create')}>
+        <Text style={styles.headerTitle} accessibilityRole="header">
+          My Trips
+        </Text>
+        <TouchableOpacity
+          style={styles.addButton}
+          onPress={() => router.push('/create')}
+          accessibilityRole="button"
+          accessibilityLabel="Plan a new trip"
+        >
           <Ionicons name="add" size={24} color={colors.primary[500]} />
         </TouchableOpacity>
       </View>
@@ -410,9 +374,9 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   heroIconGradient: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -440,7 +404,11 @@ const styles = StyleSheet.create({
     color: '#64748b',
     textAlign: 'center',
     lineHeight: 18,
-    marginBottom: 28,
+    marginBottom: 24,
+  },
+  termsLink: {
+    color: colors.primary[600],
+    textDecorationLine: 'underline',
   },
   socialButton: {
     flexDirection: 'row',
@@ -465,87 +433,9 @@ const styles = StyleSheet.create({
   appleButtonText: {
     color: '#fff',
   },
-  featuresSection: {
-    gap: 16,
-    marginBottom: 32,
-  },
-  featureRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-  },
-  featureIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: colors.primary[50],
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  featureText: {
-    flex: 1,
-  },
-  featureTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#0f172a',
-    marginBottom: 2,
-  },
-  featureSubtitle: {
-    fontSize: 13,
-    color: '#64748b',
-  },
-  previewSection: {
-    paddingTop: 24,
-    borderTopWidth: 1,
-    borderTopColor: '#f1f5f9',
-    marginBottom: 32,
-  },
-  previewLabel: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#94a3b8',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-    marginBottom: 16,
-  },
-  previewCardsContainer: {
-    gap: 12,
-    opacity: 0.45,
-  },
-  previewCard: {
-    flexDirection: 'row',
-    backgroundColor: '#f8fafc',
-    borderRadius: borderRadius.lg,
-    overflow: 'hidden',
-    height: 80,
-  },
-  previewImagePlaceholder: {
-    width: 80,
-    backgroundColor: '#e2e8f0',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  previewCardBody: {
-    flex: 1,
-    padding: 14,
-    justifyContent: 'center',
-    gap: 8,
-  },
-  previewPill: {
-    width: 120,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#e2e8f0',
-  },
   exploreCta: {
     alignItems: 'center',
-    gap: 12,
     paddingBottom: 16,
-  },
-  exploreText: {
-    fontSize: 14,
-    color: '#64748b',
   },
   exploreButton: {
     minWidth: 160,

@@ -4,7 +4,7 @@ import { Footer } from "@/components/Footer";
 import { SharedItineraryReportForm } from "@/components/reports/SharedItineraryReportForm";
 
 export const metadata: Metadata = {
-  title: "Report Shared Content | Faroway",
+  title: "Report Shared Content",
   description: "Report a shared Faroway itinerary for review.",
   robots: {
     index: false,

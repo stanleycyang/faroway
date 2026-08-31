@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import { SharedTripView } from "@/components/trips/SharedTripView";
 import { loadSharedTrip } from "@/lib/trips/load-shared-trip";
 
-export const revalidate = 3600;
+// Share revocation must take effect on the next request; do not serve a stale
+// public itinerary after its owner disables the link.
+export const dynamic = "force-dynamic";
 
 interface SharedTripPageProps {
   params: Promise<{ token: string }>;

@@ -77,7 +77,10 @@ export function SharedItineraryReportForm({
 
   if (status === "submitted") {
     return (
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-emerald-900">
+      <div
+        role="status"
+        className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-emerald-900"
+      >
         Thanks. Faroway support will review the shared itinerary and take action
         where appropriate.
       </div>
@@ -146,7 +149,10 @@ export function SharedItineraryReportForm({
         </div>
 
         {error && (
-          <p className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+          <p
+            role="alert"
+            className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700"
+          >
             {error}
           </p>
         )}

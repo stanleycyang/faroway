@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
@@ -29,6 +30,8 @@ import { shareTrip, trackAffiliateClick } from '../../services/api';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import { useTrips } from '../../hooks/useTrips';
+import { useReduceMotion } from '../../hooks/useReduceMotion';
+import { USE_NATIVE_DRIVER } from '../../lib/animation';
 
 const HEADER_HEIGHT = 300;
 
@@ -81,10 +84,9 @@ const trackAndOpen = async (params: {
 
 interface ActivityCardProps {
   activity: TripActivity;
-  onPress?: () => void;
 }
 
-function ActivityCard({ activity, onPress }: ActivityCardProps) {
+function ActivityCard({ activity }: ActivityCardProps) {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'restaurant':
@@ -140,7 +142,7 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
   };
 
   return (
-    <TouchableOpacity style={styles.activityCard} onPress={onPress} activeOpacity={0.8}>
+    <View style={styles.activityCard}>
       <View style={styles.activityTime}>
         <Text style={styles.activityTimeText}>{activity.time}</Text>
         <View style={[styles.activityDot, { backgroundColor: getTypeColor(activity.type) }]} />
@@ -148,7 +150,9 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
       </View>
       <View style={styles.activityContent}>
         {/* Activity Image */}
-        {activity.image && <Image source={{ uri: activity.image }} style={styles.activityImage} />}
+        {activity.image && (
+          <Image source={{ uri: activity.image }} style={styles.activityImage} accessible={false} />
+        )}
         <View style={styles.activityHeader}>
           <View
             style={[
@@ -183,7 +187,13 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
           </View>
         )}
         {activity.bookingUrl && (
-          <TouchableOpacity style={styles.bookButton} onPress={handleBooking} activeOpacity={0.7}>
+          <TouchableOpacity
+            style={styles.bookButton}
+            onPress={handleBooking}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`${getBookingLabel(activity.type)} for ${activity.title}`}
+          >
             <LinearGradient
               colors={
                 activity.type === 'restaurant' ? ['#f97316', '#ea580c'] : ['#6366f1', '#8b5cf6']
@@ -210,7 +220,7 @@ function ActivityCard({ activity, onPress }: ActivityCardProps) {
           </View>
         )}
       </View>
-    </TouchableOpacity>
+    </View>
   );
 }
 
@@ -233,7 +243,7 @@ function FeaturedHotelCard({
   return (
     <View style={styles.hotelCard}>
       {hotel.images && hotel.images.length > 0 && (
-        <Image source={{ uri: hotel.images[0] }} style={styles.hotelCardImage} />
+        <Image source={{ uri: hotel.images[0] }} style={styles.hotelCardImage} accessible={false} />
       )}
       <View style={styles.hotelCardContent}>
         <View style={styles.hotelCardHeader}>
@@ -263,15 +273,18 @@ function FeaturedHotelCard({
             ))}
           </View>
         )}
-        <TouchableOpacity
-          style={styles.hotelCardButton}
-          onPress={handleBooking}
-          activeOpacity={0.7}
-          disabled={!hotel.bookingUrl}
-        >
-          <Text style={styles.hotelCardButtonText}>Check Availability</Text>
-          <Ionicons name="arrow-forward" size={16} color={colors.primary[500]} />
-        </TouchableOpacity>
+        {hotel.bookingUrl && (
+          <TouchableOpacity
+            style={styles.hotelCardButton}
+            onPress={handleBooking}
+            activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Check availability for ${hotel.name}`}
+          >
+            <Text style={styles.hotelCardButtonText}>Check Availability</Text>
+            <Ionicons name="arrow-forward" size={16} color={colors.primary[500]} />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -350,6 +363,8 @@ function TransportCard({
             style={styles.transportCardButton}
             onPress={handleBooking}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={`Book flight from ${transport.departure.airport} to ${transport.arrival.airport}`}
           >
             <Text style={styles.transportCardButtonText}>Book Flight</Text>
             <Ionicons name="arrow-forward" size={16} color="#1e40af" />
@@ -372,6 +387,8 @@ function BookingsSheet({
   onClose: () => void;
   bookableItems: { activity: Activity; dayNumber: number }[];
 }) {
+  const reduceMotion = useReduceMotion();
+
   const renderBookableItem = ({ item }: { item: { activity: Activity; dayNumber: number } }) => {
     const { activity, dayNumber } = item;
 
@@ -388,13 +405,19 @@ function BookingsSheet({
     return (
       <View style={styles.sheetItem}>
         <View style={styles.sheetItemInfo}>
-          <Text style={styles.sheetItemDay}>Day {dayNumber}</Text>
+          <Text style={styles.sheetItemDay}>{dayNumber === 0 ? 'Hotel' : `Day ${dayNumber}`}</Text>
           <Text style={styles.sheetItemTitle} numberOfLines={1}>
             {activity.title}
           </Text>
           {activity.price && <Text style={styles.sheetItemPrice}>{activity.price}</Text>}
         </View>
-        <TouchableOpacity style={styles.sheetItemButton} onPress={handleBook} activeOpacity={0.7}>
+        <TouchableOpacity
+          style={styles.sheetItemButton}
+          onPress={handleBook}
+          activeOpacity={0.7}
+          accessibilityRole="button"
+          accessibilityLabel={`Book ${activity.title}`}
+        >
           <Text style={styles.sheetItemButtonText}>Book</Text>
           <Ionicons name="open-outline" size={14} color="#fff" />
         </TouchableOpacity>
@@ -405,21 +428,26 @@ function BookingsSheet({
   return (
     <Modal
       visible={visible}
-      animationType="slide"
+      animationType={reduceMotion ? 'none' : 'slide'}
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
       <SafeAreaView edges={['top']} style={styles.sheetContainer}>
         <View style={styles.sheetHeader}>
-          <Text style={styles.sheetTitle}>
+          <Text style={styles.sheetTitle} accessibilityRole="header">
             {bookableItems.length} Bookable {bookableItems.length === 1 ? 'Item' : 'Items'}
           </Text>
-          <TouchableOpacity onPress={onClose} style={styles.sheetClose}>
+          <TouchableOpacity
+            onPress={onClose}
+            style={styles.sheetClose}
+            accessibilityRole="button"
+            accessibilityLabel="Close bookings"
+          >
             <Ionicons name="close" size={24} color="#0f172a" />
           </TouchableOpacity>
         </View>
         <Text style={styles.sheetSubtitle}>
-          Book directly with our partners. Free cancellation on most items.
+          You’ll complete each reservation on the partner’s site.
         </Text>
         <FlatList
           data={bookableItems}
@@ -436,21 +464,22 @@ function BookingsSheet({
 export default function TripDetailScreen() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { trips, currentTrip } = useTripStore();
+  const { trips, currentTrip, isHydrated } = useTripStore();
   const { getTripById } = useTrips();
   const { isAuthenticated } = useAuthContext();
   const { tripGenerationCount, shouldShowRatingPrompt } = usePromptStore();
+  const reduceMotion = useReduceMotion();
   const [selectedDay, setSelectedDay] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
   const [showAuthGate, setShowAuthGate] = useState(false);
-  const [authGateTrigger, setAuthGateTrigger] = useState<'save' | 'share'>('save');
   const [showRatingPrompt, setShowRatingPrompt] = useState(false);
   const [showBookingsSheet, setShowBookingsSheet] = useState(false);
+  const [isLoadingTrip, setIsLoadingTrip] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
 
   const scrollY = useRef(new Animated.Value(0)).current;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const scrollViewRef = useRef<any>(null);
-  const trip = trips.find((t) => t.id === id) || currentTrip;
+  const trip = trips.find((t) => t.id === id) || (currentTrip?.id === id ? currentTrip : null);
 
   const estimatedTotal = useMemo(() => {
     let total = 0;
@@ -502,18 +531,49 @@ export default function TripDetailScreen() {
   const bookableCount = bookableItems.length;
 
   useEffect(() => {
-    if (!trip && id) {
-      // Delay to allow store hydration before navigating back
-      const timeout = setTimeout(() => {
-        const freshTrip =
-          useTripStore.getState().trips.find((t) => t.id === id) ||
-          useTripStore.getState().currentTrip;
-        if (!freshTrip) router.back();
-      }, 500);
-      return () => clearTimeout(timeout);
+    if (trip) {
+      setIsLoadingTrip(false);
+      setLoadError(null);
+      return;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trip, id]);
+
+    if (!id) {
+      setIsLoadingTrip(false);
+      setLoadError('This trip link is incomplete.');
+      return;
+    }
+
+    if (!isHydrated) return;
+
+    if (id.startsWith('local_')) {
+      setIsLoadingTrip(false);
+      setLoadError('This offline trip is not available on this device.');
+      return;
+    }
+
+    let cancelled = false;
+    setIsLoadingTrip(true);
+    setLoadError(null);
+
+    getTripById(id)
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          const message = error instanceof Error ? error.message : 'Unable to load this trip.';
+          setLoadError(
+            message === 'Failed to fetch' || message === 'Network request failed'
+              ? 'We couldn’t reach Faroway. Check your connection and try again.'
+              : message
+          );
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingTrip(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [getTripById, id, isHydrated, loadAttempt, trip]);
 
   // Clamp selectedDay when trip days change (e.g. after refresh with fewer days)
   useEffect(() => {
@@ -532,15 +592,6 @@ export default function TripDetailScreen() {
     return () => clearTimeout(timer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isAuthenticated, trip?.status]);
-
-  const handleHeartPress = () => {
-    hapticFeedback.light();
-    if (!isAuthenticated) {
-      setAuthGateTrigger('save');
-      setShowAuthGate(true);
-    }
-    // For authenticated users: no-op for now (toggle saved state TBD)
-  };
 
   const onRefresh = async () => {
     if (!id) return;
@@ -561,7 +612,6 @@ export default function TripDetailScreen() {
     if (!id) return;
     hapticFeedback.light();
     if (!isAuthenticated) {
-      setAuthGateTrigger('share');
       setShowAuthGate(true);
       return;
     }
@@ -581,12 +631,55 @@ export default function TripDetailScreen() {
     }
   };
 
-  if (!trip) {
+  if (!trip && isLoadingTrip) {
     return (
-      <View style={styles.loadingContainer}>
+      <View
+        style={styles.loadingContainer}
+        accessibilityRole="progressbar"
+        accessibilityLabel="Loading trip"
+      >
         <ActivityIndicator size="large" color={colors.primary[500]} />
-        <Text style={styles.loadingText}>Loading trip...</Text>
+        <Text style={styles.loadingText}>Loading trip…</Text>
       </View>
+    );
+  }
+
+  if (!trip) {
+    const needsSignIn = loadError?.toLowerCase().includes('sign in') ?? false;
+    const canRetry = loadError?.includes('couldn’t reach Faroway') ?? false;
+
+    return (
+      <SafeAreaView style={styles.errorState} edges={['top', 'bottom']}>
+        <View style={styles.errorStateIcon} accessible={false}>
+          <Ionicons name="map-outline" size={40} color={colors.primary[500]} />
+        </View>
+        <Text style={styles.errorStateTitle} accessibilityRole="header">
+          Couldn’t open this trip
+        </Text>
+        <Text style={styles.errorStateMessage} accessibilityLiveRegion="polite">
+          {loadError || 'The trip may have been removed or the link may be invalid.'}
+        </Text>
+        <Button
+          title={needsSignIn ? 'Sign in to view trips' : canRetry ? 'Try again' : 'Go to My Trips'}
+          onPress={() => {
+            if (canRetry) {
+              setLoadAttempt((attempt) => attempt + 1);
+            } else {
+              router.replace('/(tabs)/trips');
+            }
+          }}
+          size="lg"
+          fullWidth
+          style={styles.errorStatePrimary}
+        />
+        <TouchableOpacity
+          style={styles.errorStateBack}
+          onPress={() => router.back()}
+          accessibilityRole="button"
+        >
+          <Text style={styles.errorStateBackText}>Go back</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
     );
   }
 
@@ -617,23 +710,30 @@ export default function TripDetailScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar style="light" />
       <Animated.ScrollView
-        ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
-          useNativeDriver: true,
+          useNativeDriver: USE_NATIVE_DRIVER,
         })}
         scrollEventThrottle={16}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
       >
         {/* Hero Image */}
         <Animated.View
-          style={[styles.heroContainer, { transform: [{ translateY: headerTranslate }] }]}
+          style={[
+            styles.heroContainer,
+            reduceMotion ? undefined : { transform: [{ translateY: headerTranslate }] },
+          ]}
         >
           <Animated.Image
             source={{ uri: trip.coverImage }}
-            style={[styles.heroImage, { transform: [{ scale: imageScale }] }]}
+            style={[
+              styles.heroImage,
+              reduceMotion ? undefined : { transform: [{ scale: imageScale }] },
+            ]}
+            accessibilityLabel={`${trip.destination}, ${trip.country}`}
           />
           <LinearGradient
             colors={['rgba(0,0,0,0.3)', 'transparent', 'rgba(0,0,0,0.8)']}
@@ -641,21 +741,30 @@ export default function TripDetailScreen() {
           />
           <SafeAreaView edges={['top']} style={styles.heroContent}>
             <View style={styles.heroHeader}>
-              <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.back()}
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+              >
                 <Ionicons name="arrow-back" size={24} color="#fff" />
               </TouchableOpacity>
               <View style={styles.heroActions}>
-                <TouchableOpacity style={styles.actionButton} onPress={handleHeartPress}>
-                  <Ionicons name="heart-outline" size={22} color="#fff" />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.actionButton} onPress={handleShare}>
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={handleShare}
+                  accessibilityRole="button"
+                  accessibilityLabel="Share trip"
+                >
                   <Ionicons name="share-outline" size={22} color="#fff" />
                 </TouchableOpacity>
               </View>
             </View>
             <View style={styles.heroInfo}>
               <Text style={styles.heroCountry}>{trip.country}</Text>
-              <Text style={styles.heroTitle}>{trip.destination}</Text>
+              <Text style={styles.heroTitle} accessibilityRole="header">
+                {trip.destination}
+              </Text>
               <View style={styles.heroMeta}>
                 <View style={styles.heroMetaItem}>
                   <Ionicons name="calendar-outline" size={16} color="rgba(255,255,255,0.8)" />
@@ -684,8 +793,27 @@ export default function TripDetailScreen() {
           {/* Featured Hotel */}
           {trip.hotel && <FeaturedHotelCard hotel={trip.hotel} />}
 
-          {/* Day Selector */}
-          <View style={styles.daySelector}>
+          {trip.days.length === 0 ? (
+            <View style={styles.emptyItinerary}>
+              <View style={styles.emptyItineraryIcon} accessible={false}>
+                <Ionicons name="time-outline" size={32} color={colors.primary[500]} />
+              </View>
+              <Text style={styles.emptyItineraryTitle}>Your itinerary is still being prepared</Text>
+              <Text style={styles.emptyItineraryText}>
+                Refresh to check whether your day-by-day plan is ready.
+              </Text>
+              <Button
+                title="Refresh itinerary"
+                onPress={onRefresh}
+                loading={refreshing}
+                disabled={refreshing}
+                size="md"
+              />
+            </View>
+          ) : (
+            <>
+              {/* Day Selector */}
+              <View style={styles.daySelector}>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -699,6 +827,9 @@ export default function TripDetailScreen() {
                     hapticFeedback.selection();
                     setSelectedDay(index);
                   }}
+                  accessibilityRole="tab"
+                  accessibilityState={{ selected: selectedDay === index }}
+                  accessibilityLabel={`Day ${day.dayNumber}, ${new Date(day.date).toLocaleDateString()}`}
                 >
                   <Text
                     style={[
@@ -719,55 +850,51 @@ export default function TripDetailScreen() {
                 </TouchableOpacity>
               ))}
             </ScrollView>
-          </View>
+              </View>
 
           {/* Day Theme */}
-          <View style={styles.dayThemeContainer}>
-            <Text style={styles.dayTheme}>{trip.days[selectedDay]?.theme}</Text>
-          </View>
+              <View style={styles.dayThemeContainer}>
+                <Text style={styles.dayTheme}>{trip.days[selectedDay]?.theme}</Text>
+              </View>
 
           {/* Transport */}
-          {trip.days[selectedDay]?.transport && (
-            <View style={styles.transportCardWrapper}>
-              <TransportCard transport={trip.days[selectedDay].transport!} />
-            </View>
-          )}
+              {trip.days[selectedDay]?.transport && (
+                <View style={styles.transportCardWrapper}>
+                  <TransportCard transport={trip.days[selectedDay].transport!} />
+                </View>
+              )}
 
           {/* Activities */}
-          <View style={styles.activitiesContainer}>
-            {trip.days[selectedDay]?.activities.map((activity) => (
-              <ActivityCard key={activity.id} activity={activity} />
-            ))}
-          </View>
+              <View style={styles.activitiesContainer}>
+                {trip.days[selectedDay]?.activities.map((activity) => (
+                  <ActivityCard key={activity.id} activity={activity} />
+                ))}
+              </View>
+            </>
+          )}
         </View>
       </Animated.ScrollView>
 
       {/* Bottom Bar */}
-      <View style={styles.bottomBar}>
-        <View style={styles.bottomBarInfo}>
-          <Text style={styles.bottomBarLabel}>Estimated cost</Text>
-          <Text style={styles.bottomBarPrice}>
-            {estimatedTotal > 0 ? `~$${estimatedTotal.toLocaleString()}` : 'Free activities'}
-          </Text>
-        </View>
-        <Button
-          title={
-            bookableCount > 0
-              ? `Book ${bookableCount} ${bookableCount === 1 ? 'Item' : 'Items'}`
-              : 'Explore'
-          }
-          onPress={() => {
-            hapticFeedback.light();
-            if (bookableCount > 0) {
+      {bookableCount > 0 && (
+        <View style={styles.bottomBar}>
+          <View style={styles.bottomBarInfo}>
+            <Text style={styles.bottomBarLabel}>Estimated cost</Text>
+            <Text style={styles.bottomBarPrice}>
+              {estimatedTotal > 0 ? `~$${estimatedTotal.toLocaleString()}` : 'See partner prices'}
+            </Text>
+          </View>
+          <Button
+            title={`Book ${bookableCount} ${bookableCount === 1 ? 'Item' : 'Items'}`}
+            onPress={() => {
+              hapticFeedback.light();
               setShowBookingsSheet(true);
-            } else {
-              scrollViewRef.current?.scrollTo({ y: 0, animated: true });
-            }
-          }}
-          size="lg"
-          style={styles.bookAllButton}
-        />
-      </View>
+            }}
+            size="lg"
+            style={styles.bookAllButton}
+          />
+        </View>
+      )}
 
       {/* Bookings Bottom Sheet */}
       <BookingsSheet
@@ -779,7 +906,7 @@ export default function TripDetailScreen() {
       {/* Auth gate for guests */}
       <AuthGate
         visible={showAuthGate}
-        trigger={authGateTrigger}
+        trigger="share"
         tripPreview={
           trip ? { destination: trip.destination, coverImage: trip.coverImage } : undefined
         }
@@ -811,6 +938,49 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     color: colors.neutral[500],
+  },
+  errorState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    backgroundColor: '#fff',
+  },
+  errorStateIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary[50],
+    marginBottom: 20,
+  },
+  errorStateTitle: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: colors.neutral[900],
+    textAlign: 'center',
+  },
+  errorStateMessage: {
+    marginTop: 10,
+    fontSize: 15,
+    lineHeight: 22,
+    color: colors.neutral[600],
+    textAlign: 'center',
+  },
+  errorStatePrimary: {
+    marginTop: 28,
+  },
+  errorStateBack: {
+    minHeight: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    marginTop: 8,
+  },
+  errorStateBackText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: colors.neutral[600],
   },
   scrollContent: {
     paddingBottom: 120,
@@ -904,6 +1074,34 @@ const styles = StyleSheet.create({
   vibesSection: {
     paddingHorizontal: 24,
     marginBottom: 24,
+  },
+  emptyItinerary: {
+    alignItems: 'center',
+    paddingHorizontal: 32,
+    paddingVertical: 48,
+  },
+  emptyItineraryIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.primary[50],
+    marginBottom: 16,
+  },
+  emptyItineraryTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: colors.neutral[900],
+    textAlign: 'center',
+  },
+  emptyItineraryText: {
+    marginTop: 8,
+    marginBottom: 20,
+    fontSize: 14,
+    lineHeight: 21,
+    color: colors.neutral[600],
+    textAlign: 'center',
   },
   daySelector: {
     marginBottom: 16,

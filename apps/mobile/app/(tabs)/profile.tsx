@@ -16,12 +16,12 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
-import * as StoreReview from 'expo-store-review';
 import { useAuthContext } from '../../components/AuthProvider';
 import { useUserStore } from '../../stores/userStore';
 import { useTripStore } from '../../stores/tripStore';
 import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
+import { requestStoreReview } from '../../lib/storeReview';
 
 interface MenuItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -46,7 +46,13 @@ function MenuItem({
   };
 
   return (
-    <TouchableOpacity style={styles.menuItem} onPress={handlePress} activeOpacity={0.7}>
+    <TouchableOpacity
+      style={styles.menuItem}
+      onPress={handlePress}
+      activeOpacity={0.7}
+      accessibilityRole="button"
+      accessibilityLabel={value ? `${label}. ${value}` : label}
+    >
       <View style={[styles.menuIconContainer, danger && styles.menuIconContainerDanger]}>
         <Ionicons name={icon} size={20} color={danger ? colors.error : colors.primary[500]} />
       </View>
@@ -116,26 +122,48 @@ function GuestProfileCard() {
             style={styles.socialButton}
             onPress={handleGoogleSignIn}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with Google"
           >
             <Ionicons name="logo-google" size={20} color="#DB4437" />
             <Text style={styles.socialButtonText}>Continue with Google</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.socialButton, styles.appleButton]}
-            onPress={handleAppleSignIn}
-            activeOpacity={0.7}
-          >
-            <Ionicons name="logo-apple" size={20} color="#fff" />
-            <Text style={[styles.socialButtonText, styles.appleButtonText]}>
-              Continue with Apple
-            </Text>
-          </TouchableOpacity>
+          {Platform.OS === 'ios' && (
+            <TouchableOpacity
+              style={[styles.socialButton, styles.appleButton]}
+              onPress={handleAppleSignIn}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel="Continue with Apple"
+            >
+              <Ionicons name="logo-apple" size={20} color="#fff" />
+              <Text style={[styles.socialButtonText, styles.appleButtonText]}>
+                Continue with Apple
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       )}
 
       <Text style={styles.guestTerms}>
-        By continuing, you agree to our Terms and Privacy Policy.
+        By continuing, you agree to our{' '}
+        <Text
+          style={styles.termsLink}
+          onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/terms')}
+          accessibilityRole="link"
+        >
+          Terms
+        </Text>{' '}
+        and{' '}
+        <Text
+          style={styles.termsLink}
+          onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/privacy')}
+          accessibilityRole="link"
+        >
+          Privacy Policy
+        </Text>
+        .
       </Text>
     </View>
   );
@@ -193,10 +221,9 @@ export default function ProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerTitle}>Profile</Text>
-          <TouchableOpacity style={styles.settingsButton}>
-            <Ionicons name="settings-outline" size={24} color={'#475569'} />
-          </TouchableOpacity>
+          <Text style={styles.headerTitle} accessibilityRole="header">
+            Profile
+          </Text>
         </View>
 
         {/* Logged-Out State */}
@@ -274,22 +301,18 @@ export default function ProfileScreen() {
             label="Contact Us"
             onPress={() => Linking.openURL('mailto:support@faroway.ai')}
           />
-          <MenuItem
-            icon="star-outline"
-            label="Rate the App"
-            onPress={async () => {
-              const available = await StoreReview.isAvailableAsync();
-              if (available) {
-                await StoreReview.requestReview();
-              } else {
-                const url =
-                  Platform.OS === 'ios'
-                    ? 'https://apps.apple.com/app/faroway/id0000000000'
-                    : 'https://play.google.com/store/apps/details?id=app.faroway';
-                Linking.openURL(url);
-              }
-            }}
-          />
+          {Platform.OS !== 'web' && (
+            <MenuItem
+              icon="star-outline"
+              label="Rate the App"
+              onPress={async () => {
+                const result = await requestStoreReview();
+                if (result.destination === 'unavailable') {
+                  Alert.alert('Unable to open ratings', 'Please try again later.');
+                }
+              }}
+            />
+          )}
         </View>
 
         <View style={styles.menuSection}>
@@ -353,17 +376,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#0f172a',
   },
-  settingsButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-
   // ─── Guest / Logged-Out ──────────
   guestCard: {
     alignItems: 'center',
@@ -409,6 +421,10 @@ const styles = StyleSheet.create({
     color: '#64748b',
     textAlign: 'center',
     lineHeight: 18,
+  },
+  termsLink: {
+    color: colors.primary[600],
+    textDecorationLine: 'underline',
   },
   socialButton: {
     flexDirection: 'row',

@@ -29,7 +29,7 @@ export function ClusterCard({ cluster, postCount }: ClusterCardProps) {
             {postCount} {postCount === 1 ? "article" : "articles"}
           </span>
         </div>
-        <h3 className="text-xl font-bold text-white mb-1">{cluster.title}</h3>
+        <h2 className="text-xl font-bold text-white mb-1">{cluster.title}</h2>
         <p className="text-white/70 text-sm line-clamp-2 mb-3">
           {cluster.tagline}
         </p>

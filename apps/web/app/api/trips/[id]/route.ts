@@ -85,6 +85,26 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       );
     }
 
+    if (parseResult.data.start_date || parseResult.data.end_date) {
+      const { data: existingTrip, error: existingTripError } = await db
+        .from("trips")
+        .select("start_date, end_date")
+        .eq("id", id)
+        .eq("user_id", auth.userId)
+        .single();
+      if (existingTripError || !existingTrip) {
+        return NextResponse.json({ error: "Trip not found" }, { status: 404 });
+      }
+      const nextStart = parseResult.data.start_date ?? existingTrip.start_date;
+      const nextEnd = parseResult.data.end_date ?? existingTrip.end_date;
+      if (!isValidDateRange(nextStart, nextEnd)) {
+        return NextResponse.json(
+          { error: "End date must be on or after start date" },
+          { status: 400 },
+        );
+      }
+    }
+
     const { data: trip, error } = await db
       .from("trips")
       .update({ ...parseResult.data, updated_at: new Date().toISOString() })

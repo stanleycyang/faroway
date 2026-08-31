@@ -3,6 +3,9 @@
  * Applied via next.config.ts
  */
 
+const developmentScriptSource =
+  process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
+
 export const securityHeaders = [
   {
     key: "X-DNS-Prefetch-Control",
@@ -33,7 +36,7 @@ export const securityHeaders = [
     value: [
       "default-src 'self'",
       // TODO: Replace 'unsafe-inline' with nonce-based CSP
-      "script-src 'self' 'unsafe-inline'",
+      `script-src 'self' 'unsafe-inline'${developmentScriptSource}`,
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https://images.unsplash.com https://*.supabase.co https://*.tile.openstreetmap.org",
       "font-src 'self' https://fonts.gstatic.com",

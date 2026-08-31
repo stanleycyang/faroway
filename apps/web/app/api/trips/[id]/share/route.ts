@@ -96,12 +96,15 @@ export async function DELETE(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { error: updateError } = await supabase
+    const { count, error: updateError } = await supabase
       .from("trips")
-      .update({
-        is_shared: false,
-        updated_at: new Date().toISOString(),
-      })
+      .update(
+        {
+          is_shared: false,
+          updated_at: new Date().toISOString(),
+        },
+        { count: "exact" },
+      )
       .eq("id", id)
       .eq("user_id", user.id);
 
@@ -111,6 +114,10 @@ export async function DELETE(request: NextRequest, { params }: Params) {
         { error: "Failed to disable sharing" },
         { status: 500 },
       );
+    }
+
+    if (count === 0) {
+      return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true });

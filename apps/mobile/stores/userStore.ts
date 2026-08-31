@@ -1,4 +1,6 @@
 import { create } from 'zustand';
+import { createJSONStorage, persist } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface User {
   id: string;
@@ -25,32 +27,43 @@ interface UserStore {
   logout: () => void;
 }
 
-export const useUserStore = create<UserStore>((set) => ({
-  user: null,
-  hasCompletedOnboarding: false,
-  isAuthenticated: false,
-
-  setUser: (user) =>
-    set({
-      user,
-      isAuthenticated: !!user,
-    }),
-
-  setOnboardingComplete: (complete) => set({ hasCompletedOnboarding: complete }),
-
-  updatePreferences: (preferences) =>
-    set((state) => ({
-      user: state.user
-        ? {
-            ...state.user,
-            preferences: { ...state.user.preferences, ...preferences },
-          }
-        : null,
-    })),
-
-  logout: () =>
-    set({
+export const useUserStore = create<UserStore>()(
+  persist(
+    (set) => ({
       user: null,
+      hasCompletedOnboarding: false,
       isAuthenticated: false,
+
+      setUser: (user) =>
+        set({
+          user,
+          isAuthenticated: !!user,
+        }),
+
+      setOnboardingComplete: (complete) => set({ hasCompletedOnboarding: complete }),
+
+      updatePreferences: (preferences) =>
+        set((state) => ({
+          user: state.user
+            ? {
+                ...state.user,
+                preferences: { ...state.user.preferences, ...preferences },
+              }
+            : null,
+        })),
+
+      logout: () =>
+        set({
+          user: null,
+          isAuthenticated: false,
+        }),
     }),
-}));
+    {
+      name: 'user-preferences',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({
+        hasCompletedOnboarding: state.hasCompletedOnboarding,
+      }),
+    }
+  )
+);

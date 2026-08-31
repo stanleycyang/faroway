@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,28 +21,56 @@ export default function PreferencesScreen() {
   const [selectedVibes, setSelectedVibes] = useState<string[]>(user?.preferences?.vibes || []);
   const [selectedBudget, setSelectedBudget] = useState<string>(user?.preferences?.budget || '');
   const [saved, setSaved] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleSave = async () => {
-    updatePreferences({ vibes: selectedVibes, budget: selectedBudget });
-    // Persist to backend
-    updateUserProfile({
-      preferences: { vibes: selectedVibes, budget: selectedBudget },
-    });
-    hapticFeedback.success();
-    setSaved(true);
-    setTimeout(() => router.back(), 600);
+    if (isSaving) return;
+    setIsSaving(true);
+
+    try {
+      const result = await updateUserProfile({
+        preferences: { vibes: selectedVibes, budget: selectedBudget },
+      });
+      if (result.error) throw new Error(result.error);
+
+      updatePreferences({ vibes: selectedVibes, budget: selectedBudget });
+      hapticFeedback.success();
+      setSaved(true);
+      setTimeout(() => router.back(), 600);
+    } catch (error: unknown) {
+      hapticFeedback.error();
+      const message = error instanceof Error ? error.message : 'Please try again.';
+      Alert.alert('Couldn’t save preferences', message);
+      setIsSaving(false);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+        >
           <Ionicons name="arrow-back" size={24} color={'#475569'} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Travel Preferences</Text>
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveButtonText}>{saved ? '✓ Saved' : 'Save'}</Text>
+        <Text style={styles.headerTitle} accessibilityRole="header">
+          Travel Preferences
+        </Text>
+        <TouchableOpacity
+          style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+          onPress={handleSave}
+          disabled={isSaving}
+          accessibilityRole="button"
+          accessibilityLabel={saved ? 'Preferences saved' : 'Save preferences'}
+          accessibilityState={{ disabled: isSaving, busy: isSaving }}
+        >
+          <Text style={styles.saveButtonText}>
+            {saved ? '✓ Saved' : isSaving ? 'Saving…' : 'Save'}
+          </Text>
         </TouchableOpacity>
       </View>
 
@@ -67,6 +95,9 @@ export default function PreferencesScreen() {
                     setSelectedBudget(option.id);
                   }}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${option.label} budget. ${option.description}`}
+                  accessibilityState={{ selected: isSelected }}
                 >
                   <Text style={styles.budgetEmoji}>{option.emoji}</Text>
                   <View style={styles.budgetContent}>
@@ -117,9 +148,13 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: borderRadius.md,
     backgroundColor: colors.primary[500],
+  },
+  saveButtonDisabled: {
+    opacity: 0.6,
   },
   saveButtonText: {
     fontSize: 14,

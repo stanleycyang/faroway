@@ -5,6 +5,7 @@ import {
   applyCorsHeaders,
   handleCorsPreflightResponse,
 } from "@/lib/security/cors";
+import { validateRedirectUrl } from "@/lib/security/validate-redirect";
 
 // Routes that require authentication
 const protectedRoutes = ["/dashboard", "/trips", "/settings", "/profile"];
@@ -14,6 +15,11 @@ const authRoutes = ["/auth/login", "/auth/signup"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
+
+  // Keep one canonical trip-creation experience for old bookmarks and links.
+  if (pathname === "/trips/new") {
+    return NextResponse.redirect(new URL("/create", request.url), 308);
+  }
 
   // Handle CORS for API routes
   if (pathname.startsWith("/api/")) {
@@ -83,16 +89,9 @@ export async function proxy(request: NextRequest) {
 
   // Redirect authenticated users away from auth routes
   if (isAuthRoute && user) {
-    let redirectTo =
-      request.nextUrl.searchParams.get("redirectTo") || "/dashboard";
-    // Prevent open redirect: only allow relative paths
-    if (
-      !redirectTo.startsWith("/") ||
-      redirectTo.startsWith("//") ||
-      redirectTo.includes(":")
-    ) {
-      redirectTo = "/dashboard";
-    }
+    const redirectTo = validateRedirectUrl(
+      request.nextUrl.searchParams.get("redirectTo"),
+    );
     return NextResponse.redirect(new URL(redirectTo, request.url));
   }
 

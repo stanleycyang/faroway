@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { BlogPost, BlogPostMeta, AUTHORS, PaginatedResult } from "./types";
 import { getClusterBySlug } from "./clusters";
 import { IMAGE_PATHS, getImageUrl } from "@faroway/constants";
@@ -48,7 +49,7 @@ function rowToPost(row: any): BlogPost {
 // Core queries
 // ---------------------------------------------------------------------------
 
-export async function getAllPostMetas(): Promise<BlogPostMeta[]> {
+export const getAllPostMetas = cache(async (): Promise<BlogPostMeta[]> => {
   const supabase = getBlogSupabase();
   if (!supabase) return [];
 
@@ -64,7 +65,7 @@ export async function getAllPostMetas(): Promise<BlogPostMeta[]> {
     return [];
   }
   return (data || []).map(rowToMeta);
-}
+});
 
 /**
  * Fetch every published post for sitemap discovery. Listing pages intentionally
@@ -97,7 +98,7 @@ export async function getAllSitemapPostMetas(): Promise<BlogPostMeta[]> {
   return posts;
 }
 
-export async function getAllPosts(): Promise<BlogPost[]> {
+export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
   const supabase = getBlogSupabase();
   if (!supabase) return [];
 
@@ -113,22 +114,24 @@ export async function getAllPosts(): Promise<BlogPost[]> {
     return [];
   }
   return (data || []).map(rowToPost);
-}
+});
 
-export async function getPostBySlug(slug: string): Promise<BlogPost | null> {
-  const supabase = getBlogSupabase();
-  if (!supabase) return null;
+export const getPostBySlug = cache(
+  async (slug: string): Promise<BlogPost | null> => {
+    const supabase = getBlogSupabase();
+    if (!supabase) return null;
 
-  const { data, error } = await supabase
-    .from("blog_posts")
-    .select(FULL_COLUMNS)
-    .eq("slug", slug)
-    .eq("status", "published")
-    .single();
+    const { data, error } = await supabase
+      .from("blog_posts")
+      .select(FULL_COLUMNS)
+      .eq("slug", slug)
+      .eq("status", "published")
+      .single();
 
-  if (error || !data) return null;
-  return rowToPost(data);
-}
+    if (error || !data) return null;
+    return rowToPost(data);
+  },
+);
 
 // ---------------------------------------------------------------------------
 // Derived async helpers
@@ -148,10 +151,13 @@ export async function getRelatedPosts(
   slug: string,
   limit = 3,
 ): Promise<BlogPostMeta[]> {
-  const post = await getPostBySlug(slug);
+  const [post, postMetas] = await Promise.all([
+    getPostBySlug(slug),
+    getAllPostMetas(),
+  ]);
   if (!post) return [];
 
-  const all = (await getAllPostMetas()).filter((p) => p.slug !== slug);
+  const all = postMetas.filter((p) => p.slug !== slug);
 
   const scored = all.map((p) => {
     let score = 0;

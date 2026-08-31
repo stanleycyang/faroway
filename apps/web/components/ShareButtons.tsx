@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Share2,
   Twitter,
@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 
 interface ShareButtonsProps {
-  url?: string;
+  url: string;
   title: string;
   description?: string;
   hashtags?: string[];
@@ -31,9 +31,16 @@ export function ShareButtons({
 }: ShareButtonsProps) {
   const [copied, setCopied] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const shareUrl =
-    url || (typeof window !== "undefined" ? window.location.href : "");
+  useEffect(
+    () => () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    },
+    [],
+  );
+
+  const shareUrl = url;
   const encodedUrl = encodeURIComponent(shareUrl);
   const encodedTitle = encodeURIComponent(title);
   const encodedDescription = encodeURIComponent(description);
@@ -51,7 +58,8 @@ export function ShareButtons({
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopied(false), 2000);
     } catch (_err) {
       console.error("Failed to copy:", _err);
     }
@@ -201,30 +209,4 @@ export function ShareButtons({
       </button>
     </div>
   );
-}
-
-// Hook for programmatic sharing
-export function useShare() {
-  const share = async (data: { title: string; text?: string; url: string }) => {
-    if (navigator.share) {
-      try {
-        await navigator.share(data);
-        return true;
-      } catch {
-        return false;
-      }
-    }
-    // Fallback to clipboard
-    try {
-      await navigator.clipboard.writeText(data.url);
-      return true;
-    } catch {
-      return false;
-    }
-  };
-
-  return {
-    share,
-    canShare: typeof navigator !== "undefined" && !!navigator.share,
-  };
 }

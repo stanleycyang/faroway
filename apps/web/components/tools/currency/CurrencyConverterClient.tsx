@@ -18,7 +18,7 @@ export function CurrencyConverterClient() {
   const [toCode, setToCode] = useState("EUR");
   const [amount, setAmount] = useState<string>("100");
 
-  const numericAmount = parseFloat(amount) || 0;
+  const numericAmount = Math.max(0, parseFloat(amount) || 0);
   const converted = convertCurrency(numericAmount, fromCode, toCode);
   const fromCurrency = getCurrencyByCode(fromCode);
   const toCurrency = getCurrencyByCode(toCode);
@@ -53,10 +53,14 @@ export function CurrencyConverterClient() {
         {/* Currency Pickers */}
         <div className="flex items-end gap-3 mb-6">
           <div className="flex-1">
-            <label className="block text-sm font-semibold text-slate-900 mb-3">
+            <label
+              htmlFor="currency-from"
+              className="block text-sm font-semibold text-slate-900 mb-3"
+            >
               From
             </label>
             <select
+              id="currency-from"
               value={fromCode}
               onChange={(e) => setFromCode(e.target.value)}
               className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
@@ -70,6 +74,7 @@ export function CurrencyConverterClient() {
           </div>
 
           <button
+            type="button"
             onClick={handleSwap}
             className="w-10 h-10 rounded-xl border border-slate-300 flex items-center justify-center text-slate-600 hover:bg-slate-50 hover:border-primary/30 transition-all mb-0.5"
             aria-label="Swap currencies"
@@ -78,10 +83,14 @@ export function CurrencyConverterClient() {
           </button>
 
           <div className="flex-1">
-            <label className="block text-sm font-semibold text-slate-900 mb-3">
+            <label
+              htmlFor="currency-to"
+              className="block text-sm font-semibold text-slate-900 mb-3"
+            >
               To
             </label>
             <select
+              id="currency-to"
               value={toCode}
               onChange={(e) => setToCode(e.target.value)}
               className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
@@ -97,7 +106,10 @@ export function CurrencyConverterClient() {
 
         {/* Amount Input */}
         <div className="mb-6">
-          <label className="block text-sm font-semibold text-slate-900 mb-3">
+          <label
+            htmlFor="currency-amount"
+            className="block text-sm font-semibold text-slate-900 mb-3"
+          >
             Amount
           </label>
           <div className="relative">
@@ -105,6 +117,7 @@ export function CurrencyConverterClient() {
               {fromCurrency?.symbol}
             </span>
             <input
+              id="currency-amount"
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
@@ -120,8 +133,10 @@ export function CurrencyConverterClient() {
         <div className="flex gap-2 mb-8">
           {QUICK_AMOUNTS.map((qa) => (
             <button
+              type="button"
               key={qa}
               onClick={() => setAmount(qa.toString())}
+              aria-pressed={amount === qa.toString()}
               className={`flex-1 py-2 rounded-lg text-sm font-medium transition-all ${
                 amount === qa.toString()
                   ? "bg-primary/10 text-primary border border-primary/30"
@@ -135,7 +150,11 @@ export function CurrencyConverterClient() {
         </div>
 
         {/* Conversion Result */}
-        <div className="rounded-2xl bg-gradient-to-br from-primary/5 to-amber-50 border border-primary/20 p-6 mb-6 text-center">
+        <div
+          role="status"
+          aria-live="polite"
+          className="rounded-2xl bg-gradient-to-br from-primary/5 to-amber-50 border border-primary/20 p-6 mb-6 text-center"
+        >
           <p className="text-sm text-slate-600 mb-1">
             {fromCurrency?.flag} {formatNumber(numericAmount)} {fromCode} =
           </p>
@@ -144,6 +163,9 @@ export function CurrencyConverterClient() {
           </p>
           <p className="text-sm text-slate-500">
             {toCurrency?.flag} {toCurrency?.name}
+          </p>
+          <p className="mt-2 text-xs font-medium text-slate-500">
+            Planning estimate — rates are not live.
           </p>
           <div className="mt-3 pt-3 border-t border-slate-200/60">
             <p className="text-xs text-slate-400">
@@ -160,9 +182,9 @@ export function CurrencyConverterClient() {
           <div className="rounded-2xl bg-white border border-slate-200 p-6 mb-6">
             <div className="flex items-center gap-2 mb-4">
               <Lightbulb className="w-5 h-5 text-amber-500" />
-              <h3 className="text-sm font-semibold text-slate-900">
+              <h2 className="text-sm font-semibold text-slate-900">
                 Tips for {tipsCurrency.name} ({tipsCurrency.code})
-              </h3>
+              </h2>
             </div>
             <ul className="space-y-2">
               {tipsCurrency.tips.map((tip, i) => (

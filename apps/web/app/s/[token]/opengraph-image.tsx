@@ -2,6 +2,7 @@ import { ImageResponse } from "next/og";
 import { getSupabase } from "@/lib/supabase/server";
 
 export const runtime = "edge";
+export const revalidate = 0;
 export const alt = "Shared Trip Itinerary - Faroway";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";

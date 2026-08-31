@@ -34,6 +34,8 @@ export function ProfileSwitcher() {
     <div className="relative" ref={ref}>
       <button
         type="button"
+        aria-expanded={open}
+        aria-controls={open ? "world-map-profile-menu" : undefined}
         onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-2 bg-white ring-1 ring-slate-200 hover:ring-slate-300 text-slate-700 px-3 py-2 rounded-full text-sm font-semibold transition-all"
       >
@@ -45,7 +47,10 @@ export function ProfileSwitcher() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-60 bg-white rounded-2xl shadow-xl ring-1 ring-slate-200/70 overflow-hidden z-40 animate-fade-in">
+        <div
+          id="world-map-profile-menu"
+          className="absolute right-0 top-full mt-2 w-60 bg-white rounded-2xl shadow-xl ring-1 ring-slate-200/70 overflow-hidden z-40 animate-fade-in"
+        >
           <div className="px-4 py-2 text-[10px] uppercase tracking-wider text-slate-400 font-semibold">
             Profiles
           </div>
@@ -59,20 +64,14 @@ export function ProfileSwitcher() {
                   isActive ? "bg-primary/5" : "hover:bg-slate-50"
                 } transition-colors`}
               >
-                <button
-                  type="button"
-                  onClick={() => {
-                    switchProfile(p.id);
-                    setOpen(false);
-                  }}
-                  className="flex items-center gap-2 flex-1 min-w-0 text-left"
-                >
-                  <span className="text-lg leading-none">
-                    {p.emoji || "🌍"}
-                  </span>
-                  {isEditing ? (
+                {isEditing ? (
+                  <div className="flex items-center gap-2 flex-1 min-w-0">
+                    <span className="text-lg leading-none">
+                      {p.emoji || "🌍"}
+                    </span>
                     <input
                       autoFocus
+                      aria-label={`Rename ${p.name} profile`}
                       value={editName}
                       onChange={(e) => setEditName(e.target.value)}
                       onBlur={() => {
@@ -86,10 +85,22 @@ export function ProfileSwitcher() {
                         }
                         if (e.key === "Escape") setEditingId(null);
                       }}
-                      onClick={(e) => e.stopPropagation()}
-                      className="flex-1 text-sm bg-white ring-1 ring-primary/40 rounded px-2 py-0.5"
+                      className="flex-1 min-w-0 text-sm bg-white ring-1 ring-primary/40 rounded px-2 py-0.5"
                     />
-                  ) : (
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    aria-current={isActive ? "true" : undefined}
+                    onClick={() => {
+                      switchProfile(p.id);
+                      setOpen(false);
+                    }}
+                    className="flex items-center gap-2 flex-1 min-w-0 text-left"
+                  >
+                    <span className="text-lg leading-none">
+                      {p.emoji || "🌍"}
+                    </span>
                     <span
                       className={`text-sm font-semibold truncate ${
                         isActive ? "text-primary-700" : "text-slate-700"
@@ -97,24 +108,27 @@ export function ProfileSwitcher() {
                     >
                       {p.name}
                     </span>
-                  )}
-                </button>
+                  </button>
+                )}
                 <button
                   type="button"
-                  aria-label="Rename"
+                  aria-label={`Rename ${p.name} profile`}
+                  disabled={isEditing}
                   onClick={(e) => {
                     e.stopPropagation();
-                    setEditingId(p.id);
-                    setEditName(p.name);
+                    if (!isEditing) {
+                      setEditingId(p.id);
+                      setEditName(p.name);
+                    }
                   }}
-                  className="w-7 h-7 rounded-lg hover:bg-slate-200/70 text-slate-400 hover:text-slate-700 flex items-center justify-center flex-shrink-0"
+                  className="w-7 h-7 rounded-lg hover:bg-slate-200/70 text-slate-400 hover:text-slate-700 flex items-center justify-center flex-shrink-0 disabled:opacity-40"
                 >
                   <Pencil className="w-3.5 h-3.5" />
                 </button>
                 {profiles.length > 1 ? (
                   <button
                     type="button"
-                    aria-label="Delete profile"
+                    aria-label={`Delete ${p.name} profile`}
                     onClick={(e) => {
                       e.stopPropagation();
                       if (

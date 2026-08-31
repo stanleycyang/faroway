@@ -45,7 +45,8 @@ export default function EditProfileScreen() {
       }
 
       // Persist display_name to our users table
-      await updateUserProfile({ display_name: name.trim() });
+      const result = await updateUserProfile({ display_name: name.trim() });
+      if (result.error) throw new Error(result.error);
 
       // Update local store
       if (user) {
@@ -70,16 +71,26 @@ export default function EditProfileScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
             <Ionicons name="arrow-back" size={24} color={'#475569'} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Edit Profile</Text>
+          <Text style={styles.headerTitle} accessibilityRole="header">
+            Edit Profile
+          </Text>
           <TouchableOpacity
             style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
             onPress={handleSave}
             disabled={isSaving}
+            accessibilityRole="button"
+            accessibilityLabel={isSaving ? 'Saving profile' : 'Save profile'}
+            accessibilityState={{ disabled: isSaving, busy: isSaving }}
           >
-            <Text style={styles.saveButtonText}>{isSaving ? 'Saving...' : 'Save'}</Text>
+            <Text style={styles.saveButtonText}>{isSaving ? 'Saving…' : 'Save'}</Text>
           </TouchableOpacity>
         </View>
 
@@ -98,7 +109,7 @@ export default function EditProfileScreen() {
                 </View>
               )}
             </View>
-            <Text style={styles.avatarHint}>Avatar is synced from your Google account</Text>
+            <Text style={styles.avatarHint}>Avatar is synced from your sign-in provider</Text>
           </View>
 
           {/* Form */}
@@ -119,6 +130,7 @@ export default function EditProfileScreen() {
                   placeholder="Enter your name"
                   placeholderTextColor={colors.surface[600]}
                   autoCapitalize="words"
+                  accessibilityLabel="Display name"
                 />
               </View>
             </View>
@@ -174,7 +186,8 @@ const styles = StyleSheet.create({
   },
   saveButton: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    minHeight: 44,
+    justifyContent: 'center',
     borderRadius: borderRadius.md,
     backgroundColor: colors.primary[500],
   },

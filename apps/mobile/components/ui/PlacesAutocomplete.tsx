@@ -61,6 +61,7 @@ export function PlacesAutocomplete({ onSelect }: PlacesAutocompleteProps) {
         value={query}
         onChangeText={handleChangeText}
         placeholder="Search cities, countries..."
+        accessibilityLabel="Search cities and countries"
       />
 
       {showDropdown && (
@@ -89,6 +90,8 @@ export function PlacesAutocomplete({ onSelect }: PlacesAutocompleteProps) {
                   style={styles.row}
                   onPress={() => handleSelect(item)}
                   activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel={`Choose ${item.city}${item.secondary ? `, ${item.secondary}` : ''}`}
                 >
                   <Ionicons
                     name="location"
@@ -116,6 +119,8 @@ export function PlacesAutocomplete({ onSelect }: PlacesAutocompleteProps) {
                 style={styles.fallbackButton}
                 onPress={handleUseAsDestination}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Use ${query} as destination`}
               >
                 <Ionicons name="add-circle-outline" size={16} color={colors.primary[400]} />
                 <Text style={styles.fallbackButtonText}>Use "{query}" as destination</Text>

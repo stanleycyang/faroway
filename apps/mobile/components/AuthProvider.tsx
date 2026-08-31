@@ -1,5 +1,6 @@
 import React, { createContext, useContext, ReactNode } from 'react';
 import { useAuth } from '../hooks/useAuth';
+import type { GoogleSignInOptions } from '../hooks/useAuth';
 import type { User, Session } from '@supabase/supabase-js';
 
 interface AuthContextType {
@@ -8,7 +9,7 @@ interface AuthContextType {
   loading: boolean;
   initialized: boolean;
   isAuthenticated: boolean;
-  signInWithGoogle: () => Promise<unknown>;
+  signInWithGoogle: (options?: GoogleSignInOptions) => Promise<unknown>;
   signInWithApple: () => Promise<unknown>;
   signOut: () => Promise<void>;
   deleteAccount: () => Promise<void>;

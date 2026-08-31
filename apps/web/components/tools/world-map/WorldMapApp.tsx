@@ -113,6 +113,35 @@ export function WorldMapApp() {
     [toggleVisited],
   );
 
+  const closeCountryDrawer = useCallback(() => {
+    setSelected(null);
+    requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>(
+          '[aria-label="Search countries (keyboard shortcut slash)"]',
+        )
+        ?.focus();
+    });
+  }, []);
+
+  const restoreExportFocus = useCallback(() => {
+    requestAnimationFrame(() => {
+      document
+        .querySelector<HTMLElement>('[aria-label="Share and export"]')
+        ?.focus();
+    });
+  }, []);
+
+  const closeImportDialog = useCallback(() => {
+    setImportOpen(false);
+    restoreExportFocus();
+  }, [restoreExportFocus]);
+
+  const closeShareDialog = useCallback(() => {
+    setShareOpen(false);
+    restoreExportFocus();
+  }, [restoreExportFocus]);
+
   // Milestone toast on crossing 5/10/25/50/100.
   useEffect(() => {
     if (!hasHydrated) return;
@@ -186,6 +215,10 @@ export function WorldMapApp() {
         <BackupBanner />
 
         {/* The map — full-width centerpiece */}
+        <p className="sr-only">
+          Interactive world map showing pinned countries. Use Search countries
+          to add a country or open its details with a keyboard or screen reader.
+        </p>
         <div className="relative w-full aspect-[2/1] md:aspect-[21/10] animate-fade-in">
           <WorldMap visits={visits} onCountryClick={handleCountryClick} />
         </div>
@@ -234,18 +267,19 @@ export function WorldMapApp() {
 
       {selected && (
         <CountryDetailDrawer
+          key={selected.iso}
           iso={selected.iso}
           name={selected.name}
-          onClose={() => setSelected(null)}
+          onClose={closeCountryDrawer}
         />
       )}
 
-      {importOpen && <ImportDialog open onClose={() => setImportOpen(false)} />}
+      {importOpen && <ImportDialog open onClose={closeImportDialog} />}
       {shareOpen && (
         <ShareLinkDialog
           open
           initiallyCopied={shareOpen.initiallyCopied}
-          onClose={() => setShareOpen(false)}
+          onClose={closeShareDialog}
         />
       )}
 

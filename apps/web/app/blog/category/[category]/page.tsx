@@ -4,7 +4,6 @@ import {
   getPostsByCategory,
   getAllCategories,
   paginate,
-  CATEGORIES,
   POSTS_PER_PAGE,
 } from "@/lib/blog";
 import { BlogCard } from "@/components/blog/BlogCard";
@@ -19,21 +18,37 @@ export async function generateStaticParams() {
   }));
 }
 
-export const dynamicParams = false;
+export const dynamicParams = true;
+
+const categorySlug = (value: string) =>
+  value.toLowerCase().replace(/\s+/g, "-");
 
 export async function generateMetadata({
   params,
+  searchParams,
 }: {
   params: Promise<{ category: string }>;
+  searchParams: Promise<{ page?: string }>;
 }): Promise<Metadata> {
-  const { category } = await params;
-  const label =
-    CATEGORIES.find((c) => c.toLowerCase().replace(/\s+/g, "-") === category) ||
-    category;
+  const [{ category }, { page: pageParam }, categories] = await Promise.all([
+    params,
+    searchParams,
+    getAllCategories(),
+  ]);
+  const label = categories.find(
+    (candidate) => categorySlug(candidate) === category,
+  );
+  if (!label) return {};
+  const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
+  const pageLabel = page > 1 ? ` — Page ${page}` : "";
+  const canonical =
+    page > 1
+      ? `/blog/category/${category}?page=${page}`
+      : `/blog/category/${category}`;
   return {
-    title: `${label} Articles — Travel Blog`,
+    title: `${label} Articles — Travel Blog${pageLabel}`,
     description: `Browse our best ${label.toLowerCase()} articles. Expert advice, tips, and guides from the Faroway team.`,
-    alternates: { canonical: `/blog/category/${category}` },
+    alternates: { canonical },
   };
 }
 
@@ -44,11 +59,14 @@ export default async function CategoryPage({
   params: Promise<{ category: string }>;
   searchParams: Promise<{ page?: string }>;
 }) {
-  const { category } = await params;
-  const { page: pageParam } = await searchParams;
-  const currentPage = Math.max(1, parseInt(pageParam || "1", 10) || 1);
-  const label = CATEGORIES.find(
-    (candidate) => candidate.toLowerCase().replace(/\s+/g, "-") === category,
+  const [{ category }, { page: pageParam }, categories] = await Promise.all([
+    params,
+    searchParams,
+    getAllCategories(),
+  ]);
+  const requestedPage = Math.max(1, parseInt(pageParam || "1", 10) || 1);
+  const label = categories.find(
+    (candidate) => categorySlug(candidate) === category,
   );
   if (!label) notFound();
 
@@ -58,7 +76,8 @@ export default async function CategoryPage({
     items: posts,
     totalPages,
     totalItems,
-  } = paginate(allPosts, currentPage, POSTS_PER_PAGE);
+    page: currentPage,
+  } = paginate(allPosts, requestedPage, POSTS_PER_PAGE);
 
   return (
     <main className="min-h-screen pt-20">
@@ -86,7 +105,7 @@ export default async function CategoryPage({
 
         {/* Category tabs */}
         <div className="mb-10">
-          <CategoryPills activeCategory={category} />
+          <CategoryPills activeCategory={category} categories={categories} />
         </div>
 
         {posts.length === 0 ? (
@@ -95,8 +114,13 @@ export default async function CategoryPage({
           </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {posts.map((post) => (
-              <BlogCard key={post.slug} post={post} />
+            {posts.map((post, index) => (
+              <BlogCard
+                key={post.slug}
+                post={post}
+                headingLevel="h2"
+                eager={index < 3}
+              />
             ))}
           </div>
         )}

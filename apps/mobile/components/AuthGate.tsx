@@ -9,11 +9,14 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  Linking,
+  Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthContext } from './AuthProvider';
 import { colors, borderRadius, shadows } from '../constants/theme';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 
 const { height } = Dimensions.get('window');
 
@@ -76,11 +79,16 @@ export function AuthGate({
   const { signInWithGoogle, signInWithApple } = useAuthContext();
   const [loading, setLoading] = useState(false);
   const content = triggerContent[trigger];
+  const reduceMotion = useReduceMotion();
 
   const handleGoogle = async () => {
     setLoading(true);
     try {
-      await signInWithGoogle();
+      await signInWithGoogle(
+        trigger === 'generate'
+          ? { redirectTo: '/create/generating', preserveTripDraft: true }
+          : undefined
+      );
       onAuthenticated?.();
       onClose();
     } catch (err: unknown) {
@@ -113,7 +121,13 @@ export function AuthGate({
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" statusBarTranslucent>
+    <Modal
+      visible={visible}
+      transparent
+      animationType={reduceMotion ? 'none' : 'slide'}
+      statusBarTranslucent
+      onRequestClose={onClose}
+    >
       <View style={styles.overlay}>
         {/* Blurred background with trip preview */}
         {tripPreview && (
@@ -122,6 +136,7 @@ export function AuthGate({
               source={{ uri: tripPreview.coverImage }}
               style={styles.previewImage}
               blurRadius={3}
+              accessible={false}
             />
             <LinearGradient
               colors={['transparent', 'rgba(0,0,0,0.8)']}
@@ -143,7 +158,9 @@ export function AuthGate({
             </View>
 
             {/* Title & Subtitle */}
-            <Text style={styles.title}>{content.title}</Text>
+            <Text style={styles.title} accessibilityRole="header">
+              {content.title}
+            </Text>
             <Text style={styles.subtitle}>{content.subtitle}</Text>
 
             {/* Benefits */}
@@ -173,31 +190,55 @@ export function AuthGate({
                   style={styles.googleButton}
                   onPress={handleGoogle}
                   activeOpacity={0.9}
+                  accessibilityRole="button"
+                  accessibilityLabel="Continue with Google"
                 >
                   <Ionicons name="logo-google" size={18} color="#DB4437" />
                   <Text style={styles.googleButtonText}>Continue with Google</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.appleButton}
-                  onPress={handleApple}
-                  activeOpacity={0.9}
-                >
-                  <Ionicons name="logo-apple" size={20} color="#fff" />
-                  <Text style={styles.appleButtonText}>Continue with Apple</Text>
-                </TouchableOpacity>
+                {Platform.OS === 'ios' && (
+                  <TouchableOpacity
+                    style={styles.appleButton}
+                    onPress={handleApple}
+                    activeOpacity={0.9}
+                    accessibilityRole="button"
+                    accessibilityLabel="Continue with Apple"
+                  >
+                    <Ionicons name="logo-apple" size={20} color="#fff" />
+                    <Text style={styles.appleButtonText}>Continue with Apple</Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
 
             {/* Maybe Later */}
-            <TouchableOpacity style={styles.maybeLaterButton} onPress={handleMaybeLater}>
+            <TouchableOpacity
+              style={styles.maybeLaterButton}
+              onPress={handleMaybeLater}
+              accessibilityRole="button"
+            >
               <Text style={styles.maybeLaterText}>Maybe Later</Text>
             </TouchableOpacity>
 
             {/* Terms */}
             <Text style={styles.terms}>
-              By continuing, you agree to our <Text style={styles.termsLink}>Terms</Text> and{' '}
-              <Text style={styles.termsLink}>Privacy Policy</Text>
+              By continuing, you agree to our{' '}
+              <Text
+                style={styles.termsLink}
+                onPress={() => Linking.openURL('https://faroway.ai/terms')}
+                accessibilityRole="link"
+              >
+                Terms
+              </Text>{' '}
+              and{' '}
+              <Text
+                style={styles.termsLink}
+                onPress={() => Linking.openURL('https://faroway.ai/privacy')}
+                accessibilityRole="link"
+              >
+                Privacy Policy
+              </Text>
             </Text>
           </View>
         </View>
@@ -337,7 +378,7 @@ const styles = StyleSheet.create({
   },
   maybeLaterText: {
     fontSize: 15,
-    color: colors.surface[500],
+    color: colors.surface[300],
     fontWeight: '600',
   },
   terms: {

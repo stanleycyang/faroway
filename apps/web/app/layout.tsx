@@ -135,7 +135,7 @@ const websiteSchema = {
     "@type": "SearchAction",
     target: {
       "@type": "EntryPoint",
-      urlTemplate: `${baseUrl}/?destination={search_term_string}`,
+      urlTemplate: `${baseUrl}/create?destination={search_term_string}`,
     },
     "query-input": "required name=search_term_string",
   },
@@ -164,7 +164,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" data-scroll-behavior="smooth">
       <head>
         {/* Structured Data */}
         <script
@@ -196,7 +196,7 @@ export default function RootLayout({
           Skip to main content
         </a>
         <div id="main-content">{children}</div>
-        <Analytics />
+        {process.env.NODE_ENV === "production" && <Analytics />}
       </body>
     </html>
   );

@@ -8,6 +8,7 @@ import { NotificationProvider } from '../components/NotificationProvider';
 import { OfflineProvider } from '../components/OfflineProvider';
 import { SyncStatusBanner } from '../components/ui/SyncStatusBanner';
 import { useTripStore } from '../stores/tripStore';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 
 Sentry.init({
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
@@ -21,6 +22,7 @@ Sentry.init({
 
 function RootLayoutNav() {
   const { initialized } = useAuthContext();
+  const reduceMotion = useReduceMotion();
   const hydrateFromOffline = useTripStore((state) => state.hydrateFromOffline);
   const isHydrated = useTripStore((state) => state.isHydrated);
 
@@ -55,57 +57,57 @@ function RootLayoutNav() {
         screenOptions={{
           headerShown: false,
           contentStyle: { backgroundColor: '#ffffff' },
-          animation: 'slide_from_right',
-          animationDuration: 300,
+          animation: reduceMotion ? 'none' : 'slide_from_right',
+          animationDuration: reduceMotion ? 0 : 300,
         }}
       >
         <Stack.Screen
           name="index"
           options={{
-            animation: 'fade',
+            animation: reduceMotion ? 'none' : 'fade',
           }}
         />
         <Stack.Screen
           name="onboarding"
           options={{
-            animation: 'fade',
-            animationDuration: 200,
+            animation: reduceMotion ? 'none' : 'fade',
+            animationDuration: reduceMotion ? 0 : 200,
           }}
         />
         <Stack.Screen
           name="(tabs)"
           options={{
-            animation: 'fade',
-            animationDuration: 250,
+            animation: reduceMotion ? 'none' : 'fade',
+            animationDuration: reduceMotion ? 0 : 250,
           }}
         />
         <Stack.Screen
           name="create"
           options={{
             presentation: 'modal',
-            animation: 'slide_from_bottom',
-            animationDuration: 350,
+            animation: reduceMotion ? 'none' : 'slide_from_bottom',
+            animationDuration: reduceMotion ? 0 : 350,
           }}
         />
         <Stack.Screen
           name="trip/[id]"
           options={{
-            animation: 'slide_from_right',
-            animationDuration: 300,
+            animation: reduceMotion ? 'none' : 'slide_from_right',
+            animationDuration: reduceMotion ? 0 : 300,
           }}
         />
         <Stack.Screen
           name="inspiration/[slug]"
           options={{
-            animation: 'slide_from_bottom',
-            animationDuration: 350,
+            animation: reduceMotion ? 'none' : 'slide_from_bottom',
+            animationDuration: reduceMotion ? 0 : 350,
           }}
         />
         <Stack.Screen
           name="profile"
           options={{
-            animation: 'slide_from_right',
-            animationDuration: 300,
+            animation: reduceMotion ? 'none' : 'slide_from_right',
+            animationDuration: reduceMotion ? 0 : 300,
           }}
         />
       </Stack>

@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Mail, Check } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { requestPasswordReset } from "@/lib/auth/password-reset";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -17,16 +18,8 @@ export default function ForgotPasswordPage() {
     setError("");
 
     try {
-      const res = await fetch("/api/auth/forgot-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to send reset email");
-      }
+      const { error: resetError } = await requestPasswordReset(email);
+      if (resetError) throw resetError;
 
       setEmailSent(true);
     } catch (err) {
@@ -98,7 +91,10 @@ export default function ForgotPasswordPage() {
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+          <div
+            role="alert"
+            className="mb-6 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm"
+          >
             {error}
           </div>
         )}

@@ -299,6 +299,16 @@ describe("PATCH /api/trips/[id]", () => {
     expect(res.status).toBe(400);
   });
 
+  it("validates an end-only update against the stored start date", async () => {
+    mockTripReturn = { data: mockTrip, error: null };
+    const req = makeRequest("PATCH", "/api/trips/trip-1", {
+      end_date: "2026-03-31",
+    });
+    const res = await PATCH(req, makeParams("trip-1"));
+
+    expect(res.status).toBe(400);
+  });
+
   it("returns 404 when trip not found", async () => {
     mockTripReturn = {
       data: null,

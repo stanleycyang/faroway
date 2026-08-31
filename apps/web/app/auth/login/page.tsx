@@ -7,10 +7,11 @@ import { EmailPasswordForm } from "@/components/auth/EmailPasswordForm";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 import { AppleButton } from "@/components/auth/AppleButton";
 import { Logo } from "@/components/Logo";
+import { validateRedirectUrl } from "@/lib/security/validate-redirect";
 
 function LoginContent() {
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirectTo") || "/dashboard";
+  const redirectTo = validateRedirectUrl(searchParams.get("redirectTo"));
   const error = searchParams.get("error");
   const message = searchParams.get("message");
 
@@ -69,16 +70,6 @@ function LoginContent() {
 
           {/* Email/Password Form */}
           <EmailPasswordForm mode="signin" redirectTo={redirectTo} />
-
-          {/* Forgot Password Link */}
-          <div className="mt-4 text-center">
-            <Link
-              href="/auth/forgot-password"
-              className="text-sm text-gray-600 hover:text-primary transition-colors"
-            >
-              Forgot your password?
-            </Link>
-          </div>
 
           {/* Sign Up Link */}
           <p className="mt-6 text-center text-sm text-gray-600">

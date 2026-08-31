@@ -5,11 +5,14 @@ import type { BlogPostMeta } from "@/lib/blog/types";
 export function BlogCard({
   post,
   eager = false,
+  headingLevel = "h3",
 }: {
   post: BlogPostMeta;
   eager?: boolean;
+  headingLevel?: "h2" | "h3";
 }) {
   const categorySlug = post.category.toLowerCase().replace(/\s+/g, "-");
+  const Heading = headingLevel;
 
   return (
     <article className="group flex flex-col overflow-hidden rounded-2xl bg-white border border-gray-200 hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 hover:-translate-y-1">
@@ -52,9 +55,9 @@ export function BlogCard({
           prefetch={false}
           className="group/title"
         >
-          <h3 className="text-lg font-bold text-slate-900 group-hover/title:text-primary transition-colors line-clamp-2 mb-2">
+          <Heading className="text-lg font-bold text-slate-900 group-hover/title:text-primary transition-colors line-clamp-2 mb-2">
             {post.title}
-          </h3>
+          </Heading>
         </Link>
         <p className="text-slate-600 text-sm line-clamp-2 flex-1">
           {post.description}

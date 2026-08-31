@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Travel Guides — Curated Content Collections",
   description:
     "Explore our curated travel guide collections covering budget travel, destination guides, vibe-based trips, trip planning, group travel, and insider tips.",
+  alternates: { canonical: "/blog/guides" },
   openGraph: {
     title: "Travel Guides — Curated Content Collections | Faroway",
     description:

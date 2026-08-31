@@ -26,8 +26,6 @@
     "@faroway/supabase": "*",
     "@faroway/types": "*",
     "@hookform/resolvers": "^5.2.2",
-    "@json-render/core": "^0.6.1",
-    "@json-render/react": "^0.6.1",
     "@sentry/nextjs": "^10.68.0",
     "@supabase/ssr": "^0.8.0",
     "@supabase/supabase-js": "2.110.8",

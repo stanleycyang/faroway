@@ -15,6 +15,8 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useSyncStatus, useNetworkStatus } from '../../hooks/useOfflineSync';
 import { syncService } from '../../lib/offline';
+import { useReduceMotion } from '../../hooks/useReduceMotion';
+import { USE_NATIVE_DRIVER } from '../../lib/animation';
 
 interface SyncStatusBannerProps {
   /**
@@ -41,6 +43,7 @@ export function SyncStatusBanner({
 }: SyncStatusBannerProps) {
   const { isOffline } = useNetworkStatus();
   const { status, pendingCount, isSyncing, hasPending } = useSyncStatus();
+  const reduceMotion = useReduceMotion();
 
   const translateY = useRef(new Animated.Value(-100)).current;
   const opacity = useRef(new Animated.Value(0)).current;
@@ -49,20 +52,25 @@ export function SyncStatusBanner({
   const shouldShow = !autoHide || isOffline || hasPending || status === 'syncing';
 
   useEffect(() => {
+    if (reduceMotion) {
+      translateY.setValue(0);
+      opacity.setValue(shouldShow ? 1 : 0);
+      return;
+    }
+
     Animated.parallel([
       Animated.timing(translateY, {
         toValue: shouldShow ? 0 : position === 'top' ? -100 : 100,
         duration: 300,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
       Animated.timing(opacity, {
         toValue: shouldShow ? 1 : 0,
         duration: 300,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
     ]).start();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shouldShow, position]);
+  }, [opacity, position, reduceMotion, shouldShow, translateY]);
 
   const handleManualSync = async () => {
     if (!isSyncing) {
@@ -85,7 +93,7 @@ export function SyncStatusBanner({
     if (isSyncing) {
       return {
         icon: 'sync' as const,
-        text: 'Syncing...',
+        text: 'Syncing…',
         subtext: hasPending ? `${pendingCount} items remaining` : '',
         color: '#6366f1', // indigo
         bgColor: 'rgba(99, 102, 241, 0.15)',
@@ -133,6 +141,8 @@ export function SyncStatusBanner({
 
   return (
     <Animated.View
+      accessibilityLiveRegion="polite"
+      accessibilityLabel={[content.text, content.subtext].filter(Boolean).join('. ')}
       style={[
         styles.container,
         position === 'bottom' && styles.bottomPosition,
@@ -148,6 +158,12 @@ export function SyncStatusBanner({
         onPress={content.canSync && allowManualSync ? handleManualSync : undefined}
         disabled={!content.canSync || !allowManualSync || isSyncing}
         activeOpacity={content.canSync ? 0.7 : 1}
+        accessibilityRole={content.canSync && allowManualSync ? 'button' : undefined}
+        accessibilityLabel={
+          content.canSync && allowManualSync
+            ? `${content.text}. ${content.subtext}. Activate to sync.`
+            : content.text
+        }
       >
         <View style={styles.iconContainer}>
           {content.showSpinner ? (

@@ -7,10 +7,11 @@ import { EmailPasswordForm } from "@/components/auth/EmailPasswordForm";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 import { AppleButton } from "@/components/auth/AppleButton";
 import { Logo } from "@/components/Logo";
+import { validateRedirectUrl } from "@/lib/security/validate-redirect";
 
 function SignupContent() {
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirectTo") || "/dashboard";
+  const redirectTo = validateRedirectUrl(searchParams.get("redirectTo"));
   const error = searchParams.get("error");
 
   return (

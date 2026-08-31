@@ -6,16 +6,17 @@ import { getContinents, getGuidesByContinent } from "@/lib/destination-guides";
 import { getCostProfile, getCostLevel } from "@/lib/tools/cost-data";
 import { CostEstimatorClient } from "@/components/tools/cost/CostEstimatorClient";
 import { ToolCTA } from "@/components/tools/ToolCTA";
+import { RelatedTools } from "@/components/tools/RelatedTools";
 
 export const metadata: Metadata = {
   title: "Trip Cost Estimator — Budget Your Travel",
   description:
-    "Estimate your trip cost with detailed breakdowns for accommodation, food, transport, and activities. Covers 14 popular destinations with local pricing.",
+    "Estimate your trip cost with detailed breakdowns for accommodation, food, transport, and activities. Covers 40+ popular destinations with local pricing.",
   alternates: { canonical: "/tools/trip-cost" },
   openGraph: {
     title: "Trip Cost Estimator | Faroway",
     description:
-      "Free travel budget calculator for 14 destinations — see cost breakdowns instantly.",
+      "Free travel budget calculator for 40+ destinations — see cost breakdowns instantly.",
     url: "/tools/trip-cost",
   },
 };
@@ -134,6 +135,7 @@ export default function TripCostPage() {
         })}
       </section>
 
+      <RelatedTools currentSlug="trip-cost" />
       <ToolCTA />
     </main>
   );

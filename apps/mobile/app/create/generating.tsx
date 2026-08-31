@@ -9,15 +9,16 @@ import {
   Easing,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { useTripStore, Trip, TripDay, TripInput, Activity } from '../../stores/tripStore';
 import { usePromptStore } from '../../stores/promptStore';
 import { useAuthContext } from '../../components/AuthProvider';
-import { AuthGate } from '../../components/AuthGate';
 import { RatingPrompt } from '../../components/RatingPrompt';
 import { popularDestinations, IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 import { colors } from '../../constants/theme';
@@ -28,6 +29,7 @@ import {
 } from '../../lib/itineraryPreview';
 import { registry } from '../../lib/json-render/registry';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
+import { USE_NATIVE_DRIVER } from '../../lib/animation';
 
 const { width, height } = Dimensions.get('window');
 
@@ -277,20 +279,21 @@ function JsonRenderRenderer({
   blocks: StreamingBlock[];
   onNewContent?: () => void;
 }) {
-  const [fadeAnim] = useState(new Animated.Value(0));
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const reduceMotion = useReduceMotion();
   const prevLengthRef = useRef(0);
 
   useEffect(() => {
     if (blocks.length > prevLengthRef.current) {
       Animated.timing(fadeAnim, {
         toValue: 1,
-        duration: 300,
-        useNativeDriver: true,
+        duration: reduceMotion ? 150 : 300,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }).start();
       prevLengthRef.current = blocks.length;
       onNewContent?.();
     }
-  }, [blocks.length, fadeAnim, onNewContent]);
+  }, [blocks.length, fadeAnim, onNewContent, reduceMotion]);
 
   if (blocks.length === 0) return null;
 
@@ -310,17 +313,27 @@ function JsonRenderRenderer({
 
 // Pulsing dot for streaming indicator
 function PulsingDot() {
-  const [pulseAnim] = useState(new Animated.Value(1));
+  const pulseAnim = useRef(new Animated.Value(1)).current;
   const reduceMotion = useReduceMotion();
 
   useEffect(() => {
     if (reduceMotion) return;
-    Animated.loop(
+    const animation = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 0.4, duration: 600, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.4,
+          duration: 600,
+          useNativeDriver: USE_NATIVE_DRIVER,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 600,
+          useNativeDriver: USE_NATIVE_DRIVER,
+        }),
       ])
-    ).start();
+    );
+    animation.start();
+    return () => animation.stop();
   }, [pulseAnim, reduceMotion]);
 
   return <Animated.View style={[styles.streamingDot, { opacity: pulseAnim }]} />;
@@ -381,19 +394,21 @@ function ProgressRing({ progress, size = 180 }: { progress: number; size?: numbe
 
 // Skeleton loader for content
 function SkeletonLoader() {
-  const [shimmerAnim] = useState(new Animated.Value(0));
+  const shimmerAnim = useRef(new Animated.Value(0)).current;
   const reduceMotion = useReduceMotion();
 
   useEffect(() => {
     if (reduceMotion) return;
-    Animated.loop(
+    const animation = Animated.loop(
       Animated.timing(shimmerAnim, {
         toValue: 1,
         duration: 1500,
         easing: Easing.linear,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       })
-    ).start();
+    );
+    animation.start();
+    return () => animation.stop();
   }, [shimmerAnim, reduceMotion]);
 
   const translateX = shimmerAnim.interpolate({
@@ -440,16 +455,27 @@ function SkeletonLoader() {
 
 // Hotel preview card shown when hotel data arrives
 function HotelPreviewCard({ hotel }: { hotel: Record<string, unknown> }) {
-  const [fadeAnim] = useState(new Animated.Value(0));
-  const [scaleAnim] = useState(new Animated.Value(0.9));
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.9)).current;
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    if (reduceMotion) {
+      fadeAnim.setValue(1);
+      scaleAnim.setValue(1);
+      return;
+    }
+
     Animated.parallel([
-      Animated.spring(fadeAnim, { toValue: 1, useNativeDriver: true }),
-      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 8 }),
+      Animated.spring(fadeAnim, { toValue: 1, useNativeDriver: USE_NATIVE_DRIVER }),
+      Animated.spring(scaleAnim, {
+        toValue: 1,
+        useNativeDriver: USE_NATIVE_DRIVER,
+        friction: 8,
+      }),
     ]).start();
-  }, [fadeAnim, scaleAnim]);
+  }, [fadeAnim, reduceMotion, scaleAnim]);
 
   const h = hotel as StreamingHotel;
   const starRating = Math.max(1, Math.min(5, Math.round(h.starRating || 4)));
@@ -493,9 +519,10 @@ function StepIndicator({
   count?: number;
   microMessage?: string;
 }) {
-  const [scaleAnim] = useState(new Animated.Value(status === 'pending' ? 0.95 : 1));
-  const [pulseAnim] = useState(new Animated.Value(1));
+  const scaleAnim = useRef(new Animated.Value(status === 'pending' ? 0.95 : 1)).current;
+  const pulseAnim = useRef(new Animated.Value(1)).current;
   const prevStatusRef = useRef(status);
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
     if (status !== prevStatusRef.current) {
@@ -505,18 +532,36 @@ function StepIndicator({
       prevStatusRef.current = status;
     }
 
-    if (status === 'searching') {
-      Animated.loop(
+    if (status === 'searching' && !reduceMotion) {
+      const animation = Animated.loop(
         Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.05, duration: 600, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1, duration: 600, useNativeDriver: true }),
+          Animated.timing(pulseAnim, {
+            toValue: 1.05,
+            duration: 600,
+            useNativeDriver: USE_NATIVE_DRIVER,
+          }),
+          Animated.timing(pulseAnim, {
+            toValue: 1,
+            duration: 600,
+            useNativeDriver: USE_NATIVE_DRIVER,
+          }),
         ])
-      ).start();
+      );
+      animation.start();
+      return () => animation.stop();
     } else {
       pulseAnim.stopAnimation();
-      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }).start();
+      if (reduceMotion) {
+        pulseAnim.setValue(1);
+        scaleAnim.setValue(1);
+      } else {
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: USE_NATIVE_DRIVER,
+        }).start();
+      }
     }
-  }, [status, scaleAnim, pulseAnim]);
+  }, [status, scaleAnim, pulseAnim, reduceMotion]);
 
   const opacity = status === 'pending' ? 0.5 : 1;
 
@@ -562,18 +607,29 @@ function StepIndicator({
 // Cycling fun facts
 function FunFactCard({ destination }: { destination: string }) {
   const [factIndex, setFactIndex] = useState(0);
-  const [fadeAnim] = useState(new Animated.Value(1));
+  const fadeAnim = useRef(new Animated.Value(1)).current;
   const facts = DESTINATION_FACTS[destination] || DESTINATION_FACTS.default;
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
+    if (reduceMotion) return;
+
     const interval = setInterval(() => {
-      Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }).start(() => {
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: USE_NATIVE_DRIVER,
+      }).start(() => {
         setFactIndex((prev) => (prev + 1) % facts.length);
-        Animated.timing(fadeAnim, { toValue: 1, duration: 200, useNativeDriver: true }).start();
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: USE_NATIVE_DRIVER,
+        }).start();
       });
     }, 4000);
     return () => clearInterval(interval);
-  }, [facts.length, fadeAnim]);
+  }, [facts.length, fadeAnim, reduceMotion]);
 
   return (
     <View style={styles.funFact}>
@@ -587,19 +643,37 @@ function FunFactCard({ destination }: { destination: string }) {
 
 // Celebration animation when complete
 function CelebrationOverlay({ onComplete }: { onComplete: () => void }) {
-  const [scaleAnim] = useState(new Animated.Value(0));
-  const [opacityAnim] = useState(new Animated.Value(0));
+  const scaleAnim = useRef(new Animated.Value(0)).current;
+  const opacityAnim = useRef(new Animated.Value(0)).current;
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    Animated.parallel([
-      Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true, friction: 5 }),
-      Animated.timing(opacityAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-    ]).start();
+    if (reduceMotion) {
+      scaleAnim.setValue(1);
+      Animated.timing(opacityAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: USE_NATIVE_DRIVER,
+      }).start();
+    } else {
+      Animated.parallel([
+        Animated.spring(scaleAnim, {
+          toValue: 1,
+          useNativeDriver: USE_NATIVE_DRIVER,
+          friction: 5,
+        }),
+        Animated.timing(opacityAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: USE_NATIVE_DRIVER,
+        }),
+      ]).start();
+    }
 
     const timer = setTimeout(onComplete, 2000);
     return () => clearTimeout(timer);
-  }, [scaleAnim, opacityAnim, onComplete]);
+  }, [scaleAnim, opacityAnim, onComplete, reduceMotion]);
 
   return (
     <Animated.View style={[styles.celebrationOverlay, { opacity: opacityAnim }]}>
@@ -656,29 +730,39 @@ function SeededOutlineCard({ outline }: { outline: SeededItineraryOutline }) {
 export default function GeneratingScreen() {
   const router = useRouter();
   const { draftInput, finishGeneration } = useTripStore();
-  const { isAuthenticated } = useAuthContext();
+  const { initialized, isAuthenticated } = useAuthContext();
   const {
     tripGenerationCount,
     incrementTripGeneration,
-    hasDismissedSignUpAfterGeneration,
-    dismissSignUpPrompt,
     shouldShowRatingPrompt,
   } = usePromptStore();
   const [showCelebration, setShowCelebration] = useState(false);
-  const [showAuthGate, setShowAuthGate] = useState(false);
   const [showRatingPrompt, setShowRatingPrompt] = useState(false);
   const [retryTripId, setRetryTripId] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
+  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const reduceMotion = useReduceMotion();
 
   const destinationInfo = popularDestinations.find((d) => d.name === draftInput?.destination);
   const seededOutline = useMemo(() => buildSeededItineraryOutline(draftInput), [draftInput]);
+  const isDraftComplete = Boolean(
+    draftInput?.destination.trim() && draftInput.startDate && draftInput.endDate
+  );
+  const canGenerate = initialized && isAuthenticated && isDraftComplete;
 
   useEffect(() => {
-    if (!draftInput) {
+    if (initialized && !canGenerate) {
       router.replace('/create');
     }
-  }, [draftInput, router]);
+  }, [canGenerate, initialized, router]);
+
+  useEffect(
+    () => () => {
+      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    },
+    []
+  );
 
   const handleComplete = useCallback(
     (_document: StreamingBlock[]) => {
@@ -694,7 +778,7 @@ export default function GeneratingScreen() {
 
   const streamingInput = useMemo(
     () =>
-      draftInput
+      canGenerate && draftInput
         ? {
             destination: draftInput.destination,
             startDate: draftInput.startDate,
@@ -707,7 +791,7 @@ export default function GeneratingScreen() {
             budget: draftInput.budget,
           }
         : undefined,
-    [draftInput]
+    [canGenerate, draftInput]
   );
 
   const streaming = useStreamingItinerary(
@@ -757,10 +841,11 @@ export default function GeneratingScreen() {
 
   // Auto-scroll when new content arrives
   const handleNewContent = useCallback(() => {
-    setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: true });
+    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
+    scrollTimerRef.current = setTimeout(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: !reduceMotion });
     }, 100);
-  }, []);
+  }, [reduceMotion]);
 
   // Get micro-message for each step
   const getMicroMessage = (step: string) => {
@@ -780,10 +865,31 @@ export default function GeneratingScreen() {
     [streaming.topHotel, streaming.activitiesCount, streaming.diningCount, streaming.transportCount]
   );
 
+  if (!canGenerate) {
+    return (
+      <View
+        style={styles.loadingGuard}
+        accessibilityRole="progressbar"
+        accessibilityLabel={initialized ? 'Returning to trip setup' : 'Checking your account'}
+      >
+        <ActivityIndicator size="large" color={colors.primary[500]} />
+        <Text style={styles.loadingGuardText}>
+          {initialized ? 'Returning to trip setup…' : 'Checking your account…'}
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
+      <StatusBar style="light" />
       {destinationInfo && (
-        <Image source={{ uri: destinationInfo.image }} style={styles.bgImage} blurRadius={25} />
+        <Image
+          source={{ uri: destinationInfo.image }}
+          style={styles.bgImage}
+          blurRadius={25}
+          accessible={false}
+        />
       )}
       <LinearGradient colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.95)']} style={styles.overlay} />
 
@@ -797,7 +903,9 @@ export default function GeneratingScreen() {
           {/* Header */}
           <View style={styles.header}>
             <Text style={styles.headerLabel}>Creating your trip to</Text>
-            <Text style={styles.headerDestination}>{draftInput?.destination}</Text>
+            <Text style={styles.headerDestination} accessibilityRole="header">
+              {draftInput?.destination}
+            </Text>
             <View style={styles.headerMeta}>
               <Text style={styles.headerMetaText}>
                 {draftInput?.startDate &&
@@ -822,7 +930,9 @@ export default function GeneratingScreen() {
             <View style={styles.progressArea}>
               <ProgressRing progress={streaming.progress} />
 
-              <Text style={styles.currentMessage}>{streaming.message}</Text>
+              <Text style={styles.currentMessage} accessibilityLiveRegion="polite">
+                {streaming.message}
+              </Text>
 
               {seededOutline && <SeededOutlineCard outline={seededOutline} />}
 
@@ -896,7 +1006,7 @@ export default function GeneratingScreen() {
           {showProgressiveBlocks && (
             <View style={styles.blocksContainer}>
               {!streaming.isComplete && streaming.isStreaming && (
-                <View style={styles.streamingBanner}>
+                <View style={styles.streamingBanner} accessibilityLiveRegion="polite">
                   <PulsingDot />
                   <Text style={styles.streamingText}>{streaming.message}</Text>
                 </View>
@@ -938,28 +1048,12 @@ export default function GeneratingScreen() {
         <CelebrationOverlay
           onComplete={() => {
             setShowCelebration(false);
-            // After celebration: show sign-up prompt for guests, or rating prompt for auth users
-            if (!isAuthenticated && !hasDismissedSignUpAfterGeneration) {
-              setShowAuthGate(true);
-            } else if (isAuthenticated && tripGenerationCount >= 3 && shouldShowRatingPrompt()) {
+            if (tripGenerationCount >= 3 && shouldShowRatingPrompt()) {
               setShowRatingPrompt(true);
             }
           }}
         />
       )}
-
-      {/* Sign-up prompt for guests */}
-      <AuthGate
-        visible={showAuthGate}
-        trigger="save"
-        tripPreview={
-          draftInput?.destination && destinationInfo
-            ? { destination: draftInput.destination, coverImage: destinationInfo.image }
-            : undefined
-        }
-        onDismiss={() => dismissSignUpPrompt()}
-        onClose={() => setShowAuthGate(false)}
-      />
 
       {/* Rating prompt for authenticated users */}
       <RatingPrompt
@@ -972,6 +1066,17 @@ export default function GeneratingScreen() {
 }
 
 const styles = StyleSheet.create({
+  loadingGuard: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#050505',
+  },
+  loadingGuardText: {
+    marginTop: 14,
+    fontSize: 15,
+    color: colors.neutral[400],
+  },
   container: { flex: 1, backgroundColor: '#000' },
   bgImage: { position: 'absolute', width, height, resizeMode: 'cover' },
   overlay: { position: 'absolute', width, height },

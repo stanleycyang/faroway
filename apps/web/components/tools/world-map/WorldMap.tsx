@@ -64,6 +64,7 @@ export function WorldMap({ visits, readOnly, onCountryClick }: WorldMapProps) {
   const [hover, setHover] = useState<HoverState | null>(null);
   const [position, setPosition] = useState(HOME_POSITION);
   const containerRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<HTMLDivElement>(null);
 
   // Long-press / right-click bookkeeping. Long-press on touch and right-click
   // on desktop both open the detail drawer (intent: "edit"); a regular left
@@ -80,6 +81,8 @@ export function WorldMap({ visits, readOnly, onCountryClick }: WorldMapProps) {
     pointerStartRef.current = null;
   }, []);
 
+  useEffect(() => clearLongPress, [clearLongPress]);
+
   // Reset hover on scroll so the tooltip doesn't stick when the page moves.
   useEffect(() => {
     const onScroll = () => setHover(null);
@@ -93,6 +96,14 @@ export function WorldMap({ visits, readOnly, onCountryClick }: WorldMapProps) {
     },
     [],
   );
+
+  const moveTooltip = useCallback((event: ReactMouseEvent) => {
+    const tooltip = tooltipRef.current;
+    if (!tooltip) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    tooltip.style.left = `${event.clientX - (rect?.left ?? 0)}px`;
+    tooltip.style.top = `${event.clientY - (rect?.top ?? 0)}px`;
+  }, []);
 
   const zoomIn = () =>
     setPosition((p) => ({
@@ -145,6 +156,8 @@ export function WorldMap({ visits, readOnly, onCountryClick }: WorldMapProps) {
       </div>
 
       <ComposableMap
+        aria-hidden="true"
+        focusable="false"
         projection="geoEqualEarth"
         projectionConfig={{ scale: 165 }}
         width={980}
@@ -195,6 +208,7 @@ export function WorldMap({ visits, readOnly, onCountryClick }: WorldMapProps) {
                     <Geography
                       key={geo.rsmKey}
                       geography={geo}
+                      tabIndex={-1}
                       onMouseEnter={(event: ReactMouseEvent) => {
                         if (!iso) return;
                         const rect =
@@ -207,17 +221,7 @@ export function WorldMap({ visits, readOnly, onCountryClick }: WorldMapProps) {
                         });
                       }}
                       onMouseMove={(event: ReactMouseEvent) => {
-                        const rect =
-                          containerRef.current?.getBoundingClientRect();
-                        setHover((h) =>
-                          h
-                            ? {
-                                ...h,
-                                x: event.clientX - (rect?.left ?? 0),
-                                y: event.clientY - (rect?.top ?? 0),
-                              }
-                            : h,
-                        );
+                        moveTooltip(event);
                       }}
                       onMouseLeave={() => setHover(null)}
                       onClick={() => {
@@ -329,7 +333,13 @@ export function WorldMap({ visits, readOnly, onCountryClick }: WorldMapProps) {
       </div>
 
       {hover && (
-        <MapTooltip iso={hover.iso} name={hover.name} x={hover.x} y={hover.y} />
+        <MapTooltip
+          iso={hover.iso}
+          name={hover.name}
+          x={hover.x}
+          y={hover.y}
+          tooltipRef={tooltipRef}
+        />
       )}
     </div>
   );

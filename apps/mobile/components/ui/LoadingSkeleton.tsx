@@ -1,6 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { View, StyleSheet, Animated, ViewStyle } from 'react-native';
 import { borderRadius } from '../../constants/theme';
+import { useReduceMotion } from '../../hooks/useReduceMotion';
+import { USE_NATIVE_DRIVER } from '../../lib/animation';
 
 interface SkeletonProps {
   width?: number | `${number}%`;
@@ -16,24 +18,31 @@ export function Skeleton({
   style,
 }: SkeletonProps) {
   const animatedValue = useRef(new Animated.Value(0)).current;
+  const reduceMotion = useReduceMotion();
 
   useEffect(() => {
-    Animated.loop(
+    if (reduceMotion) {
+      animatedValue.setValue(1);
+      return;
+    }
+
+    const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(animatedValue, {
           toValue: 1,
           duration: 1000,
-          useNativeDriver: true,
+          useNativeDriver: USE_NATIVE_DRIVER,
         }),
         Animated.timing(animatedValue, {
           toValue: 0,
           duration: 1000,
-          useNativeDriver: true,
+          useNativeDriver: USE_NATIVE_DRIVER,
         }),
       ])
-    ).start();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    );
+    animation.start();
+    return () => animation.stop();
+  }, [animatedValue, reduceMotion]);
 
   const opacity = animatedValue.interpolate({
     inputRange: [0, 1],

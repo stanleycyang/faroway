@@ -91,6 +91,9 @@ export function ExportMenu({ onOpenImport, onOpenShare }: Props) {
     <div className="relative" ref={menuRef}>
       <button
         type="button"
+        aria-label="Share and export"
+        aria-expanded={open}
+        aria-controls={open ? "world-map-export-menu" : undefined}
         onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-full text-sm font-semibold hover:bg-slate-800 transition-colors shadow-sm"
       >
@@ -99,7 +102,10 @@ export function ExportMenu({ onOpenImport, onOpenShare }: Props) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl ring-1 ring-slate-200/70 overflow-hidden z-40 animate-fade-in">
+        <div
+          id="world-map-export-menu"
+          className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl ring-1 ring-slate-200/70 overflow-hidden z-40 animate-fade-in"
+        >
           <button
             type="button"
             onClick={copyShareLink}

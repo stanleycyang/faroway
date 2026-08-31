@@ -21,6 +21,8 @@ export interface Trip {
     | "completed"
     | "failed";
   search_id?: string;
+  is_shared?: boolean;
+  share_token?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -47,7 +49,7 @@ export async function loadTripForUserUncached(
   const { data: trip, error } = await db
     .from("trips")
     .select(
-      "id, destination, start_date, end_date, status, travelers, budget, preferences, vibes, interests, budget_tier, user_id, search_id, created_at, updated_at, itineraries(days, overview, total_cost, packing_list, general_tips, generated_at)",
+      "id, destination, start_date, end_date, status, travelers, budget, preferences, vibes, interests, budget_tier, user_id, search_id, is_shared, share_token, created_at, updated_at, itineraries(days, overview, total_cost, packing_list, general_tips, generated_at)",
     )
     .eq("id", id)
     .eq("user_id", userId)

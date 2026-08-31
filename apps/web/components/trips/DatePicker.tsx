@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { DayPicker, type DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { Calendar } from "lucide-react";
+import { useModalFocusTrap } from "@/hooks/useModalFocusTrap";
 import { cn } from "@/lib/utils";
 import "react-day-picker/style.css";
 
@@ -31,9 +32,29 @@ export function DatePicker({
   const [draftRange, setDraftRange] = useState<DateRange | undefined>(
     undefined,
   );
+  const [numberOfMonths, setNumberOfMonths] = useState(1);
+  const dialogRef = useRef<HTMLDivElement>(null);
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
+
+  useEffect(() => {
+    const query = window.matchMedia("(min-width: 640px)");
+    const updateMonthCount = () => setNumberOfMonths(query.matches ? 2 : 1);
+    updateMonthCount();
+    query.addEventListener("change", updateMonthCount);
+    return () => query.removeEventListener("change", updateMonthCount);
+  }, []);
+
+  useModalFocusTrap({
+    open: showCalendar,
+    dialogRef,
+    onClose: () => setShowCalendar(false),
+  });
+
+  const closeCalendar = () => {
+    setShowCalendar(false);
+  };
 
   const openCalendar = () => {
     // Initialize draft from current selection
@@ -46,15 +67,17 @@ export function DatePicker({
   };
 
   const handleConfirm = () => {
+    if (!draftRange?.from || !draftRange.to) return;
     onStartDateChange(draftRange?.from);
     onEndDateChange(draftRange?.to);
-    setShowCalendar(false);
+    closeCalendar();
   };
 
   const handleClear = () => {
     setDraftRange(undefined);
     onStartDateChange(undefined);
     onEndDateChange(undefined);
+    closeCalendar();
   };
 
   const getDuration = () => {
@@ -146,13 +169,29 @@ export function DatePicker({
         <div
           className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
           onClick={(e) => {
-            if (e.target === e.currentTarget) handleConfirm();
+            if (e.target === e.currentTarget) closeCalendar();
           }}
         >
-          <div className="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 max-w-fit animate-fade-in">
+          <div
+            ref={dialogRef}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="date-picker-title"
+            aria-describedby="date-picker-description"
+            tabIndex={-1}
+            className="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 max-w-fit animate-fade-in outline-none"
+          >
             <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
               <div>
-                <h3 className="font-semibold text-gray-900">Select dates</h3>
+                <h3
+                  id="date-picker-title"
+                  className="font-semibold text-gray-900"
+                >
+                  Select dates
+                </h3>
+                <span id="date-picker-description" className="sr-only">
+                  Choose a start date and end date for your trip.
+                </span>
                 {draftRange?.from && (
                   <p className="text-sm text-gray-500 mt-0.5">
                     {format(draftRange.from, "MMM d")}
@@ -170,7 +209,7 @@ export function DatePicker({
               </div>
               <button
                 type="button"
-                onClick={() => setShowCalendar(false)}
+                onClick={closeCalendar}
                 className="text-gray-400 hover:text-gray-600 text-xl leading-none ml-4"
                 aria-label="Close calendar"
               >
@@ -197,11 +236,7 @@ export function DatePicker({
                 selected={draftRange}
                 onSelect={handleRangeSelect}
                 disabled={{ before: today }}
-                numberOfMonths={
-                  typeof window !== "undefined" && window.innerWidth >= 640
-                    ? 2
-                    : 1
-                }
+                numberOfMonths={numberOfMonths}
                 showOutsideDays
               />
             </div>
@@ -212,14 +247,19 @@ export function DatePicker({
                 onClick={handleClear}
                 className="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-gray-600 hover:bg-gray-50 transition-colors font-medium"
               >
-                Clear
+                Clear dates
               </button>
               <button
                 type="button"
                 onClick={handleConfirm}
-                className="flex-1 px-4 py-2.5 bg-primary text-white rounded-xl hover:bg-primary-600 transition-colors font-medium"
+                disabled={!draftRange?.from || !draftRange.to}
+                className="flex-1 px-4 py-2.5 bg-primary text-white rounded-xl hover:bg-primary-600 transition-colors font-medium disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed"
               >
-                {draftRange?.from && draftRange?.to ? "Confirm" : "Done"}
+                {draftRange?.from && draftRange?.to
+                  ? "Confirm dates"
+                  : draftRange?.from
+                    ? "Choose an end date"
+                    : "Choose a start date"}
               </button>
             </div>
           </div>

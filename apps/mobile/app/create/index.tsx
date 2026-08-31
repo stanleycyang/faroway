@@ -171,10 +171,17 @@ export default function CreateTripScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <TouchableOpacity style={styles.closeButton} onPress={() => router.back()}>
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="Close trip planner"
+          >
             <Ionicons name="close" size={24} color={colors.neutral[700]} />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Plan Your Trip</Text>
+          <Text style={styles.headerTitle} accessibilityRole="header">
+            Plan Your Trip
+          </Text>
           <View style={{ width: 44 }} />
         </View>
 
@@ -193,6 +200,8 @@ export default function CreateTripScreen() {
                   setShowAuthGate(true);
                 }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel="Sign in to sync your trips across devices"
               >
                 <Ionicons name="cloud-upload-outline" size={18} color={colors.primary[600]} />
                 <Text style={styles.signInBannerText}>
@@ -203,6 +212,8 @@ export default function CreateTripScreen() {
                 style={styles.signInBannerClose}
                 onPress={() => dismissCreateBanner()}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss sign-in reminder"
               >
                 <Ionicons name="close" size={18} color={colors.primary[400]} />
               </TouchableOpacity>
@@ -218,6 +229,8 @@ export default function CreateTripScreen() {
                 style={styles.selectedDestination}
                 onPress={() => setShowSearch(true)}
                 activeOpacity={0.9}
+                accessibilityRole="button"
+                accessibilityLabel={`Change destination from ${draftInput.destination}${draftInput.country ? `, ${draftInput.country}` : ''}`}
               >
                 {mapUrl && !mapLoadFailed ? (
                   <Image
@@ -225,11 +238,13 @@ export default function CreateTripScreen() {
                     style={styles.selectedDestinationImage}
                     resizeMode="cover"
                     onError={() => setMapLoadFailed(true)}
+                    accessible={false}
                   />
                 ) : selectedDestination ? (
                   <Image
                     source={{ uri: selectedDestination.image }}
                     style={styles.selectedDestinationImage}
+                    accessible={false}
                   />
                 ) : (
                   <LinearGradient
@@ -271,8 +286,14 @@ export default function CreateTripScreen() {
                       key={dest.id}
                       style={styles.destinationOption}
                       onPress={() => handleSelectDestination(dest.name, dest.country)}
+                      accessibilityRole="button"
+                      accessibilityLabel={`Choose ${dest.name}, ${dest.country}`}
                     >
-                      <Image source={{ uri: dest.image }} style={styles.destinationOptionImage} />
+                      <Image
+                        source={{ uri: dest.image }}
+                        style={styles.destinationOptionImage}
+                        accessible={false}
+                      />
                       <LinearGradient
                         colors={['transparent', 'rgba(0,0,0,0.6)']}
                         style={styles.destinationOptionGradient}
@@ -309,6 +330,9 @@ export default function CreateTripScreen() {
                   style={styles.counterButton}
                   onPress={() => handleTravelersChange(-1)}
                   disabled={(draftInput?.travelers || 2) <= 1}
+                  accessibilityRole="button"
+                  accessibilityLabel="Remove one traveler"
+                  accessibilityState={{ disabled: (draftInput?.travelers || 2) <= 1 }}
                 >
                   <Ionicons
                     name="remove"
@@ -318,11 +342,19 @@ export default function CreateTripScreen() {
                     }
                   />
                 </TouchableOpacity>
-                <Text style={styles.counterValue}>{draftInput?.travelers || 2}</Text>
+                <Text
+                  style={styles.counterValue}
+                  accessibilityLabel={`${draftInput?.travelers || 2} travelers`}
+                >
+                  {draftInput?.travelers || 2}
+                </Text>
                 <TouchableOpacity
                   style={styles.counterButton}
                   onPress={() => handleTravelersChange(1)}
                   disabled={(draftInput?.travelers || 2) >= 10}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add one traveler"
+                  accessibilityState={{ disabled: (draftInput?.travelers || 2) >= 10 }}
                 >
                   <Ionicons
                     name="add"
@@ -344,6 +376,9 @@ export default function CreateTripScreen() {
                     draftInput?.travelerType === type.id && styles.travelerTypeButtonSelected,
                   ]}
                   onPress={() => handleTravelerTypeSelect(type.id)}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${type.label} travelers`}
+                  accessibilityState={{ selected: draftInput?.travelerType === type.id }}
                 >
                   <Ionicons
                     name={type.icon as React.ComponentProps<typeof Ionicons>['name']}
@@ -595,9 +630,9 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   counterButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',

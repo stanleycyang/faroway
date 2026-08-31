@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Platform } from 'react-native';
 import { colors } from '../../constants/theme';
 
 export default function TabLayout() {
@@ -20,11 +21,16 @@ export default function TabLayout() {
           paddingTop: 8,
           paddingBottom: bottomPadding,
           height: 64 + bottomPadding,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -2 },
-          shadowOpacity: 0.06,
-          shadowRadius: 8,
-          elevation: 4,
+          ...Platform.select({
+            web: { boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.06)' },
+            default: {
+              shadowColor: '#000',
+              shadowOffset: { width: 0, height: -2 },
+              shadowOpacity: 0.06,
+              shadowRadius: 8,
+              elevation: 4,
+            },
+          }),
         },
         tabBarLabelStyle: {
           fontSize: 12,

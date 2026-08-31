@@ -1,3 +1,5 @@
+import type { ViewStyle } from 'react-native';
+
 export const colors = {
   primary: {
     50: '#FFF5F4',
@@ -104,35 +106,38 @@ export const typography = {
   },
 };
 
-export const shadows = {
-  sm: {
+const createShadow = (boxShadow: string, nativeStyle: ViewStyle): ViewStyle =>
+  typeof document === 'undefined' ? nativeStyle : { boxShadow };
+
+export const shadows: Record<'sm' | 'md' | 'lg' | 'glow', ViewStyle> = {
+  sm: createShadow('0 1px 4px rgba(249, 112, 102, 0.08)', {
     shadowColor: '#F97066',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
-  },
-  md: {
+  }),
+  md: createShadow('0 4px 12px rgba(249, 112, 102, 0.12)', {
     shadowColor: '#F97066',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 12,
     elevation: 4,
-  },
-  lg: {
+  }),
+  lg: createShadow('0 8px 24px rgba(249, 112, 102, 0.18)', {
     shadowColor: '#F97066',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.18,
     shadowRadius: 24,
     elevation: 8,
-  },
-  glow: {
+  }),
+  glow: createShadow('0 0 16px rgba(250, 140, 132, 0.35)', {
     shadowColor: '#FA8C84',
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.35,
     shadowRadius: 16,
     elevation: 6,
-  },
+  }),
 };
 
 // Glassmorphism helper values

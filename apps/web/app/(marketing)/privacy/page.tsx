@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy | Faroway",
+  title: "Privacy Policy",
   description:
     "Learn how Faroway collects, uses, and protects your personal information.",
   alternates: {

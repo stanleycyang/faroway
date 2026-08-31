@@ -7,10 +7,13 @@ import {
   TextStyle,
   Animated,
   Pressable,
+  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
+import { useReduceMotion } from '../../hooks/useReduceMotion';
+import { USE_NATIVE_DRIVER } from '../../lib/animation';
 
 interface ButtonProps {
   title: string;
@@ -23,6 +26,8 @@ interface ButtonProps {
   fullWidth?: boolean;
   style?: ViewStyle;
   textStyle?: TextStyle;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
 }
 
 export function Button({
@@ -36,15 +41,19 @@ export function Button({
   fullWidth = false,
   style,
   textStyle,
+  accessibilityLabel,
+  accessibilityHint,
 }: ButtonProps) {
   const scaleAnim = useRef(new Animated.Value(1)).current;
+  const reduceMotion = useReduceMotion();
 
   const handlePressIn = () => {
     if (!disabled && !loading) {
       hapticFeedback.light();
+      if (reduceMotion) return;
       Animated.spring(scaleAnim, {
         toValue: 0.96,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
         speed: 50,
         bounciness: 4,
       }).start();
@@ -52,16 +61,20 @@ export function Button({
   };
 
   const handlePressOut = () => {
+    if (reduceMotion) {
+      scaleAnim.setValue(1);
+      return;
+    }
     Animated.spring(scaleAnim, {
       toValue: 1,
-      useNativeDriver: true,
+      useNativeDriver: USE_NATIVE_DRIVER,
       speed: 50,
       bounciness: 4,
     }).start();
   };
 
   const sizeStyles: Record<string, ViewStyle> = {
-    sm: { paddingVertical: 10, paddingHorizontal: 18, minHeight: 38 },
+    sm: { paddingVertical: 10, paddingHorizontal: 18, minHeight: 44 },
     md: { paddingVertical: 14, paddingHorizontal: 28, minHeight: 50 },
     lg: { paddingVertical: 18, paddingHorizontal: 36, minHeight: 58 },
   };
@@ -123,7 +136,13 @@ export function Button({
     <>
       {loading ? (
         <ActivityIndicator
-          color={variant === 'primary' || variant === 'secondary' ? '#fff' : colors.primary[400]}
+          color={
+            variant === 'primary'
+              ? '#fff'
+              : variant === 'secondary'
+                ? '#0f172a'
+                : colors.primary[400]
+          }
           size="small"
         />
       ) : (
@@ -143,6 +162,10 @@ export function Button({
       onPressIn={handlePressIn}
       onPressOut={handlePressOut}
       disabled={disabled || loading}
+      accessibilityRole="button"
+      accessibilityLabel={accessibilityLabel ?? (loading ? `${title}, loading` : title)}
+      accessibilityHint={accessibilityHint}
+      accessibilityState={{ disabled: disabled || loading, busy: loading }}
     >
       <Animated.View
         style={[
@@ -168,10 +191,15 @@ export function Button({
 
 const styles = StyleSheet.create({
   primaryGlow: {
-    shadowColor: '#FA8C84',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    elevation: 8,
+    ...Platform.select({
+      web: { boxShadow: '0 4px 16px rgba(250, 140, 132, 0.35)' },
+      default: {
+        shadowColor: '#FA8C84',
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.35,
+        shadowRadius: 16,
+        elevation: 8,
+      },
+    }),
   },
 });

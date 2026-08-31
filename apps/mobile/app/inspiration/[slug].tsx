@@ -8,14 +8,18 @@ import {
   Animated,
   Dimensions,
   Image,
+  Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInspirationBySlug, popularDestinations } from '@faroway/constants';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
+import { useReduceMotion } from '../../hooks/useReduceMotion';
+import { USE_NATIVE_DRIVER } from '../../lib/animation';
 
 const { width, height: screenHeight } = Dimensions.get('window');
 const HERO_HEIGHT = screenHeight * 0.45;
@@ -65,6 +69,7 @@ export default function InspirationDetailScreen() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const insets = useSafeAreaInsets();
   const inspiration = getInspirationBySlug(slug || '');
+  const reduceMotion = useReduceMotion();
 
   const scrollY = useRef(new Animated.Value(0)).current;
   const sectionAnims = useRef([
@@ -81,24 +86,38 @@ export default function InspirationDetailScreen() {
   useEffect(() => {
     hapticFeedback.light();
 
+    if (reduceMotion) {
+      sectionAnims.forEach((anim) => anim.setValue(1));
+      return;
+    }
+
     const animations = sectionAnims.map((anim, i) =>
       Animated.spring(anim, {
         toValue: 1,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
         delay: 200 + i * 120,
         tension: 50,
         friction: 8,
       })
     );
     Animated.stagger(120, animations).start();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [reduceMotion, sectionAnims]);
 
   if (!inspiration) {
     return (
       <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
-        <Text style={{ fontSize: 16, color: '#475569' }}>Inspiration not found</Text>
-        <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 16 }}>
+        <Text
+          style={{ fontSize: 20, fontWeight: '700', color: '#0f172a' }}
+          accessibilityRole="header"
+        >
+          Inspiration not found
+        </Text>
+        <TouchableOpacity
+          onPress={() => router.back()}
+          style={{ minHeight: 44, justifyContent: 'center', marginTop: 8 }}
+          accessibilityRole="button"
+          accessibilityLabel="Go back"
+        >
           <Text style={{ fontSize: 16, color: colors.primary[500], fontWeight: '600' }}>
             Go back
           </Text>
@@ -121,14 +140,16 @@ export default function InspirationDetailScreen() {
 
   const makeSectionStyle = (anim: Animated.Value) => ({
     opacity: anim,
-    transform: [
-      {
-        translateY: anim.interpolate({
-          inputRange: [0, 1],
-          outputRange: [30, 0],
-        }),
-      },
-    ],
+    transform: reduceMotion
+      ? []
+      : [
+          {
+            translateY: anim.interpolate({
+              inputRange: [0, 1],
+              outputRange: [30, 0],
+            }),
+          },
+        ],
   });
 
   const handleDestinationPress = (destination: (typeof matchingDestinations)[0]) => {
@@ -169,10 +190,11 @@ export default function InspirationDetailScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar style="light" />
       <Animated.ScrollView
         showsVerticalScrollIndicator={false}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
-          useNativeDriver: true,
+          useNativeDriver: USE_NATIVE_DRIVER,
         })}
         scrollEventThrottle={16}
         contentContainerStyle={{ paddingBottom: 120 }}
@@ -183,10 +205,13 @@ export default function InspirationDetailScreen() {
             source={{ uri: inspiration.heroImage }}
             style={[
               styles.heroImage,
-              {
-                transform: [{ translateY: heroTranslateY }, { scale: heroScale }],
-              },
+              reduceMotion
+                ? undefined
+                : {
+                    transform: [{ translateY: heroTranslateY }, { scale: heroScale }],
+                  },
             ]}
+            accessible={false}
           />
           <LinearGradient
             colors={[
@@ -200,7 +225,9 @@ export default function InspirationDetailScreen() {
           <View style={[styles.heroContent, { paddingTop: insets.top }]}>
             <View style={styles.heroTextContainer}>
               <Text style={styles.heroEmoji}>{inspiration.emoji}</Text>
-              <Text style={styles.heroTitle}>{inspiration.title}</Text>
+              <Text style={styles.heroTitle} accessibilityRole="header">
+                {inspiration.title}
+              </Text>
               <Text style={styles.heroTagline}>{inspiration.tagline}</Text>
             </View>
           </View>
@@ -241,6 +268,8 @@ export default function InspirationDetailScreen() {
                 style={styles.destCard}
                 activeOpacity={0.9}
                 onPress={() => handleDestinationPress(dest)}
+                accessibilityRole="button"
+                accessibilityLabel={`${dest.name}, ${dest.country}`}
               >
                 <Image source={{ uri: dest.image }} style={styles.destImage} />
                 <LinearGradient
@@ -268,6 +297,8 @@ export default function InspirationDetailScreen() {
       <TouchableOpacity
         style={[styles.backButton, { top: insets.top + 8 }]}
         onPress={() => router.back()}
+        accessibilityRole="button"
+        accessibilityLabel="Go back"
       >
         <Ionicons name="arrow-back" size={22} color="#fff" />
       </TouchableOpacity>
@@ -278,6 +309,8 @@ export default function InspirationDetailScreen() {
           style={[styles.surpriseButton, { backgroundColor: inspiration.gradientColors[0] }]}
           activeOpacity={0.85}
           onPress={handleSurpriseMe}
+          accessibilityRole="button"
+          accessibilityLabel="Surprise me with a destination"
         >
           <Ionicons name="sparkles" size={20} color="#fff" />
           <Text style={styles.surpriseButtonText}>Surprise Me</Text>
@@ -455,7 +488,9 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingVertical: 16,
     borderRadius: borderRadius.lg,
-    ...shadows.glow,
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0 0 16px rgba(250, 140, 132, 0.35)' }
+      : shadows.glow),
   },
   surpriseButtonText: {
     fontSize: 17,

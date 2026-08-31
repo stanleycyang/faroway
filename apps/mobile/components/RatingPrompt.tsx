@@ -1,7 +1,8 @@
 import { View, Text, StyleSheet, TouchableOpacity, Modal } from 'react-native';
-import * as StoreReview from 'expo-store-review';
 import { usePromptStore } from '../stores/promptStore';
 import { colors, borderRadius, shadows } from '../constants/theme';
+import { requestStoreReview } from '../lib/storeReview';
+import { useReduceMotion } from '../hooks/useReduceMotion';
 
 interface RatingPromptProps {
   visible: boolean;
@@ -11,14 +12,16 @@ interface RatingPromptProps {
 
 export function RatingPrompt({ visible, tripCount, onClose }: RatingPromptProps) {
   const { markRatingPrompted, markRated } = usePromptStore();
+  const reduceMotion = useReduceMotion();
 
   const handleRate = async () => {
-    markRated();
-    onClose();
-    const available = await StoreReview.isAvailableAsync();
-    if (available) {
-      await StoreReview.requestReview();
+    const result = await requestStoreReview();
+    if (result.destination === 'native' || result.destination === 'store') {
+      markRated();
+    } else {
+      markRatingPrompted();
     }
+    onClose();
   };
 
   const handleMaybeLater = () => {
@@ -32,7 +35,13 @@ export function RatingPrompt({ visible, tripCount, onClose }: RatingPromptProps)
   };
 
   return (
-    <Modal visible={visible} transparent animationType="slide" statusBarTranslucent>
+    <Modal
+      visible={visible}
+      transparent
+      animationType={reduceMotion ? 'none' : 'slide'}
+      statusBarTranslucent
+      onRequestClose={handleMaybeLater}
+    >
       <View style={styles.overlay}>
         <View style={styles.bottomSheet}>
           {/* Handle */}
@@ -45,7 +54,9 @@ export function RatingPrompt({ visible, tripCount, onClose }: RatingPromptProps)
             </View>
 
             {/* Title & Subtitle */}
-            <Text style={styles.title}>Enjoying Faroway?</Text>
+            <Text style={styles.title} accessibilityRole="header">
+              Enjoying Faroway?
+            </Text>
             <Text style={styles.subtitle}>
               {tripCount && tripCount > 1
                 ? `You've planned ${tripCount} trips with us!`
@@ -53,17 +64,30 @@ export function RatingPrompt({ visible, tripCount, onClose }: RatingPromptProps)
             </Text>
 
             {/* Rate Button */}
-            <TouchableOpacity style={styles.rateButton} onPress={handleRate} activeOpacity={0.9}>
-              <Text style={styles.rateButtonText}>Rate on App Store</Text>
+            <TouchableOpacity
+              style={styles.rateButton}
+              onPress={handleRate}
+              activeOpacity={0.9}
+              accessibilityRole="button"
+            >
+              <Text style={styles.rateButtonText}>Rate Faroway</Text>
             </TouchableOpacity>
 
             {/* Maybe Later */}
-            <TouchableOpacity style={styles.maybeLaterButton} onPress={handleMaybeLater}>
+            <TouchableOpacity
+              style={styles.maybeLaterButton}
+              onPress={handleMaybeLater}
+              accessibilityRole="button"
+            >
               <Text style={styles.maybeLaterText}>Maybe Later</Text>
             </TouchableOpacity>
 
             {/* Don't Ask Again */}
-            <TouchableOpacity style={styles.dontAskButton} onPress={handleDontAskAgain}>
+            <TouchableOpacity
+              style={styles.dontAskButton}
+              onPress={handleDontAskAgain}
+              accessibilityRole="button"
+            >
               <Text style={styles.dontAskText}>Don't Ask Again</Text>
             </TouchableOpacity>
           </View>
@@ -143,7 +167,7 @@ const styles = StyleSheet.create({
   },
   maybeLaterText: {
     fontSize: 15,
-    color: colors.surface[500],
+    color: colors.surface[300],
     fontWeight: '600',
   },
   dontAskButton: {
@@ -151,7 +175,7 @@ const styles = StyleSheet.create({
   },
   dontAskText: {
     fontSize: 13,
-    color: colors.surface[600],
+    color: colors.surface[400],
     fontWeight: '500',
   },
 });

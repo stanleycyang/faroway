@@ -1,6 +1,11 @@
 export default function Loading() {
   return (
-    <main className="min-h-screen pt-20">
+    <main
+      role="status"
+      aria-busy="true"
+      aria-label="Loading article"
+      className="min-h-screen pt-20"
+    >
       <div className="max-w-5xl mx-auto px-6 py-10 animate-pulse">
         <div className="h-5 w-56 rounded bg-gray-200 mb-8" />
         <div className="h-12 w-5/6 rounded bg-gray-200 mb-4" />

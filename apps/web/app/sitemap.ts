@@ -8,6 +8,8 @@ import { getGuideSlugs } from "@/lib/destination-guides";
 
 import { getAllCostProfiles } from "@/lib/tools/cost-data";
 
+export const revalidate = 3600;
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
   // Static pages
@@ -66,14 +68,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  const blogPosts: MetadataRoute.Sitemap = (await getAllSitemapPostMetas()).map(
-    (post) => ({
-      url: `${baseUrl}/blog/${post.slug}`,
-      lastModified: post.lastUpdated || post.date,
-      changeFrequency: "monthly" as const,
-      priority: 0.7,
-    }),
-  );
+  const [postMetas, categories] = await Promise.all([
+    getAllSitemapPostMetas(),
+    getAllCategories(),
+  ]);
+  const blogPosts: MetadataRoute.Sitemap = postMetas.map((post) => ({
+    url: `${baseUrl}/blog/${post.slug}`,
+    lastModified: post.lastUpdated || post.date,
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  }));
 
   const blogGuides: MetadataRoute.Sitemap = [
     {
@@ -88,13 +92,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     })),
   ];
 
-  const blogCategories: MetadataRoute.Sitemap = (await getAllCategories()).map(
-    (cat) => ({
-      url: `${baseUrl}/blog/category/${cat.toLowerCase().replace(/\s+/g, "-")}`,
-      changeFrequency: "weekly" as const,
-      priority: 0.6,
-    }),
-  );
+  const blogCategories: MetadataRoute.Sitemap = categories.map((cat) => ({
+    url: `${baseUrl}/blog/category/${cat.toLowerCase().replace(/\s+/g, "-")}`,
+    changeFrequency: "weekly" as const,
+    priority: 0.6,
+  }));
 
   // Tools pages
   const toolSlugs = [

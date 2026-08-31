@@ -7,7 +7,7 @@ import { scoreDestinations, type QuizResult } from "@/lib/tools/quiz-scoring";
 import { QuizQuestion } from "./QuizQuestion";
 import { QuizResults } from "./QuizResults";
 
-type QuizState = "intro" | "questions" | "calculating" | "results";
+type QuizState = "intro" | "questions" | "results";
 
 export function TravelQuizClient() {
   const [state, setState] = useState<QuizState>("intro");
@@ -32,19 +32,21 @@ export function TravelQuizClient() {
     [currentQuestion],
   );
 
-  const handleNext = useCallback(() => {
-    if (currentQuestion < quizQuestions.length - 1) {
-      setCurrentQuestion((prev) => prev + 1);
-    } else {
-      // Calculate results
-      setState("calculating");
-      setTimeout(() => {
-        const scored = scoreDestinations(answers);
-        setResults(scored);
+  const handleAdvance = useCallback(
+    (options: QuizOption[]) => {
+      const nextAnswers = [...answers];
+      nextAnswers[currentQuestion] = options;
+      setAnswers(nextAnswers);
+
+      if (currentQuestion < quizQuestions.length - 1) {
+        setCurrentQuestion((prev) => prev + 1);
+      } else {
+        setResults(scoreDestinations(nextAnswers));
         setState("results");
-      }, 1500);
-    }
-  }, [currentQuestion, answers]);
+      }
+    },
+    [currentQuestion, answers],
+  );
 
   const handleRestart = () => {
     setState("intro");
@@ -69,6 +71,7 @@ export function TravelQuizClient() {
               match you with your perfect destination.
             </p>
             <button
+              type="button"
               onClick={handleStart}
               className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-amber-500 text-white px-8 py-4 rounded-full text-lg font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5"
             >
@@ -87,18 +90,8 @@ export function TravelQuizClient() {
             totalQuestions={quizQuestions.length}
             selected={answers[currentQuestion] || []}
             onSelect={handleSelect}
-            onNext={handleNext}
+            onAdvance={handleAdvance}
           />
-        )}
-
-        {state === "calculating" && (
-          <div className="text-center pt-20 animate-fade-in">
-            <div className="w-16 h-16 rounded-full border-4 border-primary/20 border-t-primary animate-spin mx-auto mb-6" />
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">
-              Finding your perfect match...
-            </h2>
-            <p className="text-slate-500">Analyzing your travel personality</p>
-          </div>
         )}
 
         {state === "results" && (

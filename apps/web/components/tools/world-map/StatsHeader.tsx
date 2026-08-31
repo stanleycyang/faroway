@@ -53,6 +53,7 @@ export function StatsHeader({
       <div className="mt-5 flex items-baseline gap-3 text-ink">
         {spelled ? (
           <h1
+            aria-label={`${stats.totalVisited} of ${stats.totalCountries} countries visited`}
             className="font-editorial italic font-bold leading-[0.95] tracking-[-0.02em] text-[56px] sm:text-[72px] lg:text-[88px] text-balance"
             style={{ paddingBottom: "0.05em" }}
           >
@@ -60,6 +61,7 @@ export function StatsHeader({
           </h1>
         ) : (
           <h1
+            aria-label={`${stats.totalVisited} of ${stats.totalCountries} countries visited`}
             className="font-editorial font-black leading-[0.85] tracking-[-0.04em] text-[88px] sm:text-[120px] lg:text-[140px]"
             style={{ paddingBottom: "0.18em" }}
           >

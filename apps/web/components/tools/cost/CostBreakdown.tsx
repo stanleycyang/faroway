@@ -91,7 +91,7 @@ export function CostBreakdown({
       </div>
 
       {/* Category breakdown */}
-      <h3 className="text-lg font-bold text-slate-900 mb-4">Cost Breakdown</h3>
+      <h2 className="text-lg font-bold text-slate-900 mb-4">Cost Breakdown</h2>
       <div className="space-y-4 mb-8">
         {CATEGORY_META.map(({ key, label, icon: Icon, color }) => {
           const pct = profile.breakdown[key as keyof typeof profile.breakdown];
@@ -139,9 +139,9 @@ export function CostBreakdown({
       </div>
 
       {/* Sample prices */}
-      <h3 className="text-lg font-bold text-slate-900 mb-4">
+      <h2 className="text-lg font-bold text-slate-900 mb-4">
         Sample Prices in {destinationName}
-      </h3>
+      </h2>
       <div className="grid grid-cols-2 gap-3 mb-8">
         {profile.samplePrices.map((sp) => (
           <div

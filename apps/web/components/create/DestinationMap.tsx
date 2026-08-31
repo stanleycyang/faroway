@@ -27,6 +27,11 @@ export function DestinationMap({ lat, lng, name }: DestinationMapProps) {
       zoom: 11,
       zoomControl: false,
       attributionControl: false,
+      dragging: false,
+      scrollWheelZoom: false,
+      doubleClickZoom: false,
+      touchZoom: false,
+      keyboard: false,
     });
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -55,5 +60,11 @@ export function DestinationMap({ lat, lng, name }: DestinationMapProps) {
     };
   }, [lat, lng, name]);
 
-  return <div ref={mapRef} className="h-48 w-full rounded-xl isolate z-0" />;
+  return (
+    <div
+      ref={mapRef}
+      className="h-48 w-full rounded-xl isolate z-0"
+      aria-hidden="true"
+    />
+  );
 }

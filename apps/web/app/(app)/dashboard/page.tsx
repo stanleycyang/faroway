@@ -15,8 +15,7 @@ interface DashboardPageProps {
 export default async function DashboardPage({
   searchParams,
 }: DashboardPageProps) {
-  const params = await searchParams;
-  const supabase = await createClient();
+  const [params, supabase] = await Promise.all([searchParams, createClient()]);
 
   // Check if user is authenticated
   const {
@@ -61,7 +60,6 @@ export default async function DashboardPage({
   const inProgressTrips = trips.filter(
     (t) => t.start_date <= today && t.end_date >= today,
   );
-
   // Apply filter
   let filteredTrips = trips;
   switch (filter) {
@@ -177,39 +175,6 @@ export default async function DashboardPage({
             </div>
           )}
         </section>
-
-        {/* Quick Actions (only show when user has trips) */}
-        {trips.length > 0 && (
-          <section className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Link
-              href="/create"
-              className="p-6 bg-gradient-to-br from-primary to-primary-600 rounded-2xl text-white shadow-lg hover:shadow-xl transition-all group"
-            >
-              <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">
-                ✨
-              </div>
-              <h3 className="text-lg font-semibold">Plan Another Trip</h3>
-              <p className="text-white/80 text-sm mt-1">
-                Let AI help you create the perfect itinerary
-              </p>
-            </Link>
-
-            <Link
-              href="/trips"
-              className="p-6 bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-all group"
-            >
-              <div className="text-3xl mb-3 group-hover:scale-110 transition-transform">
-                📋
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900">
-                View All Trips
-              </h3>
-              <p className="text-gray-600 text-sm mt-1">
-                Manage and edit your planned adventures
-              </p>
-            </Link>
-          </section>
-        )}
       </main>
     </div>
   );

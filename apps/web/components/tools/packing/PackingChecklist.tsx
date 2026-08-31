@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import { Check, Printer } from "lucide-react";
 import type { PackingCategory } from "@/lib/tools/packing-data";
 
@@ -13,31 +13,34 @@ export function PackingChecklist({
   categories,
   storageKey,
 }: PackingChecklistProps) {
-  const [checked, setChecked] = useState<Set<string>>(() => {
-    if (typeof window === "undefined") return new Set<string>();
+  const [checked, setChecked] = useState<Set<string>>(new Set());
+  const [hasHydrated, setHasHydrated] = useState(false);
+
+  useEffect(() => {
+    let savedItems: string[] | null = null;
     try {
       const saved = localStorage.getItem(storageKey);
-      if (saved) return new Set<string>(JSON.parse(saved));
+      if (saved) savedItems = JSON.parse(saved) as string[];
     } catch {}
-    return new Set<string>();
-  });
+    const frame = requestAnimationFrame(() => {
+      if (savedItems) setChecked(new Set(savedItems));
+      setHasHydrated(true);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [storageKey]);
 
-  // Save to localStorage
-  const persist = useCallback(
-    (next: Set<string>) => {
-      try {
-        localStorage.setItem(storageKey, JSON.stringify([...next]));
-      } catch {}
-    },
-    [storageKey],
-  );
+  useEffect(() => {
+    if (!hasHydrated) return;
+    try {
+      localStorage.setItem(storageKey, JSON.stringify([...checked]));
+    } catch {}
+  }, [checked, hasHydrated, storageKey]);
 
   const toggle = (item: string) => {
     setChecked((prev) => {
       const next = new Set(prev);
       if (next.has(item)) next.delete(item);
       else next.add(item);
-      persist(next);
       return next;
     });
   };
@@ -60,6 +63,7 @@ export function PackingChecklist({
               {progressPercent}%
             </span>
             <button
+              type="button"
               onClick={() => window.print()}
               className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-700 transition-colors print-hidden"
             >
@@ -68,7 +72,14 @@ export function PackingChecklist({
             </button>
           </div>
         </div>
-        <div className="h-2.5 bg-slate-100 rounded-full overflow-hidden">
+        <div
+          role="progressbar"
+          aria-label="Packing progress"
+          aria-valuemin={0}
+          aria-valuemax={totalItems}
+          aria-valuenow={checkedCount}
+          className="h-2.5 bg-slate-100 rounded-full overflow-hidden"
+        >
           <div
             className="h-full bg-gradient-to-r from-primary to-amber-500 rounded-full transition-all duration-500"
             style={{ width: `${progressPercent}%` }}
@@ -87,9 +98,9 @@ export function PackingChecklist({
             <div key={category.category}>
               <div className="flex items-center gap-2 mb-3">
                 <span className="text-xl">{category.emoji}</span>
-                <h3 className="text-lg font-bold text-slate-900">
+                <h2 className="text-lg font-bold text-slate-900">
                   {category.category}
-                </h3>
+                </h2>
                 <span className="text-xs text-slate-400 ml-auto">
                   {categoryChecked}/{category.items.length}
                 </span>
@@ -102,8 +113,10 @@ export function PackingChecklist({
 
                   return (
                     <button
+                      type="button"
                       key={key}
                       onClick={() => toggle(key)}
+                      aria-pressed={isChecked}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition-all ${
                         isChecked
                           ? "bg-primary/5 text-slate-400 line-through"

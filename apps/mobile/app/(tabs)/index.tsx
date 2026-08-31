@@ -22,6 +22,7 @@ import { useUserStore } from '../../stores/userStore';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
+import { USE_NATIVE_DRIVER } from '../../lib/animation';
 
 const { width } = Dimensions.get('window');
 
@@ -66,12 +67,12 @@ export default function ExploreScreen() {
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 500,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
         duration: 500,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
     ]).start();
   }, [fadeAnim, slideAnim, reduceMotion]);
@@ -120,7 +121,7 @@ export default function ExploreScreen() {
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
-          useNativeDriver: true,
+          useNativeDriver: USE_NATIVE_DRIVER,
         })}
         scrollEventThrottle={16}
       >
@@ -130,7 +131,7 @@ export default function ExploreScreen() {
         >
           <View>
             <Text style={styles.greeting}>{greeting} 👋</Text>
-            <Text style={styles.headerTitle}>
+            <Text style={styles.headerTitle} accessibilityRole="header">
               {hasTrips ? 'Where to next?' : 'Plan your dream trip'}
             </Text>
           </View>
@@ -178,7 +179,7 @@ export default function ExploreScreen() {
             style={styles.heroCard}
           >
             {/* Background pattern */}
-            <View style={styles.heroPattern}>
+            <View style={styles.heroPattern} accessible={false}>
               <Text style={styles.heroPatternEmoji}>✈️</Text>
               <Text style={[styles.heroPatternEmoji, styles.heroPattern2]}>🗺️</Text>
               <Text style={[styles.heroPatternEmoji, styles.heroPattern3]}>🌴</Text>
@@ -203,7 +204,9 @@ export default function ExploreScreen() {
               <View style={styles.heroFeatures}>
                 <View style={styles.heroFeature}>
                   <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.8)" />
-                  <Text style={styles.heroFeatureText}>Saved to your account</Text>
+                  <Text style={styles.heroFeatureText}>
+                    {isAuthenticated ? 'Synced across devices' : 'Sign in to generate'}
+                  </Text>
                 </View>
                 <View style={styles.heroFeature}>
                   <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.8)" />
@@ -272,20 +275,6 @@ export default function ExploreScreen() {
           </ScrollView>
         </View>
 
-        {/* Social Proof */}
-        <View style={styles.socialProof}>
-          <View style={styles.socialProofAvatars}>
-            {['👩🏻', '👨🏽', '👩🏼', '👨🏻'].map((emoji, i) => (
-              <View key={i} style={[styles.avatar, { marginLeft: i > 0 ? -10 : 0 }]}>
-                <Text style={styles.avatarEmoji}>{emoji}</Text>
-              </View>
-            ))}
-          </View>
-          <Text style={styles.socialProofText}>
-            Trips shaped around your dates, budget, and travel style
-          </Text>
-        </View>
-
         {/* Trending This Season */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Trending This Season</Text>
@@ -300,7 +289,11 @@ export default function ExploreScreen() {
                 accessibilityLabel={`${destination.name}, ${destination.country}`}
                 accessibilityHint="Starts trip planning for this destination"
               >
-                <Image source={{ uri: destination.image }} style={styles.trendingImage} />
+                <Image
+                  source={{ uri: destination.image }}
+                  style={styles.trendingImage}
+                  accessible={false}
+                />
                 <LinearGradient
                   colors={['transparent', 'rgba(0,0,0,0.7)']}
                   style={styles.trendingGradient}
@@ -505,43 +498,6 @@ const styles = StyleSheet.create({
   },
   destinationCard: {
     width: width * 0.7,
-  },
-  socialProof: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 12,
-    paddingVertical: 20,
-    marginHorizontal: 24,
-    marginBottom: 24,
-    backgroundColor: '#ffffff',
-    borderRadius: borderRadius.lg,
-    borderWidth: 1,
-    borderColor: '#e2e8f0',
-  },
-  socialProofAvatars: {
-    flexDirection: 'row',
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#f8fafc',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#ffffff',
-  },
-  avatarEmoji: {
-    fontSize: 16,
-  },
-  socialProofText: {
-    fontSize: 14,
-    color: '#475569',
-  },
-  socialProofNumber: {
-    fontWeight: '700',
-    color: '#0f172a',
   },
   trendingGrid: {
     flexDirection: 'row',

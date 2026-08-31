@@ -6,16 +6,17 @@ import { getContinents, getGuidesByContinent } from "@/lib/destination-guides";
 import { getVisaSummary, visaStatusConfig } from "@/lib/tools/visa-data";
 import { VisaCheckerClient } from "@/components/tools/visa/VisaCheckerClient";
 import { ToolCTA } from "@/components/tools/ToolCTA";
+import { RelatedTools } from "@/components/tools/RelatedTools";
 
 export const metadata: Metadata = {
   title: "Visa Checker — Do I Need a Visa?",
   description:
-    "Check visa requirements for 14 popular destinations based on your passport. Instant results with stay duration, visa type, and travel tips.",
+    "Check general visa guidance for 40+ popular destinations based on your passport. Always verify current requirements with an official authority.",
   alternates: { canonical: "/tools/visa-checker" },
   openGraph: {
     title: "Visa Checker | Faroway",
     description:
-      "Free visa requirement checker for 14 destinations — know before you go.",
+      "Free visa guidance for 40+ destinations — verify before you go.",
     url: "/tools/visa-checker",
   },
 };
@@ -149,6 +150,7 @@ export default function VisaCheckerPage() {
         })}
       </section>
 
+      <RelatedTools currentSlug="visa-checker" />
       <ToolCTA />
     </main>
   );

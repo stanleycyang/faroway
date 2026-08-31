@@ -1,8 +1,9 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, MessageCircle, Share2, X } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { useModalFocusTrap } from "@/hooks/useModalFocusTrap";
 import { useActiveProfile } from "@/lib/tools/world-map/store";
 import { buildShareUrl, encodeProfileToUrl } from "@/lib/tools/world-map/share";
 import { computeStats } from "@/lib/tools/world-map/stats";
@@ -22,6 +23,8 @@ interface Props {
 
 export function ShareLinkDialog({ open, onClose, initiallyCopied }: Props) {
   const profile = useActiveProfile();
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const { url, text, stats } = useMemo(() => {
     if (!open || !profile) {
@@ -41,13 +44,16 @@ export function ShareLinkDialog({ open, onClose, initiallyCopied }: Props) {
     };
   }, [open, profile]);
 
-  const [copied, setCopied] = useState(false);
-  const [trackedOpen, setTrackedOpen] = useState(false);
+  const [copied, setCopied] = useState(Boolean(initiallyCopied));
 
-  if (trackedOpen !== open) {
-    setTrackedOpen(open);
-    setCopied(open ? Boolean(initiallyCopied) : false);
-  }
+  useModalFocusTrap({ open, dialogRef, onClose });
+
+  useEffect(
+    () => () => {
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+    },
+    [],
+  );
 
   if (!open || !profile) return null;
 
@@ -55,7 +61,8 @@ export function ShareLinkDialog({ open, onClose, initiallyCopied }: Props) {
     try {
       await navigator.clipboard.writeText(url);
       setCopied(true);
-      setTimeout(() => setCopied(false), 1800);
+      if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
+      copyTimerRef.current = setTimeout(() => setCopied(false), 1800);
     } catch {
       /* link is visible in the field */
     }
@@ -79,7 +86,14 @@ export function ShareLinkDialog({ open, onClose, initiallyCopied }: Props) {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm animate-fade-in p-4">
-      <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-slide-up max-h-[92vh] flex flex-col">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="share-map-title"
+        tabIndex={-1}
+        className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-slide-up max-h-[92vh] flex flex-col outline-none"
+      >
         {/* Visual hero — the actual map */}
         <div className="relative bg-gradient-to-br from-amber-50 via-white to-rose-50 px-6 pt-6 pb-4">
           <button
@@ -91,9 +105,12 @@ export function ShareLinkDialog({ open, onClose, initiallyCopied }: Props) {
             <X className="w-4 h-4" />
           </button>
 
-          <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400">
+          <h2
+            id="share-map-title"
+            className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-400"
+          >
             Share your map
-          </div>
+          </h2>
           <div className="mt-1.5 flex items-baseline gap-2">
             <div className="text-4xl font-bold tabular-nums text-slate-900 font-serif">
               {stats.totalVisited}

@@ -1,11 +1,18 @@
 import React, { useState, useMemo, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Modal, Dimensions } from 'react-native';
-import { CalendarList, DateData } from 'react-native-calendars';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  StyleSheet,
+  Modal,
+  ScrollView,
+  useWindowDimensions,
+} from 'react-native';
+import { Calendar, DateData } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, borderRadius } from '../../constants/theme';
+import { getDatePickerModalHeight } from '../../lib/datePickerLayout';
 import { hapticFeedback } from '../../utils/haptics';
-
-const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 interface DateRangePickerProps {
   startDate: string;
@@ -72,6 +79,8 @@ export function DateRangePicker({
 }: DateRangePickerProps) {
   const [showPicker, setShowPicker] = useState(false);
   const [selectionMode, setSelectionMode] = useState<SelectionMode>('start');
+  const { height: viewportHeight } = useWindowDimensions();
+  const modalHeight = getDatePickerModalHeight(viewportHeight);
 
   const formatDisplayDate = (dateStr: string) => {
     if (!dateStr) return 'Select date';
@@ -164,6 +173,8 @@ export function DateRangePicker({
             selectionMode === 'start' && showPicker && styles.dateButtonActive,
           ]}
           onPress={() => openPicker('start')}
+          accessibilityRole="button"
+          accessibilityLabel={`Start date. ${formatDisplayDate(startDate)}`}
         >
           <Ionicons name="calendar-outline" size={20} color={colors.primary[400]} />
           <View style={styles.dateButtonText}>
@@ -180,6 +191,8 @@ export function DateRangePicker({
             selectionMode === 'end' && showPicker && styles.dateButtonActive,
           ]}
           onPress={() => openPicker('end')}
+          accessibilityRole="button"
+          accessibilityLabel={`End date. ${formatDisplayDate(endDate)}`}
         >
           <Ionicons name="calendar-outline" size={20} color={colors.primary[400]} />
           <View style={styles.dateButtonText}>
@@ -191,7 +204,7 @@ export function DateRangePicker({
 
       <Modal visible={showPicker} transparent animationType="slide" onRequestClose={closePicker}>
         <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { height: modalHeight }]} accessibilityViewIsModal>
             {/* Drag handle */}
             <View style={styles.dragHandleContainer}>
               <View style={styles.dragHandle} />
@@ -199,66 +212,93 @@ export function DateRangePicker({
 
             {/* Header */}
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Select Dates</Text>
-              <TouchableOpacity onPress={closePicker}>
+              <Text style={styles.modalTitle} accessibilityRole="header">
+                Choose your dates
+              </Text>
+              <TouchableOpacity
+                onPress={closePicker}
+                style={styles.closeButton}
+                accessibilityRole="button"
+                accessibilityLabel="Close date picker"
+              >
                 <Ionicons name="close" size={24} color={colors.surface[400]} />
               </TouchableOpacity>
             </View>
 
-            {/* Date summary chips */}
-            <View style={styles.chipRow}>
-              <TouchableOpacity
-                style={[styles.chip, selectionMode === 'start' && styles.chipActive]}
-                onPress={() => setSelectionMode('start')}
-              >
-                <Text
-                  style={[styles.chipLabel, selectionMode === 'start' && styles.chipLabelActive]}
+            <ScrollView
+              style={styles.pickerScroll}
+              contentContainerStyle={styles.pickerScrollContent}
+              showsVerticalScrollIndicator={false}
+              bounces={false}
+            >
+              {/* Date summary chips */}
+              <View style={styles.chipRow}>
+                <TouchableOpacity
+                  style={[styles.chip, selectionMode === 'start' && styles.chipActive]}
+                  onPress={() => setSelectionMode('start')}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: selectionMode === 'start' }}
+                  accessibilityLabel={`Choose start date. ${formatDisplayDate(startDate)}`}
                 >
-                  Start
-                </Text>
-                <Text style={[styles.chipDate, selectionMode === 'start' && styles.chipDateActive]}>
-                  {startDate ? formatDisplayDate(startDate) : 'Pick a date'}
-                </Text>
-              </TouchableOpacity>
+                  <Text
+                    style={[styles.chipLabel, selectionMode === 'start' && styles.chipLabelActive]}
+                  >
+                    Start
+                  </Text>
+                  <Text
+                    style={[styles.chipDate, selectionMode === 'start' && styles.chipDateActive]}
+                  >
+                    {startDate ? formatDisplayDate(startDate) : 'Pick a date'}
+                  </Text>
+                </TouchableOpacity>
 
-              <Ionicons name="arrow-forward" size={16} color={colors.surface[600]} />
+                <Ionicons name="arrow-forward" size={16} color={colors.surface[600]} />
 
+                <TouchableOpacity
+                  style={[styles.chip, selectionMode === 'end' && styles.chipActive]}
+                  onPress={() => setSelectionMode('end')}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected: selectionMode === 'end' }}
+                  accessibilityLabel={`Choose end date. ${formatDisplayDate(endDate)}`}
+                >
+                  <Text
+                    style={[styles.chipLabel, selectionMode === 'end' && styles.chipLabelActive]}
+                  >
+                    End
+                  </Text>
+                  <Text style={[styles.chipDate, selectionMode === 'end' && styles.chipDateActive]}>
+                    {endDate ? formatDisplayDate(endDate) : 'Pick a date'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Calendar */}
+              <Calendar
+                current={initialDate}
+                minDate={TODAY}
+                markingType="period"
+                markedDates={markedDates}
+                onDayPress={onDayPress}
+                theme={calendarTheme}
+                style={styles.calendar}
+                enableSwipeMonths
+              />
+            </ScrollView>
+
+            {/* Done button */}
+            <View style={styles.doneContainer}>
               <TouchableOpacity
-                style={[styles.chip, selectionMode === 'end' && styles.chipActive]}
-                onPress={() => setSelectionMode('end')}
+                style={[styles.doneButton, (!startDate || !endDate) && styles.doneButtonDisabled]}
+                onPress={closePicker}
+                disabled={!startDate || !endDate}
+                accessibilityRole="button"
+                accessibilityState={{ disabled: !startDate || !endDate }}
               >
-                <Text style={[styles.chipLabel, selectionMode === 'end' && styles.chipLabelActive]}>
-                  End
-                </Text>
-                <Text style={[styles.chipDate, selectionMode === 'end' && styles.chipDateActive]}>
-                  {endDate ? formatDisplayDate(endDate) : 'Pick a date'}
+                <Text style={styles.doneButtonText}>
+                  {!startDate ? 'Choose a start date' : !endDate ? 'Choose an end date' : 'Done'}
                 </Text>
               </TouchableOpacity>
             </View>
-
-            {/* Calendar */}
-            <CalendarList
-              current={initialDate}
-              minDate={TODAY}
-              pastScrollRange={0}
-              futureScrollRange={12}
-              scrollEnabled
-              showScrollIndicator={false}
-              markingType="period"
-              markedDates={markedDates}
-              onDayPress={onDayPress}
-              theme={calendarTheme}
-              calendarStyle={styles.calendar}
-            />
-
-            {/* Done button */}
-            {startDate && endDate ? (
-              <View style={styles.doneContainer}>
-                <TouchableOpacity style={styles.doneButton} onPress={closePicker}>
-                  <Text style={styles.doneButtonText}>Done</Text>
-                </TouchableOpacity>
-              </View>
-            ) : null}
           </View>
         </View>
       </Modal>
@@ -317,7 +357,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
     borderTopLeftRadius: borderRadius.xl,
     borderTopRightRadius: borderRadius.xl,
-    height: SCREEN_HEIGHT * 0.9,
     borderWidth: 1,
     borderColor: '#e2e8f0',
     borderBottomWidth: 0,
@@ -345,6 +384,18 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     color: '#0f172a',
+  },
+  pickerScroll: {
+    flex: 1,
+  },
+  pickerScrollContent: {
+    paddingBottom: 8,
+  },
+  closeButton: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   chipRow: {
     flexDirection: 'row',
@@ -387,15 +438,13 @@ const styles = StyleSheet.create({
   },
   calendar: {
     backgroundColor: '#ffffff',
+    marginHorizontal: 12,
   },
   doneContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
+    marginTop: 'auto',
     paddingHorizontal: 24,
     paddingTop: 12,
-    paddingBottom: 40,
+    paddingBottom: 28,
     backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
@@ -405,6 +454,9 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderRadius: borderRadius.md,
     alignItems: 'center',
+  },
+  doneButtonDisabled: {
+    backgroundColor: colors.surface[300],
   },
   doneButtonText: {
     color: '#fff',

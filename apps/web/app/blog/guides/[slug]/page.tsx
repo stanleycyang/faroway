@@ -35,6 +35,7 @@ export async function generateMetadata({
   return {
     title: cluster.seo.title,
     description: cluster.seo.description,
+    alternates: { canonical: `/blog/guides/${cluster.slug}` },
     openGraph: {
       title: cluster.seo.title,
       description: cluster.seo.description,

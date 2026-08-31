@@ -3,9 +3,13 @@ import { CATEGORIES } from "@/lib/blog/types";
 
 interface CategoryPillsProps {
   activeCategory?: string;
+  categories?: readonly string[];
 }
 
-export function CategoryPills({ activeCategory }: CategoryPillsProps) {
+export function CategoryPills({
+  activeCategory,
+  categories = CATEGORIES,
+}: CategoryPillsProps) {
   const allActive = !activeCategory;
 
   return (
@@ -20,7 +24,7 @@ export function CategoryPills({ activeCategory }: CategoryPillsProps) {
       >
         All
       </Link>
-      {CATEGORIES.map((cat) => {
+      {categories.map((cat) => {
         const slug = cat.toLowerCase().replace(/\s+/g, "-");
         const active = slug === activeCategory;
         return (

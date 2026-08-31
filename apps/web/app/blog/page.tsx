@@ -1,10 +1,5 @@
 import type { Metadata } from "next";
-import {
-  getAllPostMetas,
-  getFeaturedPost,
-  paginate,
-  POSTS_PER_PAGE,
-} from "@/lib/blog";
+import { getAllPostMetas, paginate, POSTS_PER_PAGE } from "@/lib/blog";
 import { BlogCard } from "@/components/blog/BlogCard";
 import { FeaturedHero } from "@/components/blog/FeaturedHero";
 import { CategoryPills } from "@/components/blog/CategoryPills";
@@ -13,42 +8,54 @@ import { Pagination } from "@/components/blog/Pagination";
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
-export const metadata: Metadata = {
-  title: "Travel Blog — Tips, Guides & Inspiration",
-  description:
-    "Expert travel tips, destination guides, budget hacks, and AI-powered planning advice. Everything you need to plan your next adventure.",
-  alternates: { canonical: "/blog" },
-  openGraph: {
-    title: "Faroway Travel Blog — Tips, Guides & Inspiration",
+export async function generateMetadata({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}): Promise<Metadata> {
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
+  const canonical = page > 1 ? `/blog?page=${page}` : "/blog";
+  const pageLabel = page > 1 ? ` — Page ${page}` : "";
+  return {
+    title: `Travel Blog — Tips, Guides & Inspiration${pageLabel}`,
     description:
-      "Expert travel tips, destination guides, and AI-powered planning advice.",
-    type: "website",
-    url: "/blog",
-  },
-};
+      "Expert travel tips, destination guides, budget hacks, and AI-powered planning advice. Everything you need to plan your next adventure.",
+    alternates: { canonical },
+    openGraph: {
+      title: `Faroway Travel Blog — Tips, Guides & Inspiration${pageLabel}`,
+      description:
+        "Expert travel tips, destination guides, and AI-powered planning advice.",
+      type: "website",
+      url: canonical,
+    },
+  };
+}
 
 export default async function BlogIndex({
   searchParams,
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
-  const { page: pageParam } = await searchParams;
-  const currentPage = Math.max(1, parseInt(pageParam || "1", 10) || 1);
-
-  const allPosts = await getAllPostMetas();
-  const featured = await getFeaturedPost();
-  const isFirstPage = currentPage === 1;
+  const [{ page: pageParam }, allPosts] = await Promise.all([
+    searchParams,
+    getAllPostMetas(),
+  ]);
+  const requestedPage = Math.max(1, parseInt(pageParam || "1", 10) || 1);
+  const featured = allPosts.find((post) => post.featured) || allPosts[0];
+  const categories = [...new Set(allPosts.map((post) => post.category))];
+  const isFirstPage = requestedPage === 1;
 
   // On page 1 we show the featured hero separately, so exclude it from the grid
   const gridPosts = isFirstPage
     ? allPosts.filter((p) => p.slug !== featured?.slug)
     : allPosts;
 
-  const { items: posts, totalPages } = paginate(
-    gridPosts,
-    currentPage,
-    POSTS_PER_PAGE,
-  );
+  const {
+    items: posts,
+    totalPages,
+    page: currentPage,
+  } = paginate(gridPosts, requestedPage, POSTS_PER_PAGE);
 
   const collectionSchema = {
     "@context": "https://schema.org",
@@ -99,7 +106,7 @@ export default async function BlogIndex({
 
         {/* Category Filters */}
         <div className="mb-10">
-          <CategoryPills />
+          <CategoryPills categories={categories} />
         </div>
 
         {/* Featured Post — only on page 1 */}
@@ -120,7 +127,7 @@ export default async function BlogIndex({
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {posts.map((post, index) => (
-            <BlogCard key={post.slug} post={post} eager={index === 0} />
+            <BlogCard key={post.slug} post={post} eager={index < 3} />
           ))}
         </div>
 

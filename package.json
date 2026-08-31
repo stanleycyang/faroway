@@ -55,6 +55,7 @@
     "d3-color": "3.1.0",
     "defu": "6.1.7",
     "esbuild": "0.28.1",
+    "expo-constants": "18.0.14",
     "fast-uri": "3.1.4",
     "file-type": "21.3.4",
     "flatted": "3.4.3",
@@ -75,6 +76,9 @@
     "vite": "7.3.6",
     "yaml": "2.9.0",
     "yauzl": "3.4.0"
+  },
+  "resolutions": {
+    "expo-constants": "18.0.14"
   },
   "devDependencies": {
     "@supabase/supabase-js": "2.110.8",

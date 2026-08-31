@@ -9,12 +9,19 @@ import {
 import { useUserStore, type User as AppUser } from '../stores/userStore';
 import { useTripStore } from '../stores/tripStore';
 import {
+  discardPendingOAuthTripDraft,
+  resolveWebOAuthRedirectUrl,
+  savePendingOAuthTripDraft,
+  takePendingOAuthTripDraft,
+} from '../lib/oauthReturnState';
+import {
   setAuthToken,
   getUserProfile,
   deleteAccount as deleteAccountRequest,
 } from '../services/api';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
+import { Platform } from 'react-native';
 // Anonymous-trip claim flow has been removed. Trip generation is auth-gated
 // end-to-end, so trips always belong to a real Supabase user from creation.
 
@@ -48,6 +55,11 @@ interface AuthState {
   session: Session | null;
   loading: boolean;
   initialized: boolean;
+}
+
+export interface GoogleSignInOptions {
+  redirectTo?: string;
+  preserveTripDraft?: boolean;
 }
 
 export function useAuth() {
@@ -112,6 +124,17 @@ export function useAuth() {
     // Get initial session
     const initSession = async () => {
       try {
+        if (Platform.OS === 'web') {
+          try {
+            const pendingDraft = takePendingOAuthTripDraft(window.sessionStorage);
+            if (pendingDraft) {
+              useTripStore.getState().setDraftInput(pendingDraft);
+            }
+          } catch {
+            // Browser storage can be disabled; session recovery should still proceed.
+          }
+        }
+
         const {
           data: { session },
         } = await supabase.auth.getSession();
@@ -171,9 +194,42 @@ export function useAuth() {
   }, []); // setUser/clearUserStore are stable zustand selectors
 
   // Sign in with Google (native SDK)
-  const signInWithGoogle = useCallback(async () => {
+  const signInWithGoogle = useCallback(async (options?: GoogleSignInOptions) => {
     try {
       setAuthState((prev) => ({ ...prev, loading: true }));
+
+      if (Platform.OS === 'web') {
+        const currentPath = `${window.location.pathname}${window.location.search}`;
+        const preserveTripDraft =
+          options?.preserveTripDraft ?? window.location.pathname.startsWith('/create');
+
+        if (preserveTripDraft) {
+          const draft = useTripStore.getState().draftInput;
+          if (draft) {
+            savePendingOAuthTripDraft(window.sessionStorage, draft);
+          }
+        }
+
+        const redirectTo = resolveWebOAuthRedirectUrl(
+          window.location.origin,
+          currentPath,
+          options?.redirectTo
+        );
+        const { data, error } = await supabase.auth.signInWithOAuth({
+          provider: 'google',
+          options: {
+            redirectTo,
+          },
+        });
+
+        if (error) {
+          if (preserveTripDraft) {
+            discardPendingOAuthTripDraft(window.sessionStorage);
+          }
+          throw error;
+        }
+        return data;
+      }
 
       const googleSignIn = await getGoogleSignInModule();
       if (!googleSignIn) {

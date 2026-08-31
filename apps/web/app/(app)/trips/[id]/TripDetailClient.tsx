@@ -79,11 +79,13 @@ const ItineraryMap = dynamic(
 interface TripDetailClientProps {
   tripId: string;
   initialData: TripResponse;
+  initialShareUrl: string | null;
 }
 
 export function TripDetailClient({
   tripId,
   initialData,
+  initialShareUrl,
 }: TripDetailClientProps) {
   const router = useRouter();
 
@@ -93,7 +95,9 @@ export function TripDetailClient({
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareUrl, setShareUrl] = useState<string | null>(initialShareUrl);
+  const [shareStatus, setShareStatus] = useState<string | null>(null);
+  const [isShareBusy, setIsShareBusy] = useState(false);
   const [showStickyBar, setShowStickyBar] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [showReadyScreen, setShowReadyScreen] = useState(false);
@@ -105,11 +109,16 @@ export function TripDetailClient({
     ITINERARY_STREAMING_ENABLED &&
     trip?.status === "generating" &&
     !!trip?.search_id;
+  const tripIsComplete =
+    trip?.status === "planned" ||
+    trip?.status === "generated" ||
+    trip?.status === "completed";
 
   // SSE progressive generation hook
   const generation = useTripGeneration({
     tripId,
     enabled: shouldStream,
+    completed: tripIsComplete,
     onComplete: () => {
       // Refetch trip to get updated status and DB itinerary
       fetchTrip();
@@ -156,27 +165,50 @@ export function TripDetailClient({
     if (
       !trip ||
       trip.status !== "generating" ||
-      (trip.search_id && ITINERARY_STREAMING_ENABLED)
+      (trip.search_id &&
+        ITINERARY_STREAMING_ENABLED &&
+        generation.phase !== "error")
     ) {
       return;
     }
 
-    const interval = setInterval(async () => {
-      const res = await fetch(`/api/trips/${tripId}/generate`);
-      if (res.ok) {
-        const data = await res.json();
-        if (data.status === "completed" || data.status === "failed") {
-          clearInterval(interval);
-          await fetchTrip();
+    let cancelled = false;
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+    const controller = new AbortController();
+
+    const poll = async () => {
+      try {
+        const res = await fetch(`/api/trips/${tripId}/generate`, {
+          signal: controller.signal,
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === "completed" || data.status === "failed") {
+            await fetchTrip();
+            return;
+          }
+        }
+      } catch (pollError) {
+        if (!(pollError instanceof Error && pollError.name === "AbortError")) {
+          console.error("Trip generation status check failed", pollError);
         }
       }
-    }, 3000);
+      if (!cancelled) timeout = setTimeout(poll, 3000);
+    };
 
-    return () => clearInterval(interval);
+    timeout = setTimeout(poll, 3000);
+    return () => {
+      cancelled = true;
+      controller.abort();
+      if (timeout) clearTimeout(timeout);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- we intentionally depend on trip?.status and trip?.search_id, not the whole trip object
-  }, [trip?.status, trip?.search_id, tripId, fetchTrip]);
+  }, [trip?.status, trip?.search_id, tripId, fetchTrip, generation.phase]);
 
   const handleShare = async () => {
+    if (isShareBusy) return;
+    setIsShareBusy(true);
+    setShareStatus(null);
     try {
       let url = shareUrl;
       if (!url) {
@@ -196,17 +228,35 @@ export function TripDetailClient({
         });
       } else {
         await navigator.clipboard.writeText(url!);
-        alert("Share link copied to clipboard!");
+        setShareStatus("Public share link copied to your clipboard.");
       }
     } catch (err) {
       if (err instanceof Error && err.name !== "AbortError") {
         console.error("Share failed:", err);
+        setShareStatus("We couldn’t share this trip. Please try again.");
       }
+    } finally {
+      setIsShareBusy(false);
     }
   };
 
-  const handleExport = () => {
-    alert("Export feature coming soon!");
+  const handleRevokeShare = async () => {
+    if (isShareBusy) return;
+    setIsShareBusy(true);
+    setShareStatus(null);
+    try {
+      const response = await fetch(`/api/trips/${tripId}/share`, {
+        method: "DELETE",
+      });
+      if (!response.ok) throw new Error("Failed to stop sharing");
+      setShareUrl(null);
+      setShareStatus("Public access has been turned off.");
+    } catch (revokeError) {
+      console.error("Share revocation failed:", revokeError);
+      setShareStatus("We couldn’t turn off public access. Please try again.");
+    } finally {
+      setIsShareBusy(false);
+    }
   };
 
   const handleRetry = async () => {
@@ -325,13 +375,11 @@ export function TripDetailClient({
   }, [trip]);
 
   // Determine display status
-  const isGenerating = trip?.status === "generating" || generation.isStreaming;
-  const isFailed = trip?.status === "failed" || !!generation.error;
-  const isComplete =
-    trip?.status === "planned" ||
-    trip?.status === "generated" ||
-    trip?.status === "completed" ||
-    generation.isComplete;
+  const isComplete = tripIsComplete || generation.isComplete;
+  const isGenerating =
+    !isComplete && (trip?.status === "generating" || generation.isStreaming);
+  const isFailed =
+    !isComplete && (trip?.status === "failed" || !!generation.error);
   const tripStatus = isGenerating
     ? "generating"
     : isFailed
@@ -487,7 +535,6 @@ export function TripDetailClient({
         totalCost={itinerary?.totalEstimatedCost}
         status={tripStatus}
         onShare={handleShare}
-        onExport={handleExport}
       />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
@@ -713,24 +760,42 @@ export function TripDetailClient({
             <p className="text-sm text-gray-600 mb-4">
               Let friends and family know about your upcoming trip!
             </p>
-            <ShareButtons
-              url={shareUrl || undefined}
-              title={`My ${trip.destination} Trip Itinerary`}
-              description={`Check out my AI-generated itinerary to ${trip.destination}! Created with Faroway.`}
-              hashtags={[
-                "Faroway",
-                "Travel",
-                trip.destination.replace(/\s+/g, ""),
-              ]}
-              className="justify-center"
-            />
-            {!shareUrl && (
+            {shareUrl ? (
+              <>
+                <ShareButtons
+                  url={shareUrl}
+                  title={`My ${trip.destination} Trip Itinerary`}
+                  description={`Check out my AI-generated itinerary to ${trip.destination}! Created with Faroway.`}
+                  hashtags={[
+                    "Faroway",
+                    "Travel",
+                    trip.destination.replace(/\s+/g, ""),
+                  ]}
+                  className="justify-center"
+                />
+                <button
+                  type="button"
+                  onClick={handleRevokeShare}
+                  disabled={isShareBusy}
+                  className="mt-4 text-sm font-medium text-gray-500 hover:text-red-600 disabled:opacity-50"
+                >
+                  Turn off public access
+                </button>
+              </>
+            ) : (
               <button
+                type="button"
                 onClick={handleShare}
-                className="mt-3 text-sm text-primary-600 hover:text-primary-700 font-medium"
+                disabled={isShareBusy}
+                className="inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 disabled:opacity-50"
               >
-                Generate a public share link
+                {isShareBusy ? "Creating link…" : "Create public share link"}
               </button>
+            )}
+            {shareStatus && (
+              <p className="mt-3 text-sm text-gray-600" role="status">
+                {shareStatus}
+              </p>
             )}
           </div>
         )}

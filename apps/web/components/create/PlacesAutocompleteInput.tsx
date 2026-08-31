@@ -58,6 +58,14 @@ export function PlacesAutocompleteInput({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  useEffect(
+    () => () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      abortRef.current?.abort();
+    },
+    [],
+  );
+
   const filterLocal = useCallback(
     (q: string) => {
       const lower = q.toLowerCase();
@@ -165,9 +173,13 @@ export function PlacesAutocompleteInput({
   };
 
   const handleClear = () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    abortRef.current?.abort();
     setQuery("");
     setPredictions([]);
     setLocalResults([]);
+    setIsLoading(false);
+    setIsOpen(false);
     inputRef.current?.focus();
   };
 
@@ -191,6 +203,12 @@ export function PlacesAutocompleteInput({
           autoCapitalize="words"
           spellCheck={false}
           value={query}
+          aria-label="Destination"
+          aria-expanded={showDropdown}
+          aria-controls={
+            showDropdown ? "destination-search-results" : undefined
+          }
+          role="combobox"
           onChange={(e) => handleInputChange(e.target.value)}
           onFocus={() => {
             if (query.length >= MIN_QUERY_LENGTH) setIsOpen(true);
@@ -202,6 +220,7 @@ export function PlacesAutocompleteInput({
           <button
             type="button"
             onClick={handleClear}
+            aria-label="Clear destination"
             className="absolute right-4 top-1/2 -translate-y-1/2"
           >
             <X className="w-5 h-5 text-gray-400 hover:text-gray-600" />
@@ -211,6 +230,7 @@ export function PlacesAutocompleteInput({
 
       {showDropdown && (
         <div
+          id="destination-search-results"
           ref={dropdownRef}
           className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-50"
         >

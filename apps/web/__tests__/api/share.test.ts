@@ -264,7 +264,7 @@ describe("DELETE /api/trips/[id]/share", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockAuthReturn = { data: { user: mockUser }, error: null };
-    mockUpdateReturn = { data: null, error: null };
+    mockUpdateReturn = { data: null, error: null, count: 1 };
     mockSupabase.from = vi.fn(() => createQueryChain(() => mockUpdateReturn));
   });
 
@@ -275,6 +275,15 @@ describe("DELETE /api/trips/[id]/share", () => {
 
     expect(res.status).toBe(200);
     expect(json.success).toBe(true);
+  });
+
+  it("returns 404 when no owned trip was updated", async () => {
+    mockUpdateReturn = { data: null, error: null, count: 0 };
+
+    const req = makeRequest("DELETE", "/api/trips/trip-1/share");
+    const res = await shareDelete(req, makeParams("trip-1"));
+
+    expect(res.status).toBe(404);
   });
 
   it("returns 401 when not authenticated", async () => {

@@ -1,7 +1,6 @@
-"use client";
-
 import Link from "next/link";
-import { MapPin, Home, Search, ArrowLeft } from "lucide-react";
+import { MapPin, Home, Search } from "lucide-react";
+import { GoBackButton } from "@/components/GoBackButton";
 
 export default function NotFound() {
   return (
@@ -44,13 +43,7 @@ export default function NotFound() {
         </div>
 
         {/* Go Back Link */}
-        <button
-          onClick={() => window.history.back()}
-          className="mt-6 inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Go back to previous page
-        </button>
+        <GoBackButton />
 
         {/* Popular Destinations Suggestion */}
         <div className="mt-12 pt-8 border-t border-gray-200">
@@ -61,7 +54,7 @@ export default function NotFound() {
             {["Tokyo", "Paris", "Bali", "New York", "Barcelona"].map((city) => (
               <Link
                 key={city}
-                href={`/?destination=${encodeURIComponent(city)}`}
+                href={`/create?destination=${encodeURIComponent(city)}`}
                 className="px-4 py-2 bg-white rounded-full text-sm text-gray-600 hover:text-primary hover:border-primary border border-gray-200 transition-colors"
               >
                 {city}

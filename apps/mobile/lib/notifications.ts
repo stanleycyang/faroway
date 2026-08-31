@@ -9,6 +9,7 @@ let _notifications: typeof import('expo-notifications') | null = null;
 let _initPromise: Promise<typeof import('expo-notifications') | null> | null = null;
 
 async function getNotifications() {
+  if (Platform.OS === 'web') return null;
   if (_notifications) return _notifications;
   if (_initPromise) return _initPromise;
 

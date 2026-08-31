@@ -224,7 +224,7 @@ export default async function BestTimeDestinationPage({
                       {seasonMonths.slice(0, 2).flatMap((m) =>
                         m.pros.slice(0, 1).map((pro) => (
                           <li
-                            key={pro}
+                            key={`${m.month}-pro-${pro}`}
                             className="text-xs text-slate-500 flex items-start gap-2"
                           >
                             <span className="text-green-500 mt-0.5">+</span>
@@ -235,7 +235,7 @@ export default async function BestTimeDestinationPage({
                       {seasonMonths.slice(0, 2).flatMap((m) =>
                         m.cons.slice(0, 1).map((con) => (
                           <li
-                            key={con}
+                            key={`${m.month}-con-${con}`}
                             className="text-xs text-slate-500 flex items-start gap-2"
                           >
                             <span className="text-red-400 mt-0.5">-</span>

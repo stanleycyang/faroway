@@ -7,6 +7,7 @@ module.exports = {
   transform: {
     '^.+\\.tsx?$': ['ts-jest', { tsconfig: 'tsconfig.json' }],
   },
+  setupFiles: ['<rootDir>/jest.setup.js'],
   moduleNameMapper: {
     '^@faroway/types$': '<rootDir>/../../packages/types/src/index.ts',
     '^@faroway/constants$': '<rootDir>/../../packages/constants/src/index.ts',

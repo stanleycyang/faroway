@@ -4,7 +4,7 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 
 export const metadata: Metadata = {
-  title: "Terms of Service | Faroway",
+  title: "Terms of Service",
   description:
     "Terms and conditions for using Faroway AI-powered travel planning.",
   alternates: {

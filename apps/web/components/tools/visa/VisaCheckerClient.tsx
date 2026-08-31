@@ -10,8 +10,6 @@ import {
   type VisaStatus,
 } from "@/lib/tools/visa-data";
 import { ToolHero } from "@/components/tools/ToolHero";
-import { ToolCTA } from "@/components/tools/ToolCTA";
-import { RelatedTools } from "@/components/tools/RelatedTools";
 
 const guides = getAllGuides();
 
@@ -35,21 +33,25 @@ export function VisaCheckerClient() {
   const passport = passportCountries.find((p) => p.code === passportCode);
 
   return (
-    <main className="min-h-screen">
+    <div>
       <ToolHero
         badge="Free Tool"
         title="Visa Checker"
         gradientWord="Visa"
-        description="Check visa requirements for 14 popular destinations based on your passport country. Instant results with stay duration and tips."
+        description="Check general visa guidance for 40+ popular destinations based on your passport country. Always verify requirements with an official authority before travel."
       />
 
       <section className="max-w-xl mx-auto px-6 pb-16">
         {/* Passport Country */}
         <div className="mb-6">
-          <label className="block text-sm font-semibold text-slate-900 mb-3">
+          <label
+            htmlFor="visa-passport"
+            className="block text-sm font-semibold text-slate-900 mb-3"
+          >
             Your Passport
           </label>
           <select
+            id="visa-passport"
             value={passportCode}
             onChange={(e) => setPassportCode(e.target.value)}
             className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
@@ -65,10 +67,14 @@ export function VisaCheckerClient() {
 
         {/* Destination */}
         <div className="mb-8">
-          <label className="block text-sm font-semibold text-slate-900 mb-3">
+          <label
+            htmlFor="visa-destination"
+            className="block text-sm font-semibold text-slate-900 mb-3"
+          >
             Destination
           </label>
           <select
+            id="visa-destination"
             value={destinationSlug}
             onChange={(e) => setDestinationSlug(e.target.value)}
             className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-slate-900 text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary"
@@ -84,7 +90,11 @@ export function VisaCheckerClient() {
 
         {/* Result Card */}
         {visaInfo && destination && passport && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-300">
+          <div
+            role="status"
+            aria-live="polite"
+            className="animate-in fade-in slide-in-from-bottom-4 duration-300"
+          >
             <div
               className={`rounded-2xl border-2 ${visaStatusConfig[visaInfo.status].border} ${visaStatusConfig[visaInfo.status].bg} p-6 mb-6`}
             >
@@ -112,9 +122,9 @@ export function VisaCheckerClient() {
               </div>
 
               {/* Details */}
-              <h3 className="text-lg font-bold text-slate-900 mb-1">
+              <h2 className="text-lg font-bold text-slate-900 mb-1">
                 {passport.flag} {passport.name} → {destination.name}
-              </h3>
+              </h2>
 
               <div className="space-y-3 mt-4">
                 <div className="flex items-start gap-3">
@@ -165,10 +175,22 @@ export function VisaCheckerClient() {
             </p>
           </div>
         )}
-      </section>
 
-      <RelatedTools currentSlug="visa-checker" />
-      <ToolCTA />
-    </main>
+        {passportCode && destinationSlug && !visaInfo && (
+          <div
+            role="status"
+            className="rounded-2xl border border-slate-200 p-6 text-center"
+          >
+            <h2 className="font-semibold text-slate-900">
+              Guidance unavailable
+            </h2>
+            <p className="mt-2 text-sm text-slate-500">
+              We do not have guidance for this combination yet. Check the
+              destination&apos;s official immigration authority before travel.
+            </p>
+          </div>
+        )}
+      </section>
+    </div>
   );
 }

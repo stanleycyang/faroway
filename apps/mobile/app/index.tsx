@@ -1,17 +1,21 @@
 import { useEffect, useRef } from 'react';
 import { View, Text, Image, StyleSheet, Dimensions, Animated } from 'react-native';
 import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUserStore } from '../stores/userStore';
 import { Button } from '../components/ui';
 import { colors } from '../constants/theme';
 import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
+import { useReduceMotion } from '../hooks/useReduceMotion';
+import { USE_NATIVE_DRIVER } from '../lib/animation';
 
 const { width, height } = Dimensions.get('window');
 
 export default function WelcomeScreen() {
   const router = useRouter();
   const { hasCompletedOnboarding, isAuthenticated } = useUserStore();
+  const reduceMotion = useReduceMotion();
 
   const logoOpacity = useRef(new Animated.Value(0)).current;
   const logoScale = useRef(new Animated.Value(0.8)).current;
@@ -21,17 +25,27 @@ export default function WelcomeScreen() {
   const buttonOpacity = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    if (reduceMotion) {
+      logoOpacity.setValue(1);
+      logoScale.setValue(1);
+      titleOpacity.setValue(1);
+      titleTranslateY.setValue(0);
+      subtitleOpacity.setValue(1);
+      buttonOpacity.setValue(1);
+      return;
+    }
+
     // Animate entrance
     Animated.parallel([
       Animated.timing(logoOpacity, {
         toValue: 1,
         duration: 800,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
       Animated.timing(logoScale, {
         toValue: 1,
         duration: 800,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
     ]).start();
 
@@ -41,12 +55,12 @@ export default function WelcomeScreen() {
         Animated.timing(titleOpacity, {
           toValue: 1,
           duration: 600,
-          useNativeDriver: true,
+          useNativeDriver: USE_NATIVE_DRIVER,
         }),
         Animated.timing(titleTranslateY, {
           toValue: 0,
           duration: 600,
-          useNativeDriver: true,
+          useNativeDriver: USE_NATIVE_DRIVER,
         }),
       ]),
     ]).start();
@@ -56,7 +70,7 @@ export default function WelcomeScreen() {
       Animated.timing(subtitleOpacity, {
         toValue: 1,
         duration: 600,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
     ]).start();
 
@@ -65,11 +79,18 @@ export default function WelcomeScreen() {
       Animated.timing(buttonOpacity, {
         toValue: 1,
         duration: 600,
-        useNativeDriver: true,
+        useNativeDriver: USE_NATIVE_DRIVER,
       }),
     ]).start();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [
+    buttonOpacity,
+    logoOpacity,
+    logoScale,
+    reduceMotion,
+    subtitleOpacity,
+    titleOpacity,
+    titleTranslateY,
+  ]);
 
   useEffect(() => {
     // Auto-redirect if already onboarded
@@ -89,11 +110,13 @@ export default function WelcomeScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar style="light" />
       <Image
         source={{
           uri: getImageUrl(IMAGE_PATHS.inspirations['beach-getaway']),
         }}
         style={styles.backgroundImage}
+        accessible={false}
       />
       <LinearGradient colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']} style={styles.gradient} />
 
@@ -119,6 +142,7 @@ export default function WelcomeScreen() {
           </Animated.View>
 
           <Animated.Text
+            accessibilityRole="header"
             style={[
               styles.title,
               {

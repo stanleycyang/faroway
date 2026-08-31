@@ -49,6 +49,7 @@ export function PackingListClient() {
               </p>
             </div>
             <button
+              type="button"
               onClick={handleReset}
               className="text-sm text-primary font-medium hover:underline print-hidden"
             >
@@ -85,10 +86,14 @@ export function PackingListClient() {
       <section className="max-w-xl mx-auto px-6 pb-16">
         {/* Destination picker */}
         <div className="mb-8">
-          <label className="block text-sm font-semibold text-slate-900 mb-3">
+          <label
+            htmlFor="packing-destination"
+            className="block text-sm font-semibold text-slate-900 mb-3"
+          >
             Where are you going?
           </label>
           <select
+            id="packing-destination"
             value={destination?.slug || ""}
             onChange={(e) => {
               const guide = guides.find((g) => g.slug === e.target.value);
@@ -106,15 +111,17 @@ export function PackingListClient() {
         </div>
 
         {/* Trip type picker */}
-        <div className="mb-8">
-          <label className="block text-sm font-semibold text-slate-900 mb-3">
+        <fieldset className="mb-8">
+          <legend className="block text-sm font-semibold text-slate-900 mb-3">
             What type of trip?
-          </label>
+          </legend>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {TRIP_TYPES.map((type) => (
               <button
+                type="button"
                 key={type.id}
                 onClick={() => setTripType(type.id)}
+                aria-pressed={tripType === type.id}
                 className={`p-4 rounded-xl border-2 text-center transition-all ${
                   tripType === type.id
                     ? "border-primary bg-primary/5 shadow-sm"
@@ -128,10 +135,11 @@ export function PackingListClient() {
               </button>
             ))}
           </div>
-        </div>
+        </fieldset>
 
         {/* Generate button */}
         <button
+          type="button"
           onClick={handleGenerate}
           disabled={!destination || !tripType}
           className="w-full py-3.5 rounded-full bg-gradient-to-r from-primary to-amber-500 text-white font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"

@@ -8,10 +8,9 @@ interface TripDetailPageProps {
 }
 
 export default async function TripDetailPage({ params }: TripDetailPageProps) {
-  const { id } = await params;
+  const [{ id }, supabase] = await Promise.all([params, createClient()]);
   if (!/^[a-zA-Z0-9-]+$/.test(id)) notFound();
 
-  const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -23,5 +22,17 @@ export default async function TripDetailPage({ params }: TripDetailPageProps) {
   const initialData = await loadTripForUser(id, user.id);
   if (!initialData) notFound();
 
-  return <TripDetailClient tripId={id} initialData={initialData} />;
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
+  const initialShareUrl =
+    initialData.trip.is_shared && initialData.trip.share_token
+      ? `${baseUrl}/s/${initialData.trip.share_token}`
+      : null;
+
+  return (
+    <TripDetailClient
+      tripId={id}
+      initialData={initialData}
+      initialShareUrl={initialShareUrl}
+    />
+  );
 }

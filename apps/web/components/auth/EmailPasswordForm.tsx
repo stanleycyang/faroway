@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { requestPasswordReset } from "@/lib/auth/password-reset";
 
 interface EmailPasswordFormProps {
   mode: "signin" | "signup";
@@ -46,49 +47,47 @@ export function EmailPasswordForm({
       return;
     }
 
-    const supabase = createClient();
+    try {
+      const supabase = createClient();
 
-    if (mode === "signup") {
-      // Sign up
-      const { error: signUpError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
-        },
-      });
+      if (mode === "signup") {
+        const { error: signUpError } = await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+          },
+        });
 
-      if (signUpError) {
-        setError(signUpError.message);
-        setLoading(false);
-        return;
-      }
+        if (signUpError) throw signUpError;
+        setMessage(
+          "Check your email for a confirmation link to complete your signup.",
+        );
+      } else {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
-      // Show confirmation message
-      setMessage(
-        "Check your email for a confirmation link to complete your signup.",
-      );
-      setLoading(false);
-    } else {
-      // Sign in
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (signInError) {
-        if (signInError.message === "Invalid login credentials") {
-          setError("Invalid email or password");
-        } else {
-          setError(signInError.message);
+        if (signInError) {
+          throw new Error(
+            signInError.message === "Invalid login credentials"
+              ? "Invalid email or password"
+              : signInError.message,
+          );
         }
-        setLoading(false);
-        return;
-      }
 
-      // Redirect on successful login
-      router.push(redirectTo);
-      router.refresh();
+        router.push(redirectTo);
+        router.refresh();
+      }
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : "Couldn’t complete authentication. Please try again.",
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -96,14 +95,20 @@ export function EmailPasswordForm({
     <form onSubmit={handleSubmit} className="space-y-4">
       {/* Error Message */}
       {error && (
-        <div className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+        <div
+          role="alert"
+          className="p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm"
+        >
           {error}
         </div>
       )}
 
       {/* Success Message */}
       {message && (
-        <div className="p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
+        <div
+          role="status"
+          className="p-3 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm"
+        >
           {message}
         </div>
       )}
@@ -187,16 +192,19 @@ export function EmailPasswordForm({
                 return;
               }
               setLoading(true);
-              const supabase = createClient();
-              const { error: resetError } =
-                await supabase.auth.resetPasswordForEmail(email, {
-                  redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset-password`,
-                });
-              setLoading(false);
-              if (resetError) {
-                setError(resetError.message);
-              } else {
-                setMessage("Check your email for a password reset link");
+              setError(null);
+              setMessage(null);
+              try {
+                const { error: resetError } = await requestPasswordReset(email);
+                if (resetError) {
+                  setError(resetError.message);
+                } else {
+                  setMessage("Check your email for a password reset link");
+                }
+              } catch {
+                setError("Couldn’t send a reset email. Please try again.");
+              } finally {
+                setLoading(false);
               }
             }}
             className="text-sm text-primary hover:text-primary-dark font-medium transition-colors"

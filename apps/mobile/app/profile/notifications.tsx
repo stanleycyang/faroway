@@ -1,5 +1,13 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView } from 'react-native';
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Switch,
+  ScrollView,
+  Alert,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -61,23 +69,43 @@ export default function NotificationsScreen() {
       ? userWithSettings.notificationSettings
       : defaultSettings
   );
+  const [savingSetting, setSavingSetting] = useState<string | null>(null);
 
-  const toggleSetting = (id: string) => {
+  const toggleSetting = async (id: string) => {
     hapticFeedback.selection();
+    const previous = settings;
     const updated = { ...settings, [id]: !settings[id] };
     setSettings(updated);
-    // Persist to backend
-    updateUserProfile({ notification_settings: updated });
+    setSavingSetting(id);
+
+    try {
+      const result = await updateUserProfile({ notification_settings: updated });
+      if (result.error) throw new Error(result.error);
+    } catch (error: unknown) {
+      setSettings(previous);
+      hapticFeedback.error();
+      const message = error instanceof Error ? error.message : 'Please try again.';
+      Alert.alert('Couldn’t save notification settings', message);
+    } finally {
+      setSavingSetting(null);
+    }
   };
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backButton} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+          accessibilityRole="button"
+          accessibilityLabel="Back"
+        >
           <Ionicons name="arrow-back" size={24} color={'#475569'} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Notifications</Text>
+        <Text style={styles.headerTitle} accessibilityRole="header">
+          Notifications
+        </Text>
         <View style={{ width: 44 }} />
       </View>
 
@@ -105,6 +133,9 @@ export default function NotificationsScreen() {
                 }}
                 thumbColor="#fff"
                 ios_backgroundColor={colors.surface[700]}
+                disabled={savingSetting !== null}
+                accessibilityLabel={setting.title}
+                accessibilityHint={setting.description}
               />
             </View>
           ))}

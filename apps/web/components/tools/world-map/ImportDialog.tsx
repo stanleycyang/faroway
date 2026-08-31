@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Upload, X } from "lucide-react";
+import { useModalFocusTrap } from "@/hooks/useModalFocusTrap";
 import { useWorldMapStore } from "@/lib/tools/world-map/store";
 import type { AppState, Profile } from "@/lib/tools/world-map/types";
 
@@ -32,11 +33,14 @@ function validate(json: unknown): Parsed | null {
 
 export function ImportDialog({ open, onClose }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const [parsed, setParsed] = useState<Parsed | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mergeProfile = useWorldMapStore((s) => s.mergeProfile);
   const mergeProfiles = useWorldMapStore((s) => s.mergeProfiles);
   const replaceAll = useWorldMapStore((s) => s.replaceAll);
+
+  useModalFocusTrap({ open, dialogRef, onClose });
 
   function reset() {
     setParsed(null);
@@ -86,11 +90,21 @@ export function ImportDialog({ open, onClose }: Props) {
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm animate-fade-in p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-slide-up">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="import-backup-title"
+        tabIndex={-1}
+        className="bg-white rounded-2xl shadow-2xl max-w-md w-full overflow-hidden animate-slide-up outline-none"
+      >
         <div className="flex items-center justify-between px-6 pt-5 pb-3 border-b border-slate-100">
-          <h3 className="text-lg font-bold text-slate-900 font-serif">
+          <h2
+            id="import-backup-title"
+            className="text-lg font-bold text-slate-900 font-serif"
+          >
             Restore from backup
-          </h3>
+          </h2>
           <button
             type="button"
             onClick={() => {
@@ -123,7 +137,10 @@ export function ImportDialog({ open, onClose }: Props) {
           </label>
 
           {error && (
-            <div className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
+            <div
+              role="alert"
+              className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2"
+            >
               {error}
             </div>
           )}

@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { View, TextInput, Text, StyleSheet, TouchableOpacity, ViewStyle } from 'react-native';
+import {
+  View,
+  TextInput,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ViewStyle,
+  Platform,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, borderRadius } from '../../constants/theme';
 
@@ -104,6 +112,7 @@ interface SearchInputProps {
   onChangeText: (text: string) => void;
   onSubmit?: () => void;
   style?: ViewStyle;
+  accessibilityLabel?: string;
 }
 
 export function SearchInput({
@@ -112,6 +121,7 @@ export function SearchInput({
   onChangeText,
   onSubmit,
   style,
+  accessibilityLabel,
 }: SearchInputProps) {
   return (
     <View style={[styles.searchContainer, style]}>
@@ -124,9 +134,14 @@ export function SearchInput({
         onChangeText={onChangeText}
         onSubmitEditing={onSubmit}
         returnKeyType="search"
+        accessibilityLabel={accessibilityLabel || placeholder}
       />
       {value.length > 0 && (
-        <TouchableOpacity onPress={() => onChangeText('')}>
+        <TouchableOpacity
+          onPress={() => onChangeText('')}
+          accessibilityRole="button"
+          accessibilityLabel="Clear search"
+        >
           <Ionicons name="close-circle" size={20} color={colors.surface[500]} />
         </TouchableOpacity>
       )}
@@ -156,10 +171,15 @@ const styles = StyleSheet.create({
   inputFocused: {
     borderColor: colors.primary[500],
     backgroundColor: '#ffffff',
-    shadowColor: '#F97066',
-    shadowOffset: { width: 0, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    ...Platform.select({
+      web: { boxShadow: '0 0 8px rgba(249, 112, 102, 0.2)' },
+      default: {
+        shadowColor: '#F97066',
+        shadowOffset: { width: 0, height: 0 },
+        shadowOpacity: 0.2,
+        shadowRadius: 8,
+      },
+    }),
   },
   inputError: {
     borderColor: colors.error,

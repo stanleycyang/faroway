@@ -1,4 +1,5 @@
 import { Metadata } from "next";
+import { notFound } from "next/navigation";
 import {
   loadSharedTrip,
   type SharedTripData,
@@ -27,7 +28,7 @@ function buildTripMeta(trip: SharedTripData) {
     dateRange = `${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
   }
 
-  const title = `${duration} ${destination} Trip Itinerary`;
+  const title = `${duration} ${destination} Trip Itinerary`.trim();
   const description = `Explore this ${duration ? duration + " " : ""}AI-generated itinerary to ${destination}${dateRange ? ` (${dateRange})` : ""}. Created with Faroway for ${travelers} traveler${travelers > 1 ? "s" : ""}.`;
 
   const jsonLd = {
@@ -58,7 +59,7 @@ export async function generateMetadata({
 
   if (!trip) {
     return {
-      title: "Shared Trip Itinerary | Faroway",
+      title: "Shared Trip Itinerary",
       description: "View this AI-generated travel itinerary on Faroway",
       openGraph: {
         title: "Shared Trip Itinerary | Faroway",
@@ -104,6 +105,7 @@ export default async function SharedTripLayout({
 }: SharedTripLayoutProps) {
   const { token } = await params;
   const trip = await loadSharedTrip(token);
+  if (!trip) notFound();
 
   return (
     <>

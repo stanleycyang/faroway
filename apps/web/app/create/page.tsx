@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -25,6 +25,7 @@ import {
   type PlaceResult,
 } from "@/components/create/PlacesAutocompleteInput";
 import { DatePicker } from "@/components/trips/DatePicker";
+import { saveCreateDraft, takeCreateDraft } from "@/lib/create-draft";
 
 // Dynamic import — Leaflet must not run on the server
 const DestinationMap = dynamic(
@@ -115,6 +116,16 @@ interface SelectedPlace {
   isRecommended: boolean;
 }
 
+interface StoredCreateDraft {
+  selectedPlace: SelectedPlace;
+  startDate: string;
+  endDate: string;
+  travelers: number;
+  travelerType: string;
+  selectedVibes: string[];
+  showAdvanced: boolean;
+}
+
 export default function CreateTripPage() {
   const router = useRouter();
   const { session, loading: authLoading } = useUser();
@@ -131,6 +142,81 @@ export default function CreateTripPage() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [progressMessage, setProgressMessage] = useState("");
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const draftId = params.get("draft");
+    let draft: Partial<StoredCreateDraft> | null = null;
+
+    if (draftId) {
+      try {
+        draft = takeCreateDraft<StoredCreateDraft>(localStorage, draftId);
+      } catch {
+        draft = null;
+      }
+      params.delete("draft");
+      const query = params.toString();
+      window.history.replaceState(
+        null,
+        "",
+        `/create${query ? `?${query}` : ""}`,
+      );
+    }
+
+    if (draft) {
+      const restoredStart = draft.startDate
+        ? new Date(draft.startDate)
+        : undefined;
+      const restoredEnd = draft.endDate ? new Date(draft.endDate) : undefined;
+
+      if (draft.selectedPlace?.name) setSelectedPlace(draft.selectedPlace);
+      if (restoredStart && !Number.isNaN(restoredStart.getTime())) {
+        setStartDate(restoredStart);
+      }
+      if (restoredEnd && !Number.isNaN(restoredEnd.getTime())) {
+        setEndDate(restoredEnd);
+      }
+      if (typeof draft.travelers === "number") {
+        setTravelers(Math.max(1, Math.min(10, draft.travelers)));
+      }
+      if (typeof draft.travelerType === "string") {
+        setTravelerType(draft.travelerType);
+      }
+      if (Array.isArray(draft.selectedVibes)) {
+        setSelectedVibes(draft.selectedVibes.slice(0, 5));
+      }
+      setShowAdvanced(Boolean(draft.showAdvanced));
+      return;
+    }
+
+    const requestedDestination = params.get("destination");
+    if (!requestedDestination) return;
+    const normalized = requestedDestination.trim().toLowerCase();
+    const recommended = destinations.find(
+      (destination) =>
+        destination.id === normalized ||
+        destination.name.toLowerCase() === normalized,
+    );
+    setSelectedPlace(
+      recommended
+        ? {
+            name: recommended.name,
+            lat: recommended.lat,
+            lng: recommended.lng,
+            placeId: recommended.id,
+            isRecommended: true,
+          }
+        : {
+            name: requestedDestination
+              .replace(/-/g, " ")
+              .replace(/\b\w/g, (letter) => letter.toUpperCase()),
+            lat: 0,
+            lng: 0,
+            placeId: "",
+            isRecommended: false,
+          },
+    );
+  }, []);
 
   const selectedRecommendedDest = selectedPlace?.isRecommended
     ? destinations.find((d) => d.name === selectedPlace.name)
@@ -181,7 +267,24 @@ export default function CreateTripPage() {
   const handleGenerate = async () => {
     if (!canGenerate) return;
     if (!session) {
-      router.push(`/auth/login?redirectTo=${encodeURIComponent("/create")}`);
+      const draft: StoredCreateDraft = {
+        selectedPlace,
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        travelers,
+        travelerType,
+        selectedVibes,
+        showAdvanced,
+      };
+      try {
+        const draftId = saveCreateDraft(localStorage, draft);
+        const returnPath = `/create?draft=${encodeURIComponent(draftId)}`;
+        router.push(`/auth/login?redirectTo=${encodeURIComponent(returnPath)}`);
+      } catch {
+        setGenerateError(
+          "We couldn’t preserve this trip for sign-in. Please check your browser storage settings and try again.",
+        );
+      }
       return;
     }
     setIsGenerating(true);
@@ -304,7 +407,7 @@ export default function CreateTripPage() {
         />
 
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-4">
-          {destinations.map((dest) => (
+          {destinations.map((dest, index) => (
             <button
               key={dest.id}
               aria-label={`Select ${dest.name}, ${dest.country}`}
@@ -316,6 +419,7 @@ export default function CreateTripPage() {
                 src={dest.image}
                 alt={`${dest.name}, ${dest.country}`}
                 fill
+                priority={index < 2}
                 sizes="(max-width: 768px) 100vw, 33vw"
                 className="object-cover group-hover:scale-110 transition-transform duration-500"
               />
@@ -350,7 +454,11 @@ export default function CreateTripPage() {
           <h1 className="text-lg font-semibold text-gray-900">
             Plan Your Trip
           </h1>
-          <Link href="/" className="flex items-center gap-2">
+          <Link
+            href="/"
+            className="flex items-center gap-2"
+            aria-label="Faroway home"
+          >
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center">
               <Sparkles className="w-4 h-4 text-white" />
             </div>
@@ -359,7 +467,14 @@ export default function CreateTripPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 sm:px-6 py-8">
-        <div className="flex items-center gap-2 mb-8">
+        <div
+          className="flex items-center gap-2 mb-8"
+          role="progressbar"
+          aria-label="Trip setup progress"
+          aria-valuemin={0}
+          aria-valuemax={3}
+          aria-valuenow={selectedPlace ? (startDate && endDate ? 3 : 1) : 0}
+        >
           <div
             className={`h-1 flex-1 rounded-full ${selectedPlace ? "bg-primary" : "bg-gray-200"}`}
           />
@@ -367,7 +482,7 @@ export default function CreateTripPage() {
             className={`h-1 flex-1 rounded-full ${startDate && endDate ? "bg-primary" : "bg-gray-200"}`}
           />
           <div
-            className={`h-1 flex-1 rounded-full ${showAdvanced && (selectedVibes.length > 0 || travelerType) ? "bg-primary" : "bg-gray-200"}`}
+            className={`h-1 flex-1 rounded-full ${canGenerate ? "bg-primary" : "bg-gray-200"}`}
           />
         </div>
 
@@ -414,6 +529,8 @@ export default function CreateTripPage() {
         <section className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-6">
           <button
             onClick={() => setShowAdvanced(!showAdvanced)}
+            aria-expanded={showAdvanced}
+            aria-controls="trip-customization"
             className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
           >
             <div className="flex items-center gap-3">
@@ -437,7 +554,10 @@ export default function CreateTripPage() {
           </button>
 
           {showAdvanced && (
-            <div className="px-6 pb-6 pt-2 border-t border-gray-100">
+            <div
+              id="trip-customization"
+              className="px-6 pb-6 pt-2 border-t border-gray-100"
+            >
               <div className="mb-6">
                 <label className="block text-sm font-medium text-gray-700 mb-3">
                   Number of travelers
@@ -480,6 +600,7 @@ export default function CreateTripPage() {
                     <button
                       key={type.id}
                       onClick={() => setTravelerType(type.id)}
+                      aria-pressed={travelerType === type.id}
                       className={`flex items-center gap-2 px-4 py-2.5 rounded-full border-2 transition-all ${
                         travelerType === type.id
                           ? "border-primary bg-primary-50 text-primary-700"
@@ -505,6 +626,7 @@ export default function CreateTripPage() {
                     <button
                       key={vibe.id}
                       onClick={() => toggleVibe(vibe.id)}
+                      aria-pressed={selectedVibes.includes(vibe.id)}
                       disabled={
                         !selectedVibes.includes(vibe.id) &&
                         selectedVibes.length >= 5

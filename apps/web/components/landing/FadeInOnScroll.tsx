@@ -1,6 +1,6 @@
 "use client";
 
-import { useInView } from "@/hooks";
+import { useInView, useReducedMotion } from "@/hooks";
 
 interface FadeInOnScrollProps {
   children: React.ReactNode;
@@ -17,15 +17,19 @@ export function FadeInOnScroll({
     threshold: 0.1,
     triggerOnce: true,
   });
+  const reduceMotion = useReducedMotion();
+  const isVisible = reduceMotion || isInView;
 
   return (
     <div
       ref={ref}
       className={className}
       style={{
-        opacity: isInView ? 1 : 0,
-        transform: isInView ? "translateY(0)" : "translateY(24px)",
-        transition: `opacity 0.6s ease-out ${delay}ms, transform 0.6s ease-out ${delay}ms`,
+        opacity: isVisible ? 1 : 0,
+        transform: isVisible ? "translateY(0)" : "translateY(24px)",
+        transition: reduceMotion
+          ? "none"
+          : `opacity 0.6s ease-out ${delay}ms, transform 0.6s ease-out ${delay}ms`,
       }}
     >
       {children}

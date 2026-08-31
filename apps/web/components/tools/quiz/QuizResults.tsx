@@ -22,9 +22,9 @@ export function QuizResults({ results, onRestart }: QuizResultsProps) {
   return (
     <div className="animate-fade-in">
       <div className="text-center mb-10">
-        <h2 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">
+        <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">
           Your Perfect <span className="text-gradient">Destinations</span>
-        </h2>
+        </h1>
         <p className="text-slate-500 text-lg">
           Based on your travel style, here are your top matches
         </p>
@@ -57,9 +57,9 @@ export function QuizResults({ results, onRestart }: QuizResultsProps) {
               <div className="flex-1 p-6">
                 <div className="flex items-start justify-between mb-3">
                   <div>
-                    <h3 className="text-xl font-bold text-slate-900">
+                    <h2 className="text-xl font-bold text-slate-900">
                       {result.destination.name}
-                    </h3>
+                    </h2>
                     <p className="text-sm text-slate-500">
                       {result.destination.country}
                     </p>
@@ -88,7 +88,7 @@ export function QuizResults({ results, onRestart }: QuizResultsProps) {
                 </div>
 
                 <Link
-                  href={`/create?destination=${result.destination.slug}`}
+                  href={`/create?destination=${encodeURIComponent(result.destination.name)}`}
                   className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-amber-500 text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5"
                 >
                   <Sparkles className="w-4 h-4" />
@@ -102,6 +102,7 @@ export function QuizResults({ results, onRestart }: QuizResultsProps) {
 
       <div className="text-center mt-8">
         <button
+          type="button"
           onClick={onRestart}
           className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 text-sm font-medium transition-colors"
         >

@@ -48,7 +48,11 @@ export function NewsletterCTA() {
             onSubmit={handleSubmit}
             className="flex flex-col sm:flex-row gap-3 max-w-lg mx-auto"
           >
+            <label htmlFor="newsletter-email" className="sr-only">
+              Email address
+            </label>
             <input
+              id="newsletter-email"
               type="email"
               required
               value={email}
@@ -66,7 +70,7 @@ export function NewsletterCTA() {
           </form>
         )}
         {status === "error" && (
-          <p className="text-red-400 text-sm mt-3">
+          <p role="alert" className="text-red-600 text-sm mt-3">
             Something went wrong. Please try again.
           </p>
         )}

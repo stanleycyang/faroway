@@ -37,8 +37,11 @@ export function DestinationCard({
       onPress={onPress}
       activeOpacity={0.9}
       style={[styles.cardContainer, dimensions, shadows.md]}
+      accessibilityRole="button"
+      accessibilityLabel={`${name}, ${country}${description ? `. ${description}` : ''}`}
+      accessibilityHint="Starts trip planning for this destination"
     >
-      <Image source={{ uri: image }} style={styles.cardImage} />
+      <Image source={{ uri: image }} style={styles.cardImage} accessible={false} />
       <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={styles.gradient} />
       {/* Glassmorphic info overlay */}
       <View style={styles.cardContent}>
@@ -97,8 +100,14 @@ export function TripCard({
   };
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.9} style={[styles.tripCard, shadows.md]}>
-      <Image source={{ uri: image }} style={styles.tripImage} />
+    <TouchableOpacity
+      onPress={onPress}
+      activeOpacity={0.9}
+      style={[styles.tripCard, shadows.md]}
+      accessibilityRole="button"
+      accessibilityLabel={`${destination}, ${country}. ${statusLabels[status]}. ${dates}. ${daysCount} days`}
+    >
+      <Image source={{ uri: image }} style={styles.tripImage} accessible={false} />
       <LinearGradient colors={['transparent', 'rgba(0,0,0,0.5)']} style={styles.tripImageOverlay} />
       <View style={styles.tripContent}>
         <View style={styles.tripHeader}>

@@ -46,6 +46,7 @@ export interface TripGenerationState {
 interface UseTripGenerationOptions {
   tripId: string;
   enabled?: boolean;
+  completed?: boolean;
   onComplete?: () => void;
   onError?: (error: string) => void;
 }
@@ -68,6 +69,32 @@ const initialState: TripGenerationState = {
 
 export const ITINERARY_STREAMING_ENABLED =
   process.env.NEXT_PUBLIC_ITINERARY_STREAMING_ENABLED !== "false";
+
+export function reconcileInactiveGeneration(
+  state: TripGenerationState,
+  completed: boolean,
+): TripGenerationState {
+  if (completed) {
+    return {
+      ...state,
+      phase: "complete",
+      progress: 100,
+      message: "Your itinerary is ready!",
+      isStreaming: false,
+      isComplete: true,
+      error: null,
+    };
+  }
+
+  if (!state.isStreaming && state.error === null) return state;
+
+  return {
+    ...state,
+    phase: state.phase === "error" ? "connecting" : state.phase,
+    isStreaming: false,
+    error: null,
+  };
+}
 
 export interface ParsedSSEEvent {
   type: string;
@@ -137,7 +164,13 @@ function isStreamingEventData(value: unknown): value is StreamingEventData {
 export function useTripGeneration(
   options: UseTripGenerationOptions,
 ): TripGenerationState {
-  const { tripId, enabled = true, onComplete, onError } = options;
+  const {
+    tripId,
+    enabled = true,
+    completed = false,
+    onComplete,
+    onError,
+  } = options;
 
   const [state, setState] = useState<TripGenerationState>(initialState);
 
@@ -238,6 +271,7 @@ export function useTripGeneration(
             phase: "complete",
             progress: 100,
             message: "Your itinerary is ready!",
+            error: null,
           }));
           onCompleteRef.current?.();
           break;
@@ -258,6 +292,14 @@ export function useTripGeneration(
       console.error(`[useTripGeneration] Failed to parse ${type} event:`, err);
     }
   }, []);
+
+  useEffect(() => {
+    if (completed) {
+      setState((prev) => reconcileInactiveGeneration(prev, true));
+    } else if (!enabled || !ITINERARY_STREAMING_ENABLED) {
+      setState((prev) => reconcileInactiveGeneration(prev, false));
+    }
+  }, [completed, enabled]);
 
   useEffect(() => {
     if (!enabled || !tripId || !ITINERARY_STREAMING_ENABLED) return;
@@ -303,7 +345,12 @@ export function useTripGeneration(
         // Stream ended naturally — make sure we're in a terminal state
         setState((prev) => {
           if (prev.isComplete || prev.phase === "error") return prev;
-          return { ...prev, isStreaming: false };
+          return {
+            ...prev,
+            isStreaming: false,
+            phase: "error",
+            error: "Live updates disconnected. Checking progress…",
+          };
         });
       } catch (error) {
         if ((error as Error).name === "AbortError") return;

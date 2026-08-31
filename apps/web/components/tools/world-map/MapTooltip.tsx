@@ -1,5 +1,6 @@
 "use client";
 
+import type { RefObject } from "react";
 import { useWorldMapStore } from "@/lib/tools/world-map/store";
 import { flagEmoji } from "@/lib/tools/world-map/iso";
 import { VISITED_FILL } from "@/lib/tools/world-map/status";
@@ -9,9 +10,10 @@ interface Props {
   name: string;
   x: number;
   y: number;
+  tooltipRef?: RefObject<HTMLDivElement | null>;
 }
 
-export function MapTooltip({ iso, name, x, y }: Props) {
+export function MapTooltip({ iso, name, x, y, tooltipRef }: Props) {
   const visited = useWorldMapStore((s) => {
     const profile = s.profiles.find((p) => p.id === s.activeProfileId);
     return Boolean(profile?.visits[iso]);
@@ -19,6 +21,7 @@ export function MapTooltip({ iso, name, x, y }: Props) {
 
   return (
     <div
+      ref={tooltipRef}
       className="pointer-events-none absolute z-30 -translate-x-1/2 -translate-y-[calc(100%+10px)] animate-fade-in"
       style={{ left: x, top: y }}
     >

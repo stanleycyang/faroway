@@ -275,10 +275,12 @@ export default async function BlogPostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const post = await getPostBySlug(slug);
+  const [post, related] = await Promise.all([
+    getPostBySlug(slug),
+    getRelatedPosts(slug, 3),
+  ]);
   if (!post) notFound();
 
-  const related = await getRelatedPosts(slug, 3);
   const postUrl = `${baseUrl}/blog/${post.slug}`;
   const contentHtml = renderMarkdown(post.content);
 
@@ -301,6 +303,14 @@ export default async function BlogPostPage({
   };
 
   const categorySlug = post.category.toLowerCase().replace(/\s+/g, "-");
+  const isFinancialContent =
+    categorySlug === "money" ||
+    post.tags.some((tag) => /credit|finance|bank|rewards/i.test(tag));
+  const referencedYear = post.title.match(/\b(20\d{2})\b/)?.[1];
+  const isDatedFinancialContent =
+    isFinancialContent &&
+    referencedYear !== undefined &&
+    Number(referencedYear) < new Date().getFullYear();
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
@@ -441,6 +451,20 @@ export default async function BlogPostPage({
           <div className="flex gap-16 max-w-7xl mx-auto mt-8">
             {/* Article content */}
             <article className="max-w-[720px] mx-auto flex-1 min-w-0">
+              {isFinancialContent && (
+                <aside
+                  role="note"
+                  className="mb-8 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-relaxed text-amber-950"
+                >
+                  <strong>
+                    {isDatedFinancialContent
+                      ? `This article references ${referencedYear} terms. `
+                      : "Financial terms can change. "}
+                  </strong>
+                  Verify current fees, rates, rewards, and coverage directly
+                  with the card issuer before making a financial decision.
+                </aside>
+              )}
               <ProseWrapper html={contentHtml} />
 
               {/* Tags */}
