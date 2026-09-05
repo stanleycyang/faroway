@@ -2,7 +2,7 @@
  * Viator Partner API Client
  *
  * Viator (TripAdvisor Experiences) provides tours, activities, and attractions.
- * Commission: 15-20% per booking
+ * Commission depends on the approved partner agreement.
  *
  * Uses the Partner API endpoints:
  * - POST /products/search  (v2 — requires Accept: application/json;version=2.0)
@@ -12,6 +12,7 @@
  */
 
 import { fetchWithTimeout } from "@/lib/search/runtime";
+import { parseViatorAffiliateUrl } from "@faroway/constants";
 
 // Environment variables
 const VIATOR_API_KEY = process.env.VIATOR_API_KEY;
@@ -432,38 +433,24 @@ export async function checkViatorAvailability(
 }
 
 /**
- * Generate affiliate booking URL with tracking.
- * Prefers the productUrl from the API response when available.
+ * Use the provider's product URL without rewriting its attribution parameters.
+ * A product code alone cannot establish a valid affiliate checkout URL.
+ * Per-click campaign correlation is added by the click endpoint.
  */
 export function generateViatorAffiliateUrl(
-  productCode: string,
-  trackingId: string,
+  _productCode: string,
+  _trackingId: string,
   options?: {
     date?: string;
     travelers?: number;
     productUrl?: string;
   },
-): string {
-  // Use the API-provided productUrl when available (already has proper structure)
-  if (options?.productUrl) {
-    const url = new URL(options.productUrl);
-    url.searchParams.set("pid", VIATOR_PARTNER_ID || "faroway");
-    url.searchParams.set("mcid", trackingId);
-    url.searchParams.set("medium", "api");
-    return url.toString();
-  }
-
-  // Fallback: construct from product code
-  const baseUrl = `https://www.viator.com/tours/${productCode}`;
-  const params = new URLSearchParams({
-    pid: VIATOR_PARTNER_ID || "faroway",
-    mcid: trackingId,
-    medium: "api",
-    ...(options?.date && { date: options.date }),
-    ...(options?.travelers && { travelers: options.travelers.toString() }),
-  });
-
-  return `${baseUrl}?${params}`;
+): string | undefined {
+  if (!options?.productUrl) return undefined;
+  return parseViatorAffiliateUrl(
+    options.productUrl,
+    VIATOR_PARTNER_ID,
+  )?.toString();
 }
 
 /**

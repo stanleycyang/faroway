@@ -26,7 +26,7 @@ const SearchInputSchema = z
       .enum(["solo", "couple", "family", "friends", "business"])
       .optional(),
     vibes: z.array(z.string().max(50)).max(10).optional(),
-    budget: z.string().max(50).optional(),
+    budget: z.enum(["budget", "moderate", "luxury"]).optional(),
     originCity: z.string().max(200).optional(),
     originAirport: z.string().max(10).optional(),
   })

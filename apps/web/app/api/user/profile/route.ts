@@ -8,27 +8,29 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase/server";
 import {
   requireAuth,
+  requireUserIdFromRequest,
   validationErrorResponse,
   AuthResult,
 } from "@/lib/auth/middleware";
-import { checkRateLimit, checkRateLimitAsync } from "@/lib/security/rate-limit";
+import { checkRateLimitAsync } from "@/lib/security/rate-limit";
 import { z } from "zod";
 
-const UpdateProfileSchema = z.object({
-  email: z.string().email().optional(),
-  display_name: z.string().min(1).max(100).trim().optional(),
-  avatar_url: z.string().url().optional(),
-  preferences: z
-    .object({
-      vibes: z.array(z.string().max(50)).max(10).optional(),
-      budget: z.enum(["budget", "moderate", "luxury"]).optional(),
-      travelerType: z
-        .enum(["solo", "couple", "family", "friends", "business"])
-        .optional(),
-    })
-    .optional(),
-  notification_settings: z.record(z.boolean()).optional(),
-});
+const UpdateProfileSchema = z
+  .object({
+    display_name: z.string().min(1).max(100).trim().optional(),
+    avatar_url: z.string().url().optional(),
+    preferences: z
+      .object({
+        vibes: z.array(z.string().max(50)).max(10).optional(),
+        budget: z.enum(["budget", "moderate", "luxury"]).optional(),
+        travelerType: z
+          .enum(["solo", "couple", "family", "friends", "business"])
+          .optional(),
+      })
+      .optional(),
+    notification_settings: z.record(z.boolean()).optional(),
+  })
+  .strict();
 
 export async function GET(request: NextRequest) {
   const authResult = await requireAuth(request);
@@ -87,9 +89,10 @@ export async function PATCH(request: NextRequest) {
   const { user } = authResult as AuthResult;
 
   // Rate limit: 10 req/min per user
-  const rl = checkRateLimit(`profile-patch:${user!.id}`, {
+  const rl = await checkRateLimitAsync(`profile-patch:${user!.id}`, {
     maxRequests: 10,
     windowMs: 60_000,
+    failClosed: true,
   });
   if (!rl.allowed) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
@@ -108,9 +111,6 @@ export async function PATCH(request: NextRequest) {
 
     const updates: Record<string, unknown> = {};
 
-    if (parseResult.data.email) {
-      updates.email = parseResult.data.email;
-    }
     if (parseResult.data.display_name !== undefined) {
       updates.display_name = parseResult.data.display_name;
     }
@@ -178,10 +178,9 @@ export async function PATCH(request: NextRequest) {
  * Step 1 fails ⇒ bail before step 2 so the user can retry.
  */
 export async function DELETE(request: NextRequest) {
-  const authResult = await requireAuth(request);
+  const authResult = await requireUserIdFromRequest(request);
   if (authResult instanceof NextResponse) return authResult;
-  const { user } = authResult as AuthResult;
-  const userId = user!.id;
+  const { userId } = authResult;
 
   // Strict rate limit: 3 attempts per hour. Use the KV-backed async path so
   // the limit is enforced across serverless instances (the sync helper falls
@@ -189,6 +188,7 @@ export async function DELETE(request: NextRequest) {
   const rl = await checkRateLimitAsync(`account-delete:${userId}`, {
     maxRequests: 3,
     windowMs: 60 * 60 * 1000,
+    failClosed: true,
   });
   if (!rl.allowed) {
     return NextResponse.json(

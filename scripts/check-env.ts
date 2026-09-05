@@ -11,11 +11,13 @@ import { resolve } from "path";
 const ROOT = resolve(import.meta.dirname, "..");
 const args = new Set(process.argv.slice(2));
 const mobileReleaseMode = args.has("--mobile-release");
+const webReleaseMode = args.has("--web-release");
 
 interface EnvVar {
   name: string;
   required: boolean;
   description: string;
+  minLength?: number;
 }
 
 const SHARED: EnvVar[] = [
@@ -151,11 +153,6 @@ const MOBILE: EnvVar[] = [
     required: false,
     description: "Backend API URL",
   },
-  {
-    name: "EXPO_PUBLIC_GOOGLE_PLACES_API_KEY",
-    required: false,
-    description: "Google Places API key",
-  },
 ];
 
 const MOBILE_RELEASE: EnvVar[] = [
@@ -194,10 +191,57 @@ const MOBILE_RELEASE: EnvVar[] = [
     required: false,
     description: "Sentry DSN for mobile crash reporting",
   },
+];
+
+const WEB_RELEASE: EnvVar[] = [
+  ...SHARED,
   {
-    name: "EXPO_PUBLIC_GOOGLE_PLACES_API_KEY",
-    required: false,
-    description: "Google Places API key",
+    name: "SUPABASE_SERVICE_ROLE_KEY",
+    required: true,
+    description: "Supabase service role key (server-only)",
+  },
+  {
+    name: "AI_GATEWAY_API_KEY",
+    required: true,
+    description: "Vercel AI Gateway API key for itinerary generation",
+  },
+  {
+    name: "NEXT_PUBLIC_APP_URL",
+    required: true,
+    description: "Canonical production web origin",
+  },
+  {
+    name: "IP_HASH_SALT",
+    required: true,
+    minLength: 32,
+    description: "Server-only HMAC salt (at least 32 characters)",
+  },
+  {
+    name: "CRON_SECRET",
+    required: true,
+    minLength: 32,
+    description: "Cleanup cron bearer secret (at least 32 characters)",
+  },
+  {
+    name: "NEXT_PUBLIC_SENTRY_DSN",
+    required: true,
+    description: "Browser error-monitoring DSN",
+  },
+  {
+    name: "VIATOR_API_KEY",
+    required: true,
+    description: "Viator inventory API key",
+  },
+  {
+    name: "VIATOR_PARTNER_ID",
+    required: true,
+    description: "Viator affiliate partner ID",
+  },
+  {
+    name: "VIATOR_WEBHOOK_SECRET",
+    required: true,
+    minLength: 32,
+    description: "Viator conversion webhook HMAC secret",
   },
 ];
 
@@ -270,11 +314,15 @@ function check(label: string, vars: EnvVar[]): number {
 
   for (const v of vars) {
     const value = allVars[v.name];
-    if (value) {
+    if (value && (!v.minLength || value.length >= v.minLength)) {
       console.log(`  ${GREEN}✓${RESET} ${v.name} ${DIM}(configured)${RESET}`);
     } else if (v.required) {
+      const requirement =
+        value && v.minLength
+          ? `(must be at least ${v.minLength} characters)`
+          : "(required)";
       console.log(
-        `  ${RED}✗${RESET} ${v.name} ${RED}(required)${RESET} ${DIM}— ${v.description}${RESET}`,
+        `  ${RED}✗${RESET} ${v.name} ${RED}${requirement}${RESET} ${DIM}— ${v.description}${RESET}`,
       );
       missing++;
     } else {
@@ -293,6 +341,8 @@ console.log(`  ${"═".repeat(45)}`);
 let totalMissing = 0;
 if (mobileReleaseMode) {
   totalMissing += check("Mobile Release", MOBILE_RELEASE);
+} else if (webReleaseMode) {
+  totalMissing += check("Web Release", WEB_RELEASE);
 } else {
   totalMissing += check("Shared (Supabase)", SHARED);
   totalMissing += check("Web App", WEB);

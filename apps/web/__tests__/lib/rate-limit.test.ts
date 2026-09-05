@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 // Mock @faroway/constants before importing modules that depend on it
-vi.mock("@faroway/constants", () => ({
+vi.mock("@faroway/constants", async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   VIBE_KEYWORDS: {
     adventure: ["hiking", "trekking", "outdoor", "extreme"],
     cultural: ["museum", "temple", "history", "art"],
@@ -226,36 +227,37 @@ describe("generateViatorAffiliateUrl", () => {
     generateViatorAffiliateUrl = mod.generateViatorAffiliateUrl;
   });
 
-  it("generates a URL with the required params", () => {
-    const url = generateViatorAffiliateUrl("PROD-123", "track-abc");
-    const parsed = new URL(url);
-
-    expect(parsed.origin + parsed.pathname).toBe(
-      "https://www.viator.com/tours/PROD-123",
-    );
-    expect(parsed.searchParams.get("mcid")).toBe("track-abc");
+  it("preserves the provider-issued attribution values", () => {
+    const url = generateViatorAffiliateUrl("123", "faroway-search-123", {
+      productUrl:
+        "https://www.viator.com/tours/City/Tour/d1-123?pid=P12345678&mcid=42383&medium=api&api_version=2.0",
+    });
+    expect(url).toBeDefined();
+    const parsed = new URL(url!);
+    expect(parsed.searchParams.get("pid")).toBe("P12345678");
+    expect(parsed.searchParams.get("mcid")).toBe("42383");
     expect(parsed.searchParams.get("medium")).toBe("api");
-    // pid falls back to 'faroway' when env var is unset
-    expect(parsed.searchParams.get("pid")).toBe("faroway");
+    expect(parsed.searchParams.get("api_version")).toBe("2.0");
   });
 
-  it("includes optional date and travelers when provided", () => {
+  it("does not invent a product URL or placeholder partner ID", () => {
+    expect(generateViatorAffiliateUrl("PROD-123", "track-abc")).toBeUndefined();
+  });
+
+  it("does not invent a URL even when dates and travelers are provided", () => {
     const url = generateViatorAffiliateUrl("PROD-456", "track-xyz", {
       date: "2026-03-15",
       travelers: 4,
     });
-    const parsed = new URL(url);
-
-    expect(parsed.searchParams.get("date")).toBe("2026-03-15");
-    expect(parsed.searchParams.get("travelers")).toBe("4");
+    expect(url).toBeUndefined();
   });
 
-  it("omits date and travelers when options are not provided", () => {
-    const url = generateViatorAffiliateUrl("PROD-789", "track-000");
-    const parsed = new URL(url);
-
-    expect(parsed.searchParams.has("date")).toBe(false);
-    expect(parsed.searchParams.has("travelers")).toBe(false);
+  it("rejects malformed provider links without crashing the whole search", () => {
+    expect(
+      generateViatorAffiliateUrl("PROD-789", "track-000", {
+        productUrl: "not-a-url",
+      }),
+    ).toBeUndefined();
   });
 });
 

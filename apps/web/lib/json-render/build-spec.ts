@@ -14,6 +14,8 @@
  *   - buildBudgetBlocks()     — called alongside itinerary
  */
 
+import { parseViatorAffiliateUrl } from "@faroway/constants";
+
 export interface HotelInput {
   id?: string;
   name: string;
@@ -24,6 +26,7 @@ export interface HotelInput {
   amenities?: string[];
   description?: string;
   affiliateUrl?: string;
+  affiliatePartner?: string;
   images?: string[];
   starRating?: number;
 }
@@ -39,6 +42,7 @@ export interface ActivityInput {
   reviewCount?: number;
   category?: string;
   affiliateUrl?: string;
+  affiliatePartner?: string;
   images?: string[];
   location?: { neighborhood?: string; city?: string; name?: string };
 }
@@ -52,6 +56,7 @@ export interface RestaurantInput {
   reviewCount?: number;
   description?: string;
   reservationUrl?: string;
+  affiliatePartner?: string;
   images?: string[];
 }
 
@@ -163,30 +168,20 @@ export function buildHotelBlocks(
     components.push({
       type: "HotelCard",
       props: {
+        id: topHotel.id,
         name: topHotel.name,
         rating: topHotel.rating || 4.5,
         starRating: topHotel.starRating,
         pricePerNight: topHotel.pricePerNight || 150,
         image: topHotel.images?.[0],
         bookingUrl: topHotel.affiliateUrl,
+        affiliatePartner: topHotel.affiliatePartner,
         amenities: topHotel.amenities || [],
         description: topHotel.description,
         reviewCount: topHotel.reviewCount,
         featured: true,
       },
     });
-
-    if (topHotel.affiliateUrl) {
-      components.push({
-        type: "BookingButton",
-        props: {
-          label: `Book ${topHotel.name}`,
-          url: topHotel.affiliateUrl,
-          provider: "Booking.com",
-          price: topHotel.pricePerNight,
-        },
-      });
-    }
   }
 
   const filteredOtherHotels = otherHotels.filter((h) => h.id !== topHotel?.id);
@@ -201,28 +196,18 @@ export function buildHotelBlocks(
       components.push({
         type: "HotelCard",
         props: {
+          id: hotel.id,
           name: hotel.name,
           rating: hotel.rating || 4.5,
           pricePerNight: hotel.pricePerNight || 150,
           image: hotel.images?.[0],
           bookingUrl: hotel.affiliateUrl,
+          affiliatePartner: hotel.affiliatePartner,
           amenities: hotel.amenities || [],
           description: hotel.description,
           reviewCount: hotel.reviewCount,
         },
       });
-
-      if (hotel.affiliateUrl) {
-        components.push({
-          type: "BookingButton",
-          props: {
-            label: `Book ${hotel.name}`,
-            url: hotel.affiliateUrl,
-            provider: "Booking.com",
-            price: hotel.pricePerNight,
-          },
-        });
-      }
     }
   }
 
@@ -315,6 +300,7 @@ export function buildItineraryBlocks(
       components.push({
         type: "ActivityCard",
         props: {
+          id: activity.id,
           name: activity.name,
           description: activity.description || `Enjoy ${activity.name}`,
           duration: activity.duration
@@ -324,7 +310,12 @@ export function buildItineraryBlocks(
           rating: activity.rating,
           reviewCount: activity.reviewCount,
           image: activity.images?.[0],
-          bookingUrl: activity.affiliateUrl,
+          bookingUrl:
+            (activity.affiliatePartner || "viator").toLowerCase() === "viator"
+              ? activity.affiliateUrl &&
+                parseViatorAffiliateUrl(activity.affiliateUrl)?.toString()
+              : activity.affiliateUrl,
+          affiliatePartner: activity.affiliatePartner,
           time,
           location:
             activity.location?.name ||
@@ -344,6 +335,7 @@ export function buildItineraryBlocks(
       components.push({
         type: "RestaurantCard",
         props: {
+          id: restaurant.id,
           name: restaurant.name,
           cuisine: restaurant.cuisine || "Local",
           priceLevel: Math.min(4, Math.max(1, priceLevelNum)),
@@ -351,6 +343,7 @@ export function buildItineraryBlocks(
           reviewCount: restaurant.reviewCount,
           image: restaurant.images?.[0],
           reservationUrl: restaurant.reservationUrl,
+          affiliatePartner: restaurant.affiliatePartner,
           description: restaurant.description,
           time,
         },

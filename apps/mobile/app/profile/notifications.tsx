@@ -53,8 +53,7 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const { user } = useUserStore();
   const userWithSettings = user as
-    | (typeof user & { notificationSettings?: Record<string, boolean> })
-    | null;
+    (typeof user & { notificationSettings?: Record<string, boolean> }) | null;
   const [settings, setSettings] = useState<Record<string, boolean>>(
     userWithSettings?.notificationSettings &&
       Object.keys(userWithSettings.notificationSettings).length > 0

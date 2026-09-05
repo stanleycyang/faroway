@@ -89,4 +89,20 @@ describe("GET /api/search/[searchId]", () => {
     expect(res.status).toBe(404);
     expect(json.error).toBe("Search not found");
   });
+
+  it("does not expose stored provider errors", async () => {
+    searchRecord = {
+      ...searchRecord,
+      status: "error",
+      error_message:
+        "AI gateway failed with sk-secret-value while calling internal-host",
+    };
+
+    const res = await GET(makeReq(), makeParams());
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.error).toBe("Search failed. Please try again.");
+    expect(JSON.stringify(json)).not.toContain("sk-secret-value");
+  });
 });

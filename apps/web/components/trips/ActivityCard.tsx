@@ -13,6 +13,8 @@ import {
   Zap,
   TrendingUp,
 } from "lucide-react";
+import { AffiliateDisclosure } from "@/components/affiliate/AffiliateDisclosure";
+import { buildAffiliateClickRedirect } from "@/lib/affiliates/click-redirect";
 
 export interface Activity {
   id: string;
@@ -84,6 +86,7 @@ export interface Restaurant {
   reservationInfo?: {
     recommended: boolean;
     url?: string;
+    affiliatePartner?: string;
   };
   rating?: number;
   reviewCount?: number;
@@ -175,6 +178,7 @@ const mealTypeConfig: Record<
 interface ActivityCardProps {
   activity: Activity;
   index?: number;
+  tripId?: string;
 }
 
 function getBadge(
@@ -200,7 +204,7 @@ function getBadge(
   return null;
 }
 
-export function ActivityCard({ activity }: ActivityCardProps) {
+export function ActivityCard({ activity, tripId }: ActivityCardProps) {
   // Guard against receiving a non-object (e.g. a plain string from inconsistent AI output)
   if (!activity || typeof activity !== "object" || !activity.name) return null;
 
@@ -210,7 +214,6 @@ export function ActivityCard({ activity }: ActivityCardProps) {
   const reviewCount = activity.reviewCount;
   const badge = getBadge(rating, reviewCount);
   const hasImage = activity.images && activity.images.length > 0;
-  const hasBooking = !!activity.bookingInfo?.bookingUrl;
 
   const formatDuration = (minutes: number) => {
     if (minutes < 60) return `${minutes}m`;
@@ -228,26 +231,17 @@ export function ActivityCard({ activity }: ActivityCardProps) {
     }).format(amount);
   };
 
-  const handleBookingClick = () => {
-    const url = activity.bookingInfo?.bookingUrl;
-    if (!url) return;
-
-    // Fire and forget tracking
-    fetch("/api/track/click", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+  const bookingHref = activity.bookingInfo?.bookingUrl
+    ? buildAffiliateClickRedirect({
         itemType: "activity",
         itemId: activity.id,
         itemName: activity.name,
-        affiliatePartner: activity.bookingInfo?.affiliateId || "viator",
-        affiliateUrl: url,
+        affiliatePartner: activity.bookingInfo.affiliateId || "viator",
+        affiliateUrl: activity.bookingInfo.bookingUrl,
+        tripId,
         source: "itinerary",
-      }),
-    }).catch(() => {});
-
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
+      })
+    : undefined;
 
   return (
     <div
@@ -427,46 +421,19 @@ export function ActivityCard({ activity }: ActivityCardProps) {
           )}
 
         {/* Booking CTA — Primary conversion element */}
-        {hasBooking && (
+        {bookingHref && (
           <div className="mt-4 space-y-2">
-            <button
-              onClick={handleBookingClick}
+            <a
+              href={bookingHref}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
               className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-primary to-primary-600 text-white rounded-xl text-sm font-bold hover:from-primary-600 hover:to-primary-700 transition-all duration-200 shadow-md hover:shadow-lg hover:shadow-primary/25 active:scale-[0.98]"
             >
               <Shield className="w-4 h-4" />
               Reserve Your Spot
               <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-            </button>
-            <div className="flex items-center justify-center gap-3 text-[11px] text-gray-500">
-              <span className="inline-flex items-center gap-1">
-                <svg
-                  className="w-3 h-3 text-green-500"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Free cancellation
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <svg
-                  className="w-3 h-3 text-green-500"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Instant confirmation
-              </span>
-            </div>
+            </a>
+            <AffiliateDisclosure />
           </div>
         )}
 
@@ -486,9 +453,10 @@ export function ActivityCard({ activity }: ActivityCardProps) {
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
+  tripId?: string;
 }
 
-export function RestaurantCard({ restaurant }: RestaurantCardProps) {
+export function RestaurantCard({ restaurant, tripId }: RestaurantCardProps) {
   // Guard against receiving a non-object (e.g. a plain string from inconsistent AI output)
   if (!restaurant || typeof restaurant !== "object" || !restaurant.name)
     return null;
@@ -524,25 +492,18 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
     );
   };
 
-  const handleReserveClick = () => {
-    const url = restaurant.reservationInfo?.url;
-    if (!url) return;
-
-    fetch("/api/track/click", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+  const reservationHref = restaurant.reservationInfo?.url
+    ? buildAffiliateClickRedirect({
         itemType: "restaurant",
         itemId: restaurant.id,
         itemName: restaurant.name,
-        affiliatePartner: "opentable",
-        affiliateUrl: url,
+        affiliatePartner:
+          restaurant.reservationInfo.affiliatePartner || "opentable",
+        affiliateUrl: restaurant.reservationInfo.url,
+        tripId,
         source: "itinerary",
-      }),
-    }).catch(() => {});
-
-    window.open(url, "_blank", "noopener,noreferrer");
-  };
+      })
+    : undefined;
 
   return (
     <div className="group bg-white border border-gray-100 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 border-l-4 border-l-orange-400">
@@ -657,44 +618,17 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
             {/* Reserve CTA */}
             {hasReservation && (
               <div className="mt-4 space-y-2">
-                <button
-                  onClick={handleReserveClick}
+                <a
+                  href={reservationHref}
+                  target="_blank"
+                  rel="noopener noreferrer sponsored"
                   className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl text-sm font-bold hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-md hover:shadow-lg hover:shadow-orange-500/25 active:scale-[0.98]"
                 >
                   <Utensils className="w-4 h-4" />
                   Reserve a Table
                   <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-                </button>
-                <div className="flex items-center justify-center gap-3 text-[11px] text-gray-500">
-                  <span className="inline-flex items-center gap-1">
-                    <svg
-                      className="w-3 h-3 text-green-500"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    Confirmed instantly
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <svg
-                      className="w-3 h-3 text-green-500"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    Free to cancel
-                  </span>
-                </div>
+                </a>
+                <AffiliateDisclosure />
               </div>
             )}
 

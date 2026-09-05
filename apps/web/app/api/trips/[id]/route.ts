@@ -20,7 +20,7 @@ const UpdateTripSchema = z
     status: z.literal("draft").optional(),
     preferences: z.record(z.unknown()).optional(),
     vibes: z.array(z.string().max(50)).max(10).optional(),
-    budget_tier: z.string().max(50).optional(),
+    budget_tier: z.enum(["budget", "moderate", "luxury"]).optional(),
   })
   .strict()
   .refine(
@@ -85,10 +85,14 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       );
     }
 
-    if (parseResult.data.start_date || parseResult.data.end_date) {
+    if (
+      parseResult.data.start_date ||
+      parseResult.data.end_date ||
+      parseResult.data.preferences !== undefined
+    ) {
       const { data: existingTrip, error: existingTripError } = await db
         .from("trips")
-        .select("start_date, end_date")
+        .select("start_date, end_date, preferences")
         .eq("id", id)
         .eq("user_id", auth.userId)
         .single();
@@ -97,11 +101,20 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       }
       const nextStart = parseResult.data.start_date ?? existingTrip.start_date;
       const nextEnd = parseResult.data.end_date ?? existingTrip.end_date;
-      if (!isValidDateRange(nextStart, nextEnd)) {
+      if (
+        (parseResult.data.start_date || parseResult.data.end_date) &&
+        !isValidDateRange(nextStart, nextEnd)
+      ) {
         return NextResponse.json(
           { error: "End date must be on or after start date" },
           { status: 400 },
         );
+      }
+      if (parseResult.data.preferences !== undefined) {
+        parseResult.data.preferences = {
+          ...existingTrip.preferences,
+          ...parseResult.data.preferences,
+        };
       }
     }
 

@@ -11,7 +11,17 @@ jest.mock('../../lib/supabase', () => ({
   getAuthHeaders: jest.fn(),
 }));
 
-import { buildTripCreatePayload, buildTripUpdatePayload } from '../../lib/offline/sync';
+jest.mock('../../constants/api', () => ({
+  API_BASE_URL: 'http://localhost:3000',
+  API_TIMEOUT: 5000,
+}));
+
+import {
+  buildTripCreatePayload,
+  buildTripUpdatePayload,
+  mergeTripsForSync,
+} from '../../lib/offline/sync';
+import type { PendingMutation } from '../../lib/offline/storage';
 import type { Trip } from '../../stores/tripStore';
 
 describe('offline sync payloads', () => {
@@ -53,6 +63,7 @@ describe('offline sync payloads', () => {
   it('serializes offline updates with backend field names', () => {
     expect(
       buildTripUpdatePayload({
+        destination: 'Kyoto',
         startDate: '2026-07-01',
         endDate: '2026-07-08',
         travelers: 3,
@@ -60,6 +71,7 @@ describe('offline sync payloads', () => {
         vibes: ['nightlife'],
       })
     ).toEqual({
+      destination: 'Kyoto',
       start_date: '2026-07-01',
       end_date: '2026-07-08',
       travelers: 3,
@@ -68,5 +80,37 @@ describe('offline sync payloads', () => {
         travelerType: 'friends',
       },
     });
+  });
+
+  it('does not overwrite pending local edits while pulling server trips', () => {
+    const localEdit = { ...trip, id: 'trip-1', destination: 'Local Kyoto' };
+    const serverVersion = { ...trip, id: 'trip-1', destination: 'Stale Tokyo' };
+    const pending: PendingMutation[] = [
+      {
+        id: 'mutation-1',
+        type: 'update',
+        tripId: 'trip-1',
+        data: { destination: 'Local Kyoto' },
+        timestamp: 1,
+        retryCount: 3,
+      },
+    ];
+
+    expect(mergeTripsForSync([localEdit], [serverVersion], pending)).toEqual([localEdit]);
+  });
+
+  it('keeps pending deletes hidden while pulling server trips', () => {
+    const serverVersion = { ...trip, id: 'trip-1' };
+    const pending: PendingMutation[] = [
+      {
+        id: 'mutation-1',
+        type: 'delete',
+        tripId: 'trip-1',
+        timestamp: 1,
+        retryCount: 3,
+      },
+    ];
+
+    expect(mergeTripsForSync([], [serverVersion], pending)).toEqual([]);
   });
 });

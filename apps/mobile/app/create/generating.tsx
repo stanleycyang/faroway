@@ -100,6 +100,7 @@ interface StreamingItem {
   reviewCount?: number;
   images?: string[];
   affiliateUrl?: string;
+  affiliatePartner?: string;
   reservationUrl?: string;
 }
 
@@ -130,6 +131,7 @@ interface StreamingHotel {
   amenities?: string[];
   images?: string[];
   affiliateUrl?: string;
+  affiliatePartner?: string;
   location?: unknown;
 }
 
@@ -180,6 +182,7 @@ function convertStreamingDataToTrip(
           reviewCount: activity.reviewCount,
           image: activity.images?.[0],
           bookingUrl: activity.affiliateUrl,
+          affiliatePartner: activity.affiliatePartner,
         });
       });
     };
@@ -201,6 +204,7 @@ function convertStreamingDataToTrip(
         reviewCount: meal.reviewCount,
         image: meal.images?.[0],
         bookingUrl: meal.reservationUrl,
+        affiliatePartner: meal.affiliatePartner,
       });
     };
 
@@ -260,6 +264,7 @@ function convertStreamingDataToTrip(
           amenities: hotelAmenities,
           images: hotelImages,
           bookingUrl: hotel.affiliateUrl || '',
+          affiliatePartner: hotel.affiliatePartner,
           location: hotelLocation,
         }
       : undefined,
@@ -275,9 +280,11 @@ function convertStreamingDataToTrip(
 function JsonRenderRenderer({
   blocks,
   onNewContent,
+  tripId,
 }: {
   blocks: StreamingBlock[];
   onNewContent?: () => void;
+  tripId?: string;
 }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const reduceMotion = useReduceMotion();
@@ -305,7 +312,7 @@ function JsonRenderRenderer({
           Record<string, unknown>
         >;
         if (!Component) return null;
-        return <Component key={`${comp.type}-${index}`} {...(comp.props || {})} />;
+        return <Component key={`${comp.type}-${index}`} {...(comp.props || {})} tripId={tripId} />;
       })}
     </Animated.View>
   );
@@ -1007,7 +1014,11 @@ export default function GeneratingScreen() {
                   <Text style={styles.streamingText}>{streaming.message}</Text>
                 </View>
               )}
-              <JsonRenderRenderer blocks={streaming.blocks} onNewContent={handleNewContent} />
+              <JsonRenderRenderer
+                blocks={streaming.blocks}
+                onNewContent={handleNewContent}
+                tripId={streaming.tripId || undefined}
+              />
             </View>
           )}
 

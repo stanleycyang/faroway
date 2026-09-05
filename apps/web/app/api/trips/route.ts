@@ -6,6 +6,7 @@ import { z } from "zod";
 const DateOnlySchema = z
   .string()
   .refine(isValidDateOnly, "Must be a valid YYYY-MM-DD date");
+const BudgetTierSchema = z.enum(["budget", "moderate", "luxury"]);
 
 const CreateTripSchema = z
   .object({
@@ -13,7 +14,7 @@ const CreateTripSchema = z
     start_date: DateOnlySchema,
     end_date: DateOnlySchema,
     travelers: z.number().int().min(1).max(50).optional(),
-    budget: z.enum(["budget", "moderate", "luxury"]).optional(),
+    budget: BudgetTierSchema.optional(),
     preferences: z
       .object({
         travelerType: z
@@ -22,7 +23,7 @@ const CreateTripSchema = z
         originCity: z.string().max(200).optional(),
         originAirport: z.string().max(10).optional(),
         vibes: z.array(z.string().max(50)).max(10).optional(),
-        budget: z.string().max(50).optional(),
+        budget: BudgetTierSchema.optional(),
         adults: z.number().int().min(1).max(50).optional(),
         children: z.number().int().min(0).max(50).optional(),
         interests: z.array(z.string().max(50)).max(20).optional(),
@@ -118,10 +119,7 @@ export async function POST(request: NextRequest) {
     } = parseResult.data;
 
     // Resolve budget: top-level field takes priority, then preferences.budget
-    const budgetTier =
-      budget ||
-      (preferences?.budget as "budget" | "moderate" | "luxury") ||
-      "moderate";
+    const budgetTier = budget || preferences?.budget || "moderate";
 
     // Use the user-scoped client so RLS is enforced as defense-in-depth.
     // We still explicitly scope user_id from the verified session below, but

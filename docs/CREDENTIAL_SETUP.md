@@ -66,6 +66,12 @@ Travel and enrichment providers are optional. Missing provider credentials must 
 - `GETYOURGUIDE_PARTNER_ID`
 - `TAVILY_API_KEY`
 
+Conversion ingestion secrets (`VIATOR_WEBHOOK_SECRET`,
+`BOOKING_WEBHOOK_SECRET`, and `GYG_WEBHOOK_SECRET`) are required only after a
+real partner webhook or report adapter has passed the end-to-end checks in the
+[Affiliate Launch Runbook](./AFFILIATE_LAUNCH_RUNBOOK.md). Configuring a secret
+alone does not activate conversion reporting.
+
 ## Mobile Production
 
 Configure public mobile values in EAS environment variables or `eas.json` only when they are safe to expose:
@@ -76,7 +82,6 @@ Configure public mobile values in EAS environment variables or `eas.json` only w
 - `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID`
 - `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`
 - `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME`
-- `EXPO_PUBLIC_GOOGLE_PLACES_API_KEY`
 - `EXPO_PUBLIC_SENTRY_DSN`
 
 The public EAS project ID and `testimonio` owner are committed in

@@ -42,6 +42,15 @@ test.describe("Public API endpoints", () => {
     expect(response.status()).toBe(401);
   });
 
+  for (const alias of ["account", "profile"]) {
+    test(`DELETE /api/user/${alias} requires authentication`, async ({
+      request,
+    }) => {
+      const response = await request.delete(`/api/user/${alias}`);
+      expect(response.status()).toBe(401);
+    });
+  }
+
   test("rate limit headers present on destinations API", async ({
     request,
   }) => {

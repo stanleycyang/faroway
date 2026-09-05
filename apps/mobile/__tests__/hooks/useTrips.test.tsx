@@ -3,6 +3,11 @@ jest.mock('../../lib/supabase', () => ({
   getAuthHeaders: jest.fn(() => Promise.resolve({ Authorization: 'Bearer token' })),
 }));
 
+jest.mock('../../constants/api', () => ({
+  API_BASE_URL: 'http://localhost:3000',
+  API_TIMEOUT: 5000,
+}));
+
 jest.mock('../../lib/offline', () => ({
   offlineStorage: {
     loadTrips: jest.fn(() => Promise.resolve([])),
@@ -154,5 +159,27 @@ describe('useTrips', () => {
     expect(updated?.destination).toBe('Osaka');
     expect(useTripStore.getState().trips[0].destination).toBe('Osaka');
     expect(syncService.queueUpdate).toHaveBeenCalledWith('trip-1', { destination: 'Osaka' });
+  });
+
+  it('serializes online updates to the strict API field names', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: () => Promise.resolve({ trip: makeApiTrip('trip-1', 'Tokyo') }),
+    });
+
+    const tripsApi = renderUseTrips();
+    await tripsApi.updateTrip('trip-1', {
+      startDate: '2026-05-01',
+      endDate: '2026-05-08',
+      budget: 'luxury',
+    });
+
+    const [, options] = mockFetch.mock.calls[0];
+    expect(JSON.parse(options.body)).toEqual({
+      start_date: '2026-05-01',
+      end_date: '2026-05-08',
+      budget_tier: 'luxury',
+      preferences: { budget: 'luxury' },
+    });
   });
 });

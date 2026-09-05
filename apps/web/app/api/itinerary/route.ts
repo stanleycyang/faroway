@@ -20,10 +20,14 @@ export const maxDuration = 60;
 
 const TravelerInputSchema = z.union([
   z.number().int().min(1).max(50),
-  z.object({
-    adults: z.number().int().min(1).max(50),
-    children: z.number().int().min(0).max(49).default(0),
-  }),
+  z
+    .object({
+      adults: z.number().int().min(1).max(50),
+      children: z.number().int().min(0).max(49).default(0),
+    })
+    .refine(({ adults, children }) => adults + children <= 50, {
+      message: "Total travelers must be 50 or fewer",
+    }),
 ]);
 
 const DateOnlySchema = z
@@ -122,7 +126,7 @@ export async function POST(request: NextRequest) {
       searchResult.results.hotels[0] ||
       null;
     const mapped = mapSearchResultsToItinerary(searchResult.results, topHotel);
-    const itinerary: GeneratedItinerary = {
+    let itinerary: GeneratedItinerary = {
       tripId: user?.id ? `trip_${user.id}_${Date.now()}` : `trip_${Date.now()}`,
       destination: params.destination,
       startDate: params.startDate,
@@ -138,27 +142,76 @@ export async function POST(request: NextRequest) {
       generatedAt: new Date().toISOString(),
     };
 
-    // Optionally save to database if user is authenticated
+    // Optionally save to the normalized trips + itineraries tables when the
+    // request is authenticated. The old implementation wrote a non-existent
+    // `trips.itinerary` column and silently reported success.
     if (user && params.save !== false) {
-      const { error: saveError } = await supabase.from("trips").insert({
-        user_id: user.id,
-        destination: params.destination,
-        start_date: params.startDate,
-        end_date: params.endDate,
-        preferences: {
-          vibes,
-          budget,
+      const { data: savedTrip, error: tripSaveError } = await supabase
+        .from("trips")
+        .insert({
+          user_id: user.id,
+          destination: params.destination,
+          start_date: params.startDate,
+          end_date: params.endDate,
           travelers,
+          budget_tier: budget,
+          vibes,
           interests: params.interests || [],
-          dietaryRestrictions: params.dietaryRestrictions || [],
-        },
-        itinerary: itinerary,
-        status: "draft",
-      });
+          dietary_restrictions: params.dietaryRestrictions || [],
+          preferences: {
+            travelerType: params.travelerType,
+            originCity: params.originCity,
+            originAirport: params.originAirport,
+          },
+          status: "draft",
+        })
+        .select("id")
+        .single();
 
-      if (saveError) {
-        console.error("[Save Error]", saveError);
-        // Don't fail the request, just log the error
+      if (tripSaveError || !savedTrip) {
+        console.error("[Trip Save Error]", tripSaveError);
+        throw new Error("Failed to save generated trip");
+      }
+
+      itinerary = { ...itinerary, tripId: savedTrip.id };
+      const { data: savedItinerary, error: itinerarySaveError } = await supabase
+        .from("itineraries")
+        .insert({
+          trip_id: savedTrip.id,
+          user_id: user.id,
+          destination: params.destination,
+          start_date: params.startDate,
+          end_date: params.endDate,
+          overview: itinerary.overview,
+          total_cost: itinerary.totalEstimatedCost,
+          days: itinerary.days,
+          packing_list: itinerary.packingList,
+          general_tips: itinerary.generalTips,
+          generated_at: itinerary.generatedAt,
+        })
+        .select("id")
+        .single();
+
+      if (itinerarySaveError || !savedItinerary) {
+        console.error("[Itinerary Save Error]", itinerarySaveError);
+        await supabase.from("trips").delete().eq("id", savedTrip.id);
+        throw new Error("Failed to save generated itinerary");
+      }
+
+      const { error: finalizeError } = await supabase
+        .from("trips")
+        .update({
+          status: "planned",
+          itinerary_id: savedItinerary.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", savedTrip.id)
+        .eq("user_id", user.id);
+
+      if (finalizeError) {
+        console.error("[Trip Finalize Error]", finalizeError);
+        await supabase.from("trips").delete().eq("id", savedTrip.id);
+        throw new Error("Failed to finalize generated trip");
       }
     }
 
@@ -172,10 +225,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.error("[Itinerary Error]", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Generation failed" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Generation failed" }, { status: 500 });
   }
 }
 

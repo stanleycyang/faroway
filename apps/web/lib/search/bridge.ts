@@ -117,7 +117,11 @@ function mapDining(
       reasoning: `Matches your ${d.vibeMatch?.join(", ") || "dining"} preferences`,
     },
     reservationInfo: d.reservationUrl
-      ? { recommended: true, url: d.reservationUrl }
+      ? {
+          recommended: true,
+          url: d.reservationUrl,
+          affiliatePartner: d.affiliatePartner,
+        }
       : { recommended: false },
     rating: d.rating,
     reviewCount: d.reviewCount,

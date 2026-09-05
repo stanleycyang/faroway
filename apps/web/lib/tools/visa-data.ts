@@ -1,8 +1,5 @@
 export type VisaStatus =
-  | "visa-free"
-  | "visa-on-arrival"
-  | "e-visa"
-  | "visa-required";
+  "visa-free" | "visa-on-arrival" | "e-visa" | "visa-required";
 
 export interface VisaInfo {
   status: VisaStatus;

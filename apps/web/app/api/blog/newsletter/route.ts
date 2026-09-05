@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase/server";
-import { checkRateLimit, getClientIp } from "@/lib/security/rate-limit";
+import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 import { z } from "zod";
 
 const NewsletterSchema = z.object({
@@ -11,9 +11,10 @@ const NewsletterSchema = z.object({
 export async function POST(request: NextRequest) {
   // Rate limit: 3 req/min per IP
   const ip = getClientIp(request);
-  const rl = checkRateLimit(`newsletter:${ip}`, {
+  const rl = await checkRateLimitAsync(`newsletter:${ip}`, {
     maxRequests: 3,
     windowMs: 60_000,
+    failClosed: true,
   });
   if (!rl.allowed) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });

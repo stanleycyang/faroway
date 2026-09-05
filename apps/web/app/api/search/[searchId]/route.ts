@@ -192,9 +192,9 @@ export async function GET(
       }
     }
 
-    // If error, include error message
+    // Stored provider and workflow errors may contain implementation details.
     if (search.status === "error") {
-      response.error = search.error_message || "An error occurred";
+      response.error = "Search failed. Please try again.";
     }
 
     return NextResponse.json(response);

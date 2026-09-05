@@ -11,6 +11,7 @@ import {
   DollarSign,
   Sparkles,
 } from "lucide-react";
+import { formatTripDate, getTripDuration } from "@/lib/trips/format-time";
 
 interface TripHeaderProps {
   destination: string;
@@ -38,23 +39,6 @@ export function TripHeader({
   backUrl = "/dashboard",
   showActions = true,
 }: TripHeaderProps) {
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const getDuration = () => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const days =
-      Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    return days;
-  };
-
   const formatCost = (amount: number, currency: string) => {
     return new Intl.NumberFormat("en-US", {
       style: "currency",
@@ -64,7 +48,7 @@ export function TripHeader({
     }).format(amount);
   };
 
-  const duration = getDuration();
+  const duration = getTripDuration(startDate, endDate);
 
   return (
     <div className="bg-gradient-to-b from-gray-50 to-white border-b border-gray-200">
@@ -138,7 +122,7 @@ export function TripHeader({
             <Calendar className="w-5 h-5 text-primary" />
             <div>
               <p className="text-sm font-semibold text-gray-900">
-                {formatDate(startDate)} – {formatDate(endDate)}
+                {formatTripDate(startDate)} - {formatTripDate(endDate)}
               </p>
               <p className="text-xs text-gray-500">
                 {duration} day{duration > 1 ? "s" : ""}

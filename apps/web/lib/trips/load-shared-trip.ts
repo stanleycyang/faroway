@@ -24,7 +24,7 @@ export interface SharedTripData {
   itineraries: SharedItineraryData[] | SharedItineraryData | null;
 }
 
-async function loadSharedTripUncached(
+export async function loadSharedTripUncached(
   token: string,
 ): Promise<SharedTripData | null> {
   if (!/^[a-zA-Z0-9_-]+$/.test(token)) return null;
@@ -42,7 +42,12 @@ async function loadSharedTripUncached(
     .eq("is_shared", true)
     .single();
 
-  if (error || !trip) return null;
+  if (error) {
+    if (error.code === "PGRST116") return null;
+    console.error("Failed to load shared trip:", error.message);
+    throw new Error("Unable to load this shared trip right now");
+  }
+  if (!trip) return null;
   return trip as SharedTripData;
 }
 

@@ -21,4 +21,7 @@ Components:
 Actions:
 - trackClick: Track affiliate click for booking/reservation links
 - saveToTrip: Save an item to the trip
-- shareItinerary: Share the itinerary`;
+- shareItinerary: Share the itinerary
+
+Never invent booking, reservation, or affiliate URLs. Only render a booking
+URL when a live provider supplied both the URL and its affiliate partner.`;

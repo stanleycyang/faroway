@@ -21,7 +21,6 @@ import {
 import {
   searchAmadeusHotels,
   isAmadeusConfigured,
-  generateAmadeusAffiliateUrl,
   resolveAmadeusCityCode,
 } from "@/lib/affiliates/amadeus";
 import {
@@ -59,8 +58,6 @@ const HotelSchema = z.object({
     neighborhood: z.string().optional(),
   }),
   images: z.array(z.string()).default([]),
-  affiliateUrl: z.string(),
-  affiliatePartner: z.string(),
   vibeScore: z.number().min(0).max(100),
   vibeMatch: z.array(z.string()),
 });
@@ -69,7 +66,10 @@ const HotelListSchema = z.object({
   hotels: z.array(HotelSchema),
 });
 
-type GeneratedHotel = Omit<HotelResult, "id">;
+type GeneratedHotel = Omit<
+  HotelResult,
+  "id" | "affiliateUrl" | "affiliatePartner"
+>;
 
 interface HotelListResult {
   hotels: GeneratedHotel[];
@@ -85,9 +85,8 @@ For each hotel, provide:
 5. Location in a popular neighborhood
 6. How well it matches the traveler's preferences
 
-Use realistic affiliate URLs in format:
-- https://booking.com/hotel/[country-code]/[hotel-slug]
-- https://hotels.com/ho[id]/[hotel-name]
+Do not generate booking or affiliate URLs. Only live provider results may have
+booking links; AI-generated recommendations are informational only.
 
 Price ranges by star rating (per night):
 - 2-star: $40-80
@@ -261,15 +260,6 @@ export async function runHotelsAgent(
                   neighborhood: undefined,
                 },
                 images: hotel.images,
-                affiliateUrl: generateAmadeusAffiliateUrl(
-                  "hotel",
-                  {
-                    hotelId: hotel.hotelId,
-                    checkIn: dates.start,
-                  },
-                  `tg_${Date.now()}`,
-                ),
-                affiliatePartner: "amadeus",
                 vibeScore: vibeResult.score,
                 vibeMatch: vibeResult.matchedVibes,
               };
@@ -387,10 +377,15 @@ For vibes like:
 
     console.log("[Hotels Agent] AI generated", result.hotels.length, "hotels");
 
-    return result.hotels.map((hotel, index) => ({
-      ...hotel,
-      id: `hotel_${Date.now()}_${index}`,
-    }));
+    return result.hotels.map((hotel, index) => {
+      const safeHotel = { ...hotel } as GeneratedHotel & {
+        affiliateUrl?: string;
+        affiliatePartner?: string;
+      };
+      delete safeHotel.affiliateUrl;
+      delete safeHotel.affiliatePartner;
+      return { ...safeHotel, id: `hotel_${Date.now()}_${index}` };
+    });
   } catch (error) {
     if (isOperationTimeoutError(error)) {
       console.warn(

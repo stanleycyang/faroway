@@ -445,7 +445,9 @@ export default function CreateTripPage() {
       <header className="bg-white border-b border-gray-200 sticky top-0 z-40">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <button
+            type="button"
             onClick={() => router.back()}
+            aria-label="Back"
             className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
@@ -649,6 +651,7 @@ export default function CreateTripPage() {
 
         <div className="sticky bottom-0 bg-gray-50 pt-4 pb-8 -mx-4 px-4 sm:-mx-6 sm:px-6">
           <button
+            type="button"
             onClick={handleGenerate}
             disabled={!canGenerate || isGenerating || authLoading}
             className={`w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 transition-all ${

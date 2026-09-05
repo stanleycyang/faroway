@@ -26,12 +26,18 @@ import { usePromptStore } from '../../stores/promptStore';
 import { useAuthContext } from '../../components/AuthProvider';
 import { AuthGate } from '../../components/AuthGate';
 import { RatingPrompt } from '../../components/RatingPrompt';
-import { shareTrip, trackAffiliateClick } from '../../services/api';
+import { shareTrip } from '../../services/api';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import { useTrips } from '../../hooks/useTrips';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { USE_NATIVE_DRIVER } from '../../lib/animation';
+import {
+  AFFILIATE_DISCLOSURE,
+  confirmAndOpenAffiliateLink,
+  getBookableItemContextLabel,
+  itemTypeForAffiliateActivityType,
+} from '../../lib/affiliateCheckout';
 
 const HEADER_HEIGHT = 300;
 
@@ -49,44 +55,12 @@ const openURL = async (url: string) => {
   }
 };
 
-/**
- * Track affiliate click and open the booking URL.
- * Fires tracking request, then opens the URL (uses tracked URL if available).
- */
-const trackAndOpen = async (params: {
-  itemType: 'hotel' | 'activity' | 'restaurant' | 'flight';
-  itemId: string;
-  itemName: string;
-  affiliatePartner: string;
-  affiliateUrl: string;
-}) => {
-  hapticFeedback.light();
-
-  // Fire tracking request (non-blocking)
-  const trackingPromise = trackAffiliateClick({
-    itemType: params.itemType,
-    itemId: params.itemId,
-    itemName: params.itemName,
-    affiliatePartner: params.affiliatePartner,
-    affiliateUrl: params.affiliateUrl,
-    source: 'itinerary',
-  });
-
-  // Try to get the tracked redirect URL, fall back to original
-  try {
-    const result = await trackingPromise;
-    const url = result.data?.redirectUrl || params.affiliateUrl;
-    await openURL(url);
-  } catch {
-    await openURL(params.affiliateUrl);
-  }
-};
-
 interface ActivityCardProps {
   activity: TripActivity;
+  tripId: string;
 }
 
-function ActivityCard({ activity }: ActivityCardProps) {
+function ActivityCard({ activity, tripId }: ActivityCardProps) {
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'restaurant':
@@ -132,13 +106,24 @@ function ActivityCard({ activity }: ActivityCardProps) {
 
   const handleBooking = () => {
     if (!activity.bookingUrl) return;
-    trackAndOpen({
-      itemType: activity.type === 'restaurant' ? 'restaurant' : 'activity',
-      itemId: activity.id,
-      itemName: activity.title,
-      affiliatePartner: activity.affiliatePartner || 'viator',
-      affiliateUrl: activity.bookingUrl,
-    });
+    confirmAndOpenAffiliateLink(
+      {
+        itemType: itemTypeForAffiliateActivityType(activity.type),
+        itemId: activity.id,
+        itemName: activity.title,
+        affiliatePartner: activity.affiliatePartner || 'viator',
+        affiliateUrl: activity.bookingUrl,
+        tripId,
+        priceLabel: activity.price ? `${activity.price} estimate` : undefined,
+        cancellationLabel: activity.freeCancellation
+          ? 'The provider currently lists free cancellation; confirm the final terms before payment.'
+          : undefined,
+        source: 'itinerary',
+      },
+      (url) => {
+        void openURL(url);
+      }
+    );
   };
 
   return (
@@ -187,31 +172,34 @@ function ActivityCard({ activity }: ActivityCardProps) {
           </View>
         )}
         {activity.bookingUrl && (
-          <TouchableOpacity
-            style={styles.bookButton}
-            onPress={handleBooking}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel={`${getBookingLabel(activity.type)} for ${activity.title}`}
-          >
-            <LinearGradient
-              colors={
-                activity.type === 'restaurant' ? ['#f97316', '#ea580c'] : ['#6366f1', '#8b5cf6']
-              }
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-            />
-            <Ionicons
-              name={
-                activity.type === 'restaurant' ? 'restaurant-outline' : 'shield-checkmark-outline'
-              }
-              size={16}
-              color="#fff"
-            />
-            <Text style={styles.bookButtonText}>{getBookingLabel(activity.type)}</Text>
-            <Ionicons name="open-outline" size={14} color="rgba(255,255,255,0.7)" />
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              style={styles.bookButton}
+              onPress={handleBooking}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`${getBookingLabel(activity.type)} for ${activity.title}`}
+            >
+              <LinearGradient
+                colors={
+                  activity.type === 'restaurant' ? ['#f97316', '#ea580c'] : ['#6366f1', '#8b5cf6']
+                }
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFill}
+              />
+              <Ionicons
+                name={
+                  activity.type === 'restaurant' ? 'restaurant-outline' : 'shield-checkmark-outline'
+                }
+                size={16}
+                color="#fff"
+              />
+              <Text style={styles.bookButtonText}>{getBookingLabel(activity.type)}</Text>
+              <Ionicons name="open-outline" size={14} color="rgba(255,255,255,0.7)" />
+            </TouchableOpacity>
+            <Text style={styles.affiliateDisclosure}>{AFFILIATE_DISCLOSURE}</Text>
+          </>
         )}
         {activity.bookingUrl && activity.freeCancellation && (
           <View style={styles.freeCancelRow}>
@@ -226,18 +214,29 @@ function ActivityCard({ activity }: ActivityCardProps) {
 
 function FeaturedHotelCard({
   hotel,
+  tripId,
 }: {
   hotel: NonNullable<import('../../stores/tripStore').Trip['hotel']>;
+  tripId: string;
 }) {
   const handleBooking = () => {
     if (!hotel.bookingUrl) return;
-    trackAndOpen({
-      itemType: 'hotel',
-      itemId: hotel.id,
-      itemName: hotel.name,
-      affiliatePartner: 'booking',
-      affiliateUrl: hotel.bookingUrl,
-    });
+    confirmAndOpenAffiliateLink(
+      {
+        itemType: 'hotel',
+        itemId: hotel.id,
+        itemName: hotel.name,
+        affiliatePartner: hotel.affiliatePartner || 'booking',
+        affiliateUrl: hotel.bookingUrl,
+        tripId,
+        price: hotel.pricePerNight,
+        priceLabel: `$${hotel.pricePerNight}/night estimate`,
+        source: 'itinerary',
+      },
+      (url) => {
+        void openURL(url);
+      }
+    );
   };
 
   return (
@@ -274,16 +273,19 @@ function FeaturedHotelCard({
           </View>
         )}
         {hotel.bookingUrl && (
-          <TouchableOpacity
-            style={styles.hotelCardButton}
-            onPress={handleBooking}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel={`Check availability for ${hotel.name}`}
-          >
-            <Text style={styles.hotelCardButtonText}>Check Availability</Text>
-            <Ionicons name="arrow-forward" size={16} color={colors.primary[500]} />
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              style={styles.hotelCardButton}
+              onPress={handleBooking}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Check availability for ${hotel.name}`}
+            >
+              <Text style={styles.hotelCardButtonText}>Check Availability</Text>
+              <Ionicons name="arrow-forward" size={16} color={colors.primary[500]} />
+            </TouchableOpacity>
+            <Text style={styles.affiliateDisclosure}>{AFFILIATE_DISCLOSURE}</Text>
+          </>
         )}
       </View>
     </View>
@@ -292,8 +294,10 @@ function FeaturedHotelCard({
 
 function TransportCard({
   transport,
+  tripId,
 }: {
   transport: NonNullable<import('../../stores/tripStore').TripDay['transport']>;
+  tripId: string;
 }) {
   const formatDuration = (minutes: number) => {
     const h = Math.floor(minutes / 60);
@@ -311,13 +315,23 @@ function TransportCard({
 
   const handleBooking = () => {
     if (!transport.bookingUrl) return;
-    trackAndOpen({
-      itemType: 'flight',
-      itemId: `transport_${transport.departure.airport}_${transport.arrival.airport}`,
-      itemName: `${transport.provider} ${transport.departure.airport}-${transport.arrival.airport}`,
-      affiliatePartner: transport.affiliatePartner || 'duffel',
-      affiliateUrl: transport.bookingUrl,
-    });
+    confirmAndOpenAffiliateLink(
+      {
+        itemType: 'transport',
+        itemId: `transport_${transport.departure.airport}_${transport.arrival.airport}`,
+        itemName: `${transport.provider} ${transport.departure.airport}-${transport.arrival.airport}`,
+        affiliatePartner: transport.affiliatePartner || 'duffel',
+        affiliateUrl: transport.bookingUrl,
+        tripId,
+        price: transport.price,
+        currency: transport.currency,
+        priceLabel: `${transport.currency} ${transport.price} estimate`,
+        source: 'itinerary',
+      },
+      (url) => {
+        void openURL(url);
+      }
+    );
   };
 
   return (
@@ -359,16 +373,21 @@ function TransportCard({
           </View>
         </View>
         {transport.bookingUrl && (
-          <TouchableOpacity
-            style={styles.transportCardButton}
-            onPress={handleBooking}
-            activeOpacity={0.7}
-            accessibilityRole="button"
-            accessibilityLabel={`Book flight from ${transport.departure.airport} to ${transport.arrival.airport}`}
-          >
-            <Text style={styles.transportCardButtonText}>Book Flight</Text>
-            <Ionicons name="arrow-forward" size={16} color="#1e40af" />
-          </TouchableOpacity>
+          <>
+            <TouchableOpacity
+              style={styles.transportCardButton}
+              onPress={handleBooking}
+              activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Book flight from ${transport.departure.airport} to ${transport.arrival.airport}`}
+            >
+              <Text style={styles.transportCardButtonText}>Book Flight</Text>
+              <Ionicons name="arrow-forward" size={16} color="#1e40af" />
+            </TouchableOpacity>
+            <Text style={[styles.affiliateDisclosure, styles.affiliateDisclosureOnDark]}>
+              {AFFILIATE_DISCLOSURE}
+            </Text>
+          </>
         )}
       </LinearGradient>
     </View>
@@ -382,10 +401,12 @@ function BookingsSheet({
   visible,
   onClose,
   bookableItems,
+  tripId,
 }: {
   visible: boolean;
   onClose: () => void;
   bookableItems: { activity: Activity; dayNumber: number }[];
+  tripId: string;
 }) {
   const reduceMotion = useReduceMotion();
 
@@ -393,19 +414,32 @@ function BookingsSheet({
     const { activity, dayNumber } = item;
 
     const handleBook = () => {
-      trackAndOpen({
-        itemType: activity.type === 'restaurant' ? 'restaurant' : 'activity',
-        itemId: activity.id,
-        itemName: activity.title,
-        affiliatePartner: activity.affiliatePartner || 'viator',
-        affiliateUrl: activity.bookingUrl!,
-      });
+      confirmAndOpenAffiliateLink(
+        {
+          itemType: itemTypeForAffiliateActivityType(activity.type),
+          itemId: activity.id,
+          itemName: activity.title,
+          affiliatePartner: activity.affiliatePartner || 'viator',
+          affiliateUrl: activity.bookingUrl!,
+          tripId,
+          priceLabel: activity.price ? `${activity.price} estimate` : undefined,
+          cancellationLabel: activity.freeCancellation
+            ? 'The provider currently lists free cancellation; confirm the final terms before payment.'
+            : undefined,
+          source: 'itinerary',
+        },
+        (url) => {
+          void openURL(url);
+        }
+      );
     };
 
     return (
       <View style={styles.sheetItem}>
         <View style={styles.sheetItemInfo}>
-          <Text style={styles.sheetItemDay}>{dayNumber === 0 ? 'Hotel' : `Day ${dayNumber}`}</Text>
+          <Text style={styles.sheetItemDay}>
+            {getBookableItemContextLabel(dayNumber, activity.type)}
+          </Text>
           <Text style={styles.sheetItemTitle} numberOfLines={1}>
             {activity.title}
           </Text>
@@ -447,7 +481,7 @@ function BookingsSheet({
           </TouchableOpacity>
         </View>
         <Text style={styles.sheetSubtitle}>
-          You’ll complete each reservation on the partner’s site.
+          You’ll complete each reservation on the partner’s site. {AFFILIATE_DISCLOSURE}
         </Text>
         <FlatList
           data={bookableItems}
@@ -520,7 +554,7 @@ export default function TripDetailScreen() {
           type: 'accommodation',
           price: `$${trip.hotel.pricePerNight}/night`,
           bookingUrl: trip.hotel.bookingUrl,
-          affiliatePartner: 'booking',
+          affiliatePartner: trip.hotel.affiliatePartner || 'booking',
         },
         dayNumber: 0,
       });
@@ -791,7 +825,7 @@ export default function TripDetailScreen() {
           )}
 
           {/* Featured Hotel */}
-          {trip.hotel && <FeaturedHotelCard hotel={trip.hotel} />}
+          {trip.hotel && <FeaturedHotelCard hotel={trip.hotel} tripId={trip.id} />}
 
           {trip.days.length === 0 ? (
             <View style={styles.emptyItinerary}>
@@ -863,14 +897,14 @@ export default function TripDetailScreen() {
               {/* Transport */}
               {trip.days[selectedDay]?.transport && (
                 <View style={styles.transportCardWrapper}>
-                  <TransportCard transport={trip.days[selectedDay].transport!} />
+                  <TransportCard transport={trip.days[selectedDay].transport!} tripId={trip.id} />
                 </View>
               )}
 
               {/* Activities */}
               <View style={styles.activitiesContainer}>
                 {trip.days[selectedDay]?.activities.map((activity) => (
-                  <ActivityCard key={activity.id} activity={activity} />
+                  <ActivityCard key={activity.id} activity={activity} tripId={trip.id} />
                 ))}
               </View>
             </>
@@ -904,6 +938,7 @@ export default function TripDetailScreen() {
         visible={showBookingsSheet}
         onClose={() => setShowBookingsSheet(false)}
         bookableItems={bookableItems}
+        tripId={trip.id}
       />
 
       {/* Auth gate for guests */}
@@ -1261,6 +1296,18 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '700',
     color: '#fff',
+  },
+  affiliateDisclosure: {
+    marginTop: 6,
+    marginHorizontal: 16,
+    marginBottom: 8,
+    color: '#64748b',
+    fontSize: 10,
+    lineHeight: 14,
+    textAlign: 'center',
+  },
+  affiliateDisclosureOnDark: {
+    color: 'rgba(255,255,255,0.75)',
   },
   freeCancelRow: {
     flexDirection: 'row',

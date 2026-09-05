@@ -44,10 +44,15 @@ export function TripFilters({
   return (
     <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
       {/* Filter Tabs */}
-      <div className="flex gap-1 sm:gap-2 p-1 bg-gray-100 rounded-xl w-full sm:w-auto overflow-x-auto">
+      <div
+        aria-label="Filter trips"
+        className="flex gap-1 sm:gap-2 p-1 bg-gray-100 rounded-xl w-full sm:w-auto overflow-x-auto"
+      >
         {filters.map((filter) => (
           <button
             key={filter.value}
+            type="button"
+            aria-pressed={currentFilter === filter.value}
             onClick={() => updateParams("filter", filter.value)}
             className={`px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 min-h-[44px] flex items-center ${
               currentFilter === filter.value
@@ -71,10 +76,14 @@ export function TripFilters({
 
       {/* Sort Dropdown */}
       <div className="flex items-center gap-2 w-full sm:w-auto">
-        <span className="text-sm text-gray-500 whitespace-nowrap">
+        <label
+          htmlFor="trip-sort"
+          className="text-sm text-gray-500 whitespace-nowrap"
+        >
           Sort by:
-        </span>
+        </label>
         <select
+          id="trip-sort"
           value={currentSort}
           onChange={(e) => updateParams("sort", e.target.value)}
           className="flex-1 sm:flex-none px-3 py-2.5 min-h-[44px] bg-white border border-gray-200 rounded-lg text-sm font-medium text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"

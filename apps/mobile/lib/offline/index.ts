@@ -18,6 +18,8 @@ export {
 // Sync
 export {
   syncService,
+  buildTripCreatePayload,
+  buildTripUpdatePayload,
   type SyncStatus,
   type SyncResult,
   type SyncState,

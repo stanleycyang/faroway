@@ -207,4 +207,15 @@ describe("PATCH /api/user/profile", () => {
 
     expect(res.status).toBe(400);
   });
+
+  it("rejects email changes that would desynchronize the auth identity", async () => {
+    const req = makeRequest("PATCH", "/api/user/profile", {
+      email: "different@example.com",
+    });
+
+    const res = await PATCH(req);
+
+    expect(res.status).toBe(400);
+    expect(mockSupabase.from).not.toHaveBeenCalled();
+  });
 });

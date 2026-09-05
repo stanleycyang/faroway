@@ -82,8 +82,20 @@ function createChain(table: string) {
 
 const supabaseMock = {
   from: vi.fn((table: string) => createChain(table)),
-  rpc: vi.fn(async () => ({ data: null, error: null })),
+  rpc: vi.fn<
+    (
+      name: string,
+      args: Record<string, unknown>,
+    ) => Promise<{ data: boolean; error: null }>
+  >(async () => ({
+    data: true,
+    error: null,
+  })),
 };
+
+vi.mock("@/lib/workflow/runtime", () => ({
+  createFatalWorkflowError: (message: string) => new Error(message),
+}));
 
 vi.mock("@/lib/supabase/server", () => ({
   getSupabase: vi.fn(() => supabaseMock),
@@ -239,6 +251,7 @@ async function waitFor(
 describe("planTripWorkflow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    supabaseMock.rpc.mockResolvedValue({ data: true, error: null });
     mocks.runOrchestratorAgent.mockResolvedValue(searchPlan);
     mocks.runHotelsAgent.mockResolvedValue([hotel]);
     mocks.runActivitiesAgent.mockResolvedValue([activity]);
@@ -353,5 +366,36 @@ describe("planTripWorkflow", () => {
     expect(Array.isArray(hotelsArgs?.p_value)).toBe(true);
     expect(typeof daysArgs?.p_value).not.toBe("string");
     expect(typeof hotelsArgs?.p_value).not.toBe("string");
+  });
+
+  it("stops a fenced-out worker before making provider or AI calls", async () => {
+    supabaseMock.rpc.mockResolvedValueOnce({ data: false, error: null });
+    const result = await planTripWorkflow(workflowInput);
+    expect(result.status).toBe("error");
+    expect(mocks.runOrchestratorAgent).not.toHaveBeenCalled();
+    expect(mocks.runHotelsAgent).not.toHaveBeenCalled();
+    expect(mocks.runAggregatorAgent).not.toHaveBeenCalled();
+    expect(supabaseMock.rpc).toHaveBeenLastCalledWith("fail_trip_generation", {
+      p_trip_id: "trip-1",
+      p_search_id: workflowInput.searchId,
+    });
+  });
+
+  it("persists all trip results through the fenced completion transaction", async () => {
+    await planTripWorkflow(workflowInput);
+    expect(supabaseMock.rpc).toHaveBeenCalledWith(
+      "complete_trip_generation",
+      expect.objectContaining({
+        p_trip_id: "trip-1",
+        p_search_id: workflowInput.searchId,
+        p_results: expect.any(Array),
+        p_days: expect.any(Array),
+        p_spec: expect.any(Array),
+        p_itinerary: expect.objectContaining({ trip_id: "trip-1" }),
+      }),
+    );
+    expect(supabaseMock.from).not.toHaveBeenCalledWith("trips");
+    expect(supabaseMock.from).not.toHaveBeenCalledWith("itineraries");
+    expect(supabaseMock.from).not.toHaveBeenCalledWith("notifications");
   });
 });

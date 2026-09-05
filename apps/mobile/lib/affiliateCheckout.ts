@@ -1,6 +1,7 @@
-import { Alert } from 'react-native';
+import { Alert, Platform } from 'react-native';
 import { isAllowedAffiliateUrl, openAffiliateLink, type TrackClickParams } from '../services/api';
 import { hapticFeedback } from '../utils/haptics';
+import { API_BASE_URL } from '../constants/api';
 
 const PARTNER_NAMES: Record<string, string> = {
   booking: 'Booking.com',
@@ -11,6 +12,9 @@ const PARTNER_NAMES: Record<string, string> = {
   opentable: 'OpenTable',
   duffel: 'Duffel',
 };
+
+export const AFFILIATE_DISCLOSURE =
+  'Affiliate link: Faroway may earn a commission at no extra cost to you.';
 
 interface CheckoutCopyInput {
   itemName: string;
@@ -73,6 +77,7 @@ export function buildAffiliateCheckoutCopy({
     `Partner: ${partnerName}`,
     priceLabel ? `Estimated price: ${priceLabel}` : 'Final price: confirmed by the partner',
     cancellationLabel || 'Cancellation terms are confirmed by the partner before payment.',
+    AFFILIATE_DISCLOSURE,
     `Faroway will open ${partnerName} and keep your trip saved here. Availability, payment, and booking changes happen with the partner.`,
   ];
 
@@ -87,12 +92,16 @@ export function confirmAndOpenAffiliateLink(
   params: ConfirmAffiliateOpenParams,
   openUrl: (url: string) => void
 ): void {
-  if (!isAllowedAffiliateUrl(params.affiliateUrl)) {
+  // Alert.alert is a no-op on react-native-web. Do not invoke browser APIs
+  // during Expo's server render either.
+  if (Platform.OS === 'web' && typeof window === 'undefined') return;
+  if (!isAllowedAffiliateUrl(params.affiliateUrl, params.affiliatePartner)) {
     hapticFeedback.warning();
-    Alert.alert(
-      'Partner Link Unavailable',
-      'This partner link could not be verified. Try another booking option from the itinerary.'
-    );
+    const title = 'Partner Link Unavailable';
+    const message =
+      'This partner link could not be verified. Try another booking option from the itinerary.';
+    if (Platform.OS === 'web') window.alert(`${title}\n\n${message}`);
+    else Alert.alert(title, message);
     return;
   }
 
@@ -105,6 +114,19 @@ export function confirmAndOpenAffiliateLink(
     priceLabel,
     cancellationLabel,
   });
+
+  if (Platform.OS === 'web') {
+    if (window.confirm(`${copy.title}\n\n${copy.message}`)) {
+      // Navigate within the user gesture. Awaiting POST tracking first can
+      // cause Linking.openURL's new tab to be blocked by the browser.
+      const redirect = new URL('/api/track/click', API_BASE_URL);
+      for (const [key, value] of Object.entries(trackingParams)) {
+        if (value !== undefined && value !== null) redirect.searchParams.set(key, String(value));
+      }
+      openUrl(redirect.toString());
+    }
+    return;
+  }
 
   Alert.alert(copy.title, copy.message, [
     { text: 'Not Now', style: 'cancel' },

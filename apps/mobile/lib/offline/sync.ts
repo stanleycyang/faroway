@@ -9,6 +9,10 @@ import { API_BASE_URL, getAuthHeaders } from '../supabase';
 import { normalizeTripStatus } from '../tripStatus';
 import type { Trip, TripInput } from '../../stores/tripStore';
 import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
+import { fetchWithTimeout } from '../../services/request';
+import { buildTripUpdatePayload } from '../../services/tripPayload';
+
+export { buildTripUpdatePayload } from '../../services/tripPayload';
 
 /**
  * Serialize a locally-created Trip into the snake_case body that
@@ -37,28 +41,6 @@ export function buildTripCreatePayload(trip: Trip): PendingMutationData {
  * `PATCH /api/trips/[id]` expects. Only present fields are included so we
  * don't accidentally overwrite untouched server fields with undefined.
  */
-export function buildTripUpdatePayload(patch: Partial<TripInput>): PendingMutationData {
-  const body: PendingMutationData = {};
-  const preferences: Record<string, unknown> = {};
-
-  if (patch.startDate !== undefined) body.start_date = patch.startDate;
-  if (patch.endDate !== undefined) body.end_date = patch.endDate;
-  if (patch.travelers !== undefined) body.travelers = patch.travelers;
-  if (patch.vibes !== undefined) body.vibes = patch.vibes;
-  if (patch.budget !== undefined) {
-    body.budget_tier = patch.budget;
-    preferences.budget = patch.budget;
-  }
-  if (patch.travelerType !== undefined) preferences.travelerType = patch.travelerType;
-  if (patch.originCity !== undefined) preferences.originCity = patch.originCity;
-  if (patch.originAirport !== undefined) preferences.originAirport = patch.originAirport;
-
-  if (Object.keys(preferences).length > 0) {
-    body.preferences = preferences;
-  }
-  return body;
-}
-
 export type SyncStatus = 'idle' | 'syncing' | 'success' | 'error' | 'offline';
 
 export interface SyncResult {
@@ -74,6 +56,43 @@ export interface SyncState {
   pendingCount: number;
   isOnline: boolean;
   error: string | null;
+}
+
+/**
+ * Merge server state without overwriting local changes that are still queued.
+ * Deletes remain hidden, updates remain client-visible, and locally-created
+ * trips remain available until the server acknowledges them.
+ */
+export function mergeTripsForSync(
+  local: Trip[],
+  server: Trip[],
+  pendingMutations: PendingMutation[]
+): Trip[] {
+  const pendingByTrip = new Map(
+    pendingMutations.map((mutation) => [mutation.tripId, mutation.type])
+  );
+  const localById = new Map(local.map((trip) => [trip.id, trip]));
+  const merged = new Map<string, Trip>();
+
+  for (const serverTrip of server) {
+    const pendingType = pendingByTrip.get(serverTrip.id);
+    if (pendingType === 'delete') continue;
+    if (pendingType === 'update') {
+      merged.set(serverTrip.id, localById.get(serverTrip.id) ?? serverTrip);
+      continue;
+    }
+    merged.set(serverTrip.id, serverTrip);
+  }
+
+  for (const localTrip of local) {
+    const pendingType = pendingByTrip.get(localTrip.id);
+    if (pendingType === 'delete') continue;
+    if (pendingType === 'create' || pendingType === 'update' || localTrip.id.startsWith('local_')) {
+      merged.set(localTrip.id, localTrip);
+    }
+  }
+
+  return Array.from(merged.values());
 }
 
 type SyncListener = (state: SyncState) => void;
@@ -234,10 +253,11 @@ class SyncService {
 
     try {
       // Step 1: Push pending mutations first
-      const pushResult = await this.pushPendingMutations();
+      const pushResult = await this.pushPendingMutations(force);
       result.synced = pushResult.synced;
       result.failed = pushResult.failed;
       result.errors = pushResult.errors;
+      result.success = pushResult.failed === 0;
 
       // Step 2: Pull latest from server
       await this.pullFromServer();
@@ -251,7 +271,10 @@ class SyncService {
         error: result.failed > 0 ? `${result.failed} items failed to sync` : null,
       });
 
-      await offlineStorage.recordSuccessfulSync();
+      await offlineStorage.updateSyncMeta({
+        lastSyncTime: Date.now(),
+        lastSyncStatus: result.failed > 0 ? 'partial' : 'success',
+      });
 
       console.log('[SyncService] Sync complete:', result);
       return result;
@@ -292,7 +315,7 @@ class SyncService {
   /**
    * Push pending mutations to server
    */
-  private async pushPendingMutations(): Promise<SyncResult> {
+  private async pushPendingMutations(force: boolean): Promise<SyncResult> {
     const mutations = await offlineStorage.getPendingMutations();
     const result: SyncResult = { success: true, synced: 0, failed: 0, errors: [] };
 
@@ -306,10 +329,11 @@ class SyncService {
     const sorted = mutations.sort((a, b) => a.timestamp - b.timestamp);
 
     for (const mutation of sorted) {
-      // Skip if too many retries
-      if (mutation.retryCount >= MAX_RETRY_COUNT) {
-        console.log(`[SyncService] Mutation ${mutation.id} exceeded retry limit, removing`);
-        await offlineStorage.removePendingMutation(mutation.id);
+      // Automatic sync stops hammering a permanently failing mutation, but
+      // preserves it so a pull cannot erase the user's local edit. A manual
+      // forced sync is still allowed to retry it.
+      if (!force && mutation.retryCount >= MAX_RETRY_COUNT) {
+        console.log(`[SyncService] Mutation ${mutation.id} exceeded automatic retry limit`);
         result.failed++;
         result.errors.push({ mutationId: mutation.id, error: 'Max retries exceeded' });
         continue;
@@ -346,7 +370,7 @@ class SyncService {
 
     switch (mutation.type) {
       case 'create': {
-        const response = await fetch(`${API_BASE_URL}/api/trips`, {
+        const response = await fetchWithTimeout(`${API_BASE_URL}/api/trips`, {
           method: 'POST',
           headers,
           body: JSON.stringify(mutation.data),
@@ -368,11 +392,14 @@ class SyncService {
       }
 
       case 'update': {
-        const response = await fetch(`${API_BASE_URL}/api/trips/${mutation.tripId}`, {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify(mutation.data),
-        });
+        const response = await fetchWithTimeout(
+          `${API_BASE_URL}/api/trips/${encodeURIComponent(mutation.tripId)}`,
+          {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify(mutation.data),
+          }
+        );
 
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -382,10 +409,13 @@ class SyncService {
       }
 
       case 'delete': {
-        const response = await fetch(`${API_BASE_URL}/api/trips/${mutation.tripId}`, {
-          method: 'DELETE',
-          headers,
-        });
+        const response = await fetchWithTimeout(
+          `${API_BASE_URL}/api/trips/${encodeURIComponent(mutation.tripId)}`,
+          {
+            method: 'DELETE',
+            headers,
+          }
+        );
 
         // 404 is acceptable for delete (already deleted)
         if (!response.ok && response.status !== 404) {
@@ -403,7 +433,7 @@ class SyncService {
   private async pullFromServer(): Promise<void> {
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/api/trips`, {
+      const response = await fetchWithTimeout(`${API_BASE_URL}/api/trips`, {
         method: 'GET',
         headers,
       });
@@ -420,10 +450,12 @@ class SyncService {
       const serverTrips: Trip[] = (data.trips || []).map(this.transformApiTrip);
 
       // Get local trips
-      const localTrips = await offlineStorage.loadTrips();
+      const [localTrips, pendingMutations] = await Promise.all([
+        offlineStorage.loadTrips(),
+        offlineStorage.getPendingMutations(),
+      ]);
 
-      // Merge: server wins for existing trips, keep local-only trips
-      const mergedTrips = this.mergeTrips(localTrips, serverTrips);
+      const mergedTrips = mergeTripsForSync(localTrips, serverTrips, pendingMutations);
 
       await offlineStorage.saveTrips(mergedTrips);
       console.log(`[SyncService] Pulled ${serverTrips.length} trips from server`);
@@ -436,26 +468,6 @@ class SyncService {
       }
       throw error;
     }
-  }
-
-  /**
-   * Merge local and server trips
-   * Strategy: Server wins for conflicts, keep local-only (pending) trips
-   */
-  private mergeTrips(local: Trip[], server: Trip[]): Trip[] {
-    const merged: Map<string, Trip> = new Map();
-
-    // First, add all server trips (authoritative)
-    server.forEach((trip) => merged.set(trip.id, trip));
-
-    // Then, add local-only trips (those with local_ prefix that haven't synced)
-    local.forEach((trip) => {
-      if (trip.id.startsWith('local_') && !merged.has(trip.id)) {
-        merged.set(trip.id, trip);
-      }
-    });
-
-    return Array.from(merged.values());
   }
 
   /**

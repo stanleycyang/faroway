@@ -20,6 +20,9 @@ import {
   type Restaurant,
 } from "./ActivityCard";
 import type { TripDayTransport } from "@faroway/types";
+import { AffiliateDisclosure } from "@/components/affiliate/AffiliateDisclosure";
+import { buildAffiliateClickRedirect } from "@/lib/affiliates/click-redirect";
+import { formatTravelTime } from "@/lib/trips/format-time";
 
 interface TimeBlock {
   activities: Activity[];
@@ -32,6 +35,7 @@ interface HotelInfo {
   pricePerNight?: number;
   amenities?: string[];
   affiliateUrl?: string;
+  affiliatePartner?: string;
   image?: string;
 }
 
@@ -51,6 +55,7 @@ interface ItineraryDayProps {
   defaultExpanded?: boolean;
   hotel?: HotelInfo;
   transport?: TripDayTransport;
+  tripId?: string;
 }
 
 export function ItineraryDay({
@@ -66,6 +71,7 @@ export function ItineraryDay({
   defaultExpanded = true,
   hotel,
   transport,
+  tripId,
 }: ItineraryDayProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
 
@@ -145,6 +151,8 @@ export function ItineraryDay({
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden transition-shadow hover:shadow-md">
       {/* Day Header - Always visible */}
       <button
+        type="button"
+        aria-expanded={isExpanded}
         onClick={() => setIsExpanded(!isExpanded)}
         className={`w-full px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between hover:bg-gray-50/50 transition-colors bg-gradient-to-r ${dayColor.light} to-transparent`}
       >
@@ -238,31 +246,26 @@ export function ItineraryDay({
                   </div>
                 </div>
                 {hotel.affiliateUrl && (
-                  <button
-                    onClick={() => {
-                      fetch("/api/track/click", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          itemType: "hotel",
-                          itemId: `hotel_${hotel.name?.replace(/\s+/g, "_")}`,
-                          itemName: hotel.name,
-                          affiliatePartner: "booking",
-                          affiliateUrl: hotel.affiliateUrl,
-                          source: "itinerary",
-                        }),
-                      }).catch(() => {});
-                      window.open(
-                        hotel.affiliateUrl,
-                        "_blank",
-                        "noopener,noreferrer",
-                      );
-                    }}
-                    className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
-                  >
-                    Check Prices
-                    <ExternalLink className="w-3 h-3" />
-                  </button>
+                  <div className="flex-shrink-0 text-center">
+                    <a
+                      href={buildAffiliateClickRedirect({
+                        itemType: "hotel",
+                        itemId: `hotel_${hotel.name.replace(/\s+/g, "_")}`,
+                        itemName: hotel.name,
+                        affiliatePartner: hotel.affiliatePartner || "booking",
+                        affiliateUrl: hotel.affiliateUrl,
+                        tripId,
+                        source: "itinerary",
+                      })}
+                      target="_blank"
+                      rel="noopener noreferrer sponsored"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
+                    >
+                      Check Prices
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                    <AffiliateDisclosure className="mt-1 max-w-48 text-[10px] leading-3 text-gray-500" />
+                  </div>
                 )}
               </div>
             </div>
@@ -308,12 +311,7 @@ export function ItineraryDay({
                       {transport.departure.airport}
                     </p>
                     <p className="text-xs text-blue-200">
-                      {new Date(
-                        transport.departure.dateTime,
-                      ).toLocaleTimeString("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
+                      {formatTravelTime(transport.departure.dateTime)}
                     </p>
                   </div>
                   <div className="flex-1 flex flex-col items-center">
@@ -339,45 +337,34 @@ export function ItineraryDay({
                       {transport.arrival.airport}
                     </p>
                     <p className="text-xs text-blue-200">
-                      {new Date(transport.arrival.dateTime).toLocaleTimeString(
-                        "en-US",
-                        {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        },
-                      )}
+                      {formatTravelTime(transport.arrival.dateTime)}
                     </p>
                   </div>
                 </div>
 
                 {/* CTA */}
                 {transport.affiliateUrl && (
-                  <button
-                    onClick={() => {
-                      fetch("/api/track/click", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          itemType: "transport",
-                          itemId: `transport_${transport.departure.airport}_${transport.arrival.airport}`,
-                          itemName: `${transport.provider} ${transport.departure.airport}-${transport.arrival.airport}`,
-                          affiliatePartner:
-                            transport.affiliatePartner || "duffel",
-                          affiliateUrl: transport.affiliateUrl,
-                          source: "itinerary",
-                        }),
-                      }).catch(() => {});
-                      window.open(
-                        transport.affiliateUrl,
-                        "_blank",
-                        "noopener,noreferrer",
-                      );
-                    }}
-                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 transition-all shadow-md active:scale-[0.98]"
-                  >
-                    Book This Flight
-                    <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-                  </button>
+                  <div>
+                    <a
+                      href={buildAffiliateClickRedirect({
+                        itemType: "transport",
+                        itemId: `transport_${transport.departure.airport}_${transport.arrival.airport}`,
+                        itemName: `${transport.provider} ${transport.departure.airport}-${transport.arrival.airport}`,
+                        affiliatePartner:
+                          transport.affiliatePartner || "duffel",
+                        affiliateUrl: transport.affiliateUrl,
+                        tripId,
+                        source: "itinerary",
+                      })}
+                      target="_blank"
+                      rel="noopener noreferrer sponsored"
+                      className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 transition-all shadow-md active:scale-[0.98]"
+                    >
+                      Book This Flight
+                      <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+                    </a>
+                    <AffiliateDisclosure className="mt-2 text-center text-[10px] leading-3 text-blue-100" />
+                  </div>
                 )}
               </div>
             </div>
@@ -395,6 +382,7 @@ export function ItineraryDay({
                 label="Morning"
                 color="amber"
                 block={morning}
+                tripId={tripId}
               />
             )}
 
@@ -405,6 +393,7 @@ export function ItineraryDay({
                 label="Afternoon"
                 color="orange"
                 block={afternoon}
+                tripId={tripId}
               />
             )}
 
@@ -415,6 +404,7 @@ export function ItineraryDay({
                 label="Evening"
                 color="primary"
                 block={evening}
+                tripId={tripId}
               />
             )}
           </div>
@@ -465,6 +455,7 @@ interface TimeBlockSectionProps {
   label: string;
   color: "amber" | "orange" | "primary";
   block: TimeBlock;
+  tripId?: string;
 }
 
 function TimeBlockSection({
@@ -472,6 +463,7 @@ function TimeBlockSection({
   label,
   color,
   block,
+  tripId,
 }: TimeBlockSectionProps) {
   const colorClasses = {
     amber: {
@@ -532,10 +524,15 @@ function TimeBlockSection({
             key={activity.id || idx}
             activity={activity}
             index={idx}
+            tripId={tripId}
           />
         ))}
         {meals.map((meal, idx) => (
-          <RestaurantCard key={meal.id || idx} restaurant={meal} />
+          <RestaurantCard
+            key={meal.id || idx}
+            restaurant={meal}
+            tripId={tripId}
+          />
         ))}
       </div>
     </div>

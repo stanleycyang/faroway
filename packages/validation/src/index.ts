@@ -4,23 +4,27 @@
  * Uses zod/v3 import for v3/v4 compatibility during transition.
  */
 
-import { z } from 'zod/v3';
+import { z } from "zod/v3";
 
 // =============================================================================
 // Common Schemas
 // =============================================================================
 
-export const uuidSchema = z.string().uuid('Invalid UUID format');
+export const uuidSchema = z.string().uuid("Invalid UUID format");
 
-export const emailSchema = z.string().email('Invalid email format').toLowerCase().trim();
+export const emailSchema = z
+  .string()
+  .email("Invalid email format")
+  .toLowerCase()
+  .trim();
 
 export const passwordSchema = z
   .string()
-  .min(8, 'Password must be at least 8 characters')
-  .max(100, 'Password must be less than 100 characters')
+  .min(8, "Password must be at least 8 characters")
+  .max(100, "Password must be less than 100 characters")
   .regex(
     /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/,
-    'Password must contain at least one uppercase letter, one lowercase letter, and one number'
+    "Password must contain at least one uppercase letter, one lowercase letter, and one number",
   );
 
 export const dateSchema = z.string().refine(
@@ -28,7 +32,7 @@ export const dateSchema = z.string().refine(
     const date = new Date(val);
     return !isNaN(date.getTime());
   },
-  { message: 'Invalid date format' }
+  { message: "Invalid date format" },
 );
 
 // =============================================================================
@@ -39,15 +43,15 @@ export const registerSchema = z.object({
   email: emailSchema,
   name: z
     .string()
-    .min(1, 'Name is required')
-    .max(255, 'Name must be less than 255 characters')
+    .min(1, "Name is required")
+    .max(255, "Name must be less than 255 characters")
     .trim(),
   password: passwordSchema,
 });
 
 export const loginSchema = z.object({
   email: emailSchema,
-  password: z.string().min(1, 'Password is required'),
+  password: z.string().min(1, "Password is required"),
 });
 
 // =============================================================================
@@ -55,34 +59,40 @@ export const loginSchema = z.object({
 // =============================================================================
 
 export const tripStatusSchema = z.enum([
-  'draft',
-  'planning',
-  'planned',
-  'generating',
-  'failed',
-  'booked',
-  'active',
-  'in_progress',
-  'paid',
-  'completed',
-  'canceled',
+  "draft",
+  "planning",
+  "planned",
+  "generating",
+  "failed",
+  "booked",
+  "active",
+  "in_progress",
+  "paid",
+  "completed",
+  "canceled",
 ]);
 
-export const budgetLevelSchema = z.enum(['budget', 'moderate', 'luxury']);
+export const budgetLevelSchema = z.enum(["budget", "moderate", "luxury"]);
 
-export const travelerTypeSchema = z.enum(['solo', 'couple', 'family', 'friends', 'business']);
+export const travelerTypeSchema = z.enum([
+  "solo",
+  "couple",
+  "family",
+  "friends",
+  "business",
+]);
 
 export const createTripSchema = z
   .object({
     destination: z
       .string()
-      .min(1, 'Destination is required')
-      .max(500, 'Destination must be less than 500 characters')
+      .min(1, "Destination is required")
+      .max(500, "Destination must be less than 500 characters")
       .trim(),
     start_date: dateSchema,
     end_date: dateSchema,
-    budget: z.number().positive('Budget must be positive').optional(),
-    status: tripStatusSchema.optional().default('draft'),
+    budget: z.number().positive("Budget must be positive").optional(),
+    status: tripStatusSchema.optional().default("draft"),
   })
   .refine(
     (data) => {
@@ -91,9 +101,9 @@ export const createTripSchema = z
       return end >= start;
     },
     {
-      message: 'End date must be on or after start date',
-      path: ['end_date'],
-    }
+      message: "End date must be on or after start date",
+      path: ["end_date"],
+    },
   );
 
 export const updateTripSchema = z
@@ -114,9 +124,9 @@ export const updateTripSchema = z
       return true;
     },
     {
-      message: 'End date must be on or after start date',
-      path: ['end_date'],
-    }
+      message: "End date must be on or after start date",
+      path: ["end_date"],
+    },
   );
 
 // =============================================================================
@@ -124,9 +134,9 @@ export const updateTripSchema = z
 // =============================================================================
 
 export const activitySchema = z.object({
-  time: z.string().regex(/^\d{2}:\d{2}$/, 'Time must be in HH:MM format'),
-  title: z.string().min(1, 'Activity title is required').max(255),
-  description: z.string().max(2000).default(''),
+  time: z.string().regex(/^\d{2}:\d{2}$/, "Time must be in HH:MM format"),
+  title: z.string().min(1, "Activity title is required").max(255),
+  description: z.string().max(2000).default(""),
   location: z.string().max(500).optional(),
   duration_minutes: z.number().positive().optional(),
   cost: z.number().min(0).optional(),
@@ -135,7 +145,7 @@ export const activitySchema = z.object({
 
 export const createItinerarySchema = z.object({
   trip_id: uuidSchema,
-  day_number: z.number().int().positive('Day number must be positive'),
+  day_number: z.number().int().positive("Day number must be positive"),
   activities: z.array(activitySchema).default([]),
   notes: z.string().max(5000).optional(),
 });
@@ -150,11 +160,11 @@ export const updateItinerarySchema = z.object({
 // =============================================================================
 
 export const travelStyleSchema = z.enum([
-  'budget',
-  'mid_range',
-  'luxury',
-  'backpacker',
-  'business',
+  "budget",
+  "mid_range",
+  "luxury",
+  "backpacker",
+  "business",
 ]);
 
 export const updatePreferencesSchema = z.object({
@@ -182,7 +192,7 @@ export const tripQuerySchema = paginationSchema.extend({
 // =============================================================================
 
 export const searchInputSchema = z.object({
-  destination: z.string().min(1, 'Destination is required').max(500),
+  destination: z.string().min(1, "Destination is required").max(500),
   startDate: dateSchema,
   endDate: dateSchema,
   travelers: z.number().int().positive().max(20),
@@ -196,16 +206,18 @@ export const searchInputSchema = z.object({
 // =============================================================================
 
 export const trackClickSchema = z.object({
-  itemType: z.enum(['hotel', 'activity', 'restaurant', 'flight']),
-  itemId: z.string().min(1),
-  itemName: z.string().min(1),
-  affiliatePartner: z.string().min(1),
-  affiliateUrl: z.string().url(),
+  itemType: z.enum(["hotel", "activity", "restaurant", "flight", "transport"]),
+  itemId: z.string().min(1).max(500),
+  itemName: z.string().min(1).max(500),
+  affiliatePartner: z.string().min(1).max(50),
+  affiliateUrl: z.string().url().max(2000),
   searchId: z.string().optional(),
   tripId: z.string().optional(),
-  price: z.number().optional(),
-  currency: z.string().optional(),
-  source: z.enum(['search_results', 'trip_view', 'itinerary', 'email']).optional(),
+  price: z.number().finite().nonnegative().optional(),
+  currency: z.string().min(1).max(10).optional(),
+  source: z
+    .enum(["search_results", "trip_view", "itinerary", "email"])
+    .optional(),
 });
 
 // =============================================================================

@@ -55,6 +55,49 @@ test.describe("Trip creation page", () => {
       .first();
     await expect(input).toBeVisible({ timeout: 10_000 });
   });
+
+  test("preserves a signed-out trip draft before sending the user to login", async ({
+    page,
+  }) => {
+    await page.goto("/create?destination=Tokyo");
+
+    await page.getByRole("button", { name: "Select start date" }).click();
+    const enabledDays = page.locator(".rdp-day_button:not([disabled])");
+    await enabledDays.first().click();
+    await enabledDays.nth(2).click();
+    await page.getByRole("button", { name: "Confirm dates" }).click();
+
+    const generateButton = page.getByRole("button", {
+      name: "Sign in & Generate",
+    });
+    await expect(generateButton).toBeEnabled();
+    await generateButton.click();
+
+    await expect(page).toHaveURL(
+      /\/auth\/login\?redirectTo=%2Fcreate%3Fdraft%3D[a-zA-Z0-9-]+$/,
+    );
+    const redirectTo = new URL(page.url()).searchParams.get("redirectTo");
+    const draftId =
+      redirectTo && new URL(redirectTo, page.url()).searchParams.get("draft");
+    expect(draftId).toBeTruthy();
+    await expect
+      .poll(() =>
+        page.evaluate(
+          (id) => localStorage.getItem(`faroway-create-draft:${id}`),
+          draftId,
+        ),
+      )
+      .not.toBeNull();
+  });
+
+  test("gives the back control an accessible name on narrow screens", async ({
+    page,
+  }) => {
+    await page.goto("/create");
+    await expect(
+      page.getByRole("button", { name: "Back", exact: true }),
+    ).toBeVisible();
+  });
 });
 
 test.describe("Blog", () => {

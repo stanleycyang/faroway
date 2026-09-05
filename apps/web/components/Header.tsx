@@ -60,9 +60,12 @@ export function Header() {
               Plan My Trip
             </Link>
             <button
+              type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="lg:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors"
               aria-label="Toggle menu"
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-navigation"
             >
               {mobileMenuOpen ? (
                 <X className="w-6 h-6" />
@@ -75,7 +78,10 @@ export function Header() {
 
         {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="lg:hidden pb-4 border-t border-slate-200">
+          <div
+            id="mobile-navigation"
+            className="lg:hidden pb-4 border-t border-slate-200"
+          >
             <div className="flex flex-col gap-1 pt-2">
               {NAV_ITEMS.map((item) => (
                 <Link

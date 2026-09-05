@@ -9,10 +9,7 @@ export interface TripExportTrip {
 }
 
 type ExportCost =
-  | GeneratedItinerary["totalEstimatedCost"]
-  | number
-  | null
-  | undefined;
+  GeneratedItinerary["totalEstimatedCost"] | number | null | undefined;
 type ExportItinerary =
   | (Omit<Partial<GeneratedItinerary>, "days" | "totalEstimatedCost"> & {
       days?: TripDay[];

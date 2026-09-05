@@ -677,8 +677,7 @@ function localizedText(value: unknown): string {
       (record["en-us"] as string | undefined) ||
       (record["en-gb"] as string | undefined) ||
       (Object.values(record).find((item) => typeof item === "string") as
-        | string
-        | undefined) ||
+        string | undefined) ||
       ""
     );
   }
@@ -710,8 +709,7 @@ function normalizeBookingDemandHotel(
         )
       : 1;
   const searchPrice = searchResult.price as
-    | { total?: number; base?: number; currency?: string }
-    | undefined;
+    { total?: number; base?: number; currency?: string } | undefined;
   const totalPrice = Number(searchPrice?.total || searchPrice?.base || 0);
   const rating = detail?.rating as
     | {

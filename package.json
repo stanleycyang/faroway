@@ -22,6 +22,7 @@
     "check": "turbo type-check lint format:check",
     "test": "turbo test && bun run test:scripts",
     "test:scripts": "bun test scripts/__tests__",
+    "test:db:generation": "node scripts/test-generation-transactions.mjs",
     "test:web": "turbo test --filter=@faroway/web",
     "db:start": "bunx supabase start",
     "db:stop": "bunx supabase stop",
@@ -43,15 +44,19 @@
     "clean:all": "turbo clean && rm -rf node_modules apps/*/node_modules packages/*/node_modules",
     "nuke": "turbo clean && rm -rf node_modules apps/*/node_modules packages/*/node_modules bun.lockb && bun install",
     "env:check": "bun run scripts/check-env.ts",
+    "release:check:web": "bun run scripts/check-env.ts --web-release",
     "preinstall": "node -e \"if(process.env.npm_execpath && !process.env.npm_execpath.includes('bun')) { console.error('\\x1b[31m\\nPlease use bun as the package manager:\\n  bun install\\n\\x1b[0m'); process.exit(1) }\""
   },
   "overrides": {
+    "@babel/core": "7.29.7",
+    "@humanfs/node": "0.16.8",
     "@nestjs/common": "11.1.28",
     "@nestjs/core": "11.1.28",
     "@opentelemetry/core": "2.10.0",
     "@xhmikosr/decompress": "10.2.1",
-    "@xmldom/xmldom": "0.8.13",
+    "@xmldom/xmldom": "0.8.15",
     "ajv": "6.15.0",
+    "browserslist": "4.28.8",
     "d3-color": "3.1.0",
     "defu": "6.1.7",
     "esbuild": "0.28.1",
@@ -65,7 +70,7 @@
     "path-to-regexp": "8.4.2",
     "piscina": "4.9.3",
     "postcss": "8.5.23",
-    "qs": "6.15.3",
+    "qs": "6.16.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "@types/react": "~19.1.10",
@@ -84,7 +89,7 @@
     "@supabase/supabase-js": "2.110.8",
     "gray-matter": "^4.0.3",
     "turbo": "2.10.6",
-    "typescript": "^5.5.4"
+    "typescript": "^5.9.3"
   },
   "packageManager": "bun@1.3.9"
 }

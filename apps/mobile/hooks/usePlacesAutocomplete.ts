@@ -1,5 +1,7 @@
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { popularDestinations } from '@faroway/constants';
+import { API_BASE_URL } from '../constants/api';
+import { fetchWithTimeout } from '../services/request';
 
 export interface PlacePrediction {
   placeId: string;
@@ -7,9 +9,9 @@ export interface PlacePrediction {
   secondary: string; // country/region
 }
 
-const API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
 const MIN_QUERY_LENGTH = 2;
 const DEBOUNCE_MS = 300;
+const PLACES_TIMEOUT_MS = 8000;
 
 function filterLocalDestinations(query: string): PlacePrediction[] {
   const q = query.toLowerCase();
@@ -22,6 +24,39 @@ function filterLocalDestinations(query: string): PlacePrediction[] {
     }));
 }
 
+export function parsePlacesProxyPredictions(value: unknown): PlacePrediction[] | null {
+  if (!value || typeof value !== 'object' || !('predictions' in value)) {
+    return null;
+  }
+
+  const rawPredictions = (value as { predictions?: unknown }).predictions;
+  if (!Array.isArray(rawPredictions)) return null;
+
+  return rawPredictions.flatMap((prediction) => {
+    if (
+      !prediction ||
+      typeof prediction !== 'object' ||
+      typeof (prediction as { placeId?: unknown }).placeId !== 'string' ||
+      typeof (prediction as { mainText?: unknown }).mainText !== 'string'
+    ) {
+      return [];
+    }
+
+    const item = prediction as {
+      placeId: string;
+      mainText: string;
+      secondaryText?: unknown;
+    };
+    return [
+      {
+        placeId: item.placeId,
+        city: item.mainText,
+        secondary: typeof item.secondaryText === 'string' ? item.secondaryText : '',
+      },
+    ];
+  });
+}
+
 export function usePlacesAutocomplete() {
   const [predictions, setPredictions] = useState<PlacePrediction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,6 +64,14 @@ export function usePlacesAutocomplete() {
 
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(
+    () => () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      abortRef.current?.abort();
+    },
+    []
+  );
 
   const clear = useCallback(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -50,12 +93,6 @@ export function usePlacesAutocomplete() {
       return;
     }
 
-    // No API key — fall back to local filtering
-    if (!API_KEY) {
-      setPredictions(filterLocalDestinations(query));
-      return;
-    }
-
     setIsLoading(true);
 
     debounceRef.current = setTimeout(async () => {
@@ -63,41 +100,26 @@ export function usePlacesAutocomplete() {
       abortRef.current = controller;
 
       try {
-        const url =
-          `https://maps.googleapis.com/maps/api/place/autocomplete/json` +
-          `?input=${encodeURIComponent(query)}` +
-          `&types=(cities)` +
-          `&key=${encodeURIComponent(API_KEY)}`;
-
-        const res = await fetch(url, { signal: controller.signal });
+        const url = `${API_BASE_URL}/api/places/autocomplete?input=${encodeURIComponent(query)}`;
+        const res = await fetchWithTimeout(url, { signal: controller.signal }, PLACES_TIMEOUT_MS);
+        if (!res.ok) {
+          throw new Error(`Places request failed (${res.status})`);
+        }
         const data = await res.json();
+        // Some fetch implementations (or body readers) settle after cancellation.
+        if (controller.signal.aborted) return;
+        const parsedPredictions = parsePlacesProxyPredictions(data);
 
-        if (data.status === 'OK' && data.predictions) {
-          setPredictions(
-            data.predictions.map(
-              (p: {
-                place_id: string;
-                description: string;
-                structured_formatting?: { main_text?: string; secondary_text?: string };
-              }) => ({
-                placeId: p.place_id,
-                city: p.structured_formatting?.main_text ?? p.description,
-                secondary: p.structured_formatting?.secondary_text ?? '',
-              })
-            )
-          );
-          setError(null);
-        } else if (data.status === 'ZERO_RESULTS') {
-          setPredictions([]);
+        if (parsedPredictions) {
+          setPredictions(parsedPredictions);
           setError(null);
         } else {
-          // API error — fall back to local filtering
-          setPredictions(filterLocalDestinations(query));
-          setError(null);
+          throw new Error('Invalid places response');
         }
-      } catch (err: unknown) {
-        if (err instanceof Error && err.name === 'AbortError') return;
-        // Network error — fall back to local filtering
+      } catch {
+        if (controller.signal.aborted) return;
+        // Deadlines also throw AbortError, but do not abort the caller's signal.
+        // Timeouts, network failures and invalid responses all use local results.
         setPredictions(filterLocalDestinations(query));
         setError(null);
       } finally {

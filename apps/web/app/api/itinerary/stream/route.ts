@@ -183,8 +183,7 @@ export async function POST(request: NextRequest) {
             encoder.encode(
               `data: ${JSON.stringify({
                 status: "error",
-                message:
-                  error instanceof Error ? error.message : "Generation failed",
+                message: "Generation failed",
               })}\n\n`,
             ),
           );
@@ -210,10 +209,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.error("[Itinerary Stream] Request error:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Request failed" },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: "Request failed" }, { status: 500 });
   }
 }
 
@@ -265,6 +261,7 @@ function mapHotel(hotel: HotelResult): HotelInput {
     amenities: hotel.amenities,
     description: hotel.description,
     affiliateUrl: hotel.affiliateUrl,
+    affiliatePartner: hotel.affiliatePartner,
     images: hotel.images,
     starRating: hotel.starRating,
   };
@@ -282,6 +279,7 @@ function mapActivity(activity: ActivityResult): ActivityInput {
     reviewCount: activity.reviewCount,
     category: activity.category,
     affiliateUrl: activity.affiliateUrl,
+    affiliatePartner: activity.affiliatePartner,
     images: activity.images,
     location: {
       name: activity.location?.name,
@@ -301,6 +299,7 @@ function mapDining(restaurant: DiningResult): RestaurantInput {
     reviewCount: restaurant.reviewCount,
     description: restaurant.description,
     reservationUrl: restaurant.reservationUrl,
+    affiliatePartner: restaurant.affiliatePartner,
     images: restaurant.images,
   };
 }
@@ -343,6 +342,7 @@ function mapItineraryActivity(activity: ItineraryActivity): ActivityInput {
     currency: activity.estimatedCost.currency,
     category: activity.category,
     affiliateUrl: activity.bookingInfo?.bookingUrl,
+    affiliatePartner: activity.bookingInfo?.affiliateId,
     location: { name: activity.location.name },
   };
 }
@@ -355,5 +355,6 @@ function mapRestaurant(restaurant: Restaurant): RestaurantInput {
     priceLevel: restaurant.priceLevel,
     description: restaurant.description,
     reservationUrl: restaurant.reservationInfo?.url,
+    affiliatePartner: restaurant.reservationInfo?.affiliatePartner,
   };
 }

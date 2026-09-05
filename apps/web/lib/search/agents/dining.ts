@@ -44,8 +44,6 @@ const DiningSchema = z.object({
     neighborhood: z.string().optional(),
   }),
   images: z.array(z.string()).default([]),
-  reservationUrl: z.string().optional(),
-  affiliatePartner: z.string().optional(),
   mealTypes: z.array(z.enum(["breakfast", "lunch", "dinner"])),
   vibeScore: z.number().min(0).max(100),
   vibeMatch: z.array(z.string()),
@@ -56,7 +54,10 @@ const DiningListSchema = z.object({
   restaurants: z.array(DiningSchema),
 });
 
-type GeneratedDining = Omit<DiningResult, "id" | "priceLevel"> & {
+type GeneratedDining = Omit<
+  DiningResult,
+  "id" | "priceLevel" | "reservationUrl" | "affiliatePartner"
+> & {
   priceLevel: number;
 };
 
@@ -81,7 +82,8 @@ Price levels:
 
 Include common dietary options if applicable (vegetarian, vegan, gluten-free, halal, kosher).
 
-For reservation URLs, use format: https://opentable.com/r/[restaurant-slug] or leave empty if not needed.
+Do not generate reservation or affiliate URLs. Only live provider results may
+have reservation links; AI-generated recommendations are informational only.
 
 IMPORTANT: For the "images" field, return an EMPTY array []. Do NOT generate or guess image URLs.`;
 
@@ -146,11 +148,19 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
 
     // Add unique IDs and sort by vibe score
     let restaurants = result.restaurants
-      .map((restaurant, index) => ({
-        ...restaurant,
-        id: `dining_${Date.now()}_${index}`,
-        priceLevel: restaurant.priceLevel as 1 | 2 | 3 | 4,
-      }))
+      .map((restaurant, index) => {
+        const safeRestaurant = { ...restaurant } as GeneratedDining & {
+          reservationUrl?: string;
+          affiliatePartner?: string;
+        };
+        delete safeRestaurant.reservationUrl;
+        delete safeRestaurant.affiliatePartner;
+        return {
+          ...safeRestaurant,
+          id: `dining_${Date.now()}_${index}`,
+          priceLevel: restaurant.priceLevel as 1 | 2 | 3 | 4,
+        };
+      })
       .sort((a, b) => b.vibeScore - a.vibeScore);
 
     // Enrich with TripAdvisor ratings and reviews

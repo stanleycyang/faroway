@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react';
 import { API_BASE_URL, getAuthHeaders } from '../lib/supabase';
 import { useTripStore, Trip, TripInput, TripDay, Activity, Hotel } from '../stores/tripStore';
 import { syncService, networkMonitor, offlineStorage } from '../lib/offline';
+import { fetchWithTimeout } from '../services/request';
+import { buildTripUpdatePayload } from '../services/tripPayload';
 import { normalizeTripStatus } from '../lib/tripStatus';
 import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 
@@ -91,7 +93,7 @@ function transformApiRestaurant(r: any): Activity {
     type: 'restaurant',
     price: formatCostValue(r.estimatedCost) || formatCostValue(r.price),
     bookingUrl: r.reservationInfo?.url || r.bookingUrl || undefined,
-    affiliatePartner: 'opentable',
+    affiliatePartner: r.reservationInfo?.affiliatePartner || r.affiliatePartner || undefined,
     rating: r.rating,
     reviewCount: r.reviewCount,
   };
@@ -183,6 +185,7 @@ function transformApiHotel(h: any): Hotel | undefined {
     amenities: h.amenities || [],
     images: h.images || (h.image ? [h.image] : []),
     bookingUrl: h.affiliateUrl || h.bookingUrl || '',
+    affiliatePartner: h.affiliatePartner || undefined,
     location: {
       name: h.location?.name || h.neighborhood || '',
       address: h.location?.address || h.address || '',
@@ -250,7 +253,7 @@ export function useTrips() {
 
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/api/trips`, {
+      const response = await fetchWithTimeout(`${API_BASE_URL}/api/trips`, {
         method: 'GET',
         headers,
       });
@@ -326,7 +329,7 @@ export function useTrips() {
 
       try {
         const headers = await getAuthHeaders();
-        const response = await fetch(`${API_BASE_URL}/api/trips`, {
+        const response = await fetchWithTimeout(`${API_BASE_URL}/api/trips`, {
           method: 'POST',
           headers,
           body: JSON.stringify({
@@ -378,10 +381,13 @@ export function useTrips() {
 
       try {
         const headers = await getAuthHeaders();
-        const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
-          method: 'GET',
-          headers,
-        });
+        const response = await fetchWithTimeout(
+          `${API_BASE_URL}/api/trips/${encodeURIComponent(id)}`,
+          {
+            method: 'GET',
+            headers,
+          }
+        );
 
         if (!response.ok) {
           if (response.status === 401) {
@@ -434,11 +440,14 @@ export function useTrips() {
 
       try {
         const headers = await getAuthHeaders();
-        const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify(updates),
-        });
+        const response = await fetchWithTimeout(
+          `${API_BASE_URL}/api/trips/${encodeURIComponent(id)}`,
+          {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify(buildTripUpdatePayload(updates)),
+          }
+        );
 
         if (!response.ok) {
           if (response.status === 401) {
@@ -479,10 +488,13 @@ export function useTrips() {
 
       try {
         const headers = await getAuthHeaders();
-        const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
-          method: 'DELETE',
-          headers,
-        });
+        const response = await fetchWithTimeout(
+          `${API_BASE_URL}/api/trips/${encodeURIComponent(id)}`,
+          {
+            method: 'DELETE',
+            headers,
+          }
+        );
 
         if (!response.ok) {
           if (response.status === 401) {
@@ -510,11 +522,14 @@ export function useTrips() {
 
     try {
       const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/api/trips/${tripId}/generate`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({}),
-      });
+      const response = await fetchWithTimeout(
+        `${API_BASE_URL}/api/trips/${encodeURIComponent(tripId)}/generate`,
+        {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({}),
+        }
+      );
 
       if (!response.ok) {
         throw new Error('Failed to generate itinerary');

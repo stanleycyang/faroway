@@ -344,8 +344,7 @@ function recoverFromRawText(
 
     let daysArray: Record<string, unknown>[] | null = null;
     let topHotelId: string | undefined = parsed.topHotelId as
-      | string
-      | undefined;
+      string | undefined;
 
     if (Array.isArray(parsed.days)) {
       // Days is already an array — shouldn't normally get here, but handle it

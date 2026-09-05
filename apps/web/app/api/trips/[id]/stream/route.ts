@@ -238,10 +238,9 @@ export async function POST(request: NextRequest, { params }: Params) {
         );
         return;
       } catch (error) {
-        const msg = error instanceof Error ? error.message : "Stream error";
         console.error(`[Stream POST] Error for trip ${tripId}:`, error);
         try {
-          send("error", { message: msg });
+          send("error", { message: "Generation stream failed" });
         } catch {
           /* */
         }
@@ -331,9 +330,9 @@ export async function GET(request: NextRequest, { params }: Params) {
           request,
         );
       } catch (error) {
-        const msg = error instanceof Error ? error.message : "Stream error";
+        console.error(`[Stream GET] Error for trip ${tripId}:`, error);
         try {
-          send("error", { message: msg });
+          send("error", { message: "Generation stream failed" });
         } catch {
           /* */
         }
@@ -393,7 +392,7 @@ async function pollAndStream(
     }
 
     if (search.status === "error") {
-      send("error", { message: search.error_message || "Generation failed" });
+      send("error", { message: "Generation failed. Please try again." });
       terminalEventSent = true;
       break;
     }

@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase/server";
 import { z } from "zod";
 import crypto from "crypto";
+import { normalizeAffiliatePartner } from "@faroway/constants";
 
 // Webhook secrets for each affiliate partner
 const WEBHOOK_SECRETS: Record<string, string | undefined> = {
@@ -26,8 +27,8 @@ const ConversionSchema = z.object({
   booking_reference: z.string().min(1).max(200).optional(),
 
   // Financial
-  booking_value: z.number().finite().nonnegative(),
-  commission_value: z.number().finite().nonnegative(),
+  booking_value: z.number().finite().nonnegative().max(99_999_999.99),
+  commission_value: z.number().finite().nonnegative().max(99_999_999.99),
   currency: z
     .string()
     .regex(/^[A-Z]{3}$/)
@@ -108,8 +109,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const db = getSupabase();
+
     // Find the original click
-    const { data: click, error: findError } = await getSupabase()
+    const { data: click, error: findError } = await db
       .from("affiliate_clicks")
       .select("*")
       .eq("id", data.click_id)
@@ -117,12 +120,31 @@ export async function POST(request: NextRequest) {
 
     if (findError || !click) {
       console.error("[Conversion Webhook] Click not found:", data.click_id);
-      // Still record the conversion, but log the issue
+      // An external booking reference is required when Faroway cannot resolve
+      // the click. Without one, conversion_key would be NULL and webhook
+      // retries could create duplicate revenue rows.
+      if (!data.order_id && !data.booking_reference) {
+        return NextResponse.json(
+          { error: "Missing conversion reference" },
+          { status: 400 },
+        );
+      }
+    } else if (
+      normalizeAffiliatePartner(click.affiliate_partner) !== data.partner
+    ) {
+      console.error(
+        "[Conversion Webhook] Partner does not match click:",
+        data.click_id,
+      );
+      return NextResponse.json(
+        { error: "Click partner mismatch" },
+        { status: 400 },
+      );
     }
 
     // Record the conversion idempotently. Partner webhooks are retried and may
     // advance a booking from pending to confirmed or cancelled.
-    const { error: insertError } = await getSupabase()
+    const { error: insertError } = await db
       .from("affiliate_conversions")
       .upsert(
         {
@@ -150,7 +172,7 @@ export async function POST(request: NextRequest) {
 
     // Update the original click as converted
     if (click) {
-      await getSupabase()
+      const { error: updateError } = await db
         .from("affiliate_clicks")
         .update({
           converted: data.status === "confirmed",
@@ -158,6 +180,17 @@ export async function POST(request: NextRequest) {
             data.status === "confirmed" ? data.commission_value : null,
         })
         .eq("id", data.click_id);
+
+      if (updateError) {
+        console.error(
+          "[Conversion Webhook] Failed to update click:",
+          updateError,
+        );
+        return NextResponse.json(
+          { error: "Failed to finalize conversion" },
+          { status: 500 },
+        );
+      }
     }
 
     console.log(

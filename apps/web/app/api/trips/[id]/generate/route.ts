@@ -10,13 +10,15 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
+import { z } from "zod";
 import { logger } from "@/lib/logger";
 import { getSupabase } from "@/lib/supabase/server";
 import { requireUserIdFromRequest } from "@/lib/auth/middleware";
 import { startWorkflow } from "@/lib/workflow/runtime";
 import { planTripWorkflow } from "@/workflows/plan-trip";
 import { buildInstantPreview } from "@/lib/search/preview";
-import { checkRateLimitAsync } from "@/lib/security/rate-limit";
+import { getRateLimitBucketKey } from "@/lib/security/rate-limit";
 
 type Params = {
   params: Promise<{
@@ -25,6 +27,30 @@ type Params = {
 };
 
 type TravelerType = "solo" | "couple" | "family" | "friends" | "business";
+
+const GenerationClaimSchema = z.discriminatedUnion("outcome", [
+  z.object({
+    outcome: z.literal("created"),
+    searchId: z.string().min(1),
+    status: z.string(),
+  }),
+  z.object({
+    outcome: z.literal("replayed"),
+    searchId: z.string().min(1),
+    status: z.string(),
+  }),
+  z.object({
+    outcome: z.literal("in_progress"),
+    searchId: z.string().nullable(),
+  }),
+  z.object({ outcome: z.literal("not_found") }),
+  z.object({ outcome: z.literal("key_conflict") }),
+  z.object({ outcome: z.literal("trip_changed") }),
+  z.object({
+    outcome: z.literal("rate_limited"),
+    retryAfter: z.number().int().nonnegative(),
+  }),
+]);
 
 const TRAVELER_TYPES = new Set<TravelerType>([
   "solo",
@@ -40,39 +66,43 @@ export async function POST(request: NextRequest, { params }: Params) {
     const auth = await requireUserIdFromRequest(request);
     if (auth instanceof NextResponse) return auth;
     const userId = auth.userId;
-
-    // Rate limit: 5 per hour per user.
-    const hourlyLimit = await checkRateLimitAsync(`generate:hour:${userId}`, {
-      maxRequests: 5,
-      windowMs: 60 * 60 * 1000,
-      failClosed: true,
-    });
-    if (!hourlyLimit.allowed) {
+    const requestKey = request.headers.get("Idempotency-Key") ?? randomUUID();
+    if (!/^[A-Za-z0-9._:-]{1,128}$/.test(requestKey)) {
       return NextResponse.json(
-        {
-          error:
-            "Too many generation requests. Please wait before generating another trip.",
-        },
-        {
-          status: 429,
-          headers: {
-            "Retry-After": String(Math.ceil(hourlyLimit.resetIn / 1000)),
-          },
-        },
+        { error: "Invalid Idempotency-Key" },
+        { status: 400 },
       );
     }
+    const text = await request.text();
+    let body: unknown = {};
+    try {
+      if (text.trim()) body = JSON.parse(text);
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 },
+      );
+    }
+    const parsed = z
+      .object({ preferences: z.record(z.unknown()).optional() })
+      .passthrough()
+      .safeParse(body);
+    if (!parsed.success)
+      return NextResponse.json(
+        { error: "Invalid request body" },
+        { status: 400 },
+      );
+    const bodyPreferences = parsed.data.preferences ?? {};
 
     const adminClient = getSupabase();
-
     const { data: trip, error: tripError } = await adminClient
       .from("trips")
       .select(
-        "id, destination, start_date, end_date, status, travelers, budget_tier, vibes, interests, dietary_restrictions, mobility_needs, user_id, search_id, preferences",
+        "id, destination, start_date, end_date, status, travelers, budget_tier, vibes, interests, dietary_restrictions, mobility_needs, user_id, search_id, preferences, updated_at",
       )
       .eq("id", tripId)
       .eq("user_id", userId)
       .single();
-
     if (tripError || !trip) {
       return NextResponse.json(
         { error: "Trip not found or access denied" },
@@ -80,30 +110,14 @@ export async function POST(request: NextRequest, { params }: Params) {
       );
     }
 
-    // Check if generation is already in progress
-    if (trip.status === "generating") {
-      return NextResponse.json(
-        {
-          error: "Itinerary generation already in progress",
-          searchId: trip.search_id,
-        },
-        { status: 409 },
-      );
-    }
-
-    // Parse optional preferences from request body
-    let bodyPreferences: Record<string, unknown> = {};
-    try {
-      const body = await request.json().catch(() => ({}));
-      bodyPreferences = body.preferences || {};
-    } catch {
-      // No body or invalid JSON, use trip defaults
-    }
-
-    const tripPreferences = (trip.preferences || {}) as Record<string, unknown>;
-    const bodyVibes = normalizeStringArray(bodyPreferences.vibes, 10, 50);
-    const tripVibes = Array.isArray(trip.vibes) ? trip.vibes : [];
-    const vibes = bodyVibes ?? tripVibes;
+    const tripPreferences = z
+      .record(z.unknown())
+      .catch({})
+      .parse(trip.preferences);
+    const vibes =
+      normalizeStringArray(bodyPreferences.vibes, 10, 50) ??
+      normalizeStringArray(trip.vibes, 10, 50) ??
+      [];
     const travelerType =
       normalizeTravelerType(bodyPreferences.travelerType) ||
       normalizeTravelerType(tripPreferences.travelerType);
@@ -113,121 +127,125 @@ export async function POST(request: NextRequest, { params }: Params) {
     const originAirport =
       normalizeString(bodyPreferences.originAirport, 10) ||
       normalizeString(tripPreferences.originAirport, 10);
-
-    // Create a search record in the searches table
-    const { data: search, error: searchError } = await adminClient
-      .from("searches")
-      .insert({
-        user_id: userId,
-        destination: trip.destination,
-        start_date: trip.start_date,
-        end_date: trip.end_date,
-        travelers: trip.travelers || 2,
-        traveler_type: travelerType || null,
-        vibes,
-        budget: trip.budget_tier || "moderate",
-        status: "pending",
-      })
-      .select("id")
-      .single();
-
-    if (searchError || !search) {
-      logger.error("[API] Failed to create search record:", searchError);
-      return NextResponse.json(
-        { error: "Failed to initialize search" },
-        { status: 500 },
-      );
-    }
-
-    const searchId = search.id;
-
-    // Link search to trip and update status
-    await adminClient
-      .from("trips")
-      .update({
-        status: "generating",
-        search_id: searchId,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", tripId);
-
-    // Store instant preview so loader can render within a few seconds.
-    const previewDays = buildInstantPreview({
+    const input = {
+      tripId,
+      userId,
       destination: trip.destination,
       startDate: trip.start_date,
       endDate: trip.end_date,
       travelers: trip.travelers || 2,
+      travelerType,
       vibes,
-    });
-    await adminClient.rpc("merge_intermediate_results", {
-      p_search_id: searchId,
-      p_key: "days",
-      p_value: previewDays,
-    });
-    await adminClient.rpc("merge_intermediate_results", {
-      p_search_id: searchId,
-      p_key: "previewReady",
-      p_value: true,
-    });
+      budget: trip.budget_tier || "moderate",
+      originCity,
+      originAirport,
+    };
+    const preview = buildInstantPreview(input);
 
-    // Kick off durable workflow immediately (stream route only observes state).
-    try {
-      await startWorkflow(planTripWorkflow, [
-        {
-          searchId,
-          tripId,
-          destination: trip.destination,
-          startDate: trip.start_date,
-          endDate: trip.end_date,
-          travelers: trip.travelers || 2,
-          travelerType,
-          vibes,
-          budget: trip.budget_tier || "moderate",
-          originCity,
-          originAirport,
-          userId,
-        },
-      ]);
-    } catch (workflowError) {
-      const message =
-        workflowError instanceof Error
-          ? workflowError.message
-          : "Workflow failed to start";
-      await Promise.allSettled([
-        adminClient
-          .from("searches")
-          .update({
-            status: "error",
-            error_message: message,
-          })
-          .eq("id", searchId),
-        adminClient
-          .from("trips")
-          .update({
-            status: "failed",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", tripId),
-      ]);
-      throw workflowError;
+    // Ownership, optimistic input validation, rate consumption, search/tracking
+    // creation and trip linkage commit together under the trip's row lock.
+    const { data, error } = await adminClient.rpc("begin_trip_generation", {
+      p_trip_id: tripId,
+      p_user_id: userId,
+      p_request_key: requestKey,
+      p_input: input,
+      p_preview: preview,
+      p_expected_updated_at: trip.updated_at,
+      p_rate_limit_key: getRateLimitBucketKey(`generate:hour:${userId}`),
+      // Compare caller intent, not defaults re-read from a subsequently edited trip.
+      p_request_fingerprint: bodyPreferences,
+    });
+    if (error)
+      throw new Error("Failed to initialize trip generation", { cause: error });
+    const claim = GenerationClaimSchema.parse(data);
+    switch (claim.outcome) {
+      case "not_found":
+        return NextResponse.json(
+          { error: "Trip not found or access denied" },
+          { status: 404 },
+        );
+      case "key_conflict":
+        return NextResponse.json(
+          {
+            error:
+              "Idempotency-Key was already used with different trip inputs",
+          },
+          { status: 409 },
+        );
+      case "trip_changed":
+        return NextResponse.json(
+          {
+            error:
+              "Trip changed while starting generation. Reload and try again.",
+          },
+          { status: 409 },
+        );
+      case "rate_limited":
+        return NextResponse.json(
+          {
+            error:
+              "Too many generation requests. Please wait before generating another trip.",
+          },
+          { status: 429, headers: { "Retry-After": String(claim.retryAfter) } },
+        );
+      case "in_progress":
+        return NextResponse.json(
+          {
+            error: "Itinerary generation already in progress",
+            searchId: claim.searchId,
+          },
+          { status: 409 },
+        );
     }
 
-    logger.info(
-      `[API] Created search ${searchId} for trip ${tripId} — workflow started`,
-    );
+    const searchId = claim.searchId;
+    if (claim.outcome === "created") {
+      try {
+        await startWorkflow(planTripWorkflow, [{ ...input, searchId }]);
+      } catch (workflowError) {
+        // The runtime may have accepted work before losing its response. Fence
+        // this attempt so a delayed worker cannot overwrite a subsequent retry.
+        const failure = await adminClient.rpc("fail_trip_generation", {
+          p_trip_id: tripId,
+          p_search_id: searchId,
+        });
+        if (failure.error)
+          logger.error(
+            "[API] Failed to record workflow startup failure",
+            failure.error,
+          );
+        logger.error("[API] Workflow startup failed", workflowError);
+        return NextResponse.json(
+          {
+            error: "Failed to start trip planning",
+            tripId,
+            searchId,
+            workflowId: searchId,
+            statusUrl: `/api/workflows/${searchId}/status`,
+          },
+          { status: 500 },
+        );
+      }
+    }
 
     return NextResponse.json({
       success: true,
       tripId,
       searchId,
-      message:
-        "Trip planning started — connect to the stream endpoint for real-time updates",
+      workflowId: searchId,
+      statusUrl: `/api/workflows/${searchId}/status`,
       streamUrl: `/api/trips/${tripId}/stream`,
+      status: claim.status,
+      replayed: claim.outcome === "replayed",
+      message:
+        claim.outcome === "replayed"
+          ? "Returning the existing generation"
+          : "Trip planning started",
     });
   } catch (error) {
     logger.error("[API] Error starting trip planning:", error);
     return NextResponse.json(
-      { error: "Failed to start trip planning" },
+      { error: "Failed to initialize trip generation" },
       { status: 500 },
     );
   }

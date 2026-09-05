@@ -134,8 +134,6 @@ function generateMockHotels(
       neighborhood: ["Downtown", "Old Town", "Beach", "City Center"][i % 4],
     },
     vibeMatch: vibes?.slice(0, 2) || [],
-    affiliateUrl: `https://www.booking.com/searchresults.html?ss=${encodeURIComponent(destination)}`,
-    affiliatePartner: "booking.com",
   }));
 }
 
@@ -156,8 +154,6 @@ function generateMockActivities(
     category:
       category || ["sightseeing", "cultural", "food", "adventure"][i % 4],
     vibeMatch: vibes?.slice(0, 2) || [],
-    affiliateUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`,
-    affiliatePartner: "viator",
   }));
 }
 
@@ -319,6 +315,7 @@ function normalizeViatorToActivity(
     vibeScore: matchedVibes.length * 25,
     affiliateUrl: generateViatorAffiliateUrl(product.productCode, trackingId, {
       date,
+      productUrl: product.productUrl,
     }),
     affiliatePartner: "viator",
     images: product.images
@@ -360,8 +357,6 @@ const searchDiningTool = tool({
       reviewCount: Math.floor(Math.random() * 800) + 200,
       description: `Popular ${mealType} spot in ${destination} known for excellent ${cuisine || "local"} cuisine.`,
       vibeMatch: vibes?.slice(0, 2) || [],
-      reservationUrl: `https://www.opentable.com/s?term=${encodeURIComponent(destination)}`,
-      affiliatePartner: "opentable",
     }));
 
     return {

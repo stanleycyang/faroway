@@ -72,4 +72,29 @@ describe('offlineStorage pending mutations', () => {
       }),
     ]);
   });
+
+  it('resets retries when the user makes a new edit', async () => {
+    const mutation = await offlineStorage.addPendingMutation({
+      type: 'update',
+      tripId: 'trip-1',
+      data: { destination: 'Tokyo' },
+    });
+    await offlineStorage.incrementMutationRetry(mutation.id);
+    await offlineStorage.incrementMutationRetry(mutation.id);
+    await offlineStorage.incrementMutationRetry(mutation.id);
+
+    await offlineStorage.addPendingMutation({
+      type: 'update',
+      tripId: 'trip-1',
+      data: { destination: 'Kyoto' },
+    });
+
+    await expect(offlineStorage.getPendingMutations()).resolves.toEqual([
+      expect.objectContaining({
+        tripId: 'trip-1',
+        retryCount: 0,
+        data: { destination: 'Kyoto' },
+      }),
+    ]);
+  });
 });

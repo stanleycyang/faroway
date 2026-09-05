@@ -182,6 +182,9 @@ class OfflineStorage {
             ...existing,
             data: mergeMutationData(existing.data, mutation.data),
             timestamp: Date.now(),
+            // A new user edit is a fresh opportunity to sync. Without this,
+            // an item that reached the retry ceiling could never be retried.
+            retryCount: 0,
           };
         }
         // Update + Update = Merge updates
@@ -190,6 +193,7 @@ class OfflineStorage {
             ...existing,
             data: mergeMutationData(existing.data, mutation.data),
             timestamp: Date.now(),
+            retryCount: 0,
           };
         }
         // Otherwise replace

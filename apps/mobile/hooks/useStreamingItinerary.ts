@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { API_BASE_URL } from '../constants/api';
 import { getAuthHeaders } from '../lib/supabase';
+import { fetchWithTimeout } from '../services/request';
 
 export interface StreamingBlock {
   type: string;
@@ -45,7 +46,7 @@ export interface StreamingState {
 }
 
 export interface UseStreamingItineraryOptions {
-  /** Trip ID to stream from the unified endpoint (if already created) */
+  /** Recover this trip: start a draft/failed attempt, or reconnect to an active/completed one. */
   tripId?: string;
   /** Input to create a new trip + trigger generation (if no tripId) */
   input?: {
@@ -126,6 +127,40 @@ export function extractApiErrorMessage(body: string, fallback: string): string {
 async function readApiErrorMessage(response: Response, fallback: string): Promise<string> {
   const text = await response.text().catch(() => '');
   return extractApiErrorMessage(text, fallback);
+}
+
+async function getGenerationRecoveryAction(
+  tripId: string,
+  signal: AbortSignal
+): Promise<'start' | 'connect'> {
+  const headers = await getAuthHeaders();
+  if (signal.aborted) return 'connect';
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}/api/trips/${encodeURIComponent(tripId)}/generate`,
+    { method: 'GET', headers, signal }
+  );
+  if (!response.ok) {
+    throw new Error(await readApiErrorMessage(response, 'Could not check generation status'));
+  }
+  const data: unknown = await response.json();
+  // The trip ID proves creation, not dispatch. Never infer an active run from
+  // a lost response, and never restart one whose status cannot be established.
+  switch (isObjectRecord(data) ? data.status : undefined) {
+    case 'draft':
+    case 'not_started':
+    case 'failed':
+    case 'error':
+      return 'start';
+    case 'pending':
+    case 'running':
+    case 'searching':
+    case 'generating':
+    case 'completed':
+    case 'planned':
+      return 'connect';
+    default:
+      throw new Error('Could not confirm generation status. Please try reconnecting.');
+  }
 }
 
 function getTripIdFromCreateResponse(payload: unknown): string | null {
@@ -388,6 +423,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
 
     setState({
       ...initialState,
+      tripId: providedTripId || null,
       isLoading: true,
       message: 'Starting trip generation...',
     });
@@ -404,12 +440,14 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
     (async () => {
       try {
         let streamTripId = providedTripId;
+        let needsGeneration = !providedTripId;
 
         // If no tripId, create a trip and trigger generation first.
         // All three endpoints below now require Supabase bearer auth.
         if (!streamTripId && input) {
           const createHeaders = await getAuthHeaders();
-          const tripRes = await fetch(`${API_BASE_URL}/api/trips`, {
+          if (abortController.signal.aborted) return;
+          const tripRes = await fetchWithTimeout(`${API_BASE_URL}/api/trips`, {
             method: 'POST',
             headers: createHeaders,
             body: JSON.stringify({
@@ -433,27 +471,55 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
           }
 
           const createPayload = await tripRes.json().catch(() => null);
+          if (abortController.signal.aborted) return;
           const createdTripId = getTripIdFromCreateResponse(createPayload);
           if (!createdTripId) {
             throw new Error('Trip was created, but the server response was incomplete.');
           }
           streamTripId = createdTripId;
+          // Creation succeeded even if the following request loses its response.
+          // Recovery must reuse this trip, not create another one.
+          setState((prev) => ({ ...prev, tripId: createdTripId }));
+        }
 
+        if (!streamTripId) throw new Error('No trip ID available');
+        if (providedTripId) {
+          needsGeneration =
+            (await getGenerationRecoveryAction(streamTripId, abortController.signal)) === 'start';
+        }
+        if (abortController.signal.aborted) return;
+
+        if (needsGeneration) {
           const genHeaders = await getAuthHeaders();
-          const genRes = await fetch(`${API_BASE_URL}/api/trips/${streamTripId}/generate`, {
-            method: 'POST',
-            headers: genHeaders,
-            signal: abortController.signal,
-          });
+          if (abortController.signal.aborted) return;
+          const genRes = await fetchWithTimeout(
+            `${API_BASE_URL}/api/trips/${encodeURIComponent(streamTripId)}/generate`,
+            {
+              method: 'POST',
+              headers: genHeaders,
+              signal: abortController.signal,
+            }
+          );
 
-          if (!genRes.ok && genRes.status !== 409) {
-            throw new Error(await readApiErrorMessage(genRes, 'Failed to start generation'));
+          if (!genRes.ok) {
+            const message = await readApiErrorMessage(genRes, 'Failed to start generation');
+            if (abortController.signal.aborted) return;
+            // 409 can also mean a changed trip or conflicting request key.
+            // Connect only after confirming another request actually started it.
+            if (
+              genRes.status !== 409 ||
+              (await getGenerationRecoveryAction(streamTripId, abortController.signal)) !==
+                'connect'
+            ) {
+              throw new Error(message);
+            }
           }
         }
 
         if (!streamTripId) {
           throw new Error('No trip ID available');
         }
+        if (abortController.signal.aborted) return;
 
         setState((prev) => ({
           ...prev,
@@ -466,6 +532,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
           await pollGenerationStatus(streamTripId, abortController.signal, (progress) =>
             setState((prev) => ({ ...prev, ...progress }))
           );
+          if (abortController.signal.aborted) return;
           onCompleteRef.current?.(blocksRef.current);
           return;
         }
@@ -474,6 +541,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
         // This is more reliable than fetch for SSE in React Native
         const streamUrl = `${API_BASE_URL}/api/trips/${streamTripId}/stream`;
         const streamHeaders = await getAuthHeaders();
+        if (abortController.signal.aborted) return;
 
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
@@ -488,6 +556,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
 
           // Process incremental data as it arrives
           xhr.onprogress = () => {
+            if (abortController.signal.aborted) return;
             if (xhr.readyState >= 3 && xhr.responseText) {
               // Get only the new data since last progress event
               const newData = xhr.responseText.substring(processedLengthRef.current);
@@ -506,6 +575,10 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
           };
 
           xhr.onload = () => {
+            if (abortController.signal.aborted) {
+              resolve();
+              return;
+            }
             if (xhr.status >= 200 && xhr.status < 300) {
               // Process any remaining data in buffer
               if (sseBuffer.trim()) {
@@ -524,6 +597,10 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
             reject(new Error('Network error during streaming'));
           };
 
+          xhr.onabort = () => {
+            reject(new Error('Stream cancelled'));
+          };
+
           xhr.ontimeout = () => {
             reject(new Error('Stream timed out'));
           };
@@ -533,6 +610,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
 
           xhr.send(null);
         });
+        if (abortController.signal.aborted) return;
 
         // Stream ended naturally
         setState((prev) => {
@@ -545,10 +623,14 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
           };
         });
       } catch (error) {
-        if ((error as Error).name === 'AbortError') return;
         if (abortController.signal.aborted) return;
 
-        const msg = (error as Error).message || 'Connection failed';
+        const msg =
+          isObjectRecord(error) && error.name === 'AbortError'
+            ? 'The request timed out. Check your connection and try reconnecting to your trip.'
+            : error instanceof Error && error.message
+              ? error.message
+              : 'Connection failed';
         console.error('[useStreamingItinerary] Stream error:', msg);
 
         setState((prev) => {
@@ -587,11 +669,15 @@ async function pollGenerationStatus(
     if (signal.aborted) return;
 
     const pollHeaders = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/trips/${tripId}/generate`, {
-      method: 'GET',
-      headers: pollHeaders,
-      signal,
-    });
+    if (signal.aborted) return;
+    const response = await fetchWithTimeout(
+      `${API_BASE_URL}/api/trips/${encodeURIComponent(tripId)}/generate`,
+      {
+        method: 'GET',
+        headers: pollHeaders,
+        signal,
+      }
+    );
     if (!response.ok) {
       throw new Error(
         await readApiErrorMessage(response, `Polling failed (HTTP ${response.status})`)
@@ -599,6 +685,7 @@ async function pollGenerationStatus(
     }
 
     const data = await response.json();
+    if (signal.aborted) return;
     update({
       progress: typeof data.progress === 'number' ? data.progress : 0,
       step: data.step || 'running',

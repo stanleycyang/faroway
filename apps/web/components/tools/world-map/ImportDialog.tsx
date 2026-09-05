@@ -4,37 +4,20 @@ import { useRef, useState } from "react";
 import { Upload, X } from "lucide-react";
 import { useModalFocusTrap } from "@/hooks/useModalFocusTrap";
 import { useWorldMapStore } from "@/lib/tools/world-map/store";
-import type { AppState, Profile } from "@/lib/tools/world-map/types";
+import {
+  parseWorldMapImport,
+  type ParsedWorldMapImport,
+} from "@/lib/tools/world-map/import";
 
 interface Props {
   open: boolean;
   onClose: () => void;
 }
 
-type Parsed =
-  | { kind: "state"; state: AppState }
-  | { kind: "profile"; profile: Profile };
-
-function validate(json: unknown): Parsed | null {
-  if (!json || typeof json !== "object") return null;
-  const obj = json as Record<string, unknown>;
-  if (Array.isArray(obj.profiles) && typeof obj.activeProfileId === "string") {
-    return { kind: "state", state: obj as unknown as AppState };
-  }
-  if (
-    typeof obj.id === "string" &&
-    obj.visits &&
-    typeof obj.visits === "object"
-  ) {
-    return { kind: "profile", profile: obj as unknown as Profile };
-  }
-  return null;
-}
-
 export function ImportDialog({ open, onClose }: Props) {
   const fileRef = useRef<HTMLInputElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const [parsed, setParsed] = useState<Parsed | null>(null);
+  const [parsed, setParsed] = useState<ParsedWorldMapImport | null>(null);
   const [error, setError] = useState<string | null>(null);
   const mergeProfile = useWorldMapStore((s) => s.mergeProfile);
   const mergeProfiles = useWorldMapStore((s) => s.mergeProfiles);
@@ -52,9 +35,12 @@ export function ImportDialog({ open, onClose }: Props) {
     const file = e.target.files?.[0];
     if (!file) return;
     try {
+      if (file.size > 5 * 1024 * 1024) {
+        throw new Error("Backup files must be 5 MB or smaller.");
+      }
       const text = await file.text();
       const json = JSON.parse(text);
-      const validated = validate(json);
+      const validated = parseWorldMapImport(json);
       if (!validated) {
         setError("This doesn't look like a valid backup file.");
         setParsed(null);
@@ -64,7 +50,9 @@ export function ImportDialog({ open, onClose }: Props) {
       setError(null);
     } catch (err) {
       console.error(err);
-      setError("Couldn't parse that file.");
+      setError(
+        err instanceof Error ? err.message : "Couldn't parse that file.",
+      );
       setParsed(null);
     }
   }

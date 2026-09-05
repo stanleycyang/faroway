@@ -251,8 +251,7 @@ function getGooglePlacePoint(item: Record<string, unknown>): {
   lng: number;
 } {
   const geometry = item.geometry as
-    | { location?: { lat?: unknown; lng?: unknown } }
-    | undefined;
+    { location?: { lat?: unknown; lng?: unknown } } | undefined;
   const lat = geometry?.location?.lat;
   const lng = geometry?.location?.lng;
   return {

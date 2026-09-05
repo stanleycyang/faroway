@@ -9,11 +9,14 @@ import {
   Utensils,
 } from "lucide-react";
 import type { ReactNode } from "react";
+import { AffiliateDisclosure } from "@/components/affiliate/AffiliateDisclosure";
 import type { StreamingSpecBlock } from "@/hooks/useTripGeneration";
+import { buildAffiliateClickRedirect } from "@/lib/affiliates/click-redirect";
 
 interface StreamedSpecPreviewProps {
   blocks: StreamingSpecBlock[];
   isGenerating?: boolean;
+  tripId?: string;
 }
 
 type SpecProps = Record<string, unknown>;
@@ -21,6 +24,7 @@ type SpecProps = Record<string, unknown>;
 export function StreamedSpecPreview({
   blocks,
   isGenerating = false,
+  tripId,
 }: StreamedSpecPreviewProps) {
   if (blocks.length === 0) return null;
 
@@ -33,13 +37,23 @@ export function StreamedSpecPreview({
         </div>
       )}
       {blocks.map((block, index) => (
-        <SpecBlock block={block} key={`${block.type}-${index}`} />
+        <SpecBlock
+          block={block}
+          key={`${block.type}-${index}`}
+          tripId={tripId}
+        />
       ))}
     </div>
   );
 }
 
-function SpecBlock({ block }: { block: StreamingSpecBlock }) {
+function SpecBlock({
+  block,
+  tripId,
+}: {
+  block: StreamingSpecBlock;
+  tripId?: string;
+}) {
   const props = block.props || {};
 
   switch (block.type) {
@@ -48,17 +62,17 @@ function SpecBlock({ block }: { block: StreamingSpecBlock }) {
     case "Section":
       return <SectionTitle props={props} />;
     case "HotelCard":
-      return <HotelCard props={props} />;
+      return <HotelCard props={props} tripId={tripId} />;
     case "BookingButton":
-      return <BookingButton props={props} />;
+      return <BookingButton props={props} tripId={tripId} />;
     case "ItineraryDay":
       return <ItineraryDayCard props={props} />;
     case "DayTimeline":
       return <DayTimeline props={props} />;
     case "ActivityCard":
-      return <ActivityCard props={props} />;
+      return <ActivityCard props={props} tripId={tripId} />;
     case "RestaurantCard":
-      return <RestaurantCard props={props} />;
+      return <RestaurantCard props={props} tripId={tripId} />;
     case "PriceTag":
       return <PriceTag props={props} />;
     case "Text":
@@ -108,9 +122,23 @@ function SectionTitle({ props }: { props: SpecProps }) {
   );
 }
 
-function HotelCard({ props }: { props: SpecProps }) {
+function HotelCard({ props, tripId }: { props: SpecProps; tripId?: string }) {
   const amenities = stringArrayProp(props, "amenities");
   const bookingUrl = textProp(props, "bookingUrl");
+  const name = textProp(props, "name", "Hotel");
+  const bookingHref = bookingUrl
+    ? buildAffiliateClickRedirect({
+        itemType: "hotel",
+        itemId: textProp(props, "id", name),
+        itemName: name,
+        affiliatePartner: textProp(props, "affiliatePartner", "booking"),
+        affiliateUrl: bookingUrl,
+        tripId,
+        price: numberProp(props, "pricePerNight"),
+        currency: "USD",
+        source: "itinerary",
+      })
+    : undefined;
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -120,9 +148,7 @@ function HotelCard({ props }: { props: SpecProps }) {
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-lg font-bold text-gray-900">
-              {textProp(props, "name", "Hotel")}
-            </h3>
+            <h3 className="text-lg font-bold text-gray-900">{name}</h3>
             {booleanProp(props, "featured") && (
               <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700">
                 Recommended
@@ -152,16 +178,19 @@ function HotelCard({ props }: { props: SpecProps }) {
               ))}
             </div>
           )}
-          {bookingUrl && (
-            <a
-              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-primary-600"
-              href={bookingUrl}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <Ticket className="h-4 w-4" />
-              View hotel
-            </a>
+          {bookingHref && (
+            <div className="mt-4">
+              <a
+                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-primary-600"
+                href={bookingHref}
+                rel="noopener noreferrer sponsored"
+                target="_blank"
+              >
+                <Ticket className="h-4 w-4" />
+                View hotel
+              </a>
+              <AffiliateDisclosure className="mt-2" />
+            </div>
           )}
         </div>
       </div>
@@ -169,20 +198,49 @@ function HotelCard({ props }: { props: SpecProps }) {
   );
 }
 
-function BookingButton({ props }: { props: SpecProps }) {
+function BookingButton({
+  props,
+  tripId,
+}: {
+  props: SpecProps;
+  tripId?: string;
+}) {
   const url = textProp(props, "url");
   if (!url) return null;
+  const provider = textProp(
+    props,
+    "affiliatePartner",
+    textProp(props, "provider", "booking"),
+  );
+  const label = textProp(props, "label", "Book now");
+  const itemType = itemTypeForPartner(provider);
+  const href = buildAffiliateClickRedirect({
+    itemType,
+    itemId: textProp(props, "itemId", label),
+    itemName: textProp(props, "itemName", label),
+    affiliatePartner: provider,
+    affiliateUrl: url,
+    tripId,
+    price: numberProp(props, "price"),
+    currency: "USD",
+    source: "itinerary",
+  });
+
+  if (!href) return null;
 
   return (
-    <a
-      className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-50"
-      href={url}
-      rel="noopener noreferrer"
-      target="_blank"
-    >
-      <Ticket className="h-4 w-4" />
-      {textProp(props, "label", "Book now")}
-    </a>
+    <div>
+      <a
+        className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-50"
+        href={href}
+        rel="noopener noreferrer sponsored"
+        target="_blank"
+      >
+        <Ticket className="h-4 w-4" />
+        {label}
+      </a>
+      <AffiliateDisclosure className="mt-2" />
+    </div>
   );
 }
 
@@ -223,7 +281,13 @@ function DayTimeline({ props }: { props: SpecProps }) {
   );
 }
 
-function ActivityCard({ props }: { props: SpecProps }) {
+function ActivityCard({
+  props,
+  tripId,
+}: {
+  props: SpecProps;
+  tripId?: string;
+}) {
   return (
     <SmallCard
       accent="primary"
@@ -236,11 +300,22 @@ function ActivityCard({ props }: { props: SpecProps }) {
       ]}
       title={textProp(props, "name", "Activity")}
       url={textProp(props, "bookingUrl")}
+      itemId={textProp(props, "id", textProp(props, "name", "Activity"))}
+      itemType="activity"
+      partner={textProp(props, "affiliatePartner", "viator")}
+      price={numberProp(props, "price")}
+      tripId={tripId}
     />
   );
 }
 
-function RestaurantCard({ props }: { props: SpecProps }) {
+function RestaurantCard({
+  props,
+  tripId,
+}: {
+  props: SpecProps;
+  tripId?: string;
+}) {
   return (
     <SmallCard
       accent="orange"
@@ -253,6 +328,10 @@ function RestaurantCard({ props }: { props: SpecProps }) {
       ]}
       title={textProp(props, "name", "Restaurant")}
       url={textProp(props, "reservationUrl")}
+      itemId={textProp(props, "id", textProp(props, "name", "Restaurant"))}
+      itemType="restaurant"
+      partner={textProp(props, "affiliatePartner", "opentable")}
+      tripId={tripId}
     />
   );
 }
@@ -288,6 +367,11 @@ function SmallCard({
   meta,
   title,
   url,
+  itemId,
+  itemType,
+  partner,
+  price,
+  tripId,
 }: {
   accent: "primary" | "orange";
   description?: string;
@@ -295,8 +379,26 @@ function SmallCard({
   meta: Array<string | undefined>;
   title: string;
   url?: string;
+  itemId: string;
+  itemType: "activity" | "restaurant";
+  partner: string;
+  price?: number;
+  tripId?: string;
 }) {
   const iconBg = accent === "primary" ? "bg-primary-50" : "bg-orange-50";
+  const href = url
+    ? buildAffiliateClickRedirect({
+        itemType,
+        itemId,
+        itemName: title,
+        affiliatePartner: partner,
+        affiliateUrl: url,
+        tripId,
+        price,
+        currency: "USD",
+        source: "itinerary",
+      })
+    : undefined;
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
@@ -314,16 +416,19 @@ function SmallCard({
               {description}
             </p>
           )}
-          {url && (
-            <a
-              className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-primary-700 hover:text-primary-800"
-              href={url}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <Ticket className="h-4 w-4" />
-              View details
-            </a>
+          {href && (
+            <div className="mt-3">
+              <a
+                className="inline-flex items-center gap-2 text-sm font-bold text-primary-700 hover:text-primary-800"
+                href={href}
+                rel="noopener noreferrer sponsored"
+                target="_blank"
+              >
+                <Ticket className="h-4 w-4" />
+                View details
+              </a>
+              <AffiliateDisclosure className="mt-1" />
+            </div>
           )}
         </div>
       </div>
@@ -393,4 +498,20 @@ function ratingLabel(props: SpecProps): string | undefined {
 function moneyLabel(amount?: number, period?: string): string | undefined {
   if (amount == null) return undefined;
   return period ? `$${amount}/${period}` : `$${amount}`;
+}
+
+function itemTypeForPartner(
+  partner: string,
+): "hotel" | "activity" | "restaurant" | "transport" {
+  const normalized = partner.toLowerCase();
+  if (normalized.includes("open")) return "restaurant";
+  if (
+    normalized.includes("viator") ||
+    normalized.includes("getyourguide") ||
+    normalized.includes("tripadvisor")
+  ) {
+    return "activity";
+  }
+  if (normalized.includes("duffel")) return "transport";
+  return "hotel";
 }

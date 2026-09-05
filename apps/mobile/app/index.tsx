@@ -94,11 +94,11 @@ export default function WelcomeScreen() {
 
   useEffect(() => {
     // Auto-redirect if already onboarded
-    if (hasCompletedOnboarding && isAuthenticated) {
-      setTimeout(() => router.replace('/(tabs)'), 1500);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasCompletedOnboarding, isAuthenticated]);
+    if (!hasCompletedOnboarding || !isAuthenticated) return;
+
+    const timer = setTimeout(() => router.replace('/(tabs)'), 1500);
+    return () => clearTimeout(timer);
+  }, [hasCompletedOnboarding, isAuthenticated, router]);
 
   const handleGetStarted = () => {
     if (hasCompletedOnboarding) {

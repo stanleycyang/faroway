@@ -54,6 +54,7 @@ vi.mock("@/lib/affiliates/tripadvisor", () => ({
 }));
 
 import { runActivitiesAgent } from "@/lib/search/agents/activities";
+import { runDiningAgent } from "@/lib/search/agents/dining";
 import { runHotelsAgent } from "@/lib/search/agents/hotels";
 
 const plan = {
@@ -79,6 +80,12 @@ const plan = {
     amenities: ["wifi"],
     neighborhoods: ["Shibuya"],
   },
+  diningCriteria: {
+    cuisineTypes: [],
+    priceRange: "moderate",
+    dietaryNeeds: [],
+    mealPriorities: ["dinner"],
+  },
 };
 
 const aiActivity = {
@@ -96,6 +103,8 @@ const aiActivity = {
   vibeScore: 80,
   vibeMatch: ["foodie"],
   bookingRequired: false,
+  affiliateUrl: "https://example.com/invented-tour",
+  affiliatePartner: "ai",
 };
 
 const aiHotel = {
@@ -114,6 +123,23 @@ const aiHotel = {
   affiliatePartner: "ai",
   vibeScore: 75,
   vibeMatch: ["foodie"],
+};
+
+const aiRestaurant = {
+  name: "AI Bistro",
+  description: "A central bistro",
+  cuisineTypes: ["Japanese"],
+  priceLevel: 2,
+  rating: 4.6,
+  reviewCount: 80,
+  location: { name: "Tokyo", address: "", lat: 35.6, lng: 139.7 },
+  images: [],
+  mealTypes: ["dinner"],
+  vibeScore: 78,
+  vibeMatch: ["foodie"],
+  dietaryOptions: [],
+  reservationUrl: "https://example.com/invented-table",
+  affiliatePartner: "ai",
 };
 
 async function waitFor(
@@ -170,6 +196,8 @@ describe("search agents internal parallelism", () => {
     const results = await search;
 
     expect(results[0].name).toBe("AI Food Walk");
+    expect(results[0].affiliateUrl).toBeUndefined();
+    expect(results[0].affiliatePartner).toBeUndefined();
   });
 
   it("starts Booking.com and AI hotel fallback before awaiting either result", async () => {
@@ -199,6 +227,8 @@ describe("search agents internal parallelism", () => {
     const results = await search;
 
     expect(results[0].name).toBe("AI Hotel");
+    expect(results[0].affiliateUrl).toBeUndefined();
+    expect(results[0].affiliatePartner).toBeUndefined();
   });
 
   it("passes resolved Amadeus city codes into hotel search", async () => {
@@ -212,5 +242,17 @@ describe("search agents internal parallelism", () => {
     expect(mocks.searchAmadeusHotels).toHaveBeenCalledWith(
       expect.objectContaining({ cityCode: "TYO" }),
     );
+  });
+
+  it("strips invented reservation links from AI dining results", async () => {
+    mocks.generateObject.mockResolvedValue({
+      object: { restaurants: [aiRestaurant] },
+    });
+
+    const results = await runDiningAgent(plan as never, 1);
+
+    expect(results[0].name).toBe("AI Bistro");
+    expect(results[0].reservationUrl).toBeUndefined();
+    expect(results[0].affiliatePartner).toBeUndefined();
   });
 });

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
+import { fetchWithTimeout } from "@/lib/search/runtime";
 
 export async function GET(request: NextRequest) {
   const placeId = request.nextUrl.searchParams.get("placeId");
@@ -34,7 +35,13 @@ export async function GET(request: NextRequest) {
       `&fields=geometry,name` +
       `&key=${encodeURIComponent(API_KEY)}`;
 
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetchWithTimeout(url);
+    if (!res.ok) {
+      return NextResponse.json(
+        { error: "Failed to fetch details" },
+        { status: 502 },
+      );
+    }
     const data = await res.json();
 
     if (data.status === "OK" && data.result?.geometry?.location) {

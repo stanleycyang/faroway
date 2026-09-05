@@ -3,7 +3,11 @@
  * Centralized API client for the mobile app
  */
 
-import { API_BASE_URL, API_TIMEOUT } from '../constants/api';
+import { API_BASE_URL } from '../constants/api';
+import { parseViatorAffiliateUrl, normalizeAffiliatePartner } from '@faroway/constants';
+import { getApiHeaders } from './authToken';
+import { fetchWithTimeout } from './request';
+import { buildTripUpdatePayload, type TripUpdateInput } from './tripPayload';
 import type {
   ApiResponse,
   Trip,
@@ -23,42 +27,19 @@ export type {
   DestinationsResponse,
 } from '@faroway/types';
 
-// Auth token managed via Supabase SecureStore - this is an in-memory cache only.
-// Do NOT persist this token to AsyncStorage or other insecure storage.
-let authToken: string | null = null;
-
-export function setAuthToken(token: string | null) {
-  authToken = token;
-}
-
-export function getAuthToken(): string | null {
-  return authToken;
-}
+export { getAuthToken, setAuthToken } from './authToken';
 
 /**
  * Base fetch wrapper with auth and error handling
  */
 async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
-
   try {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-      ...(options.headers as Record<string, string>),
-    };
+    const headers = await getApiHeaders(options.headers as Record<string, string> | undefined);
 
-    if (authToken) {
-      headers['Authorization'] = `Bearer ${authToken}`;
-    }
-
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetchWithTimeout(`${API_BASE_URL}${endpoint}`, {
       ...options,
       headers,
-      signal: controller.signal,
     });
-
-    clearTimeout(timeoutId);
 
     const parsed = await parseApiResponseBody(response);
 
@@ -79,8 +60,6 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
 
     return { data: parsed.data as T };
   } catch (error) {
-    clearTimeout(timeoutId);
-
     if (error instanceof Error) {
       if (error.name === 'AbortError') {
         return { error: 'Request timed out', code: 'TIMEOUT' };
@@ -128,8 +107,6 @@ export async function getUserProfile(): Promise<ApiResponse<UserProfile>> {
 }
 
 export async function updateUserProfile(updates: {
-  email?: string;
-  subscription_tier?: string;
   display_name?: string;
   avatar_url?: string;
   preferences?: {
@@ -198,23 +175,27 @@ export async function removePushToken(token?: string): Promise<ApiResponse<{ del
 // Mirror of the backend allowlist (apps/web/app/api/track/click/route.ts).
 // Mobile validates before showing the confirm sheet so we don't ship a
 // trustworthy-looking CTA for a URL the backend will reject as SSRF.
-const ALLOWED_AFFILIATE_DOMAINS = [
-  'viator.com',
-  'booking.com',
-  'getyourguide.com',
-  'tripadvisor.com',
-  'discovercars.com',
-  'hostelworld.com',
-  'amadeus.com',
-  'duffel.com',
-];
+const PARTNER_DOMAINS: Record<string, string[]> = {
+  viator: ['viator.com'],
+  booking: ['booking.com'],
+  getyourguide: ['getyourguide.com'],
+  tripadvisor: ['tripadvisor.com'],
+  discovercars: ['discovercars.com'],
+  hostelworld: ['hostelworld.com'],
+  duffel: ['duffel.com'],
+  opentable: ['opentable.com'],
+};
 
-export function isAllowedAffiliateUrl(url: string): boolean {
+export function isAllowedAffiliateUrl(url: string, partner: string): boolean {
   try {
     const parsed = new URL(url);
-    if (parsed.protocol !== 'https:') return false;
-    return ALLOWED_AFFILIATE_DOMAINS.some(
-      (d) => parsed.hostname === d || parsed.hostname.endsWith(`.${d}`)
+    const normalizedPartner = normalizeAffiliatePartner(partner);
+    if (parsed.protocol !== 'https:' || !normalizedPartner) return false;
+    if (normalizedPartner === 'viator') return parseViatorAffiliateUrl(url) !== null;
+    return (
+      PARTNER_DOMAINS[normalizedPartner]?.some(
+        (d) => parsed.hostname === d || parsed.hostname.endsWith(`.${d}`)
+      ) ?? false
     );
   } catch {
     return false;
@@ -259,11 +240,11 @@ export async function createTrip(trip: {
 
 export async function updateTrip(
   id: string,
-  updates: Partial<Trip>
+  updates: TripUpdateInput
 ): Promise<ApiResponse<{ trip: Trip }>> {
   return apiFetch<{ trip: Trip }>(`/api/trips/${encodeURIComponent(id)}`, {
     method: 'PATCH',
-    body: JSON.stringify(updates),
+    body: JSON.stringify(buildTripUpdatePayload(updates)),
   });
 }
 

@@ -13,6 +13,17 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const RATE_LIMIT_SALT = process.env.IP_HASH_SALT;
 const useSupabase = !!(SUPABASE_URL && SUPABASE_SERVICE_KEY && RATE_LIMIT_SALT);
 
+/** Shared key format for transactions that consume a limit inside their RPC. */
+export function getRateLimitBucketKey(identifier: string): string {
+  const salt = process.env.IP_HASH_SALT;
+  if (!salt && process.env.NODE_ENV === "production") {
+    throw new Error("IP_HASH_SALT is required for distributed rate limiting");
+  }
+  return createHmac("sha256", salt || "faroway-local-development")
+    .update(identifier)
+    .digest("hex");
+}
+
 // ── In-memory fallback ────────────────────────────────────────────────────────
 
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -65,9 +76,7 @@ async function checkRateLimitSupabase(
   identifier: string,
   config: RateLimitConfig,
 ): Promise<{ allowed: boolean; remaining: number; resetIn: number }> {
-  const key = createHmac("sha256", RATE_LIMIT_SALT!)
-    .update(identifier)
-    .digest("hex");
+  const key = getRateLimitBucketKey(identifier);
 
   try {
     const response = await fetch(

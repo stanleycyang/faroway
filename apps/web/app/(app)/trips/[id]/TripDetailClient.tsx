@@ -18,6 +18,9 @@ import {
   Ticket,
   Plane,
 } from "lucide-react";
+import { AffiliateDisclosure } from "@/components/affiliate/AffiliateDisclosure";
+import { buildAffiliateClickRedirect } from "@/lib/affiliates/click-redirect";
+import { formatTravelTime } from "@/lib/trips/format-time";
 
 /**
  * Error boundary that prevents a single broken itinerary day from crashing the whole page.
@@ -613,6 +616,7 @@ export function TripDetailClient({
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
             <FeaturedHotelCard
               hotel={displayTopHotel}
+              tripId={tripId}
               nights={
                 displayDays
                   ? Math.max(0, displayDays.length - 1)
@@ -625,7 +629,7 @@ export function TripDetailClient({
         )}
 
         {/* Featured Flights */}
-        <FeaturedFlights days={itinerary?.days || null} />
+        <FeaturedFlights days={itinerary?.days || null} tripId={tripId} />
 
         {/* Interactive Map (only when DB itinerary loaded) */}
         {itinerary && !isGenerating && (
@@ -678,11 +682,13 @@ export function TripDetailClient({
                             pricePerNight: displayTopHotel.pricePerNight,
                             amenities: displayTopHotel.amenities,
                             affiliateUrl: displayTopHotel.affiliateUrl,
+                            affiliatePartner: displayTopHotel.affiliatePartner,
                             image: displayTopHotel.images?.[0],
                           }
                         : undefined
                     }
                     transport={day.transport}
+                    tripId={tripId}
                   />
                 </DayErrorBoundary>
               </div>
@@ -692,6 +698,7 @@ export function TripDetailClient({
           <StreamedSpecPreview
             blocks={generation.specBlocks}
             isGenerating={isGenerating}
+            tripId={tripId}
           />
         ) : isComplete && !displayDays?.length ? (
           <EmptyItinerary destination={trip.destination} />
@@ -860,28 +867,25 @@ interface FeaturedHotel {
 function FeaturedHotelCard({
   hotel,
   nights,
+  tripId,
 }: {
   hotel: FeaturedHotel;
   nights: number;
+  tripId: string;
 }) {
-  const handleClick = () => {
-    if (!hotel.affiliateUrl) return;
-
-    fetch("/api/track/click", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+  const affiliateHref = hotel.affiliateUrl
+    ? buildAffiliateClickRedirect({
         itemType: "hotel",
         itemId: hotel.id || hotel.name,
         itemName: hotel.name,
         affiliatePartner: hotel.affiliatePartner || "booking",
         affiliateUrl: hotel.affiliateUrl,
+        tripId,
+        price: hotel.pricePerNight,
+        currency: "USD",
         source: "itinerary",
-      }),
-    }).catch(() => {});
-
-    window.open(hotel.affiliateUrl, "_blank", "noopener,noreferrer");
-  };
+      })
+    : undefined;
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6 group hover:shadow-lg transition-shadow">
@@ -975,64 +979,22 @@ function FeaturedHotelCard({
               </span>
             )}
           </div>
-          {hotel.affiliateUrl && (
-            <button
-              onClick={handleClick}
+          {affiliateHref && (
+            <a
+              href={affiliateHref}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
               className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-sm hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg hover:shadow-blue-500/25 active:scale-[0.98]"
             >
               <Shield className="w-4 h-4" />
               Check Availability & Prices
               <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-            </button>
+            </a>
           )}
         </div>
 
-        {/* Trust signals */}
-        {hotel.affiliateUrl && (
-          <div className="flex items-center justify-center gap-4 mt-3 text-[11px] text-gray-500">
-            <span className="inline-flex items-center gap-1">
-              <svg
-                className="w-3 h-3 text-green-500"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Best price guarantee
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <svg
-                className="w-3 h-3 text-green-500"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Free cancellation
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <svg
-                className="w-3 h-3 text-green-500"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              No hidden fees
-            </span>
-          </div>
+        {affiliateHref && (
+          <AffiliateDisclosure className="mt-3 text-center text-[11px] text-gray-500" />
         )}
       </div>
     </div>
@@ -1165,13 +1127,7 @@ function FlightLeg({
             {transport.departure.airport}
           </p>
           <p className="text-[11px] text-blue-200">
-            {new Date(transport.departure.dateTime).toLocaleTimeString(
-              "en-US",
-              {
-                hour: "2-digit",
-                minute: "2-digit",
-              },
-            )}
+            {formatTravelTime(transport.departure.dateTime)}
           </p>
         </div>
         <div className="flex-1 flex flex-col items-center">
@@ -1196,10 +1152,7 @@ function FlightLeg({
             {transport.arrival.airport}
           </p>
           <p className="text-[11px] text-blue-200">
-            {new Date(transport.arrival.dateTime).toLocaleTimeString("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
+            {formatTravelTime(transport.arrival.dateTime)}
           </p>
         </div>
       </div>
@@ -1213,7 +1166,13 @@ function FlightLeg({
   );
 }
 
-function FeaturedFlights({ days }: { days: TripDay[] | null }) {
+function FeaturedFlights({
+  days,
+  tripId,
+}: {
+  days: TripDay[] | null;
+  tripId: string;
+}) {
   if (!days?.length) return null;
 
   // Find outbound (first day with transport) and return (last day with transport)
@@ -1228,26 +1187,22 @@ function FeaturedFlights({ days }: { days: TripDay[] | null }) {
 
   if (!outbound?.transport) return null;
 
-  const handleFlightClick = (transport: TripDay["transport"]) => {
-    if (!transport?.affiliateUrl) return;
-    fetch("/api/track/click", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        itemType: "transport",
-        itemId: `transport_${transport.departure.airport}_${transport.arrival.airport}`,
-        itemName: `${transport.provider} ${transport.departure.airport}-${transport.arrival.airport}`,
-        affiliatePartner: transport.affiliatePartner || "duffel",
-        affiliateUrl: transport.affiliateUrl,
-        source: "itinerary",
-      }),
-    }).catch(() => {});
-    window.open(transport.affiliateUrl, "_blank", "noopener,noreferrer");
-  };
-
   const totalPrice =
     (outbound.transport?.price || 0) + (returnFlight?.transport?.price || 0);
   const currency = outbound.transport?.currency || "USD";
+  const affiliateHref = outbound.transport.affiliateUrl
+    ? buildAffiliateClickRedirect({
+        itemType: "transport",
+        itemId: `transport_${outbound.transport.departure.airport}_${outbound.transport.arrival.airport}`,
+        itemName: `${outbound.transport.provider} ${outbound.transport.departure.airport}-${outbound.transport.arrival.airport}`,
+        affiliatePartner: outbound.transport.affiliatePartner || "duffel",
+        affiliateUrl: outbound.transport.affiliateUrl,
+        tripId,
+        price: totalPrice,
+        currency,
+        source: "itinerary",
+      })
+    : undefined;
 
   return (
     <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-2xl overflow-hidden mb-6 shadow-lg shadow-blue-500/20 relative">
@@ -1289,15 +1244,20 @@ function FeaturedFlights({ days }: { days: TripDay[] | null }) {
           )}
         </div>
 
-        {outbound.transport?.affiliateUrl && (
-          <button
-            onClick={() => handleFlightClick(outbound.transport)}
-            className="w-full mt-5 inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 transition-all shadow-md active:scale-[0.98]"
-          >
-            <Shield className="w-4 h-4" />
-            Book {returnFlight ? "Flights" : "Flight"}
-            <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-          </button>
+        {affiliateHref && (
+          <div className="mt-5">
+            <a
+              href={affiliateHref}
+              target="_blank"
+              rel="noopener noreferrer sponsored"
+              className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 transition-all shadow-md active:scale-[0.98]"
+            >
+              <Shield className="w-4 h-4" />
+              Book {returnFlight ? "Flights" : "Flight"}
+              <ExternalLink className="w-3.5 h-3.5 opacity-70" />
+            </a>
+            <AffiliateDisclosure className="mt-2 text-center text-[10px] leading-3 text-blue-100" />
+          </div>
         )}
       </div>
     </div>

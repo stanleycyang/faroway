@@ -14,12 +14,7 @@ export interface Trip {
   preferences?: Record<string, unknown>;
   vibes?: string[];
   status:
-    | "draft"
-    | "generating"
-    | "planned"
-    | "generated"
-    | "completed"
-    | "failed";
+    "draft" | "generating" | "planned" | "generated" | "completed" | "failed";
   search_id?: string;
   is_shared?: boolean;
   share_token?: string | null;
@@ -55,7 +50,12 @@ export async function loadTripForUserUncached(
     .eq("user_id", userId)
     .single();
 
-  if (error || !trip) return null;
+  if (error) {
+    if (error.code === "PGRST116") return null;
+    console.error("Failed to load trip:", error.message);
+    throw new Error("Unable to load this trip right now");
+  }
+  if (!trip) return null;
 
   const { itineraries, ...tripData } = trip as typeof trip & {
     itineraries: ItineraryJoin[] | ItineraryJoin | null;

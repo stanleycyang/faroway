@@ -88,16 +88,25 @@ export async function GET(request: NextRequest, { params }: Params) {
         result = { itineraryId: itinerary.id };
       }
     } else if (workflowRun.status === "failed") {
-      result = { error: workflowRun.error_message || "Workflow failed" };
+      result = { error: "Workflow failed. Please try again." };
     }
 
     const response: WorkflowStatusResponse = {
       workflowId,
       tripId: workflowRun.trip_id,
       status: workflowRun.status,
-      progress: progress?.progress || 0,
-      step: progress?.step || "unknown",
-      message: progress?.message || "Processing...",
+      progress:
+        workflowRun.status === "completed"
+          ? 100
+          : workflowRun.status === "failed"
+            ? 0
+            : progress?.progress || 0,
+      step:
+        workflowRun.status === "failed" ? "error" : progress?.step || "unknown",
+      message:
+        workflowRun.status === "failed"
+          ? "Generation failed. Please try again."
+          : progress?.message || "Processing...",
       startedAt: workflowRun.started_at,
       completedAt: workflowRun.completed_at,
       result,

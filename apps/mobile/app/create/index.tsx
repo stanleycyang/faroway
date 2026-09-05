@@ -21,25 +21,12 @@ import { AuthGate } from '../../components/AuthGate';
 import { popularDestinations, travelerTypes } from '@faroway/constants';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
+import { API_BASE_URL } from '../../constants/api';
 
-const GOOGLE_API_KEY = process.env.EXPO_PUBLIC_GOOGLE_PLACES_API_KEY;
-
-function getStaticMapUrl(destination: string, country: string): string | null {
-  if (!GOOGLE_API_KEY) return null;
-  const center = encodeURIComponent(`${destination}${country ? `, ${country}` : ''}`);
-  return (
-    `https://maps.googleapis.com/maps/api/staticmap?center=${center}` +
-    `&zoom=11&size=600x300&scale=2&maptype=roadmap` +
-    `&markers=color:0x6366f1|${center}` +
-    `&style=feature:all|element:geometry|color:0x242f3e` +
-    `&style=feature:all|element:labels.text.stroke|color:0x242f3e` +
-    `&style=feature:all|element:labels.text.fill|color:0x746855` +
-    `&style=feature:water|element:geometry|color:0x17263c` +
-    `&style=feature:road|element:geometry|color:0x38414e` +
-    `&style=feature:road|element:geometry.stroke|color:0x212a37` +
-    `&style=feature:poi|element:geometry|color:0x283d6a` +
-    `&key=${GOOGLE_API_KEY}`
-  );
+function getStaticMapUrl(destination: string, country: string): string {
+  const query = new URLSearchParams({ destination });
+  if (country) query.set('country', country);
+  return `${API_BASE_URL}/api/places/static-map?${query.toString()}`;
 }
 
 export default function CreateTripScreen() {

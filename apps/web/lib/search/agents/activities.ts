@@ -58,8 +58,6 @@ const ActivitySchema = z.object({
     neighborhood: z.string().optional(),
   }),
   images: z.array(z.string()).default([]),
-  affiliateUrl: z.string().optional(),
-  affiliatePartner: z.string().optional(),
   bestTimeOfDay: z.enum(["morning", "afternoon", "evening", "any"]),
   vibeScore: z.number().min(0).max(100),
   vibeMatch: z.array(z.string()),
@@ -70,7 +68,10 @@ const ActivityListSchema = z.object({
   activities: z.array(ActivitySchema),
 });
 
-type GeneratedActivity = Omit<ActivityResult, "id">;
+type GeneratedActivity = Omit<
+  ActivityResult,
+  "id" | "affiliateUrl" | "affiliatePartner"
+>;
 
 interface ActivityListResult {
   activities: GeneratedActivity[];
@@ -159,10 +160,18 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
     "activities AI",
   )
     .then(({ object: result }) =>
-      result.activities.map((activity, index) => ({
-        ...activity,
-        id: `activity_${Date.now()}_${index}`,
-      })),
+      result.activities.map((activity, index) => {
+        const safeActivity = { ...activity } as GeneratedActivity & {
+          affiliateUrl?: string;
+          affiliatePartner?: string;
+        };
+        delete safeActivity.affiliateUrl;
+        delete safeActivity.affiliatePartner;
+        return {
+          ...safeActivity,
+          id: `activity_${Date.now()}_${index}`,
+        };
+      }),
     )
     .catch((error) => {
       if (isOperationTimeoutError(error)) {

@@ -181,6 +181,30 @@ const supabaseMock = {
   from: vi.fn((table: string) => createChain(table)),
   rpc: vi.fn(async (fn: string, args: Record<string, unknown>) => {
     dbState.rpcCalls.push({ fn, args });
+    if (fn === "begin_trip_generation") {
+      dbState.search = {
+        id: "search-e2e-1",
+        status: "pending",
+        progress: {},
+        error_message: null,
+        intermediate_results: { days: args.p_preview, previewReady: true },
+        json_render_spec: null,
+        created_at: "2026-05-01T00:00:00.000Z",
+        completed_at: null,
+      };
+      Object.assign(dbState.trip, {
+        status: "generating",
+        search_id: dbState.search.id,
+      });
+      return {
+        data: {
+          outcome: "created",
+          searchId: dbState.search.id,
+          status: "pending",
+        },
+        error: null,
+      };
+    }
     if (fn === "merge_intermediate_results" && dbState.search) {
       const key = String(args.p_key);
       const value =
@@ -247,11 +271,8 @@ describe("Itinerary workflow API e2e", () => {
     expect(dbState.search?.intermediate_results.days).toBeDefined();
     expect(Array.isArray(dbState.search?.intermediate_results.days)).toBe(true);
     expect(
-      dbState.rpcCalls.find(
-        (call) =>
-          call.fn === "merge_intermediate_results" &&
-          call.args.p_key === "days",
-      )?.args.p_value,
+      dbState.rpcCalls.find((call) => call.fn === "begin_trip_generation")?.args
+        .p_preview,
     ).toEqual(dbState.search?.intermediate_results.days);
 
     dbState.search = {
@@ -395,8 +416,9 @@ describe("Itinerary workflow API e2e", () => {
 
     expect(events).toContainEqual({
       event: "error",
-      data: { message: "activities vendor failed" },
+      data: { message: "Generation failed. Please try again." },
     });
+    expect(JSON.stringify(events)).not.toContain("activities vendor failed");
     expect(events.map((event) => event.event)).not.toContain("complete");
   });
 

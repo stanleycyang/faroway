@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -22,6 +22,14 @@ export default function PreferencesScreen() {
   const [selectedBudget, setSelectedBudget] = useState<string>(user?.preferences?.budget || '');
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const navigateBackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(
+    () => () => {
+      if (navigateBackTimerRef.current) clearTimeout(navigateBackTimerRef.current);
+    },
+    []
+  );
 
   const handleSave = async () => {
     if (isSaving) return;
@@ -36,7 +44,7 @@ export default function PreferencesScreen() {
       updatePreferences({ vibes: selectedVibes, budget: selectedBudget });
       hapticFeedback.success();
       setSaved(true);
-      setTimeout(() => router.back(), 600);
+      navigateBackTimerRef.current = setTimeout(() => router.back(), 600);
     } catch (error: unknown) {
       hapticFeedback.error();
       const message = error instanceof Error ? error.message : 'Please try again.';

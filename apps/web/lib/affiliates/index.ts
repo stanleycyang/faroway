@@ -2,7 +2,7 @@
  * Affiliate Partner Integrations
  *
  * This module provides integrations with travel affiliate partners:
- * - Viator (tours & experiences) - 15-20% commission
+ * - Viator (tours & experiences) - commission depends on the approved agreement
  * - Booking.com (hotels) - 25-40% commission
  * - Click tracking for commission attribution
  */
@@ -81,19 +81,3 @@ export {
   type TripAdvisorDetails,
   type TripAdvisorReview,
 } from "./tripadvisor";
-
-// Click Tracking
-export {
-  generateTrackingId,
-  detectDeviceType,
-  trackClick,
-  recordConversion,
-  getClickByTrackingId,
-  getUserClicks,
-  getAffiliateAnalytics,
-  type AffiliatePartner,
-  type AffiliateClick,
-  type TrackClickInput,
-  type TrackClickResult,
-  type ConversionInput,
-} from "./tracking";

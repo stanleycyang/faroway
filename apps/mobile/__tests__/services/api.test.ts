@@ -24,6 +24,7 @@ import {
   getTrendingDestinations,
   trackAffiliateClick,
   openAffiliateLink,
+  isAllowedAffiliateUrl,
   registerPushToken,
   removePushToken,
 } from '../../services/api';
@@ -148,6 +149,20 @@ describe('createTrip', () => {
 });
 
 describe('updateTrip', () => {
+  it('preserves supported server-shaped fields on the wire', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ trip: {} }) });
+    await updateTrip('trip-1', {
+      start_date: '2026-12-01',
+      end_date: '2026-12-07',
+      status: 'draft',
+    });
+    expect(JSON.parse(mockFetch.mock.calls[0][1].body)).toEqual({
+      start_date: '2026-12-01',
+      end_date: '2026-12-07',
+      status: 'draft',
+    });
+  });
+
   it('sends PATCH with updates', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -159,6 +174,7 @@ describe('updateTrip', () => {
     const [url, options] = mockFetch.mock.calls[0];
     expect(url).toBe('http://localhost:3000/api/trips/trip-1');
     expect(options.method).toBe('PATCH');
+    expect(JSON.parse(options.body)).toEqual({ destination: 'Osaka' });
   });
 });
 
@@ -245,6 +261,34 @@ describe('trackAffiliateClick', () => {
     });
 
     expect(result.data?.clickId).toBe('click-1');
+  });
+});
+
+describe('isAllowedAffiliateUrl', () => {
+  it('requires provider-issued attribution on Viator links before opening them', () => {
+    expect(
+      isAllowedAffiliateUrl(
+        'https://www.viator.com/tours/123?pid=P12345678&mcid=42383&medium=api',
+        'viator'
+      )
+    ).toBe(true);
+    expect(
+      isAllowedAffiliateUrl(
+        'https://www.viator.com/tours/123?pid=faroway&mcid=click_old&medium=api',
+        'viator'
+      )
+    ).toBe(false);
+    expect(isAllowedAffiliateUrl('https://www.viator.com/tours/123', 'viator')).toBe(false);
+  });
+  it('accepts a URL only when its host matches the selected partner', () => {
+    expect(isAllowedAffiliateUrl('https://www.booking.com/hotel/1', 'booking.com')).toBe(true);
+    expect(isAllowedAffiliateUrl('https://www.booking.com/hotel/1', 'viator')).toBe(false);
+    expect(isAllowedAffiliateUrl('https://www.opentable.com/r/bistro', 'opentable')).toBe(true);
+  });
+
+  it('rejects unknown partners and non-HTTPS URLs', () => {
+    expect(isAllowedAffiliateUrl('https://www.booking.com/hotel/1', 'unknown')).toBe(false);
+    expect(isAllowedAffiliateUrl('http://www.booking.com/hotel/1', 'booking')).toBe(false);
   });
 });
 

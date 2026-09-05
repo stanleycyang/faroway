@@ -30,9 +30,6 @@ export async function POST(request: NextRequest) {
     }
 
     console.error("[Itinerary Generation Error]", error);
-    return Response.json(
-      { error: error instanceof Error ? error.message : "Generation failed" },
-      { status: 500 },
-    );
+    return Response.json({ error: "Generation failed" }, { status: 500 });
   }
 }

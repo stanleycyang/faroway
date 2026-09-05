@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHmac } from "node:crypto";
 import { getSupabase } from "@/lib/supabase/server";
-import { checkRateLimit, getClientIp } from "@/lib/security/rate-limit";
+import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 import { z } from "zod";
 
 const ViewSchema = z.object({
@@ -12,21 +13,22 @@ const ViewSchema = z.object({
 });
 
 async function hashIP(ip: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(
-    ip + (process.env.IP_HASH_SALT || "faroway-blog"),
-  );
-  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+  const salt = process.env.IP_HASH_SALT;
+  if (!salt && process.env.NODE_ENV === "production") {
+    throw new Error("IP_HASH_SALT is required in production");
+  }
+  return createHmac("sha256", salt || "faroway-blog-development")
+    .update(ip)
+    .digest("hex");
 }
 
 export async function POST(request: NextRequest) {
   // Rate limit: 30 req/min per IP
   const ip = getClientIp(request);
-  const rl = checkRateLimit(`blog-views:${ip}`, {
+  const rl = await checkRateLimitAsync(`blog-views:${ip}`, {
     maxRequests: 30,
     windowMs: 60_000,
+    failClosed: true,
   });
   if (!rl.allowed) {
     return NextResponse.json({ error: "Too many requests" }, { status: 429 });
@@ -45,33 +47,24 @@ export async function POST(request: NextRequest) {
 
     const { slug } = parseResult.data;
     const viewerIpHash = await hashIP(ip);
-    const userAgent = request.headers.get("user-agent") || null;
-    const referrer = request.headers.get("referer") || null;
+    const userAgent = request.headers.get("user-agent")?.slice(0, 1024) || null;
+    const referrer = request.headers.get("referer")?.slice(0, 2048) || null;
 
     const supabase = getSupabase();
 
-    // Insert view record
-    const { error: viewError } = await supabase.from("blog_post_views").insert({
-      post_slug: slug,
-      viewer_ip_hash: viewerIpHash,
-      user_agent: userAgent,
-      referrer: referrer,
+    const { error: rpcError } = await supabase.rpc("record_blog_view", {
+      p_slug: slug,
+      p_viewer_ip_hash: viewerIpHash,
+      p_user_agent: userAgent,
+      p_referrer: referrer,
     });
-
-    if (viewError) {
-      console.error("[Blog Views] Insert error:", viewError);
-    }
-
-    // Increment view count on blog_posts
-    const { error: rpcError } = await supabase.rpc(
-      "increment_blog_view_count",
-      {
-        p_slug: slug,
-      },
-    );
 
     if (rpcError) {
       console.error("[Blog Views] RPC error:", rpcError);
+      return NextResponse.json(
+        { error: "Failed to track view" },
+        { status: 500 },
+      );
     }
 
     return NextResponse.json({ success: true });

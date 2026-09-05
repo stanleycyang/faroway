@@ -48,7 +48,11 @@ export default async function DashboardPage({
       query = query.order("start_date", { ascending: false });
   }
 
-  const { data: allTrips } = await query;
+  const { data: allTrips, error: tripsError } = await query;
+  if (tripsError) {
+    console.error("Failed to load dashboard trips:", tripsError.message);
+    throw new Error("Unable to load your trips right now");
+  }
 
   // Calculate stats and filter trips
   const now = new Date();
@@ -94,12 +98,14 @@ export default async function DashboardPage({
               <span className="text-sm text-gray-600 hidden sm:block">
                 {user.email}
               </span>
-              <Link
-                href="/auth/logout"
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
-              >
-                Sign out
-              </Link>
+              <form action="/auth/logout" method="post">
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+                >
+                  Sign out
+                </button>
+              </form>
             </div>
           </div>
         </div>

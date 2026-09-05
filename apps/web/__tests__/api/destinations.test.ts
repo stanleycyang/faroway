@@ -103,6 +103,11 @@ vi.mock("@/lib/security/rate-limit", () => ({
     remaining: 59,
     resetIn: 60000,
   })),
+  checkRateLimitAsync: vi.fn(async () => ({
+    allowed: true,
+    remaining: 2,
+    resetIn: 60000,
+  })),
   getClientIp: vi.fn(() => "127.0.0.1"),
 }));
 
@@ -150,6 +155,7 @@ import { GET as getTrending } from "@/app/api/destinations/trending/route";
 import { POST as subscribeNewsletter } from "@/app/api/blog/newsletter/route";
 
 import { checkRateLimit } from "@/lib/security/rate-limit";
+import { checkRateLimitAsync } from "@/lib/security/rate-limit";
 import { getCurrentSeason } from "@/lib/destinations";
 
 // ---------------------------------------------------------------------------
@@ -499,7 +505,7 @@ describe("GET /api/destinations/trending", () => {
 describe("POST /api/blog/newsletter", () => {
   beforeEach(() => {
     resetMockState();
-    vi.mocked(checkRateLimit).mockReturnValue({
+    vi.mocked(checkRateLimitAsync).mockResolvedValue({
       allowed: true,
       remaining: 2,
       resetIn: 60000,
@@ -560,7 +566,7 @@ describe("POST /api/blog/newsletter", () => {
   });
 
   it("returns 429 when rate limited", async () => {
-    vi.mocked(checkRateLimit).mockReturnValue({
+    vi.mocked(checkRateLimitAsync).mockResolvedValue({
       allowed: false,
       remaining: 0,
       resetIn: 30000,

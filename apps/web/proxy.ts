@@ -13,6 +13,10 @@ const protectedRoutes = ["/dashboard", "/trips", "/settings", "/profile"];
 // Routes that should redirect to dashboard if already authenticated
 const authRoutes = ["/auth/login", "/auth/signup"];
 
+function matchesRouteSegment(pathname: string, route: string): boolean {
+  return pathname === route || pathname.startsWith(`${route}/`);
+}
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -74,16 +78,21 @@ export async function proxy(request: NextRequest) {
 
   // Check if the current route requires authentication
   const isProtectedRoute = protectedRoutes.some((route) =>
-    pathname.startsWith(route),
+    matchesRouteSegment(pathname, route),
   );
 
   // Check if the current route is an auth route (login/signup)
-  const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
+  const isAuthRoute = authRoutes.some((route) =>
+    matchesRouteSegment(pathname, route),
+  );
 
   // Redirect unauthenticated users away from protected routes
   if (isProtectedRoute && !user) {
     const loginUrl = new URL("/auth/login", request.url);
-    loginUrl.searchParams.set("redirectTo", pathname);
+    loginUrl.searchParams.set(
+      "redirectTo",
+      `${pathname}${request.nextUrl.search}`,
+    );
     return NextResponse.redirect(loginUrl);
   }
 

@@ -29,7 +29,8 @@ Output format:
 - Provide specific timing (duration in minutes)
 - Match activities to user's stated vibes with clear reasoning
 - Balance popular attractions with authentic local experiences
-- Consider practical factors: walking distances, opening hours, energy levels`;
+- Consider practical factors: walking distances, opening hours, energy levels
+- Never invent booking, reservation, or affiliate URLs. AI recommendations are informational; only live provider data may add booking links.`;
 
 export function buildItineraryPrompt(preferences: TripPreferences): string {
   const {

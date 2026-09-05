@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
 interface JsonParseOk {
   ok: true;
@@ -13,7 +13,7 @@ interface JsonParseError {
 export type JsonParseResult = JsonParseOk | JsonParseError;
 
 export async function parseJsonRequest(
-  request: NextRequest,
+  request: Request,
   message = "Invalid JSON body",
 ): Promise<JsonParseResult> {
   try {

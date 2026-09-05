@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
 import { colors, borderRadius, shadows, spacing, typography } from '../../constants/theme';
 import { z } from 'zod';
+import { isAllowedAffiliateUrl } from '../../services/api';
 import {
   TripSummarySchema,
   HeroImageSchema,
@@ -28,6 +29,11 @@ import {
   RatingStarsSchema,
   MapPreviewSchema,
 } from './catalog';
+import {
+  AFFILIATE_DISCLOSURE,
+  confirmAndOpenAffiliateLink,
+  itemTypeForAffiliatePartner,
+} from '../affiliateCheckout';
 
 // =============================================================================
 // Helper Functions
@@ -47,6 +53,12 @@ const openURL = async (url: string) => {
     console.error('Failed to open URL:', error);
     Linking.openURL(url);
   }
+};
+
+const openTrackedAffiliateLink = (params: Parameters<typeof confirmAndOpenAffiliateLink>[0]) => {
+  confirmAndOpenAffiliateLink(params, (url) => {
+    void openURL(url);
+  });
 };
 
 // =============================================================================
@@ -156,6 +168,7 @@ export const Text: React.FC<TextProps> = ({ content, variant = 'body' }) => {
 type HotelCardProps = z.infer<typeof HotelCardSchema>;
 
 export const HotelCard: React.FC<HotelCardProps> = ({
+  id,
   name,
   rating,
   pricePerNight,
@@ -164,6 +177,8 @@ export const HotelCard: React.FC<HotelCardProps> = ({
   amenities,
   description,
   reviewCount,
+  affiliatePartner,
+  tripId,
 }) => {
   return (
     <View style={[styles.card, styles.hotelCard]}>
@@ -206,21 +221,37 @@ export const HotelCard: React.FC<HotelCardProps> = ({
         )}
 
         {bookingUrl && (
-          <TouchableOpacity
-            style={styles.hotelCardButton}
-            onPress={() => openURL(bookingUrl)}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={[colors.primary[500], colors.primary[700]]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.hotelCardButtonGradient}
+          <View>
+            <TouchableOpacity
+              style={styles.hotelCardButton}
+              onPress={() =>
+                openTrackedAffiliateLink({
+                  itemType: 'hotel',
+                  itemId: id || name,
+                  itemName: name,
+                  affiliatePartner: affiliatePartner || 'booking',
+                  affiliateUrl: bookingUrl,
+                  tripId,
+                  price: pricePerNight,
+                  currency: 'USD',
+                  priceLabel: `$${pricePerNight}/night estimate`,
+                  source: 'itinerary',
+                })
+              }
+              activeOpacity={0.8}
             >
-              <RNText style={styles.hotelCardButtonText}>Book Now</RNText>
-              <Ionicons name="arrow-forward" size={18} color="#fff" />
-            </LinearGradient>
-          </TouchableOpacity>
+              <LinearGradient
+                colors={[colors.primary[500], colors.primary[700]]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.hotelCardButtonGradient}
+              >
+                <RNText style={styles.hotelCardButtonText}>Book Now</RNText>
+                <Ionicons name="arrow-forward" size={18} color="#fff" />
+              </LinearGradient>
+            </TouchableOpacity>
+            <RNText style={styles.affiliateDisclosure}>{AFFILIATE_DISCLOSURE}</RNText>
+          </View>
         )}
       </View>
     </View>
@@ -258,6 +289,7 @@ export const ItineraryDay: React.FC<ItineraryDayProps> = ({ dayNumber, date, tit
 type ActivityCardProps = z.infer<typeof ActivityCardSchema>;
 
 export const ActivityCard: React.FC<ActivityCardProps> = ({
+  id,
   name,
   description,
   duration,
@@ -268,6 +300,8 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
   bookingUrl,
   time,
   location,
+  affiliatePartner,
+  tripId,
 }) => {
   return (
     <View style={[styles.card, styles.activityCard]}>
@@ -309,15 +343,31 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
             <RNText style={styles.activityCardPrice}>${price}</RNText>
           </View>
 
-          {bookingUrl && (
-            <TouchableOpacity
-              style={styles.activityCardButton}
-              onPress={() => openURL(bookingUrl)}
-              activeOpacity={0.8}
-            >
-              <RNText style={styles.activityCardButtonText}>View Details</RNText>
-              <Ionicons name="arrow-forward" size={16} color={colors.primary[600]} />
-            </TouchableOpacity>
+          {bookingUrl && isAllowedAffiliateUrl(bookingUrl, affiliatePartner || 'viator') && (
+            <View>
+              <TouchableOpacity
+                style={styles.activityCardButton}
+                onPress={() =>
+                  openTrackedAffiliateLink({
+                    itemType: 'activity',
+                    itemId: id || name,
+                    itemName: name,
+                    affiliatePartner: affiliatePartner || 'viator',
+                    affiliateUrl: bookingUrl,
+                    tripId,
+                    price,
+                    currency: 'USD',
+                    priceLabel: `$${price} estimate`,
+                    source: 'itinerary',
+                  })
+                }
+                activeOpacity={0.8}
+              >
+                <RNText style={styles.activityCardButtonText}>View Details</RNText>
+                <Ionicons name="arrow-forward" size={16} color={colors.primary[600]} />
+              </TouchableOpacity>
+              <RNText style={styles.affiliateDisclosure}>{AFFILIATE_DISCLOSURE}</RNText>
+            </View>
           )}
         </View>
       </View>
@@ -332,6 +382,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
 type RestaurantCardProps = z.infer<typeof RestaurantCardSchema>;
 
 export const RestaurantCard: React.FC<RestaurantCardProps> = ({
+  id,
   name,
   cuisine,
   priceLevel,
@@ -341,6 +392,8 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
   reservationUrl,
   description,
   time,
+  affiliatePartner,
+  tripId,
 }) => {
   const priceLevelString = '$'.repeat(priceLevel);
 
@@ -380,14 +433,27 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
           )}
 
           {reservationUrl && (
-            <TouchableOpacity
-              style={styles.restaurantCardButton}
-              onPress={() => openURL(reservationUrl)}
-              activeOpacity={0.8}
-            >
-              <RNText style={styles.restaurantCardButtonText}>Reserve Table</RNText>
-              <Ionicons name="arrow-forward" size={16} color="#ef4444" />
-            </TouchableOpacity>
+            <View>
+              <TouchableOpacity
+                style={styles.restaurantCardButton}
+                onPress={() =>
+                  openTrackedAffiliateLink({
+                    itemType: 'restaurant',
+                    itemId: id || name,
+                    itemName: name,
+                    affiliatePartner: affiliatePartner || 'opentable',
+                    affiliateUrl: reservationUrl,
+                    tripId,
+                    source: 'itinerary',
+                  })
+                }
+                activeOpacity={0.8}
+              >
+                <RNText style={styles.restaurantCardButtonText}>Reserve Table</RNText>
+                <Ionicons name="arrow-forward" size={16} color="#ef4444" />
+              </TouchableOpacity>
+              <RNText style={styles.affiliateDisclosure}>{AFFILIATE_DISCLOSURE}</RNText>
+            </View>
           )}
         </View>
       </View>
@@ -463,23 +529,54 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ items }) => {
 
 type BookingButtonProps = z.infer<typeof BookingButtonSchema>;
 
-export const BookingButton: React.FC<BookingButtonProps> = ({ label, url, provider, price }) => {
+export const BookingButton: React.FC<BookingButtonProps> = ({
+  label,
+  url,
+  provider,
+  affiliatePartner,
+  itemId,
+  itemName,
+  itemType,
+  tripId,
+  price,
+}) => {
+  const partner = affiliatePartner || provider || 'booking';
   return (
-    <TouchableOpacity style={styles.bookingButton} onPress={() => openURL(url)} activeOpacity={0.8}>
-      <LinearGradient
-        colors={[colors.primary[500], colors.primary[700]]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 0 }}
-        style={styles.bookingButtonGradient}
+    <View>
+      <TouchableOpacity
+        style={styles.bookingButton}
+        onPress={() =>
+          openTrackedAffiliateLink({
+            itemType: itemType || itemTypeForAffiliatePartner(partner),
+            itemId: itemId || label,
+            itemName: itemName || label,
+            affiliatePartner: partner,
+            affiliateUrl: url,
+            tripId,
+            price,
+            currency: 'USD',
+            priceLabel: price ? `$${price} estimate` : undefined,
+            source: 'itinerary',
+          })
+        }
+        activeOpacity={0.8}
       >
-        <View style={styles.bookingButtonContent}>
-          <RNText style={styles.bookingButtonLabel}>{label}</RNText>
-          {provider && <RNText style={styles.bookingButtonProvider}>via {provider}</RNText>}
-        </View>
-        {price && <RNText style={styles.bookingButtonPrice}>${price}</RNText>}
-        <Ionicons name="arrow-forward" size={20} color="#fff" />
-      </LinearGradient>
-    </TouchableOpacity>
+        <LinearGradient
+          colors={[colors.primary[500], colors.primary[700]]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.bookingButtonGradient}
+        >
+          <View style={styles.bookingButtonContent}>
+            <RNText style={styles.bookingButtonLabel}>{label}</RNText>
+            {provider && <RNText style={styles.bookingButtonProvider}>via {provider}</RNText>}
+          </View>
+          {price && <RNText style={styles.bookingButtonPrice}>${price}</RNText>}
+          <Ionicons name="arrow-forward" size={20} color="#fff" />
+        </LinearGradient>
+      </TouchableOpacity>
+      <RNText style={styles.affiliateDisclosure}>{AFFILIATE_DISCLOSURE}</RNText>
+    </View>
   );
 };
 
@@ -682,6 +779,13 @@ const styles = StyleSheet.create({
   textTitle: {
     ...typography.h3,
     color: colors.neutral[900],
+  },
+  affiliateDisclosure: {
+    marginTop: spacing.xs,
+    color: colors.neutral[500],
+    fontSize: 10,
+    lineHeight: 14,
+    textAlign: 'center',
   },
 
   // Shared Card

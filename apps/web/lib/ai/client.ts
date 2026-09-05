@@ -86,7 +86,6 @@ const ActivitySchema = z.object({
   bookingInfo: z
     .object({
       requiresReservation: z.boolean(),
-      bookingUrl: z.string().optional(),
     })
     .optional(),
 });
@@ -104,7 +103,6 @@ const RestaurantSchema = z.object({
   reservationInfo: z
     .object({
       recommended: z.boolean(),
-      url: z.string().optional(),
     })
     .optional(),
 });

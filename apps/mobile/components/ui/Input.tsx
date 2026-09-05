@@ -22,6 +22,7 @@ interface InputProps {
   error?: string;
   icon?: keyof typeof Ionicons.glyphMap;
   rightIcon?: keyof typeof Ionicons.glyphMap;
+  rightIconAccessibilityLabel?: string;
   onRightIconPress?: () => void;
   multiline?: boolean;
   numberOfLines?: number;
@@ -40,6 +41,7 @@ export function Input({
   error,
   icon,
   rightIcon,
+  rightIconAccessibilityLabel,
   onRightIconPress,
   multiline = false,
   numberOfLines = 1,
@@ -82,11 +84,15 @@ export function Input({
           multiline={multiline}
           numberOfLines={numberOfLines}
           editable={editable}
+          accessibilityLabel={label || placeholder}
         />
         {secureTextEntry && (
           <TouchableOpacity
             onPress={() => setIsPasswordVisible(!isPasswordVisible)}
             style={styles.rightIconButton}
+            accessibilityRole="button"
+            accessibilityLabel={isPasswordVisible ? 'Hide password' : 'Show password'}
+            accessibilityState={{ expanded: isPasswordVisible }}
           >
             <Ionicons
               name={isPasswordVisible ? 'eye-off' : 'eye'}
@@ -96,7 +102,12 @@ export function Input({
           </TouchableOpacity>
         )}
         {rightIcon && !secureTextEntry && (
-          <TouchableOpacity onPress={onRightIconPress} style={styles.rightIconButton}>
+          <TouchableOpacity
+            onPress={onRightIconPress}
+            style={styles.rightIconButton}
+            accessibilityRole="button"
+            accessibilityLabel={rightIconAccessibilityLabel || `${label || 'Input'} action`}
+          >
             <Ionicons name={rightIcon} size={20} color={colors.surface[500]} />
           </TouchableOpacity>
         )}

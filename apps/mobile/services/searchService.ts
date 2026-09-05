@@ -4,6 +4,8 @@
  */
 
 import { API_BASE_URL } from '../constants/api';
+import { getApiHeaders } from './authToken';
+import { fetchWithTimeout } from './request';
 import type {
   SearchInput,
   StartSearchResponse,
@@ -32,15 +34,9 @@ export async function startSearch(
   input: SearchInput,
   authToken?: string
 ): Promise<StartSearchResponse> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
+  const headers = await getApiHeaders({}, authToken);
 
-  if (authToken) {
-    headers['Authorization'] = `Bearer ${authToken}`;
-  }
-
-  const response = await fetch(`${API_BASE_URL}/api/search/start`, {
+  const response = await fetchWithTimeout(`${API_BASE_URL}/api/search/start`, {
     method: 'POST',
     headers,
     body: JSON.stringify(input),
@@ -63,7 +59,11 @@ export async function getSearchStatus(searchId: string): Promise<SearchStatusRes
     throw new Error('Invalid search ID');
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/search/${encodeURIComponent(searchId)}`);
+  const headers = await getApiHeaders();
+  const response = await fetchWithTimeout(
+    `${API_BASE_URL}/api/search/${encodeURIComponent(searchId)}`,
+    { headers }
+  );
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }));

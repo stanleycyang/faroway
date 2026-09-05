@@ -10,6 +10,8 @@ const requestClient = {
   },
 };
 
+let workflowStatus: "completed" | "failed";
+
 function createAdminChain(table: string) {
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
   chain.select = vi.fn(() => chain);
@@ -23,10 +25,13 @@ function createAdminChain(table: string) {
           id: "workflow-1",
           trip_id: "trip-1",
           user_id: "user-1",
-          status: "completed",
+          status: workflowStatus,
           started_at: "2026-05-01T00:00:00.000Z",
           completed_at: "2026-05-01T00:01:00.000Z",
-          error_message: null,
+          error_message:
+            workflowStatus === "failed"
+              ? "Provider rejected sk-secret-value at internal-host"
+              : null,
         },
         error: null,
       };
@@ -88,6 +93,7 @@ function makeParams(workflowId = "workflow-1") {
 describe("GET /api/workflows/[workflowId]/status", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    workflowStatus = "completed";
   });
 
   it("uses request-derived auth so bearer-token clients can poll workflow status", async () => {
@@ -104,5 +110,18 @@ describe("GET /api/workflows/[workflowId]/status", () => {
       progress: 100,
       result: { itineraryId: "itinerary-1" },
     });
+  });
+
+  it("does not expose stored workflow errors", async () => {
+    workflowStatus = "failed";
+
+    const res = await GET(makeReq(), makeParams());
+    const json = await res.json();
+
+    expect(res.status).toBe(200);
+    expect(json.result).toEqual({
+      error: "Workflow failed. Please try again.",
+    });
+    expect(JSON.stringify(json)).not.toContain("sk-secret-value");
   });
 });

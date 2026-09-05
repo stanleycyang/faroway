@@ -26,6 +26,7 @@ import {
   BuildSpecInput,
 } from "@/lib/json-render/build-spec";
 import { getSupabase } from "@/lib/supabase/server";
+import { createFatalWorkflowError } from "@/lib/workflow/runtime";
 import type {
   SearchInput,
   SearchPlan,
@@ -199,29 +200,10 @@ export async function planTripWorkflow(
     const errorMessage =
       error instanceof Error ? error.message : "Unknown error";
 
-    await updateSearchStatus(searchId, "error", {}, errorMessage);
-
-    // Also update trip status if we have a tripId
     if (tripId) {
-      await getSupabase()
-        .from("trips")
-        .update({
-          status: "failed",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", tripId);
-
-      // Update workflow_progress for backward compat
-      await getSupabase().from("workflow_progress").upsert(
-        {
-          trip_id: tripId,
-          step: "error",
-          progress: 0,
-          message: errorMessage,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "trip_id" },
-      );
+      await failTripGeneration(searchId, tripId);
+    } else {
+      await updateSearchStatus(searchId, "error", {}, errorMessage);
     }
 
     return {
@@ -231,6 +213,19 @@ export async function planTripWorkflow(
       error: errorMessage,
     };
   }
+}
+
+async function failTripGeneration(
+  searchId: string,
+  tripId: string,
+): Promise<void> {
+  "use step";
+  const { error } = await getSupabase().rpc("fail_trip_generation", {
+    p_trip_id: tripId,
+    p_search_id: searchId,
+  });
+  if (error)
+    throw new Error("Failed to persist generation failure", { cause: error });
 }
 
 // ─── Step 1: Create Search Plan ─────────────────────────────────────────────
@@ -246,35 +241,24 @@ async function createSearchPlan(
     `[Workflow] Step 1: Creating search plan for ${params.destination}`,
   );
 
-  await getSupabase()
-    .from("searches")
-    .update({
-      status: "searching",
-      progress: {
-        orchestrator: "searching",
-        hotels: "pending",
-        activities: "pending",
-        dining: "pending",
-        transport: "pending",
-        enrichment: "pending",
-        aggregator: "pending",
-      },
-    })
-    .eq("id", searchId);
-
-  // Update workflow_progress for trip-based polling
-  if (tripId) {
-    await getSupabase().from("workflow_progress").upsert(
-      {
-        trip_id: tripId,
-        step: "orchestrator",
-        progress: 5,
-        message: "Analyzing your preferences...",
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "trip_id" },
-    );
-  }
+  await persistGenerationProgress(
+    searchId,
+    tripId,
+    {
+      orchestrator: "searching",
+      hotels: "pending",
+      activities: "pending",
+      dining: "pending",
+      transport: "pending",
+      enrichment: "pending",
+      aggregator: "pending",
+    },
+    {
+      step: "orchestrator",
+      progress: 5,
+      message: "Analyzing your preferences...",
+    },
+  );
 
   console.log(`[Workflow] Step 1 complete for search ${searchId}`);
 }
@@ -345,34 +329,25 @@ async function buildSearchPlanStep(params: {
 
   const plan = await runOrchestratorAgent(searchInput);
 
-  await getSupabase()
-    .from("searches")
-    .update({
-      progress: {
-        orchestrator: "done",
-        hotels: "pending",
-        activities: "pending",
-        dining: "pending",
-        transport: "pending",
-        enrichment: "pending",
-        aggregator: "pending",
-      },
-    })
-    .eq("id", searchId);
+  await persistGenerationProgress(
+    searchId,
+    tripId,
+    {
+      orchestrator: "done",
+      hotels: "pending",
+      activities: "pending",
+      dining: "pending",
+      transport: "pending",
+      enrichment: "pending",
+      aggregator: "pending",
+    },
+    {
+      step: "orchestrator",
+      progress: 15,
+      message: "Search plan ready. Running providers in parallel...",
+    },
+  );
   await mergeIntermediateResult(searchId, "searchPlan", plan);
-
-  if (tripId) {
-    await getSupabase().from("workflow_progress").upsert(
-      {
-        trip_id: tripId,
-        step: "orchestrator",
-        progress: 15,
-        message: "Search plan ready. Running providers in parallel...",
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "trip_id" },
-    );
-  }
   console.log(
     `[WorkflowTiming] search=${searchId} stage=build_search_plan duration_ms=${Date.now() - startedAt}`,
   );
@@ -548,36 +523,24 @@ async function markItineraryComposed(
   tripId?: string,
 ): Promise<void> {
   "use step";
-
-  console.log(`[Workflow] Step 3: Itinerary composed for ${searchId}`);
-
-  await getSupabase()
-    .from("searches")
-    .update({
-      progress: {
-        orchestrator: "done",
-        hotels: "done",
-        activities: "done",
-        dining: "done",
-        transport: "done",
-        enrichment: "done",
-        aggregator: "done",
-      },
-    })
-    .eq("id", searchId);
-
-  if (tripId) {
-    await getSupabase().from("workflow_progress").upsert(
-      {
-        trip_id: tripId,
-        step: "composing",
-        progress: 85,
-        message: "Finalizing your itinerary...",
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "trip_id" },
-    );
-  }
+  await persistGenerationProgress(
+    searchId,
+    tripId,
+    {
+      orchestrator: "done",
+      hotels: "done",
+      activities: "done",
+      dining: "done",
+      transport: "done",
+      enrichment: "done",
+      aggregator: "done",
+    },
+    {
+      step: "composing",
+      progress: 85,
+      message: "Finalizing your itinerary...",
+    },
+  );
 }
 
 // ─── Step 4: Build Spec & Save ──────────────────────────────────────────────
@@ -610,6 +573,7 @@ async function buildAndSaveSpec(
     amenities: h.amenities,
     description: h.description,
     affiliateUrl: h.affiliateUrl,
+    affiliatePartner: h.affiliatePartner,
     images: h.images,
   }));
 
@@ -625,6 +589,7 @@ async function buildAndSaveSpec(
     reviewCount: a.reviewCount,
     category: a.category,
     affiliateUrl: a.affiliateUrl,
+    affiliatePartner: a.affiliatePartner,
     images: a.images,
     location: {
       name: a.location?.name,
@@ -643,6 +608,7 @@ async function buildAndSaveSpec(
     reviewCount: d.reviewCount,
     description: d.description,
     reservationUrl: d.reservationUrl,
+    affiliatePartner: d.affiliatePartner,
     images: d.images,
   }));
 
@@ -662,6 +628,7 @@ async function buildAndSaveSpec(
         rating: undefined,
         category: a.category,
         affiliateUrl: a.bookingInfo?.bookingUrl,
+        affiliatePartner: a.bookingInfo?.affiliateId,
         location: { name: a.location.name },
       })),
       meal: day.morning.meals[0]
@@ -672,6 +639,8 @@ async function buildAndSaveSpec(
             rating: undefined,
             description: day.morning.meals[0].description,
             reservationUrl: day.morning.meals[0].reservationInfo?.url,
+            affiliatePartner:
+              day.morning.meals[0].reservationInfo?.affiliatePartner,
           }
         : undefined,
     },
@@ -686,6 +655,7 @@ async function buildAndSaveSpec(
         rating: undefined,
         category: a.category,
         affiliateUrl: a.bookingInfo?.bookingUrl,
+        affiliatePartner: a.bookingInfo?.affiliateId,
         location: { name: a.location.name },
       })),
       meal: day.afternoon.meals[0]
@@ -696,6 +666,8 @@ async function buildAndSaveSpec(
             rating: undefined,
             description: day.afternoon.meals[0].description,
             reservationUrl: day.afternoon.meals[0].reservationInfo?.url,
+            affiliatePartner:
+              day.afternoon.meals[0].reservationInfo?.affiliatePartner,
           }
         : undefined,
     },
@@ -710,6 +682,7 @@ async function buildAndSaveSpec(
         rating: undefined,
         category: a.category,
         affiliateUrl: a.bookingInfo?.bookingUrl,
+        affiliatePartner: a.bookingInfo?.affiliateId,
         location: { name: a.location.name },
       })),
       meal: day.evening.meals[0]
@@ -720,6 +693,8 @@ async function buildAndSaveSpec(
             rating: undefined,
             description: day.evening.meals[0].description,
             reservationUrl: day.evening.meals[0].reservationInfo?.url,
+            affiliatePartner:
+              day.evening.meals[0].reservationInfo?.affiliatePartner,
           }
         : undefined,
     },
@@ -749,6 +724,7 @@ async function buildAndSaveSpec(
           amenities: result.topHotel.amenities,
           description: result.topHotel.description,
           affiliateUrl: result.topHotel.affiliateUrl,
+          affiliatePartner: result.topHotel.affiliatePartner,
           images: result.topHotel.images,
           starRating: result.topHotel.starRating,
         }
@@ -760,7 +736,19 @@ async function buildAndSaveSpec(
 
   const jsonRenderSpec = buildJsonRenderSpec(specInput);
 
-  // Save search results to database
+  // Trip persistence, search results, completion and notification commit as
+  // one fenced transaction; a retried step is a no-op after success.
+  if (meta.tripId) {
+    await bridgeToItineraries(
+      searchId,
+      meta.tripId,
+      result,
+      meta,
+      jsonRenderSpec,
+    );
+    return;
+  }
+
   await saveSearchResults(searchId, result);
 
   // Save the json-render spec and mark as completed. Keep intermediate results
@@ -783,11 +771,6 @@ async function buildAndSaveSpec(
     })
     .eq("id", searchId);
 
-  // ── Bridge to itineraries table (for web trip detail page) ────────
-  if (meta.tripId) {
-    await bridgeToItineraries(searchId, meta.tripId, meta.userId, result, meta);
-  }
-
   console.log(`[Workflow] Step 4 complete – search ${searchId} done`);
 }
 
@@ -799,9 +782,9 @@ async function buildAndSaveSpec(
 async function bridgeToItineraries(
   searchId: string,
   tripId: string,
-  userId: string | undefined,
   result: MappedItinerary,
   meta: { destination: string; startDate: string; endDate: string },
+  spec: ReturnType<typeof buildJsonRenderSpec>,
 ): Promise<void> {
   const db = getSupabase();
 
@@ -822,7 +805,6 @@ async function bridgeToItineraries(
 
   const itineraryPayload = {
     trip_id: tripId,
-    user_id: userId || null,
     destination: meta.destination,
     start_date: meta.startDate,
     end_date: meta.endDate,
@@ -833,82 +815,19 @@ async function bridgeToItineraries(
     general_tips: [],
     generated_at: new Date().toISOString(),
   };
-  const { data: existingItinerary } = await db
-    .from("itineraries")
-    .select("id")
-    .eq("trip_id", tripId)
-    .limit(1)
-    .single();
-
-  const { data: savedItinerary, error: insertError } = existingItinerary?.id
-    ? await db
-        .from("itineraries")
-        .update(itineraryPayload)
-        .eq("id", existingItinerary.id)
-        .select("id")
-        .single()
-    : await db
-        .from("itineraries")
-        .insert(itineraryPayload)
-        .select("id")
-        .single();
-
-  if (insertError) {
-    console.error(
-      `[Workflow] Failed to bridge itinerary: ${insertError.message}`,
-    );
-    // Non-fatal — search results are already saved
-  }
-
-  // Update trip status to the canonical itinerary-ready state.
-  await db
-    .from("trips")
-    .update({
-      status: "planned",
-      itinerary_id: savedItinerary?.id || null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", tripId);
-
-  // Update workflow_progress to 100%
-  await db.from("workflow_progress").upsert(
-    {
-      trip_id: tripId,
-      step: "complete",
-      progress: 100,
-      message: "Your itinerary is ready!",
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "trip_id" },
-  );
-
-  // Update workflow run status
-  await db
-    .from("workflow_runs")
-    .update({
-      status: "completed",
-      completed_at: new Date().toISOString(),
-    })
-    .eq("trip_id", tripId)
-    .eq("status", "running");
-
-  // Insert notification (only for authenticated users)
-  if (userId && savedItinerary) {
-    await db.from("notifications").insert({
-      user_id: userId,
-      type: "itinerary_ready",
-      title: "Your Itinerary is Ready!",
-      message: `Your trip itinerary to ${meta.destination} has been generated and is ready to view.`,
-      data: {
-        trip_id: tripId,
-        itinerary_id: savedItinerary.id,
-        search_id: searchId,
-      },
-      read: false,
-    });
-  }
-
-  console.log(`[Workflow] Bridged itinerary for trip ${tripId}`);
+  const { resultRows, itineraryRows } = buildSearchResultRows(searchId, result);
+  const { data, error } = await db.rpc("complete_trip_generation", {
+    p_trip_id: tripId,
+    p_search_id: searchId,
+    p_itinerary: itineraryPayload,
+    p_spec: spec,
+    p_results: resultRows,
+    p_days: itineraryRows,
+  });
+  if (error)
+    throw new Error("Failed to persist trip itinerary", { cause: error });
+  if (data !== true)
+    throw createFatalWorkflowError("This generation is no longer active.");
 }
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
@@ -917,27 +836,42 @@ async function setProgressState(
   searchId: string,
   tripId: string | undefined,
   progress: Record<string, string>,
-  workflow?: {
-    step: string;
-    progress: number;
-    message: string;
-  },
+  workflow?: { step: string; progress: number; message: string },
 ): Promise<void> {
   "use step";
-  const db = getSupabase();
-  await db.from("searches").update({ progress }).eq("id", searchId);
+  await persistGenerationProgress(searchId, tripId, progress, workflow);
+}
 
-  if (!tripId || !workflow) return;
-  await db.from("workflow_progress").upsert(
-    {
-      trip_id: tripId,
-      step: workflow.step,
-      progress: workflow.progress,
-      message: workflow.message,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "trip_id" },
-  );
+async function persistGenerationProgress(
+  searchId: string,
+  tripId: string | undefined,
+  progress: Record<string, string>,
+  workflow?: { step: string; progress: number; message: string },
+): Promise<void> {
+  const db = getSupabase();
+  if (tripId && workflow) {
+    const { data, error } = await db.rpc("advance_trip_generation", {
+      p_trip_id: tripId,
+      p_search_id: searchId,
+      p_progress: progress,
+      p_step: workflow.step,
+      p_percent: workflow.progress,
+      p_message: workflow.message,
+    });
+    if (error)
+      throw new Error("Failed to persist generation progress", {
+        cause: error,
+      });
+    if (data !== true)
+      throw createFatalWorkflowError("This generation is no longer active.");
+    return;
+  }
+  const { error } = await db
+    .from("searches")
+    .update({ status: "searching", progress })
+    .eq("id", searchId);
+  if (error)
+    throw new Error("Failed to persist search progress", { cause: error });
 }
 
 async function updateSearchStatus(
@@ -965,10 +899,7 @@ async function updateSearchStatus(
   await getSupabase().from("searches").update(update).eq("id", searchId);
 }
 
-async function saveSearchResults(
-  searchId: string,
-  result: MappedItinerary,
-): Promise<void> {
+function buildSearchResultRows(searchId: string, result: MappedItinerary) {
   // Build all result rows and batch insert
   const resultRows = [
     ...(result.hotels || []).map((hotel) => ({
@@ -1019,37 +950,49 @@ async function saveSearchResults(
     })),
   ];
 
-  if (resultRows.length > 0) {
-    await getSupabase().from("search_results").insert(resultRows);
-  }
-
   // Save itinerary days (batch)
-  if (result.days.length > 0) {
-    const itineraryRows = result.days.map((day: TripDay) => ({
-      search_id: searchId,
-      day_number: day.dayNumber,
-      date: day.date,
-      title: day.title,
-      summary: day.summary,
-      morning_activities: day.morning.activities.map(
-        (a: ItineraryActivity) => a.id,
-      ),
-      afternoon_activities: day.afternoon.activities.map(
-        (a: ItineraryActivity) => a.id,
-      ),
-      evening_activities: day.evening.activities.map(
-        (a: ItineraryActivity) => a.id,
-      ),
-      meals: [
-        ...day.morning.meals.map((m: FarowayRestaurant) => m.id),
-        ...day.afternoon.meals.map((m: FarowayRestaurant) => m.id),
-        ...day.evening.meals.map((m: FarowayRestaurant) => m.id),
-      ].filter(Boolean),
-      estimated_cost: day.totalEstimatedCost?.amount || 0,
-      cost_currency: day.totalEstimatedCost?.currency || "USD",
-      tips: day.tips || [],
-    }));
+  const itineraryRows = result.days.map((day: TripDay) => ({
+    search_id: searchId,
+    day_number: day.dayNumber,
+    date: day.date,
+    title: day.title,
+    summary: day.summary,
+    morning_activities: day.morning.activities.map(
+      (a: ItineraryActivity) => a.id,
+    ),
+    afternoon_activities: day.afternoon.activities.map(
+      (a: ItineraryActivity) => a.id,
+    ),
+    evening_activities: day.evening.activities.map(
+      (a: ItineraryActivity) => a.id,
+    ),
+    meals: [
+      ...day.morning.meals.map((m: FarowayRestaurant) => m.id),
+      ...day.afternoon.meals.map((m: FarowayRestaurant) => m.id),
+      ...day.evening.meals.map((m: FarowayRestaurant) => m.id),
+    ].filter(Boolean),
+    estimated_cost: day.totalEstimatedCost?.amount || 0,
+    cost_currency: day.totalEstimatedCost?.currency || "USD",
+    tips: day.tips || [],
+  }));
 
-    await getSupabase().from("search_itineraries").insert(itineraryRows);
+  return { resultRows, itineraryRows };
+}
+
+async function saveSearchResults(
+  searchId: string,
+  result: MappedItinerary,
+): Promise<void> {
+  const { resultRows, itineraryRows } = buildSearchResultRows(searchId, result);
+  const db = getSupabase();
+  if (resultRows.length > 0) {
+    const { error } = await db.from("search_results").insert(resultRows);
+    if (error)
+      throw new Error("Failed to persist search results", { cause: error });
+  }
+  if (itineraryRows.length > 0) {
+    const { error } = await db.from("search_itineraries").insert(itineraryRows);
+    if (error)
+      throw new Error("Failed to persist search itinerary", { cause: error });
   }
 }

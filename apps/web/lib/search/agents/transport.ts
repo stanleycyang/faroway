@@ -8,7 +8,6 @@ import { SearchPlan, TransportResult } from "../types";
 import {
   searchAmadeusFlights,
   isAmadeusConfigured,
-  generateAmadeusAffiliateUrl,
 } from "@/lib/affiliates/amadeus";
 import {
   searchDuffelFlights,
@@ -126,8 +125,6 @@ async function searchAmadeusProvider(
       limit: options.limit,
     });
 
-    const trackingId = `tg_${Date.now()}`;
-
     return offers.map((offer, index) => ({
       id: `transport_amadeus_${offer.offerId || index}`,
       type: "flight" as const,
@@ -163,12 +160,6 @@ async function searchAmadeusProvider(
         },
         duration: seg.duration,
       })),
-      affiliateUrl: generateAmadeusAffiliateUrl(
-        "flight",
-        { origin, destination, date: dates.start },
-        trackingId,
-      ),
-      affiliatePartner: "amadeus",
       source: "amadeus" as const,
       vibeScore: 0,
       vibeMatch: [],
@@ -305,10 +296,7 @@ function normalizeAmadeusCabinClass(
 ): "ECONOMY" | "PREMIUM_ECONOMY" | "BUSINESS" | "FIRST" | undefined {
   if (!cabinClass) return undefined;
   return cabinClass.toUpperCase() as
-    | "ECONOMY"
-    | "PREMIUM_ECONOMY"
-    | "BUSINESS"
-    | "FIRST";
+    "ECONOMY" | "PREMIUM_ECONOMY" | "BUSINESS" | "FIRST";
 }
 
 /**

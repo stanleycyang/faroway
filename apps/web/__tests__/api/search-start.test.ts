@@ -178,4 +178,23 @@ describe("POST /api/search/start", () => {
     expect(res.status).toBe(400);
     expect(startMock).not.toHaveBeenCalled();
   });
+
+  it("rejects unsupported budget tiers before creating a search", async () => {
+    const res = await POST(
+      new NextRequest("http://localhost:3000/api/search/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          destination: "Tokyo",
+          startDate: "2026-06-01",
+          endDate: "2026-06-05",
+          budget: "unlimited",
+        }),
+      }),
+    );
+
+    expect(res.status).toBe(400);
+    expect(supabaseMock.from).not.toHaveBeenCalled();
+    expect(startMock).not.toHaveBeenCalled();
+  });
 });

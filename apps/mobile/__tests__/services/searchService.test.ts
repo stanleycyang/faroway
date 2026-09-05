@@ -15,6 +15,7 @@ import {
   calculateProgressPercent,
   getStatusMessage,
 } from '../../services/searchService';
+import { setAuthToken } from '../../services/authToken';
 
 import type { SearchProgress } from '@faroway/types';
 
@@ -24,6 +25,7 @@ const mockFetch = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
+  setAuthToken('session-token');
 });
 
 describe('startSearch', () => {
@@ -129,6 +131,7 @@ describe('getSearchStatus', () => {
 
     const result = await getSearchStatus('s-1');
     expect(result.status).toBe('searching');
+    expect(mockFetch.mock.calls[0][1].headers.Authorization).toBe('Bearer session-token');
   });
 
   it('rejects invalid search ID with special chars', async () => {

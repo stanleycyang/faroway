@@ -196,7 +196,7 @@ export default function RootLayout({
           Skip to main content
         </a>
         <div id="main-content">{children}</div>
-        {process.env.NODE_ENV === "production" && <Analytics />}
+        {process.env.VERCEL === "1" && <Analytics />}
       </body>
     </html>
   );

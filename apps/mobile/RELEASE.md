@@ -14,8 +14,6 @@ Required production environment variables or EAS environment values:
 - `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID`: Google Sign-In iOS OAuth client ID.
 - `EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME`: reversed iOS client ID URL scheme,
   starting with `com.googleusercontent.apps.`.
-- `EXPO_PUBLIC_GOOGLE_PLACES_API_KEY`: optional Google Places and Static Maps key
-  for destination autocomplete/map previews.
 
 The public EAS project ID used by builds and push notifications is committed in
 `app.config.ts`.

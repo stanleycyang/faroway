@@ -102,6 +102,7 @@ vi.mock("@/lib/supabase/server", () => ({
 
 import { GET as getTrips, POST } from "@/app/api/trips/route";
 import { GET as getTrip, PATCH, DELETE } from "@/app/api/trips/[id]/route";
+import { buildTripUpdatePayload } from "../../../mobile/services/tripPayload";
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -216,6 +217,20 @@ describe("POST /api/trips", () => {
 
     expect(res.status).toBe(400);
   });
+
+  it("returns 400 for an unsupported nested budget tier", async () => {
+    const req = makeRequest("POST", "/api/trips", {
+      destination: "Tokyo",
+      start_date: "2026-04-01",
+      end_date: "2026-04-07",
+      preferences: { budget: "unlimited" },
+    });
+
+    const res = await POST(req);
+
+    expect(res.status).toBe(400);
+    expect(tripsChain.insert).not.toHaveBeenCalled();
+  });
 });
 
 describe("GET /api/trips/[id]", () => {
@@ -281,6 +296,74 @@ describe("PATCH /api/trips/[id]", () => {
     expect(json.trip.destination).toBe("Osaka");
   });
 
+  it.each([
+    {
+      start_date: "2026-12-01",
+      end_date: "2026-12-07",
+      status: "draft" as const,
+    },
+    {
+      startDate: "2026-12-01",
+      endDate: "2026-12-07",
+      status: "draft" as const,
+    },
+  ])(
+    "applies the actual mobile serializer's date and draft updates (%j)",
+    async (patch) => {
+      mockTripReturn = { data: mockTrip, error: null };
+      const response = await PATCH(
+        makeRequest(
+          "PATCH",
+          "/api/trips/trip-1",
+          buildTripUpdatePayload(patch),
+        ),
+        makeParams("trip-1"),
+      );
+      expect(response.status).toBe(200);
+      expect(tripsChain.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          start_date: "2026-12-01",
+          end_date: "2026-12-07",
+          status: "draft",
+        }),
+      );
+      expect(tripsChain.eq).toHaveBeenCalledWith("user_id", mockUser.id);
+    },
+  );
+
+  it("merges partial mobile preferences without erasing saved preferences", async () => {
+    mockTripReturn = {
+      data: {
+        ...mockTrip,
+        preferences: {
+          travelerType: "family",
+          originAirport: "SFO",
+          budget: "moderate",
+        },
+      },
+      error: null,
+    };
+    const response = await PATCH(
+      makeRequest(
+        "PATCH",
+        "/api/trips/trip-1",
+        buildTripUpdatePayload({ originCity: "Chicago" }),
+      ),
+      makeParams("trip-1"),
+    );
+    expect(response.status).toBe(200);
+    expect(tripsChain.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        preferences: {
+          travelerType: "family",
+          originAirport: "SFO",
+          budget: "moderate",
+          originCity: "Chicago",
+        },
+      }),
+    );
+  });
+
   it("returns 400 for invalid input", async () => {
     const req = makeRequest("PATCH", "/api/trips/trip-1", {
       unknown_field: "bad",
@@ -321,6 +404,17 @@ describe("PATCH /api/trips/[id]", () => {
     const res = await PATCH(req, makeParams("trip-1"));
 
     expect(res.status).toBe(404);
+  });
+
+  it("returns 400 for an unsupported budget tier", async () => {
+    const req = makeRequest("PATCH", "/api/trips/trip-1", {
+      budget_tier: "unlimited",
+    });
+
+    const res = await PATCH(req, makeParams("trip-1"));
+
+    expect(res.status).toBe(400);
+    expect(tripsChain.update).not.toHaveBeenCalled();
   });
 });
 

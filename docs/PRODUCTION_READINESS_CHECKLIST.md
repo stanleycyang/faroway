@@ -27,6 +27,17 @@ Use this before a launch candidate is promoted.
 - Abuse-prone endpoints use the shared rate-limit utility, preferably the async KV-backed path.
 - Safe error responses are returned to clients; sensitive details stay in server logs.
 
+## Affiliate Monetization
+
+- Complete the partner-specific checks in
+  [Affiliate Launch Runbook](./AFFILIATE_LAUNCH_RUNBOOK.md).
+- AI-only recommendations have no booking CTA; every CTA is backed by a live
+  provider URL whose host matches the declared affiliate partner.
+- Web and mobile clicks create an `affiliate_clicks` row and carry the same
+  durable click ID to the partner.
+- Do not report bookings or revenue until real partner conversion data has been
+  adapted, verified, and reconciled end to end.
+
 ## Security and Observability
 
 - No secrets, bearer tokens, push tokens, or raw credential values are logged or committed.

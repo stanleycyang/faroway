@@ -265,6 +265,7 @@ export interface Restaurant {
   reservationInfo?: {
     recommended: boolean;
     url?: string;
+    affiliatePartner?: string;
   };
   rating?: number;
   reviewCount?: number;
@@ -457,8 +458,9 @@ export interface HotelResult {
   amenities: string[];
   location: LocationInfo;
   images: string[];
-  affiliateUrl: string;
-  affiliatePartner: string;
+  /** Present only when a live provider returned a verified booking URL. */
+  affiliateUrl?: string;
+  affiliatePartner?: string;
   vibeScore: number;
   vibeMatch: string[];
   tripadvisorRating?: number;
@@ -547,8 +549,9 @@ export interface TransportResult {
   cabinClass?: "economy" | "premium_economy" | "business" | "first";
   airlines: string[];
   segments: TransportSegment[];
-  affiliateUrl: string;
-  affiliatePartner: string;
+  /** Present only when the provider returned a hosted booking URL. */
+  affiliateUrl?: string;
+  affiliatePartner?: string;
   source: "amadeus" | "duffel";
   vibeScore: number;
   vibeMatch: string[];

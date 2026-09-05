@@ -6,6 +6,7 @@ import crypto from "crypto";
 const WEBHOOK_SECRET = "test-webhook-secret-123";
 vi.hoisted(() => {
   process.env.VIATOR_WEBHOOK_SECRET = "test-webhook-secret-123";
+  process.env.BOOKING_WEBHOOK_SECRET = "test-booking-secret-456";
 });
 
 // ── Mock Supabase (Share route) ─────────────────────────────────────────────
@@ -317,7 +318,7 @@ describe("POST /api/track/conversion", () => {
       data: {
         id: "click-abc",
         user_id: "user-456",
-        partner: "viator",
+        affiliate_partner: "viator",
         converted: false,
       },
       error: null,
@@ -378,6 +379,57 @@ describe("POST /api/track/conversion", () => {
     );
   });
 
+  it.each(["booking", "booking.com", "Booking.com", "BOOKINGCOM"])(
+    "accepts signed booking conversions for legacy %s clicks",
+    async (partner) => {
+      mockClickReturn = {
+        data: {
+          id: "click-abc",
+          user_id: "user-456",
+          affiliate_partner: partner,
+        },
+        error: null,
+      };
+      const payload = JSON.stringify({
+        ...validConversion,
+        partner: "booking",
+      });
+      const res = await conversionPost(
+        makeRequest("POST", "/api/track/conversion", payload, {
+          "x-webhook-signature": signPayload(
+            payload,
+            "test-booking-secret-456",
+          ),
+        }),
+      );
+      expect(res.status).toBe(200);
+      expect(conversionsChain.upsert).toHaveBeenCalledWith(
+        expect.objectContaining({
+          partner: "booking",
+          click_id: "click-abc",
+          user_id: "user-456",
+        }),
+        { onConflict: "partner,conversion_key" },
+      );
+    },
+  );
+
+  it("does not let alias normalization bypass partner signature verification", async () => {
+    mockClickReturn = {
+      data: { id: "click-abc", affiliate_partner: "Booking.com" },
+      error: null,
+    };
+    const payload = JSON.stringify({ ...validConversion, partner: "booking" });
+    const res = await conversionPost(
+      makeRequest("POST", "/api/track/conversion", payload, {
+        "x-webhook-signature": signPayload(payload, WEBHOOK_SECRET),
+      }),
+    );
+    expect(res.status).toBe(401);
+    expect(mockConversionSupabase.from).not.toHaveBeenCalled();
+    expect(conversionsChain.upsert).not.toHaveBeenCalled();
+  });
+
   it("returns 400 for invalid/missing fields", async () => {
     const invalidPayload = JSON.stringify({ click_id: "click-abc" }); // missing required fields
     const signature = signPayload(invalidPayload, WEBHOOK_SECRET);
@@ -423,13 +475,16 @@ describe("POST /api/track/conversion", () => {
     expect(res.status).toBe(401);
   });
 
-  it("handles missing click gracefully and still records conversion", async () => {
+  it("records an unknown click when the partner supplies a stable order ID", async () => {
     mockClickReturn = {
       data: null,
       error: { code: "PGRST116", message: "Not found" },
     };
 
-    const payload = JSON.stringify(validConversion);
+    const payload = JSON.stringify({
+      ...validConversion,
+      order_id: "partner-order-123",
+    });
     const signature = signPayload(payload, WEBHOOK_SECRET);
 
     const req = makeRequest("POST", "/api/track/conversion", payload, {
@@ -450,5 +505,62 @@ describe("POST /api/track/conversion", () => {
       expect.objectContaining({ click_id: null }),
       { onConflict: "partner,conversion_key" },
     );
+  });
+
+  it("rejects an unknown click without a stable conversion reference", async () => {
+    mockClickReturn = {
+      data: null,
+      error: { code: "PGRST116", message: "Not found" },
+    };
+
+    const payload = JSON.stringify(validConversion);
+    const signature = signPayload(payload, WEBHOOK_SECRET);
+    const res = await conversionPost(
+      makeRequest("POST", "/api/track/conversion", payload, {
+        "x-webhook-signature": signature,
+      }),
+    );
+
+    expect(res.status).toBe(400);
+    expect(conversionsChain.upsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects a conversion attributed to a different partner's click", async () => {
+    mockClickReturn = {
+      data: {
+        id: "click-abc",
+        user_id: "user-456",
+        affiliate_partner: "booking",
+        converted: false,
+      },
+      error: null,
+    };
+
+    const payload = JSON.stringify(validConversion);
+    const signature = signPayload(payload, WEBHOOK_SECRET);
+    const res = await conversionPost(
+      makeRequest("POST", "/api/track/conversion", payload, {
+        "x-webhook-signature": signature,
+      }),
+    );
+
+    expect(res.status).toBe(400);
+    expect(conversionsChain.upsert).not.toHaveBeenCalled();
+  });
+
+  it("rejects financial values that exceed the database column", async () => {
+    const payload = JSON.stringify({
+      ...validConversion,
+      booking_value: 100_000_000,
+    });
+    const signature = signPayload(payload, WEBHOOK_SECRET);
+    const res = await conversionPost(
+      makeRequest("POST", "/api/track/conversion", payload, {
+        "x-webhook-signature": signature,
+      }),
+    );
+
+    expect(res.status).toBe(400);
+    expect(mockConversionSupabase.from).not.toHaveBeenCalled();
   });
 });
