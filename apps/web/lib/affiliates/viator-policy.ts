@@ -65,7 +65,13 @@ function filterCachedSpec(value: unknown): unknown[] {
     // Legacy trip metadata is independent of supplier content. Do not replay
     // unmarked cards, timelines or free-form prose.
     if (item.type === "TripSummary") {
-      const keys = ["destination", "startDate", "endDate", "travelers", "budget"];
+      const keys = [
+        "destination",
+        "startDate",
+        "endDate",
+        "travelers",
+        "budget",
+      ];
       const safe = Object.fromEntries(
         Object.entries(props).filter(([key]) => keys.includes(key)),
       );

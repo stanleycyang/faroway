@@ -413,9 +413,7 @@ async function pollAndStream(
       });
     }
 
-    const ir = filterViatorDisplay(
-      search.intermediate_results || {},
-    ) as Record<string, unknown>;
+    const ir = filterViatorDisplay(search.intermediate_results || {});
 
     if (!sentHotels && ir.hotels) {
       const hotels = ir.hotels as HotelInput[];
@@ -560,10 +558,9 @@ async function loadSearchForStream(
       .single();
 
     if (!error) {
+      const search = data as unknown as SearchStreamRecord | null;
       return {
-        search:
-          filterViatorDisplay(data as unknown as SearchStreamRecord | null) ??
-          null,
+        search: filterViatorDisplay(search) ?? null,
         error: null,
       };
     }
