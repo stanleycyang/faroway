@@ -9,6 +9,7 @@ import {
   createGateway,
 } from "@/lib/ai/sdk";
 import { z } from "zod";
+import { canProcessViatorContent } from "@/lib/affiliates/viator-policy";
 import {
   SearchPlan,
   HotelResult,
@@ -108,6 +109,7 @@ export async function runAggregatorAgent(
   transport: TransportResult[] = [],
 ): Promise<{ days: SuggestedDay[]; topHotel: HotelResult | null }> {
   const { destination, dates } = plan;
+  activities = activities.filter(canProcessViatorContent);
 
   // Calculate number of days
   const startDate = new Date(dates.start);

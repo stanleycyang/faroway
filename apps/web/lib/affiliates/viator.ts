@@ -13,6 +13,7 @@
 
 import { fetchWithTimeout } from "@/lib/search/runtime";
 import { buildViatorHandoffUrl } from "./viator-link";
+import { isViatorContentEnabled } from "./viator-policy";
 
 // Environment variables
 const VIATOR_API_KEY = process.env.VIATOR_API_KEY;
@@ -267,7 +268,7 @@ export interface ViatorAvailability {
  * Check if Viator API is configured
  */
 export function isViatorConfigured(): boolean {
-  return !!(VIATOR_API_KEY && VIATOR_PARTNER_ID);
+  return isViatorContentEnabled() && !!(VIATOR_API_KEY && VIATOR_PARTNER_ID);
 }
 
 /**
@@ -487,7 +488,7 @@ function normalizeViatorProduct(raw: any): ViatorProduct {
     title: raw.title || raw.name,
     description: raw.description || "",
     shortDescription:
-      raw.shortDescription || raw.description?.substring(0, 200) || "",
+      raw.shortDescription || "",
     // v2: reviews.combinedAverageRating / reviews.totalReviews
     rating: raw.reviews?.combinedAverageRating || raw.rating || 0,
     reviewCount: raw.reviews?.totalReviews || raw.reviewCount || 0,

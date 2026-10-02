@@ -1,3 +1,5 @@
+import { ViatorContentPolicy } from "@/components/trips/ViatorContentPolicy";
+import { isViatorContentEnabled } from "@/lib/affiliates/viator-policy";
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
@@ -195,7 +197,9 @@ export default function RootLayout({
         >
           Skip to main content
         </a>
-        <div id="main-content">{children}</div>
+        <ViatorContentPolicy enabled={isViatorContentEnabled()}>
+          <div id="main-content">{children}</div>
+        </ViatorContentPolicy>
         {process.env.NODE_ENV === "production" && <Analytics />}
       </body>
     </html>

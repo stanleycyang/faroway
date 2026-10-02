@@ -10,6 +10,10 @@ import {
   createGateway,
 } from "@/lib/ai/sdk";
 import { z } from "zod";
+import {
+  canProcessViatorContent,
+  isViatorContentEnabled,
+} from "@/lib/affiliates/viator-policy";
 import { SearchPlan, ActivityResult } from "../types";
 import { VIBE_KEYWORDS } from "@faroway/constants";
 import {
@@ -106,7 +110,7 @@ export async function runActivitiesAgent(
   const { destination, dates, activityCriteria, vibeInterpretation } = plan;
   const vibes = vibeInterpretation.vibes;
 
-  const viatorPromise = isViatorConfigured()
+  const viatorPromise = isViatorContentEnabled() && isViatorConfigured()
     ? searchViatorProducts({
         destination,
         startDate: dates.start,
@@ -208,8 +212,8 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
     return {
       id: `activity_v_${product.productCode}`,
       name: product.title,
-      description:
-        product.shortDescription || product.description.substring(0, 200),
+      description: product.description,
+      viatorContentVersion: 1,
       category: product.categories[0] || "sightseeing",
       duration: durationMinutes,
       price: product.price.amount,
@@ -309,7 +313,10 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
   // Enrich with TripAdvisor ratings and reviews
   if (isTripAdvisorConfigured() && allActivities.length > 0) {
     try {
-      allActivities = await enrichWithTripAdvisor(allActivities, "attractions");
+      const eligible = allActivities.filter(canProcessViatorContent);
+      const enriched = await enrichWithTripAdvisor(eligible, "attractions");
+      const byId = new Map(enriched.map((item) => [item.id, item]));
+      allActivities = allActivities.map((item) => byId.get(item.id) || item);
     } catch (e) {
       console.error("[Activities Agent] TripAdvisor enrichment error:", e);
     }

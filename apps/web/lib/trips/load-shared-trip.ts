@@ -1,5 +1,7 @@
 import "server-only";
 
+import { filterViatorDisplay } from "@/lib/affiliates/viator-policy";
+
 import { cache } from "react";
 import type { TripDay } from "@faroway/types";
 import { getSupabase } from "@/lib/supabase/server";
@@ -43,7 +45,7 @@ async function loadSharedTripUncached(
     .single();
 
   if (error || !trip) return null;
-  return trip as SharedTripData;
+  return filterViatorDisplay(trip as SharedTripData);
 }
 
 export const loadSharedTrip = cache(loadSharedTripUncached);

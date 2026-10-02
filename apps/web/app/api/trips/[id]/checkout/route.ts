@@ -1,3 +1,4 @@
+import { isViatorContentEnabled } from "@/lib/affiliates/viator-policy";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUserIdFromRequest } from "@/lib/auth/middleware";
@@ -22,6 +23,7 @@ const Input = z
 
 function enabled() {
   return (
+    isViatorContentEnabled() &&
     process.env.VIATOR_HOSTED_CHECKOUT_ENABLED === "true" &&
     process.env.VIATOR_SANDBOX !== "true" &&
     /^P\d+$/.test(process.env.VIATOR_PARTNER_ID || "") &&
@@ -59,7 +61,10 @@ export async function GET(request: NextRequest, context: Context) {
       );
     // A saved handoff is not evidence of a booking or a charge. Do not promote
     // clicks, client returns, or legacy conversion flags into booking state.
-    return json({ enabled: enabled(), attempts: data || [] });
+    return json({
+      enabled: enabled(),
+      attempts: isViatorContentEnabled() ? data || [] : [],
+    });
   } catch {
     return json({ error: "Booking history is temporarily unavailable." }, 503);
   }

@@ -1,3 +1,7 @@
+import {
+  filterViatorDisplay,
+  isViatorContent,
+} from "@/lib/affiliates/viator-policy";
 /**
  * json-render Spec Builder
  *
@@ -237,6 +241,7 @@ export function buildHotelBlocks(
 export function buildItineraryBlocks(
   days: ItineraryDayInput[],
 ): JsonRenderComponent[] {
+  days = filterViatorDisplay(days);
   const components: JsonRenderComponent[] = [];
 
   if (days.length === 0) return components;
@@ -316,7 +321,9 @@ export function buildItineraryBlocks(
         type: "ActivityCard",
         props: {
           name: activity.name,
-          description: activity.description || `Enjoy ${activity.name}`,
+          description:
+            activity.description ||
+            (isViatorContent(activity) ? "" : `Enjoy ${activity.name}`),
           duration: activity.duration
             ? `${activity.duration} hours`
             : "2 hours",
@@ -465,6 +472,7 @@ export function buildBudgetBlocks(
 export function buildJsonRenderSpec(
   input: BuildSpecInput,
 ): JsonRenderComponent[] {
+  input = filterViatorDisplay(input);
   const nights = Math.ceil(
     (new Date(input.endDate).getTime() - new Date(input.startDate).getTime()) /
       (1000 * 60 * 60 * 24),

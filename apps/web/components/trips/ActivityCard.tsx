@@ -1,5 +1,8 @@
 "use client";
 
+import { canDisplayViatorContent } from "@/lib/affiliates/viator-policy";
+import { useViatorContentEnabled } from "./ViatorContentPolicy";
+
 import React from "react";
 import Image from "next/image";
 import { useTripCheckout } from "./TripCheckout";
@@ -204,6 +207,8 @@ function getBadge(
 
 export function ActivityCard({ activity, date }: ActivityCardProps) {
   const checkout = useTripCheckout();
+  const viatorContentEnabled = useViatorContentEnabled();
+  if (!canDisplayViatorContent(activity, viatorContentEnabled)) return null;
   // Guard against receiving a non-object (e.g. a plain string from inconsistent AI output)
   if (!activity || typeof activity !== "object" || !activity.name) return null;
 
@@ -348,7 +353,7 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
           </div>
         )}
 
-        <p className="text-sm text-gray-600 leading-relaxed line-clamp-2 mt-1">
+        <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap mt-1">
           {activity.description}
         </p>
 

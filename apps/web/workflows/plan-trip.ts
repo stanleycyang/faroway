@@ -1,3 +1,4 @@
+import { viatorContentMetadata } from "@/lib/affiliates/viator-policy";
 /**
  * Trip Planning Workflow
  * Uses the multi-agent search system with structured output (generateObject)
@@ -615,6 +616,7 @@ async function buildAndSaveSpec(
 
   // Map activities for build-spec
   const activityInputs = result.activities.map((a) => ({
+    ...viatorContentMetadata(a),
     id: a.id,
     name: a.name,
     description: a.description,
@@ -653,6 +655,7 @@ async function buildAndSaveSpec(
     title: day.title,
     morning: {
       activities: day.morning.activities.map((a: ItineraryActivity) => ({
+        ...viatorContentMetadata(a),
         id: a.id,
         name: a.name,
         description: a.description,
@@ -677,6 +680,7 @@ async function buildAndSaveSpec(
     },
     afternoon: {
       activities: day.afternoon.activities.map((a: ItineraryActivity) => ({
+        ...viatorContentMetadata(a),
         id: a.id,
         name: a.name,
         description: a.description,
@@ -701,6 +705,7 @@ async function buildAndSaveSpec(
     },
     evening: {
       activities: day.evening.activities.map((a: ItineraryActivity) => ({
+        ...viatorContentMetadata(a),
         id: a.id,
         name: a.name,
         description: a.description,

@@ -1,3 +1,4 @@
+import { viatorContentMetadata } from "@/lib/affiliates/viator-policy";
 /**
  * POST /api/itinerary/stream
  * Streaming itinerary generation using json-render
@@ -272,6 +273,7 @@ function mapHotel(hotel: HotelResult): HotelInput {
 
 function mapActivity(activity: ActivityResult): ActivityInput {
   return {
+    ...viatorContentMetadata(activity),
     id: activity.id,
     name: activity.name,
     description: activity.description,
@@ -335,6 +337,7 @@ function mapDay(day: TripDay): ItineraryDayInput {
 
 function mapItineraryActivity(activity: ItineraryActivity): ActivityInput {
   return {
+    ...viatorContentMetadata(activity),
     id: activity.id,
     name: activity.name,
     description: activity.description,

@@ -1,3 +1,4 @@
+import { viatorContentMetadata } from "@/lib/affiliates/viator-policy";
 /**
  * Type Bridge: Multi-Agent Search Results → Frontend Itinerary Types
  *
@@ -39,6 +40,7 @@ function mapActivity(
   };
 
   return {
+    ...viatorContentMetadata(a),
     id: a.id,
     name: a.name,
     description: a.description,

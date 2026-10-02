@@ -79,6 +79,8 @@ const loaded = () => ({
 
 beforeEach(() => {
   vi.resetAllMocks();
+  vi.stubEnv("VIATOR_CONTENT_ENABLED", "true");
+  vi.stubEnv("VIATOR_CONTENT_APPROVAL_REF", "test-approval");
   vi.stubEnv("VIATOR_HOSTED_CHECKOUT_ENABLED", "true");
   vi.stubEnv("VIATOR_PARTNER_ID", "P12345678");
   vi.stubEnv("VIATOR_SANDBOX", "false");
@@ -110,6 +112,18 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("owned-trip Viator hosted handoff", () => {
+  it("blocks checkout and history without content approval", async () => {
+    vi.stubEnv("VIATOR_CONTENT_APPROVAL_REF", "");
+    expect((await POST(request(), context())).status).toBe(503);
+    mocks.history.mockResolvedValue({
+      data: [{ item_name: "Provider title" }],
+      error: null,
+    });
+    const history = await GET(request(), context());
+    expect(await history.json()).toEqual({ enabled: false, attempts: [] });
+    expect(mocks.product).not.toHaveBeenCalled();
+  });
+
   it("saves attribution before returning the canonical URL, without claiming a booking", async () => {
     const response = await POST(request(), context());
     expect(response.status).toBe(200);

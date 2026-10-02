@@ -5,9 +5,42 @@ itineraries. Viator hosts payment and booking support. Faroway does not collect
 card data, reserve inventory, or submit a booking. This is not embedded payment
 or a multi-provider cart.
 
+## Content and processing approval gates
+
+Viator API access and display are disabled unless both
+`VIATOR_CONTENT_ENABLED=true` and a nonempty `VIATOR_CONTENT_APPROVAL_REF`
+are configured. The reference is a non-secret identifier for the reviewed
+commercial approval, not a credential or an assertion of legal certification.
+Receiving a sandbox key or accepting a licence does not establish that the
+current abbreviated product display is approved.
+
+External AI and enrichment processing additionally require
+`VIATOR_EXTERNAL_PROCESSING_ENABLED=true` and a nonempty
+`VIATOR_EXTERNAL_PROCESSING_APPROVAL_REF`. Without this separate approval,
+Viator items do not enter aggregator prompts, the alternate AI agent's tools,
+or TripAdvisor enrichment. Independently generated planning continues.
+
+API calls are gated at the provider module. Read boundaries filter private and
+shared trips, search results, and stream intermediates. New provider cards retain
+the full description and a content-version marker. Legacy cards without that
+marker remain hidden even when display is enabled; the code cannot recover
+previously truncated text. Mixed legacy summaries are withheld when their
+provider cards are removed. No stored trip is rewritten. Opaque cached
+json-render specs are not replayed; structured itinerary data and progressive
+blocks remain available. Already-downloaded offline copies cannot be remotely
+revoked by this server change.
+
+Before enabling content, obtain review of required product fields, approved
+display format, refresh/storage rules, copyright notices and takedown handling.
+The current card is not certified to satisfy the licence's complete-product
+information requirements. Keep provider wording separate from Faroway planning
+prose; do not treat an AI rewrite as independent content. Noindex remains
+required on private/shared itineraries.
+
 ## Enablement
 
-The server requires `VIATOR_HOSTED_CHECKOUT_ENABLED=true`, an existing valid
+The server requires the content approval gate above plus
+`VIATOR_HOSTED_CHECKOUT_ENABLED=true`, an existing valid
 `VIATOR_PARTNER_ID`, configured Viator API access, and production mode
 (`VIATOR_SANDBOX` must not be `true`). The feature is disabled by default. Do not
 enable it until the owner has verified the partner account, current terms,
@@ -39,7 +72,9 @@ there is no invented product path or placeholder affiliate ID.
 5. Confirm commission reconciliation with the partner's supported reporting
    process. A transaction-based attribution test requires separate authorization
    and provider-approved procedures. Enable production only after owner approval.
-   Roll back by setting `VIATOR_HOSTED_CHECKOUT_ENABLED=false`.
+   Roll back handoffs with `VIATOR_HOSTED_CHECKOUT_ENABLED=false`; disable all
+   API/content use with `VIATOR_CONTENT_ENABLED=false`. Restart/redeploy through
+   the normal approved process when environment settings change.
 
 These are owner actions, not setup performed by this change. The feature remains
 blocked until account access, terms, and attribution are verified.
