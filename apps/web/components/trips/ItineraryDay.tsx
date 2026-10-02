@@ -394,6 +394,7 @@ export function ItineraryDay({
                 icon={<Sunrise className="w-4 h-4" />}
                 label="Morning"
                 color="amber"
+                date={date}
                 block={morning}
               />
             )}
@@ -404,6 +405,7 @@ export function ItineraryDay({
                 icon={<Sun className="w-4 h-4" />}
                 label="Afternoon"
                 color="orange"
+                date={date}
                 block={afternoon}
               />
             )}
@@ -414,6 +416,7 @@ export function ItineraryDay({
                 icon={<Moon className="w-4 h-4" />}
                 label="Evening"
                 color="primary"
+                date={date}
                 block={evening}
               />
             )}
@@ -461,6 +464,7 @@ export function ItineraryDay({
 }
 
 interface TimeBlockSectionProps {
+  date: string;
   icon: React.ReactNode;
   label: string;
   color: "amber" | "orange" | "primary";
@@ -468,6 +472,7 @@ interface TimeBlockSectionProps {
 }
 
 function TimeBlockSection({
+  date,
   icon,
   label,
   color,
@@ -531,6 +536,7 @@ function TimeBlockSection({
           <ActivityCard
             key={activity.id || idx}
             activity={activity}
+            date={date}
             index={idx}
           />
         ))}

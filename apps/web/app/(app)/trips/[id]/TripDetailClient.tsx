@@ -58,6 +58,7 @@ import { ItineraryDay } from "@/components/trips/ItineraryDay";
 import { ItineraryGenerationLoader } from "@/components/trips/ItineraryGenerationLoader";
 import { TripReadyScreen } from "@/components/trips/TripReadyScreen";
 import { StreamedSpecPreview } from "@/components/trips/StreamedSpecPreview";
+import { TripCheckout } from "@/components/trips/TripCheckout";
 import { TripFeedback } from "@/components/trips/TripFeedback";
 import { ShareButtons } from "@/components/ShareButtons";
 import {
@@ -649,44 +650,46 @@ export function TripDetailClient({
                 </span>
               )}
             </div>
-            {displayDays.map((day, index) => (
-              <div
-                key={day.dayNumber || index}
-                className="animate-in fade-in slide-in-from-bottom-2 duration-500"
-                style={{
-                  animationDelay: `${index * 150}ms`,
-                  animationFillMode: "both",
-                }}
-              >
-                <DayErrorBoundary dayNumber={day.dayNumber || index + 1}>
-                  <ItineraryDay
-                    dayNumber={day.dayNumber}
-                    date={day.date}
-                    title={day.title}
-                    summary={day.summary}
-                    morning={day.morning}
-                    afternoon={day.afternoon}
-                    evening={day.evening}
-                    totalEstimatedCost={day.totalEstimatedCost}
-                    tips={day.tips}
-                    defaultExpanded={true}
-                    hotel={
-                      index === 0 && displayTopHotel
-                        ? {
-                            name: displayTopHotel.name,
-                            starRating: displayTopHotel.starRating,
-                            pricePerNight: displayTopHotel.pricePerNight,
-                            amenities: displayTopHotel.amenities,
-                            affiliateUrl: displayTopHotel.affiliateUrl,
-                            image: displayTopHotel.images?.[0],
-                          }
-                        : undefined
-                    }
-                    transport={day.transport}
-                  />
-                </DayErrorBoundary>
-              </div>
-            ))}
+            <TripCheckout tripId={tripId} travelers={trip.travelers}>
+              {displayDays.map((day, index) => (
+                <div
+                  key={day.dayNumber || index}
+                  className="animate-in fade-in slide-in-from-bottom-2 duration-500"
+                  style={{
+                    animationDelay: `${index * 150}ms`,
+                    animationFillMode: "both",
+                  }}
+                >
+                  <DayErrorBoundary dayNumber={day.dayNumber || index + 1}>
+                    <ItineraryDay
+                      dayNumber={day.dayNumber}
+                      date={day.date}
+                      title={day.title}
+                      summary={day.summary}
+                      morning={day.morning}
+                      afternoon={day.afternoon}
+                      evening={day.evening}
+                      totalEstimatedCost={day.totalEstimatedCost}
+                      tips={day.tips}
+                      defaultExpanded={true}
+                      hotel={
+                        index === 0 && displayTopHotel
+                          ? {
+                              name: displayTopHotel.name,
+                              starRating: displayTopHotel.starRating,
+                              pricePerNight: displayTopHotel.pricePerNight,
+                              amenities: displayTopHotel.amenities,
+                              affiliateUrl: displayTopHotel.affiliateUrl,
+                              image: displayTopHotel.images?.[0],
+                            }
+                          : undefined
+                      }
+                      transport={day.transport}
+                    />
+                  </DayErrorBoundary>
+                </div>
+              ))}
+            </TripCheckout>
           </div>
         ) : hasStreamedSpecBlocks ? (
           <StreamedSpecPreview

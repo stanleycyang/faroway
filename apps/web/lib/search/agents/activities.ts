@@ -162,6 +162,10 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
       result.activities.map((activity, index) => ({
         ...activity,
         id: `activity_${Date.now()}_${index}`,
+        affiliateUrl: undefined,
+        affiliatePartner: undefined,
+        rating: 0,
+        reviewCount: 0,
       })),
     )
     .catch((error) => {

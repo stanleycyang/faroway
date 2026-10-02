@@ -12,6 +12,7 @@
  */
 
 import { fetchWithTimeout } from "@/lib/search/runtime";
+import { buildViatorHandoffUrl } from "./viator-link";
 
 // Environment variables
 const VIATOR_API_KEY = process.env.VIATOR_API_KEY;
@@ -365,6 +366,7 @@ async function searchByDestinationId(
  */
 export async function getViatorProduct(
   productCode: string,
+  campaign?: string,
 ): Promise<ViatorProduct | null> {
   if (!isViatorConfigured()) {
     return null;
@@ -372,7 +374,7 @@ export async function getViatorProduct(
 
   try {
     const response = await fetchWithTimeout(
-      `${VIATOR_API_BASE}/products/${productCode}`,
+      `${VIATOR_API_BASE}/products/${encodeURIComponent(productCode)}${campaign ? `?campaign-value=${encodeURIComponent(campaign)}` : ""}`,
       {
         headers: getV2ReadHeaders(),
       },
@@ -444,26 +446,14 @@ export function generateViatorAffiliateUrl(
     productUrl?: string;
   },
 ): string {
-  // Use the API-provided productUrl when available (already has proper structure)
-  if (options?.productUrl) {
-    const url = new URL(options.productUrl);
-    url.searchParams.set("pid", VIATOR_PARTNER_ID || "faroway");
-    url.searchParams.set("mcid", trackingId);
-    url.searchParams.set("medium", "api");
-    return url.toString();
-  }
-
-  // Fallback: construct from product code
-  const baseUrl = `https://www.viator.com/tours/${productCode}`;
-  const params = new URLSearchParams({
-    pid: VIATOR_PARTNER_ID || "faroway",
-    mcid: trackingId,
-    medium: "api",
-    ...(options?.date && { date: options.date }),
-    ...(options?.travelers && { travelers: options.travelers.toString() }),
-  });
-
-  return `${baseUrl}?${params}`;
+  // Product paths and MCIDs are provider-owned. Never invent either. Dates and
+  // traveler details are confirmed on Viator; unsupported URL prefill is avoided.
+  void productCode;
+  const campaign = trackingId.replace(/[^a-zA-Z0-9-]/g, "-").slice(0, 100);
+  return options?.productUrl && VIATOR_PARTNER_ID
+    ? buildViatorHandoffUrl(options.productUrl, campaign, VIATOR_PARTNER_ID) ||
+        ""
+    : "";
 }
 
 /**

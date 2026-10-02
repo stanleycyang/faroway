@@ -2,6 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
+import { useTripCheckout } from "./TripCheckout";
 import {
   MapPin,
   Clock,
@@ -174,6 +175,7 @@ const mealTypeConfig: Record<
 
 interface ActivityCardProps {
   activity: Activity;
+  date?: string;
   index?: number;
 }
 
@@ -200,7 +202,8 @@ function getBadge(
   return null;
 }
 
-export function ActivityCard({ activity }: ActivityCardProps) {
+export function ActivityCard({ activity, date }: ActivityCardProps) {
+  const checkout = useTripCheckout();
   // Guard against receiving a non-object (e.g. a plain string from inconsistent AI output)
   if (!activity || typeof activity !== "object" || !activity.name) return null;
 
@@ -210,7 +213,12 @@ export function ActivityCard({ activity }: ActivityCardProps) {
   const reviewCount = activity.reviewCount;
   const badge = getBadge(rating, reviewCount);
   const hasImage = activity.images && activity.images.length > 0;
-  const hasBooking = !!activity.bookingInfo?.bookingUrl;
+  const viatorCheckout =
+    checkout &&
+    date &&
+    activity.bookingInfo?.affiliateId === "viator" &&
+    /^activity_v_[a-zA-Z0-9]+$/.test(activity.id);
+  const hasBooking = !!activity.bookingInfo?.bookingUrl || !!viatorCheckout;
 
   const formatDuration = (minutes: number) => {
     if (minutes < 60) return `${minutes}m`;
@@ -229,6 +237,10 @@ export function ActivityCard({ activity }: ActivityCardProps) {
   };
 
   const handleBookingClick = () => {
+    if (viatorCheckout && checkout && date) {
+      checkout.review({ id: activity.id, name: activity.name, date });
+      return;
+    }
     const url = activity.bookingInfo?.bookingUrl;
     if (!url) return;
 
@@ -431,42 +443,21 @@ export function ActivityCard({ activity }: ActivityCardProps) {
           <div className="mt-4 space-y-2">
             <button
               onClick={handleBookingClick}
+              disabled={!!viatorCheckout && !checkout?.enabled}
               className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-primary to-primary-600 text-white rounded-xl text-sm font-bold hover:from-primary-600 hover:to-primary-700 transition-all duration-200 shadow-md hover:shadow-lg hover:shadow-primary/25 active:scale-[0.98]"
             >
               <Shield className="w-4 h-4" />
-              Reserve Your Spot
+              {viatorCheckout
+                ? checkout?.enabled
+                  ? "Review on Viator"
+                  : "Viator checkout unavailable"
+                : "View booking options"}
               <ExternalLink className="w-3.5 h-3.5 opacity-70" />
             </button>
-            <div className="flex items-center justify-center gap-3 text-[11px] text-gray-500">
-              <span className="inline-flex items-center gap-1">
-                <svg
-                  className="w-3 h-3 text-green-500"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Free cancellation
-              </span>
-              <span className="inline-flex items-center gap-1">
-                <svg
-                  className="w-3 h-3 text-green-500"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                Instant confirmation
-              </span>
-            </div>
+            <p className="text-center text-xs text-gray-500">
+              Final price, availability and cancellation terms are confirmed by
+              the provider.
+            </p>
           </div>
         )}
 
