@@ -157,8 +157,8 @@ function generateMockActivities(
     category:
       category || ["sightseeing", "cultural", "food", "adventure"][i % 4],
     vibeMatch: vibes?.slice(0, 2) || [],
-    affiliateUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`,
-    affiliatePartner: "viator",
+    affiliateUrl: undefined,
+    affiliatePartner: undefined,
   }));
 }
 

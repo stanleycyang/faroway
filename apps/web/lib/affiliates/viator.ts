@@ -487,8 +487,7 @@ function normalizeViatorProduct(raw: any): ViatorProduct {
     productCode: raw.productCode || raw.code,
     title: raw.title || raw.name,
     description: raw.description || "",
-    shortDescription:
-      raw.shortDescription || "",
+    shortDescription: raw.shortDescription || "",
     // v2: reviews.combinedAverageRating / reviews.totalReviews
     rating: raw.reviews?.combinedAverageRating || raw.rating || 0,
     reviewCount: raw.reviews?.totalReviews || raw.reviewCount || 0,

@@ -83,6 +83,35 @@ describe("Viator commercial approval gates", () => {
     expect(saved.days[0].morning.activities).toHaveLength(2);
   });
 
+  it("preserves independent cached specs and suppresses provider specs", () => {
+    vi.stubEnv("VIATOR_CONTENT_ENABLED", "false");
+    const independentSpec = {
+      type: "ActivityCard",
+      props: { name: "Independent walk" },
+      contentPolicyVersion: 1,
+      containsViatorContent: false,
+    };
+    const providerSpec = {
+      ...independentSpec,
+      props: { name: provider.name },
+      containsViatorContent: true,
+    };
+    const result = filterViatorDisplay({
+      jsonRenderSpec: [independentSpec, providerSpec],
+    });
+    expect(result.jsonRenderSpec).toEqual([
+      { type: "ActivityCard", props: { name: "Independent walk" } },
+    ]);
+  });
+
+  it("filters legacy stringified itinerary days before display", () => {
+    vi.stubEnv("VIATOR_CONTENT_ENABLED", "false");
+    const result = filterViatorDisplay({
+      days: JSON.stringify([{ morning: { activities: [provider] } }]),
+    });
+    expect(result.days).toEqual([{ morning: { activities: [] } }]);
+  });
+
   it("recognizes legacy booking and tracking provenance", () => {
     vi.stubEnv("VIATOR_CONTENT_ENABLED", "false");
     const values = [
@@ -101,9 +130,8 @@ describe("Viator commercial approval gates", () => {
     const fetch = vi.spyOn(globalThis, "fetch");
     const api = await import("@/lib/affiliates/viator");
     expect(api.isViatorConfigured()).toBe(false);
-    expect(await api.searchViatorProducts({ destination: "Paris" })).toEqual(
-      [],
-    );
+    const products = await api.searchViatorProducts({ destination: "Paris" });
+    expect(products).toEqual([]);
     expect(await api.getViatorProduct("123P1")).toBeNull();
     expect(
       await api.checkViatorAvailability("123P1", "2099-01-01", "2099-01-02"),
@@ -135,9 +163,8 @@ describe("Viator commercial approval gates", () => {
     const { enrichWithTripAdvisor } =
       await import("@/lib/affiliates/tripadvisor");
     const item = { ...provider, location: { name: "Paris" } };
-    expect(await enrichWithTripAdvisor([item], "attractions")).toEqual([
-      item,
-    ]);
+    const enriched = await enrichWithTripAdvisor([item], "attractions");
+    expect(enriched).toEqual([item]);
     expect(fetch).not.toHaveBeenCalled();
   });
 });

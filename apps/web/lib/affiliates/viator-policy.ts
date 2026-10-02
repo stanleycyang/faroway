@@ -42,6 +42,43 @@ export function isViatorContent(value: unknown): boolean {
   }
 }
 
+export function containsViatorContent(value: unknown): boolean {
+  if (isViatorContent(value)) return true;
+  if (Array.isArray(value)) return value.some(containsViatorContent);
+  const item = record(value);
+  return item ? Object.values(item).some(containsViatorContent) : false;
+}
+
+function filterCachedSpec(value: unknown): unknown[] {
+  if (!Array.isArray(value)) return [];
+  return value.flatMap((entry) => {
+    const item = record(entry);
+    const props = record(item?.props);
+    if (!item || !props) return [];
+    if (
+      item.contentPolicyVersion === 1 &&
+      (item.containsViatorContent === false ||
+        (item.containsViatorContent === true && isViatorContentEnabled()))
+    ) {
+      return [{ type: item.type, props }];
+    }
+    // Legacy trip metadata is independent of supplier content. Do not replay
+    // unmarked cards, timelines or free-form prose.
+    if (item.type === "TripSummary") {
+      const keys = ["destination", "startDate", "endDate", "travelers", "budget"];
+      const safe = Object.fromEntries(
+        Object.entries(props).filter(([key]) => keys.includes(key)),
+      );
+      return [{ type: item.type, props: safe }];
+    }
+    const headings = ["Your Stay", "Your Itinerary", "Other Hotel Options"];
+    if (item.type === "Section" && headings.includes(String(props.title))) {
+      return [{ type: item.type, props: { title: props.title } }];
+    }
+    return [];
+  });
+}
+
 export function viatorContentMetadata(value: unknown) {
   return isViatorContent(value)
     ? { viatorContentVersion: record(value)?.viatorContentVersion }
@@ -89,7 +126,22 @@ export function filterViatorDisplay<T>(value: T): T {
     const output: Record<string, unknown> = {};
     let removed = false;
     for (const [key, child] of Object.entries(item)) {
-      if (key === "json_render_spec" || key === "jsonRenderSpec") continue;
+      if (key === "json_render_spec" || key === "jsonRenderSpec") {
+        const spec = filterCachedSpec(child);
+        if (spec.length > 0) output[key] = spec;
+        continue;
+      }
+      if (key === "days" && typeof child === "string") {
+        try {
+          const result = visit(JSON.parse(child));
+          output[key] = result.value;
+          removed ||= result.removed;
+        } catch {
+          output[key] = [];
+          removed = true;
+        }
+        continue;
+      }
       const result = visit(child);
       if (result.value !== undefined) output[key] = result.value;
       removed ||= result.removed;

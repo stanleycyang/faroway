@@ -26,8 +26,8 @@ the full description and a content-version marker. Legacy cards without that
 marker remain hidden even when display is enabled; the code cannot recover
 previously truncated text. Mixed legacy summaries are withheld when their
 provider cards are removed. No stored trip is rewritten. Opaque cached
-json-render specs are not replayed; structured itinerary data and progressive
-blocks remain available. Already-downloaded offline copies cannot be remotely
+json-render cards are not replayed unless they carry the new source marker;
+safe trip metadata, structured itineraries and progressive blocks remain available. Already-downloaded offline copies cannot be remotely
 revoked by this server change.
 
 Before enabling content, obtain review of required product fields, approved

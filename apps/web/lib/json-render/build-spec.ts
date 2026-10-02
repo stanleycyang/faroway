@@ -1,4 +1,5 @@
 import {
+  containsViatorContent,
   filterViatorDisplay,
   isViatorContent,
 } from "@/lib/affiliates/viator-policy";
@@ -506,5 +507,9 @@ export function buildJsonRenderSpec(
     ...hotelBlocks,
     ...itineraryBlocks,
     ...budgetBlocks,
-  ];
+  ].map((component) => ({
+    ...component,
+    contentPolicyVersion: 1,
+    containsViatorContent: containsViatorContent(input),
+  }));
 }

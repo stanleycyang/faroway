@@ -110,16 +110,17 @@ export async function runActivitiesAgent(
   const { destination, dates, activityCriteria, vibeInterpretation } = plan;
   const vibes = vibeInterpretation.vibes;
 
-  const viatorPromise = isViatorContentEnabled() && isViatorConfigured()
-    ? searchViatorProducts({
-        destination,
-        startDate: dates.start,
-        limit: 15,
-      }).catch((error) => {
-        console.error("[Activities Agent] Viator search error:", error);
-        return [];
-      })
-    : Promise.resolve([]);
+  const viatorPromise =
+    isViatorContentEnabled() && isViatorConfigured()
+      ? searchViatorProducts({
+          destination,
+          startDate: dates.start,
+          limit: 15,
+        }).catch((error) => {
+          console.error("[Activities Agent] Viator search error:", error);
+          return [];
+        })
+      : Promise.resolve([]);
 
   const gygPromise = isGYGConfigured()
     ? searchGYGActivities({
