@@ -67,7 +67,18 @@ export async function GET(request: Request) {
             fontSize: 28,
           }}
         >
-          ✈
+          <svg
+            width="30"
+            height="30"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="white"
+            strokeWidth="1.8"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M17.8 8.2 21 3l-5.2 3.2-4.6-1.4-1.4 1.4 3.3 2.7-4.2 4.2-3.3-.7-1.4 1.4 4.1 2.7 2.7 4.1 1.4-1.4-.7-3.3 4.2-4.2 2.7 3.3 1.4-1.4-1.4-4.6Z" />
+          </svg>
         </div>
         <span
           style={{

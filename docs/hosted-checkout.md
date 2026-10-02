@@ -20,6 +20,30 @@ opaque attempt ID as campaign attribution. It does not put traveler names, email
 trip IDs, or traveler details in the URL. Missing/invalid links fail closed;
 there is no invented product path or placeholder affiliate ID.
 
+### Owner launch checklist
+
+1. Confirm the partner account's permitted production API access, applicable
+   terms, and the account PID. Confirm product-detail responses return canonical
+   links containing that PID and provider-issued MCID/medium values.
+2. Through the existing approved secrets-management process, configure
+   `VIATOR_API_KEY` and `VIATOR_PARTNER_ID`; keep
+   `VIATOR_HOSTED_CHECKOUT_ENABLED=false` until verification is complete. Use
+   `VIATOR_SANDBOX=false` for the production API. Never put keys in source control.
+3. Verify the deployed authentication, `affiliate_clicks` table, and rate-limit
+   infrastructure. This release assumes the existing schema; no migration is added.
+4. After approval to enable a controlled environment, turn on the gate and inspect
+   an owned itinerary's handoff, provider product identity, canonical attribution
+   parameters, final pricing/options, and recovery after returning. Do not pay or
+   book during this check. Check partner reporting according to the account's
+   reporting capabilities; a recorded click does not establish earned commission.
+5. Confirm commission reconciliation with the partner's supported reporting
+   process. A transaction-based attribution test requires separate authorization
+   and provider-approved procedures. Enable production only after owner approval.
+   Roll back by setting `VIATOR_HOSTED_CHECKOUT_ENABLED=false`.
+
+These are owner actions, not setup performed by this change. The feature remains
+blocked until account access, terms, and attribution are verified.
+
 ## Traveler flow
 
 1. Select a Viator experience in an owned itinerary.
@@ -28,7 +52,8 @@ there is no invented product path or placeholder affiliate ID.
 3. Continue: the server verifies ownership and the itinerary item, resolves the
    canonical URL from Viator, and saves the handoff before returning a URL.
 4. Navigate in the same tab. Browser back or reopening the trip reloads saved
-   steps. Repeated requests reuse the same opaque attempt ID.
+   steps. Repeated requests reuse the same opaque attempt ID and revalidate the
+   canonical product with Viator; stored tracking URLs are never trusted on resume.
 
 The existing `affiliate_clicks` ledger stores these steps with `checkout-` IDs
 and an item key containing the activity ID and planned date. A prepared step is

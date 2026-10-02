@@ -67,6 +67,14 @@ jobs:
       - name: Run tests
         run: bun run test
 
+      - name: Install checkout test browser
+        run: bunx playwright install --with-deps chromium
+        working-directory: apps/web
+
+      - name: Test hosted checkout in desktop and mobile browsers
+        run: bunx playwright test -c playwright.checkout.config.ts
+        working-directory: apps/web
+
   build-web:
     name: Build Web
     runs-on: ubuntu-latest

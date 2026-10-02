@@ -24,6 +24,9 @@ describe("Viator provider-owned attribution", () => {
     canonical.replace("P12345678", "faroway"),
     canonical.replace("mcid=42383", "mcid=tg_123"),
     canonical.replace("&medium=api", ""),
+    canonical + "&pid=P9999",
+    canonical + "&mcid=99999",
+    canonical + "&medium=link",
     "not a URL",
   ])("rejects unsafe or unattributable links: %s", (url) => {
     expect(buildViatorHandoffUrl(url, "checkout-123", "P12345678")).toBeNull();

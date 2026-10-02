@@ -84,6 +84,15 @@ export async function POST(request: NextRequest, context: Context) {
     const { activityId, date, attemptId } = input.data;
     const loaded = await loadTripForUserUncached(id, auth.userId);
     if (!loaded) return json({ error: "Trip not found" }, 404);
+    if (date < loaded.trip.start_date || date > loaded.trip.end_date) {
+      return json(
+        {
+          error:
+            "This experience's date no longer matches your trip. Please update your plan.",
+        },
+        409,
+      );
+    }
     const day = loaded.itinerary?.days?.find((d) => d.date === date);
     const activity =
       day &&
@@ -102,36 +111,26 @@ export async function POST(request: NextRequest, context: Context) {
     const readExisting = () =>
       db
         .from("affiliate_clicks")
-        .select("id, user_id, trip_id, item_id, affiliate_url")
+        .select(
+          "id, user_id, trip_id, item_id, item_type, affiliate_partner, affiliate_url",
+        )
         .eq("id", clickId)
         .maybeSingle();
-    const responseForExisting = (row: {
+    const matchesExisting = (row: {
       user_id: string;
       trip_id: string;
       item_id: string;
+      item_type: string;
+      affiliate_partner: string;
       affiliate_url: string;
     }) => {
-      if (
-        row.user_id !== auth.userId ||
-        row.trip_id !== id ||
-        row.item_id !== itemId
-      ) {
-        return json({ error: "Please restart this checkout step." }, 409);
-      }
-      const url = buildViatorHandoffUrl(
-        row.affiliate_url,
-        clickId,
-        process.env.VIATOR_PARTNER_ID,
+      return (
+        row.user_id === auth.userId &&
+        row.trip_id === id &&
+        row.item_id === itemId &&
+        row.item_type === "activity" &&
+        row.affiliate_partner === "viator"
       );
-      return url
-        ? json({ redirectUrl: url, attemptId, status: "handoff_prepared" })
-        : json(
-            {
-              error:
-                "The provider link is unavailable. Please restart this step.",
-            },
-            503,
-          );
     };
     const existing = await readExisting();
     if (existing.error)
@@ -139,10 +138,11 @@ export async function POST(request: NextRequest, context: Context) {
         { error: "Could not recover checkout. Please try again." },
         503,
       );
-    if (existing.data) return responseForExisting(existing.data);
+    if (existing.data && !matchesExisting(existing.data))
+      return json({ error: "Please restart this checkout step." }, 409);
 
     // Resolve the canonical URL from the provider, never from user input or an
-    // LLM. Product details are not a date-specific availability/price quote.
+    // LLM or a previously saved tracking row, including on resume. Product details are not a date-specific availability/price quote.
     const productCode = activityId.slice("activity_v_".length);
     const product = await getViatorProduct(productCode, clickId);
     const url =
@@ -161,6 +161,9 @@ export async function POST(request: NextRequest, context: Context) {
         },
         503,
       );
+    const prepared = () =>
+      json({ redirectUrl: url, attemptId, status: "handoff_prepared" });
+    if (existing.data) return prepared();
     const { error } = await db.from("affiliate_clicks").insert({
       id: clickId,
       user_id: auth.userId,
@@ -176,7 +179,11 @@ export async function POST(request: NextRequest, context: Context) {
     });
     if (error?.code === "23505") {
       const raced = await readExisting();
-      if (!raced.error && raced.data) return responseForExisting(raced.data);
+      if (!raced.error && raced.data) {
+        return matchesExisting(raced.data)
+          ? prepared()
+          : json({ error: "Please restart this checkout step." }, 409);
+      }
     }
     if (error)
       return json(

@@ -48,10 +48,17 @@ const existing = () => ({
   user_id: "user-1",
   trip_id: tripId,
   item_id: "activity_v_123P1@2099-06-01",
+  item_type: "activity",
+  affiliate_partner: "viator",
   affiliate_url: canonical,
 });
 const loaded = () => ({
-  trip: { id: tripId, travelers: 2 },
+  trip: {
+    id: tripId,
+    travelers: 2,
+    start_date: "2099-06-01",
+    end_date: "2099-06-04",
+  },
   itinerary: {
     days: [
       {
@@ -172,18 +179,47 @@ describe("owned-trip Viator hosted handoff", () => {
   it("rejects dates in the past", async () => {
     const trip = loaded();
     trip.itinerary.days[0].date = "2000-01-01";
+    trip.trip.start_date = "2000-01-01";
+    trip.trip.end_date = "2000-01-04";
     mocks.load.mockResolvedValue(trip);
     expect(
       (await POST(request({ ...input, date: "2000-01-01" }), context())).status,
     ).toBe(409);
   });
-  it("recovers the same attempt without creating another click or provider request", async () => {
-    mocks.existing.mockResolvedValue({ data: existing(), error: null });
-    expect((await POST(request(), context())).status).toBe(200);
-    expect(mocks.insert).not.toHaveBeenCalled();
+
+  it("rejects stale itinerary dates after the trip dates change", async () => {
+    const trip = loaded();
+    trip.trip.start_date = "2099-07-01";
+    trip.trip.end_date = "2099-07-04";
+    mocks.load.mockResolvedValue(trip);
+    expect((await POST(request(), context())).status).toBe(409);
     expect(mocks.product).not.toHaveBeenCalled();
+    expect(mocks.insert).not.toHaveBeenCalled();
   });
-  it.each(["user_id", "trip_id", "item_id"])(
+  it("revalidates a resumed attempt without creating another click", async () => {
+    mocks.existing.mockResolvedValue({
+      data: {
+        ...existing(),
+        affiliate_url:
+          "https://www.viator.com/tours/poisoned?pid=P1&mcid=1&medium=api",
+      },
+      error: null,
+    });
+    const response = await POST(request(), context());
+    expect(response.status).toBe(200);
+    expect((await response.json()).redirectUrl).not.toContain("poisoned");
+    expect(mocks.insert).not.toHaveBeenCalled();
+    expect(mocks.product).toHaveBeenCalledTimes(1);
+  });
+  it("fails closed when the provider cannot revalidate a resumed attempt", async () => {
+    mocks.existing.mockResolvedValue({ data: existing(), error: null });
+    mocks.product.mockResolvedValue(null);
+    const response = await POST(request(), context());
+    expect(response.status).toBe(503);
+    expect(await response.json()).not.toHaveProperty("redirectUrl");
+    expect(mocks.insert).not.toHaveBeenCalled();
+  });
+  it.each(["user_id", "trip_id", "item_id", "item_type", "affiliate_partner"])(
     "rejects reused attempt IDs with different %s",
     async (field) => {
       mocks.existing.mockResolvedValue({

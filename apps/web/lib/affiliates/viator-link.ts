@@ -18,6 +18,14 @@ export function buildViatorHandoffUrl(
       !url.pathname.startsWith("/tours/")
     )
       return null;
+    // Different parsers may choose the first or last duplicate parameter.
+    // Reject ambiguity rather than validating one account and sending another.
+    if (
+      ["pid", "mcid", "medium"].some(
+        (key) => url.searchParams.getAll(key).length !== 1,
+      )
+    )
+      return null;
     const pid = url.searchParams.get("pid");
     if (!pid || !/^P\d+$/.test(pid) || (partnerId && pid !== partnerId))
       return null;
