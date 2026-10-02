@@ -143,7 +143,8 @@ export function filterViatorDisplay<T>(value: T): T {
           output[key] = result.value;
           removed ||= result.removed;
         } catch {
-          output[key] = [];
+          // Keep invalid shape distinguishable from a valid empty itinerary.
+          output[key] = {};
           removed = true;
         }
         continue;
