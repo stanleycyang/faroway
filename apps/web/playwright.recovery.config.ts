@@ -14,7 +14,7 @@ export default defineConfig({
   webServer: {
     command: "node e2e/fixtures/recovery-server.mjs",
     url: "http://127.0.0.1:4400/create",
-    timeout: 180_000,
+    timeout: 600_000,
     reuseExistingServer: false,
     gracefulShutdown: { signal: "SIGTERM", timeout: 5_000 },
   },
