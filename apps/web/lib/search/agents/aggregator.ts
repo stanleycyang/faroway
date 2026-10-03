@@ -9,6 +9,7 @@ import {
   createGateway,
 } from "@/lib/ai/sdk";
 import { z } from "zod";
+import { canProcessViatorContent } from "@/lib/affiliates/viator-policy";
 import {
   SearchPlan,
   HotelResult,
@@ -108,6 +109,7 @@ export async function runAggregatorAgent(
   transport: TransportResult[] = [],
 ): Promise<{ days: SuggestedDay[]; topHotel: HotelResult | null }> {
   const { destination, dates } = plan;
+  activities = activities.filter(canProcessViatorContent);
 
   // Calculate number of days
   const startDate = new Date(dates.start);
@@ -132,7 +134,7 @@ export async function runAggregatorAgent(
     name: a.name,
     category: a.category,
     duration: a.duration,
-    price: a.price,
+    price: a.priceStatus === "unknown" || a.price <= 0 ? null : a.price,
     bestTime: a.bestTimeOfDay,
     vibeScore: a.vibeScore,
     bookingRequired: a.bookingRequired,
@@ -142,7 +144,7 @@ export async function runAggregatorAgent(
     id: d.id,
     name: d.name,
     cuisine: d.cuisineTypes.join(", "),
-    priceLevel: d.priceLevel,
+    priceLevel: d.priceStatus === "unknown" ? null : d.priceLevel,
     mealTypes: d.mealTypes,
     vibeScore: d.vibeScore,
   }));

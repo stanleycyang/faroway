@@ -101,6 +101,12 @@ export async function POST(request: NextRequest) {
 
     const data = parseResult.data;
 
+    // This namespace is reserved for server-verified, owned-trip handoffs.
+    // The public analytics endpoint must not be able to forge that ledger.
+    if (data.clickId?.startsWith("checkout-")) {
+      return NextResponse.json({ error: "Reserved click ID" }, { status: 400 });
+    }
+
     // Validate affiliate URL domain to prevent SSRF
     if (!isAllowedAffiliateUrl(data.affiliateUrl)) {
       return NextResponse.json(

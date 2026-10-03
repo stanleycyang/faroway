@@ -1,3 +1,4 @@
+import { filterViatorDisplay } from "@/lib/affiliates/viator-policy";
 /**
  * GET /api/search/[searchId]
  * Get search status and results
@@ -197,7 +198,7 @@ export async function GET(
       response.error = search.error_message || "An error occurred";
     }
 
-    return NextResponse.json(response);
+    return NextResponse.json(filterViatorDisplay(response));
   } catch (error) {
     console.error("[Search Status] Error:", error);
     return NextResponse.json(

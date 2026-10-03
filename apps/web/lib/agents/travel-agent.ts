@@ -1,3 +1,4 @@
+import { isViatorExternalProcessingEnabled } from "@/lib/affiliates/viator-policy";
 /**
  * Faroway Travel Agent
  * Uses AI SDK ToolLoopAgent with tools for searching hotels, activities, and dining
@@ -156,8 +157,8 @@ function generateMockActivities(
     category:
       category || ["sightseeing", "cultural", "food", "adventure"][i % 4],
     vibeMatch: vibes?.slice(0, 2) || [],
-    affiliateUrl: `https://www.viator.com/searchResults/all?text=${encodeURIComponent(destination)}`,
-    affiliatePartner: "viator",
+    affiliateUrl: undefined,
+    affiliatePartner: undefined,
   }));
 }
 
@@ -226,7 +227,7 @@ const searchActivitiesTool = tool({
     vibes,
   }: SearchActivitiesInput) => {
     // Query Viator for activities
-    if (isViatorConfigured()) {
+    if (isViatorConfigured() && isViatorExternalProcessingEnabled()) {
       try {
         const viatorProducts = await searchViatorProducts({
           destination,
@@ -307,8 +308,8 @@ function normalizeViatorToActivity(
   return {
     id: `activity_${product.productCode}`,
     name: product.title,
-    description:
-      product.shortDescription || product.description.substring(0, 200),
+    description: product.description,
+    viatorContentVersion: 1,
     duration: durationHours,
     price: product.price.amount,
     currency: product.price.currencyCode,

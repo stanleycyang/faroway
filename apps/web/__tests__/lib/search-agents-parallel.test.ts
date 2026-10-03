@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   generateObject: vi.fn(),
@@ -132,11 +132,15 @@ async function waitFor(
 describe("search agents internal parallelism", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("VIATOR_CONTENT_ENABLED", "true");
+    vi.stubEnv("VIATOR_CONTENT_APPROVAL_REF", "test-approval");
     mocks.searchViatorProducts.mockResolvedValue([]);
     mocks.searchGYGActivities.mockResolvedValue([]);
     mocks.isAmadeusConfigured.mockReturnValue(false);
     mocks.searchAmadeusHotels.mockResolvedValue([]);
   });
+
+  afterEach(() => vi.unstubAllEnvs());
 
   it("starts Viator, GetYourGuide, and AI activity generation before awaiting any result", async () => {
     const started: string[] = [];
@@ -172,6 +176,39 @@ describe("search agents internal parallelism", () => {
     expect(results[0].name).toBe("AI Food Walk");
   });
 
+  it("keeps independent AI planning when Viator content is disabled", async () => {
+    vi.stubEnv("VIATOR_CONTENT_ENABLED", "false");
+    mocks.generateObject.mockResolvedValue({
+      object: { activities: [aiActivity] },
+    });
+    const results = await runActivitiesAgent(plan as never, 1);
+    expect(mocks.searchViatorProducts).not.toHaveBeenCalled();
+    expect(results[0].name).toBe("AI Food Walk");
+  });
+
+  it("keeps the complete provider description without rewriting it", async () => {
+    const description = "Provider-owned wording. ".repeat(30);
+    mocks.searchViatorProducts.mockResolvedValue([
+      {
+        productCode: "123P1",
+        title: "Provider food tour",
+        description,
+        shortDescription: "Short provider excerpt",
+        duration: { fixedDurationInMinutes: 90 },
+        categories: ["food"],
+        price: { amount: 30, currencyCode: "USD" },
+        rating: 4,
+        reviewCount: 10,
+        location: { city: "Tokyo" },
+        images: [],
+      },
+    ]);
+    mocks.generateObject.mockResolvedValue({ object: { activities: [] } });
+    const results = await runActivitiesAgent(plan as never);
+    expect(results[0].description).toBe(description);
+    expect(results[0]).toHaveProperty("viatorContentVersion", 1);
+  });
+
   it("starts Booking.com and AI hotel fallback before awaiting either result", async () => {
     const started: string[] = [];
     let release!: () => void;
@@ -199,6 +236,43 @@ describe("search agents internal parallelism", () => {
     const results = await search;
 
     expect(results[0].name).toBe("AI Hotel");
+  });
+
+  it("strips model-generated booking links and ratings even when the model ignores instructions", async () => {
+    mocks.searchBookingHotels.mockResolvedValue([]);
+    mocks.generateObject.mockResolvedValueOnce({
+      object: {
+        hotels: [
+          {
+            ...aiHotel,
+            affiliateUrl: "https://booking.com/invented",
+            affiliatePartner: "booking",
+          },
+        ],
+      },
+    });
+    const hotels = await runHotelsAgent(plan as never, 1);
+    expect(hotels[0]).toMatchObject({
+      affiliateUrl: "",
+      affiliatePartner: "",
+      userRating: 0,
+      reviewCount: 0,
+    });
+    mocks.generateObject.mockResolvedValueOnce({
+      object: {
+        activities: [
+          {
+            ...aiActivity,
+            affiliateUrl: "https://www.viator.com/invented",
+            affiliatePartner: "viator",
+          },
+        ],
+      },
+    });
+    const activities = await runActivitiesAgent(plan as never, 1);
+    expect(activities[0].affiliateUrl).toBeUndefined();
+    expect(activities[0].rating).toBe(0);
+    expect(activities[0].reviewCount).toBe(0);
   });
 
   it("passes resolved Amadeus city codes into hotel search", async () => {

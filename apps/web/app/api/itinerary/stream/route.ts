@@ -1,3 +1,4 @@
+import { viatorContentMetadata } from "@/lib/affiliates/viator-policy";
 /**
  * POST /api/itinerary/stream
  * Streaming itinerary generation using json-render
@@ -272,11 +273,13 @@ function mapHotel(hotel: HotelResult): HotelInput {
 
 function mapActivity(activity: ActivityResult): ActivityInput {
   return {
+    ...viatorContentMetadata(activity),
     id: activity.id,
     name: activity.name,
     description: activity.description,
     duration: activity.duration,
     price: activity.price,
+    priceStatus: activity.priceStatus,
     currency: activity.currency,
     rating: activity.rating,
     reviewCount: activity.reviewCount,
@@ -297,6 +300,7 @@ function mapDining(restaurant: DiningResult): RestaurantInput {
     name: restaurant.name,
     cuisine: restaurant.cuisineTypes.join(", "),
     priceLevel: restaurant.priceLevel,
+    priceStatus: restaurant.priceStatus,
     rating: restaurant.rating,
     reviewCount: restaurant.reviewCount,
     description: restaurant.description,
@@ -335,11 +339,13 @@ function mapDay(day: TripDay): ItineraryDayInput {
 
 function mapItineraryActivity(activity: ItineraryActivity): ActivityInput {
   return {
+    ...viatorContentMetadata(activity),
     id: activity.id,
     name: activity.name,
     description: activity.description,
     duration: activity.duration / 60,
     price: activity.estimatedCost.amount,
+    priceStatus: activity.estimatedCost.status,
     currency: activity.estimatedCost.currency,
     category: activity.category,
     affiliateUrl: activity.bookingInfo?.bookingUrl,
@@ -353,6 +359,7 @@ function mapRestaurant(restaurant: Restaurant): RestaurantInput {
     name: restaurant.name,
     cuisine: restaurant.cuisineType.join(", "),
     priceLevel: restaurant.priceLevel,
+    priceStatus: restaurant.estimatedCost.status,
     description: restaurant.description,
     reservationUrl: restaurant.reservationInfo?.url,
   };

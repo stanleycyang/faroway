@@ -73,6 +73,12 @@ describe("enrichNonAffiliateCandidates", () => {
     expect(result.activities.some((a) => a.name.includes("Yanaka"))).toBe(true);
     expect(result.activities.every((a) => !a.affiliateUrl)).toBe(true);
     expect(result.notes.join(" ")).toContain("Tavily");
+    expect(
+      result.activities.every(
+        (a) =>
+          a.rating === 0 && a.reviewCount === 0 && a.priceStatus === "unknown",
+      ),
+    ).toBe(true);
     expect(fetchSpy).toHaveBeenCalledWith(
       "https://api.tavily.com/search",
       expect.objectContaining({
@@ -87,54 +93,22 @@ describe("enrichNonAffiliateCandidates", () => {
     ).not.toHaveProperty("api_key");
   });
 
-  it("merges Google Places activity and dining candidates", async () => {
+  it("does not ingest Google content into persisted or AI-processed enrichment", async () => {
     process.env.GOOGLE_PLACES_API_KEY = "places-key";
-    const fetchSpy = vi
-      .spyOn(globalThis, "fetch")
-      .mockImplementation(async (input) => {
-        const url = String(input);
-        const isDining = url.includes("restaurant");
-        return new Response(
-          JSON.stringify({
-            results: [
-              {
-                name: isDining ? "Places dining" : "Places activity",
-                formatted_address: isDining ? "2 Chome" : "1 Chome",
-                rating: isDining ? 4.5 : 4.7,
-                user_ratings_total: isDining ? 42 : 99,
-                geometry: {
-                  location: isDining
-                    ? { lat: 35.7, lng: 139.8 }
-                    : { lat: 35.6, lng: 139.7 },
-                },
-              },
-            ],
-          }),
-          { status: 200 },
-        );
-      });
-
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
     const result = await runSearchEnrichment(basePlan, "search-1");
-
-    expect(result.activities).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: "places_activity_search-1_0",
-          name: "Places activity",
-          location: expect.objectContaining({ lat: 35.6, lng: 139.7 }),
-        }),
-      ]),
-    );
-    expect(result.dining).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          id: "places_dining_search-1_0",
-          name: "Places dining",
-          location: expect.objectContaining({ lat: 35.7, lng: 139.8 }),
-        }),
-      ]),
-    );
-    expect(result.notes.join(" ")).toContain("Google Places");
-    expect(fetchSpy).toHaveBeenCalled();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(
+      result.activities.every(
+        (a) =>
+          a.rating === 0 && a.reviewCount === 0 && a.priceStatus === "unknown",
+      ),
+    ).toBe(true);
+    expect(
+      result.dining.every(
+        (d) =>
+          d.rating === 0 && d.reviewCount === 0 && d.priceStatus === "unknown",
+      ),
+    ).toBe(true);
   });
 });

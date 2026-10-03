@@ -85,9 +85,9 @@ For each hotel, provide:
 5. Location in a popular neighborhood
 6. How well it matches the traveler's preferences
 
-Use realistic affiliate URLs in format:
-- https://booking.com/hotel/[country-code]/[hotel-slug]
-- https://hotels.com/ho[id]/[hotel-name]
+Leave affiliateUrl and affiliatePartner empty. These are suggestions, not verified
+offers. Never invent booking URLs, user ratings, or review counts; use zero for
+userRating and reviewCount when there is no verified source.
 
 Price ranges by star rating (per night):
 - 2-star: $40-80
@@ -390,6 +390,10 @@ For vibes like:
     return result.hotels.map((hotel, index) => ({
       ...hotel,
       id: `hotel_${Date.now()}_${index}`,
+      affiliateUrl: "",
+      affiliatePartner: "",
+      userRating: 0,
+      reviewCount: 0,
     }));
   } catch (error) {
     if (isOperationTimeoutError(error)) {

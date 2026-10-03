@@ -171,11 +171,15 @@ export const HotelCard: React.FC<HotelCardProps> = ({
       <View style={styles.hotelCardContent}>
         <View style={styles.hotelCardHeader}>
           <RNText style={styles.hotelCardName}>{name}</RNText>
-          <View style={styles.hotelCardRating}>
-            <Ionicons name="star" size={16} color="#fbbf24" />
-            <RNText style={styles.hotelCardRatingText}>{rating.toFixed(1)}</RNText>
-            {reviewCount && <RNText style={styles.hotelCardReviewCount}>({reviewCount})</RNText>}
-          </View>
+          {typeof rating === 'number' && rating > 0 && (
+            <View style={styles.hotelCardRating}>
+              <Ionicons name="star" size={16} color="#fbbf24" />
+              <RNText style={styles.hotelCardRatingText}>{rating.toFixed(1)}</RNText>
+              {typeof reviewCount === 'number' && reviewCount > 0 && (
+                <RNText style={styles.hotelCardReviewCount}>({reviewCount})</RNText>
+              )}
+            </View>
+          )}
         </View>
 
         {description && (
@@ -185,9 +189,11 @@ export const HotelCard: React.FC<HotelCardProps> = ({
         )}
 
         <View style={styles.hotelCardPrice}>
-          <RNText style={styles.hotelCardPriceLabel}>From</RNText>
-          <RNText style={styles.hotelCardPriceAmount}>${pricePerNight}</RNText>
-          <RNText style={styles.hotelCardPricePeriod}>/ night</RNText>
+          <RNText style={styles.hotelCardPriceAmount}>
+            {typeof pricePerNight === 'number' && pricePerNight > 0
+              ? `Est. $${pricePerNight} / night`
+              : 'Price unknown'}
+          </RNText>
         </View>
 
         {amenities.length > 0 && (
@@ -262,6 +268,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
   description,
   duration,
   price,
+  priceStatus,
   rating,
   reviewCount,
   image,
@@ -297,16 +304,20 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
               <Ionicons name="time" size={14} color={colors.neutral[500]} />
               <RNText style={styles.activityCardMetaText}>{duration}</RNText>
             </View>
-            {rating && (
+            {typeof rating === 'number' && rating > 0 && (
               <View style={styles.activityCardMetaItem}>
                 <Ionicons name="star" size={14} color="#fbbf24" />
                 <RNText style={styles.activityCardMetaText}>{rating.toFixed(1)}</RNText>
-                {reviewCount && (
+                {typeof reviewCount === 'number' && reviewCount > 0 && (
                   <RNText style={styles.activityCardReviewCount}>({reviewCount})</RNText>
                 )}
               </View>
             )}
-            <RNText style={styles.activityCardPrice}>${price}</RNText>
+            <RNText style={styles.activityCardPrice}>
+              {priceStatus !== 'unknown' && typeof price === 'number' && price > 0
+                ? `Est. $${price}`
+                : 'Price unknown'}
+            </RNText>
           </View>
 
           {bookingUrl && (
@@ -335,6 +346,7 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
   name,
   cuisine,
   priceLevel,
+  priceStatus,
   rating,
   reviewCount,
   image,
@@ -342,7 +354,8 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
   description,
   time,
 }) => {
-  const priceLevelString = '$'.repeat(priceLevel);
+  const priceLevelString =
+    priceStatus !== 'unknown' && priceLevel ? `Est. ${'$'.repeat(priceLevel)}` : 'Price unknown';
 
   return (
     <View style={[styles.card, styles.restaurantCard]}>
@@ -369,11 +382,11 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
             </RNText>
           )}
 
-          {rating && (
+          {typeof rating === 'number' && rating > 0 && (
             <View style={styles.restaurantCardRating}>
               <Ionicons name="star" size={14} color="#fbbf24" />
               <RNText style={styles.restaurantCardRatingText}>{rating.toFixed(1)}</RNText>
-              {reviewCount && (
+              {typeof reviewCount === 'number' && reviewCount > 0 && (
                 <RNText style={styles.restaurantCardReviewCount}>({reviewCount} reviews)</RNText>
               )}
             </View>
@@ -525,7 +538,7 @@ export const RatingStars: React.FC<RatingStarsProps> = ({ rating, reviewCount })
         ))}
       </View>
       <RNText style={styles.ratingValue}>{rating.toFixed(1)}</RNText>
-      {reviewCount && (
+      {typeof reviewCount === 'number' && reviewCount > 0 && (
         <RNText style={styles.reviewCount}>({reviewCount.toLocaleString()} reviews)</RNText>
       )}
     </View>

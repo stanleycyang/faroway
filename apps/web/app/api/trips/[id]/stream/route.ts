@@ -1,3 +1,4 @@
+import { filterViatorDisplay } from "@/lib/affiliates/viator-policy";
 /**
  * POST /api/trips/[id]/stream — Observe durable generation via SSE
  *
@@ -412,7 +413,7 @@ async function pollAndStream(
       });
     }
 
-    const ir = (search.intermediate_results || {}) as Record<string, unknown>;
+    const ir = filterViatorDisplay(search.intermediate_results || {});
 
     if (!sentHotels && ir.hotels) {
       const hotels = ir.hotels as HotelInput[];
@@ -522,12 +523,15 @@ async function pollAndStream(
 }
 
 function normalizeItineraryDays(value: unknown): ItineraryDayInput[] | null {
-  if (Array.isArray(value)) return value as ItineraryDayInput[];
+  if (Array.isArray(value))
+    return filterViatorDisplay(value) as ItineraryDayInput[];
   if (typeof value !== "string") return null;
 
   try {
     const parsed = JSON.parse(value) as unknown;
-    return Array.isArray(parsed) ? (parsed as ItineraryDayInput[]) : null;
+    return Array.isArray(parsed)
+      ? (filterViatorDisplay(parsed) as ItineraryDayInput[])
+      : null;
   } catch {
     return null;
   }
@@ -554,8 +558,9 @@ async function loadSearchForStream(
       .single();
 
     if (!error) {
+      const search = data as unknown as SearchStreamRecord | null;
       return {
-        search: (data as unknown as SearchStreamRecord | null) ?? null,
+        search: filterViatorDisplay(search) ?? null,
         error: null,
       };
     }

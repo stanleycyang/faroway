@@ -82,8 +82,8 @@ export const Text = {
 
 export const HotelCardSchema = z.object({
   name: z.string().describe('Hotel or accommodation name'),
-  rating: z.number().min(0).max(5).describe('Star rating (0-5)'),
-  pricePerNight: z.number().describe('Price per night in USD'),
+  rating: z.number().min(0).max(5).optional().describe('Verified rating, when known'),
+  pricePerNight: z.number().optional().describe('Estimated price per night in USD'),
   image: z.string().url().optional().describe('Hotel image URL'),
   bookingUrl: z.string().url().optional().describe('Booking URL (booking.com, etc.)'),
   amenities: z.array(z.string()).describe('List of amenities (e.g., ["WiFi", "Pool", "Gym"])'),
@@ -123,7 +123,8 @@ export const ActivityCardSchema = z.object({
   name: z.string().describe('Activity name'),
   description: z.string().describe('Activity description'),
   duration: z.string().describe('Duration (e.g., "2 hours", "3-4 hours")'),
-  price: z.number().describe('Price in USD'),
+  price: z.number().optional().describe('Estimated price in USD'),
+  priceStatus: z.enum(['unknown', 'estimate']).optional(),
   rating: z.number().min(0).max(5).optional().describe('Rating (0-5)'),
   reviewCount: z.number().optional().describe('Number of reviews'),
   image: z.string().url().optional().describe('Activity image URL'),
@@ -146,7 +147,8 @@ export const ActivityCard = {
 export const RestaurantCardSchema = z.object({
   name: z.string().describe('Restaurant name'),
   cuisine: z.string().describe('Cuisine type (e.g., "Italian", "Seafood", "Local")'),
-  priceLevel: z.number().min(1).max(4).describe('Price level (1-4, where 1=$ and 4=$$$$)'),
+  priceLevel: z.number().min(1).max(4).optional().describe('Estimated price level, when known'),
+  priceStatus: z.enum(['unknown', 'estimate']).optional(),
   rating: z.number().min(0).max(5).optional().describe('Rating (0-5)'),
   reviewCount: z.number().optional().describe('Number of reviews'),
   image: z.string().url().optional().describe('Restaurant image URL'),

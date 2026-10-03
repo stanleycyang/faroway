@@ -1,3 +1,4 @@
+import { canProcessViatorContent } from "./viator-policy";
 /**
  * TripAdvisor Content API Client
  *
@@ -325,6 +326,7 @@ export async function enrichWithTripAdvisor<
     await Promise.all(
       batchIndices.map(async (idx) => {
         const item = enrichedItems[idx];
+        if (!canProcessViatorContent(item)) return;
         try {
           const query = `${item.name} ${item.location.name}`;
           const results = await searchTripAdvisorLocations(

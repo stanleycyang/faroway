@@ -218,44 +218,39 @@ describe("getClientIp", () => {
 // ─── Viator Helpers ──────────────────────────────────────────────────────────
 
 describe("generateViatorAffiliateUrl", () => {
-  let generateViatorAffiliateUrl: typeof import("@/lib/affiliates/viator").generateViatorAffiliateUrl;
+  const productUrl =
+    "https://www.viator.com/tours/Paris/Walk/d479-123P1?pid=P12345678&mcid=42383&medium=api";
+  afterEach(() => vi.unstubAllEnvs());
 
-  beforeEach(async () => {
+  it("preserves provider attribution and uses campaign for our tracking ID", async () => {
+    vi.stubEnv("VIATOR_PARTNER_ID", "P12345678");
     vi.resetModules();
-    const mod = await import("@/lib/affiliates/viator");
-    generateViatorAffiliateUrl = mod.generateViatorAffiliateUrl;
-  });
-
-  it("generates a URL with the required params", () => {
-    const url = generateViatorAffiliateUrl("PROD-123", "track-abc");
-    const parsed = new URL(url);
-
-    expect(parsed.origin + parsed.pathname).toBe(
-      "https://www.viator.com/tours/PROD-123",
+    const { generateViatorAffiliateUrl } =
+      await import("@/lib/affiliates/viator");
+    const parsed = new URL(
+      generateViatorAffiliateUrl("123P1", "tg_123", { productUrl }),
     );
-    expect(parsed.searchParams.get("mcid")).toBe("track-abc");
-    expect(parsed.searchParams.get("medium")).toBe("api");
-    // pid falls back to 'faroway' when env var is unset
-    expect(parsed.searchParams.get("pid")).toBe("faroway");
+    expect(parsed.searchParams.get("mcid")).toBe("42383");
+    expect(parsed.searchParams.get("pid")).toBe("P12345678");
+    expect(parsed.searchParams.get("campaign")).toBe("tg-123");
   });
 
-  it("includes optional date and travelers when provided", () => {
-    const url = generateViatorAffiliateUrl("PROD-456", "track-xyz", {
-      date: "2026-03-15",
-      travelers: 4,
-    });
-    const parsed = new URL(url);
-
-    expect(parsed.searchParams.get("date")).toBe("2026-03-15");
-    expect(parsed.searchParams.get("travelers")).toBe("4");
+  it("does not invent a link when the provider URL is absent", async () => {
+    vi.stubEnv("VIATOR_PARTNER_ID", "P12345678");
+    vi.resetModules();
+    const { generateViatorAffiliateUrl } =
+      await import("@/lib/affiliates/viator");
+    expect(generateViatorAffiliateUrl("123P1", "track-123")).toBe("");
   });
 
-  it("omits date and travelers when options are not provided", () => {
-    const url = generateViatorAffiliateUrl("PROD-789", "track-000");
-    const parsed = new URL(url);
-
-    expect(parsed.searchParams.has("date")).toBe(false);
-    expect(parsed.searchParams.has("travelers")).toBe(false);
+  it("does not substitute a placeholder affiliate ID", async () => {
+    vi.stubEnv("VIATOR_PARTNER_ID", "");
+    vi.resetModules();
+    const { generateViatorAffiliateUrl } =
+      await import("@/lib/affiliates/viator");
+    expect(
+      generateViatorAffiliateUrl("123P1", "track-123", { productUrl }),
+    ).toBe("");
   });
 });
 

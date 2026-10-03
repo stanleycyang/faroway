@@ -1,3 +1,4 @@
+import { viatorContentMetadata } from "@/lib/affiliates/viator-policy";
 /**
  * Trip Planning Workflow
  * Uses the multi-agent search system with structured output (generateObject)
@@ -615,11 +616,13 @@ async function buildAndSaveSpec(
 
   // Map activities for build-spec
   const activityInputs = result.activities.map((a) => ({
+    ...viatorContentMetadata(a),
     id: a.id,
     name: a.name,
     description: a.description,
     duration: a.duration,
     price: a.price,
+    priceStatus: a.priceStatus,
     currency: a.currency,
     rating: a.rating,
     reviewCount: a.reviewCount,
@@ -639,6 +642,7 @@ async function buildAndSaveSpec(
     name: d.name,
     cuisine: d.cuisineTypes.join(", "),
     priceLevel: d.priceLevel,
+    priceStatus: d.priceStatus,
     rating: d.rating,
     reviewCount: d.reviewCount,
     description: d.description,
@@ -653,11 +657,13 @@ async function buildAndSaveSpec(
     title: day.title,
     morning: {
       activities: day.morning.activities.map((a: ItineraryActivity) => ({
+        ...viatorContentMetadata(a),
         id: a.id,
         name: a.name,
         description: a.description,
         duration: a.duration / 60, // minutes → hours for build-spec
         price: a.estimatedCost.amount,
+        priceStatus: a.estimatedCost.status,
         currency: a.estimatedCost.currency,
         rating: undefined,
         category: a.category,
@@ -669,6 +675,7 @@ async function buildAndSaveSpec(
             name: day.morning.meals[0].name,
             cuisine: day.morning.meals[0].cuisineType.join(", "),
             priceLevel: day.morning.meals[0].priceLevel,
+            priceStatus: day.morning.meals[0].estimatedCost.status,
             rating: undefined,
             description: day.morning.meals[0].description,
             reservationUrl: day.morning.meals[0].reservationInfo?.url,
@@ -677,11 +684,13 @@ async function buildAndSaveSpec(
     },
     afternoon: {
       activities: day.afternoon.activities.map((a: ItineraryActivity) => ({
+        ...viatorContentMetadata(a),
         id: a.id,
         name: a.name,
         description: a.description,
         duration: a.duration / 60,
         price: a.estimatedCost.amount,
+        priceStatus: a.estimatedCost.status,
         currency: a.estimatedCost.currency,
         rating: undefined,
         category: a.category,
@@ -693,6 +702,7 @@ async function buildAndSaveSpec(
             name: day.afternoon.meals[0].name,
             cuisine: day.afternoon.meals[0].cuisineType.join(", "),
             priceLevel: day.afternoon.meals[0].priceLevel,
+            priceStatus: day.afternoon.meals[0].estimatedCost.status,
             rating: undefined,
             description: day.afternoon.meals[0].description,
             reservationUrl: day.afternoon.meals[0].reservationInfo?.url,
@@ -701,11 +711,13 @@ async function buildAndSaveSpec(
     },
     evening: {
       activities: day.evening.activities.map((a: ItineraryActivity) => ({
+        ...viatorContentMetadata(a),
         id: a.id,
         name: a.name,
         description: a.description,
         duration: a.duration / 60,
         price: a.estimatedCost.amount,
+        priceStatus: a.estimatedCost.status,
         currency: a.estimatedCost.currency,
         rating: undefined,
         category: a.category,
@@ -717,6 +729,7 @@ async function buildAndSaveSpec(
             name: day.evening.meals[0].name,
             cuisine: day.evening.meals[0].cuisineType.join(", "),
             priceLevel: day.evening.meals[0].priceLevel,
+            priceStatus: day.evening.meals[0].estimatedCost.status,
             rating: undefined,
             description: day.evening.meals[0].description,
             reservationUrl: day.evening.meals[0].reservationInfo?.url,

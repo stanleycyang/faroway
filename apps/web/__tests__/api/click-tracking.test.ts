@@ -107,6 +107,21 @@ describe("POST /api/track/click", () => {
     );
   });
 
+  it("cannot forge a server-verified checkout handoff through public analytics", async () => {
+    const response = await POST(
+      makeRequest({
+        clickId: "checkout-00000000-0000-4000-8000-000000000002",
+        itemType: "activity",
+        itemId: "activity_v_123P1@2099-06-01",
+        itemName: "Invented tour",
+        affiliatePartner: "viator",
+        affiliateUrl: "https://www.viator.com/tours/invented",
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(mocks.insert).not.toHaveBeenCalled();
+  });
+
   it("rejects malformed JSON as a client error", async () => {
     const response = await POST(makeRawRequest("{not-json"));
     const body = await response.json();

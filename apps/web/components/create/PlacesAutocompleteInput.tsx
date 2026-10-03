@@ -1,13 +1,12 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
+import { PlacesExplorer } from "@/components/places/PlacesExplorer";
 import { Search, MapPin, X, Loader2 } from "lucide-react";
 
 export interface PlaceResult {
   name: string;
-  lat: number;
-  lng: number;
-  placeId: string;
+  source: "catalog" | "user";
 }
 
 interface Prediction {
@@ -42,7 +41,16 @@ export function PlacesAutocompleteInput({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  // Click outside handler
+  const dismissResults = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = null;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setPredictions([]);
+    setIsLoading(false);
+    setIsOpen(false);
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -50,13 +58,21 @@ export function PlacesAutocompleteInput({
         !dropdownRef.current.contains(e.target as Node) &&
         inputRef.current &&
         !inputRef.current.contains(e.target as Node)
-      ) {
-        setIsOpen(false);
-      }
+      )
+        dismissResults();
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") dismissResults();
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("pagehide", dismissResults);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("pagehide", dismissResults);
+    };
+  }, [dismissResults]);
 
   useEffect(
     () => () => {
@@ -81,6 +97,7 @@ export function PlacesAutocompleteInput({
   const handleInputChange = (value: string) => {
     setQuery(value);
     setIsOpen(true);
+    setPredictions([]);
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (abortRef.current) abortRef.current.abort();
@@ -127,48 +144,16 @@ export function PlacesAutocompleteInput({
     }, DEBOUNCE_MS);
   };
 
-  const handleSelectPrediction = async (prediction: Prediction) => {
-    setIsOpen(false);
-    setQuery(prediction.mainText);
-    setPredictions([]);
-
-    // Fetch lat/lng from details endpoint
-    try {
-      const res = await fetch(
-        `/api/places/details?placeId=${encodeURIComponent(prediction.placeId)}`,
-      );
-      if (res.ok) {
-        const data = await res.json();
-        onSelect({
-          name: prediction.mainText,
-          lat: data.lat,
-          lng: data.lng,
-          placeId: prediction.placeId,
-        });
-        return;
-      }
-    } catch {
-      // Fall through to no-coords selection
-    }
-
-    onSelect({
-      name: prediction.mainText,
-      lat: 0,
-      lng: 0,
-      placeId: prediction.placeId,
-    });
-  };
-
   const handleSelectLocal = (dest: { name: string; country: string }) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    abortRef.current?.abort();
     setIsOpen(false);
     setQuery(dest.name);
     setPredictions([]);
     setLocalResults([]);
     onSelect({
       name: dest.name,
-      lat: 0,
-      lng: 0,
-      placeId: "",
+      source: "catalog",
     });
   };
 
@@ -184,11 +169,7 @@ export function PlacesAutocompleteInput({
   };
 
   const hasGoogleResults = predictions.length > 0;
-  const hasLocalResults = localResults.length > 0;
-  const showDropdown =
-    isOpen &&
-    query.length >= MIN_QUERY_LENGTH &&
-    (hasGoogleResults || hasLocalResults || isLoading);
+  const showDropdown = isOpen && query.trim().length >= MIN_QUERY_LENGTH;
 
   return (
     <div className="relative">
@@ -203,6 +184,7 @@ export function PlacesAutocompleteInput({
           autoCapitalize="words"
           spellCheck={false}
           value={query}
+          maxLength={120}
           aria-label="Destination"
           aria-expanded={showDropdown}
           aria-controls={
@@ -232,7 +214,7 @@ export function PlacesAutocompleteInput({
         <div
           id="destination-search-results"
           ref={dropdownRef}
-          className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-50"
+          className="absolute top-full left-0 right-0 mt-2 max-h-[65vh] overflow-auto bg-white border border-gray-200 rounded-xl shadow-lg z-50"
         >
           {isLoading &&
           predictions.length === 0 &&
@@ -243,46 +225,68 @@ export function PlacesAutocompleteInput({
             </div>
           ) : (
             <ul className="max-h-64 overflow-auto">
-              {predictions.map((p) => (
-                <li key={p.placeId}>
+              {localResults.map((d) => (
+                <li key={d.name}>
                   <button
                     type="button"
-                    onClick={() => handleSelectPrediction(p)}
+                    onClick={() => handleSelectLocal(d)}
                     className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
                   >
                     <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-gray-900 truncate">
-                        {p.mainText}
+                        {d.name}
                       </p>
                       <p className="text-sm text-gray-500 truncate">
-                        {p.secondaryText}
+                        {d.country}
                       </p>
                     </div>
                   </button>
                 </li>
               ))}
-              {!hasGoogleResults &&
-                localResults.map((d) => (
-                  <li key={d.name}>
-                    <button
-                      type="button"
-                      onClick={() => handleSelectLocal(d)}
-                      className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
-                    >
-                      <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-gray-900 truncate">
-                          {d.name}
-                        </p>
-                        <p className="text-sm text-gray-500 truncate">
-                          {d.country}
-                        </p>
-                      </div>
-                    </button>
-                  </li>
-                ))}
+              <li>
+                <button
+                  type="button"
+                  className="w-full px-4 py-3 text-left text-sm font-medium text-primary"
+                  onClick={() => {
+                    abortRef.current?.abort();
+                    if (debounceRef.current) clearTimeout(debounceRef.current);
+                    setIsOpen(false);
+                    setPredictions([]);
+                    onSelect({ name: query.trim(), source: "user" });
+                  }}
+                >
+                  Plan with “{query.trim()}”
+                </button>
+              </li>
             </ul>
+          )}
+          {hasGoogleResults && (
+            <div
+              data-sentry-block
+              className="sentry-block border-t border-gray-200 p-3 bg-gray-50"
+            >
+              <p className="mb-2 text-xs text-gray-600">
+                Live city reference · choose a catalog destination above or use
+                your own text to plan.
+              </p>
+              {predictions.map((p) => (
+                <div
+                  key={p.placeId}
+                  className="mb-2 rounded-lg border border-gray-200 bg-white p-3"
+                >
+                  <p className="text-sm font-medium">{p.mainText}</p>
+                  <p className="text-xs text-gray-600">{p.secondaryText}</p>
+                  <span
+                    translate="no"
+                    className="text-xs font-normal text-[#5E5E5E] whitespace-nowrap"
+                  >
+                    Google Maps
+                  </span>
+                  <PlacesExplorer key={p.placeId} initialPlaceId={p.placeId} />
+                </div>
+              ))}
+            </div>
           )}
         </div>
       )}

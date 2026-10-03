@@ -10,6 +10,10 @@ import {
   createGateway,
 } from "@/lib/ai/sdk";
 import { z } from "zod";
+import {
+  canProcessViatorContent,
+  isViatorContentEnabled,
+} from "@/lib/affiliates/viator-policy";
 import { SearchPlan, ActivityResult } from "../types";
 import { VIBE_KEYWORDS } from "@faroway/constants";
 import {
@@ -30,7 +34,6 @@ import {
 } from "@/lib/affiliates/tripadvisor";
 import {
   AI_AGENT_TIMEOUT_MS,
-  fetchWithTimeout,
   isOperationTimeoutError,
   withAbortTimeout,
 } from "@/lib/search/runtime";
@@ -106,16 +109,17 @@ export async function runActivitiesAgent(
   const { destination, dates, activityCriteria, vibeInterpretation } = plan;
   const vibes = vibeInterpretation.vibes;
 
-  const viatorPromise = isViatorConfigured()
-    ? searchViatorProducts({
-        destination,
-        startDate: dates.start,
-        limit: 15,
-      }).catch((error) => {
-        console.error("[Activities Agent] Viator search error:", error);
-        return [];
-      })
-    : Promise.resolve([]);
+  const viatorPromise =
+    isViatorContentEnabled() && isViatorConfigured()
+      ? searchViatorProducts({
+          destination,
+          startDate: dates.start,
+          limit: 15,
+        }).catch((error) => {
+          console.error("[Activities Agent] Viator search error:", error);
+          return [];
+        })
+      : Promise.resolve([]);
 
   const gygPromise = isGYGConfigured()
     ? searchGYGActivities({
@@ -162,6 +166,10 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
       result.activities.map((activity, index) => ({
         ...activity,
         id: `activity_${Date.now()}_${index}`,
+        affiliateUrl: undefined,
+        affiliatePartner: undefined,
+        rating: 0,
+        reviewCount: 0,
       })),
     )
     .catch((error) => {
@@ -204,8 +212,8 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
     return {
       id: `activity_v_${product.productCode}`,
       name: product.title,
-      description:
-        product.shortDescription || product.description.substring(0, 200),
+      description: product.description,
+      viatorContentVersion: 1,
       category: product.categories[0] || "sightseeing",
       duration: durationMinutes,
       price: product.price.amount,
@@ -305,7 +313,10 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
   // Enrich with TripAdvisor ratings and reviews
   if (isTripAdvisorConfigured() && allActivities.length > 0) {
     try {
-      allActivities = await enrichWithTripAdvisor(allActivities, "attractions");
+      const eligible = allActivities.filter(canProcessViatorContent);
+      const enriched = await enrichWithTripAdvisor(eligible, "attractions");
+      const byId = new Map(enriched.map((item) => [item.id, item]));
+      allActivities = allActivities.map((item) => byId.get(item.id) || item);
     } catch (e) {
       console.error("[Activities Agent] TripAdvisor enrichment error:", e);
     }
@@ -329,40 +340,17 @@ function deduplicateActivities(activities: ActivityResult[]): ActivityResult[] {
 }
 
 /**
- * Search Google Places for activities (when API key is available)
+ * Deprecated compatibility helper: Google venue ingestion is disabled.
  */
 export async function searchGooglePlacesActivities(
-  destination: string,
-  types: string[],
+  _destination: string,
+  _types: string[],
 ): Promise<Record<string, unknown>[]> {
-  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-  if (!apiKey) {
-    console.log(
-      "[Activities Agent] No Google Places API key, using AI-generated data",
-    );
-    return [];
-  }
-
-  try {
-    const searchQueries = types.map((type) => `${type} in ${destination}`);
-    const responses = await Promise.allSettled(
-      searchQueries.slice(0, 3).map(async (query) => {
-        const response = await fetchWithTimeout(
-          `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&key=${apiKey}`,
-        );
-        if (!response.ok) return [];
-        const data = await response.json();
-        return Array.isArray(data.results) ? data.results : [];
-      }),
-    );
-
-    return responses.flatMap((result) =>
-      result.status === "fulfilled" ? result.value : [],
-    );
-  } catch (error) {
-    console.error("[Activities Agent] Google Places error:", error);
-    return [];
-  }
+  void _destination;
+  void _types;
+  // Places content must not enter the persisted, AI-processed recommendation
+  // pipeline. A future transient, attributed display needs a separate design.
+  return [];
 }
 
 /**

@@ -12,6 +12,8 @@
  */
 
 import { fetchWithTimeout } from "@/lib/search/runtime";
+import { buildViatorHandoffUrl } from "./viator-link";
+import { isViatorContentEnabled } from "./viator-policy";
 
 // Environment variables
 const VIATOR_API_KEY = process.env.VIATOR_API_KEY;
@@ -266,7 +268,7 @@ export interface ViatorAvailability {
  * Check if Viator API is configured
  */
 export function isViatorConfigured(): boolean {
-  return !!(VIATOR_API_KEY && VIATOR_PARTNER_ID);
+  return isViatorContentEnabled() && !!(VIATOR_API_KEY && VIATOR_PARTNER_ID);
 }
 
 /**
@@ -365,6 +367,7 @@ async function searchByDestinationId(
  */
 export async function getViatorProduct(
   productCode: string,
+  campaign?: string,
 ): Promise<ViatorProduct | null> {
   if (!isViatorConfigured()) {
     return null;
@@ -372,7 +375,7 @@ export async function getViatorProduct(
 
   try {
     const response = await fetchWithTimeout(
-      `${VIATOR_API_BASE}/products/${productCode}`,
+      `${VIATOR_API_BASE}/products/${encodeURIComponent(productCode)}${campaign ? `?campaign-value=${encodeURIComponent(campaign)}` : ""}`,
       {
         headers: getV2ReadHeaders(),
       },
@@ -444,26 +447,14 @@ export function generateViatorAffiliateUrl(
     productUrl?: string;
   },
 ): string {
-  // Use the API-provided productUrl when available (already has proper structure)
-  if (options?.productUrl) {
-    const url = new URL(options.productUrl);
-    url.searchParams.set("pid", VIATOR_PARTNER_ID || "faroway");
-    url.searchParams.set("mcid", trackingId);
-    url.searchParams.set("medium", "api");
-    return url.toString();
-  }
-
-  // Fallback: construct from product code
-  const baseUrl = `https://www.viator.com/tours/${productCode}`;
-  const params = new URLSearchParams({
-    pid: VIATOR_PARTNER_ID || "faroway",
-    mcid: trackingId,
-    medium: "api",
-    ...(options?.date && { date: options.date }),
-    ...(options?.travelers && { travelers: options.travelers.toString() }),
-  });
-
-  return `${baseUrl}?${params}`;
+  // Product paths and MCIDs are provider-owned. Never invent either. Dates and
+  // traveler details are confirmed on Viator; unsupported URL prefill is avoided.
+  void productCode;
+  const campaign = trackingId.replace(/[^a-zA-Z0-9-]/g, "-").slice(0, 100);
+  return options?.productUrl && VIATOR_PARTNER_ID
+    ? buildViatorHandoffUrl(options.productUrl, campaign, VIATOR_PARTNER_ID) ||
+        ""
+    : "";
 }
 
 /**
@@ -496,8 +487,7 @@ function normalizeViatorProduct(raw: any): ViatorProduct {
     productCode: raw.productCode || raw.code,
     title: raw.title || raw.name,
     description: raw.description || "",
-    shortDescription:
-      raw.shortDescription || raw.description?.substring(0, 200) || "",
+    shortDescription: raw.shortDescription || "",
     // v2: reviews.combinedAverageRating / reviews.totalReviews
     rating: raw.reviews?.combinedAverageRating || raw.rating || 0,
     reviewCount: raw.reviews?.totalReviews || raw.reviewCount || 0,

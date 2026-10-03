@@ -1,5 +1,7 @@
 import "server-only";
 
+import { filterViatorDisplay } from "@/lib/affiliates/viator-policy";
+
 import { cache } from "react";
 import type { GeneratedItinerary } from "@/lib/ai/types";
 import { getSupabase } from "@/lib/supabase/server";
@@ -77,7 +79,7 @@ export async function loadTripForUserUncached(
 
   return {
     trip: tripData as Trip,
-    itinerary,
+    itinerary: filterViatorDisplay(itinerary),
   };
 }
 
