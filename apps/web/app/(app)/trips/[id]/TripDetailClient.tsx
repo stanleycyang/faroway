@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+} from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -55,6 +61,7 @@ import {
   FeaturedHotelCard,
   type FeaturedHotel,
 } from "@/components/trips/FeaturedHotelCard";
+import { ShareConsentDialog } from "@/components/trips/ShareConsentDialog";
 import { TripBudget } from "@/components/trips/TripBudget";
 import { TripHeader } from "@/components/trips/TripHeader";
 import { ItineraryDay } from "@/components/trips/ItineraryDay";
@@ -102,10 +109,13 @@ export function TripDetailClient({
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shareConsentOpen, setShareConsentOpen] = useState(false);
+  const shareLock = useRef(false);
   const [shareUrl, setShareUrl] = useState<string | null>(initialShareUrl);
   const [shareStatus, setShareStatus] = useState<string | null>(null);
   const [isShareBusy, setIsShareBusy] = useState(false);
   const [showStickyBar, setShowStickyBar] = useState(false);
+  const retryLock = useRef(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const [showReadyScreen, setShowReadyScreen] = useState(false);
   const [hasSeenGeneratingThisSession, setHasSeenGeneratingThisSession] =
@@ -144,7 +154,13 @@ export function TripDetailClient({
         throw new Error("Failed to fetch trip");
       }
       const data: TripResponse = await res.json();
+      setError(null);
       setTrip(data.trip);
+      setShareUrl(
+        data.trip.is_shared && data.trip.share_token
+          ? `${window.location.origin}/s/${data.trip.share_token}`
+          : null,
+      );
       if (data.itinerary) {
         setItinerary(data.itinerary);
       }
@@ -212,8 +228,14 @@ export function TripDetailClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- we intentionally depend on trip?.status and trip?.search_id, not the whole trip object
   }, [trip?.status, trip?.search_id, tripId, fetchTrip, generation.phase]);
 
-  const handleShare = async () => {
-    if (isShareBusy) return;
+  const handleShare = async (confirmed = false) => {
+    if (shareLock.current) return;
+    if (!shareUrl && !confirmed) {
+      setShareConsentOpen(true);
+      return;
+    }
+    setShareConsentOpen(false);
+    shareLock.current = true;
     setIsShareBusy(true);
     setShareStatus(null);
     try {
@@ -221,6 +243,8 @@ export function TripDetailClient({
       if (!url) {
         const res = await fetch(`/api/trips/${tripId}/share`, {
           method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ publicConsent: true }),
         });
         if (!res.ok) throw new Error("Failed to enable sharing");
         const data = await res.json();
@@ -238,17 +262,20 @@ export function TripDetailClient({
         setShareStatus("Public share link copied to your clipboard.");
       }
     } catch (err) {
-      if (err instanceof Error && err.name !== "AbortError") {
-        console.error("Share failed:", err);
-        setShareStatus("We couldn’t share this trip. Please try again.");
-      }
+      setShareStatus(
+        err instanceof Error && err.name === "AbortError"
+          ? "Share sheet canceled. Your public link remains active; use Turn off public access to revoke it."
+          : "Sharing did not finish. If a public link was created, it remains active until you turn off public access.",
+      );
     } finally {
+      shareLock.current = false;
       setIsShareBusy(false);
     }
   };
 
   const handleRevokeShare = async () => {
-    if (isShareBusy) return;
+    if (shareLock.current) return;
+    shareLock.current = true;
     setIsShareBusy(true);
     setShareStatus(null);
     try {
@@ -262,29 +289,24 @@ export function TripDetailClient({
       console.error("Share revocation failed:", revokeError);
       setShareStatus("We couldn’t turn off public access. Please try again.");
     } finally {
+      shareLock.current = false;
       setIsShareBusy(false);
     }
   };
 
   const handleRetry = async () => {
-    if (!trip || isRetrying) return;
+    if (!trip || retryLock.current) return;
+    retryLock.current = true;
     setIsRetrying(true);
 
     try {
-      // Reset trip to draft
-      await fetch(`/api/trips/${tripId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "draft" }),
-      });
-
       // Trigger new generation
       const genRes = await fetch(`/api/trips/${tripId}/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
       });
 
-      if (!genRes.ok) {
+      if (!genRes.ok && genRes.status !== 409) {
         const data = await genRes.json().catch(() => ({}));
         throw new Error(data.error || "Failed to retry generation");
       }
@@ -295,6 +317,7 @@ export function TripDetailClient({
       console.error("Retry failed:", err);
       setError(err instanceof Error ? err.message : "Retry failed");
     } finally {
+      retryLock.current = false;
       setIsRetrying(false);
     }
   };
@@ -430,7 +453,7 @@ export function TripDetailClient({
   }
 
   // Error state
-  if (error || !trip) {
+  if (!trip) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
         <div className="text-center max-w-md">
@@ -488,18 +511,38 @@ export function TripDetailClient({
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       {/* Trip Header */}
+      <ShareConsentDialog
+        open={shareConsentOpen}
+        onCancel={() => setShareConsentOpen(false)}
+        onConfirm={() => handleShare(true)}
+      />
       <TripHeader
         destination={trip.destination}
         startDate={trip.start_date}
         endDate={trip.end_date}
         travelers={trip.travelers}
         status={tripStatus}
-        onShare={handleShare}
+        onShare={() => handleShare()}
       />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Generation Failed */}
-        {isFailed && !isGenerating && (
+        {error && (
+          <div
+            role="alert"
+            className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm"
+          >
+            {error}. Your last loaded trip is still shown.{" "}
+            <button
+              type="button"
+              onClick={() => fetchTrip()}
+              className="underline"
+            >
+              Refresh trip
+            </button>
+          </div>
+        )}
+        {(isFailed || trip.status === "draft") && !isGenerating && (
           <div className="bg-red-50 border border-red-200 rounded-2xl p-6 mb-6">
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -507,11 +550,15 @@ export function TripDetailClient({
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-red-800 mb-1">
-                  Generation Failed
+                  {trip.status === "draft"
+                    ? "Your trip is saved"
+                    : "Planning was interrupted"}
                 </h3>
                 <p className="text-sm text-red-700 mb-4">
-                  {generation.error ||
-                    "Something went wrong while generating your itinerary. Please try again."}
+                  {trip.status === "draft"
+                    ? "Your choices are saved. Start planning when you are ready."
+                    : generation.error ||
+                      "Your saved trip is still available. Try planning again."}
                 </p>
                 <button
                   onClick={handleRetry}
@@ -521,7 +568,11 @@ export function TripDetailClient({
                   <RefreshCw
                     className={`w-4 h-4 ${isRetrying ? "animate-spin" : ""}`}
                   />
-                  {isRetrying ? "Retrying..." : "Try Again"}
+                  {isRetrying
+                    ? "Starting..."
+                    : trip.status === "draft"
+                      ? "Start planning"
+                      : "Try Again"}
                 </button>
               </div>
             </div>
@@ -724,7 +775,7 @@ export function TripDetailClient({
         )}
 
         {/* Share This Trip */}
-        {isComplete && (!!displayDays?.length || itinerary) && (
+        {trip && (
           <div className="mt-8 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl p-6 sm:p-8 text-center border border-primary-100/30">
             <h3 className="font-bold text-gray-900 mb-2 text-lg">
               Share Your Adventure
@@ -745,25 +796,25 @@ export function TripDetailClient({
                   ]}
                   className="justify-center"
                 />
-                <button
-                  type="button"
-                  onClick={handleRevokeShare}
-                  disabled={isShareBusy}
-                  className="mt-4 text-sm font-medium text-gray-500 hover:text-red-600 disabled:opacity-50"
-                >
-                  Turn off public access
-                </button>
               </>
             ) : (
               <button
                 type="button"
-                onClick={handleShare}
+                onClick={() => handleShare()}
                 disabled={isShareBusy}
                 className="inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 disabled:opacity-50"
               >
                 {isShareBusy ? "Creating link…" : "Create public share link"}
               </button>
             )}
+            <button
+              type="button"
+              onClick={handleRevokeShare}
+              disabled={isShareBusy}
+              className="mt-4 text-sm font-medium text-gray-500 hover:text-red-600 disabled:opacity-50"
+            >
+              Turn off public access
+            </button>
             {shareStatus && (
               <p className="mt-3 text-sm text-gray-600" role="status">
                 {shareStatus}

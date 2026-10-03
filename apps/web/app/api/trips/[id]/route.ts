@@ -105,13 +105,14 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       }
     }
 
-    const { data: trip, error } = await db
+    let update = db
       .from("trips")
       .update({ ...parseResult.data, updated_at: new Date().toISOString() })
       .eq("id", id)
-      .eq("user_id", auth.userId)
-      .select()
-      .single();
+      .eq("user_id", auth.userId);
+    if (parseResult.data.status === "draft")
+      update = update.eq("status", "failed");
+    const { data: trip, error } = await update.select().single();
 
     if (error || !trip) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });

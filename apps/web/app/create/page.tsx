@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -96,6 +96,35 @@ export default function CreateTripPage() {
   const [travelers, setTravelers] = useState(2);
   const [travelerType, setTravelerType] = useState("couple");
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
+  const submissionLock = useRef(false);
+  const [pendingRequest, setPendingRequest] = useState<{
+    requestId: string;
+    destination: string;
+    start_date: string;
+    end_date: string;
+    travelers: number;
+    budget: string;
+    preferences: { travelerType: string; vibes: string[] };
+  } | null>(null);
+  useEffect(() => {
+    setPendingRequest(null);
+    if (!session?.user.id) return;
+    try {
+      const saved = localStorage.getItem(
+        `faroway:pending-create:${session.user.id}`,
+      );
+      const value = saved ? JSON.parse(saved) : null;
+      if (
+        value?.requestId &&
+        value?.destination &&
+        value?.start_date &&
+        value?.end_date
+      )
+        setPendingRequest(value);
+    } catch {
+      /* A new request can still be created once storage is available. */
+    }
+  }, [session?.user.id]);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [progressMessage, setProgressMessage] = useState("");
@@ -227,8 +256,9 @@ export default function CreateTripPage() {
   };
 
   const handleGenerate = async () => {
-    if (!canGenerate) return;
+    if ((!canGenerate && !pendingRequest) || submissionLock.current) return;
     if (!session) {
+      if (!canGenerate) return;
       const draft: StoredCreateDraft = {
         selectedPlace,
         startDate: startDate.toISOString(),
@@ -249,25 +279,29 @@ export default function CreateTripPage() {
       }
       return;
     }
+    submissionLock.current = true;
     setIsGenerating(true);
     setGenerateError(null);
     setProgressMessage("Creating your trip...");
-
+    let createdTripId: string | null = null;
+    const storageKey = `faroway:pending-create:${session.user.id}`;
     try {
+      const payload = pendingRequest ?? {
+        requestId: crypto.randomUUID(),
+        destination: selectedPlace!.name,
+        start_date: format(startDate!, "yyyy-MM-dd"),
+        end_date: format(endDate!, "yyyy-MM-dd"),
+        travelers,
+        budget: "moderate",
+        preferences: { travelerType, vibes: selectedVibes },
+      };
+      // Persist before any write: a lost response or reload reuses the same ID.
+      localStorage.setItem(storageKey, JSON.stringify(payload));
+      setPendingRequest(payload);
       const response = await fetch("/api/trips", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          destination: selectedPlace.name,
-          start_date: format(startDate!, "yyyy-MM-dd"),
-          end_date: format(endDate!, "yyyy-MM-dd"),
-          travelers,
-          budget: "moderate",
-          preferences: {
-            travelerType,
-            vibes: selectedVibes,
-          },
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -276,6 +310,7 @@ export default function CreateTripPage() {
       }
 
       const { trip } = await response.json();
+      createdTripId = trip.id;
 
       setProgressMessage("Starting AI trip planner...");
 
@@ -284,7 +319,7 @@ export default function CreateTripPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           preferences: {
-            vibes: selectedVibes,
+            vibes: pendingRequest?.preferences.vibes ?? selectedVibes,
           },
         }),
       });
@@ -299,8 +334,21 @@ export default function CreateTripPage() {
       }
 
       // Redirect to trip detail page — real progress happens there via SSE
+      localStorage.removeItem(storageKey);
+      setPendingRequest(null);
       router.push(`/trips/${trip.id}`);
     } catch (err) {
+      if (createdTripId) {
+        // The trip exists even if starting generation failed or its reply was lost.
+        try {
+          localStorage.removeItem(storageKey);
+        } catch {
+          /* Replaying this ID remains safe. */
+        }
+        setPendingRequest(null);
+        router.push(`/trips/${createdTripId}`);
+        return;
+      }
       setGenerateError(
         err instanceof Error
           ? err.message
@@ -308,6 +356,9 @@ export default function CreateTripPage() {
       );
       setIsGenerating(false);
       setProgressMessage("");
+    } finally {
+      submissionLock.current = false;
+      setIsGenerating(false);
     }
   };
 
@@ -612,9 +663,11 @@ export default function CreateTripPage() {
         <div className="sticky bottom-0 bg-gray-50 pt-4 pb-8 -mx-4 px-4 sm:-mx-6 sm:px-6">
           <button
             onClick={handleGenerate}
-            disabled={!canGenerate || isGenerating || authLoading}
+            disabled={
+              (!canGenerate && !pendingRequest) || isGenerating || authLoading
+            }
             className={`w-full py-4 rounded-xl font-semibold text-lg flex items-center justify-center gap-2 transition-all ${
-              canGenerate && !isGenerating && !authLoading
+              (canGenerate || pendingRequest) && !isGenerating && !authLoading
                 ? "bg-primary hover:bg-primary-600 text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:-translate-y-0.5"
                 : "bg-gray-200 text-gray-400 cursor-not-allowed"
             }`}
@@ -627,10 +680,43 @@ export default function CreateTripPage() {
             ) : (
               <>
                 <Sparkles className="w-5 h-5" />
-                {session ? "Generate Itinerary" : "Sign in & Generate"}
+                {pendingRequest
+                  ? "Resume saved trip"
+                  : session
+                    ? "Generate Itinerary"
+                    : "Sign in & Generate"}
               </>
             )}
           </button>
+          {pendingRequest && (
+            <p role="status" className="mt-3 text-sm text-gray-700">
+              Unfinished request: {pendingRequest.destination},{" "}
+              {pendingRequest.start_date} to {pendingRequest.end_date}. Use
+              Resume saved trip above to resume this same trip; your changed
+              form choices will not replace it.{" "}
+              <button
+                type="button"
+                className="underline"
+                disabled={isGenerating}
+                onClick={() => {
+                  if (!session) return;
+                  try {
+                    localStorage.removeItem(
+                      `faroway:pending-create:${session.user.id}`,
+                    );
+                    setPendingRequest(null);
+                  } catch {
+                    setGenerateError(
+                      "Could not clear the saved request. Check browser storage permissions.",
+                    );
+                  }
+                }}
+              >
+                Clear this unfinished request
+              </button>
+              . Any trip already saved remains in your dashboard.
+            </p>
+          )}
           {generateError && (
             <div
               className="mt-3 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm text-center"

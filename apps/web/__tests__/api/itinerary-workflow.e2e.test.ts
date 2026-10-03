@@ -171,6 +171,7 @@ function createChain(table: string) {
       return { data: null, error: null };
     },
   };
+  chain.maybeSingle = chain.single;
   return chain;
 }
 

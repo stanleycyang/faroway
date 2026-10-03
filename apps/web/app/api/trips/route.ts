@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClientFromRequest } from "@/lib/supabase/server";
 import { isValidDateOnly, isValidDateRange } from "@/lib/api/date-range";
 import { z } from "zod";
+import { createHash } from "node:crypto";
 
 const DateOnlySchema = z
   .string()
@@ -9,6 +10,7 @@ const DateOnlySchema = z
 
 const CreateTripSchema = z
   .object({
+    requestId: z.string().uuid().optional(),
     destination: z.string().min(1).max(200).trim(),
     start_date: DateOnlySchema,
     end_date: DateOnlySchema,
@@ -22,7 +24,7 @@ const CreateTripSchema = z
         originCity: z.string().max(200).optional(),
         originAirport: z.string().max(10).optional(),
         vibes: z.array(z.string().max(50)).max(10).optional(),
-        budget: z.string().max(50).optional(),
+        budget: z.enum(["budget", "moderate", "luxury"]).optional(),
         adults: z.number().int().min(1).max(50).optional(),
         children: z.number().int().min(0).max(50).optional(),
         interests: z.array(z.string().max(50)).max(20).optional(),
@@ -109,6 +111,7 @@ export async function POST(request: NextRequest) {
     }
 
     const {
+      requestId,
       destination,
       start_date,
       end_date,
@@ -123,6 +126,10 @@ export async function POST(request: NextRequest) {
       (preferences?.budget as "budget" | "moderate" | "luxury") ||
       "moderate";
 
+    const requestHash = createHash("sha256")
+      .update(JSON.stringify({ ...parseResult.data, requestId: undefined }))
+      .digest("hex");
+
     // Use the user-scoped client so RLS is enforced as defense-in-depth.
     // We still explicitly scope user_id from the verified session below, but
     // any future RLS policy on `trips` will also catch us if the auth check
@@ -130,6 +137,7 @@ export async function POST(request: NextRequest) {
     const { data: trip, error } = await supabase
       .from("trips")
       .insert({
+        ...(requestId ? { id: requestId } : {}),
         user_id: user.id,
         destination,
         start_date,
@@ -138,6 +146,7 @@ export async function POST(request: NextRequest) {
         budget_tier: budgetTier,
         vibes: preferences?.vibes,
         preferences: {
+          ...(requestId ? { creationRequestHash: requestHash } : {}),
           travelerType: preferences?.travelerType,
           originCity: preferences?.originCity,
           originAirport: preferences?.originAirport,
@@ -146,6 +155,31 @@ export async function POST(request: NextRequest) {
       })
       .select()
       .single();
+
+    if (error?.code === "23505" && requestId) {
+      const { data: existing, error: readError } = await supabase
+        .from("trips")
+        .select()
+        .eq("id", requestId)
+        .eq("user_id", user.id)
+        .single();
+      if (
+        !readError &&
+        existing?.preferences?.creationRequestHash === requestHash
+      ) {
+        return NextResponse.json(
+          { trip: existing },
+          { headers: { "Cache-Control": "no-store" } },
+        );
+      }
+      return NextResponse.json(
+        {
+          error:
+            "This request cannot be reused for a different trip. Open your saved trips to continue.",
+        },
+        { status: 409 },
+      );
+    }
 
     if (error) {
       console.error("Database error:", error);

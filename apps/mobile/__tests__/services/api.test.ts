@@ -20,6 +20,7 @@ import {
   updateTrip,
   deleteTrip,
   shareTrip,
+  revokeTripShare,
   getPopularDestinations,
   getTrendingDestinations,
   trackAffiliateClick,
@@ -186,7 +187,15 @@ describe('shareTrip', () => {
     expect(result.data?.shareToken).toBe('abc');
     expect(mockFetch).toHaveBeenCalledWith(
       'http://localhost:3000/api/trips/trip-1/share',
-      expect.objectContaining({ method: 'POST' })
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ publicConsent: true }) })
+    );
+  });
+  it('revokes the public link through the authenticated API', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true }) });
+    await revokeTripShare('trip-1');
+    expect(mockFetch).toHaveBeenCalledWith(
+      'http://localhost:3000/api/trips/trip-1/share',
+      expect.objectContaining({ method: 'DELETE' })
     );
   });
 });

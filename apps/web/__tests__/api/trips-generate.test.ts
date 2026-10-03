@@ -11,30 +11,42 @@ vi.mock("@/workflows/plan-trip", () => ({
   planTripWorkflow: vi.fn(async () => ({})),
 }));
 
-type QueryMode = "trip_select" | "search_insert" | "trip_update";
-
-let mode: QueryMode | null = null;
-let tripStatus: "draft" | "generating" = "draft";
+let tripStatus = "draft";
+let activeSearch: string | null = null;
+let searchCount = 0;
+let claimFails = false;
+const deletedSearches: string[] = [];
 const rpcMock = vi.fn(async () => ({ data: null, error: null }));
+vi.mock("@/lib/security/rate-limit", () => ({
+  checkRateLimitAsync: vi.fn(async () => ({ allowed: true })),
+}));
 
 function createTableChain(table: string) {
+  let operation = "select";
+  let values: Record<string, unknown> = {};
+  const filters: Record<string, unknown> = {};
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
-  chain.select = vi.fn(() => {
-    if (table === "trips") mode = "trip_select";
+  chain.select = vi.fn(() => chain);
+  chain.insert = vi.fn((input) => {
+    operation = "insert";
+    values = input;
     return chain;
   });
-  chain.insert = vi.fn(() => {
-    if (table === "searches") mode = "search_insert";
+  chain.update = vi.fn((input) => {
+    operation = "update";
+    values = input;
     return chain;
   });
-  chain.update = vi.fn(() => {
-    if (table === "trips") mode = "trip_update";
+  chain.delete = vi.fn(() => {
+    operation = "delete";
     return chain;
   });
-  chain.eq = vi.fn(() => chain);
-  chain.is = vi.fn(() => chain);
-  chain.single = vi.fn(async () => {
-    if (mode === "trip_select") {
+  chain.eq = chain.is = vi.fn((key, value) => {
+    filters[key] = value;
+    return chain;
+  });
+  const execute = () => {
+    if (table === "trips" && operation === "select")
       return {
         data: {
           id: "trip-1",
@@ -51,16 +63,33 @@ function createTableChain(table: string) {
             originAirport: "SFO",
           },
           user_id: "user-1",
-          search_id: null,
+          search_id: activeSearch,
         },
         error: null,
       };
+    if (table === "trips" && operation === "update") {
+      if (claimFails)
+        return { data: null, error: { message: "database unavailable" } };
+      if (
+        filters.status !== tripStatus ||
+        filters.search_id !== activeSearch ||
+        filters.user_id !== "user-1"
+      )
+        return { data: null, error: null };
+      tripStatus = String(values.status);
+      activeSearch = String(values.search_id);
+      return { data: { id: "trip-1" }, error: null };
     }
-    if (mode === "search_insert") {
-      return { data: { id: "search-1" }, error: null };
-    }
+    if (table === "searches" && operation === "insert")
+      return { data: { id: `search-${++searchCount}` }, error: null };
+    if (table === "searches" && operation === "delete")
+      deletedSearches.push(String(filters.id));
     return { data: null, error: null };
-  });
+  };
+  chain.single = chain.maybeSingle = vi.fn(async () => execute());
+  chain.then = vi.fn((resolve: (value: unknown) => unknown) =>
+    Promise.resolve(execute()).then(resolve),
+  );
   return chain;
 }
 
@@ -97,7 +126,10 @@ function makeReq(body: Record<string, unknown> = {}) {
 describe("POST /api/trips/[id]/generate", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mode = null;
+    activeSearch = null;
+    searchCount = 0;
+    claimFails = false;
+    deletedSearches.length = 0;
     tripStatus = "draft";
     startMock.mockResolvedValue({ runId: "run-1" });
   });
@@ -168,6 +200,45 @@ describe("POST /api/trips/[id]/generate", () => {
     expect(previewReadyRpcArgs?.p_value).toBe(true);
   });
 
+  it("starts only one workflow when concurrent requests read the same draft", async () => {
+    const responses = await Promise.all([
+      POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }),
+      POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }),
+    ]);
+    expect(responses.map((r) => r.status).sort()).toEqual([200, 409]);
+    expect(startMock).toHaveBeenCalledTimes(1);
+    expect(deletedSearches).toHaveLength(1);
+  });
+  it("does not dispatch when claiming the trip fails", async () => {
+    claimFails = true;
+    expect(
+      (await POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }))
+        .status,
+    ).toBe(503);
+    expect(startMock).not.toHaveBeenCalled();
+    expect(deletedSearches).toEqual(["search-1"]);
+  });
+  it("preserves an ambiguous startup claim instead of launching twice", async () => {
+    startMock.mockRejectedValueOnce(new Error("reply lost"));
+    expect(
+      (await POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }))
+        .status,
+    ).toBe(500);
+    expect(tripStatus).toBe("generating");
+    expect(
+      (await POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }))
+        .status,
+    ).toBe(409);
+    expect(startMock).toHaveBeenCalledTimes(1);
+  });
+  it("reuses an already completed trip rather than regenerating on replay", async () => {
+    tripStatus = "planned";
+    expect(
+      (await POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }))
+        .status,
+    ).toBe(200);
+    expect(startMock).not.toHaveBeenCalled();
+  });
   it("returns conflict when generation already running", async () => {
     tripStatus = "generating";
     const res = await POST(makeReq(), {

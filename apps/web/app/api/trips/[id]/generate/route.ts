@@ -41,27 +41,6 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (auth instanceof NextResponse) return auth;
     const userId = auth.userId;
 
-    // Rate limit: 5 per hour per user.
-    const hourlyLimit = await checkRateLimitAsync(`generate:hour:${userId}`, {
-      maxRequests: 5,
-      windowMs: 60 * 60 * 1000,
-      failClosed: true,
-    });
-    if (!hourlyLimit.allowed) {
-      return NextResponse.json(
-        {
-          error:
-            "Too many generation requests. Please wait before generating another trip.",
-        },
-        {
-          status: 429,
-          headers: {
-            "Retry-After": String(Math.ceil(hourlyLimit.resetIn / 1000)),
-          },
-        },
-      );
-    }
-
     const adminClient = getSupabase();
 
     const { data: trip, error: tripError } = await adminClient
@@ -88,6 +67,41 @@ export async function POST(request: NextRequest, { params }: Params) {
           searchId: trip.search_id,
         },
         { status: 409 },
+      );
+    }
+
+    if (["planned", "generated", "completed"].includes(trip.status)) {
+      return NextResponse.json({
+        success: true,
+        tripId,
+        searchId: trip.search_id,
+        status: trip.status,
+      });
+    }
+    if (!["draft", "failed"].includes(trip.status))
+      return NextResponse.json(
+        { error: "Trip is not ready for generation" },
+        { status: 409 },
+      );
+
+    // Rate limit: 5 per hour per user.
+    const hourlyLimit = await checkRateLimitAsync(`generate:hour:${userId}`, {
+      maxRequests: 5,
+      windowMs: 60 * 60 * 1000,
+      failClosed: true,
+    });
+    if (!hourlyLimit.allowed) {
+      return NextResponse.json(
+        {
+          error:
+            "Too many generation requests. Please wait before generating another trip.",
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.ceil(hourlyLimit.resetIn / 1000)),
+          },
+        },
       );
     }
 
@@ -141,15 +155,39 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     const searchId = search.id;
 
-    // Link search to trip and update status
-    await adminClient
+    // Only one concurrent caller may claim the observed trip state. A losing
+    // request never starts a workflow, even when both read the same draft.
+    let claim = adminClient
       .from("trips")
       .update({
         status: "generating",
         search_id: searchId,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", tripId);
+      .eq("id", tripId)
+      .eq("user_id", userId)
+      .eq("status", trip.status);
+    claim = trip.search_id
+      ? claim.eq("search_id", trip.search_id)
+      : claim.is("search_id", null);
+    const { data: claimed, error: claimError } = await claim
+      .select("id")
+      .maybeSingle();
+    if (claimError || !claimed) {
+      await adminClient
+        .from("searches")
+        .delete()
+        .eq("id", searchId)
+        .eq("user_id", userId);
+      return NextResponse.json(
+        {
+          error: claimError
+            ? "Could not start planning. Please retry."
+            : "Planning state changed. Reopen your trip to continue.",
+        },
+        { status: claimError ? 503 : 409 },
+      );
+    }
 
     // Store instant preview so loader can render within a few seconds.
     const previewDays = buildInstantPreview({
@@ -193,22 +231,21 @@ export async function POST(request: NextRequest, { params }: Params) {
         workflowError instanceof Error
           ? workflowError.message
           : "Workflow failed to start";
-      await Promise.allSettled([
-        adminClient
-          .from("searches")
-          .update({
-            status: "error",
-            error_message: message,
-          })
-          .eq("id", searchId),
-        adminClient
-          .from("trips")
-          .update({
-            status: "failed",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", tripId),
-      ]);
+      // Dispatch failures can be ambiguous: the workflow may already exist.
+      // Keep the claim so a retry cannot start a second paid workflow.
+      await adminClient
+        .from("searches")
+        .update({
+          error_message:
+            "Workflow startup could not be confirmed. Check progress before retrying.",
+        })
+        .eq("id", searchId)
+        .eq("user_id", userId);
+      logger.error("[API] Workflow startup unconfirmed", {
+        tripId,
+        searchId,
+        message,
+      });
       throw workflowError;
     }
 

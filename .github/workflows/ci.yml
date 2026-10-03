@@ -75,6 +75,11 @@ jobs:
         run: bunx playwright test -c playwright.checkout.config.ts
         working-directory: apps/web
 
+      - name: Test trip creation recovery and public sharing in the full app
+        run: bunx playwright test -c playwright.recovery.config.ts
+        working-directory: apps/web
+        timeout-minutes: 15
+
   build-web:
     name: Build Web
     runs-on: ubuntu-latest

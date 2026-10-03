@@ -282,8 +282,14 @@ export async function shareTrip(
 ): Promise<ApiResponse<{ shareUrl: string; shareToken: string }>> {
   return apiFetch<{ shareUrl: string; shareToken: string }>(
     `/api/trips/${encodeURIComponent(id)}/share`,
-    { method: 'POST' }
+    { method: 'POST', body: JSON.stringify({ publicConsent: true }) }
   );
+}
+
+export async function revokeTripShare(id: string): Promise<ApiResponse<{ success: boolean }>> {
+  return apiFetch<{ success: boolean }>(`/api/trips/${encodeURIComponent(id)}/share`, {
+    method: 'DELETE',
+  });
 }
 
 // ============================================

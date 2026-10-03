@@ -134,6 +134,8 @@ function makeRequest(
   body?: string | object,
   headers?: Record<string, string>,
 ): NextRequest {
+  if (method === "POST" && url.includes("/share") && body === undefined)
+    body = { publicConsent: true };
   const init: RequestInit = { method };
   if (body) {
     init.body = typeof body === "string" ? body : JSON.stringify(body);
@@ -166,7 +168,7 @@ describe("POST /api/trips/[id]/share", () => {
       },
       error: null,
     };
-    mockUpdateReturn = { data: null, error: null };
+    mockUpdateReturn = { data: { id: "trip-1" }, error: null };
     // After the select().eq().eq().single() the chain resolves to mockTripReturn.
     // After the update().eq().eq() the chain resolves too, but the route only checks error.
     // Since both use the same tripsChain, we make the chain result dynamic:
@@ -186,6 +188,15 @@ describe("POST /api/trips/[id]/share", () => {
       // Second call: update
       return createQueryChain(() => mockUpdateReturn);
     });
+  });
+
+  it("rejects sharing without explicit consent before reading trip data", async () => {
+    const res = await sharePost(
+      makeRequest("POST", "/api/trips/trip-1/share", {}),
+      makeParams("trip-1"),
+    );
+    expect(res.status).toBe(400);
+    expect(mockSupabase.from).not.toHaveBeenCalled();
   });
 
   it("successfully enables sharing and returns shareUrl and token", async () => {

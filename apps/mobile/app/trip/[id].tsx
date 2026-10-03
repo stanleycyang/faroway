@@ -26,7 +26,7 @@ import { usePromptStore } from '../../stores/promptStore';
 import { useAuthContext } from '../../components/AuthProvider';
 import { AuthGate } from '../../components/AuthGate';
 import { RatingPrompt } from '../../components/RatingPrompt';
-import { shareTrip, trackAffiliateClick } from '../../services/api';
+import { shareTrip, revokeTripShare, trackAffiliateClick } from '../../services/api';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import { useTrips } from '../../hooks/useTrips';
@@ -615,6 +615,30 @@ export default function TripDetailScreen() {
       setShowAuthGate(true);
       return;
     }
+    const confirmed = await new Promise<boolean>((resolve) =>
+      Alert.alert(
+        'Make this trip public?',
+        'Anyone with the link can see your dates and itinerary. The link remains active if you cancel the share sheet. You can turn off public access from this sharing menu.',
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+          {
+            text: 'Turn off public access',
+            style: 'destructive',
+            onPress: async () => {
+              resolve(false);
+              const result = await revokeTripShare(id);
+              Alert.alert(
+                result.error ? 'Could not turn off sharing' : 'Public access turned off',
+                result.error || 'The old public link no longer works.'
+              );
+            },
+          },
+          { text: 'Create public link', onPress: () => resolve(true) },
+        ],
+        { cancelable: true, onDismiss: () => resolve(false) }
+      )
+    );
+    if (!confirmed) return;
     try {
       const result = await shareTrip(id);
       if (result.data?.shareUrl) {

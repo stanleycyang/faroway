@@ -28,10 +28,17 @@ export async function POST(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const consent = await request.json().catch(() => null);
+    if (consent?.publicConsent !== true)
+      return NextResponse.json(
+        { error: "Explicit public sharing consent is required" },
+        { status: 400 },
+      );
+
     // Fetch current trip to check ownership and existing token
     const { data: trip, error: fetchError } = await supabase
       .from("trips")
-      .select("id, share_token, is_shared, user_id")
+      .select("id, share_token, is_shared, user_id, updated_at")
       .eq("id", id)
       .eq("user_id", user.id)
       .single();
@@ -40,26 +47,35 @@ export async function POST(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
-    const shareToken = trip.share_token || nanoid(12);
+    const shareToken =
+      trip.is_shared && trip.share_token ? trip.share_token : nanoid(24);
     const now = new Date().toISOString();
 
-    const { error: updateError } = await supabase
-      .from("trips")
-      .update({
-        share_token: shareToken,
-        is_shared: true,
-        shared_at: trip.share_token ? undefined : now,
-        updated_at: now,
-      })
-      .eq("id", id)
-      .eq("user_id", user.id);
-
-    if (updateError) {
-      console.error("Error enabling sharing:", updateError);
-      return NextResponse.json(
-        { error: "Failed to enable sharing" },
-        { status: 500 },
-      );
+    if (!trip.is_shared) {
+      let update = supabase
+        .from("trips")
+        .update({
+          share_token: shareToken,
+          is_shared: true,
+          shared_at: now,
+          updated_at: now,
+        })
+        .eq("id", id)
+        .eq("user_id", user.id)
+        .eq("is_shared", false);
+      if (trip.updated_at) update = update.eq("updated_at", trip.updated_at);
+      const { data: changed, error: updateError } = await update
+        .select("id")
+        .single();
+      if (updateError || !changed) {
+        return NextResponse.json(
+          {
+            error:
+              "Sharing changed or could not be saved. Refresh the trip before trying again.",
+          },
+          { status: 409 },
+        );
+      }
     }
 
     const baseUrl =
@@ -101,6 +117,8 @@ export async function DELETE(request: NextRequest, { params }: Params) {
       .update(
         {
           is_shared: false,
+          share_token: null,
+          shared_at: null,
           updated_at: new Date().toISOString(),
         },
         { count: "exact" },
