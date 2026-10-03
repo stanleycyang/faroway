@@ -84,6 +84,19 @@ describe("workflow startup reconciliation", () => {
       );
     },
   );
+  it("recovers a failed final bridge even if the search was marked completed first", async () => {
+    mock.search.status = "completed";
+    mock.status.mockResolvedValue("failed");
+    expect(
+      (await reconcileGeneration("trip-1", "owner", "search-1")).state,
+    ).toBe("retry_available");
+    expect(mock.apply).toHaveBeenCalledWith(
+      "trip-1",
+      "search-1",
+      "failed",
+      expect.any(Object),
+    );
+  });
   it("does not release an attempt if a newer attempt won the database fence", async () => {
     mock.status.mockResolvedValue("failed");
     mock.apply.mockResolvedValue(false);

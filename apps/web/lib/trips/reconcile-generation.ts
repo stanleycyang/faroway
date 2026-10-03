@@ -21,7 +21,6 @@ export async function reconcileGeneration(
     .eq("user_id", userId)
     .single();
   if (error || !search) return { state: "unconfirmed" as const };
-  if (search.status === "completed") return { state: "settled" as const };
   if (!search.workflow_run_id)
     return {
       state:
