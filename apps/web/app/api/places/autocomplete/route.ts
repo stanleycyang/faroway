@@ -3,6 +3,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 
 export async function GET(request: NextRequest) {
+  if (process.env.GOOGLE_PLACES_LIVE_ENABLED !== "true") {
+    return NextResponse.json(
+      { predictions: [] },
+      { status: 501, headers: { "Cache-Control": "private, no-store" } },
+    );
+  }
   const input = request.nextUrl.searchParams.get("input");
 
   if (!input || input.length < 2) {

@@ -41,7 +41,16 @@ export function PlacesAutocompleteInput({
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  // Click outside handler
+  const dismissResults = useCallback(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = null;
+    abortRef.current?.abort();
+    abortRef.current = null;
+    setPredictions([]);
+    setIsLoading(false);
+    setIsOpen(false);
+  }, []);
+
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -49,15 +58,21 @@ export function PlacesAutocompleteInput({
         !dropdownRef.current.contains(e.target as Node) &&
         inputRef.current &&
         !inputRef.current.contains(e.target as Node)
-      ) {
-        setIsOpen(false);
-        setPredictions([]);
-        abortRef.current?.abort();
-      }
+      )
+        dismissResults();
+    };
+    const handleVisibility = () => {
+      if (document.visibilityState === "hidden") dismissResults();
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+    document.addEventListener("visibilitychange", handleVisibility);
+    window.addEventListener("pagehide", dismissResults);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("visibilitychange", handleVisibility);
+      window.removeEventListener("pagehide", dismissResults);
+    };
+  }, [dismissResults]);
 
   useEffect(
     () => () => {

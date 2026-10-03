@@ -16,12 +16,14 @@ globalThis.fetch = fetchMock as unknown as typeof fetch;
 
 async function importAutocompleteRoute() {
   vi.resetModules();
+  process.env.GOOGLE_PLACES_LIVE_ENABLED = "true";
   process.env.GOOGLE_PLACES_API_KEY = "places-key";
   return import("@/app/api/places/autocomplete/route");
 }
 
 async function importDetailsRoute() {
   vi.resetModules();
+  process.env.GOOGLE_PLACES_LIVE_ENABLED = "true";
   process.env.GOOGLE_PLACES_API_KEY = "places-key";
   return import("@/app/api/places/details/route");
 }
@@ -31,6 +33,19 @@ function makeRequest(path: string) {
 }
 
 describe("Places API proxy routes", () => {
+  it.each(["autocomplete?input=Tokyo", "details?placeId=tokyo"])(
+    "keeps live routes off with an existing key until explicitly enabled: %s",
+    async (path) => {
+      const { GET } = path.startsWith("autocomplete")
+        ? await importAutocompleteRoute()
+        : await importDetailsRoute();
+      delete process.env.GOOGLE_PLACES_LIVE_ENABLED;
+      const res = await GET(makeRequest(`/api/places/${path}`));
+      expect(res.status).toBe(501);
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(mocks.checkRateLimitAsync).not.toHaveBeenCalled();
+    },
+  );
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.checkRateLimitAsync.mockResolvedValue({ allowed: true });

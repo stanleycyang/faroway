@@ -148,7 +148,17 @@ whitelist. Legacy unmarked selections are not restored unless their ID/name matc
 the existing independent catalog. Dates and other trip preferences still restore.
 Existing saved trips/offline copies are not modified or certified by this change.
 
-`/api/places/venues` serves user-triggered Text Search (New), capped at three results,
+`GOOGLE_PLACES_LIVE_ENABLED` defaults to false for all Google live references,
+including city autocomplete. An existing API key alone cannot activate these
+requests. `/api/places/autocomplete`, `/api/places/venues` and the details alias return a
+graceful unavailable response before any provider or rate-limit-storage call while
+the gate is off. Independent catalog/user-text planning remains usable. Enable
+only after explicit billing, API restriction/quota and presentation/terms review.
+The current public terms/privacy pages do not yet incorporate the required Google
+Maps terms/privacy disclosures. Keep the gate off until that activation prerequisite
+is resolved; this PR does not invent or certify legal terms.
+
+When enabled, `/api/places/venues` serves user-triggered Text Search (New), capped at three results,
 and lazy Place Details (New). `/api/places/details` is a compatibility alias to the
 new display-only response; it no longer returns coordinates. Search requests only
 ID, display name, address, Maps link and third-party attributions; details add business

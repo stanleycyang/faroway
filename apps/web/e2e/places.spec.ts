@@ -240,3 +240,84 @@ test("weather outside the forecast range never invents a forecast", async ({
   ).toContainText("not available yet");
   await expect(page.getByRole("table")).toHaveCount(0);
 });
+
+test("gated live references fail gracefully without blocking independent planning", async ({
+  page,
+}) => {
+  await page.route("**/api/places/venues?*", (route) =>
+    route.fulfill({
+      status: 501,
+      json: { error: "Live place references are not available yet." },
+    }),
+  );
+  await page.route("**/api/places/autocomplete?*", (route) =>
+    route.fulfill({ status: 501, json: { predictions: [] } }),
+  );
+  await page.goto(fixtureUrl);
+  await page.getByRole("button", { name: "Explore live places" }).click();
+  await page
+    .getByRole("textbox", { name: "Venue and city" })
+    .fill("Museum Tokyo");
+  await page
+    .getByRole("button", { name: "Search places", exact: true })
+    .click();
+  await expect(page.getByRole("alert")).toContainText("continue planning");
+  await page.getByRole("combobox").fill("Tok");
+  await page.getByRole("button", { name: "Tokyo Japan" }).click();
+  await expect(page.locator("output")).toContainText('"source":"catalog"');
+});
+
+test("dismissal cancels pending autocomplete and tab hide discards displayed predictions", async ({
+  page,
+}) => {
+  let calls = 0;
+  await page.clock.install();
+  await page.route("**/api/places/autocomplete?*", (route) => {
+    calls++;
+    return route.fulfill({
+      json: {
+        predictions: [
+          {
+            placeId: "providerid",
+            mainText: "Transient Google city",
+            secondaryText: "Region",
+          },
+        ],
+      },
+    });
+  });
+  await page.goto(fixtureUrl);
+  await page.getByRole("combobox").fill("Tok");
+  await page.getByRole("button", { name: "Explore live places" }).click();
+  await page.clock.runFor(400);
+  expect(calls).toBe(0);
+  await page.getByRole("combobox").fill("Tokyo");
+  await page.clock.runFor(400);
+  await expect(
+    page.getByText("Transient Google city", { exact: true }),
+  ).toBeVisible();
+  expect(calls).toBe(1);
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "hidden",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await expect(
+    page.getByText("Transient Google city", { exact: true }),
+  ).toHaveCount(0);
+  await page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", {
+      configurable: true,
+      value: "visible",
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+  await page.getByRole("combobox").focus();
+  await page.clock.runFor(400);
+  await expect(
+    page.getByText("Transient Google city", { exact: true }),
+  ).toHaveCount(0);
+  expect(calls).toBe(1);
+});

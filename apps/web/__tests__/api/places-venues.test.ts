@@ -12,10 +12,23 @@ const fetchMock = vi.fn();
 beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   fetchMock.mockReset();
+  limit.mockClear();
+  vi.stubEnv("GOOGLE_PLACES_LIVE_ENABLED", "true");
   limit.mockResolvedValue({ allowed: true });
   vi.stubEnv("GOOGLE_PLACES_API_KEY", "test-key");
 });
 describe("transient venue lookup", () => {
+  it.each([undefined, "false", "1"])(
+    "does not call providers or rate-limit storage when live lookup is off (%s)",
+    async (enabled) => {
+      vi.stubEnv("GOOGLE_PLACES_LIVE_ENABLED", enabled);
+      const res = await GET(request("query=Museum"));
+      expect(res.status).toBe(501);
+      expect(res.headers.get("cache-control")).toContain("no-store");
+      expect(fetchMock).not.toHaveBeenCalled();
+      expect(limit).not.toHaveBeenCalled();
+    },
+  );
   it("uses capped Text Search New, no-store and a minimal Pro mask", async () => {
     fetchMock.mockResolvedValue(
       new Response(

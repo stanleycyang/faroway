@@ -13,6 +13,16 @@ export async function GET(request: NextRequest) {
       status,
       headers: { "Cache-Control": "private, no-store, max-age=0" },
     });
+  // Existing autocomplete credentials must not silently enable new Pro billing.
+  if (process.env.GOOGLE_PLACES_LIVE_ENABLED !== "true") {
+    return reply(
+      {
+        error:
+          "Live place references are not available yet. You can continue planning.",
+      },
+      501,
+    );
+  }
   if (
     !!query === !!placeId ||
     (query && (query.length < 2 || query.length > 120)) ||
