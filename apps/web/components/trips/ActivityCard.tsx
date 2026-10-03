@@ -25,6 +25,7 @@ export interface Activity {
   duration: number;
   estimatedCost: {
     amount: number;
+    status?: "unknown" | "estimate";
     currency: string;
   };
   timeOfDay: "morning" | "afternoon" | "evening";
@@ -68,6 +69,7 @@ export interface Restaurant {
   description: string;
   estimatedCost: {
     amount: number;
+    status?: "unknown" | "estimate";
     currency: string;
     perPerson: boolean;
   };
@@ -365,15 +367,13 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
               {formatDuration(activity.duration)}
             </span>
           )}
-          {activity.estimatedCost?.amount != null && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-lg font-semibold text-gray-700">
-              <DollarSign className="w-3.5 h-3.5 text-gray-400" />
-              {formatCost(
-                activity.estimatedCost.amount,
-                activity.estimatedCost.currency || "USD",
-              )}
-            </span>
-          )}
+          <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-lg font-semibold text-gray-700">
+            <DollarSign className="w-3.5 h-3.5 text-gray-400" />
+            {activity.estimatedCost?.status !== "unknown" &&
+            activity.estimatedCost?.amount > 0
+              ? `Est. ${formatCost(activity.estimatedCost.amount, activity.estimatedCost.currency || "USD")}`
+              : "Price unknown"}
+          </span>
           {activity.location?.name && (
             <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-lg truncate max-w-[180px]">
               <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
@@ -567,20 +567,21 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
 
             {/* Metadata chips */}
             <div className="flex flex-wrap items-center gap-2 mt-3 text-xs text-gray-500">
-              {restaurant.priceLevel != null &&
+              {restaurant.estimatedCost?.status !== "unknown" &&
+                restaurant.priceLevel != null &&
                 renderPriceLevel(restaurant.priceLevel)}
-              {restaurant.estimatedCost?.amount != null && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-lg font-semibold text-gray-700">
-                  <DollarSign className="w-3.5 h-3.5 text-gray-400" />
-                  {formatCost(
-                    restaurant.estimatedCost.amount,
-                    restaurant.estimatedCost.currency || "USD",
-                  )}
-                  {restaurant.estimatedCost.perPerson && (
+              <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-lg font-semibold text-gray-700">
+                <DollarSign className="w-3.5 h-3.5 text-gray-400" />
+                {restaurant.estimatedCost?.status !== "unknown" &&
+                restaurant.estimatedCost?.amount > 0
+                  ? `Est. ${formatCost(restaurant.estimatedCost.amount, restaurant.estimatedCost.currency || "USD")}`
+                  : "Price unknown"}
+                {restaurant.estimatedCost?.status !== "unknown" &&
+                  restaurant.estimatedCost?.amount > 0 &&
+                  restaurant.estimatedCost.perPerson && (
                     <span className="text-gray-400">/pp</span>
                   )}
-                </span>
-              )}
+              </span>
               {restaurant.location?.name && (
                 <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-lg truncate max-w-[180px]">
                   <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />

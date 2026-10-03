@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from "@/lib/search/runtime";
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 
@@ -28,22 +29,42 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const url =
-      `https://maps.googleapis.com/maps/api/place/details/json` +
-      `?place_id=${encodeURIComponent(placeId)}` +
-      `&fields=geometry,name` +
-      `&key=${encodeURIComponent(API_KEY)}`;
-
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetchWithTimeout(
+      `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`,
+      {
+        headers: {
+          "X-Goog-Api-Key": API_KEY,
+          "X-Goog-FieldMask": "displayName,location,attributions",
+        },
+      },
+    );
+    if (!res.ok)
+      return NextResponse.json(
+        { error: "Place unavailable" },
+        { status: res.status === 404 ? 404 : 502 },
+      );
     const data = await res.json();
-
-    if (data.status === "OK" && data.result?.geometry?.location) {
-      const { lat, lng } = data.result.geometry.location;
-      return NextResponse.json({
-        name: data.result.name,
-        lat,
-        lng,
-      });
+    const lat = data.location?.latitude;
+    const lng = data.location?.longitude;
+    if (
+      typeof lat === "number" &&
+      Number.isFinite(lat) &&
+      Math.abs(lat) <= 90 &&
+      typeof lng === "number" &&
+      Number.isFinite(lng) &&
+      Math.abs(lng) <= 180
+    ) {
+      return NextResponse.json(
+        {
+          name: data.displayName?.text,
+          lat,
+          lng,
+          attributions: Array.isArray(data.attributions)
+            ? data.attributions
+            : [],
+        },
+        { headers: { "Cache-Control": "private, no-store" } },
+      );
     }
 
     return NextResponse.json({ error: "Place not found" }, { status: 404 });

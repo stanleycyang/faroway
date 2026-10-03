@@ -132,3 +132,54 @@ development setup.
 Embedded checkout is a separate scope requiring Full + Booking approval and
 certification. Provider ownership of payment does not eliminate Faroway's
 contractual, privacy, security, or applicable compliance obligations.
+
+## Places API (New) and enrichment follow-up
+
+Destination autocomplete now calls `places.googleapis.com/v1/places:autocomplete`
+with a city-only filter, server-side `X-Goog-Api-Key`, explicit field mask,
+no-store fetch, and bounded timeout. Details use `GET /v1/places/{placeId}`
+with `displayName,location,attributions`; neither endpoint requests ratings,
+reviews, photos, or opening hours. Response bodies retain the existing destination
+selection contract. The compact prediction dropdown displays Google Maps text
+attribution and separates Google predictions from the local fallback list.
+Missing credentials and upstream failures leave local destination selection usable.
+
+The existing `GOOGLE_PLACES_API_KEY` must belong to a project with Places API
+(New) enabled, billing and appropriate API restrictions/quotas. A key being present
+does not prove any of those conditions. No live credential validation or settings
+changes were performed for this change. Autocomplete currently uses per-request
+billing; session-token billing optimization remains a follow-up.
+
+Google activity/dining enrichment previously entered AI aggregation and persisted
+search/trip records. That ingestion is now closed, including the old exported
+search helpers. A future transient attributed display must establish permitted
+storage and model-processing behavior before restoring it. This is deliberately
+not a migration of Google venue content into a new saved cache. Existing stored
+content is not rewritten or deleted by this change.
+
+Destination selection still passes a selected city name and coordinates into the
+existing create-trip flow, including resumable drafts. Review that storage and
+model-input path against the applicable agreement before production activation;
+this patch does not certify it. The place-ID storage exception is not a blanket
+exception for names, coordinates, predictions, photos, or reviews. Terms/privacy
+pages and all eventual provider/author attributions also need launch review.
+
+Fallback and Tavily enrichment no longer invent stars; search relevance scores
+are not customer ratings. Unpriced ideas carry `priceStatus: "unknown"` through
+itinerary storage and web/mobile rendering. Positive displayed activity, dining,
+and mobile hotel amounts are labeled estimates, and mobile budget summaries
+explicitly warn that prices may be unknown. Generated dining reviews are cleared;
+independent provider review fields are preserved. This does not revalidate legacy
+saved ratings, confirm AI-generated venue names, or turn estimates into quotes.
+
+References checked October 3, 2026:
+
+- [Autocomplete (New)](https://developers.google.com/maps/documentation/places/web-service/place-autocomplete)
+- [Place Details (New)](https://developers.google.com/maps/documentation/places/web-service/place-details)
+- [Places policies and attribution](https://developers.google.com/maps/documentation/places/web-service/policies)
+
+Regression coverage uses mocked providers only: API contracts, key placement,
+field masks, missing configuration, upstream errors, malformed coordinates,
+blocked enrichment ingestion, honest price/rating presentation, and desktop/mobile
+browser selection, attribution, and local fallback. Viator approval gates remain
+unchanged.

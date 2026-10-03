@@ -81,6 +81,7 @@ export function PlacesAutocompleteInput({
   const handleInputChange = (value: string) => {
     setQuery(value);
     setIsOpen(true);
+    setPredictions([]);
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (abortRef.current) abortRef.current.abort();
@@ -128,6 +129,8 @@ export function PlacesAutocompleteInput({
   };
 
   const handleSelectPrediction = async (prediction: Prediction) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    abortRef.current?.abort();
     setIsOpen(false);
     setQuery(prediction.mainText);
     setPredictions([]);
@@ -160,6 +163,8 @@ export function PlacesAutocompleteInput({
   };
 
   const handleSelectLocal = (dest: { name: string; country: string }) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    abortRef.current?.abort();
     setIsOpen(false);
     setQuery(dest.name);
     setPredictions([]);
@@ -283,6 +288,16 @@ export function PlacesAutocompleteInput({
                   </li>
                 ))}
             </ul>
+          )}
+          {hasGoogleResults && (
+            <div className="border-t border-gray-100 px-4 py-2 text-right">
+              <span
+                translate="no"
+                className="text-xs font-normal not-italic tracking-normal whitespace-nowrap text-[#5E5E5E]"
+              >
+                Google Maps
+              </span>
+            </div>
           )}
         </div>
       )}

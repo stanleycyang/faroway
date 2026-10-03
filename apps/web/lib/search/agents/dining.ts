@@ -18,7 +18,6 @@ import {
 } from "@/lib/affiliates/tripadvisor";
 import {
   AI_AGENT_TIMEOUT_MS,
-  fetchWithTimeout,
   isOperationTimeoutError,
   withAbortTimeout,
 } from "@/lib/search/runtime";
@@ -69,7 +68,7 @@ const SYSTEM_PROMPT = `You are a food and restaurant expert. Generate realistic 
 For each restaurant, provide:
 1. Real restaurant names that exist at the destination (or realistic-sounding names)
 2. Accurate cuisine types and pricing
-3. Typical ratings and review counts
+3. Set rating and reviewCount to 0; unverified reviews must not be invented
 4. Which meals they're best for (breakfast, lunch, dinner)
 5. How well the atmosphere matches the traveler's vibes
 
@@ -148,6 +147,8 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
     let restaurants = result.restaurants
       .map((restaurant, index) => ({
         ...restaurant,
+        rating: 0,
+        reviewCount: 0,
         id: `dining_${Date.now()}_${index}`,
         priceLevel: restaurant.priceLevel as 1 | 2 | 3 | 4,
       }))
@@ -177,47 +178,17 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
 }
 
 /**
- * Search restaurants via Google Places (when API key is available)
+ * Deprecated compatibility helper: Google venue ingestion is disabled.
  */
 export async function searchGooglePlacesDining(
-  destination: string,
-  cuisineTypes: string[],
+  _destination: string,
+  _types: string[],
 ): Promise<Record<string, unknown>[]> {
-  const apiKey = process.env.GOOGLE_PLACES_API_KEY;
-  if (!apiKey) {
-    console.log(
-      "[Dining Agent] No Google Places API key, using AI-generated data",
-    );
-    return [];
-  }
-
-  try {
-    const queries =
-      cuisineTypes.length > 0
-        ? cuisineTypes.map(
-            (cuisine) => `${cuisine} restaurant in ${destination}`,
-          )
-        : [`restaurant in ${destination}`];
-
-    const responses = await Promise.allSettled(
-      queries.slice(0, 3).map(async (query) => {
-        const response = await fetchWithTimeout(
-          `https://maps.googleapis.com/maps/api/place/textsearch/json?` +
-            `query=${encodeURIComponent(query)}&type=restaurant&key=${apiKey}`,
-        );
-        if (!response.ok) return [];
-        const data = await response.json();
-        return Array.isArray(data.results) ? data.results : [];
-      }),
-    );
-
-    return responses.flatMap((result) =>
-      result.status === "fulfilled" ? result.value : [],
-    );
-  } catch (error) {
-    console.error("[Dining Agent] Google Places error:", error);
-    return [];
-  }
+  void _destination;
+  void _types;
+  // Places content must not enter the persisted, AI-processed recommendation
+  // pipeline. A future transient, attributed display needs a separate design.
+  return [];
 }
 
 /**

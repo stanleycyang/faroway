@@ -208,6 +208,7 @@ export interface ItineraryActivity {
   duration: number;
   estimatedCost: {
     amount: number;
+    status?: "unknown" | "estimate";
     currency: string;
   };
   timeOfDay: TimeOfDay;
@@ -248,6 +249,7 @@ export interface Restaurant {
   description: string;
   estimatedCost: {
     amount: number;
+    status?: "unknown" | "estimate";
     currency: string;
     perPerson: boolean;
   };
@@ -468,6 +470,7 @@ export interface HotelResult {
 }
 
 export interface ActivityResult {
+  priceStatus?: "unknown" | "estimate";
   id: string;
   name: string;
   description: string;
@@ -491,6 +494,7 @@ export interface ActivityResult {
 }
 
 export interface DiningResult {
+  priceStatus?: "unknown" | "estimate";
   id: string;
   name: string;
   description: string;

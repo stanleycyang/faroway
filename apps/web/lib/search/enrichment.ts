@@ -1,7 +1,5 @@
 import type { ActivityResult, DiningResult, SearchPlan } from "@faroway/types";
 import { fetchWithTimeout } from "@/lib/search/runtime";
-import { searchGooglePlacesActivities } from "@/lib/search/agents/activities";
-import { searchGooglePlacesDining } from "@/lib/search/agents/dining";
 
 export interface EnrichmentOutput {
   activities: ActivityResult[];
@@ -34,12 +32,13 @@ function buildFallbackActivities(plan: SearchPlan): ActivityResult[] {
     id: normalizeId("enriched_activity", name, index),
     name: `${name} in ${plan.destination}`,
     description:
-      "Quality-first suggestion to improve authenticity while affiliate inventory loads.",
+      "Planning idea; confirm opening times, availability and any admission price.",
     category: "sightseeing",
     duration: 90,
     price: 0,
+    priceStatus: "unknown",
     currency: "USD",
-    rating: 4.5,
+    rating: 0,
     reviewCount: 0,
     location: { name: plan.destination, address: "", lat: 0, lng: 0 },
     images: [],
@@ -60,9 +59,10 @@ function buildFallbackDining(plan: SearchPlan): DiningResult[] {
     id: normalizeId("enriched_dining", cuisine, index),
     name: `${cuisine} neighborhood spot`,
     description:
-      "Non-affiliate local recommendation included to improve quality and variety.",
+      "Dining idea; choose a venue and confirm menu prices before booking.",
     cuisineTypes: [cuisine],
     priceLevel: 2,
+    priceStatus: "unknown",
     dietaryOptions: plan.diningCriteria.dietaryNeeds || [],
     mealTypes: ["lunch", "dinner"],
     location: { name: plan.destination, address: "", lat: 0, lng: 0 },
@@ -71,7 +71,7 @@ function buildFallbackDining(plan: SearchPlan): DiningResult[] {
     affiliatePartner: undefined,
     vibeScore: 74 - index * 3,
     vibeMatch: plan.vibeInterpretation.vibes.slice(0, 2),
-    rating: 4.4,
+    rating: 0,
     reviewCount: 0,
   }));
 }
@@ -123,8 +123,9 @@ export async function enrichNonAffiliateCandidates(
       category: "sightseeing",
       duration: 90,
       price: 0,
+      priceStatus: "unknown",
       currency: "USD",
-      rating: Math.max(3.8, Math.min(5, (item.score || 0.8) * 5)),
+      rating: 0,
       reviewCount: 0,
       location: { name: plan.destination, address: "", lat: 0, lng: 0 },
       images: [],
@@ -153,110 +154,11 @@ export async function enrichNonAffiliateCandidates(
 
 export async function runSearchEnrichment(
   plan: SearchPlan,
-  idNamespace: string = "direct",
+  _idNamespace: string = "direct",
 ): Promise<EnrichmentOutput> {
-  const [enriched, placesActivities, placesDining] = await Promise.all([
-    enrichNonAffiliateCandidates(plan),
-    searchGooglePlacesActivities(plan.destination, [
-      "museum",
-      "park",
-      "viewpoint",
-    ]),
-    searchGooglePlacesDining(plan.destination, [
-      "local",
-      "street food",
-      "popular",
-    ]),
-  ]);
-
-  const normalizedPlacesActivities: ActivityResult[] = placesActivities
-    .slice(0, 3)
-    .map((item, index) => {
-      const point = getGooglePlacePoint(item);
-      return {
-        id: `places_activity_${idNamespace}_${index}`,
-        name: String(item.name || "Local activity"),
-        description: `Google Places recommendation for ${plan.destination}`,
-        category: "sightseeing",
-        duration: 90,
-        price: 0,
-        currency: "USD",
-        rating: typeof item.rating === "number" ? item.rating : 4.3,
-        reviewCount:
-          typeof item.user_ratings_total === "number"
-            ? item.user_ratings_total
-            : 0,
-        location: {
-          name: plan.destination,
-          address: String(item.formatted_address || item.vicinity || ""),
-          lat: point.lat,
-          lng: point.lng,
-        },
-        images: [],
-        affiliateUrl: undefined,
-        affiliatePartner: undefined,
-        bestTimeOfDay: "any",
-        vibeScore: 72 - index * 2,
-        vibeMatch: plan.vibeInterpretation.vibes.slice(0, 2),
-        bookingRequired: false,
-      };
-    });
-
-  const normalizedPlacesDining: DiningResult[] = placesDining
-    .slice(0, 3)
-    .map((item, index) => {
-      const point = getGooglePlacePoint(item);
-      return {
-        id: `places_dining_${idNamespace}_${index}`,
-        name: String(item.name || "Local restaurant"),
-        description: `Google Places dining recommendation for ${plan.destination}`,
-        cuisineTypes: ["local"],
-        priceLevel: 2,
-        dietaryOptions: [],
-        mealTypes: ["lunch", "dinner"],
-        location: {
-          name: plan.destination,
-          address: String(item.formatted_address || item.vicinity || ""),
-          lat: point.lat,
-          lng: point.lng,
-        },
-        images: [],
-        reservationUrl: undefined,
-        affiliatePartner: undefined,
-        vibeScore: 70 - index * 2,
-        vibeMatch: plan.vibeInterpretation.vibes.slice(0, 2),
-        rating: typeof item.rating === "number" ? item.rating : 4.2,
-        reviewCount:
-          typeof item.user_ratings_total === "number"
-            ? item.user_ratings_total
-            : 0,
-      };
-    });
-
-  return {
-    activities: [...enriched.activities, ...normalizedPlacesActivities],
-    dining: [...enriched.dining, ...normalizedPlacesDining],
-    notes: [
-      ...enriched.notes,
-      ...(normalizedPlacesActivities.length > 0 ||
-      normalizedPlacesDining.length > 0
-        ? ["Google Places enrichment applied for non-affiliate local picks."]
-        : []),
-    ],
-  };
-}
-
-function getGooglePlacePoint(item: Record<string, unknown>): {
-  lat: number;
-  lng: number;
-} {
-  const geometry = item.geometry as
-    | { location?: { lat?: unknown; lng?: unknown } }
-    | undefined;
-  const lat = geometry?.location?.lat;
-  const lng = geometry?.location?.lng;
-  return {
-    lat: typeof lat === "number" ? lat : 0,
-    lng: typeof lng === "number" ? lng : 0,
-  };
+  void _idNamespace;
+  // Google Places responses were previously sent to the aggregator and stored
+  // in search/trip records. Keep that path closed until storage and external
+  // processing rights and a transient attributed display are resolved.
+  return enrichNonAffiliateCandidates(plan);
 }

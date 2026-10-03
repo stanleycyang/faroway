@@ -34,6 +34,7 @@ export interface HotelInput {
 }
 
 export interface ActivityInput {
+  priceStatus?: "unknown" | "estimate";
   id?: string;
   name: string;
   description?: string;
@@ -49,6 +50,7 @@ export interface ActivityInput {
 }
 
 export interface RestaurantInput {
+  priceStatus?: "unknown" | "estimate";
   id?: string;
   name: string;
   cuisine?: string;
@@ -169,9 +171,9 @@ export function buildHotelBlocks(
       type: "HotelCard",
       props: {
         name: topHotel.name,
-        rating: topHotel.rating || 4.5,
+        rating: topHotel.rating,
         starRating: topHotel.starRating,
-        pricePerNight: topHotel.pricePerNight || 150,
+        pricePerNight: topHotel.pricePerNight,
         image: topHotel.images?.[0],
         bookingUrl: topHotel.affiliateUrl,
         amenities: topHotel.amenities || [],
@@ -207,8 +209,8 @@ export function buildHotelBlocks(
         type: "HotelCard",
         props: {
           name: hotel.name,
-          rating: hotel.rating || 4.5,
-          pricePerNight: hotel.pricePerNight || 150,
+          rating: hotel.rating,
+          pricePerNight: hotel.pricePerNight,
           image: hotel.images?.[0],
           bookingUrl: hotel.affiliateUrl,
           amenities: hotel.amenities || [],
@@ -328,7 +330,8 @@ export function buildItineraryBlocks(
           duration: activity.duration
             ? `${activity.duration} hours`
             : "2 hours",
-          price: activity.price || 0,
+          price: activity.price,
+          priceStatus: activity.priceStatus,
           rating: activity.rating,
           reviewCount: activity.reviewCount,
           image: activity.images?.[0],
@@ -354,7 +357,11 @@ export function buildItineraryBlocks(
         props: {
           name: restaurant.name,
           cuisine: restaurant.cuisine || "Local",
-          priceLevel: Math.min(4, Math.max(1, priceLevelNum)),
+          priceLevel:
+            restaurant.priceStatus === "unknown" || !restaurant.priceLevel
+              ? undefined
+              : Math.min(4, Math.max(1, priceLevelNum)),
+          priceStatus: restaurant.priceStatus,
           rating: restaurant.rating,
           reviewCount: restaurant.reviewCount,
           image: restaurant.images?.[0],
@@ -417,7 +424,10 @@ export function buildBudgetBlocks(
   });
 
   const hotelCost = (topHotel?.pricePerNight || 0) * nights;
-  const activityCost = activities.reduce((sum, a) => sum + (a.price || 0), 0);
+  const activityCost = activities.reduce(
+    (sum, a) => sum + (a.priceStatus === "unknown" ? 0 : a.price || 0),
+    0,
+  );
   const diningCost = totalEstimatedCost - hotelCost - activityCost;
 
   if (hotelCost > 0) {
@@ -456,7 +466,7 @@ export function buildBudgetBlocks(
   components.push({
     type: "Text",
     props: {
-      content: `Estimated total: $${totalEstimatedCost.toLocaleString()} ${currency} for ${nights} night${nights !== 1 ? "s" : ""}.`,
+      content: `Estimated total: $${totalEstimatedCost.toLocaleString()} ${currency} for ${nights} night${nights !== 1 ? "s" : ""}. Planning estimate only; some prices may be unknown. Confirm prices before purchase.`,
       variant: "caption",
     },
   });

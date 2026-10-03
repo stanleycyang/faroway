@@ -46,7 +46,8 @@ function mapActivity(
     description: a.description,
     duration: a.duration, // already in minutes from activities agent
     estimatedCost: {
-      amount: a.price,
+      amount: a.priceStatus === "unknown" ? 0 : a.price,
+      status: a.priceStatus,
       currency: a.currency || "USD",
     },
     timeOfDay:
@@ -100,7 +101,9 @@ function mapDining(
     priceLevel: d.priceLevel as 1 | 2 | 3 | 4,
     description: d.description,
     estimatedCost: {
-      amount: priceLevelCostMap[d.priceLevel] || 30,
+      amount:
+        d.priceStatus === "unknown" ? 0 : priceLevelCostMap[d.priceLevel] || 30,
+      status: d.priceStatus ?? "estimate",
       currency: "USD",
       perPerson: true,
     },

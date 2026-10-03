@@ -1,3 +1,4 @@
+import { fetchWithTimeout } from "@/lib/search/runtime";
 import { NextRequest, NextResponse } from "next/server";
 import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 
@@ -28,32 +29,53 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const url =
-      `https://maps.googleapis.com/maps/api/place/autocomplete/json` +
-      `?input=${encodeURIComponent(input)}` +
-      `&types=(cities)` +
-      `&key=${encodeURIComponent(API_KEY)}`;
-
-    const res = await fetch(url, { cache: "no-store" });
+    const res = await fetchWithTimeout(
+      "https://places.googleapis.com/v1/places:autocomplete",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Goog-Api-Key": API_KEY,
+          "X-Goog-FieldMask":
+            "suggestions.placePrediction.placeId,suggestions.placePrediction.text.text,suggestions.placePrediction.structuredFormat",
+        },
+        body: JSON.stringify({ input, includedPrimaryTypes: ["(cities)"] }),
+      },
+    );
+    if (!res.ok) return NextResponse.json({ predictions: [] }, { status: 502 });
     const data = await res.json();
-
-    if (data.status === "OK" && data.predictions) {
-      return NextResponse.json({
-        predictions: data.predictions.map(
-          (p: {
-            place_id: string;
-            description: string;
-            structured_formatting?: {
-              main_text?: string;
-              secondary_text?: string;
-            };
-          }) => ({
-            placeId: p.place_id,
-            mainText: p.structured_formatting?.main_text ?? p.description,
-            secondaryText: p.structured_formatting?.secondary_text ?? "",
-          }),
-        ),
-      });
+    if (Array.isArray(data.suggestions)) {
+      return NextResponse.json(
+        {
+          predictions: data.suggestions.flatMap(
+            (suggestion: {
+              placePrediction?: {
+                placeId?: string;
+                text?: { text?: string };
+                structuredFormat?: {
+                  mainText?: { text?: string };
+                  secondaryText?: { text?: string };
+                };
+              };
+            }) => {
+              const p = suggestion.placePrediction;
+              const mainText =
+                p?.structuredFormat?.mainText?.text ?? p?.text?.text;
+              return p?.placeId && mainText
+                ? [
+                    {
+                      placeId: p.placeId,
+                      mainText,
+                      secondaryText:
+                        p.structuredFormat?.secondaryText?.text ?? "",
+                    },
+                  ]
+                : [];
+            },
+          ),
+        },
+        { headers: { "Cache-Control": "private, no-store" } },
+      );
     }
 
     return NextResponse.json({ predictions: [] });
