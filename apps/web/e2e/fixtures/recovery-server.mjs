@@ -166,17 +166,37 @@ const child = spawn(
     },
   },
 );
-for (const signal of ["SIGTERM", "SIGINT"])
-  process.on(signal, () => {
-    try {
-      process.kill(-child.pid, signal);
-    } catch {
-      /* Already stopped. */
-    }
-    server.close();
-  });
-child.on("exit", (code) => {
+let stopping = false;
+let forceStop;
+const killChildGroup = (signal) => {
+  try {
+    process.kill(-child.pid, signal);
+  } catch {
+    /* Already stopped. */
+  }
+};
+const cleanup = () => {
+  server.closeAllConnections();
   server.close();
   rmSync(fixtureRoot, { recursive: true, force: true });
-  process.exitCode = code || 0;
+};
+for (const signal of ["SIGTERM", "SIGINT"])
+  process.on(signal, () => {
+    if (stopping) return;
+    stopping = true;
+    killChildGroup("SIGTERM");
+    server.closeAllConnections();
+    server.close();
+    // Detached Next descendants otherwise keep Playwright's output pipes open.
+    forceStop = setTimeout(() => {
+      killChildGroup("SIGKILL");
+      cleanup();
+      process.exit(0);
+    }, 2_000);
+  });
+child.on("exit", (code) => {
+  if (forceStop) clearTimeout(forceStop);
+  killChildGroup("SIGKILL");
+  cleanup();
+  process.exit(stopping ? 0 : code || 0);
 });

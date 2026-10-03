@@ -16,6 +16,7 @@ export default defineConfig({
     url: "http://127.0.0.1:4400/create",
     timeout: 180_000,
     reuseExistingServer: false,
+    gracefulShutdown: { signal: "SIGTERM", timeout: 5_000 },
   },
   projects: [
     { name: "desktop", use: { ...devices["Desktop Chrome"] } },

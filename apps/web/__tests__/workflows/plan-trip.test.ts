@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("workflow", () => ({
+  getWorkflowMetadata: () => ({ workflowRunId: "run-fixture-1" }),
+}));
+
 const mocks = vi.hoisted(() => ({
   runOrchestratorAgent: vi.fn(),
   runHotelsAgent: vi.fn(),
@@ -82,7 +86,7 @@ function createChain(table: string) {
 
 const supabaseMock = {
   from: vi.fn((table: string) => createChain(table)),
-  rpc: vi.fn(async () => ({ data: null, error: null })),
+  rpc: vi.fn(async () => ({ data: true, error: null })),
 };
 
 vi.mock("@/lib/supabase/server", () => ({

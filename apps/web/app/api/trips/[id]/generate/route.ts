@@ -13,6 +13,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { getSupabase } from "@/lib/supabase/server";
 import { requireUserIdFromRequest } from "@/lib/auth/middleware";
+import {
+  reconcileGeneration,
+  STARTUP_UNCONFIRMED,
+} from "@/lib/trips/reconcile-generation";
 import { startWorkflow } from "@/lib/workflow/runtime";
 import { planTripWorkflow } from "@/workflows/plan-trip";
 import { buildInstantPreview } from "@/lib/search/preview";
@@ -61,9 +65,13 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     // Check if generation is already in progress
     if (trip.status === "generating") {
+      const recovery = trip.search_id
+        ? await reconcileGeneration(tripId, userId, trip.search_id)
+        : { state: "unconfirmed" };
       return NextResponse.json(
         {
           error: "Itinerary generation already in progress",
+          recovery: recovery.state,
           searchId: trip.search_id,
         },
         { status: 409 },
@@ -173,19 +181,39 @@ export async function POST(request: NextRequest, { params }: Params) {
     const { data: claimed, error: claimError } = await claim
       .select("id")
       .maybeSingle();
-    if (claimError || !claimed) {
+    if (claimError) {
+      // A failed reply is not proof the conditional write failed. Only this
+      // request knows this newly-created search ID; read it back before dispatch.
+      const { data: observed, error: readError } = await adminClient
+        .from("trips")
+        .select("search_id, status")
+        .eq("id", tripId)
+        .eq("user_id", userId)
+        .single();
+      if (
+        readError ||
+        observed?.search_id !== searchId ||
+        observed.status !== "generating"
+      ) {
+        // Preserve the candidate. Deleting it could clear an already-committed
+        // trip.search_id through the foreign key's ON DELETE SET NULL action.
+        return NextResponse.json(
+          {
+            error:
+              "Planning startup could not be confirmed. Reopen your saved trip to check progress.",
+          },
+          { status: 503 },
+        );
+      }
+    } else if (!claimed) {
       await adminClient
         .from("searches")
         .delete()
         .eq("id", searchId)
         .eq("user_id", userId);
       return NextResponse.json(
-        {
-          error: claimError
-            ? "Could not start planning. Please retry."
-            : "Planning state changed. Reopen your trip to continue.",
-        },
-        { status: claimError ? 503 : 409 },
+        { error: "Planning state changed. Reopen your trip to continue." },
+        { status: 409 },
       );
     }
 
@@ -210,7 +238,7 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     // Kick off durable workflow immediately (stream route only observes state).
     try {
-      await startWorkflow(planTripWorkflow, [
+      const run = await startWorkflow<{ runId: string }>(planTripWorkflow, [
         {
           searchId,
           tripId,
@@ -226,6 +254,13 @@ export async function POST(request: NextRequest, { params }: Params) {
           userId,
         },
       ]);
+      // The workflow also records its own ID in its first step, closing the
+      // window where the caller loses the successful start response.
+      await adminClient
+        .from("searches")
+        .update({ workflow_run_id: run.runId })
+        .eq("id", searchId)
+        .eq("user_id", userId);
     } catch (workflowError) {
       const message =
         workflowError instanceof Error
@@ -236,8 +271,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       await adminClient
         .from("searches")
         .update({
-          error_message:
-            "Workflow startup could not be confirmed. Check progress before retrying.",
+          error_message: STARTUP_UNCONFIRMED,
         })
         .eq("id", searchId)
         .eq("user_id", userId);
@@ -330,11 +364,17 @@ export async function GET(request: NextRequest, { params }: Params) {
       });
     }
 
+    const recovery =
+      trip.status === "generating"
+        ? await reconcileGeneration(tripId, userId, trip.search_id)
+        : null;
+
     // Read from searches table — this is the new unified path
     const { data: search, error: searchError } = await adminClient
       .from("searches")
       .select("id, status, progress, error_message, created_at, completed_at")
       .eq("id", trip.search_id)
+      .eq("user_id", userId)
       .single();
 
     if (searchError || !search) {
@@ -394,6 +434,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     return NextResponse.json({
       tripId,
+      recovery: recovery?.state,
       searchId: search.id,
       status:
         search.status === "completed"
@@ -404,7 +445,10 @@ export async function GET(request: NextRequest, { params }: Params) {
       progress: Math.min(100, Math.round(progressPercent)),
       step: currentStep,
       searchProgress,
-      message,
+      message:
+        recovery?.state === "unconfirmed"
+          ? "We are checking whether planning started. Your saved trip is safe; another run will not be started while its status is uncertain."
+          : message,
       startedAt: search.created_at,
       completedAt: search.completed_at,
     });

@@ -1,3 +1,5 @@
+import { applyGenerationUpdate } from "@/lib/trips/apply-generation-update";
+import { getWorkflowMetadata } from "workflow";
 import { viatorContentMetadata } from "@/lib/affiliates/viator-policy";
 /**
  * Trip Planning Workflow
@@ -202,28 +204,7 @@ export async function planTripWorkflow(
 
     await updateSearchStatus(searchId, "error", {}, errorMessage);
 
-    // Also update trip status if we have a tripId
-    if (tripId) {
-      await getSupabase()
-        .from("trips")
-        .update({
-          status: "failed",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", tripId);
-
-      // Update workflow_progress for backward compat
-      await getSupabase().from("workflow_progress").upsert(
-        {
-          trip_id: tripId,
-          step: "error",
-          progress: 0,
-          message: errorMessage,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "trip_id" },
-      );
-    }
+    await recordTripFailure(searchId, tripId, errorMessage);
 
     return {
       searchId,
@@ -232,6 +213,18 @@ export async function planTripWorkflow(
       error: errorMessage,
     };
   }
+}
+
+async function recordTripFailure(
+  searchId: string,
+  tripId: string | undefined,
+  errorMessage: string,
+) {
+  "use step";
+  if (tripId)
+    await applyGenerationUpdate(tripId, searchId, "failed", {
+      message: errorMessage,
+    });
 }
 
 // ─── Step 1: Create Search Plan ─────────────────────────────────────────────
@@ -247,10 +240,12 @@ async function createSearchPlan(
     `[Workflow] Step 1: Creating search plan for ${params.destination}`,
   );
 
-  await getSupabase()
+  const { error: identityError } = await getSupabase()
     .from("searches")
     .update({
       status: "searching",
+      workflow_run_id: getWorkflowMetadata().workflowRunId,
+      error_message: null,
       progress: {
         orchestrator: "searching",
         hotels: "pending",
@@ -262,19 +257,18 @@ async function createSearchPlan(
       },
     })
     .eq("id", searchId);
+  if (identityError)
+    throw new Error("Could not record the planning run identity");
 
   // Update workflow_progress for trip-based polling
   if (tripId) {
-    await getSupabase().from("workflow_progress").upsert(
-      {
-        trip_id: tripId,
-        step: "orchestrator",
-        progress: 5,
-        message: "Analyzing your preferences...",
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "trip_id" },
-    );
+    await applyGenerationUpdate(tripId, searchId, "progress", {
+      trip_id: tripId,
+      step: "orchestrator",
+      progress: 5,
+      message: "Analyzing your preferences...",
+      updated_at: new Date().toISOString(),
+    });
   }
 
   console.log(`[Workflow] Step 1 complete for search ${searchId}`);
@@ -363,16 +357,13 @@ async function buildSearchPlanStep(params: {
   await mergeIntermediateResult(searchId, "searchPlan", plan);
 
   if (tripId) {
-    await getSupabase().from("workflow_progress").upsert(
-      {
-        trip_id: tripId,
-        step: "orchestrator",
-        progress: 15,
-        message: "Search plan ready. Running providers in parallel...",
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "trip_id" },
-    );
+    await applyGenerationUpdate(tripId, searchId, "progress", {
+      trip_id: tripId,
+      step: "orchestrator",
+      progress: 15,
+      message: "Search plan ready. Running providers in parallel...",
+      updated_at: new Date().toISOString(),
+    });
   }
   console.log(
     `[WorkflowTiming] search=${searchId} stage=build_search_plan duration_ms=${Date.now() - startedAt}`,
@@ -568,16 +559,13 @@ async function markItineraryComposed(
     .eq("id", searchId);
 
   if (tripId) {
-    await getSupabase().from("workflow_progress").upsert(
-      {
-        trip_id: tripId,
-        step: "composing",
-        progress: 85,
-        message: "Finalizing your itinerary...",
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: "trip_id" },
-    );
+    await applyGenerationUpdate(tripId, searchId, "progress", {
+      trip_id: tripId,
+      step: "composing",
+      progress: 85,
+      message: "Finalizing your itinerary...",
+      updated_at: new Date().toISOString(),
+    });
   }
 }
 
@@ -816,8 +804,6 @@ async function bridgeToItineraries(
   result: MappedItinerary,
   meta: { destination: string; startDate: string; endDate: string },
 ): Promise<void> {
-  const db = getSupabase();
-
   // The bridge output (result.days) is already in TripDay format with
   // proper { activities: ItineraryActivity[], meals: Restaurant[] } structure
   // thanks to mapSearchResultsToItinerary, so we can use them directly.
@@ -846,80 +832,7 @@ async function bridgeToItineraries(
     general_tips: [],
     generated_at: new Date().toISOString(),
   };
-  const { data: existingItinerary } = await db
-    .from("itineraries")
-    .select("id")
-    .eq("trip_id", tripId)
-    .limit(1)
-    .single();
-
-  const { data: savedItinerary, error: insertError } = existingItinerary?.id
-    ? await db
-        .from("itineraries")
-        .update(itineraryPayload)
-        .eq("id", existingItinerary.id)
-        .select("id")
-        .single()
-    : await db
-        .from("itineraries")
-        .insert(itineraryPayload)
-        .select("id")
-        .single();
-
-  if (insertError) {
-    console.error(
-      `[Workflow] Failed to bridge itinerary: ${insertError.message}`,
-    );
-    // Non-fatal — search results are already saved
-  }
-
-  // Update trip status to the canonical itinerary-ready state.
-  await db
-    .from("trips")
-    .update({
-      status: "planned",
-      itinerary_id: savedItinerary?.id || null,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", tripId);
-
-  // Update workflow_progress to 100%
-  await db.from("workflow_progress").upsert(
-    {
-      trip_id: tripId,
-      step: "complete",
-      progress: 100,
-      message: "Your itinerary is ready!",
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "trip_id" },
-  );
-
-  // Update workflow run status
-  await db
-    .from("workflow_runs")
-    .update({
-      status: "completed",
-      completed_at: new Date().toISOString(),
-    })
-    .eq("trip_id", tripId)
-    .eq("status", "running");
-
-  // Insert notification (only for authenticated users)
-  if (userId && savedItinerary) {
-    await db.from("notifications").insert({
-      user_id: userId,
-      type: "itinerary_ready",
-      title: "Your Itinerary is Ready!",
-      message: `Your trip itinerary to ${meta.destination} has been generated and is ready to view.`,
-      data: {
-        trip_id: tripId,
-        itinerary_id: savedItinerary.id,
-        search_id: searchId,
-      },
-      read: false,
-    });
-  }
+  await applyGenerationUpdate(tripId, searchId, "planned", itineraryPayload);
 
   console.log(`[Workflow] Bridged itinerary for trip ${tripId}`);
 }
@@ -941,16 +854,13 @@ async function setProgressState(
   await db.from("searches").update({ progress }).eq("id", searchId);
 
   if (!tripId || !workflow) return;
-  await db.from("workflow_progress").upsert(
-    {
-      trip_id: tripId,
-      step: workflow.step,
-      progress: workflow.progress,
-      message: workflow.message,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: "trip_id" },
-  );
+  await applyGenerationUpdate(tripId, searchId, "progress", {
+    trip_id: tripId,
+    step: workflow.step,
+    progress: workflow.progress,
+    message: workflow.message,
+    updated_at: new Date().toISOString(),
+  });
 }
 
 async function updateSearchStatus(

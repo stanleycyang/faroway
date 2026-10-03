@@ -207,8 +207,14 @@ export function TripDetailClient({
         if (res.ok) {
           const data = await res.json();
           if (data.status === "completed" || data.status === "failed") {
-            await fetchTrip();
-            return;
+            const refreshed = await fetchTrip();
+            if (
+              refreshed &&
+              ["planned", "generated", "completed", "failed"].includes(
+                refreshed.status,
+              )
+            )
+              return;
           }
         }
       } catch (pollError) {
@@ -480,18 +486,35 @@ export function TripDetailClient({
 
   if (showFullGenerationLoader) {
     return (
-      <ItineraryGenerationLoader
-        destination={trip.destination}
-        nights={Math.max(0, skeletonDayCount - 1)}
-        travelers={trip.travelers}
-        phase={generation.phase}
-        progress={generation.progress}
-        message={generation.message}
-        searchProgress={generation.searchProgress}
-        activitiesCount={generation.activitiesCount}
-        diningCount={generation.diningCount}
-        transportCount={generation.transportCount}
-      />
+      <div>
+        {error && (
+          <div
+            role="alert"
+            className="fixed left-4 right-4 top-4 z-[120] rounded-xl bg-amber-50 p-4 text-amber-900"
+          >
+            {error}. Your trip is saved.{" "}
+            <button
+              type="button"
+              className="underline"
+              onClick={() => fetchTrip()}
+            >
+              Refresh trip
+            </button>
+          </div>
+        )}
+        <ItineraryGenerationLoader
+          destination={trip.destination}
+          nights={Math.max(0, skeletonDayCount - 1)}
+          travelers={trip.travelers}
+          phase={generation.phase}
+          progress={generation.progress}
+          message={generation.message}
+          searchProgress={generation.searchProgress}
+          activitiesCount={generation.activitiesCount}
+          diningCount={generation.diningCount}
+          transportCount={generation.transportCount}
+        />
+      </div>
     );
   }
 

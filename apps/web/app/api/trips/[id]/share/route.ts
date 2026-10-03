@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClientFromRequest } from "@/lib/supabase/server";
+import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
 import { nanoid } from "nanoid";
 
 type Params = {
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const now = new Date().toISOString();
 
     if (!trip.is_shared) {
-      let update = supabase
+      let update = getSupabase()
         .from("trips")
         .update({
           share_token: shareToken,
@@ -63,7 +63,9 @@ export async function POST(request: NextRequest, { params }: Params) {
         .eq("id", id)
         .eq("user_id", user.id)
         .eq("is_shared", false);
-      if (trip.updated_at) update = update.eq("updated_at", trip.updated_at);
+      update = trip.updated_at
+        ? update.eq("updated_at", trip.updated_at)
+        : update.is("updated_at", null);
       const { data: changed, error: updateError } = await update
         .select("id")
         .single();
@@ -112,7 +114,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { count, error: updateError } = await supabase
+    const { count, error: updateError } = await getSupabase()
       .from("trips")
       .update(
         {

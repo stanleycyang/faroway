@@ -26,6 +26,7 @@ const baseTrip = {
   travelers: 2,
   status: "planned",
   preferences: {},
+  updated_at: "2026-10-03T00:00:00.000Z",
   is_shared: false,
   share_token: null,
   itineraries: {
@@ -215,4 +216,45 @@ test("keeps the last usable itinerary when refreshing after retry fails", async 
   await expect(page.getByText("Trip not found", { exact: true })).toHaveCount(
     0,
   );
+});
+
+test("retries the trip fetch after terminal progress and a temporary failure", async ({
+  page,
+  request,
+}) => {
+  await request.post("http://127.0.0.1:4401/fixture/trip", {
+    data: {
+      ...baseTrip,
+      status: "generating",
+      search_id: null,
+      itineraries: null,
+    },
+  });
+  let tripReads = 0;
+  await page.route(`**/api/trips/${id}`, async (route) => {
+    tripReads += 1;
+    if (tripReads === 1) return route.continue();
+    if (tripReads === 2)
+      return route.fulfill({
+        status: 503,
+        json: { error: "Temporary fixture failure" },
+      });
+    return route.fulfill({
+      json: { trip: baseTrip, itinerary: baseTrip.itineraries },
+    });
+  });
+  await page.route("**/api/trips/*/generate", (route) =>
+    route.fulfill({ json: { status: "completed" } }),
+  );
+  await page.goto(`/trips/${id}`);
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Failed to fetch trip" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Refresh trip" }),
+  ).toBeVisible();
+  await expect(page.getByText("Saved Paris plan", { exact: true })).toBeVisible(
+    { timeout: 20000 },
+  );
+  expect(tripReads).toBeGreaterThanOrEqual(3);
 });

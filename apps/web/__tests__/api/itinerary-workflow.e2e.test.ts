@@ -13,6 +13,7 @@ vi.mock("@/workflows/plan-trip", () => ({
 }));
 
 type SearchRecord = {
+  user_id?: string;
   id: string;
   status: string;
   progress: Record<string, string>;
@@ -161,6 +162,11 @@ function createChain(table: string) {
             },
           };
         }
+        if (
+          dbState.search?.user_id &&
+          query.eq_user_id !== dbState.search.user_id
+        )
+          return { data: null, error: { message: "Search not found" } };
         return { data: dbState.search, error: null };
       }
 
@@ -204,7 +210,10 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import { POST as postGenerate } from "@/app/api/trips/[id]/generate/route";
-import { POST as postStream } from "@/app/api/trips/[id]/stream/route";
+import {
+  POST as postStream,
+  GET as getStream,
+} from "@/app/api/trips/[id]/stream/route";
 
 describe("Itinerary workflow API e2e", () => {
   beforeEach(() => {
@@ -229,6 +238,45 @@ describe("Itinerary workflow API e2e", () => {
     dbState.searchSelectCount = 0;
     dbState.missingIntermediateResultsColumn = false;
   });
+
+  it.each([false, true])(
+    "never streams a foreign search, including legacy fallback (%s)",
+    async (fallback) => {
+      dbState.missingIntermediateResultsColumn = fallback;
+      dbState.trip.search_id = "foreign-search";
+      dbState.trip.status = "generating";
+      dbState.search = {
+        id: "foreign-search",
+        user_id: "other-user",
+        status: "completed",
+        progress: {},
+        error_message: null,
+        intermediate_results: { days: [{ title: "PRIVATE FOREIGN TRIP" }] },
+        json_render_spec: [
+          {
+            type: "TripSummary",
+            props: { destination: "PRIVATE FOREIGN TRIP" },
+          },
+        ],
+        created_at: "2026-05-01T00:00:00Z",
+        completed_at: "2026-05-01T00:01:00Z",
+      };
+      for (const [method, handler] of [
+        ["POST", postStream],
+        ["GET", getStream],
+      ] as const) {
+        const response = await handler(
+          new NextRequest("http://localhost/api/trips/trip-e2e-1/stream", {
+            method,
+          }),
+          { params: Promise.resolve({ id: "trip-e2e-1" }) },
+        );
+        const body = await response.text();
+        expect(body).not.toContain("PRIVATE FOREIGN TRIP");
+        expect(parseSse(body).map((event) => event.event)).toContain("error");
+      }
+    },
+  );
 
   it("runs generate kickoff and exposes progress + spec events over stream", async () => {
     const generateReq = new NextRequest(

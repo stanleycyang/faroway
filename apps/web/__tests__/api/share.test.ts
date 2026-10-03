@@ -90,7 +90,12 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => mockSupabase),
   createClientFromRequest: (request: unknown) =>
     createClientFromRequestMock(request),
-  getSupabase: vi.fn(() => mockConversionSupabase),
+  getSupabase: vi.fn(() => ({
+    from: (table: string) =>
+      table === "trips"
+        ? mockSupabase.from()
+        : mockConversionSupabase.from(table),
+  })),
 }));
 
 vi.mock("nanoid", () => ({
@@ -164,6 +169,7 @@ describe("POST /api/trips/[id]/share", () => {
         id: "trip-1",
         share_token: null,
         is_shared: false,
+        updated_at: "2026-10-03T00:00:00.000Z",
         user_id: "user-123",
       },
       error: null,

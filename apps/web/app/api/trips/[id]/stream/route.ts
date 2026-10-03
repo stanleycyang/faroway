@@ -1,3 +1,4 @@
+import { reconcileGeneration } from "@/lib/trips/reconcile-generation";
 import { filterViatorDisplay } from "@/lib/affiliates/viator-policy";
 /**
  * POST /api/trips/[id]/stream — Observe durable generation via SSE
@@ -236,6 +237,7 @@ export async function POST(request: NextRequest, { params }: Params) {
             budget: trip.budget_tier || undefined,
           },
           request,
+          userId,
         );
         return;
       } catch (error) {
@@ -330,6 +332,7 @@ export async function GET(request: NextRequest, { params }: Params) {
           tripId,
           null,
           request,
+          userId,
         );
       } catch (error) {
         const msg = error instanceof Error ? error.message : "Stream error";
@@ -360,6 +363,7 @@ async function pollAndStream(
   tripId: string,
   tripMeta: TripStreamMeta | null,
   request: NextRequest,
+  userId: string,
 ) {
   let lastProgressJson = "";
   let clientDisconnected = false;
@@ -378,7 +382,11 @@ async function pollAndStream(
       break;
     }
 
-    const { search, error } = await loadSearchForStream(db, searchId);
+    // Reconcile known terminal workflow runs while SSE is connected, too.
+    // No new run is ever dispatched by observation; backend uncertainty keeps
+    // the existing claim. Limit the workflow backend check to once per 30 polls.
+    if (i % 30 === 0) await reconcileGeneration(tripId, userId, searchId);
+    const { search, error } = await loadSearchForStream(db, searchId, userId);
 
     if (error) {
       console.error("[Stream] Failed to read search progress:", error);
@@ -540,6 +548,7 @@ function normalizeItineraryDays(value: unknown): ItineraryDayInput[] | null {
 async function loadSearchForStream(
   db: DB,
   searchId: string,
+  userId: string,
 ): Promise<SearchQueryResult> {
   const attempts = [
     "status, progress, error_message, intermediate_results, json_render_spec",
@@ -555,6 +564,7 @@ async function loadSearchForStream(
       .from("searches")
       .select(select)
       .eq("id", searchId)
+      .eq("user_id", userId)
       .single();
 
     if (!error) {

@@ -15,6 +15,7 @@ let tripStatus = "draft";
 let activeSearch: string | null = null;
 let searchCount = 0;
 let claimFails = false;
+let claimReplyLost = false;
 const deletedSearches: string[] = [];
 const rpcMock = vi.fn(async () => ({ data: null, error: null }));
 vi.mock("@/lib/security/rate-limit", () => ({
@@ -78,6 +79,8 @@ function createTableChain(table: string) {
         return { data: null, error: null };
       tripStatus = String(values.status);
       activeSearch = String(values.search_id);
+      if (claimReplyLost)
+        return { data: null, error: { message: "reply lost after commit" } };
       return { data: { id: "trip-1" }, error: null };
     }
     if (table === "searches" && operation === "insert")
@@ -129,6 +132,7 @@ describe("POST /api/trips/[id]/generate", () => {
     activeSearch = null;
     searchCount = 0;
     claimFails = false;
+    claimReplyLost = false;
     deletedSearches.length = 0;
     tripStatus = "draft";
     startMock.mockResolvedValue({ runId: "run-1" });
@@ -216,7 +220,38 @@ describe("POST /api/trips/[id]/generate", () => {
         .status,
     ).toBe(503);
     expect(startMock).not.toHaveBeenCalled();
-    expect(deletedSearches).toEqual(["search-1"]);
+    expect(deletedSearches).toEqual([]);
+  });
+  it("reads back a committed claim after a lost DB reply without deleting or dispatching twice", async () => {
+    claimReplyLost = true;
+    expect(
+      (await POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }))
+        .status,
+    ).toBe(200);
+    expect(activeSearch).toBe("search-1");
+    expect(deletedSearches).toEqual([]);
+    expect(
+      (await POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }))
+        .status,
+    ).toBe(409);
+    expect(startMock).toHaveBeenCalledTimes(1);
+  });
+  it("cannot race a retired legacy request into a second workflow", async () => {
+    const { POST: legacyPost } =
+      await import("@/app/api/workflows/generate-itinerary/route");
+    const responses = await Promise.all([
+      POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }),
+      legacyPost(
+        new NextRequest("http://localhost/api/workflows/generate-itinerary", {
+          method: "POST",
+          body: JSON.stringify({
+            tripId: "00000000-0000-4000-8000-000000000001",
+          }),
+        }),
+      ),
+    ]);
+    expect(responses.map((r) => r.status)).toEqual([200, 410]);
+    expect(startMock).toHaveBeenCalledTimes(1);
   });
   it("preserves an ambiguous startup claim instead of launching twice", async () => {
     startMock.mockRejectedValueOnce(new Error("reply lost"));
