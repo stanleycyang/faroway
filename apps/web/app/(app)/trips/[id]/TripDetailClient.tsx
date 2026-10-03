@@ -952,10 +952,14 @@ export function TripDetailClient({
               <button
                 type="button"
                 onClick={() => handleShare()}
-                disabled={isShareBusy}
+                disabled={isShareBusy || !!trip.preferences?.planNeedsRefresh}
                 className="inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 disabled:opacity-50"
               >
-                {isShareBusy ? "Creating link…" : "Create public share link"}
+                {trip.preferences?.planNeedsRefresh
+                  ? "Update plan before sharing"
+                  : isShareBusy
+                    ? "Creating link…"
+                    : "Create public share link"}
               </button>
             )}
             <button
