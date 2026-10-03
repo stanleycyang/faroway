@@ -200,7 +200,12 @@ export async function planTripWorkflow(
     };
   } catch (error) {
     const errorMessage =
-      error instanceof Error ? error.message : "Unknown error";
+      typeof error === "object" &&
+      error !== null &&
+      "message" in error &&
+      typeof error.message === "string"
+        ? error.message
+        : "Unknown error";
 
     await updateSearchStatus(searchId, "error", {}, errorMessage);
 

@@ -1,13 +1,10 @@
 import { createRequire } from "node:module";
+import { FatalError } from "workflow";
 
 const requireWorkflow = createRequire(import.meta.url);
 
 type WorkflowApiModule = {
   start: (workflow: unknown, args: readonly unknown[]) => Promise<unknown>;
-};
-
-type WorkflowModule = {
-  FatalError?: new (message: string) => Error;
 };
 
 export async function startWorkflow<TResult = unknown>(
@@ -19,8 +16,7 @@ export async function startWorkflow<TResult = unknown>(
 }
 
 export function createFatalWorkflowError(message: string): Error {
-  const { FatalError } = requireWorkflow("workflow") as WorkflowModule;
-  return FatalError ? new FatalError(message) : new Error(message);
+  return new FatalError(message);
 }
 
 /** Reads a known run; never starts or restarts work during reconciliation. */

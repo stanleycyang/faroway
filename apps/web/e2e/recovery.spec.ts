@@ -258,3 +258,46 @@ test("retries the trip fetch after terminal progress and a temporary failure", a
   );
   expect(tripReads).toBeGreaterThanOrEqual(3);
 });
+
+test("compiled workflow records its identity and stops a superseded attempt before AI", async ({
+  request,
+  context,
+}) => {
+  await request.post("http://127.0.0.1:4401/fixture/trip", {
+    data: { ...baseTrip, status: "draft", search_id: null, itineraries: null },
+  });
+  const response = await context.request.post(`/api/trips/${id}/generate`, {
+    data: {},
+  });
+  expect(response.status(), await response.text()).toBe(200);
+  await expect
+    .poll(
+      async () => {
+        const state = await (
+          await request.get("http://127.0.0.1:4401/fixture/state")
+        ).json();
+        return state.searches[0]?.status;
+      },
+      { timeout: 90000 },
+    )
+    .toBe("error");
+  const state = await (
+    await request.get("http://127.0.0.1:4401/fixture/state")
+  ).json();
+  expect(state.searches[0].workflow_run_id).toBeTruthy();
+  expect(state.searches[0].error_message).toContain("no longer active");
+  expect(
+    state.generationUpdates.map((call: { p_state: string }) => call.p_state),
+  ).toEqual(["progress", "failed"]);
+  expect(state.generationUpdates[0].p_payload.step).toBe("orchestrator");
+  // Exercise the real getRun() backend lookup after the compiled run settles.
+  await expect
+    .poll(
+      async () => {
+        const status = await context.request.get(`/api/trips/${id}/generate`);
+        return (await status.json()).recovery;
+      },
+      { timeout: 30000 },
+    )
+    .toBe("settled");
+});

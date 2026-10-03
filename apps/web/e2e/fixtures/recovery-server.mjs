@@ -1,4 +1,5 @@
 // Test-only local backend. Never imports a production environment or contacts providers.
+import { randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 import {
@@ -23,6 +24,8 @@ for (const file of [
 }
 let trips = new Map();
 let inserts = 0;
+let searches = new Map();
+let generationUpdates = [];
 const user = {
   id: "00000000-0000-4000-8000-000000000001",
   email: "fixture@example.invalid",
@@ -44,15 +47,49 @@ const server = createServer(async (req, res) => {
   if (url.pathname === "/fixture/reset") {
     trips = new Map();
     inserts = 0;
+    searches = new Map();
+    generationUpdates = [];
     return send({});
   }
   if (url.pathname === "/fixture/state")
-    return send({ trips: [...trips.values()], inserts });
+    return send({
+      trips: [...trips.values()],
+      inserts,
+      searches: [...searches.values()],
+      generationUpdates,
+    });
   if (url.pathname === "/fixture/trip") {
     trips.set(body.id, body);
     return send({});
   }
   if (url.pathname === "/auth/v1/user") return send(user);
+  if (url.pathname === "/rest/v1/rpc/apply_trip_generation_update") {
+    generationUpdates.push(body);
+    // This fixture models an attempt whose claim has been superseded. The
+    // real compiled workflow must stop before invoking any paid AI step.
+    return send(false);
+  }
+  if (url.pathname === "/rest/v1/searches") {
+    if (req.method === "POST") {
+      const row = {
+        ...body,
+        id: randomUUID(),
+        created_at: new Date().toISOString(),
+      };
+      searches.set(row.id, row);
+      return send(row, 201);
+    }
+    const row = searches.get(url.searchParams.get("id")?.slice(3));
+    if (
+      !row ||
+      (url.searchParams.has("user_id") &&
+        url.searchParams.get("user_id") !== `eq.${row.user_id}`)
+    )
+      return send({ code: "PGRST116" }, 406);
+    if (req.method === "PATCH") Object.assign(row, body);
+    if (req.method === "DELETE") searches.delete(row.id);
+    return send(row);
+  }
   if (url.pathname === "/rest/v1/trips") {
     if (req.method === "POST") {
       if (trips.has(body.id))
@@ -154,6 +191,8 @@ const child = spawn(
       PATH: process.env.PATH,
       HOME: "/tmp/faroway-fixture-home",
       NODE_ENV: "development",
+      WORKFLOW_TARGET_WORLD: "local",
+      WORKFLOW_LOCAL_BASE_URL: "http://127.0.0.1:4400",
       NEXT_TELEMETRY_DISABLED: "1",
       NEXT_FONT_GOOGLE_MOCKED_RESPONSES: path.join(
         fixtureRoot,

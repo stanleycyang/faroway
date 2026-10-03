@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("workflow", () => ({
+  FatalError: class FatalError extends Error {},
   getWorkflowMetadata: () => ({ workflowRunId: "run-fixture-1" }),
 }));
 

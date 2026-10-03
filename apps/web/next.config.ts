@@ -6,6 +6,10 @@ const developmentScriptSource =
   process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
 
 const nextConfig: NextConfig = {
+  // The local Workflow backend uses Node's real entrypoint to resolve its
+  // cache directory. Bundling this dependency replaces require.main with a
+  // webpack module lacking filename and prevents workflow routes from loading.
+  serverExternalPackages: ["xdg-app-paths"],
   transpilePackages: [
     "@faroway/supabase",
     "@faroway/constants",
