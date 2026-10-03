@@ -1,3 +1,4 @@
+import { planningPauseResponse } from "@/lib/trips/planning-pause";
 /**
  * Itinerary API Route (Non-streaming)
  * For cases where full response is preferred over streaming.
@@ -53,6 +54,8 @@ const ItineraryRequestSchema = z
   });
 
 export async function POST(request: NextRequest) {
+  const paused = planningPauseResponse();
+  if (paused) return paused;
   try {
     // Rate limit: 10 generations per minute per IP
     const ip = getClientIp(request);

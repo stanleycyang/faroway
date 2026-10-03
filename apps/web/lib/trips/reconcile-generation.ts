@@ -1,3 +1,4 @@
+import { isPlanningPaused } from "@/lib/trips/planning-pause";
 import { applyGenerationUpdate } from "@/lib/trips/apply-generation-update";
 import { getSupabase } from "@/lib/supabase/server";
 import { getWorkflowRunStatus } from "@/lib/workflow/runtime";
@@ -13,14 +14,16 @@ export async function reconcileGeneration(
   userId: string,
   searchId: string,
 ) {
+  if (isPlanningPaused()) return { state: "paused" as const };
   const db = getSupabase();
   const { data: search, error } = await db
     .from("searches")
-    .select("id, status, workflow_run_id, error_message")
+    .select("id, status, workflow_run_id, workflow_run_verified, error_message")
     .eq("id", searchId)
     .eq("user_id", userId)
     .single();
   if (error || !search) return { state: "unconfirmed" as const };
+  if (!search.workflow_run_verified) return { state: "unconfirmed" as const };
   if (!search.workflow_run_id)
     return {
       state:

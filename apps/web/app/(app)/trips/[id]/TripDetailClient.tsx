@@ -109,6 +109,8 @@ export function TripDetailClient({
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [planningStatus, setPlanningStatus] = useState<string | null>(null);
+  const [checkingPlanning, setCheckingPlanning] = useState(false);
   const [shareConsentOpen, setShareConsentOpen] = useState(false);
   const shareLock = useRef(false);
   const [shareUrl, setShareUrl] = useState<string | null>(initialShareUrl);
@@ -172,6 +174,33 @@ export function TripDetailClient({
       setLoading(false);
     }
   }, [tripId, router]);
+
+  const checkPlanningStatus = async () => {
+    if (checkingPlanning) return;
+    setCheckingPlanning(true);
+    try {
+      const response = await fetch(`/api/trips/${tripId}/generate`);
+      if (!response.ok)
+        throw new Error(
+          "Status is temporarily unavailable. Your trip is saved; try checking again shortly.",
+        );
+      const status = await response.json();
+      setPlanningStatus(
+        status.message ||
+          "Your saved trip is still being planned. You can leave and return here.",
+      );
+      if (status.status === "completed" || status.status === "failed")
+        await fetchTrip();
+    } catch (cause) {
+      setPlanningStatus(
+        cause instanceof Error
+          ? cause.message
+          : "Status is temporarily unavailable. Check again shortly.",
+      );
+    } finally {
+      setCheckingPlanning(false);
+    }
+  };
 
   // Sticky booking bar scroll listener
   useEffect(() => {
@@ -514,6 +543,30 @@ export function TripDetailClient({
           diningCount={generation.diningCount}
           transportCount={generation.transportCount}
         />
+        <aside className="fixed bottom-4 left-4 right-4 z-[120] mx-auto max-w-lg rounded-2xl border border-gray-200 bg-white/95 p-4 shadow-lg backdrop-blur">
+          <p role="status" className="text-sm text-gray-700">
+            {planningStatus ||
+              "Your trip is saved. You can leave this page and return without starting another plan."}
+          </p>
+          <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
+            <button
+              type="button"
+              disabled={checkingPlanning}
+              onClick={checkPlanningStatus}
+              className="font-semibold text-primary underline disabled:opacity-50"
+            >
+              {checkingPlanning ? "Checking status…" : "Check planning status"}
+            </button>
+            <Link href="/dashboard" className="text-gray-600 underline">
+              Back to saved trips
+            </Link>
+          </div>
+          {planningStatus && (
+            <p className="mt-2 break-all text-xs text-gray-500">
+              If you need help, keep this trip ID: {tripId}
+            </p>
+          )}
+        </aside>
       </div>
     );
   }

@@ -8,6 +8,7 @@ const mock = vi.hoisted(() => ({
     user_id: "owner",
     status: "pending",
     workflow_run_id: "run-1" as string | null,
+    workflow_run_verified: true,
     error_message:
       "Workflow startup could not be confirmed. Check progress before retrying.",
   },
@@ -44,9 +45,19 @@ describe("workflow startup reconciliation", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mock.search.status = "pending";
+    mock.search.workflow_run_verified = true;
     mock.search.workflow_run_id = "run-1";
     mock.status.mockResolvedValue("running");
     mock.apply.mockResolvedValue(true);
+  });
+  it("does not trust pre-migration or owner-writable run bindings", async () => {
+    mock.search.workflow_run_verified = false;
+    mock.status.mockResolvedValue("failed");
+    expect(
+      (await reconcileGeneration("trip-1", "owner", "search-1")).state,
+    ).toBe("unconfirmed");
+    expect(mock.status).not.toHaveBeenCalled();
+    expect(mock.apply).not.toHaveBeenCalled();
   });
   it("retains an uncertain claim without a run ID", async () => {
     mock.search.workflow_run_id = null;

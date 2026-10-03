@@ -1,3 +1,4 @@
+import { planningPauseResponse } from "@/lib/trips/planning-pause";
 /**
  * POST /api/search/start
  * Start a new travel search using Vercel Workflow + AI SDK Agents
@@ -42,6 +43,8 @@ export async function POST(request: NextRequest) {
     const auth = await requireUserIdFromRequest(request);
     if (auth instanceof NextResponse) return auth;
     const userId = auth.userId;
+    const paused = planningPauseResponse();
+    if (paused) return paused;
 
     // Rate limit: 5 searches per minute per IP
     const ip = getClientIp(request);

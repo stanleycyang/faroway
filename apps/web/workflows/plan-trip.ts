@@ -250,6 +250,7 @@ async function createSearchPlan(
     .update({
       status: "searching",
       workflow_run_id: getWorkflowMetadata().workflowRunId,
+      workflow_run_verified: true,
       error_message: null,
       progress: {
         orchestrator: "searching",

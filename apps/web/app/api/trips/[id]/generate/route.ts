@@ -1,3 +1,4 @@
+import { planningPauseResponse } from "@/lib/trips/planning-pause";
 /**
  * POST /api/trips/[id]/generate
  *
@@ -44,6 +45,8 @@ export async function POST(request: NextRequest, { params }: Params) {
     const auth = await requireUserIdFromRequest(request);
     if (auth instanceof NextResponse) return auth;
     const userId = auth.userId;
+    const paused = planningPauseResponse();
+    if (paused) return paused;
 
     const adminClient = getSupabase();
 
@@ -258,7 +261,7 @@ export async function POST(request: NextRequest, { params }: Params) {
       // window where the caller loses the successful start response.
       await adminClient
         .from("searches")
-        .update({ workflow_run_id: run.runId })
+        .update({ workflow_run_id: run.runId, workflow_run_verified: true })
         .eq("id", searchId)
         .eq("user_id", userId);
     } catch (workflowError) {
@@ -446,9 +449,11 @@ export async function GET(request: NextRequest, { params }: Params) {
       step: currentStep,
       searchProgress,
       message:
-        recovery?.state === "unconfirmed"
-          ? "We are checking whether planning started. Your saved trip is safe; another run will not be started while its status is uncertain."
-          : message,
+        recovery?.state === "paused"
+          ? "Planning recovery is temporarily paused for maintenance. Your trip is saved. Check again later."
+          : recovery?.state === "unconfirmed"
+            ? "We are checking whether planning started. Your saved trip is safe; another run will not be started while its status is uncertain."
+            : message,
       startedAt: search.created_at,
       completedAt: search.completed_at,
     });

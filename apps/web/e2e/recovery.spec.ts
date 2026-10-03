@@ -301,3 +301,40 @@ test("compiled workflow records its identity and stops a superseded attempt befo
     )
     .toBe("settled");
 });
+
+test("uncertain planning offers a status check without dispatching another run", async ({
+  page,
+  request,
+}) => {
+  await request.post("http://127.0.0.1:4401/fixture/trip", {
+    data: {
+      ...baseTrip,
+      status: "generating",
+      search_id: null,
+      itineraries: null,
+    },
+  });
+  let dispatches = 0;
+  await page.route("**/api/trips/*/generate", (route) => {
+    if (route.request().method() === "POST") dispatches += 1;
+    return route.fulfill({
+      json: {
+        status: "generating",
+        recovery: "unconfirmed",
+        message:
+          "Planning startup is unconfirmed. Your saved trip is safe. Check again shortly.",
+      },
+    });
+  });
+  await page.goto(`/trips/${id}`);
+  await page.getByRole("button", { name: "Check planning status" }).click();
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Planning startup is unconfirmed" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Back to saved trips" }),
+  ).toBeVisible();
+  expect(dispatches).toBe(0);
+});

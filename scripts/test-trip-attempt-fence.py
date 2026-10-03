@@ -29,25 +29,28 @@ def apply(search, state, payload='{}'):
 try:
     subprocess.run(["docker", "run", "--detach", "--rm", "--network", "none", "--name", name, "-e", "POSTGRES_HOST_AUTH_METHOD=trust", "postgres:16-alpine"], check=True, stdout=subprocess.DEVNULL)
     for _ in range(60):
-        if subprocess.run(["docker", "exec", name, "pg_isready", "-U", "postgres"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0: break
+        if subprocess.run(["docker", "exec", name, "pg_isready", "-h", "127.0.0.1", "-U", "postgres"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0: break
         time.sleep(.25)
     else: raise AssertionError("Local Postgres did not become ready")
     sql("""
     CREATE ROLE authenticated; CREATE ROLE anon; CREATE ROLE service_role BYPASSRLS;
-    CREATE TABLE searches (id UUID PRIMARY KEY, user_id UUID);
+    CREATE TABLE searches (id UUID PRIMARY KEY, user_id UUID, status TEXT DEFAULT 'pending', workflow_run_id TEXT);
     CREATE TABLE trips (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id UUID, destination TEXT, start_date DATE, end_date DATE, status TEXT DEFAULT 'draft', search_id UUID REFERENCES searches(id) ON DELETE SET NULL, itinerary_id UUID, is_shared BOOLEAN DEFAULT FALSE, share_token TEXT, shared_at TIMESTAMPTZ, updated_at TIMESTAMPTZ DEFAULT NOW());
     CREATE TABLE itineraries (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), trip_id UUID REFERENCES trips(id), user_id UUID, destination TEXT, start_date DATE, end_date DATE, overview TEXT, total_cost JSONB, days JSONB, packing_list TEXT[], general_tips TEXT[], generated_at TIMESTAMPTZ, created_at TIMESTAMPTZ DEFAULT NOW());
     CREATE TABLE workflow_progress (trip_id UUID PRIMARY KEY REFERENCES trips(id), user_id UUID, step TEXT, progress INTEGER CHECK(progress BETWEEN 0 AND 100), message TEXT, updated_at TIMESTAMPTZ);
     CREATE TABLE notifications (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id UUID, type TEXT, title TEXT, message TEXT, data JSONB, read BOOLEAN);
+    ALTER TABLE searches ENABLE ROW LEVEL SECURITY;
+    CREATE POLICY search_owner_access ON searches TO authenticated USING (user_id::TEXT = current_setting('request.jwt.claim.sub', TRUE)) WITH CHECK (user_id::TEXT = current_setting('request.jwt.claim.sub', TRUE));
+    GRANT SELECT, INSERT, UPDATE, DELETE ON searches TO authenticated;
     ALTER TABLE trips ENABLE ROW LEVEL SECURITY;
     CREATE POLICY owner_access ON trips TO authenticated USING (user_id::TEXT = current_setting('request.jwt.claim.sub', TRUE)) WITH CHECK (user_id::TEXT = current_setting('request.jwt.claim.sub', TRUE));
     GRANT SELECT, INSERT, UPDATE, DELETE ON trips TO authenticated;
     GRANT ALL ON ALL TABLES IN SCHEMA public TO service_role;
     """)
-    for migration in ["20261003001000_fence_trip_generation.sql", "20261003002000_protect_trip_lifecycle.sql"]:
+    for migration in ["20261003001000_fence_trip_generation.sql", "20261003002000_protect_trip_lifecycle.sql", "20261003003000_protect_search_run_binding.sql", "20261003004000_require_terminal_generation_evidence.sql"]:
         script = (root / "supabase/migrations" / migration).read_text()
         sql(script); sql(script)  # Reapplication is safe.
-    sql(f"INSERT INTO searches VALUES ('{a}','{owner}'), ('{b}','{owner}'), ('{foreign}','{other}'); INSERT INTO trips(id,user_id,destination,start_date,end_date) VALUES ('{trip}','{owner}','Paris','2099-06-01','2099-06-03');")
+    sql(f"INSERT INTO searches(id,user_id) VALUES ('{a}','{owner}'), ('{b}','{owner}'), ('{foreign}','{other}'); INSERT INTO trips(id,user_id,destination,start_date,end_date) VALUES ('{trip}','{owner}','Paris','2099-06-01','2099-06-03');")
     auth = f"SET ROLE authenticated; SET request.jwt.claim.sub = '{owner}'; "
     sql(auth + f"UPDATE trips SET destination='Rome' WHERE id='{trip}';")
     for mutation in [f"search_id='{foreign}'", "status='generating'", "is_shared=TRUE,share_token='bypass'"]:
@@ -66,6 +69,15 @@ try:
     sql(f"UPDATE trips SET is_shared=FALSE,share_token=NULL,shared_at=NULL,updated_at=clock_timestamp() WHERE id='{trip}' AND user_id='{owner}';")
     assert sql(f"SELECT count(*) FROM trips WHERE share_token='current-enable' OR is_shared;") == '0'
     print("PASS timestamp compare-and-swap rejects stale enable after revoke; revoke after enable invalidates token")
+    for mutation in ["workflow_run_id='older-failed-run'", "status='error'", "workflow_run_verified=TRUE", f"id='{uuid.uuid4()}'", f"user_id='{other}'"]:
+        sql(auth + f"UPDATE searches SET {mutation} WHERE id='{a}';", ok=False)
+    sql(auth + f"DELETE FROM searches WHERE id='{a}';", ok=False)
+    sql(auth + f"INSERT INTO searches(id,user_id,workflow_run_id) VALUES ('{uuid.uuid4()}','{owner}','forged-run');", ok=False)
+    assert sql(auth + f"SELECT count(*) FROM searches WHERE id='{a}';") == '1'
+    assert sql(f"SELECT workflow_run_verified FROM searches WHERE id='{a}';") == 'f'
+    sql(f"SET ROLE service_role; UPDATE searches SET workflow_run_id='server-run',workflow_run_verified=TRUE WHERE id='{a}';")
+    assert sql(f"SELECT workflow_run_id FROM searches WHERE id='{a}';") == 'server-run'
+    print("PASS authenticated search run/status/ownership/ID/verification mutations, insert and delete rejected; service write allowed")
     def claim(search):
         return sql(f"UPDATE trips SET status='generating',search_id='{search}' WHERE id='{trip}' AND user_id='{owner}' AND status='draft' RETURNING id;")
     with concurrent.futures.ThreadPoolExecutor() as pool:
@@ -94,6 +106,11 @@ try:
     assert holder.wait(timeout=10) == 0
     assert sql("SELECT overview FROM itineraries;") == 'current'
     assert sql(f"SELECT search_id FROM trips WHERE id='{trip}';") == stale
+    sql(f"UPDATE trips SET updated_at=NOW()-INTERVAL '2 hours' WHERE id='{trip}';")
+    assert '"trips": 0' in sql("SELECT cleanup_stale_generation_state();")
+    assert sql(f"SELECT status FROM trips WHERE id='{trip}';") == 'generating'
+    sql(auth + "SELECT cleanup_stale_generation_state();", ok=False)
+    print("PASS timeout cleanup cannot release an unidentified active planning claim")
     print("PASS overlapping new claim and old completion serialize on the row lock")
 finally:
     subprocess.run(["docker", "rm", "-f", name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

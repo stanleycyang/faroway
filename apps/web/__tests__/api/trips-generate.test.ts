@@ -128,6 +128,7 @@ function makeReq(body: Record<string, unknown> = {}) {
 
 describe("POST /api/trips/[id]/generate", () => {
   beforeEach(() => {
+    vi.unstubAllEnvs();
     vi.clearAllMocks();
     activeSearch = null;
     searchCount = 0;
@@ -138,6 +139,18 @@ describe("POST /api/trips/[id]/generate", () => {
     startMock.mockResolvedValue({ runId: "run-1" });
   });
 
+  it("maintenance pause prevents creating or dispatching an attempt", async () => {
+    vi.stubEnv("FAROWAY_PLANNING_PAUSED", "true");
+    const response = await POST(makeReq(), {
+      params: Promise.resolve({ id: "trip-1" }),
+    });
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Retry-After")).toBe("300");
+    expect(searchCount).toBe(0);
+    expect(startMock).not.toHaveBeenCalled();
+    expect(tripStatus).toBe("draft");
+    vi.unstubAllEnvs();
+  });
   it("routes auth through createClientFromRequest so bearer-token mobile clients work", async () => {
     // Regression guard: this route must invoke createClientFromRequest(request)
     // so the Authorization header from mobile is honored. Cookie-only

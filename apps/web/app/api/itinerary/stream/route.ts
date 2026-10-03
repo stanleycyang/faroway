@@ -1,3 +1,4 @@
+import { planningPauseResponse } from "@/lib/trips/planning-pause";
 import { viatorContentMetadata } from "@/lib/affiliates/viator-policy";
 /**
  * POST /api/itinerary/stream
@@ -58,6 +59,8 @@ const StreamRequestSchema = z
   });
 
 export async function POST(request: NextRequest) {
+  const paused = planningPauseResponse();
+  if (paused) return paused;
   try {
     const ip = getClientIp(request);
     const rateLimit = await checkRateLimitAsync(`itinerary-stream:${ip}`, {
