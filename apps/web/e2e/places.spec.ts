@@ -185,3 +185,58 @@ test("user destination text is preserved independently of Google predictions", a
     '{"name":"My destination","source":"user"}',
   );
 });
+
+test("weather loads only on request and presents timestamp, units and licensing", async ({
+  page,
+}) => {
+  let calls = 0;
+  await page.route("**/api/weather?*", (route) => {
+    calls++;
+    expect(route.request().url()).toContain("destinationId=tokyo");
+    expect(route.request().url()).not.toContain("lat=");
+    return route.fulfill({
+      json: {
+        status: "available",
+        forecast: {
+          updatedAt: "2026-10-03T11:00:00Z",
+          deprecated: false,
+          points: [
+            {
+              time: "2026-10-03T13:00:00Z",
+              temperatureC: 18,
+              windMetersPerSecond: 3,
+              precipitationMm: 0.4,
+              precipitationHours: 1,
+            },
+          ],
+        },
+      },
+    });
+  });
+  await page.goto(fixtureUrl);
+  expect(calls).toBe(0);
+  await page.getByRole("button", { name: "Check trip forecast" }).click();
+  await expect(page.getByRole("cell", { name: "18 °C" })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "0.4 mm / 1 h" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "CC BY 4.0" })).toHaveAttribute(
+    "href",
+    "https://creativecommons.org/licenses/by/4.0/",
+  );
+  await expect(
+    page.getByText(/Updated Sat, 03 Oct 2026 11:00:00 GMT/),
+  ).toBeVisible();
+});
+
+test("weather outside the forecast range never invents a forecast", async ({
+  page,
+}) => {
+  await page.route("**/api/weather?*", (route) =>
+    route.fulfill({ json: { status: "outside_forecast" } }),
+  );
+  await page.goto(fixtureUrl);
+  await page.getByRole("button", { name: "Check trip forecast" }).click();
+  await expect(
+    page.getByRole("region", { name: "Trip weather" }).getByRole("status"),
+  ).toContainText("not available yet");
+  await expect(page.getByRole("table")).toHaveCount(0);
+});

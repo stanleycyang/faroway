@@ -58,6 +58,7 @@ import { ItineraryDay } from "@/components/trips/ItineraryDay";
 import { ItineraryGenerationLoader } from "@/components/trips/ItineraryGenerationLoader";
 import { TripReadyScreen } from "@/components/trips/TripReadyScreen";
 import { StreamedSpecPreview } from "@/components/trips/StreamedSpecPreview";
+import { TripWeather } from "@/components/trips/TripWeather";
 import { PlacesExplorer } from "@/components/places/PlacesExplorer";
 import { TripCheckout } from "@/components/trips/TripCheckout";
 import { TripFeedback } from "@/components/trips/TripFeedback";
@@ -691,7 +692,13 @@ export function TripDetailClient({
                 </div>
               ))}
             </TripCheckout>
-            <PlacesExplorer />
+            <PlacesExplorer key={tripId} />
+            <TripWeather
+              key={`${trip.destination}:${trip.start_date}:${trip.end_date}`}
+              destination={trip.destination}
+              start={trip.start_date}
+              end={trip.end_date}
+            />
           </div>
         ) : hasStreamedSpecBlocks ? (
           <StreamedSpecPreview

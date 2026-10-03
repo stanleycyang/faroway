@@ -193,3 +193,48 @@ field masks, missing configuration, upstream errors, malformed coordinates,
 blocked enrichment ingestion, honest price/rating presentation, and desktop/mobile
 browser selection, attribution, and local fallback. Viator approval gates remain
 unchanged.
+
+## Optional MET Norway weather (disabled)
+
+`MET_WEATHER_ENABLED` defaults to false. Activation also requires `MET_USER_AGENT`
+identifying Faroway and a verified public business contact URL, the shared-cache
+migration `20261003000000_met_weather_cache.sql`, Supabase service credentials and
+`IP_HASH_SALT` for the existing distributed rate limiter. Do not substitute a made-up
+contact. No API key or new account is needed. Nothing was enabled or migrated in
+production; these are rollout prerequisites, not instructions executed by this PR.
+
+The web trip panel loads only on a traveler click. Its backend accepts one of the
+six existing catalog destination IDs and trip dates, never GPS coordinates or
+traveler identity. Catalog coordinates are rounded to four decimals. Unsupported
+locations are omitted; arbitrary free-text destination geocoding is out of scope.
+Although MET has global coverage, this initial Faroway panel covers only that catalog.
+
+The service-role-only shared cache stores forecasts plus `Expires`, `Last-Modified`
+and fetch time. It serves cached data until expiry, uses conditional revalidation,
+honors 304 and throttling `Retry-After`, and holds a 15-second distributed refresh
+lock. The existing atomic shared rate limiter permits at most one aggregate upstream
+request per second across destinations/instances, conservatively below MET's
+20-per-second threshold. Cache/lock/rate-limit failure prevents upstream access;
+there is no in-memory-only production fallback. An absent/past Expires backs off at
+least one minute. Non-success responses are not displayed as forecasts. A 203
+response carries an explicit deprecated-service warning.
+
+Only actual forecast points overlapping upcoming trip dates are returned. Beyond
+nine days the route returns unavailable without contacting MET; shorter actual
+provider coverage is respected. The panel labels UTC timestamps, temperature,
+precipitation interval and wind units, includes the provider update time, credits
+MET Norway under CC BY 4.0, and identifies Faroway's selection/formatting. No
+endorsement, precise long-range weather or trip availability is implied. Weather
+is not passed into AI prompts or used to alter bookings.
+
+Tests use synthetic forecasts and mock cache/provider calls. No live request,
+contact verification, quota/load test or database migration execution was performed.
+Before enablement, apply and verify the migration and service-role permissions in
+an approved environment, check shared locking/rate limiting across instances, and
+verify the public contact. The adapter deliberately fails closed otherwise.
+
+- [MET Locationforecast HOWTO](https://docs.api.met.no/doc/locationforecast/HowTO)
+- [MET terms](https://docs.api.met.no/doc/TermsOfService)
+- [MET data license](https://docs.api.met.no/doc/License)
+
+Ticketmaster remains deferred pending an applicable commercial/affiliate agreement.

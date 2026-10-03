@@ -19,6 +19,7 @@ import {
   Plus,
 } from "lucide-react";
 import { format } from "date-fns";
+import { destinations as destinationCatalog } from "@/lib/planner-destination-catalog";
 import { IMAGE_PATHS, getImageUrl } from "@faroway/constants";
 import {
   PlacesAutocompleteInput,
@@ -40,56 +41,14 @@ const DestinationMap = dynamic(
   { ssr: false },
 );
 
-const destinations = [
-  {
-    id: "tokyo",
-    name: "Tokyo",
-    country: "Japan",
-    lat: 35.6762,
-    lng: 139.6503,
-    image: getImageUrl(IMAGE_PATHS.destinations.tokyo),
-  },
-  {
-    id: "paris",
-    name: "Paris",
-    country: "France",
-    lat: 48.8566,
-    lng: 2.3522,
-    image: getImageUrl(IMAGE_PATHS.destinations.paris),
-  },
-  {
-    id: "bali",
-    name: "Bali",
-    country: "Indonesia",
-    lat: -8.3405,
-    lng: 115.092,
-    image: getImageUrl(IMAGE_PATHS.destinations.bali),
-  },
-  {
-    id: "new-york",
-    name: "New York",
-    country: "USA",
-    lat: 40.7128,
-    lng: -74.006,
-    image: getImageUrl(IMAGE_PATHS.destinations["new-york"]),
-  },
-  {
-    id: "santorini",
-    name: "Santorini",
-    country: "Greece",
-    lat: 36.3932,
-    lng: 25.4615,
-    image: getImageUrl(IMAGE_PATHS.destinations.santorini),
-  },
-  {
-    id: "barcelona",
-    name: "Barcelona",
-    country: "Spain",
-    lat: 41.3874,
-    lng: 2.1686,
-    image: getImageUrl(IMAGE_PATHS.destinations.barcelona),
-  },
-];
+const destinations = destinationCatalog.map((destination) => ({
+  ...destination,
+  image: getImageUrl(
+    IMAGE_PATHS.destinations[
+      destination.id as keyof typeof IMAGE_PATHS.destinations
+    ],
+  ),
+}));
 
 const travelerTypes = [
   { id: "solo", label: "Solo", icon: "🧑" },
