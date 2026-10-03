@@ -53,7 +53,9 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     if (!body?.expectedUpdatedAt)
       return NextResponse.json(
         {
-          error: "Refresh the trip before saving changes",
+          error:
+            "Editing requires a newer app. Update the app or open this trip on the Faroway website to edit safely. Your saved trip is unchanged.",
+          webUrl: `https://www.faroway.ai/trips/${encodeURIComponent(id)}`,
           code: "REVISION_REQUIRED",
         },
         { status: 428 },

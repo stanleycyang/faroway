@@ -16,6 +16,9 @@ BEGIN
   NEW.preferences := (COALESCE(NEW.preferences, '{}'::jsonb) - 'creationRequestHash' - 'planNeedsRefresh') ||
     (COALESCE(OLD.preferences, '{}'::jsonb) - ARRAY['travelerType','originCity','originAirport','adults','children','interests']);
   IF v_changed THEN
+    IF current_user = 'service_role' AND COALESCE(current_setting('faroway.versioned_brief_write', TRUE), '') <> 'on' THEN
+      RAISE EXCEPTION 'Brief writes require the versioned RPC' USING ERRCODE = '42501';
+    END IF;
     IF OLD.status = 'generating' THEN
       RAISE EXCEPTION 'Trip brief is locked while planning' USING ERRCODE = '40001';
     END IF;
@@ -37,8 +40,11 @@ CREATE TRIGGER protect_trip_brief BEFORE UPDATE ON public.trips FOR EACH ROW EXE
 
 CREATE OR REPLACE FUNCTION public.update_trip_brief(
   p_trip_id UUID, p_user_id UUID, p_expected_updated_at TIMESTAMPTZ, p_changes JSONB
-) RETURNS SETOF public.trips LANGUAGE sql SET search_path = public, pg_temp AS $$
-  UPDATE public.trips AS t SET
+) RETURNS SETOF public.trips LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+DECLARE v_previous TEXT := current_setting('faroway.versioned_brief_write', TRUE);
+BEGIN
+  PERFORM set_config('faroway.versioned_brief_write', 'on', TRUE);
+  RETURN QUERY UPDATE public.trips AS t SET
     destination = COALESCE(p_changes->>'destination', t.destination),
     start_date = COALESCE((p_changes->>'start_date')::DATE, t.start_date),
     end_date = COALESCE((p_changes->>'end_date')::DATE, t.end_date),
@@ -49,6 +55,8 @@ CREATE OR REPLACE FUNCTION public.update_trip_brief(
   WHERE t.id = p_trip_id AND t.user_id = p_user_id
     AND t.updated_at = p_expected_updated_at AND t.status <> 'generating'
   RETURNING t.*;
+  PERFORM set_config('faroway.versioned_brief_write', COALESCE(v_previous, ''), TRUE);
+END;
 $$;
 REVOKE ALL ON FUNCTION public.update_trip_brief(UUID, UUID, TIMESTAMPTZ, JSONB) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.update_trip_brief(UUID, UUID, TIMESTAMPTZ, JSONB) TO service_role;

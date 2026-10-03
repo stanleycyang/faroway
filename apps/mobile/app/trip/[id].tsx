@@ -786,6 +786,26 @@ export default function TripDetailScreen() {
             </View>
             <View style={styles.heroInfo}>
               <Text style={styles.heroCountry}>{trip.country}</Text>
+              {trip.planNeedsRefresh && (
+                <View style={{ padding: 12, backgroundColor: '#fff5ee', borderRadius: 12 }}>
+                  <Text style={{ color: '#65251e' }}>
+                    Your brief changed. The previous plan is kept on the website; update it before
+                    booking or sharing.
+                  </Text>
+                  <TouchableOpacity
+                    accessibilityRole="link"
+                    onPress={() => {
+                      void openURL(`https://www.faroway.ai/trips/${encodeURIComponent(trip.id)}`);
+                    }}
+                    style={{ minHeight: 44, justifyContent: 'center' }}
+                  >
+                    <Text style={{ color: '#9f342e', fontWeight: '700' }}>
+                      Review trip on Faroway website
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+
               <Text style={styles.heroTitle} accessibilityRole="header">
                 {trip.destination}
               </Text>

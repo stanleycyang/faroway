@@ -363,6 +363,40 @@ test("saves the complete brief without starting work and preserves it on reload"
       is_shared: true,
       share_token: "old-link",
       preferences: { originCity: "London", creationRequestHash: "keep-me" },
+      itineraries: {
+        ...baseTrip.itineraries,
+        days: [
+          {
+            ...baseTrip.itineraries.days[0],
+            hotel: {
+              name: "Old hotel offer",
+              pricePerNight: 100,
+              currency: "USD",
+              affiliateUrl: "https://booking.example.invalid/old",
+            },
+            transport: {
+              provider: "Old airline",
+              price: 200,
+              currency: "USD",
+              departure: { airport: "LHR", time: "08:00" },
+              arrival: { airport: "CDG", time: "10:00" },
+              affiliateUrl: "https://flights.example.invalid/old",
+            },
+            morning: {
+              activities: [
+                {
+                  id: "old-activity",
+                  name: "Old activity offer",
+                  bookingInfo: {
+                    bookingUrl: "https://viator.example.invalid/old",
+                  },
+                },
+              ],
+              meals: [],
+            },
+          },
+        ],
+      },
     },
   });
   let starts = 0;
@@ -384,6 +418,20 @@ test("saves the complete brief without starting work and preserves it on reload"
     page.getByRole("button", { name: "Start planning" }),
   ).toBeVisible();
   expect(starts).toBe(0);
+  await expect(
+    page.getByRole("region", { name: "Previous plan" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Old activity offer", { exact: true }),
+  ).toBeVisible();
+  await expect(page.getByText("Old hotel offer", { exact: true })).toHaveCount(
+    0,
+  );
+  await expect(page.getByText("Your Flights", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: /Book|Review experience|View deal/i }),
+  ).toHaveCount(0);
+  await expect(page.locator('a[href*="example.invalid/old"]')).toHaveCount(0);
   const state = await (
     await request.get("http://127.0.0.1:4401/fixture/state")
   ).json();
@@ -437,4 +485,40 @@ test("keeps unsaved edits when another device changes the brief", async ({
   await expect(page.getByLabel("Destination", { exact: true })).toHaveValue(
     "Rome",
   );
+});
+
+test("untouched legacy brief preserves its revision and public link", async ({
+  page,
+  request,
+}) => {
+  await request.post("http://127.0.0.1:4401/fixture/trip", {
+    data: {
+      ...baseTrip,
+      preferences: { travelerType: "couple" },
+      is_shared: true,
+      share_token: "keep-public-link",
+    },
+  });
+  let writes = 0;
+  await page.route("**/api/trips/*", async (route) => {
+    if (route.request().method() === "PATCH") writes++;
+    await route.continue();
+  });
+  await page.goto(`/trips/${id}`);
+  await page.getByText("Your trip brief", { exact: true }).click();
+  await page.getByRole("button", { name: "Save trip brief" }).click();
+  await expect(
+    page.getByText("Your brief is already up to date.", { exact: false }),
+  ).toBeVisible();
+  expect(writes).toBe(0);
+  const state = await (
+    await request.get("http://127.0.0.1:4401/fixture/state")
+  ).json();
+  expect(state.trips[0]).toMatchObject({
+    status: "planned",
+    updated_at: baseTrip.updated_at,
+    is_shared: true,
+    share_token: "keep-public-link",
+    preferences: { travelerType: "couple" },
+  });
 });

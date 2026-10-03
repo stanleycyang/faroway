@@ -739,7 +739,7 @@ export function TripDetailClient({
         )}
 
         {/* Recommended Hotel — fades in from stream or DB */}
-        {displayTopHotel && (
+        {displayTopHotel && !trip.preferences?.planNeedsRefresh && (
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
             <FeaturedHotelCard
               hotel={displayTopHotel}
@@ -755,7 +755,9 @@ export function TripDetailClient({
         )}
 
         {/* Featured Flights */}
-        <FeaturedFlights days={itinerary?.days || null} />
+        {!trip.preferences?.planNeedsRefresh && (
+          <FeaturedFlights days={itinerary?.days || null} />
+        )}
 
         {/* Interactive Map (only when DB itinerary loaded) */}
         {itinerary && !isGenerating && (

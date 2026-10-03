@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   existing: vi.fn(),
   insert: vi.fn(),
+  rpc: vi.fn(),
   history: vi.fn(),
   eq: vi.fn(),
 }));
@@ -27,7 +28,7 @@ vi.mock("@/lib/affiliates/viator", () => ({
   isViatorConfigured: mocks.configured,
 }));
 vi.mock("@/lib/supabase/server", () => ({
-  getSupabase: () => ({ from: mocks.from }),
+  getSupabase: () => ({ from: mocks.from, rpc: mocks.rpc }),
 }));
 import { GET, POST } from "@/app/api/trips/[id]/checkout/route";
 
@@ -56,6 +57,7 @@ const loaded = () => ({
   trip: {
     id: tripId,
     travelers: 2,
+    updated_at: "2026-10-03T00:00:00.000Z",
     start_date: "2099-06-01",
     end_date: "2099-06-04",
   },
@@ -95,6 +97,7 @@ beforeEach(() => {
   });
   mocks.existing.mockResolvedValue({ data: null, error: null });
   mocks.insert.mockResolvedValue({ error: null });
+  mocks.rpc.mockResolvedValue({ data: true, error: null });
   mocks.history.mockResolvedValue({ data: [], error: null });
   const query = {
     select: vi.fn(),
@@ -150,12 +153,13 @@ describe("owned-trip Viator hosted handoff", () => {
       "123P1",
       `checkout-${attemptId}`,
     );
-    expect(mocks.insert).toHaveBeenCalledWith(
+    expect(mocks.rpc).toHaveBeenCalledWith(
+      "prepare_trip_handoff",
       expect.objectContaining({
-        user_id: "user-1",
-        trip_id: tripId,
-        converted: false,
-        item_name: "Provider Walk",
+        p_user_id: "user-1",
+        p_trip_id: tripId,
+        p_revision: loaded().trip.updated_at,
+        p_item_name: "Provider Walk",
       }),
     );
     expect(body.redirectUrl).not.toContain(tripId);
@@ -257,15 +261,33 @@ describe("owned-trip Viator hosted handoff", () => {
       expect((await POST(request(), context())).status).toBe(409);
     },
   );
-  it("recovers a concurrent duplicate insert", async () => {
-    mocks.existing
-      .mockResolvedValueOnce({ data: null, error: null })
-      .mockResolvedValueOnce({ data: existing(), error: null });
-    mocks.insert.mockResolvedValue({ error: { code: "23505" } });
-    expect((await POST(request(), context())).status).toBe(200);
+  it("rejects a brief edit while provider lookup is pending, including resumed attempts", async () => {
+    let finish!: (value: unknown) => void;
+    mocks.product.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    );
+    const response = POST(request(), context());
+    await vi.waitFor(() => expect(mocks.product).toHaveBeenCalled());
+    // The database's observed revision has changed before publication.
+    mocks.rpc.mockResolvedValue({ data: false, error: null });
+    finish({ productCode: "123P1", title: "Walk", productUrl: canonical });
+    const result = await response;
+    expect(result.status).toBe(409);
+    expect(await result.json()).not.toHaveProperty("redirectUrl");
+    expect(mocks.insert).not.toHaveBeenCalled();
+    mocks.existing.mockResolvedValue({ data: existing(), error: null });
+    mocks.product.mockResolvedValue({
+      productCode: "123P1",
+      title: "Walk",
+      productUrl: canonical,
+    });
+    expect((await POST(request(), context())).status).toBe(409);
   });
   it("does not navigate when persistence fails", async () => {
-    mocks.insert.mockResolvedValue({ error: { code: "unavailable" } });
+    mocks.rpc.mockResolvedValue({ data: null, error: { code: "unavailable" } });
     const response = await POST(request(), context());
     expect(response.status).toBe(503);
     expect(await response.json()).not.toHaveProperty("redirectUrl");

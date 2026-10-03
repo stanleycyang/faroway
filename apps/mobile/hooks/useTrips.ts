@@ -22,6 +22,7 @@ interface ApiTrip {
   travelers: number;
   traveler_type?: string;
   preferences?: {
+    planNeedsRefresh?: boolean;
     travelerType?: string;
     originCity?: string;
     originAirport?: string;
@@ -215,8 +216,11 @@ function transformApiTrip(apiTrip: ApiTrip, itinerary?: ApiItinerary): Trip {
     originAirport: apiTrip.preferences?.originAirport,
     vibes: apiTrip.vibes || [],
     budget: apiTrip.budget_tier || apiTrip.budget,
-    days: transformItineraryDays(rawDays),
-    hotel: transformApiHotel(itineraryData?.topHotel),
+    planNeedsRefresh: apiTrip.preferences?.planNeedsRefresh === true,
+    days: apiTrip.preferences?.planNeedsRefresh ? [] : transformItineraryDays(rawDays),
+    hotel: apiTrip.preferences?.planNeedsRefresh
+      ? undefined
+      : transformApiHotel(itineraryData?.topHotel),
     coverImage:
       apiTrip.cover_image || getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
     createdAt: apiTrip.created_at,

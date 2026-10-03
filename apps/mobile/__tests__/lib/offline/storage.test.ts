@@ -91,3 +91,22 @@ it('preserves a conflicted edit for review instead of exhausting retry attempts'
     data: { expectedUpdatedAt: 'old-revision', destination: 'Vienna' },
   });
 });
+
+it('does not silently rebase earlier queued edits onto a newly cached revision', async () => {
+  await offlineStorage.clearAll();
+  await offlineStorage.addPendingMutation({
+    type: 'update',
+    tripId: 'versioned',
+    data: { destination: 'Rome', expectedUpdatedAt: 'original' },
+  });
+  await offlineStorage.addPendingMutation({
+    type: 'update',
+    tripId: 'versioned',
+    data: { travelers: 3, expectedUpdatedAt: 'newer-device-version' },
+  });
+  expect((await offlineStorage.getPendingMutations())[0].data).toEqual({
+    destination: 'Rome',
+    travelers: 3,
+    expectedUpdatedAt: 'original',
+  });
+});

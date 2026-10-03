@@ -38,6 +38,7 @@ try:
     CREATE TABLE trips (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id UUID, destination TEXT, travelers INTEGER DEFAULT 2, budget_tier TEXT DEFAULT 'moderate', vibes TEXT[], preferences JSONB, start_date DATE, end_date DATE, status TEXT DEFAULT 'draft', search_id UUID REFERENCES searches(id) ON DELETE SET NULL, itinerary_id UUID, is_shared BOOLEAN DEFAULT FALSE, share_token TEXT, shared_at TIMESTAMPTZ, updated_at TIMESTAMPTZ DEFAULT NOW());
     CREATE TABLE itineraries (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), trip_id UUID REFERENCES trips(id), user_id UUID, destination TEXT, start_date DATE, end_date DATE, overview TEXT, total_cost JSONB, days JSONB, packing_list TEXT[], general_tips TEXT[], generated_at TIMESTAMPTZ, created_at TIMESTAMPTZ DEFAULT NOW());
     CREATE TABLE workflow_progress (trip_id UUID PRIMARY KEY REFERENCES trips(id), user_id UUID, step TEXT, progress INTEGER CHECK(progress BETWEEN 0 AND 100), message TEXT, updated_at TIMESTAMPTZ);
+    CREATE TABLE affiliate_clicks (id TEXT PRIMARY KEY,user_id UUID,trip_id UUID,item_id TEXT,item_type TEXT,item_name TEXT,affiliate_partner TEXT,affiliate_url TEXT,source TEXT,converted BOOLEAN,clicked_at TIMESTAMPTZ);
     CREATE TABLE notifications (id UUID PRIMARY KEY DEFAULT gen_random_uuid(), user_id UUID, type TEXT, title TEXT, message TEXT, data JSONB, read BOOLEAN);
     ALTER TABLE searches ENABLE ROW LEVEL SECURITY;
     CREATE POLICY search_owner_access ON searches TO authenticated USING (user_id::TEXT = current_setting('request.jwt.claim.sub', TRUE)) WITH CHECK (user_id::TEXT = current_setting('request.jwt.claim.sub', TRUE));
@@ -117,10 +118,12 @@ try:
         sql(brief_migration.read_text())
         sql(f"SET ROLE service_role; UPDATE trips SET destination='Unsafe edit' WHERE id='{trip}';", ok=False)
         sql(f"UPDATE trips SET status='planned',is_shared=TRUE,share_token='old-public-link' WHERE id='{trip}';")
+        sql(f"SET ROLE service_role; UPDATE trips SET destination='Unsafe planned edit' WHERE id='{trip}';", ok=False)
         version = sql(f"SELECT updated_at FROM trips WHERE id='{trip}';")
         sql(auth + f"UPDATE trips SET destination='Direct edit' WHERE id='{trip}';", ok=False)
         sql(auth + f"SELECT * FROM update_trip_brief('{trip}','{owner}','{version}','{{}}');", ok=False)
         assert sql(f"SET ROLE service_role; SELECT id FROM update_trip_brief('{trip}','{owner}','{version}','{{\"destination\":\"Vienna\",\"preferences\":{{\"interests\":[\"art\"]}}}}');") == trip
+        sql(f"SET ROLE service_role; UPDATE trips SET destination='Unsafe draft edit' WHERE id='{trip}';", ok=False)
         assert sql(f"SELECT status || ':' || is_shared::TEXT || ':' || (preferences->>'planNeedsRefresh') FROM trips WHERE id='{trip}';") == 'draft:false:true'
         assert sql("SELECT overview FROM itineraries;") == 'current'
         assert sql(f"SELECT count(*) FROM trips WHERE share_token='old-public-link' OR search_id IS NOT NULL;") == '0'
@@ -132,6 +135,21 @@ try:
         assert apply(a, "planned", '{"days":[],"overview":"revised"}') == 't'
         assert sql(f"SELECT COALESCE(preferences->>'planNeedsRefresh','false') FROM trips WHERE id='{trip}';") == 'false'
         print("PASS brief revision conflicts, generation lock, revoked sharing, preserved old plan and revised publication")
+
+    checkout_migration = root / "supabase/migrations/20261003006000_version_checkout_handoffs.sql"
+    if checkout_migration.exists():
+        sql(checkout_migration.read_text()); sql(checkout_migration.read_text())
+        version = sql(f"SELECT updated_at FROM trips WHERE id='{trip}';")
+        handoff = f"SELECT prepare_trip_handoff('{trip}','{owner}','{version}','checkout-test','activity_v_123P1@2099-06-01','Walk','https://www.viator.com/test');"
+        sql(auth + handoff, ok=False)
+        assert sql('SET ROLE service_role; ' + handoff) == 't'
+        assert sql('SET ROLE service_role; ' + handoff) == 't'
+        assert sql('SELECT count(*) FROM affiliate_clicks;') == '1'
+        assert sql(f"SET ROLE service_role; SELECT id FROM update_trip_brief('{trip}','{owner}','{version}','{{\"destination\":\"Lisbon\"}}');") == trip
+        assert sql('SET ROLE service_role; ' + handoff) == 'f'
+        assert sql('SET ROLE service_role; ' + handoff.replace('checkout-test', 'checkout-late')) == 'f'
+        assert sql('SELECT count(*) FROM affiliate_clicks;') == '1'
+        print("PASS atomic checkout publication rejects changed brief, replay and late provider results")
 
 finally:
     subprocess.run(["docker", "rm", "-f", name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

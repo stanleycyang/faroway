@@ -142,6 +142,28 @@ describe('useTrips', () => {
     expect(offlineStorage.saveTrip).not.toHaveBeenCalled();
   });
 
+  it('does not expose old booking cards after a brief edit', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        trip: {
+          ...makeApiTrip('trip-1', 'Paris'),
+          preferences: { planNeedsRefresh: true },
+        },
+        itinerary: {
+          topHotel: { name: 'Old hotel', bookingUrl: 'https://example.invalid/hotel' },
+          days: [
+            { activities: [{ title: 'Old tour', bookingUrl: 'https://example.invalid/tour' }] },
+          ],
+        },
+      }),
+    });
+    const trip = await renderUseTrips().getTripById('trip-1');
+    expect(trip.planNeedsRefresh).toBe(true);
+    expect(trip.days).toEqual([]);
+    expect(trip.hotel).toBeUndefined();
+  });
+
   it('returns the updated trip when queueing an offline update', async () => {
     networkMonitor.isOnline.mockReturnValue(false);
     const originalTrip = makeTrip('trip-1', 'Tokyo');

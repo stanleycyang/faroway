@@ -47,7 +47,7 @@ export async function GET(request: NextRequest, context: Context) {
     if (!trip) return json({ error: "Trip not found" }, 404);
     const { data, error } = await getSupabase()
       .from("affiliate_clicks")
-      .select("id, item_id, item_name, clicked_at")
+      .select("id, item_id, item_name, clicked_at, trip_revision")
       .eq("trip_id", id)
       .eq("user_id", auth.userId)
       .eq("affiliate_partner", "viator")
@@ -63,7 +63,12 @@ export async function GET(request: NextRequest, context: Context) {
     // clicks, client returns, or legacy conversion flags into booking state.
     return json({
       enabled: enabled() && !trip.trip.preferences?.planNeedsRefresh,
-      attempts: isViatorContentEnabled() ? data || [] : [],
+      attempts: isViatorContentEnabled()
+        ? (data || []).map((attempt) => ({
+            ...attempt,
+            canResume: attempt.trip_revision === trip.trip.updated_at,
+          }))
+        : [],
     });
   } catch {
     return json({ error: "Booking history is temporarily unavailable." }, 503);
@@ -89,7 +94,7 @@ export async function POST(request: NextRequest, context: Context) {
     const { activityId, date, attemptId } = input.data;
     const loaded = await loadTripForUserUncached(id, auth.userId);
     if (!loaded) return json({ error: "Trip not found" }, 404);
-    if (loaded.trip.preferences?.planNeedsRefresh)
+    if (loaded.trip.preferences?.planNeedsRefresh || !loaded.trip.updated_at)
       return json(
         { error: "Update your plan for the saved brief before checkout." },
         409,
@@ -171,34 +176,27 @@ export async function POST(request: NextRequest, context: Context) {
         },
         503,
       );
-    const prepared = () =>
-      json({ redirectUrl: url, attemptId, status: "handoff_prepared" });
-    if (existing.data) return prepared();
-    const { error } = await db.from("affiliate_clicks").insert({
-      id: clickId,
-      user_id: auth.userId,
-      trip_id: id,
-      item_id: itemId,
-      item_type: "activity",
-      item_name: product!.title,
-      affiliate_partner: "viator",
-      affiliate_url: url,
-      source: "itinerary",
-      converted: false,
-      clicked_at: new Date().toISOString(),
+    const { data: prepared, error } = await db.rpc("prepare_trip_handoff", {
+      p_trip_id: id,
+      p_user_id: auth.userId,
+      p_revision: loaded.trip.updated_at,
+      p_click_id: clickId,
+      p_item_id: itemId,
+      p_item_name: product!.title,
+      p_url: url,
     });
-    if (error?.code === "23505") {
-      const raced = await readExisting();
-      if (!raced.error && raced.data) {
-        return matchesExisting(raced.data)
-          ? prepared()
-          : json({ error: "Please restart this checkout step." }, 409);
-      }
-    }
     if (error)
       return json(
         { error: "Could not save this booking step. Please try again." },
         503,
+      );
+    if (prepared !== true)
+      return json(
+        {
+          error:
+            "Your plan changed while preparing checkout. Refresh the trip and review the current experience before continuing.",
+        },
+        409,
       );
     return json({ redirectUrl: url, attemptId, status: "handoff_prepared" });
   } catch {

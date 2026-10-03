@@ -6,6 +6,7 @@ import * as Sentry from '@sentry/react-native';
 import { AuthProvider, useAuthContext } from '../components/AuthProvider';
 import { NotificationProvider } from '../components/NotificationProvider';
 import { OfflineProvider } from '../components/OfflineProvider';
+import { TripSyncConflicts } from '../components/ui/TripSyncConflicts';
 import { SyncStatusBanner } from '../components/ui/SyncStatusBanner';
 import { useTripStore } from '../stores/tripStore';
 import { useReduceMotion } from '../hooks/useReduceMotion';
@@ -53,6 +54,7 @@ function RootLayoutNav() {
     <>
       <StatusBar style="dark" />
       <SyncStatusBanner position="top" autoHide={true} />
+      <TripSyncConflicts />
       <Stack
         screenOptions={{
           headerShown: false,

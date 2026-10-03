@@ -189,7 +189,10 @@ class OfflineStorage {
         else if (existing.type === 'update' && mutation.type === 'update') {
           mutations[existingIndex] = {
             ...existing,
-            data: mergeMutationData(existing.data, mutation.data),
+            data: {
+              ...mergeMutationData(existing.data, mutation.data),
+              expectedUpdatedAt: existing.data?.expectedUpdatedAt,
+            },
             timestamp: Date.now(),
           };
         }

@@ -64,6 +64,7 @@ export interface TripDay {
 }
 
 export interface Trip {
+  planNeedsRefresh?: boolean;
   id: string;
   destination: string;
   country: string;

@@ -442,7 +442,8 @@ class SyncService {
       travelerType: apiTrip.traveler_type || 'solo',
       vibes: apiTrip.vibes || [],
       budget: apiTrip.budget,
-      days: apiTrip.itinerary?.days || [],
+      planNeedsRefresh: apiTrip.preferences?.planNeedsRefresh === true,
+      days: apiTrip.preferences?.planNeedsRefresh ? [] : apiTrip.itinerary?.days || [],
       coverImage:
         apiTrip.cover_image ||
         getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
@@ -456,6 +457,7 @@ class SyncService {
    * Queue a create operation (for offline)
    */
   async queueCreate(trip: Trip): Promise<void> {
+    if (this.syncInProgress) throw new Error('Wait for sync to finish before editing trips.');
     await offlineStorage.saveTrip(trip);
     await offlineStorage.addPendingMutation({
       type: 'create',
@@ -474,6 +476,7 @@ class SyncService {
    * Queue an update operation (for offline)
    */
   async queueUpdate(tripId: string, updates: Partial<TripInput>): Promise<void> {
+    if (this.syncInProgress) throw new Error('Wait for sync to finish before editing this trip.');
     // Update local storage
     const trip = await offlineStorage.getTrip(tripId);
     if (trip) {
@@ -496,6 +499,7 @@ class SyncService {
    * Queue a delete operation (for offline)
    */
   async queueDelete(tripId: string): Promise<void> {
+    if (this.syncInProgress) throw new Error('Wait for sync to finish before editing trips.');
     await offlineStorage.deleteTrip(tripId);
     await offlineStorage.addPendingMutation({
       type: 'delete',
@@ -504,6 +508,41 @@ class SyncService {
 
     const meta = await offlineStorage.getSyncMeta();
     this.updateState({ pendingCount: meta.pendingCount });
+  }
+
+  /** Explicit traveler choice after comparing the current server brief. */
+  async resolveBlockedMutation(snapshot: PendingMutation, revision?: string): Promise<void> {
+    if (this.syncInProgress)
+      throw new Error('Wait for sync to finish before resolving this change.');
+    this.syncInProgress = true;
+    this.updateState({ status: 'syncing' });
+    try {
+      const current = (await offlineStorage.getPendingMutations()).find(
+        (m) => m.id === snapshot.id
+      );
+      if (!current?.blockedReason || JSON.stringify(current) !== JSON.stringify(snapshot))
+        throw new Error('Your local changes changed. Review them again before continuing.');
+      if (revision) {
+        const response = await fetch(`${API_BASE_URL}/api/trips/${snapshot.tripId}`, {
+          method: 'PATCH',
+          headers: await getAuthHeaders(),
+          body: JSON.stringify({ ...snapshot.data, expectedUpdatedAt: revision }),
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || 'Could not save. Your local changes are still kept.');
+        }
+      }
+      await offlineStorage.removePendingMutation(snapshot.id);
+      this.updateState({
+        pendingCount: (await offlineStorage.getPendingMutations()).length,
+        status: 'idle',
+        error: null,
+      });
+    } finally {
+      this.syncInProgress = false;
+      if (this.state.status === 'syncing') this.updateState({ status: 'error' });
+    }
   }
 
   /**

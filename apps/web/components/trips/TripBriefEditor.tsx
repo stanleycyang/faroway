@@ -52,6 +52,59 @@ export function TripBriefEditor({
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
     if (saving || locked) return;
+    const changes: Record<string, unknown> = {};
+    const changedPreferences: Record<string, unknown> = {};
+    const changed = (
+      key: string,
+      value: unknown,
+      previous: unknown,
+      target = changes,
+    ) => {
+      if (JSON.stringify(value) !== JSON.stringify(previous))
+        target[key] = value;
+    };
+    changed("destination", destination.trim(), trip.destination);
+    changed("start_date", start, trip.start_date);
+    changed("end_date", end, trip.end_date);
+    changed("budget_tier", budget, trip.budget_tier ?? "moderate");
+    changed("vibes", list(vibes), trip.vibes ?? []);
+    changed(
+      "travelerType",
+      type,
+      preferences.travelerType ?? (trip.travelers === 1 ? "solo" : "friends"),
+      changedPreferences,
+    );
+    changed(
+      "originCity",
+      origin.trim(),
+      preferences.originCity ?? "",
+      changedPreferences,
+    );
+    changed(
+      "originAirport",
+      airport.trim().toUpperCase(),
+      preferences.originAirport ?? "",
+      changedPreferences,
+    );
+    changed(
+      "interests",
+      list(interests),
+      preferences.interests ?? [],
+      changedPreferences,
+    );
+    if (
+      adults !== Number(preferences.adults ?? trip.travelers) ||
+      children !== Number(preferences.children ?? 0)
+    ) {
+      changes.travelers = adults + children;
+      Object.assign(changedPreferences, { adults, children });
+    }
+    if (Object.keys(changedPreferences).length)
+      changes.preferences = changedPreferences;
+    if (!Object.keys(changes).length) {
+      setMessage("Your brief is already up to date. No changes were saved.");
+      return;
+    }
     setSaving(true);
     setMessage(null);
     try {
@@ -60,20 +113,7 @@ export function TripBriefEditor({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           expectedUpdatedAt: trip.updated_at,
-          destination,
-          start_date: start,
-          end_date: end,
-          travelers: adults + children,
-          budget_tier: budget,
-          vibes: list(vibes),
-          preferences: {
-            travelerType: type,
-            originCity: origin,
-            originAirport: airport.toUpperCase(),
-            adults,
-            children,
-            interests: list(interests),
-          },
+          ...changes,
         }),
       });
       const result = await response.json();

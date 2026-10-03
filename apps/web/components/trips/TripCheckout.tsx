@@ -23,6 +23,7 @@ interface Handoff {
   item_id: string;
   item_name: string;
   clicked_at: string;
+  canResume?: boolean;
 }
 const CheckoutContext = createContext<{
   enabled: boolean;
@@ -80,7 +81,7 @@ export function TripCheckout({
   const review = (item: Selection) => {
     setError(null);
     const previous = attempts.find(
-      (a) => a.item_id === `${item.id}@${item.date}`,
+      (a) => a.item_id === `${item.id}@${item.date}` && a.canResume !== false,
     );
     setSelection({
       ...item,
@@ -168,10 +169,12 @@ export function TripCheckout({
                     <p className="text-sm font-medium">{attempt.item_name}</p>
                     <p className="text-xs text-gray-500">
                       Planned for {date} · Confirmation not verified
+                      {attempt.canResume === false &&
+                        " · From a previous plan; review the current choices instead."}
                     </p>
                   </div>
                   <button
-                    disabled={!enabled}
+                    disabled={!enabled || attempt.canResume === false}
                     onClick={() =>
                       review({
                         id,
