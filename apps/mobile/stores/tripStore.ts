@@ -80,6 +80,7 @@ export interface Trip {
   hotel?: Hotel;
   coverImage: string;
   createdAt: string;
+  updatedAt?: string;
   status: 'draft' | 'planned' | 'active' | 'completed';
 }
 

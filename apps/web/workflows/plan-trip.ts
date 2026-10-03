@@ -50,6 +50,9 @@ interface TripPlanInput {
   startDate: string;
   endDate: string;
   travelers: number;
+  adults?: number;
+  children?: number;
+  interests?: string[];
   travelerType?: SearchInput["travelerType"];
   vibes?: string[];
   budget?: string;
@@ -81,6 +84,9 @@ export async function planTripWorkflow(
     startDate,
     endDate,
     travelers,
+    adults,
+    children,
+    interests,
     travelerType,
     vibes,
     budget,
@@ -101,6 +107,9 @@ export async function planTripWorkflow(
       startDate,
       endDate,
       travelers,
+      adults,
+      children,
+      interests,
       travelerType,
       vibes,
       budget,
@@ -311,6 +320,9 @@ async function buildSearchPlanStep(params: {
   startDate: string;
   endDate: string;
   travelers: number;
+  adults?: number;
+  children?: number;
+  interests?: string[];
   travelerType?: SearchInput["travelerType"];
   vibes?: string[];
   budget?: string;
@@ -326,6 +338,9 @@ async function buildSearchPlanStep(params: {
     startDate,
     endDate,
     travelers,
+    adults,
+    children,
+    interests,
     travelerType,
     vibes,
     budget,
@@ -337,6 +352,9 @@ async function buildSearchPlanStep(params: {
     startDate,
     endDate,
     travelers,
+    adults,
+    children,
+    interests,
     travelerType,
     vibes: vibes || [],
     budget: (budget as "budget" | "moderate" | "luxury") || "moderate",
@@ -586,6 +604,9 @@ async function buildAndSaveSpec(
     startDate: string;
     endDate: string;
     travelers: number;
+    adults?: number;
+    children?: number;
+    interests?: string[];
     budget?: string;
     userId?: string;
   },

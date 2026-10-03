@@ -58,6 +58,7 @@ export interface PendingMutation {
   data?: PendingMutationData;
   timestamp: number;
   retryCount: number;
+  blockedReason?: string;
 }
 
 export interface SyncMeta {
@@ -255,6 +256,15 @@ class OfflineStorage {
   /**
    * Increment retry count for a mutation
    */
+  async blockPendingMutation(mutationId: string, reason: string): Promise<void> {
+    const mutations = await this.getPendingMutations();
+    const mutation = mutations.find((item) => item.id === mutationId);
+    if (mutation) {
+      mutation.blockedReason = reason;
+      await this.savePendingMutations(mutations);
+    }
+  }
+
   async incrementMutationRetry(mutationId: string): Promise<void> {
     try {
       const mutations = await this.getPendingMutations();

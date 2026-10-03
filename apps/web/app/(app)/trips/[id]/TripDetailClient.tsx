@@ -1,5 +1,7 @@
 "use client";
 
+import { TripBriefEditor } from "@/components/trips/TripBriefEditor";
+
 import React, {
   useEffect,
   useState,
@@ -264,6 +266,10 @@ export function TripDetailClient({
   }, [trip?.status, trip?.search_id, tripId, fetchTrip, generation.phase]);
 
   const handleShare = async (confirmed = false) => {
+    if (trip?.preferences?.planNeedsRefresh) {
+      setShareStatus("Update the plan for your saved brief before sharing it.");
+      return;
+    }
     if (shareLock.current) return;
     if (!shareUrl && !confirmed) {
       setShareConsentOpen(true);
@@ -387,7 +393,8 @@ export function TripDetailClient({
 
   // Keep currencies separate; itinerary totals do not establish a party quote.
   const budgetBreakdown = useMemo(() => {
-    if (!itinerary?.days?.length || !trip) return null;
+    if (!itinerary?.days?.length || !trip || trip.preferences?.planNeedsRefresh)
+      return null;
     const nights = Math.max(
       0,
       Math.round(
@@ -602,6 +609,36 @@ export function TripDetailClient({
       />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <TripBriefEditor
+          key={trip.updated_at}
+          trip={trip}
+          onReload={() => {
+            void fetchTrip();
+          }}
+          onSaved={(saved) => {
+            setTrip(saved);
+            setShareUrl(
+              saved.is_shared && saved.share_token
+                ? `${window.location.origin}/s/${saved.share_token}`
+                : null,
+            );
+            setShareStatus(
+              saved.is_shared
+                ? "Brief saved. Your public link is unchanged."
+                : "Brief saved. Public access is off until you share the updated plan.",
+            );
+          }}
+        />
+        {trip.preferences?.planNeedsRefresh === true && (
+          <div
+            role="status"
+            className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+          >
+            Your updated brief is saved. The previous plan below uses your
+            earlier dates and preferences. Start planning to update it before
+            checkout or sharing.
+          </div>
+        )}
         {/* Generation Failed */}
         {error && (
           <div
@@ -619,18 +656,24 @@ export function TripDetailClient({
           </div>
         )}
         {(isFailed || trip.status === "draft") && !isGenerating && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl p-6 mb-6">
+          <div
+            className={`border rounded-2xl p-6 mb-6 ${trip.status === "draft" ? "bg-primary-50 border-primary-100" : "bg-red-50 border-red-200"}`}
+          >
             <div className="flex items-start gap-4">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
-                <AlertCircle className="w-5 h-5 text-red-600" />
+              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center flex-shrink-0">
+                {trip.status === "draft" ? (
+                  <Sparkles className="w-5 h-5 text-primary" />
+                ) : (
+                  <AlertCircle className="w-5 h-5 text-red-600" />
+                )}
               </div>
               <div className="flex-1">
-                <h3 className="font-semibold text-red-800 mb-1">
+                <h3 className="font-semibold text-gray-900 mb-1">
                   {trip.status === "draft"
                     ? "Your trip is saved"
                     : "Planning was interrupted"}
                 </h3>
-                <p className="text-sm text-red-700 mb-4">
+                <p className="text-sm text-gray-700 mb-4">
                   {trip.status === "draft"
                     ? "Your choices are saved. Start planning when you are ready."
                     : generation.error ||
@@ -639,7 +682,7 @@ export function TripDetailClient({
                 <button
                   onClick={handleRetry}
                   disabled={isRetrying}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <RefreshCw
                     className={`w-4 h-4 ${isRetrying ? "animate-spin" : ""}`}
@@ -728,7 +771,7 @@ export function TripDetailClient({
               <h2 className="text-xl font-bold text-gray-900">
                 Your Itinerary
               </h2>
-              {bookableCount > 0 && (
+              {bookableCount > 0 && !trip.preferences?.planNeedsRefresh && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 text-primary-700 rounded-full text-xs font-bold">
                   <Ticket className="w-3.5 h-3.5" />
                   {bookableCount} bookable experience
@@ -736,50 +779,80 @@ export function TripDetailClient({
                 </span>
               )}
             </div>
-            <TripCheckout tripId={tripId} travelers={trip.travelers}>
-              {displayDays.map((day, index) => (
-                <div
-                  key={day.dayNumber || index}
-                  className="animate-in fade-in slide-in-from-bottom-2 duration-500"
-                  style={{
-                    animationDelay: `${index * 150}ms`,
-                    animationFillMode: "both",
-                  }}
-                >
-                  <DayErrorBoundary dayNumber={day.dayNumber || index + 1}>
-                    <ItineraryDay
-                      dayNumber={day.dayNumber}
-                      date={day.date}
-                      title={day.title}
-                      summary={day.summary}
-                      morning={day.morning}
-                      afternoon={day.afternoon}
-                      evening={day.evening}
-                      tips={day.tips}
-                      defaultExpanded={true}
-                      hotel={
-                        index === 0 && displayTopHotel
-                          ? {
-                              name: displayTopHotel.name,
-                              starRating: displayTopHotel.starRating,
-                              pricePerNight: displayTopHotel.pricePerNight,
-                              currency: displayTopHotel.currency,
-                              priceStatus:
-                                "priceStatus" in displayTopHotel
-                                  ? displayTopHotel.priceStatus
-                                  : undefined,
-                              amenities: displayTopHotel.amenities,
-                              affiliateUrl: displayTopHotel.affiliateUrl,
-                              image: displayTopHotel.images?.[0],
-                            }
-                          : undefined
-                      }
-                      transport={day.transport}
-                    />
-                  </DayErrorBoundary>
-                </div>
-              ))}
-            </TripCheckout>
+            {trip.preferences?.planNeedsRefresh === true && (
+              <section aria-label="Previous plan" className="space-y-4">
+                {displayDays.map((day, index) => (
+                  <article
+                    key={day.dayNumber || index}
+                    className="rounded-2xl border border-gray-200 bg-white p-5"
+                  >
+                    <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                      Previous plan · {day.date}
+                    </p>
+                    <h3 className="mt-1 font-semibold text-gray-900">
+                      {day.title}
+                    </h3>
+                    <p className="mt-2 text-sm text-gray-600">{day.summary}</p>
+                    <ul className="mt-3 space-y-2 text-sm text-gray-700">
+                      {[day.morning, day.afternoon, day.evening]
+                        .flatMap((slot) => [
+                          ...(slot?.activities ?? []),
+                          ...(slot?.meals ?? []),
+                        ])
+                        .map((item, itemIndex) => (
+                          <li key={`${item.name}-${itemIndex}`}>{item.name}</li>
+                        ))}
+                    </ul>
+                  </article>
+                ))}
+              </section>
+            )}
+            {!trip.preferences?.planNeedsRefresh && (
+              <TripCheckout tripId={tripId} travelers={trip.travelers}>
+                {displayDays.map((day, index) => (
+                  <div
+                    key={day.dayNumber || index}
+                    className="animate-in fade-in slide-in-from-bottom-2 duration-500"
+                    style={{
+                      animationDelay: `${index * 150}ms`,
+                      animationFillMode: "both",
+                    }}
+                  >
+                    <DayErrorBoundary dayNumber={day.dayNumber || index + 1}>
+                      <ItineraryDay
+                        dayNumber={day.dayNumber}
+                        date={day.date}
+                        title={day.title}
+                        summary={day.summary}
+                        morning={day.morning}
+                        afternoon={day.afternoon}
+                        evening={day.evening}
+                        tips={day.tips}
+                        defaultExpanded={true}
+                        hotel={
+                          index === 0 && displayTopHotel
+                            ? {
+                                name: displayTopHotel.name,
+                                starRating: displayTopHotel.starRating,
+                                pricePerNight: displayTopHotel.pricePerNight,
+                                currency: displayTopHotel.currency,
+                                priceStatus:
+                                  "priceStatus" in displayTopHotel
+                                    ? displayTopHotel.priceStatus
+                                    : undefined,
+                                amenities: displayTopHotel.amenities,
+                                affiliateUrl: displayTopHotel.affiliateUrl,
+                                image: displayTopHotel.images?.[0],
+                              }
+                            : undefined
+                        }
+                        transport={day.transport}
+                      />
+                    </DayErrorBoundary>
+                  </div>
+                ))}
+              </TripCheckout>
+            )}
             <PlacesExplorer key={tripId} />
             <TripWeather
               key={`${trip.destination}:${trip.start_date}:${trip.end_date}`}
@@ -904,7 +977,7 @@ export function TripDetailClient({
       {isComplete && bookableCount > 0 && (
         <div
           className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 ${
-            showStickyBar
+            showStickyBar && !trip.preferences?.planNeedsRefresh
               ? "translate-y-0 opacity-100"
               : "translate-y-full opacity-0"
           }`}

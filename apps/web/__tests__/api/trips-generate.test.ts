@@ -16,6 +16,7 @@ let activeSearch: string | null = null;
 let searchCount = 0;
 let claimFails = false;
 let claimReplyLost = false;
+let briefChangedBeforeClaim = false;
 const deletedSearches: string[] = [];
 const rpcMock = vi.fn(async () => ({ data: null, error: null }));
 vi.mock("@/lib/security/rate-limit", () => ({
@@ -65,10 +66,12 @@ function createTableChain(table: string) {
           },
           user_id: "user-1",
           search_id: activeSearch,
+          updated_at: "2026-10-03T00:00:00Z",
         },
         error: null,
       };
     if (table === "trips" && operation === "update") {
+      if (briefChangedBeforeClaim) return { data: null, error: null };
       if (claimFails)
         return { data: null, error: { message: "database unavailable" } };
       if (
@@ -134,9 +137,20 @@ describe("POST /api/trips/[id]/generate", () => {
     searchCount = 0;
     claimFails = false;
     claimReplyLost = false;
+    briefChangedBeforeClaim = false;
     deletedSearches.length = 0;
     tripStatus = "draft";
     startMock.mockResolvedValue({ runId: "run-1" });
+  });
+
+  it("does not dispatch a plan if the brief changed after it was read", async () => {
+    briefChangedBeforeClaim = true;
+    expect(
+      (await POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }))
+        .status,
+    ).toBe(409);
+    expect(startMock).not.toHaveBeenCalled();
+    expect(deletedSearches).toHaveLength(1);
   });
 
   it("maintenance pause prevents creating or dispatching an attempt", async () => {

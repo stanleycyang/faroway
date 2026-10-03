@@ -38,7 +38,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     // Fetch current trip to check ownership and existing token
     const { data: trip, error: fetchError } = await supabase
       .from("trips")
-      .select("id, share_token, is_shared, user_id, updated_at")
+      .select("id, share_token, is_shared, user_id, updated_at, preferences")
       .eq("id", id)
       .eq("user_id", user.id)
       .single();
@@ -46,6 +46,12 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (fetchError || !trip) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
+
+    if (trip.preferences?.planNeedsRefresh)
+      return NextResponse.json(
+        { error: "Update the plan for your saved brief before sharing it." },
+        { status: 409 },
+      );
 
     const shareToken =
       trip.is_shared && trip.share_token ? trip.share_token : nanoid(24);

@@ -205,6 +205,27 @@ describe("POST /api/trips/[id]/share", () => {
     expect(mockSupabase.from).not.toHaveBeenCalled();
   });
 
+  it("requires a current plan before creating a public link", async () => {
+    mockTripReturn = {
+      data: {
+        id: "trip-1",
+        user_id: "user-123",
+        is_shared: false,
+        preferences: { planNeedsRefresh: true },
+      },
+      error: null,
+    };
+    expect(
+      (
+        await sharePost(
+          makeRequest("POST", "/api/trips/trip-1/share"),
+          makeParams("trip-1"),
+        )
+      ).status,
+    ).toBe(409);
+    expect(mockSupabase.from).toHaveBeenCalledTimes(1);
+  });
+
   it("successfully enables sharing and returns shareUrl and token", async () => {
     const req = makeRequest("POST", "/api/trips/trip-1/share");
     const res = await sharePost(req, makeParams("trip-1"));

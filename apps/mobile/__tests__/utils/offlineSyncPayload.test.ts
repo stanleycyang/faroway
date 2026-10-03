@@ -33,6 +33,16 @@ describe('offline sync payloads', () => {
     status: 'draft',
   };
 
+  it('retains the revision observed when edits were queued', () => {
+    expect(
+      buildTripUpdatePayload({ destination: 'Vienna', budget: 'luxury' }, '2026-10-03T00:00:00Z')
+    ).toEqual({
+      destination: 'Vienna',
+      budget_tier: 'luxury',
+      expectedUpdatedAt: '2026-10-03T00:00:00Z',
+    });
+  });
+
   it('serializes offline creates with backend field names', () => {
     expect(buildTripCreatePayload(trip)).toEqual({
       destination: 'Tokyo',

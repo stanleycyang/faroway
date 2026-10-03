@@ -1,3 +1,4 @@
+import { buildTripUpdatePayload } from '../lib/offline/trip-payload';
 import { useState, useCallback } from 'react';
 import { API_BASE_URL, getAuthHeaders } from '../lib/supabase';
 import { useTripStore, Trip, TripInput, TripDay, Activity, Hotel } from '../stores/tripStore';
@@ -219,6 +220,7 @@ function transformApiTrip(apiTrip: ApiTrip, itinerary?: ApiItinerary): Trip {
     coverImage:
       apiTrip.cover_image || getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
     createdAt: apiTrip.created_at,
+    updatedAt: apiTrip.updated_at,
     status: normalizeTripStatus(apiTrip.status),
   };
 }
@@ -437,14 +439,20 @@ export function useTrips() {
         const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
           method: 'PATCH',
           headers,
-          body: JSON.stringify(updates),
+          body: JSON.stringify(
+            buildTripUpdatePayload(
+              updates,
+              useTripStore.getState().trips.find((t) => t.id === id)?.updatedAt
+            )
+          ),
         });
 
         if (!response.ok) {
           if (response.status === 401) {
             throw new Error('Please sign in to update this trip');
           }
-          throw new Error('Failed to update trip');
+          const failure = await response.json().catch(() => ({}));
+          throw new Error(failure.error || 'Failed to update trip');
         }
 
         const data = await response.json();

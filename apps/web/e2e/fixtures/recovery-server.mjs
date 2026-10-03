@@ -63,6 +63,30 @@ const server = createServer(async (req, res) => {
     return send({});
   }
   if (url.pathname === "/auth/v1/user") return send(user);
+  if (url.pathname === "/rest/v1/rpc/update_trip_brief") {
+    const trip = trips.get(body.p_trip_id);
+    if (
+      !trip ||
+      trip.user_id !== body.p_user_id ||
+      trip.updated_at !== body.p_expected_updated_at ||
+      trip.status === "generating"
+    )
+      return send(null);
+    Object.assign(trip, body.p_changes, {
+      preferences: {
+        ...trip.preferences,
+        ...body.p_changes.preferences,
+        planNeedsRefresh: !!trip.itineraries,
+      },
+      status: "draft",
+      search_id: null,
+      is_shared: false,
+      share_token: null,
+      shared_at: null,
+      updated_at: new Date().toISOString(),
+    });
+    return send(trip);
+  }
   if (url.pathname === "/rest/v1/rpc/apply_trip_generation_update") {
     generationUpdates.push(body);
     // This fixture models an attempt whose claim has been superseded. The

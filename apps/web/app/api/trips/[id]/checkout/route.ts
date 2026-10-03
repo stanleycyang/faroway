@@ -62,7 +62,7 @@ export async function GET(request: NextRequest, context: Context) {
     // A saved handoff is not evidence of a booking or a charge. Do not promote
     // clicks, client returns, or legacy conversion flags into booking state.
     return json({
-      enabled: enabled(),
+      enabled: enabled() && !trip.trip.preferences?.planNeedsRefresh,
       attempts: isViatorContentEnabled() ? data || [] : [],
     });
   } catch {
@@ -89,6 +89,11 @@ export async function POST(request: NextRequest, context: Context) {
     const { activityId, date, attemptId } = input.data;
     const loaded = await loadTripForUserUncached(id, auth.userId);
     if (!loaded) return json({ error: "Trip not found" }, 404);
+    if (loaded.trip.preferences?.planNeedsRefresh)
+      return json(
+        { error: "Update your plan for the saved brief before checkout." },
+        409,
+      );
     if (date < loaded.trip.start_date || date > loaded.trip.end_date) {
       return json(
         {

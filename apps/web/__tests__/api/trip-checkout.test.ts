@@ -112,6 +112,20 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("owned-trip Viator hosted handoff", () => {
+  it("blocks stale-plan checkout before requesting provider data", async () => {
+    const saved = loaded();
+    mocks.load.mockResolvedValue({
+      ...saved,
+      trip: { ...saved.trip, preferences: { planNeedsRefresh: true } },
+    });
+    expect((await POST(request(), context())).status).toBe(409);
+    expect(mocks.product).not.toHaveBeenCalled();
+    expect(mocks.insert).not.toHaveBeenCalled();
+    expect((await (await GET(request(), context())).json()).enabled).toBe(
+      false,
+    );
+  });
+
   it("blocks checkout and history without content approval", async () => {
     vi.stubEnv("VIATOR_CONTENT_APPROVAL_REF", "");
     expect((await POST(request(), context())).status).toBe(503);

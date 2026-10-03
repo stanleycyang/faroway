@@ -73,3 +73,21 @@ describe('offlineStorage pending mutations', () => {
     ]);
   });
 });
+
+it('preserves a conflicted edit for review instead of exhausting retry attempts', async () => {
+  const mutation = await offlineStorage.addPendingMutation({
+    type: 'update',
+    tripId: 'conflicted-trip',
+    data: { expectedUpdatedAt: 'old-revision', destination: 'Vienna' },
+  });
+  await offlineStorage.blockPendingMutation(
+    mutation.id,
+    'Load the latest trip and review your changes'
+  );
+  const pending = await offlineStorage.getPendingMutations();
+  expect(pending.find((item) => item.id === mutation.id)).toMatchObject({
+    retryCount: 0,
+    blockedReason: 'Load the latest trip and review your changes',
+    data: { expectedUpdatedAt: 'old-revision', destination: 'Vienna' },
+  });
+});

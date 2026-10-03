@@ -13,6 +13,7 @@ export interface Trip {
   start_date: string;
   end_date: string;
   travelers: number;
+  budget_tier?: "budget" | "moderate" | "luxury";
   preferences?: Record<string, unknown>;
   vibes?: string[];
   status:

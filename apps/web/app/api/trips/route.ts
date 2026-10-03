@@ -1,3 +1,4 @@
+import { validBriefComposition } from "@/lib/trips/brief";
 import { NextRequest, NextResponse } from "next/server";
 import { createClientFromRequest } from "@/lib/supabase/server";
 import { isValidDateOnly, isValidDateRange } from "@/lib/api/date-range";
@@ -120,6 +121,12 @@ export async function POST(request: NextRequest) {
       preferences,
     } = parseResult.data;
 
+    if (!validBriefComposition(travelers ?? 1, preferences ?? {}))
+      return NextResponse.json(
+        { error: "Adults and children must add up to the traveler count" },
+        { status: 400 },
+      );
+
     // Resolve budget: top-level field takes priority, then preferences.budget
     const budgetTier =
       budget ||
@@ -150,6 +157,9 @@ export async function POST(request: NextRequest) {
           travelerType: preferences?.travelerType,
           originCity: preferences?.originCity,
           originAirport: preferences?.originAirport,
+          adults: preferences?.adults,
+          children: preferences?.children,
+          interests: preferences?.interests,
         },
         status: "draft",
       })

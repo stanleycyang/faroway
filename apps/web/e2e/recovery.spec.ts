@@ -352,3 +352,89 @@ test("uncertain planning offers a status check without dispatching another run",
   ).toBeVisible();
   expect(dispatches).toBe(0);
 });
+
+test("saves the complete brief without starting work and preserves it on reload", async ({
+  page,
+  request,
+}) => {
+  await request.post("http://127.0.0.1:4401/fixture/trip", {
+    data: {
+      ...baseTrip,
+      is_shared: true,
+      share_token: "old-link",
+      preferences: { originCity: "London", creationRequestHash: "keep-me" },
+    },
+  });
+  let starts = 0;
+  await page.route("**/api/trips/*/generate", (route) => {
+    if (route.request().method() === "POST") starts++;
+    return route.fulfill({ json: {} });
+  });
+  await page.goto(`/trips/${id}`);
+  await page.getByText("Your trip brief", { exact: true }).click();
+  await page
+    .getByLabel("Interests, separated by commas")
+    .fill("Art, quiet cafés");
+  await page.getByLabel("Children", { exact: true }).fill("1");
+  await page.getByRole("button", { name: "Save trip brief" }).click();
+  await expect(
+    page.getByText("Your updated brief is saved.", { exact: false }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Start planning" }),
+  ).toBeVisible();
+  expect(starts).toBe(0);
+  const state = await (
+    await request.get("http://127.0.0.1:4401/fixture/state")
+  ).json();
+  expect(state.trips[0]).toMatchObject({
+    travelers: 3,
+    is_shared: false,
+    share_token: null,
+    preferences: {
+      adults: 2,
+      children: 1,
+      interests: ["Art", "quiet cafés"],
+      creationRequestHash: "keep-me",
+      originCity: "London",
+    },
+  });
+  await page.reload();
+  await page.getByText("Your trip brief", { exact: true }).click();
+  await expect(page.getByLabel("Interests, separated by commas")).toHaveValue(
+    "Art, quiet cafés",
+  );
+  await page.screenshot({
+    path: test.info().outputPath("trip-brief-editor.png"),
+    fullPage: true,
+  });
+});
+
+test("keeps unsaved edits when another device changes the brief", async ({
+  page,
+  request,
+}) => {
+  await request.post("http://127.0.0.1:4401/fixture/trip", { data: baseTrip });
+  await page.goto(`/trips/${id}`);
+  await page.getByText("Your trip brief", { exact: true }).click();
+  await page.getByLabel("Destination", { exact: true }).fill("Vienna");
+  await request.post("http://127.0.0.1:4401/fixture/trip", {
+    data: {
+      ...baseTrip,
+      destination: "Rome",
+      updated_at: "2026-10-04T00:00:00.000Z",
+    },
+  });
+  await page.getByRole("button", { name: "Save trip brief" }).click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "another tab or device" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Destination", { exact: true })).toHaveValue(
+    "Vienna",
+  );
+  await page.getByRole("button", { name: "Load latest brief" }).click();
+  await page.getByText("Your trip brief", { exact: true }).click();
+  await expect(page.getByLabel("Destination", { exact: true })).toHaveValue(
+    "Rome",
+  );
+});

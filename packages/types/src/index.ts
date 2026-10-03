@@ -354,6 +354,9 @@ export interface AIGenerationError {
 // =============================================================================
 
 export interface SearchInput {
+  adults?: number;
+  children?: number;
+  interests?: string[];
   destination: string;
   startDate: string;
   endDate: string;

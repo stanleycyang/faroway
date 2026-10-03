@@ -193,6 +193,8 @@ export async function runOrchestratorAgent(
 **Destination:** ${input.destination}
 **Dates:** ${input.startDate} to ${input.endDate} (${nights} nights)
 **Travelers:** ${input.travelers} people, ${input.travelerType || "general"} travel
+**Party composition:** ${input.adults == null ? "Not specified" : `${input.adults} adults and ${input.children ?? 0} children`}
+**Interests:** ${(input.interests ?? []).join(", ") || "Not specified"}
 **Vibes:** ${vibes.join(", ")}
 **Budget:** ${input.budget || "moderate"}${originInfo}
 
@@ -296,7 +298,7 @@ export function buildFallbackSearchPlan(input: SearchInput): SearchPlan {
       categories: vibes,
       pacePreference: "moderate",
       mustSee: [],
-      interests: vibeKeywords.slice(0, 10),
+      interests: [...(input.interests ?? []), ...vibeKeywords].slice(0, 20),
     },
     diningCriteria: {
       cuisineTypes: ["local"],

@@ -57,6 +57,7 @@ function createQueryChain(getResult: () => QueryResult | undefined) {
     "limit",
     "order",
     "single",
+    "maybeSingle",
   ];
   methods.forEach((m) => {
     chain[m] = vi.fn(() => chain);
@@ -82,7 +83,12 @@ function createQueryChain(getResult: () => QueryResult | undefined) {
 const tripsChain = createQueryChain(() => mockTripReturn);
 const itinerariesChain = createQueryChain(() => mockItineraryReturn);
 
+let mockRpcResult: QueryResult | null = null;
+const mockRpc = vi.fn(() =>
+  createQueryChain(() => mockRpcResult ?? mockTripReturn),
+);
 const mockSupabase = {
+  rpc: mockRpc,
   auth: {
     getUser: vi.fn(() => mockAuthReturn),
   },
@@ -264,14 +270,95 @@ describe("GET /api/trips/[id]", () => {
 describe("PATCH /api/trips/[id]", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRpcResult = null;
+    mockTripReturn = { data: mockTrip, error: null };
     mockAuthReturn = { data: { user: mockUser }, error: null };
   });
 
+  it("requires a loaded revision instead of silently overwriting a newer brief", async () => {
+    expect(
+      (
+        await PATCH(
+          makeRequest("PATCH", "/api/trips/trip-1", { destination: "Osaka" }),
+          makeParams("trip-1"),
+        )
+      ).status,
+    ).toBe(428);
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
+  it.each(["generating", "stale", "lost-race"])(
+    "rejects %s saves without overwriting the active brief",
+    async (state) => {
+      mockTripReturn = {
+        data: {
+          ...mockTrip,
+          status: state === "generating" ? "generating" : "draft",
+        },
+        error: null,
+      };
+      if (state === "lost-race") mockRpcResult = { data: null, error: null };
+      const response = await PATCH(
+        makeRequest("PATCH", "/api/trips/trip-1", {
+          destination: "Osaka",
+          expectedUpdatedAt:
+            state === "stale" ? "2025-01-01T00:00:00Z" : mockTrip.updated_at,
+        }),
+        makeParams("trip-1"),
+      );
+      expect(response.status).toBe(409);
+      if (state !== "lost-race") expect(mockRpc).not.toHaveBeenCalled();
+    },
+  );
+  it("keeps the creation request hash and unrelated preferences while saving validated fields", async () => {
+    mockTripReturn = {
+      data: {
+        ...mockTrip,
+        preferences: { creationRequestHash: "original", originCity: "London" },
+      },
+      error: null,
+    };
+    const response = await PATCH(
+      makeRequest("PATCH", "/api/trips/trip-1", {
+        expectedUpdatedAt: mockTrip.updated_at,
+        preferences: { interests: ["art"] },
+      }),
+      makeParams("trip-1"),
+    );
+    expect(response.status).toBe(200);
+    expect(mockRpc).toHaveBeenCalledWith(
+      "update_trip_brief",
+      expect.objectContaining({
+        p_changes: expect.objectContaining({
+          preferences: {
+            creationRequestHash: "original",
+            originCity: "London",
+            interests: ["art"],
+          },
+        }),
+      }),
+    );
+  });
+  it("rejects traveler composition that does not match the party size", async () => {
+    expect(
+      (
+        await PATCH(
+          makeRequest("PATCH", "/api/trips/trip-1", {
+            expectedUpdatedAt: mockTrip.updated_at,
+            travelers: 2,
+            preferences: { adults: 2, children: 1 },
+          }),
+          makeParams("trip-1"),
+        )
+      ).status,
+    ).toBe(400);
+    expect(mockRpc).not.toHaveBeenCalled();
+  });
   it("updates trip fields", async () => {
     const updatedTrip = { ...mockTrip, destination: "Osaka" };
-    mockTripReturn = { data: updatedTrip, error: null };
+    mockRpcResult = { data: updatedTrip, error: null };
 
     const req = makeRequest("PATCH", "/api/trips/trip-1", {
+      expectedUpdatedAt: mockTrip.updated_at,
       destination: "Osaka",
     });
     const res = await PATCH(req, makeParams("trip-1"));
@@ -283,6 +370,7 @@ describe("PATCH /api/trips/[id]", () => {
 
   it("returns 400 for invalid input", async () => {
     const req = makeRequest("PATCH", "/api/trips/trip-1", {
+      expectedUpdatedAt: mockTrip.updated_at,
       unknown_field: "bad",
     });
     const res = await PATCH(req, makeParams("trip-1"));
@@ -292,6 +380,7 @@ describe("PATCH /api/trips/[id]", () => {
 
   it("rejects client-controlled generation state transitions", async () => {
     const req = makeRequest("PATCH", "/api/trips/trip-1", {
+      expectedUpdatedAt: mockTrip.updated_at,
       status: "planned",
     });
     const res = await PATCH(req, makeParams("trip-1"));
@@ -302,6 +391,7 @@ describe("PATCH /api/trips/[id]", () => {
   it("validates an end-only update against the stored start date", async () => {
     mockTripReturn = { data: mockTrip, error: null };
     const req = makeRequest("PATCH", "/api/trips/trip-1", {
+      expectedUpdatedAt: mockTrip.updated_at,
       end_date: "2026-03-31",
     });
     const res = await PATCH(req, makeParams("trip-1"));
@@ -316,6 +406,7 @@ describe("PATCH /api/trips/[id]", () => {
     };
 
     const req = makeRequest("PATCH", "/api/trips/trip-1", {
+      expectedUpdatedAt: mockTrip.updated_at,
       destination: "Osaka",
     });
     const res = await PATCH(req, makeParams("trip-1"));

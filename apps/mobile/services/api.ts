@@ -259,11 +259,12 @@ export async function createTrip(trip: {
 
 export async function updateTrip(
   id: string,
-  updates: Partial<Trip>
+  updates: Partial<Trip>,
+  expectedUpdatedAt?: string
 ): Promise<ApiResponse<{ trip: Trip }>> {
   return apiFetch<{ trip: Trip }>(`/api/trips/${encodeURIComponent(id)}`, {
     method: 'PATCH',
-    body: JSON.stringify(updates),
+    body: JSON.stringify({ ...updates, expectedUpdatedAt }),
   });
 }
 

@@ -53,7 +53,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     const { data: trip, error: tripError } = await adminClient
       .from("trips")
       .select(
-        "id, destination, start_date, end_date, status, travelers, budget_tier, vibes, interests, dietary_restrictions, mobility_needs, user_id, search_id, preferences",
+        "id, destination, start_date, end_date, status, travelers, budget_tier, vibes, interests, dietary_restrictions, mobility_needs, user_id, search_id, preferences, updated_at",
       )
       .eq("id", tripId)
       .eq("user_id", userId)
@@ -177,7 +177,8 @@ export async function POST(request: NextRequest, { params }: Params) {
       })
       .eq("id", tripId)
       .eq("user_id", userId)
-      .eq("status", trip.status);
+      .eq("status", trip.status)
+      .eq("updated_at", trip.updated_at);
     claim = trip.search_id
       ? claim.eq("search_id", trip.search_id)
       : claim.is("search_id", null);
@@ -249,6 +250,15 @@ export async function POST(request: NextRequest, { params }: Params) {
           startDate: trip.start_date,
           endDate: trip.end_date,
           travelers: trip.travelers || 2,
+          adults:
+            typeof tripPreferences.adults === "number"
+              ? tripPreferences.adults
+              : undefined,
+          children:
+            typeof tripPreferences.children === "number"
+              ? tripPreferences.children
+              : undefined,
+          interests: normalizeStringArray(tripPreferences.interests, 20, 50),
           travelerType,
           vibes,
           budget: trip.budget_tier || "moderate",
