@@ -4,6 +4,7 @@ import concurrent.futures
 import subprocess
 import time
 import uuid
+import json
 
 root = Path(__file__).resolve().parents[1]
 name = "faroway-fence-" + uuid.uuid4().hex[:10]
@@ -150,6 +151,58 @@ try:
         assert sql('SET ROLE service_role; ' + handoff.replace('checkout-test', 'checkout-late')) == 'f'
         assert sql('SELECT count(*) FROM affiliate_clicks;') == '1'
         print("PASS atomic checkout publication rejects changed brief, replay and late provider results")
+
+    plan_migration = root / "supabase/migrations/20261003007000_revision_safe_plan_edits.sql"
+    if plan_migration.exists():
+        sql("CREATE SCHEMA auth; CREATE FUNCTION auth.uid() RETURNS UUID LANGUAGE sql STABLE AS $$ SELECT current_setting('request.jwt.claim.sub',TRUE)::UUID $$; GRANT USAGE ON SCHEMA auth TO authenticated;")
+        sql(plan_migration.read_text()); sql(plan_migration.read_text())
+        sql(f"UPDATE trips SET status='generating',search_id='{a}' WHERE id='{trip}';")
+        initial_days = [{"dayNumber":1,"date":"2099-06-01","morning":{"activities":[{"id":"walk","name":"Walk"}]},"afternoon":{"activities":[{"id":"museum","name":"Museum"}]}}]
+        payload = json.dumps({"days":initial_days,"overview":"Plan to edit"})
+        assert sql(f"SET ROLE service_role; SELECT apply_trip_generation_update('{trip}','{a}','planned','{payload}');") == 't'
+        sql(f"SET ROLE service_role; UPDATE itineraries SET days='[]' WHERE trip_id='{trip}';",ok=False)
+        sql(f"GRANT SELECT,UPDATE,DELETE ON itineraries TO authenticated;")
+        sql(auth + f"UPDATE itineraries SET days='[]' WHERE trip_id='{trip}';",ok=False)
+        days = json.loads(sql(f"SELECT stamp_plan_items('{trip}',days) FROM itineraries WHERE trip_id='{trip}';"))
+        first = days[0]['morning']['activities'][0]['planItemId']; second = days[0]['afternoon']['activities'][0]['planItemId']
+        def edit_command(action, item=first, other_item=None):
+            result = {'requestId':str(uuid.uuid4()),'expectedUpdatedAt':sql(f"SELECT updated_at FROM trips WHERE id='{trip}';"),'expectedPlanRevision':sql(f"SELECT plan_revision_id FROM trips WHERE id='{trip}';") or None,'action':action,'itemId':item}
+            if other_item: result['otherItemId']=other_item
+            return result
+        def edit(command, snapshot, locks):
+            return json.loads(sql(f"SET ROLE service_role; SELECT edit_trip_plan('{trip}','{owner}','{json.dumps(command)}','{json.dumps(snapshot)}',ARRAY{json.dumps(locks).replace(chr(34),chr(39))}::TEXT[]);"))
+        lock_command = edit_command('lock')
+        assert edit(lock_command,days,[first])['state']=='applied'
+        assert edit(lock_command,days,[first])['state']=='replayed'
+        assert sql("SELECT count(*) FROM trip_plan_revisions;")=='2'
+        swap_command = edit_command('swap',first,second)
+        swapped=json.loads(json.dumps(days)); swapped[0]['morning']['activities'][0],swapped[0]['afternoon']['activities'][0]=swapped[0]['afternoon']['activities'][0],swapped[0]['morning']['activities'][0]
+        swapped[0]['morning']['activities'][0]['timeOfDay']='morning'; swapped[0]['afternoon']['activities'][0]['timeOfDay']='afternoon'
+        swapped[0].update({'title':'Day 1','summary':'Schedule updated. Check travel times and opening hours.','tips':[]})
+        assert edit(swap_command,swapped,[first])['state']=='conflict'
+        assert edit(edit_command('unlock'),days,[])['state']=='applied'
+        assert edit(swap_command,swapped,[])['state']=='conflict' # stale parent
+        swap_command=edit_command('swap',first,second)
+        assert edit(swap_command,swapped,[])['state']=='applied'
+        assert sql(f"SELECT days->0->'morning'->'activities'->0->>'name' FROM itineraries WHERE trip_id='{trip}';")=='Museum'
+        assert sql(f"SELECT count(*) FROM trip_plan_revisions WHERE days->0->'morning'->'activities'->0->>'name'='Walk';")=='3'
+        sql("UPDATE trip_plan_revisions SET days='[]';",ok=False)
+        sql(auth + "SELECT count(*) FROM trip_plan_revisions;",ok=False)
+        race1=edit_command('lock',first); race2=edit_command('lock',second)
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            jobs=[pool.submit(edit,race1,swapped,[first]),pool.submit(edit,race2,swapped,[second])]
+            assert sorted(job.result()['state'] for job in jobs)==['applied','conflict']
+        sql(auth + f"SELECT edit_trip_plan('{trip}','{owner}','{{}}','[]','{{}}');",ok=False)
+        sql(auth + f"UPDATE trips SET plan_revision_id=gen_random_uuid() WHERE id='{trip}';",ok=False)
+        sql(f"SET ROLE service_role; UPDATE trips SET plan_revision_id=gen_random_uuid() WHERE id='{trip}';",ok=False)
+        stale_command=edit_command('lock')
+        version=sql(f"SELECT updated_at FROM trips WHERE id='{trip}';")
+        sql(f"SET ROLE service_role; SELECT id FROM update_trip_brief('{trip}','{owner}','{version}','{{\"destination\":\"Oslo\"}}');")
+        assert edit(stale_command,swapped,[first])['state']=='conflict'
+        sql(f"UPDATE trips SET status='generating',search_id='{b}' WHERE id='{trip}';")
+        assert sql(f"SET ROLE service_role; SELECT apply_trip_generation_update('{trip}','{b}','planned','{payload}');")=='t'
+        assert sql(f"SELECT plan_revision_id IS NULL FROM trips WHERE id='{trip}';")=='t'
+        print("PASS immutable plan history, server-only writes, locked swaps, exact replay, stale parents/briefs and new generation lineage")
 
 finally:
     subprocess.run(["docker", "rm", "-f", name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

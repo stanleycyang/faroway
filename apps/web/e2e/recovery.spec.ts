@@ -522,3 +522,120 @@ test("untouched legacy brief preserves its revision and public link", async ({
     preferences: { travelerType: "couple" },
   });
 });
+
+test("locks favorites and reviews a swap before publishing a new plan", async ({
+  page,
+  request,
+}) => {
+  await request.post("http://127.0.0.1:4401/fixture/trip", {
+    data: {
+      ...baseTrip,
+      is_shared: true,
+      share_token: "old-plan-link",
+      itineraries: {
+        ...baseTrip.itineraries,
+        days: [
+          {
+            ...baseTrip.itineraries.days[0],
+            morning: {
+              activities: [{ id: "walk", name: "Quiet walk" }],
+              meals: [],
+            },
+            afternoon: {
+              activities: [{ id: "museum", name: "Art museum" }],
+              meals: [],
+            },
+          },
+        ],
+      },
+    },
+  });
+  await page.goto(`/trips/${id}`);
+  const editor = page
+    .locator("details")
+    .filter({ has: page.getByText("Make this plan yours", { exact: false }) })
+    .first();
+  await editor.locator("summary").first().click();
+  await editor
+    .getByRole("button", { name: "Lock Quiet walk", exact: true })
+    .click();
+  await expect
+    .poll(
+      async () =>
+        (
+          await (
+            await request.get("http://127.0.0.1:4401/fixture/state")
+          ).json()
+        ).planHistory.length,
+    )
+    .toBe(1);
+  await expect(editor).not.toHaveAttribute("open");
+  await editor.locator("summary").first().click();
+  await expect(
+    editor.getByRole("button", { name: "Unlock Quiet walk", exact: true }),
+  ).toBeVisible();
+  await expect(editor.getByRole("button", { name: "Review swap" })).toHaveCount(
+    0,
+  );
+  await editor
+    .getByRole("button", { name: "Unlock Quiet walk", exact: true })
+    .click();
+  await expect
+    .poll(
+      async () =>
+        (
+          await (
+            await request.get("http://127.0.0.1:4401/fixture/state")
+          ).json()
+        ).planHistory.length,
+    )
+    .toBe(2);
+  await expect(editor).not.toHaveAttribute("open");
+  await editor.locator("summary").first().click();
+  await editor
+    .getByLabel("First activity", { exact: true })
+    .selectOption({ label: "Quiet walk · 2099-06-01 morning" });
+  await editor
+    .getByLabel("Swap with", { exact: true })
+    .selectOption({ label: "Art museum · 2099-06-01 afternoon" });
+  await editor
+    .getByRole("button", { name: "Review swap", exact: true })
+    .click();
+  await expect(
+    editor.getByRole("region", { name: "Review activity swap" }),
+  ).toContainText("Quiet walk moves to 2099-06-01, afternoon");
+  expect(
+    (await (await request.get("http://127.0.0.1:4401/fixture/state")).json())
+      .planHistory.length,
+  ).toBe(2);
+  await page.screenshot({
+    path: test.info().outputPath("review-plan-swap.png"),
+    fullPage: true,
+  });
+  let loseReply = true;
+  await page.route("**/api/trips/*/plan", async (route) => {
+    if (route.request().method() === "POST" && loseReply) {
+      loseReply = false;
+      await route.fetch();
+      await route.abort();
+    } else await route.continue();
+  });
+  await editor.getByRole("button", { name: "Confirm swap" }).click();
+  await expect(
+    editor.getByText("A plan change needs confirmation.", { exact: false }),
+  ).toBeVisible();
+  await page.reload();
+  await editor.locator("summary").first().click();
+  await editor.getByRole("button", { name: "Check saved plan" }).click();
+  await expect(
+    editor.getByRole("button", { name: "Retry saved change" }),
+  ).toHaveCount(0);
+  const state = await (
+    await request.get("http://127.0.0.1:4401/fixture/state")
+  ).json();
+  expect(state.planHistory).toHaveLength(3);
+  expect(state.trips[0].itineraries.days[0].morning.activities[0].name).toBe(
+    "Art museum",
+  );
+  expect(state.trips[0].is_shared).toBe(false);
+});

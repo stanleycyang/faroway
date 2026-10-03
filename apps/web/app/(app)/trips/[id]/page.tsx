@@ -33,6 +33,7 @@ export default async function TripDetailPage({ params }: TripDetailPageProps) {
       tripId={id}
       initialData={initialData}
       initialShareUrl={initialShareUrl}
+      planEditingEnabled={process.env.FAROWAY_PLAN_EDITING_ENABLED === "true"}
     />
   );
 }

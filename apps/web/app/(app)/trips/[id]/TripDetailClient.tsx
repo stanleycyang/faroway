@@ -1,5 +1,6 @@
 "use client";
 
+import { PlanEditor } from "@/components/trips/PlanEditor";
 import { TripBriefEditor } from "@/components/trips/TripBriefEditor";
 
 import React, {
@@ -96,12 +97,14 @@ interface TripDetailClientProps {
   tripId: string;
   initialData: TripResponse;
   initialShareUrl: string | null;
+  planEditingEnabled?: boolean;
 }
 
 export function TripDetailClient({
   tripId,
   initialData,
   initialShareUrl,
+  planEditingEnabled = false,
 }: TripDetailClientProps) {
   const router = useRouter();
 
@@ -610,7 +613,7 @@ export function TripDetailClient({
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         <TripBriefEditor
-          key={trip.updated_at}
+          key={`brief:${trip.updated_at}`}
           trip={trip}
           onReload={() => {
             void fetchTrip();
@@ -737,6 +740,20 @@ export function TripDetailClient({
             </p>
           </div>
         )}
+
+        {planEditingEnabled &&
+          itinerary &&
+          !isGenerating &&
+          !trip.preferences?.planNeedsRefresh && (
+            <PlanEditor
+              key={`plan:${trip.updated_at}`}
+              tripId={trip.id}
+              userId={trip.user_id}
+              onSaved={() => {
+                void fetchTrip();
+              }}
+            />
+          )}
 
         {/* Recommended Hotel — fades in from stream or DB */}
         {displayTopHotel && !trip.preferences?.planNeedsRefresh && (

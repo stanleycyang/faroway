@@ -29,6 +29,7 @@ let trips = new Map();
 let inserts = 0;
 let searches = new Map();
 let generationUpdates = [];
+let planHistory = [];
 const user = {
   id: "00000000-0000-4000-8000-000000000001",
   email: "fixture@example.invalid",
@@ -52,6 +53,7 @@ const server = createServer(async (req, res) => {
     inserts = 0;
     searches = new Map();
     generationUpdates = [];
+    planHistory = [];
     return send({});
   }
   if (url.pathname === "/fixture/state")
@@ -60,6 +62,7 @@ const server = createServer(async (req, res) => {
       inserts,
       searches: [...searches.values()],
       generationUpdates,
+      planHistory,
     });
   if (url.pathname === "/fixture/trip") {
     trips.set(body.id, body);
@@ -92,6 +95,58 @@ const server = createServer(async (req, res) => {
   }
   if (url.pathname === "/rest/v1/rpc/consume_rate_limit")
     return send([{ allowed: true, remaining: 19, reset_in_ms: 60000 }]);
+  if (url.pathname === "/rest/v1/trip_plan_revisions") {
+    return send(
+      planHistory.filter(
+        (row) =>
+          url.searchParams.get("trip_id") === `eq.${row.trip_id}` &&
+          url.searchParams.get("user_id") === `eq.${row.user_id}`,
+      ),
+    );
+  }
+  if (url.pathname === "/rest/v1/rpc/edit_trip_plan") {
+    const trip = trips.get(body.p_trip_id);
+    const command = body.p_command;
+    const existing = planHistory.find(
+      (row) => row.request_id === command.requestId,
+    );
+    if (existing)
+      return send({
+        state:
+          existing.id === trip?.plan_revision_id &&
+          JSON.stringify(existing.command) === JSON.stringify(command)
+            ? "replayed"
+            : "conflict",
+      });
+    if (
+      !trip ||
+      trip.user_id !== body.p_user_id ||
+      trip.updated_at !== command.expectedUpdatedAt ||
+      (trip.plan_revision_id ?? null) !== command.expectedPlanRevision ||
+      trip.status !== "planned"
+    )
+      return send({ state: "conflict" });
+    trip.itineraries.days = body.p_days;
+    trip.updated_at = new Date().toISOString();
+    trip.plan_revision_id = randomUUID();
+    trip.is_shared = false;
+    trip.share_token = null;
+    if (command.action === "swap") trip.itineraries.overview = "";
+    planHistory.unshift({
+      id: trip.plan_revision_id,
+      trip_id: trip.id,
+      user_id: trip.user_id,
+      request_id: command.requestId,
+      locked_items: body.p_locked,
+      created_at: trip.updated_at,
+      command,
+    });
+    return send({
+      state: "applied",
+      planRevision: trip.plan_revision_id,
+      revision: trip.updated_at,
+    });
+  }
   if (url.pathname === "/rest/v1/rpc/apply_trip_generation_update") {
     generationUpdates.push(body);
     // This fixture models an attempt whose claim has been superseded. The
@@ -236,6 +291,7 @@ const fixtureEnv = {
   PATH: process.env.PATH,
   HOME: path.join(fixtureRoot, "home"),
   NODE_ENV: "production",
+  FAROWAY_PLAN_EDITING_ENABLED: "true",
   IP_HASH_SALT: "isolated-fixture-rate-limit-salt",
   NODE_OPTIONS: "--max-old-space-size=3072",
   WORKFLOW_TARGET_WORLD: "local",
