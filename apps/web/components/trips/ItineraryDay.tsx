@@ -1,5 +1,7 @@
 "use client";
 
+import { formatEstimate, knownEstimate } from "@/lib/trips/budget";
+
 import React, { useState } from "react";
 import {
   ChevronDown,
@@ -30,6 +32,8 @@ interface HotelInfo {
   name: string;
   starRating?: number;
   pricePerNight?: number;
+  currency?: string;
+  priceStatus?: string;
   amenities?: string[];
   affiliateUrl?: string;
   image?: string;
@@ -222,14 +226,22 @@ export function ItineraryDay({
                     )}
                   </div>
                   <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
-                    {hotel.pricePerNight && (
-                      <span className="font-bold text-gray-800 text-sm">
-                        ${hotel.pricePerNight}
-                        <span className="font-normal text-gray-500">
-                          /night
-                        </span>
+                    <span className="font-bold text-gray-800 text-sm">
+                      {formatEstimate(
+                        hotel.pricePerNight,
+                        hotel.currency,
+                        hotel.priceStatus,
+                      )}
+                      <span className="font-normal text-gray-500">
+                        {knownEstimate(
+                          hotel.pricePerNight,
+                          hotel.currency,
+                          hotel.priceStatus,
+                        )
+                          ? " estimated/night"
+                          : ""}
                       </span>
-                    )}
+                    </span>
                     {hotel.amenities && hotel.amenities.length > 0 && (
                       <span className="truncate text-gray-500">
                         {hotel.amenities.slice(0, 3).join(" · ")}

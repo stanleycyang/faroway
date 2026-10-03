@@ -50,7 +50,6 @@ export function SharedTripView({
         startDate={startDate}
         endDate={endDate}
         travelers={travelers}
-        totalCost={itinerary?.totalEstimatedCost}
         backUrl="/"
         showActions={false}
       />
@@ -87,6 +86,13 @@ export function SharedTripView({
           </div>
         )}
 
+        {itinerary?.days?.length ? (
+          <p className="mb-4 text-sm text-gray-600">
+            Prices shown are planning estimates. Confirm current prices, party
+            size, taxes, fees and cancellation terms with each provider. No
+            booking is confirmed by this plan.
+          </p>
+        ) : null}
         {/* Day-by-Day Itinerary */}
         {itinerary?.days && itinerary.days.length > 0 && (
           <div className="space-y-5">
@@ -103,7 +109,6 @@ export function SharedTripView({
                 morning={day.morning}
                 afternoon={day.afternoon}
                 evening={day.evening}
-                totalEstimatedCost={day.totalEstimatedCost}
                 tips={day.tips}
                 defaultExpanded={true}
               />
