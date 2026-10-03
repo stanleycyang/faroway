@@ -135,34 +135,44 @@ contractual, privacy, security, or applicable compliance obligations.
 
 ## Places API (New) and enrichment follow-up
 
-Destination autocomplete now calls `places.googleapis.com/v1/places:autocomplete`
-with a city-only filter, server-side `X-Goog-Api-Key`, explicit field mask,
-no-store fetch, and bounded timeout. Details use `GET /v1/places/{placeId}`
-with `displayName,location,attributions`; neither endpoint requests ratings,
-reviews, photos, or opening hours. Response bodies retain the existing destination
-selection contract. The compact prediction dropdown displays Google Maps text
-attribution and separates Google predictions from the local fallback list.
-Missing credentials and upstream failures leave local destination selection usable.
+Destination autocomplete calls `places.googleapis.com/v1/places:autocomplete`
+with a city-only filter, server key headers, an explicit field mask and no-store,
+bounded requests. Google predictions are now a separate live reference area.
+Planning selection only accepts Faroway catalog facts or the traveler's own text;
+clicking a Google reference never changes a planning input. Only catalog coordinates
+reach the existing Leaflet preview. Native autocomplete uses the independent catalog
+and explicit traveler input, and no longer calls Google's legacy endpoint.
 
-The existing `GOOGLE_PLACES_API_KEY` must belong to a project with Places API
-(New) enabled, billing and appropriate API restrictions/quotas. A key being present
-does not prove any of those conditions. No live credential validation or settings
-changes were performed for this change. Autocomplete currently uses per-request
-billing; session-token billing optimization remains a follow-up.
+Create drafts carry an explicit independent source marker and restore through a
+whitelist. Legacy unmarked selections are not restored unless their ID/name match
+the existing independent catalog. Dates and other trip preferences still restore.
+Existing saved trips/offline copies are not modified or certified by this change.
 
-Google activity/dining enrichment previously entered AI aggregation and persisted
-search/trip records. That ingestion is now closed, including the old exported
-search helpers. A future transient attributed display must establish permitted
-storage and model-processing behavior before restoring it. This is deliberately
-not a migration of Google venue content into a new saved cache. Existing stored
-content is not rewritten or deleted by this change.
+`/api/places/venues` serves user-triggered Text Search (New), capped at three results,
+and lazy Place Details (New). `/api/places/details` is a compatibility alias to the
+new display-only response; it no longer returns coordinates. Search requests only
+ID, display name, address, Maps link and third-party attributions; details add business
+status. These are Pro fields, not a free service. No enterprise ratings, hours, phone,
+website, photos, reviews or AI summaries are requested. The panel makes no booking or
+availability claims and includes Maps/provider attribution and source links.
 
-Destination selection still passes a selected city name and coordinates into the
-existing create-trip flow, including resumable drafts. Review that storage and
-model-input path against the applicable agreement before production activation;
-this patch does not certify it. The place-ID storage exception is not a blanket
-exception for names, coordinates, predictions, photos, or reviews. Terms/privacy
-pages and all eventual provider/author attributions also need launch review.
+The web trip page offers an independent live venue explorer. Responses stay in
+component memory only while displayed, use no-store HTTP/fetch, clear on close/tab
+hide, and are blocked from Sentry replay. No trip save callback, database write,
+model invocation, persistent client cache, or cross-provider enrichment is wired to
+the display. Detail requests use only the selected place ID. No Google data is
+rendered on a non-Google map. Google activity/dining ingestion in the AI pipeline
+remains closed. No Google data, including IDs, needs to be saved in this scope;
+future saved references must persist IDs only and fetch display content afresh.
+
+The existing `GOOGLE_PLACES_API_KEY` must belong to a project with Places API (New)
+enabled, billing and appropriate API restrictions/quotas. Missing configuration,
+provider failure and rate limiting leave planning usable. Key presence, billing,
+actual cost and live access have not been tested. Autocomplete is per-request;
+Text Search and Place Details use their Pro SKUs with no paid-field expansion.
+Public terms/privacy and final provider presentation still need launch review.
+The independent-source separation is an engineering boundary, not a legal opinion
+about every applicable Google agreement or independently supplied destination fact.
 
 Fallback and Tavily enrichment no longer invent stars; search relevance scores
 are not customer ratings. Unpriced ideas carry `priceStatus: "unknown"` through
@@ -178,7 +188,7 @@ References checked October 3, 2026:
 - [Place Details (New)](https://developers.google.com/maps/documentation/places/web-service/place-details)
 - [Places policies and attribution](https://developers.google.com/maps/documentation/places/web-service/policies)
 
-Regression coverage uses mocked providers only: API contracts, key placement,
+Regression coverage uses mocked providers only: independent destination/draft boundaries, lazy display/no-save browser flows, API contracts, key placement,
 field masks, missing configuration, upstream errors, malformed coordinates,
 blocked enrichment ingestion, honest price/rating presentation, and desktop/mobile
 browser selection, attribution, and local fallback. Viator approval gates remain

@@ -77,8 +77,8 @@ describe("Places API proxy routes", () => {
     expect(res.status).toBe(429);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(mocks.checkRateLimitAsync).toHaveBeenCalledWith(
-      "places-details:127.0.0.1",
-      { maxRequests: 120, windowMs: 60_000, failClosed: true },
+      "places-venues:127.0.0.1",
+      { maxRequests: 30, windowMs: 60_000, failClosed: true },
     );
   });
 
@@ -134,11 +134,12 @@ describe("Places API proxy routes", () => {
     });
   });
 
-  it("maps Details New coordinates and attribution without exposing provider payloads", async () => {
+  it("returns transient Details New fields while omitting coordinates and reviews", async () => {
     const { GET } = await importDetailsRoute();
     fetchMock.mockResolvedValueOnce(
       new Response(
         JSON.stringify({
+          id: "abc123",
           displayName: { text: "Tokyo" },
           location: { latitude: 35.6, longitude: 139.7 },
           attributions: [
@@ -150,19 +151,22 @@ describe("Places API proxy routes", () => {
     );
     const res = await GET(makeRequest("/api/places/details?placeId=abc123"));
     expect(await res.json()).toEqual({
-      name: "Tokyo",
-      lat: 35.6,
-      lng: 139.7,
-      attributions: [
-        { provider: "Example", providerUri: "https://example.com" },
-      ],
+      place: {
+        placeId: "abc123",
+        name: "Tokyo",
+        attributions: [
+          { provider: "Example", providerUri: "https://example.com/" },
+        ],
+      },
     });
-    expect(res.headers.get("cache-control")).toBe("private, no-store");
+    expect(res.headers.get("cache-control")).toBe(
+      "private, no-store, max-age=0",
+    );
     expect(fetchMock.mock.calls[0][0]).toBe(
       "https://places.googleapis.com/v1/places/abc123",
     );
     expect(fetchMock.mock.calls[0][1].headers["X-Goog-FieldMask"]).toBe(
-      "displayName,location,attributions",
+      "id,displayName,formattedAddress,googleMapsUri,attributions,businessStatus",
     );
   });
 
@@ -202,7 +206,7 @@ describe("Places API proxy routes", () => {
     expect(await res.json()).toEqual({ predictions: [] });
   });
 
-  it("rejects malformed details coordinates", async () => {
+  it("rejects malformed details without a display name", async () => {
     const { GET } = await importDetailsRoute();
     fetchMock.mockResolvedValueOnce(
       new Response(

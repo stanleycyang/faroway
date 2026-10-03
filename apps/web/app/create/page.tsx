@@ -25,6 +25,10 @@ import {
   type PlaceResult,
 } from "@/components/create/PlacesAutocompleteInput";
 import { DatePicker } from "@/components/trips/DatePicker";
+import {
+  plannerDestination,
+  type PlannerDestination,
+} from "@/lib/planner-destination";
 import { saveCreateDraft, takeCreateDraft } from "@/lib/create-draft";
 
 // Dynamic import — Leaflet must not run on the server
@@ -108,13 +112,7 @@ const vibes = [
   { id: "photography", label: "Photography", emoji: "📸" },
 ];
 
-interface SelectedPlace {
-  name: string;
-  lat: number;
-  lng: number;
-  placeId: string;
-  isRecommended: boolean;
-}
+type SelectedPlace = PlannerDestination;
 
 interface StoredCreateDraft {
   selectedPlace: SelectedPlace;
@@ -169,7 +167,7 @@ export default function CreateTripPage() {
         : undefined;
       const restoredEnd = draft.endDate ? new Date(draft.endDate) : undefined;
 
-      if (draft.selectedPlace?.name) setSelectedPlace(draft.selectedPlace);
+      setSelectedPlace(plannerDestination(draft.selectedPlace, destinations));
       if (restoredStart && !Number.isNaN(restoredStart.getTime())) {
         setStartDate(restoredStart);
       }
@@ -205,6 +203,7 @@ export default function CreateTripPage() {
             lng: recommended.lng,
             placeId: recommended.id,
             isRecommended: true,
+            source: "catalog",
           }
         : {
             name: requestedDestination
@@ -214,6 +213,7 @@ export default function CreateTripPage() {
             lng: 0,
             placeId: "",
             isRecommended: false,
+            source: "user",
           },
     );
   }, []);
@@ -241,21 +241,24 @@ export default function CreateTripPage() {
       lng: dest.lng,
       placeId: dest.id,
       isRecommended: true,
+      source: "catalog",
     });
     setShowDestinations(false);
   };
 
   const handleSelectFromAutocomplete = (place: PlaceResult) => {
-    const recommended = destinations.find(
-      (d) => d.name.toLowerCase() === place.name.toLowerCase(),
+    const entry =
+      place.source === "catalog"
+        ? destinations.find((d) => d.name === place.name)
+        : undefined;
+    setSelectedPlace(
+      plannerDestination(
+        entry
+          ? { source: "catalog", name: entry.name, placeId: entry.id }
+          : { source: "user", name: place.name },
+        destinations,
+      ),
     );
-    setSelectedPlace({
-      name: place.name,
-      lat: place.lat,
-      lng: place.lng,
-      placeId: place.placeId,
-      isRecommended: !!recommended,
-    });
     setShowDestinations(false);
   };
 
