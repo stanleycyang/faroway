@@ -4,6 +4,9 @@ import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 import {
   existsSync,
+  mkdirSync,
+  readdirSync,
+  realpathSync,
   cpSync,
   mkdtempSync,
   symlinkSync,
@@ -87,6 +90,8 @@ const server = createServer(async (req, res) => {
     });
     return send(trip);
   }
+  if (url.pathname === "/rest/v1/rpc/consume_rate_limit")
+    return send([{ allowed: true, remaining: 19, reset_in_ms: 60000 }]);
   if (url.pathname === "/rest/v1/rpc/apply_trip_generation_update") {
     generationUpdates.push(body);
     // This fixture models an attempt whose claim has been superseded. The
@@ -183,11 +188,39 @@ cpSync(
   path.join(repoRoot, "package.json"),
   path.join(fixtureRoot, "package.json"),
 );
-symlinkSync(
-  path.join(repoRoot, "node_modules"),
-  path.join(fixtureRoot, "node_modules"),
-  "dir",
-);
+// Preserve workspace-local versions (web uses Zod 3 while the hoisted tree
+// also contains Zod 4), and resolve @faroway imports to this source snapshot.
+const dependencies = realpathSync(path.join(repoRoot, "node_modules"));
+const fixtureModules = path.join(fixtureRoot, "node_modules");
+mkdirSync(fixtureModules);
+for (const entry of readdirSync(dependencies)) {
+  if (entry !== "@faroway")
+    symlinkSync(
+      path.join(dependencies, entry),
+      path.join(fixtureModules, entry),
+    );
+}
+mkdirSync(path.join(fixtureModules, "@faroway"));
+for (const entry of readdirSync(path.join(dependencies, "@faroway"))) {
+  const installed = realpathSync(path.join(dependencies, "@faroway", entry));
+  const isWeb = entry === "web";
+  const snapshot = isWeb
+    ? path.join(fixtureRoot, "apps/web")
+    : path.join(fixtureRoot, "packages", entry);
+  symlinkSync(
+    existsSync(snapshot) ? snapshot : installed,
+    path.join(fixtureModules, "@faroway", entry),
+  );
+  if (
+    existsSync(snapshot) &&
+    existsSync(path.join(installed, "node_modules"))
+  ) {
+    symlinkSync(
+      path.join(installed, "node_modules"),
+      path.join(snapshot, "node_modules"),
+    );
+  }
+}
 const fixtureConfig = path.join(fixtureRoot, "apps/web/next.config.ts");
 writeFileSync(
   fixtureConfig,
@@ -196,39 +229,48 @@ writeFileSync(
     'remotePatterns: [{ protocol: "http", hostname: "127.0.0.1", port: "4401", pathname: "/storage/v1/object/public/**" },',
   ),
 );
-const child = spawn(
-  process.execPath,
-  [
-    path.join(repoRoot, "node_modules/next/dist/bin/next"),
-    "dev",
-    "--webpack",
-    "--hostname",
-    "127.0.0.1",
-    "--port",
-    "4400",
-  ],
-  {
-    stdio: "inherit",
-    detached: true,
-    cwd: path.join(fixtureRoot, "apps/web"),
-    env: {
-      PATH: process.env.PATH,
-      HOME: "/tmp/faroway-fixture-home",
-      NODE_ENV: "development",
-      WORKFLOW_TARGET_WORLD: "local",
-      WORKFLOW_LOCAL_BASE_URL: "http://127.0.0.1:4400",
-      NEXT_TELEMETRY_DISABLED: "1",
-      NEXT_FONT_GOOGLE_MOCKED_RESPONSES: path.join(
-        fixtureRoot,
-        "apps/web/e2e/fixtures/fonts.cjs",
-      ),
-      NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:4401",
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: "fixture-anon-key",
-      SUPABASE_SERVICE_ROLE_KEY: "fixture-service-key",
-      NEXT_PUBLIC_BASE_URL: "http://127.0.0.1:4400",
-    },
-  },
+// Compile before serving: dev-server rebuilds/restarts can interrupt the local
+// Workflow queue and read partially rewritten manifests. Exercise the same
+// compiled handlers without HMR, with bounded heap and build concurrency.
+const fixtureEnv = {
+  PATH: process.env.PATH,
+  HOME: path.join(fixtureRoot, "home"),
+  NODE_ENV: "production",
+  IP_HASH_SALT: "isolated-fixture-rate-limit-salt",
+  NODE_OPTIONS: "--max-old-space-size=3072",
+  WORKFLOW_TARGET_WORLD: "local",
+  WORKFLOW_LOCAL_DATA_DIR: path.join(fixtureRoot, "workflow-data"),
+  WORKFLOW_LOCAL_BASE_URL: "http://127.0.0.1:4400",
+  NEXT_TELEMETRY_DISABLED: "1",
+  NEXT_FONT_GOOGLE_MOCKED_RESPONSES: path.join(
+    fixtureRoot,
+    "apps/web/e2e/fixtures/fonts.cjs",
+  ),
+  NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:4401",
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: "fixture-anon-key",
+  SUPABASE_SERVICE_ROLE_KEY: "fixture-service-key",
+  NEXT_PUBLIC_BASE_URL: "http://127.0.0.1:4400",
+};
+writeFileSync(
+  fixtureConfig,
+  readFileSync(fixtureConfig, "utf8").replace(
+    "const nextConfig: NextConfig = {",
+    "const nextConfig: NextConfig = { experimental: { cpus: 2 },",
+  ),
 );
+const launch = (args) =>
+  spawn(
+    process.execPath,
+    [path.join(repoRoot, "node_modules/next/dist/bin/next"), ...args],
+    {
+      stdio: "inherit",
+      detached: true,
+      cwd: path.join(fixtureRoot, "apps/web"),
+      env: fixtureEnv,
+    },
+  );
+let child = launch(["build", "--webpack"]);
+let building = true;
 let stopping = false;
 let forceStop;
 const killChildGroup = (signal) => {
@@ -257,9 +299,16 @@ for (const signal of ["SIGTERM", "SIGINT"])
       process.exit(0);
     }, 2_000);
   });
-child.on("exit", (code) => {
+const onExit = (code, signal) => {
+  if (building && !stopping && code === 0 && !signal) {
+    building = false;
+    child = launch(["start", "--hostname", "127.0.0.1", "--port", "4400"]);
+    child.on("exit", onExit);
+    return;
+  }
   if (forceStop) clearTimeout(forceStop);
   killChildGroup("SIGKILL");
   cleanup();
-  process.exit(stopping ? 0 : code || 0);
-});
+  process.exit(stopping ? 0 : code || 1);
+};
+child.on("exit", onExit);
