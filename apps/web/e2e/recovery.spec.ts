@@ -263,6 +263,15 @@ test("compiled workflow records its identity and stops a superseded attempt befo
   request,
   context,
 }) => {
+  test.setTimeout(240_000);
+  // Cold compilation on shared CI runners can exceed the workflow polling
+  // budget. Compile the real internal handlers before dispatching the run.
+  await context.request.get("/.well-known/workflow/v1/flow", {
+    timeout: 120_000,
+  });
+  await context.request.get("/.well-known/workflow/v1/step", {
+    timeout: 120_000,
+  });
   await request.post("http://127.0.0.1:4401/fixture/trip", {
     data: { ...baseTrip, status: "draft", search_id: null, itineraries: null },
   });
@@ -276,11 +285,16 @@ test("compiled workflow records its identity and stops a superseded attempt befo
         const state = await (
           await request.get("http://127.0.0.1:4401/fixture/state")
         ).json();
-        return state.searches[0]?.status;
+        return {
+          status: state.searches[0]?.status,
+          updates: state.generationUpdates.map(
+            (call: { p_state: string }) => call.p_state,
+          ),
+        };
       },
-      { timeout: 90000 },
+      { timeout: 120000 },
     )
-    .toBe("error");
+    .toEqual({ status: "error", updates: ["progress", "failed"] });
   const state = await (
     await request.get("http://127.0.0.1:4401/fixture/state")
   ).json();
