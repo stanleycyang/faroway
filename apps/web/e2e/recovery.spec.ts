@@ -593,10 +593,10 @@ test("locks favorites and reviews a swap before publishing a new plan", async ({
   await expect(editor).not.toHaveAttribute("open");
   await editor.locator("summary").first().click();
   await editor
-    .getByLabel("First activity", { exact: true })
+    .getByRole("combobox", { name: "First activity", exact: true })
     .selectOption({ label: "Quiet walk · 2099-06-01 morning" });
   await editor
-    .getByLabel("Swap with", { exact: true })
+    .getByRole("combobox", { name: "Swap with", exact: true })
     .selectOption({ label: "Art museum · 2099-06-01 afternoon" });
   await editor
     .getByRole("button", { name: "Review swap", exact: true })
