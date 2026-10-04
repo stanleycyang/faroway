@@ -1,3 +1,4 @@
+import { regenerateTrip } from '../services/planningService';
 import { buildTripUpdatePayload } from '../lib/offline/trip-payload';
 import { useState, useCallback } from 'react';
 import { API_BASE_URL, getAuthHeaders } from '../lib/supabase';
@@ -521,19 +522,7 @@ export function useTrips() {
     setError(null);
 
     try {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/api/trips/${tripId}/generate`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({}),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate itinerary');
-      }
-
-      const data = await response.json();
-      return data;
+      return await regenerateTrip(tripId);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
       console.error('Error generating itinerary:', err);

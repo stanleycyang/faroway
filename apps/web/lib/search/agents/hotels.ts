@@ -1,3 +1,7 @@
+import {
+  PLANNING_MODEL,
+  PLANNING_PROVIDER_OPTIONS,
+} from "@/lib/ai/planning-disclosure";
 /**
  * Hotels Agent
  * Searches for accommodation options from affiliate partners
@@ -39,7 +43,7 @@ const aiGateway = process.env.AI_GATEWAY_API_KEY
   ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
   : defaultGateway;
 
-const MODEL = "google/gemini-3-flash";
+const MODEL = PLANNING_MODEL;
 
 const HotelSchema = z.object({
   name: z.string(),
@@ -374,6 +378,7 @@ For vibes like:
       (abortSignal) =>
         generateObject<HotelListResult>({
           model: aiGateway(MODEL),
+          providerOptions: PLANNING_PROVIDER_OPTIONS,
           system: SYSTEM_PROMPT,
           prompt,
           schema: HotelListSchema,

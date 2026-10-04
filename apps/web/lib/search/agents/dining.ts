@@ -1,3 +1,7 @@
+import {
+  PLANNING_MODEL,
+  PLANNING_PROVIDER_OPTIONS,
+} from "@/lib/ai/planning-disclosure";
 /**
  * Dining Agent
  * Searches for restaurant recommendations
@@ -26,7 +30,7 @@ const aiGateway = process.env.AI_GATEWAY_API_KEY
   ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
   : defaultGateway;
 
-const MODEL = "google/gemini-3-flash";
+const MODEL = PLANNING_MODEL;
 
 const DiningSchema = z.object({
   name: z.string(),
@@ -132,6 +136,7 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
       (abortSignal) =>
         generateObject<DiningListResult>({
           model: aiGateway(MODEL),
+          providerOptions: PLANNING_PROVIDER_OPTIONS,
           system: SYSTEM_PROMPT,
           prompt,
           schema: DiningListSchema,

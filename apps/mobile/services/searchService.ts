@@ -1,3 +1,4 @@
+import { withPlanningConsent } from '../lib/planningConsent';
 /**
  * Faroway Search Service
  * Connects mobile app to the backend search API
@@ -32,19 +33,17 @@ export async function startSearch(
   input: SearchInput,
   authToken?: string
 ): Promise<StartSearchResponse> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  };
-
-  if (authToken) {
-    headers['Authorization'] = `Bearer ${authToken}`;
-  }
-
-  const response = await fetch(`${API_BASE_URL}/api/search/start`, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify(input),
-  });
+  // A caller-supplied token cannot transfer consent to a different account.
+  void authToken;
+  const body = JSON.stringify(input);
+  const response = await withPlanningConsent(async ({ headers, signal }) =>
+    fetch(`${API_BASE_URL}/api/search/start`, {
+      method: 'POST',
+      headers: await headers(),
+      signal,
+      body,
+    })
+  );
 
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: 'Unknown error' }));

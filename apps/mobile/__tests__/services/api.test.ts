@@ -1,3 +1,4 @@
+jest.mock('../../lib/planningConsent', () => ({ withPlanningConsent: jest.fn() }));
 // Mock expo-constants before importing api module
 jest.mock('expo-constants', () => ({
   __esModule: true,

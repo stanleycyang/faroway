@@ -1,3 +1,15 @@
+jest.mock('../../constants/api', () => ({ API_BASE_URL: 'http://localhost:3000' }));
+jest.mock('../../lib/planningConsent', () => ({
+  withPlanningConsent: jest.fn(async (dispatch) =>
+    dispatch({
+      headers: async () => ({
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer current-session',
+      }),
+      signal: new AbortController().signal,
+    })
+  ),
+}));
 jest.mock('../../lib/supabase', () => ({
   API_BASE_URL: 'http://localhost:3000',
   getAuthHeaders: jest.fn(() => Promise.resolve({ Authorization: 'Bearer token' })),

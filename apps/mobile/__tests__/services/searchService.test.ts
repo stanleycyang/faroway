@@ -1,3 +1,14 @@
+jest.mock('../../lib/planningConsent', () => ({
+  withPlanningConsent: jest.fn(async (dispatch) =>
+    dispatch({
+      headers: async () => ({
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer current-session',
+      }),
+      signal: new AbortController().signal,
+    })
+  ),
+}));
 jest.mock('expo-constants', () => ({
   __esModule: true,
   default: { expoConfig: {} },
@@ -53,7 +64,7 @@ describe('startSearch', () => {
     expect(options.method).toBe('POST');
   });
 
-  it('includes auth token when provided', async () => {
+  it('uses consent-bound session auth instead of a caller-supplied token', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: () => Promise.resolve({ searchId: 's-1', status: 'started' }),
@@ -71,7 +82,7 @@ describe('startSearch', () => {
     );
 
     const headers = mockFetch.mock.calls[0][1].headers;
-    expect(headers['Authorization']).toBe('Bearer my-token');
+    expect(headers['Authorization']).toBe('Bearer current-session');
   });
 
   it('throws on non-ok response', async () => {

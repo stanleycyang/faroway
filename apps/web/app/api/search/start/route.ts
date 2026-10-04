@@ -1,3 +1,4 @@
+import { isStalePlanningDisclosure } from "@/lib/ai/planning-disclosure";
 import { planningPauseResponse } from "@/lib/trips/planning-pause";
 /**
  * POST /api/search/start
@@ -42,6 +43,11 @@ export async function POST(request: NextRequest) {
   try {
     const auth = await requireUserIdFromRequest(request);
     if (auth instanceof NextResponse) return auth;
+    if (isStalePlanningDisclosure(request.headers))
+      return NextResponse.json(
+        { error: "AI sharing details changed. Review them and try again." },
+        { status: 409 },
+      );
     const userId = auth.userId;
     const paused = planningPauseResponse();
     if (paused) return paused;

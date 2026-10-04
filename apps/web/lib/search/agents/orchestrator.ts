@@ -1,3 +1,7 @@
+import {
+  PLANNING_MODEL,
+  PLANNING_PROVIDER_OPTIONS,
+} from "@/lib/ai/planning-disclosure";
 /**
  * Orchestrator Agent
  * Analyzes user input and creates a search plan for other agents
@@ -21,7 +25,7 @@ const aiGateway = process.env.AI_GATEWAY_API_KEY
   ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
   : defaultGateway;
 
-const MODEL = "google/gemini-3-flash";
+const MODEL = PLANNING_MODEL;
 
 const SearchPlanSchema = z.object({
   destination: z.string(),
@@ -217,6 +221,7 @@ Create a detailed search plan with:
       (abortSignal) =>
         generateObject<SearchPlan>({
           model: aiGateway(MODEL),
+          providerOptions: PLANNING_PROVIDER_OPTIONS,
           system: SYSTEM_PROMPT,
           prompt,
           schema: SearchPlanSchema,

@@ -1,3 +1,4 @@
+import { createAndStartTrip } from '../services/planningService';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { API_BASE_URL } from '../constants/api';
 import { getAuthHeaders } from '../lib/supabase';
@@ -126,13 +127,6 @@ export function extractApiErrorMessage(body: string, fallback: string): string {
 async function readApiErrorMessage(response: Response, fallback: string): Promise<string> {
   const text = await response.text().catch(() => '');
   return extractApiErrorMessage(text, fallback);
-}
-
-function getTripIdFromCreateResponse(payload: unknown): string | null {
-  if (!isObjectRecord(payload)) return null;
-  const trip = payload.trip;
-  if (!isObjectRecord(trip)) return null;
-  return typeof trip.id === 'string' && trip.id.trim() ? trip.id : null;
 }
 
 export function getIncompleteStreamMessage(message: string): string {
@@ -408,47 +402,14 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
         // If no tripId, create a trip and trigger generation first.
         // All three endpoints below now require Supabase bearer auth.
         if (!streamTripId && input) {
-          const createHeaders = await getAuthHeaders();
-          const tripRes = await fetch(`${API_BASE_URL}/api/trips`, {
-            method: 'POST',
-            headers: createHeaders,
-            body: JSON.stringify({
-              destination: input.destination,
-              start_date: input.startDate,
-              end_date: input.endDate,
-              travelers: input.travelers,
-              budget: input.budget || 'moderate',
-              preferences: {
-                travelerType: input.travelerType,
-                originCity: input.originCity,
-                originAirport: input.originAirport,
-                vibes: input.vibes,
-              },
-            }),
-            signal: abortController.signal,
-          });
-
-          if (!tripRes.ok) {
-            throw new Error(await readApiErrorMessage(tripRes, 'Failed to create trip'));
-          }
-
-          const createPayload = await tripRes.json().catch(() => null);
-          const createdTripId = getTripIdFromCreateResponse(createPayload);
-          if (!createdTripId) {
-            throw new Error('Trip was created, but the server response was incomplete.');
-          }
-          streamTripId = createdTripId;
-
-          const genHeaders = await getAuthHeaders();
-          const genRes = await fetch(`${API_BASE_URL}/api/trips/${streamTripId}/generate`, {
-            method: 'POST',
-            headers: genHeaders,
-            signal: abortController.signal,
-          });
-
-          if (!genRes.ok && genRes.status !== 409) {
-            throw new Error(await readApiErrorMessage(genRes, 'Failed to start generation'));
-          }
+          streamTripId = await createAndStartTrip(
+            input,
+            (id) => {
+              // Preserve the receipt even if generation dispatch is interrupted.
+              setState((prev) => ({ ...prev, tripId: id }));
+            },
+            abortController.signal
+          );
         }
 
         if (!streamTripId) {
