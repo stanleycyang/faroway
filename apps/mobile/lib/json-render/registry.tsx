@@ -1,16 +1,8 @@
 import React from 'react';
-import {
-  View,
-  Text as RNText,
-  Image,
-  StyleSheet,
-  TouchableOpacity,
-  Linking,
-  Platform,
-} from 'react-native';
+import { View, Text as RNText, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import * as WebBrowser from 'expo-web-browser';
+import { reviewSavedTripBooking } from '../savedTripBooking';
 import { colors, borderRadius, shadows, spacing, typography } from '../../constants/theme';
 import { z } from 'zod';
 import {
@@ -33,21 +25,8 @@ import {
 // Helper Functions
 // =============================================================================
 
-const openURL = async (url: string) => {
-  try {
-    if (Platform.OS === 'web') {
-      window.open(url, '_blank');
-    } else {
-      await WebBrowser.openBrowserAsync(url, {
-        presentationStyle: WebBrowser.WebBrowserPresentationStyle.AUTOMATIC,
-        controlsColor: colors.primary[600],
-      });
-    }
-  } catch (error) {
-    console.error('Failed to open URL:', error);
-    Linking.openURL(url);
-  }
-};
+// Streaming cards have no owned, saved revision. Never open their generated URLs.
+const openURL = (_url: string) => reviewSavedTripBooking(undefined, async () => undefined);
 
 // =============================================================================
 // TripSummary Component

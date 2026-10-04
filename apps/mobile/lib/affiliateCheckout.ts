@@ -111,7 +111,12 @@ export function confirmAndOpenAffiliateLink(
     {
       text: copy.confirmLabel,
       onPress: () => {
-        void openAffiliateLink(trackingParams, openUrl);
+        void openAffiliateLink(trackingParams, openUrl).catch(() => {
+          Alert.alert(
+            'Review your saved trip',
+            'Open your saved trip on Faroway to review current booking options.'
+          );
+        });
       },
     },
   ]);

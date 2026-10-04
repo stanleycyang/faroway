@@ -345,12 +345,9 @@ export async function openAffiliateLink(
   params: TrackClickParams,
   openUrl: (url: string) => void
 ): Promise<void> {
-  const result = await trackAffiliateClick(params);
-
-  if (result.data?.redirectUrl) {
-    openUrl(result.data.redirectUrl);
-  } else {
-    // Fallback to original URL if tracking fails
-    openUrl(params.affiliateUrl);
-  }
+  // Legacy click tracking accepts client-supplied URLs. It is not a checkout
+  // authorization or a revision check, even when the tracking request succeeds.
+  void params;
+  void openUrl;
+  throw new Error('Review booking options from your saved trip on Faroway.');
 }
