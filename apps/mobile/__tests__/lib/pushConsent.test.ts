@@ -182,6 +182,21 @@ it('does not claim old-build logout cleanup succeeded when token lookup is offli
   expect(send).not.toHaveBeenCalled();
 });
 
+it('never replaces the owner after legacy token discovery', async () => {
+  let checks = 0;
+  const original = { id: 'a', accessToken: 'a-session' };
+  const switched = { id: 'b', accessToken: 'b-session' };
+  manager = new PushConsent({
+    identity: async () => (++checks <= 3 ? original : switched),
+    read: async () => null,
+    write: async () => {},
+    acquire,
+    send,
+  });
+  await expect(manager.disable()).rejects.toThrow('account changed');
+  expect(send).not.toHaveBeenCalled();
+});
+
 it('rotates a restored token only under its existing account consent', async () => {
   await manager.enable();
   send.mockClear();
