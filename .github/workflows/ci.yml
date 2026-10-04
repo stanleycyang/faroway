@@ -67,6 +67,10 @@ jobs:
       - name: Run tests
         run: bun run test
 
+      - name: Test privileged database boundaries in disposable PostgreSQL
+        run: python3 scripts/test-database-access-boundaries.py
+        timeout-minutes: 5
+
       - name: Install checkout test browser
         run: bunx playwright install --with-deps chromium
         working-directory: apps/web
