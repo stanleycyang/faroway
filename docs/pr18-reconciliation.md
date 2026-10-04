@@ -2,9 +2,11 @@
 
 Read-only audit on 2026-10-04 of [PR18](https://github.com/stanleycyang/faroway/pull/18), head **`f5c6cfab26928debd5f379952b2de867f6e9d24a`**, against reviewed PR33 runtime **`68e1b247db430b8650bdeeb74a24364f6beba2c2`**. PR18 is not an ancestor of PR33. Its current [PR CI](https://github.com/stanleycyang/faroway/actions/runs/33145538734) failed Format check; tests/build were skipped. No branch was changed, merged or closed, and no behavior on PR18 was executed during this audit.
 
-## Necessary selective salvage
+## Completed selective salvage
 
-The current [mobile generation screen](../apps/mobile/app/create/generating.tsx) line 859 sets `hotels: streaming.topHotel ? 10 : 0`; [stream handling](../apps/mobile/hooks/useStreamingItinerary.ts) discards the reported hotel count. PR18 tracks `hotelsCount` and uses it in the loader. This is an actual unaddressed truthfulness defect, not a reason to merge the whole stale branch. Port a narrow validated count (or suppress unknown count), with regression cases for absent, malformed, zero and real counts, then re-review the new runtime head.
+At the audited baseline, the [mobile generation screen](../apps/mobile/app/create/generating.tsx) set `hotels: streaming.topHotel ? 10 : 0`, while [stream handling](../apps/mobile/hooks/useStreamingItinerary.ts) discarded the reported count. PR18 contained the useful idea of preserving `hotelsCount`.
+
+The selective fix is now in runtime **`78827b70aeb2ee17c22c9ffc8eae61b56d86b9a7`** (identical file tree to implementation commit `407ad25d96a95df703176f1b342f5403ffbd70f6`). It validates reported hotel/activity/dining/transport counts and bounded progress. Adjacent preview fallbacks also fabricated $200/night, four stars and a 4.5 rating; these are removed. Prices require a positive finite amount and supplied currency and are labeled estimates. Unknown values remain unavailable. Tests cover absent, malformed, zero and real counts plus rendered previews. Local 255 mobile tests, typecheck, lint and formatting pass; exact-head CI and focused review are tracked in [release-verification.md](release-verification.md). No unrelated PR18 modules or automatic-generation flow were transplanted.
 
 ## Useful improvements still absent
 

@@ -1,13 +1,14 @@
 # Faroway release verification and cutover checklist
 
-Verified on 2026-10-04. The runtime candidate is **`68e1b247db430b8650bdeeb74a24364f6beba2c2`** in [draft PR33](https://github.com/stanleycyang/faroway/pull/33). The parent relayed independent clearance of this exact SHA for SQL/concurrency and mobile consent/recovery/push. This document is a separate documentation-only change; it does not change that reviewed runtime identity or authorize deployment.
+Verified on 2026-10-04. The runtime candidate is **`78827b70aeb2ee17c22c9ffc8eae61b56d86b9a7`** in [draft PR33](https://github.com/stanleycyang/faroway/pull/33). The parent relayed independent clearance of baseline `68e1b247db430b8650bdeeb74a24364f6beba2c2` for SQL/concurrency and mobile consent/recovery/push. The later, focused generation-truthfulness fix requires its own review. Runtime `78827b7` has the identical file tree to `407ad25d96a95df703176f1b342f5403ffbd70f6`; the final merge only reconciles already-landed main history. This document is a separate documentation-only change; it does not change that reviewed runtime identity or authorize deployment.
 
 ## Verified evidence
 
-[Push CI 37237140588](https://github.com/stanleycyang/faroway/actions/runs/37237140588) and [PR CI 37237143510](https://github.com/stanleycyang/faroway/actions/runs/37237143510) both passed quality checks, tests and web build at the runtime SHA above:
+[Push CI 37239036926](https://github.com/stanleycyang/faroway/actions/runs/37239036926) and [PR CI 37239041219](https://github.com/stanleycyang/faroway/actions/runs/37239041219) both passed quality checks, tests and web build at the runtime SHA above:
 
-- 604 web, 226 mobile and 103 shared-package tests; 28 hosted-checkout and 28 full-app desktop/mobile recovery browser checks.
+- 604 web, 255 mobile and 103 shared-package tests; 28 hosted-checkout and 28 full-app desktop/mobile recovery browser checks.
 - Disposable PostgreSQL tests: generation and privilege boundaries, frozen bootstrap rehearsal, deletion/write serialization, service-role parent-first itinerary cascade, two-device recovery proof retention/expiry/cap, token ownership/order and dispatch claims.
+- Generation fact tests reject absent/malformed counts and progress, preserve actual reported counts, and render no invented nightly price, stars or rating. Known nightly amounts retain their supplied currency and an estimate label.
 - Mobile delayed-removal tests preserve another account's writes, including partial removal failure. Category grants require submitted current consent; local recovery proof survives failed cleanup. Ordered push revocation persists when registration is disabled.
 
 These use synthetic browser/provider responses and disposable databases. They do not establish actual supplier prices, booking/commission confirmation, live model quality, Apple revocation, OS push delivery or signed-device readiness.
@@ -16,7 +17,7 @@ These use synthetic browser/provider responses and disposable databases. They do
 
 PR20 and PR24 were independently cleared and merged with merge commits. Main is **`5a8eadf06f596f81e8bcc0f4d90d3e58518c83eb`**. Vercel production deployment `dpl_2RFYSiq4ynRTt67okcCFkBTUwfyV` is READY and assigned to `faroway.ai` / `www.faroway.ai`. Aggregate telemetry showed successful function responses and no logged 5xx/error/fatal entries in the checked 30-minute window. Direct HTTP verification remains blocked by this environment's 403 restriction; no bypass was used. No production SQL was executed, so PR24's live database privilege changes are **not applied** by its code merge.
 
-No blocker remains reported within the two independent review scopes. A separate [PR18 read-only audit](pr18-reconciliation.md) found an unresolved truthfulness defect outside those scopes: the mobile loader invents a count of ten hotels from one preview. Selectively fix that before calling the full candidate production-ready. Other PR18 UX improvements are recorded there; PR18 remains open, unmerged and unmodified. PR33 is not yet safe to merge into auto-deploy main: generation, brief editing and checkout have schema prerequisites even with optional feature flags off.
+The previously reported safety findings are cleared within the two independent review scopes. The separate [PR18 read-only audit](pr18-reconciliation.md) identified fabricated generation facts. The focused increment now removes the invented ten-hotel count and adjacent $200/night, four-star and 4.5-score defaults, validates reported counts/progress, and adds rendered-output regressions. Focused independent review remains pending; full product readiness is not claimed from the earlier scoped clearance. PR18 remains open and unmerged, with its other useful UX changes explicitly recorded. PR33 is not yet safe to merge into auto-deploy main: generation, brief editing and checkout have schema prerequisites even with optional feature flags off.
 
 ## Minimum staging approvals
 
