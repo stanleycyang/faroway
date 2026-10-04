@@ -1,3 +1,4 @@
+import { devicePushConsent } from '../services/pushConsentService';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as Sentry from '@sentry/react-native';
 import { supabase } from '../lib/supabase';
@@ -195,6 +196,7 @@ export function useAuth() {
 
   // Sign in with Google (native SDK)
   const signInWithGoogle = useCallback(async (options?: GoogleSignInOptions) => {
+    await devicePushConsent.disable();
     try {
       setAuthState((prev) => ({ ...prev, loading: true }));
 
@@ -268,6 +270,7 @@ export function useAuth() {
       throw new Error(APPLE_SIGN_IN_UNAVAILABLE_MESSAGE);
     }
 
+    await devicePushConsent.disable();
     try {
       setAuthState((prev) => ({ ...prev, loading: true }));
 
@@ -311,6 +314,8 @@ export function useAuth() {
 
   // Sign out
   const signOut = useCallback(async () => {
+    // Complete device-token removal before invalidating its authenticated session.
+    await devicePushConsent.disable();
     setAuthState((prev) => ({ ...prev, loading: true }));
 
     const { error } = await supabase.auth.signOut();
@@ -338,6 +343,7 @@ export function useAuth() {
   const deleteAccount = useCallback(async () => {
     setAuthState((prev) => ({ ...prev, loading: true }));
 
+    const deletingUserId = useUserStore.getState().user?.id;
     const result = await deleteAccountRequest();
 
     if (result.error) {
@@ -345,6 +351,8 @@ export function useAuth() {
       throw new Error(result.error);
     }
 
+    if (deletingUserId)
+      await devicePushConsent.forgetDeletedAccount(deletingUserId).catch(() => {});
     try {
       await supabase.auth.signOut();
     } catch {

@@ -15,7 +15,6 @@ import {
 import { logger } from '../lib/logger';
 
 interface UseNotificationsOptions {
-  autoRequestPermissions?: boolean;
   onNotificationReceived?: (notification: unknown, data: NotificationData | null) => void;
   onNotificationResponse?: (data: NotificationData | null) => void;
 }
@@ -29,11 +28,7 @@ interface UseNotificationsReturn {
 }
 
 export function useNotifications(options: UseNotificationsOptions = {}): UseNotificationsReturn {
-  const {
-    autoRequestPermissions = false,
-    onNotificationReceived,
-    onNotificationResponse,
-  } = options;
+  const { onNotificationReceived, onNotificationResponse } = options;
 
   const router = useRouter();
   const [pushToken, setPushToken] = useState<string | null>(null);
@@ -106,10 +101,6 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
         }
         handleNotificationNavigation(data);
       }
-
-      if (autoRequestPermissions) {
-        await registerForNotifications();
-      }
     };
 
     initialize();
@@ -118,7 +109,7 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
       mounted = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoRequestPermissions]);
+  }, []);
 
   // Set up notification listeners
   useEffect(() => {

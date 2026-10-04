@@ -56,6 +56,7 @@ export interface NotificationData {
 export interface PushTokenResult {
   token: string | null;
   error?: string;
+  permissionDenied?: boolean;
 }
 
 // Re-export types that consumers need (use `any` for the lazy-loaded module's types)
@@ -106,19 +107,35 @@ export async function checkNotificationPermissions(): Promise<boolean> {
 // Push Token Registration
 // ============================================
 
-export async function registerForPushNotificationsAsync(): Promise<PushTokenResult> {
+export async function registerForPushNotificationsAsync(
+  options: { requestPermission?: boolean } = {}
+): Promise<PushTokenResult> {
   if (!Device.isDevice) {
-    return { token: null, error: 'Push notifications require a physical device' };
+    return {
+      token: null,
+      error: 'Push notifications require a physical device',
+      permissionDenied: true,
+    };
   }
 
   const Notifications = await getNotifications();
   if (!Notifications) {
-    return { token: null, error: 'Notifications not available in this environment' };
+    return {
+      token: null,
+      error: 'Notifications not available in this environment',
+      permissionDenied: true,
+    };
   }
 
-  const permissionGranted = await requestNotificationPermissions();
+  const permissionGranted = options.requestPermission
+    ? await requestNotificationPermissions()
+    : await checkNotificationPermissions();
   if (!permissionGranted) {
-    return { token: null, error: 'Notification permissions not granted' };
+    return {
+      token: null,
+      error: 'Notification permissions not granted. Enable them in device Settings to continue.',
+      permissionDenied: true,
+    };
   }
 
   try {
