@@ -13,8 +13,8 @@ export async function dispatchItineraryReady(tripId: string, searchId: string) {
     process.env.PUSH_CONSENT_V2_ENABLED !== "true"
   )
     return "disabled";
-  const db = getSupabase();
   try {
+    const db = getSupabase();
     const claim = await db.rpc("claim_itinerary_push", {
       p_trip_id: tripId,
       p_search_id: searchId,

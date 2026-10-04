@@ -201,7 +201,14 @@ export async function planTripWorkflow(
       userId,
     });
 
-    if (tripId) await notifyItineraryReadyStep(tripId, searchId);
+    if (tripId) {
+      try {
+        await notifyItineraryReadyStep(tripId, searchId);
+      } catch {
+        // The plan is already saved. Optional notification/queue failure cannot
+        // turn a completed generation into an error or trigger replanning.
+      }
+    }
 
     return {
       searchId,
