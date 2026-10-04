@@ -120,10 +120,11 @@ export class PushConsent {
   disable() {
     return this.run(async () => {
       let record = await this.deps.read();
+      if (!record && !(await this.deps.identity())) return false;
+      const owner = await this.owner();
+      await this.recordFor(owner);
       if (!record) {
         // Recover registrations created by older builds, without an OS prompt.
-        if (!(await this.deps.identity())) return false;
-        const owner = await this.owner();
         const previous = await this.deps.acquire(false);
         await this.assertOwner(owner);
         if (!previous.token) {
@@ -132,8 +133,7 @@ export class PushConsent {
         }
         record = { userId: owner.id, token: previous.token, enabled: false };
       }
-      const owner = await this.owner();
-      await this.recordFor(owner);
+      await this.assertOwner(owner);
       await this.remove(record, owner);
       return false;
     });
