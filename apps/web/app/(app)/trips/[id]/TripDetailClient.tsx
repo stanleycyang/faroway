@@ -4,14 +4,12 @@ import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import Image from "next/image";
 import {
   Loader2,
   AlertCircle,
   MapPin,
   RefreshCw,
   Sparkles,
-  Star,
   ExternalLink,
   Shield,
   ChevronUp,
@@ -53,6 +51,11 @@ class DayErrorBoundary extends React.Component<
     return this.props.children;
   }
 }
+import {
+  FeaturedHotelCard,
+  type FeaturedHotel,
+} from "@/components/trips/FeaturedHotelCard";
+import { TripBudget } from "@/components/trips/TripBudget";
 import { TripHeader } from "@/components/trips/TripHeader";
 import { ItineraryDay } from "@/components/trips/ItineraryDay";
 import { ItineraryGenerationLoader } from "@/components/trips/ItineraryGenerationLoader";
@@ -70,6 +73,7 @@ import {
 import type { GeneratedItinerary } from "@/lib/ai/types";
 import type { Trip, TripResponse } from "@/lib/trips/load-trip";
 import type { TripDay } from "@faroway/types";
+import { summarizeBudget } from "@/lib/trips/budget";
 
 const ItineraryMap = dynamic(
   () =>
@@ -323,49 +327,17 @@ export function TripDetailClient({
     return count;
   }, [itinerary]);
 
-  // Compute budget breakdown
+  // Keep currencies separate; itinerary totals do not establish a party quote.
   const budgetBreakdown = useMemo(() => {
-    if (!itinerary?.days?.length) return null;
-
-    let accommodation = 0;
-    let activities = 0;
-    let dining = 0;
-    let transport = 0;
-
-    const nights = itinerary.days.length > 0 ? itinerary.days.length - 1 : 0;
-    if (topHotel?.pricePerNight) {
-      accommodation = topHotel.pricePerNight * nights;
-    }
-
-    for (const day of itinerary.days) {
-      if (day.transport?.price) {
-        transport += day.transport.price;
-      }
-      for (const slot of [day.morning, day.afternoon, day.evening]) {
-        if (!slot) continue;
-        if (Array.isArray(slot.activities)) {
-          for (const act of slot.activities) {
-            if (act?.estimatedCost?.amount)
-              activities += act.estimatedCost.amount;
-          }
-        }
-        const slotRecord = slot as unknown as Record<string, unknown>;
-        const mealsList = Array.isArray(slot.meals)
-          ? slot.meals
-          : slotRecord.meal
-            ? [slotRecord.meal as { estimatedCost?: { amount: number } }]
-            : [];
-        for (const meal of mealsList) {
-          if (meal?.estimatedCost?.amount) dining += meal.estimatedCost.amount;
-        }
-      }
-    }
-
-    const total = accommodation + activities + dining + transport;
-    if (total === 0) return null;
-
-    return { accommodation, activities, dining, transport, total };
-  }, [itinerary, topHotel]);
+    if (!itinerary?.days?.length || !trip) return null;
+    const nights = Math.max(
+      0,
+      Math.round(
+        (Date.parse(trip.end_date) - Date.parse(trip.start_date)) / 86400000,
+      ),
+    );
+    return summarizeBudget(itinerary.days, topHotel, nights, trip.travelers);
+  }, [itinerary, topHotel, trip]);
 
   // Trip length (days) from date range — used for nights estimate during generation / hotel card
   const skeletonDayCount = useMemo(() => {
@@ -413,22 +385,9 @@ export function TripDetailClient({
     }
     return totalStops;
   }, [displayDays]);
-  const readyScreenEstimatedCost = useMemo(() => {
-    const rawTotal = itinerary?.totalEstimatedCost ?? budgetBreakdown?.total;
-    if (typeof rawTotal === "number") return rawTotal;
-    if (
-      rawTotal &&
-      typeof rawTotal === "object" &&
-      "amount" in rawTotal &&
-      typeof rawTotal.amount === "number"
-    ) {
-      return rawTotal.amount;
-    }
-    return null;
-  }, [itinerary?.totalEstimatedCost, budgetBreakdown?.total]);
   const readyScreenDescription =
     itinerary?.overview ||
-    `We've drafted ${Math.max(1, skeletonDayCount)} days in ${trip?.destination || "your destination"}. Every stop is optional — swap, reorder, or ask Faroway to rework anything.`;
+    `We've drafted ${Math.max(1, skeletonDayCount)} days in ${trip?.destination || "your destination"}. Review your suggested stops and confirm current prices and availability before booking.`;
   const readyScreenHeroImage = displayTopHotel?.images?.[0];
 
   const showFullGenerationLoader =
@@ -521,7 +480,6 @@ export function TripDetailClient({
         description={readyScreenDescription}
         days={displayDays.length}
         stops={readyScreenStopsCount}
-        estimatedCost={readyScreenEstimatedCost}
         onOpenTrip={() => setShowReadyScreen(false)}
       />
     );
@@ -535,7 +493,6 @@ export function TripDetailClient({
         startDate={trip.start_date}
         endDate={trip.end_date}
         travelers={trip.travelers}
-        totalCost={itinerary?.totalEstimatedCost}
         status={tripStatus}
         onShare={handleShare}
       />
@@ -616,13 +573,13 @@ export function TripDetailClient({
           <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
             <FeaturedHotelCard
               hotel={displayTopHotel}
-              nights={
-                displayDays
-                  ? Math.max(0, displayDays.length - 1)
-                  : skeletonDayCount > 0
-                    ? skeletonDayCount - 1
-                    : 0
-              }
+              nights={Math.max(
+                0,
+                Math.round(
+                  (Date.parse(trip.end_date) - Date.parse(trip.start_date)) /
+                    86400000,
+                ),
+              )}
             />
           </div>
         )}
@@ -671,7 +628,6 @@ export function TripDetailClient({
                       morning={day.morning}
                       afternoon={day.afternoon}
                       evening={day.evening}
-                      totalEstimatedCost={day.totalEstimatedCost}
                       tips={day.tips}
                       defaultExpanded={true}
                       hotel={
@@ -680,6 +636,11 @@ export function TripDetailClient({
                               name: displayTopHotel.name,
                               starRating: displayTopHotel.starRating,
                               pricePerNight: displayTopHotel.pricePerNight,
+                              currency: displayTopHotel.currency,
+                              priceStatus:
+                                "priceStatus" in displayTopHotel
+                                  ? displayTopHotel.priceStatus
+                                  : undefined,
                               amenities: displayTopHotel.amenities,
                               affiliateUrl: displayTopHotel.affiliateUrl,
                               image: displayTopHotel.images?.[0],
@@ -709,9 +670,8 @@ export function TripDetailClient({
           <EmptyItinerary destination={trip.destination} />
         ) : null}
 
-        {/* Budget Summary */}
         {budgetBreakdown && (
-          <BudgetSummary breakdown={budgetBreakdown} currency="USD" />
+          <TripBudget budget={budgetBreakdown} travelers={trip.travelers} />
         )}
 
         {/* General Tips */}
@@ -849,301 +809,6 @@ export function TripDetailClient({
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// ── Featured Hotel Card ──────────────────────────────────────────────────────
-
-interface FeaturedHotel {
-  id?: string;
-  name: string;
-  images?: string[];
-  affiliateUrl?: string;
-  affiliatePartner?: string;
-  pricePerNight: number;
-  starRating?: number;
-  userRating?: number;
-  reviewCount?: number;
-  description?: string;
-  amenities?: string[];
-}
-
-function FeaturedHotelCard({
-  hotel,
-  nights,
-}: {
-  hotel: FeaturedHotel;
-  nights: number;
-}) {
-  const handleClick = () => {
-    if (!hotel.affiliateUrl) return;
-
-    fetch("/api/track/click", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        itemType: "hotel",
-        itemId: hotel.id || hotel.name,
-        itemName: hotel.name,
-        affiliatePartner: hotel.affiliatePartner || "booking",
-        affiliateUrl: hotel.affiliateUrl,
-        source: "itinerary",
-      }),
-    }).catch(() => {});
-
-    window.open(hotel.affiliateUrl, "_blank", "noopener,noreferrer");
-  };
-
-  return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6 group hover:shadow-lg transition-shadow">
-      {hotel.images?.[0] && (
-        <div className="relative h-56 sm:h-72 overflow-hidden">
-          <Image
-            src={hotel.images[0]}
-            alt={hotel.name}
-            fill
-            sizes="(max-width: 768px) 100vw, 33vw"
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
-            unoptimized
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-          <div className="absolute top-3 left-3 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full text-xs font-bold text-white flex items-center gap-1.5 shadow-lg">
-            <Sparkles className="w-3.5 h-3.5" />
-            Faroway Pick
-          </div>
-          {/* Price overlay on image */}
-          <div className="absolute bottom-4 right-4 text-right">
-            <div className="text-3xl font-black text-white drop-shadow-lg">
-              ${hotel.pricePerNight}
-            </div>
-            <div className="text-xs text-white/80 font-medium">per night</div>
-          </div>
-        </div>
-      )}
-      <div className="p-5 sm:p-6">
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <h3 className="font-black text-xl text-gray-900">{hotel.name}</h3>
-            <div className="flex items-center gap-2 mt-1.5">
-              {hotel.starRating && (
-                <span className="text-yellow-500 text-sm">
-                  {"★".repeat(Math.min(5, hotel.starRating))}
-                </span>
-              )}
-              {hotel.userRating && (
-                <span className="flex items-center gap-1 text-sm">
-                  <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
-                  <span className="font-bold text-gray-700">
-                    {hotel.userRating.toFixed(1)}
-                  </span>
-                  {hotel.reviewCount && (
-                    <span className="text-gray-400 text-xs">
-                      ({hotel.reviewCount.toLocaleString()} reviews)
-                    </span>
-                  )}
-                </span>
-              )}
-            </div>
-          </div>
-          {!hotel.images?.[0] && (
-            <div className="text-right flex-shrink-0">
-              <div className="text-2xl font-black text-gray-900">
-                ${hotel.pricePerNight}
-              </div>
-              <div className="text-xs text-gray-500">per night</div>
-            </div>
-          )}
-        </div>
-
-        {hotel.description && (
-          <p className="text-sm text-gray-600 mb-4 leading-relaxed line-clamp-2">
-            {hotel.description}
-          </p>
-        )}
-
-        {hotel.amenities && hotel.amenities.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-5">
-            {hotel.amenities.slice(0, 6).map((amenity: string, i: number) => (
-              <span
-                key={i}
-                className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs bg-gray-50 text-gray-600 font-medium border border-gray-100"
-              >
-                {amenity}
-              </span>
-            ))}
-          </div>
-        )}
-
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-gray-100">
-          <div className="text-sm text-gray-500">
-            {nights > 0 && (
-              <span>
-                Total:{" "}
-                <span className="font-black text-lg text-gray-900">
-                  ${hotel.pricePerNight * nights}
-                </span>{" "}
-                for {nights} night{nights !== 1 ? "s" : ""}
-              </span>
-            )}
-          </div>
-          {hotel.affiliateUrl && (
-            <button
-              onClick={handleClick}
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-sm hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg hover:shadow-blue-500/25 active:scale-[0.98]"
-            >
-              <Shield className="w-4 h-4" />
-              Check Availability & Prices
-              <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-            </button>
-          )}
-        </div>
-
-        {/* Trust signals */}
-        {hotel.affiliateUrl && (
-          <div className="flex items-center justify-center gap-4 mt-3 text-[11px] text-gray-500">
-            <span className="inline-flex items-center gap-1">
-              <svg
-                className="w-3 h-3 text-green-500"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Best price guarantee
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <svg
-                className="w-3 h-3 text-green-500"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              Free cancellation
-            </span>
-            <span className="inline-flex items-center gap-1">
-              <svg
-                className="w-3 h-3 text-green-500"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                  clipRule="evenodd"
-                />
-              </svg>
-              No hidden fees
-            </span>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Budget Summary Component ─────────────────────────────────────────────────
-
-function BudgetSummary({
-  breakdown,
-  currency,
-}: {
-  breakdown: {
-    accommodation: number;
-    activities: number;
-    dining: number;
-    transport: number;
-    total: number;
-  };
-  currency: string;
-}) {
-  const formatCost = (amount: number) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-
-  const categories = [
-    {
-      label: "Accommodation",
-      amount: breakdown.accommodation,
-      color: "bg-blue-500",
-      bgColor: "bg-blue-50 text-blue-700",
-      icon: "🏨",
-    },
-    {
-      label: "Activities & Tours",
-      amount: breakdown.activities,
-      color: "bg-emerald-500",
-      bgColor: "bg-emerald-50 text-emerald-700",
-      icon: "🎯",
-    },
-    {
-      label: "Dining",
-      amount: breakdown.dining,
-      color: "bg-orange-500",
-      bgColor: "bg-orange-50 text-orange-700",
-      icon: "🍽️",
-    },
-    {
-      label: "Transport",
-      amount: breakdown.transport,
-      color: "bg-sky-500",
-      bgColor: "bg-sky-50 text-sky-700",
-      icon: "✈️",
-    },
-  ].filter((c) => c.amount > 0);
-
-  return (
-    <div className="mt-6 bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-      <h3 className="font-bold text-gray-900 mb-5 text-lg">Budget Summary</h3>
-
-      {/* Stacked bar */}
-      <div className="h-4 rounded-full overflow-hidden flex mb-5 bg-gray-100">
-        {categories.map((cat) => (
-          <div
-            key={cat.label}
-            className={`${cat.color} transition-all first:rounded-l-full last:rounded-r-full`}
-            style={{ width: `${(cat.amount / breakdown.total) * 100}%` }}
-          />
-        ))}
-      </div>
-
-      {/* Category breakdown */}
-      <div className="space-y-3">
-        {categories.map((cat) => (
-          <div key={cat.label} className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className="text-lg">{cat.icon}</span>
-              <span className="text-sm text-gray-600 font-medium">
-                {cat.label}
-              </span>
-            </div>
-            <span className="text-sm font-bold text-gray-900">
-              {formatCost(cat.amount)}
-            </span>
-          </div>
-        ))}
-      </div>
-
-      <div className="mt-5 pt-5 border-t border-gray-100 flex items-center justify-between">
-        <span className="font-bold text-gray-900">Estimated Total</span>
-        <span className="text-2xl font-black text-gray-900">
-          {formatCost(breakdown.total)}
-        </span>
-      </div>
     </div>
   );
 }
