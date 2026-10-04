@@ -150,9 +150,7 @@ export async function updateUserProfile(updates: {
  * Caller is responsible for clearing local state and signing out.
  */
 export async function deleteAccount(): Promise<ApiResponse<{ deleted: boolean }>> {
-  return apiFetch<{ deleted: boolean }>('/api/user/profile', {
-    method: 'DELETE',
-  });
+  return { error: 'Use the confirmed account deletion flow in Settings.' };
 }
 
 // ============================================

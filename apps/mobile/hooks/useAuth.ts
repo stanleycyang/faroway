@@ -1,3 +1,4 @@
+import { deleteAccountWithRecovery } from '../services/accountDeletionService';
 import { devicePushConsent } from '../services/pushConsentService';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as Sentry from '@sentry/react-native';
@@ -15,11 +16,7 @@ import {
   savePendingOAuthTripDraft,
   takePendingOAuthTripDraft,
 } from '../lib/oauthReturnState';
-import {
-  setAuthToken,
-  getUserProfile,
-  deleteAccount as deleteAccountRequest,
-} from '../services/api';
+import { setAuthToken, getUserProfile } from '../services/api';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
@@ -344,7 +341,9 @@ export function useAuth() {
     setAuthState((prev) => ({ ...prev, loading: true }));
 
     const deletingUserId = useUserStore.getState().user?.id;
-    const result = await deleteAccountRequest();
+    const result = deletingUserId
+      ? await deleteAccountWithRecovery(deletingUserId)
+      : { error: 'Sign in to resume deletion.' };
 
     if (result.error) {
       setAuthState((prev) => ({ ...prev, loading: false }));
@@ -353,8 +352,17 @@ export function useAuth() {
 
     if (deletingUserId)
       await devicePushConsent.forgetDeletedAccount(deletingUserId).catch(() => {});
+    const cleanupSession = await supabase.auth.getSession();
+    const currentProfileId = useUserStore.getState().user?.id;
+    if (
+      (cleanupSession.data.session && cleanupSession.data.session.user.id !== deletingUserId) ||
+      (currentProfileId && currentProfileId !== deletingUserId)
+    ) {
+      setAuthState((prev) => ({ ...prev, loading: false }));
+      throw new Error('The original account was deleted. Your current account remains signed in.');
+    }
     try {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
     } catch {
       // The server has already deleted the auth user; local cleanup still needs to run.
     }
@@ -366,6 +374,11 @@ export function useAuth() {
       // Non-blocking — Google session may not exist (e.g. Apple sign-in user)
     }
 
+    const afterCleanup = useUserStore.getState().user?.id;
+    if (afterCleanup && afterCleanup !== deletingUserId) {
+      setAuthState((prev) => ({ ...prev, loading: false }));
+      throw new Error('The original account was deleted. Reopen your current account.');
+    }
     setAuthToken(null);
     clearUserStore();
     clearTrips();

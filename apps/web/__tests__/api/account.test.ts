@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const mockUser = { id: "user-123", email: "test@example.com" };
+const mockUser = { id: "user-123", email: "test@example.com", identities: [] };
 
 interface QueryResult {
   data: unknown;
@@ -69,6 +69,14 @@ vi.mock("@/lib/supabase/server", () => ({
   getSupabase: vi.fn(() => mockAdminClient),
 }));
 
+vi.mock("@/lib/auth/account-deletion", async (original) => ({
+  ...(await original<typeof import("@/lib/auth/account-deletion")>()),
+  runAccountDeletion: vi.fn(async (_user, _code, deps) => {
+    await deps.purgeData();
+    await deps.deleteAuth();
+    return { deleted: true };
+  }),
+}));
 import { DELETE } from "@/app/api/user/account/route";
 
 function makeRequest(): NextRequest {
@@ -77,6 +85,7 @@ function makeRequest(): NextRequest {
     {
       method: "DELETE",
       headers: { Authorization: "Bearer token" },
+      body: JSON.stringify({ confirm: true, recoveryToken: "a".repeat(64) }),
     },
   );
 }
@@ -84,6 +93,7 @@ function makeRequest(): NextRequest {
 describe("DELETE /api/user/account", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("ACCOUNT_DELETION_ENABLED", "true");
     consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     operations = [];
     mockAuthReturn = { data: { user: mockUser }, error: null };
@@ -108,8 +118,15 @@ describe("DELETE /api/user/account", () => {
 
   afterEach(() => {
     consoleErrorSpy.mockRestore();
+    vi.unstubAllEnvs();
   });
 
+  it("fails closed before Auth or data access when rollout is disabled", async () => {
+    vi.stubEnv("ACCOUNT_DELETION_ENABLED", "false");
+    expect((await DELETE(makeRequest())).status).toBe(503);
+    expect(mockRequestClient.auth.getUser).not.toHaveBeenCalled();
+    expect(mockAdminClient.from).not.toHaveBeenCalled();
+  });
   it("deletes user-owned data before deleting the auth user", async () => {
     const res = await DELETE(makeRequest());
     const json = await res.json();
@@ -195,6 +212,6 @@ describe("DELETE /api/user/account", () => {
 
     const res = await DELETE(makeRequest());
 
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(503);
   });
 });

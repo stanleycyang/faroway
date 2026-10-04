@@ -201,6 +201,8 @@ export async function planTripWorkflow(
       userId,
     });
 
+    if (tripId) await notifyItineraryReadyStep(tripId, searchId);
+
     return {
       searchId,
       tripId,
@@ -1002,4 +1004,11 @@ async function saveSearchResults(
 
     await getSupabase().from("search_itineraries").insert(itineraryRows);
   }
+}
+
+async function notifyItineraryReadyStep(tripId: string, searchId: string) {
+  "use step";
+  const { dispatchItineraryReady } =
+    await import("@/lib/notifications/itinerary-dispatch");
+  return dispatchItineraryReady(tripId, searchId);
 }

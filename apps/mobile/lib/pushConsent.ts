@@ -120,7 +120,14 @@ export class PushConsent {
   disable() {
     return this.run(async () => {
       let record = await this.deps.read();
-      if (!record && !(await this.deps.identity())) return false;
+      const current = await this.deps.identity();
+      if (!current || (record && record.userId !== current.id)) {
+        // Expired sessions must not prevent reauthentication. Keep cleanup
+        // pending for the original account; never transfer or register it.
+        // A different account must also be able to sign out and return to it.
+        if (record) await this.deps.write({ ...record, enabled: false });
+        return false;
+      }
       const owner = await this.owner();
       await this.recordFor(owner);
       if (!record) {

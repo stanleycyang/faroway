@@ -5,7 +5,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useUserStore } from '../../stores/userStore';
-import { updateNotificationPreferences } from '../../services/pushConsentService';
+import {
+  updateNotificationPreferences,
+  getVerifiedNotificationPreferences,
+} from '../../services/pushConsentService';
 import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 
@@ -54,19 +57,30 @@ export default function NotificationsScreen() {
   const router = useRouter();
   const push = useNotificationContext();
   const { user } = useUserStore();
-  const userWithSettings = user as
-    | (typeof user & { notificationSettings?: Record<string, boolean> })
-    | null;
-  const [settings, setSettings] = useState<Record<string, boolean>>(
-    userWithSettings?.notificationSettings &&
-      Object.keys(userWithSettings.notificationSettings).length > 0
-      ? userWithSettings.notificationSettings
-      : defaultSettings
-  );
+  const [settings, setSettings] = useState<Record<string, boolean>>(defaultSettings);
   const [savingSetting, setSavingSetting] = useState<string | null>(null);
+  const [loadingPreferences, setLoadingPreferences] = useState(true);
   useEffect(() => {
-    setSettings(user?.notificationSettings || defaultSettings);
-  }, [user?.id, user?.notificationSettings]);
+    let active = true;
+    const accountId = user?.id;
+    setSettings(defaultSettings);
+    setLoadingPreferences(true);
+    if (!accountId) {
+      setLoadingPreferences(false);
+      return;
+    }
+    void getVerifiedNotificationPreferences(accountId)
+      .then((value) => {
+        if (active && useUserStore.getState().user?.id === accountId) setSettings(value);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setLoadingPreferences(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [user?.id]);
 
   const toggleSetting = async (id: string) => {
     hapticFeedback.selection();
@@ -158,7 +172,7 @@ export default function NotificationsScreen() {
                 }}
                 thumbColor="#fff"
                 ios_backgroundColor={colors.surface[700]}
-                disabled={savingSetting !== null}
+                disabled={loadingPreferences || savingSetting !== null}
                 accessibilityLabel={setting.title}
                 accessibilityHint={setting.description}
               />

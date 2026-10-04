@@ -11,8 +11,22 @@ import {
   validationErrorResponse,
   AuthResult,
 } from "@/lib/auth/middleware";
-import { checkRateLimit, checkRateLimitAsync } from "@/lib/security/rate-limit";
+import { checkRateLimit } from "@/lib/security/rate-limit";
 import { z } from "zod";
+
+interface ProfileRow {
+  id: string;
+  email: string;
+  display_name: string | null;
+  avatar_url: string | null;
+  auth_provider: string;
+  subscription_tier: string;
+  preferences: Record<string, unknown> | null;
+  notification_settings: Record<string, boolean> | null;
+  notification_consent_version?: string | null;
+  created_at: string;
+  updated_at: string;
+}
 
 const UpdateProfileSchema = z.object({
   email: z.string().email().optional(),
@@ -43,10 +57,13 @@ export async function GET(request: NextRequest) {
     const { data: profile, error } = await getSupabase()
       .from("users")
       .select(
-        "id, email, display_name, avatar_url, auth_provider, subscription_tier, preferences, notification_settings, created_at, updated_at",
+        "id, email, display_name, avatar_url, auth_provider, subscription_tier, preferences, notification_settings, created_at, updated_at" +
+          (process.env.PUSH_CONSENT_V2_ENABLED === "true"
+            ? ", notification_consent_version"
+            : ""),
       )
       .eq("id", user!.id)
-      .single();
+      .single<ProfileRow>();
 
     if (error) {
       console.error("[User Profile] Database error:", error);
@@ -65,6 +82,7 @@ export async function GET(request: NextRequest) {
       subscriptionTier: profile.subscription_tier,
       preferences: profile.preferences || {},
       notificationSettings: profile.notification_settings || {},
+      notificationConsentVersion: profile.notification_consent_version || null,
       createdAt: profile.created_at,
       updatedAt: profile.updated_at,
     });
@@ -122,6 +140,8 @@ export async function PATCH(request: NextRequest) {
     }
     if (parseResult.data.notification_settings !== undefined) {
       updates.notification_settings = parseResult.data.notification_settings;
+      if (process.env.PUSH_CONSENT_V2_ENABLED === "true")
+        updates.notification_consent_version = "notifications-v2";
     }
 
     if (Object.keys(updates).length === 0) {
@@ -133,7 +153,7 @@ export async function PATCH(request: NextRequest) {
       .update(updates)
       .eq("id", user!.id)
       .select()
-      .single();
+      .single<ProfileRow>();
 
     if (error) {
       console.error("[User Profile] Update error:", error);
@@ -152,6 +172,7 @@ export async function PATCH(request: NextRequest) {
       subscriptionTier: profile.subscription_tier,
       preferences: profile.preferences || {},
       notificationSettings: profile.notification_settings || {},
+      notificationConsentVersion: profile.notification_consent_version || null,
       createdAt: profile.created_at,
       updatedAt: profile.updated_at,
     });
@@ -177,60 +198,5 @@ export async function PATCH(request: NextRequest) {
  *
  * Step 1 fails ⇒ bail before step 2 so the user can retry.
  */
-export async function DELETE(request: NextRequest) {
-  const authResult = await requireAuth(request);
-  if (authResult instanceof NextResponse) return authResult;
-  const { user } = authResult as AuthResult;
-  const userId = user!.id;
-
-  // Strict rate limit: 3 attempts per hour. Use the KV-backed async path so
-  // the limit is enforced across serverless instances (the sync helper falls
-  // back to per-instance memory, which barely applies on Vercel).
-  const rl = await checkRateLimitAsync(`account-delete:${userId}`, {
-    maxRequests: 3,
-    windowMs: 60 * 60 * 1000,
-  });
-  if (!rl.allowed) {
-    return NextResponse.json(
-      { error: "Too many requests" },
-      {
-        status: 429,
-        headers: { "Retry-After": String(Math.ceil(rl.resetIn / 1000)) },
-      },
-    );
-  }
-
-  const db = getSupabase();
-
-  try {
-    const { error: userRowError } = await db
-      .from("users")
-      .delete()
-      .eq("id", userId);
-
-    if (userRowError) {
-      console.error("[Account Delete] users delete:", userRowError);
-      return NextResponse.json(
-        { error: "Failed to delete account data" },
-        { status: 500 },
-      );
-    }
-
-    const { error: authDeleteError } = await db.auth.admin.deleteUser(userId);
-    if (authDeleteError) {
-      console.error("[Account Delete] auth.admin.deleteUser:", authDeleteError);
-      return NextResponse.json(
-        { error: "Failed to delete account credentials" },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({ deleted: true });
-  } catch (error) {
-    console.error("[Account Delete] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to delete account" },
-      { status: 500 },
-    );
-  }
-}
+// One deletion boundary for both legacy and current native clients.
+export { DELETE } from "@/lib/auth/account-deletion-route";

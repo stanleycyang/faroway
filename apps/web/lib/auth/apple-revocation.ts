@@ -21,10 +21,10 @@ export class AppleRevocationError extends Error {
   }
 }
 
-interface AuthenticatedUser {
+export interface AuthenticatedUser {
   identities?: Array<{ provider: string; identity_data?: { sub?: unknown } }>;
 }
-interface AppleRevocationConfiguration {
+export interface AppleRevocationConfiguration {
   // Server-selected bundle ID or Services ID matching this authorization flow.
   clientId: string;
   // Supplied by a reviewed server credential mechanism; never from the client.
@@ -32,7 +32,7 @@ interface AppleRevocationConfiguration {
 }
 
 /**
- * PREPARATION ONLY: not wired to the account deletion route or native UI.
+ * Used by the configuration-gated durable account deletion coordinator.
  * Caller must authenticate the user, obtain deliberate deletion consent and a
  * fresh Apple authorization code, and select server-owned client configuration.
  * A 200 revocation response is an accepted request, not a deletion receipt.
@@ -43,6 +43,7 @@ export async function revokeAppleAuthorizationForUser(
   user: AuthenticatedUser,
   authorizationCode: string,
   configuration?: AppleRevocationConfiguration,
+  persistVerifiedToken?: (token: AppleRevocationToken) => Promise<void>,
 ): Promise<{ status: "not_applicable" | "revocation_accepted" }> {
   if (!Array.isArray(user.identities))
     throw new AppleRevocationError("identity_unavailable");
@@ -121,14 +122,50 @@ export async function revokeAppleAuthorizationForUser(
       : null;
   const token = refreshToken || accessToken;
   if (!token) throw new AppleRevocationError("exchange_failed");
+  const verified = {
+    token,
+    tokenType: refreshToken
+      ? ("refresh_token" as const)
+      : ("access_token" as const),
+    clientId: configuration.clientId,
+  };
+  // A durable caller persists encrypted recovery material BEFORE revocation.
+  if (persistVerifiedToken) await persistVerifiedToken(verified);
+  await revokeVerifiedAppleToken(verified, configuration);
+  return { status: "revocation_accepted" };
+}
+
+export interface AppleRevocationToken {
+  token: string;
+  tokenType: "refresh_token" | "access_token";
+  clientId: string;
+}
+export async function revokeVerifiedAppleToken(
+  token: AppleRevocationToken,
+  configuration: AppleRevocationConfiguration,
+) {
+  if (
+    token.clientId !== configuration.clientId ||
+    !token.token ||
+    !["refresh_token", "access_token"].includes(token.tokenType)
+  )
+    throw new AppleRevocationError("identity_mismatch");
   try {
-    const response = await request("/auth/revoke", {
-      token,
-      token_type_hint: refreshToken ? "refresh_token" : "access_token",
+    const response = await fetch(`${issuer}/auth/revoke`, {
+      method: "POST",
+      redirect: "error",
+      cache: "no-store",
+      signal: AbortSignal.timeout(10_000),
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: configuration.clientId,
+        client_secret: configuration.clientSecret,
+        token: token.token,
+        token_type_hint: token.tokenType,
+      }),
     });
     if (response.status !== 200) throw new Error();
   } catch {
     throw new AppleRevocationError("revocation_failed");
   }
-  return { status: "revocation_accepted" };
 }

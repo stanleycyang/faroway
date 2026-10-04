@@ -30,6 +30,7 @@ type PushTokenRow = {
 
 type UserNotificationSettingsRow = {
   notification_settings: Record<string, boolean> | null;
+  notification_consent_version: string | null;
 };
 
 type ExpoTicket = {
@@ -143,12 +144,12 @@ async function deleteInvalidPushTokens(
 
   const { error } = await db
     .from("push_tokens")
-    .delete()
+    .update({ is_active: false, consent_version: null })
     .eq("user_id", userId)
     .in("token", tokens);
 
   if (error) {
-    logger.warn("[Expo Push] Failed to delete invalid push tokens:", error);
+    logger.warn("[Expo Push] Failed to disable invalid push tokens");
   }
 }
 
@@ -158,7 +159,6 @@ export async function sendItineraryReadyPush(
     userId,
     tripId,
     itineraryId,
-    destination,
   }: {
     userId: string;
     tripId: string;
@@ -166,14 +166,20 @@ export async function sendItineraryReadyPush(
     destination: string;
   },
 ): Promise<ExpoPushResult> {
+  if (
+    process.env.PUSH_CONSENT_V2_ENABLED !== "true" ||
+    process.env.PUSH_DELIVERY_ENABLED !== "true"
+  )
+    return { attempted: 0, sent: 0, failed: 0, skipped: 0, invalidTokens: [] };
   const { data: settingsRow, error: settingsError } = await db
     .from("users")
-    .select("notification_settings")
+    .select("notification_settings, notification_consent_version")
     .eq("id", userId)
     .single<UserNotificationSettingsRow>();
 
   if (
     settingsError ||
+    settingsRow?.notification_consent_version !== "notifications-v2" ||
     settingsRow?.notification_settings?.itinerary_updates !== true
   ) {
     return { attempted: 0, sent: 0, failed: 0, skipped: 0, invalidTokens: [] };
@@ -182,7 +188,9 @@ export async function sendItineraryReadyPush(
   const { data, error } = await db
     .from("push_tokens")
     .select("token")
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .eq("is_active", true)
+    .eq("consent_version", "notifications-v2");
 
   if (error || !Array.isArray(data)) {
     return { attempted: 0, sent: 0, failed: 0, skipped: 0, invalidTokens: [] };
@@ -199,7 +207,7 @@ export async function sendItineraryReadyPush(
       to: token,
       sound: "default",
       title: "Your itinerary is ready",
-      body: `Your ${destination} itinerary is ready to view.`,
+      body: "Your saved itinerary is ready to review.",
       data: {
         type: "trip_generation_complete",
         tripId,

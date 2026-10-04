@@ -29,29 +29,24 @@ function createDb({
   const deleteInvalidTokens = vi.fn(async () => ({ error: null }));
   const db = {
     from: vi.fn((table: string) => {
-      if (table === "users") {
-        return {
-          select: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              single: vi.fn(async () => ({
-                data: { notification_settings: settings },
-                error: null,
-              })),
-            })),
-          })),
-        };
-      }
-
-      return {
-        select: vi.fn(() => ({
-          eq: vi.fn(async () => ({ data: tokens, error: null })),
-        })),
-        delete: vi.fn(() => ({
-          eq: vi.fn(() => ({
-            in: deleteInvalidTokens,
-          })),
-        })),
-      };
+      const chain: Record<string, unknown> = {};
+      chain.select = vi.fn(() => chain);
+      chain.eq = vi.fn(() => chain);
+      chain.single = vi.fn(async () => ({
+        data: {
+          notification_settings: settings,
+          notification_consent_version: "notifications-v2",
+        },
+        error: null,
+      }));
+      chain.update = vi.fn(() => chain);
+      chain.in = deleteInvalidTokens;
+      chain.then = (resolve: (value: unknown) => unknown) =>
+        Promise.resolve({
+          data: table === "users" ? null : tokens,
+          error: null,
+        }).then(resolve);
+      return chain;
     }),
   } as unknown as SupabaseClient;
 
@@ -61,6 +56,8 @@ function createDb({
 describe("Expo push notification helpers", () => {
   beforeEach(() => {
     fetchWithTimeoutMock.mockReset();
+    vi.stubEnv("PUSH_CONSENT_V2_ENABLED", "true");
+    vi.stubEnv("PUSH_DELIVERY_ENABLED", "true");
   });
 
   it("sends valid Expo push tokens and reports ticket failures", async () => {

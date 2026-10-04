@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   devicePushConsent,
   updateNotificationPreferences,
+  getVerifiedNotificationPreferences,
 } from '../../services/pushConsentService';
 const fetchMock = jest.fn();
 
@@ -69,4 +70,33 @@ it('pins notification preference writes to the matching authenticated session', 
       body: JSON.stringify({ notification_settings: { itinerary_updates: true } }),
     })
   );
+});
+
+it('orders opt-out after a timed-out registration even when the device clock moves backwards', async () => {
+  const clock = jest.spyOn(Date, 'now').mockReturnValue(10000);
+  fetchMock.mockRejectedValueOnce(new Error('timeout'));
+  await expect(devicePushConsent.enable()).rejects.toThrow('timeout');
+  clock.mockReturnValue(9000);
+  await devicePushConsent.disable();
+  const bodies = fetchMock.mock.calls.map(([, options]) => JSON.parse(options.body));
+  expect(bodies[1].revision).toBeGreaterThan(bodies[0].revision);
+  expect(bodies.every((b) => b.consentVersion === 'notifications-v2')).toBe(true);
+  clock.mockRestore();
+});
+
+it('does not treat legacy default-true categories or cached settings as explicit consent', async () => {
+  fetchMock.mockResolvedValue({
+    ok: true,
+    json: async () => ({ id: 'a', notificationSettings: { itinerary_updates: true } }),
+  });
+  expect((await getVerifiedNotificationPreferences('a')).itinerary_updates).toBe(false);
+  fetchMock.mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      id: 'a',
+      notificationConsentVersion: 'notifications-v2',
+      notificationSettings: { itinerary_updates: true },
+    }),
+  });
+  expect((await getVerifiedNotificationPreferences('a')).itinerary_updates).toBe(true);
 });

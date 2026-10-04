@@ -2,8 +2,19 @@ import type { SearchInput } from '@faroway/types';
 import { API_BASE_URL } from '../constants/api';
 import { withPlanningConsent } from '../lib/planningConsent';
 
+export class GenerationNotStartedError extends Error {}
+
 async function checked(response: Response, fallback: string) {
   const body = await response.json().catch(() => null);
+  if (
+    !response.ok &&
+    response.status === 409 &&
+    body?.code === 'ai_consent_required' &&
+    body?.generationStarted === false
+  )
+    throw new GenerationNotStartedError(
+      'Your trip is saved, but planning has not started. Review AI sharing to start it.'
+    );
   if (!response.ok) throw new Error(typeof body?.error === 'string' ? body.error : fallback);
   return body;
 }
@@ -68,4 +79,22 @@ export async function regenerateTrip(tripId: string) {
       'Failed to generate itinerary'
     )
   );
+}
+
+export async function recoverUnstartedTrip(tripId: string) {
+  const { supabase } = await import('../lib/supabase');
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session) throw new Error('Sign in to recover this trip.');
+  const result = await checked(
+    await fetch(`${API_BASE_URL}/api/trips/${encodeURIComponent(tripId)}`, {
+      headers: { Authorization: `Bearer ${data.session.access_token}` },
+    }),
+    'Could not verify the saved trip. Reconnect to check its status.'
+  );
+  const trip = result?.trip ?? result;
+  if (trip?.status !== 'draft' || trip.search_id) return; // Existing/uncertain attempt: reconnect only.
+  const current = await supabase.auth.getSession();
+  if (current.data.session?.user.id !== data.session.user.id)
+    throw new Error('Your account changed. Reopen your saved trip.');
+  await regenerateTrip(tripId);
 }

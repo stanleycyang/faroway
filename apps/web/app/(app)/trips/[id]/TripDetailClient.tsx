@@ -1,4 +1,5 @@
 "use client";
+import { requestPlanningConsent } from "@/lib/ai/planning-consent-client";
 
 import { BookingChecklist } from "@/components/trips/BookingChecklist";
 import { PlanEditor } from "@/components/trips/PlanEditor";
@@ -347,10 +348,11 @@ export function TripDetailClient({
     setIsRetrying(true);
 
     try {
+      const planningHeaders = await requestPlanningConsent();
       // Trigger new generation
       const genRes = await fetch(`/api/trips/${tripId}/generate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await planningHeaders(),
       });
 
       if (!genRes.ok && genRes.status !== 409) {

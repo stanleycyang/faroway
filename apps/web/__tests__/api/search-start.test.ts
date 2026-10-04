@@ -58,7 +58,10 @@ import { POST } from "@/app/api/search/start/route";
 function makeReq() {
   return new NextRequest("http://localhost:3000/api/search/start", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-faroway-ai-disclosure": "planning-google-v1",
+    },
     body: JSON.stringify({
       destination: "Tokyo",
       startDate: "2026-06-01",
@@ -105,7 +108,10 @@ describe("POST /api/search/start", () => {
     const res = await POST(
       new NextRequest("http://localhost:3000/api/search/start", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-faroway-ai-disclosure": "planning-google-v1",
+        },
         body: JSON.stringify({
           destination: "Tokyo",
           startDate: "2026-06-01",
@@ -150,7 +156,10 @@ describe("POST /api/search/start", () => {
     const res = await POST(
       new NextRequest("http://localhost:3000/api/search/start", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-faroway-ai-disclosure": "planning-google-v1",
+        },
         body: "{not-json",
       }),
     );
@@ -165,7 +174,10 @@ describe("POST /api/search/start", () => {
     const res = await POST(
       new NextRequest("http://localhost:3000/api/search/start", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-faroway-ai-disclosure": "planning-google-v1",
+        },
         body: JSON.stringify({
           destination: "Tokyo",
           startDate: "2026-06-05",

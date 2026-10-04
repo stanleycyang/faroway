@@ -1,4 +1,5 @@
 "use client";
+import { requestPlanningConsent } from "@/lib/ai/planning-consent-client";
 
 import React, { useEffect, useState, useRef } from "react";
 import Image from "next/image";
@@ -295,12 +296,13 @@ export default function CreateTripPage() {
         budget: "moderate",
         preferences: { travelerType, vibes: selectedVibes },
       };
+      const planningHeaders = await requestPlanningConsent();
       // Persist before any write: a lost response or reload reuses the same ID.
       localStorage.setItem(storageKey, JSON.stringify(payload));
       setPendingRequest(payload);
       const response = await fetch("/api/trips", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await planningHeaders(),
         body: JSON.stringify(payload),
       });
 
@@ -316,7 +318,7 @@ export default function CreateTripPage() {
 
       const genResponse = await fetch(`/api/trips/${trip.id}/generate`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: await planningHeaders(),
         body: JSON.stringify({
           preferences: {
             vibes: pendingRequest?.preferences.vibes ?? selectedVibes,

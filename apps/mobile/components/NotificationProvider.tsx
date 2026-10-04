@@ -1,3 +1,4 @@
+import { reconcileCompletedAccountDeletion } from '../services/accountDeletionService';
 import React, { useEffect, useCallback, createContext, useContext, useState, useRef } from 'react';
 import { AppState } from 'react-native';
 import { useNotifications } from '../hooks/useNotifications';
@@ -65,7 +66,10 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
   useEffect(() => {
     setEnabled(false);
     const restore = () => {
-      void run(() => devicePushConsent.restore()).catch(() => {});
+      void run(async () => {
+        await reconcileCompletedAccountDeletion((id) => devicePushConsent.forgetDeletedAccount(id));
+        return devicePushConsent.restore();
+      }).catch(() => {});
     };
     restore();
     const subscription = AppState.addEventListener('change', (state) => {

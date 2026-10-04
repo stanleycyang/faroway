@@ -12,7 +12,12 @@ jest.mock('../../lib/supabase', () => ({
 }));
 jest.mock('../../constants/api', () => ({ API_BASE_URL: 'https://staging.example' }));
 import { withPlanningConsent } from '../../lib/planningConsent';
-import { createAndStartTrip, regenerateTrip } from '../../services/planningService';
+import {
+  createAndStartTrip,
+  regenerateTrip,
+  recoverUnstartedTrip,
+  GenerationNotStartedError,
+} from '../../services/planningService';
 import { startSearch } from '../../services/searchService';
 
 const fetchMock = jest.fn();
@@ -177,4 +182,41 @@ it('fails closed when the disclosure endpoint is missing, without a cached subst
   await expect(regenerateTrip(id)).rejects.toThrow('unavailable');
   expect(mockAlert).not.toHaveBeenCalled();
   expect(posts()).toHaveLength(0);
+});
+
+it('recovers create success followed by a definite disclosure 409 through fresh consent, without creating another trip', async () => {
+  let rejectGeneration = true;
+  fetchMock.mockImplementation(async (url: string, options: RequestInit) => ({
+    ok: !(url.endsWith('/generate') && rejectGeneration),
+    status: url.endsWith('/generate') && rejectGeneration ? 409 : 200,
+    json: async () =>
+      url.endsWith('/disclosure')
+        ? disclosure
+        : url.endsWith('/api/trips')
+          ? { trip: { id } }
+          : url.endsWith('/generate') && rejectGeneration
+            ? { code: 'ai_consent_required', generationStarted: false }
+            : options.method === 'POST'
+              ? { status: 'started' }
+              : { trip: { id, status: 'draft', search_id: null } },
+  }));
+  const receipt = jest.fn();
+  await expect(createAndStartTrip(input, receipt)).rejects.toBeInstanceOf(
+    GenerationNotStartedError
+  );
+  expect(receipt).toHaveBeenCalledWith(id);
+  rejectGeneration = false;
+  await recoverUnstartedTrip(id);
+  expect(mockAlert).toHaveBeenCalledTimes(2);
+  expect(posts().filter(([url]) => url.endsWith('/api/trips'))).toHaveLength(1);
+  expect(posts().filter(([url]) => url.endsWith('/generate'))).toHaveLength(2);
+});
+it('only reconnects when recovery discovers an existing or ambiguous planning attempt', async () => {
+  fetchMock.mockResolvedValue({
+    ok: true,
+    json: async () => ({ trip: { id, status: 'generating', search_id: 'existing' } }),
+  });
+  await recoverUnstartedTrip(id);
+  expect(posts()).toHaveLength(0);
+  expect(mockAlert).not.toHaveBeenCalled();
 });

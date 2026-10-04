@@ -46,6 +46,7 @@ const baseTrip = {
   },
 };
 test.beforeEach(async ({ page, context, request }) => {
+  page.on("dialog", (dialog) => dialog.accept());
   await request.post("http://127.0.0.1:4401/fixture/reset");
   const jwt =
     [
@@ -276,6 +277,7 @@ test("compiled workflow records its identity and stops a superseded attempt befo
     data: { ...baseTrip, status: "draft", search_id: null, itineraries: null },
   });
   const response = await context.request.post(`/api/trips/${id}/generate`, {
+    headers: { "x-faroway-ai-disclosure": "planning-google-v1" },
     data: {},
   });
   expect(response.status(), await response.text()).toBe(200);
@@ -891,4 +893,48 @@ test("recovers a confirmed booking report when the following refresh fails", asy
   await expect(
     checklist.getByText("Booked · reported by you", { exact: true }),
   ).toBeVisible();
+});
+
+test("AI sharing decline makes no trip or planning request; a deliberate retry sends versioned consent", async ({
+  page,
+  request,
+}) => {
+  await page.goto("/create");
+  await page.evaluate(
+    ({ userId, value }) =>
+      localStorage.setItem(
+        `faroway:pending-create:${userId}`,
+        JSON.stringify(value),
+      ),
+    { userId: user.id, value: payload },
+  );
+  await page.reload();
+  page.removeAllListeners("dialog");
+  page.on("dialog", (dialog) => dialog.dismiss());
+  let generations = 0;
+  await page.route("**/api/trips/*/generate", (route) => {
+    generations++;
+    expect(route.request().headers()["x-faroway-ai-disclosure"]).toBe(
+      "planning-google-v1",
+    );
+    expect(route.request().headers()["authorization"]).toMatch(/^Bearer /);
+    return route.fulfill({
+      status: 503,
+      json: { error: "Fixture unavailable" },
+    });
+  });
+  await page.getByRole("button", { name: "Resume saved trip" }).click();
+  await expect(
+    page.getByRole("alert").filter({ hasText: /sharing declined/i }),
+  ).toBeVisible();
+  expect(generations).toBe(0);
+  expect(
+    (await (await request.get("http://127.0.0.1:4401/fixture/state")).json())
+      .inserts,
+  ).toBe(0);
+  page.removeAllListeners("dialog");
+  page.on("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Resume saved trip" }).click();
+  await expect(page).toHaveURL(new RegExp(`/trips/${id}$`));
+  expect(generations).toBe(1);
 });

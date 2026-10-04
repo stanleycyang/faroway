@@ -14,5 +14,5 @@ export const PLANNING_DISCLOSURE = {
 
 export function isStalePlanningDisclosure(headers: Headers): boolean {
   const version = headers.get("x-faroway-ai-disclosure");
-  return version !== null && version !== PLANNING_DISCLOSURE.version;
+  return version !== PLANNING_DISCLOSURE.version;
 }

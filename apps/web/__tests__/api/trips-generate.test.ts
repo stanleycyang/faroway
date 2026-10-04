@@ -124,7 +124,10 @@ import { POST } from "@/app/api/trips/[id]/generate/route";
 function makeReq(body: Record<string, unknown> = {}) {
   return new NextRequest("http://localhost:3000/api/trips/trip-1/generate", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-faroway-ai-disclosure": "planning-google-v1",
+    },
     body: JSON.stringify(body),
   });
 }
@@ -175,6 +178,7 @@ describe("POST /api/trips/[id]/generate", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-faroway-ai-disclosure": "planning-google-v1",
           Authorization: "Bearer mobile-token",
         },
         body: JSON.stringify({}),

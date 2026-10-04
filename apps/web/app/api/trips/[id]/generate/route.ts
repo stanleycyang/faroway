@@ -47,7 +47,11 @@ export async function POST(request: NextRequest, { params }: Params) {
     if (auth instanceof NextResponse) return auth;
     if (isStalePlanningDisclosure(request.headers))
       return NextResponse.json(
-        { error: "AI sharing details changed. Review them and try again." },
+        {
+          error: "Review AI sharing details before planning.",
+          code: "ai_consent_required",
+          generationStarted: false,
+        },
         { status: 409 },
       );
     const userId = auth.userId;

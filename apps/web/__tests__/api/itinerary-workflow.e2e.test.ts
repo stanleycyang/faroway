@@ -283,7 +283,10 @@ describe("Itinerary workflow API e2e", () => {
       "http://localhost/api/trips/trip-e2e-1/generate",
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-faroway-ai-disclosure": "planning-google-v1",
+        },
         body: JSON.stringify({}),
       },
     );

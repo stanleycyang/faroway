@@ -1,4 +1,8 @@
-import { createAndStartTrip } from '../services/planningService';
+import {
+  createAndStartTrip,
+  GenerationNotStartedError,
+  recoverUnstartedTrip,
+} from '../services/planningService';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { API_BASE_URL } from '../constants/api';
 import { getAuthHeaders } from '../lib/supabase';
@@ -25,6 +29,7 @@ export interface StreamingState {
   isStreaming: boolean;
   isComplete: boolean;
   error: string | null;
+  canStart: boolean;
   progress: number;
   step: string;
   message: string;
@@ -66,6 +71,7 @@ export interface UseStreamingItineraryOptions {
    * Included in the effect's dependency array; the value itself is not used.
    */
   retryKey?: number;
+  restartUnstarted?: boolean;
   onComplete?: (document: StreamingBlock[]) => void;
   onError?: (error: Error) => void;
 }
@@ -78,6 +84,7 @@ const initialState: StreamingState = {
   isStreaming: false,
   isComplete: false,
   error: null,
+  canStart: false,
   progress: 0,
   step: 'queued',
   message: 'Connecting...',
@@ -221,6 +228,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
     input,
     streamingEnabled = process.env.EXPO_PUBLIC_ITINERARY_STREAMING_ENABLED !== 'false',
     retryKey,
+    restartUnstarted,
     onComplete,
     onError,
   } = options;
@@ -398,6 +406,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
     (async () => {
       try {
         let streamTripId = providedTripId;
+        if (streamTripId && restartUnstarted) await recoverUnstartedTrip(streamTripId);
 
         // If no tripId, create a trip and trigger generation first.
         // All three endpoints below now require Supabase bearer auth.
@@ -519,6 +528,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
             isLoading: false,
             isStreaming: false,
             error: msg,
+            canStart: error instanceof GenerationNotStartedError,
           };
         });
         onErrorRef.current?.(new Error(msg));
@@ -530,7 +540,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
       cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [providedTripId, processEvent, streamingEnabled, inputKey, retryKey]);
+  }, [providedTripId, processEvent, streamingEnabled, inputKey, retryKey, restartUnstarted]);
 
   return state;
 }

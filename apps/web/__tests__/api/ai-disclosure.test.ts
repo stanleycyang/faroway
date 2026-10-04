@@ -32,20 +32,23 @@ describe("active planning disclosure", () => {
       "vertex",
     ]);
   });
-  it("rejects a stale consent version before database or AI dispatch", async () => {
-    const request = () =>
-      new NextRequest("https://example.test/api", {
-        method: "POST",
-        headers: { "x-faroway-ai-disclosure": "old-version" },
-      });
-    expect((await search(request())).status).toBe(409);
-    expect(
-      (await generate(request(), { params: Promise.resolve({ id: "trip" }) }))
-        .status,
-    ).toBe(409);
-    expect(database).not.toHaveBeenCalled();
-    expect(workflow).not.toHaveBeenCalled();
-  });
+  it.each(["old-version", ""])(
+    "rejects missing/stale consent before dispatch (%s)",
+    async (version) => {
+      const request = () =>
+        new NextRequest("https://example.test/api", {
+          method: "POST",
+          headers: version ? { "x-faroway-ai-disclosure": version } : {},
+        });
+      expect((await search(request())).status).toBe(409);
+      expect(
+        (await generate(request(), { params: Promise.resolve({ id: "trip" }) }))
+          .status,
+      ).toBe(409);
+      expect(database).not.toHaveBeenCalled();
+      expect(workflow).not.toHaveBeenCalled();
+    },
+  );
   it("binds every active AI agent to the disclosed model and recipient allowlist", () => {
     for (const name of [
       "orchestrator",

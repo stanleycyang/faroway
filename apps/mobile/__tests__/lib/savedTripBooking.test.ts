@@ -40,3 +40,14 @@ it('keeps failed navigation recoverable without falling back to a provider', asy
     expect.stringContaining('still saved')
   );
 });
+
+it('declining a booking review leaves navigation inert and never appends credentials', () => {
+  const open = jest.fn().mockResolvedValue(undefined);
+  reviewSavedTripBooking(id, open);
+  const cancel = mockAlert.mock.calls[0][2][0];
+  expect(cancel.style).toBe('cancel');
+  expect(cancel.onPress).toBeUndefined();
+  expect(open).not.toHaveBeenCalled();
+  mockAlert.mock.calls[0][2][1].onPress();
+  expect(open.mock.calls[0][0]).not.toMatch(/token|authorization|affiliate/i);
+});

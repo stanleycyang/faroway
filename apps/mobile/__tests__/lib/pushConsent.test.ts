@@ -209,3 +209,52 @@ it('rotates a restored token only under its existing account consent', async () 
   expect(record?.token).toBe('ExpoPushToken[rotated]');
   expect(acquire).toHaveBeenLastCalledWith(false);
 });
+
+it('allows reauthentication after session expiry and reconciles cleanup only for the original account', async () => {
+  await manager.enable();
+  account = null;
+  send.mockClear();
+  acquire.mockClear();
+  await expect(manager.disable()).resolves.toBe(false);
+  expect(record?.enabled).toBe(false);
+  expect(send).not.toHaveBeenCalled();
+  expect(acquire).not.toHaveBeenCalled();
+  account = { id: 'a', accessToken: 'new-a-session' };
+  await expect(manager.restore()).resolves.toBe(false);
+  expect(send).toHaveBeenCalledWith(
+    'DELETE',
+    'ExpoPushToken[device]',
+    expect.objectContaining({ id: 'a', accessToken: 'new-a-session' })
+  );
+  expect(record).toBeNull();
+});
+
+it('does not transfer expired-session cleanup when another account signs in', async () => {
+  await manager.enable();
+  account = null;
+  await manager.disable();
+  account = { id: 'b', accessToken: 'b-session' };
+  send.mockClear();
+  acquire.mockClear();
+  await expect(manager.restore()).rejects.toThrow('another account');
+  await expect(manager.enable()).rejects.toThrow('another account');
+  expect(record).toMatchObject({ userId: 'a', enabled: false });
+  expect(send).not.toHaveBeenCalled();
+  expect(acquire).not.toHaveBeenCalled();
+});
+
+it('allows a different account to sign out or reauthenticate back to the pending owner', async () => {
+  await manager.enable();
+  account = null;
+  await manager.disable();
+  account = { id: 'b', accessToken: 'b-session' };
+  send.mockClear();
+  acquire.mockClear();
+  await expect(manager.disable()).resolves.toBe(false);
+  expect(record).toMatchObject({ userId: 'a', enabled: false });
+  expect(send).not.toHaveBeenCalled();
+  expect(acquire).not.toHaveBeenCalled();
+  account = { id: 'a', accessToken: 'new-a-session' };
+  await manager.restore();
+  expect(record).toBeNull();
+});

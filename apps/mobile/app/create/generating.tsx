@@ -736,6 +736,7 @@ export default function GeneratingScreen() {
   const [showRatingPrompt, setShowRatingPrompt] = useState(false);
   const [retryTripId, setRetryTripId] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
+  const [restartUnstarted, setRestartUnstarted] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reduceMotion = useReduceMotion();
@@ -794,6 +795,7 @@ export default function GeneratingScreen() {
     retryTripId
       ? {
           tripId: retryTripId,
+          restartUnstarted,
           retryKey: retryNonce,
           onComplete: handleComplete,
           onError: handleError,
@@ -809,11 +811,12 @@ export default function GeneratingScreen() {
   );
 
   const handleReconnect = useCallback(() => {
+    setRestartUnstarted(streaming.canStart);
     if (streaming.tripId) {
       setRetryTripId(streaming.tripId);
     }
     setRetryNonce((value) => value + 1);
-  }, [streaming.tripId]);
+  }, [streaming.tripId, streaming.canStart]);
 
   const handleViewTrip = useCallback(() => {
     if (!draftInput || !streaming.tripId) return;
@@ -979,11 +982,19 @@ export default function GeneratingScreen() {
                   onPress={handleReconnect}
                   accessibilityRole="button"
                   accessibilityLabel={
-                    streaming.tripId ? 'Reconnect to trip generation' : 'Try trip generation again'
+                    streaming.canStart
+                      ? 'Review AI sharing and start planning'
+                      : streaming.tripId
+                        ? 'Reconnect to trip generation'
+                        : 'Try trip generation again'
                   }
                 >
                   <Text style={styles.errorButtonText}>
-                    {streaming.tripId ? 'Reconnect' : 'Try Again'}
+                    {streaming.canStart
+                      ? 'Review and start'
+                      : streaming.tripId
+                        ? 'Reconnect'
+                        : 'Try Again'}
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
