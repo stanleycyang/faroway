@@ -31,12 +31,26 @@ BEGIN
   ELSIF v_server AND OLD.status = 'generating' AND NEW.status = 'planned' AND NEW.search_id IS NOT DISTINCT FROM OLD.search_id THEN
     NEW.preferences := NEW.preferences - 'planNeedsRefresh';
   END IF;
-  NEW.updated_at := clock_timestamp();
   RETURN NEW;
 END;
 $$;
 DROP TRIGGER IF EXISTS protect_trip_brief ON public.trips;
 CREATE TRIGGER protect_trip_brief BEFORE UPDATE ON public.trips FOR EACH ROW EXECUTE FUNCTION public.protect_trip_brief();
+
+-- The existing update_trips_updated_at trigger runs after protect_trip_brief.
+-- Its shared function assigns transaction-stable NOW(), which can collapse
+-- consecutive edits onto the same revision. Replace only the trips binding;
+-- other tables retain their existing timestamp behavior.
+CREATE OR REPLACE FUNCTION public.advance_trip_revision() RETURNS TRIGGER
+LANGUAGE plpgsql SET search_path = public, pg_temp AS $$
+BEGIN
+  NEW.updated_at := GREATEST(clock_timestamp(), OLD.updated_at + INTERVAL '1 microsecond');
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS update_trips_updated_at ON public.trips;
+CREATE TRIGGER update_trips_updated_at BEFORE UPDATE ON public.trips
+  FOR EACH ROW EXECUTE FUNCTION public.advance_trip_revision();
 
 CREATE OR REPLACE FUNCTION public.update_trip_brief(
   p_trip_id UUID, p_user_id UUID, p_expected_updated_at TIMESTAMPTZ, p_changes JSONB

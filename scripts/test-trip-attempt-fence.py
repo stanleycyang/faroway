@@ -116,7 +116,14 @@ try:
     print("PASS overlapping new claim and old completion serialize on the row lock")
     brief_migration = root / "supabase/migrations/20261003005000_version_trip_briefs.sql"
     if brief_migration.exists():
-        sql(brief_migration.read_text())
+        # Reproduce the existing production timestamp trigger, including its name/order.
+        sql("""
+        CREATE FUNCTION public.update_updated_at_column() RETURNS TRIGGER AS $$
+        BEGIN NEW.updated_at = NOW(); RETURN NEW; END; $$ LANGUAGE plpgsql;
+        CREATE TRIGGER update_trips_updated_at BEFORE UPDATE ON trips
+          FOR EACH ROW EXECUTE FUNCTION public.update_updated_at_column();
+        """)
+        sql(brief_migration.read_text()); sql(brief_migration.read_text())
         sql(f"SET ROLE service_role; UPDATE trips SET destination='Unsafe edit' WHERE id='{trip}';", ok=False)
         sql(f"UPDATE trips SET status='planned',is_shared=TRUE,share_token='old-public-link' WHERE id='{trip}';")
         sql(f"SET ROLE service_role; UPDATE trips SET destination='Unsafe planned edit' WHERE id='{trip}';", ok=False)
@@ -135,6 +142,25 @@ try:
         assert sql(f"SELECT id FROM update_trip_brief('{trip}','{owner}','{version}','{{\"destination\":\"Racing edit\"}}');") == ''
         assert apply(a, "planned", '{"days":[],"overview":"revised"}') == 't'
         assert sql(f"SELECT COALESCE(preferences->>'planNeedsRefresh','false') FROM trips WHERE id='{trip}';") == 'false'
+        # NOW() is transaction-stable: without replacing the legacy trigger, both
+        # edits below share a revision and the stale second write is accepted.
+        sql(f"""
+        BEGIN;
+        SET LOCAL ROLE service_role;
+        DO $$$$ DECLARE v TIMESTAMPTZ; first_version TIMESTAMPTZ; changed INTEGER;
+        BEGIN
+          SELECT updated_at INTO v FROM trips WHERE id='{trip}';
+          SELECT updated_at INTO first_version FROM update_trip_brief('{trip}','{owner}',v,'{{"destination":"Initial transaction edit"}}');
+          IF first_version <= v THEN RAISE EXCEPTION 'Revision did not advance'; END IF;
+          SELECT count(*) INTO changed FROM update_trip_brief('{trip}','{owner}',first_version,'{{"destination":"Accepted transaction edit"}}');
+          IF changed <> 1 THEN RAISE EXCEPTION 'Fresh revision rejected'; END IF;
+          SELECT count(*) INTO changed FROM update_trip_brief('{trip}','{owner}',first_version,'{{"destination":"Stale transaction edit"}}');
+          IF changed <> 0 THEN RAISE EXCEPTION 'Transaction-stable timestamp accepted stale revision'; END IF;
+          IF (SELECT updated_at FROM trips WHERE id='{trip}') <= first_version THEN RAISE EXCEPTION 'Revision did not strictly advance'; END IF;
+        END $$$$;
+        ROLLBACK;
+        """.replace('$$$$', '$$'))
+        print("PASS existing timestamp trigger cannot collapse consecutive revisions in one transaction")
         print("PASS brief revision conflicts, generation lock, revoked sharing, preserved old plan and revised publication")
 
     checkout_migration = root / "supabase/migrations/20261003006000_version_checkout_handoffs.sql"
