@@ -33,6 +33,9 @@ export default async function TripDetailPage({ params }: TripDetailPageProps) {
       tripId={id}
       initialData={initialData}
       initialShareUrl={initialShareUrl}
+      bookingChecklistEnabled={
+        process.env.FAROWAY_BOOKING_CHECKLIST_ENABLED === "true"
+      }
       planEditingEnabled={process.env.FAROWAY_PLAN_EDITING_ENABLED === "true"}
     />
   );

@@ -1,5 +1,5 @@
 // Test-only local backend. Never imports a production environment or contacts providers.
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
 import {
@@ -30,6 +30,7 @@ let inserts = 0;
 let searches = new Map();
 let generationUpdates = [];
 let planHistory = [];
+let bookingReports = [];
 const user = {
   id: "00000000-0000-4000-8000-000000000001",
   email: "fixture@example.invalid",
@@ -54,6 +55,7 @@ const server = createServer(async (req, res) => {
     searches = new Map();
     generationUpdates = [];
     planHistory = [];
+    bookingReports = [];
     return send({});
   }
   if (url.pathname === "/fixture/state")
@@ -63,8 +65,11 @@ const server = createServer(async (req, res) => {
       searches: [...searches.values()],
       generationUpdates,
       planHistory,
+      bookingReports,
     });
   if (url.pathname === "/fixture/trip") {
+    if (body.itineraries && !body.itineraries.booking_generation_id)
+      body.itineraries.booking_generation_id = randomUUID();
     trips.set(body.id, body);
     return send({});
   }
@@ -103,6 +108,80 @@ const server = createServer(async (req, res) => {
           url.searchParams.get("user_id") === `eq.${row.user_id}`,
       ),
     );
+  }
+  if (url.pathname === "/rest/v1/rpc/read_trip_booking_reports") {
+    const trip = trips.get(body.p_trip_id);
+    if (!trip || trip.user_id !== body.p_user_id) return send(null);
+    const owned = bookingReports.filter(
+      (row) => row.trip_id === trip.id && row.user_id === body.p_user_id,
+    );
+    const latest = new Map();
+    for (const row of owned) {
+      const key = `${row.generation_id}:${row.item_id}`;
+      if (!latest.has(key)) latest.set(key, row);
+    }
+    return send({
+      reports: [...latest.values()],
+      receipt: owned.some((row) => row.request_id === body.p_request_id),
+    });
+  }
+  if (url.pathname === "/rest/v1/rpc/report_trip_booking") {
+    const trip = trips.get(body.p_trip_id),
+      command = body.p_command;
+    if (!trip || trip.user_id !== body.p_user_id)
+      return send({ state: "conflict" });
+    const existing = bookingReports.find(
+      (row) => row.trip_id === trip.id && row.request_id === command.requestId,
+    );
+    if (existing)
+      return send({
+        state:
+          JSON.stringify(existing.command) === JSON.stringify(command)
+            ? "replayed"
+            : "conflict",
+        reportId: existing.id,
+      });
+    const previous = bookingReports.find(
+      (row) =>
+        row.trip_id === trip.id &&
+        row.generation_id === command.generationId &&
+        row.item_id === command.itemId,
+    );
+    if (
+      trip.updated_at !== command.expectedUpdatedAt ||
+      trip.status !== "planned" ||
+      trip.preferences?.planNeedsRefresh ||
+      trip.itineraries?.booking_generation_id !== command.generationId ||
+      (previous?.id ?? null) !== command.expectedReportId
+    )
+      return send({ state: "conflict" });
+    let selected;
+    trip.itineraries.days.forEach((day, di) => {
+      for (const period of ["morning", "afternoon", "evening"]) {
+        (day[period]?.activities || []).forEach((item, ai) => {
+          const id =
+            item.planItemId ||
+            `item_${createHash("md5").update(`${trip.id}:${di}:${period}:${ai}`).digest("hex")}`;
+          if (id === command.itemId) selected = { item, date: day.date };
+        });
+      }
+    });
+    if (!selected) return send({ state: "conflict" });
+    const report = {
+      id: randomUUID(),
+      trip_id: trip.id,
+      user_id: trip.user_id,
+      generation_id: command.generationId,
+      item_id: command.itemId,
+      trip_version: trip.updated_at,
+      status: command.status,
+      request_id: command.requestId,
+      item_snapshot: selected.item,
+      activity_date: selected.date,
+      command,
+    };
+    bookingReports.unshift(report);
+    return send({ state: "applied", reportId: report.id });
   }
   if (url.pathname === "/rest/v1/rpc/edit_trip_plan") {
     const trip = trips.get(body.p_trip_id);
@@ -292,6 +371,7 @@ const fixtureEnv = {
   HOME: path.join(fixtureRoot, "home"),
   NODE_ENV: "production",
   FAROWAY_PLAN_EDITING_ENABLED: "true",
+  FAROWAY_BOOKING_CHECKLIST_ENABLED: "true",
   IP_HASH_SALT: "isolated-fixture-rate-limit-salt",
   NODE_OPTIONS: "--max-old-space-size=3072",
   WORKFLOW_TARGET_WORLD: "local",

@@ -230,5 +230,60 @@ try:
         assert sql(f"SELECT plan_revision_id IS NULL FROM trips WHERE id='{trip}';")=='t'
         print("PASS immutable plan history, server-only writes, locked swaps, exact replay, stale parents/briefs and new generation lineage")
 
+    booking_migration=root / "supabase/migrations/20261003008000_trip_booking_checklist.sql"
+    if booking_migration.exists():
+        sql(booking_migration.read_text()); sql(booking_migration.read_text())
+        def report_command(status='traveler_booked',parent=None):
+            return {'requestId':str(uuid.uuid4()),'expectedUpdatedAt':sql(f"SELECT updated_at FROM trips WHERE id='{trip}';"),'generationId':sql(f"SELECT booking_generation_id FROM itineraries WHERE trip_id='{trip}';"),'itemId':first,'expectedReportId':parent,'status':status}
+        def report(command,user=owner):
+            return json.loads(sql(f"SET ROLE service_role; SELECT report_trip_booking('{trip}','{user}','{json.dumps(command)}');"))
+        command=report_command()
+        sql(auth+f"SELECT report_trip_booking('{trip}','{owner}','{json.dumps(command)}');",ok=False)
+        sql(auth+f"SELECT read_trip_booking_reports('{trip}','{owner}',NULL);",ok=False)
+        sql(auth+"SELECT * FROM trip_booking_reports;",ok=False)
+        assert report(command,other)['state']=='conflict'
+        assert sql(f"SET ROLE service_role; SELECT read_trip_booking_reports('{trip}','{other}',NULL) IS NULL;")=='t'
+        assert report({**command,'itemId':'item_'+'0'*32})['state']=='conflict'
+        assert report({**command,'status':'provider_verified'})['state']=='conflict'
+        before=sql(f"SELECT updated_at FROM trips WHERE id='{trip}';")
+        saved=report(command); assert saved['state']=='applied'
+        assert report(command)['state']=='replayed'
+        assert report({**command,'status':'needed'})['state']=='conflict'
+        assert sql(f"SELECT updated_at FROM trips WHERE id='{trip}';")==before
+        assert sql("SELECT count(*) FROM affiliate_clicks;")=='1'
+        assert sql("SELECT count(*) FROM affiliate_clicks WHERE converted;")=='0'
+        sql("SET ROLE service_role; UPDATE trip_booking_reports SET status='needed';",ok=False)
+        sql("UPDATE trip_booking_reports SET status='needed';",ok=False)
+        print("PASS booking ownership, immutable traveler-only reports, exact replay and no trip/commission mutation")
+        race1=report_command('needed',saved['reportId']);race2=report_command('provider_opened',saved['reportId'])
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+            results=list(pool.map(report,[race1,race2]))
+        assert sorted(r['state'] for r in results)==['applied','conflict']
+        data=json.loads(sql(f"SET ROLE service_role; SELECT read_trip_booking_reports('{trip}','{owner}','{command['requestId']}');"))
+        assert data['receipt'] and len(data['reports'])==1
+        assert data['reports'][0]['id']!=saved['reportId']
+        current=data['reports'][0]
+        late=report_command('traveler_booked',current['id'])
+        # Changing the plan keeps report history but invalidates its trip binding.
+        days=json.loads(sql(f"SELECT stamp_plan_items('{trip}',days) FROM itineraries WHERE trip_id='{trip}';"))
+        assert edit(edit_command('lock'),days,[first])['state']=='applied'
+        assert report(late)['state']=='conflict'
+        assert sql(f"SELECT trip_version <> (SELECT updated_at FROM trips WHERE id='{trip}') FROM trip_booking_reports WHERE id='{current['id']}';")=='t'
+        assert report(command)['state']=='replayed' # Receipt remains checkable after changes.
+        version=sql(f"SELECT updated_at FROM trips WHERE id='{trip}';")
+        sql(f"SET ROLE service_role; SELECT id FROM update_trip_brief('{trip}','{owner}','{version}','{{\"destination\":\"Tokyo\"}}');")
+        assert report(report_command('needed',current['id']))['state']=='conflict'
+        old_generation=command['generationId']
+        sql(f"UPDATE trips SET status='generating',search_id='{a}' WHERE id='{trip}';")
+        assert sql(f"SET ROLE service_role; SELECT apply_trip_generation_update('{trip}','{a}','planned','{payload}');")=='t'
+        fresh=report_command()
+        assert fresh['generationId']!=old_generation
+        assert report({**fresh,'generationId':old_generation})['state']=='conflict'
+        assert report(fresh)['state']=='applied'
+        data=json.loads(sql(f"SET ROLE service_role; SELECT read_trip_booking_reports('{trip}','{owner}',NULL);"))
+        assert len(data['reports'])==2
+        assert sql("SELECT count(*) FROM trip_booking_reports;")=='3'
+        print("PASS competing booking reports, edit/brief races, retained receipts and separate regenerated-plan identity")
+
 finally:
     subprocess.run(["docker", "rm", "-f", name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

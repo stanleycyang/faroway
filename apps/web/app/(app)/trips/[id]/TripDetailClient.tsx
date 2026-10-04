@@ -1,5 +1,6 @@
 "use client";
 
+import { BookingChecklist } from "@/components/trips/BookingChecklist";
 import { PlanEditor } from "@/components/trips/PlanEditor";
 import { TripBriefEditor } from "@/components/trips/TripBriefEditor";
 
@@ -98,6 +99,7 @@ interface TripDetailClientProps {
   initialData: TripResponse;
   initialShareUrl: string | null;
   planEditingEnabled?: boolean;
+  bookingChecklistEnabled?: boolean;
 }
 
 export function TripDetailClient({
@@ -105,6 +107,7 @@ export function TripDetailClient({
   initialData,
   initialShareUrl,
   planEditingEnabled = false,
+  bookingChecklistEnabled = false,
 }: TripDetailClientProps) {
   const router = useRouter();
 
@@ -754,6 +757,14 @@ export function TripDetailClient({
               }}
             />
           )}
+
+        {bookingChecklistEnabled && (
+          <BookingChecklist
+            key={`bookings:${trip.updated_at}`}
+            tripId={trip.id}
+            userId={trip.user_id}
+          />
+        )}
 
         {/* Recommended Hotel — fades in from stream or DB */}
         {displayTopHotel && !trip.preferences?.planNeedsRefresh && (

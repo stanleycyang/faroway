@@ -716,3 +716,179 @@ test("refreshes the main trip after a confirmed edit even when editor refresh fa
   ).json();
   expect(state.planHistory).toHaveLength(1);
 });
+
+test("retains traveler booking reports after interruption, edits and regeneration", async ({
+  page,
+  request,
+}) => {
+  const trip = structuredClone(baseTrip);
+  trip.itineraries.days[0].morning.activities = [
+    { name: "Quiet walk" },
+  ] as never;
+  await request.post("http://127.0.0.1:4401/fixture/trip", { data: trip });
+  await page.goto(`/trips/${id}`);
+  const checklist = page.getByRole("region", {
+    name: "Booking checklist",
+    exact: true,
+  });
+  await expect(
+    checklist.getByText("Provider verification is not connected.", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  let dropReply = true;
+  await page.route("**/api/trips/*/bookings", async (route) => {
+    if (route.request().method() === "POST" && dropReply) {
+      dropReply = false;
+      const response = await route.fetch();
+      expect(response.status()).toBe(200);
+      await route.abort();
+    } else await route.continue();
+  });
+  await checklist
+    .getByRole("button", { name: "I opened the provider", exact: true })
+    .click();
+  await checklist
+    .getByRole("button", { name: "Save my report", exact: true })
+    .click();
+  await expect(
+    checklist.getByRole("button", { name: "Check saved report", exact: true }),
+  ).toBeVisible();
+  await page.reload();
+  await checklist
+    .getByRole("button", { name: "Check saved report", exact: true })
+    .click();
+  await expect(
+    checklist.getByText("Provider opened · reported by you", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    checklist.getByRole("button", { name: "Retry same report", exact: true }),
+  ).toHaveCount(0);
+  await checklist
+    .getByRole("button", { name: "I booked this", exact: true })
+    .click();
+  await expect(
+    checklist.getByText("This records your own progress only.", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await checklist
+    .getByRole("button", { name: "Save my report", exact: true })
+    .click();
+  await expect(
+    checklist.getByText("Booked · reported by you", { exact: true }),
+  ).toBeVisible();
+  await page.screenshot({
+    path: test.info().outputPath("booking-checklist.png"),
+    fullPage: true,
+  });
+  let state = await (
+    await request.get("http://127.0.0.1:4401/fixture/state")
+  ).json();
+  expect(state.bookingReports).toHaveLength(2);
+  expect(state.trips[0].updated_at).toBe(trip.updated_at);
+  await page
+    .locator("summary")
+    .filter({ hasText: "Make this plan yours" })
+    .click();
+  await page
+    .getByRole("button", { name: "Lock Quiet walk", exact: true })
+    .click();
+  await expect(
+    checklist.getByText("Trip changed — review this report", { exact: false }),
+  ).toBeVisible();
+  await expect(
+    checklist.getByText("Booked · reported by you", { exact: true }),
+  ).toBeVisible();
+  state = await (
+    await request.get("http://127.0.0.1:4401/fixture/state")
+  ).json();
+  state.trips[0].itineraries.booking_generation_id =
+    "00000000-0000-4000-8000-000000000099";
+  state.trips[0].updated_at = "2026-10-05T00:00:00.000Z";
+  await request.post("http://127.0.0.1:4401/fixture/trip", {
+    data: state.trips[0],
+  });
+  await page.reload();
+  await expect(
+    checklist.getByText("Review / still needed", { exact: true }),
+  ).toBeVisible();
+  await checklist
+    .getByText("Reports from earlier or unavailable activities (1)", {
+      exact: true,
+    })
+    .click();
+  await expect(
+    checklist.getByText("Quiet walk · 2099-06-01 · Booked · reported by you", {
+      exact: true,
+    }),
+  ).toBeVisible();
+});
+
+test("recovers a confirmed booking report when the following refresh fails", async ({
+  page,
+  request,
+}) => {
+  const trip = structuredClone(baseTrip);
+  trip.itineraries.days[0].morning.activities = [
+    { name: "Quiet walk" },
+  ] as never;
+  await request.post("http://127.0.0.1:4401/fixture/trip", { data: trip });
+  await page.goto(`/trips/${id}`);
+  const checklist = page.getByRole("region", {
+    name: "Booking checklist",
+    exact: true,
+  });
+  let saved = false,
+    failRead = true;
+  await page.route("**/api/trips/*/bookings", async (route) => {
+    if (route.request().method() === "POST") {
+      const response = await route.fetch();
+      expect(response.status()).toBe(200);
+      saved = true;
+      await route.fulfill({ response });
+    } else if (saved && failRead)
+      await route.fulfill({ status: 503, json: { error: "Unavailable" } });
+    else await route.continue();
+  });
+  await checklist
+    .getByRole("button", { name: "I booked this", exact: true })
+    .click();
+  await checklist
+    .getByRole("button", { name: "Save my report", exact: true })
+    .click();
+  await expect(
+    checklist.getByText(
+      "Your report was saved, but progress could not refresh.",
+      { exact: false },
+    ),
+  ).toBeVisible();
+  await expect(
+    checklist.getByRole("button", { name: "Retry same report", exact: true }),
+  ).toHaveCount(0);
+  failRead = false;
+  await checklist
+    .getByRole("button", { name: "Refresh saved progress", exact: true })
+    .click();
+  await expect(
+    checklist.getByText("Booked · reported by you", { exact: true }),
+  ).toBeVisible();
+  const state = await (
+    await request.get("http://127.0.0.1:4401/fixture/state")
+  ).json();
+  expect(state.bookingReports).toHaveLength(1);
+  await checklist
+    .getByRole("button", { name: "Still needed", exact: true })
+    .click();
+  await expect(
+    checklist.getByText("changing this status does not cancel it", {
+      exact: false,
+    }),
+  ).toBeVisible();
+  await checklist
+    .getByRole("button", { name: "Keep current status", exact: true })
+    .click();
+  await expect(
+    checklist.getByText("Booked · reported by you", { exact: true }),
+  ).toBeVisible();
+});
