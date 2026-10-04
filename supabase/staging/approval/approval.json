@@ -1,0 +1,13 @@
+{
+  "target_project_ref": "omovikloadpvzijoaqus",
+  "release_head": "39e18f4049413f9c47b71da2bbf74e587352b7c9",
+  "bootstrap_sha256": "09b820436a77967f95024abf4f724f4f2f1bb1d3378ee33b73656593ba729939",
+  "supplements": {
+    "guard.sql": "e9d882a7c215fca8354f0e9a7ec9213d08e2d3a8a2929c5f33fbdd7a5896bdf1",
+    "permissions.sql": "019bda715c19adb36fe242d34871d508e09bc0637590c1449d5c2f9539cffc33",
+    "synthetic-content.sql": "37f7c7584750433f8752a1438f2cddd814aa25d41dea65550cf4abc24954bb46",
+    "postconditions.sql": "78b57ec37b51b50907bf0c0428c086c72e3ccfbe898cde62ac4fdf322470b346"
+  },
+  "manifest_sha256": "6c394ccfd2d85f0f3dc97955e6540bd2dfcb4562e7eb897db7793439a952d56f",
+  "network_or_sql_executed": false
+}

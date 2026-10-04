@@ -17,7 +17,7 @@ This draft combines the reviewed trip stack with the independent database-access
 
 ## Verification and its limits
 
-- The source stack passed 811 unit/script tests, 26 production-build desktop/mobile recovery cases, 10 hosted-checkout cases, typecheck/lint/formatting, disposable PostgreSQL invariants and production builds. PR24 adds four isolation unit cases and its separate privileged-database suite; integrated expected unit/script count is 815.
+- The source stack passed 811 unit/script tests, 26 production-build desktop/mobile recovery cases, 28 hosted-checkout cases (54 browser cases total), typecheck/lint/formatting, disposable PostgreSQL invariants and production builds. PR24 adds four isolation unit cases and its separate privileged-database suite; integrated expected unit/script count is 815.
 - [Fixture journey](release-evidence/fixture-journey.json) maps capture/recovery, constraint assessment, brief editing, locks/swaps, sharing, stale checkout prevention and booking-report recovery to executable tests. The phases use independent fixtures, not one continuous live-model/supplier purchase trace.
 - Run `python3 scripts/planning-quality-eval.py`. [Fixtures](../scripts/fixtures/planning-quality.json) and [recorded results](release-evidence/planning-quality-results.json) cover family, step-free and dietary/slow-paced constraints. All 3 acceptable fixtures pass and all 10 adversarial fixtures fail the expected check. The CI step verifies these exact outcomes.
 - This is rubric calibration on synthetic plans. It does not measure actual model output quality, supplier inventory, prices, accessibility, menus, opening hours or travel time. Model-quality evaluation with actual generations remains separately approval-gated; no paid calls ran.

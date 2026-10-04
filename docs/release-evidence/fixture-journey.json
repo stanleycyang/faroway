@@ -80,7 +80,8 @@
   "acceptance_targets": {
     "safe_unit_and_script_failures": 0,
     "desktop_mobile_recovery_cases_passed": 26,
-    "hosted_checkout_cases_passed": 10,
+    "hosted_checkout_cases_passed": 28,
+    "browser_cases_total": 54,
     "cross_owner_database_writes_accepted": 0,
     "stale_plan_checkout_publications": 0,
     "duplicate_report_rows_for_identical_retry": 0,
