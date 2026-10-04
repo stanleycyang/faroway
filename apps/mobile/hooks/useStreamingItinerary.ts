@@ -1,3 +1,4 @@
+import { reportedCount, reportedProgress } from '../lib/generationFacts';
 import {
   createAndStartTrip,
   GenerationNotStartedError,
@@ -36,12 +37,14 @@ export interface StreamingState {
   searchProgress: Record<string, string> | null;
   /** Top hotel from hotels agent (for display during streaming) */
   topHotel: Record<string, unknown> | null;
+  /** Reported hotel count; a preview alone does not establish inventory. */
+  hotelsCount: number | undefined;
   /** Activity count from activities agent */
-  activitiesCount: number;
+  activitiesCount: number | undefined;
   /** Dining count from dining agent */
-  diningCount: number;
+  diningCount: number | undefined;
   /** Transport count from transport agent */
-  transportCount: number;
+  transportCount: number | undefined;
   /** Itinerary days from aggregator */
   days: unknown[] | null;
   /** Micro-progress updates for granular feedback */
@@ -90,9 +93,10 @@ const initialState: StreamingState = {
   message: 'Connecting...',
   searchProgress: null,
   topHotel: null,
-  activitiesCount: 0,
-  diningCount: 0,
-  transportCount: 0,
+  hotelsCount: undefined,
+  activitiesCount: undefined,
+  diningCount: undefined,
+  transportCount: undefined,
   days: null,
   microProgress: null,
   microHistory: [],
@@ -258,7 +262,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
         case 'progress': {
           setState((prev) => ({
             ...prev,
-            progress: data.progress ?? prev.progress,
+            progress: reportedProgress(data.progress) ?? prev.progress,
             step: data.step ?? prev.step,
             message: data.message ?? prev.message,
             searchProgress: data.searchProgress ?? prev.searchProgress,
@@ -269,6 +273,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
         case 'hotels':
           setState((prev) => ({
             ...prev,
+            hotelsCount: reportedCount(data.count),
             topHotel: data.topHotel ?? prev.topHotel,
           }));
           break;
@@ -276,21 +281,21 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
         case 'activities':
           setState((prev) => ({
             ...prev,
-            activitiesCount: data.count ?? prev.activitiesCount,
+            activitiesCount: reportedCount(data.count),
           }));
           break;
 
         case 'dining':
           setState((prev) => ({
             ...prev,
-            diningCount: data.count ?? prev.diningCount,
+            diningCount: reportedCount(data.count),
           }));
           break;
 
         case 'transport':
           setState((prev) => ({
             ...prev,
-            transportCount: data.count ?? prev.transportCount,
+            transportCount: reportedCount(data.count),
           }));
           break;
 
@@ -571,7 +576,7 @@ async function pollGenerationStatus(
 
     const data = await response.json();
     update({
-      progress: typeof data.progress === 'number' ? data.progress : 0,
+      progress: reportedProgress(data.progress) ?? 0,
       step: data.step || 'running',
       message: data.message || 'Generating...',
     });
