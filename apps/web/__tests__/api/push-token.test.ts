@@ -79,3 +79,32 @@ it("revokes through the same ordered atomic boundary, preserving a tombstone", a
   );
   expect(from).not.toHaveBeenCalled();
 });
+
+it("preserves opt-out ordering through activation, flag rollback and re-enable", async () => {
+  let revision = 0;
+  let active = false;
+  rpc.mockImplementation(async (_name, input) => {
+    if (input.p_revision <= revision) return { data: false, error: null };
+    revision = input.p_revision;
+    active = input.p_enabled;
+    return { data: true, error: null };
+  });
+  expect((await POST(request("POST"))).status).toBe(200);
+  vi.stubEnv("PUSH_CONSENT_V2_ENABLED", "false");
+  expect(
+    (await DELETE(request("DELETE", { ...body, revision: 102 }))).status,
+  ).toBe(200);
+  expect(active).toBe(false);
+  vi.stubEnv("PUSH_CONSENT_V2_ENABLED", "true");
+  expect((await POST(request("POST", { ...body, revision: 101 }))).status).toBe(
+    409,
+  );
+  expect(active).toBe(false);
+  expect(from).not.toHaveBeenCalled();
+});
+it("never erases a tombstone on missing RPC or database failure", async () => {
+  vi.stubEnv("PUSH_CONSENT_V2_ENABLED", "false");
+  rpc.mockResolvedValue({ error: { code: "42883" } });
+  expect((await DELETE(request("DELETE"))).status).toBe(503);
+  expect(from).not.toHaveBeenCalled();
+});

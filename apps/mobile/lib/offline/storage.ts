@@ -6,6 +6,14 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Trip } from '../../stores/tripStore';
 
+// Cache removal and all subsequent reads/writes share one queue. A new
+// account's writes cannot land between the removals in an account cleanup.
+let storageQueue: Promise<unknown> = Promise.resolve();
+function serializeStorage<T>(work: () => Promise<T>): Promise<T> {
+  const result = storageQueue.then(work);
+  storageQueue = result.catch(() => {});
+  return result;
+}
 // Storage keys
 const STORAGE_KEYS = {
   TRIPS: '@faroway/trips',
@@ -358,18 +366,18 @@ class OfflineStorage {
   /**
    * Clear all offline data (for logout/reset)
    */
-  async clearAll(): Promise<void> {
-    try {
-      await Promise.all([
-        AsyncStorage.removeItem(STORAGE_KEYS.TRIPS),
-        AsyncStorage.removeItem(STORAGE_KEYS.PENDING_MUTATIONS),
-        AsyncStorage.removeItem(STORAGE_KEYS.SYNC_META),
-        AsyncStorage.removeItem(STORAGE_KEYS.LAST_SYNC),
-      ]);
-    } catch (error) {
-      console.error('[OfflineStorage] Error clearing all data:', error);
-      throw error;
-    }
+  async clearAll(authorize: () => Promise<void> = async () => {}): Promise<void> {
+    // Recheck identity after earlier storage work, immediately before removal.
+    // Later operations (including a new account's save) wait for ALL removals.
+    await authorize();
+    const results = await Promise.allSettled([
+      AsyncStorage.removeItem(STORAGE_KEYS.TRIPS),
+      AsyncStorage.removeItem(STORAGE_KEYS.PENDING_MUTATIONS),
+      AsyncStorage.removeItem(STORAGE_KEYS.SYNC_META),
+      AsyncStorage.removeItem(STORAGE_KEYS.LAST_SYNC),
+    ]);
+    const failed = results.find((result) => result.status === 'rejected');
+    if (failed?.status === 'rejected') throw failed.reason;
   }
 
   /**
@@ -393,4 +401,13 @@ class OfflineStorage {
 }
 
 // Export singleton instance
-export const offlineStorage = new OfflineStorage();
+// Serialize whole public operations, not individual AsyncStorage calls: nested
+// read-modify-write methods stay atomic and cannot span another account's clear.
+export const offlineStorage = new Proxy(new OfflineStorage(), {
+  get(target, property, receiver) {
+    const value = Reflect.get(target, property, receiver);
+    return typeof value === 'function'
+      ? (...args: unknown[]) => serializeStorage(() => value.apply(target, args))
+      : value;
+  },
+});

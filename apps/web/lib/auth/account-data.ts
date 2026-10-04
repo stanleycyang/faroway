@@ -209,7 +209,8 @@ export async function purgeAccountData(
   await deleteByIds(db, "affiliate_clicks", "trip_id", tripIds, {
     optionalSchema: true,
   });
-  await deleteByIds(db, "itineraries", "trip_id", tripIds);
+  // The parent cascade is the authorized deletion path; direct itinerary
+  // DELETE is intentionally rejected by the plan-write guard.
   await deleteByUserId(db, "trips", userId);
   await deleteByIds(db, "search_results", "search_id", searchIds, {
     optionalSchema: true,

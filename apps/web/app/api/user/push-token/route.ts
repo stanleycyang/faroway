@@ -27,23 +27,14 @@ async function update(request: NextRequest, enabled: boolean) {
       { status: 400 },
     );
   const db = getSupabase();
-  if (process.env.PUSH_CONSENT_V2_ENABLED !== "true") {
-    if (enabled)
-      return NextResponse.json(
-        { error: "Device notifications are not enabled yet." },
-        { status: 503 },
-      );
-    // Safe rollout cleanup while dispatch is disabled. New POSTs fail closed.
-    const { error } = await db
-      .from("push_tokens")
-      .delete()
-      .eq("user_id", user.id)
-      .eq("token", input.data.token);
+  if (enabled && process.env.PUSH_CONSENT_V2_ENABLED !== "true")
     return NextResponse.json(
-      error ? { error: "Removal must be retried." } : { deleted: true },
-      { status: error ? 503 : 200 },
+      { error: "Device notifications are not enabled yet." },
+      { status: 503 },
     );
-  }
+  // Registration flags never disable ordered revocation. Physical deletion
+  // would erase the revision tombstone and let a delayed POST resurrect consent.
+  // Missing ordering schema fails closed; no destructive legacy fallback.
   const { data, error } = await db.rpc("set_device_push_consent", {
     p_user_id: user.id,
     p_token: input.data.token,

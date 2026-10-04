@@ -2,7 +2,7 @@
   "status": "review candidate; NOT applied or activated",
   "integrated_base": "codex/apple-revocation-preparation",
   "sql": "supabase/release-candidate/account-and-push.sql",
-  "sql_sha256": "6cd8282e1517af475b75e0cdfaaf99acb335ccdadba3b0b0c534495bda17764d",
+  "sql_sha256": "f40d6c7509005fde86b0c8b5c1b9304fc774db6148017447150868a91e4d8eb6",
   "approved_bootstrap_sha256_unchanged": "09b820436a77967f95024abf4f724f4f2f1bb1d3378ee33b73656593ba729939",
   "required_approvals": [
     "Review the separate SQL transaction and run aggregate legacy-registration audit against the intended staging target. Approve independently of bootstrap.",
@@ -29,7 +29,9 @@
     "A lost code exchange response before encrypted token persistence needs fresh Apple reauthentication. A changed linked Apple identity fails closed for resolution.",
     "The native recovery proof is stored only in SecureStore. Reauthentication never opts into push; pending cleanup for another account is never transferred.",
     "The SQL file is intentionally outside the frozen bootstrap migration inventory. Supabase CLI was unavailable and npm resolution failed; promote through an available CLI migration-new command only after review, preserving the reviewed SQL content.",
-    "Core account writes and deletion claims use transaction-scoped account advisory locks at READ COMMITTED; other isolation levels fail closed. Owned searches cannot transfer or detach. Purge removes trips before owned searches to avoid fenced foreign-key updates."
+    "Core account writes and deletion claims use transaction-scoped account advisory locks at READ COMMITTED; other isolation levels fail closed. Owned searches cannot transfer or detach. Purge removes trips before owned searches to avoid fenced foreign-key updates.",
+    "Up to 32 status-only device proofs remain valid independently for 30 days from issuance. New proofs do not evict unexpired ones; the cap rejects new issuance and permits reuse. Receipt retention must preserve all unexpired proofs.",
+    "Ordered push revocation remains active when registration/delivery flags are off. Missing ordering schema returns a retryable failure; no physical-delete fallback may erase tombstones."
   ],
   "device_release_checks": [
     "Native saved-trip browser handoff while signed in/out, interrupted navigation and provider final-price/terms consent.",

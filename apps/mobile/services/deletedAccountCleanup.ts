@@ -18,7 +18,16 @@ export async function cleanupDeletedAccount(userId: string) {
   )
     throw new Error('Sign out of your current account to finish the deleted account cleanup.');
   // Await durable deletion, rather than the store's fire-and-forget clearAll.
-  await offlineStorage.clearAll();
+  await offlineStorage.clearAll(async () => {
+    const queued = await supabase.auth.getSession();
+    const queuedProfile = useUserStore.getState().user?.id;
+    if (
+      queued.error ||
+      (queued.data.session && queued.data.session.user.id !== userId) ||
+      (queuedProfile && queuedProfile !== userId)
+    )
+      throw new Error('Your account changed before storage cleanup. Please retry.');
+  });
   const checked = await supabase.auth.getSession();
   const checkedProfile = useUserStore.getState().user?.id;
   if (

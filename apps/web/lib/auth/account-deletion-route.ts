@@ -171,11 +171,10 @@ export async function POST(request: NextRequest) {
   if (!input.success) return reply({ error: "Invalid recovery request" }, 400);
   try {
     const db = getSupabase();
-    const { data, error } = await db
-      .from("account_deletion_receipts")
-      .select("user_id,phase")
-      .eq("recovery_hash", recoveryHash(input.data.recoveryToken))
-      .maybeSingle();
+    const { data: receipts, error } = await db.rpc("lookup_account_deletion", {
+      p_recovery_hash: recoveryHash(input.data.recoveryToken),
+    });
+    const data = receipts?.[0];
     if (error)
       return reply({ error: "Deletion recovery is unavailable." }, 503);
     if (!data) return reply({ deleted: false });
@@ -223,11 +222,16 @@ export async function PATCH(request: NextRequest) {
     } = await auth.auth.getUser();
     if (error || !user)
       return reply({ error: "Sign in to cancel this request." }, 401);
-    const result = await getSupabase()
+    const db = getSupabase();
+    const proof = await db.rpc("lookup_account_deletion", {
+      p_recovery_hash: recoveryHash(input.data.recoveryToken),
+    });
+    if (proof.error || proof.data?.[0]?.user_id !== user.id)
+      return reply({ error: "Cancellation could not be confirmed." }, 409);
+    const result = await db
       .from("account_deletion_receipts")
       .delete()
       .eq("user_id", user.id)
-      .eq("recovery_hash", recoveryHash(input.data.recoveryToken))
       .eq("phase", "pending")
       .is("lease_id", null)
       .select("user_id");

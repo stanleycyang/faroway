@@ -16,6 +16,25 @@ ALTER TABLE public.account_deletion_receipts ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.account_deletion_receipts FROM PUBLIC, anon, authenticated;
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.account_deletion_receipts TO service_role;
 
+-- Multiple authenticated devices retain status-only proofs through expiry.
+CREATE TABLE public.account_deletion_proofs (
+  recovery_hash TEXT PRIMARY KEY CHECK (recovery_hash ~ '^[a-f0-9]{64}$'),
+  user_id UUID NOT NULL REFERENCES public.account_deletion_receipts(user_id) ON DELETE CASCADE,
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT (now()+interval '30 days')
+);
+CREATE INDEX account_deletion_proofs_owner ON public.account_deletion_proofs(user_id);
+ALTER TABLE public.account_deletion_proofs ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.account_deletion_proofs FROM PUBLIC,anon,authenticated;
+GRANT SELECT,INSERT,UPDATE,DELETE ON public.account_deletion_proofs TO service_role;
+CREATE FUNCTION public.lookup_account_deletion(p_recovery_hash TEXT)
+RETURNS TABLE(user_id UUID,phase TEXT) LANGUAGE sql STABLE SET search_path=pg_catalog AS $$
+  SELECT r.user_id,r.phase FROM public.account_deletion_receipts r
+  JOIN public.account_deletion_proofs p ON p.user_id=r.user_id
+  WHERE p.recovery_hash=p_recovery_hash AND p.expires_at>now();
+$$;
+REVOKE ALL ON FUNCTION public.lookup_account_deletion(TEXT) FROM PUBLIC,anon,authenticated;
+GRANT EXECUTE ON FUNCTION public.lookup_account_deletion(TEXT) TO service_role;
+
 CREATE FUNCTION public.claim_account_deletion(p_user_id UUID, p_recovery_hash TEXT, p_lease_id UUID, p_apple_subject TEXT DEFAULT NULL)
 RETURNS SETOF public.account_deletion_receipts LANGUAGE plpgsql SET search_path=pg_catalog AS $$
 BEGIN
@@ -26,11 +45,21 @@ BEGIN
   INSERT INTO public.account_deletion_receipts(user_id,recovery_hash,apple_subject)
     VALUES(p_user_id,p_recovery_hash,p_apple_subject) ON CONFLICT(user_id) DO NOTHING;
   -- Only a freshly authenticated owner can invoke this service-only function.
-  -- Reauthentication can replace a lost local recovery token after the lease.
+  -- Preserve every unexpired issued proof. Refuse a 33rd new proof instead of
+  -- evicting another device; reusing any existing proof remains possible.
+  DELETE FROM public.account_deletion_proofs WHERE user_id=p_user_id AND expires_at<=now();
+  IF NOT EXISTS(SELECT 1 FROM public.account_deletion_proofs WHERE recovery_hash=p_recovery_hash AND user_id=p_user_id)
+     AND (SELECT count(*) FROM public.account_deletion_proofs WHERE user_id=p_user_id)>=32 THEN
+    RAISE EXCEPTION 'Recovery proof limit reached';
+  END IF;
   RETURN QUERY UPDATE public.account_deletion_receipts SET
-    recovery_hash=p_recovery_hash,apple_subject=coalesce(apple_subject,p_apple_subject),
+    apple_subject=coalesce(apple_subject,p_apple_subject),
     phase=CASE WHEN apple_subject IS NULL AND p_apple_subject IS NOT NULL AND phase<>'completed' THEN 'pending' ELSE phase END,lease_id=p_lease_id,lease_until=clock_timestamp()+interval '2 minutes',updated_at=now()
     WHERE user_id=p_user_id AND (lease_until IS NULL OR lease_until<clock_timestamp()) RETURNING *;
+  IF FOUND THEN
+    INSERT INTO public.account_deletion_proofs(recovery_hash,user_id) VALUES(p_recovery_hash,p_user_id)
+      ON CONFLICT(recovery_hash) DO NOTHING;
+  END IF;
 END $$;
 REVOKE ALL ON FUNCTION public.claim_account_deletion(UUID,TEXT,UUID,TEXT) FROM PUBLIC,anon,authenticated;
 GRANT EXECUTE ON FUNCTION public.claim_account_deletion(UUID,TEXT,UUID,TEXT) TO service_role;

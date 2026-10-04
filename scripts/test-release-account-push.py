@@ -82,10 +82,32 @@ try:
     assert consent(A,200)=='f'
     sql(f"UPDATE public.account_deletion_receipts SET lease_until=now()-interval '1 second' WHERE user_id='{A}'")
     assert sql(f"SET ROLE service_role; SELECT count(*) FROM public.claim_account_deletion('{A}','{'b'*64}','{lease2}');")=='1'
+    for index in range(30):
+        sql(f"INSERT INTO public.account_deletion_proofs(recovery_hash,user_id) VALUES('{index:064x}','{A}');")
+    sql(f"UPDATE public.account_deletion_receipts SET lease_until=now()-interval '1 second' WHERE user_id='{A}';")
+    sql(f"SELECT * FROM public.claim_account_deletion('{A}','{'e'*64}','{uuid.uuid4()}');",False)
+    # A full proof set must neither evict valid devices nor prevent an existing
+    # proof from reacquiring a lease.
+    assert sql(f"SELECT count(*) FROM public.claim_account_deletion('{A}','{'b'*64}','{lease2}');")=='1'
+    # Device B resumes with proof b; device A's previously issued a remains valid.
+    for proof in ['a','b']:
+        assert sql(f"SET ROLE service_role; SELECT user_id FROM public.lookup_account_deletion('{proof*64}');")==A
     assert sql(f"WITH changed AS (UPDATE public.account_deletion_receipts SET phase='completed' WHERE user_id='{A}' AND lease_id='{lease1}' RETURNING *) SELECT count(*) FROM changed")=='0'
-    sql(f"DELETE FROM public.trips WHERE user_id='{A}'; DELETE FROM public.searches WHERE user_id='{A}';")
+    # Match API role/order: direct itinerary deletion remains protected; deleting
+    # owned parent trips must cascade successfully under the same service role.
+    sql(f"SET ROLE service_role; DELETE FROM public.itineraries WHERE trip_id='{T}';",False)
+    sql(f"SET ROLE service_role; DELETE FROM public.trips WHERE user_id='{A}'; DELETE FROM public.searches WHERE user_id='{A}';")
+    assert sql(f"SELECT count(*) FROM public.itineraries WHERE trip_id='{T}'")=='0'
+    print('PASS service-role parent-first purge with guarded itinerary cascade',flush=True)
     sql(f"DELETE FROM public.users WHERE id='{A}'; DELETE FROM auth.users WHERE id='{A}';")
     assert sql(f"SELECT count(*) FROM public.account_deletion_receipts WHERE user_id='{A}'")=='1'
+    sql(f"UPDATE public.account_deletion_receipts SET phase='completed' WHERE user_id='{A}';")
+    for proof in ['a','b']:
+        assert sql(f"SET ROLE service_role; SELECT phase FROM public.lookup_account_deletion('{proof*64}');")=='completed'
+    sql(f"UPDATE public.account_deletion_proofs SET expires_at=now()-interval '1 second' WHERE recovery_hash='{'a'*64}';")
+    assert sql(f"SELECT count(*) FROM public.lookup_account_deletion('{'a'*64}');")=='0'
+    assert sql(f"SELECT count(*) FROM public.lookup_account_deletion('{'b'*64}');")=='1'
+    print('PASS two-device recovery proof preservation and independent expiry after Auth deletion',flush=True)
     print('PASS private durable deletion receipts, lease fencing, write refusal and survival after Auth deletion',flush=True)
 finally:
     subprocess.run(['docker','rm','--force',name],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL)
