@@ -4,19 +4,25 @@ Prepared 2026-10-04. **No merge, production SQL, deployment configuration change
 
 ## Verified release identity
 
-| Item                    | Exact reviewed source                      | State at inspection                                                          |
-| ----------------------- | ------------------------------------------ | ---------------------------------------------------------------------------- |
-| Production / `main`     | `4f68fe54eac618395a8ebb23d0d124f3799adb28` | Vercel `READY`, production alias verified                                    |
-| PR20 price trust        | `9e4983aa2ac4a65e297ffb51611958eff7aedc73` | Open draft, targets `main`; not merged                                       |
-| PR21 recovery/sharing   | `a736aa36c17ab41b2b205098b3326bfc8ec10db8` | Open draft, targets PR20 branch; exact-head CI including build passed        |
-| PR22 editable brief     | `f493f40d793f85adafca33fd13888b0c3387d16a` | Open draft, targets PR21 branch; exact-head CI including build passed        |
-| PR23 activity revisions | `541ba22cd25f58451d24365e2da3d5728192f4e9` | Separate draft under further review; excluded from the PR21/22 merge request |
+| Item                    | Exact reviewed source                      | State at inspection                                                                    |
+| ----------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------- |
+| Production / `main`     | `4f68fe54eac618395a8ebb23d0d124f3799adb28` | Vercel `READY`, production alias verified                                              |
+| PR20 price trust        | `9e4983aa2ac4a65e297ffb51611958eff7aedc73` | Open draft, targets `main`; not merged                                                 |
+| PR21 recovery/sharing   | `a736aa36c17ab41b2b205098b3326bfc8ec10db8` | Open draft, targets PR20 branch; exact-head CI including build passed                  |
+| PR22 editable brief     | `cd83a8ecce2927b9d721d215fcc3107cbebb6e96` | Open draft; timestamp-trigger correction tested locally; renewed exact-head CI pending |
+| PR23 activity revisions | `9046c0f13ab841e327d49a09fb9d59c08e9284c9` | Separate draft under further review; excluded from the PR21/22 merge request           |
 
 These are code-review baselines, not an instruction to deploy a moving branch. Re-resolve and record the final release/merge SHA, database target, and tested artifact immediately before approval. A later commit needs renewed exact-head verification.
 
 Vercel target verified through the connected app: team `Testimonio` (`team_idxL5WtlJ0ci1y7tBwPL6AhC`), project `faroway` (`prj_fC34YwwfPMXckMb4vVpfkawHM17P`). `www.faroway.ai` resolves to deployment `dpl_5fXdSvLR7FA8D8ojFVapUQvuva6w`, production SHA above. Git branch pushes are producing automatic previews, and recent `main` commits have production deployments. The connector's normalized metadata does **not** expose the production auto-deploy policy or current runtime feature-flag values; a merge must be treated as potentially deploying immediately until an operator verifies a hold.
 
-No Supabase connector or authenticated CLI is available here. No local linked project reference exists. Repository `supabase/config.toml` is local-development configuration, not verified production identity. Production schema, applied migration ledger, backup/PITR, SQL permissions, actual flag values, and workflow inventory remain unverified. Do not read dotenv files or request pasted credentials to bridge this gap. Use an authorized connection or the owner's database operator to confirm the exact target and execute approved SQL.
+The parent thread's authorized read-only database review verified Supabase project `jcnephijkxgtprsutgsf` (`ACTIVE_HEALTHY`, `us-west-2`) and the Vercel production URL binding. The migration ledger ends at `20260725006000`; all six proposed migrations are absent. It includes `20260725002000_lock_down_tracking_and_search_rls`, so older checked-in policies alone do not describe current production permissions. Actual policies/functions are being reviewed separately. Backup/PITR, staging readiness, external workflow inventory, and controlled deployment hold remain unverified.
+
+**Preview is not staging.** Read-only configuration metadata shows production, preview, and development use this same Supabase project, with service-role variable metadata scoped to all three. No Supabase development branches were found. Do not run preview write tests/canaries or use these environments for migration rehearsals. Existing tests use disposable local PostgreSQL and synthetic local browser services. An isolated staging target needs separate approval and verification; no keys were read or printed.
+
+The database has 62 trips (47 planned, 15 failed), 59 searches (45 completed, 14 error), zero `workflow_runs` rows, and no recorded workflow-run bindings at inspection. This does **not** establish an external durable-job drain. Existing cleanup still marks old generation failed after one hour; 004000 remains required. Environment metadata lists neither `FAROWAY_PLANNING_PAUSED` nor `FAROWAY_PLAN_EDITING_ENABLED`; deployed artifact values and hold behavior still require verification.
+
+The live `update_trips_updated_at` trigger calls transaction-stable `NOW()` after `protect_trip_brief`. A disposable reproduction demonstrated accepted stale edits inside one transaction. PR22's corrected 005000 replaces only this trip trigger binding with a strictly advancing timestamp (`max(clock_timestamp(), previous + 1 microsecond)`), preserving the shared function used by other tables. The regression now passes with the existing trigger setup. This is part of the explicit 005000 review, not an already-applied production fix.
 
 ## Safe production sequence for PR20 → PR21 → PR22
 
@@ -62,4 +68,10 @@ Prefer a compatible paused application retaining new RPCs/protections. Rolling b
 
 “Approve prerequisite PR20, followed by PR21 and PR22 into `main` in dependency order, only after final review and exact-head CI. Approve staging rehearsal and the six specifically named SQL migrations in this checklist's order, including service-only RPCs, authenticated lifecycle/search restrictions, the brief-write barrier and revision-bound checkout ledger. Approve a controlled planning/editing maintenance window and deployment pause/hold configuration on the verified Faroway target. Require the database operator to confirm the Supabase target, backup, schema/grants and old-run drain before each phase. Keep provider flags unchanged. Ask me separately before production write canaries, unpausing, PR23/schema007000, any destructive rollback, or provider activation.”
 
-That wording is a proposed bounded approval request, not received authorization or a claim that the missing database access has been established.
+That wording is a proposed bounded approval request, not received authorization. Read-only database access does not authorize production SQL or canaries.
+
+## Separate existing security prerequisites
+
+The read-only database review found `get_user_push_tokens(uuid)` and `deactivate_push_token(text)` executable by `anon`/`authenticated` while `SECURITY DEFINER` and without caller ownership checks. Their checked-in definitions in `20260220100000_push_tokens.sql` match that mechanism. The token table currently has zero rows; neither RPC was invoked. `affiliate_stats` is an owner-security aggregate view with client SELECT grants; its definition in `20260206_affiliate_tracking.sql` aggregates all clicks. Current table RLS from the July lockdown does not by itself make an owner-security view safe.
+
+Propose a separate focused migration, outside the six-file rollout: revoke these RPCs from PUBLIC/anon/authenticated and grant only service_role, with fixed search_path and schema-qualified table references; revoke client access to affiliate_stats and allow service_role only. No application callers of these named RPCs/view were found in apps or packages. Confirm external jobs before changing access; any future traveler-facing aggregate endpoint needs explicit owner scoping. Local regression coverage should seed two users, reject anonymous/authenticated token reads/deactivation and view reads, permit service operations, and confirm ordinary owner-scoped token management remains functional. Require explicit production approval for this additional permission change. Do not describe production as secured by the six planned migrations alone.
