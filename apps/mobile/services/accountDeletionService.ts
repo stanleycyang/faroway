@@ -48,7 +48,6 @@ export async function deleteAccountWithRecovery(userId: string) {
     }
     const recovery = await request('POST', { recoveryToken: receipt.recoveryToken });
     if (recovery.ok && recovery.data.deleted === true) {
-      await SecureStore.deleteItemAsync(key);
       return { data: { deleted: true } };
     }
     if (!recovery.ok)
@@ -98,7 +97,6 @@ export async function deleteAccountWithRecovery(userId: string) {
     }
     if (!result.ok || result.data.deleted !== true)
       throw new Error(result.data.error || 'Deletion is not complete. Please retry.');
-    await SecureStore.deleteItemAsync(key);
     return { data: { deleted: true } };
   } catch (error) {
     return {
@@ -126,4 +124,17 @@ export async function reconcileCompletedAccountDeletion(
   } catch {
     /* Preserve proof and retry status on the next foreground event. */
   }
+}
+
+/** Clear proof only after all durable local cleanup succeeds. Status reconciliation
+ * uses the same callback after a crash; cleanup must be idempotent. */
+export async function finishAccountDeletionCleanup(
+  userId: string,
+  cleanup: (userId: string) => Promise<void>
+) {
+  const raw = await SecureStore.getItemAsync(key);
+  if (!raw || (JSON.parse(raw) as Receipt).userId !== userId)
+    throw new Error('Deletion recovery proof is unavailable.');
+  await cleanup(userId);
+  if ((await SecureStore.getItemAsync(key)) === raw) await SecureStore.deleteItemAsync(key);
 }

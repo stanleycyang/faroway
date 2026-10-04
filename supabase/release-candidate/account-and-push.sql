@@ -19,6 +19,10 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON public.account_deletion_receipts TO serv
 CREATE FUNCTION public.claim_account_deletion(p_user_id UUID, p_recovery_hash TEXT, p_lease_id UUID, p_apple_subject TEXT DEFAULT NULL)
 RETURNS SETOF public.account_deletion_receipts LANGUAGE plpgsql SET search_path=pg_catalog AS $$
 BEGIN
+  IF current_setting('transaction_isolation') <> 'read committed' THEN
+    RAISE EXCEPTION 'Account deletion requires read committed isolation';
+  END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended('account-write:'||p_user_id::text,0));
   INSERT INTO public.account_deletion_receipts(user_id,recovery_hash,apple_subject)
     VALUES(p_user_id,p_recovery_hash,p_apple_subject) ON CONFLICT(user_id) DO NOTHING;
   -- Only a freshly authenticated owner can invoke this service-only function.
@@ -33,9 +37,24 @@ GRANT EXECUTE ON FUNCTION public.claim_account_deletion(UUID,TEXT,UUID,TEXT) TO 
 
 -- Fence new core writes while deletion is pending; deletion itself remains retryable.
 CREATE FUNCTION public.reject_deleting_account_write() RETURNS TRIGGER LANGUAGE plpgsql SECURITY DEFINER SET search_path=pg_catalog AS $$
-DECLARE target UUID;
+DECLARE target UUID; prior UUID;
 BEGIN
   target := (to_jsonb(NEW)->>CASE WHEN TG_TABLE_NAME='users' THEN 'id' ELSE 'user_id' END)::uuid;
+  IF TG_OP='UPDATE' THEN
+    prior := (to_jsonb(OLD)->>CASE WHEN TG_TABLE_NAME='users' THEN 'id' ELSE 'user_id' END)::uuid;
+    -- Owned search data cannot be detached or transferred while a purge takes
+    -- an ownership snapshot. Anonymous claims (NULL -> owner) remain supported.
+    IF TG_TABLE_NAME='searches' AND prior IS NOT NULL AND prior IS DISTINCT FROM target THEN
+      RAISE EXCEPTION 'Search ownership is immutable' USING ERRCODE='55000';
+    END IF;
+  END IF;
+  IF target IS NULL THEN RETURN NEW; END IF;
+  IF current_setting('transaction_isolation') <> 'read committed' THEN
+    RAISE EXCEPTION 'Account writes require read committed isolation';
+  END IF;
+  -- The claim waits for every earlier core write to commit before exposing the
+  -- receipt. Later writes wait for the claim, then see it in a fresh snapshot.
+  PERFORM pg_advisory_xact_lock(hashtextextended('account-write:'||target::text,0));
   IF EXISTS(SELECT 1 FROM public.account_deletion_receipts WHERE user_id=target) THEN
     RAISE EXCEPTION 'Account deletion in progress' USING ERRCODE='55000';
   END IF;

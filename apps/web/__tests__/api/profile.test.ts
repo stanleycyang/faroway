@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 
 // ── Mock Supabase ──────────────────────────────────────────────────────────────
@@ -140,6 +140,37 @@ describe("GET /api/user/profile", () => {
 });
 
 describe("PATCH /api/user/profile", () => {
+  afterEach(() => vi.unstubAllEnvs());
+  it.each([undefined, "notifications-v1"])(
+    "rejects unversioned or stale category grants (%s)",
+    async (version) => {
+      vi.stubEnv("PUSH_CONSENT_V2_ENABLED", "true");
+      vi.clearAllMocks();
+      const res = await PATCH(
+        makeRequest("PATCH", "/api/user/profile", {
+          notification_settings: {
+            deals: false,
+            itinerary_updates: true,
+            trip_reminders: true,
+          },
+          notification_consent_version: version,
+        }),
+      );
+      expect(res.status).toBe(400);
+      expect(mockSupabase.from).not.toHaveBeenCalled();
+    },
+  );
+  it("accepts only current submitted category consent", async () => {
+    vi.stubEnv("PUSH_CONSENT_V2_ENABLED", "true");
+    mockUpdateReturn = { data: mockProfile, error: null };
+    const res = await PATCH(
+      makeRequest("PATCH", "/api/user/profile", {
+        notification_settings: { itinerary_updates: true },
+        notification_consent_version: "notifications-v2",
+      }),
+    );
+    expect(res.status).toBe(200);
+  });
   beforeEach(() => {
     vi.clearAllMocks();
   });

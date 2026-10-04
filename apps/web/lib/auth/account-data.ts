@@ -162,14 +162,9 @@ export async function purgeAccountData(
     userId,
     tripIds,
   );
-  const searchIds = [
-    ...new Set([
-      ...trips
-        .map((trip) => trip.search_id)
-        .filter((id): id is string => Boolean(id)),
-      ...(await fetchUserSearchIds(db, userId)),
-    ]),
-  ];
+  // A historical trip link is not proof of search ownership. Only delete
+  // searches (and their children) selected through this account's owner column.
+  const searchIds = await fetchUserSearchIds(db, userId);
 
   await deleteByUserId(db, "push_tokens", userId, { optionalSchema: true });
   await deleteByUserId(db, "notifications", userId, {
@@ -214,6 +209,8 @@ export async function purgeAccountData(
   await deleteByIds(db, "affiliate_clicks", "trip_id", tripIds, {
     optionalSchema: true,
   });
+  await deleteByIds(db, "itineraries", "trip_id", tripIds);
+  await deleteByUserId(db, "trips", userId);
   await deleteByIds(db, "search_results", "search_id", searchIds, {
     optionalSchema: true,
   });
@@ -223,8 +220,6 @@ export async function purgeAccountData(
   await deleteByIds(db, "searches", "id", searchIds, {
     optionalSchema: true,
   });
-  await deleteByIds(db, "itineraries", "trip_id", tripIds);
-  await deleteByUserId(db, "trips", userId);
   await requireSuccessfulQuery(
     "delete user profile",
     db.from("users").delete().eq("id", userId),

@@ -1,3 +1,4 @@
+import { cleanupDeletedAccount } from '../services/deletedAccountCleanup';
 import { reconcileCompletedAccountDeletion } from '../services/accountDeletionService';
 import React, { useEffect, useCallback, createContext, useContext, useState, useRef } from 'react';
 import { AppState } from 'react-native';
@@ -67,7 +68,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
     setEnabled(false);
     const restore = () => {
       void run(async () => {
-        await reconcileCompletedAccountDeletion((id) => devicePushConsent.forgetDeletedAccount(id));
+        await reconcileCompletedAccountDeletion(cleanupDeletedAccount);
         return devicePushConsent.restore();
       }).catch(() => {});
     };

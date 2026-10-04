@@ -67,7 +67,10 @@ it('pins notification preference writes to the matching authenticated session', 
     expect.objectContaining({
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', Authorization: 'Bearer a-token' },
-      body: JSON.stringify({ notification_settings: { itinerary_updates: true } }),
+      body: JSON.stringify({
+        notification_settings: { itinerary_updates: true },
+        notification_consent_version: 'notifications-v2',
+      }),
     })
   );
 });

@@ -116,6 +116,34 @@ describe("DELETE /api/user/account", () => {
     };
   });
 
+  it("does not delete another owner's search through a corrupt trip link", async () => {
+    tableResults.trips.data = [{ id: "trip-1", search_id: "foreign-search" }];
+    expect((await DELETE(makeRequest())).status).toBe(200);
+    const searchDeletes = operations.filter(
+      (op) =>
+        ["searches", "search_results", "search_itineraries"].includes(
+          String(op.table),
+        ) && op.method === "in",
+    );
+    expect(searchDeletes).toHaveLength(3);
+    expect(
+      operations.findIndex(
+        (op) => op.table === "trips" && op.method === "delete",
+      ),
+    ).toBeLessThan(
+      operations.findIndex(
+        (op) => op.table === "searches" && op.method === "delete",
+      ),
+    );
+    for (const op of searchDeletes) expect(op.value).toEqual(["search-2"]);
+    expect(operations).toContainEqual({
+      table: "searches",
+      method: "eq",
+      column: "user_id",
+      value: "user-123",
+    });
+  });
+
   afterEach(() => {
     consoleErrorSpy.mockRestore();
     vi.unstubAllEnvs();
@@ -150,7 +178,7 @@ describe("DELETE /api/user/account", () => {
           table: "search_results",
           method: "in",
           column: "search_id",
-          value: ["search-1", "search-2"],
+          value: ["search-2"],
         },
         {
           table: "affiliate_clicks",

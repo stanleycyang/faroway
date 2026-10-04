@@ -1,4 +1,8 @@
-import { deleteAccountWithRecovery } from '../services/accountDeletionService';
+import { cleanupDeletedAccount } from '../services/deletedAccountCleanup';
+import {
+  deleteAccountWithRecovery,
+  finishAccountDeletionCleanup,
+} from '../services/accountDeletionService';
 import { devicePushConsent } from '../services/pushConsentService';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as Sentry from '@sentry/react-native';
@@ -350,38 +354,12 @@ export function useAuth() {
       throw new Error(result.error);
     }
 
-    if (deletingUserId)
-      await devicePushConsent.forgetDeletedAccount(deletingUserId).catch(() => {});
-    const cleanupSession = await supabase.auth.getSession();
-    const currentProfileId = useUserStore.getState().user?.id;
-    if (
-      (cleanupSession.data.session && cleanupSession.data.session.user.id !== deletingUserId) ||
-      (currentProfileId && currentProfileId !== deletingUserId)
-    ) {
-      setAuthState((prev) => ({ ...prev, loading: false }));
-      throw new Error('The original account was deleted. Your current account remains signed in.');
-    }
     try {
-      await supabase.auth.signOut({ scope: 'local' });
-    } catch {
-      // The server has already deleted the auth user; local cleanup still needs to run.
-    }
-
-    try {
-      const googleSignIn = await getGoogleSignInModule();
-      await googleSignIn?.GoogleSignin.signOut();
-    } catch {
-      // Non-blocking — Google session may not exist (e.g. Apple sign-in user)
-    }
-
-    const afterCleanup = useUserStore.getState().user?.id;
-    if (afterCleanup && afterCleanup !== deletingUserId) {
+      await finishAccountDeletionCleanup(deletingUserId!, cleanupDeletedAccount);
+    } catch (error) {
       setAuthState((prev) => ({ ...prev, loading: false }));
-      throw new Error('The original account was deleted. Reopen your current account.');
+      throw error;
     }
-    setAuthToken(null);
-    clearUserStore();
-    clearTrips();
     hadAuthenticatedSessionRef.current = false;
     setAuthState({
       user: null,
@@ -389,7 +367,7 @@ export function useAuth() {
       loading: false,
       initialized: true,
     });
-  }, [clearTrips, clearUserStore]);
+  }, []);
 
   return {
     ...authState,

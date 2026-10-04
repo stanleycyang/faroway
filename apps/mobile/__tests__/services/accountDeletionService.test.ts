@@ -14,6 +14,7 @@ jest.mock('../../lib/supabase', () => ({ supabase: { auth: { getSession: session
 jest.mock('../../constants/api', () => ({ API_BASE_URL: 'https://staging.example' }));
 import {
   deleteAccountWithRecovery,
+  finishAccountDeletionCleanup,
   reconcileCompletedAccountDeletion,
 } from '../../services/accountDeletionService';
 const fetchMock = jest.fn();
@@ -105,5 +106,38 @@ it('never clears an uncertain deletion proof during restoration', async () => {
   const cleanup = jest.fn();
   await reconcileCompletedAccountDeletion(cleanup);
   expect(cleanup).not.toHaveBeenCalled();
+  expect(remove).not.toHaveBeenCalled();
+});
+
+it('retains proof after confirmed deletion until durable local cleanup finishes', async () => {
+  const raw = JSON.stringify({ userId: 'a', recoveryToken: 'a'.repeat(64) });
+  getItem.mockResolvedValue(raw);
+  await deleteAccountWithRecovery('a');
+  expect(remove).not.toHaveBeenCalled();
+  const cleanup = jest
+    .fn()
+    .mockRejectedValueOnce(new Error('storage failed'))
+    .mockResolvedValue(undefined);
+  await expect(finishAccountDeletionCleanup('a', cleanup)).rejects.toThrow('storage failed');
+  expect(remove).not.toHaveBeenCalled();
+  // App restarts: status-only reconciliation repeats cleanup, then clears proof.
+  await reconcileCompletedAccountDeletion(cleanup);
+  expect(cleanup).toHaveBeenCalledTimes(2);
+  expect(remove).toHaveBeenCalledTimes(1);
+});
+it('keeps proof when restoration cleanup fails at any boundary', async () => {
+  getItem.mockResolvedValue(JSON.stringify({ userId: 'a', recoveryToken: 'a'.repeat(64) }));
+  for (const boundary of ['push', 'trips', 'signout']) {
+    await reconcileCompletedAccountDeletion(async () => {
+      throw new Error(boundary);
+    });
+    expect(remove).not.toHaveBeenCalled();
+  }
+});
+it('does not remove a replacement recovery proof after asynchronous cleanup', async () => {
+  getItem
+    .mockResolvedValueOnce(JSON.stringify({ userId: 'a', recoveryToken: 'a'.repeat(64) }))
+    .mockResolvedValueOnce(JSON.stringify({ userId: 'b', recoveryToken: 'b'.repeat(64) }));
+  await finishAccountDeletionCleanup('a', async () => {});
   expect(remove).not.toHaveBeenCalled();
 });

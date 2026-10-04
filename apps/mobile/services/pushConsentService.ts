@@ -27,7 +27,10 @@ export async function updateNotificationPreferences(
       'Content-Type': 'application/json',
       Authorization: `Bearer ${data.session.access_token}`,
     },
-    body: JSON.stringify({ notification_settings: settings }),
+    body: JSON.stringify({
+      notification_settings: settings,
+      notification_consent_version: 'notifications-v2',
+    }),
   });
   if (!response.ok)
     throw new Error('Couldn’t save notification settings. Please try again online.');

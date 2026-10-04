@@ -54,6 +54,25 @@ try:
     assert sorted(results)==['f','t']
     assert sql(f"SELECT public.claim_itinerary_push('{T}','{B}') IS NULL")=='t'
     print('PASS explicit category/device consent, stale generation exclusion and single dispatch claim',flush=True)
+    # Hold an insertion open after its trigger: deletion must wait, so its later
+    # snapshot includes this search. Use pg_stat_activity to prove overlap.
+    late=str(uuid.uuid4())
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        writer=pool.submit(sql,f"BEGIN; SET application_name='deletion-writer'; INSERT INTO public.searches(id,user_id,destination,start_date,end_date,status) VALUES('{late}','{B}','Late','2099-01-01','2099-01-02','pending'); SELECT pg_sleep(2); COMMIT;")
+        for _ in range(100):
+            if sql("SELECT count(*) FROM pg_stat_activity WHERE application_name='deletion-writer' AND wait_event='PgSleep'")=='1':break
+            time.sleep(.02)
+        else:raise AssertionError('Writer did not reach overlap barrier')
+        deletion=pool.submit(sql,f"SELECT count(*) FROM public.claim_account_deletion('{B}','{'c'*64}','{uuid.uuid4()}');")
+        time.sleep(.1)
+        assert not deletion.done(), 'Deletion claim bypassed in-flight write'
+        writer.result(); assert deletion.result()=='1'
+    assert sql(f"SELECT count(*) FROM public.searches WHERE id='{late}' AND user_id='{B}'")=='1'
+    sql(f"INSERT INTO public.searches(user_id,destination,start_date,end_date,status) VALUES('{B}','Blocked','2099-01-01','2099-01-02','pending');",False)
+    sql(f"UPDATE public.searches SET user_id=NULL WHERE id='{late}'",False)
+    sql(f"DELETE FROM public.searches WHERE user_id='{B}'; DELETE FROM public.users WHERE id='{B}'; DELETE FROM auth.users WHERE id='{B}';")
+    assert sql(f"SELECT count(*) FROM public.searches WHERE id='{late}'")=='0'
+    print('PASS in-flight insertion serialization, late-write rejection and no detached search after Auth deletion',flush=True)
     lease1=uuid.uuid4();lease2=uuid.uuid4()
     claim=f"SET ROLE service_role; SELECT count(*) FROM public.claim_account_deletion('{A}','{'a'*64}','{lease1}');"
     assert sql(claim)=='1'
@@ -64,6 +83,7 @@ try:
     sql(f"UPDATE public.account_deletion_receipts SET lease_until=now()-interval '1 second' WHERE user_id='{A}'")
     assert sql(f"SET ROLE service_role; SELECT count(*) FROM public.claim_account_deletion('{A}','{'b'*64}','{lease2}');")=='1'
     assert sql(f"WITH changed AS (UPDATE public.account_deletion_receipts SET phase='completed' WHERE user_id='{A}' AND lease_id='{lease1}' RETURNING *) SELECT count(*) FROM changed")=='0'
+    sql(f"DELETE FROM public.trips WHERE user_id='{A}'; DELETE FROM public.searches WHERE user_id='{A}';")
     sql(f"DELETE FROM public.users WHERE id='{A}'; DELETE FROM auth.users WHERE id='{A}';")
     assert sql(f"SELECT count(*) FROM public.account_deletion_receipts WHERE user_id='{A}'")=='1'
     print('PASS private durable deletion receipts, lease fencing, write refusal and survival after Auth deletion',flush=True)

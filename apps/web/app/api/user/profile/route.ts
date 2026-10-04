@@ -42,6 +42,7 @@ const UpdateProfileSchema = z.object({
     })
     .optional(),
   notification_settings: z.record(z.boolean()).optional(),
+  notification_consent_version: z.string().optional(),
 });
 
 export async function GET(request: NextRequest) {
@@ -139,6 +140,14 @@ export async function PATCH(request: NextRequest) {
       updates.preferences = parseResult.data.preferences;
     }
     if (parseResult.data.notification_settings !== undefined) {
+      if (
+        process.env.PUSH_CONSENT_V2_ENABLED === "true" &&
+        parseResult.data.notification_consent_version !== "notifications-v2"
+      ) {
+        return validationErrorResponse(
+          "Current notification consent is required",
+        );
+      }
       updates.notification_settings = parseResult.data.notification_settings;
       if (process.env.PUSH_CONSENT_V2_ENABLED === "true")
         updates.notification_consent_version = "notifications-v2";
