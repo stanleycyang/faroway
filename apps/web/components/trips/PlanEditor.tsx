@@ -82,11 +82,13 @@ export function PlanEditor({
       ) {
         clearPending();
         setMessage("Your change was saved. The current plan is shown below.");
-        onSaved();
       } else
         setMessage(
-          "The latest plan is loaded. Review it before retrying or discarding your pending change.",
+          pending
+            ? "The latest plan is loaded. Review it before retrying or discarding your pending change."
+            : "The latest saved plan is loaded.",
         );
+      onSaved();
     } catch (error) {
       setMessage(
         error instanceof Error
@@ -106,6 +108,7 @@ export function PlanEditor({
     } catch {
       /* Server request identity still prevents replay. */
     }
+    let saved = false;
     try {
       const response = await fetch(endpoint, {
         method: "POST",
@@ -116,18 +119,21 @@ export function PlanEditor({
       const data = await response.json();
       if (!response.ok)
         throw new Error(data.error || "Could not save this change.");
+      saved = true;
       clearPending();
       setReviewing(false);
       setFirst("");
       setSecond("");
-      await refresh();
       onSaved();
+      await refresh();
       setMessage(
         "Your plan is saved. Public sharing is off until you choose to share again.",
       );
     } catch (error) {
       setMessage(
-        `${error instanceof Error ? error.message : "The save was interrupted."} Your last accepted plan is kept. Check the saved plan before retrying.`,
+        saved
+          ? "Your change was saved, but the updated plan could not be loaded. Refresh the saved plan; do not submit the change again."
+          : `${error instanceof Error ? error.message : "The save was interrupted."} Check the saved plan before retrying; the save may already have completed.`,
       );
     } finally {
       inFlight.current = false;
@@ -172,6 +178,15 @@ export function PlanEditor({
       )}
       {!plan && !message && (
         <p className="mt-3 text-sm">Loading your saved plan…</p>
+      )}
+      {message && !pending && (
+        <button
+          disabled={busy}
+          onClick={() => void checkSaved()}
+          className="min-h-11 mt-2 font-medium underline"
+        >
+          Refresh saved plan
+        </button>
       )}
       {pending && (
         <div className="mt-4 rounded-xl border border-amber-200 p-4">

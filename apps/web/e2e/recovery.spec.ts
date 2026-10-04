@@ -639,3 +639,80 @@ test("locks favorites and reviews a swap before publishing a new plan", async ({
   );
   expect(state.trips[0].is_shared).toBe(false);
 });
+
+test("refreshes the main trip after a confirmed edit even when editor refresh fails", async ({
+  page,
+  request,
+}) => {
+  await request.post("http://127.0.0.1:4401/fixture/trip", {
+    data: {
+      ...baseTrip,
+      is_shared: true,
+      share_token: "old-link",
+      itineraries: {
+        ...baseTrip.itineraries,
+        days: [
+          {
+            ...baseTrip.itineraries.days[0],
+            morning: {
+              activities: [{ id: "walk", name: "Quiet walk" }],
+              meals: [],
+            },
+          },
+        ],
+      },
+    },
+  });
+  let saved = false;
+  let failEditorRefresh = true;
+  let mainReadsAfterSave = 0;
+  await page.route("**/api/trips/*", async (route) => {
+    if (saved && route.request().method() === "GET") mainReadsAfterSave++;
+    await route.continue();
+  });
+  await page.route("**/api/trips/*/plan", async (route) => {
+    if (route.request().method() === "POST") {
+      const response = await route.fetch();
+      expect(response.status()).toBe(200);
+      saved = true;
+      return route.fulfill({ response });
+    }
+    if (saved && failEditorRefresh)
+      return route.fulfill({
+        status: 503,
+        json: { error: "Editor refresh temporarily unavailable" },
+      });
+    await route.continue();
+  });
+  await page.goto(`/trips/${id}`);
+  const editor = page
+    .locator("details")
+    .filter({ has: page.getByText("Make this plan yours", { exact: false }) })
+    .first();
+  await editor.locator("summary").first().click();
+  await editor
+    .getByRole("button", { name: "Lock Quiet walk", exact: true })
+    .click();
+  await expect.poll(() => mainReadsAfterSave).toBeGreaterThan(0);
+  await expect(
+    page.getByRole("button", { name: "Create public share link", exact: true }),
+  ).toBeVisible();
+  await expect(editor).not.toHaveAttribute("open");
+  await editor.locator("summary").first().click();
+  await expect(
+    editor.getByRole("button", { name: "Refresh saved plan" }),
+  ).toBeVisible();
+  await expect(
+    editor.getByRole("button", { name: "Retry saved change" }),
+  ).toHaveCount(0);
+  await expect(editor).not.toContainText("Your last accepted plan is kept");
+  failEditorRefresh = false;
+  await editor.getByRole("button", { name: "Refresh saved plan" }).click();
+  await expect(
+    editor.getByRole("button", { name: "Unlock Quiet walk", exact: true }),
+  ).toBeVisible();
+  const state = await (
+    await request.get("http://127.0.0.1:4401/fixture/state")
+  ).json();
+  expect(state.planHistory).toHaveLength(1);
+});
