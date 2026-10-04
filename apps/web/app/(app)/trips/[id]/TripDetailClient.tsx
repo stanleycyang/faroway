@@ -1139,23 +1139,6 @@ function FeaturedFlights({ days }: { days: TripDay[] | null }) {
 
   if (!outbound?.transport) return null;
 
-  const handleFlightClick = (transport: TripDay["transport"]) => {
-    if (!transport?.affiliateUrl) return;
-    fetch("/api/track/click", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        itemType: "transport",
-        itemId: `transport_${transport.departure.airport}_${transport.arrival.airport}`,
-        itemName: `${transport.provider} ${transport.departure.airport}-${transport.arrival.airport}`,
-        affiliatePartner: transport.affiliatePartner || "duffel",
-        affiliateUrl: transport.affiliateUrl,
-        source: "itinerary",
-      }),
-    }).catch(() => {});
-    window.open(transport.affiliateUrl, "_blank", "noopener,noreferrer");
-  };
-
   const totalPrice =
     (outbound.transport?.price || 0) + (returnFlight?.transport?.price || 0);
   const currency = outbound.transport?.currency || "USD";
@@ -1202,11 +1185,12 @@ function FeaturedFlights({ days }: { days: TripDay[] | null }) {
 
         {outbound.transport?.affiliateUrl && (
           <button
-            onClick={() => handleFlightClick(outbound.transport)}
+            disabled
+            title="Flight checkout is not available on Faroway yet."
             className="w-full mt-5 inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 transition-all shadow-md active:scale-[0.98]"
           >
             <Shield className="w-4 h-4" />
-            Book {returnFlight ? "Flights" : "Flight"}
+            Flight booking unavailable
             <ExternalLink className="w-3.5 h-3.5 opacity-70" />
           </button>
         )}

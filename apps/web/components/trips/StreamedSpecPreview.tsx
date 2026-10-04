@@ -153,15 +153,10 @@ function HotelCard({ props }: { props: SpecProps }) {
             </div>
           )}
           {bookingUrl && (
-            <a
-              className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-primary-600"
-              href={bookingUrl}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
+            <span className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-primary-600">
               <Ticket className="h-4 w-4" />
-              View hotel
-            </a>
+              Booking preview — review your saved plan
+            </span>
           )}
         </div>
       </div>
@@ -174,15 +169,10 @@ function BookingButton({ props }: { props: SpecProps }) {
   if (!url) return null;
 
   return (
-    <a
-      className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-50"
-      href={url}
-      rel="noopener noreferrer"
-      target="_blank"
-    >
+    <span className="inline-flex items-center justify-center gap-2 rounded-lg border border-primary-200 bg-white px-4 py-2 text-sm font-bold text-primary-700 transition-colors hover:bg-primary-50">
       <Ticket className="h-4 w-4" />
-      {textProp(props, "label", "Book now")}
-    </a>
+      Booking preview — review your saved plan
+    </span>
   );
 }
 
@@ -315,15 +305,10 @@ function SmallCard({
             </p>
           )}
           {url && (
-            <a
-              className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-primary-700 hover:text-primary-800"
-              href={url}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
+            <span className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-primary-700 hover:text-primary-800">
               <Ticket className="h-4 w-4" />
-              View details
-            </a>
+              Booking preview — review your saved plan
+            </span>
           )}
         </div>
       </div>
