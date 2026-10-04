@@ -1,0 +1,23 @@
+Migration 008000 decision record — proposal only, no production execution
+
+The reviewed file adds booking_generation_id UUID NOT NULL DEFAULT gen_random_uuid(). A volatile default computes a value for existing rows and can make ADD COLUMN expensive. A small trip count is not evidence of itinerary size or lock duration. Actual itinerary row count/bytes and long-running lock holders are not available in this execution environment.
+
+Request the authorized database operator's read-only aggregate evidence:
+  SELECT count(*) AS itinerary_rows FROM public.itineraries;
+  SELECT pg_relation_size('public.itineraries') AS heap_bytes,
+         pg_total_relation_size('public.itineraries') AS total_bytes;
+Also request lock/transaction age metadata without query text or traveler rows. Rehearse with equivalent size/indexes/roles on isolated staging. Record elapsed rewrite time, WAL/space impact and observed blocking. No production data copy is authorized by this request.
+
+If keeping the one-step DDL: prerequisite corrected005000 and007000; checklist remains off; approved maintenance window; proposed SET LOCAL lock_timeout='2s' and statement_timeout='30s' inside the reviewed transaction. An exceeded budget aborts the transaction and phase; no automatic retry or enlarged timeout. These are proposed abort bounds, not a promised interruption duration. Require sufficient storage and verified backup/restore before approval.
+
+Safer phased alternative if rehearsal does not comfortably fit the approved budget (requires a revised migration and its own tests/review, not an operator silently editing 008000):
+1. Short bounded DDL transaction adds nullable UUID with no default, then sets gen_random_uuid() as the default for future inserts and installs the generation-rotation trigger. Keep feature off.
+2. Approved operator backfills only NULL UUIDs in bounded primary-key batches, each committed separately. Respect row locks; stop on contention. Do not change days, generated_at, provider data or report state. The existing itinerary guard must remain enabled; use the authorized operator role or explicitly reviewed scoped mechanism, not a global trigger bypass.
+3. Add a NOT VALID non-null CHECK, validate it under a bounded budget, then use the validated constraint when setting NOT NULL in a final brief DDL transaction. Verify zero NULLs and correct new-generation rotation before installing/enabling callers.
+4. Rehearse interruption/restart and concurrent generation. A partially prepared schema stays feature-disabled; never report the migration as complete until all phases and grants/functions are verified.
+
+This phased approach is not implemented or tested in the current PR25 migration. The current one-step migration passed disposable SQL tests only; those fixtures do not predict production locking. No new approval is inferred from successful tests.
+
+PostgreSQL 16 sources:
+https://www.postgresql.org/docs/16/ddl-alter.html
+https://www.postgresql.org/docs/16/runtime-config-client.html

@@ -1,0 +1,246 @@
+{
+  "mode": "offline synthetic rubric calibration; no model/provider calls",
+  "fixture_count": 13,
+  "rubric_checks": 10,
+  "expected_outcome_matches": 13,
+  "mismatches": [],
+  "positive_acceptance": 3,
+  "negative_detection": 10,
+  "live_model_quality_measured": false,
+  "results": [
+    {
+      "id": "family-valid",
+      "score": 100,
+      "accepted": true,
+      "failed_checks": [],
+      "checks": {
+        "dates_and_party": true,
+        "interest_coverage": true,
+        "pace_and_time": true,
+        "accessibility_evidence": true,
+        "dietary_evidence": true,
+        "schedule_feasibility": true,
+        "budget_and_units": true,
+        "honest_price_claims": true,
+        "locks_preserved": true,
+        "purchase_and_reporting_truth": true
+      }
+    },
+    {
+      "id": "step-free-valid",
+      "score": 100,
+      "accepted": true,
+      "failed_checks": [],
+      "checks": {
+        "dates_and_party": true,
+        "interest_coverage": true,
+        "pace_and_time": true,
+        "accessibility_evidence": true,
+        "dietary_evidence": true,
+        "schedule_feasibility": true,
+        "budget_and_units": true,
+        "honest_price_claims": true,
+        "locks_preserved": true,
+        "purchase_and_reporting_truth": true
+      }
+    },
+    {
+      "id": "vegan-slow-valid",
+      "score": 100,
+      "accepted": true,
+      "failed_checks": [],
+      "checks": {
+        "dates_and_party": true,
+        "interest_coverage": true,
+        "pace_and_time": true,
+        "accessibility_evidence": true,
+        "dietary_evidence": true,
+        "schedule_feasibility": true,
+        "budget_and_units": true,
+        "honest_price_claims": true,
+        "locks_preserved": true,
+        "purchase_and_reporting_truth": true
+      }
+    },
+    {
+      "id": "wrong-party",
+      "score": 90,
+      "accepted": false,
+      "failed_checks": ["dates_and_party"],
+      "checks": {
+        "dates_and_party": false,
+        "interest_coverage": true,
+        "pace_and_time": true,
+        "accessibility_evidence": true,
+        "dietary_evidence": true,
+        "schedule_feasibility": true,
+        "budget_and_units": true,
+        "honest_price_claims": true,
+        "locks_preserved": true,
+        "purchase_and_reporting_truth": true
+      }
+    },
+    {
+      "id": "missing-interest",
+      "score": 90,
+      "accepted": false,
+      "failed_checks": ["interest_coverage"],
+      "checks": {
+        "dates_and_party": true,
+        "interest_coverage": false,
+        "pace_and_time": true,
+        "accessibility_evidence": true,
+        "dietary_evidence": true,
+        "schedule_feasibility": true,
+        "budget_and_units": true,
+        "honest_price_claims": true,
+        "locks_preserved": true,
+        "purchase_and_reporting_truth": true
+      }
+    },
+    {
+      "id": "early-start",
+      "score": 90,
+      "accepted": false,
+      "failed_checks": ["pace_and_time"],
+      "checks": {
+        "dates_and_party": true,
+        "interest_coverage": true,
+        "pace_and_time": false,
+        "accessibility_evidence": true,
+        "dietary_evidence": true,
+        "schedule_feasibility": true,
+        "budget_and_units": true,
+        "honest_price_claims": true,
+        "locks_preserved": true,
+        "purchase_and_reporting_truth": true
+      }
+    },
+    {
+      "id": "overlap",
+      "score": 90,
+      "accepted": false,
+      "failed_checks": ["schedule_feasibility"],
+      "checks": {
+        "dates_and_party": true,
+        "interest_coverage": true,
+        "pace_and_time": true,
+        "accessibility_evidence": true,
+        "dietary_evidence": true,
+        "schedule_feasibility": false,
+        "budget_and_units": true,
+        "honest_price_claims": true,
+        "locks_preserved": true,
+        "purchase_and_reporting_truth": true
+      }
+    },
+    {
+      "id": "mixed-currency",
+      "score": 90,
+      "accepted": false,
+      "failed_checks": ["budget_and_units"],
+      "checks": {
+        "dates_and_party": true,
+        "interest_coverage": true,
+        "pace_and_time": true,
+        "accessibility_evidence": true,
+        "dietary_evidence": true,
+        "schedule_feasibility": true,
+        "budget_and_units": false,
+        "honest_price_claims": true,
+        "locks_preserved": true,
+        "purchase_and_reporting_truth": true
+      }
+    },
+    {
+      "id": "unproven-live-price",
+      "score": 90,
+      "accepted": false,
+      "failed_checks": ["honest_price_claims"],
+      "checks": {
+        "dates_and_party": true,
+        "interest_coverage": true,
+        "pace_and_time": true,
+        "accessibility_evidence": true,
+        "dietary_evidence": true,
+        "schedule_feasibility": true,
+        "budget_and_units": true,
+        "honest_price_claims": false,
+        "locks_preserved": true,
+        "purchase_and_reporting_truth": true
+      }
+    },
+    {
+      "id": "lost-favorite",
+      "score": 90,
+      "accepted": false,
+      "failed_checks": ["locks_preserved"],
+      "checks": {
+        "dates_and_party": true,
+        "interest_coverage": true,
+        "pace_and_time": true,
+        "accessibility_evidence": true,
+        "dietary_evidence": true,
+        "schedule_feasibility": true,
+        "budget_and_units": true,
+        "honest_price_claims": true,
+        "locks_preserved": false,
+        "purchase_and_reporting_truth": true
+      }
+    },
+    {
+      "id": "click-is-not-booking",
+      "score": 90,
+      "accepted": false,
+      "failed_checks": ["purchase_and_reporting_truth"],
+      "checks": {
+        "dates_and_party": true,
+        "interest_coverage": true,
+        "pace_and_time": true,
+        "accessibility_evidence": true,
+        "dietary_evidence": true,
+        "schedule_feasibility": true,
+        "budget_and_units": true,
+        "honest_price_claims": true,
+        "locks_preserved": true,
+        "purchase_and_reporting_truth": false
+      }
+    },
+    {
+      "id": "unproven-accessibility",
+      "score": 90,
+      "accepted": false,
+      "failed_checks": ["accessibility_evidence"],
+      "checks": {
+        "dates_and_party": true,
+        "interest_coverage": true,
+        "pace_and_time": true,
+        "accessibility_evidence": false,
+        "dietary_evidence": true,
+        "schedule_feasibility": true,
+        "budget_and_units": true,
+        "honest_price_claims": true,
+        "locks_preserved": true,
+        "purchase_and_reporting_truth": true
+      }
+    },
+    {
+      "id": "diet-unverified",
+      "score": 90,
+      "accepted": false,
+      "failed_checks": ["dietary_evidence"],
+      "checks": {
+        "dates_and_party": true,
+        "interest_coverage": true,
+        "pace_and_time": true,
+        "accessibility_evidence": true,
+        "dietary_evidence": false,
+        "schedule_feasibility": true,
+        "budget_and_units": true,
+        "honest_price_claims": true,
+        "locks_preserved": true,
+        "purchase_and_reporting_truth": true
+      }
+    }
+  ]
+}

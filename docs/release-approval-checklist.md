@@ -2,6 +2,8 @@
 
 Prepared 2026-10-04. **No merge, production SQL, deployment configuration change, production canary, or provider activation is executed by this checklist.** The request to merge PR21/22 does not authorize prerequisite PR20 or database/security changes.
 
+Current frozen integration and final verification are tracked in [release-integration.md](release-integration.md). The baselines below preserve the original phased rollout review.
+
 ## Verified release identity
 
 | Item                    | Exact reviewed source                      | State at inspection                                                                    |

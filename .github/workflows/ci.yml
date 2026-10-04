@@ -67,6 +67,9 @@ jobs:
       - name: Run tests
         run: bun run test
 
+      - name: Calibrate offline planning-quality rubric
+        run: python3 scripts/planning-quality-eval.py
+
       - name: Test trip lifecycle races in disposable PostgreSQL
         run: python3 scripts/test-trip-attempt-fence.py
         timeout-minutes: 5
