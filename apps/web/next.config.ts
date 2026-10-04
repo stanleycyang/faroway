@@ -1,9 +1,17 @@
+import { assertDatabaseIsolation } from "./lib/config/database-isolation";
 import { withWorkflow } from "workflow/next";
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const developmentScriptSource =
   process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : "";
+
+assertDatabaseIsolation({
+  VERCEL_ENV: process.env.VERCEL_ENV,
+  FAROWAY_STAGING_SUPABASE_PROJECT_REF:
+    process.env.FAROWAY_STAGING_SUPABASE_PROJECT_REF,
+  NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
+});
 
 const nextConfig: NextConfig = {
   // The local Workflow backend uses Node's real entrypoint to resolve its
