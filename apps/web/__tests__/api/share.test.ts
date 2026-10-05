@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import crypto from "crypto";
 
@@ -224,6 +224,20 @@ describe("POST /api/trips/[id]/share", () => {
       ).status,
     ).toBe(409);
     expect(mockSupabase.from).toHaveBeenCalledTimes(1);
+  });
+
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("keeps share links on the configured preview origin", async () => {
+    vi.stubEnv("NEXT_PUBLIC_BASE_URL", "https://preview.example.test");
+    const response = await sharePost(
+      makeRequest("POST", "/api/trips/trip-1/share"),
+      makeParams("trip-1"),
+    );
+    expect(response.status).toBe(200);
+    expect((await response.json()).shareUrl).toBe(
+      "https://preview.example.test/s/test-token-12",
+    );
   });
 
   it("successfully enables sharing and returns shareUrl and token", async () => {

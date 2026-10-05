@@ -55,7 +55,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         {
           error:
             "Editing requires a newer app. Update the app or open this trip on the Faroway website to edit safely. Your saved trip is unchanged.",
-          webUrl: `https://www.faroway.ai/trips/${encodeURIComponent(id)}`,
+          webUrl: `${process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai"}/trips/${encodeURIComponent(id)}`,
           code: "REVISION_REQUIRED",
         },
         { status: 428 },

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 
 // ── Mock Supabase ──────────────────────────────────────────────────────────────
@@ -268,6 +268,7 @@ describe("GET /api/trips/[id]", () => {
 });
 
 describe("PATCH /api/trips/[id]", () => {
+  afterEach(() => vi.unstubAllEnvs());
   beforeEach(() => {
     vi.clearAllMocks();
     mockRpcResult = null;
@@ -286,6 +287,22 @@ describe("PATCH /api/trips/[id]", () => {
     ).toBe(428);
     expect(mockRpc).not.toHaveBeenCalled();
   });
+  it.each([
+    ["https://preview.example.test", "https://preview.example.test"],
+    ["", "https://www.faroway.ai"],
+  ])(
+    "uses configured public origin %s for the upgrade link",
+    async (configured, expected) => {
+      vi.stubEnv("NEXT_PUBLIC_BASE_URL", configured);
+      const response = await PATCH(
+        makeRequest("PATCH", "/api/trips/trip-1", { destination: "Osaka" }),
+        makeParams("trip-1"),
+      );
+      expect(response.status).toBe(428);
+      expect((await response.json()).webUrl).toBe(`${expected}/trips/trip-1`);
+      expect(mockRpc).not.toHaveBeenCalled();
+    },
+  );
   it.each(["generating", "stale", "lost-race"])(
     "rejects %s saves without overwriting the active brief",
     async (state) => {

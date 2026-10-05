@@ -18,3 +18,7 @@ The latest failed build of `c71aa003` stopped at `assertDatabaseIsolation` befor
 Production remains READY at `5a8eadf06f596f81e8bcc0f4d90d3e58518c83eb`. Protection and branch-scoped staging settings are preserved; planning remains paused and activation flags off. No schema was executed. Account and push schema remains unapplied.
 
 Anonymous HTTP checks from the execution environment were blocked by its proxy with CONNECT 403; no protection bypass was attempted. Protected browser checks are coordinated separately. An aggregate Preview log query found no error or fatal entries at 00:46 UTC, which is not proof of application coverage. Partner, purchase and production-cutover acceptance remain outstanding.
+
+## Staging origin followup
+
+The branch previously had no public origin overrides. On 2026-10-05, `NEXT_PUBLIC_BASE_URL`, `NEXT_PUBLIC_APP_URL` and `NEXT_PUBLIC_SITE_URL` were set only for Preview and `codex/release-candidate` to `https://faroway-git-codex-release-candidate-testimonio.vercel.app`. This keeps generated share links and configured callback URLs on the protected staging branch. The older-app revision-required response now honors the same base URL rather than hardcoding production; the production fallback remains unchanged. All 52 focused trip, sharing and CORS tests passed, including preview-origin regressions. These changes require their own deployment and CI evidence; the completed runs above cover the build fix only. Hardcoded production URLs in marketing structured data remain, and are not application navigation or database bindings.
