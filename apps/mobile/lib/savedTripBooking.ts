@@ -1,17 +1,6 @@
 import { Alert } from 'react-native';
-import { API_BASE_URL } from '../constants/api';
-
-export function savedTripReviewUrl(tripId?: string): string | null {
-  if (!tripId || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(tripId))
-    return null;
-  try {
-    const base = new URL(API_BASE_URL);
-    if (base.protocol !== 'https:' || base.username || base.password) return null;
-    return `${base.origin}/trips/${encodeURIComponent(tripId)}`;
-  } catch {
-    return null;
-  }
-}
+import { savedTripReviewUrl } from './savedTripUrl';
+export { savedTripReviewUrl } from './savedTripUrl';
 
 /** Never use a generated provider URL or copy native credentials into the browser. */
 export function reviewSavedTripBooking(

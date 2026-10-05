@@ -1,4 +1,5 @@
 import type { PendingMutation } from './storage';
+export { savedTripReviewUrl as tripWebUrl } from '../savedTripUrl';
 
 const fields: Record<string, string> = {
   destination: 'Destination',
@@ -14,10 +15,6 @@ const fields: Record<string, string> = {
   children: 'Children',
   interests: 'Interests',
 };
-
-export function tripWebUrl(tripId: string) {
-  return `https://www.faroway.ai/trips/${encodeURIComponent(tripId)}`;
-}
 
 export function conflictRows(mutation: PendingMutation, latest?: Record<string, unknown>) {
   const flatten = (value: Record<string, unknown>) => {

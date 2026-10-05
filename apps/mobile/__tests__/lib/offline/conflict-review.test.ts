@@ -2,6 +2,7 @@ jest.mock('../../../lib/supabase', () => ({
   API_BASE_URL: 'https://fixture.invalid',
   getAuthHeaders: jest.fn(async () => ({ Authorization: 'fixture' })),
 }));
+jest.mock('../../../constants/api', () => ({ API_BASE_URL: 'https://staging.faroway.ai' }));
 jest.mock('../../../lib/offline/network', () => ({ networkMonitor: { isOnline: () => true } }));
 import { offlineStorage } from '../../../lib/offline/storage';
 import { syncService } from '../../../lib/offline/sync';
@@ -34,7 +35,10 @@ it('compares only pending edits and omits internal revision values', async () =>
   ]);
   expect(supportsConflictReapply(mutation)).toBe(true);
   expect(supportsConflictReapply({ ...mutation, data: { status: 'draft' } })).toBe(false);
-  expect(tripWebUrl('trip-1')).toBe('https://www.faroway.ai/trips/trip-1');
+  expect(tripWebUrl('11111111-1111-4111-8111-111111111111')).toBe(
+    'https://staging.faroway.ai/trips/11111111-1111-4111-8111-111111111111'
+  );
+  expect(tripWebUrl('trip-1')).toBeNull();
 });
 it('saves only after explicit review with the observed server revision', async () => {
   const mutation = await blocked();

@@ -177,7 +177,12 @@ export function TripSyncConflicts() {
           })}
           {selected &&
             action('Open trip on Faroway website', () => {
-              void Linking.openURL(tripWebUrl(selected.tripId)).catch(() =>
+              const url = tripWebUrl(selected.tripId);
+              if (!url) {
+                setError('Could not open a safe link to this trip. Your changes are still kept.');
+                return;
+              }
+              void Linking.openURL(url).catch(() =>
                 setError('Could not open the browser. Your changes are still kept.')
               );
             })}
