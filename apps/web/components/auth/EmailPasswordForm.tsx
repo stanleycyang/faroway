@@ -154,7 +154,7 @@ export function EmailPasswordForm({
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
           required
-          minLength={8}
+          minLength={mode === "signup" ? 8 : undefined}
           className="w-full px-4 py-3 min-h-[48px] border border-gray-300 rounded-xl text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
         />
       </div>
