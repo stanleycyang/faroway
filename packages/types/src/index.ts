@@ -354,6 +354,9 @@ export interface AIGenerationError {
 // =============================================================================
 
 export interface SearchInput {
+  adults?: number;
+  children?: number;
+  interests?: string[];
   destination: string;
   startDate: string;
   endDate: string;
@@ -447,20 +450,21 @@ export interface SearchPlan {
 // =============================================================================
 
 export interface HotelResult {
+  dataSource?: "provider" | "ai";
   id: string;
   name: string;
   description: string;
-  starRating: number;
-  userRating: number;
-  reviewCount: number;
-  pricePerNight: number;
-  totalPrice: number;
-  currency: string;
+  starRating?: number;
+  userRating?: number;
+  reviewCount?: number;
+  pricePerNight?: number;
+  totalPrice?: number;
+  currency?: string;
   amenities: string[];
   location: LocationInfo;
   images: string[];
-  affiliateUrl: string;
-  affiliatePartner: string;
+  affiliateUrl?: string;
+  affiliatePartner?: string;
   vibeScore: number;
   vibeMatch: string[];
   tripadvisorRating?: number;

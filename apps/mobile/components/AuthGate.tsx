@@ -218,7 +218,9 @@ export function AuthGate({
               onPress={handleMaybeLater}
               accessibilityRole="button"
             >
-              <Text style={styles.maybeLaterText}>Maybe Later</Text>
+              <Text style={styles.maybeLaterText}>
+                {trigger === 'generate' ? 'Keep editing' : 'Maybe Later'}
+              </Text>
             </TouchableOpacity>
 
             {/* Terms */}

@@ -1,3 +1,5 @@
+import { regenerateTrip } from '../services/planningService';
+import { buildTripUpdatePayload } from '../lib/offline/trip-payload';
 import { useState, useCallback } from 'react';
 import { API_BASE_URL, getAuthHeaders } from '../lib/supabase';
 import { useTripStore, Trip, TripInput, TripDay, Activity, Hotel } from '../stores/tripStore';
@@ -21,6 +23,7 @@ interface ApiTrip {
   travelers: number;
   traveler_type?: string;
   preferences?: {
+    planNeedsRefresh?: boolean;
     travelerType?: string;
     originCity?: string;
     originAirport?: string;
@@ -214,11 +217,15 @@ function transformApiTrip(apiTrip: ApiTrip, itinerary?: ApiItinerary): Trip {
     originAirport: apiTrip.preferences?.originAirport,
     vibes: apiTrip.vibes || [],
     budget: apiTrip.budget_tier || apiTrip.budget,
-    days: transformItineraryDays(rawDays),
-    hotel: transformApiHotel(itineraryData?.topHotel),
+    planNeedsRefresh: apiTrip.preferences?.planNeedsRefresh === true,
+    days: apiTrip.preferences?.planNeedsRefresh ? [] : transformItineraryDays(rawDays),
+    hotel: apiTrip.preferences?.planNeedsRefresh
+      ? undefined
+      : transformApiHotel(itineraryData?.topHotel),
     coverImage:
       apiTrip.cover_image || getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
     createdAt: apiTrip.created_at,
+    updatedAt: apiTrip.updated_at,
     status: normalizeTripStatus(apiTrip.status),
   };
 }
@@ -437,14 +444,20 @@ export function useTrips() {
         const response = await fetch(`${API_BASE_URL}/api/trips/${id}`, {
           method: 'PATCH',
           headers,
-          body: JSON.stringify(updates),
+          body: JSON.stringify(
+            buildTripUpdatePayload(
+              updates,
+              useTripStore.getState().trips.find((t) => t.id === id)?.updatedAt
+            )
+          ),
         });
 
         if (!response.ok) {
           if (response.status === 401) {
             throw new Error('Please sign in to update this trip');
           }
-          throw new Error('Failed to update trip');
+          const failure = await response.json().catch(() => ({}));
+          throw new Error(failure.error || 'Failed to update trip');
         }
 
         const data = await response.json();
@@ -509,19 +522,7 @@ export function useTrips() {
     setError(null);
 
     try {
-      const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/api/trips/${tripId}/generate`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({}),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate itinerary');
-      }
-
-      const data = await response.json();
-      return data;
+      return await regenerateTrip(tripId);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : String(err));
       console.error('Error generating itinerary:', err);

@@ -252,12 +252,19 @@ describe("search agents internal parallelism", () => {
       },
     });
     const hotels = await runHotelsAgent(plan as never, 1);
-    expect(hotels[0]).toMatchObject({
-      affiliateUrl: "",
-      affiliatePartner: "",
-      userRating: 0,
-      reviewCount: 0,
-    });
+    expect(hotels[0]).toMatchObject({ dataSource: "ai" });
+    for (const key of [
+      "affiliateUrl",
+      "affiliatePartner",
+      "userRating",
+      "reviewCount",
+      "pricePerNight",
+      "totalPrice",
+      "currency",
+      "starRating",
+    ]) {
+      expect(hotels[0][key as keyof (typeof hotels)[0]]).toBeUndefined();
+    }
     mocks.generateObject.mockResolvedValueOnce({
       object: {
         activities: [

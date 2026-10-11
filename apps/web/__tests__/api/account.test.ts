@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 
-const mockUser = { id: "user-123", email: "test@example.com" };
+const mockUser = { id: "user-123", email: "test@example.com", identities: [] };
 
 interface QueryResult {
   data: unknown;
@@ -69,6 +69,14 @@ vi.mock("@/lib/supabase/server", () => ({
   getSupabase: vi.fn(() => mockAdminClient),
 }));
 
+vi.mock("@/lib/auth/account-deletion", async (original) => ({
+  ...(await original<typeof import("@/lib/auth/account-deletion")>()),
+  runAccountDeletion: vi.fn(async (_user, _code, deps) => {
+    await deps.purgeData();
+    await deps.deleteAuth();
+    return { deleted: true };
+  }),
+}));
 import { DELETE } from "@/app/api/user/account/route";
 
 function makeRequest(): NextRequest {
@@ -77,6 +85,7 @@ function makeRequest(): NextRequest {
     {
       method: "DELETE",
       headers: { Authorization: "Bearer token" },
+      body: JSON.stringify({ confirm: true, recoveryToken: "a".repeat(64) }),
     },
   );
 }
@@ -84,6 +93,7 @@ function makeRequest(): NextRequest {
 describe("DELETE /api/user/account", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.stubEnv("ACCOUNT_DELETION_ENABLED", "true");
     consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     operations = [];
     mockAuthReturn = { data: { user: mockUser }, error: null };
@@ -106,10 +116,45 @@ describe("DELETE /api/user/account", () => {
     };
   });
 
-  afterEach(() => {
-    consoleErrorSpy.mockRestore();
+  it("does not delete another owner's search through a corrupt trip link", async () => {
+    tableResults.trips.data = [{ id: "trip-1", search_id: "foreign-search" }];
+    expect((await DELETE(makeRequest())).status).toBe(200);
+    const searchDeletes = operations.filter(
+      (op) =>
+        ["searches", "search_results", "search_itineraries"].includes(
+          String(op.table),
+        ) && op.method === "in",
+    );
+    expect(searchDeletes).toHaveLength(3);
+    expect(
+      operations.findIndex(
+        (op) => op.table === "trips" && op.method === "delete",
+      ),
+    ).toBeLessThan(
+      operations.findIndex(
+        (op) => op.table === "searches" && op.method === "delete",
+      ),
+    );
+    for (const op of searchDeletes) expect(op.value).toEqual(["search-2"]);
+    expect(operations).toContainEqual({
+      table: "searches",
+      method: "eq",
+      column: "user_id",
+      value: "user-123",
+    });
   });
 
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+    vi.unstubAllEnvs();
+  });
+
+  it("fails closed before Auth or data access when rollout is disabled", async () => {
+    vi.stubEnv("ACCOUNT_DELETION_ENABLED", "false");
+    expect((await DELETE(makeRequest())).status).toBe(503);
+    expect(mockRequestClient.auth.getUser).not.toHaveBeenCalled();
+    expect(mockAdminClient.from).not.toHaveBeenCalled();
+  });
   it("deletes user-owned data before deleting the auth user", async () => {
     const res = await DELETE(makeRequest());
     const json = await res.json();
@@ -133,7 +178,7 @@ describe("DELETE /api/user/account", () => {
           table: "search_results",
           method: "in",
           column: "search_id",
-          value: ["search-1", "search-2"],
+          value: ["search-2"],
         },
         {
           table: "affiliate_clicks",
@@ -195,6 +240,6 @@ describe("DELETE /api/user/account", () => {
 
     const res = await DELETE(makeRequest());
 
-    expect(res.status).toBe(500);
+    expect(res.status).toBe(503);
   });
 });

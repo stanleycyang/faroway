@@ -251,28 +251,11 @@ export function ItineraryDay({
                 </div>
                 {hotel.affiliateUrl && (
                   <button
-                    onClick={() => {
-                      fetch("/api/track/click", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          itemType: "hotel",
-                          itemId: `hotel_${hotel.name?.replace(/\s+/g, "_")}`,
-                          itemName: hotel.name,
-                          affiliatePartner: "booking",
-                          affiliateUrl: hotel.affiliateUrl,
-                          source: "itinerary",
-                        }),
-                      }).catch(() => {});
-                      window.open(
-                        hotel.affiliateUrl,
-                        "_blank",
-                        "noopener,noreferrer",
-                      );
-                    }}
+                    disabled
+                    title="This provider checkout is not available on Faroway yet."
                     className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
                   >
-                    Check Prices
+                    Hotel booking unavailable
                     <ExternalLink className="w-3 h-3" />
                   </button>
                 )}
@@ -365,29 +348,11 @@ export function ItineraryDay({
                 {/* CTA */}
                 {transport.affiliateUrl && (
                   <button
-                    onClick={() => {
-                      fetch("/api/track/click", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({
-                          itemType: "transport",
-                          itemId: `transport_${transport.departure.airport}_${transport.arrival.airport}`,
-                          itemName: `${transport.provider} ${transport.departure.airport}-${transport.arrival.airport}`,
-                          affiliatePartner:
-                            transport.affiliatePartner || "duffel",
-                          affiliateUrl: transport.affiliateUrl,
-                          source: "itinerary",
-                        }),
-                      }).catch(() => {});
-                      window.open(
-                        transport.affiliateUrl,
-                        "_blank",
-                        "noopener,noreferrer",
-                      );
-                    }}
+                    disabled
+                    title="This provider checkout is not available on Faroway yet."
                     className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 transition-all shadow-md active:scale-[0.98]"
                   >
-                    Book This Flight
+                    Flight booking unavailable
                     <ExternalLink className="w-3.5 h-3.5 opacity-70" />
                   </button>
                 )}

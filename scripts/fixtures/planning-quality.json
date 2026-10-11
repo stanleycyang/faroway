@@ -1,0 +1,964 @@
+[
+  {
+    "id": "family-valid",
+    "evaluated_at": "2026-10-04T00:00:00+00:00",
+    "brief": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 2
+      },
+      "interests": ["nature", "culture"],
+      "diet": ["gluten_free"],
+      "step_free": false,
+      "max_activities_per_day": 3,
+      "earliest_start_minutes": 540,
+      "currency": "EUR",
+      "budget": 180,
+      "locked_ids": ["favorite"]
+    },
+    "plan": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 2
+      },
+      "activities": [
+        {
+          "id": "favorite",
+          "kind": "activity",
+          "date": "2099-06-01",
+          "tags": ["nature", "culture"],
+          "start_minutes": 540,
+          "end_minutes": 630,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        },
+        {
+          "id": "lunch",
+          "kind": "meal",
+          "date": "2099-06-01",
+          "tags": ["nature", "culture"],
+          "start_minutes": 690,
+          "end_minutes": 780,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        }
+      ],
+      "purchase_executed": false,
+      "commission_confirmed": false
+    },
+    "expected_accepted": true,
+    "expected_failures": []
+  },
+  {
+    "id": "step-free-valid",
+    "evaluated_at": "2026-10-04T00:00:00+00:00",
+    "brief": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 0
+      },
+      "interests": ["culture"],
+      "diet": [],
+      "step_free": true,
+      "max_activities_per_day": 2,
+      "earliest_start_minutes": 600,
+      "currency": "EUR",
+      "budget": 120,
+      "locked_ids": ["favorite"]
+    },
+    "plan": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 0
+      },
+      "activities": [
+        {
+          "id": "favorite",
+          "kind": "activity",
+          "date": "2099-06-01",
+          "tags": ["culture"],
+          "start_minutes": 600,
+          "end_minutes": 690,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": [],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        },
+        {
+          "id": "lunch",
+          "kind": "meal",
+          "date": "2099-06-01",
+          "tags": ["culture"],
+          "start_minutes": 750,
+          "end_minutes": 840,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": [],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        }
+      ],
+      "purchase_executed": false,
+      "commission_confirmed": false
+    },
+    "expected_accepted": true,
+    "expected_failures": []
+  },
+  {
+    "id": "vegan-slow-valid",
+    "evaluated_at": "2026-10-04T00:00:00+00:00",
+    "brief": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 1,
+        "children": 0
+      },
+      "interests": ["food", "nature"],
+      "diet": ["vegan"],
+      "step_free": false,
+      "max_activities_per_day": 2,
+      "earliest_start_minutes": 660,
+      "currency": "USD",
+      "budget": 75,
+      "locked_ids": ["favorite"]
+    },
+    "plan": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 1,
+        "children": 0
+      },
+      "activities": [
+        {
+          "id": "favorite",
+          "kind": "activity",
+          "date": "2099-06-01",
+          "tags": ["food", "nature"],
+          "start_minutes": 660,
+          "end_minutes": 750,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["vegan"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "USD",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        },
+        {
+          "id": "lunch",
+          "kind": "meal",
+          "date": "2099-06-01",
+          "tags": ["food", "nature"],
+          "start_minutes": 810,
+          "end_minutes": 900,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["vegan"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "USD",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        }
+      ],
+      "purchase_executed": false,
+      "commission_confirmed": false
+    },
+    "expected_accepted": true,
+    "expected_failures": []
+  },
+  {
+    "id": "wrong-party",
+    "evaluated_at": "2026-10-04T00:00:00+00:00",
+    "brief": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 2
+      },
+      "interests": ["nature", "culture"],
+      "diet": ["gluten_free"],
+      "step_free": false,
+      "max_activities_per_day": 3,
+      "earliest_start_minutes": 540,
+      "currency": "EUR",
+      "budget": 180,
+      "locked_ids": ["favorite"]
+    },
+    "plan": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 1,
+        "children": 0
+      },
+      "activities": [
+        {
+          "id": "favorite",
+          "kind": "activity",
+          "date": "2099-06-01",
+          "tags": ["nature", "culture"],
+          "start_minutes": 540,
+          "end_minutes": 630,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        },
+        {
+          "id": "lunch",
+          "kind": "meal",
+          "date": "2099-06-01",
+          "tags": ["nature", "culture"],
+          "start_minutes": 690,
+          "end_minutes": 780,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        }
+      ],
+      "purchase_executed": false,
+      "commission_confirmed": false
+    },
+    "expected_accepted": false,
+    "expected_failures": ["dates_and_party"]
+  },
+  {
+    "id": "missing-interest",
+    "evaluated_at": "2026-10-04T00:00:00+00:00",
+    "brief": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 2
+      },
+      "interests": ["nature", "culture"],
+      "diet": ["gluten_free"],
+      "step_free": false,
+      "max_activities_per_day": 3,
+      "earliest_start_minutes": 540,
+      "currency": "EUR",
+      "budget": 180,
+      "locked_ids": ["favorite"]
+    },
+    "plan": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 2
+      },
+      "activities": [
+        {
+          "id": "favorite",
+          "kind": "activity",
+          "date": "2099-06-01",
+          "tags": [],
+          "start_minutes": 540,
+          "end_minutes": 630,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        },
+        {
+          "id": "lunch",
+          "kind": "meal",
+          "date": "2099-06-01",
+          "tags": [],
+          "start_minutes": 690,
+          "end_minutes": 780,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        }
+      ],
+      "purchase_executed": false,
+      "commission_confirmed": false
+    },
+    "expected_accepted": false,
+    "expected_failures": ["interest_coverage"]
+  },
+  {
+    "id": "early-start",
+    "evaluated_at": "2026-10-04T00:00:00+00:00",
+    "brief": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 2
+      },
+      "interests": ["nature", "culture"],
+      "diet": ["gluten_free"],
+      "step_free": false,
+      "max_activities_per_day": 3,
+      "earliest_start_minutes": 540,
+      "currency": "EUR",
+      "budget": 180,
+      "locked_ids": ["favorite"]
+    },
+    "plan": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 2
+      },
+      "activities": [
+        {
+          "id": "favorite",
+          "kind": "activity",
+          "date": "2099-06-01",
+          "tags": ["nature", "culture"],
+          "start_minutes": 1,
+          "end_minutes": 630,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        },
+        {
+          "id": "lunch",
+          "kind": "meal",
+          "date": "2099-06-01",
+          "tags": ["nature", "culture"],
+          "start_minutes": 690,
+          "end_minutes": 780,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        }
+      ],
+      "purchase_executed": false,
+      "commission_confirmed": false
+    },
+    "expected_accepted": false,
+    "expected_failures": ["pace_and_time"]
+  },
+  {
+    "id": "overlap",
+    "evaluated_at": "2026-10-04T00:00:00+00:00",
+    "brief": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 2
+      },
+      "interests": ["nature", "culture"],
+      "diet": ["gluten_free"],
+      "step_free": false,
+      "max_activities_per_day": 3,
+      "earliest_start_minutes": 540,
+      "currency": "EUR",
+      "budget": 180,
+      "locked_ids": ["favorite"]
+    },
+    "plan": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 2
+      },
+      "activities": [
+        {
+          "id": "favorite",
+          "kind": "activity",
+          "date": "2099-06-01",
+          "tags": ["nature", "culture"],
+          "start_minutes": 540,
+          "end_minutes": 630,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        },
+        {
+          "id": "lunch",
+          "kind": "meal",
+          "date": "2099-06-01",
+          "tags": ["nature", "culture"],
+          "start_minutes": 630,
+          "end_minutes": 780,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        }
+      ],
+      "purchase_executed": false,
+      "commission_confirmed": false
+    },
+    "expected_accepted": false,
+    "expected_failures": ["schedule_feasibility"]
+  },
+  {
+    "id": "mixed-currency",
+    "evaluated_at": "2026-10-04T00:00:00+00:00",
+    "brief": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 2
+      },
+      "interests": ["nature", "culture"],
+      "diet": ["gluten_free"],
+      "step_free": false,
+      "max_activities_per_day": 3,
+      "earliest_start_minutes": 540,
+      "currency": "EUR",
+      "budget": 180,
+      "locked_ids": ["favorite"]
+    },
+    "plan": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 2
+      },
+      "activities": [
+        {
+          "id": "favorite",
+          "kind": "activity",
+          "date": "2099-06-01",
+          "tags": ["nature", "culture"],
+          "start_minutes": 540,
+          "end_minutes": 630,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "JPY",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        },
+        {
+          "id": "lunch",
+          "kind": "meal",
+          "date": "2099-06-01",
+          "tags": ["nature", "culture"],
+          "start_minutes": 690,
+          "end_minutes": 780,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        }
+      ],
+      "purchase_executed": false,
+      "commission_confirmed": false
+    },
+    "expected_accepted": false,
+    "expected_failures": ["budget_and_units"]
+  },
+  {
+    "id": "unproven-live-price",
+    "evaluated_at": "2026-10-04T00:00:00+00:00",
+    "brief": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 2
+      },
+      "interests": ["nature", "culture"],
+      "diet": ["gluten_free"],
+      "step_free": false,
+      "max_activities_per_day": 3,
+      "earliest_start_minutes": 540,
+      "currency": "EUR",
+      "budget": 180,
+      "locked_ids": ["favorite"]
+    },
+    "plan": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 2
+      },
+      "activities": [
+        {
+          "id": "favorite",
+          "kind": "activity",
+          "date": "2099-06-01",
+          "tags": ["nature", "culture"],
+          "start_minutes": 540,
+          "end_minutes": 630,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "live_quote"
+          },
+          "booking_status": "needed"
+        },
+        {
+          "id": "lunch",
+          "kind": "meal",
+          "date": "2099-06-01",
+          "tags": ["nature", "culture"],
+          "start_minutes": 690,
+          "end_minutes": 780,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        }
+      ],
+      "purchase_executed": false,
+      "commission_confirmed": false
+    },
+    "expected_accepted": false,
+    "expected_failures": ["honest_price_claims"]
+  },
+  {
+    "id": "lost-favorite",
+    "evaluated_at": "2026-10-04T00:00:00+00:00",
+    "brief": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 2
+      },
+      "interests": ["nature", "culture"],
+      "diet": ["gluten_free"],
+      "step_free": false,
+      "max_activities_per_day": 3,
+      "earliest_start_minutes": 540,
+      "currency": "EUR",
+      "budget": 180,
+      "locked_ids": ["favorite"]
+    },
+    "plan": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 2
+      },
+      "activities": [
+        {
+          "id": "replacement",
+          "kind": "activity",
+          "date": "2099-06-01",
+          "tags": ["nature", "culture"],
+          "start_minutes": 540,
+          "end_minutes": 630,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        },
+        {
+          "id": "lunch",
+          "kind": "meal",
+          "date": "2099-06-01",
+          "tags": ["nature", "culture"],
+          "start_minutes": 690,
+          "end_minutes": 780,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        }
+      ],
+      "purchase_executed": false,
+      "commission_confirmed": false
+    },
+    "expected_accepted": false,
+    "expected_failures": ["locks_preserved"]
+  },
+  {
+    "id": "click-is-not-booking",
+    "evaluated_at": "2026-10-04T00:00:00+00:00",
+    "brief": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 2
+      },
+      "interests": ["nature", "culture"],
+      "diet": ["gluten_free"],
+      "step_free": false,
+      "max_activities_per_day": 3,
+      "earliest_start_minutes": 540,
+      "currency": "EUR",
+      "budget": 180,
+      "locked_ids": ["favorite"]
+    },
+    "plan": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 2
+      },
+      "activities": [
+        {
+          "id": "favorite",
+          "kind": "activity",
+          "date": "2099-06-01",
+          "tags": ["nature", "culture"],
+          "start_minutes": 540,
+          "end_minutes": 630,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "provider_verified"
+        },
+        {
+          "id": "lunch",
+          "kind": "meal",
+          "date": "2099-06-01",
+          "tags": ["nature", "culture"],
+          "start_minutes": 690,
+          "end_minutes": 780,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        }
+      ],
+      "purchase_executed": false,
+      "commission_confirmed": false
+    },
+    "expected_accepted": false,
+    "expected_failures": ["purchase_and_reporting_truth"]
+  },
+  {
+    "id": "unproven-accessibility",
+    "evaluated_at": "2026-10-04T00:00:00+00:00",
+    "brief": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 0
+      },
+      "interests": ["culture"],
+      "diet": [],
+      "step_free": true,
+      "max_activities_per_day": 2,
+      "earliest_start_minutes": 600,
+      "currency": "EUR",
+      "budget": 120,
+      "locked_ids": ["favorite"]
+    },
+    "plan": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 0
+      },
+      "activities": [
+        {
+          "id": "favorite",
+          "kind": "activity",
+          "date": "2099-06-01",
+          "tags": ["culture"],
+          "start_minutes": 600,
+          "end_minutes": 690,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": null,
+          "diet": [],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        },
+        {
+          "id": "lunch",
+          "kind": "meal",
+          "date": "2099-06-01",
+          "tags": ["culture"],
+          "start_minutes": 750,
+          "end_minutes": 840,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": [],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        }
+      ],
+      "purchase_executed": false,
+      "commission_confirmed": false
+    },
+    "expected_accepted": false,
+    "expected_failures": ["accessibility_evidence"]
+  },
+  {
+    "id": "diet-unverified",
+    "evaluated_at": "2026-10-04T00:00:00+00:00",
+    "brief": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 2
+      },
+      "interests": ["nature", "culture"],
+      "diet": ["gluten_free"],
+      "step_free": false,
+      "max_activities_per_day": 3,
+      "earliest_start_minutes": 540,
+      "currency": "EUR",
+      "budget": 180,
+      "locked_ids": ["favorite"]
+    },
+    "plan": {
+      "dates": ["2099-06-01"],
+      "party": {
+        "adults": 2,
+        "children": 2
+      },
+      "activities": [
+        {
+          "id": "favorite",
+          "kind": "activity",
+          "date": "2099-06-01",
+          "tags": ["nature", "culture"],
+          "start_minutes": 540,
+          "end_minutes": 630,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": "synthetic menu fixture",
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        },
+        {
+          "id": "lunch",
+          "kind": "meal",
+          "date": "2099-06-01",
+          "tags": ["nature", "culture"],
+          "start_minutes": 690,
+          "end_minutes": 780,
+          "transfer_minutes": 20,
+          "step_free": true,
+          "accessibility_evidence": "synthetic venue accessibility fixture",
+          "diet": ["gluten_free"],
+          "diet_evidence": null,
+          "price": {
+            "amount": 25,
+            "currency": "EUR",
+            "scope": "whole_party",
+            "taxes_included": true,
+            "claim": "estimate"
+          },
+          "booking_status": "needed"
+        }
+      ],
+      "purchase_executed": false,
+      "commission_confirmed": false
+    },
+    "expected_accepted": false,
+    "expected_failures": ["dietary_evidence"]
+  }
+]

@@ -60,6 +60,9 @@ describe("CORS utilities", () => {
         "GET",
       );
       expect(response.headers.get("Vary")).toBe("Origin");
+      expect(response.headers.get("Access-Control-Allow-Headers")).toContain(
+        "Idempotency-Key",
+      );
     });
 
     it("returns null for disallowed origin", async () => {
@@ -110,6 +113,12 @@ describe("CORS utilities", () => {
         "https://faroway.ai",
       );
       expect(response.headers.get("Access-Control-Max-Age")).toBe("86400");
+      expect(response.headers.get("Access-Control-Allow-Headers")).toContain(
+        "Idempotency-Key",
+      );
+      expect(response.headers.get("Access-Control-Allow-Headers")).toContain(
+        "Cache-Control",
+      );
     });
 
     it("returns 204 without Allow-Origin for disallowed origin", async () => {

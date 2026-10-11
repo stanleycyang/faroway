@@ -1,38 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
 import { requireUserIdFromRequest } from "@/lib/auth/middleware";
-import { isValidDateOnly, isValidDateRange } from "@/lib/api/date-range";
+import {
+  UpdateBriefSchema,
+  validBriefComposition,
+  isValidDateRange,
+} from "@/lib/trips/brief";
 import { loadTripForUserUncached } from "@/lib/trips/load-trip";
-import { z } from "zod";
-
-const DateOnlySchema = z
-  .string()
-  .refine(isValidDateOnly, "Must be a valid YYYY-MM-DD date");
-
-const UpdateTripSchema = z
-  .object({
-    destination: z.string().min(1).max(200).trim().optional(),
-    start_date: DateOnlySchema.optional(),
-    end_date: DateOnlySchema.optional(),
-    travelers: z.number().int().min(1).max(50).optional(),
-    // User-initiated retries may return a failed trip to draft. Internal
-    // generation routes own every other lifecycle transition.
-    status: z.literal("draft").optional(),
-    preferences: z.record(z.unknown()).optional(),
-    vibes: z.array(z.string().max(50)).max(10).optional(),
-    budget_tier: z.string().max(50).optional(),
-  })
-  .strict()
-  .refine(
-    (data) =>
-      !data.start_date ||
-      !data.end_date ||
-      isValidDateRange(data.start_date, data.end_date),
-    {
-      message: "End date must be on or after start date",
-      path: ["end_date"],
-    },
-  );
 
 type Params = {
   params: Promise<{
@@ -76,46 +50,89 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const db = getSupabase();
 
     const body = await request.json();
-    const parseResult = UpdateTripSchema.safeParse(body);
-
-    if (!parseResult.success) {
+    if (!body?.expectedUpdatedAt)
       return NextResponse.json(
-        { error: "Invalid request body" },
+        {
+          error:
+            "Editing requires a newer app. Update the app or open this trip on the Faroway website to edit safely. Your saved trip is unchanged.",
+          webUrl: `${process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai"}/trips/${encodeURIComponent(id)}`,
+          code: "REVISION_REQUIRED",
+        },
+        { status: 428 },
+      );
+    const parsed = UpdateBriefSchema.safeParse(body);
+    if (!parsed.success)
+      return NextResponse.json(
+        { error: "Invalid trip brief", details: parsed.error.issues },
         { status: 400 },
       );
-    }
-
-    if (parseResult.data.start_date || parseResult.data.end_date) {
-      const { data: existingTrip, error: existingTripError } = await db
-        .from("trips")
-        .select("start_date, end_date")
-        .eq("id", id)
-        .eq("user_id", auth.userId)
-        .single();
-      if (existingTripError || !existingTrip) {
-        return NextResponse.json({ error: "Trip not found" }, { status: 404 });
-      }
-      const nextStart = parseResult.data.start_date ?? existingTrip.start_date;
-      const nextEnd = parseResult.data.end_date ?? existingTrip.end_date;
-      if (!isValidDateRange(nextStart, nextEnd)) {
-        return NextResponse.json(
-          { error: "End date must be on or after start date" },
-          { status: 400 },
-        );
-      }
-    }
-
-    const { data: trip, error } = await db
+    const { expectedUpdatedAt, ...changes } = parsed.data;
+    const { data: existing, error: readError } = await db
       .from("trips")
-      .update({ ...parseResult.data, updated_at: new Date().toISOString() })
+      .select("*")
       .eq("id", id)
       .eq("user_id", auth.userId)
-      .select()
       .single();
-
-    if (error || !trip) {
+    if (readError || !existing)
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
-    }
+    if (existing.status === "generating")
+      return NextResponse.json(
+        {
+          error:
+            "Your brief is locked while planning. Wait for planning to finish before editing.",
+          code: "PLANNING_IN_PROGRESS",
+        },
+        { status: 409 },
+      );
+    if (existing.updated_at !== expectedUpdatedAt)
+      return NextResponse.json(
+        {
+          error:
+            "This trip changed in another tab or device. Load the latest brief before saving.",
+          code: "REVISION_CONFLICT",
+        },
+        { status: 409 },
+      );
+    const preferences = { ...existing.preferences, ...changes.preferences };
+    if (
+      !isValidDateRange(
+        changes.start_date ?? existing.start_date,
+        changes.end_date ?? existing.end_date,
+      ) ||
+      !validBriefComposition(
+        changes.travelers ?? existing.travelers,
+        preferences,
+      )
+    )
+      return NextResponse.json(
+        { error: "Check the trip dates and traveler counts" },
+        { status: 400 },
+      );
+    const { data: trip, error } = await db
+      .rpc("update_trip_brief", {
+        p_trip_id: id,
+        p_user_id: auth.userId,
+        p_expected_updated_at: expectedUpdatedAt,
+        p_changes: { ...changes, preferences },
+      })
+      .maybeSingle();
+    if (error?.code === "40001" || (!error && !trip))
+      return NextResponse.json(
+        {
+          error:
+            "Planning started or the brief changed. Refresh before saving.",
+          code: "REVISION_CONFLICT",
+        },
+        { status: 409 },
+      );
+    if (error)
+      return NextResponse.json(
+        {
+          error:
+            "Could not save the brief. Refresh to check whether it was saved before retrying.",
+        },
+        { status: 503 },
+      );
 
     return NextResponse.json({ trip });
   } catch (error) {

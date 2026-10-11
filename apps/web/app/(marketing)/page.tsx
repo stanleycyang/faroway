@@ -167,7 +167,7 @@ export default function LandingPage() {
               </p>
 
               <p className="text-sm text-slate-400 mb-8 max-w-xl">
-                No account required to start. Saved trips sync when you sign in.
+                Choose your trip, then sign in to generate and save your plan.
               </p>
 
               <div className="flex flex-wrap gap-3 mb-8">
@@ -340,7 +340,7 @@ export default function LandingPage() {
             },
             {
               icon: <Shield className="w-4 h-4 text-accent" />,
-              label: "No account needed",
+              label: "Sign in to generate",
             },
             {
               icon: <Sparkles className="w-4 h-4 text-primary-400" />,
@@ -624,8 +624,8 @@ export default function LandingPage() {
               },
               {
                 step: 3,
-                title: "AI generates your plan",
-                desc: "Watch as AI creates a personalized day-by-day itinerary with partner links for hotels and activities.",
+                title: "Sign in and generate your plan",
+                desc: "Sign in, review AI sharing, and create your day-by-day itinerary. Review available booking options on your saved trip.",
                 icon: <Sparkles className="w-7 h-7 text-white" />,
                 gradient: "from-teal-500 to-teal-600",
                 image: getImageUrl(IMAGE_PATHS.marketing.trainJourney),

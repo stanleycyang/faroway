@@ -1,0 +1,100 @@
+{
+  "scope": "Offline journey pack: real application routes and compiled Workflow with synthetic persistence/provider replies; phases use independent fixtures. This is not one continuous live-model/supplier purchase trace.",
+  "release_basis": "Integrated source: PR25 e54c285da1927267a2758cc11b256caca2416aa2 plus PR24 69258fb5200981a6e9b6bff607ac629ecbf00eec; exact integration CI is recorded in the integration PR",
+  "scenarios": [
+    {
+      "phase": "Capture once and resume",
+      "fixtures": ["family-valid", "step-free-valid", "vegan-slow-valid"],
+      "assertions": [
+        "retain destination, dates, party, origin, interests, budget and vibes",
+        "lost creation reply plus reload creates only one trip",
+        "untouched legacy brief preserves its revision and public link"
+      ],
+      "evidence": "apps/web/e2e/recovery.spec.ts:85,356,490"
+    },
+    {
+      "phase": "Plan with honest constraints",
+      "assertions": [
+        "dates/party, interests, pace, accessibility evidence, diet evidence, schedule gaps, budget units, price provenance, locks, purchase/reporting truth"
+      ],
+      "evidence": "scripts/planning-quality-eval.py; scripts/fixtures/planning-quality.json",
+      "limit": "Rubric calibration on hand-authored synthetic plans. No live model quality, venue accessibility, diet suitability, walking time, opening hours or supplier availability verified."
+    },
+    {
+      "phase": "Recover planning without another dispatch",
+      "assertions": [
+        "last accepted itinerary remains visible during failed reads",
+        "terminal read failure can refresh",
+        "unknown workflow identity remains blocked",
+        "superseded compiled workflow stops before AI"
+      ],
+      "evidence": "apps/web/e2e/recovery.spec.ts:192,221,262,319; scripts/test-trip-attempt-fence.py"
+    },
+    {
+      "phase": "Edit and preserve favorites",
+      "assertions": [
+        "compare-and-swap rejects another device's brief",
+        "locked activities cannot swap",
+        "explicit review accepts swap",
+        "failed response recovers same request",
+        "confirmed save refreshes main trip despite editor refresh failure"
+      ],
+      "evidence": "apps/web/e2e/recovery.spec.ts:461,526,643; scripts/test-trip-attempt-fence.py"
+    },
+    {
+      "phase": "Share with consent",
+      "assertions": [
+        "no link before explicit consent",
+        "canceled share explains that access remains public",
+        "revoke makes old URL unusable",
+        "edits revoke old link"
+      ],
+      "evidence": "apps/web/e2e/recovery.spec.ts:128,356,526"
+    },
+    {
+      "phase": "Prevent stale checkout and require purchase consent",
+      "assertions": [
+        "no outbound purchase action on stale brief",
+        "provider handoff requires explicit consent",
+        "failed handoff retries same identity",
+        "plan change during provider lookup prevents publication",
+        "already-open supplier page is outside application control"
+      ],
+      "evidence": "apps/web/e2e/checkout.spec.ts:95,111,123,138,153; apps/web/__tests__/api/trip-checkout.test.ts; scripts/test-trip-attempt-fence.py",
+      "limit": "Hosted checkout UI/provider responses are mocked. No quote, inventory, reservation, payment or commission verified."
+    },
+    {
+      "phase": "Keep booking progress truthful",
+      "assertions": [
+        "needed, opened-by-traveler and booked-by-traveler remain separate",
+        "verified booking is unavailable and cannot be self-selected",
+        "lost reply/reload checks server receipt",
+        "confirmed-save/failed-refresh does not resubmit",
+        "edits mark reports for review",
+        "regeneration never inherits booked status",
+        "reports do not mutate affiliate conversions"
+      ],
+      "evidence": "apps/web/e2e/recovery.spec.ts:720,828; apps/web/__tests__/api/trip-bookings.test.ts; scripts/test-trip-attempt-fence.py"
+    }
+  ],
+  "acceptance_targets": {
+    "safe_unit_and_script_failures": 0,
+    "desktop_mobile_recovery_cases_passed": 26,
+    "hosted_checkout_cases_passed": 28,
+    "browser_cases_total": 54,
+    "cross_owner_database_writes_accepted": 0,
+    "stale_plan_checkout_publications": 0,
+    "duplicate_report_rows_for_identical_retry": 0,
+    "self_reported_provider_confirmations_or_commissions": 0,
+    "unknown_workflow_releases": 0,
+    "gold_rubric_cases_accepted": "3/3",
+    "adversarial_rubric_cases_detected": "10/10",
+    "live_model_quality": "not measured; approval-gated evaluation remains required"
+  },
+  "execution": {
+    "recovery": "node ../../node_modules/@playwright/test/cli.js test -c playwright.recovery.config.ts (cwd apps/web, sanitized fixture environment)",
+    "checkout": "node ../../node_modules/@playwright/test/cli.js test -c playwright.checkout.config.ts (cwd apps/web, sanitized fixture environment)",
+    "database": "python scripts/test-trip-attempt-fence.py (networkless disposable PostgreSQL)",
+    "rubric": "python scripts/planning-quality-eval.py"
+  }
+}

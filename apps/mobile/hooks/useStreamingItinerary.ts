@@ -1,3 +1,10 @@
+import { requestWithTimeout } from '../services/request';
+import { reportedCount, reportedProgress } from '../lib/generationFacts';
+import {
+  createAndStartTrip,
+  GenerationNotStartedError,
+  recoverUnstartedTrip,
+} from '../services/planningService';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { API_BASE_URL } from '../constants/api';
 import { getAuthHeaders } from '../lib/supabase';
@@ -24,18 +31,21 @@ export interface StreamingState {
   isStreaming: boolean;
   isComplete: boolean;
   error: string | null;
+  canStart: boolean;
   progress: number;
   step: string;
   message: string;
   searchProgress: Record<string, string> | null;
   /** Top hotel from hotels agent (for display during streaming) */
   topHotel: Record<string, unknown> | null;
+  /** Reported hotel count; a preview alone does not establish inventory. */
+  hotelsCount: number | undefined;
   /** Activity count from activities agent */
-  activitiesCount: number;
+  activitiesCount: number | undefined;
   /** Dining count from dining agent */
-  diningCount: number;
+  diningCount: number | undefined;
   /** Transport count from transport agent */
-  transportCount: number;
+  transportCount: number | undefined;
   /** Itinerary days from aggregator */
   days: unknown[] | null;
   /** Micro-progress updates for granular feedback */
@@ -65,6 +75,7 @@ export interface UseStreamingItineraryOptions {
    * Included in the effect's dependency array; the value itself is not used.
    */
   retryKey?: number;
+  restartUnstarted?: boolean;
   onComplete?: (document: StreamingBlock[]) => void;
   onError?: (error: Error) => void;
 }
@@ -77,14 +88,16 @@ const initialState: StreamingState = {
   isStreaming: false,
   isComplete: false,
   error: null,
+  canStart: false,
   progress: 0,
   step: 'queued',
   message: 'Connecting...',
   searchProgress: null,
   topHotel: null,
-  activitiesCount: 0,
-  diningCount: 0,
-  transportCount: 0,
+  hotelsCount: undefined,
+  activitiesCount: undefined,
+  diningCount: undefined,
+  transportCount: undefined,
   days: null,
   microProgress: null,
   microHistory: [],
@@ -126,13 +139,6 @@ export function extractApiErrorMessage(body: string, fallback: string): string {
 async function readApiErrorMessage(response: Response, fallback: string): Promise<string> {
   const text = await response.text().catch(() => '');
   return extractApiErrorMessage(text, fallback);
-}
-
-function getTripIdFromCreateResponse(payload: unknown): string | null {
-  if (!isObjectRecord(payload)) return null;
-  const trip = payload.trip;
-  if (!isObjectRecord(trip)) return null;
-  return typeof trip.id === 'string' && trip.id.trim() ? trip.id : null;
 }
 
 export function getIncompleteStreamMessage(message: string): string {
@@ -227,6 +233,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
     input,
     streamingEnabled = process.env.EXPO_PUBLIC_ITINERARY_STREAMING_ENABLED !== 'false',
     retryKey,
+    restartUnstarted,
     onComplete,
     onError,
   } = options;
@@ -256,7 +263,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
         case 'progress': {
           setState((prev) => ({
             ...prev,
-            progress: data.progress ?? prev.progress,
+            progress: reportedProgress(data.progress) ?? prev.progress,
             step: data.step ?? prev.step,
             message: data.message ?? prev.message,
             searchProgress: data.searchProgress ?? prev.searchProgress,
@@ -267,6 +274,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
         case 'hotels':
           setState((prev) => ({
             ...prev,
+            hotelsCount: reportedCount(data.count),
             topHotel: data.topHotel ?? prev.topHotel,
           }));
           break;
@@ -274,21 +282,21 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
         case 'activities':
           setState((prev) => ({
             ...prev,
-            activitiesCount: data.count ?? prev.activitiesCount,
+            activitiesCount: reportedCount(data.count),
           }));
           break;
 
         case 'dining':
           setState((prev) => ({
             ...prev,
-            diningCount: data.count ?? prev.diningCount,
+            diningCount: reportedCount(data.count),
           }));
           break;
 
         case 'transport':
           setState((prev) => ({
             ...prev,
-            transportCount: data.count ?? prev.transportCount,
+            transportCount: reportedCount(data.count),
           }));
           break;
 
@@ -404,53 +412,23 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
     (async () => {
       try {
         let streamTripId = providedTripId;
+        if (streamTripId && restartUnstarted)
+          await recoverUnstartedTrip(streamTripId, abortController.signal);
 
         // If no tripId, create a trip and trigger generation first.
         // All three endpoints below now require Supabase bearer auth.
         if (!streamTripId && input) {
-          const createHeaders = await getAuthHeaders();
-          const tripRes = await fetch(`${API_BASE_URL}/api/trips`, {
-            method: 'POST',
-            headers: createHeaders,
-            body: JSON.stringify({
-              destination: input.destination,
-              start_date: input.startDate,
-              end_date: input.endDate,
-              travelers: input.travelers,
-              budget: input.budget || 'moderate',
-              preferences: {
-                travelerType: input.travelerType,
-                originCity: input.originCity,
-                originAirport: input.originAirport,
-                vibes: input.vibes,
-              },
-            }),
-            signal: abortController.signal,
-          });
-
-          if (!tripRes.ok) {
-            throw new Error(await readApiErrorMessage(tripRes, 'Failed to create trip'));
-          }
-
-          const createPayload = await tripRes.json().catch(() => null);
-          const createdTripId = getTripIdFromCreateResponse(createPayload);
-          if (!createdTripId) {
-            throw new Error('Trip was created, but the server response was incomplete.');
-          }
-          streamTripId = createdTripId;
-
-          const genHeaders = await getAuthHeaders();
-          const genRes = await fetch(`${API_BASE_URL}/api/trips/${streamTripId}/generate`, {
-            method: 'POST',
-            headers: genHeaders,
-            signal: abortController.signal,
-          });
-
-          if (!genRes.ok && genRes.status !== 409) {
-            throw new Error(await readApiErrorMessage(genRes, 'Failed to start generation'));
-          }
+          streamTripId = await createAndStartTrip(
+            input,
+            (id) => {
+              // Preserve the receipt even if generation dispatch is interrupted.
+              if (!abortController.signal.aborted) setState((prev) => ({ ...prev, tripId: id }));
+            },
+            abortController.signal
+          );
         }
 
+        if (abortController.signal.aborted) return;
         if (!streamTripId) {
           throw new Error('No trip ID available');
         }
@@ -466,7 +444,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
           await pollGenerationStatus(streamTripId, abortController.signal, (progress) =>
             setState((prev) => ({ ...prev, ...progress }))
           );
-          onCompleteRef.current?.(blocksRef.current);
+          if (!abortController.signal.aborted) onCompleteRef.current?.(blocksRef.current);
           return;
         }
 
@@ -474,6 +452,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
         // This is more reliable than fetch for SSE in React Native
         const streamUrl = `${API_BASE_URL}/api/trips/${streamTripId}/stream`;
         const streamHeaders = await getAuthHeaders();
+        if (abortController.signal.aborted) return;
 
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
@@ -488,6 +467,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
 
           // Process incremental data as it arrives
           xhr.onprogress = () => {
+            if (abortController.signal.aborted) return;
             if (xhr.readyState >= 3 && xhr.responseText) {
               // Get only the new data since last progress event
               const newData = xhr.responseText.substring(processedLengthRef.current);
@@ -506,6 +486,10 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
           };
 
           xhr.onload = () => {
+            if (abortController.signal.aborted) {
+              reject(Object.assign(new Error('Cancelled'), { name: 'AbortError' }));
+              return;
+            }
             if (xhr.status >= 200 && xhr.status < 300) {
               // Process any remaining data in buffer
               if (sseBuffer.trim()) {
@@ -516,9 +500,20 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
               }
               resolve();
             } else {
-              reject(new Error(`Stream failed (HTTP ${xhr.status})`));
+              reject(
+                new Error(
+                  xhr.status === 401
+                    ? 'Sign in again to reconnect to your saved trip. Planning may still be running.'
+                    : extractApiErrorMessage(
+                        xhr.responseText || '',
+                        `Stream failed (HTTP ${xhr.status})`
+                      )
+                )
+              );
             }
           };
+
+          xhr.onabort = () => reject(Object.assign(new Error('Cancelled'), { name: 'AbortError' }));
 
           xhr.onerror = () => {
             reject(new Error('Network error during streaming'));
@@ -558,6 +553,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
             isLoading: false,
             isStreaming: false,
             error: msg,
+            canStart: error instanceof GenerationNotStartedError,
           };
         });
         onErrorRef.current?.(new Error(msg));
@@ -569,12 +565,12 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
       cleanup();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [providedTripId, processEvent, streamingEnabled, inputKey, retryKey]);
+  }, [providedTripId, processEvent, streamingEnabled, inputKey, retryKey, restartUnstarted]);
 
   return state;
 }
 
-async function pollGenerationStatus(
+export async function pollGenerationStatus(
   tripId: string,
   signal: AbortSignal,
   update: (
@@ -584,23 +580,23 @@ async function pollGenerationStatus(
   ) => void
 ) {
   for (let attempt = 0; attempt < 150; attempt++) {
-    if (signal.aborted) return;
+    if (signal.aborted) throw Object.assign(new Error('Cancelled'), { name: 'AbortError' });
 
     const pollHeaders = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/trips/${tripId}/generate`, {
-      method: 'GET',
-      headers: pollHeaders,
-      signal,
-    });
-    if (!response.ok) {
-      throw new Error(
-        await readApiErrorMessage(response, `Polling failed (HTTP ${response.status})`)
-      );
-    }
-
-    const data = await response.json();
+    const data = await requestWithTimeout(
+      `${API_BASE_URL}/api/trips/${tripId}/generate`,
+      { method: 'GET', headers: pollHeaders, signal },
+      async (response) => {
+        if (!response.ok)
+          throw new Error(
+            await readApiErrorMessage(response, `Polling failed (HTTP ${response.status})`)
+          );
+        return response.json();
+      },
+      15_000
+    );
     update({
-      progress: typeof data.progress === 'number' ? data.progress : 0,
+      progress: reportedProgress(data.progress) ?? 0,
       step: data.step || 'running',
       message: data.message || 'Generating...',
     });
@@ -620,7 +616,18 @@ async function pollGenerationStatus(
       throw new Error(data.message || 'Generation failed');
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await new Promise<void>((resolve, reject) => {
+      const cancel = () => {
+        clearTimeout(timer);
+        reject(Object.assign(new Error('Cancelled'), { name: 'AbortError' }));
+      };
+      const timer = setTimeout(() => {
+        signal.removeEventListener('abort', cancel);
+        resolve();
+      }, 2000);
+      signal.addEventListener('abort', cancel, { once: true });
+      if (signal.aborted) cancel();
+    });
   }
 
   throw new Error('Generation polling timed out');

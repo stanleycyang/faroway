@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useMemo } from 'react';
+import React, { useEffect, useState, useRef, useMemo, createContext, useContext } from 'react';
 import {
   View,
   Text,
@@ -26,12 +26,19 @@ import { usePromptStore } from '../../stores/promptStore';
 import { useAuthContext } from '../../components/AuthProvider';
 import { AuthGate } from '../../components/AuthGate';
 import { RatingPrompt } from '../../components/RatingPrompt';
-import { shareTrip, trackAffiliateClick } from '../../services/api';
+import { shareTrip, revokeTripShare } from '../../services/api';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import { useTrips } from '../../hooks/useTrips';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { USE_NATIVE_DRIVER } from '../../lib/animation';
+import { reviewSavedTripBooking } from '../../lib/savedTripBooking';
+
+const BookingTripContext = createContext<string | undefined>(undefined);
+const useBookingReview = () => {
+  const tripId = useContext(BookingTripContext);
+  return () => reviewSavedTripBooking(tripId, openURL);
+};
 
 const HEADER_HEIGHT = 300;
 
@@ -45,40 +52,7 @@ const openURL = async (url: string) => {
       controlsColor: colors.primary[600],
     });
   } catch (error) {
-    console.error('Failed to open URL:', error);
-  }
-};
-
-/**
- * Track affiliate click and open the booking URL.
- * Fires tracking request, then opens the URL (uses tracked URL if available).
- */
-const trackAndOpen = async (params: {
-  itemType: 'hotel' | 'activity' | 'restaurant' | 'flight';
-  itemId: string;
-  itemName: string;
-  affiliatePartner: string;
-  affiliateUrl: string;
-}) => {
-  hapticFeedback.light();
-
-  // Fire tracking request (non-blocking)
-  const trackingPromise = trackAffiliateClick({
-    itemType: params.itemType,
-    itemId: params.itemId,
-    itemName: params.itemName,
-    affiliatePartner: params.affiliatePartner,
-    affiliateUrl: params.affiliateUrl,
-    source: 'itinerary',
-  });
-
-  // Try to get the tracked redirect URL, fall back to original
-  try {
-    const result = await trackingPromise;
-    const url = result.data?.redirectUrl || params.affiliateUrl;
-    await openURL(url);
-  } catch {
-    await openURL(params.affiliateUrl);
+    throw error;
   }
 };
 
@@ -87,6 +61,7 @@ interface ActivityCardProps {
 }
 
 function ActivityCard({ activity }: ActivityCardProps) {
+  const reviewBooking = useBookingReview();
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'restaurant':
@@ -132,13 +107,7 @@ function ActivityCard({ activity }: ActivityCardProps) {
 
   const handleBooking = () => {
     if (!activity.bookingUrl) return;
-    trackAndOpen({
-      itemType: activity.type === 'restaurant' ? 'restaurant' : 'activity',
-      itemId: activity.id,
-      itemName: activity.title,
-      affiliatePartner: activity.affiliatePartner || 'viator',
-      affiliateUrl: activity.bookingUrl,
-    });
+    reviewBooking();
   };
 
   return (
@@ -229,15 +198,10 @@ function FeaturedHotelCard({
 }: {
   hotel: NonNullable<import('../../stores/tripStore').Trip['hotel']>;
 }) {
+  const reviewBooking = useBookingReview();
   const handleBooking = () => {
     if (!hotel.bookingUrl) return;
-    trackAndOpen({
-      itemType: 'hotel',
-      itemId: hotel.id,
-      itemName: hotel.name,
-      affiliatePartner: 'booking',
-      affiliateUrl: hotel.bookingUrl,
-    });
+    reviewBooking();
   };
 
   return (
@@ -295,6 +259,7 @@ function TransportCard({
 }: {
   transport: NonNullable<import('../../stores/tripStore').TripDay['transport']>;
 }) {
+  const reviewBooking = useBookingReview();
   const formatDuration = (minutes: number) => {
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
@@ -311,13 +276,7 @@ function TransportCard({
 
   const handleBooking = () => {
     if (!transport.bookingUrl) return;
-    trackAndOpen({
-      itemType: 'flight',
-      itemId: `transport_${transport.departure.airport}_${transport.arrival.airport}`,
-      itemName: `${transport.provider} ${transport.departure.airport}-${transport.arrival.airport}`,
-      affiliatePartner: transport.affiliatePartner || 'duffel',
-      affiliateUrl: transport.bookingUrl,
-    });
+    reviewBooking();
   };
 
   return (
@@ -387,19 +346,14 @@ function BookingsSheet({
   onClose: () => void;
   bookableItems: { activity: Activity; dayNumber: number }[];
 }) {
+  const reviewBooking = useBookingReview();
   const reduceMotion = useReduceMotion();
 
   const renderBookableItem = ({ item }: { item: { activity: Activity; dayNumber: number } }) => {
     const { activity, dayNumber } = item;
 
     const handleBook = () => {
-      trackAndOpen({
-        itemType: activity.type === 'restaurant' ? 'restaurant' : 'activity',
-        itemId: activity.id,
-        itemName: activity.title,
-        affiliatePartner: activity.affiliatePartner || 'viator',
-        affiliateUrl: activity.bookingUrl!,
-      });
+      reviewBooking();
     };
 
     return (
@@ -615,6 +569,30 @@ export default function TripDetailScreen() {
       setShowAuthGate(true);
       return;
     }
+    const confirmed = await new Promise<boolean>((resolve) =>
+      Alert.alert(
+        'Make this trip public?',
+        'Anyone with the link can see your dates and itinerary. The link remains active if you cancel the share sheet. You can turn off public access from this sharing menu.',
+        [
+          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
+          {
+            text: 'Turn off public access',
+            style: 'destructive',
+            onPress: async () => {
+              resolve(false);
+              const result = await revokeTripShare(id);
+              Alert.alert(
+                result.error ? 'Could not turn off sharing' : 'Public access turned off',
+                result.error || 'The old public link no longer works.'
+              );
+            },
+          },
+          { text: 'Create public link', onPress: () => resolve(true) },
+        ],
+        { cancelable: true, onDismiss: () => resolve(false) }
+      )
+    );
+    if (!confirmed) return;
     try {
       const result = await shareTrip(id);
       if (result.data?.shareUrl) {
@@ -709,220 +687,244 @@ export default function TripDetailScreen() {
   });
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
-      <Animated.ScrollView
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
-          useNativeDriver: USE_NATIVE_DRIVER,
-        })}
-        scrollEventThrottle={16}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
-        {/* Hero Image */}
-        <Animated.View
-          style={[
-            styles.heroContainer,
-            reduceMotion ? undefined : { transform: [{ translateY: headerTranslate }] },
-          ]}
+    <BookingTripContext.Provider value={trip.id}>
+      <View style={styles.container}>
+        <StatusBar style="light" />
+        <Animated.ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
+            useNativeDriver: USE_NATIVE_DRIVER,
+          })}
+          scrollEventThrottle={16}
+          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
         >
-          <Animated.Image
-            source={{ uri: trip.coverImage }}
+          {/* Hero Image */}
+          <Animated.View
             style={[
-              styles.heroImage,
-              reduceMotion ? undefined : { transform: [{ scale: imageScale }] },
+              styles.heroContainer,
+              reduceMotion ? undefined : { transform: [{ translateY: headerTranslate }] },
             ]}
-            accessibilityLabel={`${trip.destination}, ${trip.country}`}
-          />
-          <LinearGradient
-            colors={['rgba(0,0,0,0.3)', 'transparent', 'rgba(0,0,0,0.8)']}
-            style={styles.heroGradient}
-          />
-          <SafeAreaView edges={['top']} style={styles.heroContent}>
-            <View style={styles.heroHeader}>
-              <TouchableOpacity
-                style={styles.backButton}
-                onPress={() => router.back()}
-                accessibilityRole="button"
-                accessibilityLabel="Go back"
-              >
-                <Ionicons name="arrow-back" size={24} color="#fff" />
-              </TouchableOpacity>
-              <View style={styles.heroActions}>
+          >
+            <Animated.Image
+              source={{ uri: trip.coverImage }}
+              style={[
+                styles.heroImage,
+                reduceMotion ? undefined : { transform: [{ scale: imageScale }] },
+              ]}
+              accessibilityLabel={`${trip.destination}, ${trip.country}`}
+            />
+            <LinearGradient
+              colors={['rgba(0,0,0,0.3)', 'transparent', 'rgba(0,0,0,0.8)']}
+              style={styles.heroGradient}
+            />
+            <SafeAreaView edges={['top']} style={styles.heroContent}>
+              <View style={styles.heroHeader}>
                 <TouchableOpacity
-                  style={styles.actionButton}
-                  onPress={handleShare}
+                  style={styles.backButton}
+                  onPress={() => router.back()}
                   accessibilityRole="button"
-                  accessibilityLabel="Share trip"
+                  accessibilityLabel="Go back"
                 >
-                  <Ionicons name="share-outline" size={22} color="#fff" />
+                  <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
-              </View>
-            </View>
-            <View style={styles.heroInfo}>
-              <Text style={styles.heroCountry}>{trip.country}</Text>
-              <Text style={styles.heroTitle} accessibilityRole="header">
-                {trip.destination}
-              </Text>
-              <View style={styles.heroMeta}>
-                <View style={styles.heroMetaItem}>
-                  <Ionicons name="calendar-outline" size={16} color="rgba(255,255,255,0.8)" />
-                  <Text style={styles.heroMetaText}>{formatDateRange()}</Text>
-                </View>
-                <View style={styles.heroMetaItem}>
-                  <Ionicons name="people-outline" size={16} color="rgba(255,255,255,0.8)" />
-                  <Text style={styles.heroMetaText}>
-                    {trip.travelers} traveler{trip.travelers > 1 ? 's' : ''}
-                  </Text>
+                <View style={styles.heroActions}>
+                  <TouchableOpacity
+                    style={styles.actionButton}
+                    onPress={handleShare}
+                    accessibilityRole="button"
+                    accessibilityLabel="Share trip"
+                  >
+                    <Ionicons name="share-outline" size={22} color="#fff" />
+                  </TouchableOpacity>
                 </View>
               </View>
-            </View>
-          </SafeAreaView>
-        </Animated.View>
-
-        {/* Content */}
-        <View style={styles.content}>
-          {/* Vibes */}
-          {trip.vibes && trip.vibes.length > 0 && (
-            <View style={styles.vibesSection}>
-              <VibeChips vibes={trip.vibes} />
-            </View>
-          )}
-
-          {/* Featured Hotel */}
-          {trip.hotel && <FeaturedHotelCard hotel={trip.hotel} />}
-
-          {trip.days.length === 0 ? (
-            <View style={styles.emptyItinerary}>
-              <View style={styles.emptyItineraryIcon} accessible={false}>
-                <Ionicons name="time-outline" size={32} color={colors.primary[500]} />
-              </View>
-              <Text style={styles.emptyItineraryTitle}>Your itinerary is still being prepared</Text>
-              <Text style={styles.emptyItineraryText}>
-                Refresh to check whether your day-by-day plan is ready.
-              </Text>
-              <Button
-                title="Refresh itinerary"
-                onPress={onRefresh}
-                loading={refreshing}
-                disabled={refreshing}
-                size="md"
-              />
-            </View>
-          ) : (
-            <>
-              {/* Day Selector */}
-              <View style={styles.daySelector}>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.daySelectorContent}
-                >
-                  {trip.days.map((day, index) => (
+              <View style={styles.heroInfo}>
+                <Text style={styles.heroCountry}>{trip.country}</Text>
+                {trip.planNeedsRefresh && (
+                  <View style={{ padding: 12, backgroundColor: '#fff5ee', borderRadius: 12 }}>
+                    <Text style={{ color: '#65251e' }}>
+                      Your brief changed. The previous plan is kept on the website; update it before
+                      booking or sharing.
+                    </Text>
                     <TouchableOpacity
-                      key={day.date}
-                      style={[styles.dayTab, selectedDay === index && styles.dayTabSelected]}
+                      accessibilityRole="link"
                       onPress={() => {
-                        hapticFeedback.selection();
-                        setSelectedDay(index);
+                        reviewSavedTripBooking(trip.id, openURL);
                       }}
-                      accessibilityRole="tab"
-                      accessibilityState={{ selected: selectedDay === index }}
-                      accessibilityLabel={`Day ${day.dayNumber}, ${new Date(day.date).toLocaleDateString()}`}
+                      style={{ minHeight: 44, justifyContent: 'center' }}
                     >
-                      <Text
-                        style={[
-                          styles.dayTabNumber,
-                          selectedDay === index && styles.dayTabNumberSelected,
-                        ]}
-                      >
-                        Day {day.dayNumber}
-                      </Text>
-                      <Text
-                        style={[
-                          styles.dayTabDate,
-                          selectedDay === index && styles.dayTabDateSelected,
-                        ]}
-                      >
-                        {new Date(day.date).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                        })}
+                      <Text style={{ color: '#9f342e', fontWeight: '700' }}>
+                        Review trip on Faroway website
                       </Text>
                     </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
+                  </View>
+                )}
 
-              {/* Day Theme */}
-              <View style={styles.dayThemeContainer}>
-                <Text style={styles.dayTheme}>{trip.days[selectedDay]?.theme}</Text>
-              </View>
-
-              {/* Transport */}
-              {trip.days[selectedDay]?.transport && (
-                <View style={styles.transportCardWrapper}>
-                  <TransportCard transport={trip.days[selectedDay].transport!} />
+                <Text style={styles.heroTitle} accessibilityRole="header">
+                  {trip.destination}
+                </Text>
+                <View style={styles.heroMeta}>
+                  <View style={styles.heroMetaItem}>
+                    <Ionicons name="calendar-outline" size={16} color="rgba(255,255,255,0.8)" />
+                    <Text style={styles.heroMetaText}>{formatDateRange()}</Text>
+                  </View>
+                  <View style={styles.heroMetaItem}>
+                    <Ionicons name="people-outline" size={16} color="rgba(255,255,255,0.8)" />
+                    <Text style={styles.heroMetaText}>
+                      {trip.travelers} traveler{trip.travelers > 1 ? 's' : ''}
+                    </Text>
+                  </View>
                 </View>
-              )}
-
-              {/* Activities */}
-              <View style={styles.activitiesContainer}>
-                {trip.days[selectedDay]?.activities.map((activity) => (
-                  <ActivityCard key={activity.id} activity={activity} />
-                ))}
               </View>
-            </>
-          )}
-        </View>
-      </Animated.ScrollView>
+            </SafeAreaView>
+          </Animated.View>
 
-      {/* Bottom Bar */}
-      {bookableCount > 0 && (
-        <View style={styles.bottomBar}>
-          <View style={styles.bottomBarInfo}>
-            <Text style={styles.bottomBarLabel}>Estimated cost</Text>
-            <Text style={styles.bottomBarPrice}>
-              {estimatedTotal > 0 ? `~$${estimatedTotal.toLocaleString()}` : 'See partner prices'}
-            </Text>
+          {/* Content */}
+          <View style={styles.content}>
+            {/* Vibes */}
+            {trip.vibes && trip.vibes.length > 0 && (
+              <View style={styles.vibesSection}>
+                <VibeChips vibes={trip.vibes} />
+              </View>
+            )}
+
+            {/* Featured Hotel */}
+            {trip.hotel && <FeaturedHotelCard hotel={trip.hotel} />}
+
+            {trip.days.length === 0 ? (
+              <View style={styles.emptyItinerary}>
+                <View style={styles.emptyItineraryIcon} accessible={false}>
+                  <Ionicons name="time-outline" size={32} color={colors.primary[500]} />
+                </View>
+                <Text style={styles.emptyItineraryTitle}>
+                  Your itinerary is still being prepared
+                </Text>
+                <Text style={styles.emptyItineraryText}>
+                  Refresh to check whether your day-by-day plan is ready.
+                </Text>
+                <Button
+                  title="Refresh itinerary"
+                  onPress={onRefresh}
+                  loading={refreshing}
+                  disabled={refreshing}
+                  size="md"
+                />
+              </View>
+            ) : (
+              <>
+                {/* Day Selector */}
+                <View style={styles.daySelector}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.daySelectorContent}
+                  >
+                    {trip.days.map((day, index) => (
+                      <TouchableOpacity
+                        key={day.date}
+                        style={[styles.dayTab, selectedDay === index && styles.dayTabSelected]}
+                        onPress={() => {
+                          hapticFeedback.selection();
+                          setSelectedDay(index);
+                        }}
+                        accessibilityRole="tab"
+                        accessibilityState={{ selected: selectedDay === index }}
+                        accessibilityLabel={`Day ${day.dayNumber}, ${new Date(day.date).toLocaleDateString()}`}
+                      >
+                        <Text
+                          style={[
+                            styles.dayTabNumber,
+                            selectedDay === index && styles.dayTabNumberSelected,
+                          ]}
+                        >
+                          Day {day.dayNumber}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.dayTabDate,
+                            selectedDay === index && styles.dayTabDateSelected,
+                          ]}
+                        >
+                          {new Date(day.date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                          })}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+
+                {/* Day Theme */}
+                <View style={styles.dayThemeContainer}>
+                  <Text style={styles.dayTheme}>{trip.days[selectedDay]?.theme}</Text>
+                </View>
+
+                {/* Transport */}
+                {trip.days[selectedDay]?.transport && (
+                  <View style={styles.transportCardWrapper}>
+                    <TransportCard transport={trip.days[selectedDay].transport!} />
+                  </View>
+                )}
+
+                {/* Activities */}
+                <View style={styles.activitiesContainer}>
+                  {trip.days[selectedDay]?.activities.map((activity) => (
+                    <ActivityCard key={activity.id} activity={activity} />
+                  ))}
+                </View>
+              </>
+            )}
           </View>
-          <Button
-            title={`Book ${bookableCount} ${bookableCount === 1 ? 'Item' : 'Items'}`}
-            onPress={() => {
-              hapticFeedback.light();
-              setShowBookingsSheet(true);
-            }}
-            size="lg"
-            style={styles.bookAllButton}
-          />
-        </View>
-      )}
+        </Animated.ScrollView>
 
-      {/* Bookings Bottom Sheet */}
-      <BookingsSheet
-        visible={showBookingsSheet}
-        onClose={() => setShowBookingsSheet(false)}
-        bookableItems={bookableItems}
-      />
+        {/* Bottom Bar */}
+        {bookableCount > 0 && (
+          <View style={styles.bottomBar}>
+            <View style={styles.bottomBarInfo}>
+              <Text style={styles.bottomBarLabel}>Estimated cost</Text>
+              <Text style={styles.bottomBarPrice}>
+                {estimatedTotal > 0 ? `~$${estimatedTotal.toLocaleString()}` : 'See partner prices'}
+              </Text>
+            </View>
+            <Button
+              title={`Book ${bookableCount} ${bookableCount === 1 ? 'Item' : 'Items'}`}
+              onPress={() => {
+                hapticFeedback.light();
+                setShowBookingsSheet(true);
+              }}
+              size="lg"
+              style={styles.bookAllButton}
+            />
+          </View>
+        )}
 
-      {/* Auth gate for guests */}
-      <AuthGate
-        visible={showAuthGate}
-        trigger="share"
-        tripPreview={
-          trip ? { destination: trip.destination, coverImage: trip.coverImage } : undefined
-        }
-        onClose={() => setShowAuthGate(false)}
-      />
+        {/* Bookings Bottom Sheet */}
+        <BookingsSheet
+          visible={showBookingsSheet}
+          onClose={() => setShowBookingsSheet(false)}
+          bookableItems={bookableItems}
+        />
 
-      {/* Rating prompt for authenticated users on completed trips */}
-      <RatingPrompt
-        visible={showRatingPrompt}
-        tripCount={tripGenerationCount}
-        onClose={() => setShowRatingPrompt(false)}
-      />
-    </View>
+        {/* Auth gate for guests */}
+        <AuthGate
+          visible={showAuthGate}
+          trigger="share"
+          tripPreview={
+            trip ? { destination: trip.destination, coverImage: trip.coverImage } : undefined
+          }
+          onClose={() => setShowAuthGate(false)}
+        />
+
+        {/* Rating prompt for authenticated users on completed trips */}
+        <RatingPrompt
+          visible={showRatingPrompt}
+          tripCount={tripGenerationCount}
+          onClose={() => setShowRatingPrompt(false)}
+        />
+      </View>
+    </BookingTripContext.Provider>
   );
 }
 

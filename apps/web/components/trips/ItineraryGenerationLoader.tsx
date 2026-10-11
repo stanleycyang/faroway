@@ -33,6 +33,15 @@ export type GenerationPhase =
   | "complete"
   | "error";
 
+const PHASE_LABELS: Record<GenerationPhase, string> = {
+  connecting: "Getting ready",
+  orchestrator: "Reading your trip",
+  searching: "Finding places",
+  composing: "Putting it together",
+  complete: "Ready",
+  error: "Paused",
+};
+
 export interface ItineraryGenerationLoaderProps {
   destination: string;
   nights: number;
@@ -134,7 +143,7 @@ export function ItineraryGenerationLoader({
             />
           </div>
           <div className="mt-2 flex justify-between text-[11px] font-medium uppercase tracking-wider text-surface-500">
-            <span>{phase}</span>
+            <span>{PHASE_LABELS[phase]}</span>
             <span className="tabular-nums">{Math.round(progress)}%</span>
           </div>
         </div>

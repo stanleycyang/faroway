@@ -3,7 +3,8 @@
  * Centralized API client for the mobile app
  */
 
-import { API_BASE_URL, API_TIMEOUT } from '../constants/api';
+import { API_BASE_URL } from '../constants/api';
+import { requestWithTimeout, RequestTimeoutError } from './request';
 import type {
   ApiResponse,
   Trip,
@@ -39,9 +40,6 @@ export function getAuthToken(): string | null {
  * Base fetch wrapper with auth and error handling
  */
 async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
-
   try {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -52,15 +50,11 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
       headers['Authorization'] = `Bearer ${authToken}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers,
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    const parsed = await parseApiResponseBody(response);
+    const { response, parsed } = await requestWithTimeout(
+      `${API_BASE_URL}${endpoint}`,
+      { ...options, headers },
+      async (response) => ({ response, parsed: await parseApiResponseBody(response) })
+    );
 
     if (!parsed.ok) {
       return {
@@ -79,10 +73,11 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
 
     return { data: parsed.data as T };
   } catch (error) {
-    clearTimeout(timeoutId);
-
     if (error instanceof Error) {
-      if (error.name === 'AbortError') {
+      if (
+        error instanceof RequestTimeoutError ||
+        (error.name === 'AbortError' && !options.signal?.aborted)
+      ) {
         return { error: 'Request timed out', code: 'TIMEOUT' };
       }
       return { error: error.message, code: 'NETWORK_ERROR' };
@@ -150,9 +145,7 @@ export async function updateUserProfile(updates: {
  * Caller is responsible for clearing local state and signing out.
  */
 export async function deleteAccount(): Promise<ApiResponse<{ deleted: boolean }>> {
-  return apiFetch<{ deleted: boolean }>('/api/user/profile', {
-    method: 'DELETE',
-  });
+  return { error: 'Use the confirmed account deletion flow in Settings.' };
 }
 
 // ============================================
@@ -259,11 +252,12 @@ export async function createTrip(trip: {
 
 export async function updateTrip(
   id: string,
-  updates: Partial<Trip>
+  updates: Partial<Trip>,
+  expectedUpdatedAt?: string
 ): Promise<ApiResponse<{ trip: Trip }>> {
   return apiFetch<{ trip: Trip }>(`/api/trips/${encodeURIComponent(id)}`, {
     method: 'PATCH',
-    body: JSON.stringify(updates),
+    body: JSON.stringify({ ...updates, expectedUpdatedAt }),
   });
 }
 
@@ -282,8 +276,14 @@ export async function shareTrip(
 ): Promise<ApiResponse<{ shareUrl: string; shareToken: string }>> {
   return apiFetch<{ shareUrl: string; shareToken: string }>(
     `/api/trips/${encodeURIComponent(id)}/share`,
-    { method: 'POST' }
+    { method: 'POST', body: JSON.stringify({ publicConsent: true }) }
   );
+}
+
+export async function revokeTripShare(id: string): Promise<ApiResponse<{ success: boolean }>> {
+  return apiFetch<{ success: boolean }>(`/api/trips/${encodeURIComponent(id)}/share`, {
+    method: 'DELETE',
+  });
 }
 
 // ============================================
@@ -338,12 +338,9 @@ export async function openAffiliateLink(
   params: TrackClickParams,
   openUrl: (url: string) => void
 ): Promise<void> {
-  const result = await trackAffiliateClick(params);
-
-  if (result.data?.redirectUrl) {
-    openUrl(result.data.redirectUrl);
-  } else {
-    // Fallback to original URL if tracking fails
-    openUrl(params.affiliateUrl);
-  }
+  // Legacy click tracking accepts client-supplied URLs. It is not a checkout
+  // authorization or a revision check, even when the tracking request succeeds.
+  void params;
+  void openUrl;
+  throw new Error('Review booking options from your saved trip on Faroway.');
 }

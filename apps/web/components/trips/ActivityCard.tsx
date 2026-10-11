@@ -248,24 +248,6 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
       checkout.review({ id: activity.id, name: activity.name, date });
       return;
     }
-    const url = activity.bookingInfo?.bookingUrl;
-    if (!url) return;
-
-    // Fire and forget tracking
-    fetch("/api/track/click", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        itemType: "activity",
-        itemId: activity.id,
-        itemName: activity.name,
-        affiliatePartner: activity.bookingInfo?.affiliateId || "viator",
-        affiliateUrl: url,
-        source: "itinerary",
-      }),
-    }).catch(() => {});
-
-    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -415,12 +397,7 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
           activity.tripadvisorRating > 0 && (
             <div className="flex items-center gap-2 mt-3">
               {activity.tripadvisorUrl ? (
-                <a
-                  href={activity.tripadvisorUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#34e0a1]/10 rounded-lg text-xs font-semibold text-[#00af87] hover:bg-[#34e0a1]/20 transition-colors"
-                >
+                <span className="text-xs text-gray-500">
                   <span className="text-sm">&#9679;</span>
                   {activity.tripadvisorRating.toFixed(1)} on TripAdvisor
                   {activity.tripadvisorReviewCount != null && (
@@ -428,7 +405,7 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
                       ({activity.tripadvisorReviewCount.toLocaleString()})
                     </span>
                   )}
-                </a>
+                </span>
               ) : (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#34e0a1]/10 rounded-lg text-xs font-semibold text-[#00af87]">
                   <span className="text-sm">&#9679;</span>
@@ -448,7 +425,7 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
           <div className="mt-4 space-y-2">
             <button
               onClick={handleBookingClick}
-              disabled={!!viatorCheckout && !checkout?.enabled}
+              disabled={!viatorCheckout || !checkout?.enabled}
               className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-primary to-primary-600 text-white rounded-xl text-sm font-bold hover:from-primary-600 hover:to-primary-700 transition-all duration-200 shadow-md hover:shadow-lg hover:shadow-primary/25 active:scale-[0.98]"
             >
               <Shield className="w-4 h-4" />
@@ -456,7 +433,7 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
                 ? checkout?.enabled
                   ? "Review on Viator"
                   : "Viator checkout unavailable"
-                : "View booking options"}
+                : "Booking unavailable"}
               <ExternalLink className="w-3.5 h-3.5 opacity-70" />
             </button>
             <p className="text-center text-xs text-gray-500">
@@ -518,26 +495,6 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
         ))}
       </span>
     );
-  };
-
-  const handleReserveClick = () => {
-    const url = restaurant.reservationInfo?.url;
-    if (!url) return;
-
-    fetch("/api/track/click", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        itemType: "restaurant",
-        itemId: restaurant.id,
-        itemName: restaurant.name,
-        affiliatePartner: "opentable",
-        affiliateUrl: url,
-        source: "itinerary",
-      }),
-    }).catch(() => {});
-
-    window.open(url, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -623,12 +580,7 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
               restaurant.tripadvisorRating > 0 && (
                 <div className="flex items-center gap-2 mt-3">
                   {restaurant.tripadvisorUrl ? (
-                    <a
-                      href={restaurant.tripadvisorUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#34e0a1]/10 rounded-lg text-xs font-semibold text-[#00af87] hover:bg-[#34e0a1]/20 transition-colors"
-                    >
+                    <span className="text-xs text-gray-500">
                       <span className="text-sm">&#9679;</span>
                       {restaurant.tripadvisorRating.toFixed(1)} on TripAdvisor
                       {restaurant.tripadvisorReviewCount != null && (
@@ -636,7 +588,7 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
                           ({restaurant.tripadvisorReviewCount.toLocaleString()})
                         </span>
                       )}
-                    </a>
+                    </span>
                   ) : (
                     <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#34e0a1]/10 rounded-lg text-xs font-semibold text-[#00af87]">
                       <span className="text-sm">&#9679;</span>
@@ -655,43 +607,18 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
             {hasReservation && (
               <div className="mt-4 space-y-2">
                 <button
-                  onClick={handleReserveClick}
+                  disabled
+                  title="Restaurant reservations are not available on Faroway yet."
                   className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl text-sm font-bold hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-md hover:shadow-lg hover:shadow-orange-500/25 active:scale-[0.98]"
                 >
                   <Utensils className="w-4 h-4" />
-                  Reserve a Table
+                  Restaurant booking unavailable
                   <ExternalLink className="w-3.5 h-3.5 opacity-70" />
                 </button>
-                <div className="flex items-center justify-center gap-3 text-[11px] text-gray-500">
-                  <span className="inline-flex items-center gap-1">
-                    <svg
-                      className="w-3 h-3 text-green-500"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    Confirmed instantly
-                  </span>
-                  <span className="inline-flex items-center gap-1">
-                    <svg
-                      className="w-3 h-3 text-green-500"
-                      fill="currentColor"
-                      viewBox="0 0 20 20"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                    Free to cancel
-                  </span>
-                </div>
+                <p className="text-center text-xs text-gray-500">
+                  No reservation has been made. Confirm availability and
+                  cancellation terms with the restaurant.
+                </p>
               </div>
             )}
 

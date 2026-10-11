@@ -1,10 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useNotificationContext } from '../../components/NotificationProvider';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useUserStore } from '../../stores/userStore';
-import { updateUserProfile } from '../../services/api';
+import {
+  updateNotificationPreferences,
+  getVerifiedNotificationPreferences,
+} from '../../services/pushConsentService';
 import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 
@@ -43,37 +47,57 @@ const notificationSettings: NotificationSetting[] = [
 ];
 
 const defaultSettings: Record<string, boolean> = {
-  trip_reminders: true,
-  deals: true,
-  itinerary_updates: true,
+  trip_reminders: false,
+  deals: false,
+  itinerary_updates: false,
   app_updates: false,
 };
 
 export default function NotificationsScreen() {
   const router = useRouter();
+  const push = useNotificationContext();
   const { user } = useUserStore();
-  const userWithSettings = user as
-    | (typeof user & { notificationSettings?: Record<string, boolean> })
-    | null;
-  const [settings, setSettings] = useState<Record<string, boolean>>(
-    userWithSettings?.notificationSettings &&
-      Object.keys(userWithSettings.notificationSettings).length > 0
-      ? userWithSettings.notificationSettings
-      : defaultSettings
-  );
+  const [settings, setSettings] = useState<Record<string, boolean>>(defaultSettings);
   const [savingSetting, setSavingSetting] = useState<string | null>(null);
+  const [loadingPreferences, setLoadingPreferences] = useState(true);
+  useEffect(() => {
+    let active = true;
+    const accountId = user?.id;
+    setSettings(defaultSettings);
+    setLoadingPreferences(true);
+    if (!accountId) {
+      setLoadingPreferences(false);
+      return;
+    }
+    void getVerifiedNotificationPreferences(accountId)
+      .then((value) => {
+        if (active && useUserStore.getState().user?.id === accountId) setSettings(value);
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (active) setLoadingPreferences(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [user?.id]);
 
   const toggleSetting = async (id: string) => {
     hapticFeedback.selection();
+    const accountId = user?.id;
     const previous = settings;
     const updated = { ...settings, [id]: !settings[id] };
     setSettings(updated);
     setSavingSetting(id);
 
     try {
-      const result = await updateUserProfile({ notification_settings: updated });
-      if (result.error) throw new Error(result.error);
+      if (!accountId) throw new Error('Sign in to change notification settings.');
+      await updateNotificationPreferences(accountId, updated);
+      if (useUserStore.getState().user?.id !== accountId) return;
+      const current = useUserStore.getState().user;
+      if (current) useUserStore.getState().setUser({ ...current, notificationSettings: updated });
     } catch (error: unknown) {
+      if (useUserStore.getState().user?.id !== accountId) return;
       setSettings(previous);
       hapticFeedback.error();
       const message = error instanceof Error ? error.message : 'Please try again.';
@@ -106,6 +130,29 @@ export default function NotificationsScreen() {
           Choose which notifications you'd like to receive.
         </Text>
 
+        <View style={styles.settingItem}>
+          <View style={styles.settingContent}>
+            <Text style={styles.settingTitle}>Notifications on this device</Text>
+            <Text style={styles.settingDescription}>
+              Enable device notifications, then choose the updates you want below.
+            </Text>
+            {push.error && (
+              <Text accessibilityRole="alert" style={styles.settingDescription}>
+                {push.error}
+              </Text>
+            )}
+          </View>
+          <Switch
+            value={push.enabled}
+            disabled={push.isLoading || !user}
+            accessibilityLabel="Notifications on this device"
+            onValueChange={(value) => {
+              void (value ? push.enable() : push.disable()).catch((reason) =>
+                Alert.alert('Notification settings', reason.message)
+              );
+            }}
+          />
+        </View>
         <View style={styles.settingsList}>
           {notificationSettings.map((setting) => (
             <View key={setting.id} style={styles.settingItem}>
@@ -125,7 +172,7 @@ export default function NotificationsScreen() {
                 }}
                 thumbColor="#fff"
                 ios_backgroundColor={colors.surface[700]}
-                disabled={savingSetting !== null}
+                disabled={loadingPreferences || savingSetting !== null}
                 accessibilityLabel={setting.title}
                 accessibilityHint={setting.description}
               />

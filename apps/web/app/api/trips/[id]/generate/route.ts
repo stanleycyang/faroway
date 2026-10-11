@@ -1,3 +1,5 @@
+import { isStalePlanningDisclosure } from "@/lib/ai/planning-disclosure";
+import { planningPauseResponse } from "@/lib/trips/planning-pause";
 /**
  * POST /api/trips/[id]/generate
  *
@@ -13,6 +15,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
 import { getSupabase } from "@/lib/supabase/server";
 import { requireUserIdFromRequest } from "@/lib/auth/middleware";
+import {
+  reconcileGeneration,
+  STARTUP_UNCONFIRMED,
+} from "@/lib/trips/reconcile-generation";
 import { startWorkflow } from "@/lib/workflow/runtime";
 import { planTripWorkflow } from "@/workflows/plan-trip";
 import { buildInstantPreview } from "@/lib/search/preview";
@@ -39,7 +45,65 @@ export async function POST(request: NextRequest, { params }: Params) {
     const { id: tripId } = await params;
     const auth = await requireUserIdFromRequest(request);
     if (auth instanceof NextResponse) return auth;
+    if (isStalePlanningDisclosure(request.headers))
+      return NextResponse.json(
+        {
+          error: "Review AI sharing details before planning.",
+          code: "ai_consent_required",
+          generationStarted: false,
+        },
+        { status: 409 },
+      );
     const userId = auth.userId;
+    const paused = planningPauseResponse();
+    if (paused) return paused;
+
+    const adminClient = getSupabase();
+
+    const { data: trip, error: tripError } = await adminClient
+      .from("trips")
+      .select(
+        "id, destination, start_date, end_date, status, travelers, budget_tier, vibes, interests, dietary_restrictions, mobility_needs, user_id, search_id, preferences, updated_at",
+      )
+      .eq("id", tripId)
+      .eq("user_id", userId)
+      .single();
+
+    if (tripError || !trip) {
+      return NextResponse.json(
+        { error: "Trip not found or access denied" },
+        { status: 404 },
+      );
+    }
+
+    // Check if generation is already in progress
+    if (trip.status === "generating") {
+      const recovery = trip.search_id
+        ? await reconcileGeneration(tripId, userId, trip.search_id)
+        : { state: "unconfirmed" };
+      return NextResponse.json(
+        {
+          error: "Itinerary generation already in progress",
+          recovery: recovery.state,
+          searchId: trip.search_id,
+        },
+        { status: 409 },
+      );
+    }
+
+    if (["planned", "generated", "completed"].includes(trip.status)) {
+      return NextResponse.json({
+        success: true,
+        tripId,
+        searchId: trip.search_id,
+        status: trip.status,
+      });
+    }
+    if (!["draft", "failed"].includes(trip.status))
+      return NextResponse.json(
+        { error: "Trip is not ready for generation" },
+        { status: 409 },
+      );
 
     // Rate limit: 5 per hour per user.
     const hourlyLimit = await checkRateLimitAsync(`generate:hour:${userId}`, {
@@ -59,35 +123,6 @@ export async function POST(request: NextRequest, { params }: Params) {
             "Retry-After": String(Math.ceil(hourlyLimit.resetIn / 1000)),
           },
         },
-      );
-    }
-
-    const adminClient = getSupabase();
-
-    const { data: trip, error: tripError } = await adminClient
-      .from("trips")
-      .select(
-        "id, destination, start_date, end_date, status, travelers, budget_tier, vibes, interests, dietary_restrictions, mobility_needs, user_id, search_id, preferences",
-      )
-      .eq("id", tripId)
-      .eq("user_id", userId)
-      .single();
-
-    if (tripError || !trip) {
-      return NextResponse.json(
-        { error: "Trip not found or access denied" },
-        { status: 404 },
-      );
-    }
-
-    // Check if generation is already in progress
-    if (trip.status === "generating") {
-      return NextResponse.json(
-        {
-          error: "Itinerary generation already in progress",
-          searchId: trip.search_id,
-        },
-        { status: 409 },
       );
     }
 
@@ -141,15 +176,60 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     const searchId = search.id;
 
-    // Link search to trip and update status
-    await adminClient
+    // Only one concurrent caller may claim the observed trip state. A losing
+    // request never starts a workflow, even when both read the same draft.
+    let claim = adminClient
       .from("trips")
       .update({
         status: "generating",
         search_id: searchId,
         updated_at: new Date().toISOString(),
       })
-      .eq("id", tripId);
+      .eq("id", tripId)
+      .eq("user_id", userId)
+      .eq("status", trip.status)
+      .eq("updated_at", trip.updated_at);
+    claim = trip.search_id
+      ? claim.eq("search_id", trip.search_id)
+      : claim.is("search_id", null);
+    const { data: claimed, error: claimError } = await claim
+      .select("id")
+      .maybeSingle();
+    if (claimError) {
+      // A failed reply is not proof the conditional write failed. Only this
+      // request knows this newly-created search ID; read it back before dispatch.
+      const { data: observed, error: readError } = await adminClient
+        .from("trips")
+        .select("search_id, status")
+        .eq("id", tripId)
+        .eq("user_id", userId)
+        .single();
+      if (
+        readError ||
+        observed?.search_id !== searchId ||
+        observed.status !== "generating"
+      ) {
+        // Preserve the candidate. Deleting it could clear an already-committed
+        // trip.search_id through the foreign key's ON DELETE SET NULL action.
+        return NextResponse.json(
+          {
+            error:
+              "Planning startup could not be confirmed. Reopen your saved trip to check progress.",
+          },
+          { status: 503 },
+        );
+      }
+    } else if (!claimed) {
+      await adminClient
+        .from("searches")
+        .delete()
+        .eq("id", searchId)
+        .eq("user_id", userId);
+      return NextResponse.json(
+        { error: "Planning state changed. Reopen your trip to continue." },
+        { status: 409 },
+      );
+    }
 
     // Store instant preview so loader can render within a few seconds.
     const previewDays = buildInstantPreview({
@@ -172,7 +252,7 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     // Kick off durable workflow immediately (stream route only observes state).
     try {
-      await startWorkflow(planTripWorkflow, [
+      const run = await startWorkflow<{ runId: string }>(planTripWorkflow, [
         {
           searchId,
           tripId,
@@ -180,6 +260,15 @@ export async function POST(request: NextRequest, { params }: Params) {
           startDate: trip.start_date,
           endDate: trip.end_date,
           travelers: trip.travelers || 2,
+          adults:
+            typeof tripPreferences.adults === "number"
+              ? tripPreferences.adults
+              : undefined,
+          children:
+            typeof tripPreferences.children === "number"
+              ? tripPreferences.children
+              : undefined,
+          interests: normalizeStringArray(tripPreferences.interests, 20, 50),
           travelerType,
           vibes,
           budget: trip.budget_tier || "moderate",
@@ -188,27 +277,32 @@ export async function POST(request: NextRequest, { params }: Params) {
           userId,
         },
       ]);
+      // The workflow also records its own ID in its first step, closing the
+      // window where the caller loses the successful start response.
+      await adminClient
+        .from("searches")
+        .update({ workflow_run_id: run.runId, workflow_run_verified: true })
+        .eq("id", searchId)
+        .eq("user_id", userId);
     } catch (workflowError) {
       const message =
         workflowError instanceof Error
           ? workflowError.message
           : "Workflow failed to start";
-      await Promise.allSettled([
-        adminClient
-          .from("searches")
-          .update({
-            status: "error",
-            error_message: message,
-          })
-          .eq("id", searchId),
-        adminClient
-          .from("trips")
-          .update({
-            status: "failed",
-            updated_at: new Date().toISOString(),
-          })
-          .eq("id", tripId),
-      ]);
+      // Dispatch failures can be ambiguous: the workflow may already exist.
+      // Keep the claim so a retry cannot start a second paid workflow.
+      await adminClient
+        .from("searches")
+        .update({
+          error_message: STARTUP_UNCONFIRMED,
+        })
+        .eq("id", searchId)
+        .eq("user_id", userId);
+      logger.error("[API] Workflow startup unconfirmed", {
+        tripId,
+        searchId,
+        message,
+      });
       throw workflowError;
     }
 
@@ -293,11 +387,17 @@ export async function GET(request: NextRequest, { params }: Params) {
       });
     }
 
+    const recovery =
+      trip.status === "generating"
+        ? await reconcileGeneration(tripId, userId, trip.search_id)
+        : null;
+
     // Read from searches table — this is the new unified path
     const { data: search, error: searchError } = await adminClient
       .from("searches")
       .select("id, status, progress, error_message, created_at, completed_at")
       .eq("id", trip.search_id)
+      .eq("user_id", userId)
       .single();
 
     if (searchError || !search) {
@@ -357,6 +457,7 @@ export async function GET(request: NextRequest, { params }: Params) {
 
     return NextResponse.json({
       tripId,
+      recovery: recovery?.state,
       searchId: search.id,
       status:
         search.status === "completed"
@@ -367,7 +468,12 @@ export async function GET(request: NextRequest, { params }: Params) {
       progress: Math.min(100, Math.round(progressPercent)),
       step: currentStep,
       searchProgress,
-      message,
+      message:
+        recovery?.state === "paused"
+          ? "Planning recovery is temporarily paused for maintenance. Your trip is saved. Check again later."
+          : recovery?.state === "unconfirmed"
+            ? "We are checking whether planning started. Your saved trip is safe; another run will not be started while its status is uncertain."
+            : message,
       startedAt: search.created_at,
       completedAt: search.completed_at,
     });

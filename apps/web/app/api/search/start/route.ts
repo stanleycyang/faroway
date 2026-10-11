@@ -1,3 +1,5 @@
+import { isStalePlanningDisclosure } from "@/lib/ai/planning-disclosure";
+import { planningPauseResponse } from "@/lib/trips/planning-pause";
 /**
  * POST /api/search/start
  * Start a new travel search using Vercel Workflow + AI SDK Agents
@@ -41,7 +43,18 @@ export async function POST(request: NextRequest) {
   try {
     const auth = await requireUserIdFromRequest(request);
     if (auth instanceof NextResponse) return auth;
+    if (isStalePlanningDisclosure(request.headers))
+      return NextResponse.json(
+        {
+          error: "Review AI sharing details before planning.",
+          code: "ai_consent_required",
+          generationStarted: false,
+        },
+        { status: 409 },
+      );
     const userId = auth.userId;
+    const paused = planningPauseResponse();
+    if (paused) return paused;
 
     // Rate limit: 5 searches per minute per IP
     const ip = getClientIp(request);

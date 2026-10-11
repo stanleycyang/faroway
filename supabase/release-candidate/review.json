@@ -1,0 +1,44 @@
+{
+  "status": "registered and locally rehearsed; NOT applied or activated",
+  "integrated_base": "codex/apple-revocation-preparation",
+  "sql": "supabase/release-candidate/account-and-push.sql",
+  "sql_sha256": "f40d6c7509005fde86b0c8b5c1b9304fc774db6148017447150868a91e4d8eb6",
+  "approved_bootstrap_sha256_unchanged": "09b820436a77967f95024abf4f724f4f2f1bb1d3378ee33b73656593ba729939",
+  "required_approvals": [
+    "Review the separate SQL transaction and run aggregate legacy-registration audit against the intended staging target. Approve independently of bootstrap.",
+    "Apply candidate SQL only after approval. Recheck staging isolation, permissions, uniqueness, receipt leases and grant defaults. Do not run against production implicitly.",
+    "Approve server-only Apple client ID selection (native bundle ID vs web Services ID), client-secret provisioning/rotation and AES-256 recovery-key custody before configuration.",
+    "Deploy coherent web/server/native consent changes together; older clients without current disclosure fail closed. No legacy unauthenticated planning fallback remains.",
+    "Enable ACCOUNT_DELETION_ENABLED only with schema and reviewed Apple configuration. Enable PUSH_CONSENT_V2_ENABLED only with schema; keep PUSH_DELIVERY_ENABLED false until real-device checks are separately approved.",
+    "Separately approve any real Apple revocation, push delivery, provider booking/payment, signed build submission or production release."
+  ],
+  "configuration_names_only": {
+    "ACCOUNT_DELETION_ENABLED": "false until reviewed schema and configuration exist",
+    "APPLE_DELETION_CLIENT_ID": "server selected ID for the native authorization-code flow; never supplied by client",
+    "APPLE_DELETION_CLIENT_SECRET": "server secret; provision/rotate separately; never committed or read by this task",
+    "ACCOUNT_DELETION_ENCRYPTION_KEY": "base64-encoded 32-byte AES key; preserve existing key while encrypted pending receipts exist; rotation requires migration/recovery design",
+    "PUSH_CONSENT_V2_ENABLED": "false until candidate SQL is approved and applied",
+    "PUSH_DELIVERY_ENABLED": "false until opted-in real-device delivery is approved"
+  },
+  "operational_constraints": [
+    "Existing ambiguous duplicate push tokens lose all owners; all legacy registrations become inactive. Fresh Settings registration and an explicit category preference save are required.",
+    "Opt-out keeps an ordered inactive token tombstone. Do not purge tombstones while old registration requests or restored clients may replay.",
+    "Push dispatch is at-most-once per trip/search. A crash after claiming can omit a push; an ambiguous Expo response is not resent. An accepted ticket is not device-delivery proof.",
+    "A push already accepted by Expo cannot be recalled. Bodies omit destinations and itinerary details. Saved trip and in-app notification remain authoritative.",
+    "Deletion retains a private minimal receipt after Auth removal to recover a lost final response. Apple tokens are encrypted until revocation is accepted, then removed; Apple subject cleared on completion. Approve receipt retention/purge policy (recommended completed receipts 30 days) before launch.",
+    "A lost code exchange response before encrypted token persistence needs fresh Apple reauthentication. A changed linked Apple identity fails closed for resolution.",
+    "The native recovery proof is stored only in SecureStore. Reauthentication never opts into push; pending cleanup for another account is never transferred.",
+    "The SQL file is intentionally outside the frozen bootstrap migration inventory. Supabase CLI was unavailable and npm resolution failed; promote through an available CLI migration-new command only after review, preserving the reviewed SQL content.",
+    "Core account writes and deletion claims use transaction-scoped account advisory locks at READ COMMITTED; other isolation levels fail closed. Owned searches cannot transfer or detach. Purge removes trips before owned searches to avoid fenced foreign-key updates.",
+    "Up to 32 status-only device proofs remain valid independently for 30 days from issuance. New proofs do not evict unexpired ones; the cap rejects new issuance and permits reuse. Receipt retention must preserve all unexpired proofs.",
+    "Ordered push revocation remains active when registration/delivery flags are off. Missing ordering schema returns a retryable failure; no physical-delete fallback may erase tombstones."
+  ],
+  "device_release_checks": [
+    "Native saved-trip browser handoff while signed in/out, interrupted navigation and provider final-price/terms consent.",
+    "Apple deletion: missing configuration, wrong identity, Hide My Email, linked accounts, cancel, consumed code, timeout, app restart, lost deletion response and signing in after deletion.",
+    "Push: clean install, deny/retry, OS Settings revocation, expired session reauthentication, different-account sign-in, offline opt-out, clock regression, late POST after DELETE, restored app and token rotation.",
+    "Current web/native AI consent: decline, missing/stale metadata, account switch, offline retry, saved draft after definite generation refusal, and ambiguous timeout reconnect only."
+  ],
+  "registered_migration": "supabase/migrations/20261011045031_account_and_push.sql",
+  "registered_migration_sha256": "f40d6c7509005fde86b0c8b5c1b9304fc774db6148017447150868a91e4d8eb6"
+}

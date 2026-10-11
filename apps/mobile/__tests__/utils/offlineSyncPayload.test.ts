@@ -1,3 +1,4 @@
+jest.mock('../../constants/api', () => ({ API_TIMEOUT: 90_000 }));
 jest.mock('../../lib/offline/storage', () => ({
   offlineStorage: {},
 }));
@@ -32,6 +33,16 @@ describe('offline sync payloads', () => {
     createdAt: '2026-05-01T00:00:00.000Z',
     status: 'draft',
   };
+
+  it('retains the revision observed when edits were queued', () => {
+    expect(
+      buildTripUpdatePayload({ destination: 'Vienna', budget: 'luxury' }, '2026-10-03T00:00:00Z')
+    ).toEqual({
+      destination: 'Vienna',
+      budget_tier: 'luxury',
+      expectedUpdatedAt: '2026-10-03T00:00:00Z',
+    });
+  });
 
   it('serializes offline creates with backend field names', () => {
     expect(buildTripCreatePayload(trip)).toEqual({

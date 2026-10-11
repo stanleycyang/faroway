@@ -1,3 +1,9 @@
+import { cleanupDeletedAccount } from '../services/deletedAccountCleanup';
+import {
+  deleteAccountWithRecovery,
+  finishAccountDeletionCleanup,
+} from '../services/accountDeletionService';
+import { devicePushConsent } from '../services/pushConsentService';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as Sentry from '@sentry/react-native';
 import { supabase } from '../lib/supabase';
@@ -14,11 +20,7 @@ import {
   savePendingOAuthTripDraft,
   takePendingOAuthTripDraft,
 } from '../lib/oauthReturnState';
-import {
-  setAuthToken,
-  getUserProfile,
-  deleteAccount as deleteAccountRequest,
-} from '../services/api';
+import { setAuthToken, getUserProfile } from '../services/api';
 import * as AppleAuthentication from 'expo-apple-authentication';
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
@@ -195,6 +197,7 @@ export function useAuth() {
 
   // Sign in with Google (native SDK)
   const signInWithGoogle = useCallback(async (options?: GoogleSignInOptions) => {
+    await devicePushConsent.disable();
     try {
       setAuthState((prev) => ({ ...prev, loading: true }));
 
@@ -268,6 +271,7 @@ export function useAuth() {
       throw new Error(APPLE_SIGN_IN_UNAVAILABLE_MESSAGE);
     }
 
+    await devicePushConsent.disable();
     try {
       setAuthState((prev) => ({ ...prev, loading: true }));
 
@@ -311,6 +315,8 @@ export function useAuth() {
 
   // Sign out
   const signOut = useCallback(async () => {
+    // Complete device-token removal before invalidating its authenticated session.
+    await devicePushConsent.disable();
     setAuthState((prev) => ({ ...prev, loading: true }));
 
     const { error } = await supabase.auth.signOut();
@@ -338,7 +344,10 @@ export function useAuth() {
   const deleteAccount = useCallback(async () => {
     setAuthState((prev) => ({ ...prev, loading: true }));
 
-    const result = await deleteAccountRequest();
+    const deletingUserId = useUserStore.getState().user?.id;
+    const result = deletingUserId
+      ? await deleteAccountWithRecovery(deletingUserId)
+      : { error: 'Sign in to resume deletion.' };
 
     if (result.error) {
       setAuthState((prev) => ({ ...prev, loading: false }));
@@ -346,21 +355,11 @@ export function useAuth() {
     }
 
     try {
-      await supabase.auth.signOut();
-    } catch {
-      // The server has already deleted the auth user; local cleanup still needs to run.
+      await finishAccountDeletionCleanup(deletingUserId!, cleanupDeletedAccount);
+    } catch (error) {
+      setAuthState((prev) => ({ ...prev, loading: false }));
+      throw error;
     }
-
-    try {
-      const googleSignIn = await getGoogleSignInModule();
-      await googleSignIn?.GoogleSignin.signOut();
-    } catch {
-      // Non-blocking — Google session may not exist (e.g. Apple sign-in user)
-    }
-
-    setAuthToken(null);
-    clearUserStore();
-    clearTrips();
     hadAuthenticatedSessionRef.current = false;
     setAuthState({
       user: null,
@@ -368,7 +367,7 @@ export function useAuth() {
       loading: false,
       initialized: true,
     });
-  }, [clearTrips, clearUserStore]);
+  }, []);
 
   return {
     ...authState,

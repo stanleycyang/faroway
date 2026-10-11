@@ -1,163 +1,75 @@
 import { NextRequest, NextResponse } from "next/server";
-import { logger } from "@/lib/logger";
 import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
 import { z } from "zod";
 
-const ExpoPushTokenSchema = z
-  .string()
-  .trim()
-  .min(20)
-  .max(256)
-  .refine(
-    (token) =>
-      /^ExpoPushToken\[[A-Za-z0-9_-]+\]$/.test(token) ||
-      /^ExponentPushToken\[[A-Za-z0-9_-]+\]$/.test(token),
-    "Invalid Expo push token",
-  );
-
-const RegisterPushTokenSchema = z.object({
-  token: ExpoPushTokenSchema,
+const schema = z.object({
+  token: z
+    .string()
+    .min(20)
+    .max(256)
+    .regex(/^(ExpoPushToken|ExponentPushToken)\[[A-Za-z0-9_-]+\]$/),
+  revision: z.number().int().positive().max(Number.MAX_SAFE_INTEGER),
+  consentVersion: z.literal("notifications-v2"),
   platform: z.enum(["ios", "android", "web", "unknown"]).default("unknown"),
-  deviceName: z.string().trim().max(120).optional().nullable(),
 });
-
-const DeletePushTokenSchema = z.object({
-  token: ExpoPushTokenSchema.optional(),
-});
-
-async function requireUser(request: NextRequest) {
-  const supabase = await createClientFromRequest(request);
+async function update(request: NextRequest, enabled: boolean) {
+  const auth = await createClientFromRequest(request);
   const {
     data: { user },
-    error,
-  } = await supabase.auth.getUser();
-
-  if (error || !user) return null;
-  return user;
+    error: authError,
+  } = await auth.auth.getUser();
+  if (authError || !user)
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const input = schema.safeParse(await request.json().catch(() => null));
+  if (!input.success)
+    return NextResponse.json(
+      { error: "An updated notification consent request is required." },
+      { status: 400 },
+    );
+  const db = getSupabase();
+  if (enabled && process.env.PUSH_CONSENT_V2_ENABLED !== "true")
+    return NextResponse.json(
+      { error: "Device notifications are not enabled yet." },
+      { status: 503 },
+    );
+  // Registration flags never disable ordered revocation. Physical deletion
+  // would erase the revision tombstone and let a delayed POST resurrect consent.
+  // Missing ordering schema fails closed; no destructive legacy fallback.
+  const { data, error } = await db.rpc("set_device_push_consent", {
+    p_user_id: user.id,
+    p_token: input.data.token,
+    p_revision: input.data.revision,
+    p_enabled: enabled,
+    p_platform: input.data.platform,
+  });
+  if (error)
+    return NextResponse.json(
+      { error: "Notification settings are unavailable. Please retry." },
+      { status: 503 },
+    );
+  if (data !== true)
+    return NextResponse.json(
+      {
+        error:
+          "Registration changed or belongs to another account. Please retry from Settings.",
+      },
+      { status: 409 },
+    );
+  return NextResponse.json(enabled ? { registered: true } : { deleted: true });
 }
-
-async function parseOptionalJson(
-  request: NextRequest,
-): Promise<{ data: unknown } | { error: string }> {
-  try {
-    const text = await request.text();
-    if (!text.trim()) return { data: {} };
-    return { data: JSON.parse(text) };
-  } catch {
-    return { error: "Invalid JSON body" };
-  }
-}
-
 export async function POST(request: NextRequest) {
-  try {
-    const user = await requireUser(request);
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const body = await parseOptionalJson(request);
-    if ("error" in body) {
-      return NextResponse.json({ error: body.error }, { status: 400 });
-    }
-
-    const parseResult = RegisterPushTokenSchema.safeParse(body.data);
-
-    if (!parseResult.success) {
-      return NextResponse.json(
-        { error: "Invalid request body", details: parseResult.error.issues },
-        { status: 400 },
-      );
-    }
-
-    const { token, platform, deviceName } = parseResult.data;
-    const now = new Date().toISOString();
-
-    const { data, error } = await getSupabase()
-      .from("push_tokens")
-      .upsert(
-        {
-          user_id: user.id,
-          token,
-          platform,
-          device_name: deviceName || null,
-          updated_at: now,
-          last_seen_at: now,
-        },
-        { onConflict: "user_id,token" },
-      )
-      .select("token, platform, device_name, updated_at, last_seen_at")
-      .single();
-
-    if (error) {
-      logger.error("[Push Token] Upsert error:", error);
-      return NextResponse.json(
-        { error: "Failed to register push token" },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({
-      token: data.token,
-      platform: data.platform,
-      deviceName: data.device_name,
-      updatedAt: data.updated_at,
-      lastSeenAt: data.last_seen_at,
-    });
-  } catch (error) {
-    logger.error("[Push Token] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to register push token" },
-      { status: 500 },
-    );
-  }
+  return update(request, true).catch(() =>
+    NextResponse.json(
+      { error: "Notification settings unavailable" },
+      { status: 503 },
+    ),
+  );
 }
-
 export async function DELETE(request: NextRequest) {
-  try {
-    const user = await requireUser(request);
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const body = await parseOptionalJson(request);
-    if ("error" in body) {
-      return NextResponse.json({ error: body.error }, { status: 400 });
-    }
-
-    const parseResult = DeletePushTokenSchema.safeParse(body.data);
-
-    if (!parseResult.success) {
-      return NextResponse.json(
-        { error: "Invalid request body", details: parseResult.error.issues },
-        { status: 400 },
-      );
-    }
-
-    let query = getSupabase()
-      .from("push_tokens")
-      .delete()
-      .eq("user_id", user.id);
-
-    if (parseResult.data.token) {
-      query = query.eq("token", parseResult.data.token);
-    }
-
-    const { error } = await query;
-
-    if (error) {
-      logger.error("[Push Token] Delete error:", error);
-      return NextResponse.json(
-        { error: "Failed to delete push token" },
-        { status: 500 },
-      );
-    }
-
-    return NextResponse.json({ deleted: true });
-  } catch (error) {
-    logger.error("[Push Token] Error:", error);
-    return NextResponse.json(
-      { error: "Failed to delete push token" },
-      { status: 500 },
-    );
-  }
+  return update(request, false).catch(() =>
+    NextResponse.json(
+      { error: "Notification settings unavailable" },
+      { status: 503 },
+    ),
+  );
 }

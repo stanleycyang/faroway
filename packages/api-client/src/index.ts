@@ -150,10 +150,11 @@ export class FarowayClient {
   async updateTrip(
     id: string,
     updates: Partial<Trip>,
+    expectedUpdatedAt?: string,
   ): Promise<ApiResponse<{ trip: Trip }>> {
     return this.fetch<{ trip: Trip }>(`/api/trips/${encodeURIComponent(id)}`, {
       method: "PATCH",
-      body: JSON.stringify(updates),
+      body: JSON.stringify({ ...updates, expectedUpdatedAt }),
     });
   }
 

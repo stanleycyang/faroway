@@ -11,30 +11,44 @@ vi.mock("@/workflows/plan-trip", () => ({
   planTripWorkflow: vi.fn(async () => ({})),
 }));
 
-type QueryMode = "trip_select" | "search_insert" | "trip_update";
-
-let mode: QueryMode | null = null;
-let tripStatus: "draft" | "generating" = "draft";
+let tripStatus = "draft";
+let activeSearch: string | null = null;
+let searchCount = 0;
+let claimFails = false;
+let claimReplyLost = false;
+let briefChangedBeforeClaim = false;
+const deletedSearches: string[] = [];
 const rpcMock = vi.fn(async () => ({ data: null, error: null }));
+vi.mock("@/lib/security/rate-limit", () => ({
+  checkRateLimitAsync: vi.fn(async () => ({ allowed: true })),
+}));
 
 function createTableChain(table: string) {
+  let operation = "select";
+  let values: Record<string, unknown> = {};
+  const filters: Record<string, unknown> = {};
   const chain: Record<string, ReturnType<typeof vi.fn>> = {};
-  chain.select = vi.fn(() => {
-    if (table === "trips") mode = "trip_select";
+  chain.select = vi.fn(() => chain);
+  chain.insert = vi.fn((input) => {
+    operation = "insert";
+    values = input;
     return chain;
   });
-  chain.insert = vi.fn(() => {
-    if (table === "searches") mode = "search_insert";
+  chain.update = vi.fn((input) => {
+    operation = "update";
+    values = input;
     return chain;
   });
-  chain.update = vi.fn(() => {
-    if (table === "trips") mode = "trip_update";
+  chain.delete = vi.fn(() => {
+    operation = "delete";
     return chain;
   });
-  chain.eq = vi.fn(() => chain);
-  chain.is = vi.fn(() => chain);
-  chain.single = vi.fn(async () => {
-    if (mode === "trip_select") {
+  chain.eq = chain.is = vi.fn((key, value) => {
+    filters[key] = value;
+    return chain;
+  });
+  const execute = () => {
+    if (table === "trips" && operation === "select")
       return {
         data: {
           id: "trip-1",
@@ -51,16 +65,37 @@ function createTableChain(table: string) {
             originAirport: "SFO",
           },
           user_id: "user-1",
-          search_id: null,
+          search_id: activeSearch,
+          updated_at: "2026-10-03T00:00:00Z",
         },
         error: null,
       };
+    if (table === "trips" && operation === "update") {
+      if (briefChangedBeforeClaim) return { data: null, error: null };
+      if (claimFails)
+        return { data: null, error: { message: "database unavailable" } };
+      if (
+        filters.status !== tripStatus ||
+        filters.search_id !== activeSearch ||
+        filters.user_id !== "user-1"
+      )
+        return { data: null, error: null };
+      tripStatus = String(values.status);
+      activeSearch = String(values.search_id);
+      if (claimReplyLost)
+        return { data: null, error: { message: "reply lost after commit" } };
+      return { data: { id: "trip-1" }, error: null };
     }
-    if (mode === "search_insert") {
-      return { data: { id: "search-1" }, error: null };
-    }
+    if (table === "searches" && operation === "insert")
+      return { data: { id: `search-${++searchCount}` }, error: null };
+    if (table === "searches" && operation === "delete")
+      deletedSearches.push(String(filters.id));
     return { data: null, error: null };
-  });
+  };
+  chain.single = chain.maybeSingle = vi.fn(async () => execute());
+  chain.then = vi.fn((resolve: (value: unknown) => unknown) =>
+    Promise.resolve(execute()).then(resolve),
+  );
   return chain;
 }
 
@@ -89,19 +124,50 @@ import { POST } from "@/app/api/trips/[id]/generate/route";
 function makeReq(body: Record<string, unknown> = {}) {
   return new NextRequest("http://localhost:3000/api/trips/trip-1/generate", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "x-faroway-ai-disclosure": "planning-google-v1",
+    },
     body: JSON.stringify(body),
   });
 }
 
 describe("POST /api/trips/[id]/generate", () => {
   beforeEach(() => {
+    vi.unstubAllEnvs();
     vi.clearAllMocks();
-    mode = null;
+    activeSearch = null;
+    searchCount = 0;
+    claimFails = false;
+    claimReplyLost = false;
+    briefChangedBeforeClaim = false;
+    deletedSearches.length = 0;
     tripStatus = "draft";
     startMock.mockResolvedValue({ runId: "run-1" });
   });
 
+  it("does not dispatch a plan if the brief changed after it was read", async () => {
+    briefChangedBeforeClaim = true;
+    expect(
+      (await POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }))
+        .status,
+    ).toBe(409);
+    expect(startMock).not.toHaveBeenCalled();
+    expect(deletedSearches).toHaveLength(1);
+  });
+
+  it("maintenance pause prevents creating or dispatching an attempt", async () => {
+    vi.stubEnv("FAROWAY_PLANNING_PAUSED", "true");
+    const response = await POST(makeReq(), {
+      params: Promise.resolve({ id: "trip-1" }),
+    });
+    expect(response.status).toBe(503);
+    expect(response.headers.get("Retry-After")).toBe("300");
+    expect(searchCount).toBe(0);
+    expect(startMock).not.toHaveBeenCalled();
+    expect(tripStatus).toBe("draft");
+    vi.unstubAllEnvs();
+  });
   it("routes auth through createClientFromRequest so bearer-token mobile clients work", async () => {
     // Regression guard: this route must invoke createClientFromRequest(request)
     // so the Authorization header from mobile is honored. Cookie-only
@@ -112,6 +178,7 @@ describe("POST /api/trips/[id]/generate", () => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "x-faroway-ai-disclosure": "planning-google-v1",
           Authorization: "Bearer mobile-token",
         },
         body: JSON.stringify({}),
@@ -168,6 +235,76 @@ describe("POST /api/trips/[id]/generate", () => {
     expect(previewReadyRpcArgs?.p_value).toBe(true);
   });
 
+  it("starts only one workflow when concurrent requests read the same draft", async () => {
+    const responses = await Promise.all([
+      POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }),
+      POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }),
+    ]);
+    expect(responses.map((r) => r.status).sort()).toEqual([200, 409]);
+    expect(startMock).toHaveBeenCalledTimes(1);
+    expect(deletedSearches).toHaveLength(1);
+  });
+  it("does not dispatch when claiming the trip fails", async () => {
+    claimFails = true;
+    expect(
+      (await POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }))
+        .status,
+    ).toBe(503);
+    expect(startMock).not.toHaveBeenCalled();
+    expect(deletedSearches).toEqual([]);
+  });
+  it("reads back a committed claim after a lost DB reply without deleting or dispatching twice", async () => {
+    claimReplyLost = true;
+    expect(
+      (await POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }))
+        .status,
+    ).toBe(200);
+    expect(activeSearch).toBe("search-1");
+    expect(deletedSearches).toEqual([]);
+    expect(
+      (await POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }))
+        .status,
+    ).toBe(409);
+    expect(startMock).toHaveBeenCalledTimes(1);
+  });
+  it("cannot race a retired legacy request into a second workflow", async () => {
+    const { POST: legacyPost } =
+      await import("@/app/api/workflows/generate-itinerary/route");
+    const responses = await Promise.all([
+      POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }),
+      legacyPost(
+        new NextRequest("http://localhost/api/workflows/generate-itinerary", {
+          method: "POST",
+          body: JSON.stringify({
+            tripId: "00000000-0000-4000-8000-000000000001",
+          }),
+        }),
+      ),
+    ]);
+    expect(responses.map((r) => r.status)).toEqual([200, 410]);
+    expect(startMock).toHaveBeenCalledTimes(1);
+  });
+  it("preserves an ambiguous startup claim instead of launching twice", async () => {
+    startMock.mockRejectedValueOnce(new Error("reply lost"));
+    expect(
+      (await POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }))
+        .status,
+    ).toBe(500);
+    expect(tripStatus).toBe("generating");
+    expect(
+      (await POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }))
+        .status,
+    ).toBe(409);
+    expect(startMock).toHaveBeenCalledTimes(1);
+  });
+  it("reuses an already completed trip rather than regenerating on replay", async () => {
+    tripStatus = "planned";
+    expect(
+      (await POST(makeReq(), { params: Promise.resolve({ id: "trip-1" }) }))
+        .status,
+    ).toBe(200);
+    expect(startMock).not.toHaveBeenCalled();
+  });
   it("returns conflict when generation already running", async () => {
     tripStatus = "generating";
     const res = await POST(makeReq(), {

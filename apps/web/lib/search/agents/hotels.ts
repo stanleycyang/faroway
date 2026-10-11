@@ -1,3 +1,7 @@
+import {
+  PLANNING_MODEL,
+  PLANNING_PROVIDER_OPTIONS,
+} from "@/lib/ai/planning-disclosure";
 /**
  * Hotels Agent
  * Searches for accommodation options from affiliate partners
@@ -12,7 +16,12 @@ import {
 } from "@/lib/ai/sdk";
 import { z } from "zod";
 import { SearchPlan, HotelResult } from "../types";
-import { VIBE_KEYWORDS } from "@faroway/constants";
+import {
+  VIBE_KEYWORDS,
+  readPrice,
+  reviewRating,
+  currencyCode,
+} from "@faroway/constants";
 import {
   searchBookingHotels,
   isBookingConfigured,
@@ -39,17 +48,11 @@ const aiGateway = process.env.AI_GATEWAY_API_KEY
   ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
   : defaultGateway;
 
-const MODEL = "google/gemini-3-flash";
+const MODEL = PLANNING_MODEL;
 
 const HotelSchema = z.object({
   name: z.string(),
   description: z.string(),
-  starRating: z.number().min(1).max(5),
-  userRating: z.number().min(0).max(10),
-  reviewCount: z.number(),
-  pricePerNight: z.number(),
-  totalPrice: z.number(),
-  currency: z.string().default("USD"),
   amenities: z.array(z.string()),
   location: z.object({
     name: z.string(),
@@ -59,8 +62,6 @@ const HotelSchema = z.object({
     neighborhood: z.string().optional(),
   }),
   images: z.array(z.string()).default([]),
-  affiliateUrl: z.string(),
-  affiliatePartner: z.string(),
   vibeScore: z.number().min(0).max(100),
   vibeMatch: z.array(z.string()),
 });
@@ -79,21 +80,14 @@ const SYSTEM_PROMPT = `You are a hotel booking expert. Generate realistic hotel 
 
 For each hotel, provide:
 1. Real hotel names that exist at the destination (use actual hotel names)
-2. Accurate star ratings and typical user ratings
-3. Realistic nightly pricing based on star rating and location
-4. Common amenities for that hotel tier
-5. Location in a popular neighborhood
-6. How well it matches the traveler's preferences
+2. A brief description of why the hotel may fit the traveler's preferences
+3. Location in a popular neighborhood
+4. How well it matches the traveler's preferences
 
-Leave affiliateUrl and affiliatePartner empty. These are suggestions, not verified
-offers. Never invent booking URLs, user ratings, or review counts; use zero for
-userRating and reviewCount when there is no verified source.
-
-Price ranges by star rating (per night):
-- 2-star: $40-80
-- 3-star: $80-150
-- 4-star: $150-300
-- 5-star: $300-800+
+Do not generate booking or affiliate URLs. Only live provider results may have
+booking links; AI-generated recommendations are informational only.
+Do not invent or supply prices, currencies, review scores, review counts, star
+classifications, availability or cancellation terms. These require provider data.
 
 IMPORTANT: For the "images" field, return an EMPTY array []. Do NOT generate or guess image URLs.`;
 
@@ -120,7 +114,7 @@ function deduplicateHotels(hotels: HotelResult[]): HotelResult[] {
     const key = normalizeHotelName(hotel.name);
     const existing = seen.get(key);
 
-    if (!existing || hotel.userRating > existing.userRating) {
+    if (!existing || (hotel.userRating ?? -1) > (existing.userRating ?? -1)) {
       seen.set(key, hotel);
     }
   }
@@ -177,14 +171,21 @@ export async function runHotelsAgent(
               );
               return {
                 id: `hotel_bk_${hotel.hotelId}`,
+                dataSource: "provider",
                 name: hotel.name,
                 description: hotel.description,
-                starRating: hotel.starRating,
-                userRating: hotel.userRating,
+                starRating: reviewRating(hotel.starRating),
+                userRating: reviewRating(hotel.userRating, 10),
                 reviewCount: hotel.reviewCount,
-                pricePerNight: hotel.price.perNight,
-                totalPrice: hotel.price.total,
-                currency: hotel.price.currencyCode,
+                pricePerNight: readPrice(
+                  hotel.price.perNight,
+                  hotel.price.currencyCode,
+                )?.amount,
+                totalPrice: readPrice(
+                  hotel.price.total,
+                  hotel.price.currencyCode,
+                )?.amount,
+                currency: currencyCode(hotel.price.currencyCode),
                 amenities: hotel.amenities,
                 location: {
                   name: hotel.location.city,
@@ -244,14 +245,17 @@ export async function runHotelsAgent(
               );
               return {
                 id: `hotel_am_${hotel.hotelId}`,
+                dataSource: "provider",
                 name: hotel.name,
                 description: hotel.description || "",
-                starRating: hotel.starRating,
-                userRating: 0,
-                reviewCount: 0,
-                pricePerNight: hotel.price.perNight,
-                totalPrice: hotel.price.total,
-                currency: hotel.price.currency,
+                starRating: reviewRating(hotel.starRating),
+                pricePerNight: readPrice(
+                  hotel.price.perNight,
+                  hotel.price.currency,
+                )?.amount,
+                totalPrice: readPrice(hotel.price.total, hotel.price.currency)
+                  ?.amount,
+                currency: currencyCode(hotel.price.currency),
                 amenities: hotel.amenities,
                 location: {
                   name: hotel.location.cityCode || destination,
@@ -352,7 +356,7 @@ async function generateAiHotelFallbacks(params: {
 
 Generate hotels matching these criteria:
 - Include actual hotel names that exist in ${destination}
-- Calculate total price (nights × nightly rate)
+- Do not supply prices, review scores/counts or star classifications
 - Score each hotel 0-100 on how well it matches the traveler's vibes
 - Include a mix of star ratings within the price range
 
@@ -374,6 +378,7 @@ For vibes like:
       (abortSignal) =>
         generateObject<HotelListResult>({
           model: aiGateway(MODEL),
+          providerOptions: PLANNING_PROVIDER_OPTIONS,
           system: SYSTEM_PROMPT,
           prompt,
           schema: HotelListSchema,
@@ -387,14 +392,16 @@ For vibes like:
 
     console.log("[Hotels Agent] AI generated", result.hotels.length, "hotels");
 
-    return result.hotels.map((hotel, index) => ({
-      ...hotel,
-      id: `hotel_${Date.now()}_${index}`,
-      affiliateUrl: "",
-      affiliatePartner: "",
-      userRating: 0,
-      reviewCount: 0,
-    }));
+    return result.hotels.map((hotel, index) => {
+      // Parse again at this boundary: even a model/SDK returning extra fields
+      // cannot smuggle invented ratings, prices, policies or booking URLs through.
+      const safeHotel = HotelSchema.parse(hotel);
+      return {
+        ...safeHotel,
+        dataSource: "ai",
+        id: `hotel_${Date.now()}_${index}`,
+      };
+    });
   } catch (error) {
     if (isOperationTimeoutError(error)) {
       console.warn(

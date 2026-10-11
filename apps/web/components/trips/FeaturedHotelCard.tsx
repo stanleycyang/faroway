@@ -12,7 +12,7 @@ export interface FeaturedHotel {
   images?: string[];
   affiliateUrl?: string;
   affiliatePartner?: string;
-  pricePerNight: number;
+  pricePerNight?: number;
   currency?: string;
   priceStatus?: string;
   starRating?: number;
@@ -34,24 +34,6 @@ export function FeaturedHotelCard({
     hotel.currency,
     hotel.priceStatus,
   );
-  const handleClick = () => {
-    if (!hotel.affiliateUrl) return;
-
-    fetch("/api/track/click", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        itemType: "hotel",
-        itemId: hotel.id || hotel.name,
-        itemName: hotel.name,
-        affiliatePartner: hotel.affiliatePartner || "booking",
-        affiliateUrl: hotel.affiliateUrl,
-        source: "itinerary",
-      }),
-    }).catch(() => {});
-
-    window.open(hotel.affiliateUrl, "_blank", "noopener,noreferrer");
-  };
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6 group hover:shadow-lg transition-shadow">
@@ -152,7 +134,7 @@ export function FeaturedHotelCard({
                 Stay estimate:{" "}
                 <span className="font-black text-lg text-gray-900">
                   {formatEstimate(
-                    hotel.pricePerNight * nights,
+                    nightly.amount * nights,
                     hotel.currency,
                     hotel.priceStatus,
                   )}
@@ -163,11 +145,12 @@ export function FeaturedHotelCard({
           </div>
           {hotel.affiliateUrl && (
             <button
-              onClick={handleClick}
+              disabled
+              title="Hotel checkout is not available on Faroway yet."
               className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-sm hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg hover:shadow-blue-500/25 active:scale-[0.98]"
             >
               <Shield className="w-4 h-4" />
-              Check Availability & Prices
+              Hotel booking unavailable
               <ExternalLink className="w-3.5 h-3.5 opacity-70" />
             </button>
           )}

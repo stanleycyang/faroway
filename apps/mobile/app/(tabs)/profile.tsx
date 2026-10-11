@@ -21,7 +21,7 @@ import { useUserStore } from '../../stores/userStore';
 import { useTripStore } from '../../stores/tripStore';
 import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
-import { requestStoreReview } from '../../lib/storeReview';
+import { requestStoreReview, hasRealStoreListing } from '../../lib/storeReview';
 
 interface MenuItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -301,7 +301,7 @@ export default function ProfileScreen() {
             label="Contact Us"
             onPress={() => Linking.openURL('mailto:support@faroway.ai')}
           />
-          {Platform.OS !== 'web' && (
+          {Platform.OS !== 'web' && hasRealStoreListing() && (
             <MenuItem
               icon="star-outline"
               label="Rate the App"

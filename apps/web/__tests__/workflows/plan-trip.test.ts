@@ -1,5 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("workflow", () => ({
+  FatalError: class FatalError extends Error {},
+  getWorkflowMetadata: () => ({ workflowRunId: "run-fixture-1" }),
+}));
+
 const mocks = vi.hoisted(() => ({
   runOrchestratorAgent: vi.fn(),
   runHotelsAgent: vi.fn(),
@@ -10,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   runSearchEnrichment: vi.fn(),
   mapSearchResultsToItinerary: vi.fn(),
   buildJsonRenderSpec: vi.fn(),
+  dispatchItineraryReady: vi.fn(),
 }));
 
 vi.mock("@/lib/search/agents/orchestrator", () => ({
@@ -42,6 +48,10 @@ vi.mock("@/lib/search/enrichment", () => ({
 
 vi.mock("@/lib/search/bridge", () => ({
   mapSearchResultsToItinerary: mocks.mapSearchResultsToItinerary,
+}));
+
+vi.mock("@/lib/notifications/itinerary-dispatch", () => ({
+  dispatchItineraryReady: mocks.dispatchItineraryReady,
 }));
 
 vi.mock("@/lib/json-render/build-spec", () => ({
@@ -82,7 +92,7 @@ function createChain(table: string) {
 
 const supabaseMock = {
   from: vi.fn((table: string) => createChain(table)),
-  rpc: vi.fn(async () => ({ data: null, error: null })),
+  rpc: vi.fn(async () => ({ data: true, error: null })),
 };
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -239,6 +249,7 @@ async function waitFor(
 describe("planTripWorkflow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.dispatchItineraryReady.mockResolvedValue("accepted");
     mocks.runOrchestratorAgent.mockResolvedValue(searchPlan);
     mocks.runHotelsAgent.mockResolvedValue([hotel]);
     mocks.runActivitiesAgent.mockResolvedValue([activity]);
@@ -333,6 +344,44 @@ describe("planTripWorkflow", () => {
       [dining],
       [transport],
     );
+  });
+
+  it("dispatches only after the completed itinerary is durably saved", async () => {
+    mocks.dispatchItineraryReady.mockImplementation(async () => {
+      expect(supabaseMock.rpc).toHaveBeenCalledWith(
+        "apply_trip_generation_update",
+        expect.objectContaining({
+          p_state: "planned",
+          p_trip_id: "trip-1",
+          p_search_id: "search-1",
+        }),
+      );
+      return "accepted";
+    });
+    expect((await planTripWorkflow(workflowInput)).status).toBe("completed");
+    expect(mocks.dispatchItineraryReady).toHaveBeenCalledWith(
+      "trip-1",
+      "search-1",
+    );
+  });
+  it("keeps a completed plan successful when the notification step fails", async () => {
+    mocks.dispatchItineraryReady.mockRejectedValue(
+      new Error("notification unavailable"),
+    );
+    expect((await planTripWorkflow(workflowInput)).status).toBe("completed");
+    expect(supabaseMock.rpc).not.toHaveBeenCalledWith(
+      "apply_trip_generation_update",
+      expect.objectContaining({ p_state: "failed" }),
+    );
+  });
+  it("never dispatches a completion push for a failed planner or an unsaved search", async () => {
+    mocks.runAggregatorAgent.mockRejectedValueOnce(
+      new Error("planning failed"),
+    );
+    expect((await planTripWorkflow(workflowInput)).status).toBe("error");
+    expect(mocks.dispatchItineraryReady).not.toHaveBeenCalled();
+    await planTripWorkflow({ ...workflowInput, tripId: undefined });
+    expect(mocks.dispatchItineraryReady).not.toHaveBeenCalled();
   });
 
   it("passes JSONB values to intermediate merge RPC without stringifying", async () => {

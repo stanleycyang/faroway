@@ -1,3 +1,14 @@
+jest.mock('../../lib/planningConsent', () => ({
+  withPlanningConsent: jest.fn(async (dispatch) =>
+    dispatch({
+      headers: async () => ({
+        'Content-Type': 'application/json',
+        Authorization: 'Bearer current-session',
+      }),
+      signal: new AbortController().signal,
+    })
+  ),
+}));
 jest.mock('expo-constants', () => ({
   __esModule: true,
   default: { expoConfig: {} },
@@ -17,6 +28,7 @@ import {
   getIncompleteStreamMessage,
   parseSSEBuffer,
   parseStreamingJson,
+  pollGenerationStatus,
 } from '../../hooks/useStreamingItinerary';
 
 describe('streaming itinerary SSE parsing', () => {
@@ -60,4 +72,25 @@ describe('streaming itinerary SSE parsing', () => {
       'The connection closed before your itinerary was ready. Reconnect to continue planning.'
     );
   });
+});
+
+it('does not publish completion from a polling body after cancellation', async () => {
+  let finish!: (value: unknown) => void;
+  global.fetch = jest.fn(async () => ({
+    ok: true,
+    json: () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  })) as unknown as typeof fetch;
+  const controller = new AbortController();
+  const update = jest.fn();
+  const work = pollGenerationStatus('saved-trip', controller.signal, update);
+  const rejected = expect(work).rejects.toMatchObject({ name: 'AbortError' });
+  for (let i = 0; i < 20; i++) await Promise.resolve();
+  controller.abort();
+  await rejected;
+  finish({ status: 'completed' });
+  for (let i = 0; i < 20; i++) await Promise.resolve();
+  expect(update).not.toHaveBeenCalled();
 });

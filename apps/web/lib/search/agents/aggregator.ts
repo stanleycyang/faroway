@@ -1,3 +1,7 @@
+import {
+  PLANNING_MODEL,
+  PLANNING_PROVIDER_OPTIONS,
+} from "@/lib/ai/planning-disclosure";
 /**
  * Aggregator Agent
  * Combines results from all agents into a cohesive itinerary
@@ -28,7 +32,7 @@ const aiGateway = process.env.AI_GATEWAY_API_KEY
   ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
   : defaultGateway;
 
-const MODEL = "google/gemini-3-flash";
+const MODEL = PLANNING_MODEL;
 
 const SuggestedDaySchema = z.object({
   dayNumber: z.number(),
@@ -195,6 +199,7 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
       (abortSignal) =>
         generateObject<ItineraryResult>({
           model: aiGateway(MODEL),
+          providerOptions: PLANNING_PROVIDER_OPTIONS,
           system: SYSTEM_PROMPT,
           prompt,
           schema: ItinerarySchema,

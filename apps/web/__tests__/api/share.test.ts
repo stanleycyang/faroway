@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { NextRequest } from "next/server";
 import crypto from "crypto";
 
@@ -90,7 +90,12 @@ vi.mock("@/lib/supabase/server", () => ({
   createClient: vi.fn(async () => mockSupabase),
   createClientFromRequest: (request: unknown) =>
     createClientFromRequestMock(request),
-  getSupabase: vi.fn(() => mockConversionSupabase),
+  getSupabase: vi.fn(() => ({
+    from: (table: string) =>
+      table === "trips"
+        ? mockSupabase.from()
+        : mockConversionSupabase.from(table),
+  })),
 }));
 
 vi.mock("nanoid", () => ({
@@ -134,6 +139,8 @@ function makeRequest(
   body?: string | object,
   headers?: Record<string, string>,
 ): NextRequest {
+  if (method === "POST" && url.includes("/share") && body === undefined)
+    body = { publicConsent: true };
   const init: RequestInit = { method };
   if (body) {
     init.body = typeof body === "string" ? body : JSON.stringify(body);
@@ -162,11 +169,12 @@ describe("POST /api/trips/[id]/share", () => {
         id: "trip-1",
         share_token: null,
         is_shared: false,
+        updated_at: "2026-10-03T00:00:00.000Z",
         user_id: "user-123",
       },
       error: null,
     };
-    mockUpdateReturn = { data: null, error: null };
+    mockUpdateReturn = { data: { id: "trip-1" }, error: null };
     // After the select().eq().eq().single() the chain resolves to mockTripReturn.
     // After the update().eq().eq() the chain resolves too, but the route only checks error.
     // Since both use the same tripsChain, we make the chain result dynamic:
@@ -186,6 +194,50 @@ describe("POST /api/trips/[id]/share", () => {
       // Second call: update
       return createQueryChain(() => mockUpdateReturn);
     });
+  });
+
+  it("rejects sharing without explicit consent before reading trip data", async () => {
+    const res = await sharePost(
+      makeRequest("POST", "/api/trips/trip-1/share", {}),
+      makeParams("trip-1"),
+    );
+    expect(res.status).toBe(400);
+    expect(mockSupabase.from).not.toHaveBeenCalled();
+  });
+
+  it("requires a current plan before creating a public link", async () => {
+    mockTripReturn = {
+      data: {
+        id: "trip-1",
+        user_id: "user-123",
+        is_shared: false,
+        preferences: { planNeedsRefresh: true },
+      },
+      error: null,
+    };
+    expect(
+      (
+        await sharePost(
+          makeRequest("POST", "/api/trips/trip-1/share"),
+          makeParams("trip-1"),
+        )
+      ).status,
+    ).toBe(409);
+    expect(mockSupabase.from).toHaveBeenCalledTimes(1);
+  });
+
+  afterEach(() => vi.unstubAllEnvs());
+
+  it("keeps share links on the configured preview origin", async () => {
+    vi.stubEnv("NEXT_PUBLIC_BASE_URL", "https://preview.example.test");
+    const response = await sharePost(
+      makeRequest("POST", "/api/trips/trip-1/share"),
+      makeParams("trip-1"),
+    );
+    expect(response.status).toBe(200);
+    expect((await response.json()).shareUrl).toBe(
+      "https://preview.example.test/s/test-token-12",
+    );
   });
 
   it("successfully enables sharing and returns shareUrl and token", async () => {

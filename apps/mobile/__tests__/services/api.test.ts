@@ -1,3 +1,4 @@
+jest.mock('../../lib/planningConsent', () => ({ withPlanningConsent: jest.fn() }));
 // Mock expo-constants before importing api module
 jest.mock('expo-constants', () => ({
   __esModule: true,
@@ -20,6 +21,7 @@ import {
   updateTrip,
   deleteTrip,
   shareTrip,
+  revokeTripShare,
   getPopularDestinations,
   getTrendingDestinations,
   trackAffiliateClick,
@@ -186,7 +188,15 @@ describe('shareTrip', () => {
     expect(result.data?.shareToken).toBe('abc');
     expect(mockFetch).toHaveBeenCalledWith(
       'http://localhost:3000/api/trips/trip-1/share',
-      expect.objectContaining({ method: 'POST' })
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ publicConsent: true }) })
+    );
+  });
+  it('revokes the public link through the authenticated API', async () => {
+    mockFetch.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({ success: true }) });
+    await revokeTripShare('trip-1');
+    expect(mockFetch).toHaveBeenCalledWith(
+      'http://localhost:3000/api/trips/trip-1/share',
+      expect.objectContaining({ method: 'DELETE' })
     );
   });
 });
@@ -296,46 +306,22 @@ describe('push token APIs', () => {
 });
 
 describe('openAffiliateLink', () => {
-  it('opens redirect URL from tracking response', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: true,
-      json: () => Promise.resolve({ clickId: 'c1', redirectUrl: 'https://redirect.com' }),
-    });
-
+  it('rejects legacy tracking-based checkout without fetching or opening a URL', async () => {
     const openUrl = jest.fn();
-    await openAffiliateLink(
-      {
-        itemType: 'hotel',
-        itemId: 'htl-1',
-        itemName: 'Hotel',
-        affiliatePartner: 'booking.com',
-        affiliateUrl: 'https://booking.com/hotel/1',
-      },
-      openUrl
-    );
-
-    expect(openUrl).toHaveBeenCalledWith('https://redirect.com');
-  });
-
-  it('falls back to original URL when tracking fails', async () => {
-    mockFetch.mockResolvedValueOnce({
-      ok: false,
-      json: () => Promise.resolve({ error: 'Failed' }),
-    });
-
-    const openUrl = jest.fn();
-    await openAffiliateLink(
-      {
-        itemType: 'hotel',
-        itemId: 'htl-1',
-        itemName: 'Hotel',
-        affiliatePartner: 'booking.com',
-        affiliateUrl: 'https://booking.com/original',
-      },
-      openUrl
-    );
-
-    expect(openUrl).toHaveBeenCalledWith('https://booking.com/original');
+    await expect(
+      openAffiliateLink(
+        {
+          itemType: 'hotel',
+          itemId: 'hotel-1',
+          itemName: 'Hotel',
+          affiliatePartner: 'booking',
+          affiliateUrl: 'https://booking.com/hotel/1',
+        },
+        openUrl
+      )
+    ).rejects.toThrow('saved trip');
+    expect(openUrl).not.toHaveBeenCalled();
+    expect(mockFetch).not.toHaveBeenCalled();
   });
 });
 

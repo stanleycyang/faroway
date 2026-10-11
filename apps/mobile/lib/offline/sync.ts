@@ -3,61 +3,48 @@
  * Handles background synchronization between local storage and Supabase
  */
 
-import { offlineStorage, PendingMutation, PendingMutationData } from './storage';
+import { offlineStorage, PendingMutation } from './storage';
 import { networkMonitor } from './network';
 import { API_BASE_URL, getAuthHeaders } from '../supabase';
 import { normalizeTripStatus } from '../tripStatus';
 import type { Trip, TripInput } from '../../stores/tripStore';
 import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 
-/**
- * Serialize a locally-created Trip into the snake_case body that
- * `POST /api/trips` expects. Used by the offline mutation queue and by
- * the unit tests that document the contract.
- */
-export function buildTripCreatePayload(trip: Trip): PendingMutationData {
-  return {
-    destination: trip.destination,
-    start_date: trip.startDate,
-    end_date: trip.endDate,
-    travelers: trip.travelers,
-    budget: trip.budget,
-    preferences: {
-      travelerType: trip.travelerType,
-      originCity: trip.originCity,
-      originAirport: trip.originAirport,
-      vibes: trip.vibes,
-      budget: trip.budget,
+import { requestWithTimeout } from '../../services/request';
+import { supabase } from '../supabase';
+import * as Crypto from 'expo-crypto';
+
+async function syncResponse(input: RequestInfo | URL, init: RequestInit) {
+  return requestWithTimeout(
+    input,
+    init,
+    async (response) => {
+      const data = await response.json().catch(() => null);
+      return { ok: response.ok, status: response.status, json: async () => data };
     },
-  };
+    15_000
+  );
 }
 
-/**
- * Serialize a Trip update (partial fields) into the snake_case body that
- * `PATCH /api/trips/[id]` expects. Only present fields are included so we
- * don't accidentally overwrite untouched server fields with undefined.
- */
-export function buildTripUpdatePayload(patch: Partial<TripInput>): PendingMutationData {
-  const body: PendingMutationData = {};
-  const preferences: Record<string, unknown> = {};
-
-  if (patch.startDate !== undefined) body.start_date = patch.startDate;
-  if (patch.endDate !== undefined) body.end_date = patch.endDate;
-  if (patch.travelers !== undefined) body.travelers = patch.travelers;
-  if (patch.vibes !== undefined) body.vibes = patch.vibes;
-  if (patch.budget !== undefined) {
-    body.budget_tier = patch.budget;
-    preferences.budget = patch.budget;
-  }
-  if (patch.travelerType !== undefined) preferences.travelerType = patch.travelerType;
-  if (patch.originCity !== undefined) preferences.originCity = patch.originCity;
-  if (patch.originAirport !== undefined) preferences.originAirport = patch.originAirport;
-
-  if (Object.keys(preferences).length > 0) {
-    body.preferences = preferences;
-  }
-  return body;
+async function accountSession(ownerId?: string) {
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session || (ownerId && data.session.user.id !== ownerId))
+    throw new Error('Your account changed. Reopen your trips before syncing.');
+  return data.session;
 }
+
+async function ownedSyncResponse(input: RequestInfo | URL, init: RequestInit, ownerId: string) {
+  const session = await accountSession(ownerId);
+  const response = await syncResponse(input, {
+    ...init,
+    headers: { ...init.headers, Authorization: `Bearer ${session.access_token}` },
+  });
+  await accountSession(ownerId);
+  return response;
+}
+
+import { buildTripCreatePayload, buildTripUpdatePayload } from './trip-payload';
+export { buildTripCreatePayload, buildTripUpdatePayload } from './trip-payload';
 
 export type SyncStatus = 'idle' | 'syncing' | 'success' | 'error' | 'offline';
 
@@ -81,7 +68,7 @@ type SyncListener = (state: SyncState) => void;
 // Conflict resolution strategy
 export type ConflictStrategy = 'client-wins' | 'server-wins' | 'last-write-wins';
 
-// Maximum retries before abandoning a mutation
+// Maximum automatic retries before retaining a mutation for explicit review
 const MAX_RETRY_COUNT = 3;
 
 // Minimum time between syncs (prevent rapid-fire)
@@ -91,6 +78,8 @@ const MIN_SYNC_INTERVAL = 5000; // 5 seconds
  * Sync Service class
  * Manages bidirectional sync between local storage and backend
  */
+class TripRevisionConflict extends Error {}
+
 class SyncService {
   private state: SyncState = {
     status: 'idle',
@@ -239,6 +228,8 @@ class SyncService {
       result.failed = pushResult.failed;
       result.errors = pushResult.errors;
 
+      result.success = result.failed === 0;
+
       // Step 2: Pull latest from server
       await this.pullFromServer();
 
@@ -251,7 +242,8 @@ class SyncService {
         error: result.failed > 0 ? `${result.failed} items failed to sync` : null,
       });
 
-      await offlineStorage.recordSuccessfulSync();
+      if (result.failed === 0) await offlineStorage.recordSuccessfulSync();
+      else await offlineStorage.recordFailedSync();
 
       console.log('[SyncService] Sync complete:', result);
       return result;
@@ -306,12 +298,18 @@ class SyncService {
     const sorted = mutations.sort((a, b) => a.timestamp - b.timestamp);
 
     for (const mutation of sorted) {
+      if (mutation.blockedReason) {
+        result.failed++;
+        result.errors.push({ mutationId: mutation.id, error: mutation.blockedReason });
+        continue;
+      }
       // Skip if too many retries
       if (mutation.retryCount >= MAX_RETRY_COUNT) {
-        console.log(`[SyncService] Mutation ${mutation.id} exceeded retry limit, removing`);
-        await offlineStorage.removePendingMutation(mutation.id);
+        const reason =
+          'Automatic sync stopped after repeated failures. Your changes are saved; review them before retrying or discarding.';
+        await offlineStorage.blockPendingMutation(mutation.id, reason);
         result.failed++;
-        result.errors.push({ mutationId: mutation.id, error: 'Max retries exceeded' });
+        result.errors.push({ mutationId: mutation.id, error: reason });
         continue;
       }
 
@@ -329,7 +327,11 @@ class SyncService {
         }
         const errorMessage = error instanceof Error ? error.message : String(error);
         console.error(`[SyncService] Mutation ${mutation.id} failed:`, error);
-        await offlineStorage.incrementMutationRetry(mutation.id);
+        if (error instanceof TripRevisionConflict) {
+          await offlineStorage.blockPendingMutation(mutation.id, errorMessage);
+        } else {
+          await offlineStorage.incrementMutationRetry(mutation.id);
+        }
         result.failed++;
         result.errors.push({ mutationId: mutation.id, error: errorMessage });
       }
@@ -342,24 +344,40 @@ class SyncService {
    * Execute a single mutation on the server
    */
   private async executeMutation(mutation: PendingMutation): Promise<void> {
+    if (!mutation.ownerId)
+      throw new TripRevisionConflict(
+        'This older request has no verified account. Review your saved trips before retrying or discarding it.'
+      );
     const headers = await getAuthHeaders();
 
     switch (mutation.type) {
       case 'create': {
-        const response = await fetch(`${API_BASE_URL}/api/trips`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(mutation.data),
-        });
+        if (typeof mutation.data?.requestId !== 'string')
+          throw new TripRevisionConflict(
+            'This older creation request has no safe retry identity. Check My Trips before discarding it or starting a new trip.'
+          );
+        const response = await ownedSyncResponse(
+          `${API_BASE_URL}/api/trips`,
+          {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(mutation.data),
+          },
+          mutation.ownerId
+        );
 
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+          if ([409, 410].includes(response.status))
+            throw new TripRevisionConflict(error?.error || 'Review this creation request.');
           throw new Error(error.error || `HTTP ${response.status}`);
         }
 
         // Update local trip with server-generated ID
         const { trip } = await response.json();
-        if (trip && mutation.tripId.startsWith('local_')) {
+        if (!trip || typeof trip.id !== 'string')
+          throw new Error('Trip creation was not confirmed. Your local request is kept.');
+        if (mutation.tripId.startsWith('local_')) {
           // Replace local trip with server trip
           await offlineStorage.deleteTrip(mutation.tripId);
           await offlineStorage.saveTrip(this.transformApiTrip(trip));
@@ -368,24 +386,36 @@ class SyncService {
       }
 
       case 'update': {
-        const response = await fetch(`${API_BASE_URL}/api/trips/${mutation.tripId}`, {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify(mutation.data),
-        });
+        const response = await ownedSyncResponse(
+          `${API_BASE_URL}/api/trips/${mutation.tripId}`,
+          {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify(mutation.data),
+          },
+          mutation.ownerId
+        );
 
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+          if (response.status === 409 || response.status === 428)
+            throw new TripRevisionConflict(
+              error.error || 'Load the latest trip and review your unsynced changes.'
+            );
           throw new Error(error.error || `HTTP ${response.status}`);
         }
         break;
       }
 
       case 'delete': {
-        const response = await fetch(`${API_BASE_URL}/api/trips/${mutation.tripId}`, {
-          method: 'DELETE',
-          headers,
-        });
+        const response = await ownedSyncResponse(
+          `${API_BASE_URL}/api/trips/${mutation.tripId}`,
+          {
+            method: 'DELETE',
+            headers,
+          },
+          mutation.ownerId
+        );
 
         // 404 is acceptable for delete (already deleted)
         if (!response.ok && response.status !== 404) {
@@ -402,11 +432,16 @@ class SyncService {
    */
   private async pullFromServer(): Promise<void> {
     try {
+      const session = await accountSession();
       const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/api/trips`, {
-        method: 'GET',
-        headers,
-      });
+      const response = await ownedSyncResponse(
+        `${API_BASE_URL}/api/trips`,
+        {
+          method: 'GET',
+          headers,
+        },
+        session.user.id
+      );
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -425,6 +460,7 @@ class SyncService {
       // Merge: server wins for existing trips, keep local-only trips
       const mergedTrips = this.mergeTrips(localTrips, serverTrips);
 
+      await accountSession(session.user.id);
       await offlineStorage.saveTrips(mergedTrips);
       console.log(`[SyncService] Pulled ${serverTrips.length} trips from server`);
     } catch (error) {
@@ -473,11 +509,13 @@ class SyncService {
       travelerType: apiTrip.traveler_type || 'solo',
       vibes: apiTrip.vibes || [],
       budget: apiTrip.budget,
-      days: apiTrip.itinerary?.days || [],
+      planNeedsRefresh: apiTrip.preferences?.planNeedsRefresh === true,
+      days: apiTrip.preferences?.planNeedsRefresh ? [] : apiTrip.itinerary?.days || [],
       coverImage:
         apiTrip.cover_image ||
         getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
       createdAt: apiTrip.created_at,
+      updatedAt: apiTrip.updated_at,
       status: normalizeTripStatus(apiTrip.status),
     };
   }
@@ -486,14 +524,17 @@ class SyncService {
    * Queue a create operation (for offline)
    */
   async queueCreate(trip: Trip): Promise<void> {
+    if (this.syncInProgress) throw new Error('Wait for sync to finish before editing trips.');
+    const session = await accountSession();
     await offlineStorage.saveTrip(trip);
     await offlineStorage.addPendingMutation({
       type: 'create',
+      ownerId: session.user.id,
       tripId: trip.id,
       // Store the snake_case API payload so a later sync can POST it
       // directly. Anything else would 400 against the backend's
       // CreateTripSchema.
-      data: buildTripCreatePayload(trip),
+      data: { ...buildTripCreatePayload(trip), requestId: Crypto.randomUUID() },
     });
 
     const meta = await offlineStorage.getSyncMeta();
@@ -504,6 +545,8 @@ class SyncService {
    * Queue an update operation (for offline)
    */
   async queueUpdate(tripId: string, updates: Partial<TripInput>): Promise<void> {
+    if (this.syncInProgress) throw new Error('Wait for sync to finish before editing this trip.');
+    const session = await accountSession();
     // Update local storage
     const trip = await offlineStorage.getTrip(tripId);
     if (trip) {
@@ -512,10 +555,11 @@ class SyncService {
 
     await offlineStorage.addPendingMutation({
       type: 'update',
+      ownerId: session.user.id,
       tripId,
       // Same snake_case contract as create — the API's UpdateTripSchema
       // is strict() and rejects camelCase keys.
-      data: buildTripUpdatePayload(updates),
+      data: buildTripUpdatePayload(updates, trip?.updatedAt),
     });
 
     const meta = await offlineStorage.getSyncMeta();
@@ -526,14 +570,57 @@ class SyncService {
    * Queue a delete operation (for offline)
    */
   async queueDelete(tripId: string): Promise<void> {
+    if (this.syncInProgress) throw new Error('Wait for sync to finish before editing trips.');
+    const session = await accountSession();
     await offlineStorage.deleteTrip(tripId);
     await offlineStorage.addPendingMutation({
       type: 'delete',
+      ownerId: session.user.id,
       tripId,
     });
 
     const meta = await offlineStorage.getSyncMeta();
     this.updateState({ pendingCount: meta.pendingCount });
+  }
+
+  /** Explicit traveler choice after comparing the current server brief. */
+  async resolveBlockedMutation(snapshot: PendingMutation, revision?: string): Promise<void> {
+    if (this.syncInProgress)
+      throw new Error('Wait for sync to finish before resolving this change.');
+    this.syncInProgress = true;
+    this.updateState({ status: 'syncing' });
+    try {
+      const current = (await offlineStorage.getPendingMutations()).find(
+        (m) => m.id === snapshot.id
+      );
+      if (!current?.blockedReason || JSON.stringify(current) !== JSON.stringify(snapshot))
+        throw new Error('Your local changes changed. Review them again before continuing.');
+      if (revision) {
+        const session = await accountSession(snapshot.ownerId);
+        const response = await ownedSyncResponse(
+          `${API_BASE_URL}/api/trips/${snapshot.tripId}`,
+          {
+            method: 'PATCH',
+            headers: await getAuthHeaders(),
+            body: JSON.stringify({ ...snapshot.data, expectedUpdatedAt: revision }),
+          },
+          session.user.id
+        );
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error(data.error || 'Could not save. Your local changes are still kept.');
+        }
+      }
+      await offlineStorage.removePendingMutation(snapshot.id);
+      this.updateState({
+        pendingCount: (await offlineStorage.getPendingMutations()).length,
+        status: 'idle',
+        error: null,
+      });
+    } finally {
+      this.syncInProgress = false;
+      if (this.state.status === 'syncing') this.updateState({ status: 'error' });
+    }
   }
 
   /**
