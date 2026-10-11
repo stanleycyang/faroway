@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   const { origin } = new URL(request.url);
 
   // Complete the form submission with a fresh GET of the sign-in page.
-  return NextResponse.redirect(`${origin}/login`, {
+  return NextResponse.redirect(`${origin}/auth/login`, {
     status: 303,
   });
 }
