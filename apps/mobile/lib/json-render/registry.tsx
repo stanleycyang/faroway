@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatPrice } from '@faroway/constants';
 import { View, Text as RNText, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -138,6 +139,7 @@ export const HotelCard: React.FC<HotelCardProps> = ({
   name,
   rating,
   pricePerNight,
+  currency,
   image,
   bookingUrl,
   amenities,
@@ -169,8 +171,8 @@ export const HotelCard: React.FC<HotelCardProps> = ({
 
         <View style={styles.hotelCardPrice}>
           <RNText style={styles.hotelCardPriceAmount}>
-            {typeof pricePerNight === 'number' && pricePerNight > 0
-              ? `Est. $${pricePerNight} / night`
+            {formatPrice(pricePerNight, currency)
+              ? `Est. ${formatPrice(pricePerNight, currency)} / night`
               : 'Price unknown'}
           </RNText>
         </View>
@@ -248,6 +250,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
   duration,
   price,
   priceStatus,
+  currency,
   rating,
   reviewCount,
   image,
@@ -293,8 +296,8 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
               </View>
             )}
             <RNText style={styles.activityCardPrice}>
-              {priceStatus !== 'unknown' && typeof price === 'number' && price > 0
-                ? `Est. $${price}`
+              {priceStatus !== 'unknown' && formatPrice(price, currency)
+                ? `Est. ${formatPrice(price, currency)}`
                 : 'Price unknown'}
             </RNText>
           </View>
@@ -455,7 +458,13 @@ export const DayTimeline: React.FC<DayTimelineProps> = ({ items }) => {
 
 type BookingButtonProps = z.infer<typeof BookingButtonSchema>;
 
-export const BookingButton: React.FC<BookingButtonProps> = ({ label, url, provider, price }) => {
+export const BookingButton: React.FC<BookingButtonProps> = ({
+  label,
+  url,
+  provider,
+  price,
+  currency,
+}) => {
   return (
     <TouchableOpacity style={styles.bookingButton} onPress={() => openURL(url)} activeOpacity={0.8}>
       <LinearGradient
@@ -468,7 +477,9 @@ export const BookingButton: React.FC<BookingButtonProps> = ({ label, url, provid
           <RNText style={styles.bookingButtonLabel}>{label}</RNText>
           {provider && <RNText style={styles.bookingButtonProvider}>via {provider}</RNText>}
         </View>
-        {price && <RNText style={styles.bookingButtonPrice}>${price}</RNText>}
+        {formatPrice(price, currency) && (
+          <RNText style={styles.bookingButtonPrice}>{formatPrice(price, currency)}</RNText>
+        )}
         <Ionicons name="arrow-forward" size={20} color="#fff" />
       </LinearGradient>
     </TouchableOpacity>
@@ -481,14 +492,11 @@ export const BookingButton: React.FC<BookingButtonProps> = ({ label, url, provid
 
 type PriceTagProps = z.infer<typeof PriceTagSchema>;
 
-export const PriceTag: React.FC<PriceTagProps> = ({ amount, currency = 'USD', period }) => {
-  const currencySymbol = currency === 'USD' ? '$' : currency;
-
+export const PriceTag: React.FC<PriceTagProps> = ({ amount, currency, period }) => {
   return (
     <View style={styles.priceTag}>
       <RNText style={styles.priceTagAmount}>
-        {currencySymbol}
-        {amount.toLocaleString()}
+        {formatPrice(amount, currency) ?? 'Price unknown'}
       </RNText>
       {period && <RNText style={styles.priceTagPeriod}>{period}</RNText>}
     </View>

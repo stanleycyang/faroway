@@ -1,3 +1,4 @@
+import { formatPrice, readPrice } from "@faroway/constants";
 import {
   containsViatorContent,
   filterViatorDisplay,
@@ -174,6 +175,7 @@ export function buildHotelBlocks(
         rating: topHotel.rating,
         starRating: topHotel.starRating,
         pricePerNight: topHotel.pricePerNight,
+        currency: topHotel.currency,
         image: topHotel.images?.[0],
         bookingUrl: topHotel.affiliateUrl,
         amenities: topHotel.amenities || [],
@@ -191,6 +193,7 @@ export function buildHotelBlocks(
           url: topHotel.affiliateUrl,
           provider: "Booking.com",
           price: topHotel.pricePerNight,
+          currency: topHotel.currency,
         },
       });
     }
@@ -211,6 +214,7 @@ export function buildHotelBlocks(
           name: hotel.name,
           rating: hotel.rating,
           pricePerNight: hotel.pricePerNight,
+          currency: hotel.currency,
           image: hotel.images?.[0],
           bookingUrl: hotel.affiliateUrl,
           amenities: hotel.amenities || [],
@@ -227,6 +231,7 @@ export function buildHotelBlocks(
             url: hotel.affiliateUrl,
             provider: "Booking.com",
             price: hotel.pricePerNight,
+            currency: hotel.currency,
           },
         });
       }
@@ -331,6 +336,7 @@ export function buildItineraryBlocks(
             ? `${activity.duration} hours`
             : "2 hours",
           price: activity.price,
+          currency: activity.currency,
           priceStatus: activity.priceStatus,
           rating: activity.rating,
           reviewCount: activity.reviewCount,
@@ -413,60 +419,54 @@ export function buildBudgetBlocks(
     activities = [],
     totalEstimatedCost,
     nights,
-    currency = "USD",
+    currency,
   } = input;
+  const total = readPrice(totalEstimatedCost, currency);
+  if (!total || total.amount <= 0) return components;
 
-  if (totalEstimatedCost <= 0) return components;
-
-  components.push({
-    type: "Section",
-    props: { title: "Budget Summary" },
-  });
-
-  const hotelCost = (topHotel?.pricePerNight || 0) * nights;
-  const activityCost = activities.reduce(
-    (sum, a) => sum + (a.priceStatus === "unknown" ? 0 : a.price || 0),
-    0,
+  components.push({ type: "Section", props: { title: "Budget Summary" } });
+  // Show each known cost in its own currency. Never infer dining from a remainder
+  // or combine currencies without an explicit conversion source.
+  const hotel = readPrice(topHotel?.pricePerNight, topHotel?.currency);
+  if (hotel && Number.isInteger(nights) && nights > 0) {
+    const accommodation = hotel.amount * nights;
+    if (Number.isFinite(accommodation))
+      components.push({
+        type: "PriceTag",
+        props: {
+          amount: accommodation,
+          currency: hotel.currency,
+          period: `accommodation (${nights} night${nights !== 1 ? "s" : ""})`,
+        },
+      });
+  }
+  const costs = activities.map((a) =>
+    a.priceStatus === "unknown" ? undefined : readPrice(a.price, a.currency),
   );
-  const diningCost = totalEstimatedCost - hotelCost - activityCost;
-
-  if (hotelCost > 0) {
-    components.push({
-      type: "PriceTag",
-      props: {
-        amount: hotelCost,
-        currency,
-        period: `accommodation (${nights} night${nights !== 1 ? "s" : ""})`,
-      },
-    });
+  if (
+    costs.length > 0 &&
+    costs.every((p) => p && p.currency === costs[0]?.currency)
+  ) {
+    const amount = costs.reduce((sum, p) => sum + p!.amount, 0);
+    if (Number.isFinite(amount))
+      components.push({
+        type: "PriceTag",
+        props: {
+          amount,
+          currency: costs[0]!.currency,
+          period: "activities & tours",
+        },
+      });
   }
-
-  if (activityCost > 0) {
-    components.push({
-      type: "PriceTag",
-      props: {
-        amount: activityCost,
-        currency,
-        period: "activities & tours",
-      },
-    });
-  }
-
-  if (diningCost > 0) {
-    components.push({
-      type: "PriceTag",
-      props: {
-        amount: Math.max(0, diningCost),
-        currency,
-        period: "dining",
-      },
-    });
-  }
-
+  const currenciesMatch =
+    (!topHotel || hotel?.currency === total.currency) &&
+    costs.every((p) => p?.currency === total.currency);
   components.push({
     type: "Text",
     props: {
-      content: `Estimated total: $${totalEstimatedCost.toLocaleString()} ${currency} for ${nights} night${nights !== 1 ? "s" : ""}. Planning estimate only; some prices may be unknown. Confirm prices before purchase.`,
+      content: currenciesMatch
+        ? `Estimated total: ${formatPrice(total.amount, total.currency)} for ${nights} night${nights !== 1 ? "s" : ""}. Planning estimate only; some prices may be unknown. Confirm prices before purchase.`
+        : "Total unavailable: some prices or currencies are unknown or differ. Confirm prices before purchase.",
       variant: "caption",
     },
   });

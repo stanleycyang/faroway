@@ -102,7 +102,11 @@ describe("honest enrichment presentation", () => {
   });
 
   it("qualifies budget totals as planning estimates with unconfirmed prices", () => {
-    const cards = buildBudgetBlocks({ totalEstimatedCost: 100, nights: 1 });
+    const cards = buildBudgetBlocks({
+      totalEstimatedCost: 100,
+      nights: 1,
+      currency: "USD",
+    });
     expect(cards.find((c) => c.type === "Text")?.props.content).toContain(
       "some prices may be unknown",
     );

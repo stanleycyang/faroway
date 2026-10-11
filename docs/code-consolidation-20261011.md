@@ -35,3 +35,7 @@ PR34 merged into the candidate at `3b9d8a6a0efa3349ae116daf0423f15bc95869d8`; it
 Validation passed: all 11 quality tasks; 621 web, 315 mobile, 115 shared-package and 8 script tests (1,059 total); all five disposable PostgreSQL suites; 28 checkout/Places and 32 full-app recovery browser cases. Frozen dependency installation required no changes in the review worktree. The consolidation commits use `[skip actions]`, so hosted Actions are not claimed as validation and consume no runner minutes for these pushes.
 
 The production deployment remains `dpl_2RFYSiq4ynRTt67okcCFkBTUwfyV`, source `5a8eadf06f596f81e8bcc0f4d90d3e58518c83eb`. The main Git deployment hold prevents this code merge from releasing the schema-dependent application. Hosted schemas and activation settings were not changed.
+
+## Subsequent staging rehearsal
+
+The staging-only follow-ups are now installed and their rollback canaries passed. See [staging follow-up evidence](staging-followups-20261011.md) for exact hosted/local migration mapping, retained pricing improvements, existing security-advisor warnings and remaining browser/device gates. This later checkpoint supersedes the staging-absence observations above; production remains unchanged.

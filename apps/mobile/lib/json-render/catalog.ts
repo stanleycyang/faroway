@@ -83,7 +83,11 @@ export const Text = {
 export const HotelCardSchema = z.object({
   name: z.string().describe('Hotel or accommodation name'),
   rating: z.number().min(0).max(5).optional().describe('Verified rating, when known'),
-  pricePerNight: z.number().optional().describe('Estimated price per night in USD'),
+  pricePerNight: z
+    .number()
+    .optional()
+    .describe('Estimated price per night in the supplied currency'),
+  currency: z.string().optional().describe('Explicit currency code; omit when unknown'),
   image: z.string().url().optional().describe('Hotel image URL'),
   bookingUrl: z.string().url().optional().describe('Booking URL (booking.com, etc.)'),
   amenities: z.array(z.string()).describe('List of amenities (e.g., ["WiFi", "Pool", "Gym"])'),
@@ -123,7 +127,8 @@ export const ActivityCardSchema = z.object({
   name: z.string().describe('Activity name'),
   description: z.string().describe('Activity description'),
   duration: z.string().describe('Duration (e.g., "2 hours", "3-4 hours")'),
-  price: z.number().optional().describe('Estimated price in USD'),
+  price: z.number().optional().describe('Estimated price in the supplied currency'),
+  currency: z.string().optional().describe('Explicit currency code; omit when unknown'),
   priceStatus: z.enum(['unknown', 'estimate']).optional(),
   rating: z.number().min(0).max(5).optional().describe('Rating (0-5)'),
   reviewCount: z.number().optional().describe('Number of reviews'),
@@ -197,7 +202,8 @@ export const BookingButtonSchema = z.object({
   label: z.string().describe('Button label (e.g., "Book on Viator", "Reserve Table")'),
   url: z.string().url().describe('Booking URL'),
   provider: z.string().optional().describe('Provider name (e.g., "Viator", "Booking.com")'),
-  price: z.number().optional().describe('Price in USD (optional)'),
+  price: z.number().optional().describe('Price in the supplied currency (optional)'),
+  currency: z.string().optional().describe('Explicit currency code; omit when unknown'),
 });
 
 export const BookingButton = {
@@ -213,7 +219,7 @@ export const BookingButton = {
 
 export const PriceTagSchema = z.object({
   amount: z.number().describe('Price amount'),
-  currency: z.string().default('USD').describe('Currency code (default: USD)'),
+  currency: z.string().optional().describe('Explicit currency code; omit when unknown'),
   period: z.string().optional().describe('Period (e.g., "per person", "per night", "total")'),
 });
 

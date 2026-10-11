@@ -1,0 +1,45 @@
+{
+  "project_ref": "omovikloadpvzijoaqus",
+  "environment": "staging",
+  "executed_at_utc": "2026-10-11T05:14:43Z",
+  "bootstrap_version": "20261004223055",
+  "production_applied": false,
+  "migrations": [
+    {
+      "path": "supabase/migrations/20261011045031_account_and_push.sql",
+      "source_sha256": "f40d6c7509005fde86b0c8b5c1b9304fc774db6148017447150868a91e4d8eb6",
+      "hosted_version": "20261011051438",
+      "executed_sha256": "4189f459a94e86e99bf2f79f75778890e9d331072cc4498ba63da30bd60c921e",
+      "execution_change": "Only SET LOCAL lock_timeout=2s and statement_timeout=60s added inside the reviewed transaction."
+    },
+    {
+      "path": "supabase/migrations/20261011045040_trip_creation_recovery.sql",
+      "source_sha256": "5d297725a25557476903f0e69d792c520168896f95a086e7bfa3884630520939",
+      "hosted_version": "20261011051443",
+      "executed_sha256": "a1539f2d2d5e2805766158c439aec1087944054022c6e168669614a264b00e90",
+      "execution_change": "Only SET LOCAL lock_timeout=2s and statement_timeout=60s added inside the reviewed transaction."
+    }
+  ],
+  "verification": {
+    "client_receipt_access_denied": true,
+    "rls_enabled": true,
+    "service_only_recovery_rpcs": true,
+    "creation_replay_rollback_canary": "passed",
+    "push_consent_revision_and_optout_rollback_canary": "passed",
+    "account_deletion_claim_and_proof_rollback_canary": "passed",
+    "post_canary_users_trips_tokens_receipts": 0,
+    "browser_auth_api_acceptance": "pending",
+    "signed_device_acceptance": "pending"
+  },
+  "security_advisors": {
+    "info": "Eight deliberately server-only RLS tables have no client policies; do not add client policies to silence this notice.",
+    "existing_function_search_path_warnings": [
+      "update_push_token_timestamp",
+      "cleanup_expired_anonymous_trips",
+      "update_updated_at_column",
+      "cleanup_old_workflow_data",
+      "normalize_destination"
+    ],
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable"
+  }
+}
