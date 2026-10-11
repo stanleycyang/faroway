@@ -51,7 +51,7 @@ function rowToPost(row: any): BlogPost {
 
 export const getAllPostMetas = cache(async (): Promise<BlogPostMeta[]> => {
   const supabase = getBlogSupabase();
-  if (!supabase) return [];
+  if (!supabase) throw new Error("Blog database is not configured");
 
   const { data, error } = await supabase
     .from("blog_posts")
@@ -61,8 +61,7 @@ export const getAllPostMetas = cache(async (): Promise<BlogPostMeta[]> => {
     .limit(1000);
 
   if (error) {
-    console.error("getAllPostMetas error:", error.message);
-    return [];
+    throw new Error(`getAllPostMetas failed (${error.code || "unknown"})`);
   }
   return (data || []).map(rowToMeta);
 });
@@ -73,7 +72,7 @@ export const getAllPostMetas = cache(async (): Promise<BlogPostMeta[]> => {
  */
 export async function getAllSitemapPostMetas(): Promise<BlogPostMeta[]> {
   const supabase = getBlogSupabase();
-  if (!supabase) return [];
+  if (!supabase) throw new Error("Blog database is not configured");
 
   const posts: BlogPostMeta[] = [];
   const pageSize = 1000;
@@ -87,8 +86,9 @@ export async function getAllSitemapPostMetas(): Promise<BlogPostMeta[]> {
       .range(from, from + pageSize - 1);
 
     if (error) {
-      console.error("getAllSitemapPostMetas error:", error.message);
-      return posts;
+      throw new Error(
+        `getAllSitemapPostMetas failed (${error.code || "unknown"})`,
+      );
     }
 
     posts.push(...(data || []).map(rowToMeta));
@@ -100,7 +100,7 @@ export async function getAllSitemapPostMetas(): Promise<BlogPostMeta[]> {
 
 export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
   const supabase = getBlogSupabase();
-  if (!supabase) return [];
+  if (!supabase) throw new Error("Blog database is not configured");
 
   const { data, error } = await supabase
     .from("blog_posts")
@@ -110,8 +110,7 @@ export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
     .limit(1000);
 
   if (error) {
-    console.error("getAllPosts error:", error.message);
-    return [];
+    throw new Error(`getAllPosts failed (${error.code || "unknown"})`);
   }
   return (data || []).map(rowToPost);
 });
@@ -119,16 +118,21 @@ export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
 export const getPostBySlug = cache(
   async (slug: string): Promise<BlogPost | null> => {
     const supabase = getBlogSupabase();
-    if (!supabase) return null;
+    if (!supabase) throw new Error("Blog database is not configured");
 
     const { data, error } = await supabase
       .from("blog_posts")
       .select(FULL_COLUMNS)
       .eq("slug", slug)
       .eq("status", "published")
-      .single();
+      .maybeSingle();
 
-    if (error || !data) return null;
+    // A missing published slug is a real 404; operational failures must not
+    // replace a healthy ISR page with a cached "not found" response.
+    if (error) {
+      throw new Error(`getPostBySlug failed (${error.code || "unknown"})`);
+    }
+    if (!data) return null;
     return rowToPost(data);
   },
 );
