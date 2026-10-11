@@ -10,8 +10,8 @@ export async function POST(request: Request) {
   // Get the origin for redirect
   const { origin } = new URL(request.url);
 
-  // Redirect to home page after logout
-  return NextResponse.redirect(`${origin}/`, {
-    status: 302,
+  // Complete the form submission with a fresh GET of the sign-in page.
+  return NextResponse.redirect(`${origin}/login`, {
+    status: 303,
   });
 }

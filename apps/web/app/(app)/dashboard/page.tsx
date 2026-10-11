@@ -94,12 +94,14 @@ export default async function DashboardPage({
               <span className="text-sm text-gray-600 hidden sm:block">
                 {user.email}
               </span>
-              <Link
-                href="/auth/logout"
-                className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
-              >
-                Sign out
-              </Link>
+              <form action="/auth/logout" method="post">
+                <button
+                  type="submit"
+                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+                >
+                  Sign out
+                </button>
+              </form>
             </div>
           </div>
         </div>
