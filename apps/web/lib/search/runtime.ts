@@ -13,20 +13,20 @@ export function getEnvNumber(
 
 export const ORCHESTRATOR_TIMEOUT_MS = getEnvNumber(
   "ITINERARY_ORCHESTRATOR_TIMEOUT_MS",
-  750,
-  { min: 500, max: 10000 },
+  30000,
+  { min: 500, max: 60000 },
 );
 
 export const AI_AGENT_TIMEOUT_MS = getEnvNumber(
   "ITINERARY_AI_AGENT_TIMEOUT_MS",
-  1500,
-  { min: 1000, max: 15000 },
+  60000,
+  { min: 1000, max: 120000 },
 );
 
 export const AGGREGATOR_TIMEOUT_MS = getEnvNumber(
   "ITINERARY_AGGREGATOR_TIMEOUT_MS",
-  1000,
-  { min: 1000, max: 15000 },
+  30000,
+  { min: 1000, max: 60000 },
 );
 
 export const VENDOR_TIMEOUT_MS = getEnvNumber(
