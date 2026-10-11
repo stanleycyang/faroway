@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { BlogPost, BlogPostMeta, AUTHORS, PaginatedResult } from "./types";
 import { getClusterBySlug } from "./clusters";
 import { IMAGE_PATHS, getImageUrl } from "@faroway/constants";
@@ -49,22 +50,36 @@ function rowToPost(row: any): BlogPost {
 // Core queries
 // ---------------------------------------------------------------------------
 
-export const getAllPostMetas = cache(async (): Promise<BlogPostMeta[]> => {
-  const supabase = getBlogSupabase();
-  if (!supabase) throw new Error("Blog database is not configured");
+const getCachedPostMetas = unstable_cache(
+  async (): Promise<BlogPostMeta[]> => {
+    const supabase = getBlogSupabase();
+    if (!supabase) throw new Error("Blog database is not configured");
 
-  const { data, error } = await supabase
-    .from("blog_posts")
-    .select(META_COLUMNS)
-    .eq("status", "published")
-    .order("published_at", { ascending: false })
-    .limit(1000);
+    const { data, error } = await supabase
+      .from("blog_posts")
+      .select(META_COLUMNS)
+      .eq("status", "published")
+      .order("published_at", { ascending: false })
+      .limit(1000);
 
-  if (error) {
-    throw new Error(`getAllPostMetas failed (${error.code || "unknown"})`);
-  }
-  return (data || []).map(rowToMeta);
-});
+    if (error) {
+      throw new Error(`getAllPostMetas failed (${error.code || "unknown"})`);
+    }
+    return (data || []).map(rowToMeta);
+  },
+  [
+    "published-blog-metadata-v1",
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "unconfigured",
+  ],
+  {
+    revalidate: 21600,
+    tags: ["published-blog-metadata"],
+  },
+);
+
+// React cache deduplicates within a render; the Data Cache reuses public rows
+// across listing, category, guide, and related-post requests.
+export const getAllPostMetas = cache(getCachedPostMetas);
 
 /**
  * Fetch every published post for sitemap discovery. Listing pages intentionally

@@ -7,6 +7,8 @@ import {
   getPostBySlug,
 } from "@/lib/blog";
 
+vi.mock("next/cache", () => ({ unstable_cache: (fn: unknown) => fn }));
+
 vi.mock("@/lib/blog/supabase", () => ({ getBlogSupabase: vi.fn() }));
 
 const row = {
