@@ -1,9 +1,9 @@
 /**
  * Duffel API Client — Flight Search & Duffel Links
  *
- * Duffel is a flight booking API where Duffel acts as Merchant of Record (MoR).
- * Revenue model: we add a markup to each offer via Duffel Links, and Duffel
- * handles payment, ticketing, and post-booking support.
+ * Duffel Links provides hosted search and checkout with a configurable markup.
+ * Faroway's merchant and support obligations require account/contract review;
+ * hosted checkout does not by itself transfer those obligations to Duffel.
  *
  * Endpoints used:
  * - POST /air/offer_requests   — search for flight offers

@@ -356,7 +356,7 @@ function normalizeGYGActivity(raw: any): GYGActivity {
       cancellationPolicy:
         raw.cancellation_policy?.description ||
         raw.cancellation_text ||
-        "Free cancellation",
+        "Check cancellation terms with GetYourGuide",
       mobileTicket:
         raw.has_mobile_ticket ?? raw.bookingInfo?.mobileTicket ?? true,
       instantConfirmation:

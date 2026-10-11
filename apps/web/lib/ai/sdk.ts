@@ -27,14 +27,29 @@ function getAiSdk(): AiSdkModule {
   return requireAi("ai") as AiSdkModule;
 }
 
+export function boundedStagingArgs(args: unknown): unknown {
+  if (process.env.VERCEL_ENV !== "preview") return args;
+  const cap = Number(process.env.FAROWAY_STAGING_AI_MAX_OUTPUT_TOKENS);
+  if (!Number.isInteger(cap) || cap < 100 || cap > 8000) return args;
+  if (!args || typeof args !== "object") return args;
+  const options = args as Record<string, unknown>;
+  const requested = options.maxOutputTokens;
+  return {
+    ...options,
+    maxOutputTokens:
+      typeof requested === "number" ? Math.min(requested, cap) : cap,
+    maxRetries: 0,
+  };
+}
+
 export function generateObject<T>(
   args: unknown,
 ): Promise<GenerateObjectResult<T>> {
-  return getAiSdk().generateObject<T>(args);
+  return getAiSdk().generateObject<T>(boundedStagingArgs(args));
 }
 
 export function generateText(args: unknown): Promise<GenerateTextResult> {
-  return getAiSdk().generateText(args);
+  return getAiSdk().generateText(boundedStagingArgs(args));
 }
 
 export function streamText(args: unknown): unknown {
