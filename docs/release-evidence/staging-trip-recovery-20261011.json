@@ -1,0 +1,59 @@
+{
+  "project_ref": "omovikloadpvzijoaqus",
+  "environment": "staging",
+  "tested_sha": "65d2387295b86c8297bf8883ffac6bda991e799a",
+  "deployment": "dpl_6ZSewjQx12kMj7A74ecvT9noTmDU",
+  "preview_url": "https://faroway-jaigdamwf-testimonio.vercel.app",
+  "stable_alias": "https://faroway-git-codex-release-candidate-testimonio.vercel.app",
+  "cases": {
+    "saved_draft": {
+      "trip_id": "93f80c7d-ca99-48f7-9773-90a32f797222",
+      "destination": "Tokyo",
+      "start_date": "2026-11-01",
+      "end_date": "2026-11-04",
+      "display_days": 4,
+      "stored_dates_correct": true,
+      "reload_same_id_and_dates": true,
+      "pause_retry_feedback": "Planning is temporarily paused. Your saved trip is safe. Try again later.",
+      "last_loaded_trip_retained": true
+    },
+    "interrupted_creation": {
+      "trip_id": "7c4394e5-67ec-44d6-9581-85d179c3c2fe",
+      "destination": "Paris",
+      "start_date": "2026-11-08",
+      "end_date": "2026-11-10",
+      "interruption": "Browser reload immediately after approving the synthetic-trip disclosure",
+      "committed_before_resume": true,
+      "unfinished_request_restored": true,
+      "visible_form_destination_changed_to": "Bali",
+      "resumed_destination": "Paris",
+      "resumed_trip_id_unchanged": true,
+      "display_days": 3
+    }
+  },
+  "database_postconditions": {
+    "trips": 2,
+    "creation_receipts": 2,
+    "matching_trip_and_request_ids": 2,
+    "bali_trips": 0,
+    "searches": 0,
+    "workflow_rows": 0
+  },
+  "dashboard": {
+    "two_draft_cards": true,
+    "dates_match_database": true
+  },
+  "validation": {
+    "web_tests": 632,
+    "quality_tasks": 11,
+    "focused_calendar_and_dashboard_tests": 11
+  },
+  "limits": [
+    "Real AI job interruption was not exercised; planning remains paused.",
+    "Cross-account authenticated browser/API privacy testing remains pending.",
+    "Native signed-device acceptance remains pending."
+  ],
+  "production_changed": false,
+  "provider_flags_activated": false,
+  "cleanup": "Two synthetic drafts intentionally retained for the next privacy test."
+}

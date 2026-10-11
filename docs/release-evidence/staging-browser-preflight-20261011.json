@@ -57,7 +57,7 @@
       }
     ],
     "login_form_observed_in_browser": true,
-    "authenticated_acceptance": "Login and protected dashboard passed; creation/recovery, cross-account privacy and deletion journeys still pending"
+    "authenticated_acceptance": "Sign-in, saved drafts, pause-safe retry and committed-response-loss creation recovery passed; cross-account privacy and account deletion remain pending"
   },
   "auth_hooks": "None configured in staging dashboard",
   "auth_url_configuration": {
@@ -84,7 +84,8 @@
     "send_event": "mail.send, recovery",
     "recipient": "Current admin test user",
     "provider": "Supabase default SMTP; custom SMTP disabled",
-    "inbox_delivery": "Not verified",
+    "inbox_delivery": "Owner confirmed received",
     "agent_sent_email": false
-  }
+  },
+  "trip_recovery_receipt": "docs/release-evidence/staging-trip-recovery-20261011.json"
 }
