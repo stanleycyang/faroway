@@ -1,0 +1,23 @@
+{
+  "status": "Registered follow-ups; no hosted SQL executed",
+  "bootstrap_sha256": "09b820436a77967f95024abf4f724f4f2f1bb1d3378ee33b73656593ba729939",
+  "application_order": [
+    {
+      "path": "supabase/migrations/20261011045031_account_and_push.sql",
+      "source": "supabase/release-candidate/account-and-push.sql",
+      "sha256": "f40d6c7509005fde86b0c8b5c1b9304fc774db6148017447150868a91e4d8eb6",
+      "applied": false
+    },
+    {
+      "path": "supabase/migrations/20261011045040_trip_creation_recovery.sql",
+      "source": "supabase/release-candidate/trip-creation-recovery.sql",
+      "sha256": "5d297725a25557476903f0e69d792c520168896f95a086e7bfa3884630520939",
+      "applied": false
+    }
+  ],
+  "constraints": [
+    "Do not replay the fresh-install bootstrap on a populated database.",
+    "Apply only these reviewed follow-ups after target/schema and legacy-registration checks.",
+    "Production requires a separate migration ledger, backup and compatible application cutover."
+  ]
+}

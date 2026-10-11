@@ -40,12 +40,11 @@ export function VibeSelector({ selected, onSelect, maxSelections = 5 }: VibeSele
               onPress={() => toggleVibe(vibe.id)}
               style={[styles.vibeButton, isSelected && styles.vibeButtonSelected]}
               activeOpacity={0.7}
-              accessibilityRole="button"
+              accessibilityRole="checkbox"
               accessibilityLabel={`${vibe.label} travel vibe`}
-              accessibilityState={{
-                selected: isSelected,
-                disabled: !isSelected && selected.length >= maxSelections,
-              }}
+              aria-checked={isSelected}
+              aria-disabled={!isSelected && selected.length >= maxSelections}
+              disabled={!isSelected && selected.length >= maxSelections}
             >
               <Text style={styles.vibeEmoji}>{vibe.emoji}</Text>
               <Text style={[styles.vibeLabel, isSelected && styles.vibeLabelSelected]}>

@@ -40,7 +40,7 @@ try:
     # Historical keyed creation must be adopted even after an edited brief.
     legacy = str(uuid.uuid4())
     sql(f"INSERT INTO trips(id,user_id,destination,start_date,end_date,preferences) VALUES('{legacy}','{owner}','Edited Rome','2099-06-01','2099-06-03','{{\"creationRequestHash\":\"{'b'*64}\"}}');")
-    sql((ROOT/'supabase/release-candidate/trip-creation-recovery.sql').read_text())
+    sql((ROOT/json.loads((ROOT/'supabase/release-candidate/trip-creation-review.json').read_text())['registered_migration']).read_text())
     assert create(legacy, fingerprint='b'*64)['trip']['destination'] == 'Edited Rome'
     print('PASS adoption of existing keyed identities without rewriting edited trips', flush=True)
     for role in ['anon', 'authenticated']:
@@ -64,7 +64,7 @@ try:
     create(fresh, travelers=0, ok=False)
     assert sql(f"SELECT count(*) FROM trip_creation_requests WHERE request_key='{fresh}';") == '0'
     assert create(fresh)['outcome'] == 'created'
-    sql((ROOT/'supabase/release-candidate/account-and-push.sql').read_text())
+    sql((ROOT/json.loads((ROOT/'supabase/release-candidate/review.json').read_text())['registered_migration']).read_text())
     deleting = str(uuid.uuid4())
     sql(f"SELECT claim_account_deletion('{owner}','{'d'*64}','{deleting}');")
     create(str(uuid.uuid4()), ok=False)

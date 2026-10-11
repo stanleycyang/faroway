@@ -1,5 +1,5 @@
 {
-  "status": "review candidate; NOT applied or activated",
+  "status": "registered and locally rehearsed; NOT applied or activated",
   "base": "4825851cc38d61c6c0c378a7d51b67712f7945af",
   "sql": "supabase/release-candidate/trip-creation-recovery.sql",
   "sql_sha256": "5d297725a25557476903f0e69d792c520168896f95a086e7bfa3884630520939",
@@ -10,5 +10,7 @@
     "Rehearse with the actual staging schema and review existing keyed-trip backfill before application.",
     "Retain deleted-trip tombstones while clients may replay; account deletion cascades them.",
     "Approve production SQL, deployment hold and cutover separately; do not blanket-push migrations."
-  ]
+  ],
+  "registered_migration": "supabase/migrations/20261011045040_trip_creation_recovery.sql",
+  "registered_migration_sha256": "5d297725a25557476903f0e69d792c520168896f95a086e7bfa3884630520939"
 }
