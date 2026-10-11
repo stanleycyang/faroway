@@ -35,7 +35,7 @@
     "push_consent_revision_and_optout_rollback_canary": "passed",
     "account_deletion_claim_and_proof_rollback_canary": "passed",
     "post_canary_users_trips_tokens_receipts": 0,
-    "browser_auth_api_acceptance": "pending",
+    "browser_auth_api_acceptance": "Auth sign-in and protected dashboard passed; full API creation/recovery/privacy/deletion acceptance remains pending",
     "signed_device_acceptance": "pending",
     "helper_regression": "passed",
     "auth_redirect_configuration": "Staging Site URL and two exact callbacks saved and verified after dashboard reload; production unchanged."

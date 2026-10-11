@@ -57,7 +57,7 @@
       }
     ],
     "login_form_observed_in_browser": true,
-    "authenticated_acceptance": "pending owner-created confirmed test users"
+    "authenticated_acceptance": "Login and protected dashboard passed; creation/recovery, cross-account privacy and deletion journeys still pending"
   },
   "auth_hooks": "None configured in staging dashboard",
   "auth_url_configuration": {
@@ -69,5 +69,22 @@
       "https://faroway-31yb7p512-testimonio.vercel.app/auth/callback"
     ],
     "production_changed": false
+  },
+  "authenticated_login": {
+    "state": "passed",
+    "latest_signin_utc": "2026-10-11T22:38:49.208034Z",
+    "accounts_with_signin": 1,
+    "protected_dashboard": "Rendered signed-in test account and zero owned trips",
+    "password_changed_by_agent": false,
+    "private_api_navigation": "Browser blocked direct document navigation with ERR_BLOCKED_BY_CLIENT; not claimed as API acceptance."
+  },
+  "email_recovery": {
+    "requested_at_utc": "2026-10-11T22:36:30Z",
+    "auth_status": 200,
+    "send_event": "mail.send, recovery",
+    "recipient": "Current admin test user",
+    "provider": "Supabase default SMTP; custom SMTP disabled",
+    "inbox_delivery": "Not verified",
+    "agent_sent_email": false
   }
 }
