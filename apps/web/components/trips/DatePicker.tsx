@@ -3,6 +3,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { DayPicker, type DateRange } from "react-day-picker";
 import { format } from "date-fns";
+import { getTripDuration } from "@/lib/trips/date-duration";
 import { Calendar } from "lucide-react";
 import { useModalFocusTrap } from "@/hooks/useModalFocusTrap";
 import { cn } from "@/lib/utils";
@@ -80,24 +81,9 @@ export function DatePicker({
     closeCalendar();
   };
 
-  const getDuration = () => {
-    if (!startDate || !endDate) return null;
-    return (
-      Math.ceil(
-        (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
-      ) + 1
-    );
-  };
-
-  const getDraftDuration = () => {
-    if (!draftRange?.from || !draftRange?.to) return null;
-    return (
-      Math.ceil(
-        (draftRange.to.getTime() - draftRange.from.getTime()) /
-          (1000 * 60 * 60 * 24),
-      ) + 1
-    );
-  };
+  const getDuration = () => getTripDuration(startDate, endDate);
+  const getDraftDuration = () =>
+    getTripDuration(draftRange?.from, draftRange?.to);
 
   return (
     <div className={cn("space-y-4", className)}>
