@@ -18,7 +18,7 @@ The Vercel staging URL/ref, separately scoped server credential metadata, planni
 
 ## Local work reconciliation
 
-The original dirty workspace remains intact. Its 53 tracked changes and 52 untracked files were compared individually with the candidate, with per-file diffs and an inventory retained in the sibling backup directory.
+The original local work is preserved in stash `b43c4370af240ba8f761af70b5c463a0a2f14ab2` (named "Preserved local September work before PR consolidation 2026-10-11") and the sibling `faroway-review-backup-20261010` archive. Its 53 tracked changes and 52 untracked files were compared individually with the candidate. The stash tracked diff matches the original backup SHA-256, and all 52 untracked files were verified. The workspace now follows consolidated `main`; the original branch `fix/production-review-regressions-20260904` is retained. Do not blindly apply the old stash onto main: use that preserved branch or a separate worktree for the deferred reconciliation.
 
 Retained now: provider price/currency normalization and decimal preservation; AI hotel schema stripping unverified prices, ratings and outbound URLs; prevention of an invented cross-currency complete trip total; CORS support for idempotency/cache headers; accessible checked/disabled vibe choices. The earlier PR34 already retained bounded body reads, durable creation identities, account-scoped recovery and offline mutation retention.
 
@@ -27,3 +27,11 @@ Deferred with source preserved: the September alternate web/native planning jour
 ## Remaining production release work
 
 Rehearse the registered follow-ups on approved staging, validate server credential provenance without exposing values, and obtain signed-device acceptance. Prepare a production-specific migration ledger and backup, controlled pause, positive old-workflow drain and compatible rollback. Apply reviewed SQL in dependency order and deploy a paused compatible artifact before removing the Git hold or unpausing planning. Optional booking, push delivery, Apple deletion and live paid-provider gates stay off until their separate acceptance checks pass.
+
+## Completed code checkpoint
+
+PR34 merged into the candidate at `3b9d8a6a0efa3349ae116daf0423f15bc95869d8`; its configured, protected staging preview is READY at deployment `dpl_JA8K3gXkCNSbbrcMZ3w1tkRdTSsx`. PR33 merged the identical tested tree into main at `06f1c0d5b34a3cc22fcd38e5195f6f308921517d`. The superseded PR stack and PR18 are retired; source branches remain available.
+
+Validation passed: all 11 quality tasks; 621 web, 315 mobile, 115 shared-package and 8 script tests (1,059 total); all five disposable PostgreSQL suites; 28 checkout/Places and 32 full-app recovery browser cases. Frozen dependency installation required no changes in the review worktree. The consolidation commits use `[skip actions]`, so hosted Actions are not claimed as validation and consume no runner minutes for these pushes.
+
+The production deployment remains `dpl_2RFYSiq4ynRTt67okcCFkBTUwfyV`, source `5a8eadf06f596f81e8bcc0f4d90d3e58518c83eb`. The main Git deployment hold prevents this code merge from releasing the schema-dependent application. Hosted schemas and activation settings were not changed.
