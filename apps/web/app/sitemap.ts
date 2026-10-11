@@ -8,7 +8,8 @@ import { getGuideSlugs } from "@/lib/destination-guides";
 
 import { getAllCostProfiles } from "@/lib/tools/cost-data";
 
-export const revalidate = 3600;
+// Public editorial content can refresh on access every six hours.
+export const revalidate = 21600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";

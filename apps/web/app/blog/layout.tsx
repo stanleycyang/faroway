@@ -3,7 +3,8 @@ import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
 
 // Blog content is managed in Supabase rather than committed with the app.
-export const revalidate = 3600;
+// Public editorial content can refresh on access every six hours.
+export const revalidate = 21600;
 
 export const metadata: Metadata = {
   title: {
