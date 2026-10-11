@@ -34,5 +34,31 @@
       "appleProvider": false,
       "googleProvider": false
     }
-  ]
+  ],
+  "refreshed_preview": {
+    "deployment": "dpl_BtBEScf1HdLKLjFE7rHHLHqPbW9S",
+    "sha": "d8249a41191defb902aa6e40063bcf085f5f914a",
+    "url": "https://faroway-4vc2sleeo-testimonio.vercel.app",
+    "stable_alias": "https://faroway-git-codex-release-candidate-testimonio.vercel.app",
+    "state": "READY",
+    "http_checks": [
+      {
+        "path": "/api/health",
+        "status": 200
+      },
+      {
+        "path": "/api/destinations/popular?limit=2",
+        "status": 200,
+        "destinationNames": ["Fixture Harbor", "Fixture Garden"]
+      },
+      {
+        "path": "/api/trips",
+        "status": 401
+      }
+    ],
+    "login_form_observed_in_browser": true,
+    "authenticated_acceptance": "pending owner-created confirmed test users"
+  },
+  "auth_hooks": "None configured in staging dashboard",
+  "auth_url_configuration": "Unsaved correction awaiting browser-policy approval"
 }
