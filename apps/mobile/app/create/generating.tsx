@@ -964,7 +964,9 @@ export default function GeneratingScreen() {
           {streaming.error && (
             <View style={styles.errorBox}>
               <Text style={styles.errorEmoji}>😔</Text>
-              <Text style={styles.errorTitle}>Something went wrong</Text>
+              <Text style={styles.errorTitle}>
+                {streaming.tripId ? 'Your trip is saved' : 'Planning interrupted'}
+              </Text>
               <Text style={styles.errorMessage}>{streaming.error}</Text>
               <View style={styles.errorActions}>
                 <TouchableOpacity

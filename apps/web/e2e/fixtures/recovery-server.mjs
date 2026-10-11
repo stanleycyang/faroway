@@ -25,6 +25,7 @@ for (const file of [
   if (existsSync(file))
     throw new Error("Recovery tests require a workspace without dotenv files");
 }
+let creations = new Map();
 let trips = new Map();
 let inserts = 0;
 let searches = new Map();
@@ -50,6 +51,7 @@ const server = createServer(async (req, res) => {
     res.end(JSON.stringify(value));
   };
   if (url.pathname === "/fixture/reset") {
+    creations = new Map();
     trips = new Map();
     inserts = 0;
     searches = new Map();
@@ -74,6 +76,35 @@ const server = createServer(async (req, res) => {
     return send({});
   }
   if (url.pathname === "/auth/v1/user") return send(user);
+  if (url.pathname === "/rest/v1/rpc/create_trip_once") {
+    const input = body.p_input;
+    const key = `${body.p_user_id}:${body.p_request_key}`;
+    const previous = creations.get(key);
+    if (previous) {
+      const trip = trips.get(previous.id);
+      if (!trip) return send({ outcome: "gone" });
+      if (previous.hash !== input.preferences.creationRequestHash)
+        return send({ outcome: "key_conflict" });
+      return send({ outcome: "replayed", trip });
+    }
+    if (trips.has(input.id))
+      return send({ code: "23505", message: "duplicate" }, 409);
+    const trip = {
+      ...input,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      is_shared: false,
+      share_token: null,
+      search_id: null,
+    };
+    creations.set(key, {
+      id: trip.id,
+      hash: input.preferences.creationRequestHash,
+    });
+    trips.set(trip.id, trip);
+    inserts++;
+    return send({ outcome: "created", trip });
+  }
   if (url.pathname === "/rest/v1/rpc/update_trip_brief") {
     const trip = trips.get(body.p_trip_id);
     if (
@@ -287,6 +318,11 @@ const server = createServer(async (req, res) => {
         `0-${Math.max(0, matches.length - 1)}/${matches.length}`,
       );
       return send(matches[0] || null);
+    }
+    if (req.method === "DELETE") {
+      for (const row of matches) trips.delete(row.id);
+      res.setHeader("Content-Range", `*/${matches.length}`);
+      return send(null);
     }
     if (req.headers.accept?.includes("vnd.pgrst.object"))
       return matches[0] ? send(matches[0]) : send({ code: "PGRST116" }, 406);

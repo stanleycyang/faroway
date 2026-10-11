@@ -1,3 +1,4 @@
+jest.mock('../../constants/api', () => ({ API_TIMEOUT: 90_000 }));
 jest.mock('../../lib/offline/storage', () => ({
   offlineStorage: {},
 }));

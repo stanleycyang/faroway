@@ -6,12 +6,16 @@ export async function requestPlanningConsent() {
   const client = createClient();
   const initial = await client.auth.getSession();
   const userId = initial.data.session?.user.id;
-  if (!userId) throw new Error("Sign in before planning.");
-  const response = await fetch("/api/ai/disclosure", { cache: "no-store" });
+  if (initial.error || !userId) throw new Error("Sign in before planning.");
+  const response = await fetch("/api/ai/disclosure", {
+    cache: "no-store",
+    signal: AbortSignal.timeout(15_000),
+  });
   if (!response.ok)
     throw new Error("AI sharing information is unavailable. Please retry.");
   const disclosure = await response.json();
   if (
+    !disclosure ||
     typeof disclosure.version !== "string" ||
     !/^[a-zA-Z0-9-]{1,100}$/.test(disclosure.version) ||
     typeof disclosure.message !== "string" ||

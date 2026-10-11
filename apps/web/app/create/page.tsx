@@ -302,6 +302,7 @@ export default function CreateTripPage() {
       setPendingRequest(payload);
       const response = await fetch("/api/trips", {
         method: "POST",
+        signal: AbortSignal.timeout(25_000),
         headers: await planningHeaders(),
         body: JSON.stringify(payload),
       });
@@ -318,6 +319,7 @@ export default function CreateTripPage() {
 
       const genResponse = await fetch(`/api/trips/${trip.id}/generate`, {
         method: "POST",
+        signal: AbortSignal.timeout(25_000),
         headers: await planningHeaders(),
         body: JSON.stringify({
           preferences: {

@@ -1,6 +1,8 @@
 import type { SearchInput } from '@faroway/types';
 import { API_BASE_URL } from '../constants/api';
 import { withPlanningConsent } from '../lib/planningConsent';
+import { requestWithTimeout } from './request';
+import { pendingTripCreation, finishTripCreation } from '../lib/tripCreationRecovery';
 
 export class GenerationNotStartedError extends Error {}
 
@@ -40,14 +42,19 @@ export async function createAndStartTrip(
     },
   });
   return withPlanningConsent(async (authorization) => {
-    const result = await checked(
-      await fetch(`${API_BASE_URL}/api/trips`, {
+    // Recheck account/cancellation before persisting an account-scoped identity.
+    await authorization.headers();
+    const receipt = await pendingTripCreation(authorization.userId, body);
+    const result = await requestWithTimeout(
+      `${API_BASE_URL}/api/trips`,
+      {
         method: 'POST',
         headers: await authorization.headers(),
         signal: authorization.signal,
-        body,
-      }),
-      'Failed to save trip'
+        body: JSON.stringify({ ...JSON.parse(body), requestId: receipt.requestId }),
+      },
+      (response) => checked(response, 'Failed to save trip'),
+      25_000
     );
     const id = result?.trip?.id;
     if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id))
@@ -55,46 +62,49 @@ export async function createAndStartTrip(
         'The saved trip response was incomplete. Check your trips before trying again.'
       );
     onCreated(id);
-    await checked(
-      await fetch(`${API_BASE_URL}/api/trips/${encodeURIComponent(id)}/generate`, {
+    await requestWithTimeout(
+      `${API_BASE_URL}/api/trips/${encodeURIComponent(id)}/generate`,
+      {
         method: 'POST',
         headers: await authorization.headers(),
         signal: authorization.signal,
-      }),
-      'Failed to start generation'
+      },
+      (response) => checked(response, 'Failed to start generation'),
+      25_000
     );
+    await finishTripCreation(authorization.userId, receipt.requestId);
     return id;
   }, signal);
 }
 
-export async function regenerateTrip(tripId: string) {
-  return withPlanningConsent(async ({ headers, signal }) =>
-    checked(
-      await fetch(`${API_BASE_URL}/api/trips/${encodeURIComponent(tripId)}/generate`, {
-        method: 'POST',
-        headers: await headers(),
-        signal,
-        body: '{}',
-      }),
-      'Failed to generate itinerary'
-    )
+export async function regenerateTrip(tripId: string, parentSignal?: AbortSignal) {
+  return withPlanningConsent(
+    async ({ headers, signal }) =>
+      requestWithTimeout(
+        `${API_BASE_URL}/api/trips/${encodeURIComponent(tripId)}/generate`,
+        { method: 'POST', headers: await headers(), signal, body: '{}' },
+        (response) => checked(response, 'Failed to generate itinerary'),
+        25_000
+      ),
+    parentSignal
   );
 }
 
-export async function recoverUnstartedTrip(tripId: string) {
+export async function recoverUnstartedTrip(tripId: string, signal?: AbortSignal) {
   const { supabase } = await import('../lib/supabase');
   const { data, error } = await supabase.auth.getSession();
   if (error || !data.session) throw new Error('Sign in to recover this trip.');
-  const result = await checked(
-    await fetch(`${API_BASE_URL}/api/trips/${encodeURIComponent(tripId)}`, {
-      headers: { Authorization: `Bearer ${data.session.access_token}` },
-    }),
-    'Could not verify the saved trip. Reconnect to check its status.'
+  const result = await requestWithTimeout(
+    `${API_BASE_URL}/api/trips/${encodeURIComponent(tripId)}`,
+    { headers: { Authorization: `Bearer ${data.session.access_token}` }, signal },
+    (response) =>
+      checked(response, 'Could not verify the saved trip. Reconnect to check its status.'),
+    15_000
   );
   const trip = result?.trip ?? result;
-  if (trip?.status !== 'draft' || trip.search_id) return; // Existing/uncertain attempt: reconnect only.
+  if (trip?.status !== 'draft' || trip.search_id) return;
   const current = await supabase.auth.getSession();
-  if (current.data.session?.user.id !== data.session.user.id)
+  if (current.error || current.data.session?.user.id !== data.session.user.id)
     throw new Error('Your account changed. Reopen your saved trip.');
-  await regenerateTrip(tripId);
+  await regenerateTrip(tripId, signal);
 }

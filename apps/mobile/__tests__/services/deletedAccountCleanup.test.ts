@@ -1,3 +1,6 @@
+jest.mock('../../lib/tripCreationRecovery', () => ({
+  discardTripCreation: jest.fn(async () => {}),
+}));
 const forget = jest.fn();
 const session = jest.fn();
 const signOut = jest.fn();

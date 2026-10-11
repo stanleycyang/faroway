@@ -938,3 +938,61 @@ test("AI sharing decline makes no trip or planning request; a deliberate retry s
   await expect(page).toHaveURL(new RegExp(`/trips/${id}$`));
   expect(generations).toBe(1);
 });
+
+test("a delayed create retry cannot recreate a deleted trip", async ({
+  context,
+  request,
+}) => {
+  const first = await context.request.post("/api/trips", { data: payload });
+  expect(first.status()).toBe(201);
+  expect((await context.request.delete(`/api/trips/${id}`)).ok()).toBe(true);
+  const replay = await context.request.post("/api/trips", { data: payload });
+  expect(replay.status()).toBe(410);
+  expect((await replay.json()).code).toBe("CREATION_DELETED");
+  const state = await (
+    await request.get("http://127.0.0.1:4401/fixture/state")
+  ).json();
+  expect(state.trips).toHaveLength(0);
+  expect(state.inserts).toBe(1);
+});
+
+test("a stalled creation releases the UI and keeps the same request for retry", async ({
+  page,
+  request,
+}) => {
+  // Shorten only the write deadline; production uses 25 seconds.
+  await page.addInitScript(() => {
+    const timeout = AbortSignal.timeout.bind(AbortSignal);
+    AbortSignal.timeout = (ms) => timeout(ms === 25_000 ? 200 : ms);
+  });
+  await page.goto("/create");
+  await page.evaluate(
+    ({ userId, value }) =>
+      localStorage.setItem(
+        `faroway:pending-create:${userId}`,
+        JSON.stringify(value),
+      ),
+    { userId: user.id, value: payload },
+  );
+  await page.reload();
+  await page.route("**/api/trips", (route) => {
+    if (route.request().method() !== "POST") return route.continue();
+    // Leave this request unanswered. Its AbortSignal must release the screen.
+    return undefined;
+  });
+  await page.getByRole("button", { name: "Resume saved trip" }).click();
+  await expect(page.getByRole("alert")).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Resume saved trip" }),
+  ).toBeEnabled();
+  const saved = await page.evaluate(
+    (userId) =>
+      JSON.parse(localStorage.getItem(`faroway:pending-create:${userId}`)!),
+    user.id,
+  );
+  expect(saved.requestId).toBe(id);
+  expect(
+    (await (await request.get("http://127.0.0.1:4401/fixture/state")).json())
+      .inserts,
+  ).toBe(0);
+});

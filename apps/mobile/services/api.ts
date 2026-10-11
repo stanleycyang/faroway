@@ -3,7 +3,8 @@
  * Centralized API client for the mobile app
  */
 
-import { API_BASE_URL, API_TIMEOUT } from '../constants/api';
+import { API_BASE_URL } from '../constants/api';
+import { requestWithTimeout, RequestTimeoutError } from './request';
 import type {
   ApiResponse,
   Trip,
@@ -39,9 +40,6 @@ export function getAuthToken(): string | null {
  * Base fetch wrapper with auth and error handling
  */
 async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), API_TIMEOUT);
-
   try {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
@@ -52,15 +50,11 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
       headers['Authorization'] = `Bearer ${authToken}`;
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      ...options,
-      headers,
-      signal: controller.signal,
-    });
-
-    clearTimeout(timeoutId);
-
-    const parsed = await parseApiResponseBody(response);
+    const { response, parsed } = await requestWithTimeout(
+      `${API_BASE_URL}${endpoint}`,
+      { ...options, headers },
+      async (response) => ({ response, parsed: await parseApiResponseBody(response) })
+    );
 
     if (!parsed.ok) {
       return {
@@ -79,10 +73,11 @@ async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise
 
     return { data: parsed.data as T };
   } catch (error) {
-    clearTimeout(timeoutId);
-
     if (error instanceof Error) {
-      if (error.name === 'AbortError') {
+      if (
+        error instanceof RequestTimeoutError ||
+        (error.name === 'AbortError' && !options.signal?.aborted)
+      ) {
         return { error: 'Request timed out', code: 'TIMEOUT' };
       }
       return { error: error.message, code: 'NETWORK_ERROR' };

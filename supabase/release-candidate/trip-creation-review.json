@@ -1,0 +1,14 @@
+{
+  "status": "review candidate; NOT applied or activated",
+  "base": "4825851cc38d61c6c0c378a7d51b67712f7945af",
+  "sql": "supabase/release-candidate/trip-creation-recovery.sql",
+  "sql_sha256": "5d297725a25557476903f0e69d792c520168896f95a086e7bfa3884630520939",
+  "frozen_bootstrap_sha256_unchanged": "09b820436a77967f95024abf4f724f4f2f1bb1d3378ee33b73656593ba729939",
+  "required_before": "Updated keyed-create API and native planning client deployment",
+  "review_requirements": [
+    "Review and register this exact transaction separately from the frozen bootstrap and account/push candidate.",
+    "Rehearse with the actual staging schema and review existing keyed-trip backfill before application.",
+    "Retain deleted-trip tombstones while clients may replay; account deletion cascades them.",
+    "Approve production SQL, deployment hold and cutover separately; do not blanket-push migrations."
+  ]
+}

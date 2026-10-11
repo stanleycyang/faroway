@@ -55,7 +55,10 @@ export function TripCheckout({
   const endpoint = `/api/trips/${encodeURIComponent(tripId)}/checkout`;
   const refresh = useCallback(async () => {
     try {
-      const response = await fetch(endpoint, { cache: "no-store" });
+      const response = await fetch(endpoint, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(15_000),
+      });
       if (!response.ok) throw new Error();
       const data = await response.json();
       setEnabled(data.enabled === true);

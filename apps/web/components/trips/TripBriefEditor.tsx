@@ -110,6 +110,7 @@ export function TripBriefEditor({
     try {
       const response = await fetch(`/api/trips/${trip.id}`, {
         method: "PATCH",
+        signal: AbortSignal.timeout(20_000),
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           expectedUpdatedAt: trip.updated_at,

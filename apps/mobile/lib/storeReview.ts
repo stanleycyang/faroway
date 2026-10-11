@@ -21,22 +21,39 @@ export function isValidStoreUrl(url: string, platform: typeof Platform.OS = Plat
   try {
     const parsed = new URL(url);
 
+    if (parsed.username || parsed.password) return false;
     if (platform === 'ios') {
+      const validHost = ['apps.apple.com', 'itunes.apple.com'].includes(parsed.hostname);
       return (
-        parsed.protocol === 'itms-apps:' ||
-        parsed.hostname === 'apps.apple.com' ||
-        parsed.hostname === 'itunes.apple.com'
+        validHost &&
+        ['https:', 'itms-apps:'].includes(parsed.protocol) &&
+        /(?:^|\/)id[1-9][0-9]*(?:$|\/)/.test(parsed.pathname)
       );
     }
-
     if (platform === 'android') {
-      return parsed.protocol === 'market:' || parsed.hostname === 'play.google.com';
+      const listing =
+        parsed.protocol === 'market:'
+          ? parsed.hostname === 'details'
+          : parsed.protocol === 'https:' &&
+            parsed.hostname === 'play.google.com' &&
+            parsed.pathname === '/store/apps/details';
+      return (
+        listing &&
+        /^[a-zA-Z][a-zA-Z0-9_]*(?:\.[a-zA-Z][a-zA-Z0-9_]*)+$/.test(
+          parsed.searchParams.get('id') || ''
+        )
+      );
     }
 
     return false;
   } catch {
     return false;
   }
+}
+
+export function hasRealStoreListing(platform: typeof Platform.OS = Platform.OS) {
+  const url = StoreReview.storeUrl() || envStoreUrl(platform);
+  return Boolean(url && isValidStoreUrl(url, platform));
 }
 
 export function getStoreReviewFallbackUrl(platform: typeof Platform.OS = Platform.OS) {
