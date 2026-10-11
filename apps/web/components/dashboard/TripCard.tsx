@@ -1,3 +1,5 @@
+import { differenceInCalendarDays } from "date-fns";
+import { parseTripDate } from "@/lib/trips/date-duration";
 import Link from "next/link";
 import Image from "next/image";
 import { IMAGE_PATHS, getImageUrl } from "@faroway/constants";
@@ -94,8 +96,8 @@ const statusConfig: Record<
 };
 
 function formatDateRange(startDate: string, endDate: string): string {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = parseTripDate(startDate);
+  const end = parseTripDate(endDate);
 
   const options: Intl.DateTimeFormatOptions = {
     month: "short",
@@ -122,9 +124,8 @@ function getDaysUntil(startDate: string): {
   isPast: boolean;
 } {
   const now = new Date();
-  const start = new Date(startDate);
-  const diffTime = start.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const start = parseTripDate(startDate);
+  const diffDays = differenceInCalendarDays(start, now);
 
   if (diffDays < 0) {
     return { text: "Past trip", isUpcoming: false, isPast: true };

@@ -1,4 +1,5 @@
 "use client";
+import { getTripDuration, parseTripDate } from "@/lib/trips/date-duration";
 import { requestPlanningConsent } from "@/lib/ai/planning-consent-client";
 
 import { BookingChecklist } from "@/components/trips/BookingChecklist";
@@ -425,10 +426,9 @@ export function TripDetailClient({
   // Trip length (days) from date range — used for nights estimate during generation / hotel card
   const skeletonDayCount = useMemo(() => {
     if (!trip) return 3;
-    const start = new Date(trip.start_date);
-    const end = new Date(trip.end_date);
-    const diff =
-      Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const start = parseTripDate(trip.start_date);
+    const end = parseTripDate(trip.end_date);
+    const diff = getTripDuration(start, end) ?? 3;
     return Math.max(1, Math.min(diff, 14));
   }, [trip]);
 

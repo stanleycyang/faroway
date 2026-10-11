@@ -1,9 +1,20 @@
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
-import { getTripDuration } from "@/lib/trips/date-duration";
+import {
+  getTripDuration,
+  parseTripDate,
+  formatTripDate,
+} from "@/lib/trips/date-duration";
 
 describe("calendar trip duration", () => {
   beforeAll(() => vi.stubEnv("TZ", "America/Los_Angeles"));
   afterAll(() => vi.unstubAllEnvs());
+  it("keeps saved date-only values on their chosen local calendar dates", () => {
+    expect(formatTripDate("2026-11-01")).toBe("Nov 1, 2026");
+    expect(formatTripDate("2026-11-04")).toBe("Nov 4, 2026");
+    expect(
+      getTripDuration(parseTripDate("2026-11-01"), parseTripDate("2026-11-04")),
+    ).toBe(4);
+  });
   it("does not add a day across the fall DST change", () => {
     expect(
       getTripDuration(

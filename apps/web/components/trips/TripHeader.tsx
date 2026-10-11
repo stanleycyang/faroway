@@ -1,4 +1,9 @@
 "use client";
+import {
+  formatTripDate,
+  getTripDuration,
+  parseTripDate,
+} from "@/lib/trips/date-duration";
 
 import React from "react";
 import Link from "next/link";
@@ -38,22 +43,7 @@ export function TripHeader({
   backUrl = "/dashboard",
   showActions = true,
 }: TripHeaderProps) {
-  const formatDate = (dateStr: string) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  };
-
-  const getDuration = () => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const days =
-      Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-    return days;
-  };
+  const formatDate = formatTripDate;
 
   const formatCost = (amount: number, currency: string) => {
     return new Intl.NumberFormat("en-US", {
@@ -64,7 +54,10 @@ export function TripHeader({
     }).format(amount);
   };
 
-  const duration = getDuration();
+  const duration = getTripDuration(
+    parseTripDate(startDate),
+    parseTripDate(endDate),
+  );
 
   return (
     <div className="bg-gradient-to-b from-gray-50 to-white border-b border-gray-200">
@@ -140,9 +133,11 @@ export function TripHeader({
               <p className="text-sm font-semibold text-gray-900">
                 {formatDate(startDate)} – {formatDate(endDate)}
               </p>
-              <p className="text-xs text-gray-500">
-                {duration} day{duration > 1 ? "s" : ""}
-              </p>
+              {duration !== null && (
+                <p className="text-xs text-gray-500">
+                  {duration} day{duration > 1 ? "s" : ""}
+                </p>
+              )}
             </div>
           </div>
 
