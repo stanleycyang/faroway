@@ -12,7 +12,7 @@ export function getBlogSupabase(): SupabaseClient | null {
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (!url || !key) {
       console.warn(
-        "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY — blog queries will return empty results",
+        "Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY — blog database client is unavailable",
       );
       return null;
     }
