@@ -1,0 +1,38 @@
+{
+  "deployment": "dpl_JA8K3gXkCNSbbrcMZ3w1tkRdTSsx",
+  "checks": [
+    {
+      "path": "/api/health",
+      "status": 200
+    },
+    {
+      "path": "/api/ai/disclosure",
+      "status": 200
+    },
+    {
+      "path": "/api/destinations/popular?limit=2",
+      "status": 200,
+      "destinationNames": ["Fixture Harbor", "Fixture Garden"]
+    },
+    {
+      "path": "/api/trips",
+      "status": 401
+    },
+    {
+      "path": "/auth/login",
+      "title": "Sign In | Faroway",
+      "headings": ["Welcome back"],
+      "hasEmail": true,
+      "hasPassword": true
+    },
+    {
+      "path": "staging Auth settings",
+      "status": 200,
+      "disableSignup": false,
+      "emailAutoconfirm": false,
+      "emailProvider": true,
+      "appleProvider": false,
+      "googleProvider": false
+    }
+  ]
+}

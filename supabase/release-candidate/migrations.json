@@ -13,6 +13,12 @@
       "source": "supabase/release-candidate/trip-creation-recovery.sql",
       "sha256": "5d297725a25557476903f0e69d792c520168896f95a086e7bfa3884630520939",
       "applied": false
+    },
+    {
+      "path": "supabase/migrations/20261011052745_pin_helper_search_paths.sql",
+      "source": "supabase/release-candidate/helper-search-paths.sql",
+      "sha256": "510697e0bba4ecf3345980d2ef9a70f5a867100afbd19c6417dc69dab43dd36c",
+      "applied": false
     }
   ],
   "constraints": [

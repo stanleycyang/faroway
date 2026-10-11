@@ -18,6 +18,13 @@
       "hosted_version": "20261011051443",
       "executed_sha256": "a1539f2d2d5e2805766158c439aec1087944054022c6e168669614a264b00e90",
       "execution_change": "Only SET LOCAL lock_timeout=2s and statement_timeout=60s added inside the reviewed transaction."
+    },
+    {
+      "path": "supabase/migrations/20261011052745_pin_helper_search_paths.sql",
+      "source_sha256": "510697e0bba4ecf3345980d2ef9a70f5a867100afbd19c6417dc69dab43dd36c",
+      "hosted_version": "20261011052918",
+      "executed_sha256": "53b241dd38089b9f1f92fff78886c44ae66994cbce42e08193ed7e2819c13ca0",
+      "execution_change": "Hosted SQL retains historical trailing whitespace from cleanup function bodies; registered local SQL normalizes trailing whitespace only. Transaction settings and SQL behavior are identical."
     }
   ],
   "verification": {
@@ -29,17 +36,15 @@
     "account_deletion_claim_and_proof_rollback_canary": "passed",
     "post_canary_users_trips_tokens_receipts": 0,
     "browser_auth_api_acceptance": "pending",
-    "signed_device_acceptance": "pending"
+    "signed_device_acceptance": "pending",
+    "helper_regression": "passed",
+    "auth_redirect_configuration": "Site URL localhost:3000 and empty allowlist; prepared correction awaits browser-policy confirmation"
   },
   "security_advisors": {
     "info": "Eight deliberately server-only RLS tables have no client policies; do not add client policies to silence this notice.",
-    "existing_function_search_path_warnings": [
-      "update_push_token_timestamp",
-      "cleanup_expired_anonymous_trips",
-      "update_updated_at_column",
-      "cleanup_old_workflow_data",
-      "normalize_destination"
-    ],
-    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable"
+    "existing_function_search_path_warnings": [],
+    "remediation": "https://supabase.com/docs/guides/database/database-linter?lint=0011_function_search_path_mutable",
+    "resolved_search_path_warnings": 5,
+    "checked_at_utc": "2026-10-11T05:29:19Z"
   }
 }

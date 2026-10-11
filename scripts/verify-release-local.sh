@@ -20,6 +20,7 @@ python3 scripts/planning-quality-eval.py
 python3 scripts/test-trip-attempt-fence.py
 python3 scripts/test-database-access-boundaries.py
 python3 scripts/test-staging-bootstrap.py
+python3 scripts/test-helper-search-paths.py
 python3 scripts/test-release-account-push.py
 python3 scripts/test-trip-creation-recovery.py
 cd apps/web

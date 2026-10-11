@@ -112,6 +112,10 @@ jobs:
         run: python3 scripts/test-staging-bootstrap.py
         timeout-minutes: 5
 
+      - name: Rehearse fixed helper search paths
+        run: python3 scripts/test-helper-search-paths.py
+        timeout-minutes: 5
+
       - name: Rehearse isolated account and push release candidate
         run: python3 scripts/test-release-account-push.py
         timeout-minutes: 5
