@@ -51,7 +51,8 @@
   "limits": [
     "Real AI job interruption was not exercised; planning remains paused.",
     "Cross-account authenticated browser/API privacy testing remains pending.",
-    "Native signed-device acceptance remains pending."
+    "Native signed-device acceptance remains pending.",
+    "The reload interrupted the create-and-start flow; individual creation/generation HTTP response timing was not captured."
   ],
   "production_changed": false,
   "provider_flags_activated": false,

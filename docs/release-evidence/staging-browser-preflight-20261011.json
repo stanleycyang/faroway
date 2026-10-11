@@ -57,7 +57,7 @@
       }
     ],
     "login_form_observed_in_browser": true,
-    "authenticated_acceptance": "Sign-in, saved drafts, pause-safe retry and committed-response-loss creation recovery passed; cross-account privacy and account deletion remain pending"
+    "authenticated_acceptance": "Sign-in, saved drafts, pause-safe retry and committed interrupted-creation replay passed; cross-account privacy and account deletion remain pending"
   },
   "auth_hooks": "None configured in staging dashboard",
   "auth_url_configuration": {
