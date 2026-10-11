@@ -56,3 +56,9 @@ it("does not reuse consent on retry or restoration", async () => {
   await requestPlanningConsent();
   expect(confirm).toHaveBeenCalledTimes(2);
 });
+
+it("rejects missing disclosure without presenting consent", async () => {
+  fetchMock.mockResolvedValue({ ok: true, json: async () => null });
+  await expect(requestPlanningConsent()).rejects.toThrow("verified");
+  expect(confirm).not.toHaveBeenCalled();
+});

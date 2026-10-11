@@ -44,7 +44,7 @@ export function BookingChecklist({
     async (requestId?: string) => {
       const response = await fetch(
         endpoint + (requestId ? `?requestId=${requestId}` : ""),
-        { cache: "no-store" },
+        { cache: "no-store", signal: AbortSignal.timeout(15_000) },
       );
       const value = await response.json();
       if (!response.ok)
@@ -117,6 +117,7 @@ export function BookingChecklist({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(command),
+        signal: AbortSignal.timeout(20_000),
       });
       const result = await response.json();
       if (!response.ok) throw new Error(result.error || "Save not confirmed.");

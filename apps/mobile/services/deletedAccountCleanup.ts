@@ -3,12 +3,14 @@ import { offlineStorage } from '../lib/offline';
 import { useUserStore } from '../stores/userStore';
 import { useTripStore } from '../stores/tripStore';
 import { devicePushConsent } from './pushConsentService';
+import { discardTripCreation } from '../lib/tripCreationRecovery';
 import { setAuthToken } from './api';
 
 /** Idempotent local cleanup for a server-confirmed deletion. Failures preserve
  * the recovery proof; another signed-in account is never cleared. */
 export async function cleanupDeletedAccount(userId: string) {
   await devicePushConsent.forgetDeletedAccount(userId);
+  await discardTripCreation(userId);
   const current = await supabase.auth.getSession();
   if (current.error) throw new Error('Local account cleanup needs another attempt.');
   const profileId = useUserStore.getState().user?.id;

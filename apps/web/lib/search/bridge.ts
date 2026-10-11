@@ -200,8 +200,8 @@ export interface MappedItinerary {
   activities: ActivityResult[];
   dining: DiningResult[];
   transport: TransportResult[];
-  totalEstimatedCost: number;
-  currency: string;
+  totalEstimatedCost?: number;
+  currency?: string;
 }
 
 /**
@@ -213,17 +213,9 @@ export function mapSearchResultsToItinerary(
 ): MappedItinerary {
   const days = (results.itinerary || []).map(mapDay);
 
-  // Sum daily costs + hotel cost + transport cost
-  const activityCost = days.reduce(
-    (sum: number, d: TripDay) => sum + (d.totalEstimatedCost?.amount || 0),
-    0,
-  );
-  const nights = days.length > 0 ? days.length - 1 : 0;
-  const hotelCost = topHotel ? topHotel.pricePerNight * nights : 0;
-  const transportCost = days.reduce(
-    (sum: number, d: TripDay) => sum + (d.transport?.price || 0),
-    0,
-  );
+  // The aggregator's daily estimate can include transport, and provider prices
+  // can use different currencies/quantities. Do not invent a complete total by
+  // adding these fields (or treating unknown hotel prices as zero).
 
   return {
     days,
@@ -232,7 +224,7 @@ export function mapSearchResultsToItinerary(
     activities: results.activities || [],
     dining: results.dining || [],
     transport: results.transport || [],
-    totalEstimatedCost: activityCost + hotelCost + transportCost,
-    currency: "USD",
+    totalEstimatedCost: undefined,
+    currency: undefined,
   };
 }

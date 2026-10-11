@@ -1,3 +1,4 @@
+import { requestWithTimeout } from '../services/request';
 import { reportedCount, reportedProgress } from '../lib/generationFacts';
 import {
   createAndStartTrip,
@@ -411,7 +412,8 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
     (async () => {
       try {
         let streamTripId = providedTripId;
-        if (streamTripId && restartUnstarted) await recoverUnstartedTrip(streamTripId);
+        if (streamTripId && restartUnstarted)
+          await recoverUnstartedTrip(streamTripId, abortController.signal);
 
         // If no tripId, create a trip and trigger generation first.
         // All three endpoints below now require Supabase bearer auth.
@@ -420,12 +422,13 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
             input,
             (id) => {
               // Preserve the receipt even if generation dispatch is interrupted.
-              setState((prev) => ({ ...prev, tripId: id }));
+              if (!abortController.signal.aborted) setState((prev) => ({ ...prev, tripId: id }));
             },
             abortController.signal
           );
         }
 
+        if (abortController.signal.aborted) return;
         if (!streamTripId) {
           throw new Error('No trip ID available');
         }
@@ -441,7 +444,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
           await pollGenerationStatus(streamTripId, abortController.signal, (progress) =>
             setState((prev) => ({ ...prev, ...progress }))
           );
-          onCompleteRef.current?.(blocksRef.current);
+          if (!abortController.signal.aborted) onCompleteRef.current?.(blocksRef.current);
           return;
         }
 
@@ -449,6 +452,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
         // This is more reliable than fetch for SSE in React Native
         const streamUrl = `${API_BASE_URL}/api/trips/${streamTripId}/stream`;
         const streamHeaders = await getAuthHeaders();
+        if (abortController.signal.aborted) return;
 
         await new Promise<void>((resolve, reject) => {
           const xhr = new XMLHttpRequest();
@@ -463,6 +467,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
 
           // Process incremental data as it arrives
           xhr.onprogress = () => {
+            if (abortController.signal.aborted) return;
             if (xhr.readyState >= 3 && xhr.responseText) {
               // Get only the new data since last progress event
               const newData = xhr.responseText.substring(processedLengthRef.current);
@@ -481,6 +486,10 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
           };
 
           xhr.onload = () => {
+            if (abortController.signal.aborted) {
+              reject(Object.assign(new Error('Cancelled'), { name: 'AbortError' }));
+              return;
+            }
             if (xhr.status >= 200 && xhr.status < 300) {
               // Process any remaining data in buffer
               if (sseBuffer.trim()) {
@@ -491,9 +500,20 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
               }
               resolve();
             } else {
-              reject(new Error(`Stream failed (HTTP ${xhr.status})`));
+              reject(
+                new Error(
+                  xhr.status === 401
+                    ? 'Sign in again to reconnect to your saved trip. Planning may still be running.'
+                    : extractApiErrorMessage(
+                        xhr.responseText || '',
+                        `Stream failed (HTTP ${xhr.status})`
+                      )
+                )
+              );
             }
           };
+
+          xhr.onabort = () => reject(Object.assign(new Error('Cancelled'), { name: 'AbortError' }));
 
           xhr.onerror = () => {
             reject(new Error('Network error during streaming'));
@@ -550,7 +570,7 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
   return state;
 }
 
-async function pollGenerationStatus(
+export async function pollGenerationStatus(
   tripId: string,
   signal: AbortSignal,
   update: (
@@ -560,21 +580,21 @@ async function pollGenerationStatus(
   ) => void
 ) {
   for (let attempt = 0; attempt < 150; attempt++) {
-    if (signal.aborted) return;
+    if (signal.aborted) throw Object.assign(new Error('Cancelled'), { name: 'AbortError' });
 
     const pollHeaders = await getAuthHeaders();
-    const response = await fetch(`${API_BASE_URL}/api/trips/${tripId}/generate`, {
-      method: 'GET',
-      headers: pollHeaders,
-      signal,
-    });
-    if (!response.ok) {
-      throw new Error(
-        await readApiErrorMessage(response, `Polling failed (HTTP ${response.status})`)
-      );
-    }
-
-    const data = await response.json();
+    const data = await requestWithTimeout(
+      `${API_BASE_URL}/api/trips/${tripId}/generate`,
+      { method: 'GET', headers: pollHeaders, signal },
+      async (response) => {
+        if (!response.ok)
+          throw new Error(
+            await readApiErrorMessage(response, `Polling failed (HTTP ${response.status})`)
+          );
+        return response.json();
+      },
+      15_000
+    );
     update({
       progress: reportedProgress(data.progress) ?? 0,
       step: data.step || 'running',
@@ -596,7 +616,18 @@ async function pollGenerationStatus(
       throw new Error(data.message || 'Generation failed');
     }
 
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    await new Promise<void>((resolve, reject) => {
+      const cancel = () => {
+        clearTimeout(timer);
+        reject(Object.assign(new Error('Cancelled'), { name: 'AbortError' }));
+      };
+      const timer = setTimeout(() => {
+        signal.removeEventListener('abort', cancel);
+        resolve();
+      }, 2000);
+      signal.addEventListener('abort', cancel, { once: true });
+      if (signal.aborted) cancel();
+    });
   }
 
   throw new Error('Generation polling timed out');

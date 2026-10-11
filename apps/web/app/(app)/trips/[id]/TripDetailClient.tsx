@@ -156,7 +156,9 @@ export function TripDetailClient({
   // Fetch trip data
   const fetchTrip = useCallback(async () => {
     try {
-      const res = await fetch(`/api/trips/${tripId}`);
+      const res = await fetch(`/api/trips/${tripId}`, {
+        signal: AbortSignal.timeout(15_000),
+      });
       if (!res.ok) {
         if (res.status === 401) {
           router.push("/auth/login?redirectTo=/trips/" + tripId);
@@ -188,7 +190,9 @@ export function TripDetailClient({
     if (checkingPlanning) return;
     setCheckingPlanning(true);
     try {
-      const response = await fetch(`/api/trips/${tripId}/generate`);
+      const response = await fetch(`/api/trips/${tripId}/generate`, {
+        signal: AbortSignal.timeout(15_000),
+      });
       if (!response.ok)
         throw new Error(
           "Status is temporarily unavailable. Your trip is saved; try checking again shortly.",
@@ -240,7 +244,10 @@ export function TripDetailClient({
     const poll = async () => {
       try {
         const res = await fetch(`/api/trips/${tripId}/generate`, {
-          signal: controller.signal,
+          signal: AbortSignal.any([
+            controller.signal,
+            AbortSignal.timeout(15_000),
+          ]),
         });
         if (res.ok) {
           const data = await res.json();
@@ -291,6 +298,7 @@ export function TripDetailClient({
       if (!url) {
         const res = await fetch(`/api/trips/${tripId}/share`, {
           method: "POST",
+          signal: AbortSignal.timeout(20_000),
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ publicConsent: true }),
         });
@@ -329,6 +337,7 @@ export function TripDetailClient({
     try {
       const response = await fetch(`/api/trips/${tripId}/share`, {
         method: "DELETE",
+        signal: AbortSignal.timeout(20_000),
       });
       if (!response.ok) throw new Error("Failed to stop sharing");
       setShareUrl(null);
@@ -352,6 +361,7 @@ export function TripDetailClient({
       // Trigger new generation
       const genRes = await fetch(`/api/trips/${tripId}/generate`, {
         method: "POST",
+        signal: AbortSignal.timeout(25_000),
         headers: await planningHeaders(),
       });
 

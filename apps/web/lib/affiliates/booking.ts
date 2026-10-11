@@ -8,6 +8,12 @@
  */
 
 import { fetchWithTimeout } from "@/lib/search/runtime";
+import {
+  providerAmount,
+  currencyCode,
+  formatPrice,
+  reviewRating,
+} from "@faroway/constants";
 
 // Environment variables
 const BOOKING_TOKEN =
@@ -46,14 +52,14 @@ export interface BookingHotel {
   hotelId: string;
   name: string;
   description: string;
-  starRating: number;
-  userRating: number;
-  reviewScore: number;
-  reviewCount: number;
+  starRating?: number;
+  userRating?: number;
+  reviewScore?: number;
+  reviewCount?: number;
   price: {
-    perNight: number;
-    total: number;
-    currencyCode: string;
+    perNight?: number;
+    total?: number;
+    currencyCode?: string;
     formatted: string;
   };
   location: {
@@ -76,7 +82,7 @@ export interface BookingHotel {
     name: string;
     maxOccupancy: number;
     bedType: string;
-    price: number;
+    price?: number;
   }>;
   policies: {
     checkIn: string;
@@ -685,7 +691,7 @@ function localizedText(value: unknown): string {
   return "";
 }
 
-function normalizeBookingDemandHotel(
+export function normalizeBookingDemandHotel(
   searchResult: Record<string, unknown>,
   detail: Record<string, unknown> | undefined,
   params: Partial<BookingSearchParams>,
@@ -700,19 +706,20 @@ function normalizeBookingDemandHotel(
   const id = String(detail?.id || searchResult.id || "");
   const nights =
     params.checkIn && params.checkOut
-      ? Math.max(
-          1,
-          Math.ceil(
-            (new Date(params.checkOut).getTime() -
-              new Date(params.checkIn).getTime()) /
-              (1000 * 60 * 60 * 24),
-          ),
-        )
-      : 1;
+      ? (new Date(params.checkOut).getTime() -
+          new Date(params.checkIn).getTime()) /
+        (1000 * 60 * 60 * 24)
+      : 0;
   const searchPrice = searchResult.price as
     | { total?: number; base?: number; currency?: string }
     | undefined;
-  const totalPrice = Number(searchPrice?.total || searchPrice?.base || 0);
+  // A base price is not the total payable amount. Preserve absence and decimals.
+  const totalPrice = providerAmount(searchPrice?.total);
+  const currency = currencyCode(searchResult.currency ?? searchPrice?.currency);
+  const perNight =
+    totalPrice !== undefined && Number.isInteger(nights) && nights > 0
+      ? totalPrice / nights
+      : undefined;
   const rating = detail?.rating as
     | {
         stars?: number;
@@ -748,18 +755,16 @@ function normalizeBookingDemandHotel(
     hotelId: id,
     name: String(detail?.name || `Booking.com property ${id}`),
     description: localizedText(description?.text),
-    starRating: rating?.stars || 0,
-    userRating: rating?.review_score || 0,
-    reviewScore: rating?.review_score || 0,
-    reviewCount: rating?.number_of_reviews || 0,
+    starRating: reviewRating(rating?.stars),
+    userRating: reviewRating(rating?.review_score, 10),
+    reviewScore: reviewRating(rating?.review_score, 10),
+    reviewCount: providerAmount(rating?.number_of_reviews),
     price: {
-      perNight: nights > 0 ? Math.round(totalPrice / nights) : totalPrice,
-      total: Math.round(totalPrice),
-      currencyCode: String(
-        searchResult.currency || searchPrice?.currency || "USD",
-      ),
-      formatted: totalPrice
-        ? `$${Math.round(totalPrice / nights)}/night`
+      perNight,
+      total: totalPrice,
+      currencyCode: currency,
+      formatted: formatPrice(perNight, currency)
+        ? `${formatPrice(perNight, currency)}/night estimate`
         : "Price unavailable",
     },
     location: {
@@ -787,8 +792,8 @@ function normalizeBookingDemandHotel(
     amenities: facilities.map((facility) => `facility:${facility.id}`),
     roomTypes: [],
     policies: {
-      checkIn: "15:00",
-      checkOut: "11:00",
+      checkIn: "",
+      checkOut: "",
       cancellation: "See Booking.com for cancellation policy",
     },
     badges: [
@@ -805,7 +810,7 @@ function normalizeBookingDemandHotel(
 /**
  * Normalize Booking.com API response to our internal format
  */
-function normalizeBookingHotel(
+export function normalizeBookingHotel(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   raw: any,
   params: Partial<BookingSearchParams>,
@@ -817,23 +822,28 @@ function normalizeBookingHotel(
             new Date(params.checkIn).getTime()) /
             (1000 * 60 * 60 * 24),
         )
-      : 1;
+      : 0;
 
-  const pricePerNight = raw.min_total_price ? raw.min_total_price / nights : 0;
+  const totalPrice = providerAmount(raw.min_total_price);
+  const pricePerNight =
+    totalPrice !== undefined && nights > 0 ? totalPrice / nights : undefined;
+  const currency = currencyCode(raw.currency_code);
 
   return {
     hotelId: raw.hotel_id?.toString() || raw.id,
     name: raw.hotel_name || raw.name,
     description: raw.hotel_description || raw.description || "",
-    starRating: raw.class || raw.star_rating || 0,
-    userRating: raw.review_score || 0,
-    reviewScore: raw.review_score || 0,
-    reviewCount: raw.review_nr || raw.review_count || 0,
+    starRating: reviewRating(raw.class ?? raw.star_rating),
+    userRating: reviewRating(raw.review_score, 10),
+    reviewScore: reviewRating(raw.review_score, 10),
+    reviewCount: providerAmount(raw.review_nr ?? raw.review_count),
     price: {
-      perNight: Math.round(pricePerNight),
-      total: Math.round(raw.min_total_price || 0),
-      currencyCode: raw.currency_code || "USD",
-      formatted: `$${Math.round(pricePerNight)}/night`,
+      perNight: pricePerNight,
+      total: totalPrice,
+      currencyCode: currency,
+      formatted: formatPrice(pricePerNight, currency)
+        ? `${formatPrice(pricePerNight, currency)}/night estimate`
+        : "Price unavailable",
     },
     location: {
       address: raw.address || "",
@@ -868,15 +878,16 @@ function normalizeBookingHotel(
         name: room.room_name || room.name,
         maxOccupancy: room.max_occupancy || 2,
         bedType: room.bed_type || "Queen",
-        price: room.price || pricePerNight,
+        price: providerAmount(room.price),
       }),
     ),
     policies: {
-      checkIn: raw.checkin?.from || "15:00",
-      checkOut: raw.checkout?.until || "11:00",
-      cancellation: raw.is_free_cancellable
-        ? "Free cancellation available"
-        : "Non-refundable",
+      checkIn: raw.checkin?.from || "",
+      checkOut: raw.checkout?.until || "",
+      cancellation:
+        raw.is_free_cancellable === true || raw.is_free_cancellable === 1
+          ? "Free cancellation available"
+          : "Confirm cancellation terms with the provider",
       freeCancellationUntil: raw.free_cancellation_until,
     },
     badges: [
@@ -936,11 +947,21 @@ export function calculateHotelVibeScore(
 
   let score = 50; // Base score
   score += matchedVibes.length * 15;
-  score += Math.min(hotel.reviewScore * 3, 30); // Up to 30 points for rating
+  score += Math.min((hotel.reviewScore ?? 0) * 3, 30); // Unknown earns no review bonus
 
   // Bonus for specific matches
-  if (targetVibes.includes("Luxury") && hotel.starRating >= 4) score += 15;
-  if (targetVibes.includes("Budget") && hotel.starRating <= 3) score += 10;
+  if (
+    targetVibes.includes("Luxury") &&
+    hotel.starRating !== undefined &&
+    hotel.starRating >= 4
+  )
+    score += 15;
+  if (
+    targetVibes.includes("Budget") &&
+    hotel.starRating !== undefined &&
+    hotel.starRating <= 3
+  )
+    score += 10;
 
   return {
     score: Math.min(100, score),

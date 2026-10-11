@@ -15,6 +15,7 @@
 // @ts-expect-error -- amadeus SDK has no type declarations
 import Amadeus from "amadeus";
 import { withTimeout } from "@/lib/search/runtime";
+import { providerAmount, currencyCode, reviewRating } from "@faroway/constants";
 
 // Environment variables
 const AMADEUS_CLIENT_ID = process.env.AMADEUS_CLIENT_ID;
@@ -101,8 +102,8 @@ export interface AmadeusHotel {
   hotelId: string;
   name: string;
   description?: string;
-  starRating: number;
-  price: { perNight: number; total: number; currency: string };
+  starRating?: number;
+  price: { perNight?: number; total?: number; currency?: string };
   location: {
     lat: number;
     lng: number;
@@ -403,7 +404,7 @@ export async function searchAmadeusHotels(
 /**
  * Normalize an Amadeus hotel offer response to our internal format.
  */
-function normalizeHotelOffer(
+export function normalizeHotelOffer(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   hotelOffer: any,
   params: AmadeusHotelSearchParams,
@@ -421,20 +422,21 @@ function normalizeHotelOffer(
             new Date(params.checkIn).getTime()) /
             (1000 * 60 * 60 * 24),
         )
-      : 1;
+      : 0;
 
-  const totalPrice = parseFloat(priceInfo.total || "0");
-  const perNight = nights > 0 ? totalPrice / nights : totalPrice;
+  const totalPrice = providerAmount(priceInfo.total);
+  const perNight =
+    totalPrice !== undefined && nights > 0 ? totalPrice / nights : undefined;
 
   return {
     hotelId: hotel.hotelId || "",
     name: hotel.name || "",
     description: firstOffer.room?.description?.text,
-    starRating: parseInt(hotel.rating || "0", 10),
+    starRating: reviewRating(providerAmount(hotel.rating)),
     price: {
-      perNight: Math.round(perNight * 100) / 100,
-      total: Math.round(totalPrice * 100) / 100,
-      currency: priceInfo.currency || "USD",
+      perNight,
+      total: totalPrice,
+      currency: currencyCode(priceInfo.currency),
     },
     location: {
       lat: hotel.latitude || 0,

@@ -5,6 +5,9 @@
 
 import { NextRequest, NextResponse } from "next/server";
 
+const ALLOWED_REQUEST_HEADERS =
+  "Content-Type, Authorization, Idempotency-Key, Cache-Control";
+
 function getAllowedOrigins(): string[] {
   const envOrigins = process.env.ALLOWED_ORIGINS;
   if (envOrigins) {
@@ -41,7 +44,7 @@ export function applyCorsHeaders(
     );
     response.headers.set(
       "Access-Control-Allow-Headers",
-      "Content-Type, Authorization",
+      ALLOWED_REQUEST_HEADERS,
     );
     response.headers.set("Access-Control-Max-Age", "86400");
     response.headers.set("Vary", "Origin");
@@ -60,7 +63,7 @@ export function handleCorsPreflightResponse(
   const origin = request.headers.get("origin");
   const headers: Record<string, string> = {
     "Access-Control-Allow-Methods": "GET, POST, PATCH, DELETE, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
+    "Access-Control-Allow-Headers": ALLOWED_REQUEST_HEADERS,
     "Access-Control-Max-Age": "86400",
     Vary: "Origin",
   };

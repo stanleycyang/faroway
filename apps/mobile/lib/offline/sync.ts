@@ -10,6 +10,39 @@ import { normalizeTripStatus } from '../tripStatus';
 import type { Trip, TripInput } from '../../stores/tripStore';
 import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 
+import { requestWithTimeout } from '../../services/request';
+import { supabase } from '../supabase';
+import * as Crypto from 'expo-crypto';
+
+async function syncResponse(input: RequestInfo | URL, init: RequestInit) {
+  return requestWithTimeout(
+    input,
+    init,
+    async (response) => {
+      const data = await response.json().catch(() => null);
+      return { ok: response.ok, status: response.status, json: async () => data };
+    },
+    15_000
+  );
+}
+
+async function accountSession(ownerId?: string) {
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session || (ownerId && data.session.user.id !== ownerId))
+    throw new Error('Your account changed. Reopen your trips before syncing.');
+  return data.session;
+}
+
+async function ownedSyncResponse(input: RequestInfo | URL, init: RequestInit, ownerId: string) {
+  const session = await accountSession(ownerId);
+  const response = await syncResponse(input, {
+    ...init,
+    headers: { ...init.headers, Authorization: `Bearer ${session.access_token}` },
+  });
+  await accountSession(ownerId);
+  return response;
+}
+
 import { buildTripCreatePayload, buildTripUpdatePayload } from './trip-payload';
 export { buildTripCreatePayload, buildTripUpdatePayload } from './trip-payload';
 
@@ -35,7 +68,7 @@ type SyncListener = (state: SyncState) => void;
 // Conflict resolution strategy
 export type ConflictStrategy = 'client-wins' | 'server-wins' | 'last-write-wins';
 
-// Maximum retries before abandoning a mutation
+// Maximum automatic retries before retaining a mutation for explicit review
 const MAX_RETRY_COUNT = 3;
 
 // Minimum time between syncs (prevent rapid-fire)
@@ -195,6 +228,8 @@ class SyncService {
       result.failed = pushResult.failed;
       result.errors = pushResult.errors;
 
+      result.success = result.failed === 0;
+
       // Step 2: Pull latest from server
       await this.pullFromServer();
 
@@ -207,7 +242,8 @@ class SyncService {
         error: result.failed > 0 ? `${result.failed} items failed to sync` : null,
       });
 
-      await offlineStorage.recordSuccessfulSync();
+      if (result.failed === 0) await offlineStorage.recordSuccessfulSync();
+      else await offlineStorage.recordFailedSync();
 
       console.log('[SyncService] Sync complete:', result);
       return result;
@@ -269,10 +305,11 @@ class SyncService {
       }
       // Skip if too many retries
       if (mutation.retryCount >= MAX_RETRY_COUNT) {
-        console.log(`[SyncService] Mutation ${mutation.id} exceeded retry limit, removing`);
-        await offlineStorage.removePendingMutation(mutation.id);
+        const reason =
+          'Automatic sync stopped after repeated failures. Your changes are saved; review them before retrying or discarding.';
+        await offlineStorage.blockPendingMutation(mutation.id, reason);
         result.failed++;
-        result.errors.push({ mutationId: mutation.id, error: 'Max retries exceeded' });
+        result.errors.push({ mutationId: mutation.id, error: reason });
         continue;
       }
 
@@ -307,24 +344,40 @@ class SyncService {
    * Execute a single mutation on the server
    */
   private async executeMutation(mutation: PendingMutation): Promise<void> {
+    if (!mutation.ownerId)
+      throw new TripRevisionConflict(
+        'This older request has no verified account. Review your saved trips before retrying or discarding it.'
+      );
     const headers = await getAuthHeaders();
 
     switch (mutation.type) {
       case 'create': {
-        const response = await fetch(`${API_BASE_URL}/api/trips`, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify(mutation.data),
-        });
+        if (typeof mutation.data?.requestId !== 'string')
+          throw new TripRevisionConflict(
+            'This older creation request has no safe retry identity. Check My Trips before discarding it or starting a new trip.'
+          );
+        const response = await ownedSyncResponse(
+          `${API_BASE_URL}/api/trips`,
+          {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(mutation.data),
+          },
+          mutation.ownerId
+        );
 
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+          if ([409, 410].includes(response.status))
+            throw new TripRevisionConflict(error?.error || 'Review this creation request.');
           throw new Error(error.error || `HTTP ${response.status}`);
         }
 
         // Update local trip with server-generated ID
         const { trip } = await response.json();
-        if (trip && mutation.tripId.startsWith('local_')) {
+        if (!trip || typeof trip.id !== 'string')
+          throw new Error('Trip creation was not confirmed. Your local request is kept.');
+        if (mutation.tripId.startsWith('local_')) {
           // Replace local trip with server trip
           await offlineStorage.deleteTrip(mutation.tripId);
           await offlineStorage.saveTrip(this.transformApiTrip(trip));
@@ -333,11 +386,15 @@ class SyncService {
       }
 
       case 'update': {
-        const response = await fetch(`${API_BASE_URL}/api/trips/${mutation.tripId}`, {
-          method: 'PATCH',
-          headers,
-          body: JSON.stringify(mutation.data),
-        });
+        const response = await ownedSyncResponse(
+          `${API_BASE_URL}/api/trips/${mutation.tripId}`,
+          {
+            method: 'PATCH',
+            headers,
+            body: JSON.stringify(mutation.data),
+          },
+          mutation.ownerId
+        );
 
         if (!response.ok) {
           const error = await response.json().catch(() => ({ error: 'Unknown error' }));
@@ -351,10 +408,14 @@ class SyncService {
       }
 
       case 'delete': {
-        const response = await fetch(`${API_BASE_URL}/api/trips/${mutation.tripId}`, {
-          method: 'DELETE',
-          headers,
-        });
+        const response = await ownedSyncResponse(
+          `${API_BASE_URL}/api/trips/${mutation.tripId}`,
+          {
+            method: 'DELETE',
+            headers,
+          },
+          mutation.ownerId
+        );
 
         // 404 is acceptable for delete (already deleted)
         if (!response.ok && response.status !== 404) {
@@ -371,11 +432,16 @@ class SyncService {
    */
   private async pullFromServer(): Promise<void> {
     try {
+      const session = await accountSession();
       const headers = await getAuthHeaders();
-      const response = await fetch(`${API_BASE_URL}/api/trips`, {
-        method: 'GET',
-        headers,
-      });
+      const response = await ownedSyncResponse(
+        `${API_BASE_URL}/api/trips`,
+        {
+          method: 'GET',
+          headers,
+        },
+        session.user.id
+      );
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -394,6 +460,7 @@ class SyncService {
       // Merge: server wins for existing trips, keep local-only trips
       const mergedTrips = this.mergeTrips(localTrips, serverTrips);
 
+      await accountSession(session.user.id);
       await offlineStorage.saveTrips(mergedTrips);
       console.log(`[SyncService] Pulled ${serverTrips.length} trips from server`);
     } catch (error) {
@@ -458,14 +525,16 @@ class SyncService {
    */
   async queueCreate(trip: Trip): Promise<void> {
     if (this.syncInProgress) throw new Error('Wait for sync to finish before editing trips.');
+    const session = await accountSession();
     await offlineStorage.saveTrip(trip);
     await offlineStorage.addPendingMutation({
       type: 'create',
+      ownerId: session.user.id,
       tripId: trip.id,
       // Store the snake_case API payload so a later sync can POST it
       // directly. Anything else would 400 against the backend's
       // CreateTripSchema.
-      data: buildTripCreatePayload(trip),
+      data: { ...buildTripCreatePayload(trip), requestId: Crypto.randomUUID() },
     });
 
     const meta = await offlineStorage.getSyncMeta();
@@ -477,6 +546,7 @@ class SyncService {
    */
   async queueUpdate(tripId: string, updates: Partial<TripInput>): Promise<void> {
     if (this.syncInProgress) throw new Error('Wait for sync to finish before editing this trip.');
+    const session = await accountSession();
     // Update local storage
     const trip = await offlineStorage.getTrip(tripId);
     if (trip) {
@@ -485,6 +555,7 @@ class SyncService {
 
     await offlineStorage.addPendingMutation({
       type: 'update',
+      ownerId: session.user.id,
       tripId,
       // Same snake_case contract as create — the API's UpdateTripSchema
       // is strict() and rejects camelCase keys.
@@ -500,9 +571,11 @@ class SyncService {
    */
   async queueDelete(tripId: string): Promise<void> {
     if (this.syncInProgress) throw new Error('Wait for sync to finish before editing trips.');
+    const session = await accountSession();
     await offlineStorage.deleteTrip(tripId);
     await offlineStorage.addPendingMutation({
       type: 'delete',
+      ownerId: session.user.id,
       tripId,
     });
 
@@ -523,11 +596,16 @@ class SyncService {
       if (!current?.blockedReason || JSON.stringify(current) !== JSON.stringify(snapshot))
         throw new Error('Your local changes changed. Review them again before continuing.');
       if (revision) {
-        const response = await fetch(`${API_BASE_URL}/api/trips/${snapshot.tripId}`, {
-          method: 'PATCH',
-          headers: await getAuthHeaders(),
-          body: JSON.stringify({ ...snapshot.data, expectedUpdatedAt: revision }),
-        });
+        const session = await accountSession(snapshot.ownerId);
+        const response = await ownedSyncResponse(
+          `${API_BASE_URL}/api/trips/${snapshot.tripId}`,
+          {
+            method: 'PATCH',
+            headers: await getAuthHeaders(),
+            body: JSON.stringify({ ...snapshot.data, expectedUpdatedAt: revision }),
+          },
+          session.user.id
+        );
         if (!response.ok) {
           const data = await response.json().catch(() => ({}));
           throw new Error(data.error || 'Could not save. Your local changes are still kept.');

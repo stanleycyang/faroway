@@ -1,6 +1,6 @@
 import { validBriefComposition } from "@/lib/trips/brief";
 import { NextRequest, NextResponse } from "next/server";
-import { createClientFromRequest } from "@/lib/supabase/server";
+import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
 import { isValidDateOnly, isValidDateRange } from "@/lib/api/date-range";
 import { z } from "zod";
 import { createHash } from "node:crypto";
@@ -11,8 +11,12 @@ const DateOnlySchema = z
 
 const CreateTripSchema = z
   .object({
-    requestId: z.string().uuid().optional(),
-    destination: z.string().min(1).max(200).trim(),
+    requestId: z
+      .string()
+      .uuid()
+      .transform((value) => value.toLowerCase())
+      .optional(),
+    destination: z.string().trim().min(1).max(200),
     start_date: DateOnlySchema,
     end_date: DateOnlySchema,
     travelers: z.number().int().min(1).max(50).optional(),
@@ -137,59 +141,87 @@ export async function POST(request: NextRequest) {
       .update(JSON.stringify({ ...parseResult.data, requestId: undefined }))
       .digest("hex");
 
-    // Use the user-scoped client so RLS is enforced as defense-in-depth.
-    // We still explicitly scope user_id from the verified session below, but
-    // any future RLS policy on `trips` will also catch us if the auth check
-    // here is ever bypassed.
-    const { data: trip, error } = await supabase
-      .from("trips")
-      .insert({
-        ...(requestId ? { id: requestId } : {}),
-        user_id: user.id,
-        destination,
-        start_date,
-        end_date,
-        travelers: travelers || 1,
-        budget_tier: budgetTier,
-        vibes: preferences?.vibes,
-        preferences: {
-          ...(requestId ? { creationRequestHash: requestHash } : {}),
-          travelerType: preferences?.travelerType,
-          originCity: preferences?.originCity,
-          originAirport: preferences?.originAirport,
-          adults: preferences?.adults,
-          children: preferences?.children,
-          interests: preferences?.interests,
-        },
-        status: "draft",
-      })
-      .select()
-      .single();
-
-    if (error?.code === "23505" && requestId) {
-      const { data: existing, error: readError } = await supabase
-        .from("trips")
-        .select()
-        .eq("id", requestId)
-        .eq("user_id", user.id)
-        .single();
-      if (
-        !readError &&
-        existing?.preferences?.creationRequestHash === requestHash
-      ) {
+    const input = {
+      ...(requestId ? { id: requestId } : {}),
+      user_id: user.id,
+      destination,
+      start_date,
+      end_date,
+      travelers: travelers || 1,
+      budget_tier: budgetTier,
+      vibes: preferences?.vibes,
+      preferences: {
+        ...(requestId ? { creationRequestHash: requestHash } : {}),
+        travelerType: preferences?.travelerType,
+        originCity: preferences?.originCity,
+        originAirport: preferences?.originAirport,
+        adults: preferences?.adults,
+        children: preferences?.children,
+        interests: preferences?.interests,
+      },
+      status: "draft",
+    };
+    if (requestId) {
+      // A private durable identity survives trip deletion. Missing schema must
+      // fail closed instead of falling back to an insert that could duplicate work.
+      const { data, error } = await getSupabase().rpc("create_trip_once", {
+        p_user_id: user.id,
+        p_request_key: requestId,
+        p_input: input,
+      });
+      if (error?.code === "23505")
         return NextResponse.json(
-          { trip: existing },
-          { headers: { "Cache-Control": "no-store" } },
+          {
+            error:
+              "This creation identity is unavailable. Open your saved trips.",
+          },
+          { status: 409 },
         );
-      }
+      if (error || !data)
+        return NextResponse.json(
+          {
+            error:
+              "Trip creation could not be confirmed. Keep this request and retry.",
+            code: "CREATION_UNCONFIRMED",
+          },
+          { status: 503 },
+        );
+      if (data.outcome === "gone")
+        return NextResponse.json(
+          {
+            error:
+              "This trip was deleted. Start a new trip explicitly to plan again.",
+            code: "CREATION_DELETED",
+          },
+          { status: 410 },
+        );
+      if (data.outcome === "key_conflict")
+        return NextResponse.json(
+          {
+            error:
+              "This request cannot be reused for a different trip. Open your saved trips to continue.",
+          },
+          { status: 409 },
+        );
+      if (!["created", "replayed"].includes(data.outcome) || !data.trip)
+        return NextResponse.json(
+          { error: "Trip creation could not be confirmed." },
+          { status: 503 },
+        );
       return NextResponse.json(
+        { trip: data.trip },
         {
-          error:
-            "This request cannot be reused for a different trip. Open your saved trips to continue.",
+          status: data.outcome === "created" ? 201 : 200,
+          headers: { "Cache-Control": "no-store" },
         },
-        { status: 409 },
       );
     }
+    // Legacy unkeyed clients retain the user-scoped RLS insert path.
+    const { data: trip, error } = await supabase
+      .from("trips")
+      .insert(input)
+      .select()
+      .single();
 
     if (error) {
       console.error("Database error:", error);

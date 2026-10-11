@@ -60,6 +60,7 @@ function mergeMutationData(
 export type PendingMutationData = Record<string, unknown>;
 
 export interface PendingMutation {
+  ownerId?: string;
   id: string;
   type: MutationType;
   tripId: string;

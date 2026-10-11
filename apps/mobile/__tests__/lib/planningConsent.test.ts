@@ -1,3 +1,4 @@
+jest.mock('expo-crypto', () => ({ randomUUID: () => '11111111-1111-4111-8111-111111111111' }));
 const mockAlert = jest.fn();
 const mockSession = jest.fn();
 const mockSubscribe = jest.fn();
@@ -38,7 +39,9 @@ const input = {
 };
 const id = '11111111-1111-4111-8111-111111111111';
 
-beforeEach(() => {
+beforeEach(async () => {
+  const { default: storage } = await import('@react-native-async-storage/async-storage');
+  await storage.clear();
   jest.clearAllMocks();
   global.fetch = fetchMock;
   mockSession.mockResolvedValue({ data: { session: session() }, error: null });
@@ -219,4 +222,73 @@ it('only reconnects when recovery discovers an existing or ambiguous planning at
   await recoverUnstartedTrip(id);
   expect(posts()).toHaveLength(0);
   expect(mockAlert).not.toHaveBeenCalled();
+});
+
+it('bounds disclosure body reading and never opens consent for a late response', async () => {
+  jest.useFakeTimers();
+  try {
+    let finish!: (value: unknown) => void;
+    fetchMock.mockResolvedValue({
+      ok: true,
+      json: () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        }),
+    });
+    const dispatch = jest.fn();
+    const work = withPlanningConsent(dispatch);
+    const rejected = expect(work).rejects.toThrow('timed out');
+    await jest.advanceTimersByTimeAsync(15_000);
+    await rejected;
+    finish(disclosure);
+    await jest.advanceTimersByTimeAsync(0);
+    expect(mockAlert).not.toHaveBeenCalled();
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(unsubscribe).toHaveBeenCalled();
+    expect(jest.getTimerCount()).toBe(0);
+  } finally {
+    jest.useRealTimers();
+  }
+});
+it('unmount cancels recovery lookup and prevents a late consent dialog', async () => {
+  const controller = new AbortController();
+  let finish!: (value: unknown) => void;
+  fetchMock.mockResolvedValue({
+    ok: true,
+    json: () =>
+      new Promise((resolve) => {
+        finish = resolve;
+      }),
+  });
+  const work = recoverUnstartedTrip(id, controller.signal);
+  const rejected = expect(work).rejects.toMatchObject({ name: 'AbortError' });
+  await flush();
+  controller.abort();
+  await rejected;
+  finish({ trip: { id, status: 'draft', search_id: null } });
+  await flush();
+  expect(mockAlert).not.toHaveBeenCalled();
+  expect(posts()).toHaveLength(0);
+});
+
+it('reuses the durable creation identity after a lost create response', async () => {
+  let failCreate = true;
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url.endsWith('/api/trips') && failCreate) throw new Error('lost response');
+    return {
+      ok: true,
+      json: async () =>
+        url.endsWith('/disclosure')
+          ? disclosure
+          : url.endsWith('/api/trips')
+            ? { trip: { id } }
+            : { status: 'started' },
+    };
+  });
+  await expect(createAndStartTrip(input, jest.fn())).rejects.toThrow('lost response');
+  failCreate = false;
+  await createAndStartTrip(input, jest.fn());
+  const creates = posts().filter(([url]) => url.endsWith('/api/trips'));
+  expect(creates).toHaveLength(2);
+  expect(JSON.parse(creates[0][1].body).requestId).toBe(JSON.parse(creates[1][1].body).requestId);
 });

@@ -18,7 +18,7 @@ const fields: Record<string, string> = {
 
 export function conflictRows(mutation: PendingMutation, latest?: Record<string, unknown>) {
   const flatten = (value: Record<string, unknown>) => {
-    const { preferences, expectedUpdatedAt: _revision, ...rest } = value;
+    const { preferences, expectedUpdatedAt: _revision, requestId: _requestId, ...rest } = value;
     return { ...rest, ...(preferences && typeof preferences === 'object' ? preferences : {}) };
   };
   const local = flatten(mutation.data ?? {});

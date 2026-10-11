@@ -1,3 +1,4 @@
+import { requestWithTimeout } from './request';
 import { withPlanningConsent } from '../lib/planningConsent';
 /**
  * Faroway Search Service
@@ -36,21 +37,21 @@ export async function startSearch(
   // A caller-supplied token cannot transfer consent to a different account.
   void authToken;
   const body = JSON.stringify(input);
-  const response = await withPlanningConsent(async ({ headers, signal }) =>
-    fetch(`${API_BASE_URL}/api/search/start`, {
-      method: 'POST',
-      headers: await headers(),
-      signal,
-      body,
-    })
+  return withPlanningConsent(async ({ headers, signal }) =>
+    requestWithTimeout(
+      `${API_BASE_URL}/api/search/start`,
+      { method: 'POST', headers: await headers(), signal, body },
+      async (response) => {
+        const data = await response.json().catch((error: unknown) => {
+          if (!response.ok) return { error: 'Unknown error' };
+          throw error;
+        });
+        if (!response.ok) throw new Error(data?.error || 'Failed to start search');
+        return data;
+      },
+      25_000
+    )
   );
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error || 'Failed to start search');
-  }
-
-  return response.json();
 }
 
 /**

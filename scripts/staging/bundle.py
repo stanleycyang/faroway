@@ -10,8 +10,13 @@ def render(project_ref):
     manifest=json.loads((ROOT/'supabase/staging/manifest.json').read_text())
     assert manifest['target_project_ref']==TARGET
     expected={entry['path'] for entry in manifest['migrations']}
+    followups=json.loads((ROOT/'supabase/release-candidate/migrations.json').read_text())['application_order']
+    for entry in followups:
+        data=(ROOT/entry['path']).read_bytes()
+        if hashlib.sha256(data).hexdigest()!=entry['sha256'] or data!=(ROOT/entry['source']).read_bytes():
+            raise ValueError('Unreviewed follow-up migration: '+entry['path'])
     actual={str(p.relative_to(ROOT)) for p in (ROOT/'supabase/migrations').glob('*.sql')}
-    if actual!=expected: raise ValueError('Migration inventory changed; review and pin a new manifest')
+    if actual!=expected | {entry['path'] for entry in followups}: raise ValueError('Migration inventory changed; review and pin a new manifest')
     pieces=['-- STAGING APPROVAL BUNDLE ONLY: '+TARGET+'\n-- Execute only after target identity and explicit SQL approval are verified.\nBEGIN;\n']
     pieces.append((ROOT/'supabase/staging/guard.sql').read_text())
     for entry in manifest['migrations']:

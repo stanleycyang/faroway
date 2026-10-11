@@ -1,5 +1,5 @@
 {
-  "status": "review candidate; NOT applied or activated",
+  "status": "registered and locally rehearsed; NOT applied or activated",
   "integrated_base": "codex/apple-revocation-preparation",
   "sql": "supabase/release-candidate/account-and-push.sql",
   "sql_sha256": "f40d6c7509005fde86b0c8b5c1b9304fc774db6148017447150868a91e4d8eb6",
@@ -38,5 +38,7 @@
     "Apple deletion: missing configuration, wrong identity, Hide My Email, linked accounts, cancel, consumed code, timeout, app restart, lost deletion response and signing in after deletion.",
     "Push: clean install, deny/retry, OS Settings revocation, expired session reauthentication, different-account sign-in, offline opt-out, clock regression, late POST after DELETE, restored app and token rotation.",
     "Current web/native AI consent: decline, missing/stale metadata, account switch, offline retry, saved draft after definite generation refusal, and ambiguous timeout reconnect only."
-  ]
+  ],
+  "registered_migration": "supabase/migrations/20261011045031_account_and_push.sql",
+  "registered_migration_sha256": "f40d6c7509005fde86b0c8b5c1b9304fc774db6148017447150868a91e4d8eb6"
 }

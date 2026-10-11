@@ -87,3 +87,20 @@ describe('store review utilities', () => {
     expect(mockOpenURL).not.toHaveBeenCalled();
   });
 });
+
+it.each([
+  'https://apps.apple.com/us/app/faroway/id0000000000',
+  'itms-apps://attacker.example/app/id123',
+  'javascript://apps.apple.com/app/id123',
+  'https://apps.apple.com/',
+  'https://user:password@apps.apple.com/app/id123',
+])('rejects unsafe or placeholder iOS listing %s', (url) => {
+  expect(isValidStoreUrl(url, 'ios')).toBe(false);
+});
+it.each([
+  'market://anything',
+  'https://play.google.com/',
+  'https://play.google.com/store/apps/details',
+])('rejects incomplete Android listing %s', (url) => {
+  expect(isValidStoreUrl(url, 'android')).toBe(false);
+});

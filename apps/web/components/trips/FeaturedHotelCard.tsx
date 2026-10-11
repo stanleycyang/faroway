@@ -12,7 +12,7 @@ export interface FeaturedHotel {
   images?: string[];
   affiliateUrl?: string;
   affiliatePartner?: string;
-  pricePerNight: number;
+  pricePerNight?: number;
   currency?: string;
   priceStatus?: string;
   starRating?: number;
@@ -134,7 +134,7 @@ export function FeaturedHotelCard({
                 Stay estimate:{" "}
                 <span className="font-black text-lg text-gray-900">
                   {formatEstimate(
-                    hotel.pricePerNight * nights,
+                    nightly.amount * nights,
                     hotel.currency,
                     hotel.priceStatus,
                   )}

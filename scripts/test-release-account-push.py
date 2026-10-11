@@ -1,6 +1,6 @@
 """Review candidate only: networkless disposable PG; never external SQL."""
 from pathlib import Path
-import subprocess,time,uuid,concurrent.futures
+import subprocess,time,uuid,concurrent.futures,json
 ROOT=Path(__file__).resolve().parents[1]
 IMAGE='postgres:17.11-alpine@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24'
 name='faroway-release-'+uuid.uuid4().hex[:10]
@@ -24,7 +24,7 @@ try:
     sql((ROOT/'supabase/staging/approval/bootstrap.sql').read_text())
     sql(f"INSERT INTO auth.users(id,email) VALUES('{A}','a@example.invalid'),('{B}','b@example.invalid'); INSERT INTO public.users(id,email,auth_provider) VALUES('{A}','a@example.invalid','apple'),('{B}','b@example.invalid','email') ON CONFLICT(id) DO NOTHING;")
     sql(f"INSERT INTO public.push_tokens(user_id,token,platform) VALUES('{A}','{token}','ios'),('{B}','{token}','ios');")
-    sql((ROOT/'supabase/release-candidate/account-and-push.sql').read_text())
+    sql((ROOT/json.loads((ROOT/'supabase/release-candidate/review.json').read_text())['registered_migration']).read_text())
     assert sql(f"SELECT count(*) FROM public.push_tokens WHERE token='{token}'")=='0'
     for role in ['anon','authenticated']:
         sql(f"SET ROLE {role}; SELECT * FROM public.account_deletion_receipts;",False)

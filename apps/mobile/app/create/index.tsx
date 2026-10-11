@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -17,6 +18,11 @@ import { Button, PlacesAutocomplete, DateRangePicker, VibeSelector } from '../..
 import { useTripStore, type TripInput } from '../../stores/tripStore';
 import { usePromptStore } from '../../stores/promptStore';
 import { useAuthContext } from '../../components/AuthProvider';
+import {
+  formatMissingTripRequirements,
+  getMissingTripRequirements,
+} from '../../lib/tripRequirements';
+import { discardTripCreation, savedTripCreationDraft } from '../../lib/tripCreationRecovery';
 import { AuthGate } from '../../components/AuthGate';
 import { popularDestinations, travelerTypes } from '@faroway/constants';
 import { colors, borderRadius, shadows } from '../../constants/theme';
@@ -55,7 +61,32 @@ export default function CreateTripScreen() {
     travelers?: string;
   }>();
   const { draftInput, setDraftInput } = useTripStore();
-  const { isAuthenticated } = useAuthContext();
+  const { isAuthenticated, user } = useAuthContext();
+  const userId = user?.id;
+  const recoveryOwner = useRef<string | undefined>(userId);
+  const [savedCreation, setSavedCreation] = useState<Partial<TripInput> | null>(null);
+  const [recoveryError, setRecoveryError] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    recoveryOwner.current = userId;
+    setSavedCreation(null);
+    setRecoveryError(null);
+    if (userId)
+      void savedTripCreationDraft(userId)
+        .then((draft) => {
+          if (active) setSavedCreation(draft);
+        })
+        .catch(() => {
+          if (active)
+            setRecoveryError(
+              'Your unfinished trip request could not be read. Check My Trips before starting a new trip.'
+            );
+        });
+    return () => {
+      active = false;
+      recoveryOwner.current = undefined;
+    };
+  }, [userId]);
   const { tripGenerationCount, hasDismissedCreateBanner, dismissCreateBanner } = usePromptStore();
 
   const [showSearch, setShowSearch] = useState(!params.destination);
@@ -131,7 +162,8 @@ export default function CreateTripScreen() {
     }
   };
 
-  const canProceed = draftInput?.destination && draftInput?.startDate && draftInput?.endDate;
+  const missingRequirements = getMissingTripRequirements(draftInput);
+  const canProceed = missingRequirements.length === 0;
 
   const handleContinue = () => {
     if (!canProceed) {
@@ -425,6 +457,79 @@ export default function CreateTripScreen() {
             fullWidth
           />
         </View>
+
+        {!canProceed && (
+          <Text
+            accessibilityLiveRegion="polite"
+            style={{ textAlign: 'center', color: colors.surface[600], marginBottom: 12 }}
+          >
+            {formatMissingTripRequirements(missingRequirements)}
+          </Text>
+        )}
+
+        {recoveryError && (
+          <Text
+            accessibilityRole="alert"
+            style={{ color: colors.surface[600], textAlign: 'center' }}
+          >
+            {recoveryError}
+          </Text>
+        )}
+        {savedCreation && (
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Restore unfinished trip"
+            style={{ minHeight: 48, alignItems: 'center', justifyContent: 'center' }}
+            onPress={() => {
+              if (recoveryOwner.current !== userId) return;
+              setDraftInput(savedCreation);
+              setShowSearch(false);
+              setMapLoadFailed(false);
+            }}
+          >
+            <Text>Restore unfinished trip to {savedCreation.destination}</Text>
+          </TouchableOpacity>
+        )}
+        {user && (
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Start a new trip"
+            style={{ minHeight: 48, alignItems: 'center', justifyContent: 'center' }}
+            onPress={() => {
+              Alert.alert(
+                'Start a new trip?',
+                'Check My Trips first if an earlier request was interrupted. This clears the pending retry; any saved trip stays in My Trips.',
+                [
+                  { text: 'Keep pending trip', style: 'cancel' },
+                  {
+                    text: 'Start a new trip',
+                    onPress: () => {
+                      if (recoveryOwner.current !== user.id) return;
+                      void discardTripCreation(user.id)
+                        .then(() => {
+                          if (recoveryOwner.current !== user.id) return;
+                          setSavedCreation(null);
+                          setRecoveryError(null);
+                          useTripStore.getState().clearDraft();
+                          setShowSearch(true);
+                          setMapLoadFailed(false);
+                        })
+                        .catch(() => {
+                          if (recoveryOwner.current !== user.id) return;
+                          Alert.alert(
+                            'Could not clear pending trip',
+                            'Your saved request is kept. Please try again.'
+                          );
+                        });
+                    },
+                  },
+                ]
+              );
+            }}
+          >
+            <Text style={{ color: colors.surface[600] }}>Start a new trip</Text>
+          </TouchableOpacity>
+        )}
 
         {/* Auth gate from banner */}
         <AuthGate

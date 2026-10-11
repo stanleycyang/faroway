@@ -2,8 +2,10 @@ import { Alert } from 'react-native';
 import NetInfo from '@react-native-community/netinfo';
 import { supabase } from './supabase';
 import { API_BASE_URL } from '../constants/api';
+import { requestWithTimeout } from '../services/request';
 
 export interface PlanningDispatch {
+  userId: string;
   signal: AbortSignal;
   headers: () => Promise<Record<string, string>>;
 }
@@ -50,19 +52,16 @@ export async function withPlanningConsent<T>(
       };
     };
     const headers = await currentHeaders();
-    const timeout = setTimeout(cancel, 15_000);
-    let response: Response;
-    try {
-      response = await fetch(`${API_BASE_URL}/api/ai/disclosure`, {
-        headers,
-        signal: controller.signal,
-        cache: 'no-store',
-      });
-    } finally {
-      clearTimeout(timeout);
-    }
-    if (!response.ok) throw new Error('AI sharing information is unavailable. Please try again.');
-    const disclosure = await response.json();
+    const disclosure = await requestWithTimeout(
+      `${API_BASE_URL}/api/ai/disclosure`,
+      { headers, signal: controller.signal, cache: 'no-store' },
+      async (response) => {
+        if (!response.ok)
+          throw new Error('AI sharing information is unavailable. Please try again.');
+        return response.json();
+      },
+      15_000
+    );
     if (
       !disclosure ||
       typeof disclosure.version !== 'string' ||
@@ -101,6 +100,7 @@ export async function withPlanningConsent<T>(
     assertActive();
     if (!accepted) throw new Error('AI sharing declined. Your saved trips are still available.');
     return await dispatch({
+      userId,
       signal: controller.signal,
       headers: async () => ({
         ...(await currentHeaders()),

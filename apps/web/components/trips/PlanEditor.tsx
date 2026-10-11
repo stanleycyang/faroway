@@ -49,7 +49,10 @@ export function PlanEditor({
   const endpoint = `/api/trips/${tripId}/plan`;
   const storageKey = `faroway:plan-change:${userId}:${tripId}`;
   const refresh = useCallback(async () => {
-    const response = await fetch(endpoint, { cache: "no-store" });
+    const response = await fetch(endpoint, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(15_000),
+    });
     const data = await response.json();
     if (!response.ok)
       throw new Error(data.error || "Could not load plan editing.");
