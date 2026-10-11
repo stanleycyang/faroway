@@ -41,7 +41,8 @@ export function EmailPasswordForm({
       return;
     }
 
-    if (password.length < 8) {
+    // Existing passwords may predate the current signup policy. Let Auth verify them.
+    if (mode === "signup" && password.length < 8) {
       setError("Password must be at least 8 characters");
       setLoading(false);
       return;

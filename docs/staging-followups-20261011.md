@@ -27,3 +27,11 @@ The candidate branch was subsequently fast-forwarded to `d8249a41191defb902aa6e4
 ## Auth URL correction completed
 
 Following the owner request to handle the prepared changes, the staging Site URL and both exact callback URLs were saved and verified after reloading the dashboard. The Site URL is the stable candidate alias; callbacks are that alias `/auth/callback` and the original tested immutable preview `/auth/callback`. No wildcard, production URL, provider activation or account credential was added. This supersedes the earlier unsaved-configuration observations. The owner must enter new test-user credentials and create two confirmed staging users under the browser tool handoff policy, then sign into the stable staging alias. Both forms were left ready. Authenticated acceptance remains pending; no password should be sent in chat.
+
+## Login investigation — 2026-10-11
+
+Two current staging Auth accounts are email-confirmed, unbanned, have password hashes and matching email identities, and have application profiles. Recent password-token requests reached this staging project and returned `invalid_credentials` (HTTP 400). This is not a production binding or callback error; no password values were read, changed or recorded. The authentication failure does not establish which submitted field differed.
+
+The email form incorrectly applied the new-signup eight-character requirement to existing-account sign-in. Restrict that client-side minimum to signup; existing passwords must be verified by Supabase under its current policy. This removes a separate frontend blocker, but does not claim to resolve backend credential mismatch.
+
+Earlier operator deletion of test Auth users left two application profiles. Subsequent attempts to recreate those same emails failed with a profile unique-constraint error. Neither orphan conflicts with either current account. No profiles were deleted or relinked; do not delete/recreate an Auth user as a login workaround. Application account deletion coordinates both sides, while direct dashboard Auth deletion does not currently remove legacy application profiles. Any manual orphan cleanup needs separate inspection of owned data.
