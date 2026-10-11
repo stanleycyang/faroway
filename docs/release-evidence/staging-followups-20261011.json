@@ -38,7 +38,7 @@
     "browser_auth_api_acceptance": "pending",
     "signed_device_acceptance": "pending",
     "helper_regression": "passed",
-    "auth_redirect_configuration": "Site URL localhost:3000 and empty allowlist; prepared correction awaits browser-policy confirmation"
+    "auth_redirect_configuration": "Staging Site URL and two exact callbacks saved and verified after dashboard reload; production unchanged."
   },
   "security_advisors": {
     "info": "Eight deliberately server-only RLS tables have no client policies; do not add client policies to silence this notice.",

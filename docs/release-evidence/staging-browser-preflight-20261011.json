@@ -60,5 +60,14 @@
     "authenticated_acceptance": "pending owner-created confirmed test users"
   },
   "auth_hooks": "None configured in staging dashboard",
-  "auth_url_configuration": "Unsaved correction awaiting browser-policy approval"
+  "auth_url_configuration": {
+    "state": "saved and verified after dashboard reload",
+    "project_ref": "omovikloadpvzijoaqus",
+    "site_url": "https://faroway-git-codex-release-candidate-testimonio.vercel.app",
+    "redirect_urls": [
+      "https://faroway-git-codex-release-candidate-testimonio.vercel.app/auth/callback",
+      "https://faroway-31yb7p512-testimonio.vercel.app/auth/callback"
+    ],
+    "production_changed": false
+  }
 }
