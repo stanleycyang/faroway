@@ -6,7 +6,7 @@ This consolidation merges reviewed code while holding automatic production deplo
 
 CI runs quality and unit checks on pull requests targeting main/release-candidate and on main pushes. Feature-branch push runs no longer duplicate PR checks. PostgreSQL, browser and production-build checks require a manual dispatch with `full_verification=true`; all jobs have bounded timeouts and Bun is pinned to 1.3.9. The monthly Apple-secret rotation remains active.
 
-Run `bash scripts/verify-release-local.sh` for quality, unit, rubric, five disposable PostgreSQL suites and both synthetic browser suites without GitHub Actions usage. These tests use no hosted database or paid provider calls. Local checks do not establish signed-device, live supplier, Apple revocation or production readiness.
+Run `bash scripts/verify-release-local.sh` from a worktree without dotenv files for quality, unit, rubric, five disposable PostgreSQL suites and both synthetic browser suites without GitHub Actions usage. This workspace retains its existing ignored dotenv configuration, so the script refuses it before executing tests. The separate `/Users/stanley/Workspace/mobile/faroway-review` worktree has no dotenv files and is available for isolated verification. These tests use no hosted database or paid provider calls. Local checks do not establish signed-device, live supplier, Apple revocation or production readiness.
 
 ## Registered SQL
 
