@@ -86,6 +86,8 @@ const ratesResponse = z
   })
   .passthrough();
 
+export type LiteApiRatesResponse = z.infer<typeof ratesResponse>;
+
 export function isLiteApiConfigured(): boolean {
   return (
     process.env.LITEAPI_SANDBOX_ENABLED === "true" &&
