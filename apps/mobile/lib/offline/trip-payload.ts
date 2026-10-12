@@ -1,5 +1,6 @@
 import type { PendingMutationData } from './storage';
 import type { Trip, TripInput } from '../../stores/tripStore';
+import { hotelGuestCounts } from '@faroway/constants';
 
 /**
  * Serialize a locally-created Trip into the snake_case body that
@@ -17,6 +18,13 @@ export function buildTripCreatePayload(trip: Trip): PendingMutationData {
       travelerType: trip.travelerType,
       originCity: trip.originCity,
       originAirport: trip.originAirport,
+      hotelSearch: trip.hotelSearch,
+      ...(trip.hotelSearch
+        ? {
+            adults: hotelGuestCounts(trip.hotelSearch).adults,
+            children: hotelGuestCounts(trip.hotelSearch).children,
+          }
+        : {}),
       vibes: trip.vibes,
       budget: trip.budget,
     },
@@ -46,6 +54,15 @@ export function buildTripUpdatePayload(
   if (patch.travelerType !== undefined) preferences.travelerType = patch.travelerType;
   if (patch.originCity !== undefined) preferences.originCity = patch.originCity;
   if (patch.originAirport !== undefined) preferences.originAirport = patch.originAirport;
+  if (patch.hotelSearch !== undefined) {
+    preferences.hotelSearch = patch.hotelSearch;
+    if (patch.hotelSearch) {
+      const counts = hotelGuestCounts(patch.hotelSearch);
+      preferences.adults = counts.adults;
+      preferences.children = counts.children;
+      body.travelers = patch.travelers ?? counts.travelers;
+    }
+  }
 
   if (Object.keys(preferences).length > 0) {
     body.preferences = preferences;

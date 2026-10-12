@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { offlineStorage } from '../lib/offline';
 import { logger } from '../lib/logger';
+import type { HotelSearchDetails } from '@faroway/constants';
 
 export interface Activity {
   id: string;
@@ -64,6 +65,7 @@ export interface TripDay {
 }
 
 export interface Trip {
+  hotelSearch?: HotelSearchDetails | null;
   planNeedsRefresh?: boolean;
   id: string;
   destination: string;
@@ -86,6 +88,7 @@ export interface Trip {
 }
 
 export interface TripInput {
+  hotelSearch?: HotelSearchDetails | null;
   destination: string;
   country?: string;
   placeId?: string;

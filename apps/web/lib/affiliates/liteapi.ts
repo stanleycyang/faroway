@@ -121,6 +121,8 @@ export async function searchLiteApiHotels(input: LiteApiSearch) {
     8000,
   );
   // Never print provider bodies or credentials on failure.
+  if (response.status === 204)
+    return { sandbox: true as const, data: [], hotels: [] };
   if (!response.ok)
     throw new Error(`LiteAPI rate search failed (${response.status})`);
   const payload: unknown = await response.json();

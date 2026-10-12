@@ -59,6 +59,7 @@ export interface UseStreamingItineraryOptions {
   tripId?: string;
   /** Input to create a new trip + trigger generation (if no tripId) */
   input?: {
+    hotelSearch?: import('@faroway/constants').HotelSearchDetails | null;
     destination: string;
     startDate: string;
     endDate: string;

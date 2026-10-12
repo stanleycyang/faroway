@@ -52,7 +52,14 @@ const ActivitySchema = z.object({
   name: z.string(),
   description: z.string(),
   category: z.string(),
-  duration: z.number(), // minutes
+  durationMinutes: z
+    .number()
+    .int()
+    .min(5)
+    .max(1440)
+    .describe(
+      "Duration in minutes: a two-hour tour is 120, a ninety-minute visit is 90. Never use hours.",
+    ),
   price: z.number(),
   currency: z.string().default("USD"),
   rating: z.number().min(0).max(5),
@@ -77,7 +84,9 @@ const ActivityListSchema = z.object({
   activities: z.array(ActivitySchema),
 });
 
-type GeneratedActivity = Omit<ActivityResult, "id">;
+type GeneratedActivity = Omit<ActivityResult, "id" | "duration"> & {
+  durationMinutes: number;
+};
 
 interface ActivityListResult {
   activities: GeneratedActivity[];
@@ -91,7 +100,7 @@ For each activity, provide:
 1. Real attraction/tour names that exist at the destination
 2. Accurate descriptions of what visitors will experience
 3. Realistic pricing (use Viator as reference)
-4. Appropriate duration estimates
+4. Duration estimates in MINUTES in durationMinutes (120 for two hours, never 2)
 5. Best time of day to visit
 6. How well it matches the traveler's vibes
 
@@ -168,8 +177,9 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
     "activities AI",
   )
     .then(({ object: result }) =>
-      result.activities.map((activity, index) => ({
+      result.activities.map(({ durationMinutes, ...activity }, index) => ({
         ...activity,
+        duration: durationMinutes,
         id: `activity_${Date.now()}_${index}`,
         affiliateUrl: undefined,
         affiliatePartner: undefined,

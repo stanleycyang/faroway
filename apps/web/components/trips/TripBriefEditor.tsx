@@ -2,6 +2,12 @@
 
 import { useState } from "react";
 import type { Trip } from "@/lib/trips/load-trip";
+import {
+  validateHotelSearchDetails,
+  hotelGuestCounts,
+  type HotelSearchDetails,
+} from "@faroway/constants";
+import { HotelSearchFields } from "./HotelSearchFields";
 
 export function TripBriefEditor({
   trip,
@@ -13,6 +19,12 @@ export function TripBriefEditor({
   onReload: () => void;
 }) {
   const preferences = trip.preferences ?? {};
+  const [hotelSearch, setHotelSearch] = useState<HotelSearchDetails | null>(
+    validateHotelSearchDetails(preferences.hotelSearch)
+      ? preferences.hotelSearch
+      : null,
+  );
+  const [hotelTouched, setHotelTouched] = useState(false);
   const [destination, setDestination] = useState(trip.destination);
   const [start, setStart] = useState(trip.start_date);
   const [end, setEnd] = useState(trip.end_date);
@@ -52,8 +64,16 @@ export function TripBriefEditor({
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
     if (saving || locked) return;
+    if (
+      hotelSearch &&
+      !validateHotelSearchDetails(hotelSearch, adults + children)
+    ) {
+      setMessage("Complete hotel room details so they match your travelers.");
+      return;
+    }
     const changes: Record<string, unknown> = {};
     const changedPreferences: Record<string, unknown> = {};
+    if (hotelTouched) changedPreferences.hotelSearch = hotelSearch;
     const changed = (
       key: string,
       value: unknown,
@@ -276,6 +296,32 @@ export function TripBriefEditor({
             public link. Choose Start planning when you are ready to build a
             plan for the updated brief.
           </p>
+          <div className="sm:col-span-2">
+            <HotelSearchFields
+              value={hotelSearch}
+              travelers={adults + children}
+              onChange={(value) => {
+                setHotelTouched(true);
+                const roomsChanged =
+                  value &&
+                  hotelSearch &&
+                  JSON.stringify(value.rooms) !==
+                    JSON.stringify(hotelSearch.rooms);
+                setHotelSearch(value);
+                if (roomsChanged) {
+                  const counts = hotelGuestCounts(value);
+                  if (
+                    Number.isInteger(counts.adults) &&
+                    counts.adults >= 1 &&
+                    counts.travelers <= 50
+                  ) {
+                    setAdults(counts.adults);
+                    setChildren(counts.children);
+                  }
+                }
+              }}
+            />
+          </div>
           <button
             type="submit"
             className="rounded-full bg-primary px-5 py-3 font-semibold text-white disabled:opacity-50 sm:col-span-2"

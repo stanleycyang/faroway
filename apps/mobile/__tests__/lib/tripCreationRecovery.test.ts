@@ -60,3 +60,23 @@ it('restores the original planner choices without changing the pending identity'
   expect(await pendingTripCreation('a', body)).toEqual(receipt);
   expect(await savedTripCreationDraft('b')).toBeNull();
 });
+
+it('restores consented room guests and nationality after a lost create response', async () => {
+  const hotelSearch = {
+    countryCode: 'FR',
+    guestNationality: 'CA',
+    rooms: [{ adults: 2, children: [8] }],
+    consentVersion: 'hotel-search-nuitee-v1',
+  };
+  const body = JSON.stringify({
+    destination: 'Paris',
+    start_date: '2099-06-01',
+    end_date: '2099-06-04',
+    travelers: 3,
+    budget: 'moderate',
+    preferences: { hotelSearch },
+  });
+  const receipt = await pendingTripCreation('hotel-owner', body);
+  expect(await savedTripCreationDraft('hotel-owner')).toMatchObject({ travelers: 3, hotelSearch });
+  expect(await pendingTripCreation('hotel-owner', body)).toEqual(receipt);
+});

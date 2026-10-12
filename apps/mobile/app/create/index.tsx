@@ -24,7 +24,13 @@ import {
 } from '../../lib/tripRequirements';
 import { discardTripCreation, savedTripCreationDraft } from '../../lib/tripCreationRecovery';
 import { AuthGate } from '../../components/AuthGate';
-import { popularDestinations, travelerTypes } from '@faroway/constants';
+import {
+  popularDestinations,
+  travelerTypes,
+  validateHotelSearchDetails,
+  hotelGuestCounts,
+} from '@faroway/constants';
+import { HotelSearchFields } from '../../components/HotelSearchFields';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 
@@ -155,7 +161,8 @@ export default function CreateTripScreen() {
 
   const handleTravelersChange = (delta: number) => {
     const current = draftInput?.travelers || 2;
-    const newValue = Math.max(1, Math.min(10, current + delta));
+    if (draftInput?.hotelSearch) return;
+    const newValue = Math.max(1, Math.min(50, current + delta));
     if (newValue !== current) {
       hapticFeedback.light();
       setDraftInput({ travelers: newValue });
@@ -163,7 +170,10 @@ export default function CreateTripScreen() {
   };
 
   const missingRequirements = getMissingTripRequirements(draftInput);
-  const canProceed = missingRequirements.length === 0;
+  const hotelDetailsReady =
+    !draftInput?.hotelSearch ||
+    validateHotelSearchDetails(draftInput.hotelSearch, draftInput.travelers);
+  const canProceed = missingRequirements.length === 0 && hotelDetailsReady;
 
   const handleContinue = () => {
     if (!canProceed) {
@@ -351,6 +361,28 @@ export default function CreateTripScreen() {
             />
           </View>
 
+          <View style={styles.section}>
+            <HotelSearchFields
+              value={draftInput?.hotelSearch || null}
+              travelers={draftInput?.travelers || 2}
+              onChange={(value) => {
+                const roomsChanged =
+                  value &&
+                  draftInput?.hotelSearch &&
+                  JSON.stringify(value.rooms) !== JSON.stringify(draftInput.hotelSearch.rooms);
+                const counts = roomsChanged ? hotelGuestCounts(value) : null;
+                setDraftInput({
+                  hotelSearch: value,
+                  ...(counts &&
+                  Number.isInteger(counts.travelers) &&
+                  counts.travelers >= 1 &&
+                  counts.travelers <= 50
+                    ? { travelers: counts.travelers }
+                    : {}),
+                });
+              }}
+            />
+          </View>
           {/* Travelers */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Who's traveling?</Text>
@@ -361,10 +393,12 @@ export default function CreateTripScreen() {
                 <TouchableOpacity
                   style={styles.counterButton}
                   onPress={() => handleTravelersChange(-1)}
-                  disabled={(draftInput?.travelers || 2) <= 1}
+                  disabled={(draftInput?.travelers || 2) <= 1 || !!draftInput?.hotelSearch}
                   accessibilityRole="button"
                   accessibilityLabel="Remove one traveler"
-                  accessibilityState={{ disabled: (draftInput?.travelers || 2) <= 1 }}
+                  accessibilityState={{
+                    disabled: (draftInput?.travelers || 2) <= 1 || !!draftInput?.hotelSearch,
+                  }}
                 >
                   <Ionicons
                     name="remove"
@@ -383,10 +417,12 @@ export default function CreateTripScreen() {
                 <TouchableOpacity
                   style={styles.counterButton}
                   onPress={() => handleTravelersChange(1)}
-                  disabled={(draftInput?.travelers || 2) >= 10}
+                  disabled={(draftInput?.travelers || 2) >= 50 || !!draftInput?.hotelSearch}
                   accessibilityRole="button"
                   accessibilityLabel="Add one traveler"
-                  accessibilityState={{ disabled: (draftInput?.travelers || 2) >= 10 }}
+                  accessibilityState={{
+                    disabled: (draftInput?.travelers || 2) >= 50 || !!draftInput?.hotelSearch,
+                  }}
                 >
                   <Ionicons
                     name="add"

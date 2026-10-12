@@ -3,6 +3,7 @@ import { API_BASE_URL } from '../constants/api';
 import { withPlanningConsent } from '../lib/planningConsent';
 import { requestWithTimeout } from './request';
 import { pendingTripCreation, finishTripCreation } from '../lib/tripCreationRecovery';
+import { hotelGuestCounts, type HotelSearchDetails } from '@faroway/constants';
 
 export class GenerationNotStartedError extends Error {}
 
@@ -22,12 +23,17 @@ async function checked(response: Response, fallback: string) {
 }
 
 export async function createAndStartTrip(
-  input: Omit<SearchInput, 'travelerType' | 'budget'> & { travelerType?: string; budget?: string },
+  input: Omit<SearchInput, 'travelerType' | 'budget'> & {
+    travelerType?: string;
+    budget?: string;
+    hotelSearch?: HotelSearchDetails | null;
+  },
   onCreated: (id: string) => void,
   signal?: AbortSignal
 ): Promise<string> {
   // Freeze the brief shown when the user chose to plan; never read mutable draft
   // state after an asynchronous consent dialog.
+  const hotelCounts = input.hotelSearch ? hotelGuestCounts(input.hotelSearch) : null;
   const body = JSON.stringify({
     destination: input.destination,
     start_date: input.startDate,
@@ -39,6 +45,8 @@ export async function createAndStartTrip(
       originCity: input.originCity,
       originAirport: input.originAirport,
       vibes: input.vibes,
+      hotelSearch: input.hotelSearch,
+      ...(hotelCounts ? { adults: hotelCounts.adults, children: hotelCounts.children } : {}),
     },
   });
   return withPlanningConsent(async (authorization) => {

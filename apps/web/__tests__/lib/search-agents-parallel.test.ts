@@ -85,7 +85,7 @@ const aiActivity = {
   name: "AI Food Walk",
   description: "A fast local food walk",
   category: "food",
-  duration: 120,
+  durationMinutes: 120,
   price: 80,
   currency: "USD",
   rating: 4.6,
@@ -174,6 +174,7 @@ describe("search agents internal parallelism", () => {
     const results = await search;
 
     expect(results[0].name).toBe("AI Food Walk");
+    expect(results[0].duration).toBe(120);
   });
 
   it("keeps independent AI planning when Viator content is disabled", async () => {

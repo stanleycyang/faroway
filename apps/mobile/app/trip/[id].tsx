@@ -33,6 +33,7 @@ import { useTrips } from '../../hooks/useTrips';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { USE_NATIVE_DRIVER } from '../../lib/animation';
 import { reviewSavedTripBooking } from '../../lib/savedTripBooking';
+import { HotelQuotePanel } from '../../components/HotelQuotePanel';
 
 const BookingTripContext = createContext<string | undefined>(undefined);
 const useBookingReview = () => {
@@ -420,7 +421,7 @@ export default function TripDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { trips, currentTrip, isHydrated } = useTripStore();
   const { getTripById } = useTrips();
-  const { isAuthenticated } = useAuthContext();
+  const { isAuthenticated, user } = useAuthContext();
   const { tripGenerationCount, shouldShowRatingPrompt } = usePromptStore();
   const reduceMotion = useReduceMotion();
   const [selectedDay, setSelectedDay] = useState(0);
@@ -789,6 +790,7 @@ export default function TripDetailScreen() {
               </View>
             )}
 
+            <HotelQuotePanel key={`hotels:${trip.id}:${trip.updatedAt}:${user?.id}`} trip={trip} />
             {/* Featured Hotel */}
             {trip.hotel && <FeaturedHotelCard hotel={trip.hotel} />}
 

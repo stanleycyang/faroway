@@ -4,6 +4,17 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "releaseCandidate": {
+      "environment": "preview",
+      "distribution": "internal",
+      "ios": { "simulator": false },
+      "android": { "buildType": "apk" },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://faroway-git-codex-release-candidate-testimonio.vercel.app",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://omovikloadpvzijoaqus.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_-weY8aZ3sukEPVWbGok7tA_KxJyDEPa"
+      }
+    },
     "development": {
       "developmentClient": true,
       "distribution": "internal",

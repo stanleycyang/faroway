@@ -21,7 +21,14 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { destinations as destinationCatalog } from "@/lib/planner-destination-catalog";
-import { IMAGE_PATHS, getImageUrl } from "@faroway/constants";
+import {
+  IMAGE_PATHS,
+  getImageUrl,
+  validateHotelSearchDetails,
+  hotelGuestCounts,
+  type HotelSearchDetails,
+} from "@faroway/constants";
+import { HotelSearchFields } from "@/components/trips/HotelSearchFields";
 import {
   PlacesAutocompleteInput,
   type PlaceResult,
@@ -82,6 +89,7 @@ interface StoredCreateDraft {
   travelerType: string;
   selectedVibes: string[];
   showAdvanced: boolean;
+  hotelSearch?: HotelSearchDetails | null;
 }
 
 export default function CreateTripPage() {
@@ -95,6 +103,9 @@ export default function CreateTripPage() {
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [travelers, setTravelers] = useState(2);
+  const [hotelSearch, setHotelSearch] = useState<HotelSearchDetails | null>(
+    null,
+  );
   const [travelerType, setTravelerType] = useState("couple");
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
   const submissionLock = useRef(false);
@@ -105,7 +116,11 @@ export default function CreateTripPage() {
     end_date: string;
     travelers: number;
     budget: string;
-    preferences: { travelerType: string; vibes: string[] };
+    preferences: {
+      travelerType: string;
+      vibes: string[];
+      hotelSearch?: HotelSearchDetails | null;
+    };
   } | null>(null);
   useEffect(() => {
     setPendingRequest(null);
@@ -164,7 +179,7 @@ export default function CreateTripPage() {
         setEndDate(restoredEnd);
       }
       if (typeof draft.travelers === "number") {
-        setTravelers(Math.max(1, Math.min(10, draft.travelers)));
+        setTravelers(Math.max(1, Math.min(50, draft.travelers)));
       }
       if (typeof draft.travelerType === "string") {
         setTravelerType(draft.travelerType);
@@ -173,6 +188,8 @@ export default function CreateTripPage() {
         setSelectedVibes(draft.selectedVibes.slice(0, 5));
       }
       setShowAdvanced(Boolean(draft.showAdvanced));
+      if (draft.hotelSearch && validateHotelSearchDetails(draft.hotelSearch))
+        setHotelSearch(draft.hotelSearch);
       return;
     }
 
@@ -221,7 +238,12 @@ export default function CreateTripPage() {
     );
   };
 
-  const canGenerate = selectedPlace && startDate && endDate;
+  const canGenerate =
+    selectedPlace &&
+    startDate &&
+    endDate &&
+    (hotelSearch === null ||
+      validateHotelSearchDetails(hotelSearch, travelers));
 
   const handleSelectRecommended = (dest: (typeof destinations)[number]) => {
     setSelectedPlace({
@@ -268,6 +290,7 @@ export default function CreateTripPage() {
         travelerType,
         selectedVibes,
         showAdvanced,
+        hotelSearch,
       };
       try {
         const draftId = saveCreateDraft(localStorage, draft);
@@ -287,6 +310,7 @@ export default function CreateTripPage() {
     let createdTripId: string | null = null;
     const storageKey = `faroway:pending-create:${session.user.id}`;
     try {
+      const hotelCounts = hotelSearch ? hotelGuestCounts(hotelSearch) : null;
       const payload = pendingRequest ?? {
         requestId: crypto.randomUUID(),
         destination: selectedPlace!.name,
@@ -294,7 +318,14 @@ export default function CreateTripPage() {
         end_date: format(endDate!, "yyyy-MM-dd"),
         travelers,
         budget: "moderate",
-        preferences: { travelerType, vibes: selectedVibes },
+        preferences: {
+          travelerType,
+          vibes: selectedVibes,
+          hotelSearch,
+          ...(hotelCounts
+            ? { adults: hotelCounts.adults, children: hotelCounts.children }
+            : {}),
+        },
       };
       const planningHeaders = await requestPlanningConsent();
       // Persist before any write: a lost response or reload reuses the same ID.
@@ -585,7 +616,7 @@ export default function CreateTripPage() {
                     <button
                       aria-label="Decrease travelers"
                       onClick={() => setTravelers(Math.max(1, travelers - 1))}
-                      disabled={travelers <= 1}
+                      disabled={travelers <= 1 || hotelSearch !== null}
                       className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <Minus className="w-4 h-4" />
@@ -598,8 +629,8 @@ export default function CreateTripPage() {
                     </span>
                     <button
                       aria-label="Increase travelers"
-                      onClick={() => setTravelers(Math.min(10, travelers + 1))}
-                      disabled={travelers >= 10}
+                      onClick={() => setTravelers(Math.min(50, travelers + 1))}
+                      disabled={travelers >= 50 || hotelSearch !== null}
                       className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <Plus className="w-4 h-4" />
@@ -664,6 +695,26 @@ export default function CreateTripPage() {
           )}
         </section>
 
+        <HotelSearchFields
+          value={hotelSearch}
+          travelers={travelers}
+          onChange={(value) => {
+            const roomsChanged =
+              value &&
+              hotelSearch &&
+              JSON.stringify(value.rooms) !== JSON.stringify(hotelSearch.rooms);
+            setHotelSearch(value);
+            if (roomsChanged) {
+              const counts = hotelGuestCounts(value);
+              if (
+                Number.isInteger(counts.travelers) &&
+                counts.travelers >= 1 &&
+                counts.travelers <= 50
+              )
+                setTravelers(counts.travelers);
+            }
+          }}
+        />
         <div className="sticky bottom-0 bg-gray-50 pt-4 pb-8 -mx-4 px-4 sm:-mx-6 sm:px-6">
           <button
             onClick={handleGenerate}

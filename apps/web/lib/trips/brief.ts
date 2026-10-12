@@ -1,5 +1,15 @@
 import { z } from "zod";
 import { isValidDateOnly, isValidDateRange } from "@/lib/api/date-range";
+import {
+  validateHotelSearchDetails,
+  hotelGuestCounts,
+  type HotelSearchDetails,
+} from "@faroway/constants";
+
+export const HotelSearchDetailsSchema = z.custom<HotelSearchDetails>(
+  (value) => validateHotelSearchDetails(value),
+  "Provide complete hotel nationality, room occupancy and consent",
+);
 
 export const BriefPreferencesSchema = z
   .object({
@@ -10,6 +20,7 @@ export const BriefPreferencesSchema = z
     originAirport: z.string().trim().max(10).optional(),
     adults: z.number().int().min(1).max(50).optional(),
     children: z.number().int().min(0).max(49).optional(),
+    hotelSearch: HotelSearchDetailsSchema.nullable().optional(),
     interests: z.array(z.string().trim().min(1).max(50)).max(20).optional(),
   })
   .strict();
@@ -35,9 +46,21 @@ export function validBriefComposition(
   travelers: number,
   preferences: Record<string, unknown>,
 ) {
+  if (
+    preferences.hotelSearch != null &&
+    !validateHotelSearchDetails(preferences.hotelSearch, travelers)
+  )
+    return false;
   if (preferences.adults == null && preferences.children == null) return true;
   const adults = preferences.adults;
   const children = preferences.children ?? 0;
+  if (
+    preferences.hotelSearch != null &&
+    validateHotelSearchDetails(preferences.hotelSearch)
+  ) {
+    const counts = hotelGuestCounts(preferences.hotelSearch);
+    if (counts.adults !== adults || counts.children !== children) return false;
+  }
   return (
     typeof adults === "number" &&
     typeof children === "number" &&

@@ -64,6 +64,20 @@ beforeEach(() => {
   userId = "owner";
 });
 describe("recoverable trip creation", () => {
+  it("persists consented hotel guests through creation and replay", async () => {
+    const hotelSearch = {
+      countryCode: "FR",
+      guestNationality: "CA",
+      rooms: [{ adults: 2, children: [] }],
+      consentVersion: "hotel-search-nuitee-v1",
+    };
+    const input = { ...payload, preferences: { hotelSearch } };
+    expect((await post(input)).status).toBe(201);
+    expect((await post(input)).status).toBe(200);
+    expect(rows.get(payload.requestId)?.preferences).toMatchObject({
+      hotelSearch,
+    });
+  });
   it("returns the same trip for simultaneous requests and lost-response replay", async () => {
     const responses = await Promise.all([post(), post(), post()]);
     expect(responses.map((r) => r.status).sort()).toEqual([200, 200, 201]);

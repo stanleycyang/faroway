@@ -25,6 +25,21 @@ try:
     sql(f"INSERT INTO auth.users(id,email) VALUES('{A}','a@example.invalid'),('{B}','b@example.invalid'); INSERT INTO public.users(id,email,auth_provider) VALUES('{A}','a@example.invalid','apple'),('{B}','b@example.invalid','email') ON CONFLICT(id) DO NOTHING;")
     sql(f"INSERT INTO public.push_tokens(user_id,token,platform) VALUES('{A}','{token}','ios'),('{B}','{token}','ios');")
     sql((ROOT/json.loads((ROOT/'supabase/release-candidate/review.json').read_text())['registered_migration']).read_text())
+    sql((ROOT/'supabase/migrations/20261012045945_hotel_party_preferences.sql').read_text())
+    hotel_trip='00000000-0000-4000-8000-000000000015'
+    sql(f"INSERT INTO public.trips(id,user_id,destination,start_date,end_date,status,preferences) VALUES('{hotel_trip}','{A}','Hotel fixture','2099-01-01','2099-01-02','draft','{{\"creationRequestHash\":\"preserved\",\"hotelSearch\":null}}');")
+    revision=sql(f"SELECT updated_at FROM public.trips WHERE id='{hotel_trip}';")
+    hotel_preferences=json.dumps({'hotelSearch':{'countryCode':'US','guestNationality':'CA','rooms':[{'adults':2,'children':[8]}],'consentVersion':'hotel-search-nuitee-v1'}})
+    changes=json.dumps({'travelers':3,'preferences':json.loads(hotel_preferences)})
+    assert sql(f"SET ROLE service_role; SELECT count(*) FROM public.update_trip_brief('{hotel_trip}','{A}','{revision}','{changes}');")=='1'
+    assert sql(f"SELECT preferences->>'creationRequestHash' FROM public.trips WHERE id='{hotel_trip}';")=='preserved'
+    assert sql(f"SELECT preferences->'hotelSearch'->>'guestNationality' FROM public.trips WHERE id='{hotel_trip}';")=='CA'
+    assert sql(f"SELECT count(*) FROM public.update_trip_brief('{hotel_trip}','{A}','{revision}','{changes}');")=='0'
+    revision=sql(f"SELECT updated_at FROM public.trips WHERE id='{hotel_trip}';")
+    assert sql(f"SELECT count(*) FROM public.update_trip_brief('{hotel_trip}','{B}','{revision}','{changes}');")=='0'
+    assert sql(f"SELECT count(*) FROM public.update_trip_brief('{hotel_trip}','{A}','{revision}','{{\"preferences\":{{\"hotelSearch\":null}}}}');")=='1'
+    assert sql(f"SELECT preferences->'hotelSearch'='null'::jsonb FROM public.trips WHERE id='{hotel_trip}';")=='t'
+    print('PASS versioned hotel preferences, consent removal, metadata preservation and stale/cross-owner refusal',flush=True)
     assert sql(f"SELECT count(*) FROM public.push_tokens WHERE token='{token}'")=='0'
     for role in ['anon','authenticated']:
         sql(f"SET ROLE {role}; SELECT * FROM public.account_deletion_receipts;",False)

@@ -5,7 +5,13 @@ import { API_BASE_URL, getAuthHeaders } from '../lib/supabase';
 import { useTripStore, Trip, TripInput, TripDay, Activity, Hotel } from '../stores/tripStore';
 import { syncService, networkMonitor, offlineStorage } from '../lib/offline';
 import { normalizeTripStatus } from '../lib/tripStatus';
-import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
+import {
+  IMAGE_PATHS,
+  getImageUrl,
+  hotelGuestCounts,
+  validateHotelSearchDetails,
+  type HotelSearchDetails,
+} from '@faroway/constants';
 
 interface ApiItinerary {
   days?: unknown[];
@@ -23,6 +29,7 @@ interface ApiTrip {
   travelers: number;
   traveler_type?: string;
   preferences?: {
+    hotelSearch?: HotelSearchDetails | null;
     planNeedsRefresh?: boolean;
     travelerType?: string;
     originCity?: string;
@@ -215,6 +222,9 @@ function transformApiTrip(apiTrip: ApiTrip, itinerary?: ApiItinerary): Trip {
     travelerType: apiTrip.traveler_type || apiTrip.preferences?.travelerType || 'solo',
     originCity: apiTrip.preferences?.originCity,
     originAirport: apiTrip.preferences?.originAirport,
+    hotelSearch: validateHotelSearchDetails(apiTrip.preferences?.hotelSearch)
+      ? apiTrip.preferences.hotelSearch
+      : null,
     vibes: apiTrip.vibes || [],
     budget: apiTrip.budget_tier || apiTrip.budget,
     planNeedsRefresh: apiTrip.preferences?.planNeedsRefresh === true,
@@ -313,6 +323,7 @@ export function useTrips() {
           travelerType: input.travelerType,
           originCity: input.originCity,
           originAirport: input.originAirport,
+          hotelSearch: input.hotelSearch,
           vibes: input.vibes,
           budget: input.budget,
           days: [],
@@ -345,6 +356,13 @@ export function useTrips() {
               travelerType: input.travelerType,
               originCity: input.originCity,
               originAirport: input.originAirport,
+              hotelSearch: input.hotelSearch,
+              ...(input.hotelSearch
+                ? {
+                    adults: hotelGuestCounts(input.hotelSearch).adults,
+                    children: hotelGuestCounts(input.hotelSearch).children,
+                  }
+                : {}),
               vibes: input.vibes,
               budget: input.budget,
             },

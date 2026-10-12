@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import { z } from 'zod';
+import { validateHotelSearchDetails, type HotelSearchDetails } from '@faroway/constants';
 
 const key = (userId: string) => `faroway:pending-create:${encodeURIComponent(userId)}`;
 type Receipt = { version: 1; requestId: string; body: string };
@@ -66,6 +67,10 @@ export function savedTripCreationDraft(userId: string) {
         travelers: z.number().int().min(1).max(50),
         budget: z.string().optional(),
         preferences: z.object({
+          hotelSearch: z
+            .custom<HotelSearchDetails>((value) => validateHotelSearchDetails(value))
+            .nullable()
+            .optional(),
           travelerType: z.string().optional(),
           originCity: z.string().optional(),
           originAirport: z.string().optional(),
@@ -82,6 +87,7 @@ export function savedTripCreationDraft(userId: string) {
       travelerType: body.preferences.travelerType || 'couple',
       originCity: body.preferences.originCity,
       originAirport: body.preferences.originAirport,
+      hotelSearch: body.preferences.hotelSearch,
       vibes: body.preferences.vibes || [],
     };
   });

@@ -769,6 +769,7 @@ export default function GeneratingScreen() {
             travelerType: draftInput.travelerType || 'couple',
             originCity: draftInput.originCity,
             originAirport: draftInput.originAirport,
+            hotelSearch: draftInput.hotelSearch,
             vibes: draftInput.vibes || [],
             budget: draftInput.budget,
           }

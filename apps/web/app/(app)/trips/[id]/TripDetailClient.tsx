@@ -5,6 +5,7 @@ import { requestPlanningConsent } from "@/lib/ai/planning-consent-client";
 import { BookingChecklist } from "@/components/trips/BookingChecklist";
 import { PlanEditor } from "@/components/trips/PlanEditor";
 import { TripBriefEditor } from "@/components/trips/TripBriefEditor";
+import { HotelQuotePanel } from "@/components/trips/HotelQuotePanel";
 
 import React, {
   useEffect,
@@ -646,6 +647,10 @@ export function TripDetailClient({
                 : "Brief saved. Public access is off until you share the updated plan.",
             );
           }}
+        />
+        <HotelQuotePanel
+          key={`hotels:${trip.id}:${trip.updated_at}`}
+          trip={trip}
         />
         {trip.preferences?.planNeedsRefresh === true && (
           <div

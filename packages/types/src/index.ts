@@ -694,3 +694,25 @@ export interface Itinerary {
   created_at?: string;
   updated_at?: string;
 }
+export interface HotelQuoteResult {
+  tripId: string;
+  tripUpdatedAt: string;
+  observedAt: string;
+  sandbox: boolean;
+  hotels: Array<{
+    id: string;
+    name: string;
+    offers: Array<{
+      id: string;
+      stayAmount: number;
+      currency: string;
+      roomCount: number;
+      additionalTaxes: Array<{
+        amount: number;
+        currency: string;
+        description: string;
+      }>;
+      cancellationNote: string;
+    }>;
+  }>;
+}

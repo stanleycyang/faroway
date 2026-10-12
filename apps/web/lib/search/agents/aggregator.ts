@@ -100,10 +100,11 @@ Consider:
 3. Meal timing - breakfast spots for morning, dinner for evening
 4. Pacing - don't overload each day
 5. Vibe scores - prioritize higher-scoring options
-6. Practical logistics - museum hours, booking requirements
+6. Practical logistics - allow realistic travel time and recommend checking current hours and booking requirements
 7. Transport - if flights are available, assign the outbound flight to Day 1 and the return flight to the last day using transportId
 
-Output should reference items by their IDs and organize them into a sensible flow.`;
+Output should reference items by their IDs and organize them into a sensible flow.
+Tips may give general packing, pacing and navigation advice. Do not invent or assert current opening hours, payment methods (including cash-only rules), reservation release windows, cancellation policies or availability. These require current supplier verification; advise travelers to confirm with the venue instead.`;
 
 export async function runAggregatorAgent(
   plan: SearchPlan,

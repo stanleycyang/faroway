@@ -25,6 +25,13 @@
       "hosted_version": "20261011052918",
       "executed_sha256": "53b241dd38089b9f1f92fff78886c44ae66994cbce42e08193ed7e2819c13ca0",
       "execution_change": "Hosted SQL retains historical trailing whitespace from cleanup function bodies; registered local SQL normalizes trailing whitespace only. Transaction settings and SQL behavior are identical."
+    },
+    {
+      "path": "supabase/migrations/20261012045945_hotel_party_preferences.sql",
+      "source_sha256": "cd21d617d9f2f193fd2951e526edc86f893f040b44c83913bc67b225fde10135",
+      "hosted_version": "20261012052326",
+      "executed_sha256": "c9fbdb6f244349a21899f947a35ae9a06f68c627330590e0986a760ec06fad23",
+      "execution_change": "Session lock_timeout=2s and statement_timeout=60s prepended; reviewed function body unchanged."
     }
   ],
   "verification": {
@@ -38,7 +45,8 @@
     "browser_auth_api_acceptance": "Sign-in, saved drafts, pause-safe retry and committed interrupted-creation replay passed; cross-account privacy and deletion remain pending",
     "signed_device_acceptance": "pending",
     "helper_regression": "passed",
-    "auth_redirect_configuration": "Staging Site URL and two exact callbacks saved and verified after dashboard reload; production unchanged."
+    "auth_redirect_configuration": "Staging Site URL and two exact callbacks saved and verified after dashboard reload; production unchanged.",
+    "hotel_party_local_regression": "Passed consent addition/removal, creation metadata preservation and stale/cross-owner RPC refusal; hosted UI pending."
   },
   "security_advisors": {
     "info": "Eight deliberately server-only RLS tables have no client policies; do not add client policies to silence this notice.",

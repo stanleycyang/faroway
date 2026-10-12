@@ -12,6 +12,7 @@ import type {
   TrackClickParams,
   TrackClickResponse,
   DestinationsResponse,
+  HotelQuoteResult,
 } from '@faroway/types';
 
 // Re-export types for backward compatibility
@@ -224,6 +225,18 @@ export async function getTrips(): Promise<ApiResponse<{ trips: Trip[] }>> {
 
 export async function getTrip(id: string): Promise<ApiResponse<{ trip: Trip }>> {
   return apiFetch<{ trip: Trip }>(`/api/trips/${encodeURIComponent(id)}`);
+}
+
+export async function getTripHotelQuotes(
+  id: string,
+  expectedUpdatedAt: string,
+  signal?: AbortSignal
+): Promise<ApiResponse<HotelQuoteResult>> {
+  return apiFetch<HotelQuoteResult>(`/api/trips/${encodeURIComponent(id)}/hotels`, {
+    method: 'POST',
+    signal,
+    body: JSON.stringify({ expectedUpdatedAt }),
+  });
 }
 
 export async function createTrip(trip: {

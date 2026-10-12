@@ -19,6 +19,12 @@
       "source": "supabase/release-candidate/helper-search-paths.sql",
       "sha256": "510697e0bba4ecf3345980d2ef9a70f5a867100afbd19c6417dc69dab43dd36c",
       "applied": false
+    },
+    {
+      "path": "supabase/migrations/20261012045945_hotel_party_preferences.sql",
+      "source": "supabase/release-candidate/hotel-party-preferences.sql",
+      "sha256": "cd21d617d9f2f193fd2951e526edc86f893f040b44c83913bc67b225fde10135",
+      "applied": false
     }
   ],
   "constraints": [
