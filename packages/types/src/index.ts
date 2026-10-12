@@ -306,6 +306,7 @@ export interface TripDay {
     meals: Restaurant[];
   };
   transport?: TripDayTransport;
+  hotel?: HotelResult;
   totalEstimatedCost: {
     amount: number;
     currency: string;

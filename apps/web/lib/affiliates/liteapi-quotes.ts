@@ -23,8 +23,14 @@ export function normalizeLiteApiQuotes(
           (price) => price.currency === currency,
         );
         if (prices.length !== 1) return [];
+        const minimums = rate.retailRate.suggestedSellingPrice || [];
+        if (
+          minimums.length &&
+          !minimums.some((price) => price.currency === currency)
+        )
+          return [];
         roomTotal += prices[0].amount;
-        for (const minimum of rate.retailRate.suggestedSellingPrice || []) {
+        for (const minimum of minimums) {
           if (minimum.currency === currency)
             sellingMinimum = Math.max(sellingMinimum, minimum.amount);
         }

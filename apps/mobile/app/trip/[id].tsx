@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useRef, useMemo, createContext, useContext } from 'react';
+import { formatTripCalendarDate } from '../../lib/tripCalendarDate';
 import {
   View,
   Text,
@@ -663,16 +664,7 @@ export default function TripDetailScreen() {
   }
 
   const formatDateRange = () => {
-    const start = new Date(trip.startDate);
-    const end = new Date(trip.endDate);
-    return `${start.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    })} - ${end.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    })}`;
+    return `${formatTripCalendarDate(trip.startDate)} - ${formatTripCalendarDate(trip.endDate, true)}`;
   };
 
   const headerTranslate = scrollY.interpolate({

@@ -56,3 +56,10 @@ it("requires an identified property before displaying a quote", () => {
     normalizeLiteApiQuotes({ ...response(), hotels: [] }, "USD", 2),
   ).toEqual([]);
 });
+it("does not quote when the supplier selling minimum cannot be compared", () => {
+  const rates = response();
+  rates.data[0].roomTypes[0].rates[0].retailRate.suggestedSellingPrice = [
+    { amount: 500, currency: "EUR" },
+  ];
+  expect(normalizeLiteApiQuotes(rates, "USD", 2)).toEqual([]);
+});

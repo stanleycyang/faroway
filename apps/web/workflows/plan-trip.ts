@@ -844,6 +844,7 @@ async function bridgeToItineraries(
   // proper { activities: ItineraryActivity[], meals: Restaurant[] } structure
   // thanks to mapSearchResultsToItinerary, so we can use them directly.
   const itineraryDays = result.days.map((day) => ({
+    ...day,
     dayNumber: day.dayNumber,
     date: day.date,
     title: day.title,

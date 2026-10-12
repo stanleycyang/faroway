@@ -247,6 +247,43 @@ async function waitFor(
 }
 
 describe("planTripWorkflow", () => {
+  it("persists hotel and transport alongside the itinerary slots", async () => {
+    const day = {
+      dayNumber: 1,
+      date: "2026-06-01",
+      title: "Arrival",
+      summary: "Arrival day",
+      hotel,
+      transport: {
+        type: "flight",
+        provider: "Fixture",
+        departure: {},
+        arrival: {},
+        duration: 120,
+        stops: 0,
+        price: 100,
+        currency: "USD",
+      },
+      morning: { activities: [], meals: [] },
+      afternoon: { activities: [], meals: [] },
+      evening: { activities: [], meals: [] },
+      totalEstimatedCost: { amount: 100, currency: "USD" },
+      tips: [],
+    };
+    mocks.mapSearchResultsToItinerary.mockReturnValue(
+      mappedItinerary({ days: [day] }),
+    );
+    await planTripWorkflow(workflowInput);
+    expect(supabaseMock.rpc).toHaveBeenCalledWith(
+      "apply_trip_generation_update",
+      expect.objectContaining({
+        p_state: "planned",
+        p_payload: expect.objectContaining({
+          days: [expect.objectContaining({ hotel, transport: day.transport })],
+        }),
+      }),
+    );
+  });
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.dispatchItineraryReady.mockResolvedValue("accepted");

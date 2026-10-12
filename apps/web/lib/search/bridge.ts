@@ -183,6 +183,7 @@ function mapDay(day: SuggestedDay): TripDay {
     afternoon: mapSlot(day.afternoon, "afternoon", "lunch"),
     evening: mapSlot(day.evening, "evening", "dinner"),
     transport: day.transport ? mapTransport(day.transport) : undefined,
+    hotel: day.hotel,
     totalEstimatedCost: {
       amount: day.estimatedCost || 0,
       currency: day.currency || "USD",

@@ -41,15 +41,15 @@ const SuggestedDaySchema = z.object({
   summary: z.string(),
   hotelId: z.string().optional(),
   morning: z.object({
-    activityIds: z.array(z.string()),
+    activityIds: z.array(z.string()).max(1),
     mealId: z.string().optional(),
   }),
   afternoon: z.object({
-    activityIds: z.array(z.string()),
+    activityIds: z.array(z.string()).max(1),
     mealId: z.string().optional(),
   }),
   evening: z.object({
-    activityIds: z.array(z.string()),
+    activityIds: z.array(z.string()).max(1),
     mealId: z.string().optional(),
   }),
   transportId: z.string().optional(),
@@ -98,7 +98,7 @@ Consider:
 1. Geographic proximity - group nearby activities together
 2. Time of day - morning activities before afternoon ones
 3. Meal timing - breakfast spots for morning, dinner for evening
-4. Pacing - don't overload each day
+4. Pacing - select at most one activity per morning, afternoon and evening, no more than three per day. Keep total activity duration under eight hours per day and leave time for meals and travel. Avoid repeating an activity. A long tour may leave another slot empty. Do not add a separate meal to a dining cruise or food tour that already includes that meal.
 5. Vibe scores - prioritize higher-scoring options
 6. Practical logistics - allow realistic travel time and recommend checking current hours and booking requirements
 7. Transport - if flights are available, assign the outbound flight to Day 1 and the return flight to the last day using transportId
@@ -490,11 +490,11 @@ function createFallbackItinerary(
       summary: `Explore ${plan.destination} with a mix of activities and dining.`,
       hotel: topHotel || undefined,
       morning: {
-        activities: morningActivities.slice(i * 2, i * 2 + 2),
+        activities: morningActivities.slice(i, i + 1),
         meal: breakfastSpots[i % breakfastSpots.length],
       },
       afternoon: {
-        activities: afternoonActivities.slice(i * 2, i * 2 + 2),
+        activities: afternoonActivities.slice(i, i + 1),
         meal: lunchSpots[i % lunchSpots.length],
       },
       evening: {

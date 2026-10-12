@@ -1,5 +1,6 @@
 import { GenerationHotelFacts } from '../../components/GenerationHotelFacts';
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
+import { formatTripCalendarDate } from '../../lib/tripCalendarDate';
 import {
   View,
   Text,
@@ -898,17 +899,8 @@ export default function GeneratingScreen() {
             </Text>
             <View style={styles.headerMeta}>
               <Text style={styles.headerMetaText}>
-                {draftInput?.startDate &&
-                  new Date(draftInput.startDate).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                  })}{' '}
-                -{' '}
-                {draftInput?.endDate &&
-                  new Date(draftInput.endDate).toLocaleDateString('en-US', {
-                    month: 'short',
-                    day: 'numeric',
-                  })}
+                {draftInput?.startDate && formatTripCalendarDate(draftInput.startDate)} -{' '}
+                {draftInput?.endDate && formatTripCalendarDate(draftInput.endDate)}
               </Text>
               <Text style={styles.headerMetaDot}>•</Text>
               <Text style={styles.headerMetaText}>{draftInput?.travelers || 2} travelers</Text>
