@@ -117,6 +117,43 @@ beforeEach(() => {
 });
 
 describe('useTrips', () => {
+  it('restores saved hotels without inventing prices and keeps meal currencies', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({
+        trip: makeApiTrip('trip-1', 'Paris'),
+        itinerary: {
+          days: [
+            {
+              date: '2026-04-01',
+              dayNumber: 1,
+              title: 'Paris',
+              hotel: { name: 'Saved hotel', amenities: [] },
+              morning: {
+                activities: [
+                  {
+                    name: 'Walk',
+                    duration: 20,
+                    estimatedCost: { amount: 0, currency: 'EUR', status: 'unknown' },
+                  },
+                ],
+                meals: [{ name: 'Lunch', estimatedCost: { amount: 30, currency: 'EUR' } }],
+              },
+            },
+          ],
+        },
+      }),
+    });
+    const trip = await renderUseTrips().getTripById('trip-1');
+    expect(trip.hotel).toMatchObject({ name: 'Saved hotel' });
+    expect(trip.hotel?.pricePerNight).toBeUndefined();
+    expect(trip.hotel?.totalPrice).toBeUndefined();
+    expect(trip.days[0].activities[0]).toMatchObject({
+      duration: '20m',
+      price: 'Price unavailable',
+    });
+    expect(trip.days[0].activities[1].price).toBe('Est. EUR 30 /pp');
+  });
   it('replaces stale local trips with the backend trip list when fetching', async () => {
     useTripStore
       .getState()

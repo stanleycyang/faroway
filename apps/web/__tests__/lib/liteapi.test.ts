@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const { request } = vi.hoisted(() => ({ request: vi.fn() }));
-vi.mock("@/lib/search/runtime", () => ({ fetchWithTimeout: request }));
 import {
   LiteApiSearchSchema,
   searchLiteApiHotels,
@@ -48,17 +47,50 @@ const payload = {
 };
 beforeEach(() => {
   request.mockReset();
+  vi.stubGlobal("fetch", request);
   vi.stubEnv("LITEAPI_SANDBOX_ENABLED", "true");
   vi.stubEnv("LITEAPI_API_KEY", "sand_fixture_key");
   request.mockResolvedValue({ ok: true, json: async () => payload });
 });
-afterEach(() => vi.unstubAllEnvs());
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
 
 describe("LiteAPI sandbox rates", () => {
+  it.each(["headers", "body"])(
+    "bounds stalled response %s and aborts the request",
+    async (phase) => {
+      vi.useFakeTimers();
+      const stalled = new Promise(() => {});
+      request.mockImplementation(() =>
+        phase === "headers"
+          ? stalled
+          : Promise.resolve({ ok: true, json: () => stalled }),
+      );
+      const failure = expect(searchLiteApiHotels(input)).rejects.toThrow(
+        "timed out after 8000ms",
+      );
+      await vi.advanceTimersByTimeAsync(8001);
+      await failure;
+      expect(request.mock.calls[0][1].signal.aborted).toBe(true);
+    },
+  );
+  it("returns an empty sandbox result for no availability without reading a body", async () => {
+    const json = vi.fn();
+    request.mockResolvedValue({ status: 204, ok: true, json });
+    expect(await searchLiteApiHotels(input)).toEqual({
+      sandbox: true,
+      data: [],
+      hotels: [],
+    });
+    expect(json).not.toHaveBeenCalled();
+  });
   it("preserves prices, public selling minimums, taxes and cancellation terms", async () => {
     const result = await searchLiteApiHotels(input);
     expect(result).toEqual(payload);
-    const [url, options, timeout] = request.mock.calls[0];
+    const [url, options] = request.mock.calls[0];
     expect(url).toBe("https://api.liteapi.travel/v3.0/hotels/rates");
     expect(options.cache).toBe("no-store");
     expect(JSON.parse(options.body)).toMatchObject({
@@ -66,7 +98,7 @@ describe("LiteAPI sandbox rates", () => {
       timeout: 6,
       includeHotelData: true,
     });
-    expect(timeout).toBe(8000);
+    expect(options.signal).toBeInstanceOf(AbortSignal);
   });
   it("makes no request when disabled", async () => {
     vi.stubEnv("LITEAPI_SANDBOX_ENABLED", "false");

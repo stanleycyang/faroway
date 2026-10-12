@@ -1,6 +1,7 @@
 import { GenerationHotelFacts } from '../../components/GenerationHotelFacts';
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import { formatTripCalendarDate } from '../../lib/tripCalendarDate';
+import { formatPlanningPrice, formatPlanningDuration } from '../../lib/planningPrice';
 import {
   View,
   Text,
@@ -91,6 +92,8 @@ interface StreamingLocation {
 }
 
 interface StreamingItem {
+  currency?: string;
+  priceStatus?: string;
   id?: string;
   name?: string;
   description?: string;
@@ -120,6 +123,8 @@ interface StreamingDay {
 }
 
 interface StreamingHotel {
+  currency?: string;
+  priceStatus?: string;
   id?: string;
   name?: string;
   description?: string;
@@ -175,9 +180,13 @@ function convertStreamingDataToTrip(
           title: activity.name || 'Recommended stop',
           description: activity.description || '',
           location: activity.location?.name || activity.location?.neighborhood || '',
-          duration: activity.duration ? `${Math.round(activity.duration / 60)} hours` : '2 hours',
+          duration: formatPlanningDuration(activity.duration),
           type: 'activity',
-          price: activity.price ? `$${activity.price}` : undefined,
+          price: formatPlanningPrice({
+            amount: activity.price,
+            currency: activity.currency,
+            status: activity.priceStatus,
+          }),
           rating: activity.rating,
           reviewCount: activity.reviewCount,
           image: activity.images?.[0],
@@ -196,9 +205,11 @@ function convertStreamingDataToTrip(
         location: meal.location?.name || meal.location?.neighborhood || '',
         duration: '1 hour',
         type: 'restaurant',
-        price: meal.priceLevel
-          ? '$'.repeat(typeof meal.priceLevel === 'number' ? meal.priceLevel : 2)
-          : undefined,
+        price: formatPlanningPrice(
+          { amount: meal.price, currency: meal.currency, status: meal.priceStatus },
+          undefined,
+          true
+        ),
         rating: meal.rating,
         reviewCount: meal.reviewCount,
         image: meal.images?.[0],
@@ -255,10 +266,13 @@ function convertStreamingDataToTrip(
           id: hotel.id || 'hotel-1',
           name: hotel.name,
           description: hotel.description || '',
-          pricePerNight: hotel.pricePerNight || 0,
-          totalPrice: hotel.totalPrice || 0,
-          rating: hotel.userRating || hotel.rating || 0,
-          reviewCount: hotel.reviewCount || 0,
+          pricePerNight: hotel.pricePerNight,
+          totalPrice: hotel.totalPrice,
+          currency: hotel.currency,
+          priceStatus: hotel.priceStatus,
+          starRating: hotel.starRating,
+          rating: hotel.userRating ?? hotel.rating,
+          reviewCount: hotel.reviewCount,
           amenities: hotelAmenities,
           images: hotelImages,
           bookingUrl: hotel.affiliateUrl || '',

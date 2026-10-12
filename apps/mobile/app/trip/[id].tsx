@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef, useMemo, createContext, useContext } from 'react';
 import { formatTripCalendarDate } from '../../lib/tripCalendarDate';
+import { hotelPreviewFacts } from '../../lib/generationFacts';
 import {
   View,
   Text,
@@ -201,6 +202,7 @@ function FeaturedHotelCard({
   hotel: NonNullable<import('../../stores/tripStore').Trip['hotel']>;
 }) {
   const reviewBooking = useBookingReview();
+  const facts = hotelPreviewFacts({ ...hotel });
   const handleBooking = () => {
     if (!hotel.bookingUrl) return;
     reviewBooking();
@@ -215,19 +217,20 @@ function FeaturedHotelCard({
         <View style={styles.hotelCardHeader}>
           <View style={{ flex: 1 }}>
             <Text style={styles.hotelCardName}>{hotel.name}</Text>
-            <View style={styles.hotelCardRating}>
-              <Ionicons name="star" size={14} color="#fbbf24" />
-              <Text style={styles.hotelCardRatingText}>{hotel.rating}</Text>
-              {hotel.reviewCount != null && hotel.reviewCount > 0 && (
-                <Text style={styles.hotelCardReviewCount}>
-                  ({hotel.reviewCount.toLocaleString()} reviews)
-                </Text>
-              )}
-            </View>
+            {facts.rating && (
+              <View style={styles.hotelCardRating}>
+                <Ionicons name="star" size={14} color="#fbbf24" />
+                <Text style={styles.hotelCardRatingText}>{facts.rating}</Text>
+                {hotel.reviewCount != null && hotel.reviewCount > 0 && (
+                  <Text style={styles.hotelCardReviewCount}>
+                    ({hotel.reviewCount.toLocaleString()} reviews)
+                  </Text>
+                )}
+              </View>
+            )}
           </View>
           <View style={styles.hotelCardPriceContainer}>
-            <Text style={styles.hotelCardPrice}>${hotel.pricePerNight}</Text>
-            <Text style={styles.hotelCardPriceLabel}>per night</Text>
+            <Text style={styles.hotelCardPriceLabel}>{facts.price}</Text>
           </View>
         </View>
         {hotel.amenities && hotel.amenities.length > 0 && (
@@ -437,21 +440,6 @@ export default function TripDetailScreen() {
   const scrollY = useRef(new Animated.Value(0)).current;
   const trip = trips.find((t) => t.id === id) || (currentTrip?.id === id ? currentTrip : null);
 
-  const estimatedTotal = useMemo(() => {
-    let total = 0;
-    if (trip?.hotel) total += trip.hotel.totalPrice;
-    for (const day of trip?.days || []) {
-      if (day.transport) total += day.transport.price;
-      for (const act of day.activities) {
-        if (act.price) {
-          const numPrice = parseFloat(String(act.price).replace(/[^0-9.]/g, ''));
-          if (!isNaN(numPrice)) total += numPrice;
-        }
-      }
-    }
-    return total;
-  }, [trip]);
-
   // Collect all bookable items across all days
   const bookableItems = useMemo(() => {
     if (!trip?.days) return [];
@@ -474,7 +462,7 @@ export default function TripDetailScreen() {
           location: trip.hotel.location?.name || '',
           duration: '',
           type: 'accommodation',
-          price: `$${trip.hotel.pricePerNight}/night`,
+          price: hotelPreviewFacts({ ...trip.hotel }).price,
           bookingUrl: trip.hotel.bookingUrl,
           affiliatePartner: 'booking',
         },
@@ -877,10 +865,8 @@ export default function TripDetailScreen() {
         {bookableCount > 0 && (
           <View style={styles.bottomBar}>
             <View style={styles.bottomBarInfo}>
-              <Text style={styles.bottomBarLabel}>Estimated cost</Text>
-              <Text style={styles.bottomBarPrice}>
-                {estimatedTotal > 0 ? `~$${estimatedTotal.toLocaleString()}` : 'See partner prices'}
-              </Text>
+              <Text style={styles.bottomBarLabel}>Planning prices</Text>
+              <Text style={styles.bottomBarPrice}>See item estimates</Text>
             </View>
             <Button
               title={`Book ${bookableCount} ${bookableCount === 1 ? 'Item' : 'Items'}`}

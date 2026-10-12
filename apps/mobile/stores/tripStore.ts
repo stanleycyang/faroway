@@ -29,10 +29,13 @@ export interface Hotel {
   id: string;
   name: string;
   description: string;
-  pricePerNight: number;
-  totalPrice: number;
-  rating: number;
-  reviewCount: number;
+  pricePerNight?: number;
+  totalPrice?: number;
+  currency?: string;
+  priceStatus?: string;
+  starRating?: number;
+  rating?: number;
+  reviewCount?: number;
   amenities: string[];
   images: string[];
   bookingUrl: string;

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { fetchWithTimeout } from "@/lib/search/runtime";
+import { withAbortTimeout } from "@/lib/search/runtime";
 import { isValidDateOnly } from "@/lib/api/date-range";
 
 // Server-side only: never import this adapter into a client component.
@@ -102,34 +102,40 @@ export async function searchLiteApiHotels(input: LiteApiSearch) {
   if (!isLiteApiConfigured())
     throw new Error("LiteAPI sandbox is disabled or unconfigured");
   const params = LiteApiSearchSchema.parse(input);
-  const response = await fetchWithTimeout(
-    "https://api.liteapi.travel/v3.0/hotels/rates",
-    {
-      method: "POST",
-      headers: {
-        "X-API-Key": process.env.LITEAPI_API_KEY!,
-        "Content-Type": "application/json",
-      },
-      cache: "no-store",
-      body: JSON.stringify({
-        ...params,
-        includeHotelData: true,
-        maxRatesPerHotel: 1,
-        timeout: 6,
-      }),
+  return withAbortTimeout(
+    async (signal) => {
+      const response = await fetch(
+        "https://api.liteapi.travel/v3.0/hotels/rates",
+        {
+          method: "POST",
+          headers: {
+            "X-API-Key": process.env.LITEAPI_API_KEY!,
+            "Content-Type": "application/json",
+          },
+          cache: "no-store",
+          signal,
+          body: JSON.stringify({
+            ...params,
+            includeHotelData: true,
+            maxRatesPerHotel: 1,
+            timeout: 6,
+          }),
+        },
+      );
+      // Never print provider bodies or credentials on failure.
+      if (response.status === 204)
+        return { sandbox: true as const, data: [], hotels: [] };
+      if (!response.ok)
+        throw new Error(`LiteAPI rate search failed (${response.status})`);
+      const payload: unknown = await response.json();
+      const result = ratesResponse.safeParse(payload);
+      if (!result.success)
+        throw new Error(
+          "LiteAPI returned an invalid or non-sandbox rates response",
+        );
+      return result.data;
     },
     8000,
+    "Hotel supplier response",
   );
-  // Never print provider bodies or credentials on failure.
-  if (response.status === 204)
-    return { sandbox: true as const, data: [], hotels: [] };
-  if (!response.ok)
-    throw new Error(`LiteAPI rate search failed (${response.status})`);
-  const payload: unknown = await response.json();
-  const result = ratesResponse.safeParse(payload);
-  if (!result.success)
-    throw new Error(
-      "LiteAPI returned an invalid or non-sandbox rates response",
-    );
-  return result.data;
 }

@@ -5,6 +5,7 @@ import { API_BASE_URL, getAuthHeaders } from '../lib/supabase';
 import { useTripStore, Trip, TripInput, TripDay, Activity, Hotel } from '../stores/tripStore';
 import { syncService, networkMonitor, offlineStorage } from '../lib/offline';
 import { normalizeTripStatus } from '../lib/tripStatus';
+import { formatPlanningPrice, formatPlanningDuration } from '../lib/planningPrice';
 import {
   IMAGE_PATHS,
   getImageUrl,
@@ -45,16 +46,8 @@ interface ApiTrip {
   updated_at: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function formatCostValue(cost: any): string | undefined {
-  if (!cost) return undefined;
-  if (typeof cost === 'string') return cost;
-  if (typeof cost === 'number') return `$${cost}`;
-  if (cost.amount != null) {
-    const suffix = cost.perPerson ? '/pp' : '';
-    return `$${cost.amount}${suffix}`;
-  }
-  return undefined;
+function formatCostValue(cost: unknown, currency?: unknown, perPerson = false): string {
+  return formatPlanningPrice(cost, currency, perPerson);
 }
 
 /**
@@ -69,14 +62,15 @@ function transformApiActivity(a: any, timeOfDay: string): Activity {
     title: a.name || a.title || '',
     description: a.description || '',
     location: a.location?.name || (typeof a.location === 'string' ? a.location : ''),
-    duration: typeof a.duration === 'number' ? `${a.duration} min` : a.duration || '',
+    duration:
+      typeof a.duration === 'number' ? formatPlanningDuration(a.duration) : a.duration || '',
     type:
       a.category === 'sightseeing' || a.category === 'adventure' || a.category === 'cultural'
         ? 'attraction'
         : a.category === 'entertainment' || a.category === 'shopping'
           ? 'experience'
           : a.type || 'activity',
-    price: formatCostValue(a.estimatedCost) || formatCostValue(a.price),
+    price: formatCostValue(a.estimatedCost ?? a.price, a.currency),
     bookingUrl: a.bookingInfo?.bookingUrl || a.bookingUrl || undefined,
     affiliatePartner: a.bookingInfo?.affiliateId || a.affiliatePartner || undefined,
     image: a.images?.[0] || a.image || undefined,
@@ -99,7 +93,7 @@ function transformApiRestaurant(r: any): Activity {
     location: r.location?.name || (typeof r.location === 'string' ? r.location : ''),
     duration: '1-2 hours',
     type: 'restaurant',
-    price: formatCostValue(r.estimatedCost) || formatCostValue(r.price),
+    price: formatCostValue(r.estimatedCost ?? r.price, r.currency, true),
     bookingUrl: r.reservationInfo?.url || r.bookingUrl || undefined,
     affiliatePartner: 'opentable',
     rating: r.rating,
@@ -186,10 +180,13 @@ function transformApiHotel(h: any): Hotel | undefined {
     id: h.id || `hotel_${Date.now()}`,
     name: h.name,
     description: h.description || '',
-    pricePerNight: h.pricePerNight || h.price || 0,
-    totalPrice: h.totalPrice || h.pricePerNight || h.price || 0,
-    rating: h.rating || h.starRating || 0,
-    reviewCount: h.reviewCount || 0,
+    pricePerNight: h.pricePerNight ?? h.price,
+    totalPrice: h.totalPrice,
+    currency: h.currency,
+    priceStatus: h.priceStatus,
+    starRating: h.starRating,
+    rating: h.userRating ?? h.rating,
+    reviewCount: h.reviewCount,
     amenities: h.amenities || [],
     images: h.images || (h.image ? [h.image] : []),
     bookingUrl: h.affiliateUrl || h.bookingUrl || '',
@@ -231,7 +228,12 @@ function transformApiTrip(apiTrip: ApiTrip, itinerary?: ApiItinerary): Trip {
     days: apiTrip.preferences?.planNeedsRefresh ? [] : transformItineraryDays(rawDays),
     hotel: apiTrip.preferences?.planNeedsRefresh
       ? undefined
-      : transformApiHotel(itineraryData?.topHotel),
+      : transformApiHotel(
+          itineraryData?.topHotel ??
+            rawDays.find(
+              (day): day is { hotel: unknown } => !!day && typeof day === 'object' && 'hotel' in day
+            )?.hotel
+        ),
     coverImage:
       apiTrip.cover_image || getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
     createdAt: apiTrip.created_at,
