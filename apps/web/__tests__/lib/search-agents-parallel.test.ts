@@ -55,6 +55,7 @@ vi.mock("@/lib/affiliates/tripadvisor", () => ({
 
 import { runActivitiesAgent } from "@/lib/search/agents/activities";
 import { runHotelsAgent } from "@/lib/search/agents/hotels";
+import { runAggregatorAgent } from "@/lib/search/agents/aggregator";
 
 const plan = {
   destination: "Tokyo",
@@ -80,6 +81,32 @@ const plan = {
     neighborhoods: ["Shibuya"],
   },
 };
+
+it("does not repeat a flexible-time activity across fallback slots or days", async () => {
+  mocks.generateObject.mockRejectedValue(
+    new Error("Synthetic provider failure"),
+  );
+  const activity = {
+    ...aiActivity,
+    id: "only-activity",
+    duration: 120,
+    bestTimeOfDay: "any" as const,
+  };
+  const result = await runAggregatorAgent(plan as never, [], [activity], []);
+  const ids = result.days.flatMap((day) =>
+    [day.morning, day.afternoon, day.evening].flatMap((slot) =>
+      slot.activities.map((item) => item.id),
+    ),
+  );
+  expect(ids).toEqual(["only-activity"]);
+  expect(result.days.map((day) => day.date)).toEqual([
+    "2026-06-01",
+    "2026-06-02",
+    "2026-06-03",
+    "2026-06-04",
+    "2026-06-05",
+  ]);
+});
 
 const aiActivity = {
   name: "AI Food Walk",

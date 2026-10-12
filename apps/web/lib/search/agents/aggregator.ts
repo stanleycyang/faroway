@@ -453,6 +453,13 @@ function createFallbackItinerary(
 
   const topHotel = hotels[0] || null;
   const days: SuggestedDay[] = [];
+  const usedActivities = new Set<string>();
+  const takeActivity = (candidates: ActivityResult[]) => {
+    const activity = candidates.find((item) => !usedActivities.has(item.id));
+    if (!activity) return [];
+    usedActivities.add(activity.id);
+    return [activity];
+  };
 
   // Sort activities by best time
   const morningActivities = activities.filter(
@@ -478,7 +485,7 @@ function createFallbackItinerary(
 
   for (let i = 0; i < numDays; i++) {
     const date = new Date(startDate);
-    date.setDate(date.getDate() + i);
+    date.setUTCDate(date.getUTCDate() + i);
 
     const dayTransport =
       i === 0 ? outboundFlight : i === numDays - 1 ? returnFlight : undefined;
@@ -490,15 +497,15 @@ function createFallbackItinerary(
       summary: `Explore ${plan.destination} with a mix of activities and dining.`,
       hotel: topHotel || undefined,
       morning: {
-        activities: morningActivities.slice(i, i + 1),
+        activities: takeActivity(morningActivities),
         meal: breakfastSpots[i % breakfastSpots.length],
       },
       afternoon: {
-        activities: afternoonActivities.slice(i, i + 1),
+        activities: takeActivity(afternoonActivities),
         meal: lunchSpots[i % lunchSpots.length],
       },
       evening: {
-        activities: eveningActivities.slice(i, i + 1),
+        activities: takeActivity(eveningActivities),
         meal: dinnerSpots[i % dinnerSpots.length],
       },
       transport: dayTransport,
