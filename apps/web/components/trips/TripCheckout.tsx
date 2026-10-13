@@ -8,8 +8,9 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { ExternalLink, ShieldCheck, X } from "lucide-react";
+import { ExternalLink, ShieldCheck, X, Calendar, Users } from "lucide-react";
 import { useModalFocusTrap } from "@/hooks/useModalFocusTrap";
+import { formatTripDate } from "@/lib/trips/date-duration";
 import { buildViatorHandoffUrl } from "@/lib/affiliates/viator-link";
 
 interface Selection {
@@ -81,6 +82,14 @@ export function TripCheckout({
     if (!busyRef.current) setSelection(null);
   };
   useModalFocusTrap({ open: selection !== null, dialogRef, onClose: close });
+  useEffect(() => {
+    if (!selection) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [selection]);
   const review = (item: Selection) => {
     setError(null);
     const previous = attempts.find(
@@ -136,7 +145,7 @@ export function TripCheckout({
     selection &&
     attempts.some((a) => a.item_id === `${selection.id}@${selection.date}`);
   return (
-    <CheckoutContext.Provider value={{ enabled, review }}>
+    <CheckoutContext value={{ enabled, review }}>
       {historyError && (
         <p
           role="status"
@@ -178,15 +187,16 @@ export function TripCheckout({
                   </div>
                   <button
                     disabled={!enabled || attempt.canResume === false}
-                    onClick={() =>
+                    onClick={(event) => {
+                      event.currentTarget.focus();
                       review({
                         id,
                         date,
                         name: attempt.item_name,
                         attemptId: attempt.id.slice("checkout-".length),
-                      })
-                    }
-                    className="min-h-11 text-sm font-semibold text-primary disabled:opacity-40"
+                      });
+                    }}
+                    className="min-h-11 text-sm font-semibold text-primary-800 disabled:opacity-40"
                   >
                     Review step
                   </button>
@@ -198,7 +208,7 @@ export function TripCheckout({
       )}
       {children}
       {selection && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4">
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/60 sm:items-center sm:p-4">
           <div
             ref={dialogRef}
             tabIndex={-1}
@@ -206,25 +216,40 @@ export function TripCheckout({
             aria-modal="true"
             aria-labelledby="checkout-title"
             aria-describedby="checkout-description"
-            className="relative max-h-[90vh] w-full max-w-lg overflow-auto rounded-3xl bg-white p-6 shadow-2xl"
+            className="relative max-h-[90dvh] w-full max-w-lg overflow-auto overscroll-contain rounded-t-3xl bg-white p-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] shadow-2xl outline-none sm:rounded-3xl sm:p-8"
           >
+            <div
+              aria-hidden="true"
+              className="mx-auto mb-6 h-1 w-10 rounded-full bg-slate-200 sm:hidden"
+            />
             <button
               aria-label="Close checkout review"
               disabled={busy}
               onClick={close}
-              className="absolute right-4 top-4 rounded-full p-2 text-gray-500"
+              className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full text-slate-600 hover:bg-slate-100"
             >
               <X className="h-5 w-5" />
             </button>
-            <ShieldCheck className="mb-4 h-8 w-8 text-primary" />
-            <h2 id="checkout-title" className="text-2xl font-semibold">
+            <ShieldCheck className="mb-5 h-7 w-7 text-teal-800" />
+            <h2
+              id="checkout-title"
+              className="max-w-sm pr-6 font-editorial text-3xl leading-tight tracking-tight text-slate-900"
+            >
               Your next step, with Viator
             </h2>
-            <p className="mt-4 font-medium">{selection.name}</p>
-            <p className="mt-1 text-sm text-gray-600">
-              Planned for {selection.date} · {travelers} traveler
-              {travelers === 1 ? "" : "s"}
-            </p>
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <p className="font-semibold text-slate-900">{selection.name}</p>
+              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-600">
+                <span className="inline-flex items-center gap-2">
+                  <Calendar className="h-4 w-4" />
+                  {formatTripDate(selection.date)}
+                </span>
+                <span className="inline-flex items-center gap-2">
+                  <Users className="h-4 w-4" />
+                  {travelers} {travelers === 1 ? "traveler" : "travelers"}
+                </span>
+              </div>
+            </div>
             <p
               id="checkout-description"
               className="mt-4 text-sm leading-relaxed text-gray-600"
@@ -252,7 +277,7 @@ export function TripCheckout({
             <button
               onClick={() => void continueToProvider()}
               disabled={busy || !enabled}
-              className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 font-semibold text-white disabled:opacity-50"
+              className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
             >
               {busy ? "Preparing your booking step…" : "Continue to Viator"}
               <ExternalLink className="h-4 w-4" />
@@ -267,6 +292,6 @@ export function TripCheckout({
           </div>
         </div>
       )}
-    </CheckoutContext.Provider>
+    </CheckoutContext>
   );
 }

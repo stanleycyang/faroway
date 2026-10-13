@@ -1,6 +1,8 @@
 "use client";
 
-import Image from "next/image";
+import { useRef } from "react";
+import { useModalFocusTrap } from "@/hooks/useModalFocusTrap";
+import { TripCoverImage } from "./TripCoverImage";
 import { ArrowRight, Sparkles } from "lucide-react";
 
 interface TripReadyScreenProps {
@@ -30,33 +32,37 @@ export function TripReadyScreen({
   estimatedCost,
   onOpenTrip,
 }: TripReadyScreenProps) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useModalFocusTrap({ open: true, dialogRef, onClose: onOpenTrip });
   return (
-    <div className="fixed inset-0 z-[105] overflow-hidden bg-surface-900 text-white">
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="trip-ready-title"
+      tabIndex={-1}
+      className="outline-none fixed inset-0 z-[105] overflow-y-auto bg-surface-900 text-white"
+    >
       <div className="absolute inset-0">
         {heroImageUrl ? (
-          <Image
-            src={heroImageUrl}
-            alt={city}
-            fill
-            sizes="100vw"
-            className="object-cover"
-            unoptimized
-            priority
-          />
+          <TripCoverImage src={heroImageUrl} className="object-cover" />
         ) : (
           <div className="h-full w-full bg-gradient-to-br from-primary-600 via-primary to-amber-500" />
         )}
         <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-black/35 to-black/85" />
       </div>
 
-      <div className="relative z-[1] mx-auto flex min-h-full w-full max-w-3xl flex-col px-7 pb-10 pt-16 sm:px-10">
-        <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/15 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] backdrop-blur-md">
+      <div className="relative z-[1] mx-auto flex min-h-dvh w-full max-w-3xl flex-col px-7 pb-10 pt-16 sm:px-10">
+        <div className="inline-flex w-fit items-center gap-2 rounded-full border border-white/30 bg-white/15 px-4 py-1.5 text-sm font-medium backdrop-blur-md">
           <span className="h-1.5 w-1.5 rounded-full bg-white" />
           Your trip is ready
         </div>
 
         <div className="mt-auto">
-          <h1 className="font-editorial text-balance text-[54px] font-light italic leading-[0.95] tracking-[-0.03em] sm:text-[72px]">
+          <h1
+            id="trip-ready-title"
+            className="font-editorial text-balance text-[48px] leading-[1.05] tracking-[-0.04em] sm:text-[72px]"
+          >
             {city}
           </h1>
 
@@ -67,14 +73,9 @@ export function TripReadyScreen({
           <div className="mt-7 flex items-center gap-5 border-t border-white/25 pt-5">
             <Stat value={days} label="Days" />
             <Stat value={stops} label="Stops" />
-            <Stat
-              value={
-                estimatedCost && estimatedCost > 0
-                  ? formatCurrency(estimatedCost)
-                  : "--"
-              }
-              label="Est. cost"
-            />
+            {estimatedCost != null && estimatedCost > 0 && (
+              <Stat value={formatCurrency(estimatedCost)} label="Est. cost" />
+            )}
           </div>
 
           <button
@@ -95,10 +96,8 @@ export function TripReadyScreen({
 function Stat({ value, label }: { value: string | number; label: string }) {
   return (
     <div className="min-w-[72px]">
-      <p className="text-2xl font-black leading-none">{value}</p>
-      <p className="mt-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-white/75">
-        {label}
-      </p>
+      <p className="text-2xl font-bold leading-none">{value}</p>
+      <p className="mt-1 text-xs font-medium text-white/75">{label}</p>
     </div>
   );
 }

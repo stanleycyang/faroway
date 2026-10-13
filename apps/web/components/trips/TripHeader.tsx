@@ -6,19 +6,20 @@ import {
 } from "@/lib/trips/date-duration";
 
 import React from "react";
+import { TripCoverImage } from "./TripCoverImage";
 import Link from "next/link";
 import {
   ArrowLeft,
   Calendar,
   Users,
-  MapPin,
   Share2,
   DollarSign,
-  Sparkles,
+  Compass,
 } from "lucide-react";
 
 interface TripHeaderProps {
   destination: string;
+  heroImageUrl?: string;
   startDate: string;
   endDate: string;
   travelers: number;
@@ -34,6 +35,7 @@ interface TripHeaderProps {
 
 export function TripHeader({
   destination,
+  heroImageUrl,
   startDate,
   endDate,
   travelers,
@@ -60,110 +62,77 @@ export function TripHeader({
   );
 
   return (
-    <div className="bg-gradient-to-b from-gray-50 to-white border-b border-gray-200">
-      {/* Top Navigation */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6">
-        <div className="flex items-center justify-between h-16">
+    <header className="relative overflow-hidden bg-slate-900 text-white">
+      {heroImageUrl && (
+        <TripCoverImage src={heroImageUrl} className="object-cover" />
+      )}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/20 to-black/80" />
+      <div className="relative mx-auto max-w-4xl px-5 sm:px-6">
+        <div className="flex h-20 items-center justify-between">
           <Link
             href={backUrl}
-            className="flex items-center gap-2 text-gray-600 hover:text-gray-900 transition-colors"
+            aria-label="Back to saved trips"
+            className="flex min-h-11 items-center gap-2 rounded-full bg-black/20 px-3 text-sm font-semibold backdrop-blur"
           >
-            <ArrowLeft className="w-5 h-5" />
-            <span className="hidden sm:inline font-medium">Back</span>
+            <ArrowLeft className="h-4 w-4" />
+            My trips
           </Link>
-
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary-600 flex items-center justify-center shadow-sm">
-              <Sparkles className="w-4 h-4 text-white" />
-            </div>
-            <span className="text-lg font-bold text-gray-900 hidden sm:inline">
-              Faroway
-            </span>
+          <Link
+            href="/"
+            aria-label="Faroway home"
+            className="flex items-center gap-2 text-lg font-bold"
+          >
+            <Compass className="h-6 w-6" />
+            <span className="hidden sm:inline">faroway.</span>
           </Link>
-
           {showActions ? (
-            <div className="flex items-center gap-1">
-              <button
-                type="button"
-                onClick={onShare}
-                aria-label="Share trip"
-                className="p-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-xl transition-colors"
-                title="Share trip"
-              >
-                <Share2 className="w-5 h-5" />
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={onShare}
+              aria-label="Share trip"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-black/20 backdrop-blur hover:bg-black/40"
+            >
+              <Share2 className="h-5 w-5" />
+            </button>
           ) : (
-            <div />
+            <span className="w-11" />
           )}
         </div>
-      </div>
-
-      {/* Trip Info */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 pb-8">
-        {/* Status Badge */}
-        {status === "generating" && (
-          <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-primary-50 text-primary-700 rounded-full text-sm font-semibold shadow-sm">
-            <div className="w-2 h-2 bg-primary-500 rounded-full animate-pulse" />
-            AI is generating your itinerary...
-          </div>
-        )}
-
-        {status === "failed" && (
-          <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-red-50 text-red-700 rounded-full text-sm font-semibold">
-            <span>⚠️</span>
-            Generation failed. Please try again.
-          </div>
-        )}
-
-        {/* Destination */}
-        <div className="flex items-center gap-2 text-gray-500 text-sm mb-2">
-          <MapPin className="w-4 h-4" />
-          <span className="font-medium">Destination</span>
-        </div>
-        <h1 className="text-4xl sm:text-5xl font-black text-gray-900 mb-5 tracking-tight">
-          {destination}
-        </h1>
-
-        {/* Trip Meta Pills */}
-        <div className="flex flex-wrap gap-3">
-          <div className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-2xl border border-gray-200 shadow-sm">
-            <Calendar className="w-5 h-5 text-primary" />
-            <div>
-              <p className="text-sm font-semibold text-gray-900">
-                {formatDate(startDate)} – {formatDate(endDate)}
-              </p>
+        <div className="pb-8 pt-16 sm:pt-24 sm:pb-10">
+          {status !== "completed" && (
+            <p
+              role="status"
+              className="mb-4 inline-flex rounded-full bg-black/30 px-3 py-2 text-xs font-semibold backdrop-blur"
+            >
+              {status === "generating"
+                ? "Your itinerary is taking shape"
+                : "Planning interrupted. Your trip is saved."}
+            </p>
+          )}
+          <h1 className="font-editorial text-balance text-4xl tracking-[-0.04em] sm:text-6xl">
+            {destination}
+          </h1>
+          <div className="mt-5 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-white/90">
+            <span className="inline-flex items-center gap-2">
+              <Calendar className="h-4 w-4" />
+              {formatDate(startDate)} – {formatDate(endDate)}
               {duration !== null && (
-                <p className="text-xs text-gray-500">
-                  {duration} day{duration > 1 ? "s" : ""}
-                </p>
+                <span className="text-white/70">({duration} days)</span>
               )}
-            </div>
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <Users className="h-4 w-4" />
+              {travelers} {travelers === 1 ? "traveler" : "travelers"}
+            </span>
+            {totalCost && totalCost.amount > 0 && (
+              <span className="inline-flex items-center gap-2">
+                <DollarSign className="h-4 w-4" />
+                {formatCost(totalCost.amount, totalCost.currency)} estimated
+              </span>
+            )}
           </div>
-
-          <div className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-2xl border border-gray-200 shadow-sm">
-            <Users className="w-5 h-5 text-primary" />
-            <div>
-              <p className="text-sm font-semibold text-gray-900">
-                {travelers} traveler{travelers > 1 ? "s" : ""}
-              </p>
-              <p className="text-xs text-gray-500">Group size</p>
-            </div>
-          </div>
-
-          {totalCost && totalCost.amount > 0 && (
-            <div className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-white rounded-2xl border border-gray-200 shadow-sm">
-              <DollarSign className="w-5 h-5 text-primary" />
-              <div>
-                <p className="text-sm font-semibold text-gray-900">
-                  {formatCost(totalCost.amount, totalCost.currency)}
-                </p>
-                <p className="text-xs text-gray-500">Estimated total</p>
-              </div>
-            </div>
-          )}
         </div>
       </div>
-    </div>
+    </header>
   );
 }

@@ -69,10 +69,11 @@ import {
 } from "@/components/trips/FeaturedHotelCard";
 import { ShareConsentDialog } from "@/components/trips/ShareConsentDialog";
 import { TripBudget } from "@/components/trips/TripBudget";
+import { destinationImage } from "@/lib/trips/destination-image";
+import { TripDayNavigation } from "@/components/trips/TripDayNavigation";
 import { TripHeader } from "@/components/trips/TripHeader";
 import { ItineraryDay } from "@/components/trips/ItineraryDay";
 import { ItineraryGenerationLoader } from "@/components/trips/ItineraryGenerationLoader";
-import { TripReadyScreen } from "@/components/trips/TripReadyScreen";
 import { StreamedSpecPreview } from "@/components/trips/StreamedSpecPreview";
 import { TripWeather } from "@/components/trips/TripWeather";
 import { PlacesExplorer } from "@/components/places/PlacesExplorer";
@@ -112,6 +113,8 @@ export function TripDetailClient({
   bookingChecklistEnabled = false,
 }: TripDetailClientProps) {
   const router = useRouter();
+  const [selectedDay, setSelectedDay] = useState(0);
+  const [mapOpen, setMapOpen] = useState(false);
 
   const [trip, setTrip] = useState<Trip | null>(initialData.trip);
   const [itinerary, setItinerary] = useState<GeneratedItinerary | null>(
@@ -129,7 +132,7 @@ export function TripDetailClient({
   const [showStickyBar, setShowStickyBar] = useState(false);
   const retryLock = useRef(false);
   const [isRetrying, setIsRetrying] = useState(false);
-  const [showReadyScreen, setShowReadyScreen] = useState(false);
+  const [showCompletedDossier, setShowCompletedDossier] = useState(false);
   const [hasSeenGeneratingThisSession, setHasSeenGeneratingThisSession] =
     useState(false);
 
@@ -146,6 +149,7 @@ export function TripDetailClient({
   // SSE progressive generation hook
   const generation = useTripGeneration({
     tripId,
+    generationId: trip?.search_id,
     enabled: shouldStream,
     completed: tripIsComplete,
     onComplete: () => {
@@ -233,7 +237,8 @@ export function TripDetailClient({
       trip.status !== "generating" ||
       (trip.search_id &&
         ITINERARY_STREAMING_ENABLED &&
-        generation.phase !== "error")
+        generation.phase !== "error" &&
+        generation.phase !== "complete")
     ) {
       return;
     }
@@ -445,41 +450,30 @@ export function TripDetailClient({
       : "completed";
 
   // Progressive data: prefer DB itinerary when available, fall back to streamed days
-  const displayDays: TripDay[] | null =
-    itinerary?.days || generation.days || null;
+  const displayDays: TripDay[] | null = itinerary?.days?.length
+    ? itinerary.days
+    : generation.days?.length
+      ? generation.days
+      : itinerary?.days || null;
   const displayTopHotel = topHotel || generation.topHotel;
   const hasStreamedSpecBlocks = generation.specBlocks.length > 0;
-  const readyScreenStopsCount = useMemo(() => {
-    if (!displayDays?.length) return 0;
-    let totalStops = 0;
-    for (const day of displayDays) {
-      for (const slot of [day.morning, day.afternoon, day.evening]) {
-        if (!slot) continue;
-        if (Array.isArray(slot.activities))
-          totalStops += slot.activities.length;
-        const slotRecord = slot as unknown as Record<string, unknown>;
-        const mealsCount = Array.isArray(slot.meals)
-          ? slot.meals.length
-          : slotRecord.meal
-            ? 1
-            : 0;
-        totalStops += mealsCount;
-      }
-    }
-    return totalStops;
-  }, [displayDays]);
   const readyScreenDescription =
     itinerary?.overview ||
     `We've drafted ${Math.max(1, skeletonDayCount)} days in ${trip?.destination || "your destination"}. Review your suggested stops and confirm current prices and availability before booking.`;
-  const readyScreenHeroImage = displayTopHotel?.images?.[0];
+  const readyScreenHeroImage =
+    destinationImage(trip?.destination || "") || displayTopHotel?.images?.[0];
+  const activeDay = Math.min(
+    selectedDay,
+    Math.max(0, (displayDays?.length ?? 1) - 1),
+  );
+  const dayIdPrefix = `trip-${tripId}-day`;
 
-  const showFullGenerationLoader =
-    !!trip && isGenerating && !displayDays?.length && !hasStreamedSpecBlocks;
+  const showFullGenerationLoader = !!trip && isGenerating;
 
   useEffect(() => {
     if (isGenerating) {
       setHasSeenGeneratingThisSession(true);
-      setShowReadyScreen(false);
+      setShowCompletedDossier(false);
     }
   }, [isGenerating]);
 
@@ -488,16 +482,16 @@ export function TripDetailClient({
       hasSeenGeneratingThisSession &&
       isComplete &&
       !!displayDays?.length &&
-      !showReadyScreen
+      !showCompletedDossier
     ) {
-      setShowReadyScreen(true);
+      setShowCompletedDossier(true);
       setHasSeenGeneratingThisSession(false);
     }
   }, [
     hasSeenGeneratingThisSession,
     isComplete,
     displayDays?.length,
-    showReadyScreen,
+    showCompletedDossier,
   ]);
 
   // Loading state
@@ -558,59 +552,97 @@ export function TripDetailClient({
         )}
         <ItineraryGenerationLoader
           destination={trip.destination}
+          heroImageUrl={readyScreenHeroImage}
+          hotelPreview={
+            displayTopHotel
+              ? {
+                  name: displayTopHotel.name,
+                  image: displayTopHotel.images?.[0],
+                  description: displayTopHotel.description,
+                  amenities: displayTopHotel.amenities,
+                }
+              : undefined
+          }
+          startDate={trip.start_date}
+          endDate={trip.end_date}
+          days={isComplete ? displayDays : generation.days}
+          specBlocks={generation.specBlocks}
           nights={Math.max(0, skeletonDayCount - 1)}
           travelers={trip.travelers}
-          phase={generation.phase}
-          progress={generation.progress}
-          message={generation.message}
+          failureConfirmed={trip.status === "failed"}
+          phase={
+            isComplete ? "complete" : isFailed ? "error" : generation.phase
+          }
+          progress={isComplete ? 100 : generation.progress}
+          message={
+            generation.error ||
+            (isFailed
+              ? "Planning was interrupted. Your drafted chapters are preserved."
+              : generation.message)
+          }
+          summary={readyScreenDescription}
+          onOpenTrip={() => setShowCompletedDossier(false)}
           searchProgress={generation.searchProgress}
           activitiesCount={generation.activitiesCount}
           diningCount={generation.diningCount}
           transportCount={generation.transportCount}
-        />
-        <aside className="fixed bottom-4 left-4 right-4 z-[120] mx-auto max-w-lg rounded-2xl border border-gray-200 bg-white/95 p-4 shadow-lg backdrop-blur">
-          <p role="status" className="text-sm text-gray-700">
-            {planningStatus ||
-              "Your trip is saved. You can leave this page and return without starting another plan."}
-          </p>
-          <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
-            <button
-              type="button"
-              disabled={checkingPlanning}
-              onClick={checkPlanningStatus}
-              className="font-semibold text-primary underline disabled:opacity-50"
-            >
-              {checkingPlanning ? "Checking status…" : "Check planning status"}
-            </button>
-            <Link href="/dashboard" className="text-gray-600 underline">
-              Back to saved trips
-            </Link>
-          </div>
-          {planningStatus && (
-            <p className="mt-2 break-all text-xs text-gray-500">
-              If you need help, keep this trip ID: {tripId}
+        >
+          <aside className="rounded-2xl bg-white p-5 text-slate-700">
+            <p role="status" className="text-sm text-slate-500">
+              {isComplete
+                ? "Your itinerary is saved and ready to explore."
+                : planningStatus ||
+                  "Your trip is saved. You can leave this page and return without starting another plan."}
             </p>
-          )}
-        </aside>
+            <div className="mt-3 flex flex-wrap items-center gap-4 text-sm">
+              {generation.phase === "error" &&
+                shouldStream &&
+                trip.status === "generating" && (
+                  <button
+                    type="button"
+                    onClick={generation.reconnect}
+                    className="min-h-11 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    Reconnect live updates
+                  </button>
+                )}
+              {trip.status === "failed" && (
+                <button
+                  type="button"
+                  disabled={isRetrying}
+                  onClick={handleRetry}
+                  className="min-h-11 rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  {isRetrying ? "Starting planning…" : "Try planning again"}
+                </button>
+              )}
+              <button
+                type="button"
+                disabled={checkingPlanning}
+                onClick={checkPlanningStatus}
+                className="font-semibold text-primary-800 underline disabled:opacity-50"
+              >
+                {checkingPlanning
+                  ? "Checking status…"
+                  : "Check planning status"}
+              </button>
+              <Link href="/dashboard" className="text-slate-500 underline">
+                Back to saved trips
+              </Link>
+            </div>
+            {planningStatus && (
+              <p className="mt-2 break-all text-xs text-slate-500">
+                If you need help, keep this trip ID: {tripId}
+              </p>
+            )}
+          </aside>
+        </ItineraryGenerationLoader>
       </div>
     );
   }
 
-  if (showReadyScreen && trip && displayDays?.length) {
-    return (
-      <TripReadyScreen
-        city={trip.destination}
-        heroImageUrl={readyScreenHeroImage}
-        description={readyScreenDescription}
-        days={displayDays.length}
-        stops={readyScreenStopsCount}
-        onOpenTrip={() => setShowReadyScreen(false)}
-      />
-    );
-  }
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+    <div className="min-h-screen bg-[#f7f8fa]">
       {/* Trip Header */}
       <ShareConsentDialog
         open={shareConsentOpen}
@@ -622,31 +654,37 @@ export function TripDetailClient({
         startDate={trip.start_date}
         endDate={trip.end_date}
         travelers={trip.travelers}
+        heroImageUrl={readyScreenHeroImage}
         status={tripStatus}
         onShare={() => handleShare()}
       />
 
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
-        <TripBriefEditor
-          key={`brief:${trip.updated_at}`}
-          trip={trip}
-          onReload={() => {
-            void fetchTrip();
-          }}
-          onSaved={(saved) => {
-            setTrip(saved);
-            setShareUrl(
-              saved.is_shared && saved.share_token
-                ? `${window.location.origin}/s/${saved.share_token}`
-                : null,
-            );
-            setShareStatus(
-              saved.is_shared
-                ? "Brief saved. Your public link is unchanged."
-                : "Brief saved. Public access is off until you share the updated plan.",
-            );
-          }}
-        />
+      <main className="finished-journey max-w-4xl mx-auto px-4 sm:px-6 pt-6 sm:pt-8 pb-28">
+        {displayDays?.length ? (
+          <nav
+            aria-label="Trip sections"
+            className="sticky top-0 z-40 -mx-4 mb-8 flex gap-2 overflow-x-auto border-b border-slate-200 bg-[#f7f8fa]/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6"
+          >
+            <a
+              href="#trip-itinerary"
+              className="flex min-h-11 shrink-0 items-center rounded-full bg-slate-900 px-5 text-sm font-semibold text-white"
+            >
+              Your days
+            </a>
+            <a
+              href="#trip-stay"
+              className="flex min-h-11 shrink-0 items-center rounded-full px-5 text-sm font-medium text-slate-600 hover:bg-white"
+            >
+              Your stay
+            </a>
+            <a
+              href="#trip-details"
+              className="flex min-h-11 shrink-0 items-center rounded-full px-5 text-sm font-medium text-slate-600 hover:bg-white"
+            >
+              Trip details
+            </a>
+          </nav>
+        ) : null}
         {trip.preferences?.planNeedsRefresh === true && (
           <div
             role="status"
@@ -746,72 +784,41 @@ export function TripDetailClient({
 
         {/* Overview Section */}
         {itinerary?.overview && !isGenerating && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 mb-6">
-            <h2 className="text-lg font-bold text-gray-900 mb-3">
-              Trip Overview
+          <section aria-label="Journey overview" className="mb-10 px-1">
+            <h2 className="font-editorial text-2xl text-slate-900 mb-4 sm:text-3xl">
+              A journey shaped around you
             </h2>
             <p className="text-gray-600 leading-relaxed">
               {itinerary.overview}
             </p>
-          </div>
+          </section>
         )}
 
-        {planEditingEnabled &&
-          itinerary &&
-          !isGenerating &&
-          !trip.preferences?.planNeedsRefresh && (
-            <PlanEditor
-              key={`plan:${trip.updated_at}`}
-              tripId={trip.id}
-              userId={trip.user_id}
-              onSaved={() => {
-                void fetchTrip();
-              }}
-            />
-          )}
-
-        {bookingChecklistEnabled && (
-          <BookingChecklist
-            key={`bookings:${trip.updated_at}`}
-            tripId={trip.id}
-            userId={trip.user_id}
-          />
-        )}
-
-        {/* Recommended Hotel — fades in from stream or DB */}
-        {displayTopHotel && !trip.preferences?.planNeedsRefresh && (
-          <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
-            <FeaturedHotelCard
-              hotel={displayTopHotel}
-              nights={Math.max(
-                0,
-                Math.round(
-                  (Date.parse(trip.end_date) - Date.parse(trip.start_date)) /
-                    86400000,
-                ),
-              )}
-            />
-          </div>
-        )}
-
-        {/* Featured Flights */}
-        {!trip.preferences?.planNeedsRefresh && (
-          <FeaturedFlights days={itinerary?.days || null} />
-        )}
-
-        {/* Interactive Map (only when DB itinerary loaded) */}
+        {/* Optional map stays compact so the day plan is easy to reach. */}
         {itinerary && !isGenerating && (
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6">
-            <ItineraryMap itinerary={itinerary} className="h-64 sm:h-80" />
-          </div>
+          <details
+            open={mapOpen}
+            onToggle={(event) => setMapOpen(event.currentTarget.open)}
+            className="bg-white rounded-2xl border border-gray-200 overflow-hidden mb-6"
+          >
+            <summary className="cursor-pointer px-5 py-4 text-sm font-semibold">
+              Explore your trip on the map
+            </summary>
+            {mapOpen && (
+              <ItineraryMap itinerary={itinerary} className="h-64 sm:h-80" />
+            )}
+          </details>
         )}
 
         {/* Day-by-Day Itinerary — progressive rendering */}
         {displayDays && displayDays.length > 0 ? (
-          <div className="space-y-5">
+          <div id="trip-itinerary" className="space-y-5 scroll-mt-24">
             <div className="flex items-center justify-between">
-              <h2 className="text-xl font-bold text-gray-900">
-                Your Itinerary
+              <h2
+                tabIndex={-1}
+                className="font-editorial text-2xl text-slate-900 outline-none sm:text-3xl"
+              >
+                Your itinerary
               </h2>
               {bookableCount > 0 && !trip.preferences?.planNeedsRefresh && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-50 text-primary-700 rounded-full text-xs font-bold">
@@ -851,14 +858,25 @@ export function TripDetailClient({
             )}
             {!trip.preferences?.planNeedsRefresh && (
               <TripCheckout tripId={tripId} travelers={trip.travelers}>
+                {!isGenerating && (
+                  <TripDayNavigation
+                    days={displayDays}
+                    selectedIndex={activeDay}
+                    onSelect={setSelectedDay}
+                    idPrefix={dayIdPrefix}
+                  />
+                )}
                 {displayDays.map((day, index) => (
                   <div
                     key={day.dayNumber || index}
-                    className="animate-in fade-in slide-in-from-bottom-2 duration-500"
-                    style={{
-                      animationDelay: `${index * 150}ms`,
-                      animationFillMode: "both",
-                    }}
+                    id={`${dayIdPrefix}-panel-${index}`}
+                    role={isGenerating ? undefined : "tabpanel"}
+                    aria-labelledby={
+                      isGenerating ? undefined : `${dayIdPrefix}-tab-${index}`
+                    }
+                    hidden={!isGenerating && index !== activeDay}
+                    tabIndex={isGenerating ? undefined : 0}
+                    className="focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-slate-900"
                   >
                     <DayErrorBoundary dayNumber={day.dayNumber || index + 1}>
                       <ItineraryDay
@@ -871,23 +889,6 @@ export function TripDetailClient({
                         evening={day.evening}
                         tips={day.tips}
                         defaultExpanded={true}
-                        hotel={
-                          index === 0 && displayTopHotel
-                            ? {
-                                name: displayTopHotel.name,
-                                starRating: displayTopHotel.starRating,
-                                pricePerNight: displayTopHotel.pricePerNight,
-                                currency: displayTopHotel.currency,
-                                priceStatus:
-                                  "priceStatus" in displayTopHotel
-                                    ? displayTopHotel.priceStatus
-                                    : undefined,
-                                amenities: displayTopHotel.amenities,
-                                affiliateUrl: displayTopHotel.affiliateUrl,
-                                image: displayTopHotel.images?.[0],
-                              }
-                            : undefined
-                        }
                         transport={day.transport}
                       />
                     </DayErrorBoundary>
@@ -912,15 +913,103 @@ export function TripDetailClient({
           <EmptyItinerary destination={trip.destination} />
         ) : null}
 
+        <section
+          id="trip-stay"
+          aria-label="Your stay"
+          className="mt-12 scroll-mt-24"
+        >
+          <h2 className="mb-5 font-editorial text-2xl text-slate-900 sm:text-3xl">
+            A place to settle in
+          </h2>
+          {/* Recommended Hotel — fades in from stream or DB */}
+          {displayTopHotel && !trip.preferences?.planNeedsRefresh && (
+            <div>
+              <FeaturedHotelCard
+                hotel={displayTopHotel}
+                nights={Math.max(
+                  0,
+                  Math.round(
+                    (Date.parse(trip.end_date) - Date.parse(trip.start_date)) /
+                      86400000,
+                  ),
+                )}
+              />
+            </div>
+          )}
+        </section>
+        <section
+          id="trip-details"
+          aria-label="Trip details"
+          className="mt-12 scroll-mt-24"
+        >
+          <h2 className="mb-5 font-editorial text-2xl text-slate-900 sm:text-3xl">
+            The details, taken care of
+          </h2>
+          <TripBriefEditor
+            key={`brief:${trip.updated_at}`}
+            trip={trip}
+            onReload={() => {
+              void fetchTrip();
+            }}
+            onSaved={(saved) => {
+              setTrip(saved);
+              setShareUrl(
+                saved.is_shared && saved.share_token
+                  ? `${window.location.origin}/s/${saved.share_token}`
+                  : null,
+              );
+              setShareStatus(
+                saved.is_shared
+                  ? "Brief saved. Your public link is unchanged."
+                  : "Brief saved. Public access is off until you share the updated plan.",
+              );
+            }}
+          />
+          {planEditingEnabled &&
+            itinerary &&
+            !isGenerating &&
+            !trip.preferences?.planNeedsRefresh && (
+              <PlanEditor
+                key={`plan:${trip.updated_at}`}
+                tripId={trip.id}
+                userId={trip.user_id}
+                onSaved={() => {
+                  void fetchTrip();
+                }}
+              />
+            )}
+
+          {bookingChecklistEnabled && (
+            <BookingChecklist
+              key={`bookings:${trip.updated_at}`}
+              tripId={trip.id}
+              userId={trip.user_id}
+            />
+          )}
+
+          {itinerary?.days?.some((day) => day.transport) && (
+            <details className="mb-6 rounded-2xl border border-slate-200 bg-white">
+              <summary className="min-h-14 cursor-pointer px-5 py-4 text-sm font-semibold">
+                Getting there
+              </summary>
+              <div className="px-5 pb-2">
+                {/* Featured Flights */}
+                {!trip.preferences?.planNeedsRefresh && (
+                  <FeaturedFlights days={itinerary?.days || null} />
+                )}
+              </div>
+            </details>
+          )}
+        </section>
         {budgetBreakdown && (
           <TripBudget budget={budgetBreakdown} travelers={trip.travelers} />
         )}
 
         {/* General Tips */}
         {itinerary?.generalTips && itinerary.generalTips.length > 0 && (
-          <div className="mt-6 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl p-6 border border-primary-100/50">
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6">
             <h3 className="font-bold text-primary-800 mb-3 flex items-center gap-2">
-              <span className="text-lg">💡</span> Travel Tips for{" "}
+              <Sparkles className="h-4 w-4" /> Travel notes for{" "}
               {trip.destination}
             </h3>
             <ul className="space-y-2">
@@ -941,7 +1030,7 @@ export function TripDetailClient({
         {itinerary?.packingList && itinerary.packingList.length > 0 && (
           <div className="mt-6 bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
             <h3 className="font-bold text-gray-900 mb-3 flex items-center gap-2">
-              <span className="text-lg">🧳</span> Packing Suggestions
+              <Shield className="h-4 w-4" /> Packing suggestions
             </h3>
             <div className="flex flex-wrap gap-2">
               {itinerary.packingList.map((item, i) => (
@@ -967,12 +1056,12 @@ export function TripDetailClient({
 
         {/* Share This Trip */}
         {trip && (
-          <div className="mt-8 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl p-6 sm:p-8 text-center border border-primary-100/30">
-            <h3 className="font-bold text-gray-900 mb-2 text-lg">
-              Share Your Adventure
+          <div className="mt-10 rounded-3xl border border-slate-200 bg-white p-6 text-center sm:p-8">
+            <h3 className="font-editorial text-2xl text-slate-900 mb-2">
+              Bring someone into the journey
             </h3>
             <p className="text-sm text-gray-600 mb-4">
-              Let friends and family know about your upcoming trip!
+              Share your plans with the people you’re traveling with.
             </p>
             {shareUrl ? (
               <>
@@ -1040,16 +1129,28 @@ export function TripDetailClient({
                     book
                   </p>
                   <p className="text-xs text-gray-500">
-                    Secure your spots before they fill up
+                    Review options and confirm availability
                   </p>
                 </div>
               </div>
               <button
-                onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                onClick={() => {
+                  const section = document.getElementById("trip-itinerary");
+                  section?.scrollIntoView({
+                    behavior: window.matchMedia(
+                      "(prefers-reduced-motion: reduce)",
+                    ).matches
+                      ? "instant"
+                      : "smooth",
+                  });
+                  section
+                    ?.querySelector<HTMLElement>("h2")
+                    ?.focus({ preventScroll: true });
+                }}
                 className="flex-shrink-0 inline-flex items-center gap-1.5 px-5 py-2.5 bg-gradient-to-r from-primary to-primary-600 text-white rounded-xl text-sm font-bold shadow-md hover:shadow-lg hover:shadow-primary/25 transition-all active:scale-[0.98]"
               >
                 <ChevronUp className="w-4 h-4" />
-                View All
+                View itinerary
               </button>
             </div>
           </div>

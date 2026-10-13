@@ -45,6 +45,7 @@ export interface TripGenerationState {
 
 interface UseTripGenerationOptions {
   tripId: string;
+  generationId?: string | null;
   enabled?: boolean;
   completed?: boolean;
   onComplete?: () => void;
@@ -96,41 +97,6 @@ export function reconcileInactiveGeneration(
   };
 }
 
-export interface ParsedSSEEvent {
-  type: string;
-  data: string;
-}
-
-export function parseSSEBuffer(buffer: string): {
-  events: ParsedSSEEvent[];
-  remaining: string;
-} {
-  const events: ParsedSSEEvent[] = [];
-  const blocks = buffer.split("\n\n");
-  const remaining = blocks.pop() || "";
-
-  for (const block of blocks) {
-    if (!block.trim()) continue;
-
-    let eventType = "message";
-    let eventData = "";
-
-    for (const line of block.split("\n")) {
-      if (line.startsWith("event: ")) {
-        eventType = line.slice(7).trim();
-      } else if (line.startsWith("data: ")) {
-        eventData += (eventData ? "\n" : "") + line.slice(6);
-      }
-    }
-
-    if (eventType && eventData) {
-      events.push({ type: eventType, data: eventData });
-    }
-  }
-
-  return { events, remaining };
-}
-
 export function parseStreamingJson(rawData: string): unknown | null {
   try {
     return JSON.parse(rawData);
@@ -155,17 +121,16 @@ function isStreamingEventData(value: unknown): value is StreamingEventData {
   return value !== null && typeof value === "object";
 }
 
-/**
- * React hook that connects to POST /api/trips/[id]/stream and reads SSE
- * events via fetch + ReadableStream. This replaces the old EventSource
- * approach, allowing the server to run agents directly and stream results
- * without a DB-polling intermediary.
+/** Observe the durable planning job through the read-only SSE endpoint.
+ * Native EventSource keeps browser delivery separate from React rendering and
+ * avoids fetch byte-stream buffering in affected WebKit versions.
  */
 export function useTripGeneration(
   options: UseTripGenerationOptions,
-): TripGenerationState {
+): TripGenerationState & { reconnect: () => void } {
   const {
     tripId,
+    generationId,
     enabled = true,
     completed = false,
     onComplete,
@@ -173,6 +138,19 @@ export function useTripGeneration(
   } = options;
 
   const [state, setState] = useState<TripGenerationState>(initialState);
+  const [connectionAttempt, setConnectionAttempt] = useState(0);
+  const openedJob = useRef<string | null>(null);
+  const reconnect = useCallback(() => {
+    if (completed || !enabled) return;
+    setState((previous) => ({
+      ...previous,
+      isStreaming: true,
+      phase: "connecting",
+      error: null,
+      message: "Reconnecting to your saved planning job…",
+    }));
+    setConnectionAttempt((attempt) => attempt + 1);
+  }, [completed, enabled]);
 
   const onCompleteRef = useRef(onComplete);
   const onErrorRef = useRef(onError);
@@ -185,7 +163,7 @@ export function useTripGeneration(
     const data = parseStreamingJson(rawData);
     if (!isStreamingEventData(data)) {
       console.error(`[useTripGeneration] Failed to parse ${type} event`);
-      return;
+      return false;
     }
 
     try {
@@ -277,7 +255,10 @@ export function useTripGeneration(
           break;
 
         case "error": {
-          const errorMessage = data.message ?? "Generation failed";
+          const errorMessage =
+            typeof data.message === "string"
+              ? data.message
+              : "Generation failed";
           setState((prev) => ({
             ...prev,
             isStreaming: false,
@@ -288,91 +269,98 @@ export function useTripGeneration(
           break;
         }
       }
+      return true;
     } catch (err) {
       console.error(`[useTripGeneration] Failed to parse ${type} event:`, err);
+      return false;
     }
   }, []);
 
   useEffect(() => {
-    if (completed) {
-      setState((prev) => reconcileInactiveGeneration(prev, true));
-    } else if (!enabled || !ITINERARY_STREAMING_ENABLED) {
-      setState((prev) => reconcileInactiveGeneration(prev, false));
-    }
-  }, [completed, enabled]);
-
-  useEffect(() => {
-    if (!enabled || !tripId || !ITINERARY_STREAMING_ENABLED) return;
-
-    const abortController = new AbortController();
-
-    setState({
-      ...initialState,
-      isStreaming: true,
-      message: "Starting trip generation...",
+    if (completed || !enabled || !tripId || !ITINERARY_STREAMING_ENABLED)
+      return;
+    const source = new EventSource(
+      `/api/trips/${encodeURIComponent(tripId)}/stream`,
+    );
+    const job = `${tripId}:${generationId || "current"}`;
+    let terminal = false;
+    source.addEventListener("open", () => {
+      if (terminal) return;
+      const resuming = openedJob.current === job;
+      openedJob.current = job;
+      setState((previous) => ({
+        ...(resuming ? previous : initialState),
+        isStreaming: true,
+        phase: "connecting",
+        error: null,
+        message: resuming
+          ? "Live updates reconnected."
+          : "Opening your travel dossier…",
+      }));
     });
-
-    (async () => {
-      try {
-        const response = await fetch(`/api/trips/${tripId}/stream`, {
-          method: "POST",
-          signal: abortController.signal,
-        });
-
-        if (!response.ok || !response.body) {
-          const text = await response.text().catch(() => "");
-          throw new Error(text || `Stream failed (HTTP ${response.status})`);
+    const events = [
+      "progress",
+      "hotels",
+      "activities",
+      "dining",
+      "transport",
+      "itinerary",
+      "spec-block",
+      "spec-complete",
+      "complete",
+    ];
+    for (const type of events) {
+      source.addEventListener(type, (event) => {
+        if (terminal) return;
+        const processed = processEvent(
+          type,
+          (event as MessageEvent<string>).data,
+        );
+        if (type === "complete" && processed) {
+          terminal = true;
+          source.close();
         }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-
-          const { events, remaining } = parseSSEBuffer(buffer);
-          buffer = remaining;
-
-          for (const event of events) {
-            processEvent(event.type, event.data);
-          }
-        }
-
-        // Stream ended naturally — make sure we're in a terminal state
-        setState((prev) => {
-          if (prev.isComplete || prev.phase === "error") return prev;
-          return {
-            ...prev,
-            isStreaming: false,
-            phase: "error",
-            error: "Live updates disconnected. Checking progress…",
-          };
-        });
-      } catch (error) {
-        if ((error as Error).name === "AbortError") return;
-
-        const msg = (error as Error).message || "Connection failed";
-        console.error("[useTripGeneration] Stream error:", msg);
-
-        setState((prev) => {
-          if (prev.isComplete) return prev;
-          return {
-            ...prev,
-            isStreaming: false,
-            phase: "error",
-            error: msg,
-          };
-        });
-        onErrorRef.current?.(msg);
+      });
+    }
+    source.addEventListener("error", (event) => {
+      if (terminal) return;
+      terminal = true;
+      const data = (event as MessageEvent<string>).data;
+      if (typeof data !== "string" || !processEvent("error", data)) {
+        const message = "Live updates disconnected. Checking your saved plan…";
+        setState((previous) =>
+          previous.isComplete
+            ? previous
+            : {
+                ...previous,
+                isStreaming: false,
+                phase: "error",
+                error: message,
+              },
+        );
+        onErrorRef.current?.(message);
       }
-    })();
+      // Status polling handles recovery; closing prevents automatic replays of
+      // partial chapters and never dispatches a new generation request.
+      source.close();
+    });
+    return () => {
+      terminal = true;
+      source.close();
+    };
+  }, [
+    tripId,
+    generationId,
+    enabled,
+    completed,
+    connectionAttempt,
+    processEvent,
+  ]);
 
-    return () => abortController.abort();
-  }, [tripId, enabled, processEvent]);
-
-  return state;
+  const view = completed
+    ? reconcileInactiveGeneration(state, true)
+    : !enabled || !ITINERARY_STREAMING_ENABLED
+      ? reconcileInactiveGeneration(state, false)
+      : state;
+  return { ...view, reconnect };
 }

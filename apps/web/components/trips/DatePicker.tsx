@@ -47,6 +47,15 @@ export function DatePicker({
     return () => query.removeEventListener("change", updateMonthCount);
   }, []);
 
+  useEffect(() => {
+    if (!showCalendar) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [showCalendar]);
+
   useModalFocusTrap({
     open: showCalendar,
     dialogRef,
@@ -57,7 +66,10 @@ export function DatePicker({
     setShowCalendar(false);
   };
 
-  const openCalendar = () => {
+  const openCalendar = (trigger: HTMLButtonElement) => {
+    // Safari does not focus buttons on pointer activation. Establish the return
+    // target before the dialog's focus trap records the active element.
+    trigger.focus({ preventScroll: true });
     // Initialize draft from current selection
     setDraftRange(startDate ? { from: startDate, to: endDate } : undefined);
     setShowCalendar(true);
@@ -88,26 +100,34 @@ export function DatePicker({
   return (
     <div className={cn("space-y-4", className)}>
       {/* Date inputs */}
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             Start date
           </label>
           <button
             type="button"
-            onClick={openCalendar}
+            onClick={(event) => openCalendar(event.currentTarget)}
+            aria-label={
+              startDate ? format(startDate, "MMM d, yyyy") : "Select start date"
+            }
             className={cn(
-              "w-full px-4 py-3 bg-gray-50 border rounded-xl text-left flex items-center gap-3 transition-all",
+              "w-full px-3 sm:px-4 py-3.5 bg-white border rounded-xl text-left flex items-center gap-2 sm:gap-3 text-sm sm:text-base transition-all",
               startError
                 ? "border-red-300"
                 : "border-gray-200 hover:border-gray-300",
             )}
           >
-            <Calendar className="w-5 h-5 text-gray-400 shrink-0" />
+            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 shrink-0" />
             <span className={startDate ? "text-gray-900" : "text-gray-400"}>
-              {startDate
-                ? format(startDate, "MMM d, yyyy")
-                : "Select start date"}
+              <span className="sm:hidden">
+                {startDate ? format(startDate, "MMM d") : "Add start"}
+              </span>
+              <span className="hidden sm:inline">
+                {startDate
+                  ? format(startDate, "MMM d, yyyy")
+                  : "Select start date"}
+              </span>
             </span>
           </button>
           {startError && (
@@ -121,17 +141,25 @@ export function DatePicker({
           </label>
           <button
             type="button"
-            onClick={openCalendar}
+            onClick={(event) => openCalendar(event.currentTarget)}
+            aria-label={
+              endDate ? format(endDate, "MMM d, yyyy") : "Select end date"
+            }
             className={cn(
-              "w-full px-4 py-3 bg-gray-50 border rounded-xl text-left flex items-center gap-3 transition-all",
+              "w-full px-3 sm:px-4 py-3.5 bg-white border rounded-xl text-left flex items-center gap-2 sm:gap-3 text-sm sm:text-base transition-all",
               endError
                 ? "border-red-300"
                 : "border-gray-200 hover:border-gray-300",
             )}
           >
-            <Calendar className="w-5 h-5 text-gray-400 shrink-0" />
+            <Calendar className="w-4 h-4 sm:w-5 sm:h-5 text-gray-400 shrink-0" />
             <span className={endDate ? "text-gray-900" : "text-gray-400"}>
-              {endDate ? format(endDate, "MMM d, yyyy") : "Select end date"}
+              <span className="sm:hidden">
+                {endDate ? format(endDate, "MMM d") : "Add end"}
+              </span>
+              <span className="hidden sm:inline">
+                {endDate ? format(endDate, "MMM d, yyyy") : "Select end date"}
+              </span>
             </span>
           </button>
           {endError && (
@@ -144,7 +172,7 @@ export function DatePicker({
       {getDuration() && (
         <div className="p-3 bg-primary-50 rounded-xl">
           <p className="text-sm text-primary-700 font-medium flex items-center gap-2">
-            <span>🎉</span>
+            <Calendar className="h-4 w-4" aria-hidden="true" />
             {getDuration()} day{getDuration()! > 1 ? "s" : ""} trip
           </p>
         </div>
@@ -153,7 +181,7 @@ export function DatePicker({
       {/* Calendar modal */}
       {showCalendar && (
         <div
-          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 sm:items-center sm:p-4"
           onClick={(e) => {
             if (e.target === e.currentTarget) closeCalendar();
           }}
@@ -165,8 +193,12 @@ export function DatePicker({
             aria-labelledby="date-picker-title"
             aria-describedby="date-picker-description"
             tabIndex={-1}
-            className="bg-white rounded-2xl shadow-2xl p-4 sm:p-6 max-w-fit animate-fade-in outline-none"
+            className="bg-white rounded-t-3xl sm:rounded-3xl shadow-2xl p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] sm:p-6 w-full sm:w-auto sm:max-w-fit max-h-[90dvh] overflow-y-auto overscroll-contain motion-safe:animate-fade-in outline-none"
           >
+            <div
+              aria-hidden="true"
+              className="mx-auto mb-5 h-1 w-10 rounded-full bg-gray-200 sm:hidden"
+            />
             <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100">
               <div>
                 <h3
@@ -196,7 +228,7 @@ export function DatePicker({
               <button
                 type="button"
                 onClick={closeCalendar}
-                className="text-gray-400 hover:text-gray-600 text-xl leading-none ml-4"
+                className="flex h-10 w-10 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 text-xl leading-none ml-4"
                 aria-label="Close calendar"
               >
                 ✕
@@ -207,13 +239,15 @@ export function DatePicker({
             <div
               style={
                 {
-                  "--rdp-accent-color": "#F97066",
+                  "--rdp-accent-color": "#BE3A34",
                   "--rdp-accent-background-color": "#FEF2F2",
                   "--rdp-range_middle-background-color": "#FFF5F4",
                   "--rdp-range_middle-color": "#BE3A34",
                   "--rdp-selected-font": "bold",
-                  "--rdp-day-height": "2.5rem",
-                  "--rdp-day-width": "2.5rem",
+                  "--rdp-day-height": "2.75rem",
+                  "--rdp-day-width": "min(2.75rem, calc((100vw - 2.5rem) / 7))",
+                  "--rdp-day_button-width":
+                    "min(2.5rem, calc((100vw - 2.75rem) / 7))",
                 } as React.CSSProperties
               }
             >
@@ -239,7 +273,7 @@ export function DatePicker({
                 type="button"
                 onClick={handleConfirm}
                 disabled={!draftRange?.from || !draftRange.to}
-                className="flex-1 px-4 py-2.5 bg-primary text-white rounded-xl hover:bg-primary-600 transition-colors font-medium disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2.5 bg-slate-900 text-white rounded-xl hover:bg-slate-700 transition-colors font-medium disabled:bg-gray-200 disabled:text-gray-500 disabled:cursor-not-allowed"
               >
                 {draftRange?.from && draftRange?.to
                   ? "Confirm dates"

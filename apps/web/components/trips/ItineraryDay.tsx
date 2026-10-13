@@ -133,33 +133,20 @@ export function ItineraryDay({
   const hasEvening = hasContent(evening);
   const bookableCount = countBookable();
 
-  // Day-of-week color mapping for visual variety
-  const dayColors = [
-    { gradient: "from-primary to-primary-600", light: "from-primary-50/50" },
-    { gradient: "from-violet-500 to-purple-600", light: "from-violet-50/50" },
-    { gradient: "from-blue-500 to-indigo-600", light: "from-blue-50/50" },
-    { gradient: "from-emerald-500 to-teal-600", light: "from-emerald-50/50" },
-    { gradient: "from-amber-500 to-orange-600", light: "from-amber-50/50" },
-    { gradient: "from-pink-500 to-rose-600", light: "from-pink-50/50" },
-    { gradient: "from-cyan-500 to-blue-600", light: "from-cyan-50/50" },
-  ];
-  const dayColor = dayColors[(dayNumber - 1) % dayColors.length];
-
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden transition-shadow hover:shadow-md">
+    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
       {/* Day Header - Always visible */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className={`w-full px-4 sm:px-6 py-4 sm:py-5 flex items-center justify-between hover:bg-gray-50/50 transition-colors bg-gradient-to-r ${dayColor.light} to-transparent`}
+        aria-expanded={isExpanded}
+        className="w-full px-4 sm:px-6 py-5 sm:py-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
       >
         <div className="flex items-center gap-3 sm:gap-4">
-          <div
-            className={`w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-gradient-to-br ${dayColor.gradient} flex flex-col items-center justify-center text-white flex-shrink-0 shadow-md`}
-          >
-            <span className="text-[10px] font-semibold uppercase tracking-wider leading-none opacity-80">
+          <div className="w-12 h-14 sm:w-14 sm:h-16 rounded-xl bg-slate-900 flex flex-col items-center justify-center text-white flex-shrink-0">
+            <span className="text-xs font-medium leading-none opacity-80">
               Day
             </span>
-            <span className="text-2xl sm:text-3xl font-black leading-none">
+            <span className="text-2xl sm:text-3xl font-bold leading-none">
               {dayNumber}
             </span>
           </div>
@@ -167,7 +154,7 @@ export function ItineraryDay({
             <p className="text-xs sm:text-sm text-gray-500 font-medium">
               {formatDate(date)}
             </p>
-            <h3 className="text-base sm:text-lg font-bold text-gray-900 truncate">
+            <h3 className="text-base sm:text-xl font-semibold text-gray-900 text-left text-balance">
               {title}
             </h3>
             {bookableCount > 0 && !isExpanded && (
@@ -181,7 +168,7 @@ export function ItineraryDay({
 
         <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
           {totalEstimatedCost && totalEstimatedCost.amount > 0 && (
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-white/80 rounded-full text-sm text-gray-700 font-semibold shadow-sm">
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-full text-sm text-gray-700 font-semibold">
               <DollarSign className="w-4 h-4 text-gray-400" />
               {formatCost(
                 totalEstimatedCost.amount,
@@ -189,7 +176,7 @@ export function ItineraryDay({
               )}
             </div>
           )}
-          <div className="w-8 h-8 rounded-full bg-white/80 flex items-center justify-center shadow-sm">
+          <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center">
             {isExpanded ? (
               <ChevronUp className="w-5 h-5 text-gray-400" />
             ) : (
@@ -363,14 +350,13 @@ export function ItineraryDay({
           {/* Timeline with vertical connector */}
           <div className="relative">
             {/* Vertical timeline line */}
-            <div className="absolute left-[15px] top-0 bottom-0 w-0.5 bg-gradient-to-b from-amber-300 via-orange-300 to-primary-300 rounded-full" />
+            <div className="absolute left-[15px] top-0 bottom-0 w-0.5 bg-slate-200 rounded-full" />
 
             {/* Morning */}
             {hasMorning && (
               <TimeBlockSection
                 icon={<Sunrise className="w-4 h-4" />}
                 label="Morning"
-                color="amber"
                 date={date}
                 block={morning}
               />
@@ -381,7 +367,6 @@ export function ItineraryDay({
               <TimeBlockSection
                 icon={<Sun className="w-4 h-4" />}
                 label="Afternoon"
-                color="orange"
                 date={date}
                 block={afternoon}
               />
@@ -392,7 +377,6 @@ export function ItineraryDay({
               <TimeBlockSection
                 icon={<Moon className="w-4 h-4" />}
                 label="Evening"
-                color="primary"
                 date={date}
                 block={evening}
               />
@@ -444,34 +428,10 @@ interface TimeBlockSectionProps {
   date: string;
   icon: React.ReactNode;
   label: string;
-  color: "amber" | "orange" | "primary";
   block: TimeBlock;
 }
 
-function TimeBlockSection({
-  date,
-  icon,
-  label,
-  color,
-  block,
-}: TimeBlockSectionProps) {
-  const colorClasses = {
-    amber: {
-      dot: "bg-amber-400 ring-amber-100",
-      pill: "bg-gradient-to-r from-amber-50 to-amber-100 text-amber-700 border-amber-200 shadow-amber-100/50",
-    },
-    orange: {
-      dot: "bg-orange-400 ring-orange-100",
-      pill: "bg-gradient-to-r from-orange-50 to-orange-100 text-orange-700 border-orange-200 shadow-orange-100/50",
-    },
-    primary: {
-      dot: "bg-primary-400 ring-primary-100",
-      pill: "bg-gradient-to-r from-primary-50 to-primary-100 text-primary-700 border-primary-200 shadow-primary-100/50",
-    },
-  };
-
-  const colors = colorClasses[color];
-
+function TimeBlockSection({ date, icon, label, block }: TimeBlockSectionProps) {
   // Normalize: handle both { meals: [...] } and legacy { meal: {...} } formats
   const rawActivities = Array.isArray(block?.activities)
     ? block.activities
@@ -494,15 +454,11 @@ function TimeBlockSection({
   return (
     <div className="mb-8 last:mb-0 relative pl-10">
       {/* Timeline dot */}
-      <div
-        className={`absolute left-[9px] top-1 w-3.5 h-3.5 rounded-full ${colors.dot} ring-4 z-10`}
-      />
+      <div className="absolute left-[9px] top-1 z-10 h-3.5 w-3.5 rounded-full bg-slate-500 ring-4 ring-white" />
 
       {/* Time block header */}
       <div className="flex items-center gap-2 mb-4">
-        <div
-          className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border shadow-sm ${colors.pill}`}
-        >
+        <div className="inline-flex items-center gap-2 py-1.5 text-xs font-semibold tracking-wide text-slate-600">
           {icon}
           <span>{label}</span>
         </div>

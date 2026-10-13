@@ -1,3 +1,4 @@
+import { Compass, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
@@ -86,8 +87,8 @@ export default async function DashboardPage({
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <Link href="/" className="flex items-center gap-2">
-              <span className="text-2xl">✈️</span>
-              <span className="text-xl font-bold text-gray-900">Faroway</span>
+              <Compass className="h-6 w-6 text-slate-900" />
+              <span className="text-xl font-bold text-gray-900">faroway.</span>
             </Link>
 
             <div className="flex items-center gap-4">
@@ -112,20 +113,20 @@ export default async function DashboardPage({
         {/* Welcome Section */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">
-              Welcome back!
+            <h1 className="font-editorial text-3xl text-slate-900 sm:text-4xl">
+              Your journeys
             </h1>
             <p className="text-gray-600 mt-1">
-              Here&apos;s an overview of your trips.
+              Pick up a plan, or dream up your next escape.
             </p>
           </div>
 
           {/* Create New Trip CTA */}
           <Link
             href="/create"
-            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-primary to-primary-600 text-white rounded-full font-semibold hover:from-primary-600 hover:to-primary-700 transition-all shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-105 whitespace-nowrap"
+            className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-slate-900 text-white rounded-full font-semibold hover:bg-slate-800 transition-colors whitespace-nowrap"
           >
-            <span className="text-lg">✨</span>
+            <Plus className="h-4 w-4" />
             Create New Trip
           </Link>
         </div>
