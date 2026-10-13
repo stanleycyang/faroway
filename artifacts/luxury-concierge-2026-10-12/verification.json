@@ -66,13 +66,15 @@
     }
   ],
   "verification": {
-    "compiled_recovery": "32 passed (5.3m)",
+    "compiled_recovery": "32 passed against the independent main-based PR source; production Next.js webpack build and local backend",
     "focused_unit_tests": "12 passed across streaming dossier, stream hook, draft persistence and dashboard status",
     "typescript": "passed",
     "touched_file_eslint": "passed",
     "prettier_changed_finished_surfaces": "passed",
     "git_diff_check": "passed",
-    "browser_journey": "42 passed (1.2m), Desktop Chrome / Mobile Chrome / Mobile Safari"
+    "browser_journey": "39 passed: planning/checkout across desktop Chrome, Mobile Chrome and Mobile Safari, including malformed terminal-event regression",
+    "repository_tests": "677 web + 318 mobile + 38 constants + 33 API-client + 44 validation + 8 scripts passed",
+    "repository_quality": "11 repository type-check/lint/format tasks passed"
   },
   "limits": [
     "Visual screenshots render production components with representative fixture content; fixture font fallback is Georgia/Arial in place of production Playfair/Plus Jakarta.",
@@ -83,6 +85,36 @@
   "review_branch": {
     "base": "origin/main",
     "scope": "Web redesign only; draft PR #37 hotel-party, hotel quote API and native changes excluded",
-    "status": "Full branch validation and GitHub checks in progress"
-  }
+    "status": "Local review and validation passed; merge held for hosted checks"
+  },
+  "review_findings": [
+    {
+      "issue": "Malformed complete/error stream events could strand the observer",
+      "resolution": "Malformed completion does not terminate; malformed error falls back to recoverable disconnect; three-browser regression passed"
+    },
+    {
+      "issue": "Failed, canceled or unknown lifecycle states could be presented as ready",
+      "resolution": "Separate interrupted/canceled labels; unknown state defaults to draft; status tests passed"
+    },
+    {
+      "issue": "Safari booking-review trigger lost focus on close",
+      "resolution": "Launch controls focus explicitly; three-browser focus-return check passed"
+    },
+    {
+      "issue": "Legacy outbound test required an unavailable hotel button",
+      "resolution": "Updated the test to require an inert hotel card with an unavailability notice, no anchors/buttons/provider URL"
+    }
+  ],
+  "hosted_blockers": [
+    {
+      "check": "GitHub Quality Checks",
+      "reason": "Job never started: recent account payments failed or spending limit must be increased",
+      "run": "https://github.com/stanleycyang/faroway/actions/runs/38349916844"
+    },
+    {
+      "check": "Vercel preview",
+      "reason": "Non-production database isolation check failed. Configure an approved separate Supabase project; production reuse is blocked.",
+      "deployment": "https://vercel.com/testimonio/faroway/zYvBPNKkiS7cnju5wJkd8GSVnubh"
+    }
+  ]
 }
