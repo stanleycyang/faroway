@@ -1,10 +1,7 @@
 "use client";
-import React from "react";
-import Image from "next/image";
-import { Sparkles, Star, Shield, ExternalLink } from "lucide-react";
+import { Hotel, Star } from "lucide-react";
+import { TripCoverImage } from "./TripCoverImage";
 import { formatEstimate, knownEstimate } from "@/lib/trips/budget";
-
-// ── Featured Hotel Card ──────────────────────────────────────────────────────
 
 export interface FeaturedHotel {
   id?: string;
@@ -34,133 +31,89 @@ export function FeaturedHotelCard({
     hotel.currency,
     hotel.priceStatus,
   );
-
+  const amenities = Array.isArray(hotel.amenities)
+    ? hotel.amenities.filter((item) => typeof item === "string")
+    : [];
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden mb-6 group hover:shadow-lg transition-shadow">
-      {hotel.images?.[0] && (
-        <div className="relative h-56 sm:h-72 overflow-hidden">
-          <Image
-            src={hotel.images[0]}
-            alt={hotel.name}
-            fill
-            sizes="(max-width: 768px) 100vw, 33vw"
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
-            unoptimized
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent" />
-          <div className="absolute top-3 left-3 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-full text-xs font-bold text-white flex items-center gap-1.5 shadow-lg">
-            <Sparkles className="w-3.5 h-3.5" />
-            Faroway Pick
-          </div>
-          {/* Price overlay on image */}
-          <div className="absolute bottom-4 right-4 text-right">
-            <div className="text-3xl font-black text-white drop-shadow-lg">
-              {formatEstimate(
-                hotel.pricePerNight,
-                hotel.currency,
-                hotel.priceStatus,
-              )}
-            </div>
-            <div className="text-xs text-white/80 font-medium">
-              {nightly ? "estimated per night" : "Check with the hotel"}
-            </div>
-          </div>
-        </div>
-      )}
-      <div className="p-5 sm:p-6">
-        <div className="flex items-start justify-between mb-3">
-          <div>
-            <h3 className="font-black text-xl text-gray-900">{hotel.name}</h3>
-            <div className="flex items-center gap-2 mt-1.5">
-              {hotel.starRating && (
-                <span className="text-yellow-500 text-sm">
-                  {"★".repeat(Math.min(5, hotel.starRating))}
-                </span>
-              )}
-              {hotel.userRating && (
-                <span className="flex items-center gap-1 text-sm">
-                  <Star className="w-3.5 h-3.5 text-yellow-500 fill-yellow-500" />
-                  <span className="font-bold text-gray-700">
-                    {hotel.userRating.toFixed(1)}
-                  </span>
-                  {hotel.reviewCount && (
-                    <span className="text-gray-400 text-xs">
-                      ({hotel.reviewCount.toLocaleString()} reviews)
-                    </span>
-                  )}
-                </span>
-              )}
-            </div>
-          </div>
-          {!hotel.images?.[0] && (
-            <div className="text-right flex-shrink-0">
-              <div className="text-2xl font-black text-gray-900">
-                {formatEstimate(
-                  hotel.pricePerNight,
-                  hotel.currency,
-                  hotel.priceStatus,
-                )}
-              </div>
-              <div className="text-xs text-gray-500">
-                {nightly ? "estimated per night" : "Check with the hotel"}
-              </div>
-            </div>
+    <article
+      aria-label={`Suggested stay: ${hotel.name}`}
+      className="mb-6 overflow-hidden rounded-3xl border border-slate-200 bg-white sm:grid sm:grid-cols-[0.9fr_1.1fr]"
+    >
+      <div className="relative flex min-h-56 items-center justify-center overflow-hidden bg-slate-100 text-slate-300 sm:min-h-80">
+        <Hotel className="h-12 w-12" aria-hidden="true" />
+        {hotel.images?.[0] && (
+          <TripCoverImage src={hotel.images[0]} className="object-cover" />
+        )}
+        <span className="absolute left-4 top-4 rounded-full bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700">
+          Suggested for your journey
+        </span>
+      </div>
+      <div className="p-6 sm:p-8">
+        <h3 className="font-editorial text-2xl leading-tight tracking-tight text-slate-900 sm:text-3xl">
+          {hotel.name}
+        </h3>
+        <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-slate-600">
+          {typeof hotel.starRating === "number" && hotel.starRating > 0 && (
+            <span>{hotel.starRating}-star hotel</span>
+          )}
+          {typeof hotel.userRating === "number" && hotel.userRating > 0 && (
+            <span className="inline-flex items-center gap-1.5">
+              <Star className="h-3.5 w-3.5 text-amber-700" />
+              {hotel.userRating.toFixed(1)}
+              {hotel.reviewCount != null
+                ? ` (${hotel.reviewCount.toLocaleString()} reviews)`
+                : ""}
+            </span>
           )}
         </div>
-
         {hotel.description && (
-          <p className="text-sm text-gray-600 mb-4 leading-relaxed line-clamp-2">
+          <p className="mt-4 text-sm leading-7 text-slate-600">
             {hotel.description}
           </p>
         )}
-
-        {hotel.amenities && hotel.amenities.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-5">
-            {hotel.amenities.slice(0, 6).map((amenity: string, i: number) => (
+        {amenities.length > 0 && (
+          <div className="mt-5 flex flex-wrap gap-2">
+            {amenities.slice(0, 6).map((amenity, index) => (
               <span
-                key={i}
-                className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs bg-gray-50 text-gray-600 font-medium border border-gray-100"
+                key={`${amenity}-${index}`}
+                className="rounded-full bg-slate-50 px-3 py-1.5 text-xs text-slate-600"
               >
                 {amenity}
               </span>
             ))}
           </div>
         )}
-
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-4 border-t border-gray-100">
-          <div className="text-sm text-gray-500">
-            {nightly && nights > 0 && (
-              <span>
-                Stay estimate:{" "}
-                <span className="font-black text-lg text-gray-900">
-                  {formatEstimate(
-                    nightly.amount * nights,
-                    hotel.currency,
-                    hotel.priceStatus,
-                  )}
-                </span>{" "}
-                for {nights} night{nights !== 1 ? "s" : ""}
+        <div className="mt-6 border-t border-slate-200 pt-5">
+          <p className="text-lg font-semibold text-slate-900">
+            {formatEstimate(
+              hotel.pricePerNight,
+              hotel.currency,
+              hotel.priceStatus,
+            )}
+            {nightly && (
+              <span className="ml-1 text-xs font-normal text-slate-600">
+                estimated per night
               </span>
             )}
-          </div>
-          {hotel.affiliateUrl && (
-            <button
-              disabled
-              title="Hotel checkout is not available on Faroway yet."
-              className="inline-flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold text-sm hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg hover:shadow-blue-500/25 active:scale-[0.98]"
-            >
-              <Shield className="w-4 h-4" />
-              Hotel booking unavailable
-              <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-            </button>
+          </p>
+          {nightly && nights > 0 && (
+            <p className="mt-2 text-xs text-slate-600">
+              {formatEstimate(
+                nightly.amount * nights,
+                hotel.currency,
+                hotel.priceStatus,
+              )}{" "}
+              for {nights} {nights === 1 ? "night" : "nights"}. Room occupancy
+              is unconfirmed.
+            </p>
           )}
+          <p className="mt-3 text-xs leading-6 text-slate-600">
+            Confirm current price, room occupancy, taxes, fees, and cancellation
+            terms with the hotel. Hotel checkout is not available in Faroway
+            yet.
+          </p>
         </div>
-
-        <p className="mt-3 text-xs text-gray-500">
-          Confirm room occupancy, current price, taxes, fees and cancellation
-          terms with the hotel before booking.
-        </p>
       </div>
-    </div>
+    </article>
   );
 }

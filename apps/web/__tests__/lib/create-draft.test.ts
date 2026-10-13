@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { saveCreateDraft, takeCreateDraft } from "@/lib/create-draft";
+import {
+  saveCreateDraft,
+  takeCreateDraft,
+  saveEditorDraft,
+  readEditorDraft,
+  clearEditorDraft,
+} from "@/lib/create-draft";
 
 function createStorage() {
   const values = new Map<string, string>();
@@ -26,5 +32,27 @@ describe("create draft handoff", () => {
 
     expect(takeCreateDraft(storage, "../untrusted", 2_000)).toBeNull();
     expect(takeCreateDraft(storage, draftId, 86_402_000)).toBeNull();
+  });
+});
+
+describe("same-tab setup draft", () => {
+  it("keeps the draft across reads and clears it separately from the sign-in handoff", () => {
+    const storage = createStorage();
+    const draft = { destination: "Paris", travelers: 3 };
+    const handoff = saveCreateDraft(storage, draft, 1000);
+    saveEditorDraft(storage, draft, 1000);
+    expect(readEditorDraft(storage, 2000)).toEqual(draft);
+    expect(readEditorDraft(storage, 2000)).toEqual(draft);
+    clearEditorDraft(storage);
+    expect(readEditorDraft(storage, 2000)).toBeNull();
+    expect(takeCreateDraft(storage, handoff, 2000)).toEqual(draft);
+  });
+  it("ignores expired, future and corrupt drafts", () => {
+    const storage = createStorage();
+    saveEditorDraft(storage, { destination: "Paris" }, 1000);
+    expect(readEditorDraft(storage, 999)).toBeNull();
+    expect(readEditorDraft(storage, 86_402_000)).toBeNull();
+    storage.setItem("faroway-create-editor-draft", "invalid json");
+    expect(readEditorDraft(storage, 2000)).toBeNull();
   });
 });

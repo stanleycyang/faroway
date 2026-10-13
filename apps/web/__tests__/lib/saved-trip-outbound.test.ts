@@ -46,10 +46,6 @@ describe("saved trip outbound booking boundary", () => {
     const cards = [
       createElement(ActivityCard, { activity }),
       createElement(RestaurantCard, { restaurant }),
-      createElement(FeaturedHotelCard, {
-        nights: 2,
-        hotel: { name: "Hotel", pricePerNight: 100, affiliateUrl: unsafe },
-      }),
     ];
     for (const card of cards) {
       const html = renderToStaticMarkup(card);
@@ -59,6 +55,17 @@ describe("saved trip outbound booking boundary", () => {
       expect(html).not.toContain("Confirmed instantly");
       expect(html).not.toContain("Free to cancel");
     }
+    const hotelHtml = renderToStaticMarkup(
+      createElement(FeaturedHotelCard, {
+        nights: 2,
+        hotel: { name: "Hotel", pricePerNight: 100, affiliateUrl: unsafe },
+      }),
+    );
+    expect(hotelHtml).toContain("Hotel checkout is not available");
+    expect(hotelHtml).not.toContain(unsafe);
+    expect(hotelHtml).not.toMatch(/<(a|button)\b/);
+    expect(hotelHtml).not.toContain("Confirmed instantly");
+    expect(hotelHtml).not.toContain("Free to cancel");
   });
 
   it("disables itinerary hotel and flight actions even with a saved provider URL", () => {

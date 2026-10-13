@@ -10,13 +10,14 @@ function Experience() {
   return (
     <button
       disabled={!checkout.enabled}
-      onClick={() =>
+      onClick={(event) => {
+        event.currentTarget.focus();
         checkout.review({
           id: "activity_v_123P1",
           name: "Paris walking tour",
           date: "2099-06-01",
-        })
-      }
+        });
+      }}
     >
       Review experience
     </button>

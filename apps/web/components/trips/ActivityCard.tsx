@@ -16,6 +16,7 @@ import {
   Shield,
   Zap,
   TrendingUp,
+  Compass,
 } from "lucide-react";
 
 export interface Activity {
@@ -243,7 +244,8 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
     }).format(amount);
   };
 
-  const handleBookingClick = () => {
+  const handleBookingClick = (event: React.MouseEvent<HTMLButtonElement>) => {
+    event.currentTarget.focus();
     if (viatorCheckout && checkout && date) {
       checkout.review({ id: activity.id, name: activity.name, date });
       return;
@@ -251,9 +253,7 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
   };
 
   return (
-    <div
-      className={`group bg-white border border-gray-100 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 border-l-4 ${config.border}`}
-    >
+    <div className="group rounded-2xl border border-slate-200 bg-white overflow-hidden">
       {/* Hero Image */}
       {hasImage && (
         <div className="relative h-40 sm:h-48 overflow-hidden">
@@ -262,7 +262,7 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
             alt={activity.name}
             fill
             sizes="(max-width: 768px) 100vw, 33vw"
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            className="object-cover"
             unoptimized
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
@@ -272,7 +272,7 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
             <span
               className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ring-1 ${config.badge}`}
             >
-              {config.emoji} {config.label}
+              {config.label}
             </span>
           </div>
 
@@ -306,14 +306,12 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
         {/* No-image header */}
         {!hasImage && (
           <div className="flex items-start gap-3 mb-1">
-            <div
-              className={`flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br ${config.gradient} flex items-center justify-center text-white text-lg shadow-sm`}
-            >
-              {config.emoji}
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600">
+              <Compass className="h-5 w-5" aria-hidden="true" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h4 className="font-bold text-gray-900 text-base">
+                <h4 className="font-editorial text-slate-900 text-xl">
                   {activity.name}
                 </h4>
                 {badge && (
@@ -330,7 +328,7 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
         {hasImage && (
           <div className="mb-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h4 className="font-bold text-gray-900 text-lg leading-tight">
+              <h4 className="font-editorial text-slate-900 text-xl leading-snug">
                 {activity.name}
               </h4>
             </div>
@@ -426,7 +424,7 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
             <button
               onClick={handleBookingClick}
               disabled={!viatorCheckout || !checkout?.enabled}
-              className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-primary to-primary-600 text-white rounded-xl text-sm font-bold hover:from-primary-600 hover:to-primary-700 transition-all duration-200 shadow-md hover:shadow-lg hover:shadow-primary/25 active:scale-[0.98]"
+              className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-slate-900 text-white rounded-full text-sm font-semibold hover:bg-slate-800 transition-colors"
             >
               <Shield className="w-4 h-4" />
               {viatorCheckout
@@ -498,17 +496,18 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
   };
 
   return (
-    <div className="group bg-white border border-gray-100 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 border-l-4 border-l-orange-400">
+    <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
       <div className="p-4 sm:p-5">
         <div className="flex items-start gap-3">
           <div
-            className={`flex-shrink-0 w-10 h-10 rounded-xl bg-gradient-to-br ${mealConfig.gradient} flex items-center justify-center text-white text-lg shadow-sm`}
+            aria-label={mealConfig.label}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-600"
           >
-            {mealConfig.emoji}
+            <Utensils className="h-5 w-5" aria-hidden="true" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-              <h4 className="font-bold text-gray-900 text-base">
+              <h4 className="font-editorial text-slate-900 text-xl">
                 {restaurant.name}
               </h4>
               {badge && (
@@ -609,7 +608,7 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
                 <button
                   disabled
                   title="Restaurant reservations are not available on Faroway yet."
-                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-gradient-to-r from-orange-500 to-orange-600 text-white rounded-xl text-sm font-bold hover:from-orange-600 hover:to-orange-700 transition-all duration-200 shadow-md hover:shadow-lg hover:shadow-orange-500/25 active:scale-[0.98]"
+                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-slate-900 text-white rounded-full text-sm font-semibold hover:bg-slate-800 transition-colors"
                 >
                   <Utensils className="w-4 h-4" />
                   Restaurant booking unavailable

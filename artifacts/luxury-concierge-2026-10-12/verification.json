@@ -1,0 +1,120 @@
+{
+  "date": "2026-10-12",
+  "scope": "Luxury web travel-planning journey, aligned to the existing mobile brief",
+  "requirements": [
+    {
+      "requirement": "Mobile flow alignment",
+      "evidence": [
+        "apps/mobile/app/create/index.tsx",
+        "apps/web/app/create/page.tsx",
+        "e2e/marketing.spec.ts: continuous editable brief, dates, travelers, comfort, vibes, reload and sign-in preservation"
+      ]
+    },
+    {
+      "requirement": "Cinematic destination storytelling",
+      "evidence": [
+        "TripCoverImage + destinationImage independent catalog photography",
+        "desktop-dossier.png",
+        "mobile-dossier.png",
+        "Public destination photo HEAD checks: Paris, Tokyo, Bali each 200 image/jpeg"
+      ]
+    },
+    {
+      "requirement": "Real progressively unfolding AI journey",
+      "evidence": [
+        "useTripGeneration native EventSource observer",
+        "streaming-dossier real partial blocks/days, deduplication and rationale",
+        "e2e/planning.spec.ts staged SSE arrivals, retained chapter state, completion stays in dossier"
+      ]
+    },
+    {
+      "requirement": "Clear agent activity and user control",
+      "evidence": [
+        "Real searchProgress tasks, actual discovery counts, accessible progress/status",
+        "Explicit Open my trip, reconnect same GET observer, retry only after server-confirmed failure",
+        "e2e/planning.spec.ts reconnect asserts no planning write"
+      ]
+    },
+    {
+      "requirement": "Cohesive finished journey and return flow",
+      "evidence": [
+        "TripHeader, TripDayNavigation, ItineraryDay, ActivityCard, FeaturedHotelCard, TripBudget, TripCheckout",
+        "TripDetailClient itinerary/stay/details hierarchy",
+        "Dashboard destination-correct imagery and interrupted/canceled labels",
+        "desktop-finished-trip.png",
+        "mobile-finished-trip.png",
+        "desktop-booking-review.png",
+        "mobile-booking-review.png"
+      ]
+    },
+    {
+      "requirement": "Responsive and accessible interactions",
+      "evidence": [
+        "Desktop Chrome, Mobile Chrome, Mobile Safari browser checks",
+        "320px/short-screen calendar sheet, focus trap/return, scroll lock, day-tab keyboard navigation",
+        "Reduced-motion fades, gated pulse and scrolling; explicit focus outlines",
+        "e2e/planning.spec.ts and e2e/checkout.spec.ts"
+      ]
+    },
+    {
+      "requirement": "Complete planning recovery and safe booking interaction",
+      "evidence": [
+        "32 compiled application recovery tests passed across desktop/mobile",
+        "Lost response idempotency, terminal-fetch retry, consent decline, conflicting brief edits, favorite locks/swaps, booking reports and public-share revocation",
+        "Checkout handoff saves same idempotency key, survives return/retry, verifies provider link; tests use mock provider"
+      ]
+    }
+  ],
+  "verification": {
+    "compiled_recovery": "32 passed against the independent main-based PR source; production Next.js webpack build and local backend",
+    "focused_unit_tests": "12 passed across streaming dossier, stream hook, draft persistence and dashboard status",
+    "typescript": "passed",
+    "touched_file_eslint": "passed",
+    "prettier_changed_finished_surfaces": "passed",
+    "git_diff_check": "passed",
+    "browser_journey": "39 passed: planning/checkout across desktop Chrome, Mobile Chrome and Mobile Safari, including malformed terminal-event regression",
+    "repository_tests": "677 web + 318 mobile + 38 constants + 33 API-client + 44 validation + 8 scripts passed",
+    "repository_quality": "11 repository type-check/lint/format tasks passed"
+  },
+  "limits": [
+    "Visual screenshots render production components with representative fixture content; fixture font fallback is Georgia/Arial in place of production Playfair/Plus Jakarta.",
+    "Compiled recovery uses isolated synthetic auth/data and local workflow backend; no production data or live provider booking was created.",
+    "Hotel/flight checkout remains unavailable, and UI distinguishes estimates, saved handoffs, traveler reports and confirmed provider bookings.",
+    "Market-leading is the design ambition; no measured competitive ranking is asserted."
+  ],
+  "review_branch": {
+    "base": "origin/main",
+    "scope": "Web redesign only; draft PR #37 hotel-party, hotel quote API and native changes excluded",
+    "status": "Local review and validation passed; merge held for hosted checks"
+  },
+  "review_findings": [
+    {
+      "issue": "Malformed complete/error stream events could strand the observer",
+      "resolution": "Malformed completion does not terminate; malformed error falls back to recoverable disconnect; three-browser regression passed"
+    },
+    {
+      "issue": "Failed, canceled or unknown lifecycle states could be presented as ready",
+      "resolution": "Separate interrupted/canceled labels; unknown state defaults to draft; status tests passed"
+    },
+    {
+      "issue": "Safari booking-review trigger lost focus on close",
+      "resolution": "Launch controls focus explicitly; three-browser focus-return check passed"
+    },
+    {
+      "issue": "Legacy outbound test required an unavailable hotel button",
+      "resolution": "Updated the test to require an inert hotel card with an unavailability notice, no anchors/buttons/provider URL"
+    }
+  ],
+  "hosted_blockers": [
+    {
+      "check": "GitHub Quality Checks",
+      "reason": "Job never started: recent account payments failed or spending limit must be increased",
+      "run": "https://github.com/stanleycyang/faroway/actions/runs/38349916844"
+    },
+    {
+      "check": "Vercel preview",
+      "reason": "Non-production database isolation check failed. Configure an approved separate Supabase project; production reuse is blocked.",
+      "deployment": "https://vercel.com/testimonio/faroway/zYvBPNKkiS7cnju5wJkd8GSVnubh"
+    }
+  ]
+}

@@ -5,6 +5,9 @@ import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import postcss from "postcss";
+import tailwind from "@tailwindcss/postcss";
+
 let server: Server;
 let fixtureUrl: string;
 let directory: string;
@@ -21,14 +24,23 @@ test.beforeAll(async () => {
     `--outfile=${output}`,
   ]);
   const bundle = readFileSync(output);
+  const css = (
+    await postcss([tailwind()]).process(
+      readFileSync("app/globals.css", "utf8"),
+      { from: path.resolve("app/globals.css") },
+    )
+  ).css;
   server = createServer((request, response) => {
-    if (request.url === "/checkout.js") {
+    if (request.url === "/checkout.css") {
+      response.setHeader("Content-Type", "text/css");
+      response.end(css);
+    } else if (request.url === "/checkout.js") {
       response.setHeader("Content-Type", "application/javascript");
       response.end(bundle);
     } else {
       response.setHeader("Content-Type", "text/html");
       response.end(
-        '<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"></head><body><div id="root"></div><script src="/checkout.js"></script></body></html>',
+        '<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/checkout.css"></head><body><div id="root"></div><script src="/checkout.js"></script></body></html>',
       );
     }
   });
@@ -103,6 +115,14 @@ test("requires explicit handoff consent and handles Escape with restored focus",
     page.getByText("Continuing does not reserve", { exact: false }),
   ).toBeVisible();
   expect(posts).toHaveLength(0);
+  await expect(page.locator("body")).toHaveCSS("overflow", "hidden");
+  const dialog = page.getByRole("dialog");
+  expect(
+    await dialog.evaluate((el) => el.getBoundingClientRect().width),
+  ).toBeLessThanOrEqual(page.viewportSize()!.width);
+  await page.screenshot({
+    path: `/tmp/faroway-checkout-${test.info().project.name}.png`,
+  });
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(button).toBeFocused();

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { normalizeDashboardTripStatus } from "@/components/dashboard/TripCard";
+import {
+  normalizeDashboardTripStatus,
+  toDashboardTripStatus,
+} from "@/components/dashboard/TripCard";
 
 describe("normalizeDashboardTripStatus", () => {
   it("maps every trip lifecycle status to a dashboard display status", () => {
@@ -27,4 +30,12 @@ describe("normalizeDashboardTripStatus", () => {
     expect(normalizeDashboardTripStatus("complete")).toBe("completed");
     expect(normalizeDashboardTripStatus("cancelled")).toBe("canceled");
   });
+});
+
+it("keeps interrupted and canceled journeys distinct from ready plans", () => {
+  expect(toDashboardTripStatus("failed")).toBe("failed");
+  expect(toDashboardTripStatus("cancelled")).toBe("canceled");
+  expect(toDashboardTripStatus("planned")).toBe("complete");
+  expect(toDashboardTripStatus("pending")).toBe("generating");
+  expect(toDashboardTripStatus("unknown-future-state")).toBe("draft");
 });

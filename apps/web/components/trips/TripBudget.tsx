@@ -1,4 +1,5 @@
 import React from "react";
+import { Hotel, Compass, Utensils, Plane } from "lucide-react";
 import {
   formatEstimate,
   type CurrencyBudget,
@@ -14,7 +15,10 @@ export function TripBudget({
 }) {
   return (
     <section aria-label="Planning budget" className="mt-6">
-      <p className="text-sm text-gray-600">
+      <h2 className="mb-4 font-editorial text-2xl text-slate-900 sm:text-3xl">
+        Your planning budget
+      </h2>
+      <p className="text-sm leading-7 text-slate-600">
         Planning estimates, not a booking quote. Meals marked per person include{" "}
         {travelers} travelers. Hotel room count and activity or transport party
         pricing are unconfirmed. Taxes, fees and missing items may add to the
@@ -51,30 +55,30 @@ function BudgetSummary({
     {
       label: "Accommodation",
       amount: breakdown.accommodation,
-      color: "bg-blue-500",
+      color: "bg-slate-800",
       bgColor: "bg-blue-50 text-blue-700",
-      icon: "🏨",
+      icon: Hotel,
     },
     {
       label: "Activities & Tours",
       amount: breakdown.activities,
-      color: "bg-emerald-500",
+      color: "bg-slate-600",
       bgColor: "bg-emerald-50 text-emerald-700",
-      icon: "🎯",
+      icon: Compass,
     },
     {
       label: "Dining",
       amount: breakdown.dining,
-      color: "bg-orange-500",
+      color: "bg-slate-400",
       bgColor: "bg-orange-50 text-orange-700",
-      icon: "🍽️",
+      icon: Utensils,
     },
     {
       label: "Transport",
       amount: breakdown.transport,
-      color: "bg-sky-500",
+      color: "bg-slate-300",
       bgColor: "bg-sky-50 text-sky-700",
-      icon: "✈️",
+      icon: Plane,
     },
   ].filter((c) => c.amount > 0);
 
@@ -100,7 +104,7 @@ function BudgetSummary({
         {categories.map((cat) => (
           <div key={cat.label} className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <span className="text-lg">{cat.icon}</span>
+              <cat.icon className="h-4 w-4 text-slate-500" aria-hidden="true" />
               <span className="text-sm text-gray-600 font-medium">
                 {cat.label}
               </span>
@@ -112,11 +116,11 @@ function BudgetSummary({
         ))}
       </div>
 
-      <div className="mt-5 pt-5 border-t border-gray-100 flex items-center justify-between">
+      <div className="mt-5 pt-5 border-t border-gray-100 flex flex-wrap gap-3 items-center justify-between">
         <span className="font-bold text-gray-900">
           Listed estimate subtotal
         </span>
-        <span className="text-2xl font-black text-gray-900">
+        <span className="text-2xl font-semibold text-slate-900">
           {formatCost(breakdown.total)}
         </span>
       </div>

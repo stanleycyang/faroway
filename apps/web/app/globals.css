@@ -294,3 +294,56 @@
     border: none !important;
   }
 }
+
+/* Trip planning: clear focus and comfortably sized controls. */
+.trip-planner :is(button, a, input, summary):focus-visible {
+  outline: 2px solid #0f172a;
+  outline-offset: 4px;
+}
+.trip-planner :is(button, input) {
+  accent-color: #be3a34;
+}
+@media (prefers-reduced-motion: reduce) {
+  .trip-planner img {
+    transform: none !important;
+    transition: opacity 150ms ease !important;
+  }
+  .trip-planner {
+    scroll-behavior: auto;
+  }
+}
+
+/* Live dossier: newly received chapters reveal once, without moving the page. */
+@keyframes dossier-arrival {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.dossier-arrival {
+  animation: dossier-arrival 220ms ease-out both;
+}
+.concierge-dossier :is(button, a, summary):focus-visible {
+  outline: 2px solid #9b2d25;
+  outline-offset: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dossier-arrival {
+    animation-duration: 120ms;
+  }
+}
+.concierge-dossier aside :is(button, a):focus-visible {
+  outline-color: white;
+}
+
+.finished-journey :is(button, a, summary, input, select):focus-visible {
+  outline: 2px solid #9b2d25;
+  outline-offset: 4px;
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}

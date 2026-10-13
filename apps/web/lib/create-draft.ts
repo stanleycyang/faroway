@@ -75,3 +75,43 @@ export function takeCreateDraft<T>(
     return null;
   }
 }
+
+const EDITOR_DRAFT_KEY = "faroway-create-editor-draft";
+
+/** A same-tab setup draft is independent of any submitted trip request. */
+export function saveEditorDraft<T>(
+  storage: StorageLike,
+  draft: T,
+  now = Date.now(),
+): void {
+  storage.setItem(
+    EDITOR_DRAFT_KEY,
+    JSON.stringify({ version: 1, savedAt: now, draft }),
+  );
+}
+
+export function readEditorDraft<T>(
+  storage: StorageLike,
+  now = Date.now(),
+): T | null {
+  try {
+    const raw = storage.getItem(EDITOR_DRAFT_KEY);
+    if (!raw) return null;
+    const envelope = JSON.parse(raw) as Partial<StoredDraftEnvelope<T>>;
+    if (
+      envelope.version !== 1 ||
+      typeof envelope.savedAt !== "number" ||
+      envelope.savedAt > now ||
+      now - envelope.savedAt > CREATE_DRAFT_TTL_MS ||
+      envelope.draft === undefined
+    )
+      return null;
+    return envelope.draft;
+  } catch {
+    return null;
+  }
+}
+
+export function clearEditorDraft(storage: StorageLike): void {
+  storage.removeItem(EDITOR_DRAFT_KEY);
+}
