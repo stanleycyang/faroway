@@ -6,6 +6,7 @@ import {
   paginate,
   POSTS_PER_PAGE,
 } from "@/lib/blog";
+import type { BlogPostMeta } from "@/lib/blog";
 import { BlogCard } from "@/components/blog/BlogCard";
 import { Breadcrumbs } from "@/components/blog/Breadcrumbs";
 import { CategoryPills } from "@/components/blog/CategoryPills";
@@ -13,9 +14,13 @@ import { NewsletterCTA } from "@/components/blog/NewsletterCTA";
 import { Pagination } from "@/components/blog/Pagination";
 
 export async function generateStaticParams() {
-  return (await getAllCategories()).map((cat) => ({
-    category: cat.toLowerCase().replace(/\s+/g, "-"),
-  }));
+  try {
+    return (await getAllCategories()).map((cat) => ({
+      category: cat.toLowerCase().replace(/\s+/g, "-"),
+    }));
+  } catch {
+    return [];
+  }
 }
 
 export const dynamicParams = true;
@@ -33,7 +38,13 @@ export async function generateMetadata({
   const [{ category }, { page: pageParam }, categories] = await Promise.all([
     params,
     searchParams,
-    getAllCategories(),
+    (async () => {
+      try {
+        return await getAllCategories();
+      } catch {
+        return [];
+      }
+    })(),
   ]);
   const label = categories.find(
     (candidate) => categorySlug(candidate) === category,
@@ -62,7 +73,13 @@ export default async function CategoryPage({
   const [{ category }, { page: pageParam }, categories] = await Promise.all([
     params,
     searchParams,
-    getAllCategories(),
+    (async () => {
+      try {
+        return await getAllCategories();
+      } catch {
+        return [];
+      }
+    })(),
   ]);
   const requestedPage = Math.max(1, parseInt(pageParam || "1", 10) || 1);
   const label = categories.find(
@@ -70,7 +87,12 @@ export default async function CategoryPage({
   );
   if (!label) notFound();
 
-  const allPosts = await getPostsByCategory(category);
+  let allPosts: BlogPostMeta[] = [];
+  try {
+    allPosts = await getPostsByCategory(category);
+  } catch {
+    allPosts = [];
+  }
 
   const {
     items: posts,

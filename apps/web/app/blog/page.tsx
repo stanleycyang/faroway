@@ -37,11 +37,18 @@ export default async function BlogIndex({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
-  const [{ page: pageParam }, allPosts] = await Promise.all([
+  const [{ page: pageParam }, allPostsResult] = await Promise.all([
     searchParams,
-    getAllPostMetas(),
+    (async () => {
+      try {
+        return await getAllPostMetas();
+      } catch {
+        return [];
+      }
+    })(),
   ]);
   const requestedPage = Math.max(1, parseInt(pageParam || "1", 10) || 1);
+  const allPosts = allPostsResult;
   const featured = allPosts.find((post) => post.featured) || allPosts[0];
   const categories = [...new Set(allPosts.map((post) => post.category))];
   const isFirstPage = requestedPage === 1;

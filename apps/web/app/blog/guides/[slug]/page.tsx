@@ -64,7 +64,12 @@ export default async function ClusterPage({ params }: PageProps) {
   const cluster = getClusterBySlug(slug);
   if (!cluster) notFound();
 
-  const posts = await getPostsByCluster(slug);
+  let posts = [];
+  try {
+    posts = await getPostsByCluster(slug);
+  } catch {
+    posts = [];
+  }
   const relatedClusters = getRelatedClusters(slug);
   const displayPosts = posts.slice(0, 9);
 

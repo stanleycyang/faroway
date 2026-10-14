@@ -69,10 +69,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  const [postMetas, categories] = await Promise.all([
-    getAllSitemapPostMetas(),
-    getAllCategories(),
-  ]);
+  let postMetas: Awaited<ReturnType<typeof getAllSitemapPostMetas>> = [];
+  let categories: Awaited<ReturnType<typeof getAllCategories>> = [];
+  try {
+    [postMetas, categories] = await Promise.all([
+      getAllSitemapPostMetas(),
+      getAllCategories(),
+    ]);
+  } catch {
+    // In local or non-configured environments, omit blog URLs from sitemap
+    postMetas = [];
+    categories = [];
+  }
   const blogPosts: MetadataRoute.Sitemap = postMetas.map((post) => ({
     url: `${baseUrl}/blog/${post.slug}`,
     lastModified: post.lastUpdated || post.date,
