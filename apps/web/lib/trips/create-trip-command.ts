@@ -1,5 +1,6 @@
 import { isValidDateOnly, isValidDateRange } from "@/lib/api/date-range";
 import { z } from "zod";
+import { HotelSearchDetailsSchema } from "./brief";
 
 const DateOnlySchema = z
   .string()
@@ -28,6 +29,7 @@ export const CreateTripSchema = z
         budget: z.enum(["budget", "moderate", "luxury"]).optional(),
         adults: z.number().int().min(1).max(50).optional(),
         children: z.number().int().min(0).max(50).optional(),
+        hotelSearch: HotelSearchDetailsSchema.nullable().optional(),
         interests: z.array(z.string().max(50)).max(20).optional(),
       })
       .optional(),

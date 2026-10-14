@@ -18,6 +18,25 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 import { loadSharedTrip } from "../../lib/trips/load-shared-trip";
+test("public sharing omits hotel consent, nationality and children's ages", async () => {
+  const preferences = {
+    interests: ["art"],
+    hotelSearch: {
+      guestNationality: "CA",
+      rooms: [{ adults: 2, children: [7] }],
+    },
+  };
+  mocks.single.mockResolvedValueOnce({
+    data: { destination: "Paris", itineraries: null, preferences },
+    error: null,
+  });
+  const shared = await loadSharedTrip("public-link");
+  expect(shared).toMatchObject({
+    preferences: { interests: ["art"] },
+  });
+  expect(preferences.hotelSearch).toBeDefined();
+  expect(shared?.preferences).not.toHaveProperty("hotelSearch");
+});
 test("shared read preserves revoked/missing links as unavailable", async () => {
   mocks.single.mockResolvedValueOnce({
     data: null,

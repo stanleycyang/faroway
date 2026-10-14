@@ -52,7 +52,12 @@ async function loadSharedTripUncached(
     );
   }
   if (!trip) return null;
-  const shared = filterViatorDisplay(trip as SharedTripData);
+  const filtered = filterViatorDisplay(trip as SharedTripData);
+  const shared = {
+    ...filtered,
+    preferences: filtered.preferences ? { ...filtered.preferences } : null,
+  };
+  if (shared.preferences) delete shared.preferences.hotelSearch;
   const itineraries = Array.isArray(shared.itineraries)
     ? shared.itineraries
     : shared.itineraries

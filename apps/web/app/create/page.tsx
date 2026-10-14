@@ -35,7 +35,15 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { destinations as destinationCatalog } from "@/lib/planner-destination-catalog";
-import { IMAGE_PATHS, getImageUrl } from "@faroway/constants";
+import {
+  IMAGE_PATHS,
+  getImageUrl,
+  validateHotelSearchDetails,
+  hotelGuestCounts,
+  type HotelSearchDetails,
+} from "@faroway/constants";
+import { HotelSearchFields } from "@/components/trips/HotelSearchFields";
+import { hotelSearchEnabled } from "@/lib/trips/hotel-quotes";
 import {
   PlacesAutocompleteInput,
   type PlaceResult,
@@ -100,6 +108,7 @@ interface StoredCreateDraft {
   travelerType: string;
   selectedVibes: string[];
   showAdvanced: boolean;
+  hotelSearch?: HotelSearchDetails | null;
 
   budget?: (typeof budgetOptions)[number]["id"];
 }
@@ -143,6 +152,9 @@ function CreateTripPlanner({
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [hotelSearch, setHotelSearch] = useState<HotelSearchDetails | null>(
+    null,
+  );
   const [travelers, setTravelers] = useState(2);
   const [budget, setBudget] =
     useState<(typeof budgetOptions)[number]["id"]>("moderate");
@@ -251,6 +263,13 @@ function CreateTripPlanner({
       )
         setBudget(draft.budget);
       setShowAdvanced(draft.showAdvanced === true);
+      if (
+        hotelSearchEnabled() &&
+        validateHotelSearchDetails(draft.hotelSearch)
+      ) {
+        setHotelSearch(draft.hotelSearch);
+        setTravelers(hotelGuestCounts(draft.hotelSearch).travelers);
+      }
       return;
     }
 
@@ -296,6 +315,7 @@ function CreateTripPlanner({
         travelerType,
         selectedVibes,
         showAdvanced,
+        hotelSearch,
         budget,
       } satisfies StoredCreateDraft);
     } catch {
@@ -310,6 +330,7 @@ function CreateTripPlanner({
     travelerType,
     selectedVibes,
     showAdvanced,
+    hotelSearch,
     budget,
   ]);
 
@@ -327,7 +348,12 @@ function CreateTripPlanner({
     );
   };
 
-  const canGenerate = selectedPlace && startDate && endDate;
+  const canGenerate =
+    selectedPlace &&
+    startDate &&
+    endDate &&
+    (hotelSearch === null ||
+      validateHotelSearchDetails(hotelSearch, travelers));
 
   const handleSelectRecommended = (dest: (typeof destinations)[number]) => {
     setSelectedPlace({
@@ -373,6 +399,7 @@ function CreateTripPlanner({
         travelerType,
         selectedVibes,
         showAdvanced,
+        hotelSearch,
         budget,
       };
       try {
@@ -403,6 +430,13 @@ function CreateTripPlanner({
         preferences: {
           travelerType,
           vibes: selectedVibes,
+          ...(hotelSearch
+            ? {
+                hotelSearch,
+                adults: hotelGuestCounts(hotelSearch).adults,
+                children: hotelGuestCounts(hotelSearch).children,
+              }
+            : {}),
         },
       };
       const validated = CreateTripSchema.safeParse(candidate);
@@ -606,7 +640,9 @@ function CreateTripPlanner({
     ? "Choose a destination to get started"
     : !startDate || !endDate
       ? "Choose your dates to continue"
-      : "Your trip is ready to plan";
+      : !canGenerate
+        ? "Complete your hotel room details or turn off hotel searches"
+        : "Your trip is ready to plan";
 
   return (
     <div
@@ -709,7 +745,7 @@ function CreateTripPlanner({
                       onClick={() =>
                         setTravelers((current) => Math.max(1, current - 1))
                       }
-                      disabled={travelers <= 1}
+                      disabled={travelers <= 1 || hotelSearch !== null}
                       className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <Minus className="w-4 h-4" />
@@ -725,7 +761,7 @@ function CreateTripPlanner({
                       onClick={() =>
                         setTravelers((current) => Math.min(50, current + 1))
                       }
-                      disabled={travelers >= 50}
+                      disabled={travelers >= 50 || hotelSearch !== null}
                       className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <Plus className="w-4 h-4" />
@@ -841,6 +877,37 @@ function CreateTripPlanner({
                 ))}
               </div>
             </section>
+            {hotelSearchEnabled() && (
+              <section
+                id="planner-hotels"
+                aria-label="Hotel preferences"
+                className="scroll-mt-24 border-t border-gray-100 pt-8"
+              >
+                <h2 tabIndex={-1} className="text-lg font-bold outline-none">
+                  Your stay preferences
+                </h2>
+                <p className="mt-2 text-sm text-slate-600">
+                  Optional room details for hotel quotes. No booking is made.
+                </p>
+                <HotelSearchFields
+                  value={hotelSearch}
+                  travelers={travelers}
+                  onChange={(value) => {
+                    setHotelSearch(value);
+                    if (
+                      value &&
+                      hotelSearch &&
+                      JSON.stringify(value.rooms) !==
+                        JSON.stringify(hotelSearch.rooms)
+                    ) {
+                      const count = hotelGuestCounts(value).travelers;
+                      if (Number.isInteger(count) && count >= 1 && count <= 50)
+                        setTravelers(count);
+                    }
+                  }}
+                />
+              </section>
+            )}
             <div id="planner-notices" className="scroll-mt-24">
               {pendingRequest && (
                 <p role="status" className="mt-3 text-sm text-gray-700">
@@ -1011,7 +1078,9 @@ function CreateTripPlanner({
                       ? "planner-destination"
                       : !startDate || !endDate
                         ? "planner-dates"
-                        : "planner-destination",
+                        : !canGenerate
+                          ? "planner-hotels"
+                          : "planner-destination",
                 )
               }
               className="block w-full text-center text-xs leading-5 text-gray-600 lg:mt-1 lg:text-left"

@@ -1,0 +1,31 @@
+{
+  "scope": "Actual hotel fields and quote panel, compiled production CSS, synthetic local auth and supplier; no live provider verification",
+  "results": [
+    {
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "keyboard": true,
+      "touchTarget": 48,
+      "overflow": false,
+      "invalidAgeBlocked": true,
+      "retry": true,
+      "quote": true,
+      "consentRevocationClearsQuotes": true
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "keyboard": true,
+      "touchTarget": 48,
+      "overflow": false,
+      "invalidAgeBlocked": true,
+      "retry": true,
+      "quote": true,
+      "consentRevocationClearsQuotes": true
+    }
+  ]
+}

@@ -1,3 +1,5 @@
+import { hotelSearchEnabled } from "@/lib/trips/hotel-quotes";
+import { isDeepStrictEqual } from "node:util";
 import { NextRequest, NextResponse } from "next/server";
 import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
 import { requireUserIdFromRequest } from "@/lib/auth/middleware";
@@ -69,6 +71,15 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         { status: 400 },
       );
     const { expectedUpdatedAt, ...changes } = parsed.data;
+    if (
+      changes.preferences &&
+      "hotelSearch" in changes.preferences &&
+      !hotelSearchEnabled()
+    )
+      return NextResponse.json(
+        { error: "Hotel preferences are temporarily unavailable" },
+        { status: 503 },
+      );
     const { data: existing, error: readError } = await db
       .from("trips")
       .select("*")
@@ -144,6 +155,28 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         { status: 503 },
       );
 
+    if (
+      changes.preferences &&
+      "hotelSearch" in changes.preferences &&
+      !isDeepStrictEqual(
+        typeof trip === "object" &&
+          trip !== null &&
+          "preferences" in trip &&
+          typeof trip.preferences === "object" &&
+          trip.preferences !== null &&
+          "hotelSearch" in trip.preferences
+          ? trip.preferences.hotelSearch
+          : null,
+        preferences.hotelSearch ?? null,
+      )
+    )
+      return NextResponse.json(
+        {
+          error:
+            "Hotel preference changes could not be confirmed. Load the latest brief before retrying.",
+        },
+        { status: 503 },
+      );
     return NextResponse.json({ trip });
   } catch (error) {
     console.error("Error updating trip:", error);

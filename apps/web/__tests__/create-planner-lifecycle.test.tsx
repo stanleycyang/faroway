@@ -28,6 +28,112 @@ vi.mock("@/lib/ai/planning-consent-client", () => ({
   requestPlanningConsent: (...args: unknown[]) => mocks.consent(...args),
 }));
 import CreateTripPage from "../app/create/page";
+import { saveEditorDraft } from "../lib/create-draft";
+import { HotelSearchFields } from "../components/trips/HotelSearchFields";
+import { hotelGuestCounts, type HotelSearchDetails } from "@faroway/constants";
+
+test("hotel setup preserves the saved adult count in a family brief", async () => {
+  (
+    globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+  ).IS_REACT_ACT_ENVIRONMENT = true;
+  const changed = vi.fn();
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      renderer = create(
+        <HotelSearchFields
+          value={null}
+          travelers={3}
+          adults={2}
+          onChange={changed}
+        />,
+      );
+    });
+    await act(async () => {
+      renderer.root
+        .findByProps({ type: "checkbox" })
+        .props.onChange({ target: { checked: true } });
+    });
+    const details = changed.mock.calls[0][0] as HotelSearchDetails;
+    expect(details.rooms).toEqual([{ adults: 2, children: [] }]);
+    await act(async () => {
+      renderer.update(
+        <HotelSearchFields
+          value={details}
+          travelers={3}
+          adults={2}
+          onChange={changed}
+        />,
+      );
+    });
+    await act(async () => {
+      renderer.root
+        .findByProps({ placeholder: "For example: 6, 10" })
+        .props.onChange({ target: { value: "7" } });
+    });
+    expect(hotelGuestCounts(changed.mock.calls[1][0])).toEqual({
+      adults: 2,
+      children: 1,
+      travelers: 3,
+    });
+  } finally {
+    await act(async () => {
+      renderer?.unmount();
+    });
+  }
+});
+
+test("hotel preferences survive a same-tab planner reload", async () => {
+  (
+    globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+  ).IS_REACT_ACT_ENVIRONMENT = true;
+  vi.stubEnv("NEXT_PUBLIC_HOTEL_SEARCH_ENABLED", "true");
+  const values = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => values.get(key) ?? null,
+    setItem: (key: string, value: string) => values.set(key, value),
+    removeItem: (key: string) => values.delete(key),
+  };
+  saveEditorDraft(storage, {
+    travelers: 3,
+    hotelSearch: {
+      countryCode: "FR",
+      guestNationality: "CA",
+      rooms: [{ adults: 2, children: [7] }],
+      consentVersion: "hotel-search-nuitee-v1",
+    },
+  });
+  vi.stubGlobal("sessionStorage", storage);
+  vi.stubGlobal("localStorage", {
+    getItem: () => null,
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+  });
+  vi.stubGlobal("window", {
+    location: { search: "" },
+    history: { replaceState: vi.fn() },
+  });
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      renderer = create(<CreateTripPage />);
+    });
+    expect(
+      renderer.root.findAllByType("input").map((node) => node.props.value),
+    ).toEqual(expect.arrayContaining(["FR", "CA", "7", 2]));
+    const retained = JSON.parse(values.get("faroway-create-editor-draft")!);
+    expect(retained.draft.hotelSearch.rooms).toEqual([
+      { adults: 2, children: [7] },
+    ]);
+    expect(retained.draft.travelers).toBe(3);
+  } finally {
+    await act(async () => {
+      renderer?.unmount();
+    });
+    vi.unstubAllGlobals();
+    vi.unstubAllEnvs();
+  }
+});
 
 test.each(["account replacement", "same-owner reauthentication"])(
   "an old creation response cannot continue after %s",

@@ -1,5 +1,5 @@
 {
-  "status": "Registered follow-ups; staging applied; production unapplied",
+  "status": "Registered follow-ups; existing staging receipts retained. Hotel preferences follow-up is local-only and unapplied to hosted staging/production.",
   "bootstrap_sha256": "09b820436a77967f95024abf4f724f4f2f1bb1d3378ee33b73656593ba729939",
   "application_order": [
     {
@@ -18,6 +18,12 @@
       "path": "supabase/migrations/20261011052745_pin_helper_search_paths.sql",
       "source": "supabase/release-candidate/helper-search-paths.sql",
       "sha256": "510697e0bba4ecf3345980d2ef9a70f5a867100afbd19c6417dc69dab43dd36c",
+      "applied": false
+    },
+    {
+      "path": "supabase/migrations/20261014001000_hotel_brief_preferences.sql",
+      "source": "supabase/release-candidate/hotel-brief-preferences.sql",
+      "sha256": "edd14b2a912c1d93aa94dea511cdcaecfe95c4b8866ba7d3e70d48cd1b151d9e",
       "applied": false
     }
   ],

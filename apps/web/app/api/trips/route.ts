@@ -1,4 +1,5 @@
 import { validBriefComposition } from "@/lib/trips/brief";
+import { hotelSearchEnabled } from "@/lib/trips/hotel-quotes";
 import { NextRequest, NextResponse } from "next/server";
 import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
 import { CreateTripSchema } from "@/lib/trips/create-trip-command";
@@ -110,6 +111,11 @@ export async function POST(request: NextRequest) {
       preferences,
     } = parseResult.data;
 
+    if (preferences?.hotelSearch != null && !hotelSearchEnabled())
+      return NextResponse.json(
+        { error: "Hotel preferences are temporarily unavailable" },
+        { status: 503 },
+      );
     if (!validBriefComposition(travelers ?? 1, preferences ?? {}))
       return NextResponse.json(
         { error: "Adults and children must add up to the traveler count" },
@@ -143,6 +149,7 @@ export async function POST(request: NextRequest) {
         adults: preferences?.adults,
         children: preferences?.children,
         interests: preferences?.interests,
+        hotelSearch: preferences?.hotelSearch,
       },
       status: "draft",
     };

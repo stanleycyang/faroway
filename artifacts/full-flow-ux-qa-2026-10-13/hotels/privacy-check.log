@@ -1,0 +1,31 @@
+BEGIN
+INSERT 0 2
+INSERT 0 1
+INSERT 0 1
+SET
+              set_config
+--------------------------------------
+ 11622b9d-7b52-4212-8772-750629100e3e
+(1 row)
+
+DO
+              set_config
+--------------------------------------
+ f4e02ab0-b618-4671-9152-3e718cc945fc
+(1 row)
+
+DO
+SET
+ set_config
+------------
+
+(1 row)
+
+DO
+RESET
+DO
+ROLLBACK
+                                                             result
+---------------------------------------------------------------------------------------------------------------------------------
+ PASS: full-schema owner/stranger/anonymous reads, stranger write, four RPC grants, signup profile trigger; fixtures rolled back
+(1 row)

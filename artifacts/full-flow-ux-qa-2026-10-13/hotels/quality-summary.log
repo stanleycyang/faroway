@@ -1,0 +1,36 @@
+• turbo 2.10.6
+
+   • Packages in scope: @faroway/api-client, @faroway/constants, @faroway/eslint-config, @faroway/mobile, @faroway/supabase, @faroway/tsconfig, @faroway/types, @faroway/validation, @faroway/web
+   • Running type-check, lint, format:check in 9 packages
+   • Remote caching disabled, using shared worktree cache
+
+@faroway/web:format:check: cache bypass, force executing d9728296fce539f5
+@faroway/validation:type-check: cache bypass, force executing 0a26f678d994fbc9
+@faroway/web:format:check: $ prettier --check "**/*.{ts,tsx,js,jsx,json,css,md}"
+@faroway/validation:type-check: $ tsc --noEmit
+@faroway/web:format:check: Checking formatting...
+@faroway/mobile:format:check: cache bypass, force executing bd53f01071a9c130
+@faroway/mobile:format:check: $ prettier --check "**/*.{ts,tsx,js,jsx,json,md}"
+@faroway/mobile:format:check: Checking formatting...
+@faroway/mobile:format:check: All matched files use Prettier code style!
+@faroway/supabase:type-check: cache bypass, force executing 047a300a2fec6273
+@faroway/supabase:type-check: $ tsc --noEmit
+@faroway/types:type-check: cache bypass, force executing 81854a2808de97ff
+@faroway/types:type-check: $ tsc --noEmit
+@faroway/constants:type-check: cache bypass, force executing 4da5a57c7982f3d4
+@faroway/constants:type-check: $ tsc --noEmit
+@faroway/api-client:type-check: cache bypass, force executing 4515fb751ab76fd4
+@faroway/api-client:type-check: $ tsc --noEmit
+@faroway/web:type-check: cache bypass, force executing d4ba69bc9e94abf7
+@faroway/web:type-check: $ tsc --noEmit
+@faroway/web:format:check: All matched files use Prettier code style!
+@faroway/web:lint: cache bypass, force executing e53b47700b5235e9
+@faroway/web:lint: $ eslint .
+@faroway/mobile:lint: cache bypass, force executing 4802e3a4ccb3a3b2
+@faroway/mobile:lint: $ eslint .
+@faroway/mobile:type-check: cache bypass, force executing 90083241776c614b
+@faroway/mobile:type-check: $ tsc --noEmit
+
+ Tasks:    11 successful, 11 total
+Cached:    0 cached, 11 total
+  Time:    1m24.831s

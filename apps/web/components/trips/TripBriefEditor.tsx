@@ -1,6 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import {
+  validateHotelSearchDetails,
+  hotelGuestCounts,
+  type HotelSearchDetails,
+} from "@faroway/constants";
+import { HotelSearchFields } from "./HotelSearchFields";
+import { hotelSearchEnabled } from "@/lib/trips/hotel-quotes";
 import type { Trip } from "@/lib/trips/load-trip";
 
 interface TripBriefEditorProps {
@@ -30,6 +37,11 @@ function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
     };
   }, []);
   const preferences = trip.preferences ?? {};
+  const [hotelSearch, setHotelSearch] = useState<HotelSearchDetails | null>(
+    validateHotelSearchDetails(preferences.hotelSearch)
+      ? preferences.hotelSearch
+      : null,
+  );
   const [destination, setDestination] = useState(trip.destination);
   const [start, setStart] = useState(trip.start_date);
   const [end, setEnd] = useState(trip.end_date);
@@ -116,6 +128,11 @@ function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
           : "",
       );
       setVibes((latest.vibes ?? []).join(", "));
+      setHotelSearch(
+        validateHotelSearchDetails(latestPreferences.hotelSearch)
+          ? latestPreferences.hotelSearch
+          : null,
+      );
       setMessage(null);
       focusAfterReload.current = true;
     } catch {
@@ -181,12 +198,31 @@ function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
       changes.travelers = adults + children;
       Object.assign(changedPreferences, { adults, children });
     }
+    if (hotelSearchEnabled())
+      changed(
+        "hotelSearch",
+        hotelSearch,
+        preferences.hotelSearch ?? null,
+        changedPreferences,
+      );
     if (Object.keys(changedPreferences).length)
       changes.preferences = changedPreferences;
     if (!Object.keys(changes).length) {
       setMessage({
         text: "Your brief is already up to date. No changes were saved.",
         kind: "info",
+      });
+      return;
+    }
+    if (
+      hotelSearch !== null &&
+      (!validateHotelSearchDetails(hotelSearch, adults + children) ||
+        hotelGuestCounts(hotelSearch).adults !== adults ||
+        hotelGuestCounts(hotelSearch).children !== children)
+    ) {
+      setMessage({
+        text: "Complete your hotel room details or turn off hotel searches before saving.",
+        kind: "error",
       });
       return;
     }
@@ -296,6 +332,7 @@ function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
               type="number"
               min={1}
               max={50}
+              disabled={hotelSearch !== null}
               value={adults}
               onChange={(event) => setAdults(Number(event.target.value))}
               className={inputStyle}
@@ -308,6 +345,7 @@ function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
               type="number"
               min={0}
               max={49}
+              disabled={hotelSearch !== null}
               value={children}
               onChange={(event) => setChildren(Number(event.target.value))}
               className={inputStyle}
@@ -378,6 +416,28 @@ function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
               className={inputStyle}
             />
           </label>
+          {hotelSearchEnabled() && (
+            <div className="sm:col-span-2">
+              <HotelSearchFields
+                value={hotelSearch}
+                travelers={adults + children}
+                adults={adults}
+                onChange={(value) => {
+                  setHotelSearch(value);
+                  if (
+                    value &&
+                    hotelSearch &&
+                    JSON.stringify(value.rooms) !==
+                      JSON.stringify(hotelSearch.rooms)
+                  ) {
+                    const counts = hotelGuestCounts(value);
+                    setAdults(counts.adults);
+                    setChildren(counts.children);
+                  }
+                }}
+              />
+            </div>
+          )}
           <p className="text-sm text-gray-500 sm:col-span-2">
             Changing your brief keeps your previous plan and turns off its
             public link. Choose Start planning when you are ready to build a

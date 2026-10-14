@@ -37,6 +37,20 @@ const money = z
     currency: z.string().regex(/^[A-Z]{3}$/),
   })
   .passthrough();
+const taxes = z
+  .array(
+    z
+      .object({
+        amount: z.number().finite().nonnegative(),
+        currency: z.string().regex(/^[A-Z]{3}$/),
+        included: z.boolean(),
+        description: z.string(),
+      })
+      .passthrough(),
+  )
+  .nullable()
+  .optional();
+const prices = z.array(money).min(1).nullable().optional();
 const ratesResponse = z
   .object({
     sandbox: z.literal(true),
@@ -48,6 +62,13 @@ const ratesResponse = z
             z
               .object({
                 offerId: z.string().min(1),
+                suggestedSellingPrice: z
+                  .union([money, z.array(money).min(1)])
+                  .nullable()
+                  .optional(),
+                offerRetailRate: z
+                  .union([money, z.array(money).min(1)])
+                  .optional(),
                 rates: z
                   .array(
                     z
@@ -55,21 +76,12 @@ const ratesResponse = z
                         retailRate: z
                           .object({
                             total: z.array(money).min(1),
-                            suggestedSellingPrice: z.array(money).optional(),
-                            taxesAndFees: z
-                              .array(
-                                z
-                                  .object({
-                                    amount: z.number().finite().nonnegative(),
-                                    currency: z.string().regex(/^[A-Z]{3}$/),
-                                    included: z.boolean(),
-                                    description: z.string(),
-                                  })
-                                  .passthrough(),
-                              )
-                              .optional(),
+                            suggestedSellingPrice: prices,
+                            taxesAndFees: taxes,
                           })
                           .passthrough(),
+                        suggestedSellingPrice: prices,
+                        taxesAndFees: taxes,
                       })
                       .passthrough(),
                   )

@@ -26,3 +26,5 @@ export {
   localCalendarDate,
   type TripDatePhase,
 } from "./trip-dates";
+
+export * from "./hotel-search";

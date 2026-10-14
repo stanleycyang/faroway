@@ -7,6 +7,7 @@ import { BookingChecklist } from "@/components/trips/BookingChecklist";
 import { FlightLeg } from "@/components/trips/FlightLeg";
 import { PlanEditor } from "@/components/trips/PlanEditor";
 import { TripBriefEditor } from "@/components/trips/TripBriefEditor";
+import { HotelQuotePanel } from "@/components/trips/HotelQuotePanel";
 
 import React, {
   useEffect,
@@ -1017,6 +1018,7 @@ export function TripDetailClient({
           <h2 className="mb-5 font-editorial text-2xl text-slate-900 sm:text-3xl">
             A place to settle in
           </h2>
+          <HotelQuotePanel trip={trip} />
           {/* Recommended Hotel — fades in from stream or DB */}
           {displayTopHotel && !trip.preferences?.planNeedsRefresh && (
             <div>
