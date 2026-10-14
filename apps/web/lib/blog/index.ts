@@ -228,7 +228,8 @@ export async function getPostsByCluster(
 // Pagination (pure, synchronous — no change)
 // ---------------------------------------------------------------------------
 
-export const POSTS_PER_PAGE = 9;
+// Increase listing density to surface more content per click depth
+export const POSTS_PER_PAGE = 24;
 
 export function paginate<T>(
   items: T[],

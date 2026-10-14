@@ -12,6 +12,7 @@ import { BlogCard } from "@/components/blog/BlogCard";
 import { ViewTracker } from "@/components/blog/ViewTracker";
 import { ProseWrapper } from "@/components/blog/MDXComponents";
 import { FadeInOnScroll } from "@/components/landing/FadeInOnScroll";
+import { getGuideSlugs, getGuideBySlug } from "@/lib/destination-guides";
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
@@ -277,12 +278,32 @@ export default async function BlogPostPage({
   const { slug } = await params;
   const [post, related] = await Promise.all([
     getPostBySlug(slug),
-    getRelatedPosts(slug, 3),
+    getRelatedPosts(slug, 6),
   ]);
   if (!post) notFound();
 
   const postUrl = `${baseUrl}/blog/${post.slug}`;
   const contentHtml = renderMarkdown(post.content);
+
+  // Try to match a related destination by name/country appearing in title/description/tags
+  const allDestinationSlugs = getGuideSlugs();
+  const candidate = allDestinationSlugs
+    .map((s) => getGuideBySlug(s))
+    .filter(Boolean)
+    .find((dest) => {
+      const title = post.title.toLowerCase();
+      const desc = (post.description || "").toLowerCase();
+      const tags = post.tags.map((t) => t.toLowerCase());
+      const name = dest!.name.toLowerCase();
+      const country = dest!.country.toLowerCase();
+      return (
+        title.includes(name) ||
+        title.includes(country) ||
+        desc.includes(name) ||
+        desc.includes(country) ||
+        tags.some((t) => t.includes(name) || t.includes(country))
+      );
+    });
 
   // Article JSON-LD
   const articleJsonLd = {
@@ -539,6 +560,69 @@ export default async function BlogPostPage({
               <TableOfContents content={post.content} />
             </aside>
           </div>
+
+          {/* ===== Related Destination & Tools ===== */}
+          {candidate && (
+            <section className="max-w-7xl mx-auto py-16 mt-8">
+              <div className="text-center mb-10">
+                <span className="inline-block px-4 py-1.5 bg-primary-50 text-primary-700 rounded-full text-sm font-semibold border border-primary-200 mb-4">
+                  Plan with Faroway
+                </span>
+                <h2 className="text-3xl font-bold">
+                  Headed to <span className="text-gradient">{candidate.name}</span>?
+                </h2>
+                <p className="text-slate-600 mt-2">
+                  Explore our {candidate.name} guide and helpful trip tools.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <Link
+                  href={`/destinations/${candidate.slug}`}
+                  className="p-4 rounded-xl border border-slate-200/60 bg-white hover:border-primary/30 hover:shadow-sm transition-all group"
+                >
+                  <p className="text-sm font-semibold text-slate-900 group-hover:text-primary transition-colors">
+                    {candidate.name} Destination Guide
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Highlights, itineraries & tips
+                  </p>
+                </Link>
+                <Link
+                  href={`/tools/best-time-to-visit/${candidate.slug}`}
+                  className="p-4 rounded-xl border border-slate-200/60 bg-white hover:border-primary/30 hover:shadow-sm transition-all group"
+                >
+                  <p className="text-sm font-semibold text-slate-900 group-hover:text-primary transition-colors">
+                    Best Time to Visit {candidate.name}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Climate & crowd data by month
+                  </p>
+                </Link>
+                <Link
+                  href={`/tools/trip-cost/${candidate.slug}`}
+                  className="p-4 rounded-xl border border-slate-200/60 bg-white hover:border-primary/30 hover:shadow-sm transition-all group"
+                >
+                  <p className="text-sm font-semibold text-slate-900 group-hover:text-primary transition-colors">
+                    Trip Cost for {candidate.name}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Budget breakdowns & prices
+                  </p>
+                </Link>
+                <Link
+                  href={`/tools/visa-checker/${candidate.slug}`}
+                  className="p-4 rounded-xl border border-slate-200/60 bg-white hover:border-primary/30 hover:shadow-sm transition-all group"
+                >
+                  <p className="text-sm font-semibold text-slate-900 group-hover:text-primary transition-colors">
+                    Visa Requirements for {candidate.name}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Check by passport country
+                  </p>
+                </Link>
+              </div>
+            </section>
+          )}
 
           {/* ===== Related Posts ===== */}
           {related.length > 0 && (
