@@ -14,6 +14,10 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { getGuideBySlug, getGuideSlugs } from "@/lib/destination-guides";
+import { getAllPostMetas, type BlogPostMeta } from "@/lib/blog";
+import React from "react";
+
+export const dynamic = "force-static";
 
 // ─── Static Generation ───────────────────────────────────────────────────────
 export function generateStaticParams() {
@@ -67,6 +71,28 @@ export default async function DestinationGuidePage({
   const dest = getGuideBySlug(slug);
   if (!dest) notFound();
 
+  // Try to load related blog posts; fail soft when blog DB is not configured
+  let relatedPosts: BlogPostMeta[] = [];
+  try {
+    const metas = await getAllPostMetas();
+    const name = dest.name.toLowerCase();
+    const country = dest.country.toLowerCase();
+    relatedPosts = metas
+      .filter((p) => {
+        const title = p.title.toLowerCase();
+        const tags = p.tags.map((t) => t.toLowerCase());
+        return (
+          title.includes(name) ||
+          title.includes(country) ||
+          tags.some((t) => t.includes(name) || t.includes(country))
+        );
+      })
+      .slice(0, 6);
+  } catch {
+    // ignore — keep page static and fast even without blog DB
+    relatedPosts = [];
+  }
+
   // JSON-LD
   const jsonLd = [
     {
@@ -104,6 +130,45 @@ export default async function DestinationGuidePage({
         "@type": "Country",
         name: dest.country,
       },
+    },
+    // FAQ generated from known quick facts (grounded in existing data)
+    {
+      "@context": "https://schema.org",
+      "@type": "FAQPage",
+      mainEntity: [
+        {
+          "@type": "Question",
+          name: `What is the best time to visit ${dest.name}?`,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: dest.quickFacts.bestTime,
+          },
+        },
+        {
+          "@type": "Question",
+          name: `What language is spoken in ${dest.name}?`,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: dest.quickFacts.language,
+          },
+        },
+        {
+          "@type": "Question",
+          name: `What is the currency in ${dest.name}?`,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: dest.quickFacts.currency,
+          },
+        },
+        {
+          "@type": "Question",
+          name: `What is the timezone in ${dest.name}?`,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: dest.quickFacts.timezone,
+          },
+        },
+      ],
     },
   ];
 
@@ -339,6 +404,87 @@ export default async function DestinationGuidePage({
             ))}
           </div>
         </section>
+
+        {/* ─── Trip Tools for this Destination ─────────────────────────── */}
+        <section className="container mx-auto px-6 max-w-7xl py-12 lg:py-16">
+          <h2 className="text-2xl font-bold text-slate-900 mb-2">
+            Plan Your Trip to {dest.name}
+          </h2>
+          <p className="text-slate-500 mb-6">
+            Helpful tools and calculators for {dest.name}
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Link
+              href={`/tools/best-time-to-visit/${dest.slug}`}
+              className="p-4 rounded-xl border border-slate-200/60 bg-white hover:border-primary/30 hover:shadow-sm transition-all group"
+            >
+              <p className="text-sm font-semibold text-slate-900 group-hover:text-primary transition-colors">
+                Best Time to Visit {dest.name}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                Climate & crowd data by month
+              </p>
+            </Link>
+            <Link
+              href={`/tools/trip-cost/${dest.slug}`}
+              className="p-4 rounded-xl border border-slate-200/60 bg-white hover:border-primary/30 hover:shadow-sm transition-all group"
+            >
+              <p className="text-sm font-semibold text-slate-900 group-hover:text-primary transition-colors">
+                Trip Cost for {dest.name}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                Budget breakdowns & prices
+              </p>
+            </Link>
+            <Link
+              href={`/tools/visa-checker/${dest.slug}`}
+              className="p-4 rounded-xl border border-slate-200/60 bg-white hover:border-primary/30 hover:shadow-sm transition-all group"
+            >
+              <p className="text-sm font-semibold text-slate-900 group-hover:text-primary transition-colors">
+                Visa Requirements for {dest.name}
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                Check by passport country
+              </p>
+            </Link>
+            <Link
+              href={`/tools/packing-list`}
+              className="p-4 rounded-xl border border-slate-200/60 bg-white hover:border-primary/30 hover:shadow-sm transition-all group"
+            >
+              <p className="text-sm font-semibold text-slate-900 group-hover:text-primary transition-colors">
+                Packing List Generator
+              </p>
+              <p className="text-xs text-slate-500 mt-1">
+                Tailored to your trip style
+              </p>
+            </Link>
+          </div>
+        </section>
+
+        {/* ─── From the Blog ────────────────────────────────────────────── */}
+        {relatedPosts.length > 0 && (
+          <section className="container mx-auto px-6 max-w-7xl py-12 lg:py-16">
+            <h2 className="text-2xl font-bold text-slate-900 mb-6">
+              From the Blog — {dest.name}
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {relatedPosts.map((p) => (
+                <Link
+                  key={p.slug}
+                  href={`/blog/${p.slug}`}
+                  className="block p-4 rounded-2xl bg-white border border-slate-200/80 hover:border-primary/30 hover:shadow-sm transition-all"
+                >
+                  <p className="text-sm font-semibold text-slate-900 line-clamp-2">
+                    {p.title}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                    {p.description}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* ─── Bottom CTA ───────────────────────────────────────────────── */}
         <section className="bg-gradient-to-br from-primary-600 to-amber-500 py-16">
