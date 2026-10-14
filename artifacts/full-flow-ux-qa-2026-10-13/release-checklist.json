@@ -1,6 +1,6 @@
 {
   "frozenOn": "2026-10-14",
-  "authority": "User instruction: ten journeys and six release gates; existing PR/merge authorization persists",
+  "authority": "User instruction: ten journeys and six release gates; existing PR/merge authorization persists; 2026-10-14 user waived GitHub CI in favor of local checks",
   "changePolicy": "No checklist expansion. New ideas go to follow-up backlog unless they block an existing frozen release gate. Passed results are scoped evidence, not release approval. Failed includes incomplete internal verification, not necessarily a confirmed product defect. External verification requires explicit acceptance before release.",
   "journeys": [
     {
@@ -97,24 +97,27 @@
   "gates": [
     {
       "gate": "Functional",
-      "status": "Failed",
-      "requirement": "Every applicable frozen happy/failure/recovery case passes; no unresolved blocker or major defect"
+      "status": "External verification required",
+      "requirement": "Every applicable frozen happy/failure/recovery case passes; no unresolved blocker or major defect",
+      "internalReview": "No unresolved verified blocker in reviewed local scope; current device/hosted/provider cases remain external."
     },
     {
       "gate": "UX and accessibility",
-      "status": "Failed",
-      "requirement": "Responsive/readability/keyboard/focus/touch/reduced-motion checks on candidate"
+      "status": "External verification required",
+      "requirement": "Responsive/readability/keyboard/focus/touch/reduced-motion checks on candidate",
+      "internalReview": "No unresolved verified blocker in reviewed local scope; current device/hosted/provider cases remain external."
     },
     {
       "gate": "Privacy and reliability",
-      "status": "Failed",
-      "requirement": "Account changes/authorization/cache isolation/retry identity/save confirmation consolidated on candidate"
+      "status": "External verification required",
+      "requirement": "Account changes/authorization/cache isolation/retry identity/save confirmation consolidated on candidate",
+      "internalReview": "No unresolved verified blocker in reviewed local scope; current device/hosted/provider cases remain external."
     },
     {
       "gate": "Engineering",
       "status": "Failed",
       "requirement": "Final diff reviewed; required tests/types/lint/production build on exact candidate",
-      "preCandidateEvidence": "Current906 webtests,599 mobiletests,8 script tests,11 workspace types/lint/format tasks and dual-platform native Hermes export pass. Current web synthetic production build/3-profile private/offline story pass. Complete final diff and exact approved-public candidate checks pending. Native conflict modal reduced-motion fix subsequently added; focused checks pass, full candidate checks/export require refresh.",
+      "preCandidateEvidence": "Exact prior code commit 7e547ca: 906 web, 601 native, 47 constants and 8 script tests, plus 11 quality tasks passed; production build and native exports pass. Verified planner image fallback added afterward; 14 focused and 6 browser checks pass; refresh exact candidate.",
       "reviewProgressEvidence": [
         "frozen-foundation-auth-diff-review.json",
         "frozen-sharing-preview-diff-review.json",
@@ -172,21 +175,21 @@
     {
       "gate": "Delivery",
       "status": "Failed",
-      "requirement": "Focused PR pushed; CI green; findings resolved; merge authorized"
+      "requirement": "Reviewed PR pushed; required local checks pass (GitHub CI waived by user); review findings resolved; merge authorized",
+      "ciWaiver": "User: no need to run CI, just make sure everything passes local for now"
     }
   ],
   "candidate": {
     "branch": "codex/full-flow-ux-qa",
     "base": "a6336efe300534eef0d5bbbc0a71d7a033fca7af",
     "frozenCommit": null,
-    "pr": null
+    "pr": "https://github.com/stanleycyang/faroway/pull/40",
+    "previousValidatedCodeCommit": "7e547ca61c0f2abe828a693de6542775e0db9a20",
+    "statusAuthority": "PR #40 current results table and immutable headRefOid; new image recovery fix awaiting exact-candidate checks"
   },
   "nextActions": [
-    "Complete remaining final diff review; fix only verified frozen-gate blockers",
-    "Consolidate frozen-case evidence and close internal gaps",
-    "Freeze candidate commit and review final diff",
-    "Run exact-candidate tests/types/lint/build and required browser/device checks",
-    "Present concrete external gaps for acceptance before release",
-    "Push focused PR, resolve CI/review and merge under existing authorization"
+    "Freeze reviewed planner-image recovery candidate and run required local validation",
+    "Present listed external gaps for explicit acceptance before release",
+    "Resolve review findings and merge PR40 under existing authorization"
   ]
 }

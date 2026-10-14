@@ -6,7 +6,7 @@ import {
 import { requestPlanningConsent } from "@/lib/ai/planning-consent-client";
 
 import React, { useEffect, useState, useRef } from "react";
-import Image from "next/image";
+import { ResilientImage as Image } from "@/components/ResilientImage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
@@ -514,6 +514,7 @@ function CreateTripPlanner({
           <Image
             src={selectedRecommendedDest.image}
             alt={`${selectedPlace.name}, ${selectedRecommendedDest.country}`}
+            fallbackAlt={`Illustrated travel route for ${selectedPlace.name}`}
             fill
             sizes="(max-width: 1024px) 100vw, 760px"
             className="object-cover"
@@ -576,6 +577,7 @@ function CreateTripPlanner({
               <Image
                 src={dest.image}
                 alt={`${dest.name}, ${dest.country}`}
+                fallbackAlt={`Illustrated travel route for ${dest.name}`}
                 fill
                 priority={index < 2}
                 sizes="192px"
@@ -894,6 +896,7 @@ function CreateTripPlanner({
                 <Image
                   src={preview.image}
                   alt={`${preview.name}, ${preview.country}`}
+                  fallbackAlt={`Illustrated travel route for ${preview.name}`}
                   fill
                   priority
                   sizes="(max-width: 1024px) 90vw, 360px"

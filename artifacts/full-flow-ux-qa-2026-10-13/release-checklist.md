@@ -19,11 +19,11 @@ Statuses: **Passed**, **Failed**, **External verification required**. Failed may
 
 | Gate | Result | Required closure |
 |---|---|---|
-| Functional | Failed | Every applicable frozen happy/failure/recovery case passes; no unresolved blocker or major defect |
-| UX and accessibility | Failed | Responsive/readability/keyboard/focus/touch/reduced-motion checks on candidate |
-| Privacy and reliability | Failed | Account changes/authorization/cache isolation/retry identity/save confirmation consolidated on candidate |
+| Functional | External verification required | Every applicable frozen happy/failure/recovery case passes; no unresolved blocker or major defect |
+| UX and accessibility | External verification required | Responsive/readability/keyboard/focus/touch/reduced-motion checks on candidate |
+| Privacy and reliability | External verification required | Account changes/authorization/cache isolation/retry identity/save confirmation consolidated on candidate |
 | Engineering | Failed | Final diff reviewed; required tests/types/lint/production build on exact candidate |
 | Evidence | External verification required | Every item has scoped result/evidence; external gaps explicitly accepted before release |
-| Delivery | Failed | Focused PR pushed; CI green; findings resolved; merge authorized |
+| Delivery | Failed | Reviewed PR pushed; required local checks pass (GitHub CI waived by user); findings resolved; merge authorized |
 
-The candidate is not yet frozen or pushed. The original production worktree remains untouched. The exact release-candidate commit, test/build logs, diff review, PR, CI and merge evidence must be entered before completion.
+PR #40 is pushed. Code candidate `7e547ca` passed exact local validation and its isolated, paused preview is Ready. Hosted phone QA then found a planner image failure; the reviewed fallback fix passes 14 focused tests and 6 browser checks, with new exact-candidate validation pending. The user explicitly waived GitHub CI in favor of local passing checks on 2026-10-14. Current commit/check results are recorded in the PR40 results table; historical snapshots remain scoped. External acceptance and merge are outstanding. The original production worktree remains untouched.

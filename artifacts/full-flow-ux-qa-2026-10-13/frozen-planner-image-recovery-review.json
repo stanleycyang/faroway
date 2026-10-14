@@ -1,0 +1,44 @@
+{
+  "status": "Passed",
+  "defect": "Hosted immutable preview 7e547ca showed a broken selected-destination photo in the primary phone planner card. Three planner photo surfaces lacked the existing resilient fallback.",
+  "change": "Reuse ResilientImage for selected destination, recommendations and desktop summary, with truthful illustrated-route alternative text. No new visual design scope.",
+  "review": "Complete 4-line production diff and full added browser test reviewed. Existing component keeps dimensions/priority and fences failures by current src. No new verified blocker.",
+  "files": [
+    {
+      "path": "apps/web/app/create/page.tsx",
+      "sha256": "4d69877dbc0f202cbfbbcc6af8d09f21402bc5aad6d6ca8c0f65f65b51c8bccd"
+    },
+    {
+      "path": "apps/web/e2e/landing-images-qa.spec.ts",
+      "sha256": "f4263b9da1ea139da7fb2f39beeded279eb810f0349d11a3da4cd5aba7bc06e7"
+    }
+  ],
+  "validation": {
+    "plannerUnitTests": 14,
+    "browserTests": 6,
+    "browserProfiles": [
+      "Desktop Chromium",
+      "Mobile Safari",
+      "Mobile Chrome"
+    ],
+    "browserScope": "Current source Next dev on approved public staging configuration, forced remote-image abort, actual local SVG naturalWidth, retained Tokyo choice, Paris recommendation selection and enabled date controls; exact production candidate validation still pending.",
+    "visual": "390x844 reduced-motion screenshot inspected; document width390; local SVG naturalWidth731; no broken glyph.",
+    "logs": [
+      "/tmp/faroway-pr40-planner-image-regressions.log",
+      "/tmp/faroway-pr40-planner-image-browser.log"
+    ],
+    "screenshots": [
+      "planner-image-failure-phone.png",
+      "planner-image-recovery-phone.png"
+    ]
+  },
+  "hostedPreview": {
+    "candidate": "7e547ca61c0f2abe828a693de6542775e0db9a20",
+    "deployment": "dpl_BTj3svgsooYERCvg72wLLa2T8oaJ",
+    "state": "Ready",
+    "healthStatus": 200,
+    "configuration": "20 branch-only preview overrides, approved public staging ref omovikloadpvzijoaqus; planning paused, privileged/provider keys disabled and optional live flags off. Other branches and production unchanged.",
+    "navigation": "Visible Tokyo card click and focused guide CTA Enter reached /create?destination=Tokyo. Initial offscreen automation clicks did not navigate; URL observation was intentionally terminated after doctor showed a live daemon. Not classified as a product defect."
+  },
+  "deliveryPolicy": "User waived GitHub CI on 2026-10-14 in favor of local passing checks. External gap acceptance still required."
+}
