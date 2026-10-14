@@ -1,0 +1,27 @@
+{
+  "scope": "Final recovery browser assertions",
+  "reviewExtent": "Full current two specs",
+  "files": [
+    {
+      "path": "apps/web/e2e/recovery-focus-qa.spec.ts",
+      "sha256": "80b3598bf9e2923afc7cb6ba878757d87187633e63290cd05400bf83ed2ce2a8"
+    },
+    {
+      "path": "apps/web/e2e/shared-server-recovery-qa.spec.ts",
+      "sha256": "1607986ea8a6fad8dd70177cb9033ad17f1d0e59d1af4b1e133c187febb5c849"
+    }
+  ],
+  "assertionCoverage": [
+    "Shared/private/global/root recovery focuses heading, omits private diagnostics, invokes reset once and exposes exit href",
+    "Standalone root recovery at320px checks retry viewport and horizontal overflow",
+    "Actual shared-route failure is distinguished from not-found; retry remains enabled and support exit navigates"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "limits": [
+    "Standalone esbuild fixture stubs Next Link and Sentry and has no app CSS; not root-layout fault proof",
+    "Real shared failure spec checks rendered recovery, not successful server recovery",
+    "No new runtime run during review"
+  ]
+}

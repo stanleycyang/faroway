@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -16,13 +16,20 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button, PlacesAutocomplete, DateRangePicker, VibeSelector } from '../../components/ui';
 import { useTripStore, type TripInput } from '../../stores/tripStore';
+import { useUserStore } from '../../stores/userStore';
 import { usePromptStore } from '../../stores/promptStore';
 import { useAuthContext } from '../../components/AuthProvider';
 import {
   formatMissingTripRequirements,
   getMissingTripRequirements,
 } from '../../lib/tripRequirements';
-import { discardTripCreation, savedTripCreationDraft } from '../../lib/tripCreationRecovery';
+import {
+  discardReviewedTripCreation,
+  readTripCreationReceipt,
+  savedTripCreationDraft,
+} from '../../lib/tripCreationRecovery';
+import { useGuestTripBrief } from '../../hooks/useGuestTripBrief';
+import { tripInputFromLink } from '../../lib/tripLinkInput';
 import { AuthGate } from '../../components/AuthGate';
 import { popularDestinations, travelerTypes } from '@faroway/constants';
 import { colors, borderRadius, shadows } from '../../constants/theme';
@@ -63,21 +70,53 @@ export default function CreateTripScreen() {
   const { draftInput, setDraftInput } = useTripStore();
   const { isAuthenticated, user } = useAuthContext();
   const userId = user?.id;
-  const recoveryOwner = useRef<string | undefined>(userId);
-  const [savedCreation, setSavedCreation] = useState<Partial<TripInput> | null>(null);
-  const [recoveryError, setRecoveryError] = useState<string | null>(null);
+  const accountRevision = useUserStore((state) => state.accountRevision);
+  const recoveryScope = `${userId ?? 'guest'}:${accountRevision}`;
+  const recoveryOwner = useRef<string | undefined>(recoveryScope);
+  const discardLock = useRef(false);
+  const [storedCreation, setStoredCreation] = useState<{
+    scope: string;
+    draft: Partial<TripInput>;
+  } | null>(null);
+  const savedCreation = storedCreation?.scope === recoveryScope ? storedCreation.draft : null;
+  const setSavedCreation = useCallback(
+    (draft: Partial<TripInput> | null) => {
+      setStoredCreation(draft ? { scope: recoveryScope, draft } : null);
+    },
+    [recoveryScope]
+  );
+  const isRecoveryCurrent = useCallback(() => {
+    const current = useUserStore.getState();
+    return (
+      recoveryOwner.current === recoveryScope &&
+      current.user?.id === userId &&
+      current.accountRevision === accountRevision
+    );
+  }, [recoveryScope, userId, accountRevision]);
+  const [storedRecoveryError, setStoredRecoveryError] = useState<{
+    scope: string;
+    message: string;
+  } | null>(null);
+  const recoveryError =
+    storedRecoveryError?.scope === recoveryScope ? storedRecoveryError.message : null;
+  const setRecoveryError = useCallback(
+    (message: string | null) => {
+      setStoredRecoveryError(message ? { scope: recoveryScope, message } : null);
+    },
+    [recoveryScope]
+  );
   useEffect(() => {
     let active = true;
-    recoveryOwner.current = userId;
+    recoveryOwner.current = recoveryScope;
     setSavedCreation(null);
     setRecoveryError(null);
     if (userId)
       void savedTripCreationDraft(userId)
         .then((draft) => {
-          if (active) setSavedCreation(draft);
+          if (active && isRecoveryCurrent()) setSavedCreation(draft);
         })
         .catch(() => {
-          if (active)
+          if (active && isRecoveryCurrent())
             setRecoveryError(
               'Your unfinished trip request could not be read. Check My Trips before starting a new trip.'
             );
@@ -86,10 +125,10 @@ export default function CreateTripScreen() {
       active = false;
       recoveryOwner.current = undefined;
     };
-  }, [userId]);
+  }, [userId, recoveryScope, isRecoveryCurrent, setSavedCreation, setRecoveryError]);
   const { tripGenerationCount, hasDismissedCreateBanner, dismissCreateBanner } = usePromptStore();
 
-  const [showSearch, setShowSearch] = useState(!params.destination);
+  const [showSearch, setShowSearch] = useState(!params.destination && !draftInput?.destination);
   const [mapLoadFailed, setMapLoadFailed] = useState(false);
   const [showAuthGate, setShowAuthGate] = useState(false);
   const [authGateAction, setAuthGateAction] = useState<'banner' | 'generate'>('generate');
@@ -98,33 +137,17 @@ export default function CreateTripScreen() {
     !isAuthenticated && tripGenerationCount >= 1 && !hasDismissedCreateBanner;
 
   useEffect(() => {
-    if (params.destination) {
-      const updates: Partial<TripInput> = {
-        destination: params.destination,
-        country: params.country,
-        placeId: params.placeId,
-      };
-      if (params.vibes) {
-        updates.vibes = params.vibes.split(',');
-      }
-      if (params.startDate) {
-        updates.startDate = params.startDate;
-      }
-      if (params.endDate) {
-        updates.endDate = params.endDate;
-      }
-      if (params.travelerType) {
-        updates.travelerType = params.travelerType;
-      }
-      if (params.travelers) {
-        const count = parseInt(params.travelers, 10);
-        if (!isNaN(count)) {
-          updates.travelers = count;
-        }
-      }
-      setDraftInput(updates);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    const updates = tripInputFromLink({
+      destination: params.destination,
+      country: params.country,
+      placeId: params.placeId,
+      vibes: params.vibes,
+      startDate: params.startDate,
+      endDate: params.endDate,
+      travelerType: params.travelerType,
+      travelers: params.travelers,
+    });
+    if (updates) setDraftInput(updates);
   }, [
     params.destination,
     params.country,
@@ -134,7 +157,13 @@ export default function CreateTripScreen() {
     params.endDate,
     params.travelerType,
     params.travelers,
+    setDraftInput,
   ]);
+
+  const guestBrief = useGuestTripBrief(tripInputFromLink(params));
+  useEffect(() => {
+    if (guestBrief.restored) setShowSearch(false);
+  }, [guestBrief.restored]);
 
   const handleSelectDestination = (name: string, country: string, placeId?: string) => {
     hapticFeedback.selection();
@@ -154,7 +183,7 @@ export default function CreateTripScreen() {
   };
 
   const handleTravelersChange = (delta: number) => {
-    const current = draftInput?.travelers || 2;
+    const current = useTripStore.getState().draftInput?.travelers || 2;
     const newValue = Math.max(1, Math.min(10, current + delta));
     if (newValue !== current) {
       hapticFeedback.light();
@@ -252,6 +281,57 @@ export default function CreateTripScreen() {
             </View>
           )}
 
+          {guestBrief.message && (
+            <Text
+              accessibilityLiveRegion="polite"
+              style={{
+                color: '#475569',
+                fontSize: 14,
+                lineHeight: 20,
+                marginHorizontal: 24,
+                marginBottom: 16,
+                padding: 12,
+                borderRadius: 12,
+                backgroundColor: '#f8fafc',
+              }}
+            >
+              {guestBrief.message}
+            </Text>
+          )}
+
+          {guestBrief.discardUnreadable && (
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Discard unreadable saved choices"
+              style={{
+                minHeight: 44,
+                marginHorizontal: 24,
+                marginBottom: 16,
+                justifyContent: 'center',
+              }}
+              onPress={() =>
+                Alert.alert(
+                  'Discard unreadable saved choices?',
+                  'This removes only the unfinished guest brief on this device. Your current edits and saved trips remain available.',
+                  [
+                    { text: 'Keep saved choices', style: 'cancel' },
+                    {
+                      text: 'Discard unreadable choices',
+                      style: 'destructive',
+                      onPress: () => {
+                        void guestBrief.discardUnreadable?.();
+                      },
+                    },
+                  ]
+                )
+              }
+            >
+              <Text style={{ color: '#475569', textDecorationLine: 'underline' }}>
+                Discard unreadable saved choices
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {/* Destination Selection */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Where do you want to go?</Text>
@@ -264,6 +344,11 @@ export default function CreateTripScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={`Change destination from ${draftInput.destination}${draftInput.country ? `, ${draftInput.country}` : ''}`}
               >
+                <LinearGradient
+                  colors={['#284D57', '#142D3B']}
+                  style={StyleSheet.absoluteFill}
+                  accessible={false}
+                />
                 {mapUrl && !mapLoadFailed ? (
                   <Image
                     source={{ uri: mapUrl }}
@@ -321,6 +406,11 @@ export default function CreateTripScreen() {
                       accessibilityRole="button"
                       accessibilityLabel={`Choose ${dest.name}, ${dest.country}`}
                     >
+                      <LinearGradient
+                        colors={['#284D57', '#142D3B']}
+                        style={StyleSheet.absoluteFill}
+                        accessible={false}
+                      />
                       <Image
                         source={{ uri: dest.image }}
                         style={styles.destinationOptionImage}
@@ -376,7 +466,7 @@ export default function CreateTripScreen() {
                 </TouchableOpacity>
                 <Text
                   style={styles.counterValue}
-                  accessibilityLabel={`${draftInput?.travelers || 2} travelers`}
+                  accessibilityLabel={`${draftInput?.travelers || 2} ${(draftInput?.travelers || 2) === 1 ? 'traveler' : 'travelers'}`}
                 >
                   {draftInput?.travelers || 2}
                 </Text>
@@ -481,7 +571,7 @@ export default function CreateTripScreen() {
             accessibilityLabel="Restore unfinished trip"
             style={{ minHeight: 48, alignItems: 'center', justifyContent: 'center' }}
             onPress={() => {
-              if (recoveryOwner.current !== userId) return;
+              if (!isRecoveryCurrent()) return;
               setDraftInput(savedCreation);
               setShowSearch(false);
               setMapLoadFailed(false);
@@ -495,7 +585,22 @@ export default function CreateTripScreen() {
             accessibilityRole="button"
             accessibilityLabel="Start a new trip"
             style={{ minHeight: 48, alignItems: 'center', justifyContent: 'center' }}
-            onPress={() => {
+            onPress={async () => {
+              if (!isRecoveryCurrent() || discardLock.current) return;
+              discardLock.current = true;
+              let reviewedReceipt: string | null;
+              try {
+                reviewedReceipt = await readTripCreationReceipt(user.id);
+                if (!isRecoveryCurrent()) return;
+              } catch {
+                if (isRecoveryCurrent())
+                  setRecoveryError(
+                    'Your pending request couldn’t be checked. Check My Trips and try again.'
+                  );
+                return;
+              } finally {
+                discardLock.current = false;
+              }
               Alert.alert(
                 'Start a new trip?',
                 'Check My Trips first if an earlier request was interrupted. This clears the pending retry; any saved trip stays in My Trips.',
@@ -504,22 +609,28 @@ export default function CreateTripScreen() {
                   {
                     text: 'Start a new trip',
                     onPress: () => {
-                      if (recoveryOwner.current !== user.id) return;
-                      void discardTripCreation(user.id)
+                      if (!isRecoveryCurrent() || discardLock.current) return;
+                      discardLock.current = true;
+                      void discardReviewedTripCreation(user.id, reviewedReceipt)
                         .then(() => {
-                          if (recoveryOwner.current !== user.id) return;
+                          if (!isRecoveryCurrent()) return;
                           setSavedCreation(null);
                           setRecoveryError(null);
                           useTripStore.getState().clearDraft();
                           setShowSearch(true);
                           setMapLoadFailed(false);
                         })
-                        .catch(() => {
-                          if (recoveryOwner.current !== user.id) return;
+                        .catch((reason: unknown) => {
+                          if (!isRecoveryCurrent()) return;
                           Alert.alert(
                             'Could not clear pending trip',
-                            'Your saved request is kept. Please try again.'
+                            reason instanceof Error
+                              ? reason.message
+                              : 'Your saved request is kept. Please try again.'
                           );
+                        })
+                        .finally(() => {
+                          discardLock.current = false;
                         });
                     },
                   },

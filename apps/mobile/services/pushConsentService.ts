@@ -1,6 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 import { supabase } from '../lib/supabase';
+import { requestWithTimeout } from './request';
+import { captureTripAccount, readTripSession } from '../lib/tripAccountScope';
 import { API_BASE_URL } from '../constants/api';
 import { registerForPushNotificationsAsync } from '../lib/notifications';
 import { PushConsent, type PushConsentRecord } from '../lib/pushConsent';
@@ -14,30 +16,66 @@ async function nextRevision() {
   await AsyncStorage.setItem(REVISION_KEY, String(revision));
   return revision;
 }
+function notificationAccount(userId: string) {
+  const account = captureTripAccount();
+  const assertCurrent = () => {
+    if (account.ownerId !== userId || !account.isCurrent())
+      throw new Error('Your account changed. Reopen notification settings and try again.');
+  };
+  return {
+    assertCurrent,
+    async headers() {
+      assertCurrent();
+      const headers = await account.headers();
+      assertCurrent();
+      return headers;
+    },
+  };
+}
+
 export async function updateNotificationPreferences(
   userId: string,
   settings: Record<string, boolean>
 ) {
-  const { data, error } = await supabase.auth.getSession();
-  if (error || data.session?.user.id !== userId)
-    throw new Error('Your account changed. Please try again.');
-  const response = await fetch(`${API_BASE_URL}/api/user/profile`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${data.session.access_token}`,
+  const account = notificationAccount(userId);
+  const headers = await account.headers();
+  await requestWithTimeout(
+    `${API_BASE_URL}/api/user/profile`,
+    {
+      method: 'PATCH',
+      headers,
+      body: JSON.stringify({
+        notification_settings: settings,
+        notification_consent_version: 'notifications-v2',
+      }),
     },
-    body: JSON.stringify({
-      notification_settings: settings,
-      notification_consent_version: 'notifications-v2',
-    }),
-  });
-  if (!response.ok)
-    throw new Error('Couldn’t save notification settings. Please try again online.');
+    async (response) => {
+      if (!response.ok)
+        throw new Error('Couldn’t save notification settings. Please try again online.');
+      account.assertCurrent();
+      const receipt = await response.json().catch(() => null);
+      account.assertCurrent();
+      if (
+        !receipt ||
+        receipt.id !== userId ||
+        Object.entries(settings).some(
+          ([key, value]) => receipt.notificationSettings?.[key] !== value
+        ) ||
+        (Object.values(settings).some(Boolean) &&
+          receipt.notificationConsentVersion !== 'notifications-v2')
+      ) {
+        throw new Error(
+          'Your notification choices could not be confirmed. Reopen settings to check your saved choices before trying again.'
+        );
+      }
+    },
+    15_000
+  );
+  account.assertCurrent();
 }
 export const devicePushConsent = new PushConsent({
   identity: async () => {
-    const { data, error } = await supabase.auth.getSession();
+    const { data, error } = await readTripSession();
     return !error && data.session
       ? { id: data.session.user.id, accessToken: data.session.access_token }
       : null;
@@ -61,12 +99,10 @@ export const devicePushConsent = new PushConsent({
   acquire: (prompt) => registerForPushNotificationsAsync({ requestPermission: prompt }),
   send: async (method, token, identity) => {
     const revision = await nextRevision();
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15_000);
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/user/push-token`, {
+    await requestWithTimeout(
+      `${API_BASE_URL}/api/user/push-token`,
+      {
         method,
-        signal: controller.signal,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${identity.accessToken}`,
@@ -82,14 +118,15 @@ export const devicePushConsent = new PushConsent({
               }
             : {}),
         }),
-      });
-      if (!response.ok)
-        throw new Error(
-          'Couldn’t update device notifications. Try again online, or turn notifications off in device Settings.'
-        );
-    } finally {
-      clearTimeout(timeout);
-    }
+      },
+      (response) => {
+        if (!response.ok)
+          throw new Error(
+            'Couldn’t update device notifications. Try again online, or turn notifications off in device Settings.'
+          );
+      },
+      15_000
+    );
   },
 });
 
@@ -99,23 +136,30 @@ supabase.auth.onAuthStateChange((event) => {
 });
 
 export async function getVerifiedNotificationPreferences(userId: string) {
-  const current = await supabase.auth.getSession();
-  if (current.error || current.data.session?.user.id !== userId)
-    throw new Error('Your account changed. Please try again.');
-  const response = await fetch(`${API_BASE_URL}/api/user/profile`, {
-    headers: { Authorization: `Bearer ${current.data.session.access_token}` },
-    cache: 'no-store',
-  });
-  if (!response.ok) throw new Error('Couldn’t load notification preferences.');
-  const profile = await response.json();
+  const account = notificationAccount(userId);
+  const headers = await account.headers();
+  const profile = await requestWithTimeout(
+    `${API_BASE_URL}/api/user/profile`,
+    {
+      headers,
+      cache: 'no-store',
+    },
+    async (response) => {
+      if (!response.ok) throw new Error('Couldn’t load notification preferences.');
+      return response.json();
+    },
+    15_000
+  );
+  account.assertCurrent();
+  if (!profile || typeof profile !== 'object' || profile.id !== userId)
+    throw new Error('Your notification settings could not be verified. Please try again.');
   const defaults = {
     trip_reminders: false,
     deals: false,
     itinerary_updates: false,
     app_updates: false,
   };
-  if (profile.id !== userId || profile.notificationConsentVersion !== 'notifications-v2')
-    return defaults;
+  if (profile.notificationConsentVersion !== 'notifications-v2') return defaults;
   return Object.fromEntries(
     Object.keys(defaults).map((key) => [key, profile.notificationSettings?.[key] === true])
   );

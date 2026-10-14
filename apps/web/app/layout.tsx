@@ -1,4 +1,5 @@
 import { ViatorContentPolicy } from "@/components/trips/ViatorContentPolicy";
+import { SkipToContent } from "@/components/SkipToContent";
 import { isViatorContentEnabled } from "@/lib/affiliates/viator-policy";
 import type { Metadata, Viewport } from "next";
 import { Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
@@ -191,16 +192,14 @@ export default function RootLayout({
       <body
         className={`${plusJakarta.variable} ${playfair.variable} font-sans antialiased`}
       >
-        <a
-          href="#main-content"
-          className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:px-4 focus:py-2 focus:bg-white focus:text-primary focus:rounded-lg focus:shadow-lg"
-        >
-          Skip to main content
-        </a>
+        <SkipToContent />
         <ViatorContentPolicy enabled={isViatorContentEnabled()}>
-          <div id="main-content">{children}</div>
+          <div id="main-content" tabIndex={-1}>
+            {children}
+          </div>
         </ViatorContentPolicy>
-        {process.env.NODE_ENV === "production" && <Analytics />}
+        {process.env.NODE_ENV === "production" &&
+          process.env.VERCEL === "1" && <Analytics />}
       </body>
     </html>
   );

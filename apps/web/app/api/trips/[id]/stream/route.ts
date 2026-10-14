@@ -221,7 +221,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           travelers: trip.travelers || 2,
           budget: trip.budget_tier || undefined,
         });
-        send("spec-block", { blocks: summaryBlocks });
+        send("spec-block", { chapter: "summary", blocks: summaryBlocks });
 
         await pollAndStream(
           controller,
@@ -433,7 +433,7 @@ async function pollAndStream(
         topHotel: (ir.topHotel as HotelInput | undefined) || hotels[0],
         otherHotels: hotels.slice(1),
       });
-      if (blocks.length > 0) send("spec-block", { blocks });
+      if (blocks.length > 0) send("spec-block", { chapter: "hotels", blocks });
       sentHotels = true;
     }
     if (!sentActivities && ir.activitiesCount != null) {
@@ -461,7 +461,7 @@ async function pollAndStream(
         send("itinerary", { days, topHotel: ir.topHotel || null });
         const itineraryBlocks = buildItineraryBlocks(days);
         if (itineraryBlocks.length > 0) {
-          send("spec-block", { blocks: itineraryBlocks });
+          send("spec-block", { chapter: "itinerary", blocks: itineraryBlocks });
         }
         if (tripMeta) {
           const nights = Math.ceil(
@@ -477,7 +477,7 @@ async function pollAndStream(
             currency: "USD",
           });
           if (budgetBlocks.length > 0) {
-            send("spec-block", { blocks: budgetBlocks });
+            send("spec-block", { chapter: "budget", blocks: budgetBlocks });
           }
         }
       }

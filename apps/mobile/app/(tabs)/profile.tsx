@@ -1,3 +1,5 @@
+import { useLocalCalendarDate } from '../../hooks/useLocalCalendarDate';
+import { tripDatePhase } from '@faroway/constants';
 import { useState } from 'react';
 import {
   View,
@@ -177,9 +179,12 @@ export default function ProfileScreen() {
   const { user } = useUserStore();
   const { trips } = useTripStore();
 
-  const completedTrips = trips.filter((t) => t.status === 'completed').length;
-  const upcomingTrips = trips.filter((t) =>
-    ['draft', 'planned', 'active'].includes(t.status)
+  const today = useLocalCalendarDate();
+  const pastTrips = trips.filter(
+    (t) => tripDatePhase(t.startDate, t.endDate, today) === 'past'
+  ).length;
+  const upcomingTrips = trips.filter(
+    (t) => tripDatePhase(t.startDate, t.endDate, today) === 'upcoming'
   ).length;
 
   const handleLogout = async () => {
@@ -255,8 +260,8 @@ export default function ProfileScreen() {
               </View>
               <View style={styles.statDivider} />
               <View style={styles.statItem}>
-                <Text style={styles.statValue}>{completedTrips}</Text>
-                <Text style={styles.statLabel}>Completed</Text>
+                <Text style={styles.statValue}>{pastTrips}</Text>
+                <Text style={styles.statLabel}>Past</Text>
               </View>
             </View>
           </View>

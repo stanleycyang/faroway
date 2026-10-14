@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef, useState } from "react";
 import type { PlaceDisplay } from "@/lib/places/display";
-import { safeHttpsUrl } from "@/lib/places/display";
+import { isPlaceDisplay, safeHttpsUrl } from "@/lib/places/display";
 
 function Attribution({ place }: { place?: PlaceDisplay }) {
   return (
@@ -82,6 +82,17 @@ export function PlacesExplorer({
     setPlaces([]);
     setDetail(null);
     setSearched(false);
+    const deadline = setTimeout(() => {
+      if (request.current !== controller || controller.signal.aborted) return;
+      controller.abort();
+      setBusy(false);
+      setError(
+        "Live place details are taking too long. You can continue planning or try again.",
+      );
+    }, 15_000);
+    controller.signal.addEventListener("abort", () => clearTimeout(deadline), {
+      once: true,
+    });
     try {
       const res = await fetch(
         `/api/places/venues?${new URLSearchParams(params)}`,
@@ -93,6 +104,16 @@ export function PlacesExplorer({
         );
       const data = await res.json();
       if (controller.signal.aborted) return;
+      if (
+        !data ||
+        typeof data !== "object" ||
+        (data.places !== undefined &&
+          (!Array.isArray(data.places) ||
+            !data.places.every(isPlaceDisplay))) ||
+        (data.place != null && !isPlaceDisplay(data.place))
+      ) {
+        throw new Error("Live place response could not be verified");
+      }
       setPlaces(data.places ?? []);
       setDetail(data.place ?? null);
       setSearched(true);
@@ -102,6 +123,7 @@ export function PlacesExplorer({
           "Live place details are unavailable. You can continue planning or try again.",
         );
     } finally {
+      clearTimeout(deadline);
       if (!controller.signal.aborted) setBusy(false);
     }
   }

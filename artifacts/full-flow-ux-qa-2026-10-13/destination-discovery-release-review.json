@@ -1,0 +1,33 @@
+{
+  "scope": "Frozen journey 2 web, public compiled Next production on loopback3124",
+  "result": "Passed",
+  "before": "Paris guide CTA linked to /create and discarded chosen destination",
+  "fix": "Both guide planner links include encoded destination query",
+  "checks": [
+    {
+      "cases": 51,
+      "result": "Passed",
+      "durationSeconds": 55.2,
+      "log": "/tmp/faroway-ux-frozen-discovery-production.log",
+      "scope": "Tools/packing/quiz/world map, compiled packing-corrected snapshot before guide edit"
+    },
+    {
+      "cases": 3,
+      "result": "Passed",
+      "durationSeconds": 11.3,
+      "log": "/tmp/faroway-ux-frozen-guide-handoff.log",
+      "scope": "Desktop Chromium, Mobile Safari, Mobile Chrome: destination index \u2192 Paris guide \u2192 planner retains Paris"
+    }
+  ],
+  "buildLog": "/tmp/faroway-ux-frozen-guide-production-build.log",
+  "limitations": [
+    "Build process handle expired after context transition; authoritative log shows successful compilation, TypeScript, prerendering and route summary; next start and acceptance succeeded",
+    "No current native device or hosted provider acceptance",
+    "Not exact final release candidate validation"
+  ],
+  "sourceHashes": {
+    "apps/web/app/destinations/[slug]/page.tsx": "fce1f2c5e796137c68a81e50cce6861028d7306d6f7bf9d114b102783cd6fd89",
+    "apps/web/e2e/tool-planning-handoff-qa.spec.ts": "d256c908ddbe2813c3d60b89d026a2ce06a66d2c70e83462928fb5eb8b9d87f3",
+    "apps/web/components/tools/packing/PackingListClient.tsx": "e16f485a2d9a3d7410acea168a02fdeafac56605a36eeb04c70345924c394887"
+  }
+}

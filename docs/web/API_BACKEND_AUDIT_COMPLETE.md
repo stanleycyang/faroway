@@ -179,18 +179,9 @@ The build currently fails due to **missing frontend UI components**. These are *
 
 ## 🎯 AI Agent Logic
 
-### Travel Planning Agent ✓
-**Location**: `lib/agents/travel-agent.ts`
+### Historical travel planning prototype
 
-- **Tools**:
-  - `searchHotels`: RapidAPI integration (mock data for now)
-  - `searchActivities`: Google Places integration (mock data)
-  - `searchDining`: Restaurant search (mock data)
-  - `createItinerary`: Day-by-day planning
-
-- **Model**: Claude Sonnet 4 via AI Gateway
-- **Output**: Structured with Zod schema validation
-- **Usage**: `planTrip({ destination, dates, travelers, vibes, budget })`
+The unused `lib/agents/travel-agent.ts` prototype was removed during the October 2026 flow audit. It generated synthetic hotels, restaurant names, ratings, and prices and had no application, workflow, test, CLI, or package-export consumer. This historical audit does not describe the current planning implementation; current saved-trip orchestration starts in `apps/web/workflows/plan-trip.ts`.
 
 ### Multi-Agent Search System ✓
 **Location**: `lib/search/agents/`

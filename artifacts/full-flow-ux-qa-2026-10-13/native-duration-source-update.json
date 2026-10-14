@@ -1,0 +1,17 @@
+{
+  "scope": "Three production files updated over prior220-file native snapshot. Declared QA-only session/root overrides remain. Metro CI watch disabled; new bundle/app restart required before device acceptance.",
+  "files": [
+    {
+      "path": "lib/tripDate.ts",
+      "sha256": "ba01b06bb65d81720159cee0e403067fab9339308c82992c1f02850790e5a1b6"
+    },
+    {
+      "path": "app/(tabs)/trips.tsx",
+      "sha256": "b413e9962be6199e2823eb265aefd5b9ae3ccf0112995e2c5d3e8ed3b8a4b198"
+    },
+    {
+      "path": "components/ui/Card.tsx",
+      "sha256": "1749af6be4507aa67a46b0ba5d3e3b64cf0fd802ea5168b635a1e7584a6880bf"
+    }
+  ]
+}

@@ -12,6 +12,7 @@ interface QuizQuestionProps {
   selected: QuizOption[];
   onSelect: (options: QuizOption[]) => void;
   onAdvance: (options: QuizOption[]) => void;
+  onBack: () => void;
 }
 
 export function QuizQuestion({
@@ -21,6 +22,7 @@ export function QuizQuestion({
   selected,
   onSelect,
   onAdvance,
+  onBack,
 }: QuizQuestionProps) {
   const handleSelect = (option: QuizOption) => {
     if (question.multiSelect) {
@@ -59,7 +61,20 @@ export function QuizQuestion({
         </span>
       </div>
 
-      <h1 className="text-2xl md:text-3xl font-bold text-slate-900 mb-2">
+      {questionIndex > 0 && (
+        <button
+          type="button"
+          onClick={onBack}
+          className="mb-4 min-h-11 text-sm font-medium text-slate-700 underline underline-offset-4"
+        >
+          Previous question
+        </button>
+      )}
+
+      <h1
+        tabIndex={-1}
+        className="text-2xl md:text-3xl font-bold text-slate-900 mb-2"
+      >
         {question.question}
       </h1>
       <p className="text-slate-500 mb-8">{question.subtitle}</p>
@@ -95,7 +110,7 @@ export function QuizQuestion({
             type="button"
             onClick={() => onAdvance(selected)}
             disabled={selected.length === 0}
-            className="px-6 py-2.5 rounded-full bg-primary text-white font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-primary-600 transition-colors"
+            className="px-6 py-2.5 rounded-full bg-slate-900 text-white font-semibold text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-slate-800 transition-colors"
           >
             Continue
           </button>

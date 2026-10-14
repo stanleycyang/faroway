@@ -1,15 +1,7 @@
-export interface ForecastPoint {
-  time: string;
-  temperatureC: number;
-  windMetersPerSecond: number;
-  precipitationMm: number | null;
-  precipitationHours: 1 | 6 | 12 | null;
-}
-export interface Forecast {
-  updatedAt: string;
-  points: ForecastPoint[];
-  deprecated: boolean;
-}
+import { ForecastSchema, type Forecast } from "./forecast";
+import type { ForecastPoint } from "./forecast";
+export type { Forecast, ForecastPoint } from "./forecast";
+
 export interface CacheEntry {
   forecast: Forecast | null;
   expiresAt: number;
@@ -172,8 +164,10 @@ export async function getMetForecast(
       });
       return null;
     }
-    const forecast = normalizeForecast(await res.json(), res.status === 203);
-    if (!forecast) return null;
+    const normalized = normalizeForecast(await res.json(), res.status === 203);
+    const verified = ForecastSchema.safeParse(normalized);
+    if (!verified.success) return null;
+    const forecast = verified.data;
     const lastModified = res.headers.get("last-modified") || "";
     if (!Number.isFinite(Date.parse(lastModified))) return null;
     await deps.cache.write(key, {

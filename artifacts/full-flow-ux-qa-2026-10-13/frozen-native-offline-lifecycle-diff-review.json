@@ -1,0 +1,38 @@
+{
+  "scope": "Final native offline lifecycle/root integration",
+  "reviewExtent": "Complete base-to-current diffs of three files; underlying sync service reviewed in earlier final native boundary group.",
+  "files": [
+    {
+      "path": "apps/mobile/app/_layout.tsx",
+      "sha256": "a5fb23d72bdcf2819498e1743ae53bf436b794e39abd337f94517db9cb678f4f"
+    },
+    {
+      "path": "apps/mobile/components/OfflineProvider.tsx",
+      "sha256": "df8fe547d356748c7571450f73dfec75f306b0ef1e040dce4973e1c4ce239623"
+    },
+    {
+      "path": "apps/mobile/hooks/useOfflineSync.ts",
+      "sha256": "5089628bfe348504ed10f001ea42a8b0e2c7681c6a78ca6722264b761667b898"
+    }
+  ],
+  "invariants": [
+    "Root hydration waits for resolved authentication and follows account revision",
+    "Automatic and foreground sync require authenticated enabled state",
+    "Each hook owns subscription lifetime across Strict Mode; service initialization failure exposes recovery state",
+    "Late initialization/publication is fenced by captured account; manual sync checks account and mounted state",
+    "Auto-sync is disabled on effect teardown and foreground listener updates prior state before awaiting sync"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "validation": {
+    "result": "Passed",
+    "tests": 8,
+    "suites": 1,
+    "log": "/tmp/faroway-ux-frozen-offline-lifecycle-review.log"
+  },
+  "limits": [
+    "Current signed-device offline acceptance remains external",
+    "Full offline storage/store/conflict UI review remains separately pending"
+  ]
+}

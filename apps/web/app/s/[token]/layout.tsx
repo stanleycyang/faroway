@@ -1,3 +1,4 @@
+import { getTripDuration, parseTripDate } from "@/lib/trips/date-duration";
 import { Metadata } from "next";
 import { notFound } from "next/navigation";
 import {
@@ -12,18 +13,15 @@ interface SharedTripLayoutProps {
 
 function buildTripMeta(trip: SharedTripData) {
   const destination = trip.destination;
-  const startDate = trip.start_date ? new Date(trip.start_date) : null;
-  const endDate = trip.end_date ? new Date(trip.end_date) : null;
+  const startDate = trip.start_date ? parseTripDate(trip.start_date) : null;
+  const endDate = trip.end_date ? parseTripDate(trip.end_date) : null;
   const travelers = trip.travelers || 2;
 
   let duration = "";
   let dateRange = "";
 
-  if (startDate && endDate) {
-    const days =
-      Math.ceil(
-        (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
-      ) + 1;
+  if (startDate && endDate && getTripDuration(startDate, endDate) !== null) {
+    const days = getTripDuration(startDate, endDate);
     duration = `${days}-day`;
     dateRange = `${startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" })} - ${endDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}`;
   }
@@ -40,8 +38,10 @@ function buildTripMeta(trip: SharedTripData) {
       "@type": "Place",
       name: destination,
     },
-    ...(startDate && { startTime: startDate.toISOString() }),
-    ...(endDate && { endTime: endDate.toISOString() }),
+    ...(startDate &&
+      !Number.isNaN(startDate.getTime()) && { startTime: trip.start_date }),
+    ...(endDate &&
+      !Number.isNaN(endDate.getTime()) && { endTime: trip.end_date }),
   };
 
   return { title, description, jsonLd };

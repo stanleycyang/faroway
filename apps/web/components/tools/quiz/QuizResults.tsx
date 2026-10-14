@@ -22,7 +22,10 @@ export function QuizResults({ results, onRestart }: QuizResultsProps) {
   return (
     <div className="animate-fade-in">
       <div className="text-center mb-10">
-        <h1 className="text-3xl md:text-4xl font-bold text-slate-900 mb-3">
+        <h1
+          tabIndex={-1}
+          className="text-3xl md:text-4xl font-bold text-slate-900 mb-3"
+        >
           Your Perfect <span className="text-gradient">Destinations</span>
         </h1>
         <p className="text-slate-500 text-lg">
@@ -89,7 +92,7 @@ export function QuizResults({ results, onRestart }: QuizResultsProps) {
 
                 <Link
                   href={`/create?destination=${encodeURIComponent(result.destination.name)}`}
-                  className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-amber-500 text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5"
+                  className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-full text-sm font-semibold transition-all hover:-translate-y-0.5"
                 >
                   <Sparkles className="w-4 h-4" />
                   Plan My {result.destination.name} Trip

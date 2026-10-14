@@ -1,0 +1,50 @@
+{
+  "status": "Passed",
+  "scope": "Complete base-to-current diff for tracked tests; full new private-read/dashboard/legacy files. Truncated mobile output reread separately.",
+  "files": [
+    {
+      "path": "apps/mobile/__tests__/hooks/useTrips.test.tsx",
+      "sha256": "d2c6262ca3de2f0ffd1103d44d9b3f4493a5bbbce29afa3c1c25caaf7d862649"
+    },
+    {
+      "path": "apps/mobile/__tests__/lib/offline/storage.test.ts",
+      "sha256": "b36715b7176b92bf420e2e541a3abb0d45d39adbe523a2841c8c17d7b36c281c"
+    },
+    {
+      "path": "apps/mobile/__tests__/lib/offline/sync-retention.test.ts",
+      "sha256": "c88312e734de68411356543c4b89da0114cd4b3226200c49c41ada95eedabfe7"
+    },
+    {
+      "path": "apps/mobile/__tests__/lib/tripCreationRecovery.test.ts",
+      "sha256": "ee4b5a6b948bc8138ef8f7918b7a609ea9925e3b63ab061d2decace0fb3baf91"
+    },
+    {
+      "path": "apps/mobile/__tests__/services/searchService.test.ts",
+      "sha256": "b98af9fc8b430d8b3df332c9899d96e9660c2d44c70b61e7085b16eaee28cb3c"
+    },
+    {
+      "path": "apps/web/__tests__/api/trips.test.ts",
+      "sha256": "003078851319a12ca14fb1f968e400249b17bb187404cbfca9db8bb12b9431f0"
+    },
+    {
+      "path": "apps/web/__tests__/lib/planning-consent-client.test.ts",
+      "sha256": "b249e870b4a1a10a88c5987c650e4e271c50014058342181a289cfa9024fa643"
+    },
+    {
+      "path": "apps/web/__tests__/lib/private-trip-read.test.ts",
+      "sha256": "4f6c3a6dcfbefb9c34a8cc655c5ebdb3a772aa8e11ef6a5b4d0b43703d36667c"
+    },
+    {
+      "path": "apps/web/__tests__/dashboard-read-state.test.tsx",
+      "sha256": "d21ebf5debe437ce17cc545787e5af6a82bd39daa40669dac523d2f2dd0a4a46"
+    },
+    {
+      "path": "apps/web/__tests__/itinerary-day-legacy.test.tsx",
+      "sha256": "1ac05858ef809888aa4a8ce64ea699b725feb267ad3d98a40624f7fde9eef572"
+    }
+  ],
+  "findings": [],
+  "evidence": "Current root suite: 906 web, 601 mobile, 8 script tests passed.",
+  "review": "Account/session epochs, late HTTP/cache suppression, queue-write failure preservation, whole-list pagination, revision-sensitive detail retention, owner projections, retry identity and missing-versus-outage assertions inspected. No new verified blocker.",
+  "limits": "Mocks do not prove hosted auth, OS storage or real SQL ordering. Cache isolation cases intentionally include minimal malformed foreign payloads because identity rejection precedes parsing. SSR legacy tests do not establish interactive accessibility."
+}

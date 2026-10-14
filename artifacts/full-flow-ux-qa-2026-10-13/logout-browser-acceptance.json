@@ -1,0 +1,29 @@
+{
+  "scope": "Actual Next logout and Supabase SDK; synthetic local Auth sessions; no real account sign-out",
+  "results": [
+    {
+      "name": "desktop",
+      "failedLogoutHonest": true,
+      "sessionCheckShowsLocalSignOut": true,
+      "retrySucceeded": true,
+      "cookieCleared": true,
+      "privateDashboardDenied": true
+    },
+    {
+      "name": "mobile-safari",
+      "failedLogoutHonest": true,
+      "sessionCheckShowsLocalSignOut": true,
+      "retrySucceeded": true,
+      "cookieCleared": true,
+      "privateDashboardDenied": true
+    },
+    {
+      "name": "mobile-chrome",
+      "failedLogoutHonest": true,
+      "sessionCheckShowsLocalSignOut": true,
+      "retrySucceeded": true,
+      "cookieCleared": true,
+      "privateDashboardDenied": true
+    }
+  ]
+}

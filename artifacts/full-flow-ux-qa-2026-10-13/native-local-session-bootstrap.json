@@ -1,0 +1,10 @@
+{
+  "scope": "QA-only override in isolated native worktree; no authoritative production auth changes",
+  "baseRootSHA256": "a5fb23d72bdcf2819498e1743ae53bf436b794e39abd337f94517db9cb678f4f",
+  "overrideRootSHA256": "fe65b7241dbe123466958bad679f1b754b23fc6d06cadb324ef0ae6321104ad5",
+  "bootstrapSHA256": "c85ada87e6b62afe8e64c9b8821bad4320b8374399d422e2b2318def8371b851",
+  "origin": "http://127.0.0.1:4017",
+  "api": "http://localhost:3124",
+  "identity": "synthetic owner111; unsigned JWT accepted only by local Auth fixture",
+  "sourceManifestScope": "220-file authoritative snapshot plus declared QA-only root/session override"
+}

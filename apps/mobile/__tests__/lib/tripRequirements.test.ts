@@ -33,3 +33,13 @@ describe('trip generate requirements', () => {
     ).toEqual([]);
   });
 });
+
+it.each([
+  ['2026-02-30', '2026-03-03'],
+  ['2026-06-10', '2026-06-01'],
+  ['invalid', '2026-06-01'],
+])('requires usable ordered calendar dates for %s to %s', (startDate, endDate) => {
+  expect(getMissingTripRequirements({ destination: 'Tokyo', startDate, endDate })).toEqual([
+    'dates',
+  ]);
+});

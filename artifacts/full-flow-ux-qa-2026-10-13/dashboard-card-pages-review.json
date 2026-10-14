@@ -1,0 +1,36 @@
+{
+  "scope": "Bounded dashboard card DOM and explicit reveal; not backend pagination or bounded server serialization",
+  "change": [
+    "Render12journey cards initially; reveal12more per activation; preserve complete supplied list counts/filtering",
+    "Polite showing-count status, aria-controls grid association,48px button and visible focus style",
+    "Final disabled All journeys shown control; filter/sort/local-day key resets displayed batch",
+    "Shared hydration guard keeps reveal button disabled/busy through SSR and first hydration render"
+  ],
+  "verification": {
+    "browser": "Desktop Chrome, mobile Safari, mobile Chrome pass205-row fixture:12initial,24afterkeyboardactivation,12afterUpcomingfilter; nooverflow; desktop revealsall205",
+    "focusedRegression": "6tests across2suites pass1.46s; mounted35card test verifies12/24/35 andfilterreset",
+    "types": "Passed /tmp/faroway-ux-dashboard-pages-types-current.log",
+    "eslint": "Passed both changed files",
+    "whitespace": "Passed"
+  },
+  "retainedFailures": [
+    "Initial keyboard Enter did not reveal cards",
+    "Hydration guard alone did not make keyboard assertion pass",
+    "Adding actual focused-control assertion before Enter passed dedicated desktop and subsequent3profile run; failurecause not conclusively isolated"
+  ],
+  "remaining": [
+    "Dashboard still receives all server-rendered card slots; startup serialization/DB-row cap not fixed by batching",
+    "Hosted database large-list acceptance and current compiled acceptance",
+    "Full-flow native and remaining senior-review/delivery coverage"
+  ],
+  "files": [
+    {
+      "path": "apps/web/components/dashboard/DashboardTripList.tsx",
+      "sha256": "0075c6382f307e888db52c7b6a93ed23b21fa341d18da76fc04defb9e1a7bb56"
+    },
+    {
+      "path": "apps/web/__tests__/dashboard-local-calendar.test.tsx",
+      "sha256": "cf953e4e5732302eaded63ed14c9f796b8359903f3ff78f7fb9ea081e7ad2453"
+    }
+  ]
+}

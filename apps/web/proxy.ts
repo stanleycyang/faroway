@@ -18,7 +18,9 @@ export async function proxy(request: NextRequest) {
 
   // Keep one canonical trip-creation experience for old bookmarks and links.
   if (pathname === "/trips/new") {
-    return NextResponse.redirect(new URL("/create", request.url), 308);
+    const canonicalUrl = request.nextUrl.clone();
+    canonicalUrl.pathname = "/create";
+    return NextResponse.redirect(canonicalUrl, 308);
   }
 
   // Handle CORS for API routes
@@ -80,11 +82,20 @@ export async function proxy(request: NextRequest) {
   // Check if the current route is an auth route (login/signup)
   const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
 
+  const redirectWithSessionCookies = (url: URL) => {
+    const redirect = NextResponse.redirect(url);
+    response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));
+    return redirect;
+  };
+
   // Redirect unauthenticated users away from protected routes
   if (isProtectedRoute && !user) {
     const loginUrl = new URL("/auth/login", request.url);
-    loginUrl.searchParams.set("redirectTo", pathname);
-    return NextResponse.redirect(loginUrl);
+    loginUrl.searchParams.set(
+      "redirectTo",
+      `${pathname}${request.nextUrl.search}`,
+    );
+    return redirectWithSessionCookies(loginUrl);
   }
 
   // Redirect authenticated users away from auth routes
@@ -92,7 +103,7 @@ export async function proxy(request: NextRequest) {
     const redirectTo = validateRedirectUrl(
       request.nextUrl.searchParams.get("redirectTo"),
     );
-    return NextResponse.redirect(new URL(redirectTo, request.url));
+    return redirectWithSessionCookies(new URL(redirectTo, request.url));
   }
 
   // Apply CORS headers to API responses

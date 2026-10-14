@@ -1,0 +1,40 @@
+{
+  "scope": "Web font loading and shared editorial token repair; full size-sprawl migration remains part of the ongoing audit",
+  "fonts": "Existing Playfair Display headings and Plus Jakarta Sans UI, loaded with next/font; retained",
+  "density": "Standard travel-planning UI with editorial destination headings and long-form guides",
+  "scaleDecision": "Retain existing Tailwind product/hero sizes during this font-scope fix; examine arbitrary size migrations during remaining flow visual review",
+  "token": "@theme inline { --font-editorial: var(--font-playfair), Georgia, \"Times New Roman\", serif; }",
+  "beforeEvidence": "Live h1 used Plus Jakarta Sans; body had --font-playfair but inherited --font-editorial was empty",
+  "fixEvidence": "Live heading computed Playfair Display with loaded FontFace; 3 real-app browser font regressions and 6 body-scoped dossier/day-layout checks passed",
+  "sizeInventory": {
+    "text-sm": 511,
+    "text-xs": 194,
+    "text-lg": 99,
+    "text-xl": 73,
+    "text-3xl": 64,
+    "text-2xl": 58,
+    "text-4xl": 39,
+    "text-5xl": 37,
+    "text-base": 22,
+    "text-[11px]": 22,
+    "text-[10px]": 17,
+    "text-6xl": 11,
+    "text-7xl": 4,
+    "text-[12px]": 3,
+    "text-[72px]": 2,
+    "text-[88px]": 2,
+    "text-[3.5rem]": 1,
+    "text-[56px]": 1,
+    "text-[120px]": 1,
+    "text-[140px]": 1,
+    "text-[9px]": 1,
+    "text-[48px]": 1,
+    "text-[15px]": 1
+  },
+  "migrationMap": {
+    "font-editorial": "Keep class and family; emit underlying body-scoped variable at utility use site",
+    "arbitrarySizes": "Inventory recorded; each remaining size requires context review before migration"
+  },
+  "docs": "https://tailwindcss.com/docs/theme#referencing-other-variables",
+  "contrastEvidence": "Active recovery action measured from rendered CSS colors: 17.83:1"
+}

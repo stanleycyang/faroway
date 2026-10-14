@@ -56,7 +56,7 @@ beforeEach(async () => {
       url.endsWith('/disclosure')
         ? disclosure
         : url.endsWith('/api/trips')
-          ? { trip: { id } }
+          ? { trip: { id, user_id: 'account-a' } }
           : { status: 'started', searchId: 'search-1' },
   }));
   mockAlert.mockImplementation((_title, _message, buttons) => buttons[1].onPress());
@@ -196,7 +196,7 @@ it('recovers create success followed by a definite disclosure 409 through fresh 
       url.endsWith('/disclosure')
         ? disclosure
         : url.endsWith('/api/trips')
-          ? { trip: { id } }
+          ? { trip: { id, user_id: 'account-a' } }
           : url.endsWith('/generate') && rejectGeneration
             ? { code: 'ai_consent_required', generationStarted: false }
             : options.method === 'POST'
@@ -281,7 +281,7 @@ it('reuses the durable creation identity after a lost create response', async ()
         url.endsWith('/disclosure')
           ? disclosure
           : url.endsWith('/api/trips')
-            ? { trip: { id } }
+            ? { trip: { id, user_id: 'account-a' } }
             : { status: 'started' },
     };
   });
@@ -292,3 +292,39 @@ it('reuses the durable creation identity after a lost create response', async ()
   expect(creates).toHaveLength(2);
   expect(JSON.parse(creates[0][1].body).requestId).toBe(JSON.parse(creates[1][1].body).requestId);
 });
+
+it.each(['wrong identity', 'wrong owner', 'missing owner', 'missing trip'])(
+  'keeps the retry identity and stops before generation for a %s receipt',
+  async (outcome) => {
+    const receipt = jest.fn();
+    fetchMock.mockImplementation(async (url: string) => ({
+      ok: true,
+      json: async () =>
+        url.endsWith('/disclosure')
+          ? disclosure
+          : url.endsWith('/api/trips')
+            ? {
+                trip:
+                  outcome === 'missing trip'
+                    ? undefined
+                    : {
+                        id:
+                          outcome === 'wrong identity'
+                            ? '22222222-2222-4222-8222-222222222222'
+                            : id,
+                        ...(outcome === 'missing owner'
+                          ? {}
+                          : { user_id: outcome === 'wrong owner' ? 'account-b' : 'account-a' }),
+                      },
+              }
+            : { status: 'started' },
+    }));
+    await expect(createAndStartTrip(input, receipt)).rejects.toThrow(/saved trip response/i);
+    expect(receipt).not.toHaveBeenCalled();
+    expect(posts().map(([url]) => url)).toEqual(['https://staging.example/api/trips']);
+    const { default: storage } = await import('@react-native-async-storage/async-storage');
+    expect(JSON.parse((await storage.getItem('faroway:pending-create:account-a'))!).requestId).toBe(
+      id
+    );
+  }
+);

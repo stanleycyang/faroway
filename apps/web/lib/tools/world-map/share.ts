@@ -1,4 +1,5 @@
 import LZString from "lz-string";
+import { CONTINENT_BY_ALPHA3 } from "./continents";
 import type { CountryVisit, Profile } from "./types";
 
 // v=1 (legacy): [iso, statusIdx, firstVisit?, visitCount?, pinnedCity?]
@@ -48,12 +49,14 @@ export function decodeProfileFromUrl(encoded: string): DecodedProfile | null {
     const raw = LZString.decompressFromEncodedURIComponent(encoded);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CompactPayload;
-    if (!parsed || !Array.isArray(parsed.d)) return null;
+    if (!parsed || ![1, 2].includes(parsed.v) || !Array.isArray(parsed.d))
+      return null;
 
     const visits: Record<string, CountryVisit> = {};
     for (const tuple of parsed.d) {
       if (!Array.isArray(tuple) || typeof tuple[0] !== "string") continue;
       const iso = tuple[0];
+      if (!Object.hasOwn(CONTINENT_BY_ALPHA3, iso)) continue;
       // v=1 has a numeric status index at slot 1; v=2 has firstVisit (string)
       // or undefined there. Distinguish by type.
       const isLegacy = typeof tuple[1] === "number";
@@ -65,7 +68,12 @@ export function decodeProfileFromUrl(encoded: string): DecodedProfile | null {
         iso,
         status: "visited",
         firstVisit: typeof firstVisit === "string" ? firstVisit : undefined,
-        visitCount: typeof visitCount === "number" ? visitCount : undefined,
+        visitCount:
+          typeof visitCount === "number" &&
+          Number.isSafeInteger(visitCount) &&
+          visitCount > 0
+            ? visitCount
+            : undefined,
         pinnedCity: typeof pinnedCity === "string" ? pinnedCity : undefined,
       };
     }

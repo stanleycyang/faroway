@@ -1,0 +1,33 @@
+{
+  "observedAt": "2026-10-14T12:51:33.423432+00:00",
+  "metroSession": 96761,
+  "bundleModules": 2122,
+  "bundleMilliseconds": 27573,
+  "checks": [
+    "Initial summary presents refresh affordance",
+    "Refresh actualNext200 renders Day1/Day2 instead of stale summary",
+    "Day1 title A first taste of Paris",
+    "Day2 selection renders Art and the Left Bank"
+  ],
+  "joinedTripReads": [
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "id,destination,start_date,end_date,status,travelers,budget,preferences,vibes,interests,budget_tier,user_id,search_id,is_shared,share_token,created_at,updated_at,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "id": "eq.33333333-3333-4333-8333-333333333333",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "id,destination,start_date,end_date,status,travelers,budget,preferences,vibes,interests,budget_tier,user_id,search_id,is_shared,share_token,created_at,updated_at,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "id": "eq.33333333-3333-4333-8333-333333333333",
+        "user_id": "eq.11111111-1111-4111-8111-111111111111"
+      }
+    }
+  ],
+  "scope": "Actual iOS18.5 ExpoGo + actualNext + synthetic local Auth/REST. Latest183\u2013185 source update and earlier declared root/session override. Refresh success follows awaited owner-bound cache save; persisted bytes/process restart/offline not independently verified yet."
+}

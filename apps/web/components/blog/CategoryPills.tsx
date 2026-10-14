@@ -18,7 +18,7 @@ export function CategoryPills({
         href="/blog"
         className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
           allActive
-            ? "bg-gradient-to-r from-primary to-amber-500 text-white shadow-lg shadow-primary/25"
+            ? "bg-slate-900 text-white"
             : "bg-gray-50 text-slate-600 hover:bg-gray-100 hover:text-slate-900 border border-gray-200"
         }`}
       >
@@ -33,7 +33,7 @@ export function CategoryPills({
             href={`/blog/category/${slug}`}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${
               active
-                ? "bg-gradient-to-r from-primary to-amber-500 text-white shadow-lg shadow-primary/25"
+                ? "bg-slate-900 text-white"
                 : "bg-gray-50 text-slate-600 hover:bg-gray-100 hover:text-slate-900 border border-gray-200"
             }`}
           >

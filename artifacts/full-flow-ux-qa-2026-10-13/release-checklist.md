@@ -1,0 +1,29 @@
+# Frozen Faroway release checklist
+
+Frozen on 2026-10-14 under the user’s ten journeys and six release gates. No new journey or gate may be added. New non-blocking ideas belong in the follow-up backlog.
+
+Statuses: **Passed**, **Failed**, **External verification required**. Failed may mean an internal verification gap; it does not automatically mean a confirmed defect. Passed is scoped to linked evidence and does not bypass the exact-candidate gates. External acceptance has not yet been requested or received.
+
+| # | Journey | Web | Mobile | Frozen happy/failure/recovery cases | Evidence and remaining work |
+|---|---|---|---|---|---|
+| 1 | Onboarding and authentication | External verification required | External verification required | Sign-in/form validation, callback timeout/recovery, sign-out/session isolation | web-auth-semantic-review.json; account-deletion-signout-review.json. Remaining: Hosted Google/Apple/SMTP and current native release authentication. |
+| 2 | Destination discovery and travel tools | Passed | External verification required | Browse destination, tool input/result, destination handoff; invalid/empty input recovery | destination-discovery-release-review.json; packing-readiness-release-review.json; frozen-quality-tools-consolidation.json. Remaining: Current native device discovery/tools; exact-candidate final validation. |
+| 3 | Trip brief creation and editing | Passed | External verification required | Create/save/reopen; validation, cancelled consent, lost-response identity, edit conflict | frozen-private-creation-recovery-review.json; frozen-brief-reload-review.json; trip-creation-boundary-review.json; trip-brief-semantic-review.json. Remaining: Hosted Auth/RLS, native current-device and exact-candidate acceptance. |
+| 4 | AI planning and streaming | External verification required | External verification required | Progress/previews; interruption, reconnect same job, retry, completion/open saved plan | real-stream-review.json; stream-chapter-replay-review.json; frozen-socket-drop-review.json. frozen-private-creation-recovery-review.json. Remaining: Live durable/provider successful dispatch/retry and native device verification; paused retry/refresh passes locally. Native service/queue/cache proof: frozen-native-save-boundary-review.json; current device remains external. |
+| 5 | Saved trips, filtering, sorting and pagination | Passed | External verification required | Open saved trip; filters/sort, complete pagination, late-page failure preserves cache | trip-list-pagination-review.json; dashboard-card-pages-review.json; dashboard-summary-boundary-review.json; dashboard-server-pagination-review.json; frozen-pagination-contract-review.json. Remaining: Hosted database verification; native current-device pagination; exact-candidate final validation. |
+| 6 | Itinerary navigation and editing | Passed | External verification required | Day navigation; lock/unlock/swap/save/reopen; conflict/unconfirmed save recovery | plan-save-receipt-review.json; review-status.md (UX151/196). Remaining: Web result at synthetic Next/isolated SQL scope; native full activity/edit device checks. |
+| 7 | Booking handoffs, checklist and reports | Passed | External verification required | Provider handoff without purchase; checklist/report save/reopen; cancelled/unconfirmed action | frozen-checkout-browser-review.json; booking-report-receipt-review.json; checkout-semantic-review.json. Remaining: External vendor/native acceptance and exact-candidate validation; handoff browser checks use a scoped component fixture. |
+| 8 | Sharing, revocation and privacy | Passed | External verification required | Consent/share/open as guest/revoke; cancel, expired/revoked link, owner isolation | sharing-review-runtime-requests.json; sharing-hydration-review.json. Remaining: Web result at synthetic Next/SQL scope; hosted authorization/RLS and native sharing acceptance. |
+| 9 | Profile/preferences/notifications/sign-out/deletion recovery | Passed | External verification required | Profile/preferences save/reopen; opt-out; sign-out retry; deletion confirmation and partial/lost-response recovery | account-deletion-signout-review.json; native-profile-editor-semantic-review.json. Remaining: Web supported by scoped tests and actual synthetic logout; live Apple/deletion/OS delivery and current native device checks. |
+| 10 | Offline and loading/empty/error/recovery states | Passed | External verification required | Cached trip access; offline/read/save failure and recovery; empty vs failed read; focus/retry/exit | root-fault-browser-acceptance.json; trip-list-pagination-review.json; review-status.md. frozen-private-creation-recovery-review.json; frozen-brief-reload-review.json; frozen-native-save-boundary-review.json. Remaining: Exact-candidate accessibility and native offline/current-device acceptance. Web offline result covers an already-loaded trip, not a cold offline document. |
+
+| Gate | Result | Required closure |
+|---|---|---|
+| Functional | Failed | Every applicable frozen happy/failure/recovery case passes; no unresolved blocker or major defect |
+| UX and accessibility | Failed | Responsive/readability/keyboard/focus/touch/reduced-motion checks on candidate |
+| Privacy and reliability | Failed | Account changes/authorization/cache isolation/retry identity/save confirmation consolidated on candidate |
+| Engineering | Failed | Final diff reviewed; required tests/types/lint/production build on exact candidate |
+| Evidence | External verification required | Every item has scoped result/evidence; external gaps explicitly accepted before release |
+| Delivery | Failed | Focused PR pushed; CI green; findings resolved; merge authorized |
+
+The candidate is not yet frozen or pushed. The original production worktree remains untouched. The exact release-candidate commit, test/build logs, diff review, PR, CI and merge evidence must be entered before completion.

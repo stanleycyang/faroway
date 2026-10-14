@@ -5,6 +5,9 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Trip } from '../../stores/tripStore';
+import { readCachedTrips } from './cached-trip';
+import { readCachedMutations } from './cached-mutations';
+import { useUserStore } from '../../stores/userStore';
 
 // Cache removal and all subsequent reads/writes share one queue. A new
 // account's writes cannot land between the removals in an account cleanup.
@@ -60,6 +63,9 @@ function mergeMutationData(
 export type PendingMutationData = Record<string, unknown>;
 
 export interface PendingMutation {
+  // Visible local intent and its retry command commit in the same storage write.
+  // Kept outside data so it is never sent as an API payload.
+  localTrip?: Trip;
   ownerId?: string;
   id: string;
   type: MutationType;
@@ -76,18 +82,52 @@ export interface SyncMeta {
   pendingCount: number;
 }
 
+/** Pending intent is a view over saved data, never a replacement for that data. */
+export function applyPendingTripChanges(saved: Trip[], pending: PendingMutation[]): Trip[] {
+  const trips = new Map(saved.map((trip) => [trip.id, trip]));
+  const added: string[] = [];
+  for (const mutation of pending) {
+    if (mutation.type === 'delete') trips.delete(mutation.tripId);
+    else if (mutation.localTrip?.id === mutation.tripId) {
+      if (!trips.has(mutation.tripId)) added.push(mutation.tripId);
+      trips.set(mutation.tripId, mutation.localTrip);
+    }
+  }
+  return [
+    ...added.reverse().flatMap((id) => (trips.has(id) ? [trips.get(id)!] : [])),
+    ...[...trips.values()].filter((trip) => !added.includes(trip.id)),
+  ];
+}
+
 /**
  * Storage class for managing offline trip data
  */
 class OfflineStorage {
+  // Each serialized public operation gets its own invocation-time identity.
+  private readonly account = useUserStore.getState();
+  private assertOwner(expectedOwnerId = this.account.user?.id): string {
+    const current = useUserStore.getState();
+    if (
+      !expectedOwnerId ||
+      current.user?.id !== expectedOwnerId ||
+      this.account.user?.id !== expectedOwnerId ||
+      current.accountRevision !== this.account.accountRevision
+    ) {
+      throw new Error('Your account changed. Reopen your trips to continue.');
+    }
+    return expectedOwnerId;
+  }
   // ==================== TRIPS ====================
 
   /**
    * Save all trips to local storage
    */
-  async saveTrips(trips: Trip[]): Promise<void> {
+  async saveTrips(trips: Trip[], expectedOwnerId?: string): Promise<void> {
     try {
-      const data = JSON.stringify(trips);
+      const ownerId = this.assertOwner(expectedOwnerId);
+      // One write binds identity and content atomically; legacy unowned caches
+      // are deliberately not assigned to whichever person signs in next.
+      const data = JSON.stringify({ version: 1, ownerId, trips });
       await AsyncStorage.setItem(STORAGE_KEYS.TRIPS, data);
     } catch (error) {
       console.error('[OfflineStorage] Error saving trips:', error);
@@ -98,23 +138,37 @@ class OfflineStorage {
   /**
    * Load all trips from local storage
    */
-  async loadTrips(): Promise<Trip[]> {
+  async loadSavedTrips(): Promise<Trip[]> {
     try {
+      if (!this.account.user?.id) return [];
+      const ownerId = this.assertOwner();
       const data = await AsyncStorage.getItem(STORAGE_KEYS.TRIPS);
+      this.assertOwner(ownerId);
       if (!data) return [];
-      return JSON.parse(data) as Trip[];
+      const cache = JSON.parse(data);
+      return cache?.version === 1 && cache.ownerId === ownerId ? readCachedTrips(cache.trips) : [];
     } catch (error) {
       console.error('[OfflineStorage] Error loading trips:', error);
-      return [];
+      throw error;
     }
+  }
+
+  async loadTrips(): Promise<Trip[]> {
+    if (!this.account.user?.id) return [];
+    const trips = await this.loadSavedTrips();
+    const pending = await this.getPendingMutations();
+    this.assertOwner();
+    // Failed reads propagate so callers can distinguish recovery from an empty cache.
+    return applyPendingTripChanges(trips, pending);
   }
 
   /**
    * Save a single trip (upsert)
    */
-  async saveTrip(trip: Trip): Promise<void> {
+  async saveTrip(trip: Trip, expectedOwnerId?: string): Promise<void> {
     try {
-      const trips = await this.loadTrips();
+      this.assertOwner(expectedOwnerId);
+      const trips = await this.loadSavedTrips();
       const existingIndex = trips.findIndex((t) => t.id === trip.id);
 
       if (existingIndex >= 0) {
@@ -133,9 +187,10 @@ class OfflineStorage {
   /**
    * Delete a trip from local storage
    */
-  async deleteTrip(tripId: string): Promise<void> {
+  async deleteTrip(tripId: string, expectedOwnerId?: string): Promise<void> {
     try {
-      const trips = await this.loadTrips();
+      this.assertOwner(expectedOwnerId);
+      const trips = await this.loadSavedTrips();
       const filtered = trips.filter((t) => t.id !== tripId);
       await this.saveTrips(filtered);
     } catch (error) {
@@ -166,6 +221,7 @@ class OfflineStorage {
     mutation: Omit<PendingMutation, 'id' | 'timestamp' | 'retryCount'>
   ): Promise<PendingMutation> {
     try {
+      const ownerId = this.assertOwner(mutation.ownerId);
       const mutations = await this.getPendingMutations();
 
       // Check if there's already a pending mutation for this trip
@@ -173,6 +229,7 @@ class OfflineStorage {
 
       const newMutation: PendingMutation = {
         ...mutation,
+        ownerId,
         id: `mutation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         timestamp: Date.now(),
         retryCount: 0,
@@ -190,6 +247,7 @@ class OfflineStorage {
         else if (existing.type === 'create' && mutation.type === 'update') {
           mutations[existingIndex] = {
             ...existing,
+            localTrip: mutation.localTrip ?? existing.localTrip,
             data: mergeMutationData(existing.data, mutation.data),
             timestamp: Date.now(),
           };
@@ -198,6 +256,7 @@ class OfflineStorage {
         else if (existing.type === 'update' && mutation.type === 'update') {
           mutations[existingIndex] = {
             ...existing,
+            localTrip: mutation.localTrip ?? existing.localTrip,
             data: {
               ...mergeMutationData(existing.data, mutation.data),
               expectedUpdatedAt: existing.data?.expectedUpdatedAt,
@@ -229,12 +288,16 @@ class OfflineStorage {
    */
   async getPendingMutations(): Promise<PendingMutation[]> {
     try {
+      if (!this.account.user?.id) return [];
+      const ownerId = this.assertOwner();
       const data = await AsyncStorage.getItem(STORAGE_KEYS.PENDING_MUTATIONS);
+      this.assertOwner(ownerId);
       if (!data) return [];
-      return JSON.parse(data) as PendingMutation[];
+      const mutations = JSON.parse(data);
+      return readCachedMutations(mutations, ownerId);
     } catch (error) {
       console.error('[OfflineStorage] Error getting pending mutations:', error);
-      return [];
+      throw error;
     }
   }
 
@@ -243,7 +306,20 @@ class OfflineStorage {
    */
   async savePendingMutations(mutations: PendingMutation[]): Promise<void> {
     try {
-      await AsyncStorage.setItem(STORAGE_KEYS.PENDING_MUTATIONS, JSON.stringify(mutations));
+      const ownerId = this.assertOwner();
+      if (mutations.some((mutation) => mutation.ownerId !== ownerId)) {
+        throw new Error('These saved changes belong to another account.');
+      }
+      const data = await AsyncStorage.getItem(STORAGE_KEYS.PENDING_MUTATIONS);
+      this.assertOwner(ownerId);
+      const previous = data ? JSON.parse(data) : [];
+      if (!Array.isArray(previous)) throw new Error('The saved change queue could not be read.');
+      // A failed cleanup must not expose another owner or overwrite their queue.
+      const otherOwners = previous.filter((mutation) => mutation?.ownerId !== ownerId);
+      await AsyncStorage.setItem(
+        STORAGE_KEYS.PENDING_MUTATIONS,
+        JSON.stringify([...otherOwners, ...mutations])
+      );
     } catch (error) {
       console.error('[OfflineStorage] Error saving pending mutations:', error);
       throw error;
@@ -295,7 +371,7 @@ class OfflineStorage {
    */
   async clearPendingMutations(): Promise<void> {
     try {
-      await AsyncStorage.removeItem(STORAGE_KEYS.PENDING_MUTATIONS);
+      await this.savePendingMutations([]);
       await this.updateSyncMeta({ pendingCount: 0 });
     } catch (error) {
       console.error('[OfflineStorage] Error clearing pending mutations:', error);
@@ -310,22 +386,23 @@ class OfflineStorage {
    */
   async getSyncMeta(): Promise<SyncMeta> {
     try {
+      if (!this.account.user?.id)
+        return { lastSyncTime: null, lastSyncStatus: null, pendingCount: 0 };
+      const ownerId = this.assertOwner();
       const data = await AsyncStorage.getItem(STORAGE_KEYS.SYNC_META);
-      if (!data) {
+      this.assertOwner(ownerId);
+      const meta = data ? JSON.parse(data) : null;
+      if (meta?.ownerId !== ownerId) {
         return {
           lastSyncTime: null,
           lastSyncStatus: null,
-          pendingCount: 0,
+          pendingCount: (await this.getPendingMutations()).length,
         };
       }
-      return JSON.parse(data) as SyncMeta;
+      return { ...meta, pendingCount: (await this.getPendingMutations()).length } as SyncMeta;
     } catch (error) {
       console.error('[OfflineStorage] Error getting sync meta:', error);
-      return {
-        lastSyncTime: null,
-        lastSyncStatus: null,
-        pendingCount: 0,
-      };
+      throw error;
     }
   }
 
@@ -334,8 +411,10 @@ class OfflineStorage {
    */
   async updateSyncMeta(updates: Partial<SyncMeta>): Promise<void> {
     try {
+      const ownerId = this.assertOwner();
       const current = await this.getSyncMeta();
-      const updated = { ...current, ...updates };
+      this.assertOwner(ownerId);
+      const updated = { ...current, ...updates, ownerId };
       await AsyncStorage.setItem(STORAGE_KEYS.SYNC_META, JSON.stringify(updated));
     } catch (error) {
       console.error('[OfflineStorage] Error updating sync meta:', error);
@@ -371,6 +450,13 @@ class OfflineStorage {
     // Recheck identity after earlier storage work, immediately before removal.
     // Later operations (including a new account's save) wait for ALL removals.
     await authorize();
+    const current = useUserStore.getState();
+    if (
+      current.user?.id !== this.account.user?.id ||
+      current.accountRevision !== this.account.accountRevision
+    ) {
+      throw new Error('Your account changed. The new account cache was kept.');
+    }
     const results = await Promise.allSettled([
       AsyncStorage.removeItem(STORAGE_KEYS.TRIPS),
       AsyncStorage.removeItem(STORAGE_KEYS.PENDING_MUTATIONS),
@@ -408,7 +494,10 @@ export const offlineStorage = new Proxy(new OfflineStorage(), {
   get(target, property, receiver) {
     const value = Reflect.get(target, property, receiver);
     return typeof value === 'function'
-      ? (...args: unknown[]) => serializeStorage(() => value.apply(target, args))
+      ? (...args: unknown[]) => {
+          const operation = new OfflineStorage();
+          return serializeStorage(() => value.apply(operation, args));
+        }
       : value;
   },
 });

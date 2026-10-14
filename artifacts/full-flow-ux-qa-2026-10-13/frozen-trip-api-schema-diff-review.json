@@ -1,0 +1,42 @@
+{
+  "scope": "Final remaining trip list/read/brief-route diff and creation schema",
+  "reviewExtent": "Complete base-to-current route diffs; full extracted create schema; current owned read/brief update and creation replay branches read as context. List cursor helper reviewed previously.",
+  "files": [
+    {
+      "path": "apps/web/app/api/trips/route.ts",
+      "sha256": "7ac332e1404e5e7dc85077376305d0d85ce8ba069ea869a1c75c2221d5b7e3cf"
+    },
+    {
+      "path": "apps/web/app/api/trips/[id]/route.ts",
+      "sha256": "7e84c88cc4e9730bb53694ce82ce4958658d5b3a0751ecd7ad84abcc8edf01c5"
+    },
+    {
+      "path": "apps/web/lib/trips/create-trip-command.ts",
+      "sha256": "3102e5ad58160fc5059ddbe72b4d2322fd02ddd63c5bf55e8788d4a1cd095583"
+    }
+  ],
+  "invariants": [
+    "Verified account owner filters every private list/read/write; successful reads are private/no-store",
+    "Stable created_at/id descending keyset uses bounded validated cursor and lookahead page",
+    "List projection includes owner ID required by native collector",
+    "Brief read failures are recoverable503 rather than false missing-trip; revision and planning status protect writes",
+    "Shared create schema retains bounded destination/date/party/preferences validation and canonical request UUID",
+    "Keyed creation uses durable atomic RPC and fail-closed deleted/conflicting/unconfirmed outcomes; no fallback duplicate insert"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "validation": {
+    "result": "Passed",
+    "scope": "Existing trips API and creation recovery suites",
+    "log": "/tmp/faroway-ux-frozen-trip-routes-review-tests.log"
+  },
+  "evidence": [
+    "frozen-pagination-contract-review.json",
+    "frozen-private-creation-recovery-review.json",
+    "frozen-brief-reload-review.json"
+  ],
+  "limits": [
+    "Hosted authorization/SQL deployment and exact release candidate acceptance remain external/pending"
+  ]
+}

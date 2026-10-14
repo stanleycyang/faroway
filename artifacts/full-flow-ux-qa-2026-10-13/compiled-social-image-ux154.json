@@ -1,0 +1,41 @@
+[
+  {
+    "endpoint": "api/og",
+    "status": 200,
+    "mime": "image/png",
+    "bytes": 64428,
+    "sha256": "827f3066b246a7d284bf392f1a2fe79726e75522ad0c3b4ec6a19e72dd857467",
+    "fontTrace": [
+      "../../../../../../../node_modules/next/dist/compiled/@vercel/og/Geist-Regular.ttf",
+      "../../../../../app/api/og/world-map/fonts/inter-bold.ttf",
+      "../../../../../app/api/og/world-map/fonts/inter-regular.ttf",
+      "../../../../../app/api/og/world-map/fonts/inter-semibold.ttf"
+    ]
+  },
+  {
+    "endpoint": "opengraph-image",
+    "status": 200,
+    "mime": "image/png",
+    "bytes": 64428,
+    "sha256": "827f3066b246a7d284bf392f1a2fe79726e75522ad0c3b4ec6a19e72dd857467",
+    "fontTrace": [
+      "../../../../../../node_modules/next/dist/compiled/@vercel/og/Geist-Regular.ttf",
+      "../../../../app/api/og/world-map/fonts/inter-bold.ttf",
+      "../../../../app/api/og/world-map/fonts/inter-regular.ttf",
+      "../../../../app/api/og/world-map/fonts/inter-semibold.ttf"
+    ]
+  },
+  {
+    "endpoint": "twitter-image",
+    "status": 200,
+    "mime": "image/png",
+    "bytes": 64428,
+    "sha256": "827f3066b246a7d284bf392f1a2fe79726e75522ad0c3b4ec6a19e72dd857467",
+    "fontTrace": [
+      "../../../../../../node_modules/next/dist/compiled/@vercel/og/Geist-Regular.ttf",
+      "../../../../app/api/og/world-map/fonts/inter-bold.ttf",
+      "../../../../app/api/og/world-map/fonts/inter-regular.ttf",
+      "../../../../app/api/og/world-map/fonts/inter-semibold.ttf"
+    ]
+  }
+]

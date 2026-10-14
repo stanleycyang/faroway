@@ -92,6 +92,7 @@ test.beforeAll(async () => {
         });
         stream?.end();
       }
+      if (stage === "transport-drop") stream?.socket?.destroy();
       if (stage === "complete") {
         send("itinerary", { days: sampleDays });
         send("complete", {});
@@ -118,7 +119,7 @@ test.beforeAll(async () => {
     } else {
       response.setHeader("Content-Type", "text/html; charset=utf-8");
       response.end(
-        '<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/planning.css"><style>:root{--font-playfair:Georgia;--font-plus-jakarta:Arial}</style></head><body><div id="root"></div><script>window.process={env:{NODE_ENV:"development"}};</script><script src="/planning.js"></script></body></html>',
+        '<!doctype html><html><head><meta name="viewport" content="width=device-width, initial-scale=1"><link rel="stylesheet" href="/planning.css"><style>body{--font-playfair:Georgia;--font-plus-jakarta:Arial}</style></head><body><div id="root"></div><script>window.process={env:{NODE_ENV:"development"}};</script><script src="/planning.js"></script></body></html>',
       );
     }
   });
@@ -154,6 +155,7 @@ test("day navigation supports touch and keyboard without exposing other days", a
   await page.screenshot({
     path: `/tmp/faroway-trip-${test.info().project.name}.png`,
     fullPage: true,
+    animations: "disabled",
   });
   await page.getByRole("tab", { name: /Day 2/ }).click();
   await expect(page.getByRole("tabpanel")).toContainText(
@@ -203,9 +205,16 @@ test("planning, recovery and ready controls stay usable on short screens", async
   await page.screenshot({
     path: `/tmp/faroway-generation-${test.info().project.name}.png`,
     fullPage: true,
+    animations: "disabled",
   });
   await page.getByRole("button", { name: "Finish fixture planning" }).click();
-  await expect(page.getByRole("dialog", { name: "Paris" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Your journey is ready", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("progressbar")).toHaveAttribute(
+    "aria-valuenow",
+    "100",
+  );
   await page
     .locator("img")
     .evaluateAll((images) =>
@@ -215,15 +224,19 @@ test("planning, recovery and ready controls stay usable on short screens", async
         ),
       ),
     );
+  await page.locator(".concierge-dossier").evaluate((element) => {
+    element.scrollTop = 0;
+  });
   await page.screenshot({
     path: `/tmp/faroway-ready-${test.info().project.name}.png`,
     fullPage: true,
+    animations: "disabled",
   });
-  await page.keyboard.press("Tab");
+  await page.getByRole("button", { name: "Open my trip" }).focus();
   await expect(
     page.getByRole("button", { name: "Open my trip" }),
   ).toBeFocused();
-  await page.getByRole("button", { name: "Open my trip" }).click();
+  await page.keyboard.press("Enter");
   await expect(
     page.getByRole("tablist", { name: "Itinerary days" }),
   ).toBeVisible();
@@ -344,6 +357,7 @@ test("dossier composition remains readable across desktop and phone layouts", as
   await page.screenshot({
     path: `/tmp/faroway-luxury-dossier-${test.info().project.name}.png`,
     fullPage: true,
+    animations: "disabled",
   });
   await page
     .getByRole("button", { name: "Explore your emerging journey" })
@@ -393,6 +407,47 @@ test("reconnecting observes the same job and keeps chapter state without a new p
   ).toBeVisible();
 });
 
+test("a socket disconnect preserves chapters and reconnects the same trip without generation", async ({
+  page,
+  request,
+}) => {
+  const observations: string[] = [];
+  const generationWrites: string[] = [];
+  page.on("request", (req) => {
+    const pathname = new URL(req.url()).pathname;
+    if (pathname === "/api/trips/fixture/stream")
+      observations.push(req.method());
+    if (pathname.endsWith("/generate") && req.method() === "POST")
+      generationWrites.push(pathname);
+  });
+  await page.goto(`${fixtureUrl}?screen=live`);
+  await expect(page.getByRole("progressbar")).toHaveAttribute(
+    "aria-valuenow",
+    "42",
+  );
+  await request.get(`${fixtureUrl}/fixture/stage?value=chapter-one`);
+  const chapter = page.getByRole("button", { name: /A first taste of Paris/ });
+  await expect(chapter).toBeVisible();
+  await chapter.click();
+  await expect(chapter).toHaveAttribute("aria-expanded", "false");
+  await request.get(`${fixtureUrl}/fixture/stage?value=transport-drop`);
+  await expect(
+    page.getByRole("heading", { name: "Live updates paused" }),
+  ).toBeVisible();
+  await expect(chapter).toHaveAttribute("aria-expanded", "false");
+  await page.getByRole("button", { name: "Reconnect live updates" }).click();
+  await expect(page.getByRole("progressbar")).toHaveAttribute(
+    "aria-valuenow",
+    "42",
+  );
+  await expect(chapter).toHaveAttribute("aria-expanded", "false");
+  expect(observations).toEqual(["GET", "GET"]);
+  expect(generationWrites).toEqual([]);
+  await request.get(`${fixtureUrl}/fixture/stage?value=complete`);
+  await page.getByRole("button", { name: "Open my trip" }).click();
+  await expect(page.getByRole("tab", { name: /Day 2/ })).toBeVisible();
+});
+
 test("saved journeys expose truthful status and clear return controls", async ({
   page,
 }) => {
@@ -420,6 +475,7 @@ test("saved journeys expose truthful status and clear return controls", async ({
   await page.screenshot({
     path: `/tmp/faroway-saved-${test.info().project.name}.png`,
     fullPage: true,
+    animations: "disabled",
   });
 });
 
@@ -444,4 +500,35 @@ test("malformed terminal updates cannot strand the live observer", async ({
   await expect(
     page.getByRole("button", { name: /Art and the Left Bank/ }),
   ).toBeVisible();
+});
+
+test("completed dossier exposes its primary action immediately on a short phone", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 568 });
+  await page.goto(`${fixtureUrl}?screen=ready`);
+  await expect(
+    page.getByRole("heading", { name: "Your journey is ready", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Open my trip", exact: true }),
+  ).toBeInViewport();
+  await expect(
+    page.getByRole("button", { name: "Explore your journey", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("No stay suggestion in this plan", { exact: true }),
+  ).toBeVisible();
+  await page.locator(".concierge-dossier").evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  const chapter = page.getByRole("button", { name: /Day 3/ });
+  await expect(chapter).toBeInViewport();
+  const chapterBox = await chapter.boundingBox();
+  const actionBox = await page
+    .getByRole("button", { name: "Open my trip", exact: true })
+    .boundingBox();
+  expect(chapterBox).not.toBeNull();
+  expect(actionBox).not.toBeNull();
+  expect(chapterBox!.y + chapterBox!.height).toBeLessThanOrEqual(actionBox!.y);
 });

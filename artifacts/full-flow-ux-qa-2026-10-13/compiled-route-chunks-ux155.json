@@ -1,0 +1,575 @@
+{
+  "scope": "Production rootMainFiles plus current route layout/page entryJSFiles, deduplicated per route. Emitted entry budget, not full observed browser transfer. Error references, deferred imports, RSC, photos, fonts, prefetch and caches are separate; gzip is offline compression.",
+  "source": "594-file UX155 snapshot",
+  "routes": [
+    {
+      "route": "(app)/trips/[id]",
+      "entryKeys": [
+        "[project]/apps/web/app/layout",
+        "[project]/apps/web/app/(app)/trips/[id]/page"
+      ],
+      "chunks": [
+        {
+          "path": "static/chunks/1vm-kofyj1yra.js",
+          "bytes": 675,
+          "gzipBytes": 415,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/0---wiq-0syig.js",
+          "bytes": 32267,
+          "gzipBytes": 9186,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/2pnqgts56qn7j.js",
+          "bytes": 138183,
+          "gzipBytes": 37714,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/0ettz2tzkmk5a.js",
+          "bytes": 233019,
+          "gzipBytes": 72875,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3_5ngvo3j7tou.js",
+          "bytes": 44357,
+          "gzipBytes": 9379,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/turbopack-19mqsqwyh486-.js",
+          "bytes": 10949,
+          "gzipBytes": 4309,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3r1ewkc2rv6mv.js",
+          "bytes": 4397,
+          "gzipBytes": 1888,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/0f71lyo_zg23e.js",
+          "bytes": 21351,
+          "gzipBytes": 8468,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3g_mi-rctasx4.js",
+          "bytes": 45753,
+          "gzipBytes": 12935,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/16r6q_1js7qwh.js",
+          "bytes": 25697,
+          "gzipBytes": 9243,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/2h4hx8pkpumzw.js",
+          "bytes": 247371,
+          "gzipBytes": 64948,
+          "containsSupabaseSDK": true
+        },
+        {
+          "path": "static/chunks/1bn9dkmp01e-r.js",
+          "bytes": 97687,
+          "gzipBytes": 26548,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/2i351dk-ubzjo.js",
+          "bytes": 69267,
+          "gzipBytes": 17453,
+          "containsSupabaseSDK": false
+        }
+      ],
+      "totalBytes": 970973,
+      "totalGzipBytes": 275361
+    },
+    {
+      "route": "create",
+      "entryKeys": [
+        "[project]/apps/web/app/layout",
+        "[project]/apps/web/app/create/page"
+      ],
+      "chunks": [
+        {
+          "path": "static/chunks/1vm-kofyj1yra.js",
+          "bytes": 675,
+          "gzipBytes": 415,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/0---wiq-0syig.js",
+          "bytes": 32267,
+          "gzipBytes": 9186,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/2pnqgts56qn7j.js",
+          "bytes": 138183,
+          "gzipBytes": 37714,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/0ettz2tzkmk5a.js",
+          "bytes": 233019,
+          "gzipBytes": 72875,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3_5ngvo3j7tou.js",
+          "bytes": 44357,
+          "gzipBytes": 9379,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/turbopack-19mqsqwyh486-.js",
+          "bytes": 10949,
+          "gzipBytes": 4309,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3r1ewkc2rv6mv.js",
+          "bytes": 4397,
+          "gzipBytes": 1888,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/1odab_j83vq55.js",
+          "bytes": 15509,
+          "gzipBytes": 6272,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3ucl5ryvxsd80.js",
+          "bytes": 25697,
+          "gzipBytes": 9239,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/2h4hx8pkpumzw.js",
+          "bytes": 247371,
+          "gzipBytes": 64948,
+          "containsSupabaseSDK": true
+        },
+        {
+          "path": "static/chunks/1xsrhl4amq_vo.js",
+          "bytes": 133033,
+          "gzipBytes": 39653,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/1slgcdfoept8d.js",
+          "bytes": 69267,
+          "gzipBytes": 17356,
+          "containsSupabaseSDK": false
+        }
+      ],
+      "totalBytes": 954724,
+      "totalGzipBytes": 273234
+    },
+    {
+      "route": "(marketing)",
+      "entryKeys": [
+        "[project]/apps/web/app/layout",
+        "[project]/apps/web/app/(marketing)/page"
+      ],
+      "chunks": [
+        {
+          "path": "static/chunks/1vm-kofyj1yra.js",
+          "bytes": 675,
+          "gzipBytes": 415,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/0---wiq-0syig.js",
+          "bytes": 32267,
+          "gzipBytes": 9186,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/2pnqgts56qn7j.js",
+          "bytes": 138183,
+          "gzipBytes": 37714,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/0ettz2tzkmk5a.js",
+          "bytes": 233019,
+          "gzipBytes": 72875,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3_5ngvo3j7tou.js",
+          "bytes": 44357,
+          "gzipBytes": 9379,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/turbopack-19mqsqwyh486-.js",
+          "bytes": 10949,
+          "gzipBytes": 4309,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3r1ewkc2rv6mv.js",
+          "bytes": 4397,
+          "gzipBytes": 1888,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3k-vfemte-v30.js",
+          "bytes": 6121,
+          "gzipBytes": 2405,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3ucl5ryvxsd80.js",
+          "bytes": 25697,
+          "gzipBytes": 9239,
+          "containsSupabaseSDK": false
+        }
+      ],
+      "totalBytes": 495665,
+      "totalGzipBytes": 147410
+    },
+    {
+      "route": "(marketing)/about",
+      "entryKeys": [
+        "[project]/apps/web/app/layout",
+        "[project]/apps/web/app/(marketing)/about/page"
+      ],
+      "chunks": [
+        {
+          "path": "static/chunks/1vm-kofyj1yra.js",
+          "bytes": 675,
+          "gzipBytes": 415,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/0---wiq-0syig.js",
+          "bytes": 32267,
+          "gzipBytes": 9186,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/2pnqgts56qn7j.js",
+          "bytes": 138183,
+          "gzipBytes": 37714,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/0ettz2tzkmk5a.js",
+          "bytes": 233019,
+          "gzipBytes": 72875,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3_5ngvo3j7tou.js",
+          "bytes": 44357,
+          "gzipBytes": 9379,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/turbopack-19mqsqwyh486-.js",
+          "bytes": 10949,
+          "gzipBytes": 4309,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3r1ewkc2rv6mv.js",
+          "bytes": 4397,
+          "gzipBytes": 1888,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3i6u7nwuej0vq.js",
+          "bytes": 5826,
+          "gzipBytes": 2292,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/26_1_e39obmdq.js",
+          "bytes": 25697,
+          "gzipBytes": 9233,
+          "containsSupabaseSDK": false
+        }
+      ],
+      "totalBytes": 495370,
+      "totalGzipBytes": 147291
+    },
+    {
+      "route": "(marketing)/privacy",
+      "entryKeys": [
+        "[project]/apps/web/app/layout",
+        "[project]/apps/web/app/(marketing)/privacy/page"
+      ],
+      "chunks": [
+        {
+          "path": "static/chunks/1vm-kofyj1yra.js",
+          "bytes": 675,
+          "gzipBytes": 415,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/0---wiq-0syig.js",
+          "bytes": 32267,
+          "gzipBytes": 9186,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/2pnqgts56qn7j.js",
+          "bytes": 138183,
+          "gzipBytes": 37714,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/0ettz2tzkmk5a.js",
+          "bytes": 233019,
+          "gzipBytes": 72875,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3_5ngvo3j7tou.js",
+          "bytes": 44357,
+          "gzipBytes": 9379,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/turbopack-19mqsqwyh486-.js",
+          "bytes": 10949,
+          "gzipBytes": 4309,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3r1ewkc2rv6mv.js",
+          "bytes": 4397,
+          "gzipBytes": 1888,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/1zixd_qfjlmh_.js",
+          "bytes": 4812,
+          "gzipBytes": 1860,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/16r6q_1js7qwh.js",
+          "bytes": 25697,
+          "gzipBytes": 9243,
+          "containsSupabaseSDK": false
+        }
+      ],
+      "totalBytes": 494356,
+      "totalGzipBytes": 146869
+    },
+    {
+      "route": "(marketing)/terms",
+      "entryKeys": [
+        "[project]/apps/web/app/layout",
+        "[project]/apps/web/app/(marketing)/terms/page"
+      ],
+      "chunks": [
+        {
+          "path": "static/chunks/1vm-kofyj1yra.js",
+          "bytes": 675,
+          "gzipBytes": 415,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/0---wiq-0syig.js",
+          "bytes": 32267,
+          "gzipBytes": 9186,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/2pnqgts56qn7j.js",
+          "bytes": 138183,
+          "gzipBytes": 37714,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/0ettz2tzkmk5a.js",
+          "bytes": 233019,
+          "gzipBytes": 72875,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3_5ngvo3j7tou.js",
+          "bytes": 44357,
+          "gzipBytes": 9379,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/turbopack-19mqsqwyh486-.js",
+          "bytes": 10949,
+          "gzipBytes": 4309,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3r1ewkc2rv6mv.js",
+          "bytes": 4397,
+          "gzipBytes": 1888,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/1zixd_qfjlmh_.js",
+          "bytes": 4812,
+          "gzipBytes": 1860,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/16r6q_1js7qwh.js",
+          "bytes": 25697,
+          "gzipBytes": 9243,
+          "containsSupabaseSDK": false
+        }
+      ],
+      "totalBytes": 494356,
+      "totalGzipBytes": 146869
+    },
+    {
+      "route": "(marketing)/support",
+      "entryKeys": [
+        "[project]/apps/web/app/layout",
+        "[project]/apps/web/app/(marketing)/support/page"
+      ],
+      "chunks": [
+        {
+          "path": "static/chunks/1vm-kofyj1yra.js",
+          "bytes": 675,
+          "gzipBytes": 415,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/0---wiq-0syig.js",
+          "bytes": 32267,
+          "gzipBytes": 9186,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/2pnqgts56qn7j.js",
+          "bytes": 138183,
+          "gzipBytes": 37714,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/0ettz2tzkmk5a.js",
+          "bytes": 233019,
+          "gzipBytes": 72875,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3_5ngvo3j7tou.js",
+          "bytes": 44357,
+          "gzipBytes": 9379,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/turbopack-19mqsqwyh486-.js",
+          "bytes": 10949,
+          "gzipBytes": 4309,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3r1ewkc2rv6mv.js",
+          "bytes": 4397,
+          "gzipBytes": 1888,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3i6u7nwuej0vq.js",
+          "bytes": 5826,
+          "gzipBytes": 2292,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/26_1_e39obmdq.js",
+          "bytes": 25697,
+          "gzipBytes": 9233,
+          "containsSupabaseSDK": false
+        }
+      ],
+      "totalBytes": 495370,
+      "totalGzipBytes": 147291
+    },
+    {
+      "route": "blog/[slug]",
+      "entryKeys": [
+        "[project]/apps/web/app/layout",
+        "[project]/apps/web/app/blog/layout",
+        "[project]/apps/web/app/blog/[slug]/page"
+      ],
+      "chunks": [
+        {
+          "path": "static/chunks/1vm-kofyj1yra.js",
+          "bytes": 675,
+          "gzipBytes": 415,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/0---wiq-0syig.js",
+          "bytes": 32267,
+          "gzipBytes": 9186,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/2pnqgts56qn7j.js",
+          "bytes": 138183,
+          "gzipBytes": 37714,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/0ettz2tzkmk5a.js",
+          "bytes": 233019,
+          "gzipBytes": 72875,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3_5ngvo3j7tou.js",
+          "bytes": 44357,
+          "gzipBytes": 9379,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/turbopack-19mqsqwyh486-.js",
+          "bytes": 10949,
+          "gzipBytes": 4309,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/3r1ewkc2rv6mv.js",
+          "bytes": 4397,
+          "gzipBytes": 1888,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/1zixd_qfjlmh_.js",
+          "bytes": 4812,
+          "gzipBytes": 1860,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/16r6q_1js7qwh.js",
+          "bytes": 25697,
+          "gzipBytes": 9243,
+          "containsSupabaseSDK": false
+        },
+        {
+          "path": "static/chunks/2yeyzvxnqm56t.js",
+          "bytes": 11140,
+          "gzipBytes": 4493,
+          "containsSupabaseSDK": false
+        }
+      ],
+      "totalBytes": 505496,
+      "totalGzipBytes": 151362
+    }
+  ]
+}

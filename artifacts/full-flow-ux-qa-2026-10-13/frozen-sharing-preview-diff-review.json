@@ -1,0 +1,87 @@
+{
+  "scope": "Final review group: private/public share metadata and image boundaries, resilient image wrapper and calendar-duration helpers",
+  "reviewExtent": "Full current bodies of helpers/image routes/private and shared layouts read; homepage entire base-to-current semantic diff reread separately after initial combined output truncation. API/date deletion read from base and remaining consumers traced to distinct date-range helper.",
+  "files": [
+    {
+      "path": "apps/web/components/ResilientImage.tsx",
+      "sha256": "dd13fc13e15b1c196c8dec91c496da2d185bedccc60b3180b25fa5518deee766"
+    },
+    {
+      "path": "apps/web/lib/social-image.tsx",
+      "sha256": "7d6d4b6eff3155e5193980ea2ea835568f9461bb111aec0b9a4c59f530ab8dbb"
+    },
+    {
+      "path": "apps/web/app/opengraph-image.tsx",
+      "sha256": "97d3e28545f2671c7ef45fc99c32b9524ef361dddcb4fb43216580e8dfa42aed"
+    },
+    {
+      "path": "apps/web/app/twitter-image.tsx",
+      "sha256": "97d3e28545f2671c7ef45fc99c32b9524ef361dddcb4fb43216580e8dfa42aed"
+    },
+    {
+      "path": "apps/web/app/api/og/route.tsx",
+      "sha256": "c09ca85d33ff4da29ef29b7a814bbb157ba64cc7dc6e3fb2152531b534306e00"
+    },
+    {
+      "path": "apps/web/app/(app)/trips/[id]/layout.tsx",
+      "sha256": "f44f80fd773b1e73baf669a6a607a02e3ff1a89b08f73f3212794b355b243af7"
+    },
+    {
+      "path": "apps/web/app/(app)/trips/[id]/opengraph-image.tsx",
+      "sha256": "371cbc43170d844ef946f4006558f821471d60c9aa3eecbbc2a346dfe4768d47"
+    },
+    {
+      "path": "apps/web/app/s/[token]/layout.tsx",
+      "sha256": "ce7a51ddee7a86ba381eb55c00cebd272c89c26324fe71cbe6771a051fc18321"
+    },
+    {
+      "path": "apps/web/app/s/[token]/opengraph-image.tsx",
+      "sha256": "933354e77e19edb6b85a641b2f6bf7a25f4a3e8beaf2addd6dcf305175da50ad"
+    },
+    {
+      "path": "apps/web/lib/trips/load-shared-trip.ts",
+      "sha256": "f728be41419b21e7e388079238c164ce7b1750686b075def12a243fdab303894"
+    },
+    {
+      "path": "apps/web/lib/trips/date-duration.ts",
+      "sha256": "18703273e6b6a3004794d4e8beff4f7c679eaa60cb2780e27e9fcd04616f0d16"
+    },
+    {
+      "path": "apps/web/app/(marketing)/page.tsx",
+      "sha256": "6e997cdc16d32fd6f8671cfb306f3629384584eeb32038a88acb30a1333f1e86"
+    }
+  ],
+  "deletion": {
+    "path": "apps/web/lib/api/date.ts",
+    "baseBlobHash": "4ad5b05988c41c1b4226dd23e6fea51e548f46a1e8f2c47914632c733bf258c9",
+    "consumerCheck": "No exact old-module consumer; references found are lib/api/date-range, a distinct retained helper"
+  },
+  "invariants": [
+    "Failed marketing/blog cover uses packaged illustrated fallback and accurate fallback alt; changed src resets failure selection",
+    "Social image text is whitespace-normalized and bounded by Unicode codepoints; no user-provided file path or remote-image fetch",
+    "Only public font buffers are globally cached; failed font read resets promise; image routes run Node with traced fonts",
+    "Private metadata and image reads require verified account and owner filter; private page metadata remains noindex; images explicitly private/no-store",
+    "Shared reads require valid token syntax and is_shared=true; only selected trip/itinerary fields read; no owner ID in projection",
+    "Shared lookup errors differ from absent/revoked rows; malformed itinerary envelope throws recoverable read failure instead of an empty plan",
+    "React cache is request-scoped; shared images read token/flag freshly with revalidate0 and private/no-store",
+    "JSON-LD escapes less-than characters, retains valid calendar-date values and omits invalid date fields",
+    "Calendar-day duration is inclusive and independent of DST; date-only database values parse as local calendar dates",
+    "Homepage main landmark excludes header/footer; resilience substitutions preserve image sizing/layout and truthful illustration labels"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": [],
+    "deferred": "Status-aware private metadata wording for saved drafts/failed planning; no user journey blocked"
+  },
+  "evidence": [
+    "homepage-landmark-review.json",
+    "sharing-semantic-review.json",
+    "sharing-review-runtime-requests.json",
+    "shared-semantic-review.json",
+    "review-status.md (private/shared social preview runtime evidence)",
+    "frozen-native-save-boundary-review.json (current workspace regression)"
+  ],
+  "limits": [
+    "Hosted revocation/JWT/RLS/data lifecycle and image availability remain external",
+    "This review does not prove signed native binary/on-device UI or all changed files reviewed"
+  ]
+}

@@ -1,0 +1,264 @@
+{
+  "remaining": [],
+  "matched": {
+    "apps/mobile/__tests__/hooks/useAuth-session-races.test.tsx": [
+      "frozen-native-auth-race-regression-review.json"
+    ],
+    "apps/mobile/__tests__/hooks/useGuestTripBrief.test.tsx": [
+      "frozen-native-guest-hook-regression-review.json"
+    ],
+    "apps/mobile/__tests__/hooks/useLocalCalendarDate.test.tsx": [
+      "frozen-native-calendar-link-regression-review.json"
+    ],
+    "apps/mobile/__tests__/hooks/useNotifications-lifecycle.test.tsx": [
+      "frozen-native-lifecycle-regression-review.json"
+    ],
+    "apps/mobile/__tests__/hooks/useOfflineSync-lifecycle.test.tsx": [
+      "frozen-native-lifecycle-regression-review.json"
+    ],
+    "apps/mobile/__tests__/hooks/useStreamingItinerary.test.ts": [
+      "frozen-native-stream-animation-regression-review.json"
+    ],
+    "apps/mobile/__tests__/lib/bookingOptions.test.ts": [
+      "frozen-preview-map-booking-regression-review.json"
+    ],
+    "apps/mobile/__tests__/lib/dateRangeMarks.test.ts": [
+      "frozen-native-calendar-link-regression-review.json"
+    ],
+    "apps/mobile/__tests__/lib/guestTripBrief.test.ts": [
+      "frozen-native-guest-sharing-regression-review.json"
+    ],
+    "apps/mobile/__tests__/lib/itineraryNormalization.test.ts": [
+      "frozen-native-normalization-regression-review.json"
+    ],
+    "apps/mobile/__tests__/lib/itineraryPreview.test.ts": [
+      "frozen-date-pricing-regression-assertions-review.json"
+    ],
+    "apps/mobile/__tests__/lib/offline/conflict-review.test.ts": [
+      "frozen-native-save-boundary-review.json"
+    ],
+    "apps/mobile/__tests__/lib/planningConsent.test.ts": [
+      "frozen-native-save-boundary-review.json"
+    ],
+    "apps/mobile/__tests__/lib/streaming-preview-validation.test.ts": [
+      "frozen-preview-map-booking-regression-review.json"
+    ],
+    "apps/mobile/__tests__/lib/tripCost.test.ts": [
+      "frozen-date-pricing-regression-assertions-review.json"
+    ],
+    "apps/mobile/__tests__/lib/tripDate.test.ts": [
+      "frozen-date-pricing-regression-assertions-review.json"
+    ],
+    "apps/mobile/__tests__/lib/tripLinkInput.test.ts": [
+      "frozen-native-calendar-link-regression-review.json"
+    ],
+    "apps/mobile/__tests__/lib/tripListPages.test.ts": [
+      "frozen-pagination-deadline-regression-review.json"
+    ],
+    "apps/mobile/__tests__/lib/tripRequirements.test.ts": [
+      "frozen-date-pricing-regression-assertions-review.json"
+    ],
+    "apps/mobile/__tests__/lib/tripSharing.test.ts": [
+      "frozen-native-guest-sharing-regression-review.json"
+    ],
+    "apps/mobile/__tests__/screens/auth-gate-lifecycle.test.tsx": [
+      "frozen-native-auth-gate-regression-review.json"
+    ],
+    "apps/mobile/__tests__/screens/create-traveler-counter.test.tsx": [
+      "frozen-native-create-completion-regression-review.json"
+    ],
+    "apps/mobile/__tests__/screens/generation-animation-lifecycle.test.tsx": [
+      "frozen-native-stream-animation-regression-review.json"
+    ],
+    "apps/mobile/__tests__/screens/generation-completion.test.tsx": [
+      "frozen-native-create-completion-regression-review.json"
+    ],
+    "apps/mobile/__tests__/services/api.test.ts": [
+      "frozen-native-store-api-notification-regression-review.json"
+    ],
+    "apps/mobile/__tests__/services/profile-save.test.ts": [
+      "frozen-native-profile-save-regression-review.json"
+    ],
+    "apps/mobile/__tests__/services/pushConsentService.test.ts": [
+      "frozen-native-store-api-notification-regression-review.json"
+    ],
+    "apps/mobile/__tests__/stores/tripStore.test.ts": [
+      "frozen-native-store-api-notification-regression-review.json"
+    ],
+    "apps/web/__tests__/api-client-deadline.test.ts": [
+      "frozen-pagination-deadline-regression-review.json"
+    ],
+    "apps/web/__tests__/api/profile.test.ts": [
+      "frozen-private-api-regression-diff-review.json"
+    ],
+    "apps/web/__tests__/api/share.test.ts": [
+      "frozen-private-api-regression-diff-review.json"
+    ],
+    "apps/web/__tests__/api/trip-bookings.test.ts": [
+      "frozen-private-api-regression-diff-review.json"
+    ],
+    "apps/web/__tests__/api/trip-plan.test.ts": [
+      "frozen-private-api-regression-diff-review.json"
+    ],
+    "apps/web/__tests__/create-draft-calendar.test.ts": [
+      "frozen-date-pricing-regression-assertions-review.json"
+    ],
+    "apps/web/__tests__/dashboard-local-calendar.test.tsx": [
+      "frozen-dashboard-regression-assertions-review.json"
+    ],
+    "apps/web/__tests__/itinerary-map-coordinates.test.ts": [
+      "frozen-preview-map-booking-regression-review.json"
+    ],
+    "apps/web/__tests__/lib/dashboard-pagination.test.ts": [
+      "frozen-dashboard-regression-assertions-review.json"
+    ],
+    "apps/web/__tests__/lib/search-runtime.test.ts": [
+      "frozen-weather-runtime-regression-review.json"
+    ],
+    "apps/web/__tests__/lib/shared-trip-read.test.ts": [
+      "frozen-shared-integrity-regression-review.json"
+    ],
+    "apps/web/__tests__/packing-startup-readiness.test.tsx": [
+      "frozen-preview-map-booking-regression-review.json"
+    ],
+    "apps/web/__tests__/shared-trip-metadata-dates.test.ts": [
+      "frozen-shared-integrity-regression-review.json"
+    ],
+    "apps/web/__tests__/shared-trip-transport.test.tsx": [
+      "frozen-shared-integrity-regression-review.json"
+    ],
+    "apps/web/__tests__/trip-brief-lifecycle.test.tsx": [
+      "frozen-private-creation-recovery-review.json"
+    ],
+    "apps/web/__tests__/weather-integrity.test.tsx": [
+      "frozen-weather-runtime-regression-review.json"
+    ],
+    "apps/mobile/__tests__/hooks/useTrips.test.tsx": [
+      "frozen-final-read-retention-regression-review.json"
+    ],
+    "apps/mobile/__tests__/lib/offline/storage.test.ts": [
+      "frozen-final-read-retention-regression-review.json"
+    ],
+    "apps/mobile/__tests__/lib/offline/sync-retention.test.ts": [
+      "frozen-final-read-retention-regression-review.json"
+    ],
+    "apps/mobile/__tests__/lib/tripCreationRecovery.test.ts": [
+      "frozen-final-read-retention-regression-review.json"
+    ],
+    "apps/mobile/__tests__/screens/notifications.test.tsx": [
+      "frozen-final-form-session-regression-review.json"
+    ],
+    "apps/mobile/__tests__/screens/profile-editors.test.tsx": [
+      "frozen-final-form-session-regression-review.json"
+    ],
+    "apps/mobile/__tests__/services/searchService.test.ts": [
+      "frozen-final-read-retention-regression-review.json"
+    ],
+    "apps/web/__tests__/api/auth-callback.test.ts": [
+      "frozen-web-auth-boundary-regression-review.json"
+    ],
+    "apps/web/__tests__/api/logout.test.ts": [
+      "frozen-web-auth-boundary-regression-review.json"
+    ],
+    "apps/web/__tests__/api/trips.test.ts": [
+      "frozen-final-read-retention-regression-review.json"
+    ],
+    "apps/web/__tests__/auth-action-lifecycle.test.tsx": [
+      "frozen-final-form-session-regression-review.json"
+    ],
+    "apps/web/__tests__/country-search-recovery.test.tsx": [
+      "frozen-final-form-session-regression-review.json"
+    ],
+    "apps/web/__tests__/create-planner-lifecycle.test.tsx": [
+      "frozen-final-form-session-regression-review.json"
+    ],
+    "apps/web/__tests__/dashboard-read-state.test.tsx": [
+      "frozen-final-read-retention-regression-review.json"
+    ],
+    "apps/web/__tests__/hooks/use-trip-generation-payload.test.tsx": [
+      "frozen-final-form-session-regression-review.json"
+    ],
+    "apps/web/__tests__/hotel-sandbox-lifecycle.test.tsx": [
+      "frozen-final-form-session-regression-review.json"
+    ],
+    "apps/web/__tests__/itinerary-day-legacy.test.tsx": [
+      "frozen-final-read-retention-regression-review.json"
+    ],
+    "apps/web/__tests__/lib/planning-consent-client.test.ts": [
+      "frozen-final-read-retention-regression-review.json"
+    ],
+    "apps/web/__tests__/lib/private-trip-read.test.ts": [
+      "frozen-final-read-retention-regression-review.json"
+    ],
+    "apps/web/__tests__/lib/security/validate-redirect.test.ts": [
+      "frozen-web-auth-boundary-regression-review.json"
+    ],
+    "apps/web/__tests__/lib/tools/world-map-share.test.ts": [
+      "frozen-cursor-map-client-regression-review.json"
+    ],
+    "apps/web/__tests__/lib/tools/world-map-stats.test.ts": [
+      "frozen-cursor-map-client-regression-review.json"
+    ],
+    "apps/web/__tests__/lib/trip-list-cursor.test.ts": [
+      "frozen-cursor-map-client-regression-review.json"
+    ],
+    "apps/web/__tests__/pending-retry-discard.test.tsx": [
+      "frozen-final-form-session-regression-review.json"
+    ],
+    "apps/web/__tests__/places-autocomplete-lifecycle.test.tsx": [
+      "frozen-final-form-session-regression-review.json"
+    ],
+    "apps/web/__tests__/places-explorer-timeout.test.tsx": [
+      "frozen-final-form-session-regression-review.json"
+    ],
+    "apps/web/__tests__/private-trip-image.test.tsx": [
+      "frozen-image-calendar-regression-review.json"
+    ],
+    "apps/web/__tests__/proxy-session-cookies.test.ts": [
+      "frozen-web-auth-boundary-regression-review.json"
+    ],
+    "apps/web/__tests__/proxy.test.ts": [
+      "frozen-web-auth-boundary-regression-review.json"
+    ],
+    "apps/web/__tests__/shared-trip-image.test.tsx": [
+      "frozen-image-calendar-regression-review.json"
+    ],
+    "apps/web/__tests__/trip-feedback-lifecycle.test.tsx": [
+      "frozen-final-form-session-regression-review.json"
+    ],
+    "apps/web/__tests__/useUser-session-races.test.tsx": [
+      "frozen-final-form-session-regression-review.json"
+    ],
+    "packages/api-client/__tests__/index.test.ts": [
+      "frozen-cursor-map-client-regression-review.json"
+    ],
+    "packages/constants/__tests__/trip-dates.test.ts": [
+      "frozen-image-calendar-regression-review.json"
+    ],
+    "apps/mobile/__tests__/screens/trip-detail-sharing.test.tsx": [
+      "frozen-final-itinerary-sharing-regression-review.json"
+    ],
+    "apps/mobile/__tests__/screens/trip-sync-conflicts-lifecycle.test.tsx": [
+      "frozen-final-itinerary-sharing-regression-review.json"
+    ],
+    "apps/web/__tests__/booking-checklist-lifecycle.test.tsx": [
+      "frozen-final-itinerary-sharing-regression-review.json"
+    ],
+    "apps/web/__tests__/plan-editor-recovery.test.tsx": [
+      "frozen-final-itinerary-sharing-regression-review.json"
+    ],
+    "apps/web/__tests__/scripts/itinerary-measure-runtime.test.ts": [
+      "frozen-final-itinerary-sharing-regression-review.json"
+    ],
+    "apps/web/__tests__/trip-checkout-lifecycle.test.tsx": [
+      "frozen-final-itinerary-sharing-regression-review.json"
+    ],
+    "apps/web/__tests__/trip-detail-empty.test.tsx": [
+      "frozen-final-itinerary-sharing-regression-review.json"
+    ],
+    "apps/web/__tests__/world-map-export-lifecycle.test.tsx": [
+      "frozen-final-itinerary-sharing-regression-review.json"
+    ]
+  },
+  "limits": "Matching hashes link to documented current full-file or complete-diff extent; not blanket unchanged-body approval"
+}

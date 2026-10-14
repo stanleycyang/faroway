@@ -1,0 +1,34 @@
+{
+  "scope": "Frozen journey 7 web checkout component in real browser with production CSS and intercepted API/provider navigation; report save/reopen backed by existing actual Next/isolated SQL evidence",
+  "result": "Passed",
+  "browserCases": 15,
+  "profiles": [
+    "chromium",
+    "Mobile Safari",
+    "Mobile Chrome"
+  ],
+  "durationSeconds": 26.0,
+  "retries": 0,
+  "checks": [
+    "Explicit consent; Escape closes modal and restores focus; body scroll lock and responsive dialog",
+    "Only matching saved handoff receipt navigates to intercepted HTTPS Viator URL",
+    "Failure preserves plan and retry uses same attempt ID",
+    "Historical step reopens with confirmation not verified",
+    "Disabled provider cannot dispatch handoff"
+  ],
+  "log": "/tmp/faroway-ux-frozen-checkout-browser.log",
+  "linkedEvidence": [
+    "booking-report-receipt-review.json",
+    "checkout-semantic-review.json"
+  ],
+  "limits": [
+    "Component browser fixture, not actual Next checkout route browser story",
+    "API boundary covered by scoped regression tests; report story separately exercises actual Next/isolated SQL",
+    "No external vendor request, purchase, reservation or native device acceptance",
+    "Not exact final candidate validation"
+  ],
+  "sourceHashes": {
+    "apps/web/components/trips/TripCheckout.tsx": "561bfc461dbff45f4b64de7494a8d3ef3e51138eb4ce57267f34f3cf9caa4289",
+    "apps/web/e2e/checkout.spec.ts": "5effcf280446a54dd7ccd89a6bdb295cadc97f64be63d14c60178903c1e83996"
+  }
+}

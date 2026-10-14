@@ -1,0 +1,30 @@
+{
+  "sourceFiles": 618,
+  "manifestSha256": "92170bc27909d84be45a3b7563327daf9f24c6f189d289e746ca67ae6c58c755",
+  "scope": "618-file authoritative web/shared snapshot through193; generated workflow artifacts may change inbuild; native files outside this snapshot. Existing QA tests included, no production syntheticAuth override.",
+  "buildSession": 97686,
+  "buildLog": "/tmp/faroway-ux-compiled-build-auth-cache-current.log",
+  "state": "Build97686terminalexit0; currentserver82562ready117ms; browserrunstartedterminalpending",
+  "environment": "Approved public staging only; disabled privileged sentinel; planning paused; whitelisted env. Public configuration recovered from existing emitted public browser assets after ownedprocess env extraction unavailable.",
+  "priorServer": "76955 stopped deliberately after live revalidation, before source sync/build; port3123currentlynotserved",
+  "limits": "No current compiled browser acceptance until build/start/checks finish",
+  "build": {
+    "compileSeconds": 24.6,
+    "typesSeconds": 11.3,
+    "staticPages": 411,
+    "staticSeconds": 6.3
+  },
+  "serverSession": 82562,
+  "browserLog": "/tmp/faroway-ux-compiled-auth-cache-browser.log",
+  "browser": {
+    "initialPassed": 42,
+    "initialFailed": 3,
+    "initialSkipped": 3,
+    "initialSeconds": 40.9,
+    "correctedPassed": 6,
+    "correctedSeconds": 11.9,
+    "retries": 0,
+    "profiles": 3,
+    "scope": "48cases covered acrossruns;3initialalertselectorfailures retained;3monitoringprobes explicitlyenabled inrerun. Test-onlysignin selector changedafter618snapshot; productionruntimeunchanged."
+  }
+}

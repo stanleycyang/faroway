@@ -307,7 +307,7 @@ export default async function DestinationGuidePage({
 
             <div className="text-center mt-10">
               <Link
-                href="/create"
+                href={`/create?destination=${encodeURIComponent(dest.name)}`}
                 className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-amber-500 hover:from-primary-600 hover:to-amber-600 text-white px-6 py-3 rounded-full text-sm font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5"
               >
                 <Sparkles className="w-4 h-4" />
@@ -351,7 +351,7 @@ export default async function DestinationGuidePage({
               — completely free and tailored to your style.
             </p>
             <Link
-              href="/create"
+              href={`/create?destination=${encodeURIComponent(dest.name)}`}
               className="inline-flex items-center gap-2 bg-white text-primary-600 px-8 py-4 rounded-full text-lg font-semibold shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition-all"
             >
               <Sparkles className="w-5 h-5" />

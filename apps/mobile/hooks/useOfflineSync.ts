@@ -14,8 +14,12 @@ import {
   type SyncResult,
 } from '../lib/offline';
 import type { Trip, TripInput } from '../stores/tripStore';
+import { useUserStore } from '../stores/userStore';
+import { captureTripAccount } from '../lib/tripAccountScope';
 
 interface UseOfflineSyncOptions {
+  /** Auth must have resolved a signed-in account before automatic sync. */
+  enabled?: boolean;
   /**
    * Enable auto-sync on network restore
    * @default true
@@ -37,6 +41,7 @@ interface UseOfflineSyncOptions {
 
 export interface UseOfflineSyncReturn {
   // State
+  initialized: boolean;
   syncState: SyncState;
   isOnline: boolean;
   isOffline: boolean;
@@ -61,7 +66,8 @@ export interface UseOfflineSyncReturn {
  * Hook for offline-first data management
  */
 export function useOfflineSync(options: UseOfflineSyncOptions = {}): UseOfflineSyncReturn {
-  const { autoSync = true, syncOnForeground = true, syncOnMount = true } = options;
+  const { autoSync = true, syncOnForeground = true, syncOnMount = true, enabled = true } = options;
+  const accountRevision = useUserStore((state) => state.accountRevision);
 
   const [syncState, setSyncState] = useState<SyncState>({
     status: 'idle',
@@ -71,45 +77,80 @@ export function useOfflineSync(options: UseOfflineSyncOptions = {}): UseOfflineS
     error: null,
   });
 
-  const initialized = useRef(false);
+  const [initialized, setInitialized] = useState(false);
   const appState = useRef<AppStateStatus>(AppState.currentState);
-
-  // Initialize sync service
+  const mounted = useRef(false);
   useEffect(() => {
-    if (initialized.current) return;
-    initialized.current = true;
-
-    const init = async () => {
-      await syncService.initialize();
-      syncService.setAutoSync(autoSync);
-
-      // Initial sync if enabled
-      if (syncOnMount) {
-        await syncService.sync();
-      }
-    };
-
-    init();
-
-    // Subscribe to sync state changes
-    const unsubscribe = syncService.subscribe(setSyncState);
-
+    mounted.current = true;
     return () => {
+      mounted.current = false;
+    };
+  }, []);
+
+  // Subscriptions must survive Strict Mode effect replay. The service owns
+  // a single initialization promise; each mounted hook owns its subscription.
+  useEffect(() => {
+    let active = true;
+    const account = captureTripAccount();
+    const current = () => active && account.isCurrent();
+    setInitialized(false);
+    const unsubscribe = syncService.subscribe((state) => {
+      if (current()) setSyncState(state);
+    });
+    void syncService
+      .initialize()
+      .then(() => {
+        if (current()) setInitialized(true);
+      })
+      .catch(() => {
+        if (current())
+          setSyncState((previous) => ({
+            ...previous,
+            status: 'error',
+            error: 'Offline sync could not start. Your saved trips are kept.',
+          }));
+      });
+    return () => {
+      active = false;
       unsubscribe();
     };
-  }, [autoSync, syncOnMount]);
+  }, [accountRevision]);
+
+  useEffect(() => {
+    syncService.setAutoSync(enabled && autoSync);
+    return () => {
+      syncService.setAutoSync(false);
+    };
+  }, [enabled, autoSync]);
+
+  useEffect(() => {
+    if (!enabled || !syncOnMount) return;
+    let active = true;
+    void syncService
+      .initialize()
+      .then(() => {
+        if (active) return syncService.sync();
+      })
+      .catch(() => {
+        /* The initialization effect exposes the recovery state. */
+      });
+    return () => {
+      active = false;
+    };
+  }, [enabled, syncOnMount, accountRevision]);
 
   // Handle app state changes (foreground/background)
   useEffect(() => {
-    if (!syncOnForeground) return;
+    if (!enabled || !syncOnForeground) return;
 
     const handleAppStateChange = async (nextAppState: AppStateStatus) => {
-      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+      const previous = appState.current;
+      appState.current = nextAppState;
+      if (previous.match(/inactive|background/) && nextAppState === 'active') {
         // App came to foreground - sync
         console.log('[useOfflineSync] App foregrounded, syncing...');
         await syncService.sync();
       }
-      appState.current = nextAppState;
     };
 
     const subscription = AppState.addEventListener('change', handleAppStateChange);
@@ -117,17 +158,37 @@ export function useOfflineSync(options: UseOfflineSyncOptions = {}): UseOfflineS
     return () => {
       subscription.remove();
     };
-  }, [syncOnForeground]);
+  }, [enabled, syncOnForeground]);
 
   // Manual sync trigger
   const sync = useCallback(async (force: boolean = false): Promise<SyncResult> => {
-    return syncService.sync(force);
+    const account = captureTripAccount();
+    try {
+      await syncService.initialize();
+      account.assertCurrent();
+      if (!mounted.current)
+        return {
+          success: false,
+          synced: 0,
+          failed: 0,
+          errors: [{ mutationId: '', error: 'Sync was cancelled.' }],
+        };
+      setInitialized(true);
+      return syncService.sync(force);
+    } catch {
+      const message = 'Offline sync could not start. Please try again.';
+      if (mounted.current && account.isCurrent())
+        setSyncState((previous) => ({ ...previous, status: 'error', error: message }));
+      return { success: false, synced: 0, failed: 0, errors: [{ mutationId: '', error: message }] };
+    }
   }, []);
 
   // Clear pending changes
   const clearPendingChanges = useCallback(async (): Promise<void> => {
+    const account = captureTripAccount();
     await offlineStorage.clearPendingMutations();
-    setSyncState((prev) => ({ ...prev, pendingCount: 0 }));
+    if (mounted.current && account.isCurrent())
+      setSyncState((prev) => ({ ...prev, pendingCount: 0 }));
   }, []);
 
   // Get trips from offline storage
@@ -179,6 +240,7 @@ export function useOfflineSync(options: UseOfflineSyncOptions = {}): UseOfflineS
 
   return {
     // State
+    initialized,
     syncState,
     isOnline: syncState.isOnline,
     isOffline: !syncState.isOnline,

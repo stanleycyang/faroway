@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
+import { MapLoading } from "@/components/trips/MapLoading";
 import { decodeProfileFromUrl } from "@/lib/tools/world-map/share";
 import { computeStats } from "@/lib/tools/world-map/stats";
 import { WorldMapViewClient } from "./WorldMapViewClient";
@@ -64,13 +65,7 @@ export async function generateMetadata({
 export default function WorldMapViewPage() {
   return (
     <main className="min-h-screen pt-20 lg:pt-24 pb-16">
-      <Suspense
-        fallback={
-          <div className="min-h-[60vh] flex items-center justify-center">
-            <div className="text-slate-400 text-sm">Loading map…</div>
-          </div>
-        }
-      >
+      <Suspense fallback={<MapLoading />}>
         <WorldMapViewClient />
       </Suspense>
     </main>

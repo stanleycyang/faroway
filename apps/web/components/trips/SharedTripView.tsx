@@ -110,6 +110,7 @@ export function SharedTripView({
                 afternoon={day.afternoon}
                 evening={day.evening}
                 tips={day.tips}
+                transport={day.transport}
                 defaultExpanded={true}
               />
             ))}
@@ -199,16 +200,16 @@ export function SharedTripView({
             </div>
             <h3 className="text-2xl font-black mb-3">Create Your Own Trip</h3>
             <p className="text-white/80 mb-6 max-w-md mx-auto leading-relaxed">
-              Plan your perfect trip in 60 seconds with our AI-powered travel
-              planner. Get personalized itineraries, hotel picks, and bookable
-              experiences.
+              Start with your destination, dates, and what you love. Faroway
+              helps shape a personalized itinerary with stays and places to
+              explore.
             </p>
             <Link
               href="/create"
               className="inline-flex items-center gap-2 px-8 py-3.5 bg-white text-primary-700 rounded-full font-bold hover:bg-white/90 transition-all shadow-lg hover:shadow-xl active:scale-[0.98]"
             >
               <Sparkles className="w-5 h-5" />
-              Get Started Free
+              Start planning
             </Link>
           </div>
         </div>

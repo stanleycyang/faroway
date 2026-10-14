@@ -77,3 +77,126 @@ describe("itinerary runtime budgets", () => {
     );
   });
 });
+
+describe("vendor response deadline", () => {
+  it("bounds a stalled JSON body even when fetch ignores abort", async () => {
+    vi.useFakeTimers();
+    let bodyController!: ReadableStreamDefaultController<Uint8Array>;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        bodyController = controller;
+      },
+    });
+    let signal!: AbortSignal;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_input, init) => {
+        signal = init.signal;
+        return new Response(body);
+      }),
+    );
+    try {
+      const { fetchWithTimeout } = await import("@/lib/search/runtime");
+      const response = await fetchWithTimeout(
+        "https://example.invalid/vendor",
+        {},
+        25,
+      );
+      let settled = false;
+      const result = response.json().then(
+        () => {
+          settled = true;
+          return null;
+        },
+        (error) => {
+          settled = true;
+          return error;
+        },
+      );
+      await vi.advanceTimersByTimeAsync(26);
+      expect(settled).toBe(true);
+      expect(signal.aborted).toBe(true);
+      expect((await result).message).toContain("timed out");
+    } finally {
+      bodyController.error(new Error("Fixture cleanup"));
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+  it("bounds a fetch that never returns headers even when it ignores abort", async () => {
+    vi.useFakeTimers();
+    let signal!: AbortSignal;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((_input, init) => {
+        signal = init.signal;
+        return new Promise<Response>(() => undefined);
+      }),
+    );
+    try {
+      const { fetchWithTimeout } = await import("@/lib/search/runtime");
+      let settled = false;
+      const result = fetchWithTimeout(
+        "https://example.invalid/vendor",
+        {},
+        25,
+      ).then(
+        () => {
+          settled = true;
+          return null;
+        },
+        (error) => {
+          settled = true;
+          return error;
+        },
+      );
+      await vi.advanceTimersByTimeAsync(26);
+      expect(settled).toBe(true);
+      expect(signal.aborted).toBe(true);
+      expect((await result).message).toContain("timed out");
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+  it("preserves response metadata and body methods and clears a successful deadline", async () => {
+    vi.useFakeTimers();
+    let signal!: AbortSignal;
+    const original = new Response(JSON.stringify({ ready: true }), {
+      status: 201,
+      headers: { "X-Vendor": "fixture" },
+    });
+    Object.defineProperty(original, "url", {
+      value: "https://example.invalid/vendor",
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (_input, init) => {
+        signal = init.signal;
+        return original;
+      }),
+    );
+    try {
+      const { fetchWithTimeout } = await import("@/lib/search/runtime");
+      const response = await fetchWithTimeout(
+        "https://example.invalid/vendor",
+        {},
+        25,
+      );
+      expect(response).toBeInstanceOf(Response);
+      expect(response.status).toBe(201);
+      expect(response.ok).toBe(true);
+      expect(response.headers.get("X-Vendor")).toBe("fixture");
+      expect(response.url).toBe(original.url);
+      const clone = response.clone();
+      expect(await response.json()).toEqual({ ready: true });
+      expect(await clone.text()).toBe('{"ready":true}');
+      expect(vi.getTimerCount()).toBe(0);
+      await vi.advanceTimersByTimeAsync(100);
+      expect(signal.aborted).toBe(false);
+    } finally {
+      vi.useRealTimers();
+      vi.unstubAllGlobals();
+    }
+  });
+});

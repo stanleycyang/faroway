@@ -1,28 +1,10 @@
 import { createHash } from "node:crypto";
-import { z } from "zod";
+import type { PlanCommandInput } from "./plan-command";
+export { PlanCommand, type PlanCommandInput } from "./plan-command";
 import { canDisplayViatorContent } from "@/lib/affiliates/viator-policy";
 
 export const periods = ["morning", "afternoon", "evening"] as const;
 type RecordValue = Record<string, unknown>;
-export const PlanCommand = z
-  .object({
-    requestId: z.string().uuid(),
-    expectedUpdatedAt: z.string().datetime({ offset: true }),
-    expectedPlanRevision: z.string().uuid().nullable(),
-    action: z.enum(["lock", "unlock", "swap"]),
-    itemId: z.string().regex(/^item_[a-f0-9]{32}$/),
-    otherItemId: z
-      .string()
-      .regex(/^item_[a-f0-9]{32}$/)
-      .optional(),
-  })
-  .strict()
-  .refine((v) =>
-    v.action === "swap"
-      ? !!v.otherItemId && v.otherItemId !== v.itemId
-      : !v.otherItemId,
-  );
-export type PlanCommandInput = z.infer<typeof PlanCommand>;
 function record(value: unknown): RecordValue {
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as RecordValue)

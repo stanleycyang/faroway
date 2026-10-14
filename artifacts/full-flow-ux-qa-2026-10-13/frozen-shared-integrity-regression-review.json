@@ -1,0 +1,36 @@
+{
+  "scope": "Final shared-trip integrity/date/transport regression assertions",
+  "reviewExtent": "Full three test files",
+  "files": [
+    {
+      "path": "apps/web/__tests__/lib/shared-trip-read.test.ts",
+      "sha256": "f509215d8c20a9e11029e20905865cd2ad07675d22bf03c933686721ad61f054"
+    },
+    {
+      "path": "apps/web/__tests__/shared-trip-metadata-dates.test.ts",
+      "sha256": "de399c2d09b7c205c70050272a56504d1f32f846686c32b2b7250b63862e5fbf"
+    },
+    {
+      "path": "apps/web/__tests__/shared-trip-transport.test.tsx",
+      "sha256": "779e216499f9771de9ffa25e0a616504d4cdb18f49f32374410dabdfcc446d12"
+    }
+  ],
+  "assertionCoverage": [
+    "Missing row returns null with is_shared filter; provider read error throws scoped recoverable error",
+    "Malformed days/tips reject instead of empty plan; legacy JSON days and no-itinerary trip accepted",
+    "Shared metadata inclusive duration and date copy consistent across three TZ settings",
+    "SSR transport preserves airport wall clocks/currency and avoids per-person/instant-plan promise; home label accurate",
+    "Legacy missing transport facts show explicit unavailable labels without NaN"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "validation": {
+    "result": "Passed current workspace suite",
+    "log": "/tmp/faroway-ux-frozen-motion-current-workspace-tests.log"
+  },
+  "limits": [
+    "Shared-read database and metadata loader mocked; not hosted token/RLS proof",
+    "SSR render assertions not keyboard/browser hydration acceptance"
+  ]
+}

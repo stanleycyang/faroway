@@ -1,0 +1,35 @@
+{
+  "scope": "Final auth/sign-in browser assertion review",
+  "reviewExtent": "Complete602lines across two specs; auth spec read in two bounded chunks",
+  "files": [
+    {
+      "path": "apps/web/e2e/auth-qa.spec.ts",
+      "sha256": "906feb07df3bc239bce12cd1d2cfbecfc0566ab02025c301a9496b104196437a"
+    },
+    {
+      "path": "apps/web/e2e/signin-qa.spec.ts",
+      "sha256": "16fedfe1a07ba0ce923f5a22a6a68d94877313cf9227024b5b1485ac943a8666"
+    }
+  ],
+  "assertionCoverage": [
+    "Email login blocks competing methods/duplicate submits and retains short legacy password after rejection",
+    "Signup mismatch dispatches zero requests; no-session success asks for confirmation and preserves continuation link",
+    "Synthetic active signup follows validated return URL",
+    "Provider cancel and browser Back restore sign-in controls and continuation parameters",
+    "Recovery request captures one submitted email and avoids account-existence confirmation",
+    "429 retry retains email; timeout waits late response then asserts no success overwrite",
+    "Password mismatch performs zero writes; submitted password locks and success heading focused",
+    "Legacy route and password-reset continuation preserve destination/query; font load checked separately"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "limits": [
+    "Provider/password/signup responses and cookies are synthetic; no real SMTP, OAuth or hosted credential verification",
+    "Password-recovery code flow not proven by synthetic existing-cookie update test",
+    "No fresh runtime run during review"
+  ],
+  "evidence": [
+    "web-auth-semantic-review.json"
+  ]
+}

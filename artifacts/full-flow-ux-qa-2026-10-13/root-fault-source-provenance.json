@@ -1,0 +1,2533 @@
+{
+  "scope": "Isolated QA-only root fault; never production source",
+  "baseline": [
+    {
+      "path": "apps/web/.gitignore",
+      "sha256": "8bfadbe12929d568158293c2b2b1fa03417e95e344848c42305355d0b3555aa7"
+    },
+    {
+      "path": "apps/web/.prettierignore",
+      "sha256": "edb701469838537b166bbef6e57f574b1ecf1c621b3bd091089a6baf84c556ee"
+    },
+    {
+      "path": "apps/web/.swc/.gitignore",
+      "sha256": "cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b"
+    },
+    {
+      "path": "apps/web/.swc/plugins/macos_aarch64_22.0.1/6ea9d3dec20e87696401db15d4c456817f842cb74b13af645633912dceb61bd5.wasmer-v7",
+      "sha256": "cee17674dc617f64125fa63163c1b6fca95312aa9b27dc9adafd4e7bc25a4ecf"
+    },
+    {
+      "path": "apps/web/__tests__/api-client-deadline.test.ts",
+      "sha256": "655f09a71845f142d138eb3ef50d5526d5f9457e070995e16fb5058dbebbb4e4"
+    },
+    {
+      "path": "apps/web/__tests__/api/account-deletion-recovery.test.ts",
+      "sha256": "9b1a91a49976fe3ada4c0b4bec6a23815ffb910f9670379f09c13d1dfd82d88d"
+    },
+    {
+      "path": "apps/web/__tests__/api/account.test.ts",
+      "sha256": "24b293bc687401589230c902a67ccb1b3e181863fe61bf52771dd490142c5443"
+    },
+    {
+      "path": "apps/web/__tests__/api/affiliate-click-legacy.test.ts",
+      "sha256": "ead21bbf2dbbe4f7dbecc1da214fd2ea2ad8a06c41acbcaa4b2a3069e62c0523"
+    },
+    {
+      "path": "apps/web/__tests__/api/ai-disclosure.test.ts",
+      "sha256": "c08e6173d0fee27db2f56b156ffabb999165af88fbc7dfe7d137a2eab64f9cab"
+    },
+    {
+      "path": "apps/web/__tests__/api/auth-callback.test.ts",
+      "sha256": "fa43053aa3154f39f77f8145b29027dc24bfb88f640a460cf546ac36ee419c8e"
+    },
+    {
+      "path": "apps/web/__tests__/api/click-tracking.test.ts",
+      "sha256": "e174f672d036b2e4d81bea9743d6cd8d713842230f1703c9a22641c5db7a79a7"
+    },
+    {
+      "path": "apps/web/__tests__/api/content-reports.test.ts",
+      "sha256": "1e761bd12753c2c9f9066de1d4c90d29b7475e89a022c2a61f1815848e555a49"
+    },
+    {
+      "path": "apps/web/__tests__/api/destinations.test.ts",
+      "sha256": "e521feba42667522e4578dfe7ae1faaad7314ccaa20c42cc85ca588115469627"
+    },
+    {
+      "path": "apps/web/__tests__/api/itinerary-generate.test.ts",
+      "sha256": "41d86a5f705b771cde667a9a91fab25cb9527fc1098478e7216f60ca606e7d1e"
+    },
+    {
+      "path": "apps/web/__tests__/api/itinerary-stream.test.ts",
+      "sha256": "9d72d20a47fc34cee7798dc196f1eb34a5094d5fabb9ba5aee9a427d80a8bff8"
+    },
+    {
+      "path": "apps/web/__tests__/api/itinerary-workflow.e2e.test.ts",
+      "sha256": "49cfacdfc9c734e2619fc595cc1fafff11bd83227f95ef93610f0a42f8f4b942"
+    },
+    {
+      "path": "apps/web/__tests__/api/itinerary.test.ts",
+      "sha256": "4b3bee9d3309a3ac573243eaeea5d0ef92ad1c49002d60eecba592f54cbfd5e1"
+    },
+    {
+      "path": "apps/web/__tests__/api/liteapi.test.ts",
+      "sha256": "f036a70c1643beacd4528421a0e29a8193acb7740ba8f4fcb66d6cc5b9ddcb00"
+    },
+    {
+      "path": "apps/web/__tests__/api/logout.test.ts",
+      "sha256": "b04506aaf5d26b46c0f4b38dec35a6a6c530bc2a06f95201181b21905c1bdec7"
+    },
+    {
+      "path": "apps/web/__tests__/api/places-venues.test.ts",
+      "sha256": "f53e315ff2d40c06ea5b9ac06c164002c7bc7d721a0096f8ab85ffc165bd56a5"
+    },
+    {
+      "path": "apps/web/__tests__/api/places.test.ts",
+      "sha256": "0a24bd4b7b099ee83957a97215a7e7750a91bc83b5697e017cf9548d3f3f8347"
+    },
+    {
+      "path": "apps/web/__tests__/api/profile.test.ts",
+      "sha256": "85ad7f9797f4fd038b5531f51f8272f84ca7d9681ac333e73cf99acd5339853b"
+    },
+    {
+      "path": "apps/web/__tests__/api/push-token.test.ts",
+      "sha256": "f0b87f280c129902b1f4619cced124996e40c78f4a0c99cabff0c56f9e63ec78"
+    },
+    {
+      "path": "apps/web/__tests__/api/search-start.test.ts",
+      "sha256": "92fb4168ea2d3b154778bcea789edc7e441c5213afa0976d7a12e1ff4d4442c4"
+    },
+    {
+      "path": "apps/web/__tests__/api/search-status.test.ts",
+      "sha256": "4b436fec8b9966aabb91b7675c42d40cf0e406fa7aaada9505ba0cf1e6f89f30"
+    },
+    {
+      "path": "apps/web/__tests__/api/share.test.ts",
+      "sha256": "2c3f712fc1d4834214786ecdc8a50b61234168f56a157be75c71df9eb7e9b3e3"
+    },
+    {
+      "path": "apps/web/__tests__/api/trip-bookings.test.ts",
+      "sha256": "30601ea531fb58ca5d322a940bd5fbfde60ade7214639f8325d7a960c6fe4e23"
+    },
+    {
+      "path": "apps/web/__tests__/api/trip-checkout.test.ts",
+      "sha256": "f283a4710e55ea4fd8ff102a482ee67d84aa6717b50e679f1cd0f034c4771b5f"
+    },
+    {
+      "path": "apps/web/__tests__/api/trip-create-recovery.test.ts",
+      "sha256": "c1ec20f031cf71441bb7d4e840eeefd87e6c260e4b374d8a29f3c9601578f676"
+    },
+    {
+      "path": "apps/web/__tests__/api/trip-feedback.test.ts",
+      "sha256": "fc456c7fa57ce523c08b3817a54b6dd2ded8548b651f3dc598b4b7506b60e35c"
+    },
+    {
+      "path": "apps/web/__tests__/api/trip-plan.test.ts",
+      "sha256": "d8e86d1f209289d43f630752a96a8a27ec17ac6263c6c2fc6b577eadc63f6cea"
+    },
+    {
+      "path": "apps/web/__tests__/api/trips-generate.test.ts",
+      "sha256": "74a28dbad3a1e88bcc9ea9f2cb4cbc4a456cae8ddf3be60bd6ef3f17a0df100d"
+    },
+    {
+      "path": "apps/web/__tests__/api/trips.test.ts",
+      "sha256": "bc8e7719273d7a131edbddbccc74aa71317a8991e84d610e1d252416cadb8915"
+    },
+    {
+      "path": "apps/web/__tests__/api/weather.test.ts",
+      "sha256": "091dc58e811ff86212f11420c84b5609f99964b289e9c2c63774683605db1b76"
+    },
+    {
+      "path": "apps/web/__tests__/api/workflow-generate-route.test.ts",
+      "sha256": "39f1d86f1f368036ef8beeb445574a2b60ce91a0c2b7de3d1ae44c4f2f3eccdb"
+    },
+    {
+      "path": "apps/web/__tests__/api/workflow-status-route.test.ts",
+      "sha256": "ebb3bbec918ad871e56d45976083a35c27e37c3c19fa1eb3c3bec72b97a3770d"
+    },
+    {
+      "path": "apps/web/__tests__/auth-action-lifecycle.test.tsx",
+      "sha256": "b511f20f66f6a7f62471ff98f552a6f55e5fa97ea1af8b1b606f88061091e9da"
+    },
+    {
+      "path": "apps/web/__tests__/booking-checklist-lifecycle.test.tsx",
+      "sha256": "4cb43384eca16cb09ce841b21cbfc29f69d572e94908c9502fe28ef4b67f1572"
+    },
+    {
+      "path": "apps/web/__tests__/components/dashboard-trip-card.test.ts",
+      "sha256": "007fae788a7fdb37b92842f5e5016944522f4425629d59a9ac88a752f74390c6"
+    },
+    {
+      "path": "apps/web/__tests__/country-search-recovery.test.tsx",
+      "sha256": "499f8273b6d879afbb3d2e35e8ede79b85c5fd65a45cee5a97fdec75afbd470f"
+    },
+    {
+      "path": "apps/web/__tests__/create-draft-calendar.test.ts",
+      "sha256": "794d93ff051e5b8649649d605adf99faf6646badbfe5f5d641ba69fc422a6b0a"
+    },
+    {
+      "path": "apps/web/__tests__/create-planner-lifecycle.test.tsx",
+      "sha256": "5edde6b5a35aebca304f8adcfa95cb2e98a93e134f4915b9e802018655e6be5a"
+    },
+    {
+      "path": "apps/web/__tests__/dashboard-local-calendar.test.tsx",
+      "sha256": "aa4fb570b81af2aef7cde2426f5dde3105c68e4431f31aa7742eeafdb90d77d8"
+    },
+    {
+      "path": "apps/web/__tests__/dashboard-read-state.test.tsx",
+      "sha256": "2d226078999872b42951e58de467748a12679b79026af24c94ad7cd5f2de0eff"
+    },
+    {
+      "path": "apps/web/__tests__/hooks/use-trip-generation-stream.test.ts",
+      "sha256": "e24813c5922ab3d8adcb8462d25368a89c547369f10fbb6c8aa130d1067a7c4b"
+    },
+    {
+      "path": "apps/web/__tests__/hotel-sandbox-lifecycle.test.tsx",
+      "sha256": "6b9825d68467e4051d7d929e97543d9005ba37738e79b0a5de293ce4ab6719e7"
+    },
+    {
+      "path": "apps/web/__tests__/itinerary-day-legacy.test.tsx",
+      "sha256": "1ac05858ef809888aa4a8ce64ea699b725feb267ad3d98a40624f7fde9eef572"
+    },
+    {
+      "path": "apps/web/__tests__/itinerary-map-coordinates.test.ts",
+      "sha256": "af932de4cf79e7371cab990b1d44d9d251081a4134a2c3050404c81e36e284c6"
+    },
+    {
+      "path": "apps/web/__tests__/lib/account-deletion.test.ts",
+      "sha256": "c8d3daf15538283122f221d202e39619a70e6f81214fd0bb30ee19ad84430e4f"
+    },
+    {
+      "path": "apps/web/__tests__/lib/affiliate-vendors.test.ts",
+      "sha256": "34f994cc665ea84707e4ca178d531fa20d7c06a7a44b3be572cfe62ed65b91f7"
+    },
+    {
+      "path": "apps/web/__tests__/lib/ai-client.test.ts",
+      "sha256": "2c69e03220a4ff7ab00aa256aa1fa107ca1c203fe5111a35d8c26545cfd5a767"
+    },
+    {
+      "path": "apps/web/__tests__/lib/apple-revocation.test.ts",
+      "sha256": "9646e1b60460bae62bfa8327d911ac0f7b650a07cb787ddc37b8e7b2eb126d2c"
+    },
+    {
+      "path": "apps/web/__tests__/lib/auth-middleware.test.ts",
+      "sha256": "e5439c72a4660bc81d259dd979997412e617c78714abe566ee9cade8eef87f23"
+    },
+    {
+      "path": "apps/web/__tests__/lib/blog-cache-failures.test.ts",
+      "sha256": "46ff565d17f6d79b5b48175a250400f6338f9ab3f9b8a7d934aa758ec34eee67"
+    },
+    {
+      "path": "apps/web/__tests__/lib/create-draft.test.ts",
+      "sha256": "15cb47b1e01bec73bcdd562a51a02ce87966b6254e0a018dd0f267138c3d3de2"
+    },
+    {
+      "path": "apps/web/__tests__/lib/database-isolation.test.ts",
+      "sha256": "768ab540c438f1243d7cfd5705ced2f3eb06bad93b70f3030752a6ffc83e7aca"
+    },
+    {
+      "path": "apps/web/__tests__/lib/date-range.test.ts",
+      "sha256": "cf3388f05c1f34863b579b3221c491cda15ca5957e08df0605511993ee7fe6ad"
+    },
+    {
+      "path": "apps/web/__tests__/lib/destinations.test.ts",
+      "sha256": "766d6e8c981eac555a756e140e98e75c0e6753df3fb77b09385559b2adb4f5bb"
+    },
+    {
+      "path": "apps/web/__tests__/lib/enrichment-display.test.ts",
+      "sha256": "5aee9e03437dc5de6dbc773d70418a95dfd95b3001f68d6c29dd08b637e28453"
+    },
+    {
+      "path": "apps/web/__tests__/lib/expo-notifications.test.ts",
+      "sha256": "0eb738f4ef000dd7835ffa7a4b8d9d4c9fe7d705c866e245aae89097102a4048"
+    },
+    {
+      "path": "apps/web/__tests__/lib/hotel-pricing.test.ts",
+      "sha256": "6bcf94da1c76030564a4b1b827f44c1b063f5ca18ce005e62d092796215fb718"
+    },
+    {
+      "path": "apps/web/__tests__/lib/itinerary-dispatch.test.ts",
+      "sha256": "985477bde219d18eb4e0c5407231140976baddacb57efa2c2ba549b3e1666100"
+    },
+    {
+      "path": "apps/web/__tests__/lib/liteapi.test.ts",
+      "sha256": "bcec848722b601ab622fb993e67d0258cdeba4cc9ed8750fa1646915a82190f4"
+    },
+    {
+      "path": "apps/web/__tests__/lib/logger.test.ts",
+      "sha256": "ee51555cbfaadf8d44914adc3c15db53f370f8b4aa45530a0a59a946dc9d2249"
+    },
+    {
+      "path": "apps/web/__tests__/lib/login-copy.test.ts",
+      "sha256": "e0aeeda85e4ca6af1fca6e3f23bc7ea40850c9ff40b67a109b57e1cd1249c366"
+    },
+    {
+      "path": "apps/web/__tests__/lib/met-weather.test.ts",
+      "sha256": "2529d604ca26f176c8f86397a2c1cc0308a54e4b2146a319273cb5b83d9f73c9"
+    },
+    {
+      "path": "apps/web/__tests__/lib/orchestrator.test.ts",
+      "sha256": "5c2ec051d05a935e5b63c0cf06b4809323dac6f102afd6d4ab1cbabd03b6c969"
+    },
+    {
+      "path": "apps/web/__tests__/lib/plan-edits.test.ts",
+      "sha256": "e5f0b51aeac6a21b0dec1e8c204ea0935ab711aeebf663d71d099eff38f468bd"
+    },
+    {
+      "path": "apps/web/__tests__/lib/planner-destination.test.ts",
+      "sha256": "dcf192a883903a6eea1345c33247dcd209b1eb8152d9faf79ba96899a672a68e"
+    },
+    {
+      "path": "apps/web/__tests__/lib/planning-consent-client.test.ts",
+      "sha256": "b249e870b4a1a10a88c5987c650e4e271c50014058342181a289cfa9024fa643"
+    },
+    {
+      "path": "apps/web/__tests__/lib/private-trip-read.test.ts",
+      "sha256": "4f6c3a6dcfbefb9c34a8cc655c5ebdb3a772aa8e11ef6a5b4d0b43703d36667c"
+    },
+    {
+      "path": "apps/web/__tests__/lib/rate-limit.test.ts",
+      "sha256": "a697e87beb1ed902576b15a50682da960e1e377958e02d5caad80e8ef38feca3"
+    },
+    {
+      "path": "apps/web/__tests__/lib/reconcile-generation.test.ts",
+      "sha256": "28a6aaa603d571d21cf4eb0e86d95654dcc1898a08a6edb280d32bc1642dbbef"
+    },
+    {
+      "path": "apps/web/__tests__/lib/saved-trip-outbound.test.ts",
+      "sha256": "08d8bb4e5f7b1b7ca7c03a0afe7b3e2d9cbe82c03861ea005dbcb7c9c1a36bcf"
+    },
+    {
+      "path": "apps/web/__tests__/lib/search-agents-parallel.test.ts",
+      "sha256": "25534e762266c3a17a438bc09a2195fa5b963c7cbed21f2682f6f3d99f935b8b"
+    },
+    {
+      "path": "apps/web/__tests__/lib/search-enrichment.test.ts",
+      "sha256": "e6638c62f7dd1d893523480f3f14162c1f23c61f1b61e043c5b6e330510d7877"
+    },
+    {
+      "path": "apps/web/__tests__/lib/search-preview.test.ts",
+      "sha256": "4def2fffb8ff013b184ec14b40785f2079269abdc7eff7c73d21c4ff4c340df5"
+    },
+    {
+      "path": "apps/web/__tests__/lib/search-runtime.test.ts",
+      "sha256": "9839270c89d01f58c12dba19b84f006025260b9279e2700fcd0f69c2dcbf79ec"
+    },
+    {
+      "path": "apps/web/__tests__/lib/search-workflow.test.ts",
+      "sha256": "153ef929f925e4ec692e2012bfba9d42908485103df71daeabde03cdd6d5b3f2"
+    },
+    {
+      "path": "apps/web/__tests__/lib/security/cors.test.ts",
+      "sha256": "6382a197dd6cea223d3fec8a41ce715eb4799a2bbbc0c5d37cabf31e5774bd97"
+    },
+    {
+      "path": "apps/web/__tests__/lib/security/headers.test.ts",
+      "sha256": "f9b0d49cf0c52a2684cd5cee83211f4ddea96fc02fe4e1da33e3189ddb9ad7d9"
+    },
+    {
+      "path": "apps/web/__tests__/lib/security/validate-redirect.test.ts",
+      "sha256": "274248bdb80741e22d72d8c3f63ec8eb432b01b233595f3f54b676ec49c56e3b"
+    },
+    {
+      "path": "apps/web/__tests__/lib/shared-trip-read.test.ts",
+      "sha256": "f509215d8c20a9e11029e20905865cd2ad07675d22bf03c933686721ad61f054"
+    },
+    {
+      "path": "apps/web/__tests__/lib/staging-ai-limits.test.ts",
+      "sha256": "0dcf86d51abc738b2b507b3fd3c8d3b6b9aff76825805202b68a7cee640e612c"
+    },
+    {
+      "path": "apps/web/__tests__/lib/streamed-pricing.test.ts",
+      "sha256": "dfc205ce35edfd8d3c3df9dd87b59ff6a9b736b4da03d00c2b9d15b2978f9a13"
+    },
+    {
+      "path": "apps/web/__tests__/lib/streaming-dossier.test.ts",
+      "sha256": "b0e97b2c5049a5d33bab0a3bae8275d6951875b0b96975973f2581f9f1896fea"
+    },
+    {
+      "path": "apps/web/__tests__/lib/supabase-client.test.ts",
+      "sha256": "cf2c36065b5039ad0e01bbbc52bab719455f022864708f737fd4031b79946335"
+    },
+    {
+      "path": "apps/web/__tests__/lib/tools/quiz-scoring.test.ts",
+      "sha256": "457933dca23181aa82cf64d7ef33cdc2f1a7664c2248b14cc7ea8765dca60193"
+    },
+    {
+      "path": "apps/web/__tests__/lib/tools/world-map-migrations.test.ts",
+      "sha256": "64573e2cb5bd693670e7ad681a31df78d7db3099d8463a99821db64ee0f03a5a"
+    },
+    {
+      "path": "apps/web/__tests__/lib/tools/world-map-milestones.test.ts",
+      "sha256": "b61bcdfa71415b429ec8d6d260ee57824afb017c381456ab49f8c1465e55aa31"
+    },
+    {
+      "path": "apps/web/__tests__/lib/tools/world-map-share.test.ts",
+      "sha256": "23ab20bfb8be4012d6c1c5b2f5cc8c4eda7268f5aa0b8f1d2df3435574e4383e"
+    },
+    {
+      "path": "apps/web/__tests__/lib/tools/world-map-social.test.ts",
+      "sha256": "2d22c8eee6a1e5967906030f1d9d868b4b14d7b1be69ded0e82ee51bf76616f7"
+    },
+    {
+      "path": "apps/web/__tests__/lib/tools/world-map-stats.test.ts",
+      "sha256": "25b435f03a0e03e7be1a9ba94a544bc33e386ea724fd56dec69d39e14a5f7434"
+    },
+    {
+      "path": "apps/web/__tests__/lib/tools/world-map-store.test.ts",
+      "sha256": "a35a054ffefaf3ce421ced2659d09ba88ab7dd33f476e8bc8afb6f29837ecfd5"
+    },
+    {
+      "path": "apps/web/__tests__/lib/tools/world-map-typography.test.ts",
+      "sha256": "e7429f1267d0873436369191f44cb50046535aba6cce94405ac5f44803e911bc"
+    },
+    {
+      "path": "apps/web/__tests__/lib/trip-date-duration.test.ts",
+      "sha256": "e254f0262d01021dc6cd81946cb285305fa171a668e22ceb875e96a7d6814725"
+    },
+    {
+      "path": "apps/web/__tests__/lib/trip-export.test.ts",
+      "sha256": "4cdb181014496cc62778b60c914d96dad6aba24f9c2bce94189b4b9fc642fd88"
+    },
+    {
+      "path": "apps/web/__tests__/lib/utils.test.ts",
+      "sha256": "595d9b8a7afe40ec082f1adbbb5c2262feac22b774a3f5751a25a703eb1de89a"
+    },
+    {
+      "path": "apps/web/__tests__/lib/validation.test.ts",
+      "sha256": "fef4be5a33170572f551ea80d1aefc3347cfe47bb697f06b3e173c0187be6a31"
+    },
+    {
+      "path": "apps/web/__tests__/lib/viator-ai-boundary.test.ts",
+      "sha256": "2b1338a554d4cc249b784a339a89b80e2902dcde1b61295e8a6f76546e21118a"
+    },
+    {
+      "path": "apps/web/__tests__/lib/viator-link.test.ts",
+      "sha256": "63427e0595b2126d90f2b6dcaab427e3d126e5a840c9b9f16e081be132a58562"
+    },
+    {
+      "path": "apps/web/__tests__/lib/viator-policy.test.ts",
+      "sha256": "cd64d8b6d83b22b3a2d243bca00dab08f69c8459912de719f6d85cbe6f05cbcb"
+    },
+    {
+      "path": "apps/web/__tests__/mocks/server-only.ts",
+      "sha256": "8b6adef16f221d268b2b27bd2d1fc6605c1cd2d74dd5f5a155d03aefee7a4470"
+    },
+    {
+      "path": "apps/web/__tests__/pending-retry-discard.test.tsx",
+      "sha256": "875dda5d7cffbf68199b17be8fa4cafde5b593cc0b43c831540a25bfb90caf9d"
+    },
+    {
+      "path": "apps/web/__tests__/places-autocomplete-lifecycle.test.tsx",
+      "sha256": "e9427e5e6faa13f7c1760580bb3c21791c8649622931b0034b1b52fbf559cffe"
+    },
+    {
+      "path": "apps/web/__tests__/places-explorer-timeout.test.tsx",
+      "sha256": "b49f1ca1c0013fd680288d3cfa03aaae5d880b1f0b862a668d5abbee7d7e9bc9"
+    },
+    {
+      "path": "apps/web/__tests__/plan-editor-recovery.test.tsx",
+      "sha256": "8686b5235a4a149452031a293dec422d6486221c52bb4884475f52190383623a"
+    },
+    {
+      "path": "apps/web/__tests__/private-trip-image.test.tsx",
+      "sha256": "4bc0f036edfdea984c4031e3c272532fd7078d8a547611c26ca09bfad642f94b"
+    },
+    {
+      "path": "apps/web/__tests__/proxy-session-cookies.test.ts",
+      "sha256": "38456b1415aa4ea8d119e2dbf72a8fe645d906dc5f30efac89f49ea8e783a5a3"
+    },
+    {
+      "path": "apps/web/__tests__/proxy.test.ts",
+      "sha256": "525ba3e4df08b974236158e8b5f9765aa8da39ecf4524bdd659dd6a06b9e3ab9"
+    },
+    {
+      "path": "apps/web/__tests__/scripts/itinerary-measure-runtime.test.ts",
+      "sha256": "e87fd28fe5b63a2e1403cd333c0a042bd142c72cfe82c39de878c67b172b81e8"
+    },
+    {
+      "path": "apps/web/__tests__/scripts/itinerary-measure-script.test.ts",
+      "sha256": "11ee1d6c8a3f4eef087995d42f8a46a02dfb085c26db3d0e2bff3d49e061d48d"
+    },
+    {
+      "path": "apps/web/__tests__/scripts/itinerary-streaming-schema-script.test.ts",
+      "sha256": "e1780c5f8d8f5e3dd044aee4d649d651e6e9ca5e50347e2ce125588f27e9ce9c"
+    },
+    {
+      "path": "apps/web/__tests__/scripts/release-config.test.ts",
+      "sha256": "5d041887c9a912860d2de6571d081fbbf6f91ba02c977fc24f810e613a1996ec"
+    },
+    {
+      "path": "apps/web/__tests__/scripts/vendor-check-script.test.ts",
+      "sha256": "b739957b094781bfbbfc03409279ff9f21644f76e2906ae640630d89c1d5bc7d"
+    },
+    {
+      "path": "apps/web/__tests__/shared-trip-image.test.tsx",
+      "sha256": "a2a2bb7233527a33c8d4588169dd4914cbb38cec3bd15759913c6c3ccd96ccc7"
+    },
+    {
+      "path": "apps/web/__tests__/shared-trip-metadata-dates.test.ts",
+      "sha256": "de399c2d09b7c205c70050272a56504d1f32f846686c32b2b7250b63862e5fbf"
+    },
+    {
+      "path": "apps/web/__tests__/shared-trip-transport.test.tsx",
+      "sha256": "779e216499f9771de9ffa25e0a616504d4cdb18f49f32374410dabdfcc446d12"
+    },
+    {
+      "path": "apps/web/__tests__/trip-brief-lifecycle.test.tsx",
+      "sha256": "047d52d03a3b90bebadc7a01e08cd334cdf7bbc5e8a832a4e515075f4508049d"
+    },
+    {
+      "path": "apps/web/__tests__/trip-checkout-lifecycle.test.tsx",
+      "sha256": "f9bd8f83ee12a1c572f78f65dec6ebcb577669307a67f4f7801df2d4b955fc9b"
+    },
+    {
+      "path": "apps/web/__tests__/trip-detail-empty.test.tsx",
+      "sha256": "d1fad613e60af1348aa5bf5ad40ac241b03520918e8d9a3a68f89dde5c16c7bd"
+    },
+    {
+      "path": "apps/web/__tests__/trip-feedback-lifecycle.test.tsx",
+      "sha256": "df9fb8858f57abc86f2d744cb7e5634de80ecbb01704327967ef1a883d8eb9ff"
+    },
+    {
+      "path": "apps/web/__tests__/useUser-session-races.test.tsx",
+      "sha256": "400b9366465b646a58738d05bff72310dad9710bc487b13fe51a5b663e8b9a5e"
+    },
+    {
+      "path": "apps/web/__tests__/weather-integrity.test.tsx",
+      "sha256": "7c7f29519e04637fb5120c46f1433bb6379ed25590e4c43b4c2e407ed5e24db5"
+    },
+    {
+      "path": "apps/web/__tests__/workflows/generate-itinerary.test.ts",
+      "sha256": "e0988fb3a83baec81dc90f9e2baf5cc95c4de2158c6358260fcaf103391a8db9"
+    },
+    {
+      "path": "apps/web/__tests__/workflows/plan-trip.test.ts",
+      "sha256": "78c5754ef8142093ea38620414a70790bf0fc9b37a4171a23d1456c13ca56d2f"
+    },
+    {
+      "path": "apps/web/__tests__/world-map-export-lifecycle.test.tsx",
+      "sha256": "60568407fcf0731600858fe42a8b4a71c7b3b49884458103552f753b139e2880"
+    },
+    {
+      "path": "apps/web/app/(app)/dashboard/layout.tsx",
+      "sha256": "343be2178af090e71cea52487bd212148f5c472870ec04276d69689c2ef94039"
+    },
+    {
+      "path": "apps/web/app/(app)/dashboard/loading.tsx",
+      "sha256": "dbafa75042484ba3271acfa08d86c087139d9ff8f96a30ecac159ee040da81a0"
+    },
+    {
+      "path": "apps/web/app/(app)/dashboard/page.tsx",
+      "sha256": "48e67fed3a28ec42f05b43d695e894a6ee6343a828b83e64001c8222af51c1ae"
+    },
+    {
+      "path": "apps/web/app/(app)/trips/[id]/TripDetailClient.tsx",
+      "sha256": "5dec4b0f7a6a11f0f93ffe5d822571f4be03d011f05ec155ba7cfc890174ce26"
+    },
+    {
+      "path": "apps/web/app/(app)/trips/[id]/layout.tsx",
+      "sha256": "f44f80fd773b1e73baf669a6a607a02e3ff1a89b08f73f3212794b355b243af7"
+    },
+    {
+      "path": "apps/web/app/(app)/trips/[id]/loading.tsx",
+      "sha256": "6102171a357dc9c6f1f9013a8b286a56d06e8fb12399e6bde3e55b57f3f664fa"
+    },
+    {
+      "path": "apps/web/app/(app)/trips/[id]/opengraph-image.tsx",
+      "sha256": "371cbc43170d844ef946f4006558f821471d60c9aa3eecbbc2a346dfe4768d47"
+    },
+    {
+      "path": "apps/web/app/(app)/trips/[id]/page.tsx",
+      "sha256": "5516f85300a4771530d11b0f278ac9afe747554362f9b3c615dfd88648260033"
+    },
+    {
+      "path": "apps/web/app/(app)/trips/error.tsx",
+      "sha256": "509ae3cfff0ce08990073b0809f8646e3012a69dc8855c66b6dad0efafc21ad3"
+    },
+    {
+      "path": "apps/web/app/(app)/trips/new/page.tsx",
+      "sha256": "c211c4a716257a2507b95687f63a9f113544a0579f748dad291b93f7dead8581"
+    },
+    {
+      "path": "apps/web/app/(marketing)/about/layout.tsx",
+      "sha256": "3b7691ca8695af467182a9d28f3ad4a167456b78b3ba3f26cd757fd98b0f4858"
+    },
+    {
+      "path": "apps/web/app/(marketing)/about/page.tsx",
+      "sha256": "f11e61254798bd0342f6d98eeea2b6676c9ed0bdd06123e549e87355884a9581"
+    },
+    {
+      "path": "apps/web/app/(marketing)/layout.tsx",
+      "sha256": "1b4c47c5fb468f27d370e069165fc5531fa863776645f89f6af85986bcf670bc"
+    },
+    {
+      "path": "apps/web/app/(marketing)/page.tsx",
+      "sha256": "58380bbac838ba1baef54135878e8cdf7aa40da2525bb132e6d224f70e1621b7"
+    },
+    {
+      "path": "apps/web/app/(marketing)/privacy/page.tsx",
+      "sha256": "97af12b8dcb70782a0320b92d0543b94fe54148fbc7fa74540d87ce50fdb300c"
+    },
+    {
+      "path": "apps/web/app/(marketing)/report/page.tsx",
+      "sha256": "06ff5a323408908eb7189f074f4ee3402b578b90fb9300cb2d02528de26ef429"
+    },
+    {
+      "path": "apps/web/app/(marketing)/support/layout.tsx",
+      "sha256": "26f852716723983883467f24e3cd3ec0300cdc1bffcb23df48d9af145c8dceab"
+    },
+    {
+      "path": "apps/web/app/(marketing)/support/page.tsx",
+      "sha256": "dfc860aff2da7cd76efa323976a277c6b7621befdb5502de264ec6eacece2a9d"
+    },
+    {
+      "path": "apps/web/app/(marketing)/terms/page.tsx",
+      "sha256": "c8a3753dc1a469563674d67a4fda3fa3a4f59e7f85dfea9e70cdde2e53e8c18b"
+    },
+    {
+      "path": "apps/web/app/.well-known/workflow/v1/.gitignore",
+      "sha256": "684888c0ebb17f374298b65ee2807526c066094c701bcc7ebbe1c1095f494fc1"
+    },
+    {
+      "path": "apps/web/app/.well-known/workflow/v1/flow/route.js",
+      "sha256": "67fc27f89ffb9922c8f025e4fdae86b726dbdb230bc7084325bf88f9d7f3d280"
+    },
+    {
+      "path": "apps/web/app/.well-known/workflow/v1/flow/route.js.debug.json",
+      "sha256": "4d9cdc0d5520597f3dd5c5035c466c687b950e7aabed16432cf4e42eba6615da"
+    },
+    {
+      "path": "apps/web/app/.well-known/workflow/v1/manifest.json",
+      "sha256": "1859fa23719718660f165b9f41d848f8a6cdd69727b8430ad5bf49a47dee34e5"
+    },
+    {
+      "path": "apps/web/app/.well-known/workflow/v1/step/route.js",
+      "sha256": "e6afcccb54d64b6c46cb06b7994f515df17fb0cadd754a956891e0944ba645f5"
+    },
+    {
+      "path": "apps/web/app/.well-known/workflow/v1/step/route.js.debug.json",
+      "sha256": "89490b212cba5801c3c0128907e04342b284254d98a4145c2d026199ff76b797"
+    },
+    {
+      "path": "apps/web/app/.well-known/workflow/v1/webhook/[token]/route.js",
+      "sha256": "ccc791463ce115fcd0c8d48da38bbe297589359240478bc5c80e26d0e7cfb67c"
+    },
+    {
+      "path": "apps/web/app/api/affiliate/click/route.ts",
+      "sha256": "be074478805b8b3fdd119b895121a92dd4d196d2ecad68a4a81602d8e5fd8392"
+    },
+    {
+      "path": "apps/web/app/api/ai/disclosure/route.ts",
+      "sha256": "943a8f294615973420660d1883fa1536f61124b0dc0dc9290e9d7a295f371eeb"
+    },
+    {
+      "path": "apps/web/app/api/auth/callback/route.ts",
+      "sha256": "25355aebec57506449e3e2da3e72f37b4b1200682cf006a3ed8e5020ef3ca441"
+    },
+    {
+      "path": "apps/web/app/api/blog/newsletter/route.ts",
+      "sha256": "a84770b9585a9a40c9cc5af27648bb7126b61746c49496a348bc2af04f84c855"
+    },
+    {
+      "path": "apps/web/app/api/blog/views/route.ts",
+      "sha256": "ebf915b0d37eb2c088526f6f1724e10cbae17dffe5af07f14ed21a3575a546bc"
+    },
+    {
+      "path": "apps/web/app/api/content-reports/route.ts",
+      "sha256": "ecf9c8412ce84f47648e5d04d2eaf7ec75cbc78fe7cca22f47ce322000b4ed19"
+    },
+    {
+      "path": "apps/web/app/api/cron/cleanup/route.ts",
+      "sha256": "6faaa4d89f0f3c6f8acf0a52865161b503beaebcd0b5b94795dcce6c2e2c0c47"
+    },
+    {
+      "path": "apps/web/app/api/destinations/popular/route.ts",
+      "sha256": "6704adf551079e5ac68ea97b9f80624f58de2b040abf1da0956fde306ee60359"
+    },
+    {
+      "path": "apps/web/app/api/destinations/trending/route.ts",
+      "sha256": "c4d0021e0717bda4466411cc8c20abaa4dd9ac1ad0669c09a7740c512b45c267"
+    },
+    {
+      "path": "apps/web/app/api/health/route.ts",
+      "sha256": "5f99f0fd3cccf165e4e5e8ab490a8cca4785951674b5e14086e981f9fe0c342e"
+    },
+    {
+      "path": "apps/web/app/api/hotels/liteapi/route.ts",
+      "sha256": "7b6917a88ef450e0152d438715de754dd9d3c8bffd753e3576f3bccc85367570"
+    },
+    {
+      "path": "apps/web/app/api/itinerary/generate/route.ts",
+      "sha256": "c57566a5b1d4b803dae3efe9ddd7c5bc458cd953824ba5a2da2fc2b7a00412ac"
+    },
+    {
+      "path": "apps/web/app/api/itinerary/route.ts",
+      "sha256": "7bd992bd5aca069c772228dc3e4f5fd1c47ce3b5c033cee8e9bd41d0ad25839a"
+    },
+    {
+      "path": "apps/web/app/api/itinerary/stream/route.ts",
+      "sha256": "150c7b6bb64d0384a6be144dafbe12f1bef790ee5a8fa7f927ad7670d50512e2"
+    },
+    {
+      "path": "apps/web/app/api/og/route.tsx",
+      "sha256": "c09ca85d33ff4da29ef29b7a814bbb157ba64cc7dc6e3fb2152531b534306e00"
+    },
+    {
+      "path": "apps/web/app/api/og/world-map/fonts/inter-bold.ttf",
+      "sha256": "288316099b1e0a47a4716d159098005eef7c0066921f34e3200393dbdb01947f"
+    },
+    {
+      "path": "apps/web/app/api/og/world-map/fonts/inter-regular.ttf",
+      "sha256": "40d692fce188e4471e2b3cba937be967878f631ad3ebbbdcd587687c7ebe0c82"
+    },
+    {
+      "path": "apps/web/app/api/og/world-map/fonts/inter-semibold.ttf",
+      "sha256": "78a843fade9d4612a5567302fb595b56976eb5fcebf4fea5a5912d638bafcde3"
+    },
+    {
+      "path": "apps/web/app/api/og/world-map/fonts/playfair-display.woff",
+      "sha256": "edf03b449abed72765d03468112a7e4f742fa407ee058226b21acf9d2c588f60"
+    },
+    {
+      "path": "apps/web/app/api/og/world-map/route.tsx",
+      "sha256": "53434b441bcd7e80b949afe5cb0b36b7cc0c9983d180f6c866cb69d3ec7bbb9b"
+    },
+    {
+      "path": "apps/web/app/api/places/autocomplete/route.ts",
+      "sha256": "226cf18068015323e17e7940cb6607e2bb03352c14a067ad7fbb6481b1b3e211"
+    },
+    {
+      "path": "apps/web/app/api/places/details/route.ts",
+      "sha256": "aa3c19843125e4760f0cd06a00aa9363f68f025004f90e558315f89a310f3b08"
+    },
+    {
+      "path": "apps/web/app/api/places/venues/route.ts",
+      "sha256": "075fa45d72a1363a8240bdeb4374ca0ef4b2faea77e41eb8f613a8f121ad3eb1"
+    },
+    {
+      "path": "apps/web/app/api/search/[searchId]/route.ts",
+      "sha256": "63bd88dbe33be78f75852382ea49b28cf835d42bc80c73aa05642810cd16be90"
+    },
+    {
+      "path": "apps/web/app/api/search/start/route.ts",
+      "sha256": "b1019e7c48c931931ddffdb5d308193e7ebcc66cb96a3bb9e31aa0e13f120818"
+    },
+    {
+      "path": "apps/web/app/api/sentry-test/route.ts",
+      "sha256": "b72896381890ffbaa619c4dc9640e5bf7410f11287621e2b1d4236d2794880d2"
+    },
+    {
+      "path": "apps/web/app/api/track/click/route.ts",
+      "sha256": "c9fd1243b0b0fb7da9bd03307aaaed765ae6c18f79a2ccfa237b26d34bd975ee"
+    },
+    {
+      "path": "apps/web/app/api/track/conversion/route.ts",
+      "sha256": "f351f1cdc7e8cdfe8df9bba80d48b8a2f8c848363cd95da5d37d1787348ff40b"
+    },
+    {
+      "path": "apps/web/app/api/trips/[id]/bookings/route.ts",
+      "sha256": "bbfc019ac92338a6372e0fec7f7177caaaceec8792dbeed17c77d02df98d2fd5"
+    },
+    {
+      "path": "apps/web/app/api/trips/[id]/checkout/route.ts",
+      "sha256": "f62a2998fce3c9f5e69aecedaca83971b935088b2f04c507f0aa70632d4ace29"
+    },
+    {
+      "path": "apps/web/app/api/trips/[id]/feedback/route.ts",
+      "sha256": "903266f2e208a83ef57b8fd0ef62d16b4fa7304c86b27112f9ee2980894279fe"
+    },
+    {
+      "path": "apps/web/app/api/trips/[id]/generate/route.ts",
+      "sha256": "ef1a5245e505f2542d4cd3d4a982e3a4d8abb4df8640189ad2d0e6764773f80f"
+    },
+    {
+      "path": "apps/web/app/api/trips/[id]/plan/route.ts",
+      "sha256": "f21c399e36242219eba9137dd43a8b61388d239a27effaa8c3e6ad857ba27055"
+    },
+    {
+      "path": "apps/web/app/api/trips/[id]/route.ts",
+      "sha256": "7e84c88cc4e9730bb53694ce82ce4958658d5b3a0751ecd7ad84abcc8edf01c5"
+    },
+    {
+      "path": "apps/web/app/api/trips/[id]/share/route.ts",
+      "sha256": "5d5c00963459288654f706d3faf9b69c65766deadb5b27173c59b8b9adc1a4d2"
+    },
+    {
+      "path": "apps/web/app/api/trips/[id]/stream/route.ts",
+      "sha256": "c8eb183ac6d52d8493fb07fb7249dea6d2421f49e8f571582ff579efa6f9676b"
+    },
+    {
+      "path": "apps/web/app/api/trips/route.ts",
+      "sha256": "a3d7d1c3cf6b5e6ae7612f5fa5c2ade26d44c37d0fded6603bcec20d55f62d26"
+    },
+    {
+      "path": "apps/web/app/api/user/account/route.ts",
+      "sha256": "929572f95725ca841f3e4e5ec8568a12be863b06b6214f8a6e32931a4dac4a99"
+    },
+    {
+      "path": "apps/web/app/api/user/profile/route.ts",
+      "sha256": "efa0a73c1f3593f3052a45d33085252eabeef97d8cc03e6235c84a8b3f294330"
+    },
+    {
+      "path": "apps/web/app/api/user/push-token/route.ts",
+      "sha256": "47b54caf32990205c46b46d7b7a213c22c7efb412d6f2a36e185da0e452bbfcf"
+    },
+    {
+      "path": "apps/web/app/api/weather/route.ts",
+      "sha256": "6d17e233b6a883221436f75e3e9dfef3be48cdbf93f8497d650f69498918d3f7"
+    },
+    {
+      "path": "apps/web/app/api/workflows/[workflowId]/status/route.ts",
+      "sha256": "e87420b261324db35908884cddc0d8a284e5fa60bd3862268a77de4d1f1b6b40"
+    },
+    {
+      "path": "apps/web/app/api/workflows/generate-itinerary/route.ts",
+      "sha256": "3f553f7e5ccbadc8af55d364841f0e90f284a4e7617738abe5f5463024084b25"
+    },
+    {
+      "path": "apps/web/app/apple-icon.tsx",
+      "sha256": "788452fa7353b6bde84ea02ebba7ea84a715e240a56f21a343083e91dc8c96cb"
+    },
+    {
+      "path": "apps/web/app/auth/callback/route.ts",
+      "sha256": "a4a129fe8cde18aa36b844584719e5472e8e9a481d4325c9e6ba4bc7d5b5c9a3"
+    },
+    {
+      "path": "apps/web/app/auth/forgot-password/layout.tsx",
+      "sha256": "4e203dccc4005e9b9a372f6c128ee4632cc8a788d6b8d2bbea6869a59785c413"
+    },
+    {
+      "path": "apps/web/app/auth/forgot-password/page.tsx",
+      "sha256": "2db44ec69d40b02126fb77862a6924c5394da35950d4a5b40ed6c79b79eceb63"
+    },
+    {
+      "path": "apps/web/app/auth/login/layout.tsx",
+      "sha256": "aea59129af266d66cbdea10b33a95272d56ca7ba30c8ea886cb878d23a0ae66c"
+    },
+    {
+      "path": "apps/web/app/auth/login/page.tsx",
+      "sha256": "1a6534ef32b5843976aca71658ab675ee0d64cfc8ea3ceffdac4e99f7ce42cf4"
+    },
+    {
+      "path": "apps/web/app/auth/logout-error/page.tsx",
+      "sha256": "df76b0df5e9cc45d851415595f6202b086295b4ab823cc806b32d7a89767cc00"
+    },
+    {
+      "path": "apps/web/app/auth/logout/route.ts",
+      "sha256": "38dac93f6508e25e6a45f9094f06f2303287cd0dc77a89616c0645002a06986a"
+    },
+    {
+      "path": "apps/web/app/auth/reset-password/layout.tsx",
+      "sha256": "dd71d1b2e61916c0811efe53d506aaba73b003d139a28bb8ecfa8e818cd49638"
+    },
+    {
+      "path": "apps/web/app/auth/reset-password/page.tsx",
+      "sha256": "8acc20b1c77c31a1e53687e28d53852955f108c0f8013e1a739b16bd187db9a9"
+    },
+    {
+      "path": "apps/web/app/auth/signup/layout.tsx",
+      "sha256": "0138e8a555dd845e51e0ea40f3aceeb577e5a80e8cc4b69911a363599c553638"
+    },
+    {
+      "path": "apps/web/app/auth/signup/page.tsx",
+      "sha256": "58d6f92f17c4f940acac4d5e5cf5837b7c4eee40f4ff97a9e440d1f9e672a6b4"
+    },
+    {
+      "path": "apps/web/app/blog/[slug]/loading.tsx",
+      "sha256": "990bb64a5c488294f98ef31e74862d2d6495be3e13ef827976c13e24118e6be9"
+    },
+    {
+      "path": "apps/web/app/blog/[slug]/opengraph-image.tsx",
+      "sha256": "6e15f817e7013937a4ed3b3b3f9e87bdcacdbfd549d2bfb46481f8e287e6e655"
+    },
+    {
+      "path": "apps/web/app/blog/[slug]/page.tsx",
+      "sha256": "98bc1137b306e0d39afe486b09024013751e4315c3be57a8f67f9403bdf330f2"
+    },
+    {
+      "path": "apps/web/app/blog/category/[category]/page.tsx",
+      "sha256": "254ca74e575c6314fde946e7318bf12bfffe24b2ce214c2855e270ee2cc590b9"
+    },
+    {
+      "path": "apps/web/app/blog/error.tsx",
+      "sha256": "ede903856df558f9df1f38668f8245941219ac2a54e7ed197fb00c19aa12a853"
+    },
+    {
+      "path": "apps/web/app/blog/feed.xml/route.ts",
+      "sha256": "3bfd57ca73e74a34af8220fbb38ae6e0759cc23b44219d2ef7e78f5b6ec8cc76"
+    },
+    {
+      "path": "apps/web/app/blog/guides/[slug]/page.tsx",
+      "sha256": "17ce431c7b163967872fce903ca61c3f1b2af125c5365e448a30b92f562208a3"
+    },
+    {
+      "path": "apps/web/app/blog/guides/page.tsx",
+      "sha256": "5b1052fe8a7f7a2e3b016828241f86a7b75ce882aaf12a1ae7aceaaa4a8ae7b7"
+    },
+    {
+      "path": "apps/web/app/blog/layout.tsx",
+      "sha256": "970e3d90f0727b8bcc35c7fa714c0abe2cd279b9304f54cf28431fdcbf6d7b50"
+    },
+    {
+      "path": "apps/web/app/blog/loading.tsx",
+      "sha256": "97033c9d76f36f83b909ae35faa06f06fe4ae4607afd4011f8a9d77701392bc5"
+    },
+    {
+      "path": "apps/web/app/blog/page.tsx",
+      "sha256": "a139db1d89cc7da3e728b6b838c4a2a71347bf9bc6854ea633d54fda2c19451f"
+    },
+    {
+      "path": "apps/web/app/create/layout.tsx",
+      "sha256": "35ffe808e755d039a6f921df42b8ca8471ef6601f5c591391d6530bb800b5b88"
+    },
+    {
+      "path": "apps/web/app/create/page.tsx",
+      "sha256": "6b4a6a420d848721b54199d4367faf6bb0b716b860c61ee7fd7f3f126fe8dd89"
+    },
+    {
+      "path": "apps/web/app/destinations/[slug]/opengraph-image.tsx",
+      "sha256": "41d07e80c996898586e3bba3a2e2187aac8fba656b3a4e5ff0d378d55fee479d"
+    },
+    {
+      "path": "apps/web/app/destinations/[slug]/page.tsx",
+      "sha256": "48f2c63b184b9f1ece41b68776125e96e8c2888a3b51127fd4e597e0850b13ee"
+    },
+    {
+      "path": "apps/web/app/destinations/layout.tsx",
+      "sha256": "5885fc4e6055201b5202b8e0359bae9af65f882de31e8311d77d9dc9f27beb49"
+    },
+    {
+      "path": "apps/web/app/destinations/page.tsx",
+      "sha256": "bd9ca038f9d288f0dd1f42b04885abc9bc19bbb350357780039c031882b80478"
+    },
+    {
+      "path": "apps/web/app/error.tsx",
+      "sha256": "00e499d0fbbd30e857494f182ad519f130a12805f4e2ed89be135c7dcd2fbd91"
+    },
+    {
+      "path": "apps/web/app/favicon.ico",
+      "sha256": "ea9122f6c7dacd8cd3efa69d8bf2a6595b1e7cd889c0c09c6512e003c183d794"
+    },
+    {
+      "path": "apps/web/app/global-error.tsx",
+      "sha256": "3b94dca985b9f871b1577dc5c5d3fe9148019b683115cd2e2c775336864d6b1f"
+    },
+    {
+      "path": "apps/web/app/globals.css",
+      "sha256": "84147e1d1a00a692b8f0f6f59031c46fbd06743557277e2fe9735a1f9a4e18d5"
+    },
+    {
+      "path": "apps/web/app/hotels/sandbox/page.tsx",
+      "sha256": "4dde0d75619c7a380c0d5a3a46285b1676459bd522e4c9bf703fd3e6257ad764"
+    },
+    {
+      "path": "apps/web/app/hotels/sandbox/sandbox-form.tsx",
+      "sha256": "c0b8a000a54a6b9f10ca0ed8a41a681646956971aeef372c3cbc085c696e16ab"
+    },
+    {
+      "path": "apps/web/app/layout.tsx",
+      "sha256": "c643fd1f5bb2eed4d29096dfe9ce26f23f61d6724b90e9e00f5d9e084be0a6cc"
+    },
+    {
+      "path": "apps/web/app/not-found.tsx",
+      "sha256": "d9390c25e260af163108a0a42fa668c9fd0b038eabb32496462400a87025ea9d"
+    },
+    {
+      "path": "apps/web/app/opengraph-image.tsx",
+      "sha256": "97d3e28545f2671c7ef45fc99c32b9524ef361dddcb4fb43216580e8dfa42aed"
+    },
+    {
+      "path": "apps/web/app/robots.ts",
+      "sha256": "b3befab014a46959bc968d493e18772ac2babd6a9dd14bfca8f0ab16506d837c"
+    },
+    {
+      "path": "apps/web/app/s/[token]/layout.tsx",
+      "sha256": "ce7a51ddee7a86ba381eb55c00cebd272c89c26324fe71cbe6771a051fc18321"
+    },
+    {
+      "path": "apps/web/app/s/[token]/loading.tsx",
+      "sha256": "6102171a357dc9c6f1f9013a8b286a56d06e8fb12399e6bde3e55b57f3f664fa"
+    },
+    {
+      "path": "apps/web/app/s/[token]/opengraph-image.tsx",
+      "sha256": "933354e77e19edb6b85a641b2f6bf7a25f4a3e8beaf2addd6dcf305175da50ad"
+    },
+    {
+      "path": "apps/web/app/s/[token]/page.tsx",
+      "sha256": "c5e5bd7a4f21b345186faaa73f07a9b0f877bd0fb519801b957927b3cd9fa6a4"
+    },
+    {
+      "path": "apps/web/app/s/error.tsx",
+      "sha256": "41b49900dbd1e49831deb1232843ceb01a33ee66f0463893336f0af431d95e94"
+    },
+    {
+      "path": "apps/web/app/s/layout.tsx",
+      "sha256": "cdcf41daacde8382a15b683efe300558c55ff9c6d01b4da7613367e7ce86509e"
+    },
+    {
+      "path": "apps/web/app/s/loading.tsx",
+      "sha256": "6c3e04c33615e868762ac85b2d83483f59128b8b2d514a741f830bcdd481d27f"
+    },
+    {
+      "path": "apps/web/app/s/not-found.tsx",
+      "sha256": "264eaf1f57f17af88e0133d460310640b97600ed66ae52703c0764b5a54eaaa8"
+    },
+    {
+      "path": "apps/web/app/sitemap.ts",
+      "sha256": "8475106ba044e80ba0932e5d1388f19dd9f3c8e5ef2518cf8a470a95e41bbdc5"
+    },
+    {
+      "path": "apps/web/app/tools/best-time-to-visit/[slug]/opengraph-image.tsx",
+      "sha256": "2c297e40b09fbefd05413e21b3995b159238dddac43f2054fb977306b6be3a6a"
+    },
+    {
+      "path": "apps/web/app/tools/best-time-to-visit/[slug]/page.tsx",
+      "sha256": "643da975d1b12d5bac5d8b3c17b17ee00749ccc84f32fca7330fe8339ff3d7bb"
+    },
+    {
+      "path": "apps/web/app/tools/best-time-to-visit/page.tsx",
+      "sha256": "d634672e721c06bc36bdabf35c6d2f3d88f9f25b0d5621cda449a62bc17dcc8f"
+    },
+    {
+      "path": "apps/web/app/tools/currency-converter/page.tsx",
+      "sha256": "1c64aeaf4b99a7311a9f0774f59dbbe16910229a7f67efd8785c5fa9badd841a"
+    },
+    {
+      "path": "apps/web/app/tools/layout.tsx",
+      "sha256": "88c32e178da1a4a9c93ea3c47287a1ea70f6ff080181b068aca32151a21d224f"
+    },
+    {
+      "path": "apps/web/app/tools/packing-list/page.tsx",
+      "sha256": "97cced3ff49f4b8b914467642b7c2358f0092bf5fc7837c73ac8c2baa98f024e"
+    },
+    {
+      "path": "apps/web/app/tools/page.tsx",
+      "sha256": "99b13cdcfc9b39afbba62c85340cea42307818a54463e575a3c21ccf5e5b0450"
+    },
+    {
+      "path": "apps/web/app/tools/travel-quiz/page.tsx",
+      "sha256": "12f4bff5a960ed33fea2517a7c97a0eef142f6898bf110f3d84214390ef9cb62"
+    },
+    {
+      "path": "apps/web/app/tools/trip-cost/[slug]/opengraph-image.tsx",
+      "sha256": "e5b9410b5061640ac48370bec3007886f1af773b7c4cbcd9491e9276584c6f8b"
+    },
+    {
+      "path": "apps/web/app/tools/trip-cost/[slug]/page.tsx",
+      "sha256": "dd48ca3d9e232f2b9f946e873cb33e4421413894d49f5b85d9b0c8772a0d1a2d"
+    },
+    {
+      "path": "apps/web/app/tools/trip-cost/page.tsx",
+      "sha256": "69768f1d2274e8d1f89422b26c5d208af74c18257b88c8dd8e2b898f64571a4e"
+    },
+    {
+      "path": "apps/web/app/tools/visa-checker/[destination]/opengraph-image.tsx",
+      "sha256": "57311577224258f974fc9fbf8b35c966dbecb31a5feb59c5108ae9cac2c7d1b6"
+    },
+    {
+      "path": "apps/web/app/tools/visa-checker/[destination]/page.tsx",
+      "sha256": "ccbb8f811658bfe179c1302b9fded038c98a24f6176a34678af6b2aa6931c62d"
+    },
+    {
+      "path": "apps/web/app/tools/visa-checker/page.tsx",
+      "sha256": "69c472d3c83c5533e12c440525bb3e1b77997f592c993beb4d1d0471269a5426"
+    },
+    {
+      "path": "apps/web/app/tools/world-map/WorldMapClient.tsx",
+      "sha256": "b64bdfc55917f341e82ec3dbcd048e3aec87cb5b60f58f0d63a2d864403082d5"
+    },
+    {
+      "path": "apps/web/app/tools/world-map/page.tsx",
+      "sha256": "cf8c09c5a6fe1b4e028d72e3517a73fdb93f2fc2865bf6da850fa8ee8f828843"
+    },
+    {
+      "path": "apps/web/app/tools/world-map/view/WorldMapViewClient.tsx",
+      "sha256": "a9de9374cfcc87fef4f4dbd89e26a29889cebc58ea1f8ff8da131505f32c3f83"
+    },
+    {
+      "path": "apps/web/app/tools/world-map/view/page.tsx",
+      "sha256": "158ea1dcb1850a167542431a173886eb7f18e4789fc2db951e76517607e6d411"
+    },
+    {
+      "path": "apps/web/app/twitter-image.tsx",
+      "sha256": "97d3e28545f2671c7ef45fc99c32b9524ef361dddcb4fb43216580e8dfa42aed"
+    },
+    {
+      "path": "apps/web/components/AppStoreButtons.tsx",
+      "sha256": "2653fc0d3fc2067ab15a3b5cc97558f489440d73ae728f14bb458f015338babf"
+    },
+    {
+      "path": "apps/web/components/Footer.tsx",
+      "sha256": "02550e32347449919a698ad531614ac3c0e4b4105c05eec3cbfb4c542ab61aaa"
+    },
+    {
+      "path": "apps/web/components/GoBackButton.tsx",
+      "sha256": "b4f3b41ae3e381e37d7ca04bd0c14608add6ddc0b65c1df43ab03007779b3bc8"
+    },
+    {
+      "path": "apps/web/components/Header.tsx",
+      "sha256": "abbde889934d054567c572bf40c0597eef3020d920d10859dbf96fcacd4d4ae9"
+    },
+    {
+      "path": "apps/web/components/Logo.tsx",
+      "sha256": "4a965076f32f81fd0338c3fcdadca37838fd26fb7166a2c0b63b6d43f7288ead"
+    },
+    {
+      "path": "apps/web/components/ResilientImage.tsx",
+      "sha256": "dd13fc13e15b1c196c8dec91c496da2d185bedccc60b3180b25fa5518deee766"
+    },
+    {
+      "path": "apps/web/components/ShareButtons.tsx",
+      "sha256": "24367ee46adc55383322c4a3b683a570bb7d6cc0cd9c31652d2251538f23f9cd"
+    },
+    {
+      "path": "apps/web/components/auth/AppleButton.tsx",
+      "sha256": "aa386b04e9869662aba3f5dd7bbabad6145e956dde539d95911fb82a81a5b664"
+    },
+    {
+      "path": "apps/web/components/auth/AuthActionProvider.tsx",
+      "sha256": "f1ab2a0f90fb32d6c4bc0d9ef9b8ab9636113e06f61aef1e180632b352875e48"
+    },
+    {
+      "path": "apps/web/components/auth/AuthPageFrame.tsx",
+      "sha256": "f29a9fd6ae10ad551d4742576d17e86c321861b54688bf500486fc8b564ee518"
+    },
+    {
+      "path": "apps/web/components/auth/EmailPasswordForm.tsx",
+      "sha256": "599983b1a623a0a9996aec334406398c0751b92aaf1a18d73bd1af22f5725489"
+    },
+    {
+      "path": "apps/web/components/auth/GoogleButton.tsx",
+      "sha256": "ee050d0e8dff6fd99920695fef581d1fd96a3361e16b3c596eb796f6364f789d"
+    },
+    {
+      "path": "apps/web/components/auth/useOAuthSignIn.ts",
+      "sha256": "d23548d24ae85ca134421f6cf15862abd71100a4f26684c0ec692693f03f3019"
+    },
+    {
+      "path": "apps/web/components/blog/BlogCard.tsx",
+      "sha256": "ac11390971eb466867eba72fc019ace842fa3a1a0dc140cb69e849b2ee5450d7"
+    },
+    {
+      "path": "apps/web/components/blog/Breadcrumbs.tsx",
+      "sha256": "e1c5ed4fc86b2e5e4a827b4fb1eff63af12fe0bf992153d77b7b9add5c1bee97"
+    },
+    {
+      "path": "apps/web/components/blog/CategoryPills.tsx",
+      "sha256": "711707c727866b6f319a1d93006186c6558751a569c51d25cb9e91053f591b0f"
+    },
+    {
+      "path": "apps/web/components/blog/FeaturedHero.tsx",
+      "sha256": "10fcee43071c57ef0e4e3889032d2f0ffb4578d9a71af6ea0a3643cb7f207fb6"
+    },
+    {
+      "path": "apps/web/components/blog/JournalImage.tsx",
+      "sha256": "d74fbdb98aae44c6e75e6ea920b87702b864eeb94df9ebe3a1167a355ba6cb1e"
+    },
+    {
+      "path": "apps/web/components/blog/MDXComponents.tsx",
+      "sha256": "407ccb6afd8efb3ac950fde66ef800c503079d3d0406210b9360dbec93e33421"
+    },
+    {
+      "path": "apps/web/components/blog/NewsletterCTA.tsx",
+      "sha256": "b2850c79eac6f62a79d94568dcbf51aad584b0072650d03bdd036864dded1345"
+    },
+    {
+      "path": "apps/web/components/blog/Pagination.tsx",
+      "sha256": "7ed976ae96792e1a61f52b8b048c3de2589b718229138e25d00358cacf30a6d0"
+    },
+    {
+      "path": "apps/web/components/blog/ReadingProgressBar.tsx",
+      "sha256": "5adee42b6a4ef5552a8efd895835969eaa981aab00416c27bd12be59088b4df7"
+    },
+    {
+      "path": "apps/web/components/blog/ShareButtons.tsx",
+      "sha256": "c3f596c2554fa11f0eadba1fbb8a043017c84eb04e808ae7b5286b87947aa94a"
+    },
+    {
+      "path": "apps/web/components/blog/TableOfContents.tsx",
+      "sha256": "72866f4507c212063951345be4ebed3a2348f601ed945c4e9704f38903b03e5a"
+    },
+    {
+      "path": "apps/web/components/blog/ViewTracker.tsx",
+      "sha256": "a1c6442ae1d2d64c9482b98e6532ca3f04f153cda2a68127ca854fa2110b4097"
+    },
+    {
+      "path": "apps/web/components/blog/guides/ClusterCTA.tsx",
+      "sha256": "28d95cdd834ef1d03f9de2337290bd16416149978a9f96635773621ea92be360"
+    },
+    {
+      "path": "apps/web/components/blog/guides/ClusterCard.tsx",
+      "sha256": "90793fd9d4faee02faf3a3e872704f1ee738e3bcc3d510ab69c7a3516c42c878"
+    },
+    {
+      "path": "apps/web/components/blog/guides/ClusterHero.tsx",
+      "sha256": "3a7388039e3bb25de88f94a8b91e41e8d0f39386b44faf2fe66fca5ea2b9d98b"
+    },
+    {
+      "path": "apps/web/components/blog/guides/RelatedClusters.tsx",
+      "sha256": "95fdc04a0d0495a2f775a27feae4c3017c280728f1ead675c2dbc08f9f6bb7e2"
+    },
+    {
+      "path": "apps/web/components/blog/guides/StartHerePath.tsx",
+      "sha256": "b7449076edbaefb82498afecdb393c82cce791e1c1c801c0a36f87c7159ac027"
+    },
+    {
+      "path": "apps/web/components/blog/guides/TopicGrid.tsx",
+      "sha256": "7858453d8765d142b854a5741c4b80cd4b8740991d1ee9317d39d245634ab0f6"
+    },
+    {
+      "path": "apps/web/components/create/PlacesAutocompleteInput.tsx",
+      "sha256": "5a48abdc050b61976cfe90e5a82cd255d4273da284e6c5d9dbae67445d82fecd"
+    },
+    {
+      "path": "apps/web/components/dashboard/DashboardTripList.tsx",
+      "sha256": "653abe6ffbcdacef6a0848f55cdb9734f72bca065495297a392e5ac3ff54c8b8"
+    },
+    {
+      "path": "apps/web/components/dashboard/EmptyState.tsx",
+      "sha256": "007692c3b55ff6f701c1d9e3018e18f44945753fb96437be0d760162c8e74c5d"
+    },
+    {
+      "path": "apps/web/components/dashboard/TripCard.tsx",
+      "sha256": "293c5ce7132d8de214af87260ede55e61691500089ff389f71c3bcbdb7bc96cb"
+    },
+    {
+      "path": "apps/web/components/dashboard/TripFilters.tsx",
+      "sha256": "e9fe08cb3924852205d467971ad91816288ca65da39f662776e95ae67c3b9a8a"
+    },
+    {
+      "path": "apps/web/components/dashboard/TripStats.tsx",
+      "sha256": "9abccf77041a8b6850d24e5c98bb831e198b90935e4211e07c13653103c5a4dc"
+    },
+    {
+      "path": "apps/web/components/dashboard/index.ts",
+      "sha256": "d843c5e5f0311da1aed6a543be3d2fe70419bb625c9d7dc048be684c49173e1a"
+    },
+    {
+      "path": "apps/web/components/landing/FadeInOnScroll.tsx",
+      "sha256": "cff8c284ca52bad6361429a196b8b47cfef627a4c3a296e0cbbda39b4d4f0985"
+    },
+    {
+      "path": "apps/web/components/places/PlacesExplorer.tsx",
+      "sha256": "a738e073435b9e1358637719c8f70bf68dfd8ca3fc6dfad0036d666f159d01c1"
+    },
+    {
+      "path": "apps/web/components/reports/SharedItineraryReportForm.tsx",
+      "sha256": "8d53881b6e7113b6328d58aa313b15ecd2362ac1317be280b63ed16e402466a6"
+    },
+    {
+      "path": "apps/web/components/support/FAQAccordion.tsx",
+      "sha256": "26ee32debf65773402d8df424675207578e3fdff8ee0d6f3918e0aa524bb97c7"
+    },
+    {
+      "path": "apps/web/components/tools/RelatedTools.tsx",
+      "sha256": "8e008cde36af9c2cd6e90b10d06f25a620da055a2c036e69c8385ccbae5a5e8d"
+    },
+    {
+      "path": "apps/web/components/tools/ToolCTA.tsx",
+      "sha256": "0acb23482803d0e2fc357e6860bb4ab28fd90e5375ef468b93852bf2d276c365"
+    },
+    {
+      "path": "apps/web/components/tools/ToolHero.tsx",
+      "sha256": "ce091ff9fee24e0b7edc173c84e0dd4f9c996f25b12ab1ce6a39c7e2bc6f051e"
+    },
+    {
+      "path": "apps/web/components/tools/ToolsNav.tsx",
+      "sha256": "67b5fad51c8f981082f5e69aabdbd04cdb621d952302f3d454b953b6a938f007"
+    },
+    {
+      "path": "apps/web/components/tools/best-time/MonthlyClimateChart.tsx",
+      "sha256": "3c238697debf1013ebdca9e4816b8d5e1eaf19b8546121cad3813e069dff1e78"
+    },
+    {
+      "path": "apps/web/components/tools/best-time/MonthlyGrid.tsx",
+      "sha256": "19ee225be245d63d9fd3897965718a960e91af05c957332d27bd9aef7b20cea6"
+    },
+    {
+      "path": "apps/web/components/tools/cost/CostBreakdown.tsx",
+      "sha256": "84794f7360994f3700f3a95db0a56c942c11044e53d3fa9f665ddae729293d8f"
+    },
+    {
+      "path": "apps/web/components/tools/cost/CostEstimatorClient.tsx",
+      "sha256": "6d5aa9a6dd4df798dc8518feb9d10ac98579d4d93fa56768a84f40b27e677f20"
+    },
+    {
+      "path": "apps/web/components/tools/currency/CurrencyConverterClient.tsx",
+      "sha256": "b21143bc40956dcce3fe557d3da823a299972ec94c4bfae6dae0cecb939881f5"
+    },
+    {
+      "path": "apps/web/components/tools/packing/PackingChecklist.tsx",
+      "sha256": "a9ffe11fa52c26a2781aa1991f3bb8e1975289070cb54068a862ecd34fff4d53"
+    },
+    {
+      "path": "apps/web/components/tools/packing/PackingListClient.tsx",
+      "sha256": "2e0c73ac7955a52fe649827d571a1d28ad670d7a64d96184eddae14baef2b2c9"
+    },
+    {
+      "path": "apps/web/components/tools/quiz/QuizQuestion.tsx",
+      "sha256": "1766d66b7ccf497184a06cbc120965df7a7f5bdcb2cd459f2f02e8dc84322c54"
+    },
+    {
+      "path": "apps/web/components/tools/quiz/QuizResults.tsx",
+      "sha256": "205efb0329e54dd6e0f607aad9ec8b65458d0d6388e86a54ccfb7ff8dbdc9959"
+    },
+    {
+      "path": "apps/web/components/tools/quiz/TravelQuizClient.tsx",
+      "sha256": "3d1f0e9502efb1852fd015b33eed1bfae78f1c6768b1cb69dab26824c68b38a6"
+    },
+    {
+      "path": "apps/web/components/tools/visa/VisaCheckerClient.tsx",
+      "sha256": "c9910b1c803075d258683d8a1ea273476c5167fde88cee4a09ab31b638f68486"
+    },
+    {
+      "path": "apps/web/components/tools/world-map/BackupBanner.tsx",
+      "sha256": "dc2fe4b4277bda638914ef2eba0f9340ba016df47c90106c29ded66e4d1fd3a1"
+    },
+    {
+      "path": "apps/web/components/tools/world-map/CountryDetailDrawer.tsx",
+      "sha256": "1be138d47ba400b027c6df26d4bbef9a07a770b826f7f15ee555723c58c508c1"
+    },
+    {
+      "path": "apps/web/components/tools/world-map/CountrySearch.tsx",
+      "sha256": "da7045348fd33127a2ed57829279829f7cd06d3184b892340755e205a12d1f44"
+    },
+    {
+      "path": "apps/web/components/tools/world-map/ExportMenu.tsx",
+      "sha256": "555fc5a2ce804ff7658c6e7c428c3b7d79f63335b9acd4dc05aa5ecd81ff1068"
+    },
+    {
+      "path": "apps/web/components/tools/world-map/FieldNotes.tsx",
+      "sha256": "d50c1dcc8ae1c02e5609e76394a68ba775f7d7764937da75f7dff60c717374b1"
+    },
+    {
+      "path": "apps/web/components/tools/world-map/ImportDialog.tsx",
+      "sha256": "9f5e5f0e6514fe73ef49ee6ae0c9e46976c258316c4cf90f9a3d944a6a0cb6ba"
+    },
+    {
+      "path": "apps/web/components/tools/world-map/MapTooltip.tsx",
+      "sha256": "d8976f38a46ccf649059b6c34d3db3efc92043fc221c59a80371ff5cda9f8fef"
+    },
+    {
+      "path": "apps/web/components/tools/world-map/MilestoneToast.tsx",
+      "sha256": "7901efd2c4747ea7f511bded749858267f1372709a6cee6e2444792ae7fe7efc"
+    },
+    {
+      "path": "apps/web/components/tools/world-map/PhotoUpload.tsx",
+      "sha256": "04f475f36e351a711f1600a2a3eecec418a1c0be55dc73b155a7f8c0550c03ad"
+    },
+    {
+      "path": "apps/web/components/tools/world-map/ProfileSwitcher.tsx",
+      "sha256": "80fb8db05b5f5f15423ec2f4cf78077e7afcb3b8222b192034cb589c45cd8938"
+    },
+    {
+      "path": "apps/web/components/tools/world-map/ShareLinkDialog.tsx",
+      "sha256": "8888f7e4dbc715c4669af6f3fc6691a3aacd3f54e369036782edf13fed6973fd"
+    },
+    {
+      "path": "apps/web/components/tools/world-map/StatsHeader.tsx",
+      "sha256": "5f369e945184d4859d76eb564d2a094248da7bf4d19001463be0b1e38eb82dfa"
+    },
+    {
+      "path": "apps/web/components/tools/world-map/WorldMap.tsx",
+      "sha256": "557adba78502525335b61a2d219fd58e1e017aab02e5b4b01fb88ade3b57566e"
+    },
+    {
+      "path": "apps/web/components/tools/world-map/WorldMapApp.tsx",
+      "sha256": "93c6be8b2f67dd1c6c66e6993ef99a4d853bb4bdf6dedd8cc504299837355493"
+    },
+    {
+      "path": "apps/web/components/tools/world-map/WorldMapView.tsx",
+      "sha256": "2a192e6ac185309c2c58d8113ccdbefa019ab81cbb615eef7a0ddebfd7abbd08"
+    },
+    {
+      "path": "apps/web/components/trips/ActivityCard.tsx",
+      "sha256": "3c0d60b03c16dbc1cd2a7b47c426c153745f22e3489616cbb3c5566676ce791b"
+    },
+    {
+      "path": "apps/web/components/trips/BookingChecklist.tsx",
+      "sha256": "2273fe928a04505b6243814f4c8611dd04f1bd88262a593056f6cab2b655b5eb"
+    },
+    {
+      "path": "apps/web/components/trips/DatePicker.tsx",
+      "sha256": "3bd4be0e0e965aecdcb78ec04e202895ad40a4190553bf3c7411b2a56061db9b"
+    },
+    {
+      "path": "apps/web/components/trips/FeaturedHotelCard.tsx",
+      "sha256": "428e0953af162712974932096ce95f2c4f3555b1c5181b32a1b1e16ebcc49d01"
+    },
+    {
+      "path": "apps/web/components/trips/FlightLeg.tsx",
+      "sha256": "376ca02645466c0f1592c6f9409545bd6d0d4df13478a840fdaf5658c195fb2f"
+    },
+    {
+      "path": "apps/web/components/trips/ItineraryDay.tsx",
+      "sha256": "b8d6eb40c6e3fa4c1726abb5798f84795c240a02ef0d3901843bcb3fba4f8e56"
+    },
+    {
+      "path": "apps/web/components/trips/ItineraryGenerationLoader.tsx",
+      "sha256": "26231fc40270d842434c67fd93b39516495ee77493c0a88a652dcc3741422999"
+    },
+    {
+      "path": "apps/web/components/trips/ItineraryMap.tsx",
+      "sha256": "b513b3e676509ad085be5f276e0667ff82a209e3d265e31db9c51690482686ae"
+    },
+    {
+      "path": "apps/web/components/trips/MapLoading.tsx",
+      "sha256": "5f7ab0cf3805733a1560133c4e052df24bbf37927e437e851e47938b8db56a95"
+    },
+    {
+      "path": "apps/web/components/trips/PlanEditor.tsx",
+      "sha256": "6acf8e85b401078f62f85d90f246122e56700b9e1966eb287f6f0164e92c353b"
+    },
+    {
+      "path": "apps/web/components/trips/ShareConsentDialog.tsx",
+      "sha256": "0b442862322b627b3b4f74488ee04386b8e17dda615baebe038774d221df9127"
+    },
+    {
+      "path": "apps/web/components/trips/SharedTripView.tsx",
+      "sha256": "15395419da6742f6332881dae2e86194f9f2fd5fa5decd1e0fffa5591ee074db"
+    },
+    {
+      "path": "apps/web/components/trips/StreamedSpecPreview.tsx",
+      "sha256": "cf26bf155b9df44bc1d34987ccde6d6cd45232325204b2ac80d847091ab68f1b"
+    },
+    {
+      "path": "apps/web/components/trips/TripBriefEditor.tsx",
+      "sha256": "86e0f1f4897be424d8b55984b30a4d7b5a9d4da3d1e19b8db5c867086c1e7df7"
+    },
+    {
+      "path": "apps/web/components/trips/TripBudget.tsx",
+      "sha256": "43d4732386cd95230a2620a56ae8be0185bf3ba27a13430931562b06fc712a74"
+    },
+    {
+      "path": "apps/web/components/trips/TripCheckout.tsx",
+      "sha256": "561bfc461dbff45f4b64de7494a8d3ef3e51138eb4ce57267f34f3cf9caa4289"
+    },
+    {
+      "path": "apps/web/components/trips/TripCoverImage.tsx",
+      "sha256": "99e66148a88bfa0fb444bd00f79336a47976738dae94533f68d9357b4cab6188"
+    },
+    {
+      "path": "apps/web/components/trips/TripDayNavigation.tsx",
+      "sha256": "96d5ac4638c6206a1800096247392bd93661af8f57dd0605d195e07003a3064d"
+    },
+    {
+      "path": "apps/web/components/trips/TripFeedback.tsx",
+      "sha256": "e4e3b50ef1126a5746a8223f6212da1393fdf154ee0b04eb70998fa9693963a5"
+    },
+    {
+      "path": "apps/web/components/trips/TripHeader.tsx",
+      "sha256": "4f77ede461b7305aac4b86cba676c3bbbd902d3158b5d701dc82d3dff0134784"
+    },
+    {
+      "path": "apps/web/components/trips/TripRecovery.tsx",
+      "sha256": "3630896333d94b577296a35fac78e1a93a467f5f6da7114111436f491732d045"
+    },
+    {
+      "path": "apps/web/components/trips/TripViewLoading.tsx",
+      "sha256": "42d58a385fa261e86b14ac489bcb3af8d10f4e2f494797296fdbbf9fed33d919"
+    },
+    {
+      "path": "apps/web/components/trips/TripWeather.tsx",
+      "sha256": "ac548b478307b8e3ead8d942a0cf2b49c58549af9d5f623eb09f56fad00daae1"
+    },
+    {
+      "path": "apps/web/components/trips/ViatorContentPolicy.tsx",
+      "sha256": "080f13a0552649519f27b3eb47bc37f7be8a9b1e422b3c903cd49657cab8e9ad"
+    },
+    {
+      "path": "apps/web/e2e/api.spec.ts",
+      "sha256": "e9deff2ceb32e12a9df63eb5636329294b722bfc10326062d5aff5ff31d5c182"
+    },
+    {
+      "path": "apps/web/e2e/auth-qa.spec.ts",
+      "sha256": "906feb07df3bc239bce12cd1d2cfbecfc0566ab02025c301a9496b104196437a"
+    },
+    {
+      "path": "apps/web/e2e/blog-content-qa.spec.ts",
+      "sha256": "5b35786c5cf097df6ae25e46865ce4cf9f012cef2accfc5b3ba348ad44819b69"
+    },
+    {
+      "path": "apps/web/e2e/blog-recovery-qa.spec.ts",
+      "sha256": "2afb6d84141128ac5ba435141493cede8de3e930ca09cb579ab32a77d0091761"
+    },
+    {
+      "path": "apps/web/e2e/checkout.spec.ts",
+      "sha256": "5effcf280446a54dd7ccd89a6bdb295cadc97f64be63d14c60178903c1e83996"
+    },
+    {
+      "path": "apps/web/e2e/content-visibility-qa.spec.ts",
+      "sha256": "56fd48b70cdb7cdd15babadb52c424424de5c12fd3ab8522dc31f6b6535cab07"
+    },
+    {
+      "path": "apps/web/e2e/dashboard-calendar-qa.spec.ts",
+      "sha256": "2bd0ee6329bead93ca5fa0439a7dba7046adda1790c8f1fa86c7e56cb40e9aed"
+    },
+    {
+      "path": "apps/web/e2e/fixtures/build-planning.mjs",
+      "sha256": "86c9c10bdd9435bd81bf999f961a4503df97a92ea55450f1bb1e3bbc3c154863"
+    },
+    {
+      "path": "apps/web/e2e/fixtures/checkout.tsx",
+      "sha256": "b23452018df26d77dbc1d2939559351dd0d0cdea0a0e4cd408ac8c49c18f01f0"
+    },
+    {
+      "path": "apps/web/e2e/fixtures/fonts.cjs",
+      "sha256": "024cdb49e1a93a8af922ada5ffc8d0b7da0a82195c2fed475b63d7d0725d71e0"
+    },
+    {
+      "path": "apps/web/e2e/fixtures/next-image.tsx",
+      "sha256": "357a2ebccd725c2ce90bdaf74240c35877d7574bb791f8e6a311a02842e42372"
+    },
+    {
+      "path": "apps/web/e2e/fixtures/next-link.tsx",
+      "sha256": "0970efb9783d0381fce5da48388ab13b4dc3758cf43661ed24a24e76e55c436d"
+    },
+    {
+      "path": "apps/web/e2e/fixtures/places.tsx",
+      "sha256": "0a3abc776ac0921a4fa1cf395ad8880bef853bbdc9ab2791bad41a8fe27c1b21"
+    },
+    {
+      "path": "apps/web/e2e/fixtures/planning-data.ts",
+      "sha256": "131343ecfd68aa60f27004c403b6eea5f49ed7f03855df316bb57471347d224c"
+    },
+    {
+      "path": "apps/web/e2e/fixtures/planning.tsx",
+      "sha256": "b555c57a521383048df24defee54cb433e7c6e85dda415d6e0b07bc41c348011"
+    },
+    {
+      "path": "apps/web/e2e/fixtures/private-route-fetch.mjs",
+      "sha256": "942146ffa0c1ff7a875aaea9d1233dca2e5a6462e0a01f82e35768c26b7813db"
+    },
+    {
+      "path": "apps/web/e2e/fixtures/private-route-qa.md",
+      "sha256": "8d93a489fc0bcad38150bb7eafa10ceac541ee1b879cf43c31e8b402bb71bf2a"
+    },
+    {
+      "path": "apps/web/e2e/fixtures/private-route-service.mjs",
+      "sha256": "65ab2650893e03a149b05b14ff7ddf5038e67368dd704f5990dc9435ab8e9a17"
+    },
+    {
+      "path": "apps/web/e2e/fixtures/private-route-sql.mjs",
+      "sha256": "5539f6b055cbeb9544bfcd262f46de10245e4d831c8de485d5931d7496779c38"
+    },
+    {
+      "path": "apps/web/e2e/fixtures/recovery-server.mjs",
+      "sha256": "2e4fbe664e3c6aebc9721cb8c206e36d754466cb89d1f8c4bd5b9a90453f2469"
+    },
+    {
+      "path": "apps/web/e2e/health.spec.ts",
+      "sha256": "e64c3cb5b09255b73c11e4e2e6d03e1a5e4387384ed2d14ee8df8e4697f9500e"
+    },
+    {
+      "path": "apps/web/e2e/instrumentation-qa.spec.ts",
+      "sha256": "9a8536cc117e8e1a377869707b3edbf1be181a8f981aed8b5f4496ef41d1eccb"
+    },
+    {
+      "path": "apps/web/e2e/itinerary-map-dom-qa.spec.ts",
+      "sha256": "4bf9cc47fd446988d9b4b395550846314840616d1a45f7d145f037d92014f477"
+    },
+    {
+      "path": "apps/web/e2e/itinerary-map-leaflet-qa.spec.ts",
+      "sha256": "27bb81c985955d4a2e09f7c854f8812297e34b451b0c5212d80fba300aaf7a72"
+    },
+    {
+      "path": "apps/web/e2e/landing-images-qa.spec.ts",
+      "sha256": "f056f2a33f07734473773d80d0a0f147b4f09dc5432238eed2d07fb84983cebe"
+    },
+    {
+      "path": "apps/web/e2e/live-image-recovery-qa.spec.ts",
+      "sha256": "720378eadd0aaeda432a37edba365a47c3b6c6ee489785de2373ba6c90f79f26"
+    },
+    {
+      "path": "apps/web/e2e/marketing.spec.ts",
+      "sha256": "32d6ee51000ab26a2ea04c4cd21987b2ca6e4a3bcc9a61a1d4165b5f668cea07"
+    },
+    {
+      "path": "apps/web/e2e/packing-qa.spec.ts",
+      "sha256": "826580b3e6bb43e7160c46858dbe9bceecaf1163d000a290667a2e0910f9e323"
+    },
+    {
+      "path": "apps/web/e2e/places.spec.ts",
+      "sha256": "07b54ffaa7b855e1a9ff158c8cf7a25e1263f3c58148b54c23b1ab24a979db67"
+    },
+    {
+      "path": "apps/web/e2e/planner-draft-recovery-qa.spec.ts",
+      "sha256": "5f53f4d770462c701da72c522439261ee8f8469049df8ce1186105b0cfed81f3"
+    },
+    {
+      "path": "apps/web/e2e/planning.spec.ts",
+      "sha256": "551d99a37f427a7dffb68ff10e4c7ed081c5e7df19217a29006e259e132bd6a4"
+    },
+    {
+      "path": "apps/web/e2e/private-next-routes-qa.spec.ts",
+      "sha256": "e4c065185171d9de69006b73e32d670150625a55bce388cbe979b294b03bbabd"
+    },
+    {
+      "path": "apps/web/e2e/quiz-qa.spec.ts",
+      "sha256": "3e6fa6852789faf31d2b1981de6008e5ca68728540692be0d7e35dc1892f6124"
+    },
+    {
+      "path": "apps/web/e2e/recovery-focus-qa.spec.ts",
+      "sha256": "80b3598bf9e2923afc7cb6ba878757d87187633e63290cd05400bf83ed2ce2a8"
+    },
+    {
+      "path": "apps/web/e2e/recovery.spec.ts",
+      "sha256": "17fef6bc536b2fba7b8245e08a6e27d0ec66616504a5f14384e7958b40e29585"
+    },
+    {
+      "path": "apps/web/e2e/report-qa.spec.ts",
+      "sha256": "a0a127f2d31f68ab6b5c4844210792e81ffeb23e708cd0dccc84ec6a672ba032"
+    },
+    {
+      "path": "apps/web/e2e/shared-server-recovery-qa.spec.ts",
+      "sha256": "1607986ea8a6fad8dd70177cb9033ad17f1d0e59d1af4b1e133c187febb5c849"
+    },
+    {
+      "path": "apps/web/e2e/signin-qa.spec.ts",
+      "sha256": "16fedfe1a07ba0ce923f5a22a6a68d94877313cf9227024b5b1485ac943a8666"
+    },
+    {
+      "path": "apps/web/e2e/tool-planning-handoff-qa.spec.ts",
+      "sha256": "20fb7bcb7bfcb80eae1e402b6cda4ac6680dbec76a2090f034184bfb6c730576"
+    },
+    {
+      "path": "apps/web/e2e/tools-qa.spec.ts",
+      "sha256": "bd37ee0c8513ae0c6f337e4d736fcabad4a24e745c68f06a163e7f29ade989a9"
+    },
+    {
+      "path": "apps/web/e2e/world-map-qa.spec.ts",
+      "sha256": "f156f052375bc085b40c50eb6f4f3a24a1b0165394c4d40f659cc5edd7ce4873"
+    },
+    {
+      "path": "apps/web/e2e/world-map-recovery-qa.spec.ts",
+      "sha256": "163f34b1ce5621f59d2a3a582603b9df208a4bd5f9562ddae7f99378b4b4a626"
+    },
+    {
+      "path": "apps/web/e2e/world-map-share-qa.spec.ts",
+      "sha256": "ba651556ae27821dfa43d2462e9c4d097a1113310d0a2e9c7becd7c6dfec7fca"
+    },
+    {
+      "path": "apps/web/eslint.config.mjs",
+      "sha256": "23613a3caf0d726c068f5b5ecf0a95afb4b2bbe9d041cd69cacadb321627d57a"
+    },
+    {
+      "path": "apps/web/hooks/index.ts",
+      "sha256": "715e62d419a140094fdc08d3ad7c2ca5cd09d368766f5210f7366b79c67970ed"
+    },
+    {
+      "path": "apps/web/hooks/useHydrated.ts",
+      "sha256": "64d0ff4519b6c3e6a7c5b3f7f979b7f5c3f3b9d9ea6205ed5878e30f335a1a10"
+    },
+    {
+      "path": "apps/web/hooks/useInView.ts",
+      "sha256": "1bee2cd26ec04ec5bd2dd22ffc6bdf60a51742680ef3d6f1529c349175bdc499"
+    },
+    {
+      "path": "apps/web/hooks/useLocalCalendarDate.ts",
+      "sha256": "9551798a72287f05a78b261c16d338efc809055e0e20cf5255fc365ff603d465"
+    },
+    {
+      "path": "apps/web/hooks/useModalFocusTrap.ts",
+      "sha256": "3d3cfac8aa07b58655d9db2758fb840e780f5c9be7109e1cc69557dcaef0efa4"
+    },
+    {
+      "path": "apps/web/hooks/useReducedMotion.ts",
+      "sha256": "7878b55b89516f2453da88fc6c4313d8b7c0b1ec059dedd501df6177749c91fb"
+    },
+    {
+      "path": "apps/web/hooks/useTripGeneration.ts",
+      "sha256": "2ffbaa7f965f90e05052e0b30fbf62e48322a35f00612c5ccfb07075c91e46cf"
+    },
+    {
+      "path": "apps/web/hooks/useUser.ts",
+      "sha256": "5da0b4e52560e1b8d85b91f3f06b65144e76a620575a85476b20ff140552dda1"
+    },
+    {
+      "path": "apps/web/instrumentation-client.ts",
+      "sha256": "ea80b8864d75328deea7acce5839caa8dd66611d601be3e7e6083dcbebaf6d68"
+    },
+    {
+      "path": "apps/web/instrumentation.ts",
+      "sha256": "61713819700203a27bdf6d6010b94f3fe5fec11a4490097dd4ab9a9b0e4e0619"
+    },
+    {
+      "path": "apps/web/lib/affiliates/amadeus.ts",
+      "sha256": "623d02caf3f8655967b8bf3da9e2d32972386f36e01ec0fdb69986174994476a"
+    },
+    {
+      "path": "apps/web/lib/affiliates/booking.ts",
+      "sha256": "1bdd027830589ca55fc065d21ae2a644aa06d61a4d8ae4d03057133894ef9bc8"
+    },
+    {
+      "path": "apps/web/lib/affiliates/duffel.ts",
+      "sha256": "ce91fd9b33bbcfcd95fb01715acb3b40d95cbabca0ec53a2a6e1b22c42805475"
+    },
+    {
+      "path": "apps/web/lib/affiliates/getyourguide.ts",
+      "sha256": "2240f3fd78f9d9f6071dc2984738d988f8c4e9d4831bf335d3bfbac4a086b88d"
+    },
+    {
+      "path": "apps/web/lib/affiliates/index.ts",
+      "sha256": "ac19867c1d822c484601bd392e767f5adb094fd320f144d318ac1fb771638968"
+    },
+    {
+      "path": "apps/web/lib/affiliates/liteapi.ts",
+      "sha256": "649d0581287bad5ced52959d3adf4679d102ad77533fd904d07e9abf1a523b3e"
+    },
+    {
+      "path": "apps/web/lib/affiliates/tracking.ts",
+      "sha256": "7c1df93cd50855a1c1dee8322d330daf780a7f08dd963f3261e10adac985bc76"
+    },
+    {
+      "path": "apps/web/lib/affiliates/tripadvisor.ts",
+      "sha256": "48547e78132fc08206801fddbc9c8b56faba69aa771d609a4554c4e99af12089"
+    },
+    {
+      "path": "apps/web/lib/affiliates/viator-link.ts",
+      "sha256": "7a38cd9368ee7662f174e9419a3cc04761e9e191a74c46aa1eb3a9432c7a1c98"
+    },
+    {
+      "path": "apps/web/lib/affiliates/viator-policy.ts",
+      "sha256": "03c1cfb4e71289c00324563442324fe1f01d021c57093eac10fdc10eb5ae8bef"
+    },
+    {
+      "path": "apps/web/lib/affiliates/viator.ts",
+      "sha256": "68cfe481007f67207f05226f19d93de80ba8f4f489a344161e35b1090439dcea"
+    },
+    {
+      "path": "apps/web/lib/ai/AI_INTEGRATION_COMPLETE.md",
+      "sha256": "47b62408e1a0e8bdf44c5a587bccc53cb353191f5459afe3faff931a28009b52"
+    },
+    {
+      "path": "apps/web/lib/ai/EXAMPLE_USAGE.ts",
+      "sha256": "af9713668edba7fe093959274ddee061ec2109c75dd4ffc13c1e5f52c2e776a5"
+    },
+    {
+      "path": "apps/web/lib/ai/README.md",
+      "sha256": "f7436015d50e3c6defc4a7779dd365cc4dfc08b953f0b51bd59457a884e6b99e"
+    },
+    {
+      "path": "apps/web/lib/ai/claude.ts",
+      "sha256": "cc25d81969bdb4b90cdafa75de70e1ed65534c183a28af085f24ea5762e45e31"
+    },
+    {
+      "path": "apps/web/lib/ai/client.ts",
+      "sha256": "1c042479713fcccf0683a0ce44f16682c4aca0ced1ed9775a415f9342077a264"
+    },
+    {
+      "path": "apps/web/lib/ai/index.ts",
+      "sha256": "e17f05350d35e424f0befb2666e599f71592259161239aa0337e65d4caed616d"
+    },
+    {
+      "path": "apps/web/lib/ai/planning-consent-client.ts",
+      "sha256": "8253927eb59c08b5dc83e5f5a07bf7a823bb0876fc40674c8def5cc4a6c562f0"
+    },
+    {
+      "path": "apps/web/lib/ai/planning-disclosure.ts",
+      "sha256": "82d3cf818cecd848d64c4c8b79a3d3e8cc915e88719fa1893d1949fd14a47626"
+    },
+    {
+      "path": "apps/web/lib/ai/prompts.ts",
+      "sha256": "3b06989a179022e901c04117d7a2123f454c3aced186fd28487b8c321f17196d"
+    },
+    {
+      "path": "apps/web/lib/ai/sdk.ts",
+      "sha256": "6c8a156177a65fec363c4e9eb00959b8e76880f163827df5cce411a0d8200ae0"
+    },
+    {
+      "path": "apps/web/lib/ai/types.ts",
+      "sha256": "778c1093cb8763bc088a5e2bf6ba6078b9267553013b8b1bdc419ee733a3b45d"
+    },
+    {
+      "path": "apps/web/lib/api/date-range.ts",
+      "sha256": "f57054990c70cc538bb263719af53b2773b40a159a76c5988b9e95abb88adf77"
+    },
+    {
+      "path": "apps/web/lib/api/json.ts",
+      "sha256": "978cd1c590aaad47176632249a8a620f5290d970946d9dd05aa1b145734ebc8c"
+    },
+    {
+      "path": "apps/web/lib/auth/account-data.ts",
+      "sha256": "9b4a10311a11fa730f6c6a5c8f2313fb07b33b8c1e85e26cca2a0e1f9460ab4c"
+    },
+    {
+      "path": "apps/web/lib/auth/account-deletion-route.ts",
+      "sha256": "2043e0e452e61fa0c9bad3f3fe7191541f867503115f619e1c15a98666f38023"
+    },
+    {
+      "path": "apps/web/lib/auth/account-deletion.ts",
+      "sha256": "fd17e420c407555b00fbae60f3f7d96f845c319c8f361f0912ace7ea6aa5de13"
+    },
+    {
+      "path": "apps/web/lib/auth/apple-revocation.ts",
+      "sha256": "78ac21c146d7ee8c7599b068a2922126ed299543fb94ac33accc9d20766754df"
+    },
+    {
+      "path": "apps/web/lib/auth/deletion-recovery.ts",
+      "sha256": "b8804f40fabcfc45da1e0fa189defbd54cd952903ccfea00068e45c2b22250c5"
+    },
+    {
+      "path": "apps/web/lib/auth/index.ts",
+      "sha256": "3e2cabe5183caebcd50fb8a13cbef3e0aa0531e29c819219ad7ca3548ba6923b"
+    },
+    {
+      "path": "apps/web/lib/auth/login-copy.ts",
+      "sha256": "6c9e53c46de90984669b42a7d35297815e47cdf8a860a001d7fe80f68d63917e"
+    },
+    {
+      "path": "apps/web/lib/auth/middleware.ts",
+      "sha256": "d365c40647b8e60b1b63302084cc0a98c5fdda8e5ee6aa4e89047265e834eb09"
+    },
+    {
+      "path": "apps/web/lib/auth/password-reset.ts",
+      "sha256": "c73c5a884b771809a393b2f2b7fe0cd97707105863061cb3a3706270cc291ead"
+    },
+    {
+      "path": "apps/web/lib/auth/request-deadline.ts",
+      "sha256": "e866dca4a0c89312643e26f1738b197bde0dacf243a8b32c3e45fd766aca00ad"
+    },
+    {
+      "path": "apps/web/lib/blog/clusters.ts",
+      "sha256": "67089bc162afa7fa1925884c896d16ac71fbc340a84d32afbb8accf1c1be75a8"
+    },
+    {
+      "path": "apps/web/lib/blog/fallback-image.ts",
+      "sha256": "232f5a016b0769aa8c7b8012ab1468cb568eba3f8b4f58238a5bca98c0af8d57"
+    },
+    {
+      "path": "apps/web/lib/blog/index.ts",
+      "sha256": "0d96e5d1063c9d268c70b7a519918f3aa023517dce916e0a0c0c9fbc98ab62ee"
+    },
+    {
+      "path": "apps/web/lib/blog/supabase.ts",
+      "sha256": "223b7f28200d4547ef70a31707e3d7786fb8cf05df5382f8afdf720f4d1d6217"
+    },
+    {
+      "path": "apps/web/lib/blog/types.ts",
+      "sha256": "2708ed4072b2d3aa686ef06db86c51abbd96fbeede67335e6257dcb6e04a7ff0"
+    },
+    {
+      "path": "apps/web/lib/config/database-isolation.ts",
+      "sha256": "00895489b84476880f6fe811681097faf077fec21659ce95d22b8dd58b2f76af"
+    },
+    {
+      "path": "apps/web/lib/create-draft.ts",
+      "sha256": "9fc03bf2f027076959eecc519e5118563eb53d8448c8bff4883535b296e5e0b1"
+    },
+    {
+      "path": "apps/web/lib/destination-guides.ts",
+      "sha256": "e3d66a36f84e3f7fb570eeb2a1623dfb8675b7b35f9730e607a109bb82f486fa"
+    },
+    {
+      "path": "apps/web/lib/destinations.ts",
+      "sha256": "cb97ea3467d99b60e3a9ac22de0074a9e61605c85cd2b79a7dfb74627915d21a"
+    },
+    {
+      "path": "apps/web/lib/env.ts",
+      "sha256": "1519ebd9dd6f12eab583666042463e6a78362f34d14b442e1a6317ccedce8628"
+    },
+    {
+      "path": "apps/web/lib/json-render/build-spec.ts",
+      "sha256": "e7fa539f87b6ce9934bf53d3a13c124f750aa9ec358416fe4483f8150944705b"
+    },
+    {
+      "path": "apps/web/lib/logger.ts",
+      "sha256": "21b48348021106d78296b09ef15566fe5206a72f059362f4e7881183cc1d1c2f"
+    },
+    {
+      "path": "apps/web/lib/notifications/expo.ts",
+      "sha256": "9cbf442c9093b91a33dceafa836027d5c4de23c2f9593c07b0853c25410846a5"
+    },
+    {
+      "path": "apps/web/lib/notifications/itinerary-dispatch.ts",
+      "sha256": "57522a0b0a696538ccbe934813165bb82913cd2cba612be68f87746165b2cfa2"
+    },
+    {
+      "path": "apps/web/lib/places/display.ts",
+      "sha256": "2b5295b01f2b7c218359928c8bc8dcbcf45e77ba6e717e1d0fe641c7084eeb65"
+    },
+    {
+      "path": "apps/web/lib/planner-destination-catalog.ts",
+      "sha256": "7cd10f81cf2e82ad37670bda9b583cb6330521470db00269ff8b629cfd931149"
+    },
+    {
+      "path": "apps/web/lib/planner-destination.ts",
+      "sha256": "2f821bcec5a186355cc16c6870cf31a479d5b35b6b437db5b89386c8774aeb46"
+    },
+    {
+      "path": "apps/web/lib/search/agents/activities.ts",
+      "sha256": "744aefd8075bb394d979babcf57ea2b7932620210e6e004ffe19ac2760da88f0"
+    },
+    {
+      "path": "apps/web/lib/search/agents/aggregator.ts",
+      "sha256": "f69d88d9b886a3bcc3520eb1441cc67ae17fcf2cd8269d137cdccd9d923281b0"
+    },
+    {
+      "path": "apps/web/lib/search/agents/dining.ts",
+      "sha256": "2ec256bfba166156cacb4c7046c34575256bbfe0e578c0e8acd005b0e47477d6"
+    },
+    {
+      "path": "apps/web/lib/search/agents/hotels.ts",
+      "sha256": "7bf1746b41569cec3fe51273bfcfd4fa79ae223fd6de1e2fc78a1120f9f8ea84"
+    },
+    {
+      "path": "apps/web/lib/search/agents/index.ts",
+      "sha256": "cc6ae73f3258076cbcd7f82960931992f4a812962016198b942b3e2dde7d2e4e"
+    },
+    {
+      "path": "apps/web/lib/search/agents/orchestrator.ts",
+      "sha256": "1b2c6a420c2ab74195c55ebae57038f28fce002ed8baf7e9d7a374af6579bc1b"
+    },
+    {
+      "path": "apps/web/lib/search/agents/transport.ts",
+      "sha256": "ab1ace9eeed2949631e14ba75d453d899269a323e53d80934545d4d77c1368ac"
+    },
+    {
+      "path": "apps/web/lib/search/bridge.ts",
+      "sha256": "6d109c8a3ef5cca67c4b1b156a1eef29889014eade3d54bfa6fa253c5abcd188"
+    },
+    {
+      "path": "apps/web/lib/search/enrichment.ts",
+      "sha256": "a1ff51fe7f04c32039d7e207c2b12f0c4b42f775be72ea846053e58ff7b11ae8"
+    },
+    {
+      "path": "apps/web/lib/search/index.ts",
+      "sha256": "db61ca2a00733644e086d3535df3640e437172295232d9e861d2eb4019bf9eab"
+    },
+    {
+      "path": "apps/web/lib/search/preview.ts",
+      "sha256": "3c5c0bcc06c23a659f61a483e56641063811de2aec551216cbdda4c488237962"
+    },
+    {
+      "path": "apps/web/lib/search/runtime.ts",
+      "sha256": "868d0a35425370e1d1ac3a59e5862a696262375235d71c14c119eac69931ec37"
+    },
+    {
+      "path": "apps/web/lib/search/types.ts",
+      "sha256": "d8e15370e680940aebff4865a301e14404cd8699a66a59664c5bff7b2fff1af9"
+    },
+    {
+      "path": "apps/web/lib/search/workflow.ts",
+      "sha256": "553e76000f95d4d0759b91c0b12cff880f696f99b89712dc73842ce9606b932c"
+    },
+    {
+      "path": "apps/web/lib/security/cors.ts",
+      "sha256": "30ad1e507c7dc4d90c3552e45d71d2a1d2c69ab0c76e4dd699248b73ac54a7df"
+    },
+    {
+      "path": "apps/web/lib/security/headers.ts",
+      "sha256": "f1be7f01d475757298ad3972a7d3f4ad77509257addbbd1d682103c05f92d4b5"
+    },
+    {
+      "path": "apps/web/lib/security/rate-limit.ts",
+      "sha256": "2ebb201715f4500bea7f30e0c723ff9e159d935ab40fcb9c691c82ca29f561f1"
+    },
+    {
+      "path": "apps/web/lib/security/validate-redirect.ts",
+      "sha256": "db4d35585984efc597abcfff8a4ac680c05d62c3db7915e5b3d15bbbb914ceab"
+    },
+    {
+      "path": "apps/web/lib/social-image.tsx",
+      "sha256": "d5ac60ff333d69b9181fb199c469f6bcb6f117e33d58fd21e542f75cf1472db2"
+    },
+    {
+      "path": "apps/web/lib/store-links.ts",
+      "sha256": "2846e0aa093f50e0002d301e24bff3806cc0901ef92f01f9d3f7771823c28707"
+    },
+    {
+      "path": "apps/web/lib/supabase/client.ts",
+      "sha256": "f12fdc1ab9c8a2fa485a60dc832b1acbcc0943f16b02445232085bf3869ed6b7"
+    },
+    {
+      "path": "apps/web/lib/supabase/server.ts",
+      "sha256": "e1b919beef5a1c9760b77b655ef7e7597555344c51f9634c0c32dd462431f3b2"
+    },
+    {
+      "path": "apps/web/lib/tools/climate-data.ts",
+      "sha256": "49947312366a6106d0c7d6d1f2c4c539d0297ecc99c7150b7f7b9c80190c7314"
+    },
+    {
+      "path": "apps/web/lib/tools/cost-data.ts",
+      "sha256": "46540bc9cf6798cbfc9626086aebc65a7d6019f6d434fabb692b1cac8a9cabdc"
+    },
+    {
+      "path": "apps/web/lib/tools/currency-data.ts",
+      "sha256": "0cb9a37ee709bead3827240e81dd5ae569c5cf9b52f07979d7f8cb5d19de6472"
+    },
+    {
+      "path": "apps/web/lib/tools/packing-data.ts",
+      "sha256": "39a6ce6c93e6fd85fcd249a684577381e3def1b12cf02b5e2f72f73d2dbd35c2"
+    },
+    {
+      "path": "apps/web/lib/tools/quiz-questions.ts",
+      "sha256": "8503362b41027132d58e180f3980e5e84dc4a72fdc150632c618d25240bc8829"
+    },
+    {
+      "path": "apps/web/lib/tools/quiz-scoring.ts",
+      "sha256": "aac0099d2fa0fe7ac130427c1e825cb1e1a00b63a077ba6477cbb43deb6d52eb"
+    },
+    {
+      "path": "apps/web/lib/tools/visa-data.ts",
+      "sha256": "8534c024b4b0cd8259254db233a7ca7bcebb7c99ab225148a9a0c19ec7a690ce"
+    },
+    {
+      "path": "apps/web/lib/tools/world-map/backup.ts",
+      "sha256": "426a9353a20b7646921b4515ac4299e2e19358f09ec6685ab5740c96c8d66ea3"
+    },
+    {
+      "path": "apps/web/lib/tools/world-map/continents.ts",
+      "sha256": "d57e7c27433fe3a134822be197da5bce30fc6a48ca26ee235cc026fb64f7d3bd"
+    },
+    {
+      "path": "apps/web/lib/tools/world-map/iso.ts",
+      "sha256": "74dd75a32bbc26c537b6e2505cafb5facfe7fe48bba20542bff6a11c39c9c53a"
+    },
+    {
+      "path": "apps/web/lib/tools/world-map/migrations.ts",
+      "sha256": "084513f39d5d6aa021d1b7cd4cf2323beea8ecb5d1f36c5aae1f38c8c5fc3759"
+    },
+    {
+      "path": "apps/web/lib/tools/world-map/milestones.ts",
+      "sha256": "af041f520e752b7a3c8994830fe9838baee5118b4f2c7a22187af019cb3d9b3c"
+    },
+    {
+      "path": "apps/web/lib/tools/world-map/palette.ts",
+      "sha256": "9fc2ce6798f806f6956979dff4af092ac8e249ef762026d7f2b0cb2223c2e5b4"
+    },
+    {
+      "path": "apps/web/lib/tools/world-map/photo.ts",
+      "sha256": "a1860d74b722a25ff20697460e969da7cc425f4e0ea74375a499edc137a7e52a"
+    },
+    {
+      "path": "apps/web/lib/tools/world-map/share.ts",
+      "sha256": "ed4815e9be4721a0ce32e07333115259e682394884f144916188bfab069bd66f"
+    },
+    {
+      "path": "apps/web/lib/tools/world-map/social.ts",
+      "sha256": "bd6756cd4d094f5ac6436d31053836a038700e9132bbd3d8c2fcda052e6aadca"
+    },
+    {
+      "path": "apps/web/lib/tools/world-map/stats.ts",
+      "sha256": "de3aa9d4771963688f0a9faf6729c6cc98fd8f106dd80dbd8eb6d5d9378e3782"
+    },
+    {
+      "path": "apps/web/lib/tools/world-map/status.ts",
+      "sha256": "5306256e49add2c08725fab46b2d9f706ef528577f26f45ced1c0daa6a0679b7"
+    },
+    {
+      "path": "apps/web/lib/tools/world-map/store.ts",
+      "sha256": "fa9c4345857bf011892d4122481c4d1a63a42d5a2b59a39a2da16f93895f7724"
+    },
+    {
+      "path": "apps/web/lib/tools/world-map/topology.json",
+      "sha256": "5fe862f7bdf95837aa3fa0bfaaca2c8a8539737a47ec8f422147949a7afb4939"
+    },
+    {
+      "path": "apps/web/lib/tools/world-map/types.ts",
+      "sha256": "3c101470a6e787c51109fce47bc781fef7b2bc9b32f7418504d866f14d226b29"
+    },
+    {
+      "path": "apps/web/lib/tools/world-map/typography.ts",
+      "sha256": "f60f81719259677599996fc0b814910db59dbf5a379795e16de6f343c466fe8f"
+    },
+    {
+      "path": "apps/web/lib/trips/apply-generation-update.ts",
+      "sha256": "394be650e05d88e4cb4cb71b96502cf98bffa8c3c732a12b50abd7c115f3e6b5"
+    },
+    {
+      "path": "apps/web/lib/trips/booking-checklist.ts",
+      "sha256": "942e6aae7d10307e8bf6701e099d8c486cb4c46dab1fac8f30d6ec66ca5179ee"
+    },
+    {
+      "path": "apps/web/lib/trips/brief.ts",
+      "sha256": "d92bada4e5885ad75deae6de8946e74d484228180fe0075f74c37ba72dd4143c"
+    },
+    {
+      "path": "apps/web/lib/trips/budget-render.test.tsx",
+      "sha256": "f23d314adc5c9c296e4c5accaba857173c30b3a3692b61f7b8e5ff6bb091cdb2"
+    },
+    {
+      "path": "apps/web/lib/trips/budget.test.ts",
+      "sha256": "95682ba465af12e7b360fc07739eeee5be62c99795ee8f74e8049fca751b247c"
+    },
+    {
+      "path": "apps/web/lib/trips/budget.ts",
+      "sha256": "c5f4168cd271999e0ddba09aeac6f1c498ee1783c9edbba80fcf667f6c7d7110"
+    },
+    {
+      "path": "apps/web/lib/trips/create-trip-command.ts",
+      "sha256": "3102e5ad58160fc5059ddbe72b4d2322fd02ddd63c5bf55e8788d4a1cd095583"
+    },
+    {
+      "path": "apps/web/lib/trips/date-duration.ts",
+      "sha256": "18703273e6b6a3004794d4e8beff4f7c679eaa60cb2780e27e9fcd04616f0d16"
+    },
+    {
+      "path": "apps/web/lib/trips/destination-image.ts",
+      "sha256": "00a04167c79f728eb900221d899a2857bbf7831c8c24dcc17951bd07c3274c8d"
+    },
+    {
+      "path": "apps/web/lib/trips/export.ts",
+      "sha256": "d120e0b580ed21dff62629fbe239d6e1256ed1fc2dcfd2ceb00962f75e9dbd46"
+    },
+    {
+      "path": "apps/web/lib/trips/load-shared-trip.ts",
+      "sha256": "f728be41419b21e7e388079238c164ce7b1750686b075def12a243fdab303894"
+    },
+    {
+      "path": "apps/web/lib/trips/load-trip.ts",
+      "sha256": "c5804a8480e2d22293d9f2914724a5c3a72644585e047e50bc4389d06518a2b0"
+    },
+    {
+      "path": "apps/web/lib/trips/plan-command.ts",
+      "sha256": "4ac076c9e6e2636938553ee3c518b1fa517543061be3c54ee2b3ffae1de8303d"
+    },
+    {
+      "path": "apps/web/lib/trips/plan-edits.ts",
+      "sha256": "98ca09f8139e1e2f28dc9f950959a6885ac880876807d9f7d9240380e4420890"
+    },
+    {
+      "path": "apps/web/lib/trips/planning-pause.ts",
+      "sha256": "6382265598885ffde435519dc04edf15cf1e2f9f23fd4137a6eef63671f09ecb"
+    },
+    {
+      "path": "apps/web/lib/trips/read-itinerary.ts",
+      "sha256": "6450e0537b02baf6a02a8900b0ea2c30cc625fe95cb8ae73ce4623a5c3eaeca2"
+    },
+    {
+      "path": "apps/web/lib/trips/reconcile-generation.ts",
+      "sha256": "2ae847de2e5f99c5181951b3712f71e535f9a6e3a2aebc2becc5e46bdd8baa7a"
+    },
+    {
+      "path": "apps/web/lib/trips/remove-local-retry.ts",
+      "sha256": "566b536551866f36dd6d02e0c2c7924272d35a283b43e71e703e4171cdc4a77c"
+    },
+    {
+      "path": "apps/web/lib/trips/streaming-dossier.ts",
+      "sha256": "039f7e18e18d239c93bc58f52131db8e9c900e40c5e11d8896044f8f32efd4dd"
+    },
+    {
+      "path": "apps/web/lib/utils.ts",
+      "sha256": "4acbc7165a8d54738ff62b51414e772c08fe78434e524e6d8770180d3ba2925f"
+    },
+    {
+      "path": "apps/web/lib/weather/cache.ts",
+      "sha256": "f2470c17f43f72fb60a4818e391ac7caba69a0ce5290401ea3edf737f5857fcf"
+    },
+    {
+      "path": "apps/web/lib/weather/forecast.ts",
+      "sha256": "d83475096ad7b2424a7b66502a66d1ec27683c9be62ed90b6aaba36f62ec4fc1"
+    },
+    {
+      "path": "apps/web/lib/weather/met.ts",
+      "sha256": "6dc9e701d9d30a1ad90244998115eeeb4399eaa4ab03d6460986e17ab4a3d4f9"
+    },
+    {
+      "path": "apps/web/lib/workflow/runtime.ts",
+      "sha256": "fae9c01f50ecf8f8088c0e0bc7927a7dccce1d8f608cb4361326265aca7d2fe0"
+    },
+    {
+      "path": "apps/web/next.config.ts",
+      "sha256": "1b27d756955f113ccb7ace397a12ca24b9297f3d9392225f83efc206915336b9"
+    },
+    {
+      "path": "apps/web/package.json",
+      "sha256": "ab0c9f03d6fe49dca318e2bd8e18ce19a71e47908be7d2cceeb6c7546271b1da"
+    },
+    {
+      "path": "apps/web/playwright.checkout.config.ts",
+      "sha256": "dc94f026a7305eea1d0f5301e159fcd95c3d8232117ec629fb56063a83dc0f14"
+    },
+    {
+      "path": "apps/web/playwright.config.ts",
+      "sha256": "5343306f33ee3f8f9f4329bce724f4d593a020b992a3d987a9a4bb3dc22c818c"
+    },
+    {
+      "path": "apps/web/playwright.recovery.config.ts",
+      "sha256": "2beb5dbdbe51730386c9f0bd386aa7914fba75b5da1516e40baf4103b70b9691"
+    },
+    {
+      "path": "apps/web/postcss.config.mjs",
+      "sha256": "3aac0d047d7dd505eea362c918e2ddd0436428682c5de5cb18feda70d46aa5cb"
+    },
+    {
+      "path": "apps/web/proxy.ts",
+      "sha256": "f5dd7db38ee0d7046075231a9eef79880802078408535ca96fc6ffc7f1d04e0c"
+    },
+    {
+      "path": "apps/web/public/apple-touch-icon.png",
+      "sha256": "ac186e30f9ed79dd64e5b77b60fc672e9130fd8cb65eb4b6fef1ac75ea025e90"
+    },
+    {
+      "path": "apps/web/public/favicon-16.png",
+      "sha256": "fd90d0373cdbeee654af0f724a9b2f22a35b8d2d5240812ceb2643be51d0a02a"
+    },
+    {
+      "path": "apps/web/public/favicon-32.png",
+      "sha256": "84137463ad93f500889f23c9975a0b4ea25c7034a6f5a664fd1748f04f54d2da"
+    },
+    {
+      "path": "apps/web/public/favicon.png",
+      "sha256": "84137463ad93f500889f23c9975a0b4ea25c7034a6f5a664fd1748f04f54d2da"
+    },
+    {
+      "path": "apps/web/public/file.svg",
+      "sha256": "2b67812c325c199a02536cdbeea0c593a72f707d323b72ee3e08dbab06753bd4"
+    },
+    {
+      "path": "apps/web/public/globe.svg",
+      "sha256": "b614b9bf183925957661ac851498fe1d8029fd43a62fbfed86f9e2624a57e7cf"
+    },
+    {
+      "path": "apps/web/public/icon-192.png",
+      "sha256": "b4aa81846f0766a4ce791faf4f6a5264c28f2285526f405ddc2a574753c27a57"
+    },
+    {
+      "path": "apps/web/public/icon-512.png",
+      "sha256": "26dd3ef2106847faa412dd7d313de9a034ad9d82289d60cc1e0ec7b117871d5a"
+    },
+    {
+      "path": "apps/web/public/icon.png",
+      "sha256": "26dd3ef2106847faa412dd7d313de9a034ad9d82289d60cc1e0ec7b117871d5a"
+    },
+    {
+      "path": "apps/web/public/images/journal-cover.svg",
+      "sha256": "fcb771fe20e6189c7acbfdc8192dc7cdc826c39ba86e13b070bb87cb38127b75"
+    },
+    {
+      "path": "apps/web/public/manifest.json",
+      "sha256": "5bcd43778142fdd715639efbe7f9adc49ef1f01e7954b20dd9f8f293ecc07942"
+    },
+    {
+      "path": "apps/web/public/next.svg",
+      "sha256": "55995dfad6ecb4945a1e856ddca03c5e16aa5bf13fd21b4df6a74ae79357bcfc"
+    },
+    {
+      "path": "apps/web/public/vercel.svg",
+      "sha256": "f081337b2fee635b455b63275406a3e7f39d6a014e25ad90dab5a67e62a12ac4"
+    },
+    {
+      "path": "apps/web/public/window.svg",
+      "sha256": "644768c4aaeb4767bce293344eeb0c125fb804a94d801440424072202d85e3a1"
+    },
+    {
+      "path": "apps/web/public/world-map/countries-110m.json",
+      "sha256": "2516c915867c7baf18ddec727aec46c315541a07cfb3d79a6559b05d5e94eee8"
+    },
+    {
+      "path": "apps/web/scripts/README.md",
+      "sha256": "5f132f8fcad5818af482d72b369e74a5a010b2015c808eb022296f49a5333014"
+    },
+    {
+      "path": "apps/web/scripts/check-itinerary-streaming-schema.ts",
+      "sha256": "4716cd5c3ed823adf41abac5d060149d68264b1f242fd45949453a9da5230172"
+    },
+    {
+      "path": "apps/web/scripts/check-itinerary-vendors.ts",
+      "sha256": "661f1a2d38bd44c93bf2466cd0e159b47334de37e49e20f66dfc1120f6f0d8ff"
+    },
+    {
+      "path": "apps/web/scripts/check-liteapi-sandbox.ts",
+      "sha256": "a2ccb18fcff77a5e064a66d1d0ffbf6064348828785ff5e99538d6ab5c782409"
+    },
+    {
+      "path": "apps/web/scripts/measure-itinerary-stream.ts",
+      "sha256": "38276be67030dba97fd5b2a3d908e1d7209c8a93f43c33ec85cf2feea2eb55d7"
+    },
+    {
+      "path": "apps/web/scripts/qa/README.md",
+      "sha256": "e2227f25f1f34c57f2decd5368bcb4c730279d37cd821af66de4660f743debf9"
+    },
+    {
+      "path": "apps/web/scripts/qa/check-private-transactions.mjs",
+      "sha256": "74056a71d12320076e7fe6489ed94b39a38673c913dd302e7e4826cc8ef3fdc0"
+    },
+    {
+      "path": "apps/web/scripts/qa/full-schema-privacy-check.sql",
+      "sha256": "5e9e4bb83675ac4812796b738014530a1b27f9de3a3fd31557a8534d20f96f8a"
+    },
+    {
+      "path": "apps/web/scripts/qa/private-brief-check.sql",
+      "sha256": "4dc9c766c93ce9ea6e43ce9a37861b437f83c7aced434d1a8fc3814b00c8b01e"
+    },
+    {
+      "path": "apps/web/scripts/qa/private-transactions-bootstrap.sql",
+      "sha256": "918a77776a790e23cd887567f1610d967ad65608f5db6f0ede330ee778006679"
+    },
+    {
+      "path": "apps/web/scripts/qa/private-transactions-check.sql",
+      "sha256": "961e00bf60e6597315236a3408f34a7b63875a6f73fe836b2ed9b38196e64edd"
+    },
+    {
+      "path": "apps/web/scripts/qa/private-transactions-extra.sql",
+      "sha256": "0f63a6db32f911d122763155a6362970f6afdea0bd5be6ceb4d42fbd75d7036b"
+    },
+    {
+      "path": "apps/web/scripts/test-supabase.ts",
+      "sha256": "596f64af166cb878ae103040c503c8aba7779c3e6b990e6f07753a228011ec7a"
+    },
+    {
+      "path": "apps/web/scripts/test-workflow.ts",
+      "sha256": "e0291b1856eb23c2dfaa40ce8478ffb69b6f7caba5916bc4bdbeca893f1dab54"
+    },
+    {
+      "path": "apps/web/sentry.edge.config.ts",
+      "sha256": "e4922814c3d737d32281d1827b920d3338ad9ee8565651410a292279f07d0c87"
+    },
+    {
+      "path": "apps/web/sentry.server.config.ts",
+      "sha256": "776be7058c94b2146dc37e7b5e8d28017e71207ddf5307e1a8a4a5304cc999df"
+    },
+    {
+      "path": "apps/web/tailwind.config.ts",
+      "sha256": "f5ae770066dfb9123bcdf22ad7ec432dc55b9c1c6a20b3dd6b2f0afd6ada8b17"
+    },
+    {
+      "path": "apps/web/tsconfig.json",
+      "sha256": "a185fd261a9b3456dea445a610d37e474c2e40f8ac842f42547842fb2579987b"
+    },
+    {
+      "path": "apps/web/vercel.json",
+      "sha256": "0294c89d1295f2ff3d7b9efbc76bcc2036e7f39e1b1d2868d3712fdce8b63b92"
+    },
+    {
+      "path": "apps/web/vitest.config.ts",
+      "sha256": "61dfbe27d16d1471ac587701abdc3179c2def276ac130a822a6cfc23dbc56523"
+    },
+    {
+      "path": "apps/web/workflows/generate-itinerary.ts",
+      "sha256": "c64b7ea626ba311b1ebbb871c9c94ca281e43ed6b81190e3bf944a83ca37b586"
+    },
+    {
+      "path": "apps/web/workflows/index.ts",
+      "sha256": "a1a23b7e5752ec6dd2a172ad28b52e3bb5be5aee1c68f06eaa276683642963e2"
+    },
+    {
+      "path": "apps/web/workflows/plan-trip.ts",
+      "sha256": "63eb24d6cf47cafe75b954eb5a1f33115cfc674f7ec2e912a216a3780f10073b"
+    },
+    {
+      "path": "bun.lock",
+      "sha256": "3465ddd395ef5a89e951080209cecb1b74976ab160954f74cf1cd3f8823e178b"
+    },
+    {
+      "path": "package.json",
+      "sha256": "e6966b7c6316834aba17ad1bdc838b19a8dcb8d304f0210a0f7e06fde82fae9e"
+    },
+    {
+      "path": "packages/api-client/__tests__/index.test.ts",
+      "sha256": "3ae4e45a7a7ef3444172d85054212a1b442ff16300a7d642f2b59c617b7d2a99"
+    },
+    {
+      "path": "packages/api-client/package.json",
+      "sha256": "996db0e7b39b06d9da3f21199c7a50f0a4100f45fe369c7e652227785cf330cb"
+    },
+    {
+      "path": "packages/api-client/src/index.ts",
+      "sha256": "fb9f105dbb85741c1f354bbaf9d569b5e94158b381d9ab9a13938c5deb555a39"
+    },
+    {
+      "path": "packages/api-client/tsconfig.json",
+      "sha256": "751396664509e32e074ef298a77eb15f3333c449b225a85246c690dc0d67088f"
+    },
+    {
+      "path": "packages/api-client/vitest.config.ts",
+      "sha256": "a7611e75b888f28f69f25d33145bb55d2c8e5696b95d03e112b24cd9bbc40a0a"
+    },
+    {
+      "path": "packages/constants/__tests__/index.test.ts",
+      "sha256": "8567e103aac1fd8591af373b906e8a5c1f9e911af7b09b18b2d9c5d0ead40cbb"
+    },
+    {
+      "path": "packages/constants/__tests__/pricing.test.ts",
+      "sha256": "25145f5849f6e55a0d0221624c8cfb8e4df4acb82e0235ae2517cb814555a84a"
+    },
+    {
+      "path": "packages/constants/__tests__/trip-dates.test.ts",
+      "sha256": "0dcd7564b58db2199323698df8e65e10c81a975fca45d12d9f077a4849b0e47a"
+    },
+    {
+      "path": "packages/constants/package.json",
+      "sha256": "0709ca35d80ab3adab822579dbabf99744607119093b875109236c1529197e95"
+    },
+    {
+      "path": "packages/constants/src/destinations.ts",
+      "sha256": "475e72fa62815c2cc9e53606cadb27118ff28b7105596e712a102da753e80de6"
+    },
+    {
+      "path": "packages/constants/src/images.ts",
+      "sha256": "f471c75dec191f7a550db00b0363748a765213994368d2a4fe40aa88b7bd2895"
+    },
+    {
+      "path": "packages/constants/src/index.ts",
+      "sha256": "b5e57882a3eb11f6060949396ce83cefb436aac72c65350f8f0ef81abf8953a1"
+    },
+    {
+      "path": "packages/constants/src/inspirations.ts",
+      "sha256": "347ff0f9851cc6c88ab739fb3c8240bffe63b159141984caeabfa2b59fe0e2dc"
+    },
+    {
+      "path": "packages/constants/src/pricing.ts",
+      "sha256": "8c9ab4156a2aa62102d27adaaf2e5a68e79e9d043a2b5d67d005cc63eea6c07d"
+    },
+    {
+      "path": "packages/constants/src/search.ts",
+      "sha256": "63ce7d1b3b088df0630c0cf11d8ab5e8986eb6cda0eda56e8bb52bf027d641a4"
+    },
+    {
+      "path": "packages/constants/src/storage.ts",
+      "sha256": "fb7e275627e7c6a8ad13ca4dd54b85b11d3bd0125046644befd9847570f1c476"
+    },
+    {
+      "path": "packages/constants/src/trip-dates.ts",
+      "sha256": "fdaac291d236e0d27857a1c0ced5c60bf8d107c01228e327816a964f6656bb77"
+    },
+    {
+      "path": "packages/constants/tsconfig.json",
+      "sha256": "a82fd8dc4d032809a21150d8f8dee77f2a7c1fe8e212e785b28ecd69e7b75a42"
+    },
+    {
+      "path": "packages/constants/vitest.config.ts",
+      "sha256": "dfe9c30331c753f6b0b79c74c42fa1b4f8a04bb4cd849f57270cf2824bf504c2"
+    },
+    {
+      "path": "packages/eslint-config/base.mjs",
+      "sha256": "59ce49374b42e191cd101b16e79bcad13ac7767b8df20638a9a2f99c36b49838"
+    },
+    {
+      "path": "packages/eslint-config/package.json",
+      "sha256": "e8265efeaf3d22027cd3cae30fbed4cfb56652f6b6e767765ea661f979fcca1e"
+    },
+    {
+      "path": "packages/supabase/package.json",
+      "sha256": "05a2ef8760c6b88f46afc4d05b8a06aef7d915fe4f6eaddc23c3725c143d07f1"
+    },
+    {
+      "path": "packages/supabase/src/client.ts",
+      "sha256": "3e4e2dd7c605f90231ee5e99bb86c8f5240cdea09201d4ffb5f4d2ca9b68568c"
+    },
+    {
+      "path": "packages/supabase/src/mobile.ts",
+      "sha256": "1c6b387a7a2374460ebe92d42acda2264c4317f0a505a6d4f92feb392c08a9c9"
+    },
+    {
+      "path": "packages/supabase/src/server.ts",
+      "sha256": "ce3edc05b3601d1ca5f29df4ad2b93cdea680222a19632031da65966dfb6c13d"
+    },
+    {
+      "path": "packages/supabase/tsconfig.json",
+      "sha256": "3aa0dbaeebb7567b6aebfa22951a5102d1849bf2475fc7e26f5fb930c436d3c1"
+    },
+    {
+      "path": "packages/tsconfig/base.json",
+      "sha256": "575e935114a0fed45de347e0071cc26394f9eb3ba3713b86a90b8591b13fb1fc"
+    },
+    {
+      "path": "packages/tsconfig/library.json",
+      "sha256": "8cd88db959b05bff66e3e41e20aabba31de12fbe0b3d8edf9065acd2034ff97d"
+    },
+    {
+      "path": "packages/tsconfig/nextjs.json",
+      "sha256": "7438613da6df54766ed915fdd2fbc0491157eb1c13d98c7ebb06ae0b2778735e"
+    },
+    {
+      "path": "packages/tsconfig/package.json",
+      "sha256": "f9cb15559ac48c018d6227fa30633a28ca274108f1fc430a5ed13d08a947aa11"
+    },
+    {
+      "path": "packages/types/package.json",
+      "sha256": "b5fe6740d2673cd9bfc721fa329aa1cc8b566e9deb1e4f58ceaa8131b31fd3b2"
+    },
+    {
+      "path": "packages/types/src/index.ts",
+      "sha256": "b9cc3771dd5e1d6a84151069967efdf51e16e57b42e2c6d46c28d8bc35d8e6c5"
+    },
+    {
+      "path": "packages/types/tsconfig.json",
+      "sha256": "a82fd8dc4d032809a21150d8f8dee77f2a7c1fe8e212e785b28ecd69e7b75a42"
+    },
+    {
+      "path": "packages/validation/__tests__/index.test.ts",
+      "sha256": "994c553529a7139fd942b4c67fb47fc836965c7ea9c8eaef5d59f5dcb1c9ad0c"
+    },
+    {
+      "path": "packages/validation/package.json",
+      "sha256": "5d32bdea2447adc83e4cd7c6fca25ada5de5461b101a332e94dd9a8e65affb2e"
+    },
+    {
+      "path": "packages/validation/src/index.ts",
+      "sha256": "aec13d76b2cdbb52c15d4316403acda7e75adbea28550c322d38ca8317b6fc9f"
+    },
+    {
+      "path": "packages/validation/tsconfig.json",
+      "sha256": "a82fd8dc4d032809a21150d8f8dee77f2a7c1fe8e212e785b28ecd69e7b75a42"
+    },
+    {
+      "path": "packages/validation/vitest.config.ts",
+      "sha256": "dfe9c30331c753f6b0b79c74c42fa1b4f8a04bb4cd849f57270cf2824bf504c2"
+    },
+    {
+      "path": "turbo.json",
+      "sha256": "a96d8605bb7f83eae79c45336c39f14f0872f047d26248ce9568dfefd5955fcd"
+    }
+  ],
+  "rootOriginalSHA": "c643fd1f5bb2eed4d29096dfe9ce26f23f61d6724b90e9e00f5d9e084be0a6cc",
+  "rootOverrideSHA": "c8ee9c04029a30e157e642928ebbcb06cb6c2333cec0a859f04f44f641f62ba2",
+  "probeSHA": "14a857d9d23113c6941e84edb504d82b7cc0b93024eed9e73aa5de33925ff9f3",
+  "build": {
+    "turbopack": "Terminal failure: dependency symlink outside filesystem root",
+    "firstWebpack": "Terminal typecheck failure: missing app-local dependency links selected root Zod 4 instead of web Zod 3; no product-source change",
+    "correctedWebpack": {
+      "session": 89637,
+      "status": "Passed before deletion audit; browser run failed due retained obsolete Sentry config",
+      "log": "/tmp/faroway-ux-root-fault-build-webpack-corrected.log"
+    },
+    "runtimeFaultEnabledDuringBuild": false,
+    "dependencyLinks": "Root plus existing app/package node_modules linked to authoritative frozen installation",
+    "currentSourceWebpack": {
+      "session": 81390,
+      "status": "Terminal exit 0; 411 static pages, types passed",
+      "log": "/tmp/faroway-ux-root-fault-build-current.log"
+    }
+  },
+  "deletedBaselineFiles": [
+    "apps/web/components/create/DestinationMap.tsx",
+    "apps/web/components/trips/TripReadyScreen.tsx",
+    "apps/web/lib/agents/travel-agent.ts",
+    "apps/web/lib/ai/anthropic-sdk.ts",
+    "apps/web/lib/api/date.ts",
+    "apps/web/lib/json-render/catalog-server.ts",
+    "apps/web/sentry.client.config.ts"
+  ],
+  "initialBrowserFailure": "Blank root recovery due to isolated snapshot retaining obsolete sentry.client.config.ts alongside instrumentation-client.ts; duplicate Replay error. Seven authoritative deletions now mirrored. Not a current product defect.",
+  "runtimeSourceComparison": {
+    "scope": "All tracked and untracked apps/web and packages files, excluding generated workflow routes, generated next-env, and explicit QA root override",
+    "different": [],
+    "missingNonRuntime": [
+      "apps/web/__tests__/hooks/use-trip-generation-payload.test.tsx"
+    ]
+  },
+  "runtime": {
+    "port": 3125,
+    "session": 19476,
+    "qaRootFaultFlag": true
+  },
+  "browserAcceptance": {
+    "profiles": [
+      "desktop",
+      "mobile-safari",
+      "mobile-chrome"
+    ],
+    "result": "3 passed",
+    "artifact": "root-fault-browser-acceptance.json",
+    "safariKeyboard": "Alt+Tab to traverse buttons under WebKit default keyboard navigation",
+    "retainedFailedRuns": [
+      "Obsolete client config caused duplicate Replay blank screen",
+      "Runner incorrectly expected homepage main element; homepage content and h1 visibly loaded",
+      "Plain Tab skips buttons under default WebKit navigation"
+    ]
+  }
+}

@@ -1,0 +1,37 @@
+{
+  "scope": "Final web draft calendar/client deadline/static fallback review",
+  "reviewExtent": "Full draft helper and SVG bodies; complete shared API client base-to-current diff. Unchanged generic client methods not claimed audited.",
+  "files": [
+    {
+      "path": "apps/web/lib/create-draft.ts",
+      "sha256": "9fc03bf2f027076959eecc519e5118563eb53d8448c8bff4883535b296e5e0b1"
+    },
+    {
+      "path": "packages/api-client/src/index.ts",
+      "sha256": "7448b4a903b0027692b414e3e72279d969a3b67db41c9fbc2e138ff5d41f4811"
+    },
+    {
+      "path": "apps/web/public/images/journal-cover.svg",
+      "sha256": "fcb771fe20e6189c7acbfdc8192dc7cdc826c39ba86e13b070bb87cb38127b75"
+    }
+  ],
+  "invariants": [
+    "Draft date restoration uses valid local-calendar formatter rather than UTC shift",
+    "Shared client deadline covers token acquisition, fetch and JSON body; aborted late continuation cannot start fetch or return success",
+    "Headers preserve supplied forms through Headers constructor; response error fields are string-guarded",
+    "Shared client exposes bounded trip pages with encoded continuation cursor",
+    "Packaged illustrated SVG contains static paths/shapes only, with no external references or executable content"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "validation": {
+    "result": "Passed",
+    "scope": "Draft/calendar and shared client deadline regressions",
+    "log": "/tmp/faroway-ux-frozen-draft-client-review-tests.log"
+  },
+  "limits": [
+    "Draft envelope behavior beyond changed calendar parser is context, not a new persistence redesign",
+    "Whole exact-candidate checks and acceptance remain pending"
+  ]
+}

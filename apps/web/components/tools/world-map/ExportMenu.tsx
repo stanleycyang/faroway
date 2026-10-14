@@ -18,13 +18,76 @@ interface Props {
   onOpenShare: (alreadyCopied: boolean) => void;
 }
 
+import type { Profile } from "@/lib/tools/world-map/types";
+
 type Aspect = "landscape" | "square" | "story";
 
 export function ExportMenu({ onOpenImport, onOpenShare }: Props) {
+  const profile = useActiveProfile();
+  return (
+    <ExportSession
+      key={profile?.id ?? "none"}
+      profile={profile}
+      onOpenImport={onOpenImport}
+      onOpenShare={onOpenShare}
+    />
+  );
+}
+
+function ExportSession({
+  onOpenImport,
+  onOpenShare,
+  profile,
+}: Props & { profile: Profile | undefined }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-  const profile = useActiveProfile();
+  const [error, setError] = useState<string | null>(null);
+  const mounted = useRef(false);
+  const busyRef = useRef(false);
+  const controllerRef = useRef<AbortController | null>(null);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      controllerRef.current?.abort();
+    };
+  }, []);
+
+  async function bounded<T>(
+    work: (signal: AbortSignal) => Promise<T>,
+  ): Promise<T> {
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    let deadline: ReturnType<typeof setTimeout> | undefined;
+    const interrupted = new Promise<never>((_, reject) => {
+      controller.signal.addEventListener(
+        "abort",
+        () => reject(new Error("Export interrupted")),
+        { once: true },
+      );
+      deadline = setTimeout(() => controller.abort(), 15_000);
+    });
+    try {
+      return await Promise.race([work(controller.signal), interrupted]);
+    } finally {
+      clearTimeout(deadline);
+      if (controllerRef.current === controller) controllerRef.current = null;
+    }
+  }
+
+  function begin(action: string) {
+    if (!profile || busyRef.current || !mounted.current) return false;
+    busyRef.current = true;
+    setBusy(action);
+    setError(null);
+    return true;
+  }
+
+  function finish() {
+    busyRef.current = false;
+    if (mounted.current) setBusy(null);
+  }
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -37,53 +100,69 @@ export function ExportMenu({ onOpenImport, onOpenShare }: Props) {
   }, [open]);
 
   function downloadJson() {
-    downloadBackupJson();
-    setOpen(false);
+    if (!begin("backup")) return;
+    try {
+      downloadBackupJson();
+      setOpen(false);
+    } catch {
+      setError("Your backup couldn’t download. Try again from this menu.");
+    } finally {
+      finish();
+    }
   }
 
   async function downloadPng(aspect: Aspect) {
-    if (!profile) return;
-    setBusy(`png-${aspect}`);
+    if (!profile || !begin(`png-${aspect}`)) return;
     try {
       const encoded = encodeProfileToUrl(profile);
       const url = `/api/og/world-map?format=${aspect}&d=${encodeURIComponent(encoded)}`;
-      // Fetch as blob so we can force a download with a friendly filename.
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`OG render failed: ${res.status}`);
-      const blob = await res.blob();
+      const blob = await bounded(async (signal) => {
+        const res = await fetch(url, { signal });
+        if (signal.aborted || !mounted.current)
+          throw new Error("Export interrupted");
+        if (!res.ok) throw new Error("Poster unavailable");
+        return res.blob();
+      });
+      if (!mounted.current) return;
       const blobUrl = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      const today = new Date().toISOString().slice(0, 10);
-      a.href = blobUrl;
-      a.download = `world-map-${aspect}-${today}.png`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(blobUrl);
-    } catch (err) {
-      console.error("PNG export failed", err);
-      alert("Couldn't generate the image. Try again in a moment.");
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        a.href = blobUrl;
+        a.download = `world-map-${aspect}-${today}.png`;
+        document.body.appendChild(a);
+        a.click();
+        setOpen(false);
+      } finally {
+        a.remove();
+        URL.revokeObjectURL(blobUrl);
+      }
+    } catch {
+      if (mounted.current)
+        setError(
+          "Your poster couldn’t download. Choose a format to try again, or download a backup.",
+        );
     } finally {
-      setBusy(null);
-      setOpen(false);
+      finish();
     }
   }
 
   async function copyShareLink() {
-    if (!profile) return;
-    setBusy("share");
+    if (!profile || !begin("share")) return;
     let copied = false;
     try {
       const encoded = encodeProfileToUrl(profile);
       const url = buildShareUrl(encoded);
-      await navigator.clipboard.writeText(url);
+      await bounded(() => navigator.clipboard.writeText(url));
       copied = true;
-    } catch (err) {
-      console.error("Share link copy failed", err);
+    } catch {
+      // The share dialog offers the link for manual copying.
     } finally {
-      setBusy(null);
-      setOpen(false);
-      onOpenShare(copied);
+      finish();
+      if (mounted.current) {
+        setOpen(false);
+        onOpenShare(copied);
+      }
     }
   }
 
@@ -106,10 +185,18 @@ export function ExportMenu({ onOpenImport, onOpenShare }: Props) {
           id="world-map-export-menu"
           className="absolute right-0 top-full mt-2 w-72 bg-white rounded-2xl shadow-xl ring-1 ring-slate-200/70 overflow-hidden z-40 animate-fade-in"
         >
+          {error && (
+            <p
+              role="alert"
+              className="px-4 py-3 text-sm text-red-700 bg-red-50"
+            >
+              {error}
+            </p>
+          )}
           <button
             type="button"
             onClick={copyShareLink}
-            disabled={busy === "share"}
+            disabled={busy !== null || !profile}
             className="w-full flex items-start gap-3 text-left px-4 py-3 hover:bg-slate-50 transition-colors disabled:opacity-60"
           >
             <div className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
@@ -135,6 +222,7 @@ export function ExportMenu({ onOpenImport, onOpenShare }: Props) {
             hint="Best for X / blog headers"
             icon={<ImageIcon className="w-4 h-4" />}
             busy={busy === "png-landscape"}
+            disabled={busy !== null || !profile}
             onClick={() => downloadPng("landscape")}
           />
           <AspectButton
@@ -142,6 +230,7 @@ export function ExportMenu({ onOpenImport, onOpenShare }: Props) {
             hint="Instagram feed"
             icon={<Square className="w-4 h-4" />}
             busy={busy === "png-square"}
+            disabled={busy !== null || !profile}
             onClick={() => downloadPng("square")}
           />
           <AspectButton
@@ -149,6 +238,7 @@ export function ExportMenu({ onOpenImport, onOpenShare }: Props) {
             hint="Instagram / TikTok stories"
             icon={<Smartphone className="w-4 h-4" />}
             busy={busy === "png-story"}
+            disabled={busy !== null || !profile}
             onClick={() => downloadPng("story")}
           />
 
@@ -156,6 +246,7 @@ export function ExportMenu({ onOpenImport, onOpenShare }: Props) {
           <button
             type="button"
             onClick={downloadJson}
+            disabled={busy !== null || !profile}
             className="w-full flex items-start gap-3 text-left px-4 py-3 hover:bg-slate-50 transition-colors"
           >
             <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center flex-shrink-0">
@@ -172,7 +263,9 @@ export function ExportMenu({ onOpenImport, onOpenShare }: Props) {
           </button>
           <button
             type="button"
+            disabled={busy !== null}
             onClick={() => {
+              if (busyRef.current) return;
               onOpenImport();
               setOpen(false);
             }}
@@ -201,19 +294,21 @@ function AspectButton({
   hint,
   icon,
   busy,
+  disabled,
   onClick,
 }: {
   label: string;
   hint: string;
   icon: React.ReactNode;
   busy: boolean;
+  disabled: boolean;
   onClick: () => void;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
-      disabled={busy}
+      disabled={disabled}
       className="w-full flex items-start gap-3 text-left px-4 py-2.5 hover:bg-slate-50 transition-colors disabled:opacity-60"
     >
       <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center flex-shrink-0">

@@ -1,4 +1,5 @@
 import { requestWithTimeout } from './request';
+import { captureTripAccount } from '../lib/tripAccountScope';
 import { withPlanningConsent } from '../lib/planningConsent';
 /**
  * Faroway Search Service
@@ -63,14 +64,41 @@ export async function getSearchStatus(searchId: string): Promise<SearchStatusRes
     throw new Error('Invalid search ID');
   }
 
-  const response = await fetch(`${API_BASE_URL}/api/search/${encodeURIComponent(searchId)}`);
+  return readSearchStatus(searchId, captureTripAccount());
+}
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Unknown error' }));
-    throw new Error(error.error || 'Failed to get search status');
-  }
-
-  return response.json();
+async function readSearchStatus(
+  searchId: string,
+  account: ReturnType<typeof captureTripAccount>
+): Promise<SearchStatusResponse> {
+  const headers = await account.headers();
+  account.assertCurrent();
+  const result = await requestWithTimeout(
+    `${API_BASE_URL}/api/search/${encodeURIComponent(searchId)}`,
+    { headers },
+    async (response) => {
+      account.assertCurrent();
+      const data = await response.json().catch((error: unknown) => {
+        if (!response.ok) return { error: 'Unknown error' };
+        throw error;
+      });
+      account.assertCurrent();
+      if (!response.ok)
+        throw new Error(
+          typeof data?.error === 'string' ? data.error : 'Failed to get search status'
+        );
+      if (
+        !data ||
+        data.searchId !== searchId ||
+        !['pending', 'searching', 'completed', 'error'].includes(data.status)
+      ) {
+        throw new Error('Search status could not be verified. Try again.');
+      }
+      return data as SearchStatusResponse;
+    }
+  );
+  account.assertCurrent();
+  return result;
 }
 
 /**
@@ -82,15 +110,29 @@ export async function pollSearchStatus(
   pollInterval: number = 2000,
   maxAttempts: number = 60
 ): Promise<SearchResults> {
+  if (!searchId || /[^a-zA-Z0-9_-]/.test(searchId)) throw new Error('Invalid search ID');
+  if (
+    !Number.isFinite(pollInterval) ||
+    pollInterval < 0 ||
+    pollInterval > 2_147_483_647 ||
+    !Number.isInteger(maxAttempts) ||
+    maxAttempts < 1
+  ) {
+    throw new Error('Invalid search polling options');
+  }
+  const account = captureTripAccount();
+  account.assertCurrent();
   let attempts = 0;
 
   while (attempts < maxAttempts) {
-    const status = await getSearchStatus(searchId);
+    const status = await readSearchStatus(searchId, account);
+    account.assertCurrent();
 
     if (onProgress) {
       onProgress(status);
     }
 
+    account.assertCurrent();
     if (status.status === 'completed' && status.results) {
       return status.results;
     }

@@ -1,0 +1,29 @@
+{
+  "scope": "Final dashboard calendar and marketing browser diff assertions",
+  "reviewExtent": "Full new calendar spec and complete tracked marketing spec diff",
+  "files": [
+    {
+      "path": "apps/web/e2e/dashboard-calendar-qa.spec.ts",
+      "sha256": "257841c62353f713f2057e99b030aa1edddc82f67abc85a29229449a83ab2eb8"
+    },
+    {
+      "path": "apps/web/e2e/marketing.spec.ts",
+      "sha256": "32d6ee51000ab26a2ea04c4cd21987b2ca6e4a3bcc9a61a1d4165b5f668cea07"
+    }
+  ],
+  "assertionCoverage": [
+    "Hydrate actual DashboardTripList with server-day snapshot then assert LA local-day filtering and midnight transition; Tokyo starts past",
+    "Collect console/page hydration failures in calendar test",
+    "Marketing success blog assertion requires exact journal heading and does not run under explicit unavailable-data flag",
+    "Cross-month date selector explicitly navigates months on phone and requires visible selected date",
+    "Brief journey now verifies actual travel-group preference rather than unavailable advanced hotel UI"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "limits": [
+    "Calendar host stubs Next hooks/images and runs component hydration, not actual server route",
+    "Marketing review covers changed diff, not all unchanged test lines",
+    "No fresh runtime run claimed"
+  ]
+}

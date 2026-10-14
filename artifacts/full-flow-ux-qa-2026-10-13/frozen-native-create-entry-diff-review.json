@@ -1,0 +1,48 @@
+{
+  "scope": "Final native create/onboarding/discovery entry integration",
+  "reviewExtent": "Complete base-to-current diffs of four screens; current create continuation/authentication/requirements/recovery controls inspected. Guest and request-storage helpers reviewed in separate groups.",
+  "files": [
+    {
+      "path": "apps/mobile/app/create/index.tsx",
+      "sha256": "56156003939156c47a141e64fd69d68f9402fecf699f4b53ea27f724588ad68d"
+    },
+    {
+      "path": "apps/mobile/app/inspiration/[slug].tsx",
+      "sha256": "8dfc178b6e0cbfffd5664fc52929007fddeac416c69bfe7caeadda2af702e23f"
+    },
+    {
+      "path": "apps/mobile/app/onboarding/index.tsx",
+      "sha256": "2b8526e07444454f51559b1854cfa5c7f16595e7606bce229088ce8349fa5de6"
+    },
+    {
+      "path": "apps/mobile/app/index.tsx",
+      "sha256": "72b30921453216ac681d13e3b46230e9039a8f788c81dadc8885ceae3c6e3ead"
+    }
+  ],
+  "invariants": [
+    "Incoming destination choices pass through validated link parser before store update; restored guest destination hides search",
+    "Generation requires complete destination/date brief and authentication; sign-in continuation retains in-memory brief",
+    "Recovery displays and actions match current account revision; stale session responses cannot restore or discard",
+    "New-trip action captures exact current receipt before confirmation and uses reviewed-receipt discard",
+    "Traveler increments read latest store value and clamp one through ten",
+    "Inspiration dates use local calendar; welcome redirect timer cleans up on auth/navigation change",
+    "Onboarding has packaged visual fallback and consistent action color; copy removes instant/perfect-plan claims"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "validation": {
+    "result": "Passed",
+    "scope": "Existing create traveler-counter and auth-gate lifecycle regressions",
+    "log": "/tmp/faroway-ux-frozen-native-create-review-tests.log"
+  },
+  "evidence": [
+    "native-guest-recovery.json",
+    "frozen-native-guest-date-diff-review.json",
+    "frozen-auth-creation-diff-review.json"
+  ],
+  "limits": [
+    "Current signed-device onboarding/sign-in continuation and responsive/accessibility acceptance remain external",
+    "This group reviews screen changes and relevant integration sections, not every unchanged screen line"
+  ]
+}

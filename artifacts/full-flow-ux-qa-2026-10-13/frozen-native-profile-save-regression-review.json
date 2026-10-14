@@ -1,0 +1,29 @@
+{
+  "scope": "Final native verified-profile request regression assertions",
+  "reviewExtent": "Full current test file",
+  "files": [
+    {
+      "path": "apps/mobile/__tests__/services/profile-save.test.ts",
+      "sha256": "7bc28c40fb9dfea8bd52124e3cf393c1baa88fd66447b4b6850902f1be01d05a"
+    }
+  ],
+  "assertionCoverage": [
+    "Same-owner reauthentication during deferred SDK lookup returns AUTH_CHANGED and zero HTTP writes",
+    "Stalled SDK verification settles with preserved-edit error, zero dispatch and no timer",
+    "Prior-session HTTP receipt rejected after request starts",
+    "Profile GET sends verified token with no body",
+    "Wrong owner receipts rejected for both read/write; mismatched SDK session prevents save",
+    "Incorrect mutable API token ignored in favor of owner-matched SDK token"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "validation": {
+    "result": "Passed current workspace suite",
+    "log": "/tmp/faroway-ux-frozen-motion-current-workspace-tests.log"
+  },
+  "limits": [
+    "SDK/session/HTTP mocked; no hosted verification",
+    "Owner receipt asserted, not arbitrary server response field equivalence; route and editor evidence separate"
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "finding": "Major: Load latest brief was a no-op for editor state when saved revision was unchanged after an offline/unconfirmed save",
+  "before": {
+    "unit": "1 Failed/12 Passed, exit1",
+    "unitLog": "/tmp/faroway-ux-frozen-brief-reload-before.log",
+    "browser": "3 Failed on same unchanged-revision recovery in compiled production",
+    "browserLog": "/tmp/faroway-ux-frozen-private-creation-offline-browser.log"
+  },
+  "fix": [
+    "Parent returns verified refresh result rather than discarding it",
+    "Editor serializes reload/save; disables fields while reloading; resets all fields only for matching owner/trip/revision",
+    "Failed/unverified read retains edits; obsolete instance does not publish state",
+    "Focus moves after fields re-enable through a React effect; no animation-frame browser dependency"
+  ],
+  "reviewScope": "New reload function and parent callback; existing form save validation; not complete TripDetailClient final diff approval",
+  "after": {
+    "focused": "47 tests/2suites Passed",
+    "fullWeb": "906 tests/128suites Passed19.14s",
+    "workspaceQuality": "11tasks types/lint/format Passed42.794s",
+    "productionBrowser": "3 profiles Passed48.3s"
+  },
+  "logs": [
+    "/tmp/faroway-ux-frozen-brief-reload-focused.log",
+    "/tmp/faroway-ux-frozen-brief-recovery-full-web-tests.log",
+    "/tmp/faroway-ux-frozen-brief-recovery-workspace-quality.log"
+  ],
+  "retainedIntermediateFailures": [
+    "Development font resolver failed before story",
+    "Fixture auth reset initially reinserted existing profile; corrected idempotent identity/reset",
+    "Development cold compilation exceeded assertions/application deadline; no passing claim from those runs",
+    "Initial save acknowledgement asserted planned-trip copy on a draft; corrected to observed draft copy",
+    "Initial focus scheduling used unavailable requestAnimationFrame in Node tests; corrected to post-commit effect"
+  ],
+  "linkedEvidence": "frozen-private-creation-recovery-review.json"
+}

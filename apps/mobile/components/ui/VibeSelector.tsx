@@ -8,10 +8,17 @@ interface VibeSelectorProps {
   selected: string[];
   onSelect: (vibes: string[]) => void;
   maxSelections?: number;
+  disabled?: boolean;
 }
 
-export function VibeSelector({ selected, onSelect, maxSelections = 5 }: VibeSelectorProps) {
+export function VibeSelector({
+  selected,
+  onSelect,
+  maxSelections = 5,
+  disabled = false,
+}: VibeSelectorProps) {
   const toggleVibe = (vibeId: string) => {
+    if (disabled) return;
     if (selected.includes(vibeId)) {
       hapticFeedback.light();
       onSelect(selected.filter((id) => id !== vibeId));
@@ -43,8 +50,8 @@ export function VibeSelector({ selected, onSelect, maxSelections = 5 }: VibeSele
               accessibilityRole="checkbox"
               accessibilityLabel={`${vibe.label} travel vibe`}
               aria-checked={isSelected}
-              aria-disabled={!isSelected && selected.length >= maxSelections}
-              disabled={!isSelected && selected.length >= maxSelections}
+              aria-disabled={disabled || (!isSelected && selected.length >= maxSelections)}
+              disabled={disabled || (!isSelected && selected.length >= maxSelections)}
             >
               <Text style={styles.vibeEmoji}>{vibe.emoji}</Text>
               <Text style={[styles.vibeLabel, isSelected && styles.vibeLabelSelected]}>

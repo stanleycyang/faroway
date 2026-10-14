@@ -19,6 +19,7 @@ import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { useUserStore } from '../../stores/userStore';
 import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 import { USE_NATIVE_DRIVER } from '../../lib/animation';
+import { colors } from '../../constants/theme';
 
 const { width, height } = Dimensions.get('window');
 
@@ -36,18 +37,18 @@ const SLIDES: OnboardingSlide[] = [
   {
     id: '1',
     emoji: '✨',
-    title: 'AI Plans Your\nPerfect Trip',
-    subtitle: 'Tell us where you want to go, and watch magic happen',
-    highlight: 'in seconds',
+    title: 'Your next trip,\ntaking shape',
+    subtitle: 'Choose where you want to go. We’ll bring your days together',
+    highlight: 'around you',
     image: getImageUrl(IMAGE_PATHS.marketing.travelPlanning),
     gradient: ['#F97066', '#F59E0B'],
   },
   {
     id: '2',
     emoji: '🗺️',
-    title: 'Discover\nHidden Gems',
-    subtitle: 'Local favorites and secret spots that guidebooks miss',
-    highlight: 'curated for you',
+    title: 'Find your kind\nof places',
+    subtitle: 'Explore food, culture, and experiences that fit how you like to travel',
+    highlight: 'at your own pace',
     image: getImageUrl(IMAGE_PATHS.marketing.aerialTravel),
     gradient: ['#f59e0b', '#ef4444'],
   },
@@ -121,6 +122,9 @@ export default function OnboardingScreen() {
 
   const renderSlide = ({ item, index: _index }: { item: OnboardingSlide; index: number }) => (
     <View style={styles.slide}>
+      <LinearGradient colors={['#203B50', '#102235', '#080B12']} style={StyleSheet.absoluteFill} />
+      <View accessible={false} style={styles.atlasRing} />
+      <View accessible={false} style={[styles.atlasRing, styles.atlasRingInner]} />
       <Image source={{ uri: item.image }} style={styles.slideImage} accessible={false} />
       <LinearGradient
         colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.95)']}
@@ -236,7 +240,7 @@ export default function OnboardingScreen() {
 
         {/* CTA Button */}
         <TouchableOpacity
-          style={[styles.ctaButton, { backgroundColor: currentSlide.gradient[0] }]}
+          style={styles.ctaButton}
           onPress={handleNext}
           activeOpacity={0.9}
           accessibilityRole="button"
@@ -286,6 +290,23 @@ const styles = StyleSheet.create({
     height: '100%',
     position: 'absolute',
   },
+  atlasRing: {
+    position: 'absolute',
+    width: 620,
+    height: 620,
+    borderRadius: 310,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.13)',
+    top: -140,
+    left: -130,
+  },
+  atlasRingInner: {
+    width: 400,
+    height: 400,
+    borderRadius: 200,
+    top: -30,
+    left: -20,
+  },
   slideGradient: {
     position: 'absolute',
     top: 0,
@@ -300,13 +321,17 @@ const styles = StyleSheet.create({
     zIndex: 10,
   },
   skipButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 999,
+    backgroundColor: 'rgba(15,23,42,0.72)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   skipText: {
     fontSize: 16,
     fontWeight: '600',
-    color: 'rgba(255,255,255,0.7)',
+    color: '#fff',
   },
   content: {
     position: 'absolute',
@@ -360,7 +385,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#F97066',
+    backgroundColor: colors.action.primary,
     paddingVertical: 18,
     borderRadius: 16,
     marginBottom: 20,

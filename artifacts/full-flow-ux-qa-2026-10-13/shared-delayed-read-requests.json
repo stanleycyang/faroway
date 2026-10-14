@@ -1,0 +1,222 @@
+{
+  "scope": "Loopback-only provider request evidence for delayed shared layout QA; includes initial obsolete-heading run and corrected run. Browser terminal result recorded separately.",
+  "delayMsPerSharedRead": 3000,
+  "requests": [
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/rest/v1/trips",
+      "query": {
+        "select": "destination,start_date,end_date,travelers,preferences,vibes,budget_tier,itineraries(days,overview,total_cost,packing_list,general_tips,generated_at)",
+        "share_token": "eq.qa_read_failure_token",
+        "is_shared": "eq.true"
+      }
+    }
+  ]
+}

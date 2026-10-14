@@ -83,3 +83,33 @@ describe("encodeProfileToUrl / decodeProfileFromUrl", () => {
     expect(decoded!.visits.FRA.status).toBe("visited");
   });
 });
+
+it("ignores unknown and prototype country keys and invalid visit counts", () => {
+  const encoded = LZString.compressToEncodedURIComponent(
+    JSON.stringify({
+      v: 2,
+      d: [
+        ["XXX"],
+        ["__proto__"],
+        ["constructor"],
+        ["JPN", "", -2],
+        ["FRA", "", 1.5],
+        ["ITA", "", 3],
+      ],
+    }),
+  );
+  const decoded = decodeProfileFromUrl(encoded)!;
+  expect(Object.keys(decoded.visits)).toEqual(["JPN", "FRA", "ITA"]);
+  expect(decoded.visits.JPN.visitCount).toBeUndefined();
+  expect(decoded.visits.FRA.visitCount).toBeUndefined();
+  expect(decoded.visits.ITA.visitCount).toBe(3);
+});
+it("rejects unsupported share versions", () => {
+  expect(
+    decodeProfileFromUrl(
+      LZString.compressToEncodedURIComponent(
+        JSON.stringify({ v: 99, d: [["JPN"]] }),
+      ),
+    ),
+  ).toBeNull();
+});

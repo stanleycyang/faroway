@@ -1,0 +1,35 @@
+{
+  "scope": "Final private/shared image privacy and shared-calendar assertions",
+  "reviewExtent": "Full three current test files",
+  "files": [
+    {
+      "path": "apps/web/__tests__/shared-trip-image.test.tsx",
+      "sha256": "a2a2bb7233527a33c8d4588169dd4914cbb38cec3bd15759913c6c3ccd96ccc7"
+    },
+    {
+      "path": "apps/web/__tests__/private-trip-image.test.tsx",
+      "sha256": "4bc0f036edfdea984c4031e3c272532fd7078d8a547611c26ca09bfad642f94b"
+    },
+    {
+      "path": "packages/constants/__tests__/trip-dates.test.ts",
+      "sha256": "0dcd7564b58db2199323698df8e65e10c81a975fca45d12d9f077a4849b0e47a"
+    }
+  ],
+  "assertionCoverage": [
+    "Shared image requires token/is_shared filters and private no-store/revalidate0/node runtime",
+    "Missing/outage shared image generic without traveler facts/private diagnostics",
+    "Guest private image makes zero trip query and contains no private destination; owner image scopes by id/user_id",
+    "Calendar phase boundaries inclusive and generation-independent; invalid/reversed ranges unknown; local-date snapshot at midnight edges"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "validation": {
+    "result": "Passed current workspace suite",
+    "log": "/tmp/faroway-ux-frozen-motion-current-workspace-tests.log"
+  },
+  "limits": [
+    "ImageResponse mocked to SSR HTML, not raster/font/layout proof",
+    "Database/Auth mocked, not hosted RLS/JWT"
+  ]
+}

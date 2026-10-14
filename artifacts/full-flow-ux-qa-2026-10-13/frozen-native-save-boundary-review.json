@@ -1,0 +1,119 @@
+{
+  "scope": "Frozen native journeys3/4/10 and privacy/reliability gate: service choreography, current hook call graph, durable queue save confirmation, and same-owner account revision cache isolation",
+  "reviewExtent": {
+    "apps/mobile/lib/offline/sync.ts": "Full base-to-working diff reviewed; receipt/queue/pull method bodies traced",
+    "apps/mobile/services/planningService.ts": "Complete file read; active create/recover/regenerate paths traced through useStreamingItinerary",
+    "apps/mobile/lib/planningConsent.ts": "Complete file read",
+    "apps/mobile/lib/tripCreationRecovery.ts": "Serialization, identity/read/finish/discard and restoration sections read",
+    "apps/mobile/services/request.ts": "Complete file read"
+  },
+  "findings": [
+    {
+      "severity": "Major",
+      "problem": "Active planning accepted creation ID unrelated to saved request or different/missing owner; could publish receipt and generate wrong trip",
+      "fix": "Match returned ID to durable request UUID and returned owner to consent-pinned account before callback/generation",
+      "before": "3 Failed/20 Passed",
+      "beforeLog": "/tmp/faroway-ux-frozen-native-creation-receipt-before.log",
+      "focusedAfter": "43 Passed/3suites"
+    },
+    {
+      "severity": "Major",
+      "problem": "Reviewed/background queued updates cleared durable edits for HTTP200 without matching trip/owner/new revision; queued creation accepted another owned ID",
+      "fix": "Require matching receipt before cache promotion or queue removal; updates require nonempty changed revision; unverified receipts keep edits for review",
+      "before": "9 Failed/31 Passed",
+      "beforeLog": "/tmp/faroway-ux-frozen-native-sync-receipt-before.log",
+      "focusedAfter": "45 Passed/2suites"
+    },
+    {
+      "severity": "Major",
+      "problem": "Same-owner sign-out/sign-in during cached read or session recheck allowed old sync to replace new-session owned cache",
+      "fix": "Assert original account revision after both awaits before writing cache",
+      "verifiedBefore": "2 Failed/40 Skipped; actual cache mismatch, not harness failure",
+      "verifiedBeforeLog": "/tmp/faroway-ux-frozen-native-cache-epoch-verified-before.log",
+      "after": "42 Passed",
+      "afterLog": "/tmp/faroway-ux-frozen-native-cache-epoch-owned-fixture.log"
+    }
+  ],
+  "workspaceTests": {
+    "result": "Passed",
+    "tasks": 5,
+    "webTests": 906,
+    "mobileTests": 599,
+    "mobileSuites": 57,
+    "scriptTests": 8,
+    "log": "/tmp/faroway-ux-frozen-native-boundary-final-workspace-tests.log",
+    "note": "CI mode, no concurrent quality checks; unchanged9 screen tests separately Passed after initial two5s timeouts under concurrent load"
+  },
+  "nativeProductionExport": {
+    "result": "Passed",
+    "exitCode": 0,
+    "platforms": [
+      "ios",
+      "android"
+    ],
+    "format": "Minified Hermes bytecode",
+    "directory": "/tmp/faroway-ux-frozen-native-production-export",
+    "log": "/tmp/faroway-ux-frozen-native-production-export.log",
+    "environment": "Minimal env; dotenv disabled; reserved .invalid API/Supabase URLs and synthetic public key; no install, server deployment or vendor requests",
+    "bundleHashes": {
+      "_expo/static/js/ios/entry-c2820d51c7c8d003cc63b74ace073a77.hbc": "34974b2f09eadb83328cbfd831f4011a7d5f5d1fc6caf3ed4dd91c908a95bbff",
+      "_expo/static/js/android/entry-77893990b0f54a46f65d32129eb9e13f.hbc": "d209ce65cb5f7762a2a47f9cd6d40c7241c64ed71608ef3357a3f557a709a568"
+    },
+    "metadataHash": "c734fe86709a1fe3945c4c22cd099561c6421b21be05de452cd048db1ca7d264"
+  },
+  "retainedIntermediateFailures": [
+    "Sync confirmation first failed TS optional owner narrowing; use verified session.user.id corrected it",
+    "First cache tests attempted spying on serialized Proxy wrapper; did not exercise scenario",
+    "Second cache harness wrote legacy unowned array; ignored correctly by cache; corrected to real owner/version envelope",
+    "Verified before/after cache run performed only after harness corrections; original source restored in finally",
+    "Full concurrent test/quality run had2 unchanged screen timeouts; standalone9cases passed, then CI workspace599 mobile pass"
+  ],
+  "nativeDevice": {
+    "result": "External verification required",
+    "currentAttempt": "Cua getApp com.apple.dt.Devices timed out30s and kernel reset; no current native UI acceptance claim"
+  },
+  "limits": [
+    "No hosted Auth/JWT/RLS or live paid generation execution",
+    "Hermes export is JS compilation, not signed Xcode/Gradle binary or on-device UX acceptance",
+    "Final exact candidate/full review/PR/CI/external acceptance remain open"
+  ],
+  "files": [
+    {
+      "path": "apps/mobile/services/planningService.ts",
+      "sha256": "c12a3313405d886c8bd7006c58ef42f9834c46566279893c37815e4d5bd916b9"
+    },
+    {
+      "path": "apps/mobile/lib/planningConsent.ts",
+      "sha256": "12761f514a36624c782f8062b8118445b37e39647460a088611da7e63510c5d4"
+    },
+    {
+      "path": "apps/mobile/lib/tripCreationRecovery.ts",
+      "sha256": "5ba7e5c6cfbb1a16708ca70ee5c62b7fb954789ebe6ca9c23d10bc9594e4b82d"
+    },
+    {
+      "path": "apps/mobile/services/request.ts",
+      "sha256": "8de654ce775af63e47f8199c0fd895d79362671d9d6f942529d558922a4fe74a"
+    },
+    {
+      "path": "apps/mobile/lib/offline/sync.ts",
+      "sha256": "98cd152943ce44e60660fe91b4a981358a6f1a2a0f3a698f9e54a8043e35a777"
+    },
+    {
+      "path": "apps/mobile/__tests__/lib/planningConsent.test.ts",
+      "sha256": "36df9402b8c4e0b554bfe158f89eb1bd2dcac6d059f7694436da49cad933a846"
+    },
+    {
+      "path": "apps/mobile/__tests__/lib/offline/conflict-review.test.ts",
+      "sha256": "671a087b789da649fa1d38db9f5a9d8cf791cd72c980f7a5363327a19d0b1d3a"
+    }
+  ],
+  "workspaceQuality": {
+    "result": "Passed",
+    "tasks": 11,
+    "types": "Passed",
+    "lint": "Passed",
+    "format": "Passed",
+    "durationSeconds": 27.779,
+    "log": "/tmp/faroway-ux-frozen-native-boundary-final-workspace-quality.log"
+  }
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { MapLoading } from "@/components/trips/MapLoading";
 import { useSearchParams } from "next/navigation";
 
 const WorldMapView = dynamic(
@@ -10,11 +11,7 @@ const WorldMapView = dynamic(
     ),
   {
     ssr: false,
-    loading: () => (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-slate-400 text-sm">Loading map…</div>
-      </div>
-    ),
+    loading: () => <MapLoading />,
   },
 );
 

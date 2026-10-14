@@ -320,6 +320,19 @@ describe("DELETE /api/trips/[id]/share", () => {
     mockSupabase.from = vi.fn(() => createQueryChain(() => mockUpdateReturn));
   });
 
+  it.each([null, undefined, 2])(
+    "does not confirm revocation with unverifiable affected count %s",
+    async (count) => {
+      mockUpdateReturn = { data: null, error: null, count };
+      const response = await shareDelete(
+        makeRequest("DELETE", "/api/trips/trip-1/share"),
+        makeParams("trip-1"),
+      );
+      expect(response.status).toBe(503);
+      expect((await response.json()).success).not.toBe(true);
+    },
+  );
+
   it("successfully disables sharing", async () => {
     const req = makeRequest("DELETE", "/api/trips/trip-1/share");
     const res = await shareDelete(req, makeParams("trip-1"));

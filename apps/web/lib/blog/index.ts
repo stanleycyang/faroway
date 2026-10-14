@@ -1,8 +1,8 @@
 import { cache } from "react";
+import { JOURNAL_COVER_FALLBACK } from "./fallback-image";
 import { unstable_cache } from "next/cache";
 import { BlogPost, BlogPostMeta, AUTHORS, PaginatedResult } from "./types";
 import { getClusterBySlug } from "./clusters";
-import { IMAGE_PATHS, getImageUrl } from "@faroway/constants";
 import { getBlogSupabase } from "./supabase";
 
 // ---------------------------------------------------------------------------
@@ -29,8 +29,7 @@ function rowToMeta(row: any): BlogPostMeta {
     author: AUTHORS[row.author_slug] || AUTHORS["faroway-team"],
     category: row.category || "Travel Tips",
     tags: row.tags || [],
-    coverImage:
-      row.cover_image || getImageUrl(IMAGE_PATHS.blog.defaultFallback),
+    coverImage: row.cover_image || JOURNAL_COVER_FALLBACK,
     coverImageAlt: row.cover_image_alt || row.title,
     readingTime: row.reading_time || 5,
     featured: row.featured || false,
@@ -68,7 +67,7 @@ const getCachedPostMetas = unstable_cache(
     return (data || []).map(rowToMeta);
   },
   [
-    "published-blog-metadata-v1",
+    "published-blog-metadata-v2",
     process.env.NEXT_PUBLIC_SUPABASE_URL || "unconfigured",
   ],
   {

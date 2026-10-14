@@ -1,0 +1,15 @@
+{
+  "before": "GET profile cache-policy regression failed1/10; successful GET/PATCH profile responses lacked explicit cache restriction",
+  "after": "Both successful GET/PATCH profile responses private,no-store",
+  "verification": {
+    "routeTests": 10,
+    "types": "pass",
+    "targetLint": "pass",
+    "actualNextGET": {
+      "status": 200,
+      "cacheControl": "private, no-store",
+      "scope": "LocalNext3124/synthetic Auth and in-memory REST"
+    }
+  },
+  "limits": "No hosted profile write, account deletion or actual cross-account browser-cache disclosure reproduction. Full874web suite is through188;189focused checks only. Compiled3123predates188/189."
+}

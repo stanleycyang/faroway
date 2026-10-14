@@ -1,0 +1,28 @@
+{
+  "scope": "Final private fixture documentation and Node redirect preload",
+  "reviewExtent": "Complete current two-file bodies inspected",
+  "files": [
+    {
+      "path": "apps/web/e2e/fixtures/private-route-qa.md",
+      "sha256": "c6448bf133a73f5389e51a217274a1091b5ff374bd8624e0edd2be181b8d3e8a"
+    },
+    {
+      "path": "apps/web/e2e/fixtures/private-route-fetch.mjs",
+      "sha256": "942146ffa0c1ff7a875aaea9d1233dca2e5a6462e0a01f82e35768c26b7813db"
+    }
+  ],
+  "invariants": [
+    "Preload redirects only exact synthetic Supabase origin to fixed loopback4017; no project credentials embedded",
+    "Fixture documentation separates synthetic auth/in-memory response scopes from real SQL and hosted JWT/RLS",
+    "Creation and SQL stories explicitly describe actual SQL function scope, isolated container requirements and prohibited mode combinations",
+    "Planning remains paused for observation stories; no workflow/provider proof inferred",
+    "Logs described as method/path/query only and gaps remain explicit"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "limits": [
+    "Actual service/SQL adapter/browser test bodies require separate final reconciliation",
+    "Preload deliberately delegates other server fetches; documentation does not claim all network is blocked"
+  ]
+}

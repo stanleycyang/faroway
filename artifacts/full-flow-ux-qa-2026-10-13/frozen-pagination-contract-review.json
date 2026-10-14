@@ -1,0 +1,52 @@
+{
+  "scope": "Frozen saved-trips Functional and Privacy/reliability gates; final cross-client contract review",
+  "findings": [
+    {
+      "severity": "Major",
+      "problem": "GET trip list projected no user_id; mobile all-page reader requires owner identity and rejects genuine projected rows",
+      "fix": "Include user_id in authenticated owner-filtered projection",
+      "regression": "New mock honors selected columns; API must return authenticated owner",
+      "beforeLog": "/tmp/faroway-ux-frozen-trip-owner-contract-before.log",
+      "before": "Failed (exit1)",
+      "after": "31 API tests Passed"
+    },
+    {
+      "severity": "Major",
+      "problem": "Date ISO normalization truncated PostgreSQL microsecond cursor; older rows in the same millisecond could be skipped",
+      "fix": "Validate and retain exact database timestamp, including offset/precision",
+      "regression": "Microsecond database timestamp roundtrip",
+      "beforeLog": "/tmp/faroway-ux-frozen-cursor-precision-before.log",
+      "before": "Failed (exit1)",
+      "after": "Passed"
+    }
+  ],
+  "combinedChecks": {
+    "tests": 34,
+    "suites": 3,
+    "result": "Passed",
+    "log": "/tmp/faroway-ux-frozen-pagination-contracts.log"
+  },
+  "sourceHashes": {
+    "apps/web/app/api/trips/route.ts": "7ac332e1404e5e7dc85077376305d0d85ce8ba069ea869a1c75c2221d5b7e3cf",
+    "apps/web/lib/trips/list-cursor.ts": "68ee629c90267e1ef62da013d0f0c6bb899d603da4de5d7704b19afe468aa9d8",
+    "apps/web/__tests__/api/trips.test.ts": "003078851319a12ca14fb1f968e400249b17bb187404cbfca9db8bb12b9431f0",
+    "apps/web/__tests__/lib/trip-list-cursor.test.ts": "9fb87d5487d63ad6dc58fb7b65efefb6521d1374ccfb6a6ba27b05c27ec11ff2"
+  },
+  "limits": [
+    "Full web regression and production rebuild passed on uncommitted current source; exact final candidate still required",
+    "Prior synthetic provider ignored projection and used whole-second timestamps; earlier runtime pagination acceptance did not expose these defects",
+    "No new hosted/native acceptance; final exact candidate and review still required"
+  ],
+  "fullWebRegression": {
+    "result": "Passed",
+    "tests": 902,
+    "suites": 128,
+    "durationSeconds": 24.4,
+    "log": "/tmp/faroway-ux-frozen-pagination-full-web-tests.log"
+  },
+  "productionBuild": {
+    "result": "Passed",
+    "exitCode": 0,
+    "log": "/tmp/faroway-ux-frozen-pagination-production-build.log"
+  }
+}

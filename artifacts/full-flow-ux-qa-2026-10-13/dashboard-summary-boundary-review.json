@@ -1,0 +1,44 @@
+{
+  "scope": "Close dashboard summary-boundary change already in flight before release checklist freeze",
+  "change": "Server passes explicit compact card summaries rather than full prebuilt React card slots; client renders only visible batch and keeps counts/calendar filtering",
+  "verification": {
+    "focused": "10tests/3suites pass5.20s; summary-projection regression includes ignored preferences/owner/job fields",
+    "calendarBrowser": "6cases across3profiles pass40.2s with scoped Next adapters",
+    "actualNextBrowser": "Current205-row dashboard12/24/reveal-all/filter-reset/no-overflow passes desktop/mobileSafari/mobileChrome",
+    "types": "Pass on recheck after dev generated route module finished rewriting",
+    "lint": "Pass all5files",
+    "whitespace": "Pass"
+  },
+  "retainedFailures": [
+    "Initial actual browser navigation exceeded90s; server revalidated live/HTTP307 before warm repeat passed",
+    "Initial typecheck raced regenerated .next/dev route declaration; valid exports inspected, recheckpassed",
+    "Projection test originally constructed JSX without rendering mocked child; corrected SSR harness"
+  ],
+  "limits": [
+    "No quantified payload/latency improvement claimed",
+    "Server still fetches full list; database row-cap remains frozen journey5 gap",
+    "Final exact-release-candidate build/fullchecks/diff review remain pending"
+  ],
+  "files": [
+    {
+      "path": "apps/web/components/dashboard/DashboardTripList.tsx",
+      "sha256": "85008444fc4a152692c3095d1621f97975fef9b08c8a17766dda981c270b287a"
+    },
+    {
+      "path": "apps/web/app/(app)/dashboard/page.tsx",
+      "sha256": "80caddf7a303dd29cefe21736f077fef3a756b14a3cbdf018baa1494a91f5941"
+    },
+    {
+      "path": "apps/web/__tests__/dashboard-local-calendar.test.tsx",
+      "sha256": "0b38ef544c1907d631492fde8f225579d78252251987a9727a2eb37f4a2c2ec0"
+    },
+    {
+      "path": "apps/web/__tests__/dashboard-read-state.test.tsx",
+      "sha256": "1efd44f43e63888f96b7794873bbf458f3446d05b967f9aa7a5f8b57fac19b17"
+    },
+    {
+      "path": "apps/web/e2e/dashboard-calendar-qa.spec.ts",
+      "sha256": "257841c62353f713f2057e99b030aa1edddc82f67abc85a29229449a83ab2eb8"
+    }
+  ]
+}

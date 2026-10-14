@@ -1,0 +1,30 @@
+{
+  "scope": "Final native SSE-parser diff and animation lifecycle assertions",
+  "reviewExtent": "Complete tracked streaming test diff and full new animation test file",
+  "files": [
+    {
+      "path": "apps/mobile/__tests__/hooks/useStreamingItinerary.test.ts",
+      "sha256": "69aca727c688fb92ccabfb436947cc1949b66dbfda3b2873d88d8fbffc6a8a9f"
+    },
+    {
+      "path": "apps/mobile/__tests__/screens/generation-animation-lifecycle.test.tsx",
+      "sha256": "fac3d3940a347c156943756029f8a6256a562d0b77467f36286c77a404b30e0b"
+    }
+  ],
+  "assertionCoverage": [
+    "Tagged spec chapter packet yields exactly one event/no trailing buffer and intact parsed payload",
+    "Pending animation handle exists before exit/reduced-motion update, stop called, late finished callback cannot start next fade",
+    "Interrupted active fade cannot advance; completed active fade starts exactly one next fade"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "validation": {
+    "result": "Passed current workspace suite",
+    "log": "/tmp/faroway-ux-frozen-motion-current-workspace-tests.log"
+  },
+  "limits": [
+    "Streaming review covers changed parser case, not every unchanged hook test",
+    "Mock Animated/stream/OS preference, not native engine or live provider acceptance"
+  ]
+}

@@ -1,0 +1,41 @@
+{
+  "scope": "Native saved-card/recovery paths and shared web recovery/cover presentation reviewed; not entire large native detail screen or full web/private itinerary interaction acceptance",
+  "files": [
+    {
+      "path": "apps/mobile/components/ui/Card.tsx",
+      "sha256": "5d4cea7be0eeb7df87c0bd40ff554a50120e071a686e437e811df3ade959f860"
+    },
+    {
+      "path": "apps/mobile/app/trip/[id].tsx",
+      "sha256": "df3e2be30c737c848c44975456a62e831af4c1aa5f4fea7c7e07bb1589d9c661"
+    },
+    {
+      "path": "apps/mobile/__tests__/screens/trip-detail-sharing.test.tsx",
+      "sha256": "c8a3105481d8ceef4c4d7ebfd494224bd9b4b251e089cbaed06c082b87cc3bec"
+    },
+    {
+      "path": "apps/web/components/trips/TripRecovery.tsx",
+      "sha256": "3630896333d94b577296a35fac78e1a93a467f5f6da7114111436f491732d045"
+    },
+    {
+      "path": "apps/web/components/trips/TripCoverImage.tsx",
+      "sha256": "99e66148a88bfa0fb444bd00f79336a47976738dae94533f68d9357b4cab6188"
+    }
+  ],
+  "finding": "Temporary server detail-read failure offered only MyTrips exit, without retry;beforemountedtest1failed15passed",
+  "fix": [
+    "Retry recoverable remote reads, retain explicit terminal/ownership/sign-in exits",
+    "Summary-only empty view says itinerary is not loaded rather than claiming no saved itinerary exists",
+    "Refresh recovery mentions device storage as well as network since verified detail save now awaits cache",
+    "Card spoken label omits empty country punctuation"
+  ],
+  "checks": {
+    "mobileTests": 572,
+    "suites": 56,
+    "seconds": 7.671,
+    "types": "pass",
+    "lint": "pass",
+    "whitespace": "pass"
+  },
+  "limits": "Current simulator predateslatest fixes; actual device retry/service-offline/UIacceptance pending. Web recovery focus already verified at prior scoped runtime; no new wholeflow proof."
+}

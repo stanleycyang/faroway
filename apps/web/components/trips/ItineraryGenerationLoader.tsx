@@ -174,7 +174,9 @@ export function ItineraryGenerationLoader({
                 className="mt-8 inline-flex min-h-11 items-center gap-3 rounded-full border border-white/30 px-5 py-2.5 text-sm font-medium hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
               >
                 <ArrowDown className="h-4 w-4" />
-                Explore your emerging journey
+                {phase === "complete"
+                  ? "Explore your journey"
+                  : "Explore your emerging journey"}
               </button>
             </div>
             <p className="mt-10 hidden text-xs text-white/60 lg:block">
@@ -182,7 +184,7 @@ export function ItineraryGenerationLoader({
             </p>
           </div>
         </aside>
-        <main className="min-w-0 px-5 pb-[max(2rem,env(safe-area-inset-bottom))] pt-8 sm:px-10 sm:pt-10 lg:px-12 xl:px-16">
+        <main className="min-w-0 px-5 pb-[max(7rem,env(safe-area-inset-bottom))] pt-8 sm:px-10 sm:pt-10 lg:px-12 xl:px-16">
           <div className="mx-auto max-w-2xl">
             <div className="flex items-center justify-between gap-4">
               <p className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600">
@@ -360,10 +362,14 @@ export function ItineraryGenerationLoader({
                   </span>
                   <div>
                     <h3 className="text-sm font-medium">
-                      Finding a place to settle in
+                      {phase === "complete"
+                        ? "No stay suggestion in this plan"
+                        : "Finding a place to settle in"}
                     </h3>
                     <p className="mt-1 text-xs leading-5 text-slate-600">
-                      Stay suggestions will appear here as they arrive.
+                      {phase === "complete"
+                        ? "Review your route before choosing where to stay."
+                        : "Stay suggestions will appear here as they arrive."}
                     </p>
                   </div>
                 </div>
@@ -423,20 +429,24 @@ export function ItineraryGenerationLoader({
               )}
             </section>
             <div className="mt-10 border-t border-slate-200 pt-6">
-              {phase === "complete" && onOpenTrip && (
-                <button
-                  onClick={onOpenTrip}
-                  className="mb-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-6 py-4 text-sm font-semibold text-white hover:bg-slate-700"
-                >
-                  <BookOpen className="h-4 w-4" />
-                  Open my trip
-                </button>
-              )}
               {children}
             </div>
           </div>
         </main>
       </div>
+      {phase === "complete" && onOpenTrip && (
+        <div className="fixed inset-x-0 bottom-0 z-10 border-t border-slate-200 bg-[#f7f8fa]/95 px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur sm:px-10 lg:left-[41%] lg:px-12 xl:px-16">
+          <div className="mx-auto max-w-2xl">
+            <button
+              onClick={onOpenTrip}
+              className="flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-6 py-4 text-sm font-semibold text-white hover:bg-slate-700"
+            >
+              <BookOpen className="h-4 w-4" />
+              Open my trip
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

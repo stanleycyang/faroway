@@ -21,6 +21,8 @@ export function useInView<T extends HTMLElement = HTMLDivElement>(
   useEffect(() => {
     const element = ref.current;
     if (!element) return;
+    // Visibility is an enhancement; unsupported observers must not break the page.
+    if (typeof IntersectionObserver === "undefined") return;
 
     // If triggerOnce and already triggered, skip observer
     if (triggerOnce && hasBeenInView) {

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Image from "next/image";
+import { JournalImage } from "@/components/blog/JournalImage";
 import type { BlogPostMeta } from "@/lib/blog/types";
 
 export function BlogCard({
@@ -21,7 +21,7 @@ export function BlogCard({
         prefetch={false}
         className="relative aspect-[16/10] overflow-hidden"
       >
-        <Image
+        <JournalImage
           src={post.coverImage}
           alt={post.coverImageAlt || post.title}
           fill
@@ -63,8 +63,9 @@ export function BlogCard({
           {post.description}
         </p>
         <div className="flex items-center gap-3 mt-4 pt-4 border-t border-gray-200">
-          <Image
+          <JournalImage
             src={post.author.avatar}
+            fallbackSrc="/icon.png"
             alt={post.author.name}
             width={28}
             height={28}
@@ -86,7 +87,7 @@ export function FeaturedBlogCard({ post }: { post: BlogPostMeta }) {
     <article className="group relative overflow-hidden rounded-3xl bg-gray-900">
       <Link href={`/blog/${post.slug}`} className="block">
         <div className="relative aspect-[21/9] md:aspect-[3/1]">
-          <Image
+          <JournalImage
             src={post.coverImage}
             alt={post.coverImageAlt || post.title}
             fill

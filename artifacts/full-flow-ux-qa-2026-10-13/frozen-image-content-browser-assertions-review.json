@@ -1,0 +1,34 @@
+{
+  "scope": "Final image/content browser assertions",
+  "reviewExtent": "Full three specs read",
+  "files": [
+    {
+      "path": "apps/web/e2e/landing-images-qa.spec.ts",
+      "sha256": "f056f2a33f07734473773d80d0a0f147b4f09dc5432238eed2d07fb84983cebe"
+    },
+    {
+      "path": "apps/web/e2e/live-image-recovery-qa.spec.ts",
+      "sha256": "720378eadd0aaeda432a37edba365a47c3b6c6ee489785de2373ba6c90f79f26"
+    },
+    {
+      "path": "apps/web/e2e/content-visibility-qa.spec.ts",
+      "sha256": "56fd48b70cdb7cdd15babadb52c424424de5c12fd3ab8522dc31f6b6535cab07"
+    }
+  ],
+  "assertionCoverage": [
+    "Forced Next image abort leads to packaged SVG URL, loaded natural width and accurate illustration alt",
+    "Configured-runtime visible images load and plan action remains usable",
+    "No-JavaScript server headings remain visible through ancestor opacity checks",
+    "Native details FAQ opens/closes by Enter/Space and answers stay independently available",
+    "Reduced-motion reveals explicitly assert opacity1, transform none and animation none",
+    "Missing IntersectionObserver yields visible sections without page errors"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "limits": [
+    "Live-image spec does not inject failures or verify upstream availability independently",
+    "Content assertion excludes intentionally layout-hidden responsive decoration",
+    "No fresh runtime run during review"
+  ]
+}

@@ -1,3 +1,6 @@
+import { getMissingTripRequirements } from '../../lib/tripRequirements';
+import { formatTripDate } from '../../lib/tripDate';
+import { transformItineraryDays, transformApiHotel } from '../../lib/itineraryNormalization';
 import { GenerationHotelFacts } from '../../components/GenerationHotelFacts';
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import {
@@ -17,7 +20,8 @@ import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
-import { useTripStore, Trip, TripDay, TripInput, Activity } from '../../stores/tripStore';
+import { useTripStore, Trip, TripInput } from '../../stores/tripStore';
+import { useUserStore } from '../../stores/userStore';
 import { usePromptStore } from '../../stores/promptStore';
 import { useAuthContext } from '../../components/AuthProvider';
 import { RatingPrompt } from '../../components/RatingPrompt';
@@ -28,6 +32,7 @@ import {
   buildSeededItineraryOutline,
   type SeededItineraryOutline,
 } from '../../lib/itineraryPreview';
+import { validatePreviewBlocks } from '../../lib/json-render/validate-preview';
 import { registry } from '../../lib/json-render/registry';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { USE_NATIVE_DRIVER } from '../../lib/animation';
@@ -84,75 +89,6 @@ const DESTINATION_FACTS: Record<string, string[]> = {
   ],
 };
 
-interface StreamingLocation {
-  name?: string;
-  neighborhood?: string;
-}
-
-interface StreamingItem {
-  id?: string;
-  name?: string;
-  description?: string;
-  location?: StreamingLocation;
-  duration?: number;
-  price?: number;
-  priceLevel?: number | string;
-  rating?: number;
-  reviewCount?: number;
-  images?: string[];
-  affiliateUrl?: string;
-  reservationUrl?: string;
-}
-
-interface StreamingPeriod {
-  meal?: StreamingItem;
-  activities?: StreamingItem[];
-}
-
-interface StreamingDay {
-  date?: string;
-  dayNumber?: number;
-  title?: string;
-  morning?: StreamingPeriod;
-  afternoon?: StreamingPeriod;
-  evening?: StreamingPeriod;
-}
-
-interface StreamingHotel {
-  id?: string;
-  name?: string;
-  description?: string;
-  pricePerNight?: number;
-  totalPrice?: number;
-  userRating?: number;
-  rating?: number;
-  starRating?: number;
-  reviewCount?: number;
-  amenities?: string[];
-  images?: string[];
-  affiliateUrl?: string;
-  location?: unknown;
-}
-
-function isStringArray(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === 'string');
-}
-
-function isHotelLocation(value: unknown): value is NonNullable<Trip['hotel']>['location'] {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'name' in value &&
-    'address' in value &&
-    'lat' in value &&
-    'lng' in value &&
-    typeof value.name === 'string' &&
-    typeof value.address === 'string' &&
-    typeof value.lat === 'number' &&
-    typeof value.lng === 'number'
-  );
-}
-
 function convertStreamingDataToTrip(
   tripId: string,
   itineraryDays: unknown[],
@@ -160,84 +96,7 @@ function convertStreamingDataToTrip(
   input: TripInput
 ): Trip {
   const destinationInfo = popularDestinations.find((d) => d.name === input.destination);
-
-  const days: TripDay[] = itineraryDays.map((dayValue, dayIndex) => {
-    const day = dayValue as StreamingDay;
-    const dayNumber = day.dayNumber || dayIndex + 1;
-    const activities: Activity[] = [];
-
-    const processActivities = (items: StreamingItem[] | undefined, startHour: number) => {
-      items?.forEach((activity, idx) => {
-        activities.push({
-          id: activity.id || `activity-${dayNumber}-${startHour + idx}`,
-          time: `${startHour + idx}:00`,
-          title: activity.name || 'Recommended stop',
-          description: activity.description || '',
-          location: activity.location?.name || activity.location?.neighborhood || '',
-          duration: activity.duration ? `${Math.round(activity.duration / 60)} hours` : '2 hours',
-          type: 'activity',
-          price: activity.price ? `$${activity.price}` : undefined,
-          rating: activity.rating,
-          reviewCount: activity.reviewCount,
-          image: activity.images?.[0],
-          bookingUrl: activity.affiliateUrl,
-        });
-      });
-    };
-
-    const processMeal = (meal: StreamingItem | undefined, time: string) => {
-      if (!meal) return;
-      activities.push({
-        id: meal.id || `meal-${dayNumber}-${time}`,
-        time,
-        title: meal.name || 'Recommended meal',
-        description: meal.description || '',
-        location: meal.location?.name || meal.location?.neighborhood || '',
-        duration: '1 hour',
-        type: 'restaurant',
-        price: meal.priceLevel
-          ? '$'.repeat(typeof meal.priceLevel === 'number' ? meal.priceLevel : 2)
-          : undefined,
-        rating: meal.rating,
-        reviewCount: meal.reviewCount,
-        image: meal.images?.[0],
-        bookingUrl: meal.reservationUrl,
-      });
-    };
-
-    processMeal(day.morning?.meal, '08:00');
-    processActivities(day.morning?.activities, 9);
-    processMeal(day.afternoon?.meal, '12:30');
-    processActivities(day.afternoon?.activities, 14);
-    processActivities(day.evening?.activities, 18);
-    processMeal(day.evening?.meal, '19:30');
-
-    activities.sort((a, b) => {
-      const timeA = parseInt(a.time.split(':')[0]);
-      const timeB = parseInt(b.time.split(':')[0]);
-      return timeA - timeB;
-    });
-
-    return {
-      date: day.date || input.startDate,
-      dayNumber,
-      theme: day.title || `Day ${dayNumber}`,
-      activities,
-    };
-  });
-
-  const hotel = topHotel as StreamingHotel | null;
-  const hotelImages = isStringArray(hotel?.images) ? hotel.images : [];
-  const hotelAmenities = isStringArray(hotel?.amenities) ? hotel.amenities : [];
-  const hotelLocation = isHotelLocation(hotel?.location)
-    ? hotel.location
-    : {
-        name: input.destination,
-        address: '',
-        lat: 0,
-        lng: 0,
-      };
-
+  const hotel = transformApiHotel(topHotel);
   return {
     id: tripId,
     destination: input.destination,
@@ -248,25 +107,11 @@ function convertStreamingDataToTrip(
     travelerType: input.travelerType,
     vibes: input.vibes || [],
     budget: input.budget,
-    days,
-    hotel: hotel?.name
-      ? {
-          id: hotel.id || 'hotel-1',
-          name: hotel.name,
-          description: hotel.description || '',
-          pricePerNight: hotel.pricePerNight || 0,
-          totalPrice: hotel.totalPrice || 0,
-          rating: hotel.userRating || hotel.rating || 0,
-          reviewCount: hotel.reviewCount || 0,
-          amenities: hotelAmenities,
-          images: hotelImages,
-          bookingUrl: hotel.affiliateUrl || '',
-          location: hotelLocation,
-        }
-      : undefined,
+    days: transformItineraryDays(itineraryDays),
+    hotel,
     coverImage:
       destinationInfo?.image ||
-      hotelImages[0] ||
+      hotel?.images[0] ||
       getImageUrl(IMAGE_PATHS.inspirations['beach-getaway']),
     createdAt: new Date().toISOString(),
     status: 'planned',
@@ -286,13 +131,15 @@ function JsonRenderRenderer({
 
   useEffect(() => {
     if (blocks.length > prevLengthRef.current) {
-      Animated.timing(fadeAnim, {
+      const animation = Animated.timing(fadeAnim, {
         toValue: 1,
         duration: reduceMotion ? 150 : 300,
         useNativeDriver: USE_NATIVE_DRIVER,
-      }).start();
+      });
+      animation.start();
       prevLengthRef.current = blocks.length;
       onNewContent?.();
+      return () => animation.stop();
     }
   }, [blocks.length, fadeAnim, onNewContent, reduceMotion]);
 
@@ -342,16 +189,7 @@ function PulsingDot() {
 
 // Animated circular progress ring
 function ProgressRing({ progress, size = 180 }: { progress: number; size?: number }) {
-  const animatedProgress = useRef(new Animated.Value(0)).current;
   const strokeWidth = 8;
-
-  useEffect(() => {
-    Animated.spring(animatedProgress, {
-      toValue: progress,
-      useNativeDriver: false,
-      friction: 8,
-    }).start();
-  }, [progress, animatedProgress]);
 
   return (
     <View style={{ width: size, height: size }}>
@@ -468,14 +306,16 @@ function HotelPreviewCard({ hotel }: { hotel: Record<string, unknown> }) {
       return;
     }
 
-    Animated.parallel([
+    const animation = Animated.parallel([
       Animated.spring(fadeAnim, { toValue: 1, useNativeDriver: USE_NATIVE_DRIVER }),
       Animated.spring(scaleAnim, {
         toValue: 1,
         useNativeDriver: USE_NATIVE_DRIVER,
         friction: 8,
       }),
-    ]).start();
+    ]);
+    animation.start();
+    return () => animation.stop();
   }, [fadeAnim, reduceMotion, scaleAnim]);
 
   return (
@@ -540,10 +380,12 @@ function StepIndicator({
         pulseAnim.setValue(1);
         scaleAnim.setValue(1);
       } else {
-        Animated.spring(scaleAnim, {
+        const animation = Animated.spring(scaleAnim, {
           toValue: 1,
           useNativeDriver: USE_NATIVE_DRIVER,
-        }).start();
+        });
+        animation.start();
+        return () => animation.stop();
       }
     }
   }, [status, scaleAnim, pulseAnim, reduceMotion]);
@@ -599,21 +441,31 @@ function FunFactCard({ destination }: { destination: string }) {
   useEffect(() => {
     if (reduceMotion) return;
 
+    let active = true;
+    let animation: Animated.CompositeAnimation | undefined;
     const interval = setInterval(() => {
-      Animated.timing(fadeAnim, {
+      animation = Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 200,
         useNativeDriver: USE_NATIVE_DRIVER,
-      }).start(() => {
+      });
+      animation.start(({ finished }) => {
+        if (!active || !finished) return;
         setFactIndex((prev) => (prev + 1) % facts.length);
-        Animated.timing(fadeAnim, {
+        animation = Animated.timing(fadeAnim, {
           toValue: 1,
           duration: 200,
           useNativeDriver: USE_NATIVE_DRIVER,
-        }).start();
+        });
+        animation.start();
       });
     }, 4000);
-    return () => clearInterval(interval);
+    return () => {
+      active = false;
+      clearInterval(interval);
+      animation?.stop();
+      fadeAnim.setValue(1);
+    };
   }, [facts.length, fadeAnim, reduceMotion]);
 
   return (
@@ -634,30 +486,31 @@ function CelebrationOverlay({ onComplete }: { onComplete: () => void }) {
 
   useEffect(() => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    if (reduceMotion) {
-      scaleAnim.setValue(1);
-      Animated.timing(opacityAnim, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: USE_NATIVE_DRIVER,
-      }).start();
-    } else {
-      Animated.parallel([
-        Animated.spring(scaleAnim, {
+    if (reduceMotion) scaleAnim.setValue(1);
+    const animation = reduceMotion
+      ? Animated.timing(opacityAnim, {
           toValue: 1,
+          duration: 150,
           useNativeDriver: USE_NATIVE_DRIVER,
-          friction: 5,
-        }),
-        Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: USE_NATIVE_DRIVER,
-        }),
-      ]).start();
-    }
-
+        })
+      : Animated.parallel([
+          Animated.spring(scaleAnim, {
+            toValue: 1,
+            useNativeDriver: USE_NATIVE_DRIVER,
+            friction: 5,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 1,
+            duration: 300,
+            useNativeDriver: USE_NATIVE_DRIVER,
+          }),
+        ]);
+    animation.start();
     const timer = setTimeout(onComplete, 2000);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      animation.stop();
+    };
   }, [scaleAnim, opacityAnim, onComplete, reduceMotion]);
 
   return (
@@ -713,10 +566,36 @@ function SeededOutlineCard({ outline }: { outline: SeededItineraryOutline }) {
 }
 
 export default function GeneratingScreen() {
+  const owner = useUserStore((state) => state.user?.id);
+  const revision = useUserStore((state) => state.accountRevision);
+  return <GenerationSession key={`${owner ?? 'guest'}:${revision}`} />;
+}
+
+function GenerationSession() {
   const router = useRouter();
   const { draftInput, finishGeneration } = useTripStore();
   const { initialized, isAuthenticated } = useAuthContext();
   const { tripGenerationCount, incrementTripGeneration, shouldShowRatingPrompt } = usePromptStore();
+  const openingTrip = useRef(false);
+  const mounted = useRef(false);
+  const [account] = useState(() => {
+    const state = useUserStore.getState();
+    return { owner: state.user?.id, revision: state.accountRevision };
+  });
+  const isActive = useCallback(() => {
+    const current = useUserStore.getState();
+    return (
+      mounted.current &&
+      current.user?.id === account.owner &&
+      current.accountRevision === account.revision
+    );
+  }, [account]);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const [showCelebration, setShowCelebration] = useState(false);
   const [showRatingPrompt, setShowRatingPrompt] = useState(false);
   const [retryTripId, setRetryTripId] = useState<string | null>(null);
@@ -728,13 +607,11 @@ export default function GeneratingScreen() {
 
   const destinationInfo = popularDestinations.find((d) => d.name === draftInput?.destination);
   const seededOutline = useMemo(() => buildSeededItineraryOutline(draftInput), [draftInput]);
-  const isDraftComplete = Boolean(
-    draftInput?.destination.trim() && draftInput.startDate && draftInput.endDate
-  );
+  const isDraftComplete = getMissingTripRequirements(draftInput).length === 0;
   const canGenerate = initialized && isAuthenticated && isDraftComplete;
 
   useEffect(() => {
-    if (initialized && !canGenerate) {
+    if (initialized && !canGenerate && !openingTrip.current) {
       router.replace('/create');
     }
   }, [canGenerate, initialized, router]);
@@ -748,15 +625,20 @@ export default function GeneratingScreen() {
 
   const handleComplete = useCallback(
     (_document: StreamingBlock[]) => {
+      if (!isActive()) return;
       incrementTripGeneration();
       setShowCelebration(true);
     },
-    [incrementTripGeneration]
+    [incrementTripGeneration, isActive]
   );
 
-  const handleError = useCallback((_error: Error) => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-  }, []);
+  const handleError = useCallback(
+    (_error: Error) => {
+      if (!isActive()) return;
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+    },
+    [isActive]
+  );
 
   const streamingInput = useMemo(
     () =>
@@ -796,15 +678,17 @@ export default function GeneratingScreen() {
   );
 
   const handleReconnect = useCallback(() => {
+    if (!isActive()) return;
     setRestartUnstarted(streaming.canStart);
     if (streaming.tripId) {
       setRetryTripId(streaming.tripId);
     }
     setRetryNonce((value) => value + 1);
-  }, [streaming.tripId, streaming.canStart]);
+  }, [streaming.tripId, streaming.canStart, isActive]);
 
   const handleViewTrip = useCallback(() => {
-    if (!draftInput || !streaming.tripId) return;
+    if (!isActive() || !draftInput || !streaming.tripId || openingTrip.current) return;
+    openingTrip.current = true;
 
     if (streaming.days && streaming.days.length > 0) {
       const trip = convertStreamingDataToTrip(
@@ -818,18 +702,28 @@ export default function GeneratingScreen() {
     } else {
       router.replace(`/trip/${streaming.tripId}`);
     }
-  }, [draftInput, streaming.tripId, streaming.days, streaming.topHotel, finishGeneration, router]);
+  }, [
+    draftInput,
+    streaming.tripId,
+    streaming.days,
+    streaming.topHotel,
+    finishGeneration,
+    router,
+    isActive,
+  ]);
 
   const searchProgress = streaming.searchProgress || {};
-  const showProgressiveBlocks = streaming.blocks.length > 0;
+  const preview = useMemo(() => validatePreviewBlocks(streaming.blocks), [streaming.blocks]);
+  const showProgressiveBlocks = preview.blocks.length > 0;
 
   // Auto-scroll when new content arrives
   const handleNewContent = useCallback(() => {
+    if (!isActive()) return;
     if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
     scrollTimerRef.current = setTimeout(() => {
       scrollViewRef.current?.scrollToEnd({ animated: !reduceMotion });
     }, 100);
-  }, [reduceMotion]);
+  }, [reduceMotion, isActive]);
 
   // Get micro-message for each step
   const getMicroMessage = (step: string) => {
@@ -839,20 +733,12 @@ export default function GeneratingScreen() {
     return undefined;
   };
 
-  const counts = useMemo(
-    () => ({
-      hotels: streaming.hotelsCount,
-      activities: streaming.activitiesCount,
-      dining: streaming.diningCount,
-      transport: streaming.transportCount,
-    }),
-    [
-      streaming.hotelsCount,
-      streaming.activitiesCount,
-      streaming.diningCount,
-      streaming.transportCount,
-    ]
-  );
+  const counts = {
+    hotels: streaming.hotelsCount,
+    activities: streaming.activitiesCount,
+    dining: streaming.diningCount,
+    transport: streaming.transportCount,
+  };
 
   if (!canGenerate) {
     return (
@@ -898,13 +784,13 @@ export default function GeneratingScreen() {
             <View style={styles.headerMeta}>
               <Text style={styles.headerMetaText}>
                 {draftInput?.startDate &&
-                  new Date(draftInput.startDate).toLocaleDateString('en-US', {
+                  formatTripDate(draftInput.startDate, {
                     month: 'short',
                     day: 'numeric',
                   })}{' '}
                 -{' '}
                 {draftInput?.endDate &&
-                  new Date(draftInput.endDate).toLocaleDateString('en-US', {
+                  formatTripDate(draftInput.endDate, {
                     month: 'short',
                     day: 'numeric',
                   })}
@@ -1001,6 +887,21 @@ export default function GeneratingScreen() {
             </View>
           )}
 
+          {preview.rejected > 0 && (
+            <View
+              style={{
+                marginTop: 16,
+                padding: 14,
+                borderRadius: 12,
+                backgroundColor: 'rgba(255,255,255,0.1)',
+              }}
+            >
+              <Text accessibilityLiveRegion="polite" style={{ color: '#fff', fontSize: 14 }}>
+                Some preview details couldn’t be shown.
+              </Text>
+            </View>
+          )}
+
           {/* Progressive blocks */}
           {showProgressiveBlocks && (
             <View style={styles.blocksContainer}>
@@ -1010,14 +911,15 @@ export default function GeneratingScreen() {
                   <Text style={styles.streamingText}>{streaming.message}</Text>
                 </View>
               )}
-              <JsonRenderRenderer blocks={streaming.blocks} onNewContent={handleNewContent} />
+              <JsonRenderRenderer blocks={preview.blocks} onNewContent={handleNewContent} />
             </View>
           )}
 
           {/* Skeleton when no content yet */}
-          {!streaming.error && !showProgressiveBlocks && streaming.progress > 60 && (
-            <SkeletonLoader />
-          )}
+          {!streaming.isComplete &&
+            !streaming.error &&
+            !showProgressiveBlocks &&
+            streaming.progress > 60 && <SkeletonLoader />}
 
           {/* View trip button */}
           {streaming.isComplete && streaming.tripId && !showCelebration && (
@@ -1046,6 +948,7 @@ export default function GeneratingScreen() {
       {showCelebration && (
         <CelebrationOverlay
           onComplete={() => {
+            if (!isActive()) return;
             setShowCelebration(false);
             if (tripGenerationCount >= 3 && shouldShowRatingPrompt()) {
               setShowRatingPrompt(true);

@@ -397,8 +397,9 @@ export default async function TripCostDestinationPage({
         </section>
 
         <ToolCTA
+          destination={dest.name}
           title={`Ready for ${dest.name}?`}
-          description={`Let Faroway create your personalized ${dest.name} itinerary — completely free.`}
+          description={`Let Faroway create your personalized ${dest.name} itinerary at your own pace.`}
         />
         <RelatedTools currentSlug="trip-cost" />
       </main>

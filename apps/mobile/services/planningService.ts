@@ -57,9 +57,13 @@ export async function createAndStartTrip(
       25_000
     );
     const id = result?.trip?.id;
-    if (typeof id !== 'string' || !/^[0-9a-f-]{36}$/i.test(id))
+    if (
+      typeof id !== 'string' ||
+      id !== receipt.requestId ||
+      result?.trip?.user_id !== authorization.userId
+    )
       throw new Error(
-        'The saved trip response was incomplete. Check your trips before trying again.'
+        'The saved trip response could not be verified. Keep this request and check My Trips before retrying.'
       );
     onCreated(id);
     await requestWithTimeout(

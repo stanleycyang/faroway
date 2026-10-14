@@ -1,0 +1,50 @@
+{
+  "scope": "Final dashboard and itinerary presentation group",
+  "reviewExtent": "Complete base-to-current diffs of five tracked components and complete new FlightLeg body.",
+  "files": [
+    {
+      "path": "apps/web/components/dashboard/TripFilters.tsx",
+      "sha256": "e9fe08cb3924852205d467971ad91816288ca65da39f662776e95ae67c3b9a8a"
+    },
+    {
+      "path": "apps/web/components/dashboard/TripStats.tsx",
+      "sha256": "9abccf77041a8b6850d24e5c98bb831e198b90935e4211e07c13653103c5a4dc"
+    },
+    {
+      "path": "apps/web/components/trips/FlightLeg.tsx",
+      "sha256": "376ca02645466c0f1592c6f9409545bd6d0d4df13478a840fdaf5658c195fb2f"
+    },
+    {
+      "path": "apps/web/components/trips/ItineraryDay.tsx",
+      "sha256": "b8d6eb40c6e3fa4c1726abb5798f84795c240a02ef0d3901843bcb3fba4f8e56"
+    },
+    {
+      "path": "apps/web/components/trips/TripHeader.tsx",
+      "sha256": "4f77ede461b7305aac4b86cba676c3bbbd902d3158b5d701dc82d3dff0134784"
+    },
+    {
+      "path": "apps/web/components/trips/ItineraryMap.tsx",
+      "sha256": "b513b3e676509ad085be5f276e0667ff82a209e3d265e31db9c51690482686ae"
+    }
+  ],
+  "invariants": [
+    "Filter controls expose pressed state and sort has associated label; stats describe past travel instead of generated-plan completion",
+    "Flight times preserve supplied airport-local wall clock; missing price/duration/stop/airport facts have unavailable copy",
+    "Legacy tips and star ratings validated before rendering; transport estimate avoids unverified per-person claim",
+    "Map accepts zero coordinates but rejects invalid ranges; popup/marker labels use textContent and text nodes",
+    "Map attribution visible and resize frame cancelled on teardown; empty markers explain unavailable locations",
+    "Trip header share waits for hydration and callback; shared home link uses accurate label"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "validation": {
+    "result": "Passed",
+    "scope": "Four existing itinerary/map/dashboard regression suites",
+    "log": "/tmp/faroway-ux-frozen-itinerary-presentation-tests.log"
+  },
+  "limits": [
+    "Current release candidate responsive/accessibility acceptance still required",
+    "No real flight booking or map-provider availability verified"
+  ]
+}

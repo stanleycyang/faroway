@@ -91,6 +91,7 @@ async function mockHistory(
               json: {
                 redirectUrl: redirect.replace(attemptId, body.attemptId),
                 status: "handoff_prepared",
+                attemptId: body.attemptId,
               },
             },
       );

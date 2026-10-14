@@ -1,11 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { VibeSelector } from '../../components/ui';
+import { travelerTypes } from '@faroway/constants';
 import { useUserStore } from '../../stores/userStore';
 import { updateUserProfile } from '../../services/api';
+import { ProfileEditorBoundary, type EditorProfile } from '../../components/ProfileEditorBoundary';
 import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 
@@ -16,32 +18,78 @@ const budgetOptions = [
 ];
 
 export default function PreferencesScreen() {
+  const { user, accountRevision } = useUserStore();
+  if (!user)
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text accessibilityLiveRegion="polite">Loading your profile…</Text>
+      </SafeAreaView>
+    );
+  return (
+    <ProfileEditorBoundary>
+      {(profile) => (
+        <PreferencesScreenEditor key={`${user.id}:${accountRevision}`} profile={profile} />
+      )}
+    </ProfileEditorBoundary>
+  );
+}
+
+function PreferencesScreenEditor({ profile }: { profile: EditorProfile }) {
   const router = useRouter();
   const { user, updatePreferences } = useUserStore();
-  const [selectedVibes, setSelectedVibes] = useState<string[]>(user?.preferences?.vibes || []);
-  const [selectedBudget, setSelectedBudget] = useState<string>(user?.preferences?.budget || '');
+  const [selectedVibes, setSelectedVibes] = useState<string[]>(profile.preferences?.vibes || []);
+  const [selectedBudget, setSelectedBudget] = useState<string>(
+    budgetOptions.some((option) => option.id === profile.preferences?.budget)
+      ? profile.preferences!.budget!
+      : ''
+  );
   const [saved, setSaved] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [editingAccountId] = useState(user?.id);
+  const [editingAccountRevision] = useState(useUserStore.getState().accountRevision);
+  const mountedRef = useRef(true);
+  const savingRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  const isCurrentEditor = () =>
+    mountedRef.current &&
+    editingAccountId != null &&
+    useUserStore.getState().user?.id === editingAccountId &&
+    useUserStore.getState().accountRevision === editingAccountRevision;
 
   const handleSave = async () => {
-    if (isSaving) return;
+    if (!isCurrentEditor() || savingRef.current) return;
+    savingRef.current = true;
     setIsSaving(true);
 
     try {
-      const result = await updateUserProfile({
-        preferences: { vibes: selectedVibes, budget: selectedBudget },
-      });
+      const preferences = {
+        vibes: selectedVibes,
+        ...(selectedBudget ? { budget: selectedBudget } : {}),
+        ...(travelerTypes.some((option) => option.id === profile.preferences?.travelerType)
+          ? { travelerType: profile.preferences!.travelerType }
+          : {}),
+      };
+      const result = await updateUserProfile({ preferences }, editingAccountId!);
+      if (!isCurrentEditor()) return;
       if (result.error) throw new Error(result.error);
 
-      updatePreferences({ vibes: selectedVibes, budget: selectedBudget });
+      updatePreferences({ ...preferences, budget: selectedBudget || undefined });
       hapticFeedback.success();
       setSaved(true);
-      setTimeout(() => router.back(), 600);
+      router.back();
     } catch (error: unknown) {
+      if (!isCurrentEditor()) return;
       hapticFeedback.error();
       const message = error instanceof Error ? error.message : 'Please try again.';
       Alert.alert('Couldn’t save preferences', message);
-      setIsSaving(false);
+    } finally {
+      savingRef.current = false;
+      if (isCurrentEditor()) setIsSaving(false);
     }
   };
 
@@ -63,7 +111,7 @@ export default function PreferencesScreen() {
         <TouchableOpacity
           style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
           onPress={handleSave}
-          disabled={isSaving}
+          disabled={isSaving || user?.id !== editingAccountId}
           accessibilityRole="button"
           accessibilityLabel={saved ? 'Preferences saved' : 'Save preferences'}
           accessibilityState={{ disabled: isSaving, busy: isSaving }}
@@ -77,12 +125,17 @@ export default function PreferencesScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Vibes */}
         <View style={styles.section}>
-          <VibeSelector selected={selectedVibes} onSelect={setSelectedVibes} maxSelections={5} />
+          <VibeSelector
+            selected={selectedVibes}
+            onSelect={setSelectedVibes}
+            maxSelections={5}
+            disabled={isSaving}
+          />
         </View>
 
         {/* Budget */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Preferred Budget</Text>
+          <Text style={styles.sectionTitle}>Preferred budget (optional)</Text>
           <View style={styles.budgetOptions}>
             {budgetOptions.map((option) => {
               const isSelected = selectedBudget === option.id;
@@ -90,14 +143,19 @@ export default function PreferencesScreen() {
                 <TouchableOpacity
                   key={option.id}
                   style={[styles.budgetOption, isSelected && styles.budgetOptionSelected]}
+                  disabled={isSaving}
                   onPress={() => {
+                    if (savingRef.current) return;
                     hapticFeedback.selection();
-                    setSelectedBudget(option.id);
+                    setSelectedBudget(isSelected ? '' : option.id);
                   }}
                   activeOpacity={0.7}
                   accessibilityRole="button"
                   accessibilityLabel={`${option.label} budget. ${option.description}`}
-                  accessibilityState={{ selected: isSelected }}
+                  accessibilityState={{ selected: isSelected, disabled: isSaving }}
+                  accessibilityHint={
+                    isSelected ? 'Tap to clear your preferred budget' : 'Sets your preferred budget'
+                  }
                 >
                   <Text style={styles.budgetEmoji}>{option.emoji}</Text>
                   <View style={styles.budgetContent}>

@@ -15,21 +15,28 @@ interface Props {
 
 // Lazy-loaded list of (iso, name) pairs extracted from the TopoJSON names.
 let CACHED: CountryOption[] | null = null;
-async function loadCountries(): Promise<CountryOption[]> {
+async function loadCountries(signal: AbortSignal): Promise<CountryOption[]> {
   if (CACHED) return CACHED;
-  const res = await fetch("/world-map/countries-110m.json");
-  const json = (await res.json()) as {
-    objects: {
-      countries: {
-        geometries: Array<{ id: string; properties: { name?: string } }>;
-      };
-    };
-  };
+  const res = await fetch("/world-map/countries-110m.json", { signal });
+  if (!res.ok) throw new Error("Country list unavailable");
+  const json = await res.json();
+  const geometries = json?.objects?.countries?.geometries;
+  if (!Array.isArray(geometries)) throw new Error("Invalid country list");
+  if (signal.aborted) throw new Error("Country search cancelled");
   const out: CountryOption[] = [];
-  for (const g of json.objects.countries.geometries) {
+  for (const g of geometries) {
+    if (
+      !g ||
+      typeof g !== "object" ||
+      !["string", "number"].includes(typeof g.id)
+    )
+      continue;
     const iso = NUMERIC_TO_ALPHA3[String(g.id).padStart(3, "0")];
     if (!iso) continue;
-    out.push({ iso, name: g.properties.name ?? iso });
+    out.push({
+      iso,
+      name: typeof g.properties?.name === "string" ? g.properties.name : iso,
+    });
   }
   out.sort((a, b) => a.name.localeCompare(b.name));
   CACHED = out;
@@ -40,21 +47,41 @@ export function CountrySearch({ onPick }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [options, setOptions] = useState<CountryOption[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [retry, setRetry] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
-    loadCountries()
+    const controller = new AbortController();
+    const deadline = setTimeout(() => {
+      if (cancelled) return;
+      controller.abort();
+      setLoading(false);
+      setLoadError(true);
+    }, 15_000);
+    loadCountries(controller.signal)
       .then((countries) => {
-        if (!cancelled) setOptions(countries);
+        if (cancelled || controller.signal.aborted) return;
+        setOptions(countries);
+        setLoading(false);
+        setLoadError(false);
       })
-      .catch(console.error);
+      .catch(() => {
+        if (cancelled || controller.signal.aborted) return;
+        setLoading(false);
+        setLoadError(true);
+      })
+      .finally(() => clearTimeout(deadline));
     return () => {
       cancelled = true;
+      controller.abort();
+      clearTimeout(deadline);
     };
-  }, [open]);
+  }, [open, retry]);
 
   useEffect(() => {
     if (!open) return;
@@ -118,7 +145,7 @@ export function CountrySearch({ onPick }: Props) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === "Enter" && filtered[0]) {
+              if (e.key === "Enter" && !loading && !loadError && filtered[0]) {
                 onPick(filtered[0].iso, filtered[0].name);
                 setOpen(false);
                 setQuery("");
@@ -155,7 +182,36 @@ export function CountrySearch({ onPick }: Props) {
         </button>
       )}
 
-      {open && filtered.length > 0 && (
+      {open && (loading || loadError || filtered.length === 0) && (
+        <div className="absolute right-0 top-full mt-2 w-64 rounded-xl bg-white p-4 shadow-xl ring-1 ring-slate-200/70 z-50">
+          {loadError ? (
+            <>
+              <p role="alert" className="text-sm text-slate-700">
+                Country search couldn’t load. You can still select countries on
+                the map.
+              </p>
+              <button
+                type="button"
+                className="mt-3 text-sm font-semibold text-primary"
+                onClick={() => {
+                  setLoading(true);
+                  setLoadError(false);
+                  setRetry((value) => value + 1);
+                }}
+              >
+                Try again
+              </button>
+            </>
+          ) : (
+            <p role="status" className="text-sm text-slate-600">
+              {loading
+                ? "Loading countries…"
+                : "No matching countries. Try another name."}
+            </p>
+          )}
+        </div>
+      )}
+      {open && !loading && !loadError && filtered.length > 0 && (
         <div
           id="country-search-results"
           aria-label="Country search results"

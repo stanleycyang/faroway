@@ -1,0 +1,45 @@
+{
+  "scope": "Final native sharing helpers and share-route receipt",
+  "reviewExtent": "Complete current three-file bodies; native trip-detail account session and sharing handler read as integration context. Entire trip-detail diff remains separately pending.",
+  "files": [
+    {
+      "path": "apps/mobile/lib/tripSharing.ts",
+      "sha256": "69ce78528b9d86b2ab9f2d0cb7fb690f15edd03f7a92d53ab6ff634290bab6cf"
+    },
+    {
+      "path": "apps/mobile/lib/bookingOptions.ts",
+      "sha256": "c1f0d80b23e0d4e6610457e3e598040afd9ae3c4dd96426c7d34fac0341cc1c3"
+    },
+    {
+      "path": "apps/web/app/api/trips/[id]/share/route.ts",
+      "sha256": "5d5c00963459288654f706d3faf9b69c65766deadb5b27173c59b8b9adc1a4d2"
+    }
+  ],
+  "invariants": [
+    "Sharing helpers capture verified account and fence asynchronous response publication",
+    "Public link validates HTTPS, credentials, token/path agreement and absence of query/hash",
+    "Revocation needs success true; API owner-scoped exact count must equal one before success",
+    "Share creation requires explicit publicConsent and rejects stale-plan brief; revision-bound write prevents stale enable",
+    "Native sharing serializes operations, explains persistent link after sheet cancellation and fences late consent against account revision",
+    "Booking options are saved-plan candidates with truthful known-price formatting, not confirmed inventory"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "validation": {
+    "result": "Passed",
+    "logs": [
+      "/tmp/faroway-ux-frozen-native-sharing-review-tests.log",
+      "/tmp/faroway-ux-frozen-share-route-review-tests.log"
+    ],
+    "scope": "Three native sharing/booking suites and web share API suite"
+  },
+  "evidence": [
+    "sharing-semantic-review.json",
+    "sharing-review-runtime-requests.json"
+  ],
+  "limits": [
+    "Hosted token revocation/JWT behavior and current OS share-sheet acceptance remain external",
+    "Trip-detail integration read is partial and does not approve full screen diff"
+  ]
+}

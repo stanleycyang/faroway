@@ -1,0 +1,77 @@
+{
+  "scope": "Current Next dev source, public pages, external requests blocked",
+  "results": [
+    {
+      "name": "desktop",
+      "path": "/",
+      "target": "main",
+      "skipFocused": true,
+      "focusMoved": true,
+      "nextTabInsideContent": true
+    },
+    {
+      "name": "desktop",
+      "path": "/destinations",
+      "target": "main",
+      "skipFocused": true,
+      "focusMoved": true,
+      "nextTabInsideContent": true
+    },
+    {
+      "name": "desktop",
+      "path": "/auth/login",
+      "target": "fallback",
+      "skipFocused": true,
+      "focusMoved": true,
+      "nextTabInsideContent": true
+    },
+    {
+      "name": "mobile-safari",
+      "path": "/",
+      "target": "main",
+      "skipFocused": true,
+      "focusMoved": true,
+      "nextTabInsideContent": true
+    },
+    {
+      "name": "mobile-safari",
+      "path": "/destinations",
+      "target": "main",
+      "skipFocused": true,
+      "focusMoved": true,
+      "nextTabInsideContent": true
+    },
+    {
+      "name": "mobile-safari",
+      "path": "/auth/login",
+      "target": "fallback",
+      "skipFocused": true,
+      "focusMoved": true,
+      "nextTabInsideContent": true
+    },
+    {
+      "name": "mobile-chrome",
+      "path": "/",
+      "target": "main",
+      "skipFocused": true,
+      "focusMoved": true,
+      "nextTabInsideContent": true
+    },
+    {
+      "name": "mobile-chrome",
+      "path": "/destinations",
+      "target": "main",
+      "skipFocused": true,
+      "focusMoved": true,
+      "nextTabInsideContent": true
+    },
+    {
+      "name": "mobile-chrome",
+      "path": "/auth/login",
+      "target": "fallback",
+      "skipFocused": true,
+      "focusMoved": true,
+      "nextTabInsideContent": true
+    }
+  ]
+}

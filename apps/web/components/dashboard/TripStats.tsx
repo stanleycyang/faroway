@@ -1,14 +1,14 @@
 interface TripStatsProps {
   totalTrips: number;
   upcomingTrips: number;
-  completedTrips: number;
+  pastTrips: number;
   inProgressTrips?: number;
 }
 
 export function TripStats({
   totalTrips,
   upcomingTrips,
-  completedTrips,
+  pastTrips,
   inProgressTrips = 0,
 }: TripStatsProps) {
   const stats = [
@@ -34,8 +34,8 @@ export function TripStats({
       bgColor: "bg-blue-50",
     },
     {
-      label: "Completed",
-      value: completedTrips,
+      label: "Past",
+      value: pastTrips,
       icon: "✅",
       color: "text-gray-600",
       bgColor: "bg-gray-100",

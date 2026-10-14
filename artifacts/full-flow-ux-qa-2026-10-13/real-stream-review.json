@@ -1,0 +1,73 @@
+{
+  "scope": "Actual Next SSE GET observation with owner-filtered loopback REST and synthetic job phases; no workflow dispatch or live provider",
+  "currentProvider": {
+    "session": 69148,
+    "port": 4017,
+    "generationOnly": true,
+    "sql": false,
+    "mutations": false,
+    "native": false
+  },
+  "acceptedProfiles": [
+    {
+      "profile": "desktop",
+      "streamReads": 2,
+      "planningWrites": 0,
+      "clientErrors": [],
+      "checks": [
+        "hotel and day streamed",
+        "progress-read failure preserves day",
+        "reconnect same page",
+        "saved completion",
+        "Open my trip reveals Day 2 tab"
+      ]
+    },
+    {
+      "profile": "mobile-safari",
+      "streamReads": 2,
+      "planningWrites": 0,
+      "clientErrors": [],
+      "checks": [
+        "hotel and day streamed",
+        "progress-read failure preserves day",
+        "reconnect same page",
+        "saved completion",
+        "Open my trip reveals Day 2 tab"
+      ]
+    },
+    {
+      "name": "mobile-chrome",
+      "streamReads": 2,
+      "planningWrites": 0,
+      "errors": [],
+      "progressHotelDayVisible": true,
+      "searchReadFailurePreservedDay": true,
+      "reconnected": true,
+      "savedCompletionVisible": true
+    }
+  ],
+  "mobileChrome": "Dedicated repeat session10031 passed with unchanged20s assertion timeout; initial combined-run timeout retained",
+  "retainedFailedAttempts": [
+    "Standalone runner expect.setTimeout API corrected",
+    "Cold Next stream compile timed out before hotel",
+    "Offline emulation left existing EventSource open, so not network-failure evidence",
+    "Cold completion canonical refetch missed expected dossier within20s",
+    "Incorrect runner CTA label Open your itinerary corrected to actual Open my trip"
+  ],
+  "limits": [
+    "True transport disconnect not yet proven",
+    "Synthetic Auth/REST do not prove JWT/RLS",
+    "No durable workflow/provider execution",
+    "Not native-device streaming acceptance"
+  ],
+  "files": [
+    {
+      "path": "apps/web/e2e/fixtures/private-route-service.mjs",
+      "sha256": "b1bbc041a19693b1394af913a4adc44743443b14ce99fa5667222c40d8756493"
+    },
+    {
+      "path": "apps/web/e2e/fixtures/private-route-qa.md",
+      "sha256": "64611d5fd59e6c239ab8572b030c46b90f1afc4e41be3d8854bc5de4a4586269"
+    }
+  ]
+}

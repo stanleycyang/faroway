@@ -1,3 +1,12 @@
+let mockAccountCurrent = true;
+jest.mock('../../lib/tripAccountScope', () => ({
+  captureTripAccount: () => ({
+    assertCurrent: () => {
+      if (!mockAccountCurrent) throw new Error('Your account changed');
+    },
+    headers: async () => ({ Authorization: 'Bearer current-account' }),
+  }),
+}));
 jest.mock('../../lib/planningConsent', () => ({
   withPlanningConsent: jest.fn(async (dispatch) =>
     dispatch({
@@ -35,6 +44,7 @@ const mockFetch = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockAccountCurrent = true;
 });
 
 describe('startSearch', () => {
@@ -434,5 +444,54 @@ describe('getStatusMessage', () => {
         aggregator: 'pending',
       })
     ).toBe('Starting your search...');
+  });
+});
+
+describe('account-scoped status recovery', () => {
+  it('sends fresh account authentication', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ searchId: 's-1', status: 'pending' }),
+    });
+    await getSearchStatus('s-1');
+    expect(mockFetch.mock.calls[0][1].headers.Authorization).toBe('Bearer current-account');
+  });
+  it('rejects a different search identity', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ searchId: 's-other', status: 'completed', results: {} }),
+    });
+    await expect(getSearchStatus('s-1')).rejects.toThrow('could not be verified');
+  });
+  it('settles a stalled status request and aborts it', async () => {
+    jest.useFakeTimers();
+    try {
+      mockFetch.mockImplementationOnce(() => new Promise(() => {}));
+      const outcome = expect(getSearchStatus('s-1')).rejects.toThrow('timed out');
+      await jest.advanceTimersByTimeAsync(5000);
+      await outcome;
+      expect(mockFetch.mock.calls[0][1].signal.aborted).toBe(true);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+  it('suppresses late progress after the account changes', async () => {
+    let release!: (value: unknown) => void;
+    mockFetch.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        })
+    );
+    const progress = jest.fn();
+    const outcome = expect(pollSearchStatus('s-1', progress)).rejects.toThrow('account changed');
+    await Promise.resolve();
+    await Promise.resolve();
+    mockAccountCurrent = false;
+    const body = jest.fn(async () => ({ searchId: 's-1', status: 'completed', results: {} }));
+    release({ ok: true, json: body });
+    await outcome;
+    expect(body).not.toHaveBeenCalled();
+    expect(progress).not.toHaveBeenCalled();
   });
 });

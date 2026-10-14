@@ -1,0 +1,52 @@
+{
+  "scope": "Senior semantic review of listed current changed shared files and associated deadline regression; not all web/native product code or complete deliverable review.",
+  "files": [
+    {
+      "path": "packages/api-client/src/index.ts",
+      "sha256": "fb9f105dbb85741c1f354bbaf9d569b5e94158b381d9ab9a13938c5deb555a39"
+    },
+    {
+      "path": "packages/api-client/__tests__/index.test.ts",
+      "sha256": "3ae4e45a7a7ef3444172d85054212a1b442ff16300a7d642f2b59c617b7d2a99"
+    },
+    {
+      "path": "apps/web/__tests__/api-client-deadline.test.ts",
+      "sha256": "655f09a71845f142d138eb3ef50d5526d5f9457e070995e16fb5058dbebbb4e4"
+    },
+    {
+      "path": "packages/constants/src/index.ts",
+      "sha256": "b5e57882a3eb11f6060949396ce83cefb436aac72c65350f8f0ef81abf8953a1"
+    },
+    {
+      "path": "packages/constants/src/trip-dates.ts",
+      "sha256": "fdaac291d236e0d27857a1c0ced5c60bf8d107c01228e327816a964f6656bb77"
+    },
+    {
+      "path": "packages/constants/__tests__/trip-dates.test.ts",
+      "sha256": "0dcd7564b58db2199323698df8e65e10c81a975fca45d12d9f077a4849b0e47a"
+    },
+    {
+      "path": "docs/web/API_BACKEND_AUDIT_COMPLETE.md",
+      "sha256": "60ffc74003c1bccdcb1e005e6277b180b7fc20cb68b45311bba276cbf561610f"
+    },
+    {
+      "path": "docs/web/FRONTEND_QUICKSTART.md",
+      "sha256": "57c496759bc16bd062dd5c7cf5f20696820fcdbd4bddac00409863437511fff0"
+    }
+  ],
+  "review": [
+    "Request deadline starts before token lookup, races operation, aborts onexpiry, suppresses late dispatch/body result, clears timer on completion; catches late failure",
+    "Headers API preserves caller headers and overrides authorization with supplied current token",
+    "Error fields narrowed tostrings; success genericDTO remains caller-validation boundary",
+    "Calendar dates enforce realUTCcomponents and YYYY-MM-DD before lexicographicphase; inclusive end-date; localcalendar derives localDateparts",
+    "APIpackage exported legacy wrappers remain; no app FarowayClient consumer found in scoped rg; native uses its separate reviewed services",
+    "Docs point to current workflow and direct hookimport; historicalaudit still explicitly historical"
+  ],
+  "checks": {
+    "apiClientTests": 33,
+    "constantsTests": 47,
+    "deadlineTests": 5,
+    "packageTypes": "bothpass"
+  },
+  "limits": "No liveprovider/caller cancellation/account-revision contract added to exported SDK; unchanged APIs outside changeddeadline are not complete integration acceptance."
+}

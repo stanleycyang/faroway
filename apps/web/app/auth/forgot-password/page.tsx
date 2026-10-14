@@ -1,48 +1,84 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { validateRedirectUrl } from "@/lib/security/validate-redirect";
+import { useHydrated } from "@/hooks/useHydrated";
 import { ArrowLeft, Mail, Check } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { AuthRequestTimeoutError } from "@/lib/auth/request-deadline";
 import { requestPasswordReset } from "@/lib/auth/password-reset";
 
-export default function ForgotPasswordPage() {
+function ForgotPasswordContent() {
+  const searchParams = useSearchParams();
+  const redirectTo = validateRedirectUrl(searchParams.get("redirectTo"));
+  const returnQuery =
+    redirectTo === "/dashboard"
+      ? ""
+      : `?redirectTo=${encodeURIComponent(redirectTo)}`;
+  const hydrated = useHydrated();
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState("");
+  const [submittedEmail, setSubmittedEmail] = useState("");
+  const submittingRef = useRef(false);
+  const successHeadingRef = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (emailSent) successHeadingRef.current?.focus();
+  }, [emailSent]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    const address = email.trim();
+    setSubmittedEmail(address);
     setIsLoading(true);
     setError("");
 
     try {
-      const { error: resetError } = await requestPasswordReset(email);
+      const { error: resetError } = await requestPasswordReset(
+        address,
+        redirectTo,
+      );
       if (resetError) throw resetError;
 
       setEmailSent(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      setError(
+        err instanceof AuthRequestTimeoutError
+          ? "We couldn’t confirm whether your reset email was sent. Check your inbox before trying again."
+          : err instanceof Error
+            ? err.message
+            : "Couldn’t request a reset link. Please try again.",
+      );
     } finally {
+      submittingRef.current = false;
       setIsLoading(false);
     }
   };
 
   if (emailSent) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50 to-white px-4">
+      <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-4">
         <div className="w-full max-w-md text-center">
           <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-green-100 flex items-center justify-center">
             <Check className="w-10 h-10 text-green-600" />
           </div>
 
-          <h1 className="text-2xl font-semibold text-gray-900 mb-3">
+          <h1
+            ref={successHeadingRef}
+            tabIndex={-1}
+            className="font-editorial text-3xl text-slate-900 mb-3 outline-none"
+          >
             Check your email
           </h1>
           <p className="text-gray-600 mb-8">
-            We&apos;ve sent a password reset link to <strong>{email}</strong>.
-            Click the link in the email to reset your password.
+            If an account uses <strong>{submittedEmail}</strong>, you’ll receive
+            a password reset link. Open the link in that email to choose a new
+            password.
           </p>
 
           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 text-left">
@@ -53,8 +89,8 @@ export default function ForgotPasswordPage() {
           </div>
 
           <Link
-            href="/auth/login"
-            className="inline-flex items-center gap-2 text-primary hover:text-primary-600 font-medium transition-colors"
+            href={`/auth/login${returnQuery}`}
+            className="inline-flex items-center gap-2 text-slate-700 hover:text-slate-900 font-medium transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
             Back to sign in
@@ -65,11 +101,11 @@ export default function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-white px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#f7f8fa] px-4">
       <div className="w-full max-w-md">
         {/* Back Button */}
         <Link
-          href="/auth/login"
+          href={`/auth/login${returnQuery}`}
           className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -81,7 +117,7 @@ export default function ForgotPasswordPage() {
           <div className="flex justify-center mb-4">
             <Logo size="lg" variant="dark" />
           </div>
-          <h1 className="mt-6 text-2xl font-semibold text-gray-900">
+          <h1 className="mt-6 font-editorial text-3xl text-slate-900">
             Reset your password
           </h1>
           <p className="mt-2 text-gray-600">
@@ -100,7 +136,7 @@ export default function ForgotPasswordPage() {
         )}
 
         {/* Form */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <label
@@ -114,19 +150,25 @@ export default function ForgotPasswordPage() {
                 <input
                   id="email"
                   type="email"
+                  inputMode="email"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  autoComplete="email"
+                  disabled={!hydrated || isLoading}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   placeholder="you@example.com"
-                  className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all"
+                  className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 transition-all"
                 />
               </div>
             </div>
 
             <button
               type="submit"
-              disabled={isLoading || !email}
-              className="w-full py-3 bg-primary hover:bg-primary-600 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors shadow-lg shadow-primary/25"
+              disabled={!hydrated || isLoading || !email}
+              className="w-full py-3 bg-slate-900 hover:bg-slate-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-colors shadow-sm"
             >
               {isLoading ? "Sending..." : "Send reset link"}
             </button>
@@ -135,8 +177,8 @@ export default function ForgotPasswordPage() {
           <p className="mt-6 text-center text-sm text-gray-600">
             Remember your password?{" "}
             <Link
-              href="/auth/login"
-              className="font-semibold text-primary hover:text-primary-600 transition-colors"
+              href={`/auth/login${returnQuery}`}
+              className="font-semibold text-slate-700 hover:text-slate-900 transition-colors"
             >
               Sign in
             </Link>
@@ -144,5 +186,22 @@ export default function ForgotPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ForgotPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div
+          role="status"
+          className="min-h-screen flex items-center justify-center"
+        >
+          Loading password recovery…
+        </div>
+      }
+    >
+      <ForgotPasswordContent />
+    </Suspense>
   );
 }

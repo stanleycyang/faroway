@@ -1,0 +1,29 @@
+{
+  "scope": "Final native API client account-pinning diff",
+  "reviewExtent": "Complete base-to-current API module diff; current base fetch/body parsing and profile account request bodies read as context. Unchanged generic endpoints not claimed fully audited.",
+  "files": [
+    {
+      "path": "apps/mobile/services/api.ts",
+      "sha256": "e70c12c513fa5bfcb0a8f12b9fa86a9e3f441ff7babbfaa1c2898e03b6eba081"
+    }
+  ],
+  "invariants": [
+    "Optional pinned session token takes precedence over mutable generic auth token",
+    "Profile editor requests capture owner/revision and verify SDK session before sending; late responses and mismatched receipt owner rejected",
+    "Sharing helper requests can carry captured token through both enable/revoke operations",
+    "Finite response body parsing stays within requestWithTimeout and error fields are string-guarded"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": [],
+    "deferred": "Unused generic online trip update wrapper contract already in follow-up backlog"
+  },
+  "validation": {
+    "result": "Passed",
+    "scope": "Native API and profile-save suites",
+    "log": "/tmp/faroway-ux-frozen-native-api-review-tests.log"
+  },
+  "limits": [
+    "Hosted credentials/session revocation and exact candidate checks remain pending/external",
+    "Diff review does not imply all unchanged API methods independently exercised"
+  ]
+}

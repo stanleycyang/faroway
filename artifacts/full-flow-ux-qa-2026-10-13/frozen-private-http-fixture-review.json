@@ -1,0 +1,31 @@
+{
+  "scope": "Final private loopback HTTP fixture service",
+  "reviewExtent": "All610lines read in three bounded non-overlapping chunks",
+  "files": [
+    {
+      "path": "apps/web/e2e/fixtures/private-route-service.mjs",
+      "sha256": "dda6876f60a696705965603100407bea0dbe8fe683c771fd4bcd05b8c495f301"
+    }
+  ],
+  "invariants": [
+    "Binds fixed127.0.0.1:4017, no upstream forwarding or hosted project configuration",
+    "Creation mode rejects SQL/generation/native/list combinations; generation and SQL cannot combine",
+    "Mutation endpoints opt in by flags, constrain paths and body size and dispatch only reviewed fixed SQL adapters",
+    "Logs method/path/query, excluding body and authorization headers",
+    "Full-schema reads honor flat projection so omitted owner field is not silently fabricated",
+    "Synthetic PKCE delay issues no credential; token-owner decoding explicitly unsigned test data",
+    "List mode simulates only defined UUID cursor/count cases; shared failure tokens deliberately exercise malformed envelopes"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "validation": {
+    "result": "Passed syntax",
+    "command": "node --check apps/web/e2e/fixtures/private-route-service.mjs"
+  },
+  "limits": [
+    "Synthetic Auth and filter checks are not JWT verification or real RLS",
+    "SQL template metadata and limited REST semantics remain explicit limitations",
+    "Browser test assertion reconciliation still pending"
+  ]
+}

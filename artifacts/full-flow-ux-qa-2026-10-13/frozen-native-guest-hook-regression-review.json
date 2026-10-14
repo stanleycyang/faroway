@@ -1,0 +1,28 @@
+{
+  "scope": "Final native guest restore hook regression assertions",
+  "reviewExtent": "Full current file",
+  "files": [
+    {
+      "path": "apps/mobile/__tests__/hooks/useGuestTripBrief.test.tsx",
+      "sha256": "a0aa951042ec9d63f836c3ce4adf469f4fa3a67643ae906913ec4e3ea212a8fb"
+    }
+  ],
+  "assertionCoverage": [
+    "Delayed restore honors edited/account/exit boundary and persists newer choice only while current",
+    "Denied persistence keeps session edits with truthful message; unreadable storage neither overwritten nor cleared",
+    "Explicit incoming link choices overlay saved brief",
+    "Discard resolves only current actor/review, retains edits and enables persistence after confirmed discard",
+    "Signed-in account clears guest record without restore; unresolved Auth triggers zero storage calls",
+    "Reopened in-memory date/vibe/party/origin/budget choices preserved"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "validation": {
+    "result": "Passed current workspace suite",
+    "log": "/tmp/faroway-ux-frozen-motion-current-workspace-tests.log"
+  },
+  "limits": [
+    "Mock Auth/store/storage, not actual device persistence or OAuth handoff"
+  ]
+}

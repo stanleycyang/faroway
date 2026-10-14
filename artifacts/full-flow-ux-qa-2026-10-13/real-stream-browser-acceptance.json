@@ -1,0 +1,15 @@
+{
+  "scope": "Actual Next EventSource route with owner-filtered synthetic local REST/search states; planning paused; no workflow dispatch, live provider or hosted writes",
+  "results": [
+    {
+      "name": "mobile-chrome",
+      "streamReads": 2,
+      "planningWrites": 0,
+      "errors": [],
+      "progressHotelDayVisible": true,
+      "searchReadFailurePreservedDay": true,
+      "reconnected": true,
+      "savedCompletionVisible": true
+    }
+  ]
+}

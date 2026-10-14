@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import Image from "next/image";
+import { JournalImage } from "@/components/blog/JournalImage";
 import Link from "next/link";
 import { getAllPosts, getPostBySlug, getRelatedPosts } from "@/lib/blog";
 import { Breadcrumbs } from "@/components/blog/Breadcrumbs";
@@ -27,6 +27,7 @@ export async function generateMetadata({
   const { slug } = await params;
   const post = await getPostBySlug(slug);
   if (!post) return {};
+  const shareImage = `/blog/${encodeURIComponent(post.slug)}/opengraph-image`;
 
   return {
     title: post.title,
@@ -40,16 +41,14 @@ export async function generateMetadata({
       modifiedTime: post.lastUpdated || post.date,
       authors: [post.author.name],
       tags: post.tags,
-      images: [
-        { url: post.coverImage, width: 1200, height: 630, alt: post.title },
-      ],
+      images: [{ url: shareImage, width: 1200, height: 630, alt: post.title }],
       url: `/blog/${post.slug}`,
     },
     twitter: {
       card: "summary_large_image",
       title: post.title,
       description: post.description,
-      images: [post.coverImage],
+      images: [shareImage],
     },
   };
 }
@@ -290,7 +289,7 @@ export default async function BlogPostPage({
     "@type": "Article",
     headline: post.title,
     description: post.description,
-    image: post.coverImage,
+    image: `${baseUrl}/blog/${encodeURIComponent(post.slug)}/opengraph-image`,
     datePublished: post.date,
     dateModified: post.lastUpdated || post.date,
     author: { "@type": "Person", name: post.author.name },
@@ -352,7 +351,7 @@ export default async function BlogPostPage({
       <main className="min-h-screen">
         {/* ===== Immersive Cinematic Hero ===== */}
         <div className="relative w-full min-h-[50vh] md:min-h-[70vh] overflow-hidden flex items-end">
-          <Image
+          <JournalImage
             src={post.coverImage}
             alt={post.coverImageAlt || post.title}
             fill
@@ -405,8 +404,9 @@ export default async function BlogPostPage({
                 {/* Author row + share */}
                 <div className="flex items-center justify-between flex-wrap gap-4">
                   <div className="flex items-center gap-3">
-                    <Image
+                    <JournalImage
                       src={post.author.avatar}
+                      fallbackSrc="/icon.png"
                       alt={post.author.name}
                       width={44}
                       height={44}
@@ -486,8 +486,9 @@ export default async function BlogPostPage({
 
               {/* Author Bio — Editorial Card */}
               <div className="mt-10 p-6 bg-gradient-to-br from-gray-50 to-primary-50/30 border border-gray-200 rounded-2xl flex gap-5 items-start">
-                <Image
+                <JournalImage
                   src={post.author.avatar}
+                  fallbackSrc="/icon.png"
                   alt={post.author.name}
                   width={64}
                   height={64}

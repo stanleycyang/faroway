@@ -1,0 +1,61 @@
+{
+  "observedAt": "2026-10-14T12:33:12.715589+00:00",
+  "scope": "Dedicated iOS18.5 Expo Go; authoritative 220-file snapshot plus declared local-session bootstrap/root override; actual Next API; synthetic loopback auth and in-memory REST only. Not hosted authentication, JWT cryptography, RLS, release build or whole-flow acceptance.",
+  "checks": [
+    "Canonical saved name loaded after visible loading boundary",
+    "Edited name saved and appeared on Profile",
+    "Reopened name retained QA revised traveler",
+    "Canonical Culture/moderate preferences loaded",
+    "Added Foodie and selected Luxury then saved",
+    "Reopened Culture and Foodie checked; Luxury selected",
+    "REST receipt preserved family travelerType"
+  ],
+  "profile": {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "email": "qa@example.invalid",
+    "display_name": "QA revised traveler",
+    "avatar_url": null,
+    "auth_provider": "email",
+    "subscription_tier": "free",
+    "preferences": {
+      "vibes": [
+        "culture",
+        "foodie"
+      ],
+      "budget": "luxury",
+      "travelerType": "family"
+    },
+    "notification_settings": {
+      "trip_reminders": false,
+      "deals": false,
+      "itinerary_updates": false,
+      "app_updates": false
+    },
+    "notification_consent_version": null,
+    "created_at": "2026-01-01T00:00:00Z",
+    "updated_at": "2026-10-14T12:32:38.166Z"
+  },
+  "profilePatchRequests": [
+    {
+      "method": "PATCH",
+      "path": "/rest/v1/users",
+      "query": {
+        "id": "eq.11111111-1111-4111-8111-111111111111",
+        "select": "*"
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/rest/v1/users",
+      "query": {
+        "id": "eq.11111111-1111-4111-8111-111111111111",
+        "select": "*"
+      }
+    }
+  ],
+  "runtimeHandles": {
+    "metro": 21872,
+    "next": 12895,
+    "provider": 22029
+  }
+}

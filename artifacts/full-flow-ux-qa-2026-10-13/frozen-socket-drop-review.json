@@ -1,0 +1,32 @@
+{
+  "result": "Passed",
+  "scope": "Frozen journey 4 actual browser EventSource transport socket destruction using production useTripGeneration and dossier components; local HTTP harness, not actual Next SSE handler",
+  "cases": 3,
+  "profiles": [
+    "chromium",
+    "Mobile Safari",
+    "Mobile Chrome"
+  ],
+  "durationSeconds": 26.5,
+  "retries": 0,
+  "checks": [
+    "Socket destroyed without terminal SSE event",
+    "Focused recovery visible; preview and collapsed chapter retained",
+    "Reconnect issues exactly two GETs for the same trip and zero generation POSTs",
+    "Completion opens saved Day 2 navigation"
+  ],
+  "log": "/tmp/faroway-ux-frozen-socket-drop-browser.log",
+  "sourceHash": "c0894637c33afc2dd6dd033d8b45a6a2672f64fac11981b0e64199b5f689ca34",
+  "limits": [
+    "Actual Next stream observation separately covered by real-stream-review.json; socket-drop story exercises client via loopback harness",
+    "No durable workflow/provider execution or native device acceptance",
+    "Generation retry and complete creation story remain open"
+  ],
+  "fullPlanningBrowserSuite": {
+    "cases": 30,
+    "result": "Passed",
+    "durationSeconds": 27.1,
+    "retries": 0,
+    "log": "/tmp/faroway-ux-frozen-planning-browser.log"
+  }
+}

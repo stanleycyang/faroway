@@ -1,0 +1,31 @@
+{
+  "scope": "Final guest storage/sharing helper regression assertions",
+  "reviewExtent": "Full two current test files",
+  "files": [
+    {
+      "path": "apps/mobile/__tests__/lib/guestTripBrief.test.ts",
+      "sha256": "adf911074674597369b2b82b6767104c0147e87f1758fe5fb8aaee2857afa172"
+    },
+    {
+      "path": "apps/mobile/__tests__/lib/tripSharing.test.ts",
+      "sha256": "94fa48274b1a42fa8122e638e23aeb9e1975282cc000d9b7b3979f7b8eddedf1"
+    }
+  ],
+  "assertionCoverage": [
+    "Validated guest restore, future/expired rejection and clear ordered after older queued write",
+    "Corrupt storage read throws while raw record retained; schema strips unrelated token field",
+    "Discard refuses changed actor/changed stored record and clears only exact reviewed record",
+    "Sharing passes pinned token and requires matching link/token; response after account change rejected",
+    "Revocation explicitly requires success true and passes pinned token"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "validation": {
+    "result": "Passed in current workspace suite",
+    "log": "/tmp/faroway-ux-frozen-motion-current-workspace-tests.log"
+  },
+  "limits": [
+    "Mock AsyncStorage/API/account state, not real device or hosted auth/revocation"
+  ]
+}

@@ -35,11 +35,26 @@ describe('seeded itinerary outline', () => {
 
     expect(outline).toMatchObject({
       title: 'Paris outline',
-      dateLabel: 'Dates selected',
+      dateLabel: 'Travel dates unavailable',
       travelersLabel: '1 traveler',
       budgetLabel: 'Flexible budget',
       styleLabel: 'Personalized trip',
       focusAreas: ['Balanced pace', 'Local highlights', 'Booking context'],
     });
   });
+});
+
+it.each([
+  ['2026-02-30', '2026-03-05'],
+  ['2026-06-05', '2026-06-01'],
+])('does not invent preview dates for %s to %s', (startDate, endDate) => {
+  const outline = buildSeededItineraryOutline({
+    destination: 'Tokyo',
+    startDate,
+    endDate,
+    travelers: 1,
+    travelerType: 'solo',
+    vibes: [],
+  });
+  expect(outline?.dateLabel).toBe('Travel dates unavailable');
 });

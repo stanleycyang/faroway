@@ -1,0 +1,9 @@
+{
+  "status": 307,
+  "location": "http://localhost:3124/auth/login?error=auth_timeout&redirectTo=%2Fcreate%3Fdestination%3Dparis",
+  "wallSeconds": 29.42,
+  "providerDelaySeconds": 25,
+  "deadlineSeconds": 20,
+  "tokenExchangeObserved": true,
+  "scope": "Actual Next/installed Supabase SDK/synthetic loopback delayed rejected PKCE exchange; no session issued. Includes cold compile time; wall time is not performance acceptance."
+}

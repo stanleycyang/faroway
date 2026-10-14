@@ -1,0 +1,12 @@
+{
+  "scope": "Actual Next authenticated list route with synthetic owner-filtered205-row loopback fixture; not real PostgREST sorting or hosted RLS",
+  "sizes": [
+    100,
+    100,
+    5
+  ],
+  "total": 205,
+  "unique": true,
+  "ownerMatched": true,
+  "privateNoStore": true
+}

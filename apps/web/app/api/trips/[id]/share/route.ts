@@ -146,6 +146,15 @@ export async function DELETE(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
+    if (count !== 1)
+      return NextResponse.json(
+        {
+          error:
+            "Public access could not be confirmed off. Check your saved trip before retrying.",
+        },
+        { status: 503 },
+      );
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error in share DELETE:", error);

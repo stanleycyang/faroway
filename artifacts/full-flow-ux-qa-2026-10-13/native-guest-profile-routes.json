@@ -1,0 +1,35 @@
+{
+  "checkedAt": "2026-10-14T11:39:13.802555+00:00",
+  "scope": "Actual guest deep-link routing on dedicated iOS18.5 Expo Go; signed-in profile saves and latest profile service changes are not accepted by this check",
+  "routes": [
+    "exp://localhost:8087/--/profile/preferences",
+    "exp://localhost:8087/--/profile/edit-profile",
+    "exp://localhost:8087/--/profile/notifications"
+  ],
+  "observed": [
+    "Each explicit URI entered in simulator Safari and launched through Expo Go prompt",
+    "All three landed on guest Profile with sign-in/support/legal/navigation choices",
+    "Edit-profile and notification cases started from Explore",
+    "Return to Explore succeeded after preferences and edit-profile checks",
+    "No protected editor or indefinite profile-loading surface displayed"
+  ],
+  "sourceGuard": {
+    "file": "apps/mobile/app/profile/_layout.tsx",
+    "sha256": "b44fc186da608fec4f0773571bd71dcedf84995e573ac409e052be5ab2d9800e",
+    "state": "Unchanged from branch base; initialized guest redirects to /(tabs)/profile"
+  },
+  "authPublicationReview": "hydrateUser publishes metadata fallback synchronously before awaiting profile enrichment; applySession then publishes initialized Auth state",
+  "runtime": {
+    "MetroSession": 67828,
+    "port": 8087,
+    "status": "Revalidated live this turn; no new bundle/restart observed after deep-link actions",
+    "limit": "Loaded running bundle predates UX177\u2013179 profile changes; parent guard itself is unchanged"
+  },
+  "visual": "Actual guest Profile and Explore screenshots inspected in conversation; no saved PNG claimed",
+  "limits": [
+    "No provider login or binding agreement submitted",
+    "No OS permission requested or accepted",
+    "No hosted profile/notification/account write",
+    "No live signed-in editor/OS-notification acceptance"
+  ]
+}

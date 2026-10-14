@@ -1,0 +1,42 @@
+{
+  "scope": "Final native normalization/cache schemas and preview date diff",
+  "reviewExtent": "Complete new normalizer/cache helper bodies; complete registry date-format diff only. Existing registry behavior not claimed fully audited.",
+  "files": [
+    {
+      "path": "apps/mobile/lib/itineraryNormalization.ts",
+      "sha256": "2dda45832cd54adfa67be92ad050d352a035c38718c501f7e6c1bb8aecc41230"
+    },
+    {
+      "path": "apps/mobile/lib/json-render/registry.tsx",
+      "sha256": "1b22fa52334d503a7abbaf1cf7d3415649b1287964ba78cb0971b23d7b231bde"
+    },
+    {
+      "path": "apps/mobile/lib/offline/cached-trip.ts",
+      "sha256": "22282200f2c9eaefefdaee90c9b867c33d9dc1b812ecbec2ce25b5fe515f42ce"
+    },
+    {
+      "path": "apps/mobile/lib/offline/cached-mutations.ts",
+      "sha256": "60c40a0f5fd20d5fc7e13a6f3582243a01311a71c9dce3a1b11357b9ab1923c4"
+    }
+  ],
+  "invariants": [
+    "API time blocks and cached flat activities share guarded display normalization",
+    "Scalar fields and arrays are guarded; invalid price facts remain unavailable rather than fabricated currency totals",
+    "Transport preserves source facts with optional unknown amounts/duration/stops",
+    "Owned cache schema rejects unreadable records without deletion; JSON-null missing hotel quotes normalize back to unavailable NaN",
+    "Mutation reads filter to exact owner and validate retained local-trip ID against command trip ID",
+    "Preview day dates use reviewed local-calendar formatter"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "validation": {
+    "result": "Passed",
+    "scope": "Native normalizer and offline storage regression suites",
+    "log": "/tmp/faroway-ux-frozen-normalization-cache-tests.log"
+  },
+  "limits": [
+    "Full storage implementation/store boundary review remains separately pending",
+    "Current signed-device rendering/legacy data acceptance remains external"
+  ]
+}

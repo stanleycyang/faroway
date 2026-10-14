@@ -11,6 +11,10 @@
   --color-clay: #b91c1c;
   --color-clay-deep: #7f1d1d;
   --color-ink: #0f172a;
+}
+
+/* Resolve next/font variables where the utility is used, below the body scope. */
+@theme inline {
   --font-editorial: var(--font-playfair), Georgia, "Times New Roman", serif;
 }
 
@@ -32,7 +36,9 @@
   }
 
   html {
-    scroll-behavior: smooth;
+    /* Focus and native disclosures must settle immediately. Opt in to motion
+       only for explicit navigation actions that honor reduced motion. */
+    scroll-behavior: auto;
     scroll-padding-top: 80px;
   }
 
@@ -79,6 +85,22 @@
 }
 
 /* Keyframes */
+@keyframes scroll-reveal {
+  from {
+    opacity: 0.75;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .scroll-reveal {
+    animation: scroll-reveal 350ms ease-out;
+  }
+}
+
 @keyframes fadeIn {
   from {
     opacity: 0;

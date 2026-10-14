@@ -2,6 +2,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { destinations } from "@/lib/planner-destination-catalog";
 import type { Forecast } from "@/lib/weather/met";
+import { ForecastSchema } from "@/lib/weather/forecast";
 
 export function TripWeather({
   destination,
@@ -28,6 +29,17 @@ export function TripWeather({
     setBusy(true);
     setMessage("");
     setForecast(null);
+    const deadline = setTimeout(() => {
+      if (controller.current !== current || current.signal.aborted) return;
+      current.abort();
+      setBusy(false);
+      setMessage(
+        "Weather is taking too long. Your trip plan is still available; try again when you’re ready.",
+      );
+    }, 15_000);
+    current.signal.addEventListener("abort", () => clearTimeout(deadline), {
+      once: true,
+    });
     try {
       const params = new URLSearchParams({
         destinationId: catalog!.id,
@@ -40,8 +52,14 @@ export function TripWeather({
       });
       const data = await res.json();
       if (current.signal.aborted) return;
-      if (res.ok && data.status === "available") setForecast(data.forecast);
-      else
+      if (res.ok && data.status === "available") {
+        const verified = ForecastSchema.safeParse(data.forecast);
+        if (verified.success) setForecast(verified.data);
+        else
+          setMessage(
+            "Weather is unavailable right now. You can continue with your trip plan.",
+          );
+      } else
         setMessage(
           data.status === "outside_forecast"
             ? "Forecasts for these trip dates are not available yet. Check again closer to departure."
@@ -51,6 +69,7 @@ export function TripWeather({
       if (!current.signal.aborted)
         setMessage("Weather is unavailable right now. Please try again later.");
     } finally {
+      clearTimeout(deadline);
       if (!current.signal.aborted) setBusy(false);
     }
   }

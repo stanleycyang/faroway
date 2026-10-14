@@ -1,0 +1,40 @@
+{
+  "scope": "Final cursor precision/map payload/shared-client test diffs",
+  "reviewExtent": "Full new cursor spec and complete tracked diffs of three other tests",
+  "files": [
+    {
+      "path": "apps/web/__tests__/lib/trip-list-cursor.test.ts",
+      "sha256": "9fb87d5487d63ad6dc58fb7b65efefb6521d1374ccfb6a6ba27b05c27ec11ff2"
+    },
+    {
+      "path": "apps/web/__tests__/lib/tools/world-map-share.test.ts",
+      "sha256": "23ab20bfb8be4012d6c1c5b2f5cc8c4eda7268f5aa0b8f1d2df3435574e4383e"
+    },
+    {
+      "path": "apps/web/__tests__/lib/tools/world-map-stats.test.ts",
+      "sha256": "25b435f03a0e03e7be1a9ba94a544bc33e386ea724fd56dec69d39e14a5f7434"
+    },
+    {
+      "path": "packages/api-client/__tests__/index.test.ts",
+      "sha256": "3ae4e45a7a7ef3444172d85054212a1b442ff16300a7d642f2b59c617b7d2a99"
+    }
+  ],
+  "assertionCoverage": [
+    "Cursor write/read preserves exact PostgreSQL microsecond timestamp",
+    "Unknown/prototype country keys excluded; negative/fractional count omitted and valid count retained",
+    "Unsupported share version rejected",
+    "Duplicate/unknown/Antarctica visits do not inflate country/continent metrics",
+    "Shared-client auth header expectation remains exact under Headers abstraction"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "validation": {
+    "result": "Passed current workspace suite",
+    "log": "/tmp/faroway-ux-frozen-motion-current-workspace-tests.log"
+  },
+  "limits": [
+    "Cursor unit roundtrip not actual ordered SQL continuation; runtime evidence separate",
+    "Tracked review covers changed assertions only"
+  ]
+}

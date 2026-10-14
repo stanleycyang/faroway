@@ -1,0 +1,36 @@
+{
+  "frozenGate": "Journey5 saved trips/filtering/sorting/pagination",
+  "verifiedBlocker": "supabase/config.toml max_rows1000; dashboard formerly used one query and could silently omit older saved summaries",
+  "fix": "Read100-row stable created_at/UUID pages under verified owner before applying requested sort; reject incomplete/repeated/unreadable pages into recovery; compact summary/visible-card batching retained",
+  "verification": {
+    "regressions": "1105rows across12owner-scoped reads, requested whole-list sort, late-page failure produces no partial data; dashboard error-vs-empty, calendar and filter reset covered",
+    "actualNext": "1105-row loopback fixture, desktop/mobileSafari/mobileChrome:12initial,24keyboard reveal,12filterreset,24reveal,12sortreset, full1105count, nooverflow",
+    "fullWeb": "899tests/126suites pass32.17s",
+    "types": "Pass after generated-dev-route module rewrite completed",
+    "lint": "Pass changed sources/tests/fixture",
+    "whitespace": "Pass"
+  },
+  "limits": [
+    "Synthetic provider implements only declared limit/cursor semantics; does not prove hosted database Auth/RLS/order",
+    "All compact summaries still serialized for local-calendar accurate counts; quantitative startup/bundle profiling belongs to follow-up unless it blocks frozen gates",
+    "Current native device and exact-candidate final build/review not yet accepted"
+  ],
+  "files": [
+    {
+      "path": "apps/web/lib/trips/load-dashboard-trips.ts",
+      "sha256": "cba92221863a888b82652fba3cc6ffa9ae4ee51e8af4ece2165d5dcbd957560f"
+    },
+    {
+      "path": "apps/web/app/(app)/dashboard/page.tsx",
+      "sha256": "6fd43f414c2d005dae4f642dd09914e279abd555eabfc9d98c67725a7ac6f7ce"
+    },
+    {
+      "path": "apps/web/__tests__/lib/dashboard-pagination.test.ts",
+      "sha256": "98e1657008a662603b71b62749495234c34bc55029b6e84c959b39869fc8ab45"
+    },
+    {
+      "path": "apps/web/__tests__/dashboard-read-state.test.tsx",
+      "sha256": "d21ebf5debe437ce17cc545787e5af6a82bd39daa40669dac523d2f2dd0a4a46"
+    }
+  ]
+}

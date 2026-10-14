@@ -1,0 +1,32 @@
+{
+  "scope": "Final weather-integrity/vendor deadline regression assertions",
+  "reviewExtent": "Full new weather-integrity file and complete tracked search-runtime diff; queried other weather suites unchanged",
+  "files": [
+    {
+      "path": "apps/web/__tests__/weather-integrity.test.tsx",
+      "sha256": "7c7f29519e04637fb5120c46f1433bb6379ed25590e4c43b4c2e407ed5e24db5"
+    },
+    {
+      "path": "apps/web/__tests__/lib/search-runtime.test.ts",
+      "sha256": "9839270c89d01f58c12dba19b84f006025260b9279e2700fcd0f69c2dcbf79ec"
+    }
+  ],
+  "assertionCoverage": [
+    "Corrupt persisted forecast is cache miss; valid forecast/backoff retained",
+    "Malformed available UI forecast gives recovery and reenabled action",
+    "Corrupt-cache refresh requires shared lock before permit/provider request; call counts checked",
+    "Weather deadline aborts/re-enables control; late forecast cannot replace timeout or render table; timer cleared",
+    "Vendor stalled response body via real ReadableStream and stalled headers settle despite fetch ignoring abort",
+    "Proxy response preserves status/header/url/clone/body semantics and clears success deadline"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "validation": {
+    "result": "Passed current workspace suite",
+    "log": "/tmp/faroway-ux-frozen-motion-current-workspace-tests.log"
+  },
+  "limits": [
+    "Synthetic cache/provider calls and fake timers, not live weather/provider or hosted lock/rate-limit acceptance"
+  ]
+}

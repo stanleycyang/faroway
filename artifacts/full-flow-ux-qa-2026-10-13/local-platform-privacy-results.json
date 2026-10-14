@@ -1,0 +1,26 @@
+{
+  "checkedAt": "2026-10-14T09:27:21.384108+00:00",
+  "container": "faroway-ux-full-schema-qa",
+  "network": "none",
+  "publishedPorts": {},
+  "databaseVersion": "PostgreSQL 17.6 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 15.2.0, 64-bit",
+  "sqlFile": "apps/web/scripts/qa/full-schema-privacy-check.sql",
+  "sqlSHA256": "5e9e4bb83675ac4812796b738014530a1b27f9de3a3fd31557a8534d20f96f8a",
+  "passed": true,
+  "stdout": "              set_config              \n--------------------------------------\n 11111111-1111-4111-8111-111111111111\n(1 row)\n\n              set_config              \n--------------------------------------\n 22222222-2222-4222-8222-222222222222\n(1 row)\n\n set_config \n------------\n \n(1 row)\n\n                                                             result                                                              \n---------------------------------------------------------------------------------------------------------------------------------\n PASS: full-schema owner/stranger/anonymous reads, stranger write, four RPC grants, signup profile trigger; fixtures rolled back\n(1 row)\n\n",
+  "stderr": "",
+  "scope": [
+    "actual 49 application migrations",
+    "owner trip and itinerary reads",
+    "stranger and anonymous read isolation",
+    "stranger trip update blocked",
+    "four privileged RPCs deny anon/authenticated execute",
+    "Auth signup profile trigger"
+  ],
+  "limitations": [
+    "SQL-injected claims, not verified JWTs",
+    "No Auth HTTP or hosted Supabase acceptance",
+    "Storage migrations applied as supabase_admin with install_roles=false"
+  ],
+  "fixturePersistence": "transaction rolled back"
+}

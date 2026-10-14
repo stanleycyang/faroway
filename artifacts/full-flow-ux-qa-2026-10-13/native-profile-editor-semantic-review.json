@@ -1,0 +1,32 @@
+{
+  "scope": "Semantic/copy/accessibility review of two current native profile editors plus regression; not whole profile/auth services or device acceptance",
+  "files": [
+    {
+      "path": "apps/mobile/app/profile/edit-profile.tsx",
+      "sha256": "09254a4f3355cb7aac6579a23187ce4297a73d58e22d1b98a61c63e303095f77"
+    },
+    {
+      "path": "apps/mobile/app/profile/preferences.tsx",
+      "sha256": "c7b3c3f77c6ad748cd4f5b35f066b54e085b2b6fc56d4f8a0669aea6a3bf7bad"
+    },
+    {
+      "path": "apps/mobile/__tests__/screens/profile-editors.test.tsx",
+      "sha256": "5cf744441643fa85a4f4ce28ed8d2251d498da66709fea294170555de08ddff5"
+    }
+  ],
+  "findings": [
+    "Optional saved budget had no clear action; reproduced1failed13passed; selectedoption now togglesoff with accessibilityhint and explicitly clears localbudget after omitted API budget clears replacedJSON",
+    "Faint helpers #94a3b8 onwhite contrast2.56; replacement #64748b onwhite4.76 and read-onlyemailon#f8fafc4.55; removed parentopacity",
+    "Read-only email/avatar use canonical loadedprofile instead of cache metadata; avatar decorative",
+    "Saveerrors use action-specific titles; accountRevision/mounted/rapid-save guards retained"
+  ],
+  "checks": {
+    "mobileTests": 571,
+    "suites": 56,
+    "seconds": 6.185,
+    "types": "pass",
+    "targetLint": "pass",
+    "whitespace": "pass"
+  },
+  "limits": "Latest simulator predates190/191; no visual/VoiceOver acceptance for thesechanges or WCAG certification. Wholeflow/PRpending."
+}

@@ -1,0 +1,39 @@
+{
+  "files": [
+    {
+      "path": "apps/web/hooks/useTripGeneration.ts",
+      "sha256": "2ffbaa7f965f90e05052e0b30fbf62e48322a35f00612c5ccfb07075c91e46cf"
+    },
+    {
+      "path": "apps/web/app/api/trips/[id]/stream/route.ts",
+      "sha256": "c8eb183ac6d52d8493fb07fb7249dea6d2421f49e8f571582ff579efa6f9676b"
+    },
+    {
+      "path": "apps/web/__tests__/hooks/use-trip-generation-payload.test.tsx",
+      "sha256": "6fccc694a4301aaff597bb25fd7b8274244dc2b626b92ebf40523ffba06c216f"
+    }
+  ],
+  "before": "Mounted disconnect/reconnect replayduplicated hotelchapter;1failed3passed",
+  "fix": "SSEsummary/hotels/itinerary/budget frames have stablechapterlabels; hookupdates orderedchaptermap, keeps priorchapters throughreconnect, clearsnewjob; identicallegacyunnamedframes use serializedchunkidentity. Refinedsamechapter replaces content, not duplicates.",
+  "checks": "8focusedstream/API/mountedcasespass3.66s; finallint/whitespacepass; TypeScript84140terminalexit0 afterdevgeneratedtypes stabilized. Initialtypesfailed while routes.d.ts wasgenerated; currentfilemodule/LayoutProps observedbefore successfulrerun.",
+  "baseline": "Fullweb890tests/125suites passed17.38s andtypes through202 before203 changes; no currentfull203suiteclaim",
+  "compatibility": "Native parser plainJSON and blocks readerignore additivechapter field; reviewedsource, no newnative/releaseacceptanceclaim",
+  "limits": "MountedfakeEventSource + actualserveremitter source/APItests, not currentbrowserSSEreconnect/provider/durablegeneration acceptance. Wholegoal/review/PRincomplete.",
+  "currentFullWeb": {
+    "tests": 891,
+    "suites": 125,
+    "seconds": 17.66,
+    "session": 52668,
+    "exitCode": 0,
+    "log": "/tmp/faroway-ux-web-full-203.log"
+  },
+  "nativeWireCompatibility": {
+    "tests": 7,
+    "suites": 1,
+    "seconds": 3.324,
+    "session": 43266,
+    "exitCode": 0,
+    "log": "/tmp/faroway-ux-native-tagged-stream-tests.log",
+    "scope": "ActualnativeSSEbuffer+JSONparser with additivechapter packets; sourceblockreaderignoresmetadata. Notnativehook/UI/network/releaseacceptance."
+  }
+}

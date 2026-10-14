@@ -91,52 +91,64 @@ export function CostBreakdown({
       </div>
 
       {/* Category breakdown */}
-      <h2 className="text-lg font-bold text-slate-900 mb-4">Cost Breakdown</h2>
-      <div className="space-y-4 mb-8">
-        {CATEGORY_META.map(({ key, label, icon: Icon, color }) => {
-          const pct = profile.breakdown[key as keyof typeof profile.breakdown];
-          const amount = (totalPerPerson * pct) / 100;
+      <section aria-labelledby="cost-breakdown-heading">
+        <h2
+          id="cost-breakdown-heading"
+          className="text-lg font-bold text-slate-900 mb-2"
+        >
+          Cost Breakdown
+        </h2>
+        <p className="mb-4 text-sm text-slate-600">
+          For {travelers === 1 ? "one traveler" : `all ${travelers} travelers`}{" "}
+          across {days} {days === 1 ? "day" : "days"}.
+        </p>
+        <div className="space-y-4 mb-8">
+          {CATEGORY_META.map(({ key, label, icon: Icon, color }) => {
+            const pct =
+              profile.breakdown[key as keyof typeof profile.breakdown];
+            const amount = (grandTotal * pct) / 100;
 
-          return (
-            <div
-              key={key}
-              className="p-4 rounded-xl bg-white border border-slate-200/80"
-            >
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-3">
+            return (
+              <div
+                key={key}
+                className="p-4 rounded-xl bg-white border border-slate-200/80"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className={`w-9 h-9 rounded-lg ${color} text-white flex items-center justify-center`}
+                    >
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-900">
+                        {label}
+                      </h3>
+                      <p className="text-xs text-slate-500">{pct}% of budget</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-slate-900">
+                      {formatUSD(amount)}
+                    </p>
+                    {profile.currency !== "USD" && (
+                      <p className="text-xs text-slate-400">
+                        {formatLocal(amount)}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                   <div
-                    className={`w-9 h-9 rounded-lg ${color} text-white flex items-center justify-center`}
-                  >
-                    <Icon className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">
-                      {label}
-                    </p>
-                    <p className="text-xs text-slate-500">{pct}% of budget</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm font-bold text-slate-900">
-                    {formatUSD(amount)}
-                  </p>
-                  {profile.currency !== "USD" && (
-                    <p className="text-xs text-slate-400">
-                      {formatLocal(amount)}
-                    </p>
-                  )}
+                    className={`h-full ${color} rounded-full`}
+                    style={{ width: `${pct}%` }}
+                  />
                 </div>
               </div>
-              <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                <div
-                  className={`h-full ${color} rounded-full`}
-                  style={{ width: `${pct}%` }}
-                />
-              </div>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      </section>
 
       {/* Sample prices */}
       <h2 className="text-lg font-bold text-slate-900 mb-4">

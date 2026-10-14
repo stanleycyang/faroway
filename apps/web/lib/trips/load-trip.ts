@@ -58,7 +58,11 @@ export async function loadTripForUserUncached(
     .eq("user_id", userId)
     .single();
 
-  if (error || !trip) return null;
+  if (error) {
+    if (error.code === "PGRST116") return null;
+    throw new Error("Your trip could not be loaded. Please try again shortly.");
+  }
+  if (!trip) return null;
 
   const { itineraries, ...tripData } = trip as typeof trip & {
     itineraries: ItineraryJoin[] | ItineraryJoin | null;

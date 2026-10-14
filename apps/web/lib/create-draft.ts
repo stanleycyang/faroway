@@ -1,3 +1,5 @@
+import { parseTripDate } from "./trips/date-duration";
+
 const CREATE_DRAFT_STORAGE_PREFIX = "faroway-create-draft:";
 const CREATE_DRAFT_TTL_MS = 24 * 60 * 60 * 1000;
 const DRAFT_ID_PATTERN = /^[a-zA-Z0-9-]{8,80}$/;
@@ -114,4 +116,11 @@ export function readEditorDraft<T>(
 
 export function clearEditorDraft(storage: StorageLike): void {
   storage.removeItem(EDITOR_DRAFT_KEY);
+}
+
+/** Restore calendar dates locally and reject malformed legacy timestamp values. */
+export function parseCreateDraftDate(value: unknown): Date | undefined {
+  if (typeof value !== "string" || !value) return undefined;
+  const date = parseTripDate(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
 }

@@ -1,0 +1,110 @@
+{
+  "scope": "Final discovery tool group",
+  "reviewExtent": "Complete base-to-current diffs for all 18 changed tool paths; complete share decoder and MapLoading bodies; packing parent state lifetime and map pointer handlers read as context.",
+  "files": [
+    {
+      "path": "apps/web/app/tools/best-time-to-visit/[slug]/page.tsx",
+      "sha256": "643da975d1b12d5bac5d8b3c17b17ee00749ccc84f32fca7330fe8339ff3d7bb"
+    },
+    {
+      "path": "apps/web/app/tools/trip-cost/[slug]/page.tsx",
+      "sha256": "dd48ca3d9e232f2b9f946e873cb33e4421413894d49f5b85d9b0c8772a0d1a2d"
+    },
+    {
+      "path": "apps/web/app/tools/visa-checker/[destination]/page.tsx",
+      "sha256": "ccbb8f811658bfe179c1302b9fded038c98a24f6176a34678af6b2aa6931c62d"
+    },
+    {
+      "path": "apps/web/app/tools/world-map/WorldMapClient.tsx",
+      "sha256": "b64bdfc55917f341e82ec3dbcd048e3aec87cb5b60f58f0d63a2d864403082d5"
+    },
+    {
+      "path": "apps/web/app/tools/world-map/view/WorldMapViewClient.tsx",
+      "sha256": "a9de9374cfcc87fef4f4dbd89e26a29889cebc58ea1f8ff8da131505f32c3f83"
+    },
+    {
+      "path": "apps/web/app/tools/world-map/view/page.tsx",
+      "sha256": "158ea1dcb1850a167542431a173886eb7f18e4789fc2db951e76517607e6d411"
+    },
+    {
+      "path": "apps/web/components/tools/ToolCTA.tsx",
+      "sha256": "0acb23482803d0e2fc357e6860bb4ab28fd90e5375ef468b93852bf2d276c365"
+    },
+    {
+      "path": "apps/web/components/tools/cost/CostBreakdown.tsx",
+      "sha256": "84794f7360994f3700f3a95db0a56c942c11044e53d3fa9f665ddae729293d8f"
+    },
+    {
+      "path": "apps/web/components/tools/packing/PackingChecklist.tsx",
+      "sha256": "a9ffe11fa52c26a2781aa1991f3bb8e1975289070cb54068a862ecd34fff4d53"
+    },
+    {
+      "path": "apps/web/components/tools/packing/PackingListClient.tsx",
+      "sha256": "e16f485a2d9a3d7410acea168a02fdeafac56605a36eeb04c70345924c394887"
+    },
+    {
+      "path": "apps/web/components/tools/quiz/QuizQuestion.tsx",
+      "sha256": "1766d66b7ccf497184a06cbc120965df7a7f5bdcb2cd459f2f02e8dc84322c54"
+    },
+    {
+      "path": "apps/web/components/tools/quiz/QuizResults.tsx",
+      "sha256": "205efb0329e54dd6e0f607aad9ec8b65458d0d6388e86a54ccfb7ff8dbdc9959"
+    },
+    {
+      "path": "apps/web/components/tools/quiz/TravelQuizClient.tsx",
+      "sha256": "3d1f0e9502efb1852fd015b33eed1bfae78f1c6768b1cb69dab26824c68b38a6"
+    },
+    {
+      "path": "apps/web/components/tools/world-map/CountrySearch.tsx",
+      "sha256": "da7045348fd33127a2ed57829279829f7cd06d3184b892340755e205a12d1f44"
+    },
+    {
+      "path": "apps/web/components/tools/world-map/ExportMenu.tsx",
+      "sha256": "555fc5a2ce804ff7658c6e7c428c3b7d79f63335b9acd4dc05aa5ecd81ff1068"
+    },
+    {
+      "path": "apps/web/components/tools/world-map/WorldMap.tsx",
+      "sha256": "557adba78502525335b61a2d219fd58e1e017aab02e5b4b01fb88ade3b57566e"
+    },
+    {
+      "path": "apps/web/lib/tools/world-map/share.ts",
+      "sha256": "ed4815e9be4721a0ce32e07333115259e682394884f144916188bfab069bd66f"
+    },
+    {
+      "path": "apps/web/lib/tools/world-map/stats.ts",
+      "sha256": "de3aa9d4771963688f0a9faf6729c6cc98fd8f106dd80dbd8eb6d5d9378e3782"
+    },
+    {
+      "path": "apps/web/components/trips/MapLoading.tsx",
+      "sha256": "5f7ab0cf3805733a1560133c4e052df24bbf37927e437e851e47938b8db56a95"
+    }
+  ],
+  "invariants": [
+    "Destination handoffs encode and retain the selected place",
+    "Cost category amounts match all-traveler grand total",
+    "Packing state remounts by list identity; reads validate item keys; denied storage has truthful session-only copy; controls wait for hydration",
+    "Quiz back navigation retains answers, rapid duplicate advancement is guarded and transitions focus the new heading",
+    "Country search validates HTTP/schema response and provides timeout/retry/empty states",
+    "Exports serialize operations, bound waits and fence profile changes/unmount; clipboard failure offers manual sharing",
+    "Share decoder accepts supported versions and known country IDs; stats deduplicate and exclude Antarctica from six-continent metric",
+    "Long-press cleanup precedes fresh pointer start so movement can cancel the pending press"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "validation": {
+    "result": "Passed",
+    "suites": 6,
+    "tests": 31,
+    "durationSeconds": 0.531,
+    "log": "/tmp/faroway-ux-frozen-tools-final-review-tests.log"
+  },
+  "evidence": [
+    "destination-discovery-release-review.json",
+    "packing-readiness-release-review.json",
+    "frozen-quality-tools-consolidation.json"
+  ],
+  "limits": [
+    "This is diff review plus targeted regression evidence; complete exact-candidate validation remains pending"
+  ]
+}

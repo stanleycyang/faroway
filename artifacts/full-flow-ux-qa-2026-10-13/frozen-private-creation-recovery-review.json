@@ -1,0 +1,72 @@
+{
+  "scope": "Frozen journeys3/4/10: compiled production Next \u2192 real Supabase SDK protocol boundary \u2192 real creation/brief SQL functions in complete disposable schema; planning paused; browser HTTPS blocked",
+  "result": "Passed",
+  "profiles": [
+    "chromium",
+    "Mobile Safari",
+    "Mobile Chrome"
+  ],
+  "browser": {
+    "cases": 3,
+    "durationSeconds": 48.3,
+    "retries": 0,
+    "log": "/tmp/faroway-ux-frozen-brief-recovery-production-browser.log"
+  },
+  "checks": [
+    "Consent cancellation dispatches zero creation commands",
+    "First committed creation response deliberately lost; reload resumes identical UUID; real SQL ledger returns201 then200",
+    "Only one owned trip appears in dashboard and owner-projected API list",
+    "Save/reopen edited dates through real versioned brief SQL function",
+    "Two paused planning attempts target same trip;503 PLANNING_PAUSED; refresh clears failure and retains saved trip",
+    "Browser offline: loaded trip remains readable; failed save preserves unsaved edits and advertises unconfirmed result",
+    "Reconnect and explicit Load latest brief restores verified canonical dates even when revision is unchanged; error clears; Destination receives focus",
+    "No horizontal overflow in desktop/phone profiles"
+  ],
+  "build": {
+    "result": "Passed",
+    "exitCode": 0,
+    "log": "/tmp/faroway-ux-frozen-brief-recovery-production-build.log",
+    "environment": "Synthetic public origin and empty public blog catalog; not approved-public final release build"
+  },
+  "database": {
+    "container": "faroway-ux-full-schema-qa",
+    "label": "full-schema",
+    "network": "none",
+    "publishedPorts": {},
+    "fixtureOwner": "11111111-1111-4111-8111-111111111111",
+    "reset": "Only fixed synthetic owner trips/request ledger; identity insert idempotent"
+  },
+  "limits": [
+    "Synthetic Auth protocol does not prove hosted JWT/RLS/OAuth",
+    "Paused planning attempts do not dispatch durable workflow or live AI/provider output",
+    "Web offline proof is already-loaded trip memory, not a cold offline document/service worker",
+    "No current native release device acceptance",
+    "Exact final candidate, complete diff review, CI/PR/accepted external gaps still required"
+  ],
+  "files": [
+    {
+      "path": "apps/web/components/trips/TripBriefEditor.tsx",
+      "sha256": "02cef2fd4ff041eae9bc02a89a711e27db2cf66770974b72d092953a3ad47310"
+    },
+    {
+      "path": "apps/web/app/(app)/trips/[id]/TripDetailClient.tsx",
+      "sha256": "8e98d97c364934657a0d386239fa61616385fbfa5a64137b8d5ad0c7d3912589"
+    },
+    {
+      "path": "apps/web/__tests__/trip-brief-lifecycle.test.tsx",
+      "sha256": "19d466e01f14c81906f20d065707e929d2b1da61b2d66d64749dd9aac53c4e35"
+    },
+    {
+      "path": "apps/web/e2e/private-next-routes-qa.spec.ts",
+      "sha256": "03fdc7ce8d03fbb5f26dc65c313d3dc6954c9b54c1b9eced4acd2b07e8073568"
+    },
+    {
+      "path": "apps/web/e2e/fixtures/private-creation-sql.mjs",
+      "sha256": "a00bdc7d01914f594c8de6a2bd2eb99800b572783e76752f76cbc24c49b258c9"
+    },
+    {
+      "path": "apps/web/e2e/fixtures/private-route-service.mjs",
+      "sha256": "dda6876f60a696705965603100407bea0dbe8fe683c771fd4bcd05b8c495f301"
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "source": "https://raw.githubusercontent.com/supabase/auth/master/migrations/20220531120530_add_auth_jwt_function.up.sql",
+  "sourceSha256": "91d2d5e47f19e65a63ec411f6cbb18755ec1792cb4249694dc261ef59cc78a10",
+  "namespaceSubstitution": "auth",
+  "passed": true,
+  "scope": "Official helper applied only in offline disposable database; not full GoTrue migration or JWT verification."
+}

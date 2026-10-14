@@ -1,0 +1,31 @@
+{
+  "scope": "Final journal browser assertion review",
+  "reviewExtent": "Full two specs read",
+  "files": [
+    {
+      "path": "apps/web/e2e/blog-content-qa.spec.ts",
+      "sha256": "5b35786c5cf097df6ae25e46865ce4cf9f012cef2accfc5b3ba348ad44819b69"
+    },
+    {
+      "path": "apps/web/e2e/blog-recovery-qa.spec.ts",
+      "sha256": "2afb6d84141128ac5ba435141493cede8de3e930ca09cb579ab32a77d0091761"
+    }
+  ],
+  "assertionCoverage": [
+    "Published synthetic article/card title bounds and loaded image at320px, actual article navigation",
+    "Newsletter submitted email frozen and duplicate blocked; focused confirmation and no unsent-email promise",
+    "Newsletter503 retains email and explicit retry sends two requests",
+    "RSC image fault requires observed replacement and actual broken request before same-origin loaded fallback/no pageerror assertions",
+    "Category navigation retains synthetic article link and returns to journal",
+    "Explicit unavailable-data gate verifies focused recovery, retry and destination exit"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "limits": [
+    "Published content suite intentionally skips without synthetic staging article flag",
+    "Unavailable server suite intentionally skips without isolated fault flag",
+    "Newsletter endpoint stubbed; not real delivery/persistence proof",
+    "No empty-catalog assertion in these two files and no new runtime run claimed"
+  ]
+}

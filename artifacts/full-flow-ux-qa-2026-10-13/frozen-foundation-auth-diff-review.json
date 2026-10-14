@@ -1,0 +1,188 @@
+{
+  "scope": "Final review group: routing/security/header consolidation, auth/recovery UI and routes, root error/focus/animation foundation, test dependency/lockfile changes and unused prototype removal",
+  "reviewExtent": "Full current bodies read for auth components/routes/helpers/proxy/security; full base-to-current diff read for package/config/root/error/animation files; relevant CSS media rules and homepage semantic additions inspected. Unchanged root metadata and homepage markup not wholesale re-audited. Initial combined output truncated; auth bodies reread individually before recording this review.",
+  "files": [
+    {
+      "path": "apps/web/proxy.ts",
+      "sha256": "f5dd7db38ee0d7046075231a9eef79880802078408535ca96fc6ffc7f1d04e0c"
+    },
+    {
+      "path": "apps/web/next.config.ts",
+      "sha256": "1b27d756955f113ccb7ace397a12ca24b9297f3d9392225f83efc206915336b9"
+    },
+    {
+      "path": "apps/web/lib/security/headers.ts",
+      "sha256": "f1be7f01d475757298ad3972a7d3f4ad77509257addbbd1d682103c05f92d4b5"
+    },
+    {
+      "path": "apps/web/lib/security/validate-redirect.ts",
+      "sha256": "db4d35585984efc597abcfff8a4ac680c05d62c3db7915e5b3d15bbbb914ceab"
+    },
+    {
+      "path": "apps/web/instrumentation-client.ts",
+      "sha256": "ea80b8864d75328deea7acce5839caa8dd66611d601be3e7e6083dcbebaf6d68"
+    },
+    {
+      "path": "apps/web/app/layout.tsx",
+      "sha256": "8bc9b800792e29082f65b98c6039f245cc40e7075b5ac3f20b74fa0bcedd5e8f"
+    },
+    {
+      "path": "apps/web/app/error.tsx",
+      "sha256": "00e499d0fbbd30e857494f182ad519f130a12805f4e2ed89be135c7dcd2fbd91"
+    },
+    {
+      "path": "apps/web/app/global-error.tsx",
+      "sha256": "3b94dca985b9f871b1577dc5c5d3fe9148019b683115cd2e2c775336864d6b1f"
+    },
+    {
+      "path": "apps/web/app/globals.css",
+      "sha256": "84147e1d1a00a692b8f0f6f59031c46fbd06743557277e2fe9735a1f9a4e18d5"
+    },
+    {
+      "path": "apps/web/components/SkipToContent.tsx",
+      "sha256": "c25c999634957f688739479e325d5d8e820736872ca554aef90f964a866203aa"
+    },
+    {
+      "path": "apps/web/hooks/useHydrated.ts",
+      "sha256": "64d0ff4519b6c3e6a7c5b3f7f979b7f5c3f3b9d9ea6205ed5878e30f335a1a10"
+    },
+    {
+      "path": "apps/web/hooks/useInView.ts",
+      "sha256": "1bee2cd26ec04ec5bd2dd22ffc6bdf60a51742680ef3d6f1529c349175bdc499"
+    },
+    {
+      "path": "apps/web/hooks/useReducedMotion.ts",
+      "sha256": "7878b55b89516f2453da88fc6c4313d8b7c0b1ec059dedd501df6177749c91fb"
+    },
+    {
+      "path": "apps/web/components/landing/FadeInOnScroll.tsx",
+      "sha256": "cff8c284ca52bad6361429a196b8b47cfef627a4c3a296e0cbbda39b4d4f0985"
+    },
+    {
+      "path": "apps/web/app/auth/login/page.tsx",
+      "sha256": "1a6534ef32b5843976aca71658ab675ee0d64cfc8ea3ceffdac4e99f7ce42cf4"
+    },
+    {
+      "path": "apps/web/app/auth/signup/page.tsx",
+      "sha256": "58d6f92f17c4f940acac4d5e5cf5837b7c4eee40f4ff97a9e440d1f9e672a6b4"
+    },
+    {
+      "path": "apps/web/app/auth/forgot-password/page.tsx",
+      "sha256": "2db44ec69d40b02126fb77862a6924c5394da35950d4a5b40ed6c79b79eceb63"
+    },
+    {
+      "path": "apps/web/app/auth/reset-password/page.tsx",
+      "sha256": "8acc20b1c77c31a1e53687e28d53852955f108c0f8013e1a739b16bd187db9a9"
+    },
+    {
+      "path": "apps/web/app/auth/callback/route.ts",
+      "sha256": "a4a129fe8cde18aa36b844584719e5472e8e9a481d4325c9e6ba4bc7d5b5c9a3"
+    },
+    {
+      "path": "apps/web/app/auth/logout/route.ts",
+      "sha256": "38dac93f6508e25e6a45f9094f06f2303287cd0dc77a89616c0645002a06986a"
+    },
+    {
+      "path": "apps/web/lib/auth/password-reset.ts",
+      "sha256": "c73c5a884b771809a393b2f2b7fe0cd97707105863061cb3a3706270cc291ead"
+    },
+    {
+      "path": "apps/web/lib/auth/request-deadline.ts",
+      "sha256": "e866dca4a0c89312643e26f1738b197bde0dacf243a8b32c3e45fd766aca00ad"
+    },
+    {
+      "path": "apps/web/lib/auth/login-copy.ts",
+      "sha256": "6c9e53c46de90984669b42a7d35297815e47cdf8a860a001d7fe80f68d63917e"
+    },
+    {
+      "path": "apps/web/components/auth/EmailPasswordForm.tsx",
+      "sha256": "599983b1a623a0a9996aec334406398c0751b92aaf1a18d73bd1af22f5725489"
+    },
+    {
+      "path": "apps/web/components/auth/GoogleButton.tsx",
+      "sha256": "ee050d0e8dff6fd99920695fef581d1fd96a3361e16b3c596eb796f6364f789d"
+    },
+    {
+      "path": "apps/web/components/auth/AppleButton.tsx",
+      "sha256": "aa386b04e9869662aba3f5dd7bbabad6145e956dde539d95911fb82a81a5b664"
+    },
+    {
+      "path": "apps/web/components/auth/useOAuthSignIn.ts",
+      "sha256": "d23548d24ae85ca134421f6cf15862abd71100a4f26684c0ec692693f03f3019"
+    },
+    {
+      "path": "apps/web/components/auth/AuthActionProvider.tsx",
+      "sha256": "f1ab2a0f90fb32d6c4bc0d9ef9b8ab9636113e06f61aef1e180632b352875e48"
+    },
+    {
+      "path": "apps/web/components/auth/AuthPageFrame.tsx",
+      "sha256": "f29a9fd6ae10ad551d4742576d17e86c321861b54688bf500486fc8b564ee518"
+    },
+    {
+      "path": "apps/mobile/package.json",
+      "sha256": "2fcf45eb294c686148f1400172731580b5715d8059507a395ee8a812d7decb40"
+    },
+    {
+      "path": "apps/web/package.json",
+      "sha256": "ab0c9f03d6fe49dca318e2bd8e18ce19a71e47908be7d2cceeb6c7546271b1da"
+    },
+    {
+      "path": "bun.lock",
+      "sha256": "3465ddd395ef5a89e951080209cecb1b74976ab160954f74cf1cd3f8823e178b"
+    },
+    {
+      "path": "docs/web/API_BACKEND_AUDIT_COMPLETE.md",
+      "sha256": "60ffc74003c1bccdcb1e005e6277b180b7fc20cb68b45311bba276cbf561610f"
+    },
+    {
+      "path": "docs/web/FRONTEND_QUICKSTART.md",
+      "sha256": "57c496759bc16bd062dd5c7cf5f20696820fcdbd4bddac00409863437511fff0"
+    }
+  ],
+  "deletions": [
+    {
+      "path": "apps/web/lib/agents/travel-agent.ts",
+      "baseBlobHash": "594055e65209ac757485fdbced1670abd3c9fd7853aee7c7731bfe4b165e8612"
+    },
+    {
+      "path": "apps/web/lib/ai/anthropic-sdk.ts",
+      "baseBlobHash": "621e0238e10e2b2bd2c47683d11a004b6ccdcb44f8307d30d01327051622c668"
+    },
+    {
+      "path": "apps/web/sentry.client.config.ts",
+      "baseBlobHash": "191b787e0327af424e0ec72f92e7176876aaee4cf2588241ae5d891b232be2a6"
+    }
+  ],
+  "invariants": [
+    "Canonical legacy planner redirect retains destination/query; protected/auth redirects carry refreshed or cleared session cookies",
+    "Redirect targets accept internal relative paths and reject protocol-relative, backslash, scheme, control-character inputs",
+    "Central CSP matches former Next config; provider image domains remain limited; eval remains development-only",
+    "Tracing explicitly carries bundled OG font assets; Next database-isolation assertion preserved",
+    "Only instrumentation-client initializes browser Sentry; replay text/media masking and existing request-query stripping preserved",
+    "Shared auth action token prevents duplicate/mixed email/OAuth methods and late departure after unmount; bfcache pageshow resets abandoned pending action",
+    "Inputs stay disabled before hydration and while auth action pending; labels/autocomplete/status and48px primary controls retained",
+    "Sign-in accepts existing legacy passwords; signup requires8 characters and matching confirmation; email confirmation is not treated as signed-in session",
+    "Auth callbacks use request origin rather than untrusted forwarding headers; verified continuation and cancellation/timeout return to login",
+    "Password recovery preserves validated continuation; pending inputs frozen; timeout copy explicitly says outcome unconfirmed; success heading focuses",
+    "Root error remains independent of app CSS/router, uses real document home link and focused heading with responsive48px controls",
+    "Scroll reveal never hides SSR content; absent IntersectionObserver leaves content readable; reduced-motion CSS cancels looping/translating effects",
+    "Test-renderer additions are development-only; lockfile changes limited to required renderer/types and react-is resolution placements",
+    "Deleted agent/Anthropic wrapper have no source symbol/import consumers; active planning points at planTripWorkflow; historical docs describe deletion"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "evidence": [
+    "web-auth-semantic-review.json",
+    "auth-callback-deadline-review.json",
+    "account-deletion-signout-review.json",
+    "homepage-landmark-review.json",
+    "root-fault-browser-acceptance.json",
+    "frozen-current-quality-review.json",
+    "frozen-native-save-boundary-review.json"
+  ],
+  "limits": [
+    "Hosted OAuth/SMTP/password mutation/session revocation and telemetry delivery remain external",
+    "This group does not prove every changed source file reviewed; complete final diff gate remains open"
+  ]
+}

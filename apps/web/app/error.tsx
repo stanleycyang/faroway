@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import * as Sentry from "@sentry/nextjs";
 import Link from "next/link";
 import { AlertTriangle, RefreshCw, Home, MessageCircle } from "lucide-react";
@@ -12,13 +12,15 @@ export default function Error({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
+    heading.current?.focus();
     Sentry.captureException(error);
     console.error("Application error:", error);
   }, [error]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-red-50 flex items-center justify-center p-4">
+    <main className="min-h-screen bg-gradient-to-br from-gray-50 to-red-50 flex items-center justify-center p-4">
       <div className="max-w-lg w-full text-center">
         {/* Error Icon */}
         <div className="relative mb-8">
@@ -29,15 +31,19 @@ export default function Error({
         </div>
 
         {/* Error Message */}
-        <h1 className="text-3xl font-bold text-gray-900 mb-4">
-          Oops! Something went wrong
+        <h1
+          ref={heading}
+          tabIndex={-1}
+          className="font-editorial text-3xl text-gray-900 mb-4 outline-none"
+        >
+          This page couldn’t load
         </h1>
         <p className="text-gray-600 mb-2">
           We hit some turbulence while loading this page.
         </p>
         <p className="text-gray-500 text-sm mb-8">
-          Don&apos;t worry, your trip plans are safe. Try refreshing or head
-          back home.
+          Try loading the page again. If this happened while saving a change,
+          check your saved trip before submitting it again.
         </p>
 
         {/* Error Details (only in development) */}
@@ -84,6 +90,6 @@ export default function Error({
           </a>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

@@ -1,4 +1,8 @@
 import { NextResponse } from "next/server";
+import {
+  withAuthRequestDeadline,
+  AuthRequestTimeoutError,
+} from "@/lib/auth/request-deadline";
 import { createClient } from "@/lib/supabase/server";
 import { validateRedirectUrl } from "@/lib/security/validate-redirect";
 
@@ -6,28 +10,36 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const next = validateRedirectUrl(searchParams.get("next"));
+  let timedOut = false;
 
-  if (code) {
-    const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+  if (code && !searchParams.has("error")) {
+    try {
+      const supabase = await createClient();
+      const { error } = await withAuthRequestDeadline(
+        supabase.auth.exchangeCodeForSession(code),
+      );
 
-    if (!error) {
-      // Successful authentication - redirect to intended destination
-      const forwardedHost = request.headers.get("x-forwarded-host");
-      const isLocalEnv = process.env.NODE_ENV === "development";
-
-      if (isLocalEnv) {
-        // In development, use origin directly
-        return NextResponse.redirect(`${origin}${next}`);
-      } else if (forwardedHost) {
-        // In production with reverse proxy
-        return NextResponse.redirect(`https://${forwardedHost}${next}`);
-      } else {
-        return NextResponse.redirect(`${origin}${next}`);
+      if (!error) {
+        // Preserve the request origin; arbitrary forwarding headers are not a
+        // trusted source for the post-authentication destination.
+        return NextResponse.redirect(new URL(next, origin));
       }
+    } catch (cause) {
+      timedOut = cause instanceof AuthRequestTimeoutError;
+      // A provider/network failure must leave a usable path back to sign-in.
     }
   }
 
   // Authentication failed - redirect to login with error
-  return NextResponse.redirect(`${origin}/auth/login?error=auth_code_error`);
+  const login = new URL("/auth/login", origin);
+  login.searchParams.set(
+    "error",
+    timedOut
+      ? "auth_timeout"
+      : searchParams.get("error") === "access_denied"
+        ? "auth_cancelled"
+        : "auth_code_error",
+  );
+  if (next !== "/dashboard") login.searchParams.set("redirectTo", next);
+  return NextResponse.redirect(login);
 }

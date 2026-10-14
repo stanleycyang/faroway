@@ -1,0 +1,64 @@
+{
+  "scope": "Final isolated QA SQL runner/support and measurement script diff",
+  "reviewExtent": "Complete README, runner and five SQL bodies; complete tracked measurement script diff.",
+  "files": [
+    {
+      "path": "apps/web/scripts/measure-itinerary-stream.ts",
+      "sha256": "38276be67030dba97fd5b2a3d908e1d7209c8a93f43c33ec85cf2feea2eb55d7"
+    },
+    {
+      "path": "apps/web/scripts/qa/README.md",
+      "sha256": "e2227f25f1f34c57f2decd5368bcb4c730279d37cd821af66de4660f743debf9"
+    },
+    {
+      "path": "apps/web/scripts/qa/check-private-transactions.mjs",
+      "sha256": "74056a71d12320076e7fe6489ed94b39a38673c913dd302e7e4826cc8ef3fdc0"
+    },
+    {
+      "path": "apps/web/scripts/qa/full-schema-privacy-check.sql",
+      "sha256": "5e9e4bb83675ac4812796b738014530a1b27f9de3a3fd31557a8534d20f96f8a"
+    },
+    {
+      "path": "apps/web/scripts/qa/private-brief-check.sql",
+      "sha256": "4dc9c766c93ce9ea6e43ce9a37861b437f83c7aced434d1a8fc3814b00c8b01e"
+    },
+    {
+      "path": "apps/web/scripts/qa/private-transactions-bootstrap.sql",
+      "sha256": "918a77776a790e23cd887567f1610d967ad65608f5db6f0ede330ee778006679"
+    },
+    {
+      "path": "apps/web/scripts/qa/private-transactions-check.sql",
+      "sha256": "961e00bf60e6597315236a3408f34a7b63875a6f73fe836b2ed9b38196e64edd"
+    },
+    {
+      "path": "apps/web/scripts/qa/private-transactions-extra.sql",
+      "sha256": "0f63a6db32f911d122763155a6362970f6afdea0bd5be6ceb4d42fbd75d7036b"
+    }
+  ],
+  "invariants": [
+    "Unique disposable Docker name, network none and no port bindings verified before SQL; finally removes owned container/volume",
+    "SQL fixtures use synthetic identities; full-schema check rolls back and explicitly does not verify JWT signatures",
+    "Atomic RPC cases assert owner rejection, revision conflicts, exact replay, changed request conflict and publication invalidation",
+    "Concurrent SQL sessions verify actual row-lock wait and one applied non-baseline revision",
+    "Measurement requires traveler token and current disclosure; help exits before authentication/planning; stream observes saved-trip GET and failing kickoff is not successful",
+    "No environment file/hosted credentials read by isolated transaction runner"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "validation": {
+    "result": "Passed syntax/help only",
+    "commands": [
+      "node --check apps/web/scripts/qa/check-private-transactions.mjs",
+      "bun apps/web/scripts/measure-itinerary-stream.ts --help"
+    ],
+    "helpLog": "/tmp/faroway-ux-frozen-measure-help-review.log"
+  },
+  "evidence": [
+    "private-transactions-postgres.json"
+  ],
+  "limits": [
+    "No planning dispatched during this review",
+    "Earlier isolated SQL runtime evidence retains recorded snapshot/scope; not hosted auth or full production acceptance"
+  ]
+}

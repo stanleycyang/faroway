@@ -1,0 +1,95 @@
+{
+  "scope": "Final itinerary editing, booking handoff/checklist and report review",
+  "reviewExtent": "Complete base-to-current diffs of four trip components, current remaining rendered bodies and report form; complete listed helper and route bodies. Parent identity/revision keys traced separately. Unchanged checkout route read as context.",
+  "files": [
+    {
+      "path": "apps/web/components/trips/PlanEditor.tsx",
+      "sha256": "6acf8e85b401078f62f85d90f246122e56700b9e1966eb287f6f0164e92c353b"
+    },
+    {
+      "path": "apps/web/components/trips/BookingChecklist.tsx",
+      "sha256": "2273fe928a04505b6243814f4c8611dd04f1bd88262a593056f6cab2b655b5eb"
+    },
+    {
+      "path": "apps/web/components/trips/TripCheckout.tsx",
+      "sha256": "561bfc461dbff45f4b64de7494a8d3ef3e51138eb4ce57267f34f3cf9caa4289"
+    },
+    {
+      "path": "apps/web/components/trips/TripFeedback.tsx",
+      "sha256": "e4e3b50ef1126a5746a8223f6212da1393fdf154ee0b04eb70998fa9693963a5"
+    },
+    {
+      "path": "apps/web/components/reports/SharedItineraryReportForm.tsx",
+      "sha256": "8d53881b6e7113b6328d58aa313b15ecd2362ac1317be280b63ed16e402466a6"
+    },
+    {
+      "path": "apps/web/hooks/useModalFocusTrap.ts",
+      "sha256": "3d3cfac8aa07b58655d9db2758fb840e780f5c9be7109e1cc69557dcaef0efa4"
+    },
+    {
+      "path": "apps/web/lib/trips/plan-command.ts",
+      "sha256": "4ac076c9e6e2636938553ee3c518b1fa517543061be3c54ee2b3ffae1de8303d"
+    },
+    {
+      "path": "apps/web/lib/trips/remove-local-retry.ts",
+      "sha256": "566b536551866f36dd6d02e0c2c7924272d35a283b43e71e703e4171cdc4a77c"
+    },
+    {
+      "path": "apps/web/lib/trips/plan-edits.ts",
+      "sha256": "98ca09f8139e1e2f28dc9f950959a6885ac880876807d9f7d9240380e4420890"
+    },
+    {
+      "path": "apps/web/lib/trips/booking-checklist.ts",
+      "sha256": "942e6aae7d10307e8bf6701e099d8c486cb4c46dab1fac8f30d6ec66ca5179ee"
+    },
+    {
+      "path": "apps/web/app/api/trips/[id]/plan/route.ts",
+      "sha256": "f21c399e36242219eba9137dd43a8b61388d239a27effaa8c3e6ad857ba27055"
+    },
+    {
+      "path": "apps/web/app/api/trips/[id]/bookings/route.ts",
+      "sha256": "bbfc019ac92338a6372e0fec7f7177caaaceec8792dbeed17c77d02df98d2fd5"
+    },
+    {
+      "path": "apps/web/app/api/trips/[id]/checkout/route.ts",
+      "sha256": "f62a2998fce3c9f5e69aecedaca83971b935088b2f04c507f0aa70632d4ace29"
+    },
+    {
+      "path": "apps/web/app/api/trips/[id]/feedback/route.ts",
+      "sha256": "903266f2e208a83ef57b8fd0ef62d16b4fa7304c86b27112f9ee2980894279fe"
+    },
+    {
+      "path": "apps/web/app/api/content-reports/route.ts",
+      "sha256": "ecf9c8412ce84f47648e5d04d2eaf7ec75cbc78fe7cca22f47ce322000b4ed19"
+    }
+  ],
+  "invariants": [
+    "Durable retry identities persist across unconfirmed plan/checklist writes; matching applied/replayed receipts required before confirmation",
+    "Owned plan revisions and generation/item preconditions enforced by routes and atomic RPC contracts",
+    "Checkout uses canonical provider product URL and matching handoff receipt; UI separates handoff and self-reported status from confirmed reservations",
+    "Feedback requires authenticated trip owner and finished itinerary; shared content report requires valid active share token",
+    "Submission locks, bounded requests and unmount guards retain input after failure; report success requires explicit success true",
+    "Modal keyboard trap, Escape and launcher focus restoration reviewed; mutation controls expose explicit review/recovery states"
+  ],
+  "findings": {
+    "newVerifiedReleaseBlockers": []
+  },
+  "validation": {
+    "command": "bun run test -- nine targeted itinerary/booking/feedback/content-report suites",
+    "result": "Passed",
+    "suites": 9,
+    "tests": 94,
+    "durationSeconds": 2.04,
+    "log": "/tmp/faroway-ux-frozen-booking-final-review-tests.log"
+  },
+  "evidence": [
+    "booking-report-receipt-review.json",
+    "checkout-semantic-review.json",
+    "frozen-checkout-browser-review.json",
+    "booking-receipt-sql-runtime-requests.json"
+  ],
+  "limits": [
+    "Hosted authorization and real provider verification remain external",
+    "This group does not approve the entire candidate diff"
+  ]
+}

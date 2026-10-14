@@ -37,3 +37,16 @@ describe("computeStats", () => {
     expect(stats.continentsTotal).toBe(6);
   });
 });
+
+it("does not inflate totals with duplicate, unknown, or Antarctica pins", () => {
+  const pin = (iso: string): CountryVisit => ({ iso, status: "visited" });
+  const stats = computeStats({
+    JPN: pin("JPN"),
+    duplicate: pin("JPN"),
+    invalid: pin("XXX"),
+    prototype: pin("constructor"),
+    ATA: pin("ATA"),
+  });
+  expect(stats.totalVisited).toBe(1);
+  expect(stats.continentsVisited).toBe(1);
+});

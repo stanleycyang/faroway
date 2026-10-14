@@ -1,0 +1,34 @@
+{
+  "scope": "New shared helper versus existing UX164 compiled inline production policy. Config consumption type/lint checked; UX165 compiled execution pending.",
+  "status": 200,
+  "checks": [
+    {
+      "key": "X-DNS-Prefetch-Control",
+      "equal": true
+    },
+    {
+      "key": "Strict-Transport-Security",
+      "equal": true
+    },
+    {
+      "key": "X-Frame-Options",
+      "equal": true
+    },
+    {
+      "key": "X-Content-Type-Options",
+      "equal": true
+    },
+    {
+      "key": "Referrer-Policy",
+      "equal": true
+    },
+    {
+      "key": "Permissions-Policy",
+      "equal": true
+    },
+    {
+      "key": "Content-Security-Policy",
+      "equal": true
+    }
+  ]
+}

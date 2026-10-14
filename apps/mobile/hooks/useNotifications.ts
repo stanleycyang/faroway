@@ -35,8 +35,6 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const notificationReceivedRef = useRef<EventSubscription | null>(null);
-  const notificationResponseRef = useRef<EventSubscription | null>(null);
   const appStateRef = useRef(AppState.currentState);
 
   const handleNotificationNavigation = useCallback(
@@ -111,53 +109,40 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Set up notification listeners
+  // Each effect owns its subscriptions, including asynchronous setup.
   useEffect(() => {
     let mounted = true;
-
+    let receivedSub: EventSubscription | undefined;
+    let responseSub: EventSubscription | undefined;
     const setupListeners = async () => {
-      const receivedSub = await addNotificationReceivedListener((notification) => {
-        const data = parseNotificationData(notification);
-        logger.debug('[Notifications] Notification received:', {
-          type: data?.type,
-          tripId: data?.tripId,
+      try {
+        receivedSub = await addNotificationReceivedListener((notification) => {
+          if (!mounted) return;
+          const data = parseNotificationData(notification);
+          onNotificationReceived?.(notification, data);
         });
-        if (onNotificationReceived) {
-          onNotificationReceived(notification, data);
+        if (!mounted) {
+          receivedSub.remove();
+          return;
         }
-      });
-
-      const responseSub = await addNotificationResponseListener((response) => {
-        const data = parseNotificationData(response.notification);
-        logger.debug('[Notifications] Notification response:', {
-          type: data?.type,
-          tripId: data?.tripId,
+        responseSub = await addNotificationResponseListener((response) => {
+          if (!mounted) return;
+          const data = parseNotificationData(response.notification);
+          onNotificationResponse?.(data);
+          handleNotificationNavigation(data);
         });
-        if (onNotificationResponse) {
-          onNotificationResponse(data);
-        }
-        handleNotificationNavigation(data);
-      });
-
-      if (mounted) {
-        notificationReceivedRef.current = receivedSub;
-        notificationResponseRef.current = responseSub;
-      } else {
-        receivedSub.remove();
-        responseSub.remove();
+        if (!mounted) responseSub.remove();
+      } catch {
+        receivedSub?.remove();
+        responseSub?.remove();
+        logger.debug('[Notifications] Listener setup unavailable');
       }
     };
-
-    setupListeners();
-
+    void setupListeners();
     return () => {
       mounted = false;
-      if (notificationReceivedRef.current) {
-        notificationReceivedRef.current.remove();
-      }
-      if (notificationResponseRef.current) {
-        notificationResponseRef.current.remove();
-      }
+      receivedSub?.remove();
+      responseSub?.remove();
     };
   }, [onNotificationReceived, onNotificationResponse, handleNotificationNavigation]);
 

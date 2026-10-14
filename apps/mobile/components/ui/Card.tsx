@@ -41,6 +41,11 @@ export function DestinationCard({
       accessibilityLabel={`${name}, ${country}${description ? `. ${description}` : ''}`}
       accessibilityHint="Starts trip planning for this destination"
     >
+      <LinearGradient
+        colors={['#284D57', '#142D3B']}
+        style={StyleSheet.absoluteFill}
+        accessible={false}
+      />
       <Image source={{ uri: image }} style={styles.cardImage} accessible={false} />
       <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={styles.gradient} />
       {/* Glassmorphic info overlay */}
@@ -72,7 +77,7 @@ interface TripCardProps {
   dates: string;
   image: string;
   status: 'draft' | 'planned' | 'active' | 'completed';
-  daysCount: number;
+  daysCount: number | null;
   onPress?: () => void;
 }
 
@@ -85,6 +90,10 @@ export function TripCard({
   daysCount,
   onPress,
 }: TripCardProps) {
+  const durationLabel =
+    daysCount === null
+      ? 'Duration unavailable'
+      : `${daysCount} ${daysCount === 1 ? 'day' : 'days'}`;
   const statusColors: Record<string, string> = {
     draft: colors.surface[500],
     planned: colors.primary[500],
@@ -105,7 +114,7 @@ export function TripCard({
       activeOpacity={0.9}
       style={[styles.tripCard, shadows.md]}
       accessibilityRole="button"
-      accessibilityLabel={`${destination}, ${country}. ${statusLabels[status]}. ${dates}. ${daysCount} days`}
+      accessibilityLabel={`${country ? `${destination}, ${country}` : destination}. ${statusLabels[status]}. ${dates}. ${durationLabel}`}
     >
       <Image source={{ uri: image }} style={styles.tripImage} accessible={false} />
       <LinearGradient colors={['transparent', 'rgba(0,0,0,0.5)']} style={styles.tripImageOverlay} />
@@ -124,7 +133,7 @@ export function TripCard({
         </View>
         <View style={styles.tripFooter}>
           <Text style={styles.tripDates}>📅 {dates}</Text>
-          <Text style={styles.tripDays}>{daysCount} days</Text>
+          <Text style={styles.tripDays}>{durationLabel}</Text>
         </View>
       </View>
     </TouchableOpacity>

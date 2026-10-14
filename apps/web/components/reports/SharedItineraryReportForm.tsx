@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { useHydrated } from "@/hooks/useHydrated";
 
 const reasons = [
   { value: "offensive", label: "Offensive or hateful content" },
@@ -11,7 +12,10 @@ const reasons = [
   { value: "other", label: "Something else" },
 ] as const;
 
-type ReportState = "idle" | "submitting" | "submitted" | "error";
+interface ReportState {
+  status: "idle" | "submitted" | "error";
+  error: string | null;
+}
 
 interface SharedItineraryReportFormProps {
   token: string;
@@ -20,53 +24,7 @@ interface SharedItineraryReportFormProps {
 export function SharedItineraryReportForm({
   token,
 }: SharedItineraryReportFormProps) {
-  const [reason, setReason] =
-    useState<(typeof reasons)[number]["value"]>("offensive");
-  const [details, setDetails] = useState("");
-  const [reporterEmail, setReporterEmail] = useState("");
-  const [status, setStatus] = useState<ReportState>("idle");
-  const [error, setError] = useState<string | null>(null);
-
-  const submitReport = async (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    setStatus("submitting");
-    setError(null);
-
-    try {
-      const response = await fetch("/api/content-reports", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contentType: "shared_trip",
-          token,
-          reason,
-          details,
-          reporterEmail,
-        }),
-      });
-
-      const body = (await response.json().catch(() => ({}))) as {
-        error?: string;
-      };
-
-      if (!response.ok) {
-        throw new Error(body.error || "Failed to submit report");
-      }
-
-      setStatus("submitted");
-      setDetails("");
-      setReporterEmail("");
-    } catch (submitError) {
-      setStatus("error");
-      setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Failed to submit report",
-      );
-    }
-  };
-
-  if (!token) {
+  if (!/^[A-Za-z0-9_-]{8,128}$/.test(token)) {
     return (
       <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-amber-900">
         Open this page from a shared itinerary report link so Faroway can
@@ -74,10 +32,75 @@ export function SharedItineraryReportForm({
       </div>
     );
   }
+  return <ReportForm key={token} token={token} />;
+}
 
-  if (status === "submitted") {
+function ReportForm({ token }: SharedItineraryReportFormProps) {
+  const hydrated = useHydrated();
+  const submissionLock = useRef(false);
+  const active = useRef(true);
+  const successRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
+  const [reason, setReason] =
+    useState<(typeof reasons)[number]["value"]>("offensive");
+  const [details, setDetails] = useState("");
+  const [reporterEmail, setReporterEmail] = useState("");
+  const [state, submitAction, pending] = useActionState<ReportState, FormData>(
+    async (previous, formData) => {
+      const payload = {
+        contentType: "shared_trip",
+        token,
+        reason: formData.get("reason"),
+        details: formData.get("details"),
+        reporterEmail: formData.get("reporterEmail"),
+      };
+      try {
+        const response = await fetch("/api/content-reports", {
+          method: "POST",
+          signal: AbortSignal.timeout(20_000),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        const body = await response.json().catch(() => null);
+        if (!active.current) return previous;
+        if (!response.ok || body?.success !== true) {
+          throw new Error(
+            body?.error ||
+              "Your report could not be confirmed. Your details are kept; please try again.",
+          );
+        }
+        return { status: "submitted", error: null };
+      } catch (error) {
+        if (!active.current) return previous;
+        return {
+          status: "error",
+          error:
+            error instanceof Error &&
+            error.name !== "TimeoutError" &&
+            error.name !== "AbortError"
+              ? error.message
+              : "The report took too long to confirm. Your details are kept. It may have arrived; please wait before retrying.",
+        };
+      } finally {
+        submissionLock.current = false;
+      }
+    },
+    { status: "idle", error: null },
+  );
+  useEffect(() => {
+    if (state.status === "submitted") successRef.current?.focus();
+  }, [state.status]);
+
+  if (state.status === "submitted") {
     return (
       <div
+        ref={successRef}
+        tabIndex={-1}
         role="status"
         className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-emerald-900"
       >
@@ -89,10 +112,15 @@ export function SharedItineraryReportForm({
 
   return (
     <form
-      onSubmit={submitReport}
+      action={submitAction}
+      onSubmit={(event) => {
+        if (!hydrated || pending || submissionLock.current)
+          event.preventDefault();
+        else submissionLock.current = true;
+      }}
       className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm"
     >
-      <div className="space-y-5">
+      <fieldset disabled={!hydrated || pending} className="space-y-5">
         <div>
           <label
             htmlFor="reason"
@@ -102,6 +130,7 @@ export function SharedItineraryReportForm({
           </label>
           <select
             id="reason"
+            name="reason"
             value={reason}
             onChange={(event) => setReason(event.target.value as typeof reason)}
             className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-900 outline-none ring-primary/20 transition focus:border-primary focus:ring-4"
@@ -123,6 +152,7 @@ export function SharedItineraryReportForm({
           </label>
           <textarea
             id="details"
+            name="details"
             value={details}
             onChange={(event) => setDetails(event.target.value)}
             maxLength={1000}
@@ -140,6 +170,8 @@ export function SharedItineraryReportForm({
           </label>
           <input
             id="email"
+            name="reporterEmail"
+            maxLength={254}
             type="email"
             value={reporterEmail}
             onChange={(event) => setReporterEmail(event.target.value)}
@@ -148,23 +180,23 @@ export function SharedItineraryReportForm({
           />
         </div>
 
-        {error && (
+        {state.error && (
           <p
             role="alert"
             className="rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700"
           >
-            {error}
+            {state.error}
           </p>
         )}
 
         <button
           type="submit"
-          disabled={status === "submitting"}
-          className="inline-flex w-full items-center justify-center rounded-xl bg-primary px-5 py-3 font-bold text-white transition hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
+          disabled={!hydrated || pending}
+          className="inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-5 py-3 font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {status === "submitting" ? "Submitting..." : "Submit Report"}
+          {pending ? "Submitting..." : "Submit Report"}
         </button>
-      </div>
+      </fieldset>
     </form>
   );
 }

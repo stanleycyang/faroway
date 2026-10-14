@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { MapLoading } from "@/components/trips/MapLoading";
 
 const WorldMapApp = dynamic(
   () =>
@@ -9,11 +10,7 @@ const WorldMapApp = dynamic(
     ),
   {
     ssr: false,
-    loading: () => (
-      <div className="min-h-[60vh] flex items-center justify-center">
-        <div className="text-slate-400 text-sm">Loading your map…</div>
-      </div>
-    ),
+    loading: () => <MapLoading />,
   },
 );
 

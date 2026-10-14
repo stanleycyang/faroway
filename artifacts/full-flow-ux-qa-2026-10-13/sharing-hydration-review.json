@@ -1,0 +1,10 @@
+{
+  "sourceSha256": "5dec4b0f7a6a11f0f93ffe5d822571f4be03d011f05ec155ba7cfc890174ce26",
+  "scope": "Footerprivacy-action SSR/hydration readiness; not proof allbrowserfailurescausedbythisgap.",
+  "before": "SSR enabled Turnoffpublicaccess without clienthandler;1failed33passed",
+  "fix": "Shared useHydrated gates create/revokefootercontrols untilhydration; mountedownershipguardsretained",
+  "checks": "34TripDetailtests/webtypes/targetlint/whitespacepass",
+  "browser": "Initial55643terminalMobileChromepass/Desktop90swaitDELETEtimeout/Safari5screateURLtimeout. Failed2profiles rerun41724active; SafariURLassert20sforroute, noappdeadlinechanged.",
+  "streamReview": "15focusedstream/reconciliation/dossier casespass; observer closesonterminal/unmount and defersdisconnectrecoverytosavedpolling. Object-onlySSEpayloadguard is a lead requiringmountedrepro, no newclaimedstreamdefect.",
+  "browserFollowup": "94520desktopterminalpass15.7s(test14.7s) afterread-onlyGET405warm-up. Previousfailure snapshot showsgenericSharingdidnotfinish, provinghandlerexecuted; hydrationgap independentSSRdefect, not proved desktopfailurecause. Safari41724passed after201; latestMobileChromererun pending."
+}

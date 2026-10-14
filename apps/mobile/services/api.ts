@@ -5,6 +5,7 @@
 
 import { API_BASE_URL } from '../constants/api';
 import { requestWithTimeout, RequestTimeoutError } from './request';
+import { useUserStore } from '../stores/userStore';
 import type {
   ApiResponse,
   Trip,
@@ -39,15 +40,20 @@ export function getAuthToken(): string | null {
 /**
  * Base fetch wrapper with auth and error handling
  */
-async function apiFetch<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
+async function apiFetch<T>(
+  endpoint: string,
+  options: RequestInit = {},
+  pinnedToken?: string
+): Promise<ApiResponse<T>> {
   try {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers as Record<string, string>),
     };
 
-    if (authToken) {
-      headers['Authorization'] = `Bearer ${authToken}`;
+    const requestToken = pinnedToken ?? authToken;
+    if (requestToken) {
+      headers['Authorization'] = `Bearer ${requestToken}`;
     }
 
     const { response, parsed } = await requestWithTimeout(
@@ -118,26 +124,82 @@ async function parseApiResponseBody(
 // User Profile APIs
 // ============================================
 
-export async function getUserProfile(): Promise<ApiResponse<UserProfile>> {
-  return apiFetch<UserProfile>('/api/user/profile');
+export async function getUserProfile(sessionToken?: string): Promise<ApiResponse<UserProfile>> {
+  return apiFetch<UserProfile>('/api/user/profile', {}, sessionToken);
 }
 
-export async function updateUserProfile(updates: {
-  email?: string;
-  subscription_tier?: string;
-  display_name?: string;
-  avatar_url?: string;
-  preferences?: {
-    vibes?: string[];
-    budget?: string;
-    travelerType?: string;
-  };
-  notification_settings?: Record<string, boolean>;
-}): Promise<ApiResponse<UserProfile>> {
-  return apiFetch<UserProfile>('/api/user/profile', {
+export async function updateUserProfile(
+  updates: {
+    email?: string;
+    subscription_tier?: string;
+    display_name?: string;
+    avatar_url?: string;
+    preferences?: {
+      vibes?: string[];
+      budget?: string;
+      travelerType?: string;
+    };
+    notification_settings?: Record<string, boolean>;
+  },
+  expectedUserId: string
+): Promise<ApiResponse<UserProfile>> {
+  return profileAccountRequest(expectedUserId, {
     method: 'PATCH',
     body: JSON.stringify(updates),
   });
+}
+
+/** Editors must load canonical fields rather than save sign-in metadata defaults. */
+export async function getVerifiedUserProfile(
+  expectedUserId: string
+): Promise<ApiResponse<UserProfile>> {
+  return profileAccountRequest(expectedUserId, {});
+}
+
+async function profileAccountRequest(
+  expectedUserId: string,
+  options: RequestInit
+): Promise<ApiResponse<UserProfile>> {
+  const account = useUserStore.getState();
+  const revision = account.accountRevision;
+  const isCurrent = () => {
+    const current = useUserStore.getState();
+    return current.user?.id === expectedUserId && current.accountRevision === revision;
+  };
+  const changed = {
+    error: 'Your account changed. Reopen your profile before saving.',
+    code: 'AUTH_CHANGED',
+  };
+  if (!expectedUserId || account.user?.id !== expectedUserId) return changed;
+  try {
+    const { readTripSession } = await import('../lib/tripAccountScope');
+    if (!isCurrent()) return changed;
+    const { data, error } = await readTripSession();
+    if (!isCurrent()) return changed;
+    if (error) throw error;
+    if (data.session?.user.id !== expectedUserId) return changed;
+    const result = await apiFetch<UserProfile>(
+      '/api/user/profile',
+      options,
+      data.session.access_token
+    );
+    if (!isCurrent()) return changed;
+    if (result.error) return result;
+    if (result.data?.id !== expectedUserId)
+      return {
+        error: 'Your saved profile could not be verified. Reload it before making changes.',
+        code: 'INVALID_RESPONSE',
+      };
+    return result;
+  } catch {
+    return isCurrent()
+      ? {
+          error:
+            'Couldn’t verify your account. Your profile edits are kept. Check your connection and try again.',
+          code: 'AUTH_VERIFICATION',
+        }
+      : changed;
+  }
 }
 
 /**
@@ -272,18 +334,27 @@ export async function deleteTrip(id: string): Promise<ApiResponse<void>> {
 // ============================================
 
 export async function shareTrip(
-  id: string
+  id: string,
+  pinnedToken?: string
 ): Promise<ApiResponse<{ shareUrl: string; shareToken: string }>> {
   return apiFetch<{ shareUrl: string; shareToken: string }>(
     `/api/trips/${encodeURIComponent(id)}/share`,
-    { method: 'POST', body: JSON.stringify({ publicConsent: true }) }
+    { method: 'POST', body: JSON.stringify({ publicConsent: true }) },
+    pinnedToken
   );
 }
 
-export async function revokeTripShare(id: string): Promise<ApiResponse<{ success: boolean }>> {
-  return apiFetch<{ success: boolean }>(`/api/trips/${encodeURIComponent(id)}/share`, {
-    method: 'DELETE',
-  });
+export async function revokeTripShare(
+  id: string,
+  pinnedToken?: string
+): Promise<ApiResponse<{ success: boolean }>> {
+  return apiFetch<{ success: boolean }>(
+    `/api/trips/${encodeURIComponent(id)}/share`,
+    {
+      method: 'DELETE',
+    },
+    pinnedToken
+  );
 }
 
 // ============================================

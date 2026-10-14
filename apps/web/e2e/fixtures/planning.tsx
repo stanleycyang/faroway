@@ -8,7 +8,6 @@ import { ItineraryGenerationLoader } from "../../components/trips/ItineraryGener
 import { useTripGeneration } from "../../hooks/useTripGeneration";
 import { FeaturedHotelCard } from "../../components/trips/FeaturedHotelCard";
 import { cover, sampleDays } from "./planning-data";
-import { TripReadyScreen } from "../../components/trips/TripReadyScreen";
 
 const days = sampleDays;
 function Fixture() {
@@ -81,14 +80,22 @@ function Fixture() {
     );
   if (screen === "ready")
     return (
-      <TripReadyScreen
-        city="Paris"
-        heroImageUrl={
-          "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=1200&auto=format&fit=crop&q=80"
-        }
-        description="A few days of art, neighborhood walks, and food worth slowing down for."
-        days={3}
-        stops={12}
+      <ItineraryGenerationLoader
+        destination="Paris"
+        heroImageUrl={cover}
+        summary="A few days of art, neighborhood walks, and food worth slowing down for."
+        nights={2}
+        travelers={2}
+        startDate="2099-06-01"
+        endDate="2099-06-03"
+        phase="complete"
+        progress={100}
+        message="Your journey is ready"
+        searchProgress={{ aggregator: "done" }}
+        activitiesCount={8}
+        diningCount={4}
+        transportCount={0}
+        days={sampleDays}
         onOpenTrip={() => setScreen("trip")}
       />
     );
