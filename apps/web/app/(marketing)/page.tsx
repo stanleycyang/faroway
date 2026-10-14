@@ -1,4 +1,5 @@
 import React from "react";
+import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { Header } from "@/components/Header";
@@ -23,6 +24,25 @@ import { FadeInOnScroll } from "@/components/landing/FadeInOnScroll";
 import { AppStoreButtons } from "@/components/AppStoreButtons";
 import { IMAGE_PATHS, getImageUrl } from "@faroway/constants";
 import { HAS_MOBILE_STORE_LINKS } from "@/lib/store-links";
+
+export const metadata: Metadata = {
+  title: "Free AI Trip Planner — Day-by-Day Itineraries in 60s",
+  description:
+    "Plan trips with Faroway’s free AI trip planner. Build personalized day-by-day itineraries in under a minute — hotels, restaurants, activities, and local tips.",
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "Faroway — Free AI Trip Planner",
+    description:
+      "Create a personalized travel itinerary with AI in under a minute. Free to start.",
+    url: "/",
+  },
+  twitter: {
+    title: "Faroway — Free AI Trip Planner",
+    description:
+      "Create a personalized travel itinerary with AI in under a minute. Free to start.",
+    card: "summary_large_image",
+  },
+};
 
 // ─── Data ───────────────────────────────────────────────────────────────────
 
@@ -152,9 +172,9 @@ export default function LandingPage() {
               </div>
 
               <h1 className="text-4xl sm:text-5xl lg:text-6xl xl:text-7xl font-extrabold leading-[1.08] mb-6 tracking-tight text-slate-900">
-                Your dream trip,
+                Free <span className="text-gradient">AI trip planner</span> —
                 <br />
-                planned around{" "}
+                your dream trip, planned around{" "}
                 <span className="bg-gradient-to-r from-primary to-amber-500 bg-clip-text text-transparent">
                   your style
                 </span>
