@@ -14,10 +14,13 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { getGuideBySlug, getGuideSlugs } from "@/lib/destination-guides";
-import { getAllPostMetas, type BlogPostMeta } from "@/lib/blog";
-import React from "react";
+import { getAllPostMetas } from "@/lib/blog";
+import { withBlogFallback } from "@/lib/blog/availability";
+import { postMatchesDestination } from "@/lib/destination-match";
 
-export const dynamic = "force-static";
+// Refresh the "From the Blog" section daily. A blog outage throws instead of
+// freezing an empty section into the static page.
+export const revalidate = 86400;
 
 // ─── Static Generation ───────────────────────────────────────────────────────
 export function generateStaticParams() {
@@ -31,7 +34,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const dest = getGuideBySlug(slug);
-  if (!dest) return {};
+  if (!dest) notFound();
 
   return {
     title: `${dest.name} Travel Guide — Things to Do, Tips & Itinerary`,
@@ -71,28 +74,12 @@ export default async function DestinationGuidePage({
   const dest = getGuideBySlug(slug);
   if (!dest) notFound();
 
-  // Try to load related blog posts; fail soft when blog DB is not configured
-  let relatedPosts: BlogPostMeta[] = [];
-  try {
+  const relatedPosts = await withBlogFallback(async () => {
     const metas = await getAllPostMetas();
-    const name = dest.name.toLowerCase();
-    const country = dest.country.toLowerCase();
-    relatedPosts = metas
-      .filter((p) => {
-        if (p.noindex) return false;
-        const title = p.title.toLowerCase();
-        const tags = p.tags.map((t) => t.toLowerCase());
-        return (
-          title.includes(name) ||
-          title.includes(country) ||
-          tags.some((t) => t.includes(name) || t.includes(country))
-        );
-      })
+    return metas
+      .filter((post) => postMatchesDestination(post, dest.slug))
       .slice(0, 6);
-  } catch {
-    // ignore — keep page static and fast even without blog DB
-    relatedPosts = [];
-  }
+  }, []);
 
   // JSON-LD
   const jsonLd = [

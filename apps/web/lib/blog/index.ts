@@ -108,45 +108,15 @@ function publishedPosts(
   return excludeNoindex ? query.eq("noindex", false) : query;
 }
 
-const getCachedPostMetas = unstable_cache(
-  async (): Promise<BlogPostMeta[]> => {
-    const supabase = getBlogSupabase();
-    if (!supabase) throw new Error("Blog database is not configured");
-
-    // Listing surfaces (index, categories, related posts, destination hubs)
-    // only see indexable posts. The 1000 cap applies after that filter so
-    // flagged posts don't crowd them out.
-    const data = await readBlogRows(
-      "getAllPostMetas",
-      (columns, excludeNoindex) =>
-        publishedPosts(supabase, columns, excludeNoindex)
-          .order("published_at", { ascending: false })
-          .limit(1000),
-      { withNoindex: META_COLUMNS, withoutNoindex: LEGACY_META_COLUMNS },
-      true,
-    );
-
-    return (data || []).map(rowToMeta).filter((post) => !post.noindex);
-  },
-  [
-    "published-blog-metadata-v2",
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "unconfigured",
-  ],
-  {
-    revalidate: 21600,
-    tags: ["published-blog-metadata"],
-  },
-);
-
-// React cache deduplicates within a render; the Data Cache reuses public rows
-// across listing, category, guide, and related-post requests.
-export const getAllPostMetas = cache(getCachedPostMetas);
-
 /**
- * Fetch every published post for sitemap discovery. Listing pages intentionally
- * cap their working set, but the sitemap must not silently omit long-tail posts.
+ * Every indexable published post, read in pages of 1000. Listings, related
+ * posts, destination hubs, and the sitemap all use this so long-tail posts
+ * are not dropped. A flag flipped in the database can take up to the cache
+ * window below (6 hours) to leave listings; revalidate the
+ * `published-blog-metadata` tag to refresh sooner. The post page's own
+ * robots meta follows that page's revalidate interval.
  */
-export async function getAllSitemapPostMetas(): Promise<BlogPostMeta[]> {
+async function fetchAllIndexablePostMetas(): Promise<BlogPostMeta[]> {
   const supabase = getBlogSupabase();
   if (!supabase) throw new Error("Blog database is not configured");
 
@@ -155,7 +125,7 @@ export async function getAllSitemapPostMetas(): Promise<BlogPostMeta[]> {
 
   for (let from = 0; ; from += pageSize) {
     const data = await readBlogRows(
-      "getAllSitemapPostMetas",
+      "getAllPostMetas",
       (columns, excludeNoindex) =>
         publishedPosts(supabase, columns, excludeNoindex)
           .order("published_at", { ascending: false })
@@ -170,6 +140,28 @@ export async function getAllSitemapPostMetas(): Promise<BlogPostMeta[]> {
   }
 
   return posts;
+}
+
+const getCachedPostMetas = unstable_cache(
+  fetchAllIndexablePostMetas,
+  [
+    "published-blog-metadata-v3",
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "unconfigured",
+  ],
+  {
+    // 6h. See the note on fetchAllIndexablePostMetas about flag propagation.
+    revalidate: 21600,
+    tags: ["published-blog-metadata"],
+  },
+);
+
+// React cache deduplicates within a render; the Data Cache reuses public rows
+// across listing, category, guide, and related-post requests.
+export const getAllPostMetas = cache(getCachedPostMetas);
+
+/** Sitemap and listings share one uncached-cap read of every indexable post. */
+export async function getAllSitemapPostMetas(): Promise<BlogPostMeta[]> {
+  return fetchAllIndexablePostMetas();
 }
 
 export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
@@ -224,7 +216,6 @@ export async function getPostsByCategory(
   const all = await getAllPostMetas();
   return all.filter(
     (p) =>
-      !p.noindex &&
       p.category.toLowerCase().replace(/\s+/g, "-") === category.toLowerCase(),
   );
 }
@@ -239,7 +230,7 @@ export async function getRelatedPosts(
   ]);
   if (!post) return [];
 
-  const all = postMetas.filter((p) => p.slug !== slug && !p.noindex);
+  const all = postMetas.filter((p) => p.slug !== slug);
 
   const scored = all.map((p) => {
     let score = 0;
@@ -263,8 +254,7 @@ export async function getAllTags(): Promise<string[]> {
 
 export async function getFeaturedPost(): Promise<BlogPostMeta | undefined> {
   const posts = await getAllPostMetas();
-  const visible = posts.filter((p) => !p.noindex);
-  return visible.find((p) => p.featured) || visible[0];
+  return posts.find((p) => p.featured) || posts[0];
 }
 
 export async function getPostsByCluster(
@@ -273,7 +263,7 @@ export async function getPostsByCluster(
   const cluster = getClusterBySlug(clusterSlug);
   if (!cluster) return [];
 
-  const allPosts = (await getAllPostMetas()).filter((p) => !p.noindex);
+  const allPosts = await getAllPostMetas();
 
   return allPosts.filter((post) => {
     if (post.cluster === clusterSlug) return true;
@@ -294,6 +284,42 @@ export async function getPostsByCluster(
 
 // Increase listing density to surface more content per click depth
 export const POSTS_PER_PAGE = 24;
+
+/** Absent or empty means page 1. Anything that is not a positive integer is invalid. */
+export function parsePageParam(raw: string | undefined): number | null {
+  if (raw == null || raw === "") return 1;
+  if (!/^[1-9]\d*$/.test(raw)) return null;
+  const page = Number(raw);
+  return Number.isSafeInteger(page) ? page : null;
+}
+
+export function pageCount(
+  itemCount: number,
+  pageSize = POSTS_PER_PAGE,
+): number {
+  if (itemCount <= 0) return 1;
+  return Math.ceil(itemCount / pageSize);
+}
+
+/**
+ * Blog index window. The featured post is shown beside page 1 and is not
+ * repeated in the grid, so every page is sliced from the same remainder.
+ */
+export function blogIndexWindow(posts: BlogPostMeta[], requestedPage: number) {
+  const featured = posts.find((post) => post.featured) || posts[0];
+  const rest = featured
+    ? posts.filter((post) => post.slug !== featured.slug)
+    : posts;
+  const totalPages = pageCount(rest.length);
+  const start = (requestedPage - 1) * POSTS_PER_PAGE;
+  return {
+    featured,
+    posts: rest.slice(start, start + POSTS_PER_PAGE),
+    totalPages,
+    currentPage: requestedPage,
+    outOfRange: requestedPage > totalPages,
+  };
+}
 
 export function paginate<T>(
   items: T[],

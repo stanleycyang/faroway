@@ -3,7 +3,7 @@ export interface BlogPost {
   title: string;
   description: string;
   date: string;
-  noindex?: boolean;
+  noindex: boolean;
   lastUpdated?: string;
   author: Author;
   category: string;
@@ -28,7 +28,7 @@ export interface BlogPostMeta {
   title: string;
   description: string;
   date: string;
-  noindex?: boolean;
+  noindex: boolean;
   lastUpdated?: string;
   author: Author;
   category: string;

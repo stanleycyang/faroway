@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { getAllPosts, getPostBySlug, getRelatedPosts } from "@/lib/blog";
+import { withBlogFallback } from "@/lib/blog/availability";
+import { matchDestination } from "@/lib/destination-match";
 import { Breadcrumbs } from "@/components/blog/Breadcrumbs";
 import { ReadingProgressBar } from "@/components/blog/ReadingProgressBar";
 import { TableOfContents } from "@/components/blog/TableOfContents";
@@ -12,17 +14,12 @@ import { BlogCard } from "@/components/blog/BlogCard";
 import { ViewTracker } from "@/components/blog/ViewTracker";
 import { ProseWrapper } from "@/components/blog/MDXComponents";
 import { FadeInOnScroll } from "@/components/landing/FadeInOnScroll";
-import { getGuideSlugs, getGuideBySlug } from "@/lib/destination-guides";
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
 export async function generateStaticParams() {
-  try {
-    return (await getAllPosts()).map((p) => ({ slug: p.slug }));
-  } catch {
-    // In non-configured environments, skip prebuilding blog pages
-    return [];
-  }
+  const posts = await withBlogFallback(() => getAllPosts(), []);
+  return posts.map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({
@@ -299,25 +296,11 @@ export default async function BlogPostPage({
   const postUrl = `${baseUrl}/blog/${post.slug}`;
   const contentHtml = renderMarkdown(post.content);
 
-  // Try to match a related destination by name/country appearing in title/description/tags
-  const allDestinationSlugs = getGuideSlugs();
-  const candidate = allDestinationSlugs
-    .map((s) => getGuideBySlug(s))
-    .filter(Boolean)
-    .find((dest) => {
-      const title = post.title.toLowerCase();
-      const desc = (post.description || "").toLowerCase();
-      const tags = post.tags.map((t) => t.toLowerCase());
-      const name = dest!.name.toLowerCase();
-      const country = dest!.country.toLowerCase();
-      return (
-        title.includes(name) ||
-        title.includes(country) ||
-        desc.includes(name) ||
-        desc.includes(country) ||
-        tags.some((t) => t.includes(name) || t.includes(country))
-      );
-    });
+  const candidate = matchDestination({
+    title: post.title,
+    description: post.description,
+    tags: post.tags,
+  });
 
   // Article JSON-LD
   const articleJsonLd = {

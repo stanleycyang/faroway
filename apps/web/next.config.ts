@@ -13,6 +13,20 @@ assertDatabaseIsolation({
   NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
 });
 
+// A production deploy with no blog credentials would publish an empty sitemap.
+// Local `next build` sets NODE_ENV=production but not VERCEL_ENV, so it is exempt.
+if (process.env.VERCEL_ENV === "production") {
+  const missingBlogEnv = [
+    "NEXT_PUBLIC_SUPABASE_URL",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
+  ].filter((name) => !process.env[name]);
+  if (missingBlogEnv.length > 0) {
+    throw new Error(
+      `Production build is missing ${missingBlogEnv.join(" and ")}. Refusing to build a site whose blog and sitemap cannot be read.`,
+    );
+  }
+}
+
 const nextConfig: NextConfig = {
   // The local Workflow backend uses Node's real entrypoint to resolve its
   // cache directory. Bundling this dependency replaces require.main with a

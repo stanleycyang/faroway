@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { CLUSTERS, getPostsByCluster } from "@/lib/blog";
+import { withBlogFallback } from "@/lib/blog/availability";
 import { ClusterCard } from "@/components/blog/guides/ClusterCard";
 import { NewsletterCTA } from "@/components/blog/NewsletterCTA";
 import { FadeInOnScroll } from "@/components/landing/FadeInOnScroll";
@@ -20,25 +21,19 @@ export const metadata: Metadata = {
 export default async function GuidesIndexPage() {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
-  // Pre-fetch cluster post counts in parallel. A missing blog database
-  // should not fail the build; counts stay at zero until it is configured.
-  let clusterCounts: Record<string, number> = Object.fromEntries(
-    CLUSTERS.map((cluster) => [cluster.slug, 0]),
+  // Counts stay at zero only when the blog database is not configured locally.
+  // A query error throws so production does not publish empty guide hubs.
+  const clusterCounts: Record<string, number> = Object.fromEntries(
+    await Promise.all(
+      CLUSTERS.map(async (cluster) => {
+        const posts = await withBlogFallback(
+          () => getPostsByCluster(cluster.slug),
+          [],
+        );
+        return [cluster.slug, posts.length] as const;
+      }),
+    ),
   );
-  try {
-    clusterCounts = Object.fromEntries(
-      await Promise.all(
-        CLUSTERS.map(
-          async (c) =>
-            [c.slug, (await getPostsByCluster(c.slug)).length] as const,
-        ),
-      ),
-    );
-  } catch {
-    clusterCounts = Object.fromEntries(
-      CLUSTERS.map((cluster) => [cluster.slug, 0]),
-    );
-  }
 
   const breadcrumbSchema = {
     "@context": "https://schema.org",

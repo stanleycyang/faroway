@@ -57,6 +57,26 @@ describe("blog cache failure handling", () => {
     },
   );
 
+  it("pages listing reads past the old 1000-row cap", async () => {
+    query.range
+      .mockResolvedValueOnce({
+        data: Array.from({ length: 1000 }, (_, i) => ({
+          ...row,
+          slug: `post-${i}`,
+        })),
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: [{ ...row, slug: "post-1000" }],
+        error: null,
+      });
+    const rows = await getAllPostMetas();
+    expect(rows).toHaveLength(1001);
+    expect(rows.at(-1)?.slug).toBe("post-1000");
+    expect(query.range).toHaveBeenNthCalledWith(1, 0, 999);
+    expect(query.range).toHaveBeenNthCalledWith(2, 1000, 1999);
+  });
+
   it("never returns a partial sitemap when a later page fails", async () => {
     query.range
       .mockResolvedValueOnce({
@@ -122,7 +142,7 @@ describe("blog cache failure handling", () => {
   });
 
   it("drops noindex rows that a listing query still returns", async () => {
-    query.limit.mockResolvedValue({
+    query.range.mockResolvedValueOnce({
       data: [
         { ...row, slug: "hidden", noindex: true },
         { ...row, slug: "visible", noindex: false },
@@ -134,7 +154,7 @@ describe("blog cache failure handling", () => {
   });
 
   it("retries without noindex when the column is not on the table yet", async () => {
-    query.limit
+    query.range
       .mockResolvedValueOnce({
         data: null,
         error: {
@@ -147,7 +167,7 @@ describe("blog cache failure handling", () => {
     const rows = await getAllPostMetas();
     expect(rows).toHaveLength(1);
     expect(rows[0].noindex).toBe(false);
-    expect(query.limit).toHaveBeenCalledTimes(2);
+    expect(query.range).toHaveBeenCalledTimes(2);
   });
 
   it.each([...readers, () => getPostBySlug(row.slug)])(

@@ -4,9 +4,11 @@ import {
   getPostsByCategory,
   getAllCategories,
   paginate,
+  pageCount,
+  parsePageParam,
   POSTS_PER_PAGE,
 } from "@/lib/blog";
-import type { BlogPostMeta } from "@/lib/blog";
+import { withBlogFallback } from "@/lib/blog/availability";
 import { BlogCard } from "@/components/blog/BlogCard";
 import { Breadcrumbs } from "@/components/blog/Breadcrumbs";
 import { CategoryPills } from "@/components/blog/CategoryPills";
@@ -14,19 +16,43 @@ import { NewsletterCTA } from "@/components/blog/NewsletterCTA";
 import { Pagination } from "@/components/blog/Pagination";
 
 export async function generateStaticParams() {
-  try {
-    return (await getAllCategories()).map((cat) => ({
-      category: cat.toLowerCase().replace(/\s+/g, "-"),
-    }));
-  } catch {
-    return [];
-  }
+  const categories = await withBlogFallback(() => getAllCategories(), []);
+  return categories.map((cat) => ({
+    category: cat.toLowerCase().replace(/\s+/g, "-"),
+  }));
 }
 
 export const dynamicParams = true;
 
+// Same as the blog index: an outage or an out-of-range page must not be a
+// cached 200 from the blog layout's ISR shell.
+export const dynamic = "force-dynamic";
+
 const categorySlug = (value: string) =>
   value.toLowerCase().replace(/\s+/g, "-");
+
+async function loadCategoryPage(
+  category: string,
+  pageParam: string | undefined,
+) {
+  const page = parsePageParam(pageParam);
+  if (page == null) notFound();
+
+  const categories = await withBlogFallback(() => getAllCategories(), []);
+  const label = categories.find(
+    (candidate) => categorySlug(candidate) === category,
+  );
+  if (!label) notFound();
+
+  const allPosts = await getPostsByCategory(category);
+  if (page > pageCount(allPosts.length)) notFound();
+
+  return {
+    label,
+    categories,
+    ...paginate(allPosts, page, POSTS_PER_PAGE),
+  };
+}
 
 export async function generateMetadata({
   params,
@@ -35,22 +61,11 @@ export async function generateMetadata({
   params: Promise<{ category: string }>;
   searchParams: Promise<{ page?: string }>;
 }): Promise<Metadata> {
-  const [{ category }, { page: pageParam }, categories] = await Promise.all([
+  const [{ category }, { page: pageParam }] = await Promise.all([
     params,
     searchParams,
-    (async () => {
-      try {
-        return await getAllCategories();
-      } catch {
-        return [];
-      }
-    })(),
   ]);
-  const label = categories.find(
-    (candidate) => categorySlug(candidate) === category,
-  );
-  if (!label) return {};
-  const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
+  const { label, page } = await loadCategoryPage(category, pageParam);
   const pageLabel = page > 1 ? ` — Page ${page}` : "";
   const canonical =
     page > 1
@@ -70,36 +85,18 @@ export default async function CategoryPage({
   params: Promise<{ category: string }>;
   searchParams: Promise<{ page?: string }>;
 }) {
-  const [{ category }, { page: pageParam }, categories] = await Promise.all([
+  const [{ category }, { page: pageParam }] = await Promise.all([
     params,
     searchParams,
-    (async () => {
-      try {
-        return await getAllCategories();
-      } catch {
-        return [];
-      }
-    })(),
   ]);
-  const requestedPage = Math.max(1, parseInt(pageParam || "1", 10) || 1);
-  const label = categories.find(
-    (candidate) => categorySlug(candidate) === category,
-  );
-  if (!label) notFound();
-
-  let allPosts: BlogPostMeta[] = [];
-  try {
-    allPosts = await getPostsByCategory(category);
-  } catch {
-    allPosts = [];
-  }
-
   const {
+    label,
+    categories,
     items: posts,
     totalPages,
     totalItems,
     page: currentPage,
-  } = paginate(allPosts, requestedPage, POSTS_PER_PAGE);
+  } = await loadCategoryPage(category, pageParam);
 
   return (
     <main className="min-h-screen pt-20">

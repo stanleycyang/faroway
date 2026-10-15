@@ -5,8 +5,8 @@ import {
   getAllClusterSlugs,
   getRelatedClusters,
   getPostsByCluster,
-  type BlogPostMeta,
 } from "@/lib/blog";
+import { withBlogFallback } from "@/lib/blog/availability";
 import { BlogCard } from "@/components/blog/BlogCard";
 import { NewsletterCTA } from "@/components/blog/NewsletterCTA";
 import { ClusterHero } from "@/components/blog/guides/ClusterHero";
@@ -29,7 +29,7 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const cluster = getClusterBySlug(slug);
-  if (!cluster) return {};
+  if (!cluster) notFound();
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
@@ -65,12 +65,7 @@ export default async function ClusterPage({ params }: PageProps) {
   const cluster = getClusterBySlug(slug);
   if (!cluster) notFound();
 
-  let posts: BlogPostMeta[] = [];
-  try {
-    posts = await getPostsByCluster(slug);
-  } catch {
-    posts = [];
-  }
+  const posts = await withBlogFallback(() => getPostsByCluster(slug), []);
   const relatedClusters = getRelatedClusters(slug);
   const displayPosts = posts.slice(0, 9);
 

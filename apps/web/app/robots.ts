@@ -6,8 +6,8 @@ export default function robots(): MetadataRoute.Robots {
   return {
     rules: {
       userAgent: "*",
-      // Allow the whole site plus the Open Graph image endpoint under /api/og
-      allow: ["/", "/api/og", "/api/og/world-map"],
+      // Longest-match wins: `/api/og` allows that prefix, including /api/og/world-map.
+      allow: ["/", "/api/og"],
       disallow: [
         "/api/",
         "/auth/callback",

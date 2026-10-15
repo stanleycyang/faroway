@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
-import { getAllPostMetas, paginate, POSTS_PER_PAGE } from "@/lib/blog";
+import { notFound } from "next/navigation";
+import { blogIndexWindow, getAllPostMetas, parsePageParam } from "@/lib/blog";
+import { withBlogFallback } from "@/lib/blog/availability";
 import { BlogCard } from "@/components/blog/BlogCard";
 import { FeaturedHero } from "@/components/blog/FeaturedHero";
 import { CategoryPills } from "@/components/blog/CategoryPills";
@@ -8,13 +10,20 @@ import { Pagination } from "@/components/blog/Pagination";
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
+// Pagination and database failures must set the real status code. The blog
+// layout is ISR, and a static shell would turn an outage into a 200.
+export const dynamic = "force-dynamic";
+
 export async function generateMetadata({
   searchParams,
 }: {
   searchParams: Promise<{ page?: string }>;
 }): Promise<Metadata> {
   const { page: pageParam } = await searchParams;
-  const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
+  const page = parsePageParam(pageParam);
+  if (page == null) notFound();
+  const allPosts = await withBlogFallback(() => getAllPostMetas(), []);
+  if (blogIndexWindow(allPosts, page).outOfRange) notFound();
   const canonical = page > 1 ? `/blog?page=${page}` : "/blog";
   const pageLabel = page > 1 ? ` — Page ${page}` : "";
   return {
@@ -37,32 +46,15 @@ export default async function BlogIndex({
 }: {
   searchParams: Promise<{ page?: string }>;
 }) {
-  const [{ page: pageParam }, allPostsResult] = await Promise.all([
-    searchParams,
-    (async () => {
-      try {
-        return await getAllPostMetas();
-      } catch {
-        return [];
-      }
-    })(),
-  ]);
-  const requestedPage = Math.max(1, parseInt(pageParam || "1", 10) || 1);
-  const allPosts = allPostsResult;
-  const featured = allPosts.find((post) => post.featured) || allPosts[0];
+  const { page: pageParam } = await searchParams;
+  const requestedPage = parsePageParam(pageParam);
+  if (requestedPage == null) notFound();
+  const allPosts = await withBlogFallback(() => getAllPostMetas(), []);
+  const { featured, posts, totalPages, currentPage, outOfRange } =
+    blogIndexWindow(allPosts, requestedPage);
+  if (outOfRange) notFound();
   const categories = [...new Set(allPosts.map((post) => post.category))];
-  const isFirstPage = requestedPage === 1;
-
-  // On page 1 we show the featured hero separately, so exclude it from the grid
-  const gridPosts = isFirstPage
-    ? allPosts.filter((p) => p.slug !== featured?.slug)
-    : allPosts;
-
-  const {
-    items: posts,
-    totalPages,
-    page: currentPage,
-  } = paginate(gridPosts, requestedPage, POSTS_PER_PAGE);
+  const isFirstPage = currentPage === 1;
 
   const collectionSchema = {
     "@context": "https://schema.org",

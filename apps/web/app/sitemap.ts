@@ -4,6 +4,7 @@ import {
   getAllCategories,
   getAllClusterSlugs,
 } from "@/lib/blog";
+import { withBlogFallback } from "@/lib/blog/availability";
 import { getGuideSlugs } from "@/lib/destination-guides";
 
 import { getAllCostProfiles } from "@/lib/tools/cost-data";
@@ -69,18 +70,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  let postMetas: Awaited<ReturnType<typeof getAllSitemapPostMetas>> = [];
-  let categories: Awaited<ReturnType<typeof getAllCategories>> = [];
-  try {
-    [postMetas, categories] = await Promise.all([
-      getAllSitemapPostMetas(),
-      getAllCategories(),
-    ]);
-  } catch {
-    // In local or non-configured environments, omit blog URLs from sitemap
-    postMetas = [];
-    categories = [];
-  }
+  // Query errors throw (5xx, uncached). An empty sitemap is only for a local
+  // or preview build that has no blog credentials.
+  const [postMetas, categories] = await withBlogFallback(
+    () => Promise.all([getAllSitemapPostMetas(), getAllCategories()]),
+    [[], []] as [
+      Awaited<ReturnType<typeof getAllSitemapPostMetas>>,
+      Awaited<ReturnType<typeof getAllCategories>>,
+    ],
+  );
   const blogPosts: MetadataRoute.Sitemap = postMetas.map((post) => ({
     url: `${baseUrl}/blog/${post.slug}`,
     lastModified: post.lastUpdated || post.date,

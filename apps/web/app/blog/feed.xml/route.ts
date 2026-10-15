@@ -1,4 +1,5 @@
 import { getAllPosts } from "@/lib/blog";
+import { withBlogFallback } from "@/lib/blog/availability";
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
@@ -11,7 +12,9 @@ function escapeXml(s: string) {
 }
 
 export async function GET() {
-  const posts = (await getAllPosts()).filter((post) => !post.noindex);
+  const posts = (await withBlogFallback(() => getAllPosts(), [])).filter(
+    (post) => !post.noindex,
+  );
 
   const items = posts
     .map(
