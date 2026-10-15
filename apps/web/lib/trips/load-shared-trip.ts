@@ -64,12 +64,19 @@ async function loadSharedTripUncached(
       ? [shared.itineraries]
       : [];
   for (const itinerary of itineraries) {
-    readSavedItinerary({
-      days: itinerary.days,
-      overview: itinerary.overview,
-      packingList: itinerary.packing_list,
-      generalTips: itinerary.general_tips,
-    });
+    try {
+      const parsed = readSavedItinerary({
+        days: itinerary.days,
+        overview: itinerary.overview,
+        packingList: itinerary.packing_list,
+        generalTips: itinerary.general_tips,
+      });
+      if (parsed) itinerary.days = parsed.days;
+    } catch {
+      throw new Error(
+        "This shared itinerary could not be read. Please try again shortly.",
+      );
+    }
   }
   return shared;
 }

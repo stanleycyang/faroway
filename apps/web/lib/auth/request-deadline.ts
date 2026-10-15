@@ -18,6 +18,8 @@ export async function withAuthRequestDeadline<T>(
       AUTH_REQUEST_DEADLINE_MS,
     );
   });
+  // A response that loses the race must not surface again as an unhandled rejection.
+  void operation.catch(() => {});
   try {
     return await Promise.race([operation, deadline]);
   } finally {
