@@ -99,7 +99,55 @@ describe("blog cache failure handling", () => {
     await expect(getPostBySlug(row.slug)).resolves.toMatchObject({
       slug: row.slug,
       content: row.content,
+      noindex: false,
     });
+  });
+
+  it("keeps a noindex post addressable and does not filter it out of the slug lookup", async () => {
+    query.maybeSingle.mockResolvedValue({
+      data: { ...row, noindex: true },
+      error: null,
+    });
+    await expect(getPostBySlug(row.slug)).resolves.toMatchObject({
+      slug: row.slug,
+      noindex: true,
+    });
+    expect(query.eq).not.toHaveBeenCalledWith("noindex", false);
+  });
+
+  it("omits noindex posts from listing and sitemap queries", async () => {
+    await getAllPostMetas();
+    await getAllSitemapPostMetas();
+    expect(query.eq).toHaveBeenCalledWith("noindex", false);
+  });
+
+  it("drops noindex rows that a listing query still returns", async () => {
+    query.limit.mockResolvedValue({
+      data: [
+        { ...row, slug: "hidden", noindex: true },
+        { ...row, slug: "visible", noindex: false },
+      ],
+      error: null,
+    });
+    const rows = await getAllPostMetas();
+    expect(rows.map((post) => post.slug)).toEqual(["visible"]);
+  });
+
+  it("retries without noindex when the column is not on the table yet", async () => {
+    query.limit
+      .mockResolvedValueOnce({
+        data: null,
+        error: {
+          code: "42703",
+          message: "column blog_posts.noindex does not exist",
+        },
+      })
+      .mockResolvedValueOnce({ data: [row], error: null });
+
+    const rows = await getAllPostMetas();
+    expect(rows).toHaveLength(1);
+    expect(rows[0].noindex).toBe(false);
+    expect(query.limit).toHaveBeenCalledTimes(2);
   });
 
   it.each([...readers, () => getPostBySlug(row.slug)])(

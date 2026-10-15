@@ -20,15 +20,25 @@ export const metadata: Metadata = {
 export default async function GuidesIndexPage() {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
-  // Pre-fetch cluster post counts in parallel
-  const clusterCounts: Record<string, number> = Object.fromEntries(
-    await Promise.all(
-      CLUSTERS.map(
-        async (c) =>
-          [c.slug, (await getPostsByCluster(c.slug)).length] as const,
-      ),
-    ),
+  // Pre-fetch cluster post counts in parallel. A missing blog database
+  // should not fail the build; counts stay at zero until it is configured.
+  let clusterCounts: Record<string, number> = Object.fromEntries(
+    CLUSTERS.map((cluster) => [cluster.slug, 0]),
   );
+  try {
+    clusterCounts = Object.fromEntries(
+      await Promise.all(
+        CLUSTERS.map(
+          async (c) =>
+            [c.slug, (await getPostsByCluster(c.slug)).length] as const,
+        ),
+      ),
+    );
+  } catch {
+    clusterCounts = Object.fromEntries(
+      CLUSTERS.map((cluster) => [cluster.slug, 0]),
+    );
+  }
 
   const breadcrumbSchema = {
     "@context": "https://schema.org",

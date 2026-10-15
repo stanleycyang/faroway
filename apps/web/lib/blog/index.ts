@@ -9,10 +9,55 @@ import { getBlogSupabase } from "./supabase";
 // Column selections — avoid fetching `content` on listing queries
 // ---------------------------------------------------------------------------
 
-const META_COLUMNS =
+const META_COLUMNS_BASE =
   "slug, title, description, author_slug, category, tags, cover_image, cover_image_alt, reading_time, featured, cluster, published_at, last_updated, view_count";
 
+const META_COLUMNS = `${META_COLUMNS_BASE}, noindex`;
 const FULL_COLUMNS = `${META_COLUMNS}, content`;
+const LEGACY_META_COLUMNS = META_COLUMNS_BASE;
+const LEGACY_FULL_COLUMNS = `${META_COLUMNS_BASE}, content`;
+
+type QueryError = {
+  code?: string;
+  message?: string;
+  details?: string;
+  hint?: string;
+};
+
+/** True only for "column noindex does not exist" — not for outages. */
+function isMissingNoindexColumn(error: QueryError): boolean {
+  const text = `${error.code ?? ""} ${error.message ?? ""} ${error.details ?? ""} ${error.hint ?? ""}`;
+  return (
+    /noindex/i.test(text) &&
+    /(42703|PGRST204|does not exist|schema cache|could not find)/i.test(text)
+  );
+}
+
+/**
+ * Prefer queries that read `noindex`. If this database has not applied the
+ * column yet, retry once without it so listings keep working (everything
+ * stays indexable, which matches the column default of false).
+ */
+async function readBlogRows<T>(
+  label: string,
+  run: (
+    columns: string,
+    excludeNoindex: boolean,
+  ) => PromiseLike<{ data: T | null; error: QueryError | null }>,
+  columns: { withNoindex: string; withoutNoindex: string },
+  excludeNoindex: boolean,
+): Promise<T | null> {
+  const first = await run(columns.withNoindex, excludeNoindex);
+  if (!first.error) return first.data;
+
+  if (isMissingNoindexColumn(first.error)) {
+    const second = await run(columns.withoutNoindex, false);
+    if (!second.error) return second.data;
+    throw new Error(`${label} failed (${second.error.code || "unknown"})`);
+  }
+
+  throw new Error(`${label} failed (${first.error.code || "unknown"})`);
+}
 
 // ---------------------------------------------------------------------------
 // Row → type mappers
@@ -25,6 +70,7 @@ function rowToMeta(row: any): BlogPostMeta {
     title: row.title,
     description: row.description || "",
     date: row.published_at || new Date().toISOString(),
+    noindex: row.noindex === true,
     lastUpdated: row.last_updated || undefined,
     author: AUTHORS[row.author_slug] || AUTHORS["faroway-team"],
     category: row.category || "Travel Tips",
@@ -50,25 +96,40 @@ function rowToPost(row: any): BlogPost {
 // Core queries
 // ---------------------------------------------------------------------------
 
+function publishedPosts(
+  supabase: NonNullable<ReturnType<typeof getBlogSupabase>>,
+  columns: string,
+  excludeNoindex: boolean,
+) {
+  const query = supabase
+    .from("blog_posts")
+    .select(columns)
+    .eq("status", "published");
+  return excludeNoindex ? query.eq("noindex", false) : query;
+}
+
 const getCachedPostMetas = unstable_cache(
   async (): Promise<BlogPostMeta[]> => {
     const supabase = getBlogSupabase();
     if (!supabase) throw new Error("Blog database is not configured");
 
-    const { data, error } = await supabase
-      .from("blog_posts")
-      .select(META_COLUMNS)
-      .eq("status", "published")
-      .order("published_at", { ascending: false })
-      .limit(1000);
+    // Listing surfaces (index, categories, related posts, destination hubs)
+    // only see indexable posts. The 1000 cap applies after that filter so
+    // flagged posts don't crowd them out.
+    const data = await readBlogRows(
+      "getAllPostMetas",
+      (columns, excludeNoindex) =>
+        publishedPosts(supabase, columns, excludeNoindex)
+          .order("published_at", { ascending: false })
+          .limit(1000),
+      { withNoindex: META_COLUMNS, withoutNoindex: LEGACY_META_COLUMNS },
+      true,
+    );
 
-    if (error) {
-      throw new Error(`getAllPostMetas failed (${error.code || "unknown"})`);
-    }
-    return (data || []).map(rowToMeta);
+    return (data || []).map(rowToMeta).filter((post) => !post.noindex);
   },
   [
-    "published-blog-metadata-v1",
+    "published-blog-metadata-v2",
     process.env.NEXT_PUBLIC_SUPABASE_URL || "unconfigured",
   ],
   {
@@ -93,20 +154,18 @@ export async function getAllSitemapPostMetas(): Promise<BlogPostMeta[]> {
   const pageSize = 1000;
 
   for (let from = 0; ; from += pageSize) {
-    const { data, error } = await supabase
-      .from("blog_posts")
-      .select(META_COLUMNS)
-      .eq("status", "published")
-      .order("published_at", { ascending: false })
-      .range(from, from + pageSize - 1);
+    const data = await readBlogRows(
+      "getAllSitemapPostMetas",
+      (columns, excludeNoindex) =>
+        publishedPosts(supabase, columns, excludeNoindex)
+          .order("published_at", { ascending: false })
+          .range(from, from + pageSize - 1),
+      { withNoindex: META_COLUMNS, withoutNoindex: LEGACY_META_COLUMNS },
+      true,
+    );
 
-    if (error) {
-      throw new Error(
-        `getAllSitemapPostMetas failed (${error.code || "unknown"})`,
-      );
-    }
-
-    posts.push(...(data || []).map(rowToMeta));
+    const page = (data || []).map(rowToMeta).filter((post) => !post.noindex);
+    posts.push(...page);
     if (!data || data.length < pageSize) break;
   }
 
@@ -117,16 +176,17 @@ export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
   const supabase = getBlogSupabase();
   if (!supabase) throw new Error("Blog database is not configured");
 
-  const { data, error } = await supabase
-    .from("blog_posts")
-    .select(FULL_COLUMNS)
-    .eq("status", "published")
-    .order("published_at", { ascending: false })
-    .limit(1000);
-
-  if (error) {
-    throw new Error(`getAllPosts failed (${error.code || "unknown"})`);
-  }
+  // Includes noindex posts so their URLs can still be rendered (HTTP 200).
+  // Callers that build public lists (RSS) filter the flag themselves.
+  const data = await readBlogRows(
+    "getAllPosts",
+    (columns) =>
+      publishedPosts(supabase, columns, false)
+        .order("published_at", { ascending: false })
+        .limit(1000),
+    { withNoindex: FULL_COLUMNS, withoutNoindex: LEGACY_FULL_COLUMNS },
+    false,
+  );
   return (data || []).map(rowToPost);
 });
 
@@ -135,18 +195,20 @@ export const getPostBySlug = cache(
     const supabase = getBlogSupabase();
     if (!supabase) throw new Error("Blog database is not configured");
 
-    const { data, error } = await supabase
-      .from("blog_posts")
-      .select(FULL_COLUMNS)
-      .eq("slug", slug)
-      .eq("status", "published")
-      .maybeSingle();
+    // Do not filter noindex: a flagged post stays on its slug and returns 200.
+    const data = await readBlogRows(
+      "getPostBySlug",
+      (columns) =>
+        supabase
+          .from("blog_posts")
+          .select(columns)
+          .eq("slug", slug)
+          .eq("status", "published")
+          .maybeSingle(),
+      { withNoindex: FULL_COLUMNS, withoutNoindex: LEGACY_FULL_COLUMNS },
+      false,
+    );
 
-    // A missing published slug is a real 404; operational failures must not
-    // replace a healthy ISR page with a cached "not found" response.
-    if (error) {
-      throw new Error(`getPostBySlug failed (${error.code || "unknown"})`);
-    }
     if (!data) return null;
     return rowToPost(data);
   },
@@ -162,6 +224,7 @@ export async function getPostsByCategory(
   const all = await getAllPostMetas();
   return all.filter(
     (p) =>
+      !p.noindex &&
       p.category.toLowerCase().replace(/\s+/g, "-") === category.toLowerCase(),
   );
 }
@@ -176,7 +239,7 @@ export async function getRelatedPosts(
   ]);
   if (!post) return [];
 
-  const all = postMetas.filter((p) => p.slug !== slug);
+  const all = postMetas.filter((p) => p.slug !== slug && !p.noindex);
 
   const scored = all.map((p) => {
     let score = 0;
@@ -200,7 +263,8 @@ export async function getAllTags(): Promise<string[]> {
 
 export async function getFeaturedPost(): Promise<BlogPostMeta | undefined> {
   const posts = await getAllPostMetas();
-  return posts.find((p) => p.featured) || posts[0];
+  const visible = posts.filter((p) => !p.noindex);
+  return visible.find((p) => p.featured) || visible[0];
 }
 
 export async function getPostsByCluster(
@@ -209,7 +273,7 @@ export async function getPostsByCluster(
   const cluster = getClusterBySlug(clusterSlug);
   if (!cluster) return [];
 
-  const allPosts = await getAllPostMetas();
+  const allPosts = (await getAllPostMetas()).filter((p) => !p.noindex);
 
   return allPosts.filter((post) => {
     if (post.cluster === clusterSlug) return true;

@@ -79,6 +79,7 @@ export default async function DestinationGuidePage({
     const country = dest.country.toLowerCase();
     relatedPosts = metas
       .filter((p) => {
+        if (p.noindex) return false;
         const title = p.title.toLowerCase();
         const tags = p.tags.map((t) => t.toLowerCase());
         return (

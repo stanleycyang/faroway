@@ -11,7 +11,7 @@ function escapeXml(s: string) {
 }
 
 export async function GET() {
-  const posts = await getAllPosts();
+  const posts = (await getAllPosts()).filter((post) => !post.noindex);
 
   const items = posts
     .map(

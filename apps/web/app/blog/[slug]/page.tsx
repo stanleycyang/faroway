@@ -17,7 +17,12 @@ import { getGuideSlugs, getGuideBySlug } from "@/lib/destination-guides";
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
 export async function generateStaticParams() {
-  return (await getAllPosts()).map((p) => ({ slug: p.slug }));
+  try {
+    return (await getAllPosts()).map((p) => ({ slug: p.slug }));
+  } catch {
+    // In non-configured environments, skip prebuilding blog pages
+    return [];
+  }
 }
 
 export async function generateMetadata({
@@ -33,6 +38,15 @@ export async function generateMetadata({
     title: post.title,
     description: post.description,
     alternates: { canonical: `/blog/${post.slug}` },
+    // Flagged posts stay on this URL (200) but drop out of the index.
+    // googleBot is set too so the root layout's index directive doesn't win.
+    robots: post.noindex
+      ? {
+          index: false,
+          follow: true,
+          googleBot: { index: false, follow: true },
+        }
+      : undefined,
     openGraph: {
       title: post.title,
       description: post.description,
@@ -569,7 +583,8 @@ export default async function BlogPostPage({
                   Plan with Faroway
                 </span>
                 <h2 className="text-3xl font-bold">
-                  Headed to <span className="text-gradient">{candidate.name}</span>?
+                  Headed to{" "}
+                  <span className="text-gradient">{candidate.name}</span>?
                 </h2>
                 <p className="text-slate-600 mt-2">
                   Explore our {candidate.name} guide and helpful trip tools.

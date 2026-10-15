@@ -5,6 +5,7 @@ import {
   getAllClusterSlugs,
   getRelatedClusters,
   getPostsByCluster,
+  type BlogPostMeta,
 } from "@/lib/blog";
 import { BlogCard } from "@/components/blog/BlogCard";
 import { NewsletterCTA } from "@/components/blog/NewsletterCTA";
@@ -64,7 +65,7 @@ export default async function ClusterPage({ params }: PageProps) {
   const cluster = getClusterBySlug(slug);
   if (!cluster) notFound();
 
-  let posts = [];
+  let posts: BlogPostMeta[] = [];
   try {
     posts = await getPostsByCluster(slug);
   } catch {
