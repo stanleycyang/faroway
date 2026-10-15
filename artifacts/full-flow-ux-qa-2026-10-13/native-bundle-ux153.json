@@ -1,9 +1,0 @@
-{
-  "scope": "Current frozen native source throughUX153 (mobile throughUX149); JS bundle compilation, not device execution",
-  "httpStatus": 200,
-  "bytes": 14542174,
-  "sha256": "3e9af35e6aebe8afe51576c0abeee8076d248c67175c64ac5443577f635afe32",
-  "seconds": 2.94,
-  "sourceManifest": "/tmp/faroway-ux-native-source-manifest.json",
-  "sourceFiles": 214
-}

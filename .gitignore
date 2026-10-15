@@ -59,6 +59,9 @@ dist/
 coverage/
 test-results/
 
+# Local QA evidence. Generated review dumps and screenshots stay off the branch.
+artifacts/
+
 # lock files (keep bun.lock, ignore bun.lockb binary)
 bun.lockb
 

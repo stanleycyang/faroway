@@ -28,7 +28,7 @@ export const CreateTripSchema = z
         vibes: z.array(z.string().max(50)).max(10).optional(),
         budget: z.enum(["budget", "moderate", "luxury"]).optional(),
         adults: z.number().int().min(1).max(50).optional(),
-        children: z.number().int().min(0).max(50).optional(),
+        children: z.number().int().min(0).max(49).optional(),
         hotelSearch: HotelSearchDetailsSchema.nullable().optional(),
         interests: z.array(z.string().max(50)).max(20).optional(),
       })
@@ -39,7 +39,6 @@ export const CreateTripSchema = z
     path: ["end_date"],
   });
 
-// GET /api/trips - Fetch all trips for the authenticated user
 export type PendingCreateTrip = z.infer<typeof CreateTripSchema> & {
   requestId: string;
 };

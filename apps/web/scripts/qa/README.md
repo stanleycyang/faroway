@@ -3,7 +3,7 @@
 From the repository root:
 
 ```sh
-node apps/web/scripts/qa/check-private-transactions.mjs artifacts/full-flow-ux-qa-2026-10-13/private-transactions-postgres.json
+node apps/web/scripts/qa/check-private-transactions.mjs artifacts/private-transactions-postgres.json
 ```
 
 Requires Docker and the official `postgres:17.11` image. The runner creates a
@@ -12,7 +12,7 @@ ports. It applies the repository’s actual revision-safe plan-edit and booking
 report migrations to a minimal table substrate, then runs their functions as
 `service_role`. It removes its own container and anonymous volume in `finally`.
 No project credentials, production environment files, or hosted databases are
-used. Output is synthetic test evidence only.
+used. Output is synthetic test evidence only. Write it under `artifacts/`, which is gitignored.
 
 Checks include owner boundaries, lock/unlock/swap persistence, public-link
 revocation after edits, exact replay and changed-request conflicts, receipt and

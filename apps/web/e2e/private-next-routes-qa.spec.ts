@@ -1,5 +1,11 @@
 import { test, expect, type BrowserContext } from "@playwright/test";
-import { writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname } from "node:path";
+
+async function saveEvidence(path: string, body: Buffer) {
+  await mkdir(dirname(path), { recursive: true });
+  await writeFile(path, body);
+}
 
 test.skip(
   process.env.PRIVATE_ROUTE_QA !== "true",
@@ -386,7 +392,7 @@ test("public consent, canceled share sheet and revocation use real Next APIs", a
   expect(privatePreview.headers()["content-type"]).toContain("image/png");
   expect(privatePreview.headers()["cache-control"]).toContain("no-store");
   if (testInfo.project.name === "chromium")
-    await writeFile(
+    await saveEvidence(
       "../../artifacts/full-flow-ux-qa-2026-10-13/private-owner-trip-preview.png",
       await privatePreview.body(),
     );
@@ -447,7 +453,7 @@ test("public consent, canceled share sheet and revocation use real Next APIs", a
     expect(publicPreview.headers()["cache-control"]).toContain("no-store");
     const activeImage = await publicPreview.body();
     if (testInfo.project.name === "chromium")
-      await writeFile(
+      await saveEvidence(
         "../../artifacts/full-flow-ux-qa-2026-10-13/active-shared-trip-preview.png",
         activeImage,
       );
@@ -471,7 +477,7 @@ test("public consent, canceled share sheet and revocation use real Next APIs", a
     const revokedImage = await revokedPreview.body();
     expect(revokedImage.equals(activeImage)).toBe(false);
     if (testInfo.project.name === "chromium")
-      await writeFile(
+      await saveEvidence(
         "../../artifacts/full-flow-ux-qa-2026-10-13/revoked-shared-trip-preview.png",
         revokedImage,
       );

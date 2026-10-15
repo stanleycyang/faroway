@@ -1,4 +1,6 @@
 import { test, expect } from "@playwright/test";
+import { mkdir } from "node:fs/promises";
+import { dirname } from "node:path";
 import { build } from "esbuild";
 let bundle: string;
 test.beforeAll(async () => {
@@ -68,9 +70,10 @@ for (const [kind, title, destination] of [
         ),
       ).toBe(true);
       if (testInfo.project.name === "Mobile Chrome") {
-        await page.screenshot({
-          path: "../../artifacts/full-flow-ux-qa-2026-10-13/root-recovery-phone.png",
-        });
+        const path =
+          "../../artifacts/full-flow-ux-qa-2026-10-13/root-recovery-phone.png";
+        await mkdir(dirname(path), { recursive: true });
+        await page.screenshot({ path });
       }
     }
   });
