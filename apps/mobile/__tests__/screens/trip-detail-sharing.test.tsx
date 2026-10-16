@@ -3,6 +3,9 @@ import { act, create } from 'react-test-renderer';
 jest.mock('../../constants/api', () => ({ API_BASE_URL: 'https://fixture.test' }));
 let mockHasTrip = true;
 let mockCurrentTrip: typeof trip | null = null;
+let mockListTrip: typeof trip;
+let mockFocused = true;
+let mockTripId = 'trip-a';
 const mockGetTrip = jest.fn();
 const mockRefreshSuccess = jest.fn();
 const mockRefreshError = jest.fn();
@@ -21,6 +24,7 @@ const trip = {
   days: [],
   vibes: [],
   createdAt: '2026-10-13',
+  updatedAt: '2026-10-13T00:00:00.000Z',
   status: 'planned',
 };
 jest.mock('../../stores/userStore', () => ({
@@ -31,11 +35,20 @@ jest.mock('../../stores/userStore', () => ({
   ),
 }));
 jest.mock('../../stores/tripStore', () => ({
-  useTripStore: () => ({
-    trips: mockHasTrip ? [trip] : [],
-    currentTrip: mockCurrentTrip,
-    isHydrated: true,
-  }),
+  useTripStore: Object.assign(
+    () => ({
+      trips: mockHasTrip ? [mockListTrip] : [],
+      currentTrip: mockCurrentTrip,
+      isHydrated: true,
+    }),
+    {
+      getState: () => ({
+        trips: mockHasTrip ? [mockListTrip] : [],
+        currentTrip: mockCurrentTrip,
+        isHydrated: true,
+      }),
+    }
+  ),
 }));
 jest.mock('../../hooks/useTrips', () => ({ useTrips: () => ({ getTripById: mockGetTrip }) }));
 jest.mock('react-native', () => ({
@@ -63,7 +76,13 @@ jest.mock('react-native', () => ({
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: 'SafeAreaView' }));
 jest.mock('expo-router', () => ({
   useRouter: () => ({ replace: jest.fn(), back: jest.fn() }),
-  useLocalSearchParams: () => ({ id: 'trip-a' }),
+  useLocalSearchParams: () => ({ id: mockTripId }),
+  useFocusEffect: (effect: () => void | (() => void)) => {
+    const focused = mockFocused;
+    React.useEffect(() => {
+      if (focused) return effect();
+    }, [effect, focused]);
+  },
 }));
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Icon' }));
@@ -93,6 +112,19 @@ jest.mock('../../lib/tripSharing', () => ({
 }));
 import { Alert } from 'react-native';
 import TripDetailScreen from '../../app/trip/[id]';
+
+beforeEach(() => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  jest.clearAllMocks();
+  mockHasTrip = true;
+  mockCurrentTrip = null;
+  mockListTrip = trip;
+  mockFocused = true;
+  mockTripId = trip.id;
+  mockOwner = 'account-a';
+  mockRevision = 0;
+  mockGetTrip.mockReset().mockResolvedValue(trip);
+});
 
 it.each(['confirmed', 'after exit', 'account change'])(
   'native share handles %s',
@@ -213,17 +245,17 @@ it.each(['current', 'failed read', 'after exit', 'account revision'])(
     mockOwner = 'account-a';
     mockRevision = 0;
     let release!: (value: unknown) => void;
-    mockGetTrip.mockReset().mockImplementation(
-      () =>
-        new Promise((yes) => {
-          release = yes;
-        })
-    );
     let renderer!: ReturnType<typeof create>;
     try {
       await act(async () => {
         renderer = create(<TripDetailScreen />);
       });
+      mockGetTrip.mockReset().mockImplementation(
+        () =>
+          new Promise((yes) => {
+            release = yes;
+          })
+      );
       const refreshProps = () =>
         renderer.root.findByType('AnimatedScrollView' as React.ElementType).props.refreshControl
           .props;
@@ -384,5 +416,157 @@ it('offers retry after a temporary server detail-read failure', async () => {
       renderer!.unmount();
     });
     mockHasTrip = true;
+  }
+});
+
+it('shows a newer list revision when reopening with stale current detail', async () => {
+  mockCurrentTrip = trip;
+  mockListTrip = {
+    ...trip,
+    destination: 'Updated Kyoto',
+    updatedAt: '2026-10-14T00:00:00.000Z',
+  };
+  mockGetTrip.mockRejectedValue(new Error('Network request failed'));
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      renderer = create(<TripDetailScreen />);
+    });
+    const headings = renderer.root
+      .findAllByProps({ accessibilityRole: 'header' })
+      .map((node) => node.props.children);
+    expect(headings).toContain('Updated Kyoto');
+    expect(headings).not.toContain('Tokyo');
+    expect(mockGetTrip).toHaveBeenCalledTimes(1);
+    expect(mockGetTrip).toHaveBeenCalledWith(trip.id, expect.any(AbortSignal));
+  } finally {
+    await act(async () => renderer?.unmount());
+  }
+});
+
+it('revalidates each focus and reopening without refetching on a detail update', async () => {
+  mockCurrentTrip = trip;
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      renderer = create(<TripDetailScreen />);
+    });
+    expect(mockGetTrip).toHaveBeenCalledTimes(1);
+    mockCurrentTrip = { ...trip, destination: 'Latest detail' };
+    await act(async () => renderer.update(<TripDetailScreen />));
+    expect(mockGetTrip).toHaveBeenCalledTimes(1);
+    mockFocused = false;
+    await act(async () => renderer.update(<TripDetailScreen />));
+    mockFocused = true;
+    await act(async () => renderer.update(<TripDetailScreen />));
+    expect(mockGetTrip).toHaveBeenCalledTimes(2);
+    await act(async () => renderer.unmount());
+    await act(async () => {
+      renderer = create(<TripDetailScreen />);
+    });
+    expect(mockGetTrip).toHaveBeenCalledTimes(3);
+  } finally {
+    await act(async () => renderer?.unmount());
+  }
+});
+
+it('renders newer manual-refresh detail while the list still has an older revision', async () => {
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      renderer = create(<TripDetailScreen />);
+    });
+    const latest = {
+      ...trip,
+      destination: 'Manually refreshed Kyoto',
+      updatedAt: '2026-10-15T00:00:00.000Z',
+    };
+    mockGetTrip.mockImplementationOnce(async () => {
+      mockCurrentTrip = latest;
+      return latest;
+    });
+    await act(async () => {
+      await renderer.root
+        .findByType('AnimatedScrollView' as React.ElementType)
+        .props.refreshControl.props.onRefresh();
+    });
+    // This plain store mock needs an explicit render to publish its updated value.
+    await act(async () => renderer.update(<TripDetailScreen />));
+    expect(
+      renderer.root
+        .findAllByProps({ accessibilityRole: 'header' })
+        .map((node) => node.props.children)
+    ).toContain('Manually refreshed Kyoto');
+    expect(mockGetTrip).toHaveBeenCalledTimes(2);
+  } finally {
+    await act(async () => renderer?.unmount());
+  }
+});
+
+it('keeps local-only trips available without a detail request', async () => {
+  mockTripId = 'local_trip';
+  mockListTrip = { ...trip, id: mockTripId };
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      renderer = create(<TripDetailScreen />);
+    });
+    expect(mockGetTrip).not.toHaveBeenCalled();
+    expect(
+      renderer.root
+        .findAllByProps({ accessibilityRole: 'header' })
+        .map((node) => node.props.children)
+    ).toContain('Tokyo');
+  } finally {
+    await act(async () => renderer?.unmount());
+  }
+});
+
+it.each(['blur', 'unmount'])('cancels automatic and manual reads on %s', async (exit) => {
+  let renderer!: ReturnType<typeof create>;
+  let finish!: (value: typeof trip) => void;
+  try {
+    await act(async () => {
+      renderer = create(<TripDetailScreen />);
+    });
+    const signal = mockGetTrip.mock.calls[0][1] as AbortSignal;
+    expect(signal.aborted).toBe(false);
+    mockGetTrip.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+    );
+    let refresh!: Promise<void>;
+    await act(async () => {
+      refresh = renderer.root
+        .findByType('AnimatedScrollView' as React.ElementType)
+        .props.refreshControl.props.onRefresh();
+    });
+    expect(mockGetTrip.mock.calls[1][1]).toBe(signal);
+    await act(async () => {
+      if (exit === 'unmount') renderer.unmount();
+      else {
+        mockFocused = false;
+        renderer.update(<TripDetailScreen />);
+      }
+    });
+    expect(signal.aborted).toBe(true);
+    await act(async () => {
+      finish(trip);
+      await refresh;
+    });
+    expect(mockRefreshSuccess).not.toHaveBeenCalled();
+    expect(mockRefreshError).not.toHaveBeenCalled();
+    expect(Alert.alert).not.toHaveBeenCalled();
+    if (exit === 'blur') {
+      mockFocused = true;
+      await act(async () => renderer.update(<TripDetailScreen />));
+      const nextSignal = mockGetTrip.mock.calls[2][1] as AbortSignal;
+      expect(nextSignal).not.toBe(signal);
+      expect(nextSignal.aborted).toBe(false);
+    }
+  } finally {
+    await act(async () => renderer?.unmount());
   }
 });

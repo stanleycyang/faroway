@@ -24,7 +24,7 @@ import {
   FlatList,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -45,6 +45,7 @@ import { USE_NATIVE_DRIVER } from '../../lib/animation';
 import { reviewSavedTripBooking } from '../../lib/savedTripBooking';
 import { formatTripDate, formatTripTime } from '../../lib/tripDate';
 import { collectBookingOptions } from '../../lib/bookingOptions';
+import { selectTripDetail } from '../../lib/tripSummary';
 
 const BookingTripContext = createContext<string | undefined>(undefined);
 const useBookingReview = () => {
@@ -456,6 +457,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   const mounted = useRef(false);
   const shareLock = useRef(false);
   const refreshLock = useRef(false);
+  const detailController = useRef<AbortController | null>(null);
   const [account] = useState(() => {
     const state = useUserStore.getState();
     return { owner: state.user?.id, revision: state.accountRevision };
@@ -489,7 +491,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   const [loadAttempt, setLoadAttempt] = useState(0);
 
   const scrollY = useRef(new Animated.Value(0)).current;
-  const trip = (currentTrip?.id === id ? currentTrip : null) || trips.find((t) => t.id === id);
+  const trip = selectTripDetail(id, trips, currentTrip);
 
   const costReferences = useMemo(() => (trip ? summarizeTripCosts(trip) : []), [trip]);
 
@@ -497,50 +499,56 @@ function TripDetailSession({ id }: { id: string | undefined }) {
 
   const bookableCount = bookableItems.length;
 
-  useEffect(() => {
-    if (trip) {
-      setIsLoadingTrip(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (!id) {
+        setIsLoadingTrip(false);
+        setLoadError('This trip link is incomplete.');
+        return;
+      }
+
+      // Read the cache at focus time so publishing fetched detail does not
+      // restart this request. Cached remote trips still need revalidation.
+      const saved = useTripStore.getState();
+      const cachedTrip = selectTripDetail(id, saved.trips, saved.currentTrip);
+      if (!isHydrated) return;
+
+      if (id.startsWith('local_')) {
+        setIsLoadingTrip(false);
+        setLoadError(cachedTrip ? null : 'This offline trip is not available on this device.');
+        return;
+      }
+
+      const controller = new AbortController();
+      detailController.current = controller;
+      refreshLock.current = false;
+      setRefreshing(false);
+      setIsLoadingTrip(!cachedTrip);
       setLoadError(null);
-      return;
-    }
 
-    if (!id) {
-      setIsLoadingTrip(false);
-      setLoadError('This trip link is incomplete.');
-      return;
-    }
+      getTripById(id, controller.signal)
+        .catch((error: unknown) => {
+          if (!controller.signal.aborted) {
+            const message = error instanceof Error ? error.message : 'Unable to load this trip.';
+            setLoadError(
+              message === 'Failed to fetch' || message === 'Network request failed'
+                ? 'We couldn’t reach Faroway. Check your connection and try again.'
+                : message
+            );
+          }
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setIsLoadingTrip(false);
+        });
 
-    if (!isHydrated) return;
-
-    if (id.startsWith('local_')) {
-      setIsLoadingTrip(false);
-      setLoadError('This offline trip is not available on this device.');
-      return;
-    }
-
-    let cancelled = false;
-    setIsLoadingTrip(true);
-    setLoadError(null);
-
-    getTripById(id)
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          const message = error instanceof Error ? error.message : 'Unable to load this trip.';
-          setLoadError(
-            message === 'Failed to fetch' || message === 'Network request failed'
-              ? 'We couldn’t reach Faroway. Check your connection and try again.'
-              : message
-          );
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoadingTrip(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [getTripById, id, isHydrated, loadAttempt, trip]);
+      return () => {
+        controller.abort();
+        if (detailController.current === controller) detailController.current = null;
+      };
+      // A retry intentionally replaces the focus callback without changing its inputs.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [getTripById, id, isHydrated, loadAttempt])
+  );
 
   // Clamp selectedDay when trip days change (e.g. after refresh with fewer days)
   useEffect(() => {
@@ -561,18 +569,20 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   }, [isAuthenticated, trip?.status]);
 
   const onRefresh = async () => {
-    if (!id || !isActive() || refreshLock.current) return;
+    const controller = detailController.current;
+    if (!id || !isActive() || refreshLock.current || !controller || controller.signal.aborted)
+      return;
     refreshLock.current = true;
     setRefreshing(true);
     hapticFeedback.light();
     try {
       // Use getTripById which properly transforms itinerary data with booking URLs
-      const latest = await getTripById(id);
-      if (!isActive()) return;
+      const latest = await getTripById(id, controller.signal);
+      if (!isActive() || controller.signal.aborted) return;
       if (!latest) throw new Error('The latest saved trip could not be loaded.');
       hapticFeedback.success();
     } catch (error) {
-      if (!isActive()) return;
+      if (!isActive() || controller.signal.aborted) return;
       console.error('Failed to refresh trip:', error);
       hapticFeedback.error();
       Alert.alert(
@@ -580,8 +590,10 @@ function TripDetailSession({ id }: { id: string | undefined }) {
         'Your last loaded trip is kept. Check your connection and available device storage, then try again.'
       );
     } finally {
-      refreshLock.current = false;
-      if (isActive()) setRefreshing(false);
+      if (detailController.current === controller) {
+        refreshLock.current = false;
+        if (isActive()) setRefreshing(false);
+      }
     }
   };
 
