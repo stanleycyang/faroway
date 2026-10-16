@@ -1,3 +1,7 @@
+import {
+  HOTEL_SEARCH_CONSENT_VERSION,
+  type HotelSearchDetails,
+} from "@faroway/constants";
 import { parseTripDate } from "./trips/date-duration";
 
 const CREATE_DRAFT_STORAGE_PREFIX = "faroway-create-draft:";
@@ -123,4 +127,48 @@ export function parseCreateDraftDate(value: unknown): Date | undefined {
   if (typeof value !== "string" || !value) return undefined;
   const date = parseTripDate(value);
   return Number.isNaN(date.getTime()) ? undefined : date;
+}
+
+/** Restore editing state, not search eligibility. Submission still uses the
+ * strict hotel validator. JSON nulls preserve invalid numeric input as NaN. */
+export function restoreHotelSearchDraft(
+  value: unknown,
+): HotelSearchDetails | null {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
+  const draft = value as Record<string, unknown>;
+  if (
+    draft.consentVersion !== HOTEL_SEARCH_CONSENT_VERSION ||
+    typeof draft.countryCode !== "string" ||
+    draft.countryCode.length > 2 ||
+    typeof draft.guestNationality !== "string" ||
+    draft.guestNationality.length > 2 ||
+    !Array.isArray(draft.rooms) ||
+    draft.rooms.length < 1 ||
+    draft.rooms.length > 4
+  )
+    return null;
+  const numeric = (item: unknown): item is number | null =>
+    item === null || (typeof item === "number" && Number.isFinite(item));
+  const rooms: HotelSearchDetails["rooms"] = [];
+  for (const item of draft.rooms) {
+    if (!item || typeof item !== "object" || Array.isArray(item)) return null;
+    const room = item as Record<string, unknown>;
+    if (
+      !numeric(room.adults) ||
+      !Array.isArray(room.children) ||
+      room.children.length > 6 ||
+      !room.children.every(numeric)
+    )
+      return null;
+    rooms.push({
+      adults: room.adults ?? NaN,
+      children: room.children.map((age) => age ?? NaN),
+    });
+  }
+  return {
+    countryCode: draft.countryCode,
+    guestNationality: draft.guestNationality,
+    consentVersion: draft.consentVersion,
+    rooms,
+  };
 }
