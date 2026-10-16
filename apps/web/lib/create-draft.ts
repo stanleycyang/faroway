@@ -149,6 +149,7 @@ export function restoreHotelSearchDraft(
     return null;
   const numeric = (item: unknown): item is number | null =>
     item === null || (typeof item === "number" && Number.isFinite(item));
+  // The free-text age input can exceed submission limits while being edited.
   const rooms: HotelSearchDetails["rooms"] = [];
   for (const item of draft.rooms) {
     if (!item || typeof item !== "object" || Array.isArray(item)) return null;
@@ -156,7 +157,6 @@ export function restoreHotelSearchDraft(
     if (
       !numeric(room.adults) ||
       !Array.isArray(room.children) ||
-      room.children.length > 6 ||
       !room.children.every(numeric)
     )
       return null;

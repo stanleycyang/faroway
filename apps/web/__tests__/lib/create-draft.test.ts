@@ -91,6 +91,25 @@ describe("hotel editor draft restoration", () => {
       expect(validateHotelSearchDetails(restored)).toBe(false);
     }
   });
+  it.each([6, 7, 8])(
+    "restores %i child ages without relaxing submission limits",
+    (count) => {
+      const draft = {
+        ...details,
+        rooms: [
+          {
+            adults: 2,
+            children: Array.from({ length: count }, (_, index) => index + 1),
+          },
+        ],
+      };
+      const restored = restoreHotelSearchDraft(
+        JSON.parse(JSON.stringify(draft)),
+      );
+      expect(restored).toEqual(draft);
+      expect(validateHotelSearchDetails(restored, count + 2)).toBe(count <= 6);
+    },
+  );
   it("requires explicit versioned consent and safe room structure", () => {
     for (const value of [
       null,

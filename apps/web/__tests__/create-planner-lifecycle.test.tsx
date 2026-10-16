@@ -402,6 +402,12 @@ test.each([
   { name: "incomplete nationality", nationality: "", ages: [7], enabled: true },
   { name: "invalid child age", nationality: "CA", ages: [NaN], enabled: true },
   { name: "out-of-range age", nationality: "CA", ages: [18], enabled: true },
+  {
+    name: "seven child ages",
+    nationality: "CA",
+    ages: [1, 2, 3, 4, 5, 6, 7],
+    enabled: true,
+  },
   { name: "disabled feature", nationality: "CA", ages: [7], enabled: false },
 ])(
   "hotel editing draft survives autosave and remount: $name",
@@ -424,11 +430,12 @@ test.each([
       rooms: [{ adults: 2, children: ages }],
       consentVersion: "hotel-search-nuitee-v1",
     };
+    const travelers = 2 + ages.length;
     saveEditorDraft(storage, {
       selectedPlace: { name: "Paris", source: "catalog", placeId: "paris" },
       startDate: "2099-06-01",
       endDate: "2099-06-03",
-      travelers: 3,
+      travelers,
       travelerType: "family",
       selectedVibes: [],
       budget: "moderate",
@@ -460,7 +467,7 @@ test.each([
         expect(retained.hotelSearch).toEqual(
           enabled ? JSON.parse(JSON.stringify(hotelSearch)) : null,
         );
-        expect(retained.travelers).toBe(3);
+        expect(retained.travelers).toBe(travelers);
         const fields = renderer.root.findAllByType(HotelSearchFields);
         const submit = renderer.root
           .findAllByType("button")
