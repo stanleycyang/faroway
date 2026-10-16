@@ -397,3 +397,109 @@ test("restored draft ignores invalid choices and deduplicates supported vibes", 
     vi.unstubAllGlobals();
   }
 });
+
+test.each([
+  { name: "incomplete nationality", nationality: "", ages: [7], enabled: true },
+  { name: "invalid child age", nationality: "CA", ages: [NaN], enabled: true },
+  { name: "out-of-range age", nationality: "CA", ages: [18], enabled: true },
+  {
+    name: "seven child ages",
+    nationality: "CA",
+    ages: [1, 2, 3, 4, 5, 6, 7],
+    enabled: true,
+  },
+  { name: "disabled feature", nationality: "CA", ages: [7], enabled: false },
+])(
+  "hotel editing draft survives autosave and remount: $name",
+  async ({ nationality, ages, enabled }) => {
+    (
+      globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+    ).IS_REACT_ACT_ENVIRONMENT = true;
+    mocks.owner = "owner-a";
+    mocks.accountRevision = 0;
+    vi.stubEnv("NEXT_PUBLIC_HOTEL_SEARCH_ENABLED", String(enabled));
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
+    };
+    const hotelSearch = {
+      countryCode: "FR",
+      guestNationality: nationality,
+      rooms: [{ adults: 2, children: ages }],
+      consentVersion: "hotel-search-nuitee-v1",
+    };
+    const travelers = 2 + ages.length;
+    saveEditorDraft(storage, {
+      selectedPlace: { name: "Paris", source: "catalog", placeId: "paris" },
+      startDate: "2099-06-01",
+      endDate: "2099-06-03",
+      travelers,
+      travelerType: "family",
+      selectedVibes: [],
+      budget: "moderate",
+      hotelSearch,
+    });
+    vi.stubGlobal("sessionStorage", storage);
+    vi.stubGlobal("localStorage", {
+      getItem: () => null,
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    });
+    vi.stubGlobal("window", {
+      location: { search: "" },
+      history: { replaceState: vi.fn() },
+    });
+    const fetchMock = vi.fn(() => {
+      throw new Error("Unexpected network request");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    let renderer!: ReturnType<typeof create>;
+    try {
+      for (let mount = 0; mount < 2; mount++) {
+        await act(async () => {
+          renderer = create(<CreateTripPage />);
+        });
+        const retained = JSON.parse(
+          values.get("faroway-create-editor-draft")!,
+        ).draft;
+        expect(retained.hotelSearch).toEqual(
+          enabled ? JSON.parse(JSON.stringify(hotelSearch)) : null,
+        );
+        expect(retained.travelers).toBe(travelers);
+        const fields = renderer.root.findAllByType(HotelSearchFields);
+        const submit = renderer.root
+          .findAllByType("button")
+          .find((button) =>
+            button.children.some(
+              (child) =>
+                typeof child === "string" &&
+                child.includes("Generate itinerary"),
+            ),
+          )!;
+        if (enabled) {
+          expect(fields).toHaveLength(1);
+          expect(fields[0].props.value).toEqual(hotelSearch);
+          expect(
+            fields[0].findByProps({ type: "checkbox" }).props.checked,
+          ).toBe(true);
+          expect(submit.props.disabled).toBe(true);
+        } else {
+          expect(fields).toHaveLength(0);
+          expect(submit.props.disabled).toBe(false);
+        }
+        await act(async () => {
+          renderer.unmount();
+        });
+      }
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => {
+        renderer?.unmount();
+      });
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  },
+);

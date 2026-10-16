@@ -1,3 +1,7 @@
+import {
+  HOTEL_SEARCH_CONSENT_VERSION,
+  validateHotelSearchDetails,
+} from "@faroway/constants";
 import { describe, expect, it } from "vitest";
 import {
   saveCreateDraft,
@@ -5,6 +9,7 @@ import {
   saveEditorDraft,
   readEditorDraft,
   clearEditorDraft,
+  restoreHotelSearchDraft,
 } from "@/lib/create-draft";
 
 function createStorage() {
@@ -54,5 +59,66 @@ describe("same-tab setup draft", () => {
     expect(readEditorDraft(storage, 86_402_000)).toBeNull();
     storage.setItem("faroway-create-editor-draft", "invalid json");
     expect(readEditorDraft(storage, 2000)).toBeNull();
+  });
+});
+
+describe("hotel editor draft restoration", () => {
+  const details = {
+    countryCode: "FR",
+    guestNationality: "US",
+    consentVersion: HOTEL_SEARCH_CONSENT_VERSION,
+    rooms: [{ adults: 2, children: [6] }],
+  };
+  it("preserves incomplete nationality and room work without making it valid", () => {
+    const incomplete = { ...details, guestNationality: "" };
+    const restored = restoreHotelSearchDraft(
+      JSON.parse(JSON.stringify(incomplete)),
+    );
+    expect(restored).toEqual(incomplete);
+    expect(validateHotelSearchDetails(restored, 3)).toBe(false);
+    expect(restoreHotelSearchDraft(details)).toEqual(details);
+  });
+  it("does not turn invalid numeric input into valid guests after JSON autosave", () => {
+    for (const rooms of [
+      [{ adults: 2, children: [NaN] }],
+      [{ adults: 0, children: [18] }],
+      [{ adults: NaN, children: [] }],
+    ]) {
+      const restored = restoreHotelSearchDraft(
+        JSON.parse(JSON.stringify({ ...details, rooms })),
+      );
+      expect(restored?.rooms).toEqual(rooms);
+      expect(validateHotelSearchDetails(restored)).toBe(false);
+    }
+  });
+  it.each([6, 7, 8])(
+    "restores %i child ages without relaxing submission limits",
+    (count) => {
+      const draft = {
+        ...details,
+        rooms: [
+          {
+            adults: 2,
+            children: Array.from({ length: count }, (_, index) => index + 1),
+          },
+        ],
+      };
+      const restored = restoreHotelSearchDraft(
+        JSON.parse(JSON.stringify(draft)),
+      );
+      expect(restored).toEqual(draft);
+      expect(validateHotelSearchDetails(restored, count + 2)).toBe(count <= 6);
+    },
+  );
+  it("requires explicit versioned consent and safe room structure", () => {
+    for (const value of [
+      null,
+      {},
+      { ...details, consentVersion: undefined },
+      { ...details, rooms: [{ adults: 2, children: "6" }] },
+      { ...details, rooms: [null] },
+      { ...details, rooms: [] },
+    ])
+      expect(restoreHotelSearchDraft(value)).toBeNull();
   });
 });

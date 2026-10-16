@@ -60,6 +60,7 @@ import {
   saveEditorDraft,
   readEditorDraft,
   clearEditorDraft,
+  restoreHotelSearchDraft,
 } from "@/lib/create-draft";
 
 const destinations = destinationCatalog.map((destination) => ({
@@ -263,12 +264,11 @@ function CreateTripPlanner({
       )
         setBudget(draft.budget);
       setShowAdvanced(draft.showAdvanced === true);
-      if (
-        hotelSearchEnabled() &&
-        validateHotelSearchDetails(draft.hotelSearch)
-      ) {
-        setHotelSearch(draft.hotelSearch);
-        setTravelers(hotelGuestCounts(draft.hotelSearch).travelers);
+      if (hotelSearchEnabled()) {
+        const restoredHotelSearch = restoreHotelSearchDraft(draft.hotelSearch);
+        setHotelSearch(restoredHotelSearch);
+        if (validateHotelSearchDetails(restoredHotelSearch))
+          setTravelers(hotelGuestCounts(restoredHotelSearch).travelers);
       }
       return;
     }
