@@ -1,4 +1,5 @@
 "use client";
+import { useHydrated } from "@/hooks/useHydrated";
 import {
   formatTripDate,
   getTripDuration,
@@ -45,6 +46,7 @@ export function TripHeader({
   backUrl = "/dashboard",
   showActions = true,
 }: TripHeaderProps) {
+  const hydrated = useHydrated();
   const formatDate = formatTripDate;
 
   const formatCost = (amount: number, currency: string) => {
@@ -71,11 +73,13 @@ export function TripHeader({
         <div className="flex h-20 items-center justify-between">
           <Link
             href={backUrl}
-            aria-label="Back to saved trips"
+            aria-label={
+              backUrl === "/" ? "Faroway home" : "Back to saved trips"
+            }
             className="flex min-h-11 items-center gap-2 rounded-full bg-black/20 px-3 text-sm font-semibold backdrop-blur"
           >
             <ArrowLeft className="h-4 w-4" />
-            My trips
+            {backUrl === "/" ? "Home" : "My trips"}
           </Link>
           <Link
             href="/"
@@ -89,8 +93,9 @@ export function TripHeader({
             <button
               type="button"
               onClick={onShare}
+              disabled={!hydrated || !onShare}
               aria-label="Share trip"
-              className="flex h-11 w-11 items-center justify-center rounded-full bg-black/20 backdrop-blur hover:bg-black/40"
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-black/20 backdrop-blur hover:bg-black/40 disabled:cursor-wait disabled:opacity-50"
             >
               <Share2 className="h-5 w-5" />
             </button>

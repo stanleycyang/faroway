@@ -106,6 +106,7 @@ export function parseStreamingJson(rawData: string): unknown | null {
 }
 
 interface StreamingEventData {
+  chapter?: string;
   step?: string;
   progress?: number;
   message?: string;
@@ -118,7 +119,43 @@ interface StreamingEventData {
 }
 
 function isStreamingEventData(value: unknown): value is StreamingEventData {
-  return value !== null && typeof value === "object";
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+  const data = value as Record<string, unknown>;
+  if (
+    data.chapter != null &&
+    (typeof data.chapter !== "string" || !data.chapter.trim())
+  )
+    return false;
+  if (data.message != null && typeof data.message !== "string") return false;
+  if (data.step != null && typeof data.step !== "string") return false;
+  if (
+    data.progress != null &&
+    (typeof data.progress !== "number" ||
+      !Number.isFinite(data.progress) ||
+      data.progress < 0 ||
+      data.progress > 100)
+  )
+    return false;
+  if (
+    data.count != null &&
+    (typeof data.count !== "number" ||
+      !Number.isSafeInteger(data.count) ||
+      data.count < 0)
+  )
+    return false;
+  if (
+    data.searchProgress != null &&
+    (typeof data.searchProgress !== "object" ||
+      Array.isArray(data.searchProgress) ||
+      !Object.values(data.searchProgress).every(
+        (status) => typeof status === "string",
+      ))
+  )
+    return false;
+  for (const key of ["days", "blocks", "spec"]) {
+    if (data[key] != null && !Array.isArray(data[key])) return false;
+  }
+  return true;
 }
 
 /** Observe the durable planning job through the read-only SSE endpoint.
@@ -140,6 +177,7 @@ export function useTripGeneration(
   const [state, setState] = useState<TripGenerationState>(initialState);
   const [connectionAttempt, setConnectionAttempt] = useState(0);
   const openedJob = useRef<string | null>(null);
+  const specChapters = useRef(new Map<string, StreamingSpecBlock[]>());
   const reconnect = useCallback(() => {
     if (completed || !enabled) return;
     setState((previous) => ({
@@ -224,9 +262,12 @@ export function useTripGeneration(
         case "spec-block":
           if (Array.isArray(data.blocks) && data.blocks.length > 0) {
             const blocks = data.blocks;
+            // Durable reconnects replay chapters; update each chapter in place.
+            const chapter = data.chapter || `legacy:${JSON.stringify(blocks)}`;
+            specChapters.current.set(chapter, blocks);
             setState((prev) => ({
               ...prev,
-              specBlocks: [...prev.specBlocks, ...blocks],
+              specBlocks: [...specChapters.current.values()].flat(),
             }));
           }
           break;
@@ -287,6 +328,7 @@ export function useTripGeneration(
     source.addEventListener("open", () => {
       if (terminal) return;
       const resuming = openedJob.current === job;
+      if (!resuming) specChapters.current.clear();
       openedJob.current = job;
       setState((previous) => ({
         ...(resuming ? previous : initialState),

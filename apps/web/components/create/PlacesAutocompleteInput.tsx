@@ -22,6 +22,7 @@ interface PlacesAutocompleteInputProps {
 
 const DEBOUNCE_MS = 300;
 const MIN_QUERY_LENGTH = 2;
+const SEARCH_TIMEOUT_MS = 15_000;
 
 export function PlacesAutocompleteInput({
   onSelect,
@@ -29,9 +30,6 @@ export function PlacesAutocompleteInput({
 }: PlacesAutocompleteInputProps) {
   const [query, setQuery] = useState("");
   const [predictions, setPredictions] = useState<Prediction[]>([]);
-  const [localResults, setLocalResults] = useState<
-    { name: string; country: string }[]
-  >([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [apiAvailable, setApiAvailable] = useState(true);
@@ -82,17 +80,15 @@ export function PlacesAutocompleteInput({
     [],
   );
 
-  const filterLocal = useCallback(
-    (q: string) => {
-      const lower = q.toLowerCase();
-      return localDestinations.filter(
-        (d) =>
-          d.name.toLowerCase().includes(lower) ||
-          d.country.toLowerCase().includes(lower),
-      );
-    },
-    [localDestinations],
-  );
+  const localQuery = query.trim().toLowerCase();
+  const localResults =
+    localQuery.length < MIN_QUERY_LENGTH
+      ? []
+      : localDestinations.filter(
+          (destination) =>
+            destination.name.toLowerCase().includes(localQuery) ||
+            destination.country.toLowerCase().includes(localQuery),
+        );
 
   const handleInputChange = (value: string) => {
     setQuery(value);
@@ -104,13 +100,9 @@ export function PlacesAutocompleteInput({
 
     if (value.length < MIN_QUERY_LENGTH) {
       setPredictions([]);
-      setLocalResults([]);
       setIsLoading(false);
       return;
     }
-
-    // Always compute local results immediately
-    setLocalResults(filterLocal(value));
 
     if (!apiAvailable) return;
 
@@ -119,12 +111,20 @@ export function PlacesAutocompleteInput({
       const controller = new AbortController();
       abortRef.current = controller;
 
+      const isCurrent = () =>
+        abortRef.current === controller && !controller.signal.aborted;
+      const deadline = setTimeout(() => {
+        if (!isCurrent()) return;
+        controller.abort();
+        setIsLoading(false);
+      }, SEARCH_TIMEOUT_MS);
       try {
         const res = await fetch(
           `/api/places/autocomplete?input=${encodeURIComponent(value)}`,
           { signal: controller.signal },
         );
 
+        if (!isCurrent()) return;
         if (res.status === 501) {
           // No API key configured — fall back to local only
           setApiAvailable(false);
@@ -132,14 +132,32 @@ export function PlacesAutocompleteInput({
           return;
         }
 
-        const data = await res.json();
-        if (!controller.signal.aborted) {
-          setPredictions(data.predictions ?? []);
+        if (!res.ok) throw new Error("Destination search failed");
+        const data: unknown = await res.json();
+        if (isCurrent()) {
+          const results =
+            data && typeof data === "object" && "predictions" in data
+              ? data.predictions
+              : undefined;
+          setPredictions(
+            Array.isArray(results)
+              ? results.filter(
+                  (item): item is Prediction =>
+                    item !== null &&
+                    typeof item === "object" &&
+                    typeof item.placeId === "string" &&
+                    typeof item.mainText === "string" &&
+                    typeof item.secondaryText === "string",
+                )
+              : [],
+          );
           setIsLoading(false);
         }
       } catch (err: unknown) {
         if (err instanceof Error && err.name === "AbortError") return;
-        setIsLoading(false);
+        if (isCurrent()) setIsLoading(false);
+      } finally {
+        clearTimeout(deadline);
       }
     }, DEBOUNCE_MS);
   };
@@ -150,7 +168,6 @@ export function PlacesAutocompleteInput({
     setIsOpen(false);
     setQuery(dest.name);
     setPredictions([]);
-    setLocalResults([]);
     onSelect({
       name: dest.name,
       source: "catalog",
@@ -162,7 +179,6 @@ export function PlacesAutocompleteInput({
     abortRef.current?.abort();
     setQuery("");
     setPredictions([]);
-    setLocalResults([]);
     setIsLoading(false);
     setIsOpen(false);
     inputRef.current?.focus();

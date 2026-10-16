@@ -1,8 +1,12 @@
 "use client";
+import {
+  CreateTripSchema,
+  type PendingCreateTrip,
+} from "@/lib/trips/create-trip-command";
 import { requestPlanningConsent } from "@/lib/ai/planning-consent-client";
 
 import React, { useEffect, useState, useRef } from "react";
-import Image from "next/image";
+import { ResilientImage as Image } from "@/components/ResilientImage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
@@ -31,7 +35,15 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { destinations as destinationCatalog } from "@/lib/planner-destination-catalog";
-import { IMAGE_PATHS, getImageUrl } from "@faroway/constants";
+import {
+  IMAGE_PATHS,
+  getImageUrl,
+  validateHotelSearchDetails,
+  hotelGuestCounts,
+  type HotelSearchDetails,
+} from "@faroway/constants";
+import { HotelSearchFields } from "@/components/trips/HotelSearchFields";
+import { hotelSearchEnabled } from "@/lib/trips/hotel-quotes";
 import {
   PlacesAutocompleteInput,
   type PlaceResult,
@@ -42,6 +54,7 @@ import {
   type PlannerDestination,
 } from "@/lib/planner-destination";
 import {
+  parseCreateDraftDate,
   saveCreateDraft,
   takeCreateDraft,
   saveEditorDraft,
@@ -95,11 +108,29 @@ interface StoredCreateDraft {
   travelerType: string;
   selectedVibes: string[];
   showAdvanced: boolean;
+  hotelSearch?: HotelSearchDetails | null;
 
   budget?: (typeof budgetOptions)[number]["id"];
 }
 
 export default function CreateTripPage() {
+  const { session, loading, accountRevision } = useUser();
+  return (
+    <CreateTripPlanner
+      key={`${session?.user.id ?? "guest"}:${accountRevision ?? 0}`}
+      session={session}
+      authLoading={loading}
+    />
+  );
+}
+
+function CreateTripPlanner({
+  session,
+  authLoading,
+}: {
+  session: ReturnType<typeof useUser>["session"];
+  authLoading: boolean;
+}) {
   const router = useRouter();
   const [draftLoaded, setDraftLoaded] = useState(false);
   const scrollToSection = (id: string) => {
@@ -107,7 +138,13 @@ export default function CreateTripPage() {
     section?.scrollIntoView({ behavior: "instant", block: "start" });
     section?.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true });
   };
-  const { session, loading: authLoading } = useUser();
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const [selectedPlace, setSelectedPlace] = useState<SelectedPlace | null>(
     null,
   );
@@ -115,24 +152,17 @@ export default function CreateTripPage() {
   const [startDate, setStartDate] = useState<Date | undefined>(undefined);
   const [endDate, setEndDate] = useState<Date | undefined>(undefined);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [hotelSearch, setHotelSearch] = useState<HotelSearchDetails | null>(
+    null,
+  );
   const [travelers, setTravelers] = useState(2);
   const [budget, setBudget] =
     useState<(typeof budgetOptions)[number]["id"]>("moderate");
   const [travelerType, setTravelerType] = useState("couple");
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
   const submissionLock = useRef(false);
-  const [pendingRequest, setPendingRequest] = useState<{
-    requestId: string;
-    destination: string;
-    start_date: string;
-    end_date: string;
-    travelers: number;
-    budget: string;
-    preferences: {
-      travelerType: string;
-      vibes: string[];
-    };
-  } | null>(null);
+  const [pendingRequest, setPendingRequest] =
+    useState<PendingCreateTrip | null>(null);
   useEffect(() => {
     setPendingRequest(null);
     if (!session?.user.id) return;
@@ -141,16 +171,18 @@ export default function CreateTripPage() {
         `faroway:pending-create:${session.user.id}`,
       );
       const value = saved ? JSON.parse(saved) : null;
-      if (
-        value?.requestId &&
-        value?.destination &&
-        value?.start_date &&
-        value?.end_date
-      ) {
-        setPendingRequest(value);
+      const parsed = CreateTripSchema.safeParse(value);
+      if (parsed.success && parsed.data.requestId) {
+        setPendingRequest({ ...parsed.data, requestId: parsed.data.requestId });
+      } else if (saved) {
+        setGenerateError(
+          "Your previous request couldn’t be read. Check My Trips before starting a new trip.",
+        );
       }
     } catch {
-      /* A new request can still be created once storage is available. */
+      setGenerateError(
+        "Your unfinished request couldn’t be read. Check My Trips before starting a new trip.",
+      );
     }
   }, [session?.user.id]);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -187,26 +219,42 @@ export default function CreateTripPage() {
     }
 
     if (draft) {
-      const restoredStart = draft.startDate
-        ? new Date(draft.startDate)
-        : undefined;
-      const restoredEnd = draft.endDate ? new Date(draft.endDate) : undefined;
+      const restoredStart = parseCreateDraftDate(draft.startDate);
+      const restoredEnd = parseCreateDraftDate(draft.endDate);
 
       setSelectedPlace(plannerDestination(draft.selectedPlace, destinations));
       if (restoredStart && !Number.isNaN(restoredStart.getTime())) {
         setStartDate(restoredStart);
       }
-      if (restoredEnd && !Number.isNaN(restoredEnd.getTime())) {
+      if (restoredEnd && (!restoredStart || restoredEnd >= restoredStart)) {
         setEndDate(restoredEnd);
       }
-      if (typeof draft.travelers === "number") {
-        setTravelers(Math.max(1, Math.min(50, draft.travelers)));
+      if (
+        typeof draft.travelers === "number" &&
+        Number.isInteger(draft.travelers) &&
+        draft.travelers >= 1 &&
+        draft.travelers <= 50
+      ) {
+        setTravelers(draft.travelers);
       }
-      if (typeof draft.travelerType === "string") {
+      if (
+        typeof draft.travelerType === "string" &&
+        travelerTypes.some((type) => type.id === draft.travelerType)
+      ) {
         setTravelerType(draft.travelerType);
       }
       if (Array.isArray(draft.selectedVibes)) {
-        setSelectedVibes(draft.selectedVibes.slice(0, 5));
+        setSelectedVibes(
+          [
+            ...new Set(
+              draft.selectedVibes.filter(
+                (value): value is string =>
+                  typeof value === "string" &&
+                  vibes.some((vibe) => vibe.id === value),
+              ),
+            ),
+          ].slice(0, 5),
+        );
       }
       if (
         draft.budget === "budget" ||
@@ -214,7 +262,14 @@ export default function CreateTripPage() {
         draft.budget === "luxury"
       )
         setBudget(draft.budget);
-      setShowAdvanced(Boolean(draft.showAdvanced));
+      setShowAdvanced(draft.showAdvanced === true);
+      if (
+        hotelSearchEnabled() &&
+        validateHotelSearchDetails(draft.hotelSearch)
+      ) {
+        setHotelSearch(draft.hotelSearch);
+        setTravelers(hotelGuestCounts(draft.hotelSearch).travelers);
+      }
       return;
     }
 
@@ -254,12 +309,13 @@ export default function CreateTripPage() {
     try {
       saveEditorDraft(sessionStorage, {
         selectedPlace,
-        startDate: startDate?.toISOString() || "",
-        endDate: endDate?.toISOString() || "",
+        startDate: startDate ? format(startDate, "yyyy-MM-dd") : "",
+        endDate: endDate ? format(endDate, "yyyy-MM-dd") : "",
         travelers,
         travelerType,
         selectedVibes,
         showAdvanced,
+        hotelSearch,
         budget,
       } satisfies StoredCreateDraft);
     } catch {
@@ -274,6 +330,7 @@ export default function CreateTripPage() {
     travelerType,
     selectedVibes,
     showAdvanced,
+    hotelSearch,
     budget,
   ]);
 
@@ -291,7 +348,12 @@ export default function CreateTripPage() {
     );
   };
 
-  const canGenerate = selectedPlace && startDate && endDate;
+  const canGenerate =
+    selectedPlace &&
+    startDate &&
+    endDate &&
+    (hotelSearch === null ||
+      validateHotelSearchDetails(hotelSearch, travelers));
 
   const handleSelectRecommended = (dest: (typeof destinations)[number]) => {
     setSelectedPlace({
@@ -331,12 +393,13 @@ export default function CreateTripPage() {
       if (!canGenerate) return;
       const draft: StoredCreateDraft = {
         selectedPlace,
-        startDate: startDate.toISOString(),
-        endDate: endDate.toISOString(),
+        startDate: format(startDate, "yyyy-MM-dd"),
+        endDate: format(endDate, "yyyy-MM-dd"),
         travelers,
         travelerType,
         selectedVibes,
         showAdvanced,
+        hotelSearch,
         budget,
       };
       try {
@@ -357,7 +420,7 @@ export default function CreateTripPage() {
     let createdTripId: string | null = null;
     const storageKey = `faroway:pending-create:${session.user.id}`;
     try {
-      const payload = pendingRequest ?? {
+      const candidate = pendingRequest ?? {
         requestId: crypto.randomUUID(),
         destination: selectedPlace!.name,
         start_date: format(startDate!, "yyyy-MM-dd"),
@@ -367,25 +430,52 @@ export default function CreateTripPage() {
         preferences: {
           travelerType,
           vibes: selectedVibes,
+          ...(hotelSearch
+            ? {
+                hotelSearch,
+                adults: hotelGuestCounts(hotelSearch).adults,
+                children: hotelGuestCounts(hotelSearch).children,
+              }
+            : {}),
         },
       };
-      const planningHeaders = await requestPlanningConsent();
+      const validated = CreateTripSchema.safeParse(candidate);
+      if (!validated.success || !validated.data.requestId)
+        throw new Error("Review your trip details before planning.");
+      const payload: PendingCreateTrip = {
+        ...validated.data,
+        requestId: validated.data.requestId,
+      };
+      const planningHeaders = await requestPlanningConsent(session.user.id);
+      if (!mounted.current) return;
       // Persist before any write: a lost response or reload reuses the same ID.
       localStorage.setItem(storageKey, JSON.stringify(payload));
       setPendingRequest(payload);
+      const createHeaders = await planningHeaders();
+      if (!mounted.current) return;
       const response = await fetch("/api/trips", {
         method: "POST",
         signal: AbortSignal.timeout(25_000),
-        headers: await planningHeaders(),
+        headers: createHeaders,
         body: JSON.stringify(payload),
       });
 
+      if (!mounted.current) return;
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
         throw new Error(data.error || "Failed to create trip");
       }
 
       const { trip } = await response.json();
+      if (!mounted.current) return;
+      if (
+        typeof trip?.id !== "string" ||
+        trip.id !== payload.requestId ||
+        trip.user_id !== session.user.id
+      )
+        throw new Error(
+          "Trip creation could not be confirmed. Check My Trips before retrying.",
+        );
       createdTripId = trip.id;
       try {
         clearEditorDraft(sessionStorage);
@@ -395,19 +485,23 @@ export default function CreateTripPage() {
 
       setProgressMessage("Starting AI trip planner...");
 
+      const generationHeaders = await planningHeaders();
+      if (!mounted.current) return;
       const genResponse = await fetch(`/api/trips/${trip.id}/generate`, {
         method: "POST",
         signal: AbortSignal.timeout(25_000),
-        headers: await planningHeaders(),
+        headers: generationHeaders,
         body: JSON.stringify({
           preferences: {
-            vibes: pendingRequest?.preferences.vibes ?? selectedVibes,
+            vibes: pendingRequest?.preferences?.vibes ?? selectedVibes,
           },
         }),
       });
 
+      if (!mounted.current) return;
       if (!genResponse.ok) {
         const genData = await genResponse.json().catch(() => ({}));
+        if (!mounted.current) return;
         if (genResponse.status !== 409) {
           throw new Error(
             genData.error || "Failed to start itinerary generation",
@@ -420,6 +514,7 @@ export default function CreateTripPage() {
       setPendingRequest(null);
       router.push(`/trips/${trip.id}`);
     } catch (err) {
+      if (!mounted.current) return;
       if (createdTripId) {
         // The trip exists even if starting generation failed or its reply was lost.
         try {
@@ -440,7 +535,7 @@ export default function CreateTripPage() {
       setProgressMessage("");
     } finally {
       submissionLock.current = false;
-      setIsGenerating(false);
+      if (mounted.current) setIsGenerating(false);
     }
   };
 
@@ -453,6 +548,7 @@ export default function CreateTripPage() {
           <Image
             src={selectedRecommendedDest.image}
             alt={`${selectedPlace.name}, ${selectedRecommendedDest.country}`}
+            fallbackAlt={`Illustrated travel route for ${selectedPlace.name}`}
             fill
             sizes="(max-width: 1024px) 100vw, 760px"
             className="object-cover"
@@ -515,6 +611,7 @@ export default function CreateTripPage() {
               <Image
                 src={dest.image}
                 alt={`${dest.name}, ${dest.country}`}
+                fallbackAlt={`Illustrated travel route for ${dest.name}`}
                 fill
                 priority={index < 2}
                 sizes="192px"
@@ -543,7 +640,9 @@ export default function CreateTripPage() {
     ? "Choose a destination to get started"
     : !startDate || !endDate
       ? "Choose your dates to continue"
-      : "Your trip is ready to plan";
+      : !canGenerate
+        ? "Complete your hotel room details or turn off hotel searches"
+        : "Your trip is ready to plan";
 
   return (
     <div
@@ -643,8 +742,10 @@ export default function CreateTripPage() {
                   <div className="flex items-center gap-4">
                     <button
                       aria-label="Decrease travelers"
-                      onClick={() => setTravelers(Math.max(1, travelers - 1))}
-                      disabled={travelers <= 1}
+                      onClick={() =>
+                        setTravelers((current) => Math.max(1, current - 1))
+                      }
+                      disabled={travelers <= 1 || hotelSearch !== null}
                       className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <Minus className="w-4 h-4" />
@@ -657,8 +758,10 @@ export default function CreateTripPage() {
                     </span>
                     <button
                       aria-label="Increase travelers"
-                      onClick={() => setTravelers(Math.min(50, travelers + 1))}
-                      disabled={travelers >= 50}
+                      onClick={() =>
+                        setTravelers((current) => Math.min(50, current + 1))
+                      }
+                      disabled={travelers >= 50 || hotelSearch !== null}
                       className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <Plus className="w-4 h-4" />
@@ -774,6 +877,37 @@ export default function CreateTripPage() {
                 ))}
               </div>
             </section>
+            {hotelSearchEnabled() && (
+              <section
+                id="planner-hotels"
+                aria-label="Hotel preferences"
+                className="scroll-mt-24 border-t border-gray-100 pt-8"
+              >
+                <h2 tabIndex={-1} className="text-lg font-bold outline-none">
+                  Your stay preferences
+                </h2>
+                <p className="mt-2 text-sm text-slate-600">
+                  Optional room details for hotel quotes. No booking is made.
+                </p>
+                <HotelSearchFields
+                  value={hotelSearch}
+                  travelers={travelers}
+                  onChange={(value) => {
+                    setHotelSearch(value);
+                    if (
+                      value &&
+                      hotelSearch &&
+                      JSON.stringify(value.rooms) !==
+                        JSON.stringify(hotelSearch.rooms)
+                    ) {
+                      const count = hotelGuestCounts(value).travelers;
+                      if (Number.isInteger(count) && count >= 1 && count <= 50)
+                        setTravelers(count);
+                    }
+                  }}
+                />
+              </section>
+            )}
             <div id="planner-notices" className="scroll-mt-24">
               {pendingRequest && (
                 <p role="status" className="mt-3 text-sm text-gray-700">
@@ -810,6 +944,12 @@ export default function CreateTripPage() {
                   role="alert"
                 >
                   {generateError}
+                  <Link
+                    href="/dashboard"
+                    className="mt-2 block font-semibold underline underline-offset-4"
+                  >
+                    Check My Trips
+                  </Link>
                 </div>
               )}
             </div>
@@ -823,6 +963,7 @@ export default function CreateTripPage() {
                 <Image
                   src={preview.image}
                   alt={`${preview.name}, ${preview.country}`}
+                  fallbackAlt={`Illustrated travel route for ${preview.name}`}
                   fill
                   priority
                   sizes="(max-width: 1024px) 90vw, 360px"
@@ -937,7 +1078,9 @@ export default function CreateTripPage() {
                       ? "planner-destination"
                       : !startDate || !endDate
                         ? "planner-dates"
-                        : "planner-destination",
+                        : !canGenerate
+                          ? "planner-hotels"
+                          : "planner-destination",
                 )
               }
               className="block w-full text-center text-xs leading-5 text-gray-600 lg:mt-1 lg:text-left"

@@ -30,6 +30,7 @@ export default async function TripDetailPage({ params }: TripDetailPageProps) {
 
   return (
     <TripDetailClient
+      key={`${user.id}:${id}`}
       tripId={id}
       initialData={initialData}
       initialShareUrl={initialShareUrl}

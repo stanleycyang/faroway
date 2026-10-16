@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNotificationContext } from '../../components/NotificationProvider';
 import { View, Text, StyleSheet, TouchableOpacity, Switch, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -54,16 +54,41 @@ const defaultSettings: Record<string, boolean> = {
 };
 
 export default function NotificationsScreen() {
+  const { user, accountRevision } = useUserStore();
+  return <NotificationsEditor key={`${user?.id}:${accountRevision}`} />;
+}
+
+function NotificationsEditor() {
   const router = useRouter();
   const push = useNotificationContext();
-  const { user } = useUserStore();
+  const { user, accountRevision } = useUserStore();
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+  const isCurrent = useCallback(
+    (accountId: string) =>
+      mounted.current &&
+      useUserStore.getState().user?.id === accountId &&
+      useUserStore.getState().accountRevision === accountRevision,
+    [accountRevision]
+  );
   const [settings, setSettings] = useState<Record<string, boolean>>(defaultSettings);
   const [savingSetting, setSavingSetting] = useState<string | null>(null);
   const [loadingPreferences, setLoadingPreferences] = useState(true);
+  const [preferencesError, setPreferencesError] = useState<string | null>(null);
+  const [loadedAccountId, setLoadedAccountId] = useState<string | null>(null);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const savingRef = useRef(false);
   useEffect(() => {
     let active = true;
     const accountId = user?.id;
     setSettings(defaultSettings);
+    setLoadedAccountId(null);
+    setPreferencesError(null);
     setLoadingPreferences(true);
     if (!accountId) {
       setLoadingPreferences(false);
@@ -71,20 +96,31 @@ export default function NotificationsScreen() {
     }
     void getVerifiedNotificationPreferences(accountId)
       .then((value) => {
-        if (active && useUserStore.getState().user?.id === accountId) setSettings(value);
+        if (active && isCurrent(accountId)) {
+          setSettings(value);
+          setLoadedAccountId(accountId);
+        }
       })
-      .catch(() => {})
+      .catch(() => {
+        if (active && isCurrent(accountId)) {
+          setPreferencesError(
+            'Your saved notification choices couldn’t be loaded. Try again before making changes.'
+          );
+        }
+      })
       .finally(() => {
         if (active) setLoadingPreferences(false);
       });
     return () => {
       active = false;
     };
-  }, [user?.id]);
+  }, [user?.id, loadAttempt, isCurrent]);
 
   const toggleSetting = async (id: string) => {
-    hapticFeedback.selection();
     const accountId = user?.id;
+    if (!accountId || loadedAccountId !== accountId || savingRef.current) return;
+    savingRef.current = true;
+    hapticFeedback.selection();
     const previous = settings;
     const updated = { ...settings, [id]: !settings[id] };
     setSettings(updated);
@@ -93,17 +129,18 @@ export default function NotificationsScreen() {
     try {
       if (!accountId) throw new Error('Sign in to change notification settings.');
       await updateNotificationPreferences(accountId, updated);
-      if (useUserStore.getState().user?.id !== accountId) return;
+      if (!isCurrent(accountId)) return;
       const current = useUserStore.getState().user;
       if (current) useUserStore.getState().setUser({ ...current, notificationSettings: updated });
     } catch (error: unknown) {
-      if (useUserStore.getState().user?.id !== accountId) return;
+      if (!isCurrent(accountId)) return;
       setSettings(previous);
       hapticFeedback.error();
       const message = error instanceof Error ? error.message : 'Please try again.';
       Alert.alert('Couldn’t save notification settings', message);
     } finally {
-      setSavingSetting(null);
+      savingRef.current = false;
+      if (isCurrent(accountId)) setSavingSetting(null);
     }
   };
 
@@ -153,6 +190,32 @@ export default function NotificationsScreen() {
             }}
           />
         </View>
+        {loadingPreferences && (
+          <Text
+            accessibilityRole="text"
+            accessibilityLiveRegion="polite"
+            style={styles.settingDescription}
+          >
+            Loading your saved choices…
+          </Text>
+        )}
+        {preferencesError && (
+          <View style={styles.settingItem}>
+            <View style={styles.settingContent}>
+              <Text accessibilityRole="alert" style={styles.settingDescription}>
+                {preferencesError}
+              </Text>
+            </View>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Retry notification preferences"
+              onPress={() => setLoadAttempt((attempt) => attempt + 1)}
+              style={styles.backButton}
+            >
+              <Ionicons name="refresh" size={22} color="#475569" />
+            </TouchableOpacity>
+          </View>
+        )}
         <View style={styles.settingsList}>
           {notificationSettings.map((setting) => (
             <View key={setting.id} style={styles.settingItem}>
@@ -172,7 +235,9 @@ export default function NotificationsScreen() {
                 }}
                 thumbColor="#fff"
                 ios_backgroundColor={colors.surface[700]}
-                disabled={loadingPreferences || savingSetting !== null}
+                disabled={
+                  loadingPreferences || loadedAccountId !== user?.id || savingSetting !== null
+                }
                 accessibilityLabel={setting.title}
                 accessibilityHint={setting.description}
               />

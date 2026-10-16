@@ -1,7 +1,9 @@
 "use client";
 
+import { parseTripDate } from "@/lib/trips/date-duration";
 import { formatEstimate, knownEstimate } from "@/lib/trips/budget";
 
+import { FlightLeg } from "./FlightLeg";
 import React, { useState } from "react";
 import {
   ChevronDown,
@@ -13,7 +15,6 @@ import {
   DollarSign,
   Hotel,
   ExternalLink,
-  Plane,
 } from "lucide-react";
 import {
   ActivityCard,
@@ -72,25 +73,24 @@ export function ItineraryDay({
   transport,
 }: ItineraryDayProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
+  const displayTips = Array.isArray(tips)
+    ? tips.filter(
+        (tip): tip is string =>
+          typeof tip === "string" && tip.trim().length > 0,
+      )
+    : [];
 
-  const formatDate = (dateStr: string) => {
-    // Append T12:00:00 to avoid UTC midnight → previous day in negative-offset timezones
-    const d = new Date(dateStr.includes("T") ? dateStr : `${dateStr}T12:00:00`);
-    return d.toLocaleDateString("en-US", {
-      weekday: "long",
-      month: "short",
-      day: "numeric",
-    });
+  const formatDate = (value: string) => {
+    const parsed = parseTripDate(value);
+    return Number.isNaN(parsed.getTime())
+      ? "Date unavailable"
+      : parsed.toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "short",
+          day: "numeric",
+        });
   };
-
-  const formatCost = (amount: number, currency: string) => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency,
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
+  const formatCost = formatEstimate;
 
   const safeBlock = (block: TimeBlock): TimeBlock => {
     const rawActivities = Array.isArray(block?.activities)
@@ -206,11 +206,14 @@ export function ItineraryDay({
                     <h4 className="font-bold text-gray-900 text-sm truncate">
                       {hotel.name}
                     </h4>
-                    {hotel.starRating && (
-                      <span className="text-xs text-yellow-500 flex-shrink-0">
-                        {"★".repeat(Math.min(5, hotel.starRating))}
-                      </span>
-                    )}
+                    {typeof hotel.starRating === "number" &&
+                      Number.isInteger(hotel.starRating) &&
+                      hotel.starRating >= 1 &&
+                      hotel.starRating <= 5 && (
+                        <span className="text-xs text-yellow-500 flex-shrink-0">
+                          {"★".repeat(hotel.starRating)}
+                        </span>
+                      )}
                   </div>
                   <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
                     <span className="font-bold text-gray-800 text-sm">
@@ -250,100 +253,24 @@ export function ItineraryDay({
             </div>
           )}
 
-          {/* Transport Card */}
+          {/* Transport estimates preserve provider-local times and missing facts. */}
           {transport && (
-            <div className="mb-6 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-2xl p-5 text-white shadow-lg shadow-blue-500/20 overflow-hidden relative">
-              {/* Background pattern */}
-              <div className="absolute inset-0 opacity-[0.06]">
-                <div className="absolute -right-8 -top-8 w-40 h-40 rounded-full border-[20px] border-white" />
-                <div className="absolute -left-4 -bottom-4 w-24 h-24 rounded-full border-[12px] border-white" />
-              </div>
-
-              <div className="relative">
-                {/* Header */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
-                      <Plane className="h-4 w-4 text-white" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold">{transport.provider}</p>
-                      <p className="text-[11px] text-blue-200">
-                        {transport.type === "flight"
-                          ? "Flight"
-                          : transport.type}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-xl font-black">
-                      {formatCost(transport.price, transport.currency)}
-                    </p>
-                    <p className="text-[11px] text-blue-200">per person</p>
-                  </div>
-                </div>
-
-                {/* Route */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="text-center min-w-[60px]">
-                    <p className="text-lg font-bold tracking-wide">
-                      {transport.departure.airport}
-                    </p>
-                    <p className="text-xs text-blue-200">
-                      {new Date(
-                        transport.departure.dateTime,
-                      ).toLocaleTimeString("en-US", {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </p>
-                  </div>
-                  <div className="flex-1 flex flex-col items-center">
-                    <p className="text-[11px] text-blue-200 font-medium">
-                      {Math.floor(transport.duration / 60)}h{" "}
-                      {transport.duration % 60}m
-                    </p>
-                    <div className="w-full flex items-center gap-1 my-1">
-                      <div className="w-2 h-2 rounded-full bg-white/60" />
-                      <div className="flex-1 h-px bg-white/30 relative">
-                        <Plane className="h-3.5 w-3.5 text-white absolute -top-[7px] left-1/2 -translate-x-1/2 rotate-90" />
-                      </div>
-                      <div className="w-2 h-2 rounded-full bg-white/60" />
-                    </div>
-                    <p className="text-[11px] text-blue-200">
-                      {transport.stops === 0
-                        ? "Direct"
-                        : `${transport.stops} stop${transport.stops > 1 ? "s" : ""}`}
-                    </p>
-                  </div>
-                  <div className="text-center min-w-[60px]">
-                    <p className="text-lg font-bold tracking-wide">
-                      {transport.arrival.airport}
-                    </p>
-                    <p className="text-xs text-blue-200">
-                      {new Date(transport.arrival.dateTime).toLocaleTimeString(
-                        "en-US",
-                        {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        },
-                      )}
-                    </p>
-                  </div>
-                </div>
-
-                {/* CTA */}
-                {transport.affiliateUrl && (
-                  <button
-                    disabled
-                    title="This provider checkout is not available on Faroway yet."
-                    className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 transition-all shadow-md active:scale-[0.98]"
-                  >
-                    Flight booking unavailable
-                    <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-                  </button>
-                )}
-              </div>
+            <div className="mb-6 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 p-5 text-white">
+              <FlightLeg transport={transport} label="Transport option" />
+              <p className="mt-3 text-xs text-blue-100">
+                Planning estimate. Confirm the party size, current price, and
+                availability with the provider.
+              </p>
+              {transport.affiliateUrl && (
+                <button
+                  disabled
+                  className="mt-3 min-h-11 w-full rounded-xl bg-white px-5 py-3 text-sm font-bold text-blue-700"
+                >
+                  {transport.type === "flight"
+                    ? "Flight booking unavailable"
+                    : "Transport booking unavailable"}
+                </button>
+              )}
             </div>
           )}
 
@@ -384,7 +311,7 @@ export function ItineraryDay({
           </div>
 
           {/* Daily Tips */}
-          {tips && tips.length > 0 && (
+          {displayTips.length > 0 && (
             <div className="mt-6 p-4 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl border border-primary-100/50">
               <div className="flex items-center gap-2 text-primary-700 font-bold mb-2">
                 <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center">
@@ -393,7 +320,7 @@ export function ItineraryDay({
                 <span className="text-sm">Insider Tips</span>
               </div>
               <ul className="space-y-1.5">
-                {tips.map((tip, i) => (
+                {displayTips.map((tip, i) => (
                   <li
                     key={i}
                     className="text-sm text-primary-700 flex items-start gap-2"

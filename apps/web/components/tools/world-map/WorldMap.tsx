@@ -245,12 +245,12 @@ export function WorldMap({ visits, readOnly, onCountryClick }: WorldMapProps) {
                           event.pointerType !== "touch"
                         )
                           return;
+                        clearLongPress();
                         pointerStartRef.current = {
                           x: event.clientX,
                           y: event.clientY,
                         };
                         longPressFiredRef.current = false;
-                        clearLongPress();
                         longPressTimerRef.current = setTimeout(() => {
                           longPressFiredRef.current = true;
                           onCountryClick(iso, name, "edit");

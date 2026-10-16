@@ -140,7 +140,7 @@ import { FadeInSection, SlideInSection } from '@/components/animations';
 Detect when elements enter viewport:
 
 ```tsx
-import { useInView } from '@/hooks';
+import { useInView } from '@/hooks/useInView';
 
 function MyComponent() {
   const { ref, isInView } = useInView({ threshold: 0.5 });

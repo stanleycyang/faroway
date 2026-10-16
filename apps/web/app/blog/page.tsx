@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Metadata } from "next";
 import { getAllPostMetas, paginate, POSTS_PER_PAGE } from "@/lib/blog";
 import { BlogCard } from "@/components/blog/BlogCard";
@@ -95,7 +96,7 @@ export default async function BlogIndex({
       {/* Hero */}
       <section className="container mx-auto px-6 max-w-7xl pt-8 pb-4">
         <div className="text-center mb-10">
-          <h1 className="text-4xl md:text-5xl font-bold text-gradient mb-4">
+          <h1 className="font-editorial text-4xl md:text-5xl text-slate-900 mb-4">
             Travel Blog
           </h1>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
@@ -114,29 +115,51 @@ export default async function BlogIndex({
       </section>
 
       {/* Post Grid */}
-      <section className="container mx-auto px-6 max-w-7xl py-12">
-        <div className="flex items-baseline justify-between mb-8">
-          <h2 className="text-2xl font-bold text-slate-900">
-            {isFirstPage ? "Latest Articles" : `Page ${currentPage}`}
-          </h2>
-          {totalPages > 1 && (
-            <span className="text-sm text-gray-500">
-              Page {currentPage} of {totalPages}
-            </span>
-          )}
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {posts.map((post, index) => (
-            <BlogCard key={post.slug} post={post} eager={index < 3} />
-          ))}
-        </div>
+      {posts.length > 0 && (
+        <section className="container mx-auto px-6 max-w-7xl py-12">
+          <div className="flex items-baseline justify-between mb-8">
+            <h2 className="text-2xl font-bold text-slate-900">
+              {isFirstPage ? "Latest Articles" : `Page ${currentPage}`}
+            </h2>
+            {totalPages > 1 && (
+              <span className="text-sm text-gray-500">
+                Page {currentPage} of {totalPages}
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {posts.map((post, index) => (
+              <BlogCard key={post.slug} post={post} eager={index < 3} />
+            ))}
+          </div>
 
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          basePath="/blog"
-        />
-      </section>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            basePath="/blog"
+          />
+        </section>
+      )}
+
+      {allPosts.length === 0 && (
+        <section
+          aria-label="Journal updates"
+          className="mx-auto max-w-xl px-6 py-16 text-center"
+        >
+          <h2 className="font-editorial text-3xl text-slate-900">
+            The next story is on its way.
+          </h2>
+          <p className="mt-4 text-slate-600">
+            Explore our destination guides while we prepare more travel stories.
+          </p>
+          <Link
+            href="/destinations"
+            className="mt-6 inline-block rounded-xl bg-slate-900 px-6 py-3 font-semibold text-white hover:bg-slate-800"
+          >
+            Explore destinations
+          </Link>
+        </section>
+      )}
 
       {/* Newsletter — only on last page or single page */}
       {(currentPage === totalPages || totalPages <= 1) && (

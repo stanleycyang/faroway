@@ -95,10 +95,10 @@ export default function WelcomeScreen() {
   useEffect(() => {
     // Auto-redirect if already onboarded
     if (hasCompletedOnboarding && isAuthenticated) {
-      setTimeout(() => router.replace('/(tabs)'), 1500);
+      const redirect = setTimeout(() => router.replace('/(tabs)'), 1500);
+      return () => clearTimeout(redirect);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hasCompletedOnboarding, isAuthenticated]);
+  }, [hasCompletedOnboarding, isAuthenticated, router]);
 
   const handleGetStarted = () => {
     if (hasCompletedOnboarding) {
@@ -155,8 +155,7 @@ export default function WelcomeScreen() {
           </Animated.Text>
 
           <Animated.Text style={[styles.subtitle, { opacity: subtitleOpacity }]}>
-            Your AI-powered travel genie.{'\n'}
-            Wish for the perfect trip. We'll make it happen.
+            Your next journey starts here.{'\n'}A day-by-day plan, shaped around you.
           </Animated.Text>
         </View>
 

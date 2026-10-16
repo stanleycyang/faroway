@@ -118,7 +118,7 @@ export function Button({
 
   const getTextStyles = (): TextStyle => {
     const variantStyles: Record<string, TextStyle> = {
-      primary: { color: '#fff' },
+      primary: { color: colors.action.onPrimary },
       secondary: { color: '#0f172a' },
       outline: { color: '#0f172a' },
       ghost: { color: colors.surface[600] },
@@ -177,7 +177,9 @@ export function Button({
       >
         {isPrimary ? (
           <LinearGradient
-            colors={disabled ? ['#cbd5e1', '#cbd5e1'] : ['#F97066', '#F59E0B']}
+            colors={
+              disabled ? ['#cbd5e1', '#cbd5e1'] : [colors.action.primary, colors.action.primaryEnd]
+            }
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={[StyleSheet.absoluteFill, { borderRadius: borderRadius.lg }]}

@@ -2,6 +2,7 @@
 
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
+import { PLANNING_DISCLOSURE } from "../lib/ai/planning-disclosure";
 
 type Mode = "stream" | "baseline" | "both";
 
@@ -89,7 +90,48 @@ class SampleError extends Error {
   }
 }
 
+if (process.argv.includes("--help")) {
+  console.log(`Measure the signed-in saved-trip planning flow. Each sample saves a trip and starts planning.
+Set FAROWAY_PERF_ACCESS_TOKEN to a traveler session token (never a service-role key).
+Review this AI disclosure before setting FAROWAY_PERF_AI_DISCLOSURE=${PLANNING_DISCLOSURE.version}:
+${PLANNING_DISCLOSURE.message}
+Options: --base-url URL --samples N --mode stream --timeout-ms N --json-output PATH.
+Historical comparison only: --mode both --baseline-base-url URL --stream-base-url URL.
+The current unsaved baseline endpoint is retired.`);
+  process.exit(0);
+}
+const accessToken = process.env.FAROWAY_PERF_ACCESS_TOKEN?.trim();
+if (!accessToken || /\s/.test(accessToken))
+  throw new Error(
+    "Set FAROWAY_PERF_ACCESS_TOKEN to a signed-in traveler session token. See --help.",
+  );
+if (process.env.FAROWAY_PERF_AI_DISCLOSURE !== PLANNING_DISCLOSURE.version)
+  throw new Error(
+    "Review the current AI disclosure with --help, then set FAROWAY_PERF_AI_DISCLOSURE to its version before requesting planning.",
+  );
+const requestHeaders = (extra: Record<string, string> = {}) => ({
+  Authorization: `Bearer ${accessToken}`,
+  "x-faroway-ai-disclosure": PLANNING_DISCLOSURE.version,
+  ...extra,
+});
+
 const args = parseArgs(process.argv.slice(2));
+if (!["stream", "baseline", "both"].includes(args.mode))
+  throw new Error("Mode must be stream, baseline, or both.");
+if (!Number.isSafeInteger(args.samples) || args.samples < 1)
+  throw new Error("Samples must be a positive integer.");
+if (
+  !Number.isFinite(args.timeoutMs) ||
+  args.timeoutMs <= 0 ||
+  args.timeoutMs > 2_147_483_647
+)
+  throw new Error("Timeout must be a positive finite timer duration.");
+if (
+  ![args.simulatedRttMs, args.simulatedDownKbps].every(
+    (value) => Number.isFinite(value) && value >= 0,
+  )
+)
+  throw new Error("Network simulation values must be finite and non-negative.");
 
 console.log(
   `Measuring itinerary latency: mode=${args.mode}, samples=${args.samples}, profile=${args.profile}, baselineBase=${args.baselineBaseUrl}, streamBase=${args.streamBaseUrl}`,
@@ -153,6 +195,10 @@ if (args.jsonOutput) {
   console.log(`\nWrote JSON results to ${args.jsonOutput}`);
 }
 
+process.exitCode = summaries.some((summary) => summary.failedSamples > 0)
+  ? 1
+  : 0;
+
 function parseArgs(argv: string[]): Args {
   const values = new Map<string, string>();
   for (let i = 0; i < argv.length; i++) {
@@ -180,7 +226,7 @@ function parseArgs(argv: string[]): Args {
     baselineBaseUrl,
     streamBaseUrl,
     samples: Number(values.get("samples") || "5"),
-    mode: ((values.get("mode") || "both") as Mode) || "both",
+    mode: ((values.get("mode") || "stream") as Mode) || "stream",
     destination: values.get("destination") || "Tokyo",
     startDate: values.get("start-date") || dateOffset(45),
     endDate: values.get("end-date") || dateOffset(49),
@@ -231,6 +277,7 @@ async function measureStream(
   signal: AbortSignal,
 ): Promise<StreamMetrics> {
   const input = {
+    requestId: crypto.randomUUID(),
     destination: args.destination,
     start_date: args.startDate,
     end_date: args.endDate,
@@ -247,7 +294,7 @@ async function measureStream(
   await simulateRequestTransit(args, signal);
   const tripRes = await fetch(`${args.streamBaseUrl}/api/trips`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: requestHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(input),
     signal,
   });
@@ -265,15 +312,29 @@ async function measureStream(
     trip: { id: string };
   };
 
+  if (
+    !trip ||
+    typeof trip.id !== "string" ||
+    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+      trip.id,
+    )
+  )
+    throw new SampleError(
+      "Trip creation response did not contain a valid saved-trip ID",
+    );
   const generateStart = performance.now();
   await simulateRequestTransit(args, signal);
   const generateRes = await fetch(
     `${args.streamBaseUrl}/api/trips/${trip.id}/generate`,
-    { method: "POST", headers: { "Content-Type": "application/json" }, signal },
+    {
+      method: "POST",
+      headers: requestHeaders({ "Content-Type": "application/json" }),
+      signal,
+    },
   );
   await simulateResponseTransit(args, signal);
   const generateAckMs = performance.now() - generateStart;
-  if (!generateRes.ok && generateRes.status !== 409) {
+  if (!generateRes.ok) {
     throw new SampleError(
       await httpFailureMessage("Generate kickoff failed", generateRes),
       {
@@ -287,8 +348,8 @@ async function measureStream(
   const streamRes = await fetch(
     `${args.streamBaseUrl}/api/trips/${trip.id}/stream`,
     {
-      method: "POST",
-      headers: { Accept: "text/event-stream" },
+      method: "GET",
+      headers: requestHeaders({ Accept: "text/event-stream" }),
       signal,
     },
   );
@@ -377,7 +438,7 @@ async function measureBaseline(
   await simulateRequestTransit(args, signal);
   const res = await fetch(`${args.baselineBaseUrl}/api/itinerary`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: requestHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify({
       destination: args.destination,
       startDate: args.startDate,

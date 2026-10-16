@@ -1,3 +1,8 @@
+jest.mock('../../lib/tripAccountScope', () => ({
+  captureTripAccount: () => {
+    throw new Error('Search account scope is outside this API-wrapper suite');
+  },
+}));
 jest.mock('../../lib/planningConsent', () => ({ withPlanningConsent: jest.fn() }));
 // Mock expo-constants before importing api module
 jest.mock('expo-constants', () => ({

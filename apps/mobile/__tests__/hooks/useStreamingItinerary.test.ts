@@ -32,6 +32,19 @@ import {
 } from '../../hooks/useStreamingItinerary';
 
 describe('streaming itinerary SSE parsing', () => {
+  it('accepts tagged chapters without dropping their blocks at the native wire boundary', () => {
+    const payload = {
+      chapter: 'hotels',
+      blocks: [{ type: 'HotelCard', props: { name: 'Saved stay' } }],
+    };
+    const packet = `event: spec-block\ndata: ${JSON.stringify(payload)}\n\n`;
+    const { events, remaining } = parseSSEBuffer(packet);
+    expect(remaining).toBe('');
+    expect(events).toHaveLength(1);
+    expect(events[0].type).toBe('spec-block');
+    expect(parseStreamingJson(events[0].data)).toEqual(payload);
+  });
+
   it('parses complete SSE events and keeps an incomplete trailing event buffered', () => {
     const { events, remaining } = parseSSEBuffer(
       'event: spec-block\ndata: {"blocks":[{"type":"TripSummary"}]}\n\n' +

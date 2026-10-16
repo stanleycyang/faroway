@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, Loader2, Star } from "lucide-react";
 
 const feedbackTags = [
@@ -25,6 +25,14 @@ export function TripFeedback({ tripId }: TripFeedbackProps) {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const submitLock = useRef(false);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
 
   const toggleTag = (value: string) => {
     setSelectedTags((current) =>
@@ -37,7 +45,8 @@ export function TripFeedback({ tripId }: TripFeedbackProps) {
   };
 
   const submit = async () => {
-    if (!score || submitting) return;
+    if (!score || submitLock.current) return;
+    submitLock.current = true;
 
     setSubmitting(true);
     setError(null);
@@ -45,6 +54,7 @@ export function TripFeedback({ tripId }: TripFeedbackProps) {
       const response = await fetch(`/api/trips/${tripId}/feedback`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        signal: AbortSignal.timeout(15_000),
         body: JSON.stringify({
           score,
           wouldUseAgain: wouldUseAgain ?? undefined,
@@ -57,15 +67,23 @@ export function TripFeedback({ tripId }: TripFeedbackProps) {
       if (!response.ok) {
         throw new Error("Couldn’t save your feedback. Please try again.");
       }
-      setSubmitted(true);
+      const confirmation = await response.json();
+      if (confirmation?.success !== true) {
+        throw new Error(
+          "We couldn’t confirm your feedback was saved. Please try again.",
+        );
+      }
+      if (mounted.current) setSubmitted(true);
     } catch (submitError) {
+      if (!mounted.current) return;
       setError(
         submitError instanceof Error
           ? submitError.message
           : "Couldn’t save your feedback.",
       );
     } finally {
-      setSubmitting(false);
+      submitLock.current = false;
+      if (mounted.current) setSubmitting(false);
     }
   };
 
@@ -73,7 +91,7 @@ export function TripFeedback({ tripId }: TripFeedbackProps) {
     return (
       <section className="mt-8 rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
         <Check className="mx-auto mb-2 h-6 w-6 text-emerald-700" />
-        <h2 className="font-bold text-emerald-950">Thanks for the signal</h2>
+        <h2 className="font-bold text-emerald-950">Thanks for your feedback</h2>
         <p className="mt-1 text-sm text-emerald-800">
           Your feedback will guide the next itinerary-quality improvements.
         </p>
@@ -90,7 +108,7 @@ export function TripFeedback({ tripId }: TripFeedbackProps) {
         A quick rating helps us improve recommendations and pacing.
       </p>
 
-      <fieldset className="mt-5">
+      <fieldset disabled={submitting} className="mt-5">
         <legend className="sr-only">Itinerary usefulness rating</legend>
         <div className="flex flex-wrap gap-2">
           {[1, 2, 3, 4, 5].map((value) => (
@@ -117,7 +135,7 @@ export function TripFeedback({ tripId }: TripFeedbackProps) {
 
       {score ? (
         <>
-          <fieldset className="mt-6">
+          <fieldset disabled={submitting} className="mt-6">
             <legend className="text-sm font-semibold text-gray-900">
               Would you use Faroway for another trip?
             </legend>
@@ -143,7 +161,7 @@ export function TripFeedback({ tripId }: TripFeedbackProps) {
             </div>
           </fieldset>
 
-          <fieldset className="mt-6">
+          <fieldset disabled={submitting} className="mt-6">
             <legend className="text-sm font-semibold text-gray-900">
               What stood out?
             </legend>
@@ -173,6 +191,7 @@ export function TripFeedback({ tripId }: TripFeedbackProps) {
             Anything else?{" "}
             <span className="font-normal text-gray-500">(optional)</span>
             <textarea
+              disabled={submitting}
               value={comment}
               maxLength={1000}
               onChange={(event) => setComment(event.target.value)}

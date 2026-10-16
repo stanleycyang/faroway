@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { offlineStorage } from '../lib/offline';
 import { logger } from '../lib/logger';
+import { useUserStore } from './userStore';
 
 export interface Activity {
   id: string;
@@ -11,6 +12,7 @@ export interface Activity {
   duration: string;
   type: 'activity' | 'restaurant' | 'transport' | 'accommodation' | 'attraction' | 'experience';
   price?: string;
+  estimatedCost?: { amount: number; currency: string; perPerson?: boolean };
   bookingUrl?: string;
   affiliatePartner?: string;
   image?: string;
@@ -29,6 +31,7 @@ export interface Hotel {
   name: string;
   description: string;
   pricePerNight: number;
+  currency?: string;
   totalPrice: number;
   rating: number;
   reviewCount: number;
@@ -54,9 +57,9 @@ export interface TripDay {
     provider: string;
     departure: { airport: string; city: string; dateTime: string };
     arrival: { airport: string; city: string; dateTime: string };
-    duration: number;
-    stops: number;
-    price: number;
+    duration?: number;
+    stops?: number;
+    price?: number;
     currency: string;
     bookingUrl?: string;
     affiliatePartner?: string;
@@ -114,6 +117,8 @@ interface TripStore {
   setGenerationProgress: (progress: number) => void;
   finishGeneration: (trip: Trip) => void;
   saveTrip: (trip: Trip) => void;
+  applyQueuedTrip: (trip: Trip) => void;
+  applyQueuedDeletion: (id: string) => void;
   deleteTrip: (id: string) => void;
   setCurrentTrip: (trip: Trip | null) => void;
 
@@ -181,6 +186,21 @@ export const useTripStore = create<TripStore>((set, _get) => ({
     }));
   },
 
+  // The queue already durably owns these changes. Keep the canonical cache
+  // intact so discarding a pending edit reveals the previous saved snapshot.
+  applyQueuedTrip: (trip) =>
+    set((state) => ({
+      trips: state.trips.some((item) => item.id === trip.id)
+        ? state.trips.map((item) => (item.id === trip.id ? trip : item))
+        : [trip, ...state.trips],
+      currentTrip: state.currentTrip?.id === trip.id ? trip : state.currentTrip,
+    })),
+  applyQueuedDeletion: (id) =>
+    set((state) => ({
+      trips: state.trips.filter((trip) => trip.id !== id),
+      currentTrip: state.currentTrip?.id === id ? null : state.currentTrip,
+    })),
+
   deleteTrip: (id) => {
     // Delete from offline storage
     offlineStorage.deleteTrip(id).catch((error) => {
@@ -197,11 +217,24 @@ export const useTripStore = create<TripStore>((set, _get) => ({
 
   // Hydrate store from offline storage
   hydrateFromOffline: async () => {
+    const account = useUserStore.getState();
+    const isCurrent = () => {
+      const current = useUserStore.getState();
+      return (
+        current.user?.id === account.user?.id && current.accountRevision === account.accountRevision
+      );
+    };
+    if (!account.user) {
+      set({ trips: [], currentTrip: null, isHydrated: true });
+      return;
+    }
     try {
       const trips = await offlineStorage.loadTrips();
+      if (!isCurrent()) return;
       set({ trips, isHydrated: true });
       logger.info(`[TripStore] Hydrated ${trips.length} trips from offline storage`);
     } catch (error) {
+      if (!isCurrent()) return;
       logger.warn('[TripStore] Failed to hydrate from offline:', error);
       set({ isHydrated: true });
     }

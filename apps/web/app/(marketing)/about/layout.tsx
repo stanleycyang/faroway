@@ -1,24 +1,23 @@
 import type { Metadata } from "next";
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
+const description =
+  "Discover Faroway’s approach to personal travel planning: day-by-day itineraries, local discoveries, and room to make a trip your own.";
 
 export const metadata: Metadata = {
   title: "About Faroway — Our Mission & Story",
-  description:
-    "Learn how Faroway uses AI to make world-class travel planning instant, personal, and free for everyone. Our story, values, and mission.",
+  description,
   alternates: { canonical: "/about" },
   openGraph: {
     title: "About Faroway — Our Mission & Story",
-    description:
-      "Learn how Faroway uses AI to make world-class travel planning instant, personal, and free for everyone.",
+    description,
     type: "website",
     url: `${baseUrl}/about`,
   },
   twitter: {
     card: "summary_large_image",
     title: "About Faroway — Our Mission & Story",
-    description:
-      "Learn how Faroway uses AI to make world-class travel planning instant, personal, and free for everyone.",
+    description,
   },
 };
 

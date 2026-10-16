@@ -57,4 +57,23 @@ describe("proxy", () => {
     );
     expect(createServerClient).not.toHaveBeenCalled();
   });
+  it("preserves filters and sorting in the return path through sign-in", async () => {
+    const response = await proxy(
+      new NextRequest(
+        "http://localhost:3000/dashboard?filter=upcoming&sort=date-asc",
+      ),
+    );
+    expect(
+      new URL(response.headers.get("location")!).searchParams.get("redirectTo"),
+    ).toBe("/dashboard?filter=upcoming&sort=date-asc");
+  });
+  it("keeps the selected destination when canonicalizing a legacy trip link", async () => {
+    const response = await proxy(
+      new NextRequest("http://localhost:3000/trips/new?destination=paris"),
+    );
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe(
+      "http://localhost:3000/create?destination=paris",
+    );
+  });
 });

@@ -35,22 +35,65 @@ export const VENDOR_TIMEOUT_MS = getEnvNumber(
   { min: 1000, max: 60000 },
 );
 
+/** Keep the vendor deadline active through finite body reads, not just headers. */
 export async function fetchWithTimeout(
   input: RequestInfo | URL,
   init: RequestInit = {},
   timeoutMs = VENDOR_TIMEOUT_MS,
 ): Promise<Response> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-
-  try {
-    return await fetch(input, {
-      cache: "no-store",
-      ...init,
-      signal: controller.signal,
+  let timeout!: ReturnType<typeof setTimeout>;
+  const deadline = new Promise<never>((_, reject) => {
+    timeout = setTimeout(() => {
+      const error = new DOMException(
+        `vendor request timed out after ${timeoutMs}ms`,
+        "AbortError",
+      );
+      controller.abort(error);
+      reject(error);
+    }, timeoutMs);
+  });
+  // A caller inspecting only status must not keep a CLI process alive.
+  timeout.unref?.();
+  const bodyMethods = new Set<PropertyKey>([
+    "json",
+    "text",
+    "arrayBuffer",
+    "blob",
+    "formData",
+  ]);
+  const wrap = (response: Response): Response =>
+    new Proxy(response, {
+      get(target, property) {
+        // Response accessors/methods require the real Response as their receiver.
+        const value = Reflect.get(target, property, target);
+        if (property === "clone" && typeof value === "function")
+          return () => wrap(target.clone());
+        if (bodyMethods.has(property) && typeof value === "function") {
+          return async (...args: unknown[]) => {
+            try {
+              return await Promise.race([
+                Reflect.apply(value, target, args),
+                deadline,
+              ]);
+            } finally {
+              clearTimeout(timeout);
+            }
+          };
+        }
+        return typeof value === "function" ? value.bind(target) : value;
+      },
     });
-  } finally {
+  try {
+    const response = await Promise.race([
+      fetch(input, { cache: "no-store", ...init, signal: controller.signal }),
+      deadline,
+    ]);
+    if (response.body === null) clearTimeout(timeout);
+    return wrap(response);
+  } catch (error) {
     clearTimeout(timeout);
+    throw error;
   }
 }
 

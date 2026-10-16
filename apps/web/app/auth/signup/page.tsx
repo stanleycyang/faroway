@@ -6,7 +6,11 @@ import { Suspense } from "react";
 import { EmailPasswordForm } from "@/components/auth/EmailPasswordForm";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 import { AppleButton } from "@/components/auth/AppleButton";
-import { Logo } from "@/components/Logo";
+import { AuthActionProvider } from "@/components/auth/AuthActionProvider";
+import {
+  AuthPageFrame,
+  AuthPageLoading,
+} from "@/components/auth/AuthPageFrame";
 import { validateRedirectUrl } from "@/lib/security/validate-redirect";
 import { getSignupCopy } from "@/lib/auth/login-copy";
 
@@ -17,87 +21,65 @@ function SignupContent() {
   const copy = getSignupCopy(redirectTo);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-white px-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <Logo size="lg" variant="dark" />
-          </div>
-          <h1 className="mt-6 text-2xl font-semibold text-gray-900">
-            {copy.title}
-          </h1>
-          <p className="mt-2 text-gray-600">{copy.subtitle}</p>
+    <AuthPageFrame
+      title={copy.title}
+      subtitle={copy.subtitle}
+      action="signing up"
+    >
+      {/* Error Message */}
+      {error && (
+        <div
+          role="alert"
+          className="mb-4 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm"
+        >
+          {error}
+        </div>
+      )}
+
+      {/* Auth Card */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+        {/* OAuth Buttons */}
+        <div className="space-y-3">
+          <GoogleButton mode="signup" redirectTo={redirectTo} />
+          <AppleButton mode="signup" redirectTo={redirectTo} />
         </div>
 
-        {/* Error Message */}
-        {error && (
-          <div className="mb-4 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-            {error}
+        {/* Divider */}
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-200" />
           </div>
-        )}
-
-        {/* Auth Card */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
-          {/* OAuth Buttons */}
-          <div className="space-y-3">
-            <GoogleButton mode="signup" redirectTo={redirectTo} />
-            <AppleButton mode="signup" redirectTo={redirectTo} />
+          <div className="relative flex justify-center text-sm">
+            <span className="px-4 bg-white text-gray-500">
+              or sign up with email
+            </span>
           </div>
-
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-500">
-                or sign up with email
-              </span>
-            </div>
-          </div>
-
-          {/* Email/Password Form */}
-          <EmailPasswordForm mode="signup" redirectTo={redirectTo} />
-
-          {/* Sign In Link */}
-          <p className="mt-6 text-center text-sm text-gray-600">
-            Already have an account?{" "}
-            <Link
-              href={`/auth/login${redirectTo !== "/dashboard" ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`}
-              className="font-semibold text-primary hover:text-primary-dark transition-colors"
-            >
-              Sign in
-            </Link>
-          </p>
         </div>
 
-        {/* Footer */}
-        <p className="mt-6 text-center text-xs text-gray-500">
-          By signing up, you agree to our{" "}
-          <Link href="/terms" className="underline hover:text-gray-700">
-            Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link href="/privacy" className="underline hover:text-gray-700">
-            Privacy Policy
+        {/* Email/Password Form */}
+        <EmailPasswordForm mode="signup" redirectTo={redirectTo} />
+
+        {/* Sign In Link */}
+        <p className="mt-6 text-center text-sm text-gray-600">
+          Already have an account?{" "}
+          <Link
+            href={`/auth/login${redirectTo !== "/dashboard" ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`}
+            className="font-semibold text-primary hover:text-primary-dark transition-colors"
+          >
+            Sign in
           </Link>
         </p>
       </div>
-    </div>
+    </AuthPageFrame>
   );
 }
 
 export default function SignupPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-        </div>
-      }
-    >
-      <SignupContent />
+    <Suspense fallback={<AuthPageLoading />}>
+      <AuthActionProvider>
+        <SignupContent />
+      </AuthActionProvider>
     </Suspense>
   );
 }

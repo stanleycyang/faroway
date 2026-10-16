@@ -67,9 +67,9 @@ const approachCards = [
     icon: Heart,
   },
   {
-    title: "Seconds, Not Hours",
+    title: "Your days, brought together",
     description:
-      "Complete day-by-day itineraries with restaurants, activities, and local tips — generated in under 60 seconds.",
+      "Stays, activities, and local tips gathered into a day-by-day plan you can review as it takes shape.",
     image: getImageUrl(IMAGE_PATHS.marketing.aerialTravel),
     imageAlt: "Aerial view of turquoise waters and lush green islands",
     icon: Zap,
@@ -202,7 +202,7 @@ export default function AboutPage() {
               <blockquote className="text-3xl lg:text-4xl xl:text-5xl font-bold text-slate-900 leading-tight mb-8">
                 &ldquo;To make world-class travel planning{" "}
                 <span className="text-gradient">
-                  instant, personal, and accessible
+                  personal, thoughtful, and accessible
                 </span>{" "}
                 to everyone.&rdquo;
               </blockquote>
@@ -515,9 +515,9 @@ export default function AboutPage() {
               <span className="text-gradient-hero">dream trip</span>?
             </h2>
             <p className="text-xl text-white/70 mb-8 leading-relaxed max-w-2xl mx-auto">
-              A complete, personalized itinerary with hotels, activities, and
-              restaurants — generated in under 60 seconds and synced to your
-              free account.
+              Discover places to stay, things to do, and local favorites in a
+              plan shaped around you. Review your days as they come together,
+              then save your journey to return to it.
             </p>
 
             <div className="flex flex-wrap justify-center gap-3 mb-8">

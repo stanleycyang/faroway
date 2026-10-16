@@ -1,4 +1,5 @@
 import { useTripStore } from '../../stores/tripStore';
+import { useUserStore } from '../../stores/userStore';
 import type { Trip } from '../../stores/tripStore';
 
 // Mock offline storage
@@ -31,6 +32,12 @@ const makeMockTrip = (id: string, destination = 'Tokyo'): Trip => ({
 
 beforeEach(() => {
   jest.clearAllMocks();
+  useUserStore.getState().setUser({
+    id: 'owner-a',
+    name: 'Fixture',
+    email: 'fixture@example.invalid',
+    preferences: { vibes: [] },
+  });
   useTripStore.setState({
     trips: [],
     currentTrip: null,
@@ -224,4 +231,36 @@ describe('useTripStore', () => {
       expect(offlineStorage.clearAll).toHaveBeenCalled();
     });
   });
+});
+
+it('never hydrates private trips for a signed-out traveler', async () => {
+  useUserStore.getState().logout();
+  offlineStorage.loadTrips.mockResolvedValueOnce([makeMockTrip('private-a')]);
+  await useTripStore.getState().hydrateFromOffline();
+  expect(offlineStorage.loadTrips).not.toHaveBeenCalled();
+  expect(useTripStore.getState().trips).toEqual([]);
+  expect(useTripStore.getState().currentTrip).toBeNull();
+});
+
+it('ignores an old hydration after switching accounts', async () => {
+  let release!: (trips: Trip[]) => void;
+  offlineStorage.loadTrips.mockReturnValueOnce(
+    new Promise<Trip[]>((resolve) => {
+      release = resolve;
+    })
+  );
+  const work = useTripStore.getState().hydrateFromOffline();
+  useUserStore.getState().setUser({
+    id: 'owner-b',
+    name: 'Other',
+    email: 'other@example.invalid',
+    preferences: { vibes: [] },
+  });
+  const next = makeMockTrip('private-b');
+  useTripStore.setState({ trips: [next], currentTrip: next, isHydrated: false });
+  release([makeMockTrip('private-a')]);
+  await work;
+  expect(useTripStore.getState().trips).toEqual([next]);
+  expect(useTripStore.getState().currentTrip).toBe(next);
+  expect(useTripStore.getState().isHydrated).toBe(false);
 });

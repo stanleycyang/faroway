@@ -6,6 +6,7 @@ jest.mock('../../lib/supabase', () => ({
 }));
 jest.mock('../../lib/notifications', () => ({ registerForPushNotificationsAsync: acquireMock }));
 jest.mock('../../constants/api', () => ({ API_BASE_URL: 'https://staging.example' }));
+import { useUserStore } from '../../stores/userStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {
   devicePushConsent,
@@ -17,6 +18,9 @@ const fetchMock = jest.fn();
 beforeEach(async () => {
   jest.clearAllMocks();
   await AsyncStorage.clear();
+  useUserStore
+    .getState()
+    .setUser({ id: 'a', name: 'Fixture', email: 'a@example.invalid', preferences: { vibes: [] } });
   sessionMock.mockResolvedValue({
     data: { session: { user: { id: 'a' }, access_token: 'a-token' } },
   });
@@ -61,6 +65,14 @@ it('prevents settings saved from an old screen from changing another account', a
 });
 
 it('pins notification preference writes to the matching authenticated session', async () => {
+  fetchMock.mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({
+      id: 'a',
+      notificationSettings: { itinerary_updates: true },
+      notificationConsentVersion: 'notifications-v2',
+    }),
+  });
   await updateNotificationPreferences('a', { itinerary_updates: true });
   expect(fetchMock).toHaveBeenCalledWith(
     'https://staging.example/api/user/profile',
@@ -102,4 +114,111 @@ it('does not treat legacy default-true categories or cached settings as explicit
     }),
   });
   expect((await getVerifiedNotificationPreferences('a')).itinerary_updates).toBe(true);
+});
+
+it.each(['read', 'write'])(
+  'a stalled notification preference %s settles at its deadline',
+  async (operation) => {
+    jest.useFakeTimers();
+    try {
+      fetchMock.mockImplementation(() => new Promise(() => {}));
+      let failure: unknown;
+      const request = (
+        operation === 'read'
+          ? getVerifiedNotificationPreferences('a')
+          : updateNotificationPreferences('a', { deals: true })
+      ).catch((error) => {
+        failure = error;
+      });
+      await jest.advanceTimersByTimeAsync(15_001);
+      expect(failure).toBeInstanceOf(Error);
+      await request;
+    } finally {
+      jest.useRealTimers();
+    }
+  }
+);
+
+it('the read deadline includes a stalled profile body', async () => {
+  jest.useFakeTimers();
+  try {
+    fetchMock.mockResolvedValue({ ok: true, json: () => new Promise(() => {}) });
+    const request = getVerifiedNotificationPreferences('a');
+    const rejected = expect(request).rejects.toThrow('timed out');
+    await jest.advanceTimersByTimeAsync(15_001);
+    await rejected;
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+it.each(['read', 'write'])(
+  'a late preference %s cannot confirm after logout and same-account sign-in',
+  async (operation) => {
+    let release!: (response: unknown) => void;
+    fetchMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          release = resolve;
+        })
+    );
+    const request =
+      operation === 'read'
+        ? getVerifiedNotificationPreferences('a')
+        : updateNotificationPreferences('a', { deals: true });
+    const rejected = expect(request).rejects.toThrow('account changed');
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    useUserStore.getState().logout();
+    useUserStore.getState().setUser({
+      id: 'a',
+      name: 'Fixture',
+      email: 'a@example.invalid',
+      preferences: { vibes: [] },
+    });
+    release({
+      ok: true,
+      json: async () => ({
+        id: 'a',
+        notificationConsentVersion: 'notifications-v2',
+        notificationSettings: { deals: true },
+      }),
+    });
+    await rejected;
+  }
+);
+
+it('stalled device registration releases the queue so opt-out can retry', async () => {
+  jest.useFakeTimers();
+  try {
+    fetchMock.mockImplementationOnce(() => new Promise(() => {}));
+    const registration = devicePushConsent.enable();
+    const rejected = expect(registration).rejects.toThrow('timed out');
+    await jest.advanceTimersByTimeAsync(15_001);
+    await rejected;
+    fetchMock.mockResolvedValue({ ok: true });
+    await devicePushConsent.disable();
+    expect(fetchMock.mock.calls.at(-1)[1].method).toBe('DELETE');
+  } finally {
+    jest.useRealTimers();
+  }
+});
+
+it.each([
+  {
+    id: 'another-owner',
+    notificationSettings: { deals: true },
+    notificationConsentVersion: 'notifications-v2',
+  },
+  {
+    id: 'a',
+    notificationSettings: { deals: false },
+    notificationConsentVersion: 'notifications-v2',
+  },
+  { id: 'a', notificationSettings: { deals: true }, notificationConsentVersion: null },
+])('rejects unconfirmed notification preference receipt %j', async (receipt) => {
+  fetchMock.mockResolvedValueOnce({ ok: true, json: async () => receipt });
+  await expect(updateNotificationPreferences('a', { deals: true })).rejects.toThrow(
+    'could not be confirmed'
+  );
 });

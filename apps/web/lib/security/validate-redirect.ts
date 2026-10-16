@@ -8,6 +8,15 @@ export function validateRedirectUrl(
 ): string {
   if (!url) return fallback;
 
+  // URL parsers remove control characters before resolving a destination.
+  if (
+    [...url].some(
+      (character) =>
+        character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127,
+    )
+  )
+    return fallback;
+
   // Must be a relative path
   if (!url.startsWith("/")) return fallback;
 

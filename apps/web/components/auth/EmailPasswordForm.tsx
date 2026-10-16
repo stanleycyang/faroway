@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { requestPasswordReset } from "@/lib/auth/password-reset";
+import {
+  withAuthRequestDeadline,
+  AuthRequestTimeoutError,
+} from "@/lib/auth/request-deadline";
+import { useHydrated } from "@/hooks/useHydrated";
+import { useAuthActions } from "./AuthActionProvider";
 
 interface EmailPasswordFormProps {
   mode: "signin" | "signup";
@@ -18,33 +23,38 @@ export function EmailPasswordForm({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [loading, setLoading] = useState(false);
+  const actions = useAuthActions();
+  const hydrated = useHydrated();
+  const loading = actions.pending === "email";
+  const disabled = !hydrated || !!actions.pending;
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    if (!hydrated) return;
+    const attempt = actions.begin("email");
+    if (!attempt) return;
     setError(null);
     setMessage(null);
 
     // Validate inputs
     if (!email || !password) {
       setError("Please fill in all fields");
-      setLoading(false);
+      actions.finish(attempt);
       return;
     }
 
     if (mode === "signup" && password !== confirmPassword) {
       setError("Passwords do not match");
-      setLoading(false);
+      actions.finish(attempt);
       return;
     }
 
     // Existing passwords may predate the current signup policy. Let Auth verify them.
     if (mode === "signup" && password.length < 8) {
       setError("Password must be at least 8 characters");
-      setLoading(false);
+      actions.finish(attempt);
       return;
     }
 
@@ -52,24 +62,43 @@ export function EmailPasswordForm({
       const supabase = createClient();
 
       if (mode === "signup") {
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
-          },
-        });
+        if (typeof supabase.auth.signUp !== "function")
+          throw new Error(
+            "Account creation is unavailable right now. Please try again later.",
+          );
+        const { data, error: signUpError } = await withAuthRequestDeadline(
+          supabase.auth.signUp({
+            email: email.trim(),
+            password,
+            options: {
+              emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+            },
+          }),
+        );
 
+        if (!actions.isActive(attempt)) return;
         if (signUpError) throw signUpError;
+        if (data.session) {
+          router.push(redirectTo);
+          router.refresh();
+          return;
+        }
         setMessage(
           "Check your email for a confirmation link to complete your signup.",
         );
       } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+        if (typeof supabase.auth.signInWithPassword !== "function")
+          throw new Error(
+            "Sign-in is unavailable right now. Please try again later.",
+          );
+        const { error: signInError } = await withAuthRequestDeadline(
+          supabase.auth.signInWithPassword({
+            email: email.trim(),
+            password,
+          }),
+        );
 
+        if (!actions.isActive(attempt)) return;
         if (signInError) {
           throw new Error(
             signInError.message === "Invalid login credentials"
@@ -82,18 +111,23 @@ export function EmailPasswordForm({
         router.refresh();
       }
     } catch (submitError) {
+      if (!actions.isActive(attempt)) return;
       setError(
-        submitError instanceof Error
-          ? submitError.message
-          : "Couldn’t complete authentication. Please try again.",
+        submitError instanceof AuthRequestTimeoutError
+          ? mode === "signup"
+            ? "Account creation could not be confirmed. Check your inbox before trying again."
+            : "Sign-in could not be confirmed. Please try again."
+          : submitError instanceof Error
+            ? submitError.message
+            : "Couldn’t complete authentication. Please try again.",
       );
     } finally {
-      setLoading(false);
+      actions.finish(attempt);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} aria-busy={loading} className="space-y-4">
       {/* Error Message */}
       {error && (
         <div
@@ -134,6 +168,7 @@ export function EmailPasswordForm({
           onChange={(e) => setEmail(e.target.value)}
           placeholder="you@example.com"
           required
+          disabled={disabled}
           className="w-full px-4 py-3 min-h-[48px] border border-gray-300 rounded-xl text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
         />
       </div>
@@ -154,6 +189,7 @@ export function EmailPasswordForm({
           onChange={(e) => setPassword(e.target.value)}
           placeholder="••••••••"
           required
+          disabled={disabled}
           minLength={mode === "signup" ? 8 : undefined}
           className="w-full px-4 py-3 min-h-[48px] border border-gray-300 rounded-xl text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
         />
@@ -176,54 +212,27 @@ export function EmailPasswordForm({
             onChange={(e) => setConfirmPassword(e.target.value)}
             placeholder="••••••••"
             required
+            disabled={disabled}
             minLength={8}
             className="w-full px-4 py-3 min-h-[48px] border border-gray-300 rounded-xl text-base text-gray-900 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
           />
         </div>
       )}
 
-      {/* Forgot Password Link (signin only) */}
-      {mode === "signin" && (
-        <div className="text-right">
-          <button
-            type="button"
-            onClick={async () => {
-              if (!email) {
-                setError("Please enter your email address first");
-                return;
-              }
-              setLoading(true);
-              setError(null);
-              setMessage(null);
-              try {
-                const { error: resetError } = await requestPasswordReset(email);
-                if (resetError) {
-                  setError(resetError.message);
-                } else {
-                  setMessage("Check your email for a password reset link");
-                }
-              } catch {
-                setError("Couldn’t send a reset email. Please try again.");
-              } finally {
-                setLoading(false);
-              }
-            }}
-            className="text-sm text-primary hover:text-primary-dark font-medium transition-colors"
-          >
-            Forgot password?
-          </button>
-        </div>
-      )}
-
       {/* Submit Button */}
       <button
         type="submit"
-        disabled={loading}
-        className="w-full px-4 py-3 min-h-[48px] bg-primary text-white rounded-xl font-semibold hover:bg-primary-dark transition-all duration-200 shadow-lg shadow-primary/20 disabled:opacity-50 disabled:cursor-not-allowed"
+        disabled={disabled}
+        className="w-full px-4 py-3 min-h-[48px] bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         {loading ? (
           <span className="flex items-center justify-center gap-2">
-            <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+            <svg
+              className="animate-spin motion-reduce:animate-none h-5 w-5"
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
               <circle
                 className="opacity-25"
                 cx="12"

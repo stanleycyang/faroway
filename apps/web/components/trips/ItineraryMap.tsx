@@ -24,7 +24,17 @@ const TIME_COLORS: Record<string, string> = {
   evening: "#8B5CF6", // purple
 };
 
-function extractMarkers(itinerary: GeneratedItinerary): MapMarker[] {
+function validCoordinates(coords: { lat: number; lng: number } | undefined) {
+  return (
+    coords &&
+    Number.isFinite(coords.lat) &&
+    Number.isFinite(coords.lng) &&
+    Math.abs(coords.lat) <= 90 &&
+    Math.abs(coords.lng) <= 180
+  );
+}
+
+export function extractMarkers(itinerary: GeneratedItinerary): MapMarker[] {
   const markers: MapMarker[] = [];
 
   for (const day of itinerary.days) {
@@ -52,7 +62,7 @@ function extractMarkers(itinerary: GeneratedItinerary): MapMarker[] {
       ) as SlotItem[];
       for (const activity of activities) {
         const coords = activity.location?.coordinates;
-        if (coords?.lat && coords?.lng && activity.name) {
+        if (coords && validCoordinates(coords) && activity.name) {
           markers.push({
             lat: coords.lat,
             lng: coords.lng,
@@ -65,7 +75,7 @@ function extractMarkers(itinerary: GeneratedItinerary): MapMarker[] {
       }
       for (const meal of meals) {
         const coords = meal.location?.coordinates;
-        if (coords?.lat && coords?.lng && meal.name) {
+        if (coords && validCoordinates(coords) && meal.name) {
           markers.push({
             lat: coords.lat,
             lng: coords.lng,
@@ -99,34 +109,51 @@ export function ItineraryMap({ itinerary, className }: ItineraryMapProps) {
 
     const map = L.map(mapRef.current, {
       zoomControl: true,
-      attributionControl: false,
+      attributionControl: true,
       scrollWheelZoom: true,
     });
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
+      attribution:
+        '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
     }).addTo(map);
 
     const bounds = L.latLngBounds([]);
 
     for (const marker of markers) {
       const color = TIME_COLORS[marker.timeOfDay] || "#F25D3B";
+      const iconElement = document.createElement("div");
+      Object.assign(iconElement.style, {
+        width: "28px",
+        height: "28px",
+        background: color,
+        border: "3px solid white",
+        borderRadius: "50%",
+        boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        color: "white",
+        fontSize: "11px",
+        fontWeight: "700",
+      });
+      iconElement.textContent = String(marker.dayNumber);
       const icon = L.divIcon({
         className: "",
-        html: `<div style="
-          width:28px;height:28px;
-          background:${color};
-          border:3px solid white;
-          border-radius:50%;
-          box-shadow:0 2px 6px rgba(0,0,0,0.3);
-          display:flex;align-items:center;justify-content:center;
-          color:white;font-size:11px;font-weight:700;
-        ">${marker.dayNumber}</div>`,
+        html: iconElement,
         iconSize: [28, 28],
         iconAnchor: [14, 14],
       });
-
-      const label = `<strong>Day ${marker.dayNumber}</strong> &middot; ${marker.timeOfDay}<br/>${marker.name}`;
+      const label = document.createElement("div");
+      const dayLabel = document.createElement("strong");
+      dayLabel.textContent = `Day ${marker.dayNumber}`;
+      label.append(
+        dayLabel,
+        document.createTextNode(` · ${marker.timeOfDay}`),
+        document.createElement("br"),
+        document.createTextNode(marker.name),
+      );
       L.marker([marker.lat, marker.lng], { icon }).addTo(map).bindPopup(label);
 
       bounds.extend([marker.lat, marker.lng]);
@@ -136,17 +163,24 @@ export function ItineraryMap({ itinerary, className }: ItineraryMapProps) {
 
     mapInstanceRef.current = map;
 
-    requestAnimationFrame(() => {
+    const resizeFrame = requestAnimationFrame(() => {
       map.invalidateSize();
     });
 
     return () => {
+      cancelAnimationFrame(resizeFrame);
       map.remove();
       mapInstanceRef.current = null;
     };
   }, [markers]);
 
-  if (markers.length === 0) return null;
+  if (markers.length === 0)
+    return (
+      <p role="status" className="p-5 text-sm text-slate-600">
+        Map locations aren’t available for this itinerary yet. Your day-by-day
+        plan is still available below.
+      </p>
+    );
 
   return (
     <div className={className}>

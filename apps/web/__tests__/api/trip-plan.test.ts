@@ -56,7 +56,14 @@ beforeEach(() => {
     error: null,
   });
   mocks.history.mockResolvedValue({ data: [], error: null });
-  mocks.rpc.mockResolvedValue({ data: { state: "applied" }, error: null });
+  mocks.rpc.mockResolvedValue({
+    data: {
+      state: "applied",
+      planRevision: "33333333-3333-4333-8333-333333333333",
+      revision: "2026-10-04T00:00:00Z",
+    },
+    error: null,
+  });
   const chain = {
     select: vi.fn(),
     eq: mocks.eq,
@@ -154,7 +161,14 @@ describe("owned revision-safe plan editing", () => {
       },
       error: null,
     });
-    mocks.rpc.mockResolvedValue({ data: { state: "replayed" }, error: null });
+    mocks.rpc.mockResolvedValue({
+      data: {
+        state: "replayed",
+        planRevision: "33333333-3333-4333-8333-333333333333",
+        revision: "2026-10-04T00:00:00Z",
+      },
+      error: null,
+    });
     expect((await POST(request(), context)).status).toBe(200);
     expect(mocks.rpc).toHaveBeenCalledTimes(1);
   });
@@ -171,3 +185,19 @@ describe("owned revision-safe plan editing", () => {
     expect((await POST(request(), context)).status).toBe(503);
   });
 });
+
+it.each([
+  { code: "XX000", status: 503 },
+  { code: "PGRST116", status: 404 },
+])(
+  "distinguishes trip read failure from absence: $code",
+  async ({ code, status }) => {
+    mocks.trip.mockResolvedValue({
+      data: null,
+      error: { code, message: "Synthetic read result" },
+    });
+    expect((await GET(request(), context)).status).toBe(status);
+    expect((await POST(request(), context)).status).toBe(status);
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  },
+);

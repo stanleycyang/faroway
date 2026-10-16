@@ -9,6 +9,7 @@ import { OfflineProvider } from '../components/OfflineProvider';
 import { TripSyncConflicts } from '../components/ui/TripSyncConflicts';
 import { SyncStatusBanner } from '../components/ui/SyncStatusBanner';
 import { useTripStore } from '../stores/tripStore';
+import { useUserStore } from '../stores/userStore';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 
 Sentry.init({
@@ -25,14 +26,13 @@ function RootLayoutNav() {
   const { initialized } = useAuthContext();
   const reduceMotion = useReduceMotion();
   const hydrateFromOffline = useTripStore((state) => state.hydrateFromOffline);
-  const isHydrated = useTripStore((state) => state.isHydrated);
+  const accountRevision = useUserStore((state) => state.accountRevision);
 
-  // Hydrate trips from offline storage on mount
+  // Never expose a cache before Auth has resolved its owner. Rehydrate after
+  // account changes even when a previous account completed hydration.
   useEffect(() => {
-    if (!isHydrated) {
-      hydrateFromOffline();
-    }
-  }, [isHydrated, hydrateFromOffline]);
+    if (initialized) void hydrateFromOffline();
+  }, [initialized, accountRevision, hydrateFromOffline]);
 
   // Show loading screen while initializing
   if (!initialized) {

@@ -2,12 +2,10 @@ import { Compass, Plus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { TripCard, TripStats, EmptyState, Trip } from "@/components/dashboard";
-import {
-  TripFilters,
-  FilterType,
-  SortType,
-} from "@/components/dashboard/TripFilters";
+import { type Trip } from "@/components/dashboard/TripCard";
+import { DashboardTripList } from "@/components/dashboard/DashboardTripList";
+import { loadDashboardTrips } from "@/lib/trips/load-dashboard-trips";
+import { FilterType, SortType } from "@/components/dashboard/TripFilters";
 
 interface DashboardPageProps {
   searchParams: Promise<{ filter?: string; sort?: string }>;
@@ -30,55 +28,23 @@ export default async function DashboardPage({
   }
 
   // Parse filter and sort params
-  const filter = (params.filter as FilterType) || "all";
-  const sort = (params.sort as SortType) || "date-desc";
+  const filter: FilterType =
+    params.filter === "upcoming" || params.filter === "past"
+      ? params.filter
+      : "all";
+  const sort: SortType =
+    params.sort === "date-asc" || params.sort === "created"
+      ? params.sort
+      : "date-desc";
 
-  // Get user's trips
-  let query = supabase.from("trips").select("*");
-
-  // Apply sorting
-  switch (sort) {
-    case "date-asc":
-      query = query.order("start_date", { ascending: true });
-      break;
-    case "created":
-      query = query.order("created_at", { ascending: false });
-      break;
-    case "date-desc":
-    default:
-      query = query.order("start_date", { ascending: false });
-  }
-
-  const { data: allTrips } = await query;
-
-  // Calculate stats and filter trips
-  const now = new Date();
-  const today = now.toISOString().split("T")[0];
+  const { data: allTrips, error: tripsError } = await loadDashboardTrips(
+    supabase,
+    user.id,
+    sort,
+  );
 
   const trips = (allTrips || []) as Trip[];
-  const upcomingTrips = trips.filter((t) => t.start_date >= today);
-  const pastTrips = trips.filter((t) => t.end_date < today);
-  const inProgressTrips = trips.filter(
-    (t) => t.start_date <= today && t.end_date >= today,
-  );
-  // Apply filter
-  let filteredTrips = trips;
-  switch (filter) {
-    case "upcoming":
-      filteredTrips = upcomingTrips;
-      break;
-    case "past":
-      filteredTrips = pastTrips;
-      break;
-    default:
-      filteredTrips = trips;
-  }
-
-  const tripCounts = {
-    all: trips.length,
-    upcoming: upcomingTrips.length,
-    past: pastTrips.length,
-  };
+  const serverDay = new Date().toISOString().split("T")[0];
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -98,7 +64,7 @@ export default async function DashboardPage({
               <form action="/auth/logout" method="post">
                 <button
                   type="submit"
-                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
+                  className="min-h-11 px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 transition-colors"
                 >
                   Sign out
                 </button>
@@ -131,53 +97,55 @@ export default async function DashboardPage({
           </Link>
         </div>
 
-        {/* Stats Section */}
-        <section className="mb-8">
-          <TripStats
-            totalTrips={trips.length}
-            upcomingTrips={upcomingTrips.length}
-            completedTrips={pastTrips.length}
-            inProgressTrips={inProgressTrips.length}
-          />
-        </section>
-
-        {/* Trips Section */}
-        <section>
-          <div className="mb-6">
+        {tripsError ? (
+          <section>
             <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">
               Your Trips
             </h2>
-
-            {trips.length > 0 && (
-              <TripFilters
-                currentFilter={filter}
-                currentSort={sort}
-                tripCounts={tripCounts}
-              />
-            )}
-          </div>
-
-          {/* Trip Grid or Empty State */}
-          {trips.length === 0 ? (
-            <EmptyState />
-          ) : filteredTrips.length === 0 ? (
-            <EmptyState
-              title={`No ${filter} trips`}
-              description={
-                filter === "upcoming"
-                  ? "You don't have any upcoming trips planned yet."
-                  : "You haven't completed any trips yet."
-              }
-              showCTA={filter === "upcoming"}
-            />
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredTrips.map((trip) => (
-                <TripCard key={trip.id} trip={trip} />
-              ))}
+            <div
+              role="alert"
+              className="rounded-2xl border border-amber-200 bg-white p-6 sm:p-8"
+            >
+              <h3 className="text-xl font-semibold text-slate-900">
+                Your trips couldn’t load
+              </h3>
+              <p className="mt-2 text-slate-600">
+                We couldn’t retrieve your saved journeys. Try again in a moment.
+              </p>
+              <Link
+                href={`/dashboard?filter=${encodeURIComponent(filter)}&sort=${encodeURIComponent(sort)}`}
+                className="mt-5 inline-flex min-h-11 items-center rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white"
+              >
+                Try again
+              </Link>
             </div>
-          )}
-        </section>
+          </section>
+        ) : (
+          <DashboardTripList
+            trips={trips.map(
+              ({
+                id,
+                destination,
+                start_date,
+                end_date,
+                travelers,
+                status,
+                thumbnail_url,
+              }) => ({
+                id,
+                destination,
+                start_date,
+                end_date,
+                travelers,
+                status,
+                thumbnail_url,
+              }),
+            )}
+            filter={filter}
+            sort={sort}
+            serverDay={serverDay}
+          />
+        )}
       </main>
     </div>
   );

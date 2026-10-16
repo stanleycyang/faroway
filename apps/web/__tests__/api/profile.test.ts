@@ -99,6 +99,7 @@ describe("GET /api/user/profile", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
+    expect(res.headers.get("Cache-Control")).toBe("private, no-store");
     expect(json.id).toBe("user-123");
     expect(json.name).toBe("Test User");
     expect(json.avatar).toBe("https://example.com/avatar.jpg");

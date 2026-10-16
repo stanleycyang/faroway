@@ -49,48 +49,66 @@ export class FarowayClient {
     options: RequestInit = {},
   ): Promise<ApiResponse<T>> {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-
-    try {
-      const token = await this.getAuthToken();
-      const headers: Record<string, string> = {
-        "Content-Type": "application/json",
-        ...(options.headers as Record<string, string>),
-      };
-
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      const response = await fetch(`${this.baseUrl}${endpoint}`, {
-        ...options,
-        headers,
-        signal: controller.signal,
-      });
-
-      clearTimeout(timeoutId);
-
-      const data: any = await response.json();
-
-      if (!response.ok) {
-        return {
-          error: data.error || "Request failed",
-          code: data.code || "UNKNOWN_ERROR",
-        };
-      }
-
-      return { data: data as T };
-    } catch (error) {
-      clearTimeout(timeoutId);
-
-      if (error instanceof Error) {
-        if (error.name === "AbortError") {
-          return { error: "Request timed out", code: "TIMEOUT" };
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const timedOut = { error: "Request timed out", code: "TIMEOUT" };
+    const deadline = new Promise<ApiResponse<T>>((resolve) => {
+      timeoutId = setTimeout(() => {
+        resolve(timedOut);
+        controller.abort();
+      }, this.timeout);
+    });
+    const checkActive = () => {
+      if (controller.signal.aborted)
+        throw Object.assign(new Error("Request timed out"), {
+          name: "AbortError",
+        });
+    };
+    const operation = async (): Promise<ApiResponse<T>> => {
+      try {
+        const token = await this.getAuthToken();
+        checkActive();
+        const headers = new Headers(options.headers);
+        if (!headers.has("Content-Type"))
+          headers.set("Content-Type", "application/json");
+        if (token) headers.set("Authorization", `Bearer ${token}`);
+        const response = await fetch(`${this.baseUrl}${endpoint}`, {
+          ...options,
+          headers,
+          signal: controller.signal,
+        });
+        checkActive();
+        const data: unknown = await response.json();
+        checkActive();
+        if (!response.ok) {
+          const details =
+            data && typeof data === "object"
+              ? (data as Record<string, unknown>)
+              : {};
+          return {
+            error:
+              typeof details.error === "string"
+                ? details.error
+                : "Request failed",
+            code:
+              typeof details.code === "string" ? details.code : "UNKNOWN_ERROR",
+          };
         }
-        return { error: error.message, code: "NETWORK_ERROR" };
+        return { data: data as T };
+      } catch (error) {
+        if (
+          controller.signal.aborted ||
+          (error instanceof Error && error.name === "AbortError")
+        )
+          return timedOut;
+        if (error instanceof Error)
+          return { error: error.message, code: "NETWORK_ERROR" };
+        return { error: "Unknown error occurred", code: "UNKNOWN_ERROR" };
       }
-
-      return { error: "Unknown error occurred", code: "UNKNOWN_ERROR" };
+    };
+    try {
+      return await Promise.race([operation(), deadline]);
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 
@@ -115,8 +133,11 @@ export class FarowayClient {
   // Trips
   // ===========================================================================
 
-  async getTrips(): Promise<ApiResponse<{ trips: Trip[] }>> {
-    return this.fetch<{ trips: Trip[] }>("/api/trips");
+  /** Fetch one bounded page; pass nextCursor to continue the same ordered list. */
+  async getTrips(cursor?: string): Promise<ApiResponse<{ trips: Trip[]; nextCursor?: string | null }>> {
+    return this.fetch<{ trips: Trip[]; nextCursor?: string | null }>(
+      `/api/trips${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ""}`,
+    );
   }
 
   async getTrip(id: string): Promise<ApiResponse<{ trip: Trip }>> {

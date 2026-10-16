@@ -1,6 +1,11 @@
 import type { ViewStyle } from 'react-native';
 
 export const colors = {
+  action: {
+    primary: '#C03A31',
+    primaryEnd: '#A8362D',
+    onPrimary: '#FFFFFF',
+  },
   primary: {
     50: '#FFF5F4',
     100: '#FFE4E1',

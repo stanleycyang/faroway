@@ -3,9 +3,10 @@
  * Context provider for offline-first functionality
  */
 
-import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode } from 'react';
 import { useOfflineSync, type UseOfflineSyncReturn } from '../hooks/useOfflineSync';
 import type { SyncState } from '../lib/offline';
+import { useAuthContext } from './AuthProvider';
 
 interface OfflineContextValue extends Omit<UseOfflineSyncReturn, 'syncState'> {
   // Re-expose state individually
@@ -40,25 +41,16 @@ export function OfflineProvider({
   syncOnForeground = true,
   syncOnMount = true,
 }: OfflineProviderProps) {
-  const [initialized, setInitialized] = useState(false);
+  const auth = useAuthContext();
 
   const offlineSync = useOfflineSync({
+    enabled: auth.initialized && auth.isAuthenticated,
     autoSync,
     syncOnForeground,
     syncOnMount,
   });
 
-  // Mark as initialized once we have a sync state
-  useEffect(() => {
-    if (offlineSync.syncState.status !== 'idle' || offlineSync.syncState.isOnline !== undefined) {
-      setInitialized(true);
-    }
-  }, [offlineSync.syncState]);
-
-  const value: OfflineContextValue = {
-    ...offlineSync,
-    initialized,
-  };
+  const value: OfflineContextValue = { ...offlineSync };
 
   return <OfflineContext.Provider value={value}>{children}</OfflineContext.Provider>;
 }

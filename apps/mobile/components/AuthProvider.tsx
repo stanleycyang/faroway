@@ -1,4 +1,5 @@
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, useEffect, ReactNode } from 'react';
+import { clearGuestTripBrief } from '../lib/guestTripBrief';
 import { useAuth } from '../hooks/useAuth';
 import type { GoogleSignInOptions } from '../hooks/useAuth';
 import type { User, Session } from '@supabase/supabase-js';
@@ -19,6 +20,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const auth = useAuth();
+  const authUserId = auth.user?.id;
+  useEffect(() => {
+    if (auth.initialized && authUserId) void clearGuestTripBrief().catch(() => {});
+  }, [auth.initialized, authUserId]);
 
   return <AuthContext.Provider value={auth}>{children}</AuthContext.Provider>;
 }

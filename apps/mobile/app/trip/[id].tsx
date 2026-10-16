@@ -1,4 +1,13 @@
-import React, { useEffect, useState, useRef, useMemo, createContext, useContext } from 'react';
+import { formatKnownPrice, summarizeTripCosts } from '../../lib/tripCost';
+import React, {
+  useEffect,
+  useState,
+  useRef,
+  useMemo,
+  useCallback,
+  createContext,
+  useContext,
+} from 'react';
 import {
   View,
   Text,
@@ -26,13 +35,16 @@ import { usePromptStore } from '../../stores/promptStore';
 import { useAuthContext } from '../../components/AuthProvider';
 import { AuthGate } from '../../components/AuthGate';
 import { RatingPrompt } from '../../components/RatingPrompt';
-import { shareTrip, revokeTripShare } from '../../services/api';
+import { shareOwnedTrip, revokeOwnedTripShare } from '../../lib/tripSharing';
+import { useUserStore } from '../../stores/userStore';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import { useTrips } from '../../hooks/useTrips';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { USE_NATIVE_DRIVER } from '../../lib/animation';
 import { reviewSavedTripBooking } from '../../lib/savedTripBooking';
+import { formatTripDate, formatTripTime } from '../../lib/tripDate';
+import { collectBookingOptions } from '../../lib/bookingOptions';
 
 const BookingTripContext = createContext<string | undefined>(undefined);
 const useBookingReview = () => {
@@ -96,15 +108,6 @@ function ActivityCard({ activity }: ActivityCardProps) {
     }
   };
 
-  const getBookingLabel = (type: string) => {
-    switch (type) {
-      case 'restaurant':
-        return 'Reserve a Table';
-      default:
-        return 'Reserve Now';
-    }
-  };
-
   const handleBooking = () => {
     if (!activity.bookingUrl) return;
     reviewBooking();
@@ -161,7 +164,7 @@ function ActivityCard({ activity }: ActivityCardProps) {
             onPress={handleBooking}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel={`${getBookingLabel(activity.type)} for ${activity.title}`}
+            accessibilityLabel={`Review booking options for ${activity.title}`}
           >
             <LinearGradient
               colors={
@@ -178,7 +181,7 @@ function ActivityCard({ activity }: ActivityCardProps) {
               size={16}
               color="#fff"
             />
-            <Text style={styles.bookButtonText}>{getBookingLabel(activity.type)}</Text>
+            <Text style={styles.bookButtonText}>Review booking options</Text>
             <Ionicons name="open-outline" size={14} color="rgba(255,255,255,0.7)" />
           </TouchableOpacity>
         )}
@@ -224,7 +227,9 @@ function FeaturedHotelCard({
             </View>
           </View>
           <View style={styles.hotelCardPriceContainer}>
-            <Text style={styles.hotelCardPrice}>${hotel.pricePerNight}</Text>
+            <Text style={styles.hotelCardPrice}>
+              {formatKnownPrice(hotel.pricePerNight, hotel.currency)}
+            </Text>
             <Text style={styles.hotelCardPriceLabel}>per night</Text>
           </View>
         </View>
@@ -243,9 +248,9 @@ function FeaturedHotelCard({
             onPress={handleBooking}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel={`Check availability for ${hotel.name}`}
+            accessibilityLabel={`Review booking options for ${hotel.name}`}
           >
-            <Text style={styles.hotelCardButtonText}>Check Availability</Text>
+            <Text style={styles.hotelCardButtonText}>Review booking options</Text>
             <Ionicons name="arrow-forward" size={16} color={colors.primary[500]} />
           </TouchableOpacity>
         )}
@@ -260,19 +265,22 @@ function TransportCard({
   transport: NonNullable<import('../../stores/tripStore').TripDay['transport']>;
 }) {
   const reviewBooking = useBookingReview();
-  const formatDuration = (minutes: number) => {
+  const formatDuration = (minutes: number | undefined) => {
+    if (minutes === undefined || !Number.isFinite(minutes) || minutes < 0)
+      return 'Duration unavailable';
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
     return m > 0 ? `${h}h ${m}m` : `${h}h`;
   };
 
-  const formatTime = (dateTime: string) => {
-    const date = new Date(dateTime);
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-  };
+  const formatTime = formatTripTime;
 
   const stopsLabel =
-    transport.stops === 0 ? 'Direct' : `${transport.stops} stop${transport.stops > 1 ? 's' : ''}`;
+    transport.stops === undefined
+      ? 'Stops unavailable'
+      : transport.stops === 0
+        ? 'Direct'
+        : `${transport.stops} stop${transport.stops > 1 ? 's' : ''}`;
 
   const handleBooking = () => {
     if (!transport.bookingUrl) return;
@@ -292,7 +300,9 @@ function TransportCard({
             <Ionicons name="airplane" size={18} color="#fff" />
             <Text style={styles.transportCardProvider}>{transport.provider}</Text>
           </View>
-          <Text style={styles.transportCardPrice}>${transport.price}</Text>
+          <Text style={styles.transportCardPrice}>
+            {formatKnownPrice(transport.price, transport.currency)}
+          </Text>
         </View>
         <View style={styles.transportCardRoute}>
           <View style={styles.transportCardEndpoint}>
@@ -323,9 +333,9 @@ function TransportCard({
             onPress={handleBooking}
             activeOpacity={0.7}
             accessibilityRole="button"
-            accessibilityLabel={`Book flight from ${transport.departure.airport} to ${transport.arrival.airport}`}
+            accessibilityLabel={`Review flight options from ${transport.departure.airport} to ${transport.arrival.airport}`}
           >
-            <Text style={styles.transportCardButtonText}>Book Flight</Text>
+            <Text style={styles.transportCardButtonText}>Review flight options</Text>
             <Ionicons name="arrow-forward" size={16} color="#1e40af" />
           </TouchableOpacity>
         )}
@@ -341,10 +351,12 @@ function BookingsSheet({
   visible,
   onClose,
   bookableItems,
+  costReferences,
 }: {
   visible: boolean;
   onClose: () => void;
   bookableItems: { activity: Activity; dayNumber: number }[];
+  costReferences: string[];
 }) {
   const reviewBooking = useBookingReview();
   const reduceMotion = useReduceMotion();
@@ -370,9 +382,9 @@ function BookingsSheet({
           onPress={handleBook}
           activeOpacity={0.7}
           accessibilityRole="button"
-          accessibilityLabel={`Book ${activity.title}`}
+          accessibilityLabel={`Review booking options for ${activity.title}`}
         >
-          <Text style={styles.sheetItemButtonText}>Book</Text>
+          <Text style={styles.sheetItemButtonText}>Review</Text>
           <Ionicons name="open-outline" size={14} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -389,7 +401,7 @@ function BookingsSheet({
       <SafeAreaView edges={['top']} style={styles.sheetContainer}>
         <View style={styles.sheetHeader}>
           <Text style={styles.sheetTitle} accessibilityRole="header">
-            {bookableItems.length} Bookable {bookableItems.length === 1 ? 'Item' : 'Items'}
+            {bookableItems.length} Booking {bookableItems.length === 1 ? 'Option' : 'Options'}
           </Text>
           <TouchableOpacity
             onPress={onClose}
@@ -401,10 +413,27 @@ function BookingsSheet({
           </TouchableOpacity>
         </View>
         <Text style={styles.sheetSubtitle}>
-          You’ll complete each reservation on the partner’s site.
+          Review the saved plan on Faroway before continuing to a provider. Confirm current prices
+          and availability with the provider.
         </Text>
         <FlatList
           data={bookableItems}
+          ListHeaderComponent={
+            costReferences.length ? (
+              <View style={{ marginBottom: 20 }}>
+                <Text style={styles.sheetItemTitle}>Known price references</Text>
+                {costReferences.map((reference) => (
+                  <Text key={reference} style={styles.sheetItemPrice}>
+                    {reference}
+                  </Text>
+                ))}
+                <Text style={styles.sheetSubtitle}>
+                  Partial estimates, kept in their original currencies. These aren’t a total for
+                  your travel party. Check final prices, taxes, and availability with each partner.
+                </Text>
+              </View>
+            ) : null
+          }
           renderItem={renderBookableItem}
           keyExtractor={(item) => item.activity.id}
           contentContainerStyle={styles.sheetList}
@@ -416,8 +445,35 @@ function BookingsSheet({
 }
 
 export default function TripDetailScreen() {
-  const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  const owner = useUserStore((state) => state.user?.id);
+  const revision = useUserStore((state) => state.accountRevision);
+  return <TripDetailSession key={`${owner ?? 'guest'}:${revision}:${id}`} id={id} />;
+}
+
+function TripDetailSession({ id }: { id: string | undefined }) {
+  const router = useRouter();
+  const mounted = useRef(false);
+  const shareLock = useRef(false);
+  const refreshLock = useRef(false);
+  const [account] = useState(() => {
+    const state = useUserStore.getState();
+    return { owner: state.user?.id, revision: state.accountRevision };
+  });
+  const isActive = useCallback(() => {
+    const current = useUserStore.getState();
+    return (
+      mounted.current &&
+      current.user?.id === account.owner &&
+      current.accountRevision === account.revision
+    );
+  }, [account]);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const { trips, currentTrip, isHydrated } = useTripStore();
   const { getTripById } = useTrips();
   const { isAuthenticated } = useAuthContext();
@@ -433,54 +489,11 @@ export default function TripDetailScreen() {
   const [loadAttempt, setLoadAttempt] = useState(0);
 
   const scrollY = useRef(new Animated.Value(0)).current;
-  const trip = trips.find((t) => t.id === id) || (currentTrip?.id === id ? currentTrip : null);
+  const trip = (currentTrip?.id === id ? currentTrip : null) || trips.find((t) => t.id === id);
 
-  const estimatedTotal = useMemo(() => {
-    let total = 0;
-    if (trip?.hotel) total += trip.hotel.totalPrice;
-    for (const day of trip?.days || []) {
-      if (day.transport) total += day.transport.price;
-      for (const act of day.activities) {
-        if (act.price) {
-          const numPrice = parseFloat(String(act.price).replace(/[^0-9.]/g, ''));
-          if (!isNaN(numPrice)) total += numPrice;
-        }
-      }
-    }
-    return total;
-  }, [trip]);
+  const costReferences = useMemo(() => (trip ? summarizeTripCosts(trip) : []), [trip]);
 
-  // Collect all bookable items across all days
-  const bookableItems = useMemo(() => {
-    if (!trip?.days) return [];
-    const items: { activity: Activity; dayNumber: number }[] = [];
-    for (const day of trip.days) {
-      for (const act of day.activities) {
-        if (act.bookingUrl) {
-          items.push({ activity: act, dayNumber: day.dayNumber });
-        }
-      }
-    }
-    // Include hotel if bookable
-    if (trip.hotel?.bookingUrl) {
-      items.unshift({
-        activity: {
-          id: trip.hotel.id,
-          time: '',
-          title: trip.hotel.name,
-          description: trip.hotel.description,
-          location: trip.hotel.location?.name || '',
-          duration: '',
-          type: 'accommodation',
-          price: `$${trip.hotel.pricePerNight}/night`,
-          bookingUrl: trip.hotel.bookingUrl,
-          affiliatePartner: 'booking',
-        },
-        dayNumber: 0,
-      });
-    }
-    return items;
-  }, [trip]);
+  const bookableItems = useMemo(() => (trip ? collectBookingOptions(trip) : []), [trip]);
 
   const bookableCount = bookableItems.length;
 
@@ -548,64 +561,77 @@ export default function TripDetailScreen() {
   }, [isAuthenticated, trip?.status]);
 
   const onRefresh = async () => {
-    if (!id) return;
+    if (!id || !isActive() || refreshLock.current) return;
+    refreshLock.current = true;
     setRefreshing(true);
     hapticFeedback.light();
     try {
       // Use getTripById which properly transforms itinerary data with booking URLs
-      await getTripById(id);
+      const latest = await getTripById(id);
+      if (!isActive()) return;
+      if (!latest) throw new Error('The latest saved trip could not be loaded.');
       hapticFeedback.success();
     } catch (error) {
+      if (!isActive()) return;
       console.error('Failed to refresh trip:', error);
       hapticFeedback.error();
+      Alert.alert(
+        'Couldn’t refresh trip',
+        'Your last loaded trip is kept. Check your connection and available device storage, then try again.'
+      );
+    } finally {
+      refreshLock.current = false;
+      if (isActive()) setRefreshing(false);
     }
-    setRefreshing(false);
   };
 
   const handleShare = async () => {
-    if (!id) return;
+    if (!id || !isActive() || shareLock.current) return;
     hapticFeedback.light();
     if (!isAuthenticated) {
       setShowAuthGate(true);
       return;
     }
-    const confirmed = await new Promise<boolean>((resolve) =>
-      Alert.alert(
-        'Make this trip public?',
-        'Anyone with the link can see your dates and itinerary. The link remains active if you cancel the share sheet. You can turn off public access from this sharing menu.',
-        [
-          { text: 'Cancel', style: 'cancel', onPress: () => resolve(false) },
-          {
-            text: 'Turn off public access',
-            style: 'destructive',
-            onPress: async () => {
-              resolve(false);
-              const result = await revokeTripShare(id);
-              Alert.alert(
-                result.error ? 'Could not turn off sharing' : 'Public access turned off',
-                result.error || 'The old public link no longer works.'
-              );
-            },
-          },
-          { text: 'Create public link', onPress: () => resolve(true) },
-        ],
-        { cancelable: true, onDismiss: () => resolve(false) }
-      )
-    );
-    if (!confirmed) return;
+    shareLock.current = true;
     try {
-      const result = await shareTrip(id);
-      if (result.data?.shareUrl) {
-        await Share.share({
-          message: `Check out my trip to ${trip?.destination}! ${result.data.shareUrl}`,
-          url: result.data.shareUrl,
-          title: `${trip?.destination} Trip Itinerary`,
-        });
-      } else {
-        Alert.alert('Error', result.error || 'Failed to create share link');
+      const action = await new Promise<'cancel' | 'share' | 'revoke'>((resolve) =>
+        Alert.alert(
+          'Make this trip public?',
+          'Anyone with the link can see your dates and itinerary. The link remains active if you cancel the share sheet. You can turn off public access from this sharing menu.',
+          [
+            { text: 'Cancel', style: 'cancel', onPress: () => resolve('cancel') },
+            {
+              text: 'Turn off public access',
+              style: 'destructive',
+              onPress: () => resolve('revoke'),
+            },
+            { text: 'Create public link', onPress: () => resolve('share') },
+          ],
+          { cancelable: true, onDismiss: () => resolve('cancel') }
+        )
+      );
+      if (!isActive() || action === 'cancel') return;
+      if (action === 'revoke') {
+        await revokeOwnedTripShare(id);
+        if (isActive())
+          Alert.alert('Public access turned off', 'The old public link no longer works.');
+        return;
       }
+      const url = await shareOwnedTrip(id);
+      if (!isActive()) return;
+      await Share.share({
+        message: `Check out my trip to ${trip?.destination}! ${url}`,
+        url,
+        title: `${trip?.destination} Trip Itinerary`,
+      });
     } catch (error) {
-      console.error('Share failed:', error);
+      if (!isActive()) return;
+      Alert.alert(
+        'Sharing did not finish',
+        `${error instanceof Error ? error.message : 'Please try again.'} If a public link was created, it stays active until you turn off public access.`
+      );
+    } finally {
+      shareLock.current = false;
     }
   };
 
@@ -624,7 +650,16 @@ export default function TripDetailScreen() {
 
   if (!trip) {
     const needsSignIn = loadError?.toLowerCase().includes('sign in') ?? false;
-    const canRetry = loadError?.includes('couldn’t reach Faroway') ?? false;
+    const canRetry = Boolean(
+      id &&
+      !id.startsWith('local_') &&
+      loadError &&
+      !needsSignIn &&
+      loadError !== 'Trip not found' &&
+      loadError !== 'This trip link is incomplete.' &&
+      !loadError.includes('could not be verified') &&
+      !loadError.toLowerCase().includes('account changed')
+    );
 
     return (
       <SafeAreaView style={styles.errorState} edges={['top', 'bottom']}>
@@ -640,7 +675,9 @@ export default function TripDetailScreen() {
         <Button
           title={needsSignIn ? 'Sign in to view trips' : canRetry ? 'Try again' : 'Go to My Trips'}
           onPress={() => {
-            if (canRetry) {
+            if (needsSignIn) {
+              setShowAuthGate(true);
+            } else if (canRetry) {
               setLoadAttempt((attempt) => attempt + 1);
             } else {
               router.replace('/(tabs)/trips');
@@ -657,21 +694,26 @@ export default function TripDetailScreen() {
         >
           <Text style={styles.errorStateBackText}>Go back</Text>
         </TouchableOpacity>
+        <AuthGate
+          visible={showAuthGate}
+          trigger="general"
+          onClose={() => setShowAuthGate(false)}
+          onAuthenticated={() => {
+            if (!isActive()) return;
+            setShowAuthGate(false);
+            setLoadAttempt((attempt) => attempt + 1);
+          }}
+        />
       </SafeAreaView>
     );
   }
 
   const formatDateRange = () => {
-    const start = new Date(trip.startDate);
-    const end = new Date(trip.endDate);
-    return `${start.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    })} - ${end.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    })}`;
+    const start = formatTripDate(trip.startDate, { month: 'short', day: 'numeric' });
+    const end = formatTripDate(trip.endDate, { month: 'short', day: 'numeric', year: 'numeric' });
+    return start === 'Date unavailable' || end === 'Date unavailable'
+      ? 'Travel dates unavailable'
+      : `${start} - ${end}`;
   };
 
   const headerTranslate = scrollY.interpolate({
@@ -797,11 +839,9 @@ export default function TripDetailScreen() {
                 <View style={styles.emptyItineraryIcon} accessible={false}>
                   <Ionicons name="time-outline" size={32} color={colors.primary[500]} />
                 </View>
-                <Text style={styles.emptyItineraryTitle}>
-                  Your itinerary is still being prepared
-                </Text>
+                <Text style={styles.emptyItineraryTitle}>Your itinerary isn’t loaded</Text>
                 <Text style={styles.emptyItineraryText}>
-                  Refresh to check whether your day-by-day plan is ready.
+                  Your trip is saved. Refresh to load its latest day-by-day plan.
                 </Text>
                 <Button
                   title="Refresh itinerary"
@@ -822,7 +862,7 @@ export default function TripDetailScreen() {
                   >
                     {trip.days.map((day, index) => (
                       <TouchableOpacity
-                        key={day.date}
+                        key={`${index}:${day.date}`}
                         style={[styles.dayTab, selectedDay === index && styles.dayTabSelected]}
                         onPress={() => {
                           hapticFeedback.selection();
@@ -830,7 +870,7 @@ export default function TripDetailScreen() {
                         }}
                         accessibilityRole="tab"
                         accessibilityState={{ selected: selectedDay === index }}
-                        accessibilityLabel={`Day ${day.dayNumber}, ${new Date(day.date).toLocaleDateString()}`}
+                        accessibilityLabel={`Day ${day.dayNumber}, ${formatTripDate(day.date)}`}
                       >
                         <Text
                           style={[
@@ -846,7 +886,7 @@ export default function TripDetailScreen() {
                             selectedDay === index && styles.dayTabDateSelected,
                           ]}
                         >
-                          {new Date(day.date).toLocaleDateString('en-US', {
+                          {formatTripDate(day.date, {
                             month: 'short',
                             day: 'numeric',
                           })}
@@ -883,13 +923,15 @@ export default function TripDetailScreen() {
         {bookableCount > 0 && (
           <View style={styles.bottomBar}>
             <View style={styles.bottomBarInfo}>
-              <Text style={styles.bottomBarLabel}>Estimated cost</Text>
+              <Text style={styles.bottomBarLabel}>Price references</Text>
               <Text style={styles.bottomBarPrice}>
-                {estimatedTotal > 0 ? `~$${estimatedTotal.toLocaleString()}` : 'See partner prices'}
+                {costReferences.length
+                  ? `${costReferences.length} known estimates`
+                  : 'Check partner prices'}
               </Text>
             </View>
             <Button
-              title={`Book ${bookableCount} ${bookableCount === 1 ? 'Item' : 'Items'}`}
+              title="Review options"
               onPress={() => {
                 hapticFeedback.light();
                 setShowBookingsSheet(true);
@@ -905,6 +947,7 @@ export default function TripDetailScreen() {
           visible={showBookingsSheet}
           onClose={() => setShowBookingsSheet(false)}
           bookableItems={bookableItems}
+          costReferences={costReferences}
         />
 
         {/* Auth gate for guests */}
@@ -1291,15 +1334,16 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
   },
-  bottomBarInfo: {},
+  bottomBarInfo: { flex: 1, minWidth: 0, paddingRight: 12 },
   bottomBarLabel: {
     fontSize: 12,
     color: '#64748b',
     marginBottom: 2,
   },
   bottomBarPrice: {
-    fontSize: 24,
-    fontWeight: '800',
+    fontSize: 16,
+    lineHeight: 22,
+    fontWeight: '700',
     color: '#0f172a',
   },
   bookAllButton: {

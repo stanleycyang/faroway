@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { withAuthRequestDeadline } from "@/lib/auth/request-deadline";
 import type { User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 
 interface UseUserReturn {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  accountRevision: number;
   error: Error | null;
   refresh: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -40,8 +42,21 @@ export function useUser(): UseUserReturn {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  const [accountRevision, setAccountRevision] = useState(0);
+  const accountOwner = useRef<string | null>(null);
+  const updateAccountOwner = useCallback((owner: string | null) => {
+    if (accountOwner.current === owner) return;
+    accountOwner.current = owner;
+    setAccountRevision((revision) => revision + 1);
+  }, []);
+  const activeRef = useRef(false);
+  const epochRef = useRef(0);
+
   // Fetch user data
   const fetchUser = useCallback(async () => {
+    if (!activeRef.current) return;
+    const epoch = ++epochRef.current;
+    const isCurrent = () => activeRef.current && epochRef.current === epoch;
     try {
       setLoading(true);
       setError(null);
@@ -50,22 +65,26 @@ export function useUser(): UseUserReturn {
       const {
         data: { session },
         error: sessionError,
-      } = await supabase.auth.getSession();
+      } = await withAuthRequestDeadline(supabase.auth.getSession());
 
+      if (!isCurrent()) return;
       if (sessionError) {
         throw sessionError;
       }
 
+      updateAccountOwner(session?.user.id ?? null);
       setSession(session);
       setUser(session?.user ?? null);
     } catch (err) {
+      if (!isCurrent()) return;
       setError(err instanceof Error ? err : new Error("Failed to fetch user"));
+      updateAccountOwner(null);
       setUser(null);
       setSession(null);
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, []);
+  }, [updateAccountOwner]);
 
   // Refresh user data
   const refresh = useCallback(async () => {
@@ -74,23 +93,32 @@ export function useUser(): UseUserReturn {
 
   // Sign out
   const signOut = useCallback(async () => {
+    if (!activeRef.current) return;
+    const epoch = ++epochRef.current;
+    const isCurrent = () => activeRef.current && epochRef.current === epoch;
     try {
       setLoading(true);
+      setError(null);
       const supabase = createClient();
-      const { error } = await supabase.auth.signOut();
+      const { error } = await withAuthRequestDeadline(supabase.auth.signOut());
+      if (!isCurrent()) return;
       if (error) throw error;
+      updateAccountOwner(null);
       setUser(null);
       setSession(null);
     } catch (err) {
+      if (!isCurrent()) return;
       setError(err instanceof Error ? err : new Error("Failed to sign out"));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, []);
+  }, [updateAccountOwner]);
 
   // Initial fetch and subscribe to auth changes
   useEffect(() => {
-    fetchUser();
+    let subscribed = true;
+    activeRef.current = true;
+    void fetchUser();
 
     const supabase = createClient();
 
@@ -98,7 +126,13 @@ export function useUser(): UseUserReturn {
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, session: Session | null) => {
+      (event: AuthChangeEvent, session: Session | null) => {
+        if (!subscribed) return;
+        epochRef.current++;
+        updateAccountOwner(
+          event === "SIGNED_OUT" ? null : (session?.user.id ?? null),
+        );
+        setError(null);
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
@@ -118,13 +152,16 @@ export function useUser(): UseUserReturn {
 
     // Cleanup subscription on unmount
     return () => {
+      subscribed = false;
+      activeRef.current = false;
       subscription.unsubscribe();
     };
-  }, [fetchUser]);
+  }, [fetchUser, updateAccountOwner]);
 
   return {
     user,
     session,
+    accountRevision,
     loading,
     error,
     refresh,
@@ -137,7 +174,12 @@ export function useUser(): UseUserReturn {
  * Call this after useUser to get extended profile information
  */
 export function useUserProfile() {
-  const { user, loading: userLoading } = useUser();
+  const { user, loading: userLoading, accountRevision } = useUser();
+  const userId = user?.id;
+  const [profileScope, setProfileScope] = useState<{
+    ownerId: string | undefined;
+    revision: number;
+  } | null>(null);
   const [profile, setProfile] = useState<{
     id: string;
     email: string;
@@ -150,8 +192,12 @@ export function useUserProfile() {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    let active = true;
     async function fetchProfile() {
-      if (!user) {
+      setProfileScope({ ownerId: userId, revision: accountRevision });
+      setProfile(null);
+      setError(null);
+      if (!userId) {
         setProfile(null);
         setLoading(false);
         return;
@@ -160,31 +206,41 @@ export function useUserProfile() {
       try {
         setLoading(true);
         const supabase = createClient();
-        const { data, error: queryError } = await supabase
-          .from("users")
-          .select("*")
-          .eq("id", user.id)
-          .single();
+        const { data, error: queryError } = await withAuthRequestDeadline(
+          Promise.resolve(
+            supabase.from("users").select("*").eq("id", userId).single(),
+          ),
+        );
+        if (!active) return;
 
         if (queryError) throw queryError;
+        if (data?.id !== userId)
+          throw new Error("Your profile could not be confirmed. Please retry.");
         setProfile(data);
       } catch (err) {
+        if (!active) return;
         setError(
           err instanceof Error ? err : new Error("Failed to fetch profile"),
         );
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     }
 
     if (!userLoading) {
-      fetchProfile();
+      void fetchProfile();
     }
-  }, [user, userLoading]);
+    return () => {
+      active = false;
+    };
+  }, [userId, userLoading, accountRevision]);
 
+  const belongsToAccount =
+    profileScope?.ownerId === userId &&
+    profileScope?.revision === accountRevision;
   return {
-    profile,
-    loading: userLoading || loading,
-    error,
+    profile: belongsToAccount ? profile : null,
+    loading: userLoading || !belongsToAccount || loading,
+    error: belongsToAccount ? error : null,
   };
 }

@@ -1,10 +1,13 @@
 "use client";
+import { useHydrated } from "@/hooks/useHydrated";
 import { getTripDuration, parseTripDate } from "@/lib/trips/date-duration";
 import { requestPlanningConsent } from "@/lib/ai/planning-consent-client";
 
 import { BookingChecklist } from "@/components/trips/BookingChecklist";
+import { FlightLeg } from "@/components/trips/FlightLeg";
 import { PlanEditor } from "@/components/trips/PlanEditor";
 import { TripBriefEditor } from "@/components/trips/TripBriefEditor";
+import { HotelQuotePanel } from "@/components/trips/HotelQuotePanel";
 
 import React, {
   useEffect,
@@ -16,6 +19,8 @@ import React, {
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
+import { readSavedItinerary } from "@/lib/trips/read-itinerary";
+import { MapLoading } from "@/components/trips/MapLoading";
 import {
   Loader2,
   AlertCircle,
@@ -94,7 +99,10 @@ const ItineraryMap = dynamic(
     import("@/components/trips/ItineraryMap").then((m) => ({
       default: m.ItineraryMap,
     })),
-  { ssr: false },
+  {
+    ssr: false,
+    loading: () => <MapLoading className="h-64 sm:h-80" />,
+  },
 );
 
 interface TripDetailClientProps {
@@ -114,15 +122,34 @@ export function TripDetailClient({
 }: TripDetailClientProps) {
   const router = useRouter();
   const [selectedDay, setSelectedDay] = useState(0);
+  const hydrated = useHydrated();
+  const [planEditorOpen, setPlanEditorOpen] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
 
+  const [initialPlan] = useState(() => {
+    try {
+      return {
+        itinerary: readSavedItinerary(initialData.itinerary),
+        error: null,
+      };
+    } catch (error) {
+      return {
+        itinerary: null,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Your saved itinerary could not be read.",
+      };
+    }
+  });
   const [trip, setTrip] = useState<Trip | null>(initialData.trip);
   const [itinerary, setItinerary] = useState<GeneratedItinerary | null>(
-    initialData.itinerary ?? null,
+    initialPlan.itinerary,
   );
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(initialPlan.error);
   const [planningStatus, setPlanningStatus] = useState<string | null>(null);
+  const planningCheckLock = useRef(false);
   const [checkingPlanning, setCheckingPlanning] = useState(false);
   const [shareConsentOpen, setShareConsentOpen] = useState(false);
   const shareLock = useRef(false);
@@ -158,12 +185,26 @@ export function TripDetailClient({
     },
   });
 
-  // Fetch trip data
+  const refreshSequence = useRef(0);
+  const refreshMounted = useRef(false);
+  useEffect(() => {
+    refreshMounted.current = true;
+    return () => {
+      refreshMounted.current = false;
+      refreshSequence.current += 1;
+    };
+  }, []);
+
+  // Only the latest refresh may reconcile this mounted trip.
   const fetchTrip = useCallback(async () => {
+    const sequence = ++refreshSequence.current;
+    const isCurrent = () =>
+      refreshMounted.current && sequence === refreshSequence.current;
     try {
       const res = await fetch(`/api/trips/${tripId}`, {
         signal: AbortSignal.timeout(15_000),
       });
+      if (!isCurrent()) return null;
       if (!res.ok) {
         if (res.status === 401) {
           router.push("/auth/login?redirectTo=/trips/" + tripId);
@@ -172,6 +213,16 @@ export function TripDetailClient({
         throw new Error("Failed to fetch trip");
       }
       const data: TripResponse = await res.json();
+      if (!isCurrent()) return null;
+      if (
+        data.trip?.id !== tripId ||
+        data.trip?.user_id !== initialData.trip.user_id
+      ) {
+        throw new Error(
+          "The trip response did not match your saved trip. Try refreshing again.",
+        );
+      }
+      const savedItinerary = readSavedItinerary(data.itinerary);
       setError(null);
       setTrip(data.trip);
       setShareUrl(
@@ -179,20 +230,20 @@ export function TripDetailClient({
           ? `${window.location.origin}/s/${data.trip.share_token}`
           : null,
       );
-      if (data.itinerary) {
-        setItinerary(data.itinerary);
-      }
+      setItinerary(savedItinerary);
       return data.trip;
     } catch (err) {
+      if (!isCurrent()) return null;
       setError(err instanceof Error ? err.message : "Failed to load trip");
       return null;
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [tripId, router]);
+  }, [tripId, router, initialData.trip.user_id]);
 
   const checkPlanningStatus = async () => {
-    if (checkingPlanning) return;
+    if (planningCheckLock.current || !refreshMounted.current) return;
+    planningCheckLock.current = true;
     setCheckingPlanning(true);
     try {
       const response = await fetch(`/api/trips/${tripId}/generate`, {
@@ -202,7 +253,9 @@ export function TripDetailClient({
         throw new Error(
           "Status is temporarily unavailable. Your trip is saved; try checking again shortly.",
         );
+      if (!refreshMounted.current) return;
       const status = await response.json();
+      if (!refreshMounted.current) return;
       setPlanningStatus(
         status.message ||
           "Your saved trip is still being planned. You can leave and return here.",
@@ -210,13 +263,15 @@ export function TripDetailClient({
       if (status.status === "completed" || status.status === "failed")
         await fetchTrip();
     } catch (cause) {
+      if (!refreshMounted.current) return;
       setPlanningStatus(
         cause instanceof Error
           ? cause.message
           : "Status is temporarily unavailable. Check again shortly.",
       );
     } finally {
-      setCheckingPlanning(false);
+      planningCheckLock.current = false;
+      if (refreshMounted.current) setCheckingPlanning(false);
     }
   };
 
@@ -255,8 +310,10 @@ export function TripDetailClient({
             AbortSignal.timeout(15_000),
           ]),
         });
+        if (cancelled || controller.signal.aborted) return;
         if (res.ok) {
           const data = await res.json();
+          if (cancelled || controller.signal.aborted) return;
           if (data.status === "completed" || data.status === "failed") {
             const refreshed = await fetchTrip();
             if (
@@ -286,6 +343,7 @@ export function TripDetailClient({
   }, [trip?.status, trip?.search_id, tripId, fetchTrip, generation.phase]);
 
   const handleShare = async (confirmed = false) => {
+    if (!refreshMounted.current) return;
     if (trip?.preferences?.planNeedsRefresh) {
       setShareStatus("Update the plan for your saved brief before sharing it.");
       return;
@@ -299,6 +357,7 @@ export function TripDetailClient({
     shareLock.current = true;
     setIsShareBusy(true);
     setShareStatus(null);
+    let shareSheetOpened = false;
     try {
       let url = shareUrl;
       if (!url) {
@@ -308,12 +367,32 @@ export function TripDetailClient({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ publicConsent: true }),
         });
+        if (!refreshMounted.current) return;
         if (!res.ok) throw new Error("Failed to enable sharing");
         const data = await res.json();
-        url = data.shareUrl;
-        setShareUrl(url!);
+        if (!refreshMounted.current) return;
+        if (
+          typeof data?.shareUrl !== "string" ||
+          typeof data?.shareToken !== "string" ||
+          !/^[a-zA-Z0-9_-]+$/.test(data.shareToken)
+        )
+          throw new Error("Share response could not be verified");
+        const shared = new URL(data.shareUrl);
+        if (
+          (shared.protocol !== "https:" &&
+            shared.origin !== window.location.origin) ||
+          shared.username ||
+          shared.password ||
+          shared.pathname !== `/s/${data.shareToken}` ||
+          shared.search ||
+          shared.hash
+        )
+          throw new Error("Share response could not be verified");
+        url = shared.href;
+        setShareUrl(url);
       }
       if (navigator.share) {
+        shareSheetOpened = true;
         await navigator.share({
           title: `Trip to ${trip?.destination}`,
           text: `Check out my trip itinerary to ${trip?.destination}!`,
@@ -321,22 +400,24 @@ export function TripDetailClient({
         });
       } else {
         await navigator.clipboard.writeText(url!);
-        setShareStatus("Public share link copied to your clipboard.");
+        if (refreshMounted.current)
+          setShareStatus("Public share link copied to your clipboard.");
       }
     } catch (err) {
+      if (!refreshMounted.current) return;
       setShareStatus(
-        err instanceof Error && err.name === "AbortError"
+        shareSheetOpened && err instanceof Error && err.name === "AbortError"
           ? "Share sheet canceled. Your public link remains active; use Turn off public access to revoke it."
           : "Sharing did not finish. If a public link was created, it remains active until you turn off public access.",
       );
     } finally {
       shareLock.current = false;
-      setIsShareBusy(false);
+      if (refreshMounted.current) setIsShareBusy(false);
     }
   };
 
   const handleRevokeShare = async () => {
-    if (shareLock.current) return;
+    if (shareLock.current || !refreshMounted.current) return;
     shareLock.current = true;
     setIsShareBusy(true);
     setShareStatus(null);
@@ -345,32 +426,42 @@ export function TripDetailClient({
         method: "DELETE",
         signal: AbortSignal.timeout(20_000),
       });
+      if (!refreshMounted.current) return;
       if (!response.ok) throw new Error("Failed to stop sharing");
+      const confirmation = await response.json();
+      if (!refreshMounted.current) return;
+      if (confirmation?.success !== true)
+        throw new Error("Revocation could not be confirmed");
       setShareUrl(null);
       setShareStatus("Public access has been turned off.");
     } catch (revokeError) {
+      if (!refreshMounted.current) return;
       console.error("Share revocation failed:", revokeError);
       setShareStatus("We couldn’t turn off public access. Please try again.");
     } finally {
       shareLock.current = false;
-      setIsShareBusy(false);
+      if (refreshMounted.current) setIsShareBusy(false);
     }
   };
 
   const handleRetry = async () => {
-    if (!trip || retryLock.current) return;
+    if (!trip || retryLock.current || !refreshMounted.current) return;
     retryLock.current = true;
     setIsRetrying(true);
 
     try {
-      const planningHeaders = await requestPlanningConsent();
+      const planningHeaders = await requestPlanningConsent(trip.user_id);
+      if (!refreshMounted.current) return;
+      const headers = await planningHeaders();
+      if (!refreshMounted.current) return;
       // Trigger new generation
       const genRes = await fetch(`/api/trips/${tripId}/generate`, {
         method: "POST",
         signal: AbortSignal.timeout(25_000),
-        headers: await planningHeaders(),
+        headers,
       });
 
+      if (!refreshMounted.current) return;
       if (!genRes.ok && genRes.status !== 409) {
         const data = await genRes.json().catch(() => ({}));
         throw new Error(data.error || "Failed to retry generation");
@@ -379,11 +470,12 @@ export function TripDetailClient({
       // Refetch trip to pick up the new search_id
       await fetchTrip();
     } catch (err) {
+      if (!refreshMounted.current) return;
       console.error("Retry failed:", err);
       setError(err instanceof Error ? err.message : "Retry failed");
     } finally {
       retryLock.current = false;
-      setIsRetrying(false);
+      if (refreshMounted.current) setIsRetrying(false);
     }
   };
 
@@ -468,7 +560,12 @@ export function TripDetailClient({
   );
   const dayIdPrefix = `trip-${tripId}-day`;
 
-  const showFullGenerationLoader = !!trip && isGenerating;
+  const showFullGenerationLoader =
+    !!trip &&
+    (isGenerating ||
+      (showCompletedDossier && tripIsComplete && !!displayDays?.length));
+  const stickyBookingVisible =
+    showStickyBar && !trip?.preferences?.planNeedsRefresh;
 
   useEffect(() => {
     if (isGenerating) {
@@ -480,7 +577,7 @@ export function TripDetailClient({
   useEffect(() => {
     if (
       hasSeenGeneratingThisSession &&
-      isComplete &&
+      tripIsComplete &&
       !!displayDays?.length &&
       !showCompletedDossier
     ) {
@@ -489,7 +586,7 @@ export function TripDetailClient({
     }
   }, [
     hasSeenGeneratingThisSession,
-    isComplete,
+    tripIsComplete,
     displayDays?.length,
     showCompletedDossier,
   ]);
@@ -921,6 +1018,7 @@ export function TripDetailClient({
           <h2 className="mb-5 font-editorial text-2xl text-slate-900 sm:text-3xl">
             A place to settle in
           </h2>
+          <HotelQuotePanel trip={trip} />
           {/* Recommended Hotel — fades in from stream or DB */}
           {displayTopHotel && !trip.preferences?.planNeedsRefresh && (
             <div>
@@ -948,9 +1046,7 @@ export function TripDetailClient({
           <TripBriefEditor
             key={`brief:${trip.updated_at}`}
             trip={trip}
-            onReload={() => {
-              void fetchTrip();
-            }}
+            onReload={fetchTrip}
             onSaved={(saved) => {
               setTrip(saved);
               setShareUrl(
@@ -971,6 +1067,8 @@ export function TripDetailClient({
             !trip.preferences?.planNeedsRefresh && (
               <PlanEditor
                 key={`plan:${trip.updated_at}`}
+                open={planEditorOpen}
+                onOpenChange={setPlanEditorOpen}
                 tripId={trip.id}
                 userId={trip.user_id}
                 onSaved={() => {
@@ -1045,11 +1143,6 @@ export function TripDetailClient({
           </div>
         )}
 
-        {/* Empty state for completed trips without itinerary */}
-        {isComplete && !displayDays?.length && !itinerary && (
-          <EmptyItinerary destination={trip.destination} />
-        )}
-
         {isComplete && (!!displayDays?.length || itinerary) && (
           <TripFeedback tripId={tripId} />
         )}
@@ -1081,7 +1174,11 @@ export function TripDetailClient({
               <button
                 type="button"
                 onClick={() => handleShare()}
-                disabled={isShareBusy || !!trip.preferences?.planNeedsRefresh}
+                disabled={
+                  !hydrated ||
+                  isShareBusy ||
+                  !!trip.preferences?.planNeedsRefresh
+                }
                 className="inline-flex min-h-11 items-center justify-center rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 disabled:opacity-50"
               >
                 {trip.preferences?.planNeedsRefresh
@@ -1094,7 +1191,7 @@ export function TripDetailClient({
             <button
               type="button"
               onClick={handleRevokeShare}
-              disabled={isShareBusy}
+              disabled={!hydrated || isShareBusy}
               className="mt-4 text-sm font-medium text-gray-500 hover:text-red-600 disabled:opacity-50"
             >
               Turn off public access
@@ -1111,8 +1208,12 @@ export function TripDetailClient({
       {/* Sticky Booking Bar */}
       {isComplete && bookableCount > 0 && (
         <div
+          role="region"
+          aria-label="Booking options"
+          aria-hidden={!stickyBookingVisible}
+          inert={!stickyBookingVisible}
           className={`fixed bottom-0 left-0 right-0 z-50 transition-all duration-300 ${
-            showStickyBar && !trip.preferences?.planNeedsRefresh
+            stickyBookingVisible
               ? "translate-y-0 opacity-100"
               : "translate-y-full opacity-0"
           }`}
@@ -1134,6 +1235,7 @@ export function TripDetailClient({
                 </div>
               </div>
               <button
+                disabled={!stickyBookingVisible}
                 onClick={() => {
                   const section = document.getElementById("trip-itinerary");
                   section?.scrollIntoView({
@@ -1162,81 +1264,6 @@ export function TripDetailClient({
 
 // ── Featured Flights ────────────────────────────────────────────────────────
 
-function formatFlightCost(amount: number, currency: string) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-}
-
-function FlightLeg({
-  transport,
-  label,
-}: {
-  transport: NonNullable<TripDay["transport"]>;
-  label: string;
-}) {
-  return (
-    <div className="flex-1 min-w-0">
-      <p className="text-[11px] font-semibold text-blue-400 uppercase tracking-wider mb-2">
-        {label}
-      </p>
-      <div className="flex items-center gap-3">
-        <div className="text-center min-w-[48px]">
-          <p className="text-lg font-bold text-white">
-            {transport.departure.airport}
-          </p>
-          <p className="text-[11px] text-blue-200">
-            {new Date(transport.departure.dateTime).toLocaleTimeString(
-              "en-US",
-              {
-                hour: "2-digit",
-                minute: "2-digit",
-              },
-            )}
-          </p>
-        </div>
-        <div className="flex-1 flex flex-col items-center">
-          <p className="text-[11px] text-blue-200 font-medium">
-            {Math.floor(transport.duration / 60)}h {transport.duration % 60}m
-          </p>
-          <div className="w-full flex items-center gap-0.5 my-0.5">
-            <div className="w-1.5 h-1.5 rounded-full bg-blue-300" />
-            <div className="flex-1 h-px bg-blue-400/50" />
-            <Plane className="h-3 w-3 text-blue-300 rotate-90" />
-            <div className="flex-1 h-px bg-blue-400/50" />
-            <div className="w-1.5 h-1.5 rounded-full bg-blue-300" />
-          </div>
-          <p className="text-[11px] text-blue-300">
-            {transport.stops === 0
-              ? "Direct"
-              : `${transport.stops} stop${transport.stops > 1 ? "s" : ""}`}
-          </p>
-        </div>
-        <div className="text-center min-w-[48px]">
-          <p className="text-lg font-bold text-white">
-            {transport.arrival.airport}
-          </p>
-          <p className="text-[11px] text-blue-200">
-            {new Date(transport.arrival.dateTime).toLocaleTimeString("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
-          </p>
-        </div>
-      </div>
-      <div className="flex items-center justify-between mt-2">
-        <p className="text-xs text-blue-200">{transport.provider}</p>
-        <p className="text-sm font-bold text-white">
-          {formatFlightCost(transport.price, transport.currency)}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function FeaturedFlights({ days }: { days: TripDay[] | null }) {
   if (!days?.length) return null;
 
@@ -1251,10 +1278,6 @@ function FeaturedFlights({ days }: { days: TripDay[] | null }) {
       : null;
 
   if (!outbound?.transport) return null;
-
-  const totalPrice =
-    (outbound.transport?.price || 0) + (returnFlight?.transport?.price || 0);
-  const currency = outbound.transport?.currency || "USD";
 
   return (
     <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-indigo-800 rounded-2xl overflow-hidden mb-6 shadow-lg shadow-blue-500/20 relative">
@@ -1276,11 +1299,9 @@ function FeaturedFlights({ days }: { days: TripDay[] | null }) {
             </p>
           </div>
           <div className="ml-auto text-right">
-            <p className="text-xl font-black text-white">
-              {formatFlightCost(totalPrice, currency)}
-            </p>
+            <p className="text-xl font-black text-white">Estimates by flight</p>
             <p className="text-[11px] text-blue-200">
-              {returnFlight ? "total round trip" : "per person"}
+              Confirm fares with the provider
             </p>
           </div>
         </div>

@@ -1,3 +1,5 @@
+import { hotelSearchEnabled } from "@/lib/trips/hotel-quotes";
+import { isDeepStrictEqual } from "node:util";
 import { NextRequest, NextResponse } from "next/server";
 import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
 import { requireUserIdFromRequest } from "@/lib/auth/middleware";
@@ -31,7 +33,9 @@ export async function GET(request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     }
 
-    return NextResponse.json(result);
+    return NextResponse.json(result, {
+      headers: { "Cache-Control": "private, no-store" },
+    });
   } catch (error) {
     console.error("Error fetching trip:", error);
     return NextResponse.json(
@@ -67,12 +71,29 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         { status: 400 },
       );
     const { expectedUpdatedAt, ...changes } = parsed.data;
+    if (
+      changes.preferences &&
+      "hotelSearch" in changes.preferences &&
+      !hotelSearchEnabled()
+    )
+      return NextResponse.json(
+        { error: "Hotel preferences are temporarily unavailable" },
+        { status: 503 },
+      );
     const { data: existing, error: readError } = await db
       .from("trips")
       .select("*")
       .eq("id", id)
       .eq("user_id", auth.userId)
       .single();
+    if (readError && readError.code !== "PGRST116")
+      return NextResponse.json(
+        {
+          error:
+            "Your saved brief is temporarily unavailable. Load the latest brief before retrying.",
+        },
+        { status: 503 },
+      );
     if (readError || !existing)
       return NextResponse.json({ error: "Trip not found" }, { status: 404 });
     if (existing.status === "generating")
@@ -134,6 +155,28 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         { status: 503 },
       );
 
+    if (
+      changes.preferences &&
+      "hotelSearch" in changes.preferences &&
+      !isDeepStrictEqual(
+        typeof trip === "object" &&
+          trip !== null &&
+          "preferences" in trip &&
+          typeof trip.preferences === "object" &&
+          trip.preferences !== null &&
+          "hotelSearch" in trip.preferences
+          ? trip.preferences.hotelSearch
+          : null,
+        preferences.hotelSearch ?? null,
+      )
+    )
+      return NextResponse.json(
+        {
+          error:
+            "Hotel preference changes could not be confirmed. Load the latest brief before retrying.",
+        },
+        { status: 503 },
+      );
     return NextResponse.json({ trip });
   } catch (error) {
     console.error("Error updating trip:", error);

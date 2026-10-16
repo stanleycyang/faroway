@@ -1,6 +1,7 @@
 "use client";
 
-import { useInView, useReducedMotion } from "@/hooks";
+import { useInView } from "@/hooks/useInView";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 interface FadeInOnScrollProps {
   children: React.ReactNode;
@@ -18,18 +19,15 @@ export function FadeInOnScroll({
     triggerOnce: true,
   });
   const reduceMotion = useReducedMotion();
-  const isVisible = reduceMotion || isInView;
+  const animate = isInView && !reduceMotion;
 
   return (
     <div
       ref={ref}
-      className={className}
+      className={`${className}${animate ? " scroll-reveal" : ""}`}
       style={{
-        opacity: isVisible ? 1 : 0,
-        transform: isVisible ? "translateY(0)" : "translateY(24px)",
-        transition: reduceMotion
-          ? "none"
-          : `opacity 0.6s ease-out ${delay}ms, transform 0.6s ease-out ${delay}ms`,
+        // Server content stays readable before hydration and if scripts fail.
+        animationDelay: `${Math.max(0, Math.min(150, delay))}ms`,
       }}
     >
       {children}

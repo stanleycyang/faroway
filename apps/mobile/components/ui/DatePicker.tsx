@@ -11,6 +11,8 @@ import {
 import { Calendar, DateData } from 'react-native-calendars';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, borderRadius } from '../../constants/theme';
+import { getMarkedDates, localCalendarDate } from '../../lib/dateRangeMarks';
+import { formatTripDate } from '../../lib/tripDate';
 import { getDatePickerModalHeight } from '../../lib/datePickerLayout';
 import { hapticFeedback } from '../../utils/haptics';
 
@@ -22,54 +24,6 @@ interface DateRangePickerProps {
 }
 
 type SelectionMode = 'start' | 'end';
-
-const TODAY = new Date().toISOString().split('T')[0];
-
-type MarkedDate = {
-  startingDay?: boolean;
-  endingDay?: boolean;
-  color: string;
-  textColor: string;
-};
-
-function getMarkedDates(startDate: string, endDate: string, _selectionMode: SelectionMode) {
-  const marked: Record<string, MarkedDate> = {};
-  const accentColor = colors.primary[500];
-  const fillColor = 'rgba(249, 112, 102, 0.2)';
-
-  if (startDate && !endDate) {
-    marked[startDate] = {
-      startingDay: true,
-      endingDay: true,
-      color: accentColor,
-      textColor: '#fff',
-    };
-    return marked;
-  }
-
-  if (!startDate || !endDate) return marked;
-
-  const start = new Date(startDate + 'T00:00:00');
-  const end = new Date(endDate + 'T00:00:00');
-  const cursor = new Date(start);
-
-  while (cursor <= end) {
-    const dateStr = cursor.toISOString().split('T')[0];
-    const isStart = dateStr === startDate;
-    const isEnd = dateStr === endDate;
-
-    marked[dateStr] = {
-      color: isStart || isEnd ? accentColor : fillColor,
-      textColor: isStart || isEnd ? '#fff' : colors.surface[600],
-      startingDay: isStart,
-      endingDay: isEnd,
-    };
-
-    cursor.setDate(cursor.getDate() + 1);
-  }
-
-  return marked;
-}
 
 export function DateRangePicker({
   startDate,
@@ -84,18 +38,10 @@ export function DateRangePicker({
 
   const formatDisplayDate = (dateStr: string) => {
     if (!dateStr) return 'Select date';
-    const date = new Date(dateStr + 'T00:00:00');
-    return date.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    });
+    return formatTripDate(dateStr);
   };
 
-  const markedDates = useMemo(
-    () => getMarkedDates(startDate, endDate, selectionMode),
-    [startDate, endDate, selectionMode]
-  );
+  const markedDates = useMemo(() => getMarkedDates(startDate, endDate), [startDate, endDate]);
 
   const onDayPress = useCallback(
     (day: DateData) => {
@@ -161,7 +107,8 @@ export function DateRangePicker({
   );
 
   // Scroll to the start date's month, or today if no start date
-  const initialDate = startDate || TODAY;
+  const today = localCalendarDate(new Date());
+  const initialDate = startDate || today;
 
   return (
     <View style={styles.container}>
@@ -275,7 +222,7 @@ export function DateRangePicker({
               {/* Calendar */}
               <Calendar
                 current={initialDate}
-                minDate={TODAY}
+                minDate={today}
                 markingType="period"
                 markedDates={markedDates}
                 onDayPress={onDayPress}

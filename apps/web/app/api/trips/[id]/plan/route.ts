@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { PlanSaveReceipt } from "@/lib/trips/plan-command";
 import { requireUserIdFromRequest } from "@/lib/auth/middleware";
 import { getSupabase } from "@/lib/supabase/server";
 import { canDisplayViatorContent } from "@/lib/affiliates/viator-policy";
@@ -23,7 +24,11 @@ async function readPlan(id: string, userId: string) {
     .eq("id", id)
     .eq("user_id", userId)
     .single();
-  if (error || !trip) return null;
+  if (error) {
+    if (error.code === "PGRST116") return null;
+    throw new Error("Saved plan is temporarily unavailable");
+  }
+  if (!trip) return null;
   const { data: history, error: historyError } = await db
     .from("trip_plan_revisions")
     .select("id, request_id, locked_items, created_at, command")
@@ -195,7 +200,23 @@ export async function POST(request: NextRequest, context: Context) {
         },
         409,
       );
-    return json(data);
+    const receipt = PlanSaveReceipt.safeParse({
+      ...data,
+      requestId: command.requestId,
+    });
+    if (
+      !receipt.success ||
+      receipt.data.revision === command.expectedUpdatedAt ||
+      receipt.data.planRevision === command.expectedPlanRevision
+    )
+      return json(
+        {
+          error:
+            "The save could not be confirmed. Check your saved plan before retrying.",
+        },
+        503,
+      );
+    return json(receipt.data);
   } catch {
     return json(
       { error: "The save could not be confirmed. Your previous plan is kept." },

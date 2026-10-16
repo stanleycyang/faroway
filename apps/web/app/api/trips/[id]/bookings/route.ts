@@ -32,7 +32,11 @@ async function read(
     .eq("id", id)
     .eq("user_id", userId)
     .single();
-  if (error || !trip) return null;
+  if (error) {
+    if (error.code === "PGRST116") return null;
+    throw new Error("Saved booking progress is temporarily unavailable");
+  }
+  if (!trip) return null;
   const { data, error: reportError } = await db.rpc(
     "read_trip_booking_reports",
     { p_trip_id: id, p_user_id: userId, p_request_id: requestId },
@@ -171,7 +175,7 @@ export async function POST(request: NextRequest, context: Context) {
         { error: "Progress changed. Refresh before making another report." },
         409,
       );
-    return json(data);
+    return json({ ...data, requestId: command.requestId });
   } catch {
     return json(
       { error: "Save not confirmed. Check saved progress before retrying." },

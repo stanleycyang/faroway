@@ -2,6 +2,12 @@ import { describe, it, expect } from "vitest";
 import { validateRedirectUrl } from "@/lib/security/validate-redirect";
 
 describe("validateRedirectUrl", () => {
+  it.each(["/\t/evil.example", "/\n/evil.example", "/\r/evil.example"])(
+    "blocks URL parser control-character normalization: %j",
+    (path) => {
+      expect(validateRedirectUrl(path)).toBe("/dashboard");
+    },
+  );
   it("returns the URL when it is a valid relative path", () => {
     expect(validateRedirectUrl("/dashboard")).toBe("/dashboard");
   });

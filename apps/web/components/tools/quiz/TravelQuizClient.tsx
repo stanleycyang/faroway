@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Compass } from "lucide-react";
 import { quizQuestions, type QuizOption } from "@/lib/tools/quiz-questions";
 import { scoreDestinations, type QuizResult } from "@/lib/tools/quiz-scoring";
@@ -10,12 +10,23 @@ import { QuizResults } from "./QuizResults";
 type QuizState = "intro" | "questions" | "results";
 
 export function TravelQuizClient() {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const focusNextHeadingRef = useRef(false);
+  const questionRef = useRef(0);
   const [state, setState] = useState<QuizState>("intro");
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [answers, setAnswers] = useState<QuizOption[][]>([]);
   const [results, setResults] = useState<QuizResult[]>([]);
 
+  useEffect(() => {
+    if (!focusNextHeadingRef.current) return;
+    contentRef.current?.querySelector<HTMLElement>("h1")?.focus();
+    focusNextHeadingRef.current = false;
+  }, [state, currentQuestion]);
+
   const handleStart = () => {
+    focusNextHeadingRef.current = true;
+    questionRef.current = 0;
     setState("questions");
     setCurrentQuestion(0);
     setAnswers([]);
@@ -34,6 +45,9 @@ export function TravelQuizClient() {
 
   const handleAdvance = useCallback(
     (options: QuizOption[]) => {
+      if (questionRef.current !== currentQuestion) return;
+      questionRef.current = currentQuestion + 1;
+      focusNextHeadingRef.current = true;
       const nextAnswers = [...answers];
       nextAnswers[currentQuestion] = options;
       setAnswers(nextAnswers);
@@ -48,7 +62,17 @@ export function TravelQuizClient() {
     [currentQuestion, answers],
   );
 
+  const handleBack = () => {
+    if (currentQuestion === 0 || questionRef.current !== currentQuestion)
+      return;
+    questionRef.current = currentQuestion - 1;
+    focusNextHeadingRef.current = true;
+    setCurrentQuestion(currentQuestion - 1);
+  };
+
   const handleRestart = () => {
+    questionRef.current = 0;
+    focusNextHeadingRef.current = true;
     setState("intro");
     setCurrentQuestion(0);
     setAnswers([]);
@@ -57,13 +81,19 @@ export function TravelQuizClient() {
 
   return (
     <main className="min-h-screen">
-      <div className="max-w-2xl mx-auto px-6 pt-28 lg:pt-32 pb-16">
+      <div
+        ref={contentRef}
+        className="max-w-2xl mx-auto px-6 pt-28 lg:pt-32 pb-16"
+      >
         {state === "intro" && (
           <div className="text-center animate-fade-in">
             <div className="w-20 h-20 rounded-2xl bg-primary/10 text-primary flex items-center justify-center mx-auto mb-6">
               <Compass className="w-10 h-10" />
             </div>
-            <h1 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
+            <h1
+              tabIndex={-1}
+              className="text-4xl md:text-5xl font-bold text-slate-900 mb-4"
+            >
               Where Should <span className="text-gradient">You</span> Go?
             </h1>
             <p className="text-lg text-slate-600 mb-8 max-w-lg mx-auto">
@@ -73,7 +103,7 @@ export function TravelQuizClient() {
             <button
               type="button"
               onClick={handleStart}
-              className="inline-flex items-center gap-2 bg-gradient-to-r from-primary to-amber-500 text-white px-8 py-4 rounded-full text-lg font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-white px-8 py-4 rounded-full text-lg font-semibold transition-all hover:-translate-y-0.5"
             >
               Take the Quiz
             </button>
@@ -91,6 +121,7 @@ export function TravelQuizClient() {
             selected={answers[currentQuestion] || []}
             onSelect={handleSelect}
             onAdvance={handleAdvance}
+            onBack={handleBack}
           />
         )}
 

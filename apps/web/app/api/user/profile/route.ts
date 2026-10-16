@@ -74,19 +74,23 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      id: profile.id,
-      email: profile.email,
-      name: profile.display_name,
-      avatar: profile.avatar_url,
-      authProvider: profile.auth_provider,
-      subscriptionTier: profile.subscription_tier,
-      preferences: profile.preferences || {},
-      notificationSettings: profile.notification_settings || {},
-      notificationConsentVersion: profile.notification_consent_version || null,
-      createdAt: profile.created_at,
-      updatedAt: profile.updated_at,
-    });
+    return NextResponse.json(
+      {
+        id: profile.id,
+        email: profile.email,
+        name: profile.display_name,
+        avatar: profile.avatar_url,
+        authProvider: profile.auth_provider,
+        subscriptionTier: profile.subscription_tier,
+        preferences: profile.preferences || {},
+        notificationSettings: profile.notification_settings || {},
+        notificationConsentVersion:
+          profile.notification_consent_version || null,
+        createdAt: profile.created_at,
+        updatedAt: profile.updated_at,
+      },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
   } catch (error) {
     console.error("[User Profile] Error:", error);
     return NextResponse.json(
@@ -172,19 +176,23 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      id: profile.id,
-      email: profile.email,
-      name: profile.display_name,
-      avatar: profile.avatar_url,
-      authProvider: profile.auth_provider,
-      subscriptionTier: profile.subscription_tier,
-      preferences: profile.preferences || {},
-      notificationSettings: profile.notification_settings || {},
-      notificationConsentVersion: profile.notification_consent_version || null,
-      createdAt: profile.created_at,
-      updatedAt: profile.updated_at,
-    });
+    return NextResponse.json(
+      {
+        id: profile.id,
+        email: profile.email,
+        name: profile.display_name,
+        avatar: profile.avatar_url,
+        authProvider: profile.auth_provider,
+        subscriptionTier: profile.subscription_tier,
+        preferences: profile.preferences || {},
+        notificationSettings: profile.notification_settings || {},
+        notificationConsentVersion:
+          profile.notification_consent_version || null,
+        createdAt: profile.created_at,
+        updatedAt: profile.updated_at,
+      },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
   } catch (error) {
     console.error("[User Profile] PATCH error:", error);
     return NextResponse.json(

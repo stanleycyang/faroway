@@ -6,7 +6,11 @@ import { Suspense } from "react";
 import { EmailPasswordForm } from "@/components/auth/EmailPasswordForm";
 import { GoogleButton } from "@/components/auth/GoogleButton";
 import { AppleButton } from "@/components/auth/AppleButton";
-import { Logo } from "@/components/Logo";
+import { AuthActionProvider } from "@/components/auth/AuthActionProvider";
+import {
+  AuthPageFrame,
+  AuthPageLoading,
+} from "@/components/auth/AuthPageFrame";
 import { validateRedirectUrl } from "@/lib/security/validate-redirect";
 import { getLoginCopy } from "@/lib/auth/login-copy";
 
@@ -18,122 +22,110 @@ function LoginContent() {
   const copy = getLoginCopy(redirectTo);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-white px-4">
-      <div className="w-full max-w-md">
-        {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
-            <Logo size="lg" variant="dark" />
-          </div>
-          <h1 className="mt-6 text-2xl font-semibold text-gray-900">
-            {copy.title}
-          </h1>
-          <p className="mt-2 text-gray-600">{copy.subtitle}</p>
+    <AuthPageFrame
+      title={copy.title}
+      subtitle={copy.subtitle}
+      action="signing in"
+    >
+      {/* Error/Success Messages */}
+      {error && (
+        <div
+          role="alert"
+          className="mb-4 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm"
+        >
+          {error === "auth_code_error" &&
+            "There was an error signing you in. Please try again."}
+          {error === "auth_cancelled" &&
+            "Sign-in was canceled. Choose a method below to continue planning."}
+          {error === "auth_timeout" &&
+            "Sign-in could not be confirmed. Choose a method below to try again."}
+          {error === "no_code" &&
+            "Invalid authentication request. Please try again."}
+          {error !== "auth_code_error" &&
+            error !== "auth_cancelled" &&
+            error !== "auth_timeout" &&
+            error !== "no_code" &&
+            error}
+        </div>
+      )}
+
+      {message && (
+        <div
+          role="status"
+          className="mb-4 p-4 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm"
+        >
+          {message}
+        </div>
+      )}
+
+      {/* Auth Card */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+        {/* OAuth Buttons */}
+        <div className="space-y-3">
+          <GoogleButton mode="signin" redirectTo={redirectTo} />
+          <AppleButton mode="signin" redirectTo={redirectTo} />
         </div>
 
-        {/* Error/Success Messages */}
-        {error && (
-          <div className="mb-4 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
-            {error === "auth_code_error" &&
-              "There was an error signing you in. Please try again."}
-            {error === "no_code" &&
-              "Invalid authentication request. Please try again."}
-            {error !== "auth_code_error" && error !== "no_code" && error}
+        {/* Divider */}
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-gray-200" />
           </div>
-        )}
-
-        {message && (
-          <div className="mb-4 p-4 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm">
-            {message}
+          <div className="relative flex justify-center text-sm">
+            <span className="px-4 bg-white text-gray-500">
+              or continue with email
+            </span>
           </div>
-        )}
+        </div>
 
-        {/* Auth Card */}
-        <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
-          {/* OAuth Buttons */}
-          <div className="space-y-3">
-            <GoogleButton mode="signin" redirectTo={redirectTo} />
-            <AppleButton mode="signin" redirectTo={redirectTo} />
-          </div>
+        {/* Email/Password Form */}
+        <EmailPasswordForm mode="signin" redirectTo={redirectTo} />
 
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-200" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-4 bg-white text-gray-500">
-                or continue with email
-              </span>
-            </div>
-          </div>
+        {/* Forgot Password Link */}
+        <div className="mt-4 text-center">
+          <Link
+            href={`/auth/forgot-password${redirectTo !== "/dashboard" ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`}
+            className="text-sm text-gray-600 hover:text-primary transition-colors"
+          >
+            Forgot your password?
+          </Link>
+        </div>
 
-          {/* Email/Password Form */}
-          <EmailPasswordForm mode="signin" redirectTo={redirectTo} />
-
-          {/* Forgot Password Link */}
-          <div className="mt-4 text-center">
+        {/* Sign Up Link */}
+        {copy.emphasizeSignup ? (
+          <div className="mt-6 rounded-xl border border-primary/20 bg-primary-50 px-4 py-3 text-center">
+            <p className="text-sm font-medium text-primary-800">
+              First time here? A free account is required to generate this trip.
+            </p>
             <Link
-              href="/auth/forgot-password"
-              className="text-sm text-gray-600 hover:text-primary transition-colors"
+              href={`/auth/signup?redirectTo=${encodeURIComponent(redirectTo)}`}
+              className="mt-2 inline-block font-semibold text-primary hover:text-primary-dark transition-colors"
             >
-              Forgot your password?
+              {copy.signupCta}
             </Link>
           </div>
-
-          {/* Sign Up Link */}
-          {copy.emphasizeSignup ? (
-            <div className="mt-6 rounded-xl border border-primary/20 bg-primary-50 px-4 py-3 text-center">
-              <p className="text-sm font-medium text-primary-800">
-                First time here? A free account is required to generate this
-                trip.
-              </p>
-              <Link
-                href={`/auth/signup?redirectTo=${encodeURIComponent(redirectTo)}`}
-                className="mt-2 inline-block font-semibold text-primary hover:text-primary-dark transition-colors"
-              >
-                {copy.signupCta}
-              </Link>
-            </div>
-          ) : (
-            <p className="mt-6 text-center text-sm text-gray-600">
-              Don&apos;t have an account?{" "}
-              <Link
-                href={`/auth/signup${redirectTo !== "/dashboard" ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`}
-                className="font-semibold text-primary hover:text-primary-dark transition-colors"
-              >
-                Sign up
-              </Link>
-            </p>
-          )}
-        </div>
-
-        {/* Footer */}
-        <p className="mt-6 text-center text-xs text-gray-500">
-          By signing in, you agree to our{" "}
-          <Link href="/terms" className="underline hover:text-gray-700">
-            Terms of Service
-          </Link>{" "}
-          and{" "}
-          <Link href="/privacy" className="underline hover:text-gray-700">
-            Privacy Policy
-          </Link>
-        </p>
+        ) : (
+          <p className="mt-6 text-center text-sm text-gray-600">
+            Don&apos;t have an account?{" "}
+            <Link
+              href={`/auth/signup${redirectTo !== "/dashboard" ? `?redirectTo=${encodeURIComponent(redirectTo)}` : ""}`}
+              className="font-semibold text-primary hover:text-primary-dark transition-colors"
+            >
+              Sign up
+            </Link>
+          </p>
+        )}
       </div>
-    </div>
+    </AuthPageFrame>
   );
 }
 
 export default function LoginPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-        </div>
-      }
-    >
-      <LoginContent />
+    <Suspense fallback={<AuthPageLoading />}>
+      <AuthActionProvider>
+        <LoginContent />
+      </AuthActionProvider>
     </Suspense>
   );
 }

@@ -60,3 +60,54 @@ it('restores the original planner choices without changing the pending identity'
   expect(await pendingTripCreation('a', body)).toEqual(receipt);
   expect(await savedTripCreationDraft('b')).toBeNull();
 });
+
+it.each([
+  { start_date: '2099-02-30' },
+  { end_date: '2099-05-01' },
+  { travelers: 1.5 },
+  { budget: 'invalid' },
+  { preferences: { travelerType: 'invalid' } },
+  { preferences: { vibes: ['x'.repeat(51)] } },
+])('malformed saved choices stay untouched for explicit recovery: %j', async (invalid) => {
+  const body = JSON.stringify({
+    destination: 'Tokyo',
+    start_date: '2099-06-01',
+    end_date: '2099-06-04',
+    travelers: 2,
+    preferences: { travelerType: 'couple', vibes: ['food'] },
+    ...invalid,
+  });
+  await pendingTripCreation('a', body);
+  const before = await AsyncStorage.getItem('faroway:pending-create:a');
+  await expect(savedTripCreationDraft('a')).rejects.toThrow();
+  expect(await AsyncStorage.getItem('faroway:pending-create:a')).toBe(before);
+});
+it('a malformed request identity is not offered for restoration or erased', async () => {
+  const raw = JSON.stringify({ version: 1, requestId: 'wrong', body: '{}' });
+  await AsyncStorage.setItem('faroway:pending-create:a', raw);
+  await expect(savedTripCreationDraft('a')).rejects.toThrow('could not be read');
+  expect(await AsyncStorage.getItem('faroway:pending-create:a')).toBe(raw);
+});
+
+import {
+  readTripCreationReceipt,
+  discardReviewedTripCreation,
+} from '../../lib/tripCreationRecovery';
+it('stale reviewed discard preserves a replacement receipt', async () => {
+  await pendingTripCreation('a', '{}');
+  const reviewed = await readTripCreationReceipt('a');
+  const replacement = JSON.stringify({
+    version: 1,
+    requestId: '22222222-2222-4222-8222-222222222222',
+    body: '{"destination":"Paris"}',
+  });
+  await AsyncStorage.setItem('faroway:pending-create:a', replacement);
+  await expect(discardReviewedTripCreation('a', reviewed)).rejects.toThrow('pending trip changed');
+  expect(await AsyncStorage.getItem('faroway:pending-create:a')).toBe(replacement);
+});
+it('reviewed discard removes only the matching receipt and accepts unchanged empty storage', async () => {
+  await pendingTripCreation('a', '{}');
+  await discardReviewedTripCreation('a', await readTripCreationReceipt('a'));
+  expect(await readTripCreationReceipt('a')).toBeNull();
+  await expect(discardReviewedTripCreation('a', null)).resolves.toBeUndefined();
+});

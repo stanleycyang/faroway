@@ -1,12 +1,15 @@
 "use client";
+import { withAuthRequestDeadline } from "@/lib/auth/request-deadline";
 import { createClient } from "@/lib/supabase/client";
 
 /** Fresh choice per operation; pin both creation and generation to this account. */
-export async function requestPlanningConsent() {
+export async function requestPlanningConsent(expectedOwnerId?: string) {
   const client = createClient();
-  const initial = await client.auth.getSession();
+  const initial = await withAuthRequestDeadline(client.auth.getSession());
   const userId = initial.data.session?.user.id;
   if (initial.error || !userId) throw new Error("Sign in before planning.");
+  if (expectedOwnerId && userId !== expectedOwnerId)
+    throw new Error("Your account changed. Please start again.");
   const response = await fetch("/api/ai/disclosure", {
     cache: "no-store",
     signal: AbortSignal.timeout(15_000),
@@ -33,7 +36,7 @@ export async function requestPlanningConsent() {
       "AI sharing declined. Your saved trips are still available.",
     );
   return async () => {
-    const current = await client.auth.getSession();
+    const current = await withAuthRequestDeadline(client.auth.getSession());
     if (current.error || current.data.session?.user.id !== userId)
       throw new Error("Your account changed. Please start again.");
     if (!navigator.onLine)

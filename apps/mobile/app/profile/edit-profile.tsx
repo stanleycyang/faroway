@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -14,52 +14,80 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { useAuthContext } from '../../components/AuthProvider';
 import { useUserStore } from '../../stores/userStore';
 import { updateUserProfile } from '../../services/api';
-import { supabase } from '../../lib/supabase';
+import { ProfileEditorBoundary, type EditorProfile } from '../../components/ProfileEditorBoundary';
 import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 
 export default function EditProfileScreen() {
+  const { user, accountRevision } = useUserStore();
+  if (!user)
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text accessibilityLiveRegion="polite">Loading your profile…</Text>
+      </SafeAreaView>
+    );
+  return (
+    <ProfileEditorBoundary>
+      {(profile) => (
+        <EditProfileScreenEditor key={`${user.id}:${accountRevision}`} profile={profile} />
+      )}
+    </ProfileEditorBoundary>
+  );
+}
+
+function EditProfileScreenEditor({ profile }: { profile: EditorProfile }) {
   const router = useRouter();
-  const { user: authUser } = useAuthContext();
   const { user, setUser } = useUserStore();
-  const [name, setName] = useState(user?.name || '');
+  const [name, setName] = useState(profile.name || '');
   const [isSaving, setIsSaving] = useState(false);
+  const [editingAccountId] = useState(user?.id);
+  const [editingAccountRevision] = useState(useUserStore.getState().accountRevision);
+  const mountedRef = useRef(true);
+  const savingRef = useRef(false);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+  const isCurrentEditor = () =>
+    mountedRef.current &&
+    editingAccountId != null &&
+    useUserStore.getState().user?.id === editingAccountId &&
+    useUserStore.getState().accountRevision === editingAccountRevision;
 
   const handleSave = async () => {
+    if (!isCurrentEditor() || savingRef.current) return;
     if (!name.trim()) {
-      Alert.alert('Error', 'Name cannot be empty');
+      Alert.alert('Add your name', 'Enter a display name before saving.');
       return;
     }
 
+    savingRef.current = true;
     setIsSaving(true);
     try {
-      // Update Supabase user metadata
-      if (authUser) {
-        const { error } = await supabase.auth.updateUser({
-          data: { full_name: name.trim() },
-        });
-        if (error) throw error;
-      }
-
-      // Persist display_name to our users table
-      const result = await updateUserProfile({ display_name: name.trim() });
+      // The profile API is the canonical display-name store; one owner-pinned write.
+      const result = await updateUserProfile({ display_name: name.trim() }, editingAccountId!);
+      if (!isCurrentEditor()) return;
       if (result.error) throw new Error(result.error);
 
       // Update local store
       if (user) {
-        setUser({ ...user, name: name.trim() });
+        const current = useUserStore.getState().user;
+        if (current) setUser({ ...current, name: name.trim() });
       }
 
       hapticFeedback.success();
       router.back();
     } catch (error: unknown) {
+      if (!isCurrentEditor()) return;
       const msg = error instanceof Error ? error.message : 'Failed to save profile';
-      Alert.alert('Error', msg);
+      Alert.alert('Couldn’t save profile', msg);
     } finally {
-      setIsSaving(false);
+      savingRef.current = false;
+      if (isCurrentEditor()) setIsSaving(false);
     }
   };
 
@@ -85,7 +113,7 @@ export default function EditProfileScreen() {
           <TouchableOpacity
             style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
             onPress={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || user?.id !== editingAccountId}
             accessibilityRole="button"
             accessibilityLabel={isSaving ? 'Saving profile' : 'Save profile'}
             accessibilityState={{ disabled: isSaving, busy: isSaving }}
@@ -101,8 +129,8 @@ export default function EditProfileScreen() {
           {/* Avatar */}
           <View style={styles.avatarSection}>
             <View style={styles.avatarContainer}>
-              {user?.avatar ? (
-                <Image source={{ uri: user.avatar }} style={styles.avatar} />
+              {profile.avatar ? (
+                <Image source={{ uri: profile.avatar }} style={styles.avatar} accessible={false} />
               ) : (
                 <View style={styles.avatarPlaceholder}>
                   <Ionicons name="person" size={40} color={colors.surface[500]} />
@@ -127,6 +155,8 @@ export default function EditProfileScreen() {
                   style={styles.input}
                   value={name}
                   onChangeText={setName}
+                  editable={!isSaving}
+                  maxLength={100}
                   placeholder="Enter your name"
                   placeholderTextColor={colors.surface[600]}
                   autoCapitalize="words"
@@ -144,9 +174,7 @@ export default function EditProfileScreen() {
                   color={colors.surface[500]}
                   style={styles.inputIcon}
                 />
-                <Text style={styles.inputDisabledText}>
-                  {user?.email || authUser?.email || 'Not set'}
-                </Text>
+                <Text style={styles.inputDisabledText}>{profile.email || 'Not set'}</Text>
               </View>
               <Text style={styles.inputHint}>Email cannot be changed here</Text>
             </View>
@@ -228,7 +256,7 @@ const styles = StyleSheet.create({
   },
   avatarHint: {
     fontSize: 13,
-    color: '#94a3b8',
+    color: '#64748b',
   },
   formSection: {
     gap: 24,
@@ -253,7 +281,7 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
   },
   inputDisabled: {
-    opacity: 0.6,
+    backgroundColor: '#f8fafc',
   },
   inputIcon: {
     marginRight: 12,
@@ -267,11 +295,11 @@ const styles = StyleSheet.create({
   inputDisabledText: {
     flex: 1,
     paddingVertical: 16,
-    color: '#94a3b8',
+    color: '#64748b',
     fontSize: 16,
   },
   inputHint: {
     fontSize: 12,
-    color: '#94a3b8',
+    color: '#64748b',
   },
 });

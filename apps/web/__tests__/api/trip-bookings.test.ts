@@ -209,3 +209,19 @@ describe("persistent booking checklist boundaries", () => {
     expect((await GET(request(), context)).status).toBe(503);
   });
 });
+
+it.each([
+  { code: "XX000", status: 503 },
+  { code: "PGRST116", status: 404 },
+])(
+  "distinguishes trip read failure from absence: $code",
+  async ({ code, status }) => {
+    mocks.trip.mockResolvedValue({
+      data: null,
+      error: { code, message: "Synthetic read result" },
+    });
+    expect((await GET(request(), context)).status).toBe(status);
+    expect((await POST(request(), context)).status).toBe(status);
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  },
+);

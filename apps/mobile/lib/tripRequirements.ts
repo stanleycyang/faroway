@@ -1,3 +1,4 @@
+import { parseTripDate } from './tripDate';
 export function getMissingTripRequirements(
   input?: {
     destination?: string;
@@ -7,7 +8,16 @@ export function getMissingTripRequirements(
 ): Array<'destination' | 'dates'> {
   const missing: Array<'destination' | 'dates'> = [];
   if (!input?.destination?.trim()) missing.push('destination');
-  if (!input?.startDate || !input?.endDate) missing.push('dates');
+  const start = parseTripDate(input?.startDate || '');
+  const end = parseTripDate(input?.endDate || '');
+  if (
+    !input?.startDate ||
+    !input?.endDate ||
+    Number.isNaN(start.getTime()) ||
+    Number.isNaN(end.getTime()) ||
+    end < start
+  )
+    missing.push('dates');
   return missing;
 }
 

@@ -144,6 +144,7 @@ describe("GET /api/trips", () => {
     expect(res.status).toBe(200);
     expect(json.trips).toHaveLength(1);
     expect(json.trips[0].destination).toBe("Tokyo");
+    expect(res.headers.get("Cache-Control")).toBe("private, no-store");
   });
 
   it("returns 401 when not authenticated", async () => {
@@ -152,6 +153,24 @@ describe("GET /api/trips", () => {
     const res = await getTrips(req);
 
     expect(res.status).toBe(401);
+  });
+
+  it("projects the owner identity required by the mobile paginated reader", async () => {
+    tripsChain.select.mockImplementationOnce((columns: string) => {
+      const projected = Object.fromEntries(
+        columns.split(",").map((column) => {
+          const key = column.trim();
+          return [key, mockTrip[key as keyof typeof mockTrip]];
+        }),
+      );
+      mockTripReturn = { data: [projected], error: null };
+      return tripsChain;
+    });
+    const response = await getTrips(makeRequest("GET", "/api/trips"));
+    const data = await response.json();
+    expect(response.status).toBe(200);
+    expect(data.trips[0].user_id).toBe(mockUser.id);
+    expect(tripsChain.eq).toHaveBeenCalledWith("user_id", mockUser.id);
   });
 });
 
@@ -245,6 +264,7 @@ describe("GET /api/trips/[id]", () => {
     expect(json.trip.id).toBe("trip-1");
     expect(json.itinerary).toBeDefined();
     expect(json.itinerary.overview).toBe("A week in Tokyo");
+    expect(res.headers.get("Cache-Control")).toBe("private, no-store");
   });
 
   it("returns 404 for nonexistent trip", async () => {
@@ -276,6 +296,24 @@ describe("PATCH /api/trips/[id]", () => {
     mockAuthReturn = { data: { user: mockUser }, error: null };
   });
 
+  it.each([
+    ["PGRST116", 404],
+    ["XX000", 503],
+  ])(
+    "distinguishes missing brief from read outage %s",
+    async (code, status) => {
+      mockTripReturn = { data: null, error: { code } };
+      const response = await PATCH(
+        makeRequest("PATCH", "/api/trips/trip-1", {
+          destination: "Osaka",
+          expectedUpdatedAt: mockTrip.updated_at,
+        }),
+        makeParams("trip-1"),
+      );
+      expect(response.status).toBe(status);
+      expect(mockRpc).not.toHaveBeenCalled();
+    },
+  );
   it("requires a loaded revision instead of silently overwriting a newer brief", async () => {
     expect(
       (
@@ -456,5 +494,52 @@ describe("DELETE /api/trips/[id]", () => {
     const res = await DELETE(req, makeParams("nonexistent"));
 
     expect(res.status).toBe(404);
+  });
+});
+
+describe("trip list pagination", () => {
+  it("returns a bounded page and a stable continuation instead of silently truncating", async () => {
+    const trips = Array.from({ length: 101 }, (_, index) => ({
+      ...mockTrip,
+      id: `00000000-0000-4000-8000-${String(200 - index).padStart(12, "0")}`,
+      created_at: "2026-01-01T00:00:00Z",
+    }));
+    mockAuthReturn = { data: { user: mockUser }, error: null };
+    mockTripReturn = { data: trips, error: null };
+    const response = await getTrips(makeRequest("GET", "/api/trips"));
+    const data = await response.json();
+    expect(response.status).toBe(200);
+    expect(data.trips).toHaveLength(100);
+    const cursor = JSON.parse(
+      Buffer.from(data.nextCursor, "base64url").toString(),
+    );
+    expect(cursor).toEqual({
+      createdAt: "2026-01-01T00:00:00Z",
+      id: trips[99].id,
+    });
+    mockTripReturn = { data: [trips[100]], error: null };
+    const next = await getTrips(
+      makeRequest("GET", `/api/trips?cursor=${data.nextCursor}`),
+    );
+    expect(await next.json()).toEqual({
+      trips: [trips[100]],
+      nextCursor: null,
+    });
+    expect(tripsChain.or).toHaveBeenLastCalledWith(
+      `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`,
+    );
+  });
+  it.each([
+    "",
+    "invalid",
+    Buffer.from(
+      JSON.stringify({ createdAt: "bad,filter", id: "bad" }),
+    ).toString("base64url"),
+  ])("rejects malformed cursor %s", async (cursor) => {
+    mockAuthReturn = { data: { user: mockUser }, error: null };
+    expect(
+      (await getTrips(makeRequest("GET", `/api/trips?cursor=${cursor}`)))
+        .status,
+    ).toBe(400);
   });
 });

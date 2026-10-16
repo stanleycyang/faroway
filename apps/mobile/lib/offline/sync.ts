@@ -1,3 +1,5 @@
+import { readOwnedTripPages } from '../tripListPages';
+import { retainTripDetail } from '../tripSummary';
 /**
  * Sync Service
  * Handles background synchronization between local storage and Supabase
@@ -5,14 +7,15 @@
 
 import { offlineStorage, PendingMutation } from './storage';
 import { networkMonitor } from './network';
-import { API_BASE_URL, getAuthHeaders } from '../supabase';
+import { API_BASE_URL } from '../supabase';
 import { normalizeTripStatus } from '../tripStatus';
 import type { Trip, TripInput } from '../../stores/tripStore';
 import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 
 import { requestWithTimeout } from '../../services/request';
-import { supabase } from '../supabase';
 import * as Crypto from 'expo-crypto';
+import { captureTripAccount, readTripSession } from '../tripAccountScope';
+import { useUserStore } from '../../stores/userStore';
 
 async function syncResponse(input: RequestInfo | URL, init: RequestInit) {
   return requestWithTimeout(
@@ -27,19 +30,24 @@ async function syncResponse(input: RequestInfo | URL, init: RequestInit) {
 }
 
 async function accountSession(ownerId?: string) {
-  const { data, error } = await supabase.auth.getSession();
+  const { data, error } = await readTripSession();
   if (error || !data.session || (ownerId && data.session.user.id !== ownerId))
     throw new Error('Your account changed. Reopen your trips before syncing.');
   return data.session;
 }
 
 async function ownedSyncResponse(input: RequestInfo | URL, init: RequestInit, ownerId: string) {
-  const session = await accountSession(ownerId);
+  const account = captureTripAccount();
+  account.assertCurrent();
+  if (account.ownerId !== ownerId)
+    throw new Error('Your account changed. Reopen your trips before syncing.');
+  const headers = await account.headers();
+  account.assertCurrent();
   const response = await syncResponse(input, {
     ...init,
-    headers: { ...init.headers, Authorization: `Bearer ${session.access_token}` },
+    headers: { ...init.headers, ...headers },
   });
-  await accountSession(ownerId);
+  account.assertCurrent();
   return response;
 }
 
@@ -80,6 +88,29 @@ const MIN_SYNC_INTERVAL = 5000; // 5 seconds
  */
 class TripRevisionConflict extends Error {}
 
+/** A 200 response alone must never erase the user's durable pending edits. */
+function confirmedTripReceipt(
+  value: unknown,
+  tripId: string,
+  ownerId: string,
+  previousRevision?: string
+) {
+  const trip = (value as { trip?: Record<string, unknown> } | null)?.trip;
+  if (
+    !trip ||
+    trip.id !== tripId ||
+    trip.user_id !== ownerId ||
+    (previousRevision !== undefined &&
+      (typeof trip.updated_at !== 'string' ||
+        !trip.updated_at.trim() ||
+        trip.updated_at === previousRevision))
+  )
+    throw new TripRevisionConflict(
+      'The save response could not be verified. Your local changes are kept. Load the latest trip before retrying.'
+    );
+  return trip;
+}
+
 class SyncService {
   private state: SyncState = {
     status: 'idle',
@@ -93,13 +124,45 @@ class SyncService {
   private syncInProgress: boolean = false;
   private lastSyncAttempt: number = 0;
   private networkUnsubscribe: (() => void) | null = null;
-  private autoSyncEnabled: boolean = true;
+  private autoSyncEnabled: boolean = false;
   private hasResolvedNetwork: boolean = false;
+  private initialization: Promise<void> | null = null;
+  private accountUnsubscribe: (() => void) | null = null;
+  private stateOwner: string | undefined;
+  private stateRevision: number | undefined;
 
   /**
    * Initialize the sync service
    */
-  async initialize(): Promise<void> {
+  initialize(): Promise<void> {
+    if (!this.initialization) {
+      this.initialization = this.initializeOnce().catch((error) => {
+        this.accountUnsubscribe?.();
+        this.accountUnsubscribe = null;
+        this.networkUnsubscribe?.();
+        this.networkUnsubscribe = null;
+        this.initialization = null;
+        throw error;
+      });
+    }
+    return this.initialization;
+  }
+
+  private async initializeOnce(): Promise<void> {
+    const account = captureTripAccount();
+    this.accountUnsubscribe = useUserStore.subscribe((current, previous) => {
+      if (current.accountRevision === previous.accountRevision) return;
+      this.lastSyncAttempt = 0;
+      this.updateState(
+        {
+          status: this.state.isOnline ? 'idle' : 'offline',
+          lastSyncTime: null,
+          pendingCount: 0,
+          error: null,
+        },
+        captureTripAccount()
+      );
+    });
     // Initialize network monitoring
     await networkMonitor.initialize();
 
@@ -124,13 +187,16 @@ class SyncService {
 
     // Load initial sync state
     const meta = await offlineStorage.getSyncMeta();
-    this.state.lastSyncTime = meta.lastSyncTime;
-    this.state.pendingCount = meta.pendingCount;
     this.state.isOnline = networkMonitor.isOnline();
-
-    if (!this.state.isOnline) {
-      this.state.status = 'offline';
-    }
+    this.updateState(
+      {
+        lastSyncTime: meta.lastSyncTime,
+        pendingCount: meta.pendingCount,
+        status: this.state.isOnline ? 'idle' : 'offline',
+        error: null,
+      },
+      account
+    );
 
     console.log('[SyncService] Initialized', this.state);
   }
@@ -139,6 +205,16 @@ class SyncService {
    * Get current sync state
    */
   getState(): SyncState {
+    const current = useUserStore.getState();
+    if (this.stateOwner !== current.user?.id || this.stateRevision !== current.accountRevision) {
+      return {
+        ...this.state,
+        status: this.state.isOnline ? 'idle' : 'offline',
+        pendingCount: 0,
+        lastSyncTime: null,
+        error: null,
+      };
+    }
     return { ...this.state };
   }
 
@@ -147,7 +223,7 @@ class SyncService {
    */
   subscribe(listener: SyncListener): () => void {
     this.listeners.add(listener);
-    listener(this.state);
+    listener(this.getState());
 
     return () => {
       this.listeners.delete(listener);
@@ -160,7 +236,7 @@ class SyncService {
   private notifyListeners(): void {
     this.listeners.forEach((listener) => {
       try {
-        listener(this.state);
+        listener(this.getState());
       } catch (error) {
         console.error('[SyncService] Listener error:', error);
       }
@@ -170,7 +246,15 @@ class SyncService {
   /**
    * Update state and notify listeners
    */
-  private updateState(updates: Partial<SyncState>): void {
+  private updateState(
+    updates: Partial<SyncState>,
+    account?: ReturnType<typeof captureTripAccount>
+  ): void {
+    if (account) {
+      if (!account.isCurrent()) return;
+      this.stateOwner = account.ownerId;
+      this.stateRevision = account.accountRevision;
+    }
     this.state = { ...this.state, ...updates };
     this.notifyListeners();
   }
@@ -186,6 +270,8 @@ class SyncService {
    * Full sync - fetch from server and push pending changes
    */
   async sync(force: boolean = false): Promise<SyncResult> {
+    const account = captureTripAccount();
+    if (!account.ownerId) return { success: false, synced: 0, failed: 0, errors: [] };
     // Prevent concurrent syncs
     if (this.syncInProgress) {
       console.log('[SyncService] Sync already in progress');
@@ -201,7 +287,7 @@ class SyncService {
 
     // Check network
     if (!networkMonitor.isOnline()) {
-      this.updateState({ status: 'offline', error: 'No network connection' });
+      this.updateState({ status: 'offline', error: 'No network connection' }, account);
       return {
         success: false,
         synced: 0,
@@ -212,7 +298,7 @@ class SyncService {
 
     this.syncInProgress = true;
     this.lastSyncAttempt = now;
-    this.updateState({ status: 'syncing', error: null });
+    this.updateState({ status: 'syncing', error: null }, account);
 
     const result: SyncResult = {
       success: true,
@@ -223,7 +309,8 @@ class SyncService {
 
     try {
       // Step 1: Push pending mutations first
-      const pushResult = await this.pushPendingMutations();
+      const pushResult = await this.pushPendingMutations(account);
+      account.assertCurrent();
       result.synced = pushResult.synced;
       result.failed = pushResult.failed;
       result.errors = pushResult.errors;
@@ -231,16 +318,21 @@ class SyncService {
       result.success = result.failed === 0;
 
       // Step 2: Pull latest from server
-      await this.pullFromServer();
+      await this.pullFromServer(account.ownerId);
+      account.assertCurrent();
 
       // Update state
       const meta = await offlineStorage.getSyncMeta();
-      this.updateState({
-        status: result.failed > 0 ? 'error' : 'success',
-        lastSyncTime: Date.now(),
-        pendingCount: meta.pendingCount,
-        error: result.failed > 0 ? `${result.failed} items failed to sync` : null,
-      });
+      account.assertCurrent();
+      this.updateState(
+        {
+          status: result.failed > 0 ? 'error' : 'success',
+          lastSyncTime: Date.now(),
+          pendingCount: meta.pendingCount,
+          error: result.failed > 0 ? `${result.failed} items failed to sync` : null,
+        },
+        account
+      );
 
       if (result.failed === 0) await offlineStorage.recordSuccessfulSync();
       else await offlineStorage.recordFailedSync();
@@ -249,6 +341,7 @@ class SyncService {
       return result;
     } catch (error: unknown) {
       result.success = false;
+      if (!account.isCurrent()) return result;
 
       // Treat network request failures (server unreachable) as temporary offline,
       // not as a hard error. This prevents error spam when the backend isn't running.
@@ -257,10 +350,13 @@ class SyncService {
 
       if (isNetworkError) {
         console.log('[SyncService] Backend unreachable, treating as offline');
-        this.updateState({
-          status: 'offline',
-          error: null,
-        });
+        this.updateState(
+          {
+            status: 'offline',
+            error: null,
+          },
+          account
+        );
         return result;
       }
 
@@ -268,24 +364,33 @@ class SyncService {
       console.error('[SyncService] Sync failed:', error);
       result.errors.push({ mutationId: '', error: errorMessage });
 
-      this.updateState({
-        status: 'error',
-        error: errorMessage,
-      });
+      this.updateState(
+        {
+          status: 'error',
+          error: errorMessage,
+        },
+        account
+      );
 
       await offlineStorage.recordFailedSync();
 
       return result;
     } finally {
       this.syncInProgress = false;
+      if (!account.isCurrent() && this.autoSyncEnabled && useUserStore.getState().user) {
+        void this.sync(true);
+      }
     }
   }
 
   /**
    * Push pending mutations to server
    */
-  private async pushPendingMutations(): Promise<SyncResult> {
+  private async pushPendingMutations(
+    account: ReturnType<typeof captureTripAccount>
+  ): Promise<SyncResult> {
     const mutations = await offlineStorage.getPendingMutations();
+    account.assertCurrent();
     const result: SyncResult = { success: true, synced: 0, failed: 0, errors: [] };
 
     if (mutations.length === 0) {
@@ -298,6 +403,7 @@ class SyncService {
     const sorted = mutations.sort((a, b) => a.timestamp - b.timestamp);
 
     for (const mutation of sorted) {
+      account.assertCurrent();
       if (mutation.blockedReason) {
         result.failed++;
         result.errors.push({ mutationId: mutation.id, error: mutation.blockedReason });
@@ -315,10 +421,12 @@ class SyncService {
 
       try {
         await this.executeMutation(mutation);
+        account.assertCurrent();
         await offlineStorage.removePendingMutation(mutation.id);
         result.synced++;
         console.log(`[SyncService] Mutation ${mutation.id} synced successfully`);
       } catch (error: unknown) {
+        if (!account.isCurrent()) throw error;
         // If backend is unreachable, stop processing the rest of the queue
         const isNetworkError =
           error instanceof TypeError && /network request failed/i.test(error.message);
@@ -348,7 +456,7 @@ class SyncService {
       throw new TripRevisionConflict(
         'This older request has no verified account. Review your saved trips before retrying or discarding it.'
       );
-    const headers = await getAuthHeaders();
+    const headers = { 'Content-Type': 'application/json' };
 
     switch (mutation.type) {
       case 'create': {
@@ -374,13 +482,15 @@ class SyncService {
         }
 
         // Update local trip with server-generated ID
-        const { trip } = await response.json();
-        if (!trip || typeof trip.id !== 'string')
-          throw new Error('Trip creation was not confirmed. Your local request is kept.');
+        const trip = confirmedTripReceipt(
+          await response.json(),
+          mutation.data.requestId,
+          mutation.ownerId
+        );
         if (mutation.tripId.startsWith('local_')) {
           // Replace local trip with server trip
-          await offlineStorage.deleteTrip(mutation.tripId);
-          await offlineStorage.saveTrip(this.transformApiTrip(trip));
+          await offlineStorage.deleteTrip(mutation.tripId, mutation.ownerId);
+          await offlineStorage.saveTrip(this.transformApiTrip(trip), mutation.ownerId);
         }
         break;
       }
@@ -404,6 +514,14 @@ class SyncService {
             );
           throw new Error(error.error || `HTTP ${response.status}`);
         }
+        confirmedTripReceipt(
+          await response.json(),
+          mutation.tripId,
+          mutation.ownerId,
+          typeof mutation.data?.expectedUpdatedAt === 'string'
+            ? mutation.data.expectedUpdatedAt
+            : ''
+        );
         break;
       }
 
@@ -430,38 +548,40 @@ class SyncService {
   /**
    * Pull latest trips from server
    */
-  private async pullFromServer(): Promise<void> {
+  private async pullFromServer(ownerId: string): Promise<void> {
     try {
-      const session = await accountSession();
-      const headers = await getAuthHeaders();
-      const response = await ownedSyncResponse(
-        `${API_BASE_URL}/api/trips`,
-        {
-          method: 'GET',
-          headers,
-        },
-        session.user.id
-      );
-
-      if (!response.ok) {
-        if (response.status === 401) {
-          console.log('[SyncService] Not authenticated, skipping pull');
-          return;
-        }
-        throw new Error(`Failed to fetch trips: HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
+      const session = await accountSession(ownerId);
+      const account = captureTripAccount();
+      account.assertCurrent();
+      const data = {
+        trips: await readOwnedTripPages(
+          session.user.id,
+          (cursor) =>
+            ownedSyncResponse(
+              `${API_BASE_URL}/api/trips${cursor ? `?cursor=${encodeURIComponent(cursor)}` : ''}`,
+              { method: 'GET', headers: { 'Content-Type': 'application/json' } },
+              session.user.id
+            ),
+          account.assertCurrent
+        ),
+      };
       const serverTrips: Trip[] = (data.trips || []).map(this.transformApiTrip);
 
       // Get local trips
-      const localTrips = await offlineStorage.loadTrips();
+      const localTrips = await offlineStorage.loadSavedTrips();
+      account.assertCurrent();
 
       // Merge: server wins for existing trips, keep local-only trips
-      const mergedTrips = this.mergeTrips(localTrips, serverTrips);
+      const summaryIds = new Set<string>(
+        (data.trips || [])
+          .filter((trip: { itinerary?: unknown }) => !trip.itinerary)
+          .map((trip: { id: string }) => trip.id)
+      );
+      const mergedTrips = this.mergeTrips(localTrips, serverTrips, summaryIds);
 
       await accountSession(session.user.id);
-      await offlineStorage.saveTrips(mergedTrips);
+      account.assertCurrent();
+      await offlineStorage.saveTrips(mergedTrips, session.user.id);
       console.log(`[SyncService] Pulled ${serverTrips.length} trips from server`);
     } catch (error) {
       // Network errors are handled by sync() — only log non-network failures here
@@ -478,11 +598,15 @@ class SyncService {
    * Merge local and server trips
    * Strategy: Server wins for conflicts, keep local-only (pending) trips
    */
-  private mergeTrips(local: Trip[], server: Trip[]): Trip[] {
+  private mergeTrips(local: Trip[], server: Trip[], summaryIds: Set<string>): Trip[] {
     const merged: Map<string, Trip> = new Map();
 
+    const cachedById = new Map(local.map((trip) => [trip.id, trip]));
     // First, add all server trips (authoritative)
-    server.forEach((trip) => merged.set(trip.id, trip));
+    server.forEach((trip) => {
+      const cached = cachedById.get(trip.id);
+      merged.set(trip.id, retainTripDetail(trip, cached, summaryIds.has(trip.id)));
+    });
 
     // Then, add local-only trips (those with local_ prefix that haven't synced)
     local.forEach((trip) => {
@@ -525,20 +649,25 @@ class SyncService {
    */
   async queueCreate(trip: Trip): Promise<void> {
     if (this.syncInProgress) throw new Error('Wait for sync to finish before editing trips.');
-    const session = await accountSession();
-    await offlineStorage.saveTrip(trip);
+    const account = captureTripAccount();
+    account.assertCurrent();
+    const snapshot = JSON.parse(JSON.stringify(trip)) as Trip;
+    const session = await accountSession(account.ownerId);
+    account.assertCurrent();
     await offlineStorage.addPendingMutation({
       type: 'create',
+      localTrip: snapshot,
       ownerId: session.user.id,
-      tripId: trip.id,
+      tripId: snapshot.id,
       // Store the snake_case API payload so a later sync can POST it
       // directly. Anything else would 400 against the backend's
       // CreateTripSchema.
-      data: { ...buildTripCreatePayload(trip), requestId: Crypto.randomUUID() },
+      data: { ...buildTripCreatePayload(snapshot), requestId: Crypto.randomUUID() },
     });
 
     const meta = await offlineStorage.getSyncMeta();
-    this.updateState({ pendingCount: meta.pendingCount });
+    account.assertCurrent();
+    this.updateState({ pendingCount: meta.pendingCount }, account);
   }
 
   /**
@@ -546,24 +675,28 @@ class SyncService {
    */
   async queueUpdate(tripId: string, updates: Partial<TripInput>): Promise<void> {
     if (this.syncInProgress) throw new Error('Wait for sync to finish before editing this trip.');
-    const session = await accountSession();
+    const account = captureTripAccount();
+    account.assertCurrent();
+    const snapshot = JSON.parse(JSON.stringify(updates)) as Partial<TripInput>;
+    const session = await accountSession(account.ownerId);
+    account.assertCurrent();
     // Update local storage
     const trip = await offlineStorage.getTrip(tripId);
-    if (trip) {
-      await offlineStorage.saveTrip({ ...trip, ...updates } as Trip);
-    }
-
+    account.assertCurrent();
+    if (!trip) throw new Error('Reopen your saved trip before editing it offline.');
     await offlineStorage.addPendingMutation({
       type: 'update',
+      localTrip: { ...trip, ...snapshot },
       ownerId: session.user.id,
       tripId,
       // Same snake_case contract as create — the API's UpdateTripSchema
       // is strict() and rejects camelCase keys.
-      data: buildTripUpdatePayload(updates, trip?.updatedAt),
+      data: buildTripUpdatePayload(snapshot, trip?.updatedAt),
     });
 
     const meta = await offlineStorage.getSyncMeta();
-    this.updateState({ pendingCount: meta.pendingCount });
+    account.assertCurrent();
+    this.updateState({ pendingCount: meta.pendingCount }, account);
   }
 
   /**
@@ -571,8 +704,10 @@ class SyncService {
    */
   async queueDelete(tripId: string): Promise<void> {
     if (this.syncInProgress) throw new Error('Wait for sync to finish before editing trips.');
-    const session = await accountSession();
-    await offlineStorage.deleteTrip(tripId);
+    const account = captureTripAccount();
+    account.assertCurrent();
+    const session = await accountSession(account.ownerId);
+    account.assertCurrent();
     await offlineStorage.addPendingMutation({
       type: 'delete',
       ownerId: session.user.id,
@@ -580,19 +715,25 @@ class SyncService {
     });
 
     const meta = await offlineStorage.getSyncMeta();
-    this.updateState({ pendingCount: meta.pendingCount });
+    account.assertCurrent();
+    this.updateState({ pendingCount: meta.pendingCount }, account);
   }
 
   /** Explicit traveler choice after comparing the current server brief. */
   async resolveBlockedMutation(snapshot: PendingMutation, revision?: string): Promise<void> {
+    const account = captureTripAccount();
+    account.assertCurrent();
+    if (snapshot.ownerId !== account.ownerId)
+      throw new Error('These changes belong to another account.');
     if (this.syncInProgress)
       throw new Error('Wait for sync to finish before resolving this change.');
     this.syncInProgress = true;
-    this.updateState({ status: 'syncing' });
+    this.updateState({ status: 'syncing' }, account);
     try {
       const current = (await offlineStorage.getPendingMutations()).find(
         (m) => m.id === snapshot.id
       );
+      account.assertCurrent();
       if (!current?.blockedReason || JSON.stringify(current) !== JSON.stringify(snapshot))
         throw new Error('Your local changes changed. Review them again before continuing.');
       if (revision) {
@@ -601,7 +742,7 @@ class SyncService {
           `${API_BASE_URL}/api/trips/${snapshot.tripId}`,
           {
             method: 'PATCH',
-            headers: await getAuthHeaders(),
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ...snapshot.data, expectedUpdatedAt: revision }),
           },
           session.user.id
@@ -610,16 +751,21 @@ class SyncService {
           const data = await response.json().catch(() => ({}));
           throw new Error(data.error || 'Could not save. Your local changes are still kept.');
         }
+        confirmedTripReceipt(await response.json(), snapshot.tripId, session.user.id, revision);
       }
       await offlineStorage.removePendingMutation(snapshot.id);
-      this.updateState({
-        pendingCount: (await offlineStorage.getPendingMutations()).length,
-        status: 'idle',
-        error: null,
-      });
+      account.assertCurrent();
+      this.updateState(
+        {
+          pendingCount: (await offlineStorage.getPendingMutations()).length,
+          status: 'idle',
+          error: null,
+        },
+        account
+      );
     } finally {
       this.syncInProgress = false;
-      if (this.state.status === 'syncing') this.updateState({ status: 'error' });
+      if (this.state.status === 'syncing') this.updateState({ status: 'error' }, account);
     }
   }
 
@@ -627,19 +773,26 @@ class SyncService {
    * Clear all local data (for logout)
    */
   async clearAll(): Promise<void> {
+    const account = captureTripAccount();
     await offlineStorage.clearAll();
-    this.updateState({
-      status: 'idle',
-      lastSyncTime: null,
-      pendingCount: 0,
-      error: null,
-    });
+    this.updateState(
+      {
+        status: 'idle',
+        lastSyncTime: null,
+        pendingCount: 0,
+        error: null,
+      },
+      account
+    );
   }
 
   /**
    * Cleanup subscriptions
    */
   cleanup(): void {
+    this.accountUnsubscribe?.();
+    this.accountUnsubscribe = null;
+    this.initialization = null;
     if (this.networkUnsubscribe) {
       this.networkUnsubscribe();
       this.networkUnsubscribe = null;

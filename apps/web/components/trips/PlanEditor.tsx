@@ -1,84 +1,130 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { z } from "zod";
+import { removeLocalRetry } from "@/lib/trips/remove-local-retry";
+import {
+  PlanCommand,
+  PlanSaveReceipt,
+  type PlanCommandInput,
+} from "@/lib/trips/plan-command";
 
-interface Item {
-  id: string;
-  name: string;
-  date: string;
-  period: string;
-  locked: boolean;
-}
-interface Plan {
-  revision: string;
-  planRevision: string | null;
-  editable: boolean;
-  items: Item[];
-  history: {
-    id: string;
-    requestId: string | null;
-    createdAt: string;
-    action: string;
-  }[];
-}
-interface Command {
-  requestId: string;
-  expectedUpdatedAt: string;
-  expectedPlanRevision: string | null;
-  action: "lock" | "unlock" | "swap";
-  itemId: string;
-  otherItemId?: string;
-}
+const PlanRead = z.object({
+  revision: z.string().min(1),
+  planRevision: z.string().nullable(),
+  editable: z.boolean(),
+  items: z.array(
+    z.object({
+      id: z.string(),
+      name: z.string(),
+      date: z.string(),
+      period: z.string(),
+      locked: z.boolean(),
+    }),
+  ),
+  history: z.array(
+    z.object({
+      id: z.string(),
+      requestId: z.string().nullable(),
+      createdAt: z.string(),
+      action: z.string().min(1),
+    }),
+  ),
+});
+type Plan = z.infer<typeof PlanRead>;
+type Item = Plan["items"][number];
+type Command = PlanCommandInput;
 
 export function PlanEditor({
   tripId,
   userId,
   onSaved,
+  open,
+  onOpenChange,
 }: {
   tripId: string;
   userId: string;
   onSaved: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 }) {
   const [plan, setPlan] = useState<Plan | null>(null);
   const [first, setFirst] = useState("");
   const [second, setSecond] = useState("");
   const [reviewing, setReviewing] = useState(false);
+  const [unreadableRetry, setUnreadableRetry] = useState(false);
   const [pending, setPending] = useState<Command | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const inFlight = useRef(false);
+  const readSequence = useRef(0);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      readSequence.current += 1;
+    };
+  }, []);
   const endpoint = `/api/trips/${tripId}/plan`;
   const storageKey = `faroway:plan-change:${userId}:${tripId}`;
   const refresh = useCallback(async () => {
-    const response = await fetch(endpoint, {
-      cache: "no-store",
-      signal: AbortSignal.timeout(15_000),
-    });
-    const data = await response.json();
-    if (!response.ok)
-      throw new Error(data.error || "Could not load plan editing.");
-    setPlan(data);
-    return data as Plan;
+    const sequence = ++readSequence.current;
+    try {
+      const response = await fetch(endpoint, {
+        cache: "no-store",
+        signal: AbortSignal.timeout(15_000),
+      });
+      const data = await response.json();
+      if (!mounted.current || sequence !== readSequence.current) return null;
+      if (!response.ok)
+        throw new Error(data.error || "Could not load plan editing.");
+      const verified = PlanRead.safeParse(data);
+      if (!verified.success)
+        throw new Error(
+          "The saved plan could not be verified. Your pending change is kept; try refreshing the saved plan.",
+        );
+      setPlan(verified.data);
+      return verified.data;
+    } catch (error) {
+      if (!mounted.current || sequence !== readSequence.current) return null;
+      throw error;
+    }
   }, [endpoint]);
   useEffect(() => {
     try {
       const saved = localStorage.getItem(storageKey);
-      if (saved) setPending(JSON.parse(saved));
+      if (saved) {
+        const parsed = PlanCommand.safeParse(JSON.parse(saved));
+        if (parsed.success) setPending(parsed.data);
+        else {
+          setUnreadableRetry(true);
+          setMessage(
+            "The saved retry could not be read. Your current plan is still available; review it before making a new change.",
+          );
+        }
+      }
     } catch {
-      /* Storage may be unavailable. */
+      setUnreadableRetry(true);
+      setMessage(
+        "Saved retry recovery is unavailable. Your current plan is still available; review it before making a new change.",
+      );
     }
-    void refresh().catch((error) => setMessage(error.message));
+    void refresh().catch((error) => {
+      if (mounted.current) setMessage(error.message);
+    });
   }, [refresh, storageKey]);
   const clearPending = () => {
-    try {
-      localStorage.removeItem(storageKey);
-    } catch {
-      /* Keep current in-memory state usable. */
-    }
+    // A verified server receipt can release the UI even if local cleanup fails.
+    removeLocalRetry(storageKey);
     setPending(null);
   };
   const checkSaved = async () => {
+    if (inFlight.current) return;
+    inFlight.current = true;
+    setBusy(true);
     try {
       const latest = await refresh();
+      if (!latest) return;
       if (
         pending &&
         latest.history.some((row) => row.requestId === pending.requestId)
@@ -93,16 +139,21 @@ export function PlanEditor({
         );
       onSaved();
     } catch (error) {
+      if (!mounted.current) return;
       setMessage(
         error instanceof Error
           ? error.message
           : "Could not check the saved plan.",
       );
+    } finally {
+      inFlight.current = false;
+      if (mounted.current) setBusy(false);
     }
   };
   const save = async (command: Command) => {
-    if (inFlight.current) return;
+    if (inFlight.current || unreadableRetry) return;
     inFlight.current = true;
+    readSequence.current += 1;
     setBusy(true);
     setMessage(null);
     setPending(command);
@@ -120,19 +171,33 @@ export function PlanEditor({
         signal: AbortSignal.timeout(20_000),
       });
       const data = await response.json();
-      if (!response.ok)
-        throw new Error(data.error || "Could not save this change.");
+      if (!mounted.current) return;
+      const receipt = PlanSaveReceipt.safeParse(data);
+      if (
+        !response.ok ||
+        !receipt.success ||
+        receipt.data.requestId !== command.requestId ||
+        receipt.data.revision === command.expectedUpdatedAt ||
+        receipt.data.planRevision === command.expectedPlanRevision
+      )
+        throw new Error(
+          typeof data?.error === "string"
+            ? data.error
+            : "The save could not be confirmed.",
+        );
       saved = true;
       clearPending();
       setReviewing(false);
       setFirst("");
       setSecond("");
       onSaved();
-      await refresh();
+      const latest = await refresh();
+      if (!latest) return;
       setMessage(
         "Your plan is saved. Public sharing is off until you choose to share again.",
       );
     } catch (error) {
+      if (!mounted.current) return;
       setMessage(
         saved
           ? "Your change was saved, but the updated plan could not be loaded. Refresh the saved plan; do not submit the change again."
@@ -140,7 +205,7 @@ export function PlanEditor({
       );
     } finally {
       inFlight.current = false;
-      setBusy(false);
+      if (mounted.current) setBusy(false);
     }
   };
   const command = (
@@ -159,7 +224,11 @@ export function PlanEditor({
   const b = plan?.items.find((item) => item.id === second);
   const label = (item: Item) => `${item.name} · ${item.date} ${item.period}`;
   return (
-    <details className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+    <details
+      open={open}
+      onToggle={(event) => onOpenChange?.(event.currentTarget.open)}
+      className="mb-6 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm"
+    >
       <summary className="cursor-pointer font-semibold text-gray-900">
         Make this plan yours{" "}
         <span className="ml-2 text-sm font-normal text-gray-500">
@@ -191,6 +260,37 @@ export function PlanEditor({
           Refresh saved plan
         </button>
       )}
+      {unreadableRetry && (
+        <div
+          role="status"
+          className="mt-4 rounded-xl border border-amber-200 p-4"
+        >
+          <p className="text-sm">
+            Your interrupted change could not be read. Refresh and review the
+            saved plan before clearing this browser’s retry record and making a
+            new change.
+          </p>
+          <button
+            type="button"
+            disabled={busy}
+            className="min-h-11 mt-2 font-medium underline"
+            onClick={() => {
+              if (removeLocalRetry(storageKey)) {
+                setUnreadableRetry(false);
+                setMessage(
+                  "Unreadable retry cleared from this browser. Your saved plan is unchanged.",
+                );
+              } else {
+                setMessage(
+                  "This browser could not clear the interrupted retry. Try again before making a new change.",
+                );
+              }
+            }}
+          >
+            Discard unreadable retry
+          </button>
+        </div>
+      )}
       {pending && (
         <div className="mt-4 rounded-xl border border-amber-200 p-4">
           <p className="text-sm">
@@ -215,8 +315,17 @@ export function PlanEditor({
             <button
               disabled={busy}
               onClick={() => {
-                clearPending();
+                if (!removeLocalRetry(storageKey)) {
+                  setMessage(
+                    "This browser couldn’t discard the pending change. It is kept for recovery; try again before making a new change.",
+                  );
+                  return;
+                }
+                setPending(null);
                 setReviewing(false);
+                setMessage(
+                  "Pending retry discarded from this browser. Any change already saved remains; refresh the plan to check it.",
+                );
               }}
               className="min-h-11 font-medium underline"
             >
@@ -232,7 +341,7 @@ export function PlanEditor({
       )}
       {plan?.editable && (
         <fieldset
-          disabled={busy || !!pending}
+          disabled={busy || !!pending || unreadableRetry}
           className="mt-4 space-y-4 disabled:opacity-60"
         >
           <ul className="space-y-2">

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -37,11 +37,11 @@ interface AuthGateProps {
 const triggerContent: Record<AuthGateTrigger, { title: string; subtitle: string }> = {
   save: {
     title: 'Save Your Trip',
-    subtitle: 'Create a free account to save this amazing itinerary',
+    subtitle: 'Sign in to keep this itinerary in your account',
   },
   book: {
-    title: 'Ready to Book?',
-    subtitle: 'Sign in to complete your reservation',
+    title: 'Keep your trip organized',
+    subtitle: 'Save your itinerary while you review booking options with providers',
   },
   share: {
     title: 'Share with Friends',
@@ -53,7 +53,7 @@ const triggerContent: Record<AuthGateTrigger, { title: string; subtitle: string 
   },
   general: {
     title: 'Join Faroway',
-    subtitle: 'Create a free account to unlock all features',
+    subtitle: 'Keep your saved trips together in one account',
   },
   generate: {
     title: 'Sign in to generate your trip',
@@ -63,8 +63,7 @@ const triggerContent: Record<AuthGateTrigger, { title: string; subtitle: string 
 
 const benefits = [
   { icon: 'cloud-upload-outline', text: 'Save trips to your account' },
-  { icon: 'notifications-outline', text: 'Get itinerary-ready alerts' },
-  { icon: 'star-outline', text: 'Build your travel wishlist' },
+  { icon: 'notifications-outline', text: 'Choose your notification preferences' },
   { icon: 'people-outline', text: 'Share itinerary links' },
 ];
 
@@ -79,46 +78,80 @@ export function AuthGate({
   const { signInWithGoogle, signInWithApple } = useAuthContext();
   const [loading, setLoading] = useState(false);
   const content = triggerContent[trigger];
+  const pending = useRef(false);
+  const attempt = useRef<symbol | null>(null);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      attempt.current = null;
+    };
+  }, []);
+  useEffect(() => {
+    attempt.current = null;
+  }, [visible, trigger, tripPreview?.destination]);
+  const dismiss = () => {
+    attempt.current = null;
+    onDismiss?.();
+    onClose();
+  };
+  const begin = () => {
+    if (!visible || pending.current) return null;
+    pending.current = true;
+    const token = Symbol('native-auth');
+    attempt.current = token;
+    setLoading(true);
+    return token;
+  };
+  const current = (token: symbol) => mounted.current && attempt.current === token;
+  const finish = () => {
+    pending.current = false;
+    if (mounted.current) setLoading(false);
+  };
   const reduceMotion = useReduceMotion();
 
   const handleGoogle = async () => {
-    setLoading(true);
+    const token = begin();
+    if (!token) return;
     try {
       await signInWithGoogle(
         trigger === 'generate'
           ? { redirectTo: '/create/generating', preserveTripDraft: true }
           : undefined
       );
+      if (!current(token)) return;
       onAuthenticated?.();
       onClose();
     } catch (err: unknown) {
+      if (!current(token)) return;
       const msg = err instanceof Error ? err.message : 'Please try again';
       Alert.alert('Sign In Failed', msg);
     } finally {
-      setLoading(false);
+      finish();
     }
   };
 
   const handleApple = async () => {
-    setLoading(true);
+    const token = begin();
+    if (!token) return;
     try {
       await signInWithApple();
+      if (!current(token)) return;
       onAuthenticated?.();
       onClose();
     } catch (err: unknown) {
+      if (!current(token)) return;
       const e = err as { code?: string; message?: string };
       if (e.code !== 'ERR_REQUEST_CANCELED') {
         Alert.alert('Sign In Failed', e.message || 'Please try again');
       }
     } finally {
-      setLoading(false);
+      finish();
     }
   };
 
-  const handleMaybeLater = () => {
-    onDismiss?.();
-    onClose();
-  };
+  const handleMaybeLater = dismiss;
 
   return (
     <Modal
@@ -126,7 +159,7 @@ export function AuthGate({
       transparent
       animationType={reduceMotion ? 'none' : 'slide'}
       statusBarTranslucent
-      onRequestClose={onClose}
+      onRequestClose={dismiss}
     >
       <View style={styles.overlay}>
         {/* Blurred background with trip preview */}
@@ -146,7 +179,7 @@ export function AuthGate({
         )}
 
         {/* Bottom Sheet */}
-        <View style={styles.bottomSheet}>
+        <View style={styles.bottomSheet} accessibilityViewIsModal>
           {/* Handle */}
           <View style={styles.handle} />
 
@@ -215,6 +248,7 @@ export function AuthGate({
             {/* Maybe Later */}
             <TouchableOpacity
               style={styles.maybeLaterButton}
+              accessibilityLabel={trigger === 'generate' ? 'Keep editing your trip' : 'Maybe later'}
               onPress={handleMaybeLater}
               accessibilityRole="button"
             >

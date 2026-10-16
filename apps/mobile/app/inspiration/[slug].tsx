@@ -20,6 +20,7 @@ import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { USE_NATIVE_DRIVER } from '../../lib/animation';
+import { localCalendarDate } from '../../lib/dateRangeMarks';
 
 const { width, height: screenHeight } = Dimensions.get('window');
 const HERO_HEIGHT = screenHeight * 0.45;
@@ -58,10 +59,6 @@ function getNextFriday(): Date {
   const friday = new Date(today);
   friday.setDate(today.getDate() + daysUntilFriday);
   return friday;
-}
-
-function formatDate(date: Date): string {
-  return date.toISOString().split('T')[0];
 }
 
 export default function InspirationDetailScreen() {
@@ -180,8 +177,8 @@ export default function InspirationDetailScreen() {
         destination: randomDest.name,
         country: randomDest.country,
         vibes: inspiration.vibes.join(','),
-        startDate: formatDate(startDate),
-        endDate: formatDate(endDate),
+        startDate: localCalendarDate(startDate),
+        endDate: localCalendarDate(endDate),
         travelerType: inspiration.suggestedTravelerType,
         travelers: '2',
       },

@@ -1,4 +1,5 @@
 import type { TripInput } from '../stores/tripStore';
+import { parseTripDate } from './tripDate';
 
 export interface SeededItineraryOutline {
   title: string;
@@ -11,11 +12,8 @@ export interface SeededItineraryOutline {
 }
 
 function parseDateOnly(value: string): Date | null {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
-  if (!match) return null;
-
-  const [, year, month, day] = match;
-  const date = new Date(Number(year), Number(month) - 1, Number(day));
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return null;
+  const date = parseTripDate(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
@@ -32,10 +30,11 @@ function formatDate(value: string): string | null {
 function formatDateRange(startDate: string, endDate: string): string {
   const start = formatDate(startDate);
   const end = formatDate(endDate);
-  if (!start || !end) return 'Dates selected';
+  if (!start || !end) return 'Travel dates unavailable';
 
   const startValue = parseDateOnly(startDate);
   const endValue = parseDateOnly(endDate);
+  if (startValue && endValue && endValue < startValue) return 'Travel dates unavailable';
   const nights =
     startValue && endValue
       ? Math.max(0, Math.round((endValue.getTime() - startValue.getTime()) / (1000 * 60 * 60 * 24)))

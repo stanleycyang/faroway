@@ -1,4 +1,6 @@
 "use client";
+import { removeLocalRetry } from "@/lib/trips/remove-local-retry";
+import { z } from "zod";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   BookingReportCommand,
@@ -6,22 +8,31 @@ import {
   type BookingReportInput,
 } from "@/lib/trips/booking-checklist";
 type Status = BookingReportInput["status"];
-interface Item {
-  id: string;
-  name: string;
-  date: string;
-  status: Status;
-  reportId: string | null;
-  needsReview: boolean;
-}
-interface Checklist {
-  revision: string;
-  generationId: string;
-  editable: boolean;
-  receipt: boolean;
-  items: Item[];
-  earlier: { id: string; name: string; date: string; status: Status }[];
-}
+const ReportRow = z.object({
+  id: z.string(),
+  name: z.string(),
+  date: z.string(),
+  status: BookingReportCommand.shape.status,
+});
+const ChecklistRead = z
+  .object({
+    revision: z.string().min(1),
+    generationId: z
+      .string()
+      .nullish()
+      .transform((value) => value ?? ""),
+    editable: z.boolean(),
+    receipt: z.boolean(),
+    items: z.array(
+      ReportRow.extend({
+        reportId: z.string().nullable(),
+        needsReview: z.boolean(),
+      }),
+    ),
+    earlier: z.array(ReportRow),
+  })
+  .refine((value) => !value.editable || value.generationId.length > 0);
+type Checklist = z.infer<typeof ChecklistRead>;
 export function BookingChecklist({
   tripId,
   userId,
@@ -30,6 +41,7 @@ export function BookingChecklist({
   userId: string;
 }) {
   const [data, setData] = useState<Checklist | null>(null);
+  const [unreadableRetry, setUnreadableRetry] = useState(false);
   const [pending, setPending] = useState<BookingReportInput | null>(null);
   const [review, setReview] = useState<{
     command: BookingReportInput;
@@ -38,29 +50,47 @@ export function BookingChecklist({
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const saving = useRef(false);
+  const readSequence = useRef(0);
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      readSequence.current += 1;
+    };
+  }, []);
   const endpoint = `/api/trips/${tripId}/bookings`;
   const key = `faroway:booking-report:${userId}:${tripId}`;
   const refresh = useCallback(
     async (requestId?: string) => {
-      const response = await fetch(
-        endpoint + (requestId ? `?requestId=${requestId}` : ""),
-        { cache: "no-store", signal: AbortSignal.timeout(15_000) },
-      );
-      const value = await response.json();
-      if (!response.ok)
-        throw new Error(value.error || "Could not load booking progress.");
-      setData(value as Checklist);
-      return value as Checklist;
+      const sequence = ++readSequence.current;
+      try {
+        const response = await fetch(
+          endpoint + (requestId ? `?requestId=${requestId}` : ""),
+          { cache: "no-store", signal: AbortSignal.timeout(15_000) },
+        );
+        const value = await response.json();
+        if (!mounted.current || sequence !== readSequence.current) return null;
+        if (!response.ok)
+          throw new Error(value.error || "Could not load booking progress.");
+        const verified = ChecklistRead.safeParse(value);
+        if (!verified.success)
+          throw new Error(
+            "Saved booking progress could not be verified. Your pending report is kept; try refreshing again.",
+          );
+        setData(verified.data);
+        return verified.data;
+      } catch (error) {
+        if (!mounted.current || sequence !== readSequence.current) return null;
+        throw error;
+      }
     },
     [endpoint],
   );
   const clearPending = () => {
     setPending(null);
-    try {
-      localStorage.removeItem(key);
-    } catch {
-      /* In-memory recovery remains available. */
-    }
+    // A verified server receipt can release the UI even if local cleanup fails.
+    removeLocalRetry(key);
   };
   useEffect(() => {
     try {
@@ -68,17 +98,22 @@ export function BookingChecklist({
       if (stored) {
         const parsed = BookingReportCommand.safeParse(JSON.parse(stored));
         if (parsed.success) setPending(parsed.data);
+        else setUnreadableRetry(true);
       }
     } catch {
-      /* The server still fences request identity. */
+      setUnreadableRetry(true);
     }
-    void refresh().catch((error) => setMessage(error.message));
+    void refresh().catch((error) => {
+      if (mounted.current) setMessage(error.message);
+    });
   }, [key, refresh]);
   const check = async () => {
     if (saving.current) return;
+    saving.current = true;
     setBusy(true);
     try {
       const latest = await refresh(pending?.requestId);
+      if (!latest) return;
       if (pending && latest.receipt) {
         clearPending();
         setMessage(
@@ -91,18 +126,21 @@ export function BookingChecklist({
             : "Your latest saved progress is shown.",
         );
     } catch (error) {
+      if (!mounted.current) return;
       setMessage(
         error instanceof Error
           ? error.message
           : "Could not check saved progress.",
       );
     } finally {
-      setBusy(false);
+      saving.current = false;
+      if (mounted.current) setBusy(false);
     }
   };
   const save = async (command: BookingReportInput) => {
-    if (saving.current) return;
+    if (saving.current || unreadableRetry) return;
     saving.current = true;
+    readSequence.current += 1;
     setBusy(true);
     setMessage(null);
     setPending(command);
@@ -120,16 +158,25 @@ export function BookingChecklist({
         signal: AbortSignal.timeout(20_000),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.error || "Save not confirmed.");
+      if (!mounted.current) return;
+      if (
+        !response.ok ||
+        !["applied", "replayed"].includes(result?.state) ||
+        !z.string().uuid().safeParse(result?.reportId).success ||
+        result?.requestId !== command.requestId
+      )
+        throw new Error(result?.error || "Save not confirmed.");
       saved = true;
       setData(null);
       clearPending();
       setReview(null);
-      await refresh();
+      const latest = await refresh();
+      if (!latest) return;
       setMessage(
         "Your report is saved. It is not provider confirmation or proof of commission.",
       );
     } catch (error) {
+      if (!mounted.current) return;
       setMessage(
         saved
           ? "Your report was saved, but progress could not refresh. Refresh saved progress; do not submit it again."
@@ -137,7 +184,7 @@ export function BookingChecklist({
       );
     } finally {
       saving.current = false;
-      setBusy(false);
+      if (mounted.current) setBusy(false);
     }
   };
   return (
@@ -167,6 +214,36 @@ export function BookingChecklist({
       >
         Refresh saved progress
       </button>
+      {unreadableRetry && (
+        <div
+          role="status"
+          className="mt-3 rounded-lg border border-amber-200 p-3"
+        >
+          <p className="text-sm">
+            We could not read your interrupted report. Refresh saved progress
+            and review it before recording anything again. Your saved server
+            reports remain available.
+          </p>
+          <button
+            disabled={busy}
+            className="min-h-11 underline"
+            onClick={() => {
+              if (removeLocalRetry(key)) {
+                setUnreadableRetry(false);
+                setMessage(
+                  "Unreadable retry cleared from this browser. Saved reports and reservations remain unchanged.",
+                );
+              } else {
+                setMessage(
+                  "This browser could not clear the interrupted retry. Try again before recording a new report.",
+                );
+              }
+            }}
+          >
+            Discard unreadable retry
+          </button>
+        </div>
+      )}
       {pending && (
         <div className="mt-3 rounded-lg border border-amber-200 p-3">
           <p className="text-sm">
@@ -191,7 +268,13 @@ export function BookingChecklist({
             <button
               disabled={busy}
               onClick={() => {
-                clearPending();
+                if (!removeLocalRetry(key)) {
+                  setMessage(
+                    "This browser couldn’t discard the pending report. It is kept for recovery; try again before recording a new report.",
+                  );
+                  return;
+                }
+                setPending(null);
                 setReview(null);
                 setMessage(
                   "Pending retry discarded. Any report already saved on the server remains; refresh to check it.",
@@ -234,7 +317,9 @@ export function BookingChecklist({
                 {(Object.keys(bookingLabels) as Status[]).map((status) => (
                   <button
                     key={status}
-                    disabled={busy || !!pending || !data.editable}
+                    disabled={
+                      busy || !!pending || unreadableRetry || !data.editable
+                    }
                     onClick={() =>
                       setReview({
                         name: item.name,
@@ -262,7 +347,7 @@ export function BookingChecklist({
           </li>
         ))}
       </ul>
-      {review && !pending && (
+      {review && !pending && !unreadableRetry && (
         <div
           role="region"
           aria-label="Review booking report"

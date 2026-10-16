@@ -54,3 +54,26 @@ export function normalizePlaceDisplay(value: unknown): PlaceDisplay | null {
       : [],
   };
 }
+
+/** Validate the normalized API DTO before allowing it into UI state. */
+export function isPlaceDisplay(value: unknown): value is PlaceDisplay {
+  if (!value || typeof value !== "object") return false;
+  const place = value as Record<string, unknown>;
+  return (
+    typeof place.placeId === "string" &&
+    typeof place.name === "string" &&
+    [place.address, place.mapsUrl, place.businessStatus].every(
+      (field) => field === undefined || typeof field === "string",
+    ) &&
+    Array.isArray(place.attributions) &&
+    place.attributions.every((item: unknown) => {
+      if (!item || typeof item !== "object") return false;
+      const attribution = item as Record<string, unknown>;
+      return (
+        typeof attribution.provider === "string" &&
+        (attribution.providerUri === undefined ||
+          typeof attribution.providerUri === "string")
+      );
+    })
+  );
+}

@@ -1,47 +1,15 @@
 import { validBriefComposition } from "@/lib/trips/brief";
+import { hotelSearchEnabled } from "@/lib/trips/hotel-quotes";
 import { NextRequest, NextResponse } from "next/server";
 import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
-import { isValidDateOnly, isValidDateRange } from "@/lib/api/date-range";
-import { z } from "zod";
+import { CreateTripSchema } from "@/lib/trips/create-trip-command";
 import { createHash } from "node:crypto";
+import {
+  readTripCursor,
+  writeTripCursor,
+  TRIP_PAGE_SIZE,
+} from "@/lib/trips/list-cursor";
 
-const DateOnlySchema = z
-  .string()
-  .refine(isValidDateOnly, "Must be a valid YYYY-MM-DD date");
-
-const CreateTripSchema = z
-  .object({
-    requestId: z
-      .string()
-      .uuid()
-      .transform((value) => value.toLowerCase())
-      .optional(),
-    destination: z.string().trim().min(1).max(200),
-    start_date: DateOnlySchema,
-    end_date: DateOnlySchema,
-    travelers: z.number().int().min(1).max(50).optional(),
-    budget: z.enum(["budget", "moderate", "luxury"]).optional(),
-    preferences: z
-      .object({
-        travelerType: z
-          .enum(["solo", "couple", "family", "friends", "business"])
-          .optional(),
-        originCity: z.string().max(200).optional(),
-        originAirport: z.string().max(10).optional(),
-        vibes: z.array(z.string().max(50)).max(10).optional(),
-        budget: z.enum(["budget", "moderate", "luxury"]).optional(),
-        adults: z.number().int().min(1).max(50).optional(),
-        children: z.number().int().min(0).max(50).optional(),
-        interests: z.array(z.string().max(50)).max(20).optional(),
-      })
-      .optional(),
-  })
-  .refine((data) => isValidDateRange(data.start_date, data.end_date), {
-    message: "End date must be on or after start date",
-    path: ["end_date"],
-  });
-
-// GET /api/trips - Fetch all trips for the authenticated user
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClientFromRequest(request);
@@ -56,15 +24,28 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch user's trips from database (with caching headers for performance)
-    const { data: trips, error } = await supabase
+    // Fetch trips for the verified account.
+    const cursorValue = request.nextUrl.searchParams.get("cursor");
+    const cursor = cursorValue === null ? null : readTripCursor(cursorValue);
+    if (cursorValue !== null && !cursor)
+      return NextResponse.json(
+        { error: "Invalid trip list cursor" },
+        { status: 400 },
+      );
+    let query = supabase
       .from("trips")
       .select(
-        "id, destination, start_date, end_date, status, travelers, budget, vibes, budget_tier, preferences, search_id, created_at, updated_at",
+        "id, user_id, destination, start_date, end_date, status, travelers, budget, vibes, budget_tier, preferences, search_id, created_at, updated_at",
       )
       .eq("user_id", user.id)
       .order("created_at", { ascending: false })
-      .limit(100);
+      .order("id", { ascending: false })
+      .limit(TRIP_PAGE_SIZE + 1);
+    if (cursor)
+      query = query.or(
+        `created_at.lt.${cursor.createdAt},and(created_at.eq.${cursor.createdAt},id.lt.${cursor.id})`,
+      );
+    const { data: trips, error } = await query;
 
     if (error) {
       console.error("Database error:", error);
@@ -74,12 +55,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Return with cache headers for better performance
+    const page = (trips || []).slice(0, TRIP_PAGE_SIZE);
+    const nextCursor =
+      trips && trips.length > TRIP_PAGE_SIZE
+        ? writeTripCursor(page[page.length - 1])
+        : null;
+    // Private trip data must be reauthorized after account changes.
     return NextResponse.json(
-      { trips: trips || [] },
+      { trips: page, nextCursor },
       {
         headers: {
-          "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+          "Cache-Control": "private, no-store",
         },
       },
     );
@@ -125,6 +111,11 @@ export async function POST(request: NextRequest) {
       preferences,
     } = parseResult.data;
 
+    if (preferences?.hotelSearch != null && !hotelSearchEnabled())
+      return NextResponse.json(
+        { error: "Hotel preferences are temporarily unavailable" },
+        { status: 503 },
+      );
     if (!validBriefComposition(travelers ?? 1, preferences ?? {}))
       return NextResponse.json(
         { error: "Adults and children must add up to the traveler count" },
@@ -158,6 +149,7 @@ export async function POST(request: NextRequest) {
         adults: preferences?.adults,
         children: preferences?.children,
         interests: preferences?.interests,
+        hotelSearch: preferences?.hotelSearch,
       },
       status: "draft",
     };

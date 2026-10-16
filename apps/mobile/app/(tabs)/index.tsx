@@ -173,7 +173,7 @@ export default function ExploreScreen() {
           accessibilityHint="Starts the AI trip planning flow"
         >
           <LinearGradient
-            colors={['#F97066', '#F59E0B', '#FBBF24']}
+            colors={[colors.action.primary, colors.action.primaryEnd, '#74342F']}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.heroCard}
@@ -198,7 +198,7 @@ export default function ExploreScreen() {
 
               <View style={styles.heroButton}>
                 <Text style={styles.heroButtonText}>Start Planning</Text>
-                <Ionicons name="arrow-forward" size={18} color="#F97066" />
+                <Ionicons name="arrow-forward" size={18} color={colors.action.primary} />
               </View>
 
               <View style={styles.heroFeatures}>
@@ -277,7 +277,7 @@ export default function ExploreScreen() {
 
         {/* Trending This Season */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Trending This Season</Text>
+          <Text style={styles.sectionTitle}>More places to explore</Text>
           <View style={styles.trendingGrid}>
             {(apiTrending ?? popularDestinations.slice(5, 9)).map((destination) => (
               <TouchableOpacity
@@ -289,6 +289,11 @@ export default function ExploreScreen() {
                 accessibilityLabel={`${destination.name}, ${destination.country}`}
                 accessibilityHint="Starts trip planning for this destination"
               >
+                <LinearGradient
+                  colors={['#284D57', '#142D3B']}
+                  style={StyleSheet.absoluteFill}
+                  accessible={false}
+                />
                 <Image
                   source={{ uri: destination.image }}
                   style={styles.trendingImage}
@@ -431,7 +436,7 @@ const styles = StyleSheet.create({
   heroButtonText: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#F97066',
+    color: colors.action.primary,
   },
   heroFeatures: {
     flexDirection: 'row',

@@ -19,6 +19,8 @@ interface UserStore {
   user: User | null;
   hasCompletedOnboarding: boolean;
   isAuthenticated: boolean;
+  // Memory-only identity epoch; profile edits do not invalidate account work.
+  accountRevision: number;
 
   // Actions
   setUser: (user: User | null) => void;
@@ -33,12 +35,14 @@ export const useUserStore = create<UserStore>()(
       user: null,
       hasCompletedOnboarding: false,
       isAuthenticated: false,
+      accountRevision: 0,
 
       setUser: (user) =>
-        set({
+        set((state) => ({
           user,
           isAuthenticated: !!user,
-        }),
+          accountRevision: state.accountRevision + (state.user?.id === user?.id ? 0 : 1),
+        })),
 
       setOnboardingComplete: (complete) => set({ hasCompletedOnboarding: complete }),
 
@@ -53,10 +57,11 @@ export const useUserStore = create<UserStore>()(
         })),
 
       logout: () =>
-        set({
+        set((state) => ({
           user: null,
           isAuthenticated: false,
-        }),
+          accountRevision: state.accountRevision + 1,
+        })),
     }),
     {
       name: 'user-preferences',

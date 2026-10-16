@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useHydrated } from "@/hooks/useHydrated";
 import { getAllGuides, type DestinationGuide } from "@/lib/destination-guides";
 import {
   generatePackingList,
@@ -16,6 +17,7 @@ import { ToolHero } from "@/components/tools/ToolHero";
 const guides = getAllGuides();
 
 export function PackingListClient() {
+  const hydrated = useHydrated();
   const [destination, setDestination] = useState<DestinationGuide | null>(null);
   const [tripType, setTripType] = useState<TripType | null>(null);
   const [packingList, setPackingList] = useState<PackingCategory[] | null>(
@@ -65,8 +67,9 @@ export function PackingListClient() {
 
         <div className="print-hidden">
           <ToolCTA
+            destination={destination.name}
             title={`Ready to Plan Your ${destination.name} Trip?`}
-            description={`Let Faroway create a personalized ${destination.name} itinerary — completely free.`}
+            description={`Let Faroway create a personalized ${destination.name} itinerary at your own pace.`}
           />
           <RelatedTools currentSlug="packing-list" />
         </div>
@@ -94,6 +97,7 @@ export function PackingListClient() {
           </label>
           <select
             id="packing-destination"
+            disabled={!hydrated}
             value={destination?.slug || ""}
             onChange={(e) => {
               const guide = guides.find((g) => g.slug === e.target.value);
@@ -120,6 +124,7 @@ export function PackingListClient() {
               <button
                 type="button"
                 key={type.id}
+                disabled={!hydrated}
                 onClick={() => setTripType(type.id)}
                 aria-pressed={tripType === type.id}
                 className={`p-4 rounded-xl border-2 text-center transition-all ${
@@ -141,7 +146,7 @@ export function PackingListClient() {
         <button
           type="button"
           onClick={handleGenerate}
-          disabled={!destination || !tripType}
+          disabled={!hydrated || !destination || !tripType}
           className="w-full py-3.5 rounded-full bg-gradient-to-r from-primary to-amber-500 text-white font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:translate-y-0"
         >
           Generate My Packing List

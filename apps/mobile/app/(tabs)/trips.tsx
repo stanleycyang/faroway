@@ -1,3 +1,4 @@
+import { useLocalCalendarDate } from '../../hooks/useLocalCalendarDate';
 import { useState, useEffect, useCallback } from 'react';
 import {
   View,
@@ -21,6 +22,9 @@ import { useTripStore } from '../../stores/tripStore';
 import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import * as WebBrowser from 'expo-web-browser';
+import { formatTripDate, tripDurationDays } from '../../lib/tripDate';
+
+import { tripDatePhase } from '@faroway/constants';
 
 type FilterTab = 'all' | 'upcoming' | 'past';
 
@@ -180,25 +184,18 @@ function AuthenticatedTripsView() {
     { id: 'past', label: 'Past' },
   ];
 
+  const today = useLocalCalendarDate();
   const filteredTrips = trips.filter((trip) => {
     if (activeTab === 'all') return true;
-    if (activeTab === 'upcoming') {
-      return ['draft', 'planned', 'active'].includes(trip.status);
-    }
-    return trip.status === 'completed';
+    return tripDatePhase(trip.startDate, trip.endDate, today) === activeTab;
   });
 
   const formatDateRange = (start: string, end: string) => {
-    const startDate = new Date(start);
-    const endDate = new Date(end);
-    return `${startDate.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-    })} - ${endDate.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-    })}`;
+    const first = formatTripDate(start, { month: 'short', day: 'numeric' });
+    const last = formatTripDate(end, { month: 'short', day: 'numeric', year: 'numeric' });
+    return first === 'Date unavailable' || last === 'Date unavailable'
+      ? 'Travel dates unavailable'
+      : `${first} - ${last}`;
   };
 
   const handleTripPress = (tripId: string) => {
@@ -257,6 +254,13 @@ function AuthenticatedTripsView() {
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color={colors.primary[500]} />
           </View>
+        ) : error && trips.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateTitle}>Your trips couldn’t load</Text>
+            <Text style={styles.emptyStateSubtitle}>
+              We couldn’t confirm your saved trips. Use the retry above when you’re ready.
+            </Text>
+          </View>
         ) : trips.length === 0 ? (
           <View style={styles.emptyState}>
             <View style={styles.emptyStateIcon}>
@@ -265,7 +269,7 @@ function AuthenticatedTripsView() {
             <Text style={styles.emptyStateTitle}>No trips yet</Text>
             <Text style={styles.emptyStateSubtitle}>
               Start planning your next adventure!{'\n'}
-              Our AI will help you create the perfect itinerary.
+              Shape a day-by-day plan around what you love.
             </Text>
             <Button
               title="Create Your First Trip"
@@ -291,7 +295,7 @@ function AuthenticatedTripsView() {
                   dates={formatDateRange(trip.startDate, trip.endDate)}
                   image={trip.coverImage}
                   status={trip.status}
-                  daysCount={trip.days.length}
+                  daysCount={tripDurationDays(trip.startDate, trip.endDate)}
                   onPress={() => handleTripPress(trip.id)}
                 />
               ))

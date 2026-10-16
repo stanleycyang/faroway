@@ -6,12 +6,17 @@ import React, {
   useContext,
   useEffect,
   useRef,
+  useMemo,
   useState,
 } from "react";
 import { ExternalLink, ShieldCheck, X, Calendar, Users } from "lucide-react";
+import { z } from "zod";
 import { useModalFocusTrap } from "@/hooks/useModalFocusTrap";
+import { isValidDateOnly } from "@/lib/api/date-range";
 import { formatTripDate } from "@/lib/trips/date-duration";
 import { buildViatorHandoffUrl } from "@/lib/affiliates/viator-link";
+
+const attemptIdSchema = z.string().uuid();
 
 interface Selection {
   id: string;
@@ -26,6 +31,26 @@ interface Handoff {
   clicked_at: string;
   canResume?: boolean;
 }
+function isHandoff(value: unknown): value is Handoff {
+  if (!value || typeof value !== "object") return false;
+  const item = value as Record<string, unknown>;
+  return (
+    ["id", "item_id", "item_name", "clicked_at"].every(
+      (key) => typeof item[key] === "string",
+    ) &&
+    typeof item.id === "string" &&
+    item.id.startsWith("checkout-") &&
+    attemptIdSchema.safeParse(item.id.slice("checkout-".length)).success &&
+    typeof item.item_id === "string" &&
+    /^[^@]+@\d{4}-\d{2}-\d{2}$/.test(item.item_id) &&
+    isValidDateOnly(item.item_id.split("@")[1]) &&
+    typeof item.item_name === "string" &&
+    item.item_name.trim().length > 0 &&
+    typeof item.clicked_at === "string" &&
+    Number.isFinite(Date.parse(item.clicked_at)) &&
+    (item.canResume === undefined || typeof item.canResume === "boolean")
+  );
+}
 const CheckoutContext = createContext<{
   enabled: boolean;
   review: (selection: Selection) => void;
@@ -36,15 +61,23 @@ export function useTripCheckout() {
 }
 
 /** Saved provider handoffs, deliberately separate from booking confirmations. */
-export function TripCheckout({
-  tripId,
-  travelers,
-  children,
-}: {
+interface TripCheckoutProps {
   tripId: string;
   travelers: number;
   children: React.ReactNode;
-}) {
+}
+export function TripCheckout(props: TripCheckoutProps) {
+  return <CheckoutSession key={props.tripId} {...props} />;
+}
+function CheckoutSession({ tripId, travelers, children }: TripCheckoutProps) {
+  const mounted = useRef(false);
+  const readSequence = useRef(0);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
   const [enabled, setEnabled] = useState(false);
   const [attempts, setAttempts] = useState<Handoff[]>([]);
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -55,17 +88,28 @@ export function TripCheckout({
   const dialogRef = useRef<HTMLDivElement>(null);
   const endpoint = `/api/trips/${encodeURIComponent(tripId)}/checkout`;
   const refresh = useCallback(async () => {
+    const sequence = ++readSequence.current;
+    const current = () => mounted.current && sequence === readSequence.current;
     try {
       const response = await fetch(endpoint, {
         cache: "no-store",
         signal: AbortSignal.timeout(15_000),
       });
+      if (!current()) return;
       if (!response.ok) throw new Error();
       const data = await response.json();
+      if (!current()) return;
+      if (
+        typeof data?.enabled !== "boolean" ||
+        !Array.isArray(data.attempts) ||
+        !data.attempts.every(isHandoff)
+      )
+        throw new Error();
       setEnabled(data.enabled === true);
       setAttempts(data.attempts || []);
       setHistoryError(false);
     } catch {
+      if (!current()) return;
       setHistoryError(true);
       setEnabled(false);
     }
@@ -90,22 +134,28 @@ export function TripCheckout({
       document.body.style.overflow = previousOverflow;
     };
   }, [selection]);
-  const review = (item: Selection) => {
-    setError(null);
-    const previous = attempts.find(
-      (a) => a.item_id === `${item.id}@${item.date}` && a.canResume !== false,
-    );
-    setSelection({
-      ...item,
-      attemptId:
-        item.attemptId ||
-        previous?.id.slice("checkout-".length) ||
-        crypto.randomUUID(),
-    });
-  };
+  const review = useCallback(
+    (item: Selection) => {
+      if (busyRef.current) return;
+      setError(null);
+      const previous = attempts.find(
+        (a) => a.item_id === `${item.id}@${item.date}` && a.canResume !== false,
+      );
+      setSelection({
+        ...item,
+        attemptId:
+          item.attemptId ||
+          previous?.id.slice("checkout-".length) ||
+          crypto.randomUUID(),
+      });
+    },
+    [attempts],
+  );
+  const contextValue = useMemo(() => ({ enabled, review }), [enabled, review]);
   const continueToProvider = async () => {
     if (!selection || busyRef.current) return;
     busyRef.current = true;
+    ++readSequence.current;
     setBusy(true);
     setError(null);
     try {
@@ -119,9 +169,19 @@ export function TripCheckout({
         }),
         signal: AbortSignal.timeout(20_000),
       });
+      if (!mounted.current) return;
       const data = await response.json();
+      if (!mounted.current) return;
       if (!response.ok)
         throw new Error(data.error || "Could not prepare checkout.");
+      if (
+        data?.status !== "handoff_prepared" ||
+        data?.attemptId !== selection.attemptId
+      ) {
+        throw new Error(
+          "This booking step could not be confirmed. Review your saved progress before continuing.",
+        );
+      }
       const url = buildViatorHandoffUrl(
         data.redirectUrl,
         `checkout-${selection.attemptId}`,
@@ -131,11 +191,12 @@ export function TripCheckout({
       // browser back, app restarts, and failed navigation; no booking is inferred.
       window.location.assign(url);
     } catch (reason) {
+      if (!mounted.current) return;
       setError(reason instanceof Error ? reason.message : "Please try again.");
       void refresh();
     } finally {
       busyRef.current = false;
-      setBusy(false);
+      if (mounted.current) setBusy(false);
     }
   };
   const uniqueAttempts = attempts.filter(
@@ -145,7 +206,7 @@ export function TripCheckout({
     selection &&
     attempts.some((a) => a.item_id === `${selection.id}@${selection.date}`);
   return (
-    <CheckoutContext value={{ enabled, review }}>
+    <CheckoutContext value={contextValue}>
       {historyError && (
         <p
           role="status"

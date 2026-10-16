@@ -59,6 +59,10 @@ test.describe("Trip creation page", () => {
 
 test.describe("Blog", () => {
   test("blog index loads", async ({ page }) => {
+    test.skip(
+      process.env.E2E_BLOG_DATA_UNAVAILABLE === "true",
+      "Configured blog-content success is verified separately from the explicit unavailable-data recovery scenario.",
+    );
     const browserErrors: string[] = [];
     page.on("console", (message) => {
       const isExpectedDevelopmentCspError = message
@@ -73,7 +77,9 @@ test.describe("Blog", () => {
     });
 
     await page.goto("/blog");
-    await expect(page.locator("h1, h2").first()).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Travel Blog", exact: true }),
+    ).toBeVisible();
     expect(browserErrors).toEqual([]);
   });
 });
@@ -134,16 +140,20 @@ test("trip brief preserves choices through edits, reload and sign-in", async ({
     new RegExp(
       `${date.toLocaleString("en-US", { month: "long" })} ${date.getDate()}(?:st|nd|rd|th), ${date.getFullYear()}`,
     );
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: dateName(start) })
-    .first()
-    .click();
-  await page
-    .getByRole("dialog")
-    .getByRole("button", { name: dateName(end) })
-    .first()
-    .click();
+  const selectDate = async (date: Date) => {
+    const calendar = page.getByRole("dialog", { name: "Select dates" });
+    const day = calendar.getByRole("button", { name: dateName(date) }).first();
+    // Phones show one month; retain the same cross-month journey on every profile.
+    for (let month = 0; month < 3 && !(await day.isVisible()); month++) {
+      await calendar
+        .getByRole("button", { name: "Go to the Next Month", exact: true })
+        .click();
+    }
+    await expect(day).toBeVisible();
+    await day.click();
+  };
+  await selectDate(start);
+  await selectDate(end);
   await page
     .getByRole("button", { name: "Confirm dates", exact: true })
     .click();
@@ -200,17 +210,12 @@ test("trip brief preserves choices through edits, reload and sign-in", async ({
   await expect(
     page.getByRole("button", { name: "Luxury Exceptional stays", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
-  // Optional hotel details can be edited without losing the rest of the brief.
-  await page.getByText("Hotel search preferences", { exact: false }).click();
-  await page.getByRole("checkbox").check();
+  // This branch's brief has travel-group choices; advanced hotel preferences
+  // belong to separate unfinished release work and are not present here.
+  await page.getByRole("button", { name: "Family", exact: true }).click();
   await expect(
-    page.getByRole("button", {
-      name: "Sign in & generate itinerary",
-      exact: true,
-    }),
-  ).toBeDisabled();
-
-  await page.getByRole("checkbox").uncheck();
+    page.getByRole("button", { name: "Family", exact: true }),
+  ).toHaveAttribute("aria-pressed", "true");
   // Exercise the draft handoff without contacting an authentication provider.
   await page.route("**/auth/login?**", (route) =>
     route.fulfill({ contentType: "text/html", body: "<h1>Sign in</h1>" }),

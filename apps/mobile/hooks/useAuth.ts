@@ -7,6 +7,7 @@ import { devicePushConsent } from '../services/pushConsentService';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import * as Sentry from '@sentry/react-native';
 import { supabase } from '../lib/supabase';
+import { readTripSession } from '../lib/tripAccountScope';
 import {
   APPLE_SIGN_IN_UNAVAILABLE_MESSAGE,
   createRequestCanceledError,
@@ -75,11 +76,14 @@ export function useAuth() {
   const { setUser, logout: clearUserStore } = useUserStore();
   const clearTrips = useTripStore((state) => state.clearAll);
   const hadAuthenticatedSessionRef = useRef(false);
+  const sessionEpochRef = useRef(0);
+  const profileEpochRef = useRef(0);
+  const activeAccountRef = useRef<string | null>(null);
 
   /**
    * Hydrate user store from profile API, falling back to Supabase auth metadata.
    */
-  const hydrateUser = async (session: Session) => {
+  const hydrateUser = async (session: Session, isCurrent: () => boolean) => {
     const authUser = session.user;
     // Set auth token for API calls
     setAuthToken(session.access_token);
@@ -94,11 +98,15 @@ export function useAuth() {
       avatar: authUser.user_metadata?.avatar_url,
       preferences: { vibes: [] as string[] },
     };
+    const current = useUserStore.getState().user;
+    const baseline = current?.id === authUser.id ? current : fallback;
+    if (baseline === fallback) setUser(fallback);
 
     // Try fetching full profile from API
     try {
-      const result = await getUserProfile();
-      if (result.data) {
+      const result = await getUserProfile(session.access_token);
+      if (!isCurrent() || useUserStore.getState().user !== baseline) return;
+      if (result.data?.id === authUser.id) {
         const profile = result.data;
         setUser({
           id: profile.id,
@@ -118,82 +126,80 @@ export function useAuth() {
       // Profile hydration is best-effort; auth metadata is enough to keep sign-in moving.
     }
 
-    setUser(fallback);
+    // Metadata is already visible. A failed enrichment must not replace edits.
   };
 
-  // Initialize auth state
+  // Only the latest session may hydrate local data or finish initialization.
   useEffect(() => {
-    // Get initial session
+    let active = true;
+    const isCurrent = (epoch: number) => active && sessionEpochRef.current === epoch;
+    const applySession = async (session: Session | null, epoch: number) => {
+      if (!isCurrent(epoch)) return;
+      const previousAccount = activeAccountRef.current;
+      activeAccountRef.current = session?.user.id ?? null;
+      if (previousAccount !== activeAccountRef.current || !session) ++profileEpochRef.current;
+      if (!session) {
+        setAuthToken(null);
+        Sentry.setUser(null);
+        clearUserStore();
+        if (hadAuthenticatedSessionRef.current) clearTrips();
+        hadAuthenticatedSessionRef.current = false;
+      } else {
+        if (previousAccount && previousAccount !== session.user.id) {
+          clearUserStore();
+          clearTrips();
+        }
+        hadAuthenticatedSessionRef.current = true;
+        setAuthToken(session.access_token);
+        if (useUserStore.getState().user?.id !== session.user.id) {
+          const profileEpoch = profileEpochRef.current;
+          // Session readiness opens the app; profile enrichment is independent
+          // of token refresh and cannot overwrite a newer profile edit.
+          void hydrateUser(
+            session,
+            () =>
+              active &&
+              profileEpochRef.current === profileEpoch &&
+              activeAccountRef.current === session.user.id
+          );
+        }
+      }
+      if (!isCurrent(epoch)) return;
+      setAuthState({ user: session?.user ?? null, session, loading: false, initialized: true });
+    };
+    const initialEpoch = ++sessionEpochRef.current;
     const initSession = async () => {
       try {
         if (Platform.OS === 'web') {
           try {
             const pendingDraft = takePendingOAuthTripDraft(window.sessionStorage);
-            if (pendingDraft) {
-              useTripStore.getState().setDraftInput(pendingDraft);
-            }
+            if (pendingDraft) useTripStore.getState().setDraftInput(pendingDraft);
           } catch {
             // Browser storage can be disabled; session recovery should still proceed.
           }
         }
-
         const {
           data: { session },
-        } = await supabase.auth.getSession();
-
-        if (session) {
-          hadAuthenticatedSessionRef.current = true;
-          // Hydrate user store before marking initialized so screens never see
-          // an authenticated-but-empty user state. hydrateUser catches its own
-          // errors and always calls setUser() before returning.
-          await hydrateUser(session);
-        }
-
-        setAuthState({
-          user: session?.user ?? null,
-          session,
-          loading: false,
-          initialized: true,
-        });
+        } = await readTripSession();
+        await applySession(session, initialEpoch);
       } catch {
-        setAuthState((prev) => ({ ...prev, loading: false, initialized: true }));
+        await applySession(null, initialEpoch);
       }
     };
-
-    initSession();
-
-    // Listen for auth changes
+    void initSession();
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      async (_event: AuthChangeEvent, session: Session | null) => {
-        setAuthState({
-          user: session?.user ?? null,
-          session,
-          loading: false,
-          initialized: true,
-        });
-
-        if (session) {
-          hadAuthenticatedSessionRef.current = true;
-          await hydrateUser(session);
-        } else {
-          setAuthToken(null);
-          Sentry.setUser(null);
-          clearUserStore();
-          if (hadAuthenticatedSessionRef.current) {
-            clearTrips();
-          }
-          hadAuthenticatedSessionRef.current = false;
-        }
-      }
-    );
-
+    } = supabase.auth.onAuthStateChange((_event: AuthChangeEvent, session: Session | null) => {
+      const epoch = ++sessionEpochRef.current;
+      void applySession(session, epoch);
+    });
     return () => {
+      active = false;
       subscription.unsubscribe();
     };
+    // Zustand actions remain stable for the lifetime of this provider.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // setUser/clearUserStore are stable zustand selectors
+  }, []);
 
   // Sign in with Google (native SDK)
   const signInWithGoogle = useCallback(async (options?: GoogleSignInOptions) => {
@@ -316,15 +322,29 @@ export function useAuth() {
   // Sign out
   const signOut = useCallback(async () => {
     // Complete device-token removal before invalidating its authenticated session.
+    const signingOutAccount = activeAccountRef.current;
     await devicePushConsent.disable();
+    if (activeAccountRef.current !== signingOutAccount) {
+      throw new Error('Your account changed. Reopen your profile before signing out.');
+    }
     setAuthState((prev) => ({ ...prev, loading: true }));
 
     const { error } = await supabase.auth.signOut();
 
     if (error) {
-      setAuthState((prev) => ({ ...prev, loading: false }));
+      if (activeAccountRef.current === signingOutAccount)
+        setAuthState((prev) => ({ ...prev, loading: false }));
       throw error;
     }
+    if (activeAccountRef.current && activeAccountRef.current !== signingOutAccount) return;
+    ++sessionEpochRef.current;
+    activeAccountRef.current = null;
+    clearUserStore();
+    clearTrips();
+    hadAuthenticatedSessionRef.current = false;
+    setAuthToken(null);
+    Sentry.setUser(null);
+    setAuthState({ user: null, session: null, loading: false, initialized: true });
 
     // Clear cached Google credentials so account picker shows on next sign-in
     try {
@@ -334,10 +354,7 @@ export function useAuth() {
       // Non-blocking — Google session may not exist (e.g. Apple sign-in user)
     }
 
-    clearUserStore();
-    clearTrips();
-    hadAuthenticatedSessionRef.current = false;
-    setAuthToken(null);
+    // Provider cleanup must not clear a new account that signed in while it ran.
   }, [clearTrips, clearUserStore]);
 
   // Delete account
@@ -345,21 +362,26 @@ export function useAuth() {
     setAuthState((prev) => ({ ...prev, loading: true }));
 
     const deletingUserId = useUserStore.getState().user?.id;
+    const deletingRevision = useUserStore.getState().accountRevision;
+    const isCurrentDeletion = () =>
+      activeAccountRef.current === deletingUserId &&
+      useUserStore.getState().accountRevision === deletingRevision;
     const result = deletingUserId
       ? await deleteAccountWithRecovery(deletingUserId)
       : { error: 'Sign in to resume deletion.' };
 
     if (result.error) {
-      setAuthState((prev) => ({ ...prev, loading: false }));
+      if (isCurrentDeletion()) setAuthState((prev) => ({ ...prev, loading: false }));
       throw new Error(result.error);
     }
 
     try {
       await finishAccountDeletionCleanup(deletingUserId!, cleanupDeletedAccount);
     } catch (error) {
-      setAuthState((prev) => ({ ...prev, loading: false }));
+      if (isCurrentDeletion()) setAuthState((prev) => ({ ...prev, loading: false }));
       throw error;
     }
+    if (!isCurrentDeletion()) return;
     hadAuthenticatedSessionRef.current = false;
     setAuthState({
       user: null,

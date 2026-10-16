@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatTripDate } from '../tripDate';
 import { formatPrice } from '@faroway/constants';
 import { View, Text as RNText, Image, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -221,7 +222,7 @@ export const HotelCard: React.FC<HotelCardProps> = ({
 type ItineraryDayProps = z.infer<typeof ItineraryDaySchema>;
 
 export const ItineraryDay: React.FC<ItineraryDayProps> = ({ dayNumber, date, title }) => {
-  const formattedDate = new Date(date).toLocaleDateString('en-US', {
+  const formattedDate = formatTripDate(date, {
     weekday: 'short',
     month: 'short',
     day: 'numeric',

@@ -1,18 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import {
+  validateHotelSearchDetails,
+  hotelGuestCounts,
+  type HotelSearchDetails,
+} from "@faroway/constants";
+import { HotelSearchFields } from "./HotelSearchFields";
+import { hotelSearchEnabled } from "@/lib/trips/hotel-quotes";
 import type { Trip } from "@/lib/trips/load-trip";
 
-export function TripBriefEditor({
-  trip,
-  onSaved,
-  onReload,
-}: {
+interface TripBriefEditorProps {
   trip: Trip;
   onSaved: (trip: Trip) => void;
-  onReload: () => void;
-}) {
+  onReload: () => Promise<Trip | null | undefined>;
+}
+
+export function TripBriefEditor(props: TripBriefEditorProps) {
+  return (
+    <BriefForm
+      key={`${props.trip.user_id}:${props.trip.id}:${props.trip.updated_at}`}
+      {...props}
+    />
+  );
+}
+
+function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
+  const saveLock = useRef(false);
+  const destinationInput = useRef<HTMLInputElement>(null);
+  const focusAfterReload = useRef(false);
+  const active = useRef(true);
+  useEffect(() => {
+    active.current = true;
+    return () => {
+      active.current = false;
+    };
+  }, []);
   const preferences = trip.preferences ?? {};
+  const [hotelSearch, setHotelSearch] = useState<HotelSearchDetails | null>(
+    validateHotelSearchDetails(preferences.hotelSearch)
+      ? preferences.hotelSearch
+      : null,
+  );
   const [destination, setDestination] = useState(trip.destination);
   const [start, setStart] = useState(trip.start_date);
   const [end, setEnd] = useState(trip.end_date);
@@ -37,7 +66,17 @@ export function TripBriefEditor({
   );
   const [vibes, setVibes] = useState((trip.vibes ?? []).join(", "));
   const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState<string | null>(null);
+  const [reloading, setReloading] = useState(false);
+  useEffect(() => {
+    if (!reloading && focusAfterReload.current) {
+      focusAfterReload.current = false;
+      destinationInput.current?.focus();
+    }
+  }, [reloading]);
+  const [message, setMessage] = useState<{
+    text: string;
+    kind: "info" | "error";
+  } | null>(null);
   const locked = trip.status === "generating";
   const inputStyle =
     "mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
@@ -49,9 +88,69 @@ export function TripBriefEditor({
         .filter(Boolean),
     ),
   ];
+  const reload = async () => {
+    if (saveLock.current || !active.current) return;
+    saveLock.current = true;
+    setReloading(true);
+    try {
+      const latest = await onReload();
+      if (!active.current) return;
+      if (
+        !latest ||
+        latest.id !== trip.id ||
+        latest.user_id !== trip.user_id ||
+        latest.updated_at !== trip.updated_at
+      ) {
+        setMessage({
+          text: "The latest brief couldn’t be verified. Your edits are kept. Try loading it again.",
+          kind: "error",
+        });
+        return;
+      }
+      const latestPreferences = latest.preferences ?? {};
+      setDestination(latest.destination);
+      setStart(latest.start_date);
+      setEnd(latest.end_date);
+      setAdults(Number(latestPreferences.adults ?? latest.travelers));
+      setChildren(Number(latestPreferences.children ?? 0));
+      setBudget(latest.budget_tier ?? "moderate");
+      setType(
+        String(
+          latestPreferences.travelerType ??
+            (latest.travelers === 1 ? "solo" : "friends"),
+        ),
+      );
+      setOrigin(String(latestPreferences.originCity ?? ""));
+      setAirport(String(latestPreferences.originAirport ?? ""));
+      setInterests(
+        Array.isArray(latestPreferences.interests)
+          ? latestPreferences.interests.join(", ")
+          : "",
+      );
+      setVibes((latest.vibes ?? []).join(", "));
+      setHotelSearch(
+        validateHotelSearchDetails(latestPreferences.hotelSearch)
+          ? latestPreferences.hotelSearch
+          : null,
+      );
+      setMessage(null);
+      focusAfterReload.current = true;
+    } catch {
+      if (active.current)
+        setMessage({
+          text: "The latest brief couldn’t load. Your edits are kept. Try again.",
+          kind: "error",
+        });
+    } finally {
+      saveLock.current = false;
+      if (active.current) {
+        setReloading(false);
+      }
+    }
+  };
   const save = async (event: React.FormEvent) => {
     event.preventDefault();
-    if (saving || locked) return;
+    if (saveLock.current || saving || locked || !active.current) return;
     const changes: Record<string, unknown> = {};
     const changedPreferences: Record<string, unknown> = {};
     const changed = (
@@ -99,12 +198,35 @@ export function TripBriefEditor({
       changes.travelers = adults + children;
       Object.assign(changedPreferences, { adults, children });
     }
+    if (hotelSearchEnabled())
+      changed(
+        "hotelSearch",
+        hotelSearch,
+        preferences.hotelSearch ?? null,
+        changedPreferences,
+      );
     if (Object.keys(changedPreferences).length)
       changes.preferences = changedPreferences;
     if (!Object.keys(changes).length) {
-      setMessage("Your brief is already up to date. No changes were saved.");
+      setMessage({
+        text: "Your brief is already up to date. No changes were saved.",
+        kind: "info",
+      });
       return;
     }
+    if (
+      hotelSearch !== null &&
+      (!validateHotelSearchDetails(hotelSearch, adults + children) ||
+        hotelGuestCounts(hotelSearch).adults !== adults ||
+        hotelGuestCounts(hotelSearch).children !== children)
+    ) {
+      setMessage({
+        text: "Complete your hotel room details or turn off hotel searches before saving.",
+        kind: "error",
+      });
+      return;
+    }
+    saveLock.current = true;
     setSaving(true);
     setMessage(null);
     try {
@@ -118,20 +240,40 @@ export function TripBriefEditor({
         }),
       });
       const result = await response.json();
+      if (!active.current) return;
       if (!response.ok) {
-        setMessage(
-          result.error ||
-            "Could not save. Load the latest brief before retrying.",
-        );
+        setMessage({
+          text:
+            typeof result.error === "string"
+              ? result.error
+              : "Could not save. Load the latest brief before retrying.",
+          kind: "error",
+        });
+        return;
+      }
+      if (
+        result.trip?.id !== trip.id ||
+        result.trip?.user_id !== trip.user_id ||
+        typeof result.trip?.updated_at !== "string" ||
+        !result.trip.updated_at.trim() ||
+        result.trip.updated_at === trip.updated_at
+      ) {
+        setMessage({
+          text: "This save response could not be verified. Your edits are kept. Load the latest brief before trying again.",
+          kind: "error",
+        });
         return;
       }
       onSaved(result.trip);
     } catch {
-      setMessage(
-        "The save response was interrupted. Your edits are still here. Load the latest brief to check whether they were saved before retrying.",
-      );
+      if (!active.current) return;
+      setMessage({
+        text: "The save response was interrupted. Your edits are still here. Load the latest brief to check whether they were saved before retrying.",
+        kind: "error",
+      });
     } finally {
-      setSaving(false);
+      saveLock.current = false;
+      if (active.current) setSaving(false);
     }
   };
   return (
@@ -148,12 +290,13 @@ export function TripBriefEditor({
       </summary>
       <form onSubmit={save} className="mt-5">
         <fieldset
-          disabled={locked || saving}
+          disabled={locked || saving || reloading}
           className="grid gap-4 sm:grid-cols-2 disabled:opacity-60"
         >
           <label className="text-sm sm:col-span-2">
             Destination
             <input
+              ref={destinationInput}
               required
               maxLength={200}
               value={destination}
@@ -189,6 +332,7 @@ export function TripBriefEditor({
               type="number"
               min={1}
               max={50}
+              disabled={hotelSearch !== null}
               value={adults}
               onChange={(event) => setAdults(Number(event.target.value))}
               className={inputStyle}
@@ -201,6 +345,7 @@ export function TripBriefEditor({
               type="number"
               min={0}
               max={49}
+              disabled={hotelSearch !== null}
               value={children}
               onChange={(event) => setChildren(Number(event.target.value))}
               className={inputStyle}
@@ -271,6 +416,28 @@ export function TripBriefEditor({
               className={inputStyle}
             />
           </label>
+          {hotelSearchEnabled() && (
+            <div className="sm:col-span-2">
+              <HotelSearchFields
+                value={hotelSearch}
+                travelers={adults + children}
+                adults={adults}
+                onChange={(value) => {
+                  setHotelSearch(value);
+                  if (
+                    value &&
+                    hotelSearch &&
+                    JSON.stringify(value.rooms) !==
+                      JSON.stringify(hotelSearch.rooms)
+                  ) {
+                    const counts = hotelGuestCounts(value);
+                    setAdults(counts.adults);
+                    setChildren(counts.children);
+                  }
+                }}
+              />
+            </div>
+          )}
           <p className="text-sm text-gray-500 sm:col-span-2">
             Changing your brief keeps your previous plan and turns off its
             public link. Choose Start planning when you are ready to build a
@@ -278,24 +445,31 @@ export function TripBriefEditor({
           </p>
           <button
             type="submit"
-            className="rounded-full bg-primary px-5 py-3 font-semibold text-white disabled:opacity-50 sm:col-span-2"
+            className="rounded-full bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-800 disabled:opacity-50 sm:col-span-2"
           >
             {saving ? "Saving brief…" : "Save trip brief"}
           </button>
         </fieldset>
         {message && (
           <div
-            role="alert"
-            className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900"
+            role={message.kind === "info" ? "status" : "alert"}
+            className={
+              message.kind === "info"
+                ? "mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-700"
+                : "mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900"
+            }
           >
-            {message}
-            <button
-              type="button"
-              onClick={onReload}
-              className="ml-2 font-semibold underline"
-            >
-              Load latest brief
-            </button>
+            {message.text}
+            {message.kind === "error" && (
+              <button
+                type="button"
+                onClick={reload}
+                disabled={saving || reloading}
+                className="ml-2 font-semibold underline"
+              >
+                {reloading ? "Loading saved brief…" : "Load latest brief"}
+              </button>
+            )}
           </div>
         )}
       </form>

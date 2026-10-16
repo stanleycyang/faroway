@@ -1,15 +1,19 @@
 "use client";
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useHydrated } from "@/hooks/useHydrated";
 import type { LiteApiRatesResponse } from "@/lib/affiliates/liteapi";
 
 export function HotelSandbox() {
   const [result, setResult] = useState<LiteApiRatesResponse | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const hydrated = useHydrated();
+  const searchLock = useRef(false);
   async function search(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (loading) return;
+    if (!hydrated || searchLock.current) return;
+    searchLock.current = true;
     const fields = new FormData(event.currentTarget);
     const children = String(fields.get("children") || "").trim();
     setResult(null);
@@ -55,6 +59,7 @@ export function HotelSandbox() {
         failure instanceof Error ? failure.message : "Hotel search failed.",
       );
     } finally {
+      searchLock.current = false;
       setLoading(false);
     }
   }
@@ -69,84 +74,89 @@ export function HotelSandbox() {
         Test hotel quotes from LiteAPI. These are sandbox results; no
         reservation or payment is made.
       </p>
-      <form onSubmit={search} className="grid sm:grid-cols-2 gap-4 mt-6">
-        <label>
-          City
-          <input
-            name="city"
-            required
-            defaultValue="Paris"
-            maxLength={120}
-            className={inputStyle}
-          />
-        </label>
-        <label>
-          Destination country (two-letter code)
-          <input
-            name="country"
-            required
-            defaultValue="FR"
-            pattern="[A-Za-z]{2}"
-            className={inputStyle}
-          />
-        </label>
-        <label>
-          Check-in
-          <input
-            type="date"
-            name="checkin"
-            required
-            defaultValue="2026-11-08"
-            className={inputStyle}
-          />
-        </label>
-        <label>
-          Check-out
-          <input
-            type="date"
-            name="checkout"
-            required
-            defaultValue="2026-11-10"
-            className={inputStyle}
-          />
-        </label>
-        <label>
-          Guest nationality (two-letter code)
-          <input
-            name="nationality"
-            required
-            defaultValue="US"
-            pattern="[A-Za-z]{2}"
-            className={inputStyle}
-          />
-        </label>
-        <label>
-          Adults in one room
-          <input
-            type="number"
-            name="adults"
-            required
-            min={1}
-            max={8}
-            defaultValue={2}
-            className={inputStyle}
-          />
-        </label>
-        <label className="sm:col-span-2">
-          Children’s ages, separated by commas (optional)
-          <input
-            name="children"
-            placeholder="For example: 6, 10"
-            className={inputStyle}
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded-lg bg-gray-900 text-white px-4 py-3 disabled:opacity-50"
+      <form onSubmit={search} className="mt-6">
+        <fieldset
+          disabled={!hydrated || loading}
+          className="grid sm:grid-cols-2 gap-4"
         >
-          {loading ? "Searching…" : "Search sandbox hotels"}
-        </button>
+          <label>
+            City
+            <input
+              name="city"
+              required
+              defaultValue="Paris"
+              maxLength={120}
+              className={inputStyle}
+            />
+          </label>
+          <label>
+            Destination country (two-letter code)
+            <input
+              name="country"
+              required
+              defaultValue="FR"
+              pattern="[A-Za-z]{2}"
+              className={inputStyle}
+            />
+          </label>
+          <label>
+            Check-in
+            <input
+              type="date"
+              name="checkin"
+              required
+              defaultValue="2026-11-08"
+              className={inputStyle}
+            />
+          </label>
+          <label>
+            Check-out
+            <input
+              type="date"
+              name="checkout"
+              required
+              defaultValue="2026-11-10"
+              className={inputStyle}
+            />
+          </label>
+          <label>
+            Guest nationality (two-letter code)
+            <input
+              name="nationality"
+              required
+              defaultValue="US"
+              pattern="[A-Za-z]{2}"
+              className={inputStyle}
+            />
+          </label>
+          <label>
+            Adults in one room
+            <input
+              type="number"
+              name="adults"
+              required
+              min={1}
+              max={8}
+              defaultValue={2}
+              className={inputStyle}
+            />
+          </label>
+          <label className="sm:col-span-2">
+            Children’s ages, separated by commas (optional)
+            <input
+              name="children"
+              placeholder="For example: 6, 10"
+              className={inputStyle}
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={!hydrated || loading}
+            className="rounded-lg bg-gray-900 text-white px-4 py-3 disabled:opacity-50"
+          >
+            {loading ? "Searching…" : "Search sandbox hotels"}
+          </button>
+        </fieldset>
       </form>
       <div aria-live="polite" className="mt-6">
         {error && (

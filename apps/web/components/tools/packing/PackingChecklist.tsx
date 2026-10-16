@@ -13,36 +13,72 @@ export function PackingChecklist({
   categories,
   storageKey,
 }: PackingChecklistProps) {
+  // Remount the state owner whenever the list identity changes. A previous
+  // list must never be persisted under a newly selected destination's key.
+  return (
+    <SavedPackingChecklist
+      key={storageKey}
+      categories={categories}
+      storageKey={storageKey}
+    />
+  );
+}
+
+function SavedPackingChecklist({
+  categories,
+  storageKey,
+}: PackingChecklistProps) {
+  const [storageUnavailable, setStorageUnavailable] = useState(false);
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [hasHydrated, setHasHydrated] = useState(false);
 
   useEffect(() => {
-    let savedItems: string[] | null = null;
+    const validItems = new Set(
+      categories.flatMap((category) =>
+        category.items.map((item) => `${category.category}:${item.name}`),
+      ),
+    );
+    let savedItems: string[] = [];
+    let unavailable = false;
     try {
       const saved = localStorage.getItem(storageKey);
-      if (saved) savedItems = JSON.parse(saved) as string[];
-    } catch {}
+      if (saved) {
+        const parsed: unknown = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          savedItems = parsed.filter(
+            (item): item is string =>
+              typeof item === "string" && validItems.has(item),
+          );
+        }
+      }
+    } catch (error) {
+      // Malformed data can be replaced; denied storage cannot promise a save.
+      unavailable = !(error instanceof SyntaxError);
+    }
     const frame = requestAnimationFrame(() => {
-      if (savedItems) setChecked(new Set(savedItems));
+      setChecked(new Set(savedItems));
+      setStorageUnavailable(unavailable);
       setHasHydrated(true);
     });
     return () => cancelAnimationFrame(frame);
-  }, [storageKey]);
+  }, [categories, storageKey]);
 
-  useEffect(() => {
-    if (!hasHydrated) return;
+  const persist = (items: Set<string>) => {
     try {
-      localStorage.setItem(storageKey, JSON.stringify([...checked]));
-    } catch {}
-  }, [checked, hasHydrated, storageKey]);
+      localStorage.setItem(storageKey, JSON.stringify([...items]));
+      setStorageUnavailable(false);
+    } catch {
+      setStorageUnavailable(true);
+    }
+  };
 
   const toggle = (item: string) => {
-    setChecked((prev) => {
-      const next = new Set(prev);
-      if (next.has(item)) next.delete(item);
-      else next.add(item);
-      return next;
-    });
+    if (!hasHydrated) return;
+    const next = new Set(checked);
+    if (next.has(item)) next.delete(item);
+    else next.add(item);
+    setChecked(next);
+    persist(next);
   };
 
   const totalItems = categories.reduce((sum, c) => sum + c.items.length, 0);
@@ -81,11 +117,19 @@ export function PackingChecklist({
           className="h-2.5 bg-slate-100 rounded-full overflow-hidden"
         >
           <div
-            className="h-full bg-gradient-to-r from-primary to-amber-500 rounded-full transition-all duration-500"
+            className="h-full bg-gradient-to-r from-primary to-amber-500 rounded-full transition-all duration-500 motion-reduce:transition-none"
             style={{ width: `${progressPercent}%` }}
           />
         </div>
       </div>
+
+      <p role="status" className="mb-6 text-sm text-slate-600">
+        {!hasHydrated
+          ? "Restoring your packing progress…"
+          : storageUnavailable
+            ? "Your progress is available in this tab, but this browser cannot save it. Keep this tab open until you finish."
+            : "Your progress saves on this device as you pack."}
+      </p>
 
       {/* Categories */}
       <div className="space-y-8">
@@ -116,6 +160,7 @@ export function PackingChecklist({
                       type="button"
                       key={key}
                       onClick={() => toggle(key)}
+                      disabled={!hasHydrated}
                       aria-pressed={isChecked}
                       className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-left transition-all ${
                         isChecked

@@ -49,13 +49,10 @@ describe("FarowayClient", () => {
 
       const result = await client.getUserProfile();
       expect(result.data).toEqual({ id: "user-1", email: "test@test.com" });
-      expect(mockFetch).toHaveBeenCalledWith(
-        "https://api.faroway.ai/api/user/profile",
-        expect.objectContaining({
-          headers: expect.objectContaining({
-            Authorization: "Bearer test-token",
-          }),
-        }),
+      const [url, options] = mockFetch.mock.calls[0];
+      expect(url).toBe("https://api.faroway.ai/api/user/profile");
+      expect(new Headers(options.headers).get("Authorization")).toBe(
+        "Bearer test-token",
       );
     });
   });

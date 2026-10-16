@@ -14,14 +14,16 @@ export interface Stats {
 
 export function computeStats(visits: Record<string, CountryVisit>): Stats {
   const continentsTouched = new Set<Continent>();
-  let totalVisited = 0;
+  const countries = new Set<string>();
   for (const v of Object.values(visits)) {
-    totalVisited += 1;
+    if (!v || !Object.hasOwn(CONTINENT_BY_ALPHA3, v.iso)) continue;
     const continent = CONTINENT_BY_ALPHA3[v.iso];
-    if (continent) continentsTouched.add(continent);
+    if (continent === "Antarctica") continue;
+    countries.add(v.iso);
+    continentsTouched.add(continent);
   }
   return {
-    totalVisited,
+    totalVisited: countries.size,
     totalCountries: TOTAL_COUNTRIES,
     continentsVisited: continentsTouched.size,
     continentsTotal: 6,

@@ -1,6 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import { z } from 'zod';
+import { parseTripDate } from './tripDate';
+
+const DateOnly = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((value) => !Number.isNaN(parseTripDate(value).getTime()), 'Invalid calendar date');
 
 const key = (userId: string) => `faroway:pending-create:${encodeURIComponent(userId)}`;
 type Receipt = { version: 1; requestId: string; body: string };
@@ -50,28 +56,51 @@ export function discardTripCreation(userId: string) {
   return serialize(() => AsyncStorage.removeItem(key(userId)));
 }
 
+/** Capture the exact local receipt shown by a deliberate discard confirmation. */
+export function readTripCreationReceipt(userId: string): Promise<string | null> {
+  return serialize(() => AsyncStorage.getItem(key(userId)));
+}
+
+/** A stale confirmation must not erase a newer request. Account deletion uses discardTripCreation. */
+export function discardReviewedTripCreation(userId: string, reviewedReceipt: string | null) {
+  return serialize(async () => {
+    const current = await AsyncStorage.getItem(key(userId));
+    if (current !== reviewedReceipt)
+      throw new Error('Your pending trip changed. Review it again before starting a new trip.');
+    if (current !== null) await AsyncStorage.removeItem(key(userId));
+  });
+}
+
 /** Restore only validated planner fields; corrupt/future records remain untouched. */
 export function savedTripCreationDraft(userId: string) {
   return serialize(async () => {
     const raw = await AsyncStorage.getItem(key(userId));
     if (!raw) return null;
     const receipt = JSON.parse(raw) as Receipt;
-    if (receipt.version !== 1 || typeof receipt.body !== 'string')
+    if (
+      receipt.version !== 1 ||
+      typeof receipt.body !== 'string' ||
+      !z.string().uuid().safeParse(receipt.requestId).success
+    )
       throw new Error('The saved trip request could not be read.');
     const body = z
       .object({
         destination: z.string().trim().min(1).max(200),
-        start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-        end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+        start_date: DateOnly,
+        end_date: DateOnly,
         travelers: z.number().int().min(1).max(50),
-        budget: z.string().optional(),
+        budget: z.enum(['budget', 'moderate', 'luxury']).optional(),
         preferences: z.object({
-          travelerType: z.string().optional(),
-          originCity: z.string().optional(),
-          originAirport: z.string().optional(),
-          vibes: z.array(z.string()).max(10).optional(),
+          travelerType: z.enum(['solo', 'couple', 'family', 'friends', 'business']).optional(),
+          originCity: z.string().max(200).optional(),
+          originAirport: z.string().max(10).optional(),
+          vibes: z.array(z.string().max(50)).max(10).optional(),
         }),
       })
+      .refine(
+        (value) => parseTripDate(value.end_date) >= parseTripDate(value.start_date),
+        'End date precedes start date'
+      )
       .parse(JSON.parse(receipt.body));
     return {
       destination: body.destination,
