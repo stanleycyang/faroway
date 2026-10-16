@@ -3,8 +3,19 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.cursor/**'
+      - 'LICENSE'
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     branches: [main, codex/release-candidate]
+    paths-ignore:
+      - '**/*.md'
+      - 'docs/**'
+      - '.cursor/**'
+      - 'LICENSE'
   workflow_dispatch:
     inputs:
       full_verification:
