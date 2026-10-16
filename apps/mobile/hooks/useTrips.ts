@@ -258,20 +258,31 @@ export function useTrips() {
 
   // Get trip by ID
   const getTripById = useCallback(
-    async (id: string) => {
+    async (id: string, signal?: AbortSignal) => {
       const account = captureTripAccount();
       const request = ++detailRequestRef.current;
-      const isCurrent = () => account.isCurrent() && request === detailRequestRef.current;
+      const isCurrent = () =>
+        !signal?.aborted && account.isCurrent() && request === detailRequestRef.current;
+      const assertCurrent = () => {
+        if (signal?.aborted) {
+          const error = new Error('Trip request cancelled');
+          error.name = 'AbortError';
+          throw error;
+        }
+        if (!isCurrent()) throw new TripAccountChangedError();
+      };
       setLoading(true);
       setError(null);
       try {
+        assertCurrent();
         const headers = await account.headers();
-        if (!isCurrent()) throw new TripAccountChangedError();
+        assertCurrent();
         const response = await tripResponse(`${API_BASE_URL}/api/trips/${id}`, {
           method: 'GET',
           headers,
+          signal,
         });
-        if (!isCurrent()) throw new TripAccountChangedError();
+        assertCurrent();
         if (!response.ok) {
           throw new Error(
             response.status === 401
@@ -282,14 +293,14 @@ export function useTrips() {
           );
         }
         const data = await response.json().catch(() => null);
-        if (!isCurrent()) throw new TripAccountChangedError();
+        assertCurrent();
         if (!data?.trip || data.trip.id !== id || data.trip.user_id !== account.ownerId)
           throw new TripAccessError(
             'This trip response could not be verified. Reopen your trips and try again.'
           );
         const trip = transformApiTrip(data.trip, data.itinerary);
         await offlineStorage.saveTrip(trip, account.ownerId!);
-        if (!isCurrent()) throw new TripAccountChangedError();
+        assertCurrent();
         setCurrentTrip(trip);
         return trip;
       } catch (err: unknown) {

@@ -457,6 +457,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   const mounted = useRef(false);
   const shareLock = useRef(false);
   const refreshLock = useRef(false);
+  const detailController = useRef<AbortController | null>(null);
   const [account] = useState(() => {
     const state = useUserStore.getState();
     return { owner: state.user?.id, revision: state.accountRevision };
@@ -518,13 +519,16 @@ function TripDetailSession({ id }: { id: string | undefined }) {
         return;
       }
 
-      let cancelled = false;
+      const controller = new AbortController();
+      detailController.current = controller;
+      refreshLock.current = false;
+      setRefreshing(false);
       setIsLoadingTrip(!cachedTrip);
       setLoadError(null);
 
-      getTripById(id)
+      getTripById(id, controller.signal)
         .catch((error: unknown) => {
-          if (!cancelled) {
+          if (!controller.signal.aborted) {
             const message = error instanceof Error ? error.message : 'Unable to load this trip.';
             setLoadError(
               message === 'Failed to fetch' || message === 'Network request failed'
@@ -534,11 +538,12 @@ function TripDetailSession({ id }: { id: string | undefined }) {
           }
         })
         .finally(() => {
-          if (!cancelled) setIsLoadingTrip(false);
+          if (!controller.signal.aborted) setIsLoadingTrip(false);
         });
 
       return () => {
-        cancelled = true;
+        controller.abort();
+        if (detailController.current === controller) detailController.current = null;
       };
     }, [getTripById, id, isHydrated, loadAttempt])
   );
@@ -562,18 +567,20 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   }, [isAuthenticated, trip?.status]);
 
   const onRefresh = async () => {
-    if (!id || !isActive() || refreshLock.current) return;
+    const controller = detailController.current;
+    if (!id || !isActive() || refreshLock.current || !controller || controller.signal.aborted)
+      return;
     refreshLock.current = true;
     setRefreshing(true);
     hapticFeedback.light();
     try {
       // Use getTripById which properly transforms itinerary data with booking URLs
-      const latest = await getTripById(id);
-      if (!isActive()) return;
+      const latest = await getTripById(id, controller.signal);
+      if (!isActive() || controller.signal.aborted) return;
       if (!latest) throw new Error('The latest saved trip could not be loaded.');
       hapticFeedback.success();
     } catch (error) {
-      if (!isActive()) return;
+      if (!isActive() || controller.signal.aborted) return;
       console.error('Failed to refresh trip:', error);
       hapticFeedback.error();
       Alert.alert(
@@ -581,8 +588,10 @@ function TripDetailSession({ id }: { id: string | undefined }) {
         'Your last loaded trip is kept. Check your connection and available device storage, then try again.'
       );
     } finally {
-      refreshLock.current = false;
-      if (isActive()) setRefreshing(false);
+      if (detailController.current === controller) {
+        refreshLock.current = false;
+        if (isActive()) setRefreshing(false);
+      }
     }
   };
 

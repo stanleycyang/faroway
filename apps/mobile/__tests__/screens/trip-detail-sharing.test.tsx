@@ -438,7 +438,7 @@ it('shows a newer list revision when reopening with stale current detail', async
     expect(headings).toContain('Updated Kyoto');
     expect(headings).not.toContain('Tokyo');
     expect(mockGetTrip).toHaveBeenCalledTimes(1);
-    expect(mockGetTrip).toHaveBeenCalledWith(trip.id);
+    expect(mockGetTrip).toHaveBeenCalledWith(trip.id, expect.any(AbortSignal));
   } finally {
     await act(async () => renderer?.unmount());
   }
@@ -514,6 +514,54 @@ it('keeps local-only trips available without a detail request', async () => {
         .findAllByProps({ accessibilityRole: 'header' })
         .map((node) => node.props.children)
     ).toContain('Tokyo');
+  } finally {
+    await act(async () => renderer?.unmount());
+  }
+});
+
+it.each(['blur', 'unmount'])('cancels automatic and manual reads on %s', async (exit) => {
+  let renderer!: ReturnType<typeof create>;
+  let finish!: (value: typeof trip) => void;
+  try {
+    await act(async () => {
+      renderer = create(<TripDetailScreen />);
+    });
+    const signal = mockGetTrip.mock.calls[0][1] as AbortSignal;
+    expect(signal.aborted).toBe(false);
+    mockGetTrip.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve;
+        })
+    );
+    let refresh!: Promise<void>;
+    await act(async () => {
+      refresh = renderer.root.findByType('AnimatedScrollView' as React.ElementType).props
+        .refreshControl.props.onRefresh();
+    });
+    expect(mockGetTrip.mock.calls[1][1]).toBe(signal);
+    await act(async () => {
+      if (exit === 'unmount') renderer.unmount();
+      else {
+        mockFocused = false;
+        renderer.update(<TripDetailScreen />);
+      }
+    });
+    expect(signal.aborted).toBe(true);
+    await act(async () => {
+      finish(trip);
+      await refresh;
+    });
+    expect(mockRefreshSuccess).not.toHaveBeenCalled();
+    expect(mockRefreshError).not.toHaveBeenCalled();
+    expect(Alert.alert).not.toHaveBeenCalled();
+    if (exit === 'blur') {
+      mockFocused = true;
+      await act(async () => renderer.update(<TripDetailScreen />));
+      const nextSignal = mockGetTrip.mock.calls[2][1] as AbortSignal;
+      expect(nextSignal).not.toBe(signal);
+      expect(nextSignal.aborted).toBe(false);
+    }
   } finally {
     await act(async () => renderer?.unmount());
   }

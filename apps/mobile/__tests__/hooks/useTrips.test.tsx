@@ -299,6 +299,75 @@ it('keeps the newer detail request when an older request finishes later', async 
   expect(useTripStore.getState().currentTrip?.id).toBe('new-trip');
 });
 
+it('does not save or publish a cancelled detail response after another screen reopens', async () => {
+  const response = deferred<unknown>();
+  const started = deferred<void>();
+  mockFetch.mockImplementationOnce(() => {
+    started.resolve();
+    return response.promise;
+  });
+  const controller = new AbortController();
+  const first = renderUseTrips().getTripById('trip-1', controller.signal).catch((error) => error);
+  await started.promise;
+  controller.abort();
+  expect(mockFetch.mock.calls[0][1].signal.aborted).toBe(true);
+
+  mockFetch.mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({
+      trip: { ...makeApiTrip('trip-1', 'Latest Kyoto'), updated_at: '2026-01-03T00:00:00.000Z' },
+      itinerary: { days: [] },
+    }),
+  });
+  const latest = await renderUseTrips().getTripById('trip-1', new AbortController().signal);
+  response.resolve({
+    ok: true,
+    json: async () => ({ trip: makeApiTrip('trip-1', 'Older Tokyo'), itinerary: { days: [] } }),
+  });
+  expect((await first).name).toBe('AbortError');
+  expect(useTripStore.getState().currentTrip).toBe(latest);
+  expect(offlineStorage.saveTrip).toHaveBeenCalledTimes(1);
+  expect(offlineStorage.saveTrip).toHaveBeenCalledWith(latest, 'user-1');
+});
+
+it('does not dispatch a detail read cancelled before session resolution', async () => {
+  const { supabase } = require('../../lib/supabase');
+  const session = deferred<unknown>();
+  supabase.auth.getSession.mockReturnValueOnce(session.promise);
+  const controller = new AbortController();
+  const read = renderUseTrips().getTripById('trip-1', controller.signal).catch((error) => error);
+  controller.abort();
+  session.resolve({
+    data: { session: { user: { id: 'user-1' }, access_token: 'fixture' } },
+    error: null,
+  });
+  expect((await read).name).toBe('AbortError');
+  expect(mockFetch).not.toHaveBeenCalled();
+  expect(offlineStorage.saveTrip).not.toHaveBeenCalled();
+});
+
+it('does not publish detail cancelled during an already-started cache save', async () => {
+  const saving = deferred<void>();
+  const started = deferred<void>();
+  offlineStorage.saveTrip.mockImplementationOnce(() => {
+    started.resolve();
+    return saving.promise;
+  });
+  const previous = makeTrip('trip-1', 'Previous detail');
+  useTripStore.setState({ currentTrip: previous });
+  mockFetch.mockResolvedValueOnce({
+    ok: true,
+    json: async () => ({ trip: makeApiTrip('trip-1', 'Cancelled detail'), itinerary: { days: [] } }),
+  });
+  const controller = new AbortController();
+  const read = renderUseTrips().getTripById('trip-1', controller.signal).catch((error) => error);
+  await started.promise;
+  controller.abort();
+  saving.resolve();
+  expect((await read).name).toBe('AbortError');
+  expect(useTripStore.getState().currentTrip).toBe(previous);
+});
+
 it('refuses a session from a different account before dispatching a private read', async () => {
   const { supabase } = require('../../lib/supabase');
   supabase.auth.getSession.mockResolvedValueOnce({
