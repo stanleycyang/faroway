@@ -307,7 +307,9 @@ it('does not save or publish a cancelled detail response after another screen re
     return response.promise;
   });
   const controller = new AbortController();
-  const first = renderUseTrips().getTripById('trip-1', controller.signal).catch((error) => error);
+  const first = renderUseTrips()
+    .getTripById('trip-1', controller.signal)
+    .catch((error) => error);
   await started.promise;
   controller.abort();
   expect(mockFetch.mock.calls[0][1].signal.aborted).toBe(true);
@@ -335,7 +337,9 @@ it('does not dispatch a detail read cancelled before session resolution', async 
   const session = deferred<unknown>();
   supabase.auth.getSession.mockReturnValueOnce(session.promise);
   const controller = new AbortController();
-  const read = renderUseTrips().getTripById('trip-1', controller.signal).catch((error) => error);
+  const read = renderUseTrips()
+    .getTripById('trip-1', controller.signal)
+    .catch((error) => error);
   controller.abort();
   session.resolve({
     data: { session: { user: { id: 'user-1' }, access_token: 'fixture' } },
@@ -357,10 +361,15 @@ it('does not publish detail cancelled during an already-started cache save', asy
   useTripStore.setState({ currentTrip: previous });
   mockFetch.mockResolvedValueOnce({
     ok: true,
-    json: async () => ({ trip: makeApiTrip('trip-1', 'Cancelled detail'), itinerary: { days: [] } }),
+    json: async () => ({
+      trip: makeApiTrip('trip-1', 'Cancelled detail'),
+      itinerary: { days: [] },
+    }),
   });
   const controller = new AbortController();
-  const read = renderUseTrips().getTripById('trip-1', controller.signal).catch((error) => error);
+  const read = renderUseTrips()
+    .getTripById('trip-1', controller.signal)
+    .catch((error) => error);
   await started.promise;
   controller.abort();
   saving.resolve();

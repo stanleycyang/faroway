@@ -545,6 +545,8 @@ function TripDetailSession({ id }: { id: string | undefined }) {
         controller.abort();
         if (detailController.current === controller) detailController.current = null;
       };
+      // A retry intentionally replaces the focus callback without changing its inputs.
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [getTripById, id, isHydrated, loadAttempt])
   );
 

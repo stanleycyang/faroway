@@ -486,9 +486,12 @@ it('renders newer manual-refresh detail while the list still has an older revisi
       return latest;
     });
     await act(async () => {
-      await renderer.root.findByType('AnimatedScrollView' as React.ElementType).props
-        .refreshControl.props.onRefresh();
+      await renderer.root
+        .findByType('AnimatedScrollView' as React.ElementType)
+        .props.refreshControl.props.onRefresh();
     });
+    // This plain store mock needs an explicit render to publish its updated value.
+    await act(async () => renderer.update(<TripDetailScreen />));
     expect(
       renderer.root
         .findAllByProps({ accessibilityRole: 'header' })
@@ -536,8 +539,9 @@ it.each(['blur', 'unmount'])('cancels automatic and manual reads on %s', async (
     );
     let refresh!: Promise<void>;
     await act(async () => {
-      refresh = renderer.root.findByType('AnimatedScrollView' as React.ElementType).props
-        .refreshControl.props.onRefresh();
+      refresh = renderer.root
+        .findByType('AnimatedScrollView' as React.ElementType)
+        .props.refreshControl.props.onRefresh();
     });
     expect(mockGetTrip.mock.calls[1][1]).toBe(signal);
     await act(async () => {
