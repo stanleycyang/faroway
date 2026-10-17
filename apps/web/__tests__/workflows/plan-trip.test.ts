@@ -104,6 +104,7 @@ function executeInsert(state: ChainState) {
     for (const row of state.insert) {
       const refs = [
         row.hotel_id,
+        row.transport_id,
         ...row.morning_activities,
         ...row.afternoon_activities,
         ...row.evening_activities,
@@ -366,6 +367,76 @@ describe("planTripWorkflow", () => {
     ]);
   });
 
+  it("rejects duplicate day identities before any persistence or completion", async () => {
+    const slot = { activities: [], meals: [] };
+    const day = {
+      dayNumber: 1,
+      date: "2026-06-01",
+      morning: slot,
+      afternoon: slot,
+      evening: slot,
+    };
+    mocks.mapSearchResultsToItinerary.mockReturnValue(
+      mappedItinerary({ days: [day, { ...day }] }),
+    );
+    const outcome = await planTripWorkflow({
+      ...workflowInput,
+      tripId: undefined,
+    });
+    expect(outcome.status).toBe("error");
+    expect(supabaseMock.from).not.toHaveBeenCalledWith("search_results");
+    expect(supabaseMock.from).not.toHaveBeenCalledWith("search_itineraries");
+    const updates = supabaseMock.from.mock.results.flatMap(
+      (entry) => entry.value.update.mock.calls,
+    );
+    expect(updates.some(([value]) => value.status === "completed")).toBe(false);
+  });
+
+  it.each([false, true])(
+    "handles legacy transport checkpoint ambiguity=%s",
+    async (ambiguous) => {
+      const { mapSearchResultsToItinerary } = await vi.importActual<
+        typeof import("@/lib/search/bridge")
+      >("@/lib/search/bridge");
+      const slot = { activities: [] };
+      const mapped = mapSearchResultsToItinerary(
+        {
+          searchId: "search-1",
+          hotels: [],
+          activities: [],
+          dining: [],
+          transport: [transport],
+          itinerary: [
+            {
+              dayNumber: 1,
+              date: "2026-06-01",
+              title: "Travel",
+              summary: "Fixture",
+              morning: slot,
+              afternoon: slot,
+              evening: slot,
+              transport,
+              currency: "USD",
+              tips: [],
+            },
+          ],
+        },
+        null,
+      );
+      delete mapped.days[0].transport!.id;
+      if (ambiguous) mapped.transport.push({ ...transport, id: "other-offer" });
+      if (ambiguous) {
+        await expect(saveSearchResults("search-1", mapped)).rejects.toThrow(
+          "ambiguous transport",
+        );
+        expect(persistedDays).toEqual([]);
+      } else {
+        await saveSearchResults("search-1", mapped);
+        expect(persistedDays[0].transport_id).toBe(uuid(1));
+      }
+    },
+  );
+
   it("maps returned hotel UUIDs by provider identity despite reordered insert results", async () => {
     const other = { ...hotel, id: "hotel-2", name: "Hotel Two" };
     const slot = { activities: [], meals: [] };
@@ -410,16 +481,18 @@ describe("planTripWorkflow", () => {
     );
   });
 
-  it.each(["hotel", "activity", "dining"])(
+  it.each(["hotel", "activity", "dining", "transport"])(
     "rejects missing and ambiguous %s references without a partial itinerary",
     async (category) => {
       const slot = { activities: [], meals: [] };
       const assigned =
         category === "hotel"
           ? { hotel }
-          : category === "activity"
-            ? { morning: { ...slot, activities: [{ id: "logical" }] } }
-            : { morning: { ...slot, meals: [{ id: "logical" }] } };
+          : category === "transport"
+            ? { transport: { ...transport, id: "logical" } }
+            : category === "activity"
+              ? { morning: { ...slot, activities: [{ id: "logical" }] } }
+              : { morning: { ...slot, meals: [{ id: "logical" }] } };
       const item = category === "hotel" ? hotel : { id: "logical" };
       for (const returned of [
         [],
@@ -510,7 +583,10 @@ describe("planTripWorkflow", () => {
       hotels: [hotel],
       activities,
       dining: meals,
-      transport: [transport],
+      transport: [
+        transport,
+        { ...transport, id: "same-projection", segments: [] },
+      ],
       itinerary: [
         {
           dayNumber: 1,
@@ -551,6 +627,7 @@ describe("planTripWorkflow", () => {
     expect(response.status).toBe(200);
     const body = await response.json();
     expect(body.results.itinerary[0].transport).toEqual(transport);
+    expect(persistedDays[0].transport_id).toBe(uuid(8));
     expect(
       body.results.itinerary[0].morning.activities.map(
         (item: { id: string }) => item.id,

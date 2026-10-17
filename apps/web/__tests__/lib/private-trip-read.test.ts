@@ -9,7 +9,7 @@ vi.mock("@/lib/supabase/server", () => ({
           return {
             eq: (...args: unknown[]) => {
               mocks.eq(...args);
-              return { single: mocks.single };
+              return { single: mocks.single, maybeSingle: mocks.single };
             },
           };
         },
@@ -66,8 +66,7 @@ test("reload reads the global recommendation from only the current owned search"
 });
 
 test.each([
-  { data: null, error: { code: "PGRST116" } },
-  { data: null, error: { code: "503" } },
+  { data: null, error: null },
   {
     data: {
       status: "searching",
@@ -104,6 +103,31 @@ test.each([
     expect(result?.itinerary?.days[0].hotel?.id).toBe("day-one");
   },
 );
+
+test.each(["503", "57014", "42703", "PGRST116"])(
+  "hotel lookup error %s fails the read instead of returning a hotel-less trip",
+  async (code) => {
+    mocks.single.mockReset();
+    mocks.single
+      .mockResolvedValueOnce({
+        data: {
+          id: "trip-a",
+          user_id: "owner-a",
+          search_id: "current-search",
+          itineraries: { days: [] },
+        },
+        error: null,
+      })
+      .mockResolvedValueOnce({
+        data: null,
+        error: { code, message: "Internal private hotel diagnostics" },
+      });
+    await expect(loadTripForUserUncached("trip-a", "owner-a")).rejects.toThrow(
+      /^Your trip could not be loaded\. Please try again shortly\.$/,
+    );
+  },
+);
+
 test("legacy trip without a current search does not query unrelated search metadata", async () => {
   mocks.single.mockReset();
   mocks.single.mockResolvedValueOnce({

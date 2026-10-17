@@ -90,10 +90,16 @@ export async function loadTripForUserUncached(
       .select("status, intermediate_results")
       .eq("id", tripData.search_id)
       .eq("user_id", userId)
-      .single();
+      .maybeSingle();
+    // Only a successful lookup can establish that no recommendation exists.
+    // Fail the read on outages so clients retain their last usable trip.
+    if (searchError) {
+      throw new Error(
+        "Your trip could not be loaded. Please try again shortly.",
+      );
+    }
     const topHotel = search?.intermediate_results?.topHotel;
     itinerary.topHotel =
-      !searchError &&
       search?.status === "completed" &&
       topHotel &&
       typeof topHotel === "object" &&
