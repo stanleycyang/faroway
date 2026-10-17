@@ -503,3 +503,142 @@ test.each([
     }
   },
 );
+
+test.each(["6,", "abc"])(
+  "raw hotel age text %j survives typing, autosave and repeated reload",
+  async (raw) => {
+    (
+      globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+    ).IS_REACT_ACT_ENVIRONMENT = true;
+    mocks.owner = "owner-a";
+    mocks.accountRevision = 0;
+    vi.stubEnv("NEXT_PUBLIC_HOTEL_SEARCH_ENABLED", "true");
+    const values = new Map<string, string>();
+    const storage = {
+      getItem: (key: string) => values.get(key) ?? null,
+      setItem: (key: string, value: string) => values.set(key, value),
+      removeItem: (key: string) => values.delete(key),
+    };
+    saveEditorDraft(storage, {
+      selectedPlace: { name: "Paris", source: "catalog", placeId: "paris" },
+      startDate: "2099-06-01",
+      endDate: "2099-06-03",
+      travelers: 5,
+      travelerType: "family",
+      budget: "moderate",
+      selectedVibes: [],
+      hotelSearch: {
+        countryCode: "FR",
+        guestNationality: "CA",
+        consentVersion: "hotel-search-nuitee-v1",
+        rooms: [
+          { adults: 2, children: [6] },
+          { adults: 1, children: [8] },
+        ],
+      },
+    });
+    vi.stubGlobal("sessionStorage", storage);
+    vi.stubGlobal("localStorage", {
+      getItem: () => null,
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    });
+    vi.stubGlobal("window", {
+      location: { search: "" },
+      history: { replaceState: vi.fn() },
+    });
+    const fetchMock = vi.fn(() => {
+      throw new Error("Unexpected network request");
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    let renderer!: ReturnType<typeof create>;
+    const inputs = () =>
+      renderer.root.findAllByProps({ placeholder: "For example: 6, 10" });
+    const submit = () =>
+      renderer.root
+        .findAllByType("button")
+        .find((button) => button.children.includes("Generate itinerary"))!;
+    const saved = () =>
+      JSON.parse(values.get("faroway-create-editor-draft")!).draft;
+    try {
+      await act(async () => {
+        renderer = create(<CreateTripPage />);
+      });
+      // Invoke the real rendered inputs' onChange for each typed prefix.
+      for (let i = 1; i <= raw.length; i++) {
+        await act(async () => {
+          inputs()[0].props.onChange({ target: { value: raw.slice(0, i) } });
+        });
+      }
+      await act(async () => {
+        inputs()[1].props.onChange({ target: { value: " 8 , 9 " } });
+      });
+      expect(inputs().map((input) => input.props.value)).toEqual([
+        raw,
+        " 8 , 9 ",
+      ]);
+      expect(submit().props.disabled).toBe(true);
+      for (let reload = 0; reload < 2; reload++) {
+        await act(async () => {
+          renderer.unmount();
+        });
+        await act(async () => {
+          renderer = create(<CreateTripPage />);
+        });
+        expect(inputs().map((input) => input.props.value)).toEqual([
+          raw,
+          " 8 , 9 ",
+        ]);
+        expect(submit().props.disabled).toBe(true);
+        expect(saved().hotelAgeText).toEqual([raw, " 8 , 9 "]);
+      }
+      await act(async () => {
+        inputs()[0].props.onChange({ target: { value: "6, 10" } });
+      });
+      expect(submit().props.disabled).toBe(false);
+      expect(saved().hotelSearch.rooms[0].children).toEqual([6, 10]);
+      await act(async () => {
+        renderer.unmount();
+      });
+      await act(async () => {
+        renderer = create(<CreateTripPage />);
+      });
+      expect(inputs().map((input) => input.props.value)).toEqual([
+        "6, 10",
+        " 8 , 9 ",
+      ]);
+      expect(submit().props.disabled).toBe(false);
+      // Removing and re-adding a room must not recover its stale raw text.
+      await act(async () => {
+        renderer.root
+          .findAllByType("button")
+          .find((button) => button.children.includes("Remove last room"))!
+          .props.onClick();
+      });
+      await act(async () => {
+        renderer.root
+          .findAllByType("button")
+          .find((button) => button.children.includes("Add room"))!
+          .props.onClick();
+      });
+      expect(inputs()[1].props.value).toBe("");
+      await act(async () => {
+        renderer.unmount();
+      });
+      vi.stubEnv("NEXT_PUBLIC_HOTEL_SEARCH_ENABLED", "false");
+      await act(async () => {
+        renderer = create(<CreateTripPage />);
+      });
+      expect(inputs()).toHaveLength(0);
+      expect(saved().hotelSearch).toBeNull();
+      expect(saved().hotelAgeText).toEqual([]);
+      expect(fetchMock).not.toHaveBeenCalled();
+    } finally {
+      await act(async () => {
+        renderer?.unmount();
+      });
+      vi.unstubAllGlobals();
+      vi.unstubAllEnvs();
+    }
+  },
+);

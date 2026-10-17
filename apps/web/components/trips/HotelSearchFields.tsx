@@ -14,15 +14,25 @@ export function HotelSearchFields({
   travelers,
   adults,
   onChange,
+  ageText: editorAgeText,
+  onAgeTextChange,
 }: {
   value: HotelSearchDetails | null;
   travelers: number;
   adults?: number;
+  /** Optional editor-only raw input, never part of HotelSearchDetails. */
+  ageText?: string[];
+  onAgeTextChange?: (value: string[]) => void;
   onChange: (value: HotelSearchDetails | null) => void;
 }) {
-  const [ageText, setAgeText] = useState(
+  const [localAgeText, setLocalAgeText] = useState(
     value?.rooms.map((room) => room.children.join(", ")) || [],
   );
+  const ageText = editorAgeText ?? localAgeText;
+  const setAgeText = (text: string[]) => {
+    setLocalAgeText(text);
+    onAgeTextChange?.(text);
+  };
   const initialAdults = adults ?? travelers;
   const input =
     "mt-1 block min-h-11 w-full rounded-xl border border-gray-300 p-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary/30";
@@ -123,11 +133,11 @@ export function HotelSearchFields({
                   className={input}
                   onChange={(event) => {
                     const text = event.target.value;
-                    setAgeText((previous) =>
+                    setAgeText(
                       value.rooms.map((item, i) =>
                         i === index
                           ? text
-                          : (previous[i] ?? item.children.join(", ")),
+                          : hotelChildrenAgeText(item.children, ageText[i]),
                       ),
                     );
                     const children = parseHotelChildrenAges(text);
@@ -148,7 +158,12 @@ export function HotelSearchFields({
                 type="button"
                 className="min-h-11 px-2 underline text-sm"
                 onClick={() => {
-                  setAgeText((previous) => [...previous, ""]);
+                  setAgeText([
+                    ...value.rooms.map((room, i) =>
+                      hotelChildrenAgeText(room.children, ageText[i]),
+                    ),
+                    "",
+                  ]);
                   onChange({
                     ...value,
                     rooms: [...value.rooms, { adults: 1, children: [] }],
@@ -163,7 +178,7 @@ export function HotelSearchFields({
                 type="button"
                 className="min-h-11 px-2 underline text-sm"
                 onClick={() => {
-                  setAgeText((previous) => previous.slice(0, -1));
+                  setAgeText(ageText.slice(0, -1));
                   onChange({ ...value, rooms: value.rooms.slice(0, -1) });
                 }}
               >

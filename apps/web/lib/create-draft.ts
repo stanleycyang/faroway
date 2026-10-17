@@ -1,5 +1,6 @@
 import {
   HOTEL_SEARCH_CONSENT_VERSION,
+  hotelChildrenAgeText,
   type HotelSearchDetails,
 } from "@faroway/constants";
 import { parseTripDate } from "./trips/date-duration";
@@ -171,4 +172,22 @@ export function restoreHotelSearchDraft(
     consentVersion: draft.consentVersion,
     rooms,
   };
+}
+
+/** Restore only text that still describes the numeric room draft. Legacy or
+ * malformed text falls back to the room data; it never changes eligibility. */
+export function restoreHotelAgeTextDraft(
+  value: unknown,
+  details: HotelSearchDetails | null,
+): string[] {
+  return (
+    details?.rooms.map((room, index) =>
+      hotelChildrenAgeText(
+        room.children,
+        Array.isArray(value) && typeof value[index] === "string"
+          ? value[index]
+          : undefined,
+      ),
+    ) ?? []
+  );
 }
