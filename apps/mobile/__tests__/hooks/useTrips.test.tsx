@@ -36,6 +36,7 @@ jest.mock('../../lib/offline', () => ({
     isOnline: jest.fn(() => true),
   },
   syncService: {
+    captureMutationRead: () => ({ settled: Promise.resolve(), isCurrent: () => true }),
     queueCreate: jest.fn(() => Promise.resolve()),
     queueUpdate: jest.fn(() => Promise.resolve()),
     queueDelete: jest.fn(() => Promise.resolve()),

@@ -122,6 +122,8 @@ class SyncService {
 
   private listeners: Set<SyncListener> = new Set();
   private syncInProgress: boolean = false;
+  private mutationRevision = 0;
+  private mutationsSettled: Promise<void> = Promise.resolve();
   private lastSyncAttempt: number = 0;
   private networkUnsubscribe: (() => void) | null = null;
   private autoSyncEnabled: boolean = false;
@@ -130,6 +132,29 @@ class SyncService {
   private accountUnsubscribe: (() => void) | null = null;
   private stateOwner: string | undefined;
   private stateRevision: number | undefined;
+
+  /** A detail read must not combine a server reply with an obsolete queue snapshot. */
+  captureMutationRead() {
+    const revision = this.mutationRevision;
+    return {
+      settled: this.mutationsSettled,
+      isCurrent: () => revision === this.mutationRevision,
+    };
+  }
+
+  private beginMutationSync(): () => void {
+    this.syncInProgress = true;
+    this.mutationRevision++;
+    let settle!: () => void;
+    this.mutationsSettled = new Promise<void>((resolve) => {
+      settle = resolve;
+    });
+    return () => {
+      this.syncInProgress = false;
+      this.mutationRevision++;
+      settle();
+    };
+  }
 
   /**
    * Initialize the sync service
@@ -296,7 +321,7 @@ class SyncService {
       };
     }
 
-    this.syncInProgress = true;
+    const finishMutationSync = this.beginMutationSync();
     this.lastSyncAttempt = now;
     this.updateState({ status: 'syncing', error: null }, account);
 
@@ -376,7 +401,7 @@ class SyncService {
 
       return result;
     } finally {
-      this.syncInProgress = false;
+      finishMutationSync();
       if (!account.isCurrent() && this.autoSyncEnabled && useUserStore.getState().user) {
         void this.sync(true);
       }
@@ -727,7 +752,7 @@ class SyncService {
       throw new Error('These changes belong to another account.');
     if (this.syncInProgress)
       throw new Error('Wait for sync to finish before resolving this change.');
-    this.syncInProgress = true;
+    const finishMutationSync = this.beginMutationSync();
     this.updateState({ status: 'syncing' }, account);
     try {
       const current = (await offlineStorage.getPendingMutations()).find(
@@ -764,7 +789,7 @@ class SyncService {
         account
       );
     } finally {
-      this.syncInProgress = false;
+      finishMutationSync();
       if (this.state.status === 'syncing') this.updateState({ status: 'error' }, account);
     }
   }
