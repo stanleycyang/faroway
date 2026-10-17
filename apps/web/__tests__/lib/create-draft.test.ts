@@ -10,6 +10,7 @@ import {
   readEditorDraft,
   clearEditorDraft,
   restoreHotelSearchDraft,
+  restoreHotelAgeTextDraft,
 } from "@/lib/create-draft";
 
 function createStorage() {
@@ -69,6 +70,23 @@ describe("hotel editor draft restoration", () => {
     consentVersion: HOTEL_SEARCH_CONSENT_VERSION,
     rooms: [{ adults: 2, children: [6] }],
   };
+  it("restores matching raw text but rejects stale or malformed editor metadata", () => {
+    expect(restoreHotelAgeTextDraft([" 6 "], details)).toEqual([" 6 "]);
+    for (const raw of [undefined, null, {}, [42], ["7"], ["abc"]]) {
+      expect(restoreHotelAgeTextDraft(raw, details)).toEqual(["6"]);
+    }
+    expect(restoreHotelAgeTextDraft(["6"], null)).toEqual([]);
+    const invalid = restoreHotelSearchDraft(
+      JSON.parse(
+        JSON.stringify({
+          ...details,
+          rooms: [{ adults: 2, children: [6, NaN] }],
+        }),
+      ),
+    );
+    expect(restoreHotelAgeTextDraft(["6,"], invalid)).toEqual(["6,"]);
+    expect(validateHotelSearchDetails(invalid)).toBe(false);
+  });
   it("preserves incomplete nationality and room work without making it valid", () => {
     const incomplete = { ...details, guestNationality: "" };
     const restored = restoreHotelSearchDraft(

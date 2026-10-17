@@ -61,6 +61,7 @@ import {
   readEditorDraft,
   clearEditorDraft,
   restoreHotelSearchDraft,
+  restoreHotelAgeTextDraft,
 } from "@/lib/create-draft";
 
 const destinations = destinationCatalog.map((destination) => ({
@@ -110,6 +111,7 @@ interface StoredCreateDraft {
   selectedVibes: string[];
   showAdvanced: boolean;
   hotelSearch?: HotelSearchDetails | null;
+  hotelAgeText?: string[];
 
   budget?: (typeof budgetOptions)[number]["id"];
 }
@@ -156,6 +158,7 @@ function CreateTripPlanner({
   const [hotelSearch, setHotelSearch] = useState<HotelSearchDetails | null>(
     null,
   );
+  const [hotelAgeText, setHotelAgeText] = useState<string[]>([]);
   const [travelers, setTravelers] = useState(2);
   const [budget, setBudget] =
     useState<(typeof budgetOptions)[number]["id"]>("moderate");
@@ -267,6 +270,9 @@ function CreateTripPlanner({
       if (hotelSearchEnabled()) {
         const restoredHotelSearch = restoreHotelSearchDraft(draft.hotelSearch);
         setHotelSearch(restoredHotelSearch);
+        setHotelAgeText(
+          restoreHotelAgeTextDraft(draft.hotelAgeText, restoredHotelSearch),
+        );
         if (validateHotelSearchDetails(restoredHotelSearch))
           setTravelers(hotelGuestCounts(restoredHotelSearch).travelers);
       }
@@ -316,6 +322,7 @@ function CreateTripPlanner({
         selectedVibes,
         showAdvanced,
         hotelSearch,
+        hotelAgeText,
         budget,
       } satisfies StoredCreateDraft);
     } catch {
@@ -331,6 +338,7 @@ function CreateTripPlanner({
     selectedVibes,
     showAdvanced,
     hotelSearch,
+    hotelAgeText,
     budget,
   ]);
 
@@ -400,6 +408,7 @@ function CreateTripPlanner({
         selectedVibes,
         showAdvanced,
         hotelSearch,
+        hotelAgeText,
         budget,
       };
       try {
@@ -891,6 +900,8 @@ function CreateTripPlanner({
                 </p>
                 <HotelSearchFields
                   value={hotelSearch}
+                  ageText={hotelAgeText}
+                  onAgeTextChange={setHotelAgeText}
                   travelers={travelers}
                   onChange={(value) => {
                     setHotelSearch(value);
