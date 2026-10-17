@@ -851,6 +851,8 @@ async function bridgeToItineraries(
     morning: day.morning,
     afternoon: day.afternoon,
     evening: day.evening,
+    transport: day.transport,
+    hotel: day.hotel,
     totalEstimatedCost: day.totalEstimatedCost,
     tips: day.tips || [],
   }));
