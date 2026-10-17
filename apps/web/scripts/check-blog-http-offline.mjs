@@ -1,6 +1,6 @@
 // Real route modules in an isolated Next app with in-memory blog rows.
 // No .env, production config, instrumentation or providers are copied.
-// Usage: node scripts/check-blog-http-offline.mjs [--baseline] [--production]
+// Usage: node scripts/check-blog-http-offline.mjs [--baseline] [--production] [--isr]
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
@@ -22,7 +22,8 @@ const require = createRequire(import.meta.url);
 const web = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const fixture = await mkdtemp(path.join(tmpdir(), "faroway-blog-http-"));
 const baseline = process.argv.includes("--baseline");
-const production = process.argv.includes("--production");
+const isr = process.argv.includes("--isr");
+const production = isr || process.argv.includes("--production");
 let server;
 let log = "";
 const results = [];
@@ -107,7 +108,7 @@ try {
   );
   await write(
     "app/layout.tsx",
-    `export const dynamic = "force-dynamic";
+    `${isr ? "" : 'export const dynamic = "force-dynamic";'}
     export const metadata = { metadataBase: new URL("https://www.faroway.ai") };
     export default function Layout({children}: {children: React.ReactNode}) {
     return <html><body><div id="main-content">{children}</div></body></html>;
@@ -118,10 +119,11 @@ try {
     "export default function Page() { return <p>Fixture ready</p>; }",
   );
   // Exercise cold renders, not a previously built healthy ISR response.
-  await appendFile(
-    path.join(fixture, "app/sitemap.ts"),
-    '\nexport const dynamic = "force-dynamic";\n',
-  );
+  if (!isr)
+    await appendFile(
+      path.join(fixture, "app/sitemap.ts"),
+      '\nexport const dynamic = "force-dynamic";\n',
+    );
   await write("mode.txt", "failed");
   await write(
     "lib/blog/supabase.ts",
@@ -146,7 +148,7 @@ try {
           select: (_columns: string) => query, eq: (key: string, value: string) => { if (key === 'slug') slug = value; return query; },
           order: (_column: string, _options: unknown) => query, limit: (n: number) => result(rows.slice(0, n)),
           range: (from: number, to: number) => result(rows.slice(from, to + 1)),
-          maybeSingle: () => result(rows.find(row => row.slug === slug) || null),
+          maybeSingle: () => result(slug === 'late-story' ? { ...rows[2], slug } : rows.find(row => row.slug === slug) || null),
         };
         return query;
       }};
@@ -233,9 +235,20 @@ try {
     "/blog/feed.xml",
     "/sitemap.xml",
   ])
-    await check(url, 500);
+    await check(
+      url,
+      isr &&
+        [
+          "/blog/guides",
+          "/blog/guides/budget-travel",
+          "/blog/post-1",
+          "/sitemap.xml",
+        ].includes(url)
+        ? 200
+        : 500,
+    );
   await write("mode.txt", "related-failed");
-  await check("/blog/post-2", 500);
+  await check("/blog/late-story", 500);
   await write("mode.txt", "healthy");
   for (const agent of ["Mozilla/5.0", "Googlebot", "Twitterbot"]) {
     for (const url of [
@@ -257,6 +270,7 @@ try {
   const third = await check("/blog?page=3", 200);
   await check("/blog/category/long-tail", 200);
   const article = await check("/blog/post-19", 200);
+  await check("/blog/late-story", 200);
   const destination = await check("/destinations/tokyo", 200);
   const rss = await check("/blog/feed.xml", 200);
   const map = await check("/sitemap.xml", 200);
@@ -291,7 +305,11 @@ try {
     JSON.stringify(
       {
         mode: baseline ? "baseline" : "repaired",
-        runtime: production ? "production" : "development",
+        runtime: isr
+          ? "production-isr"
+          : production
+            ? "production"
+            : "development",
         results,
       },
       null,
