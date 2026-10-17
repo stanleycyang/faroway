@@ -91,6 +91,24 @@ async function tripResponse(url: string, init: RequestInit) {
   });
 }
 
+/** Leaving the screen must also cancel a read that is waiting for background sync. */
+async function waitForMutationSync(settled: Promise<void>, signal?: AbortSignal) {
+  if (!signal) return settled;
+  let onAbort!: () => void;
+  try {
+    await Promise.race([
+      settled,
+      new Promise<void>((resolve) => {
+        onAbort = resolve;
+        signal.addEventListener('abort', onAbort, { once: true });
+        if (signal.aborted) resolve();
+      }),
+    ]);
+  } finally {
+    signal.removeEventListener('abort', onAbort);
+  }
+}
+
 export function useTrips() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -274,44 +292,55 @@ export function useTrips() {
       setLoading(true);
       setError(null);
       try {
-        assertCurrent();
-        const headers = await account.headers();
-        assertCurrent();
-        const response = await tripResponse(`${API_BASE_URL}/api/trips/${id}`, {
-          method: 'GET',
-          headers,
-          signal,
-        });
-        assertCurrent();
-        if (!response.ok) {
-          throw new Error(
-            response.status === 401
-              ? 'Please sign in to view this trip'
-              : response.status === 404
-                ? 'Trip not found'
-                : 'Failed to fetch trip'
-          );
+        while (true) {
+          assertCurrent();
+          const mutationRead = syncService.captureMutationRead();
+          await waitForMutationSync(mutationRead.settled, signal);
+          assertCurrent();
+          if (!mutationRead.isCurrent()) continue;
+          const headers = await account.headers();
+          assertCurrent();
+          const response = await tripResponse(`${API_BASE_URL}/api/trips/${id}`, {
+            method: 'GET',
+            headers,
+            signal,
+          });
+          assertCurrent();
+          // Sync may have acknowledged an edit while this GET was in flight.
+          // Read again after it settles, including a fresh server response.
+          if (!mutationRead.isCurrent()) continue;
+          if (!response.ok) {
+            throw new Error(
+              response.status === 401
+                ? 'Please sign in to view this trip'
+                : response.status === 404
+                  ? 'Trip not found'
+                  : 'Failed to fetch trip'
+            );
+          }
+          const data = await response.json().catch(() => null);
+          assertCurrent();
+          if (!data?.trip || data.trip.id !== id || data.trip.user_id !== account.ownerId)
+            throw new TripAccessError(
+              'This trip response could not be verified. Reopen your trips and try again.'
+            );
+          if (!mutationRead.isCurrent()) continue;
+          const trip = transformApiTrip(data.trip, data.itinerary);
+          await offlineStorage.saveTrip(trip, account.ownerId!);
+          assertCurrent();
+          // Keep canonical data separate from the owner's durable pending intent.
+          // Never rebase the queued revision or publish a snapshot spanning sync.
+          const pending = await offlineStorage.getPendingMutations();
+          assertCurrent();
+          if (!mutationRead.isCurrent()) continue;
+          const visible = applyPendingTripChanges([trip], pending).find((item) => item.id === id);
+          if (!visible) {
+            setCurrentTrip(null);
+            throw new TripAccessError('This trip has a pending deletion.');
+          }
+          setCurrentTrip(visible);
+          return visible;
         }
-        const data = await response.json().catch(() => null);
-        assertCurrent();
-        if (!data?.trip || data.trip.id !== id || data.trip.user_id !== account.ownerId)
-          throw new TripAccessError(
-            'This trip response could not be verified. Reopen your trips and try again.'
-          );
-        const trip = transformApiTrip(data.trip, data.itinerary);
-        await offlineStorage.saveTrip(trip, account.ownerId!);
-        assertCurrent();
-        // Keep canonical data separate from the owner's durable pending intent,
-        // just as list refresh and hydration do. Never rebase the queued revision.
-        const pending = await offlineStorage.getPendingMutations();
-        assertCurrent();
-        const visible = applyPendingTripChanges([trip], pending).find((item) => item.id === id);
-        if (!visible) {
-          setCurrentTrip(null);
-          throw new TripAccessError('This trip has a pending deletion.');
-        }
-        setCurrentTrip(visible);
-        return visible;
       } catch (err: unknown) {
         if (isCurrent()) setError(err instanceof Error ? err.message : String(err));
         throw err;

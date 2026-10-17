@@ -307,7 +307,7 @@ export interface TripDay {
   };
   transport?: TripDayTransport;
   hotel?: HotelResult;
-  totalEstimatedCost: {
+  totalEstimatedCost?: {
     amount: number;
     currency: string;
   };
@@ -315,6 +315,8 @@ export interface TripDay {
 }
 
 export interface GeneratedItinerary {
+  /** Global recommendation, independent of each occupied night. */
+  topHotel?: HotelResult | null;
   tripId: string;
   destination: string;
   startDate: string;
@@ -451,6 +453,7 @@ export interface SearchPlan {
 // =============================================================================
 
 export interface HotelResult {
+  priceStatus?: "unknown" | "estimate";
   dataSource?: "provider" | "ai";
   id: string;
   name: string;
@@ -591,7 +594,7 @@ export interface SuggestedDay {
     meal?: DiningResult;
   };
   transport?: TransportResult;
-  estimatedCost: number;
+  estimatedCost?: number;
   currency: string;
   tips: string[];
 }

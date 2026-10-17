@@ -15,7 +15,7 @@ import { validateRedirectUrl } from "@/lib/security/validate-redirect";
 import { getSignupCopy } from "@/lib/auth/login-copy";
 
 function SignupContent() {
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? new URLSearchParams();
   const redirectTo = validateRedirectUrl(searchParams.get("redirectTo"));
   const error = searchParams.get("error");
   const copy = getSignupCopy(redirectTo);

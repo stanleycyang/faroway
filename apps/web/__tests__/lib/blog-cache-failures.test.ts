@@ -57,19 +57,43 @@ describe("blog cache failure handling", () => {
     },
   );
 
-  it("never returns a partial sitemap when a later page fails", async () => {
-    query.range
-      .mockResolvedValueOnce({
-        data: Array.from({ length: 1000 }, (_, i) => ({
-          ...row,
-          slug: `post-${i}`,
-        })),
-        error: null,
-      })
-      .mockResolvedValueOnce({ data: null, error: { code: "503" } });
-    await expect(getAllSitemapPostMetas()).rejects.toThrow("503");
-    expect(query.range).toHaveBeenNthCalledWith(2, 1000, 1999);
-  });
+  it.each([getAllPostMetas, getAllSitemapPostMetas])(
+    "never returns partial metadata when a later page fails",
+    async (read) => {
+      query.range
+        .mockResolvedValueOnce({
+          data: Array.from({ length: 1000 }, (_, i) => ({
+            ...row,
+            slug: `post-${i}`,
+          })),
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: null, error: { code: "503" } });
+      await expect(read()).rejects.toThrow("503");
+      expect(query.range).toHaveBeenNthCalledWith(2, 1000, 1999);
+    },
+  );
+
+  it.each([getAllPostMetas, getAllSitemapPostMetas])(
+    "finishes a full 1000-row page with one empty read",
+    async (read) => {
+      query.range
+        .mockResolvedValueOnce({
+          data: Array.from({ length: 1000 }, (_, i) => ({
+            ...row,
+            slug: `post-${i}`,
+          })),
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: [], error: null });
+      expect(await read()).toHaveLength(1000);
+      expect(query.range.mock.calls).toEqual([
+        [0, 999],
+        [1000, 1999],
+      ]);
+      expect(query.order).toHaveBeenCalledWith("slug", { ascending: true });
+    },
+  );
 
   it.each(readers)(
     "returns successfully loaded published rows",

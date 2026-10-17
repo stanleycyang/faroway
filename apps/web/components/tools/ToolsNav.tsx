@@ -15,7 +15,7 @@ const TOOL_LINKS = [
 ];
 
 export function ToolsNav() {
-  const pathname = usePathname();
+  const pathname = usePathname() ?? "";
 
   return (
     <div className="sticky top-16 lg:top-20 z-40 bg-white/90 backdrop-blur-xl border-b border-slate-200/60">

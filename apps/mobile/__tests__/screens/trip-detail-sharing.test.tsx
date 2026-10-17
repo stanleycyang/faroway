@@ -7,6 +7,7 @@ let mockListTrip: typeof trip;
 let mockFocused = true;
 let mockTripId = 'trip-a';
 const mockGetTrip = jest.fn();
+const mockReplace = jest.fn();
 const mockRefreshSuccess = jest.fn();
 const mockRefreshError = jest.fn();
 const mockCreateLink = jest.fn();
@@ -75,7 +76,7 @@ jest.mock('react-native', () => ({
 }));
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: 'SafeAreaView' }));
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ replace: jest.fn(), back: jest.fn() }),
+  useRouter: () => ({ replace: mockReplace, back: jest.fn() }),
   useLocalSearchParams: () => ({ id: mockTripId }),
   useFocusEffect: (effect: () => void | (() => void)) => {
     const focused = mockFocused;
@@ -517,6 +518,46 @@ it('keeps local-only trips available without a detail request', async () => {
         .findAllByProps({ accessibilityRole: 'header' })
         .map((node) => node.props.children)
     ).toContain('Tokyo');
+  } finally {
+    await act(async () => renderer?.unmount());
+  }
+});
+
+it('offers a working recovery for a local trip with no itinerary', async () => {
+  mockTripId = 'local_trip';
+  mockListTrip = { ...trip, id: mockTripId };
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      renderer = create(<TripDetailScreen />);
+    });
+    expect(renderer.root.findAllByProps({ title: 'Refresh itinerary' })).toHaveLength(0);
+    expect(
+      renderer.root.findByType('AnimatedScrollView' as React.ElementType).props.refreshControl
+    ).toBeUndefined();
+    expect(JSON.stringify(renderer.toJSON())).toContain('This trip is saved on this device');
+    await act(async () => {
+      renderer.root.findByProps({ title: 'Go to My Trips' }).props.onPress();
+    });
+    expect(mockReplace).toHaveBeenCalledWith('/(tabs)/trips');
+    expect(mockGetTrip).not.toHaveBeenCalled();
+  } finally {
+    await act(async () => renderer?.unmount());
+  }
+});
+
+it('keeps refresh recovery for a remote trip with no itinerary', async () => {
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      renderer = create(<TripDetailScreen />);
+    });
+    await act(async () => {
+      renderer.root.findByProps({ title: 'Refresh itinerary' }).props.onPress();
+    });
+    expect(mockGetTrip).toHaveBeenCalledTimes(2);
+    expect(mockRefreshSuccess).toHaveBeenCalledTimes(1);
+    expect(mockReplace).not.toHaveBeenCalled();
   } finally {
     await act(async () => renderer?.unmount());
   }

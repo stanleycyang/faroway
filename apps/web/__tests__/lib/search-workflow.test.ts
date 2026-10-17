@@ -80,6 +80,43 @@ describe("executeTravelSearch", () => {
     });
   });
 
+  it("preserves the aggregator global hotel independently of the first day", async () => {
+    const first = { id: "first", name: "First night" };
+    const top = { id: "global", name: "Global recommendation" };
+    agentMocks.runHotelsAgent.mockResolvedValue([first, top]);
+    agentMocks.runActivitiesAgent.mockResolvedValue([]);
+    agentMocks.runDiningAgent.mockResolvedValue([]);
+    agentMocks.runTransportAgent.mockResolvedValue([]);
+    agentMocks.runAggregatorAgent.mockResolvedValue({
+      topHotel: top,
+      days: [
+        {
+          dayNumber: 1,
+          date: "2026-06-01",
+          hotel: first,
+          morning: { activities: [] },
+          afternoon: { activities: [] },
+          evening: { activities: [] },
+        },
+      ],
+    });
+    const onAgentResult = vi.fn(async () => {});
+    const result = await executeTravelSearch(
+      "search-global-hotel",
+      searchInput,
+      { onAgentResult },
+    );
+    expect(result.status).toBe("completed");
+    expect(result.topHotel).toEqual(top);
+    expect(onAgentResult).toHaveBeenCalledWith(
+      "aggregator",
+      expect.objectContaining({
+        topHotel: top,
+        days: [expect.objectContaining({ hotel: first })],
+      }),
+    );
+  });
+
   it("starts specialized agents in parallel before waiting for results", async () => {
     const started: string[] = [];
     let releaseAgents!: () => void;

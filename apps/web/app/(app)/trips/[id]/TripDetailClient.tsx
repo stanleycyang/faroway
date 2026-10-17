@@ -68,10 +68,7 @@ class DayErrorBoundary extends React.Component<
     return this.props.children;
   }
 }
-import {
-  FeaturedHotelCard,
-  type FeaturedHotel,
-} from "@/components/trips/FeaturedHotelCard";
+import { FeaturedHotelCard } from "@/components/trips/FeaturedHotelCard";
 import { ShareConsentDialog } from "@/components/trips/ShareConsentDialog";
 import { TripBudget } from "@/components/trips/TripBudget";
 import { destinationImage } from "@/lib/trips/destination-image";
@@ -92,7 +89,7 @@ import {
 import type { GeneratedItinerary } from "@/lib/ai/types";
 import type { Trip, TripResponse } from "@/lib/trips/load-trip";
 import type { TripDay } from "@faroway/types";
-import { summarizeBudget } from "@/lib/trips/budget";
+import { summarizeBudget, featuredStayEstimate } from "@/lib/trips/budget";
 
 const ItineraryMap = dynamic(
   () =>
@@ -479,16 +476,8 @@ export function TripDetailClient({
     }
   };
 
-  // Extract top hotel from itinerary days
-  const topHotel = useMemo(() => {
-    if (!itinerary?.days?.length) return null;
-    // Check if any day has hotel info
-    for (const day of itinerary.days) {
-      const dayRecord = day as unknown as Record<string, unknown>;
-      if (dayRecord.hotel) return dayRecord.hotel as FeaturedHotel;
-    }
-    return null;
-  }, [itinerary]);
+  // Global recommendation is independent of the first occupied night.
+  const topHotel = itinerary?.topHotel ?? null;
 
   // Count bookable experiences across itinerary
   const bookableCount = useMemo(() => {
@@ -511,14 +500,12 @@ export function TripDetailClient({
   const budgetBreakdown = useMemo(() => {
     if (!itinerary?.days?.length || !trip || trip.preferences?.planNeedsRefresh)
       return null;
-    const nights = Math.max(
-      0,
-      Math.round(
-        (Date.parse(trip.end_date) - Date.parse(trip.start_date)) / 86400000,
-      ),
+    return summarizeBudget(
+      itinerary.days,
+      { startDate: trip.start_date, endDate: trip.end_date },
+      trip.travelers,
     );
-    return summarizeBudget(itinerary.days, topHotel, nights, trip.travelers);
-  }, [itinerary, topHotel, trip]);
+  }, [itinerary, trip]);
 
   // Trip length (days) from date range — used for nights estimate during generation / hotel card
   const skeletonDayCount = useMemo(() => {
@@ -987,6 +974,7 @@ export function TripDetailClient({
                         tips={day.tips}
                         defaultExpanded={true}
                         transport={day.transport}
+                        hotel={day.hotel}
                       />
                     </DayErrorBoundary>
                   </div>
@@ -1024,12 +1012,10 @@ export function TripDetailClient({
             <div>
               <FeaturedHotelCard
                 hotel={displayTopHotel}
-                nights={Math.max(
-                  0,
-                  Math.round(
-                    (Date.parse(trip.end_date) - Date.parse(trip.start_date)) /
-                      86400000,
-                  ),
+                stayEstimate={featuredStayEstimate(
+                  itinerary?.days ?? [],
+                  { startDate: trip.start_date, endDate: trip.end_date },
+                  displayTopHotel,
                 )}
               />
             </div>
@@ -1295,7 +1281,9 @@ function FeaturedFlights({ days }: { days: TripDay[] | null }) {
           <div>
             <h3 className="text-base font-bold text-white">Your Flights</h3>
             <p className="text-[11px] text-blue-200">
-              {returnFlight ? "Round trip" : "One way"}
+              {returnFlight
+                ? "Outbound and return details"
+                : "Outbound details · Return details unavailable"}
             </p>
           </div>
           <div className="ml-auto text-right">

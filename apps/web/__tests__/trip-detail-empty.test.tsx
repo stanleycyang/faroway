@@ -6,6 +6,7 @@ import { expect, test, vi } from "vitest";
 import { TripDetailClient } from "../app/(app)/trips/[id]/TripDetailClient";
 const actionFixture = vi.hoisted(() => ({
   complete: true,
+  realDayCards: false,
   consent: vi.fn(),
   onComplete: (() => {}) as () => void,
 }));
@@ -49,9 +50,20 @@ vi.mock("@/components/trips/TripBriefEditor", () => ({
     </button>
   ),
 }));
-vi.mock("@/components/trips/FeaturedHotelCard", () => ({
-  FeaturedHotelCard: () => null,
-}));
+vi.mock("@/components/trips/FeaturedHotelCard", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("@/components/trips/FeaturedHotelCard")
+    >();
+  return {
+    FeaturedHotelCard: (
+      props: React.ComponentProps<typeof actual.FeaturedHotelCard>,
+    ) =>
+      actionFixture.realDayCards ? (
+        <actual.FeaturedHotelCard {...props} />
+      ) : null,
+  };
+});
 vi.mock("@/components/trips/ShareConsentDialog", () => ({
   ShareConsentDialog: ({ onConfirm }: { onConfirm: () => void }) => (
     <button data-confirm-share onClick={onConfirm}>
@@ -64,9 +76,14 @@ vi.mock("@/components/trips/TripDayNavigation", () => ({
   TripDayNavigation: () => null,
 }));
 vi.mock("@/components/trips/TripHeader", () => ({ TripHeader: () => null }));
-vi.mock("@/components/trips/ItineraryDay", () => ({
-  ItineraryDay: () => null,
-}));
+vi.mock("@/components/trips/ItineraryDay", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("@/components/trips/ItineraryDay")>();
+  return {
+    ItineraryDay: (props: React.ComponentProps<typeof actual.ItineraryDay>) =>
+      actionFixture.realDayCards ? <actual.ItineraryDay {...props} /> : null,
+  };
+});
 vi.mock("@/components/trips/ItineraryGenerationLoader", () => ({
   ItineraryGenerationLoader: ({
     children,
@@ -93,7 +110,9 @@ vi.mock("@/components/places/PlacesExplorer", () => ({
   PlacesExplorer: () => null,
 }));
 vi.mock("@/components/trips/TripCheckout", () => ({
-  TripCheckout: () => null,
+  TripCheckout: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 vi.mock("@/components/trips/TripFeedback", () => ({
   TripFeedback: () => null,
@@ -926,6 +945,8 @@ test.each(["mixed currencies", "unknown price"])(
         }}
       />,
     );
+    expect(html).not.toContain("One way");
+    expect(html).not.toContain("Round trip");
     expect(html).toContain("Estimates by flight");
     expect(html).toContain("USD");
     expect(html).not.toContain("total round trip");
@@ -1337,4 +1358,133 @@ test("public-access controls stay disabled until their client handlers are ready
         html.match(/<button[^>]*>Create public share link<\/button>/)?.[0],
       ).toContain('disabled=""');
   }
+});
+
+test("mounted saved trip keeps global recommendation separate from distinct day hotel cards", async () => {
+  (
+    globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+  ).IS_REACT_ACT_ENVIRONMENT = true;
+  actionFixture.realDayCards = true;
+  vi.stubGlobal("window", {
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    location: { origin: "http://localhost" },
+  });
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => {
+      throw new Error("Unexpected network");
+    }),
+  );
+  const slot = { activities: [], meals: [] };
+  const itinerary = {
+    topHotel: {
+      id: "global",
+      name: "Global recommendation",
+      pricePerNight: 500,
+      currency: "EUR",
+    },
+    days: ["First-night hotel", "Second-night hotel"].map((name, index) => ({
+      dayNumber: index + 1,
+      date: `2026-11-0${index + 1}`,
+      title: name,
+      morning: slot,
+      afternoon: slot,
+      evening: slot,
+      hotel: {
+        id: name,
+        name,
+        pricePerNight: 100 + index * 100,
+        currency: "EUR",
+      },
+    })),
+  } as unknown as GeneratedItinerary;
+  let renderer!: ReturnType<typeof create>;
+  try {
+    for (let reload = 0; reload < 2; reload++) {
+      await act(async () => {
+        renderer = create(
+          <TripDetailClient
+            tripId="trip-a"
+            initialShareUrl={null}
+            initialData={{
+              itinerary,
+              trip: {
+                id: "trip-a",
+                user_id: "owner-a",
+                destination: "Tokyo",
+                start_date: "2026-11-01",
+                end_date: "2026-11-03",
+                travelers: 2,
+                status: "completed",
+                created_at: "2026-10-01",
+                updated_at: "2026-10-01",
+              },
+            }}
+          />,
+        );
+      });
+      expect(
+        renderer.root.findAllByType("h4").map((node) => node.children.join("")),
+      ).toEqual(["First-night hotel", "Second-night hotel"]);
+      expect(
+        renderer.root.findByProps({
+          "aria-label": "Suggested stay: Global recommendation",
+        }),
+      ).toBeTruthy();
+      expect(JSON.stringify(renderer.toJSON())).not.toContain(
+        "assigned nights",
+      );
+      await act(async () => renderer.unmount());
+    }
+    expect(fetch).not.toHaveBeenCalled();
+  } finally {
+    await act(async () => renderer?.unmount());
+    actionFixture.realDayCards = false;
+    vi.unstubAllGlobals();
+  }
+});
+
+test("a priced outbound offer does not assert one-way fare scope when return details are unavailable", () => {
+  const itinerary = {
+    days: [
+      {
+        dayNumber: 1,
+        date: "2026-11-01",
+        transport: {
+          price: 900,
+          currency: "USD",
+          provider: "Fixture airline",
+          duration: 120,
+          stops: 0,
+          departure: { airport: "AAA", dateTime: "2026-11-01T10:00:00Z" },
+          arrival: { airport: "BBB", dateTime: "2026-11-01T12:00:00Z" },
+        },
+      },
+    ],
+  } as unknown as GeneratedItinerary;
+  const html = renderToStaticMarkup(
+    <TripDetailClient
+      tripId="trip-a"
+      initialShareUrl={null}
+      initialData={{
+        itinerary,
+        trip: {
+          id: "trip-a",
+          user_id: "owner-a",
+          destination: "Tokyo",
+          start_date: "2026-11-01",
+          end_date: "2026-11-04",
+          travelers: 2,
+          status: "completed",
+          created_at: "2026-10-01",
+          updated_at: "2026-10-01",
+        },
+      }}
+    />,
+  );
+  expect(html).toContain("Outbound details");
+  expect(html).toContain("Return details unavailable");
+  expect(html).not.toContain("One way");
+  expect(html).not.toContain("Round trip");
 });

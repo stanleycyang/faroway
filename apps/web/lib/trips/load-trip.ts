@@ -82,6 +82,26 @@ export async function loadTripForUserUncached(
       } as GeneratedItinerary)
     : null;
 
+  // The current trip search is the only source of the global recommendation.
+  // Do not substitute a day hotel or a newer search owned by somebody else.
+  if (itinerary && tripData.search_id) {
+    const { data: search, error: searchError } = await db
+      .from("searches")
+      .select("status, intermediate_results")
+      .eq("id", tripData.search_id)
+      .eq("user_id", userId)
+      .single();
+    const topHotel = search?.intermediate_results?.topHotel;
+    itinerary.topHotel =
+      !searchError &&
+      search?.status === "completed" &&
+      topHotel &&
+      typeof topHotel === "object" &&
+      typeof topHotel.name === "string"
+        ? topHotel
+        : null;
+  }
+
   return {
     trip: tripData as Trip,
     itinerary: filterViatorDisplay(itinerary),

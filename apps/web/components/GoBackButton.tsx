@@ -1,8 +1,20 @@
 "use client";
 
 import { ArrowLeft } from "lucide-react";
+import { useEffect } from "react";
 
 export function GoBackButton() {
+  useEffect(() => {
+    const failedPathname = window.location.pathname;
+    function restorePage() {
+      // Next's not-found boundary resets on pathname changes, but not when
+      // history only changes an invalid page query back to a valid one.
+      if (window.location.pathname === failedPathname) window.location.reload();
+    }
+    window.addEventListener("popstate", restorePage);
+    return () => window.removeEventListener("popstate", restorePage);
+  }, []);
+
   return (
     <button
       type="button"

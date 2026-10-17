@@ -4,6 +4,7 @@ import type {
   HotelResult,
   SearchPlan,
   SuggestedDay,
+  TransportResult,
 } from "@faroway/types";
 
 const mocks = vi.hoisted(() => ({ generateObject: vi.fn() }));
@@ -62,6 +63,29 @@ const hotel: HotelResult = {
   vibeMatch: ["culture"],
 };
 
+const outbound: TransportResult = {
+  id: "outbound-1",
+  type: "flight",
+  provider: "Outbound airline",
+  departure: {
+    airport: "SFO",
+    city: "San Francisco",
+    dateTime: "2026-06-01T10:00:00Z",
+  },
+  arrival: { airport: "NRT", city: "Tokyo", dateTime: "2026-06-02T14:00:00Z" },
+  duration: 660,
+  stops: 0,
+  price: 900,
+  currency: "USD",
+  affiliateUrl: "https://example.com/offer",
+  affiliatePartner: "duffel",
+  airlines: ["Outbound airline"],
+  segments: [],
+  source: "duffel",
+  vibeScore: 0,
+  vibeMatch: [],
+};
+
 function activity(
   id: string,
   bestTimeOfDay: ActivityResult["bestTimeOfDay"] = "any",
@@ -105,6 +129,7 @@ function generatedDay(dayNumber: number, hotelId?: string) {
     title: `AI day ${dayNumber}`,
     summary: "Explore Tokyo",
     hotelId,
+    transportId: undefined as string | undefined,
     morning: { activityIds: [] as string[] },
     afternoon: { activityIds: [] as string[] },
     evening: { activityIds: [] as string[] },
@@ -279,14 +304,189 @@ describe.each(["successful", "recovered"] as const)(
       expect(scheduledIds(result.days)).toEqual([allowed.id]);
       expect(result.days[0].morning.activities[0]).toBe(allowed);
       expect(result.days[0].title).toBe("AI day 1");
+      expect(result.days[0].estimatedCost).toBeUndefined();
       expect(mocks.generateObject.mock.lastCall?.[0].prompt).not.toContain(
         blocked.name,
       );
     });
+
+    it("chooses one outbound alternative on the first day and rejects later or repeated choices", async () => {
+      const alternative = { ...outbound, id: "outbound-2", price: 1000 };
+      const days = [
+        generatedDay(1),
+        generatedDay(2),
+        generatedDay(3),
+        generatedDay(1),
+      ];
+      days.forEach((day, index) => {
+        day.transportId = index === 1 ? outbound.id : alternative.id;
+        day.estimatedCost = 1200;
+      });
+      respondWith({ days });
+      const result = await runAggregatorAgent(
+        plan,
+        [],
+        [],
+        [],
+        [outbound, alternative],
+      );
+
+      expect(result.days.map((day) => day.transport)).toEqual([
+        alternative,
+        undefined,
+        undefined,
+        undefined,
+      ]);
+      expect(result.days[0].transport).toBe(alternative);
+      expect(result.days.map((day) => day.estimatedCost)).toEqual([
+        1200,
+        undefined,
+        undefined,
+        undefined,
+      ]);
+      const { prompt, system } = mocks.generateObject.mock.lastCall![0];
+      expect(prompt).toContain("outbound alternatives");
+      expect(system).toContain("outbound alternatives");
+      expect(`${system}\n${prompt}`).not.toMatch(
+        /return flight to (?:the )?last day/,
+      );
+    });
+
+    it.each([undefined, "unknown-offer", outbound.id])(
+      "handles one-day transport choice %s without substituting an offer",
+      async (transportId) => {
+        const day = { ...generatedDay(1), transportId, estimatedCost: 900 };
+        respondWith({ days: [day] });
+        const result = await runAggregatorAgent(
+          {
+            ...plan,
+            dates: {
+              start: plan.dates.start,
+              end: plan.dates.start,
+              nights: 0,
+            },
+          },
+          [],
+          [],
+          [],
+          [outbound, { ...outbound, id: "outbound-2" }],
+        );
+        expect(result.days[0].transport).toBe(
+          transportId === outbound.id ? outbound : undefined,
+        );
+        expect(result.days[0].estimatedCost).toBe(
+          transportId === "unknown-offer" ? undefined : 900,
+        );
+      },
+    );
+
+    it("does not assign an outbound offer to a misdated first day", async () => {
+      respondWith({
+        days: [
+          {
+            ...generatedDay(1),
+            date: "2026-06-02",
+            transportId: outbound.id,
+            estimatedCost: 900,
+          },
+        ],
+      });
+      const result = await runAggregatorAgent(plan, [], [], [], [outbound]);
+      expect(result.days[0].transport).toBeUndefined();
+      expect(result.days[0].estimatedCost).toBeUndefined();
+    });
+
+    it("consumes activities only in compatible slots and invalidates only changed day estimates", async () => {
+      const night = { ...activity("night", "evening"), price: 50 };
+      const morning = activity("morning", "morning");
+      const days = [generatedDay(1), generatedDay(2), generatedDay(3)];
+      days.forEach((day) => {
+        day.estimatedCost = 150;
+      });
+      days[0].morning.activityIds = [night.id];
+      days[0].afternoon.activityIds = [morning.id];
+      days[0].evening.activityIds = [night.id];
+      days[1].morning.activityIds = [morning.id];
+      days[2].evening.activityIds = [night.id, "unknown"];
+      respondWith({ days });
+      const result = await runAggregatorAgent(plan, [], [night, morning], []);
+
+      expect(result.days[0].morning.activities).toEqual([]);
+      expect(result.days[0].afternoon.activities).toEqual([]);
+      expect(result.days[0].evening.activities[0]).toBe(night);
+      expect(result.days[1].morning.activities[0]).toBe(morning);
+      expect(result.days[2].evening.activities).toEqual([]);
+      expect(result.days.map((day) => day.estimatedCost)).toEqual([
+        undefined,
+        150,
+        undefined,
+      ]);
+      const mapped = mapSearchResultsToItinerary(
+        {
+          searchId: "search-1",
+          hotels: [],
+          activities: [night, morning],
+          dining: [],
+          transport: [],
+          itinerary: result.days,
+        },
+        null,
+      );
+      expect(mapped.days.map((day) => day.totalEstimatedCost)).toEqual([
+        undefined,
+        { amount: 150, currency: "USD" },
+        undefined,
+      ]);
+    });
+
+    it("invalidates the daily estimate for an unresolved requested meal", async () => {
+      const day = {
+        ...generatedDay(1),
+        morning: { activityIds: [], mealId: "unknown-meal" },
+        estimatedCost: 45,
+      };
+      respondWith({ days: [day] });
+      const result = await runAggregatorAgent(plan, [], [], []);
+      expect(result.days[0].morning.meal).toBeUndefined();
+      expect(result.days[0].estimatedCost).toBeUndefined();
+    });
+
+    it.each([undefined, -1, Infinity])(
+      "does not turn an unavailable daily estimate %s into free zero",
+      async (estimatedCost) => {
+        respondWith({
+          days: [
+            { ...generatedDay(1), estimatedCost: estimatedCost as number },
+          ],
+        });
+        const result = await runAggregatorAgent(plan, [], [], []);
+        expect(result.days[0].estimatedCost).toBeUndefined();
+      },
+    );
   },
 );
 
 describe("search itinerary fallback", () => {
+  it.each([0, 1, 3])(
+    "uses only one outbound alternative for a %s-night trip and leaves daily costs unavailable",
+    async (nights) => {
+      const { days } = await runAggregatorAgent(
+        {
+          ...plan,
+          dates: { ...plan.dates, nights, end: `2026-06-0${nights + 1}` },
+        },
+        [],
+        [],
+        [],
+        [outbound, { ...outbound, id: "outbound-2" }],
+      );
+      expect(days[0].transport).toBe(outbound);
+      expect(days.slice(1).every((day) => day.transport === undefined)).toBe(
+        true,
+      );
+      expect(days.every((day) => day.estimatedCost === undefined)).toBe(true);
+    },
+  );
   it("schedules flexible activities once across all slots and days", async () => {
     const activities = Array.from({ length: 8 }, (_, i) =>
       activity(`walk-${i}`),

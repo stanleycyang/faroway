@@ -1,4 +1,4 @@
-import { getAllPosts } from "@/lib/blog";
+import { getAllPostMetas } from "@/lib/blog";
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
@@ -11,7 +11,7 @@ function escapeXml(s: string) {
 }
 
 export async function GET() {
-  const posts = await getAllPosts();
+  const posts = await getAllPostMetas();
 
   const items = posts
     .map(

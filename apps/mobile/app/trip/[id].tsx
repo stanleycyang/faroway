@@ -720,6 +720,8 @@ function TripDetailSession({ id }: { id: string | undefined }) {
     );
   }
 
+  const isLocalTrip = trip.id.startsWith('local_');
+
   const formatDateRange = () => {
     const start = formatTripDate(trip.startDate, { month: 'short', day: 'numeric' });
     const end = formatTripDate(trip.endDate, { month: 'short', day: 'numeric', year: 'numeric' });
@@ -751,7 +753,11 @@ function TripDetailSession({ id }: { id: string | undefined }) {
             useNativeDriver: USE_NATIVE_DRIVER,
           })}
           scrollEventThrottle={16}
-          refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+          refreshControl={
+            isLocalTrip ? undefined : (
+              <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+            )
+          }
         >
           {/* Hero Image */}
           <Animated.View
@@ -795,26 +801,6 @@ function TripDetailSession({ id }: { id: string | undefined }) {
               </View>
               <View style={styles.heroInfo}>
                 <Text style={styles.heroCountry}>{trip.country}</Text>
-                {trip.planNeedsRefresh && (
-                  <View style={{ padding: 12, backgroundColor: '#fff5ee', borderRadius: 12 }}>
-                    <Text style={{ color: '#65251e' }}>
-                      Your brief changed. The previous plan is kept on the website; update it before
-                      booking or sharing.
-                    </Text>
-                    <TouchableOpacity
-                      accessibilityRole="link"
-                      onPress={() => {
-                        reviewSavedTripBooking(trip.id, openURL);
-                      }}
-                      style={{ minHeight: 44, justifyContent: 'center' }}
-                    >
-                      <Text style={{ color: '#9f342e', fontWeight: '700' }}>
-                        Review trip on Faroway website
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-
                 <Text style={styles.heroTitle} accessibilityRole="header">
                   {trip.destination}
                 </Text>
@@ -836,6 +822,26 @@ function TripDetailSession({ id }: { id: string | undefined }) {
 
           {/* Content */}
           <View style={styles.content}>
+            {trip.planNeedsRefresh && (
+              <View style={styles.planRefreshNotice}>
+                <Text style={{ color: '#65251e' }}>
+                  Your brief changed. The previous plan is kept on the website; update it before
+                  booking or sharing.
+                </Text>
+                <TouchableOpacity
+                  accessibilityRole="link"
+                  onPress={() => {
+                    reviewSavedTripBooking(trip.id, openURL);
+                  }}
+                  style={{ minHeight: 44, justifyContent: 'center' }}
+                >
+                  <Text style={{ color: '#9f342e', fontWeight: '700' }}>
+                    Review trip on Faroway website
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
             {/* Vibes */}
             {trip.vibes && trip.vibes.length > 0 && (
               <View style={styles.vibesSection}>
@@ -851,13 +857,17 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                 <View style={styles.emptyItineraryIcon} accessible={false}>
                   <Ionicons name="time-outline" size={32} color={colors.primary[500]} />
                 </View>
-                <Text style={styles.emptyItineraryTitle}>Your itinerary isn’t loaded</Text>
+                <Text style={styles.emptyItineraryTitle}>
+                  {isLocalTrip ? 'Your trip is saved offline' : 'Your itinerary isn’t loaded'}
+                </Text>
                 <Text style={styles.emptyItineraryText}>
-                  Your trip is saved. Refresh to load its latest day-by-day plan.
+                  {isLocalTrip
+                    ? 'This trip is saved on this device, but no itinerary is available yet. Reconnect, then check My Trips for the latest saved version.'
+                    : 'Your trip is saved. Refresh to load its latest day-by-day plan.'}
                 </Text>
                 <Button
-                  title="Refresh itinerary"
-                  onPress={onRefresh}
+                  title={isLocalTrip ? 'Go to My Trips' : 'Refresh itinerary'}
+                  onPress={isLocalTrip ? () => router.replace('/(tabs)/trips') : onRefresh}
                   loading={refreshing}
                   disabled={refreshing}
                   size="md"
@@ -1130,6 +1140,13 @@ const styles = StyleSheet.create({
     borderTopRightRadius: borderRadius.xl,
     marginTop: -24,
     paddingTop: 24,
+  },
+  planRefreshNotice: {
+    marginHorizontal: 16,
+    marginBottom: 24,
+    padding: 12,
+    backgroundColor: '#fff5ee',
+    borderRadius: 12,
   },
   vibesSection: {
     paddingHorizontal: 24,

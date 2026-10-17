@@ -21,10 +21,10 @@ export interface FeaturedHotel {
 
 export function FeaturedHotelCard({
   hotel,
-  nights,
+  stayEstimate,
 }: {
   hotel: FeaturedHotel;
-  nights: number;
+  stayEstimate?: { amount: number; currency: string; nights: number } | null;
 }) {
   const nightly = knownEstimate(
     hotel.pricePerNight,
@@ -96,17 +96,17 @@ export function FeaturedHotelCard({
               </span>
             )}
           </p>
-          {nightly && nights > 0 && (
-            <p className="mt-2 text-xs text-slate-600">
-              {formatEstimate(
-                nightly.amount * nights,
-                hotel.currency,
-                hotel.priceStatus,
-              )}{" "}
-              for {nights} {nights === 1 ? "night" : "nights"}. Room occupancy
-              is unconfirmed.
-            </p>
-          )}
+          {stayEstimate &&
+            knownEstimate(stayEstimate.amount, stayEstimate.currency) &&
+            Number.isInteger(stayEstimate.nights) &&
+            stayEstimate.nights > 0 && (
+              <p className="mt-2 text-xs text-slate-600">
+                {formatEstimate(stayEstimate.amount, stayEstimate.currency)} for{" "}
+                {stayEstimate.nights} assigned{" "}
+                {stayEstimate.nights === 1 ? "night" : "nights"}. Room occupancy
+                is unconfirmed.
+              </p>
+            )}
           <p className="mt-3 text-xs leading-6 text-slate-600">
             Confirm current price, room occupancy, taxes, fees, and cancellation
             terms with the hotel. Hotel checkout is not available in Faroway
