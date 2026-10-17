@@ -202,13 +202,13 @@ const transport = {
   type: "flight",
   departure: {
     airport: "SFO",
-    airportCode: "SFO",
-    time: "2026-06-01T10:00:00Z",
+    city: "San Francisco",
+    dateTime: "2026-06-01T10:00:00Z",
   },
   arrival: {
     airport: "NRT",
-    airportCode: "NRT",
-    time: "2026-06-02T14:00:00Z",
+    city: "Tokyo",
+    dateTime: "2026-06-02T14:00:00Z",
   },
   duration: 660,
   stops: 0,
@@ -362,6 +362,78 @@ describe("planTripWorkflow", () => {
     expect(mocks.dispatchItineraryReady).toHaveBeenCalledWith(
       "trip-1",
       "search-1",
+    );
+  });
+
+  it("preserves day hotel and transport through the real bridge and saved payload", async () => {
+    const { mapSearchResultsToItinerary } = await vi.importActual<
+      typeof import("@/lib/search/bridge")
+    >("@/lib/search/bridge");
+    mocks.mapSearchResultsToItinerary.mockImplementation(
+      mapSearchResultsToItinerary,
+    );
+    const firstDay = {
+      dayNumber: 1,
+      date: workflowInput.startDate,
+      title: "Arrival",
+      summary: "Arrive in Tokyo",
+      hotel,
+      transport,
+      morning: { activities: [] },
+      afternoon: { activities: [] },
+      evening: { activities: [] },
+      estimatedCost: 0,
+      currency: "USD",
+      tips: [],
+    };
+    mocks.runAggregatorAgent.mockResolvedValue({
+      days: [
+        firstDay,
+        {
+          ...firstDay,
+          dayNumber: 2,
+          date: "2026-06-02",
+          hotel: undefined,
+          transport: undefined,
+        },
+      ],
+      topHotel: hotel,
+    });
+
+    const result = await planTripWorkflow(workflowInput);
+
+    expect(result.status).toBe("completed");
+    expect(supabaseMock.rpc).toHaveBeenCalledWith(
+      "apply_trip_generation_update",
+      expect.objectContaining({
+        p_state: "planned",
+        p_payload: expect.objectContaining({
+          days: [
+            expect.objectContaining({
+              hotel,
+              transport: expect.objectContaining({
+                type: transport.type,
+                provider: transport.provider,
+                departure: {
+                  airport: "SFO",
+                  city: "San Francisco",
+                  dateTime: transport.departure.dateTime,
+                },
+                arrival: {
+                  airport: "NRT",
+                  city: "Tokyo",
+                  dateTime: transport.arrival.dateTime,
+                },
+                duration: transport.duration,
+                price: transport.price,
+                currency: transport.currency,
+                affiliateUrl: transport.affiliateUrl,
+              }),
+            }),
+            expect.objectContaining({ hotel: undefined, transport: undefined }),
+          ],
+        }),
+      }),
     );
   });
   it("keeps a completed plan successful when the notification step fails", async () => {
