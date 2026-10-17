@@ -14,7 +14,7 @@ import {
 import { createClient } from "@/lib/supabase/client";
 
 function ResetPasswordContent() {
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? new URLSearchParams();
   const redirectTo = validateRedirectUrl(searchParams.get("redirectTo"));
   const returnQuery =
     redirectTo === "/dashboard"

@@ -21,7 +21,7 @@ export function TripFilters({
   tripCounts,
 }: TripFiltersProps) {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? new URLSearchParams();
 
   const updateParams = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());

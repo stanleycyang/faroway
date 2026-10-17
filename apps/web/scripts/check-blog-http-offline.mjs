@@ -71,6 +71,7 @@ try {
     "app/destinations",
     "app/sitemap.ts",
     "app/not-found.tsx",
+    "pages/500.tsx",
     "components/blog",
     "components/landing/FadeInOnScroll.tsx",
     "components/Header.tsx",
@@ -293,7 +294,13 @@ try {
       "/blog/category/travel-tips?page=999",
     ])
       await check(url, 404, agent);
-    await check("/blog/backend-error", 500, agent);
+    const failedArticle = await check("/blog/backend-error", 500, agent);
+    if (!baseline && isr) {
+      assert.match(failedArticle, /This page couldn’t load/);
+      assert.match(failedArticle, /aria-label="Page recovery"/);
+      assert.match(failedArticle, /href=""[^>]*>Try again/);
+      assert.match(failedArticle, /href="\/"[^>]*>Go home/);
+    }
   }
   const first = await check("/blog", 200);
   const second = await check("/blog?page=2", 200);

@@ -11,7 +11,7 @@ import { AuthRequestTimeoutError } from "@/lib/auth/request-deadline";
 import { requestPasswordReset } from "@/lib/auth/password-reset";
 
 function ForgotPasswordContent() {
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? new URLSearchParams();
   const redirectTo = validateRedirectUrl(searchParams.get("redirectTo"));
   const returnQuery =
     redirectTo === "/dashboard"

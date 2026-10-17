@@ -5,7 +5,7 @@ import { useSearchParams } from "next/navigation";
 
 /** Keep repeated page parameters subject to the server's strict validation. */
 export function BlogPaginationNavigation() {
-  const searchParams = useSearchParams();
+  const searchParams = useSearchParams() ?? new URLSearchParams();
   const repeatedPage = searchParams.getAll("page").length > 1;
 
   useEffect(() => {

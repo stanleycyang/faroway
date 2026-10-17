@@ -16,7 +16,7 @@ const WorldMapView = dynamic(
 );
 
 export function WorldMapViewClient() {
-  const params = useSearchParams();
+  const params = useSearchParams() ?? new URLSearchParams();
   const encoded = params.get("d");
   return <WorldMapView encoded={encoded} />;
 }
