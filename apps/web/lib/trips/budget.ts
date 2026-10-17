@@ -47,14 +47,67 @@ export function formatEstimate(
   }).format(price.amount);
 }
 
+export interface StayDates {
+  startDate: string;
+  endDate: string;
+}
+
+/** One unambiguous assignment per occupied date; checkout is never a night. */
+export function occupiedHotelNights(days: TripDay[], stay: StayDates) {
+  const dateValue = (value: string) => {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return NaN;
+    const time = Date.parse(value);
+    return Number.isFinite(time) &&
+      new Date(time).toISOString().slice(0, 10) === value
+      ? time
+      : NaN;
+  };
+  const start = dateValue(stay.startDate);
+  const end = dateValue(stay.endDate);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || end < start)
+    return null;
+  // Bound malformed legacy spans without manufacturing assignments.
+  if ((end - start) / 86400000 > 366) return null;
+  const nights: NonNullable<TripDay["hotel"]>[] = [];
+  for (let time = start; time < end; time += 86400000) {
+    const date = new Date(time).toISOString().slice(0, 10);
+    const matching = days.filter((day) => day.date === date);
+    if (matching.length !== 1 || !matching[0].hotel) return null;
+    nights.push(matching[0].hotel);
+  }
+  return nights;
+}
+
+export function featuredStayEstimate(
+  days: TripDay[],
+  stay: StayDates,
+  hotel: { id?: string; affiliatePartner?: string },
+) {
+  const nights = occupiedHotelNights(days, stay);
+  if (!nights?.length || !hotel.id) return null;
+  const prices = nights.map((night) =>
+    knownEstimate(night.pricePerNight, night.currency, night.priceStatus),
+  );
+  if (
+    prices.some((price) => !price) ||
+    new Set(prices.map((price) => price?.currency)).size !== 1
+  )
+    return null;
+  const assigned = nights.flatMap((night, index) =>
+    night.id === hotel.id && night.affiliatePartner === hotel.affiliatePartner
+      ? [prices[index]!]
+      : [],
+  );
+  if (!assigned.length) return null;
+  const amount = assigned.reduce((sum, price) => sum + price.amount, 0);
+  return Number.isFinite(amount)
+    ? { amount, currency: assigned[0].currency, nights: assigned.length }
+    : null;
+}
+
 export function summarizeBudget(
   days: TripDay[],
-  hotel: {
-    pricePerNight?: number;
-    currency?: string;
-    priceStatus?: string;
-  } | null,
-  nights: number,
+  stay: StayDates | null,
   travelers: number,
 ) {
   const groups = new Map<string, CurrencyBudget>();
@@ -88,14 +141,18 @@ export function summarizeBudget(
     group.total += price.amount * multiplier;
     groups.set(price.currency, group);
   };
-  if (nights > 0)
-    add(
-      "accommodation",
-      hotel?.pricePerNight,
-      hotel?.currency,
-      hotel?.priceStatus,
-      nights,
-    );
+  if (stay) {
+    const nights = occupiedHotelNights(days, stay);
+    if (nights === null) unknownItems++;
+    else
+      for (const hotel of nights)
+        add(
+          "accommodation",
+          hotel.pricePerNight,
+          hotel.currency,
+          hotel.priceStatus,
+        );
+  }
   for (const day of days) {
     if (day.transport)
       add("transport", day.transport.price, day.transport.currency);

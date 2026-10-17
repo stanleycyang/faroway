@@ -145,7 +145,6 @@ function Fixture() {
             A place to settle in
           </h2>
           <FeaturedHotelCard
-            nights={2}
             hotel={{
               name: "A stay in Saint-Germain",
               images: [cover],

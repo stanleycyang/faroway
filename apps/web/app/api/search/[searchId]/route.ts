@@ -133,6 +133,19 @@ export async function GET(
               }) as unknown as TransportResult,
           );
 
+        // hotel_id references search_results.id, not the provider's data.id.
+        const hotelsByResultId = new Map(
+          resultsData
+            .filter((row) => row.category === "hotel")
+            .map((row) => [
+              row.id,
+              {
+                ...row.data,
+                id: typeof row.data.id === "string" ? row.data.id : row.id,
+              } as unknown as HotelResult,
+            ]),
+        );
+
         // Build itinerary from stored data
         const itinerary: SuggestedDay[] = (itineraryData || []).map(
           (day: ItineraryRow) => ({
@@ -140,7 +153,9 @@ export async function GET(
             date: day.date,
             title: day.title,
             summary: day.summary,
-            hotel: hotels[0], // Top hotel for all days
+            hotel: day.hotel_id
+              ? hotelsByResultId.get(day.hotel_id)
+              : undefined,
             morning: {
               activities: activities.filter((a) =>
                 (day.morning_activities || []).includes(a.id),

@@ -926,7 +926,7 @@ async function updateSearchStatus(
   await getSupabase().from("searches").update(update).eq("id", searchId);
 }
 
-async function saveSearchResults(
+export async function saveSearchResults(
   searchId: string,
   result: MappedItinerary,
 ): Promise<void> {
@@ -980,8 +980,22 @@ async function saveSearchResults(
     })),
   ];
 
+  const hotelResultIds = new Map<string, string | null>();
+  const hotelKey = (hotel: { id?: string; affiliatePartner?: string }) =>
+    JSON.stringify([hotel.affiliatePartner ?? "", hotel.id]);
   if (resultRows.length > 0) {
-    await getSupabase().from("search_results").insert(resultRows);
+    const { data: inserted, error } = await getSupabase()
+      .from("search_results")
+      .insert(resultRows)
+      .select("id, category, data");
+    if (error) throw new Error("Search results could not be saved");
+    for (const row of inserted ?? []) {
+      if (row.category !== "hotel" || typeof row.data?.id !== "string")
+        continue;
+      const key = hotelKey(row.data);
+      // Ambiguous provider identities cannot establish a day assignment.
+      hotelResultIds.set(key, hotelResultIds.has(key) ? null : row.id);
+    }
   }
 
   // Save itinerary days (batch)
@@ -989,6 +1003,9 @@ async function saveSearchResults(
     const itineraryRows = result.days.map((day: TripDay) => ({
       search_id: searchId,
       day_number: day.dayNumber,
+      hotel_id: day.hotel
+        ? (hotelResultIds.get(hotelKey(day.hotel)) ?? null)
+        : null,
       date: day.date,
       title: day.title,
       summary: day.summary,
@@ -1011,7 +1028,10 @@ async function saveSearchResults(
       tips: day.tips || [],
     }));
 
-    await getSupabase().from("search_itineraries").insert(itineraryRows);
+    const { error } = await getSupabase()
+      .from("search_itineraries")
+      .insert(itineraryRows);
+    if (error) throw new Error("Search itinerary could not be saved");
   }
 }
 

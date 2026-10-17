@@ -24,7 +24,7 @@ describe("traveler-facing price provenance", () => {
       },
     ] as TripDay[];
     const html = renderToStaticMarkup(
-      <TripBudget budget={summarizeBudget(days, null, 0, 4)} travelers={4} />,
+      <TripBudget budget={summarizeBudget(days, null, 4)} travelers={4} />,
     );
     expect(html).toContain("EUR");
     expect(html).toContain("USD");
@@ -45,7 +45,6 @@ describe("traveler-facing price provenance", () => {
             currency: "EUR",
             affiliateUrl: "https://example.com",
           }}
-          nights={3}
         />,
       );
       expect(html).toContain("Price unknown");
@@ -58,16 +57,15 @@ describe("traveler-facing price provenance", () => {
       expect(html).toContain("cancellation terms");
     },
   );
-  it("renders hotel currency and estimated basis for nightly and stay prices", () => {
+  it("renders nightly price without inventing a whole-trip stay price", () => {
     const html = renderToStaticMarkup(
       <FeaturedHotelCard
         hotel={{ name: "Fixture hotel", pricePerNight: 120, currency: "EUR" }}
-        nights={3}
       />,
     );
     expect(html).toContain("EUR");
     expect(html).toContain("120");
-    expect(html).toContain("360");
+    expect(html).not.toContain("360");
     expect(html).toContain("estimated per night");
     expect(html).not.toContain("$");
   });
@@ -75,10 +73,20 @@ describe("traveler-facing price provenance", () => {
     const html = renderToStaticMarkup(
       <FeaturedHotelCard
         hotel={{ name: "Fixture hotel", pricePerNight: 100 }}
-        nights={3}
       />,
     );
     expect(html).toContain("Price unknown");
     expect(html).not.toContain("Stay estimate");
   });
+});
+
+it("renders only the explicitly reconciled assigned-night estimate", () => {
+  const html = renderToStaticMarkup(
+    <FeaturedHotelCard
+      hotel={{ name: "B", pricePerNight: 200, currency: "EUR" }}
+      stayEstimate={{ amount: 200, currency: "EUR", nights: 1 }}
+    />,
+  );
+  expect(html).toContain("assigned night");
+  expect(html.replace(/<[^>]*>/g, "")).not.toContain("600");
 });

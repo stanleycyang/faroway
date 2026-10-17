@@ -90,3 +90,38 @@ describe("GET /api/search/[searchId]", () => {
     expect(json.error).toBe("Search not found");
   });
 });
+
+it("reload resolves per-day hotels by result-row UUID, never provider ID or order", async () => {
+  searchRecord = {
+    id: "search-1",
+    user_id: "user-1",
+    status: "completed",
+    search_results: [
+      {
+        id: "22222222-2222-4222-8222-222222222222",
+        category: "hotel",
+        data: { id: "provider-b", name: "B" },
+        vibe_score: 100,
+      },
+      {
+        id: "11111111-1111-4111-8111-111111111111",
+        category: "hotel",
+        data: { id: "provider-a", name: "A" },
+        vibe_score: 1,
+      },
+    ],
+    search_itineraries: [
+      { day_number: 1, hotel_id: "11111111-1111-4111-8111-111111111111" },
+      { day_number: 2, hotel_id: "22222222-2222-4222-8222-222222222222" },
+      { day_number: 3, hotel_id: null },
+      { day_number: 4, hotel_id: "provider-a" },
+    ],
+  };
+  const response = await GET(makeReq(), makeParams());
+  const body = await response.json();
+  expect(
+    body.results.itinerary.map(
+      (day: { hotel?: { id: string } }) => day.hotel?.id,
+    ),
+  ).toEqual(["provider-a", "provider-b", undefined, undefined]);
+});

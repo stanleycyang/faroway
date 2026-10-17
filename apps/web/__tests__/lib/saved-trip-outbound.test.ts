@@ -57,7 +57,6 @@ describe("saved trip outbound booking boundary", () => {
     }
     const hotelHtml = renderToStaticMarkup(
       createElement(FeaturedHotelCard, {
-        nights: 2,
         hotel: { name: "Hotel", pricePerNight: 100, affiliateUrl: unsafe },
       }),
     );
