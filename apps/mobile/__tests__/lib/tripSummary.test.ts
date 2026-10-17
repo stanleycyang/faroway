@@ -58,3 +58,26 @@ it('only selects data for the requested trip', () => {
   expect(selectTripDetail(detail.id, [], detail)).toBe(detail);
   expect(selectTripDetail(detail.id, [detail], null)).toBe(detail);
 });
+
+it.each([
+  ['2026-10-17T00:00:00.123455Z', '2026-10-17T00:00:00.123456Z'],
+  ['2026-10-17T00:00:00.123455+00:00', '2026-10-17T05:30:00.123456+05:30'],
+  ['2026-10-17T00:00:00.123455Z', '2026-10-16T20:00:00.123456-0400'],
+  ['2026-10-17T00:00:00.123Z', '2026-10-17T00:00:00.123001Z'],
+  ['1969-12-31T23:59:59.123455Z', '1969-12-31T23:59:59.123456Z'],
+  ['2026-10-17T00:00:00.123456001Z', '2026-10-17T00:00:00.123456002Z'],
+])('preserves fractional precision between %s and %s', (older, newer) => {
+  const olderDetail = { ...detail, updatedAt: older };
+  const newerSummary = { ...detail, days: [], updatedAt: newer };
+  expect(selectTripDetail(detail.id, [newerSummary], olderDetail)).toBe(newerSummary);
+  expect(selectTripDetail(detail.id, [olderDetail], newerSummary)).toBe(newerSummary);
+});
+
+it.each([
+  ['2026-10-17T00:00:00.123Z', '2026-10-17T02:00:00.123000+02:00'],
+  ['2026-10-17T00:00:00.123456Z', '2026-10-16T20:00:00.123456000-04:00'],
+  ['2026-10-17T00:00:00Z', '2026-10-17T00:00:00.000000Z'],
+])('retains full detail for equivalent padded instants %s and %s', (left, right) => {
+  const full = { ...detail, updatedAt: left };
+  expect(selectTripDetail(detail.id, [{ ...detail, days: [], updatedAt: right }], full)).toBe(full);
+});
