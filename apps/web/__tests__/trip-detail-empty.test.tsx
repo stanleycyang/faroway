@@ -945,6 +945,8 @@ test.each(["mixed currencies", "unknown price"])(
         }}
       />,
     );
+    expect(html).not.toContain("One way");
+    expect(html).not.toContain("Round trip");
     expect(html).toContain("Estimates by flight");
     expect(html).toContain("USD");
     expect(html).not.toContain("total round trip");
@@ -1441,4 +1443,48 @@ test("mounted saved trip keeps global recommendation separate from distinct day 
     actionFixture.realDayCards = false;
     vi.unstubAllGlobals();
   }
+});
+
+test("a priced outbound offer does not assert one-way fare scope when return details are unavailable", () => {
+  const itinerary = {
+    days: [
+      {
+        dayNumber: 1,
+        date: "2026-11-01",
+        transport: {
+          price: 900,
+          currency: "USD",
+          provider: "Fixture airline",
+          duration: 120,
+          stops: 0,
+          departure: { airport: "AAA", dateTime: "2026-11-01T10:00:00Z" },
+          arrival: { airport: "BBB", dateTime: "2026-11-01T12:00:00Z" },
+        },
+      },
+    ],
+  } as unknown as GeneratedItinerary;
+  const html = renderToStaticMarkup(
+    <TripDetailClient
+      tripId="trip-a"
+      initialShareUrl={null}
+      initialData={{
+        itinerary,
+        trip: {
+          id: "trip-a",
+          user_id: "owner-a",
+          destination: "Tokyo",
+          start_date: "2026-11-01",
+          end_date: "2026-11-04",
+          travelers: 2,
+          status: "completed",
+          created_at: "2026-10-01",
+          updated_at: "2026-10-01",
+        },
+      }}
+    />,
+  );
+  expect(html).toContain("Outbound details");
+  expect(html).toContain("Return details unavailable");
+  expect(html).not.toContain("One way");
+  expect(html).not.toContain("Round trip");
 });

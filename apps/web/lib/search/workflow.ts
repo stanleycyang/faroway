@@ -6,7 +6,7 @@
  * The production durable workflow lives in /workflows/.
  */
 
-import { SearchInput, SearchResults } from "./types";
+import { SearchInput, SearchResults, HotelResult } from "./types";
 import { mapSearchResultsToItinerary } from "./bridge";
 import {
   runOrchestratorAgent,
@@ -27,6 +27,7 @@ export interface TravelSearchWorkflowOutput {
   searchId: string;
   status: "completed" | "error";
   results?: SearchResults;
+  topHotel?: HotelResult | null;
   error?: string;
 }
 
@@ -231,7 +232,7 @@ export async function executeTravelSearch(
       message: "Optimizing activities by location...",
     });
     const aggregatorStart = Date.now();
-    const { days } = await runAggregatorAgent(
+    const { days, topHotel } = await runAggregatorAgent(
       searchPlan,
       hotels,
       activities,
@@ -258,8 +259,7 @@ export async function executeTravelSearch(
 
     // Send mapped aggregator results so the client can render TripDay[] progressively
     if (onAgentResult) {
-      const topHotel = days?.[0]?.hotel || hotels[0] || null;
-      const mapped = mapSearchResultsToItinerary(results, topHotel);
+      const mapped = mapSearchResultsToItinerary(results, topHotel ?? null);
       await onAgentResult("aggregator", {
         days: mapped.days,
         topHotel: mapped.topHotel,
@@ -269,6 +269,7 @@ export async function executeTravelSearch(
     return {
       searchId,
       status: "completed",
+      topHotel: topHotel ?? null,
       results,
     };
   } catch (error) {

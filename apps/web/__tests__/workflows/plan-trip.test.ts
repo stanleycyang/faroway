@@ -1,10 +1,12 @@
+import { NextRequest } from "next/server";
+import { GET as readSearch } from "@/app/api/search/[searchId]/route";
 import type {
   HotelResult,
   ActivityResult,
   DiningResult,
   TransportResult,
 } from "@faroway/types";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("workflow", () => ({
   FatalError: class FatalError extends Error {},
@@ -70,17 +72,62 @@ type ChainState = {
   update?: unknown;
 };
 
-let insertedResults: { id: string; category: string; data: unknown }[] = [];
+type ResultRow = { id: string; category: string; data: unknown };
+let insertedResults: ResultRow[] | null = null;
+let persistedResults: ResultRow[] = [];
+let persistedDays: Record<string, unknown>[] = [];
+let readSearchRecord: Record<string, unknown> | null = null;
+const uuid = (index: number) =>
+  `00000000-0000-4000-8000-${String(index).padStart(12, "0")}`;
+const uuidPattern =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function executeInsert(state: ChainState) {
+  if (state.table === insertFailure)
+    return { data: null, error: { message: "fixture failure" } };
+  if (state.table === "search_results" && Array.isArray(state.insert)) {
+    persistedResults =
+      insertedResults ??
+      state.insert
+        .map((row, index) => ({ ...row, id: uuid(index + 1) }))
+        .reverse();
+    return { data: persistedResults, error: null };
+  }
+  if (state.table === "search_itineraries" && Array.isArray(state.insert)) {
+    for (const row of state.insert) {
+      const refs = [
+        row.hotel_id,
+        ...row.morning_activities,
+        ...row.afternoon_activities,
+        ...row.evening_activities,
+        ...row.meals,
+      ].filter((id) => id != null);
+      if (refs.some((id) => typeof id !== "string" || !uuidPattern.test(id)))
+        return {
+          data: null,
+          error: {
+            code: "22P02",
+            message: "invalid input syntax for type uuid",
+          },
+        };
+      if (
+        row.hotel_id &&
+        !persistedResults.some((item) => item.id === row.hotel_id)
+      )
+        return {
+          data: null,
+          error: { code: "23503", message: "hotel foreign key violation" },
+        };
+    }
+    persistedDays = state.insert;
+  }
+  return { data: null, error: null };
+}
 let insertFailure: string | null = null;
 function createChain(table: string) {
   const state: ChainState = { table };
   const chain = {
     then: (resolve: (value: unknown) => unknown) =>
-      Promise.resolve({
-        data: state.table === "search_results" ? insertedResults : null,
-        error:
-          state.table === insertFailure ? { message: "fixture failure" } : null,
-      }).then(resolve),
+      Promise.resolve(executeInsert(state)).then(resolve),
     select: vi.fn(() => chain),
     insert: vi.fn((value: unknown) => {
       state.insert = value;
@@ -95,6 +142,8 @@ function createChain(table: string) {
     limit: vi.fn(() => chain),
     order: vi.fn(() => chain),
     single: vi.fn(async () => {
+      if (state.table === "searches" && readSearchRecord)
+        return { data: readSearchRecord, error: null };
       if (state.table === "itineraries" && state.insert) {
         return { data: { id: "itinerary-1" }, error: null };
       }
@@ -111,6 +160,11 @@ const supabaseMock = {
 
 vi.mock("@/lib/supabase/server", () => ({
   getSupabase: vi.fn(() => supabaseMock),
+  createClientFromRequest: async () => ({
+    auth: {
+      getUser: async () => ({ data: { user: { id: "user-1" } }, error: null }),
+    },
+  }),
 }));
 
 import { planTripWorkflow, saveSearchResults } from "@/workflows/plan-trip";
@@ -269,9 +323,13 @@ async function waitFor(
 }
 
 describe("planTripWorkflow", () => {
+  afterEach(() => vi.unstubAllEnvs());
   beforeEach(() => {
     vi.clearAllMocks();
-    insertedResults = [];
+    insertedResults = null;
+    persistedResults = [];
+    persistedDays = [];
+    readSearchRecord = null;
     insertFailure = null;
     mocks.dispatchItineraryReady.mockResolvedValue("accepted");
     mocks.runOrchestratorAgent.mockResolvedValue(searchPlan);
@@ -342,34 +400,49 @@ describe("planTripWorkflow", () => {
     );
   });
 
-  it("does not guess a hotel foreign key when returned identities are missing or ambiguous", async () => {
-    const slot = { activities: [], meals: [] };
-    insertedResults = [
-      { id: "row-a", category: "hotel", data: hotel },
-      { id: "row-b", category: "hotel", data: hotel },
-    ];
-    await saveSearchResults(
-      "search-1",
-      mappedItinerary({
-        days: [hotel, { ...hotel, id: "missing" }].map((assigned, index) => ({
-          dayNumber: index + 1,
-          hotel: assigned,
-          morning: slot,
-          afternoon: slot,
-          evening: slot,
-        })),
-      }),
-    );
-    const writes = supabaseMock.from.mock.results
-      .map((result) => result.value.insert.mock.calls)
-      .flat();
-    const rows = writes.find(
-      ([rows]) => Array.isArray(rows) && rows[0]?.day_number,
-    )?.[0];
-    expect(
-      rows.map((row: { hotel_id: string | null }) => row.hotel_id),
-    ).toEqual([null, null]);
-  });
+  it.each(["hotel", "activity", "dining"])(
+    "rejects missing and ambiguous %s references without a partial itinerary",
+    async (category) => {
+      const slot = { activities: [], meals: [] };
+      const assigned =
+        category === "hotel"
+          ? { hotel }
+          : category === "activity"
+            ? { morning: { ...slot, activities: [{ id: "logical" }] } }
+            : { morning: { ...slot, meals: [{ id: "logical" }] } };
+      const item = category === "hotel" ? hotel : { id: "logical" };
+      for (const returned of [
+        [],
+        [
+          { id: uuid(1), category, data: item },
+          { id: uuid(2), category, data: item },
+        ],
+      ]) {
+        supabaseMock.from.mockClear();
+        insertedResults = returned;
+        await expect(
+          saveSearchResults(
+            "search-1",
+            mappedItinerary({
+              days: [
+                {
+                  dayNumber: 1,
+                  morning: slot,
+                  afternoon: slot,
+                  evening: slot,
+                  ...assigned,
+                },
+              ],
+            }),
+          ),
+        ).rejects.toThrow("missing or ambiguous");
+        expect(supabaseMock.from).not.toHaveBeenCalledWith(
+          "search_itineraries",
+        );
+        expect(persistedDays).toEqual([]);
+      }
+    },
+  );
 
   it.each(["search_results", "search_itineraries"])(
     "does not report successful persistence after %s insert failure",
@@ -398,6 +471,119 @@ describe("planTripWorkflow", () => {
         );
     },
   );
+
+  it("round-trips logical activity and meal IDs through UUID columns without changing scheduled order", async () => {
+    vi.stubEnv("VIATOR_CONTENT_ENABLED", "true");
+    vi.stubEnv("VIATOR_CONTENT_APPROVAL_REF", "offline-fixture");
+    const { mapSearchResultsToItinerary } = await vi.importActual<
+      typeof import("@/lib/search/bridge")
+    >("@/lib/search/bridge");
+    const activities = ["activity_1", "activity_v_2", "activity_gyg_3"].map(
+      (id) => ({
+        ...activity,
+        id,
+        affiliatePartner: "fixture",
+        viatorContentVersion: 1,
+      }),
+    );
+    const meals = ["breakfast", "lunch", "dinner"].map((_mealType, index) => ({
+      ...dining,
+      id: `dining_${index}`,
+      mealTypes: ["breakfast", "lunch", "dinner"] as (
+        | "breakfast"
+        | "lunch"
+        | "dinner"
+      )[],
+    }));
+    const results = {
+      searchId: "search-1",
+      hotels: [hotel],
+      activities,
+      dining: meals,
+      transport: [],
+      itinerary: [
+        {
+          dayNumber: 1,
+          date: "2026-06-01",
+          title: "Fixture",
+          summary: "Fixture",
+          hotel,
+          morning: {
+            activities: [activities[2], activities[0]],
+            meal: meals[0],
+          },
+          afternoon: { activities: [activities[1]], meal: meals[1] },
+          evening: { activities: [], meal: meals[2] },
+          estimatedCost: 0,
+          currency: "USD",
+          tips: [],
+        },
+      ],
+    };
+    const mapped = mapSearchResultsToItinerary(results, hotel);
+    await saveSearchResults("search-1", mapped);
+    expect(persistedDays).toHaveLength(1);
+    expect(persistedDays[0].morning_activities).toEqual([uuid(4), uuid(2)]);
+    expect(persistedDays[0].meals).toEqual([uuid(5), uuid(6), uuid(7)]);
+    readSearchRecord = {
+      id: "search-1",
+      user_id: "user-1",
+      status: "completed",
+      search_results: persistedResults,
+      search_itineraries: persistedDays,
+      intermediate_results: { days: mapped.days },
+    };
+    const response = await readSearch(
+      new NextRequest("http://localhost/api/search/search-1"),
+      { params: Promise.resolve({ searchId: "search-1" }) },
+    );
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(
+      body.results.itinerary[0].morning.activities.map(
+        (item: { id: string }) => item.id,
+      ),
+    ).toEqual(["activity_gyg_3", "activity_1"]);
+    expect(body.results.itinerary[0].afternoon.activities[0].id).toBe(
+      "activity_v_2",
+    );
+    expect(
+      ["morning", "afternoon", "evening"].map(
+        (slot) => body.results.itinerary[0][slot].meal.id,
+      ),
+    ).toEqual(["dining_0", "dining_1", "dining_2"]);
+    const searchChain = supabaseMock.from.mock.results.at(-1)!.value;
+    expect(searchChain.eq).toHaveBeenCalledWith("id", "search-1");
+    expect(searchChain.eq).toHaveBeenCalledWith("user_id", "user-1");
+    // The UUID contract must not stop generation before the owned-trip bridge.
+    readSearchRecord = null;
+    mocks.mapSearchResultsToItinerary.mockReturnValue(mapped);
+    for (const tripId of [undefined, "trip-1"]) {
+      expect(
+        (await planTripWorkflow({ ...workflowInput, tripId })).status,
+      ).toBe("completed");
+    }
+    expect(supabaseMock.rpc).toHaveBeenCalledWith(
+      "apply_trip_generation_update",
+      expect.objectContaining({
+        p_trip_id: "trip-1",
+        p_search_id: "search-1",
+        p_state: "planned",
+        p_payload: expect.objectContaining({
+          days: expect.arrayContaining([
+            expect.objectContaining({
+              morning: expect.objectContaining({
+                activities: expect.arrayContaining([
+                  expect.objectContaining({ id: "activity_gyg_3" }),
+                  expect.objectContaining({ id: "activity_1" }),
+                ]),
+              }),
+            }),
+          ]),
+        }),
+      }),
+    );
+  });
 
   it("starts provider and enrichment work concurrently", async () => {
     const started: string[] = [];

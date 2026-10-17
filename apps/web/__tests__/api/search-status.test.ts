@@ -125,3 +125,74 @@ it("reload resolves per-day hotels by result-row UUID, never provider ID or orde
     ),
   ).toEqual(["provider-a", "provider-b", undefined, undefined]);
 });
+
+it.each([
+  "missing activity",
+  "wrong-category activity",
+  "missing meal",
+  "ambiguous meals",
+])(
+  "fails explicitly for %s instead of silently losing scheduled content",
+  async (scenario) => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    const id2 = "22222222-2222-4222-8222-222222222222";
+    searchRecord = {
+      id: "search-1",
+      user_id: "user-1",
+      status: "completed",
+      search_results:
+        scenario === "ambiguous meals"
+          ? [
+              {
+                id,
+                category: "dining",
+                data: { id: "dining_1", mealTypes: ["lunch"] },
+              },
+              {
+                id: id2,
+                category: "dining",
+                data: { id: "dining_2", mealTypes: ["lunch"] },
+              },
+            ]
+          : scenario === "wrong-category activity"
+            ? [{ id, category: "hotel", data: { id: "activity_1" } }]
+            : [],
+      search_itineraries: [
+        {
+          day_number: 1,
+          morning_activities: scenario.includes("activity") ? [id] : [],
+          meals:
+            scenario === "ambiguous meals"
+              ? [id, id2]
+              : scenario === "missing meal"
+                ? [id]
+                : [],
+        },
+      ],
+    };
+    const response = await GET(makeReq(), makeParams());
+    expect(response.status).toBe(500);
+    expect(await response.json()).toEqual({ error: "Internal server error" });
+  },
+);
+it("restores legacy UUID meals only when slot placement is unambiguous", async () => {
+  const id = "11111111-1111-4111-8111-111111111111";
+  searchRecord = {
+    id: "search-1",
+    user_id: "user-1",
+    status: "completed",
+    search_results: [
+      {
+        id,
+        category: "dining",
+        data: { id: "dining_1", name: "Lunch", mealTypes: ["lunch"] },
+      },
+    ],
+    search_itineraries: [{ day_number: 1, meals: [id] }],
+  };
+  const response = await GET(makeReq(), makeParams());
+  expect(response.status).toBe(200);
+  const body = await response.json();
+  expect(body.results.itinerary[0].afternoon.meal.id).toBe("dining_1");
+  expect(body.results.itinerary[0].morning.meal).toBeUndefined();
+});

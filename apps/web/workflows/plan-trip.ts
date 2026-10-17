@@ -980,9 +980,9 @@ export async function saveSearchResults(
     })),
   ];
 
-  const hotelResultIds = new Map<string, string | null>();
-  const hotelKey = (hotel: { id?: string; affiliatePartner?: string }) =>
-    JSON.stringify([hotel.affiliatePartner ?? "", hotel.id]);
+  const resultIds = new Map<string, string | null>();
+  const resultKey = (category: string, id: unknown) =>
+    JSON.stringify([category, id]);
   if (resultRows.length > 0) {
     const { data: inserted, error } = await getSupabase()
       .from("search_results")
@@ -990,39 +990,55 @@ export async function saveSearchResults(
       .select("id, category, data");
     if (error) throw new Error("Search results could not be saved");
     for (const row of inserted ?? []) {
-      if (row.category !== "hotel" || typeof row.data?.id !== "string")
-        continue;
-      const key = hotelKey(row.data);
-      // Ambiguous provider identities cannot establish a day assignment.
-      hotelResultIds.set(key, hotelResultIds.has(key) ? null : row.id);
+      if (typeof row.data?.id !== "string") continue;
+      const key = resultKey(row.category, row.data.id);
+      // A logical identity must resolve to exactly one inserted result row.
+      resultIds.set(key, resultIds.has(key) ? null : row.id);
     }
   }
+  const reference = (category: string, id: unknown) => {
+    const rowId = resultIds.get(resultKey(category, id));
+    if (
+      !rowId ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        rowId,
+      )
+    )
+      throw new Error(
+        `Search itinerary has a missing or ambiguous ${category} reference`,
+      );
+    return rowId;
+  };
 
   // Save itinerary days (batch)
   if (result.days.length > 0) {
     const itineraryRows = result.days.map((day: TripDay) => ({
       search_id: searchId,
       day_number: day.dayNumber,
-      hotel_id: day.hotel
-        ? (hotelResultIds.get(hotelKey(day.hotel)) ?? null)
-        : null,
+      hotel_id: day.hotel ? reference("hotel", day.hotel.id) : null,
       date: day.date,
       title: day.title,
       summary: day.summary,
-      morning_activities: day.morning.activities.map(
-        (a: ItineraryActivity) => a.id,
+      morning_activities: day.morning.activities.map((a: ItineraryActivity) =>
+        reference("activity", a.id),
       ),
       afternoon_activities: day.afternoon.activities.map(
-        (a: ItineraryActivity) => a.id,
+        (a: ItineraryActivity) => reference("activity", a.id),
       ),
-      evening_activities: day.evening.activities.map(
-        (a: ItineraryActivity) => a.id,
+      evening_activities: day.evening.activities.map((a: ItineraryActivity) =>
+        reference("activity", a.id),
       ),
       meals: [
-        ...day.morning.meals.map((m: FarowayRestaurant) => m.id),
-        ...day.afternoon.meals.map((m: FarowayRestaurant) => m.id),
-        ...day.evening.meals.map((m: FarowayRestaurant) => m.id),
-      ].filter(Boolean),
+        ...day.morning.meals.map((m: FarowayRestaurant) =>
+          reference("dining", m.id),
+        ),
+        ...day.afternoon.meals.map((m: FarowayRestaurant) =>
+          reference("dining", m.id),
+        ),
+        ...day.evening.meals.map((m: FarowayRestaurant) =>
+          reference("dining", m.id),
+        ),
+      ],
       estimated_cost: day.totalEstimatedCost?.amount || 0,
       cost_currency: day.totalEstimatedCost?.currency || "USD",
       tips: day.tips || [],

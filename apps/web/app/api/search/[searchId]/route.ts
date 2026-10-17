@@ -36,7 +36,7 @@ export async function GET(
     const { data: search, error: searchError } = await getSupabase()
       .from("searches")
       .select(
-        "id, user_id, status, progress, created_at, completed_at, error_message, json_render_spec, search_results(id, category, data, vibe_score), search_itineraries(day_number, date, title, summary, morning_activities, afternoon_activities, evening_activities, meals, estimated_cost, cost_currency, tips, hotel_id)",
+        "id, user_id, status, progress, created_at, completed_at, error_message, json_render_spec, intermediate_results, search_results(id, category, data, vibe_score), search_itineraries(day_number, date, title, summary, morning_activities, afternoon_activities, evening_activities, meals, estimated_cost, cost_currency, tips, hotel_id)",
       )
       .eq("id", searchId)
       .eq("user_id", user.id)
@@ -146,50 +146,129 @@ export async function GET(
             ]),
         );
 
+        const resultMap = <T>(category: string) =>
+          new Map(
+            resultsData
+              .filter((row) => row.category === category)
+              .map((row) => [
+                row.id,
+                {
+                  ...row.data,
+                  id: typeof row.data.id === "string" ? row.data.id : row.id,
+                } as T,
+              ]),
+          );
+        const activitiesByResultId = resultMap<ActivityResult>("activity");
+        const diningByResultId = resultMap<DiningResult>("dining");
+        const resolveReferences = <T>(
+          ids: string[] | null,
+          rows: Map<string, T>,
+        ): T[] =>
+          (ids ?? []).map((id) => {
+            const result = rows.get(id);
+            if (!result)
+              throw new Error(
+                "Saved itinerary references an unavailable search result",
+              );
+            return result;
+          });
+
+        const mealsForDay = (day: ItineraryRow) => {
+          const meals = resolveReferences(day.meals, diningByResultId);
+          const slots = ["morning", "afternoon", "evening"] as const;
+          const output: Partial<Record<(typeof slots)[number], DiningResult>> =
+            {};
+          const savedDays: unknown = search.intermediate_results?.days;
+          const schedules = Array.isArray(savedDays)
+            ? savedDays.filter(
+                (saved) =>
+                  saved?.dayNumber === day.day_number &&
+                  saved?.date === day.date,
+              )
+            : [];
+          if (schedules.length > 1)
+            throw new Error("Saved meal schedule is ambiguous");
+          const selected: DiningResult[] = [];
+          for (const [index, slot] of slots.entries()) {
+            let candidates: DiningResult[];
+            if (schedules.length === 1) {
+              const scheduled: unknown = schedules[0][slot]?.meals;
+              if (!Array.isArray(scheduled) || scheduled.length > 1)
+                throw new Error("Saved meal schedule cannot be reconstructed");
+              candidates = scheduled.length
+                ? [
+                    ...new Set(
+                      meals.filter((meal) => meal.id === scheduled[0]?.id),
+                    ),
+                  ]
+                : [];
+              if (candidates.length !== scheduled.length)
+                throw new Error("Saved meal reference is missing or ambiguous");
+            } else {
+              // Legacy rows have no slot metadata: accept only unambiguous placement.
+              candidates = meals.filter((meal) =>
+                meal.mealTypes?.includes(
+                  (["breakfast", "lunch", "dinner"] as const)[index],
+                ),
+              );
+            }
+            if (candidates.length > 1)
+              throw new Error("Saved meal schedule is ambiguous");
+            if (candidates[0]) {
+              output[slot] = candidates[0];
+              selected.push(candidates[0]);
+            }
+          }
+          if (
+            meals.length !== selected.length ||
+            meals.some(
+              (meal) =>
+                meals.filter((item) => item === meal).length !==
+                selected.filter((item) => item === meal).length,
+            )
+          )
+            throw new Error("Saved meals cannot be reconstructed without loss");
+          return output;
+        };
+
         // Build itinerary from stored data
         const itinerary: SuggestedDay[] = (itineraryData || []).map(
-          (day: ItineraryRow) => ({
-            dayNumber: day.day_number,
-            date: day.date,
-            title: day.title,
-            summary: day.summary,
-            hotel: day.hotel_id
-              ? hotelsByResultId.get(day.hotel_id)
-              : undefined,
-            morning: {
-              activities: activities.filter((a) =>
-                (day.morning_activities || []).includes(a.id),
-              ),
-              meal: dining.find(
-                (d) =>
-                  (day.meals || []).includes(d.id) &&
-                  d.mealTypes?.includes("breakfast"),
-              ),
-            },
-            afternoon: {
-              activities: activities.filter((a) =>
-                (day.afternoon_activities || []).includes(a.id),
-              ),
-              meal: dining.find(
-                (d) =>
-                  (day.meals || []).includes(d.id) &&
-                  d.mealTypes?.includes("lunch"),
-              ),
-            },
-            evening: {
-              activities: activities.filter((a) =>
-                (day.evening_activities || []).includes(a.id),
-              ),
-              meal: dining.find(
-                (d) =>
-                  (day.meals || []).includes(d.id) &&
-                  d.mealTypes?.includes("dinner"),
-              ),
-            },
-            estimatedCost: day.estimated_cost,
-            currency: day.cost_currency,
-            tips: day.tips || [],
-          }),
+          (day: ItineraryRow) => {
+            const meals = mealsForDay(day);
+            return {
+              dayNumber: day.day_number,
+              date: day.date,
+              title: day.title,
+              summary: day.summary,
+              hotel: day.hotel_id
+                ? hotelsByResultId.get(day.hotel_id)
+                : undefined,
+              morning: {
+                activities: resolveReferences(
+                  day.morning_activities,
+                  activitiesByResultId,
+                ),
+                meal: meals.morning,
+              },
+              afternoon: {
+                activities: resolveReferences(
+                  day.afternoon_activities,
+                  activitiesByResultId,
+                ),
+                meal: meals.afternoon,
+              },
+              evening: {
+                activities: resolveReferences(
+                  day.evening_activities,
+                  activitiesByResultId,
+                ),
+                meal: meals.evening,
+              },
+              estimatedCost: day.estimated_cost,
+              currency: day.cost_currency,
+              tips: day.tips || [],
+            };
+          },
         );
 
         response.results = {

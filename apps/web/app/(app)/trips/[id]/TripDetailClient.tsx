@@ -1281,7 +1281,9 @@ function FeaturedFlights({ days }: { days: TripDay[] | null }) {
           <div>
             <h3 className="text-base font-bold text-white">Your Flights</h3>
             <p className="text-[11px] text-blue-200">
-              {returnFlight ? "Round trip" : "One way"}
+              {returnFlight
+                ? "Outbound and return details"
+                : "Outbound details · Return details unavailable"}
             </p>
           </div>
           <div className="ml-auto text-right">
