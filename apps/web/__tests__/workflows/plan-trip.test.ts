@@ -14,6 +14,8 @@ vi.mock("workflow", () => ({
 }));
 
 const mocks = vi.hoisted(() => ({
+  generateObject: vi.fn(),
+  tripRead: undefined as Record<string, unknown> | undefined,
   runOrchestratorAgent: vi.fn(),
   runHotelsAgent: vi.fn(),
   runActivitiesAgent: vi.fn(),
@@ -24,6 +26,12 @@ const mocks = vi.hoisted(() => ({
   mapSearchResultsToItinerary: vi.fn(),
   buildJsonRenderSpec: vi.fn(),
   dispatchItineraryReady: vi.fn(),
+}));
+
+vi.mock("@/lib/ai/sdk", () => ({
+  generateObject: mocks.generateObject,
+  gateway: (model: string) => ({ model }),
+  createGateway: () => (model: string) => ({ model }),
 }));
 
 vi.mock("@/lib/search/agents/orchestrator", () => ({
@@ -144,6 +152,7 @@ function createChain(table: string) {
     single: vi.fn(async () => {
       if (state.table === "searches" && readSearchRecord)
         return { data: readSearchRecord, error: null };
+      if (state.table === "trips") return { data: mocks.tripRead, error: null };
       if (state.table === "itineraries" && state.insert) {
         return { data: { id: "itinerary-1" }, error: null };
       }
@@ -331,6 +340,7 @@ describe("planTripWorkflow", () => {
     persistedDays = [];
     readSearchRecord = null;
     insertFailure = null;
+    mocks.tripRead = undefined;
     mocks.dispatchItineraryReady.mockResolvedValue("accepted");
     mocks.runOrchestratorAgent.mockResolvedValue(searchPlan);
     mocks.runHotelsAgent.mockResolvedValue([hotel]);
@@ -757,6 +767,140 @@ describe("planTripWorkflow", () => {
       expect.objectContaining({ p_state: "failed" }),
     );
   });
+
+  describe.each(["successful", "recovered", "fallback"])(
+    "%s normalized itinerary",
+    (responsePath) => {
+      it.each([0, 4])(
+        "preserves outbound transport and unavailable costs through aggregation, bridge, persistence and read for %s nights",
+        async (nights) => {
+          const { runAggregatorAgent } = await vi.importActual<
+            typeof import("@/lib/search/agents/aggregator")
+          >("@/lib/search/agents/aggregator");
+          const { mapSearchResultsToItinerary } = await vi.importActual<
+            typeof import("@/lib/search/bridge")
+          >("@/lib/search/bridge");
+          const { loadTripForUserUncached } =
+            await import("@/lib/trips/load-trip");
+          const { buildTripExportText } = await import("@/lib/trips/export");
+          mocks.runAggregatorAgent.mockImplementation(runAggregatorAgent);
+          mocks.mapSearchResultsToItinerary.mockImplementation(
+            mapSearchResultsToItinerary,
+          );
+          mocks.runHotelsAgent.mockResolvedValue([]);
+          const nightActivity = {
+            ...activity,
+            id: "local-night",
+            affiliatePartner: undefined,
+            bestTimeOfDay: "evening",
+          };
+          mocks.runActivitiesAgent.mockResolvedValue([nightActivity]);
+          mocks.runDiningAgent.mockResolvedValue([]);
+          mocks.runTransportAgent.mockResolvedValue([
+            transport,
+            { ...transport, id: "outbound-alternative" },
+          ]);
+          const end = `2026-06-0${nights + 1}`;
+          mocks.runOrchestratorAgent.mockResolvedValue({
+            ...searchPlan,
+            dates: { ...searchPlan.dates, end, nights },
+          });
+          const days = Array.from({ length: nights + 1 }, (_, i) => ({
+            dayNumber: i + 1,
+            date: `2026-06-0${i + 1}`,
+            title: `Day ${i + 1}`,
+            summary: "Explore Tokyo",
+            morning: { activityIds: [nightActivity.id] },
+            afternoon: { activityIds: [] },
+            evening: { activityIds: [nightActivity.id] },
+            transportId: i === 0 ? transport.id : "outbound-alternative",
+            estimatedCost: 980,
+            currency: "USD",
+            tips: [],
+          }));
+          if (responsePath === "successful")
+            mocks.generateObject.mockResolvedValue({ object: { days } });
+          else
+            mocks.generateObject.mockRejectedValue(
+              Object.assign(
+                new Error("Offline fixture"),
+                responsePath === "recovered"
+                  ? { text: JSON.stringify({ days: JSON.stringify(days) }) }
+                  : {},
+              ),
+            );
+
+          expect(
+            (await planTripWorkflow({ ...workflowInput, endDate: end })).status,
+          ).toBe("completed");
+          const rpcCalls = supabaseMock.rpc.mock.calls as unknown as [
+            string,
+            Record<string, unknown>,
+          ][];
+          const payload = rpcCalls.find(
+            ([fn, args]) =>
+              fn === "apply_trip_generation_update" &&
+              args.p_state === "planned",
+          )![1].p_payload as { days: import("@faroway/types").TripDay[] };
+          // Exercise the JSON serialization used by the database client.
+          const saved = JSON.parse(JSON.stringify(payload)) as typeof payload;
+          expect(saved.days).toHaveLength(nights + 1);
+          expect(saved.days[0].transport).toEqual(
+            expect.objectContaining({
+              departure: transport.departure,
+              arrival: transport.arrival,
+              price: 900,
+              currency: "USD",
+              affiliateUrl: transport.affiliateUrl,
+            }),
+          );
+          expect(saved.days.slice(1).every((day) => !day.transport)).toBe(true);
+          expect(saved.days[0].morning.activities).toEqual([]);
+          expect(saved.days[0].evening.activities.map((a) => a.id)).toEqual([
+            nightActivity.id,
+          ]);
+          expect(
+            saved.days.every(
+              (day) => !Object.hasOwn(day, "totalEstimatedCost"),
+            ),
+          ).toBe(true);
+          const rowCallIndex = supabaseMock.from.mock.calls.findIndex(
+            ([table]) => table === "search_itineraries",
+          );
+          const rows = supabaseMock.from.mock.results[rowCallIndex].value.insert
+            .mock.calls[0][0] as Record<string, unknown>[];
+          expect(rows.map((row) => row.estimated_cost)).toEqual(
+            Array(nights + 1).fill(null),
+          );
+          expect(
+            mocks.buildJsonRenderSpec.mock.lastCall![0].days.every(
+              (day: { estimatedCost?: number }) =>
+                day.estimatedCost === undefined,
+            ),
+          ).toBe(true);
+          mocks.tripRead = {
+            id: "trip-1",
+            user_id: "user-1",
+            itineraries: saved,
+          };
+          const loaded = await loadTripForUserUncached("trip-1", "user-1");
+          expect(loaded?.itinerary?.days).toEqual(saved.days);
+          const exported = buildTripExportText(
+            {
+              destination: "Tokyo",
+              start_date: workflowInput.startDate,
+              end_date: end,
+              travelers: 2,
+              status: "planned",
+            },
+            loaded!.itinerary,
+          );
+          expect(exported.match(/Transport:/g)).toHaveLength(1);
+          expect(exported).not.toContain("Day estimate:");
+        },
+      );
+    },
+  );
   it("never dispatches a completion push for a failed planner or an unsaved search", async () => {
     mocks.runAggregatorAgent.mockRejectedValueOnce(
       new Error("planning failed"),

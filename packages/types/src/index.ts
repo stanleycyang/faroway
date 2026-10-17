@@ -307,7 +307,7 @@ export interface TripDay {
   };
   transport?: TripDayTransport;
   hotel?: HotelResult;
-  totalEstimatedCost: {
+  totalEstimatedCost?: {
     amount: number;
     currency: string;
   };
@@ -594,7 +594,7 @@ export interface SuggestedDay {
     meal?: DiningResult;
   };
   transport?: TransportResult;
-  estimatedCost: number;
+  estimatedCost?: number;
   currency: string;
   tips: string[];
 }

@@ -1039,7 +1039,7 @@ export async function saveSearchResults(
           reference("dining", m.id),
         ),
       ],
-      estimated_cost: day.totalEstimatedCost?.amount || 0,
+      estimated_cost: day.totalEstimatedCost?.amount ?? null,
       cost_currency: day.totalEstimatedCost?.currency || "USD",
       tips: day.tips || [],
     }));

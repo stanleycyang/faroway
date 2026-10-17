@@ -72,7 +72,7 @@ export async function GET(
         afternoon_activities: string[] | null;
         evening_activities: string[] | null;
         meals: string[] | null;
-        estimated_cost: number;
+        estimated_cost: number | null;
         cost_currency: string;
         tips: string[];
         hotel_id: string | null;
@@ -264,7 +264,7 @@ export async function GET(
                 ),
                 meal: meals.evening,
               },
-              estimatedCost: day.estimated_cost,
+              estimatedCost: day.estimated_cost ?? undefined,
               currency: day.cost_currency,
               tips: day.tips || [],
             };

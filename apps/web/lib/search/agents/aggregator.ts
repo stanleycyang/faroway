@@ -82,7 +82,7 @@ interface GeneratedSuggestedDay {
     mealId?: string;
   };
   transportId?: string;
-  estimatedCost: number;
+  estimatedCost?: number;
   currency: string;
   tips: string[];
 }
@@ -101,7 +101,7 @@ Consider:
 4. Pacing - don't overload each day
 5. Vibe scores - prioritize higher-scoring options
 6. Practical logistics - museum hours, booking requirements
-7. Transport - if flights are available, assign the outbound flight to Day 1 and the return flight to the last day using transportId
+7. Transport - candidates are outbound alternatives. Choose at most one using transportId on Day 1 only. Return legs are not available; offer prices may cover a round trip.
 
 Output should reference items by their IDs and organize them into a sensible flow.`;
 
@@ -166,7 +166,7 @@ export async function runAggregatorAgent(
 
   const transportSection =
     transportSummary.length > 0
-      ? `\n\n**Available Transport (assign outbound to Day 1, return to last day using transportId):**\n${JSON.stringify(transportSummary, null, 2)}`
+      ? `\n\n**Available Transport (outbound alternatives; select at most one for Day 1 only using transportId; no return legs provided):**\n${JSON.stringify(transportSummary, null, 2)}`
       : "";
 
   const prompt = `Create a ${numDays}-day itinerary for ${destination} using these search results.
@@ -190,7 +190,7 @@ Create an itinerary that:
 3. Assigns appropriate meals to each time slot
 4. Gives each day a fun title and summary
 5. Estimates daily cost
-6. Includes helpful tips${transportSummary.length > 0 ? "\n7. Assigns the cheapest outbound flight to Day 1 and return flight to the last day via transportId" : ""}
+6. Includes helpful tips${transportSummary.length > 0 ? "\n7. Selects one outbound alternative for Day 1 via transportId and omits transportId on all other days" : ""}
 
 Reference items by their IDs. Morning activities should be morning/any time, afternoon activities in afternoon, etc.`;
 
@@ -211,7 +211,14 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
       "aggregator AI",
     );
 
-    return mapAggregatorResult(result, hotels, activities, dining, transport);
+    return mapAggregatorResult(
+      result,
+      dates.start,
+      hotels,
+      activities,
+      dining,
+      transport,
+    );
   } catch (error) {
     if (isOperationTimeoutError(error)) {
       console.warn(
@@ -231,6 +238,7 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
     if (rawText) {
       const recovered = recoverFromRawText(
         rawText,
+        dates.start,
         hotels,
         activities,
         dining,
@@ -255,6 +263,7 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
  */
 function mapAggregatorResult(
   result: ItineraryResult,
+  startDate: string,
   hotels: HotelResult[],
   activities: ActivityResult[],
   dining: DiningResult[],
@@ -267,21 +276,32 @@ function mapAggregatorResult(
     hotels[0] ||
     null;
 
-  // Resolve only the eligible candidates and keep the first occurrence across
-  // all slots and days, preserving the original activity and its provenance.
+  // Consume an ID only in a compatible slot, so an invalid earlier reference
+  // cannot suppress its later valid occurrence. Keep provider objects intact.
   const usedActivityIds = new Set<string>();
-  const mapActivities = (ids: string[]): ActivityResult[] =>
+  const mapActivities = (
+    ids: string[],
+    time: "morning" | "afternoon" | "evening",
+  ): ActivityResult[] =>
     ids.flatMap((id) => {
       const activity = activities.find((candidate) => candidate.id === id);
-      if (!activity || usedActivityIds.has(activity.id)) return [];
+      if (
+        !activity ||
+        usedActivityIds.has(activity.id) ||
+        (activity.bestTimeOfDay !== "any" && activity.bestTimeOfDay !== time)
+      )
+        return [];
       usedActivityIds.add(activity.id);
       return [activity];
     });
 
-  const days: SuggestedDay[] = result.days.map((day) => {
-    const morningActivities = mapActivities(day.morning.activityIds);
-    const afternoonActivities = mapActivities(day.afternoon.activityIds);
-    const eveningActivities = mapActivities(day.evening.activityIds);
+  const days: SuggestedDay[] = result.days.map((day, index) => {
+    const morningActivities = mapActivities(day.morning.activityIds, "morning");
+    const afternoonActivities = mapActivities(
+      day.afternoon.activityIds,
+      "afternoon",
+    );
+    const eveningActivities = mapActivities(day.evening.activityIds, "evening");
 
     const morningMeal = day.morning.mealId
       ? dining.find((d) => d.id === day.morning.mealId)
@@ -295,9 +315,24 @@ function mapAggregatorResult(
       ? dining.find((d) => d.id === day.evening.mealId)
       : dining.find((d) => d.mealTypes.includes("dinner"));
 
-    const dayTransport = day.transportId
-      ? transport.find((t) => t.id === day.transportId)
-      : undefined;
+    // Current provider results contain alternative outbound offers, never a
+    // separate return leg. A repeated/misdated Day 1 must not assign one again.
+    const dayTransport =
+      index === 0 &&
+      day.dayNumber === 1 &&
+      day.date === startDate &&
+      day.transportId
+        ? transport.find((t) => t.id === day.transportId)
+        : undefined;
+
+    const removedContents =
+      morningActivities.length !== day.morning.activityIds.length ||
+      afternoonActivities.length !== day.afternoon.activityIds.length ||
+      eveningActivities.length !== day.evening.activityIds.length ||
+      (day.morning.mealId !== undefined && !morningMeal) ||
+      (day.afternoon.mealId !== undefined && !afternoonMeal) ||
+      (day.evening.mealId !== undefined && !eveningMeal) ||
+      (day.transportId !== undefined && !dayTransport);
 
     // Missing or unknown day choices retain the existing top-hotel fallback.
     const dayHotel =
@@ -324,7 +359,15 @@ function mapAggregatorResult(
         meal: eveningMeal,
       },
       transport: dayTransport,
-      estimatedCost: day.estimatedCost,
+      // The model's total no longer describes a day whose contents changed.
+      // Unknown is absence, never a free/zero estimate.
+      estimatedCost:
+        !removedContents &&
+        typeof day.estimatedCost === "number" &&
+        Number.isFinite(day.estimatedCost) &&
+        day.estimatedCost >= 0
+          ? day.estimatedCost
+          : undefined,
       currency: day.currency,
       tips: day.tips,
     };
@@ -344,6 +387,7 @@ function mapAggregatorResult(
  */
 function recoverFromRawText(
   rawText: string,
+  startDate: string,
   hotels: HotelResult[],
   activities: ActivityResult[],
   dining: DiningResult[],
@@ -423,7 +467,7 @@ function recoverFromRawText(
           mealId: d.evening?.mealId,
         },
         transportId: d.transportId,
-        estimatedCost: d.estimatedCost || 0,
+        estimatedCost: d.estimatedCost,
         currency: d.currency || "USD",
         tips: Array.isArray(d.tips) ? d.tips : [],
       }));
@@ -435,6 +479,7 @@ function recoverFromRawText(
     );
     return mapAggregatorResult(
       { days: validDays, topHotelId },
+      startDate,
       hotels,
       activities,
       dining,
@@ -493,16 +538,14 @@ function createFallbackItinerary(
   const lunchSpots = dining.filter((d) => d.mealTypes.includes("lunch"));
   const dinnerSpots = dining.filter((d) => d.mealTypes.includes("dinner"));
 
-  // Assign outbound transport to first day, return to last day
+  // These are alternative outbound offers, not outbound/return legs.
   const outboundFlight = transport[0];
-  const returnFlight = transport.length > 1 ? transport[1] : undefined;
 
   for (let i = 0; i < numDays; i++) {
     const date = new Date(startDate);
     date.setUTCDate(date.getUTCDate() + i);
 
-    const dayTransport =
-      i === 0 ? outboundFlight : i === numDays - 1 ? returnFlight : undefined;
+    const dayTransport = i === 0 ? outboundFlight : undefined;
 
     days.push({
       dayNumber: i + 1,
@@ -523,7 +566,7 @@ function createFallbackItinerary(
         meal: dinnerSpots[i % dinnerSpots.length],
       },
       transport: dayTransport,
-      estimatedCost: 200,
+      estimatedCost: undefined,
       currency: "USD",
       tips: [
         "Book popular attractions in advance",

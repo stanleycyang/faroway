@@ -39,6 +39,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import { GET } from "@/app/api/search/[searchId]/route";
+import { mapSearchResultsToItinerary } from "@/lib/search/bridge";
 
 function makeReq() {
   return new NextRequest("http://localhost:3000/api/search/search-1", {
@@ -88,6 +89,42 @@ describe("GET /api/search/[searchId]", () => {
 
     expect(res.status).toBe(404);
     expect(json.error).toBe("Search not found");
+  });
+
+  it("keeps null day costs unavailable across the search read and bridge while preserving known zero and estimates", async () => {
+    searchRecord = {
+      ...searchRecord,
+      status: "completed",
+      search_itineraries: [null, 0, 125].map((estimated_cost, i) => ({
+        day_number: i + 1,
+        date: `2026-06-0${i + 1}`,
+        title: "Explore Tokyo",
+        summary: "A day in Tokyo",
+        morning_activities: [],
+        afternoon_activities: [],
+        evening_activities: [],
+        meals: [],
+        estimated_cost,
+        cost_currency: "USD",
+        tips: [],
+        hotel_id: null,
+      })),
+    };
+    const res = await GET(makeReq(), makeParams());
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.results.itinerary[0]).not.toHaveProperty("estimatedCost");
+    expect(
+      json.results.itinerary
+        .slice(1)
+        .map((day: { estimatedCost: number }) => day.estimatedCost),
+    ).toEqual([0, 125]);
+    const mapped = mapSearchResultsToItinerary(json.results, null);
+    expect(mapped.days.map((day) => day.totalEstimatedCost)).toEqual([
+      undefined,
+      { amount: 0, currency: "USD" },
+      { amount: 125, currency: "USD" },
+    ]);
   });
 });
 
