@@ -231,6 +231,52 @@ export async function GET(
           return output;
         };
 
+        const transportForDay = (day: ItineraryRow) => {
+          const savedDays: unknown = search.intermediate_results?.days;
+          const schedules = Array.isArray(savedDays)
+            ? savedDays.filter(
+                (saved) =>
+                  saved?.dayNumber === day.day_number &&
+                  saved?.date === day.date,
+              )
+            : [];
+          if (schedules.length > 1)
+            throw new Error("Saved transport schedule is ambiguous");
+          const selected = schedules[0]?.transport;
+          if (selected == null) return undefined;
+          // The persisted TripDay projection has no provider ID. Match all of
+          // its fields against this owned search's results, never rank/order.
+          const matches = transport.filter(
+            (candidate) =>
+              (
+                [
+                  "type",
+                  "provider",
+                  "duration",
+                  "stops",
+                  "price",
+                  "currency",
+                ] as const
+              ).every((key) => candidate[key] === selected[key]) &&
+              (["departure", "arrival"] as const).every((endpoint) =>
+                (["airport", "city", "dateTime"] as const).every(
+                  (key) =>
+                    candidate[endpoint]?.[key] === selected[endpoint]?.[key],
+                ),
+              ) &&
+              (["affiliateUrl", "affiliatePartner"] as const).every(
+                (key) =>
+                  (candidate[key] || undefined) ===
+                  (selected[key] || undefined),
+              ),
+          );
+          if (matches.length !== 1)
+            throw new Error(
+              "Saved transport reference is missing or ambiguous",
+            );
+          return matches[0];
+        };
+
         // Build itinerary from stored data
         const itinerary: SuggestedDay[] = (itineraryData || []).map(
           (day: ItineraryRow) => {
@@ -264,6 +310,7 @@ export async function GET(
                 ),
                 meal: meals.evening,
               },
+              transport: transportForDay(day),
               estimatedCost: day.estimated_cost ?? undefined,
               currency: day.cost_currency,
               tips: day.tips || [],

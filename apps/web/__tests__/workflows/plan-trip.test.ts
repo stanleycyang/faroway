@@ -510,7 +510,7 @@ describe("planTripWorkflow", () => {
       hotels: [hotel],
       activities,
       dining: meals,
-      transport: [],
+      transport: [transport],
       itinerary: [
         {
           dayNumber: 1,
@@ -518,6 +518,7 @@ describe("planTripWorkflow", () => {
           title: "Fixture",
           summary: "Fixture",
           hotel,
+          transport,
           morning: {
             activities: [activities[2], activities[0]],
             meal: meals[0],
@@ -549,6 +550,7 @@ describe("planTripWorkflow", () => {
     );
     expect(response.status).toBe(200);
     const body = await response.json();
+    expect(body.results.itinerary[0].transport).toEqual(transport);
     expect(
       body.results.itinerary[0].morning.activities.map(
         (item: { id: string }) => item.id,

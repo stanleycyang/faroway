@@ -233,3 +233,148 @@ it("restores legacy UUID meals only when slot placement is unambiguous", async (
   expect(body.results.itinerary[0].afternoon.meal.id).toBe("dining_1");
   expect(body.results.itinerary[0].morning.meal).toBeUndefined();
 });
+
+const selectedTransport = {
+  id: "selected-outbound",
+  type: "flight" as const,
+  provider: "Fixture Air",
+  departure: {
+    airport: "SFO",
+    city: "San Francisco",
+    dateTime: "2026-06-01T10:00:00Z",
+  },
+  arrival: { airport: "NRT", city: "Tokyo", dateTime: "2026-06-02T14:00:00Z" },
+  duration: 660,
+  stops: 0,
+  price: 900,
+  currency: "USD",
+  affiliateUrl: "https://example.com/selected",
+  affiliatePartner: "duffel",
+  airlines: ["Fixture Air"],
+  segments: [],
+  source: "duffel" as const,
+  vibeScore: 1,
+  vibeMatch: [],
+};
+
+function transportReloadFixture() {
+  const alternative = {
+    ...selectedTransport,
+    id: "alternative",
+    price: 1200,
+    vibeScore: 100,
+  };
+  const slot = { activities: [] };
+  const itinerary = [1, 2].map((dayNumber) => ({
+    dayNumber,
+    date: `2026-06-0${dayNumber}`,
+    title: "Travel",
+    summary: "Fixture",
+    morning: slot,
+    afternoon: slot,
+    evening: slot,
+    transport: dayNumber === 1 ? selectedTransport : undefined,
+    currency: "USD",
+    tips: [],
+  }));
+  const mapped = mapSearchResultsToItinerary(
+    {
+      searchId: "search-1",
+      hotels: [],
+      activities: [],
+      dining: [],
+      transport: [alternative, selectedTransport],
+      itinerary,
+    },
+    null,
+  );
+  // Actual persisted projection has no provider ID, and JSONB key order is not stable.
+  const savedDays = JSON.parse(JSON.stringify(mapped.days));
+  savedDays[0].transport = Object.fromEntries(
+    Object.entries(savedDays[0].transport).reverse(),
+  );
+  searchRecord = {
+    id: "search-1",
+    user_id: "user-1",
+    status: "completed",
+    search_results: [alternative, selectedTransport].map((data, i) => ({
+      id: `result-${i}`,
+      category: "transport",
+      data,
+      vibe_score: data.vibeScore,
+    })),
+    search_itineraries: itinerary.map((day) => ({
+      day_number: day.dayNumber,
+      date: day.date,
+      title: day.title,
+      summary: day.summary,
+      morning_activities: [],
+      afternoon_activities: [],
+      evening_activities: [],
+      meals: [],
+      estimated_cost: null,
+      cost_currency: "USD",
+      tips: [],
+      hotel_id: null,
+    })),
+    intermediate_results: { days: savedDays.reverse() },
+  };
+  return savedDays;
+}
+
+it("restores selected per-day transport through search-only reload and bridge, not the top candidate", async () => {
+  transportReloadFixture();
+  const response = await GET(makeReq(), makeParams());
+  expect(response.status).toBe(200);
+  const { results } = await response.json();
+  expect(results.itinerary[0].transport).toEqual(selectedTransport);
+  expect(results.itinerary[1]).not.toHaveProperty("transport");
+  expect(results.itinerary[0]).not.toHaveProperty("estimatedCost");
+  const mapped = mapSearchResultsToItinerary(results, null);
+  expect(mapped.days[0].transport).toMatchObject({
+    price: 900,
+    departure: selectedTransport.departure,
+    affiliateUrl: selectedTransport.affiliateUrl,
+  });
+  expect(mapped.days[1].transport).toBeUndefined();
+  const chain = adminClient.from.mock.results.at(-1)!.value;
+  expect(chain.eq).toHaveBeenCalledWith("id", "search-1");
+  expect(chain.eq).toHaveBeenCalledWith("user_id", "user-1");
+});
+
+it.each(["legacy", "different date", "unassigned"])(
+  "does not invent transport for %s metadata",
+  async (scenario) => {
+    const saved = transportReloadFixture();
+    if (scenario === "legacy") delete searchRecord!.intermediate_results;
+    if (scenario === "different date") saved[1].date = "2026-07-01";
+    if (scenario === "unassigned") delete saved[1].transport;
+    const response = await GET(makeReq(), makeParams());
+    expect(response.status).toBe(200);
+    const { results } = await response.json();
+    expect(
+      results.itinerary.every((day: { transport?: unknown }) => !day.transport),
+    ).toBe(true);
+  },
+);
+
+it.each(["missing", "ambiguous", "wrong category", "duplicate day"])(
+  "fails explicitly for %s selected transport instead of guessing",
+  async (scenario) => {
+    const saved = transportReloadFixture();
+    if (scenario === "duplicate day") saved.push({ ...saved[1] });
+    const rows = searchRecord!.search_results as {
+      category: string;
+      data: typeof selectedTransport;
+    }[];
+    if (scenario === "missing") rows.pop();
+    if (scenario === "ambiguous")
+      rows.push({
+        ...rows[1],
+        data: { ...selectedTransport, id: "duplicate" },
+      });
+    if (scenario === "wrong category") rows[1].category = "hotel";
+    const response = await GET(makeReq(), makeParams());
+    expect(response.status).toBe(500);
+  },
+);
