@@ -452,6 +452,19 @@ function createFallbackItinerary(
 
   const topHotel = hotels[0] || null;
   const days: SuggestedDay[] = [];
+  // Flexible activities belong to multiple candidate lists, but should only
+  // be scheduled once across the entire trip.
+  const usedActivityIds = new Set<string>();
+  const takeActivities = (candidates: ActivityResult[], limit: number) => {
+    const selected: ActivityResult[] = [];
+    for (const activity of candidates) {
+      if (usedActivityIds.has(activity.id)) continue;
+      usedActivityIds.add(activity.id);
+      selected.push(activity);
+      if (selected.length === limit) break;
+    }
+    return selected;
+  };
 
   // Sort activities by best time
   const morningActivities = activities.filter(
@@ -477,7 +490,7 @@ function createFallbackItinerary(
 
   for (let i = 0; i < numDays; i++) {
     const date = new Date(startDate);
-    date.setDate(date.getDate() + i);
+    date.setUTCDate(date.getUTCDate() + i);
 
     const dayTransport =
       i === 0 ? outboundFlight : i === numDays - 1 ? returnFlight : undefined;
@@ -489,15 +502,15 @@ function createFallbackItinerary(
       summary: `Explore ${plan.destination} with a mix of activities and dining.`,
       hotel: topHotel || undefined,
       morning: {
-        activities: morningActivities.slice(i * 2, i * 2 + 2),
+        activities: takeActivities(morningActivities, 2),
         meal: breakfastSpots[i % breakfastSpots.length],
       },
       afternoon: {
-        activities: afternoonActivities.slice(i * 2, i * 2 + 2),
+        activities: takeActivities(afternoonActivities, 2),
         meal: lunchSpots[i % lunchSpots.length],
       },
       evening: {
-        activities: eveningActivities.slice(i, i + 1),
+        activities: takeActivities(eveningActivities, 1),
         meal: dinnerSpots[i % dinnerSpots.length],
       },
       transport: dayTransport,
