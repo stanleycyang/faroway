@@ -301,8 +301,17 @@ export function useTrips() {
         const trip = transformApiTrip(data.trip, data.itinerary);
         await offlineStorage.saveTrip(trip, account.ownerId!);
         assertCurrent();
-        setCurrentTrip(trip);
-        return trip;
+        // Keep canonical data separate from the owner's durable pending intent,
+        // just as list refresh and hydration do. Never rebase the queued revision.
+        const pending = await offlineStorage.getPendingMutations();
+        assertCurrent();
+        const visible = applyPendingTripChanges([trip], pending).find((item) => item.id === id);
+        if (!visible) {
+          setCurrentTrip(null);
+          throw new TripAccessError('This trip has a pending deletion.');
+        }
+        setCurrentTrip(visible);
+        return visible;
       } catch (err: unknown) {
         if (isCurrent()) setError(err instanceof Error ? err.message : String(err));
         throw err;
