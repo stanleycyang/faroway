@@ -6,6 +6,7 @@ import { FeaturedHero } from "@/components/blog/FeaturedHero";
 import { CategoryPills } from "@/components/blog/CategoryPills";
 import { NewsletterCTA } from "@/components/blog/NewsletterCTA";
 import { Pagination } from "@/components/blog/Pagination";
+import { BlogPaginationNavigation } from "@/components/blog/BlogPaginationNavigation";
 
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
@@ -75,6 +76,7 @@ export default async function BlogIndex({
 
   return (
     <main className="min-h-screen pt-20">
+      <BlogPaginationNavigation />
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{

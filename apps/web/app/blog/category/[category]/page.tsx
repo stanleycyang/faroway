@@ -6,6 +6,7 @@ import { Breadcrumbs } from "@/components/blog/Breadcrumbs";
 import { CategoryPills } from "@/components/blog/CategoryPills";
 import { NewsletterCTA } from "@/components/blog/NewsletterCTA";
 import { Pagination } from "@/components/blog/Pagination";
+import { BlogPaginationNavigation } from "@/components/blog/BlogPaginationNavigation";
 
 export async function generateStaticParams() {
   return (await getAllCategories()).map((cat) => ({
@@ -61,6 +62,7 @@ export default async function CategoryPage({
 
   return (
     <main className="min-h-screen pt-20">
+      <BlogPaginationNavigation />
       <div className="container mx-auto px-6 max-w-7xl py-8">
         <Breadcrumbs
           items={[
