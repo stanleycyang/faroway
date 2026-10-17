@@ -267,18 +267,21 @@ function mapAggregatorResult(
     hotels[0] ||
     null;
 
+  // Resolve only the eligible candidates and keep the first occurrence across
+  // all slots and days, preserving the original activity and its provenance.
+  const usedActivityIds = new Set<string>();
+  const mapActivities = (ids: string[]): ActivityResult[] =>
+    ids.flatMap((id) => {
+      const activity = activities.find((candidate) => candidate.id === id);
+      if (!activity || usedActivityIds.has(activity.id)) return [];
+      usedActivityIds.add(activity.id);
+      return [activity];
+    });
+
   const days: SuggestedDay[] = result.days.map((day) => {
-    const morningActivities = day.morning.activityIds
-      .map((id) => activities.find((a) => a.id === id))
-      .filter((a): a is ActivityResult => a !== undefined);
-
-    const afternoonActivities = day.afternoon.activityIds
-      .map((id) => activities.find((a) => a.id === id))
-      .filter((a): a is ActivityResult => a !== undefined);
-
-    const eveningActivities = day.evening.activityIds
-      .map((id) => activities.find((a) => a.id === id))
-      .filter((a): a is ActivityResult => a !== undefined);
+    const morningActivities = mapActivities(day.morning.activityIds);
+    const afternoonActivities = mapActivities(day.afternoon.activityIds);
+    const eveningActivities = mapActivities(day.evening.activityIds);
 
     const morningMeal = day.morning.mealId
       ? dining.find((d) => d.id === day.morning.mealId)
@@ -296,12 +299,18 @@ function mapAggregatorResult(
       ? transport.find((t) => t.id === day.transportId)
       : undefined;
 
+    // Missing or unknown day choices retain the existing top-hotel fallback.
+    const dayHotel =
+      (day.hotelId ? hotels.find((h) => h.id === day.hotelId) : undefined) ||
+      topHotel ||
+      undefined;
+
     return {
       dayNumber: day.dayNumber,
       date: day.date,
       title: day.title,
       summary: day.summary,
-      hotel: topHotel || undefined,
+      hotel: dayHotel,
       morning: {
         activities: morningActivities,
         meal: morningMeal,

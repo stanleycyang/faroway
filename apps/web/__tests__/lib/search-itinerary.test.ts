@@ -98,6 +98,194 @@ beforeEach(() => {
 });
 afterEach(() => vi.unstubAllEnvs());
 
+function generatedDay(dayNumber: number, hotelId?: string) {
+  return {
+    dayNumber,
+    date: `2026-06-0${dayNumber}`,
+    title: `AI day ${dayNumber}`,
+    summary: "Explore Tokyo",
+    hotelId,
+    morning: { activityIds: [] as string[] },
+    afternoon: { activityIds: [] as string[] },
+    evening: { activityIds: [] as string[] },
+    estimatedCost: 0,
+    currency: "USD",
+    tips: [],
+  };
+}
+
+describe.each(["successful", "recovered"] as const)(
+  "%s AI itinerary mapping",
+  (responsePath) => {
+    function respondWith(result: {
+      days: ReturnType<typeof generatedDay>[];
+      topHotelId?: string;
+    }) {
+      if (responsePath === "successful") {
+        mocks.generateObject.mockResolvedValue({ object: result });
+      } else {
+        mocks.generateObject.mockRejectedValue(
+          Object.assign(new Error("Offline schema recovery fixture"), {
+            text: JSON.stringify({
+              days: JSON.stringify(result.days),
+              topHotelId: result.topHotelId,
+            }),
+          }),
+        );
+      }
+    }
+
+    it("honors a valid day hotel and falls back to the selected top hotel for missing or unknown IDs", async () => {
+      const topHotel = { ...hotel, id: "hotel-top", name: "Top stay" };
+      const dayHotel = { ...hotel, id: "hotel-day", name: "Selected day stay" };
+      respondWith({
+        topHotelId: topHotel.id,
+        days: [
+          generatedDay(1, dayHotel.id),
+          generatedDay(2),
+          generatedDay(3, "unknown-hotel"),
+        ],
+      });
+      const hotels = [hotel, topHotel, dayHotel];
+      const result = await runAggregatorAgent(
+        { ...plan, dates: { ...plan.dates, end: "2026-06-03", nights: 2 } },
+        hotels,
+        [],
+        [],
+      );
+
+      expect(result.topHotel).toBe(topHotel);
+      expect(result.days[0].hotel).toBe(dayHotel);
+      expect(result.days[1].hotel).toBe(topHotel);
+      expect(result.days[2].hotel).toBe(topHotel);
+      expect(result.days[0].title).toBe("AI day 1");
+      const mapped = mapSearchResultsToItinerary(
+        {
+          searchId: "search-1",
+          hotels,
+          activities: [],
+          dining: [],
+          transport: [],
+          itinerary: result.days,
+        },
+        result.topHotel,
+      );
+      expect(mapped.days.map((day) => day.hotel)).toEqual([
+        dayHotel,
+        topHotel,
+        topHotel,
+      ]);
+    });
+
+    it.each([undefined, "unknown-top"])(
+      "retains the first-hotel fallback when topHotelId is %s",
+      async (topHotelId) => {
+        const anotherHotel = { ...hotel, id: "hotel-2" };
+        respondWith({
+          topHotelId,
+          days: [generatedDay(1), generatedDay(2, "unknown-hotel")],
+        });
+        const result = await runAggregatorAgent(
+          plan,
+          [hotel, anotherHotel],
+          [],
+          [],
+        );
+
+        expect(result.topHotel).toBe(hotel);
+        expect(result.days.map((day) => day.hotel)).toEqual([hotel, hotel]);
+        expect(result.days[0].title).toBe("AI day 1");
+      },
+    );
+
+    it("leaves hotel absent when no hotel candidate exists", async () => {
+      respondWith({
+        topHotelId: "unknown-top",
+        days: [generatedDay(1, "unknown-hotel"), generatedDay(2)],
+      });
+      const result = await runAggregatorAgent(plan, [], [], []);
+
+      expect(result.topHotel).toBeNull();
+      expect(result.days.map((day) => day.hotel)).toEqual([
+        undefined,
+        undefined,
+      ]);
+      expect(result.days[0].title).toBe("AI day 1");
+    });
+
+    it("keeps the first known activity occurrence across slots and days with provider provenance intact", async () => {
+      vi.stubEnv("VIATOR_CONTENT_ENABLED", "true");
+      vi.stubEnv("VIATOR_CONTENT_APPROVAL_REF", "offline-content-review");
+      vi.stubEnv("VIATOR_EXTERNAL_PROCESSING_ENABLED", "true");
+      vi.stubEnv(
+        "VIATOR_EXTERNAL_PROCESSING_APPROVAL_REF",
+        "offline-ai-review",
+      );
+      const first = activity("first");
+      const provider = {
+        ...activity("activity_v_fixture"),
+        affiliatePartner: "viator",
+        affiliateUrl: "https://www.viator.com/tours/fixture",
+        viatorContentVersion: 1,
+      };
+      const last = activity("last");
+      const days = [generatedDay(1), generatedDay(2)];
+      days[0].morning.activityIds = ["unknown", first.id, first.id];
+      days[0].afternoon.activityIds = [first.id, provider.id, "unknown"];
+      days[0].evening.activityIds = [provider.id, "unknown"];
+      days[1].morning.activityIds = [provider.id, last.id, "unknown"];
+      days[1].afternoon.activityIds = [last.id, first.id];
+      days[1].evening.activityIds = [first.id, last.id];
+      respondWith({ days });
+      const result = await runAggregatorAgent(
+        plan,
+        [],
+        [first, provider, { ...provider, name: "Duplicate candidate" }, last],
+        [],
+      );
+
+      expect(scheduledIds(result.days)).toEqual([
+        first.id,
+        provider.id,
+        last.id,
+      ]);
+      expect(result.days[0].morning.activities[0]).toBe(first);
+      expect(result.days[0].afternoon.activities[0]).toBe(provider);
+      expect(result.days[1].morning.activities[0]).toBe(last);
+      expect(result.days[0].evening.activities).toEqual([]);
+      expect(result.days[1].afternoon.activities).toEqual([]);
+      expect(result.days[1].evening.activities).toEqual([]);
+      expect(result.days[0].title).toBe("AI day 1");
+    });
+
+    it("cannot restore an ineligible provider activity through model IDs", async () => {
+      vi.stubEnv("VIATOR_CONTENT_ENABLED", "true");
+      vi.stubEnv("VIATOR_CONTENT_APPROVAL_REF", "offline-content-review");
+      vi.stubEnv("VIATOR_EXTERNAL_PROCESSING_ENABLED", "false");
+      vi.stubEnv("VIATOR_EXTERNAL_PROCESSING_APPROVAL_REF", "");
+      const allowed = activity("local-walk");
+      const blocked = {
+        ...activity("activity_v_blocked"),
+        name: "PROVIDER_ONLY_TITLE",
+        affiliatePartner: "viator",
+        viatorContentVersion: 1,
+      };
+      const day = generatedDay(1);
+      day.morning.activityIds = [blocked.id, "unknown", allowed.id];
+      day.afternoon.activityIds = [blocked.id];
+      respondWith({ days: [day] });
+      const result = await runAggregatorAgent(plan, [], [blocked, allowed], []);
+
+      expect(scheduledIds(result.days)).toEqual([allowed.id]);
+      expect(result.days[0].morning.activities[0]).toBe(allowed);
+      expect(result.days[0].title).toBe("AI day 1");
+      expect(mocks.generateObject.mock.lastCall?.[0].prompt).not.toContain(
+        blocked.name,
+      );
+    });
+  },
+);
+
 describe("search itinerary fallback", () => {
   it("schedules flexible activities once across all slots and days", async () => {
     const activities = Array.from({ length: 8 }, (_, i) =>
