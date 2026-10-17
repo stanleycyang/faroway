@@ -1,3 +1,4 @@
+import { matchesTransportProjection } from "@/lib/search/transport-reference";
 import { applyGenerationUpdate } from "@/lib/trips/apply-generation-update";
 import { getWorkflowMetadata } from "workflow";
 import { viatorContentMetadata } from "@/lib/affiliates/viator-policy";
@@ -37,7 +38,6 @@ import type {
   ActivityResult,
   DiningResult,
   TransportResult,
-  TripDay,
   ItineraryActivity,
   Restaurant as FarowayRestaurant,
 } from "@faroway/types";
@@ -675,7 +675,7 @@ async function buildAndSaveSpec(
   }));
 
   // Map days for build-spec: each slot's meals[0] → meal
-  const dayInputs = result.days.map((day: TripDay) => ({
+  const dayInputs = result.days.map((day) => ({
     dayNumber: day.dayNumber,
     date: day.date,
     title: day.title,
@@ -930,6 +930,16 @@ export async function saveSearchResults(
   searchId: string,
   result: MappedItinerary,
 ): Promise<void> {
+  // Validate before writing results or marking this search completed. Reloads
+  // correlate slot metadata by the day number/date pair.
+  const dayIdentities = new Set<string>();
+  for (const day of result.days) {
+    const identity = JSON.stringify([day.dayNumber, day.date]);
+    if (dayIdentities.has(identity))
+      throw new Error("Search itinerary has duplicate day identities");
+    dayIdentities.add(identity);
+  }
+
   // Build all result rows and batch insert
   const resultRows = [
     ...(result.hotels || []).map((hotel) => ({
@@ -1010,12 +1020,28 @@ export async function saveSearchResults(
     return rowId;
   };
 
+  const transportReference = (day: MappedItinerary["days"][number]) => {
+    if (!day.transport) return null;
+    if (day.transport.id !== undefined)
+      return reference("transport", day.transport.id);
+    // Durable checkpoints from older workers contain only the display projection.
+    const matches = result.transport.filter((candidate) =>
+      matchesTransportProjection(candidate, day.transport!),
+    );
+    if (matches.length !== 1)
+      throw new Error(
+        "Search itinerary has a missing or ambiguous transport reference",
+      );
+    return reference("transport", matches[0].id);
+  };
+
   // Save itinerary days (batch)
   if (result.days.length > 0) {
-    const itineraryRows = result.days.map((day: TripDay) => ({
+    const itineraryRows = result.days.map((day) => ({
       search_id: searchId,
       day_number: day.dayNumber,
       hotel_id: day.hotel ? reference("hotel", day.hotel.id) : null,
+      transport_id: transportReference(day),
       date: day.date,
       title: day.title,
       summary: day.summary,

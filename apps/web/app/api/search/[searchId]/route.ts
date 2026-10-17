@@ -1,3 +1,4 @@
+import { matchesTransportProjection } from "@/lib/search/transport-reference";
 import { filterViatorDisplay } from "@/lib/affiliates/viator-policy";
 /**
  * GET /api/search/[searchId]
@@ -36,7 +37,7 @@ export async function GET(
     const { data: search, error: searchError } = await getSupabase()
       .from("searches")
       .select(
-        "id, user_id, status, progress, created_at, completed_at, error_message, json_render_spec, intermediate_results, search_results(id, category, data, vibe_score), search_itineraries(day_number, date, title, summary, morning_activities, afternoon_activities, evening_activities, meals, estimated_cost, cost_currency, tips, hotel_id)",
+        "id, user_id, status, progress, created_at, completed_at, error_message, json_render_spec, intermediate_results, search_results(id, category, data, vibe_score), search_itineraries(day_number, date, title, summary, morning_activities, afternoon_activities, evening_activities, meals, estimated_cost, cost_currency, tips, hotel_id, transport_id)",
       )
       .eq("id", searchId)
       .eq("user_id", user.id)
@@ -76,6 +77,7 @@ export async function GET(
         cost_currency: string;
         tips: string[];
         hotel_id: string | null;
+        transport_id: string | null;
       }
 
       const searchWithRelations = search as typeof search & {
@@ -160,6 +162,7 @@ export async function GET(
           );
         const activitiesByResultId = resultMap<ActivityResult>("activity");
         const diningByResultId = resultMap<DiningResult>("dining");
+        const transportByResultId = resultMap<TransportResult>("transport");
         const resolveReferences = <T>(
           ids: string[] | null,
           rows: Map<string, T>,
@@ -232,6 +235,13 @@ export async function GET(
         };
 
         const transportForDay = (day: ItineraryRow) => {
+          if (day.transport_id != null)
+            return resolveReferences(
+              [day.transport_id],
+              transportByResultId,
+            )[0];
+          // Legacy rows predate persisted transport UUIDs. Keep the conservative
+          // projection fallback only for those rows.
           const savedDays: unknown = search.intermediate_results?.days;
           const schedules = Array.isArray(savedDays)
             ? savedDays.filter(
@@ -246,29 +256,8 @@ export async function GET(
           if (selected == null) return undefined;
           // The persisted TripDay projection has no provider ID. Match all of
           // its fields against this owned search's results, never rank/order.
-          const matches = transport.filter(
-            (candidate) =>
-              (
-                [
-                  "type",
-                  "provider",
-                  "duration",
-                  "stops",
-                  "price",
-                  "currency",
-                ] as const
-              ).every((key) => candidate[key] === selected[key]) &&
-              (["departure", "arrival"] as const).every((endpoint) =>
-                (["airport", "city", "dateTime"] as const).every(
-                  (key) =>
-                    candidate[endpoint]?.[key] === selected[endpoint]?.[key],
-                ),
-              ) &&
-              (["affiliateUrl", "affiliatePartner"] as const).every(
-                (key) =>
-                  (candidate[key] || undefined) ===
-                  (selected[key] || undefined),
-              ),
+          const matches = transport.filter((candidate) =>
+            matchesTransportProjection(candidate, selected),
           );
           if (matches.length !== 1)
             throw new Error(

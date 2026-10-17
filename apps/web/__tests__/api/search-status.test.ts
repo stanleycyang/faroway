@@ -378,3 +378,43 @@ it.each(["missing", "ambiguous", "wrong category", "duplicate day"])(
     expect(response.status).toBe(500);
   },
 );
+
+it("uses the saved transport UUID despite identical projections and stale metadata", async () => {
+  transportReloadFixture();
+  const rows = searchRecord!.search_results as {
+    id: string;
+    category: string;
+    data: typeof selectedTransport;
+  }[];
+  rows.push({
+    ...rows[1],
+    id: "replay-row",
+    data: { ...selectedTransport, id: "other-offer" },
+  });
+  const days = searchRecord!.search_itineraries as { transport_id?: string }[];
+  days[0].transport_id = "result-1";
+  delete searchRecord!.intermediate_results;
+  const response = await GET(makeReq(), makeParams());
+  expect(response.status).toBe(200);
+  expect((await response.json()).results.itinerary[0].transport).toEqual(
+    selectedTransport,
+  );
+  const chain = adminClient.from.mock.results.at(-1)!.value;
+  expect(chain.select.mock.calls[0][0]).toContain("transport_id");
+});
+
+it.each(["missing", "wrong category"])(
+  "rejects a %s saved transport UUID without falling back",
+  async (scenario) => {
+    transportReloadFixture();
+    const days = searchRecord!.search_itineraries as {
+      transport_id?: string;
+    }[];
+    days[0].transport_id =
+      scenario === "missing" ? "another-search-row" : "result-0";
+    if (scenario === "wrong category")
+      (searchRecord!.search_results as { category: string }[])[0].category =
+        "hotel";
+    expect((await GET(makeReq(), makeParams())).status).toBe(500);
+  },
+);

@@ -148,8 +148,9 @@ function mapSlot(
 
 // ── Transport Mapper ────────────────────────────────────────────────────────
 
-function mapTransport(t: TransportResult): TripDayTransport {
+function mapTransport(t: TransportResult): TripDayTransport & { id: string } {
   return {
+    id: t.id,
     type: t.type,
     provider: t.provider,
     departure: {
@@ -173,7 +174,7 @@ function mapTransport(t: TransportResult): TripDayTransport {
 
 // ── Day Mapper ──────────────────────────────────────────────────────────────
 
-function mapDay(day: SuggestedDay): TripDay {
+function mapDay(day: SuggestedDay): MappedItinerary["days"][number] {
   return {
     dayNumber: day.dayNumber,
     date: day.date,
@@ -197,7 +198,7 @@ function mapDay(day: SuggestedDay): TripDay {
 // ── Public API ───────────────────────────────────────────────────────────────
 
 export interface MappedItinerary {
-  days: TripDay[];
+  days: (TripDay & { transport?: TripDayTransport & { id?: string } })[];
   topHotel: HotelResult | null;
   hotels: HotelResult[];
   activities: ActivityResult[];
