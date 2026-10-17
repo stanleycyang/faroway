@@ -27,7 +27,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const dest = getGuideBySlug(slug);
-  if (!dest) return {};
+  if (!dest) notFound();
 
   return {
     title: `${dest.name} Travel Guide — Things to Do, Tips & Itinerary`,

@@ -28,7 +28,7 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const cluster = getClusterBySlug(slug);
-  if (!cluster) return {};
+  if (!cluster) notFound();
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 

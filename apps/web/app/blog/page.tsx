@@ -1,6 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
-import { getAllPostMetas, paginate, POSTS_PER_PAGE } from "@/lib/blog";
+import { getBlogIndexPage } from "@/lib/blog/pages";
 import { BlogCard } from "@/components/blog/BlogCard";
 import { FeaturedHero } from "@/components/blog/FeaturedHero";
 import { CategoryPills } from "@/components/blog/CategoryPills";
@@ -12,10 +12,10 @@ const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 export async function generateMetadata({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string | string[] }>;
 }): Promise<Metadata> {
   const { page: pageParam } = await searchParams;
-  const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
+  const { page } = await getBlogIndexPage(pageParam);
   const canonical = page > 1 ? `/blog?page=${page}` : "/blog";
   const pageLabel = page > 1 ? ` — Page ${page}` : "";
   return {
@@ -36,27 +36,18 @@ export async function generateMetadata({
 export default async function BlogIndex({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string | string[] }>;
 }) {
-  const [{ page: pageParam }, allPosts] = await Promise.all([
-    searchParams,
-    getAllPostMetas(),
-  ]);
-  const requestedPage = Math.max(1, parseInt(pageParam || "1", 10) || 1);
-  const featured = allPosts.find((post) => post.featured) || allPosts[0];
-  const categories = [...new Set(allPosts.map((post) => post.category))];
-  const isFirstPage = requestedPage === 1;
-
-  // On page 1 we show the featured hero separately, so exclude it from the grid
-  const gridPosts = isFirstPage
-    ? allPosts.filter((p) => p.slug !== featured?.slug)
-    : allPosts;
-
+  const { page: pageParam } = await searchParams;
   const {
+    allPosts,
+    featured,
     items: posts,
     totalPages,
     page: currentPage,
-  } = paginate(gridPosts, requestedPage, POSTS_PER_PAGE);
+  } = await getBlogIndexPage(pageParam);
+  const categories = [...new Set(allPosts.map((post) => post.category))];
+  const isFirstPage = currentPage === 1;
 
   const collectionSchema = {
     "@context": "https://schema.org",

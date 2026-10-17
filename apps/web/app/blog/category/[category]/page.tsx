@@ -1,11 +1,6 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
-import {
-  getPostsByCategory,
-  getAllCategories,
-  paginate,
-  POSTS_PER_PAGE,
-} from "@/lib/blog";
+import { getAllCategories } from "@/lib/blog";
+import { getBlogCategoryPage } from "@/lib/blog/pages";
 import { BlogCard } from "@/components/blog/BlogCard";
 import { Breadcrumbs } from "@/components/blog/Breadcrumbs";
 import { CategoryPills } from "@/components/blog/CategoryPills";
@@ -20,26 +15,18 @@ export async function generateStaticParams() {
 
 export const dynamicParams = true;
 
-const categorySlug = (value: string) =>
-  value.toLowerCase().replace(/\s+/g, "-");
-
 export async function generateMetadata({
   params,
   searchParams,
 }: {
   params: Promise<{ category: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string | string[] }>;
 }): Promise<Metadata> {
-  const [{ category }, { page: pageParam }, categories] = await Promise.all([
+  const [{ category }, { page: pageParam }] = await Promise.all([
     params,
     searchParams,
-    getAllCategories(),
   ]);
-  const label = categories.find(
-    (candidate) => categorySlug(candidate) === category,
-  );
-  if (!label) return {};
-  const page = Math.max(1, parseInt(pageParam || "1", 10) || 1);
+  const { label, page } = await getBlogCategoryPage(category, pageParam);
   const pageLabel = page > 1 ? ` — Page ${page}` : "";
   const canonical =
     page > 1
@@ -57,27 +44,20 @@ export default async function CategoryPage({
   searchParams,
 }: {
   params: Promise<{ category: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string | string[] }>;
 }) {
-  const [{ category }, { page: pageParam }, categories] = await Promise.all([
+  const [{ category }, { page: pageParam }] = await Promise.all([
     params,
     searchParams,
-    getAllCategories(),
   ]);
-  const requestedPage = Math.max(1, parseInt(pageParam || "1", 10) || 1);
-  const label = categories.find(
-    (candidate) => categorySlug(candidate) === category,
-  );
-  if (!label) notFound();
-
-  const allPosts = await getPostsByCategory(category);
-
   const {
+    label,
+    categories,
     items: posts,
     totalPages,
     totalItems,
     page: currentPage,
-  } = paginate(allPosts, requestedPage, POSTS_PER_PAGE);
+  } = await getBlogCategoryPage(category, pageParam);
 
   return (
     <main className="min-h-screen pt-20">

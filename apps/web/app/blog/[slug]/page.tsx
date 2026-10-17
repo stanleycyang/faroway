@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { JournalImage } from "@/components/blog/JournalImage";
 import Link from "next/link";
-import { getAllPosts, getPostBySlug, getRelatedPosts } from "@/lib/blog";
+import { getAllPostMetas, getPostBySlug, getRelatedPosts } from "@/lib/blog";
 import { Breadcrumbs } from "@/components/blog/Breadcrumbs";
 import { ReadingProgressBar } from "@/components/blog/ReadingProgressBar";
 import { TableOfContents } from "@/components/blog/TableOfContents";
@@ -16,7 +16,7 @@ import { FadeInOnScroll } from "@/components/landing/FadeInOnScroll";
 const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://www.faroway.ai";
 
 export async function generateStaticParams() {
-  return (await getAllPosts()).map((p) => ({ slug: p.slug }));
+  return (await getAllPostMetas()).map((p) => ({ slug: p.slug }));
 }
 
 export async function generateMetadata({
@@ -26,7 +26,7 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPostBySlug(slug);
-  if (!post) return {};
+  if (!post) notFound();
   const shareImage = `/blog/${encodeURIComponent(post.slug)}/opengraph-image`;
 
   return {

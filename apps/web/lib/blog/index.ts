@@ -49,68 +49,47 @@ function rowToPost(row: any): BlogPost {
 // Core queries
 // ---------------------------------------------------------------------------
 
-const getCachedPostMetas = unstable_cache(
-  async (): Promise<BlogPostMeta[]> => {
-    const supabase = getBlogSupabase();
-    if (!supabase) throw new Error("Blog database is not configured");
-
-    const { data, error } = await supabase
-      .from("blog_posts")
-      .select(META_COLUMNS)
-      .eq("status", "published")
-      .order("published_at", { ascending: false })
-      .limit(1000);
-
-    if (error) {
-      throw new Error(`getAllPostMetas failed (${error.code || "unknown"})`);
-    }
-    return (data || []).map(rowToMeta);
-  },
-  [
-    "published-blog-metadata-v2",
-    process.env.NEXT_PUBLIC_SUPABASE_URL || "unconfigured",
-  ],
-  {
-    revalidate: 21600,
-    tags: ["published-blog-metadata"],
-  },
-);
-
-// React cache deduplicates within a render; the Data Cache reuses public rows
-// across listing, category, guide, and related-post requests.
-export const getAllPostMetas = cache(getCachedPostMetas);
-
-/**
- * Fetch every published post for sitemap discovery. Listing pages intentionally
- * cap their working set, but the sitemap must not silently omit long-tail posts.
- */
-export async function getAllSitemapPostMetas(): Promise<BlogPostMeta[]> {
+/** Read all published metadata in a total order, including the 1000-row boundary. */
+async function fetchAllPostMetas(): Promise<BlogPostMeta[]> {
   const supabase = getBlogSupabase();
   if (!supabase) throw new Error("Blog database is not configured");
 
   const posts: BlogPostMeta[] = [];
   const pageSize = 1000;
-
   for (let from = 0; ; from += pageSize) {
     const { data, error } = await supabase
       .from("blog_posts")
       .select(META_COLUMNS)
       .eq("status", "published")
       .order("published_at", { ascending: false })
+      // slug is unique; equal publication timestamps must not shuffle pages.
+      .order("slug", { ascending: true })
       .range(from, from + pageSize - 1);
 
     if (error) {
-      throw new Error(
-        `getAllSitemapPostMetas failed (${error.code || "unknown"})`,
-      );
+      throw new Error(`getAllPostMetas failed (${error.code || "unknown"})`);
     }
-
     posts.push(...(data || []).map(rowToMeta));
     if (!data || data.length < pageSize) break;
   }
-
   return posts;
 }
+
+const getCachedPostMetas = unstable_cache(
+  fetchAllPostMetas,
+  [
+    "published-blog-metadata-v3",
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "unconfigured",
+  ],
+  { revalidate: 21600, tags: ["published-blog-metadata"] },
+);
+
+// React cache deduplicates within a render; the Data Cache reuses public rows
+// across listing, category, guide, related-post and feed requests.
+export const getAllPostMetas = cache(getCachedPostMetas);
+
+// Sitemap generation reads a fresh complete set and propagates page failures.
+export const getAllSitemapPostMetas = fetchAllPostMetas;
 
 export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
   const supabase = getBlogSupabase();
