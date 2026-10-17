@@ -2,8 +2,9 @@
 // No .env, production config, instrumentation or providers are copied.
 // Usage: node scripts/check-blog-http-offline.mjs [--baseline] [--production] [--isr]
 import assert from "node:assert/strict";
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createRequire } from "node:module";
+import { readlinkSync } from "node:fs";
 import {
   mkdtemp,
   mkdir,
@@ -20,6 +21,35 @@ import net from "node:net";
 
 const require = createRequire(import.meta.url);
 const web = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const guardScript = path.join(web, "scripts/run-without-network.py");
+if (process.env.FAROWAY_OFFLINE_NETNS !== readlinkSync("/proc/self/ns/net")) {
+  // Re-enter before creating fixtures or running application code. A failed
+  // namespace setup is fatal; there is no unguarded fallback.
+  const guarded = spawnSync(
+    "python3",
+    [
+      guardScript,
+      "--",
+      process.execPath,
+      fileURLToPath(import.meta.url),
+      ...process.argv.slice(2),
+    ],
+    { stdio: "inherit" },
+  );
+  if (guarded.error) throw guarded.error;
+  process.exit(guarded.status ?? 1);
+}
+// Do not trust the environment marker alone: a forged marker in the host
+// namespace must fail the interface and kernel-routing checks.
+const verified = spawnSync("python3", [guardScript, "--verify"], {
+  encoding: "utf8",
+});
+assert.equal(
+  verified.status,
+  0,
+  verified.stderr || "Offline network guard failed",
+);
+const networkGuard = JSON.parse(verified.stdout);
 const fixture = await mkdtemp(path.join(tmpdir(), "faroway-blog-http-"));
 const baseline = process.argv.includes("--baseline");
 const isr = process.argv.includes("--isr");
@@ -310,6 +340,7 @@ try {
           : production
             ? "production"
             : "development",
+        networkGuard,
         results,
       },
       null,
