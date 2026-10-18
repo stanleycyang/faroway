@@ -46,6 +46,12 @@ const baseTrip = {
   },
 };
 test.beforeEach(async ({ page, context, request }) => {
+  // The kernel guard blocks external networking; expose the intended online
+  // UI state so these recovery cases can still reach the loopback fixture.
+  if (process.env.FAROWAY_OFFLINE_NETNS)
+    await context.addInitScript(() =>
+      Object.defineProperty(navigator, "onLine", { get: () => true }),
+    );
   page.on("dialog", (dialog) => dialog.accept());
   await request.post("http://127.0.0.1:4401/fixture/reset");
   const jwt =
@@ -129,7 +135,27 @@ test("resumes a lost creation response after reload without a duplicate trip", a
 test("requires consent, explains canceled sharing, and permanently revokes the old link", async ({
   page,
   request,
+  browser,
 }) => {
+  const guest = await browser.newPage();
+  await guest.route(/^https:\/\//, (route) => route.abort());
+  const expectRevoked = async (token: string) => {
+    const response = await guest.goto(`http://127.0.0.1:4400/s/${token}`);
+    // A streamed loading shell may already have committed HTTP 200. Verify
+    // actual guest denial and absence of itinerary data, not only status.
+    expect(await response!.text()).not.toContain("Saved Paris plan");
+    expect(await response!.text()).not.toContain("Explore Paris");
+    await expect(
+      guest.getByRole("heading", { name: "This shared trip isn’t available" }),
+    ).toBeVisible();
+    await expect(
+      guest.getByRole("heading", { name: "Paris", exact: true }),
+    ).toHaveCount(0);
+    await expect(guest.locator('meta[name="robots"]').first()).toHaveAttribute(
+      "content",
+      /noindex/,
+    );
+  };
   await request.post("http://127.0.0.1:4401/fixture/trip", { data: baseTrip });
   await page.addInitScript(() =>
     Object.defineProperty(navigator, "share", {
@@ -167,11 +193,15 @@ test("requires consent, explains canceled sharing, and permanently revokes the o
   ).trips[0];
   expect(shared.is_shared).toBe(true);
   const token = shared.share_token;
+  await guest.goto(`http://127.0.0.1:4400/s/${token}`);
+  await expect(
+    guest.getByText("Saved Paris plan", { exact: true }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Turn off public access" }).click();
   await expect(
     page.getByText("Public access has been turned off."),
   ).toBeVisible();
-  expect((await request.get(`/s/${token}`)).status()).toBe(404);
+  await expectRevoked(token);
   await page.reload();
   await expect(
     page.getByRole("button", { name: "Create public share link" }),
@@ -187,7 +217,12 @@ test("requires consent, explains canceled sharing, and permanently revokes the o
     await (await request.get("http://127.0.0.1:4401/fixture/state")).json()
   ).trips[0];
   expect(reshared.share_token).not.toBe(token);
-  expect((await request.get(`/s/${token}`)).status()).toBe(404);
+  await guest.goto(`http://127.0.0.1:4400/s/${reshared.share_token}`);
+  await expect(
+    guest.getByText("Saved Paris plan", { exact: true }),
+  ).toBeVisible();
+  await expectRevoked(token);
+  await guest.close();
 });
 
 test("keeps the last usable itinerary when refreshing after retry fails", async ({
