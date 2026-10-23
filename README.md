@@ -59,27 +59,28 @@ bun dev:ios      # Open iOS simulator directly
 
 ### Web (`apps/web/.env.local`)
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `NEXT_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon key (safe to expose) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Yes | Service role key (server-only) |
-| `OPENAI_API_KEY` | For AI | OpenAI GPT-4o for itinerary generation |
-| `GOOGLE_AI_API_KEY` | For AI | Google Gemini (fallback) |
-| `IP_HASH_SALT` | Prod | Server-only HMAC salt for privacy-preserving distributed rate limits |
-| `NEXT_PUBLIC_BASE_URL` | Prod | Production URL for OG tags/sitemap |
+| Variable                        | Required | Description                                                                                                                                                            |
+| ------------------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Yes      | Supabase project URL                                                                                                                                                   |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes      | Supabase anon key (safe to expose)                                                                                                                                     |
+| `SUPABASE_SERVICE_ROLE_KEY`     | Yes      | Service role key (server-only)                                                                                                                                         |
+| `OPENAI_API_KEY`                | For AI   | OpenAI GPT-4o for itinerary generation                                                                                                                                 |
+| `GOOGLE_AI_API_KEY`             | For AI   | Google Gemini (fallback)                                                                                                                                               |
+| `IP_HASH_SALT`                  | Prod     | Server-only HMAC salt for privacy-preserving distributed rate limits                                                                                                   |
+| `NEXT_PUBLIC_BASE_URL`          | Prod     | Production URL for OG tags/sitemap                                                                                                                                     |
+| `FAROWAY_BUILD_WITHOUT_BLOG_DB` | No       | Set to `1` only for a local `next build` that should publish an empty blog when Supabase is unreachable. Leave unset in production so a network error fails the build. |
 
 See `apps/web/.env.example` for the full list including travel vendor API keys.
 
 ### Mobile (`apps/mobile/.env.local`)
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `EXPO_PUBLIC_SUPABASE_URL` | Yes | Supabase project URL |
-| `EXPO_PUBLIC_SUPABASE_ANON_KEY` | Yes | Supabase anon key |
-| `EXPO_PUBLIC_API_URL` | Dev | Override backend URL (auto-detected in dev) |
-| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | Auth | Google OAuth web client ID |
-| `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | Auth | Google OAuth iOS client ID |
+| Variable                           | Required | Description                                 |
+| ---------------------------------- | -------- | ------------------------------------------- |
+| `EXPO_PUBLIC_SUPABASE_URL`         | Yes      | Supabase project URL                        |
+| `EXPO_PUBLIC_SUPABASE_ANON_KEY`    | Yes      | Supabase anon key                           |
+| `EXPO_PUBLIC_API_URL`              | Dev      | Override backend URL (auto-detected in dev) |
+| `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` | Auth     | Google OAuth web client ID                  |
+| `EXPO_PUBLIC_GOOGLE_IOS_CLIENT_ID` | Auth     | Google OAuth iOS client ID                  |
 
 See `apps/mobile/.env.example` for the full list.
 
@@ -198,6 +199,7 @@ supabase migration up
 ## CI/CD
 
 GitHub Actions (`.github/workflows/ci.yml`) runs on every push:
+
 1. **Quality** — `type-check`, `lint`, `format:check`
 2. **Tests** — unit tests (web: Vitest, mobile: Jest)
 3. **Build** — `next build` for web

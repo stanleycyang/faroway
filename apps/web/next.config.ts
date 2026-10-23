@@ -1,7 +1,7 @@
 import { securityHeaders } from "./lib/security/headers";
 import { assertDatabaseIsolation } from "./lib/config/database-isolation";
 import { withWorkflow } from "workflow/next";
-import { withSentryConfig } from "@sentry/nextjs";
+import { withSentryConfig } from "@sentry/nextjs/config";
 import type { NextConfig } from "next";
 
 assertDatabaseIsolation({

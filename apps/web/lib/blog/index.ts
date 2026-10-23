@@ -49,6 +49,70 @@ function rowToPost(row: any): BlogPost {
 // Core queries
 // ---------------------------------------------------------------------------
 
+/** Transport failure from an unreachable Supabase host, distinct from a coded outage. */
+export class BlogDatabaseUnreachableError extends Error {
+  constructor(detail: string) {
+    super(`Blog database is unreachable: ${detail}`);
+    this.name = "BlogDatabaseUnreachableError";
+  }
+}
+
+function isUnreachableSupabaseError(error: {
+  code?: string | null;
+  message?: string | null;
+}): boolean {
+  const code = typeof error.code === "string" ? error.code.trim() : "";
+  if (code) return false;
+  return /typo in the url or port|fetch failed|enotfound|econnrefused|enetunreach|eai_again|getaddrinfo|econnreset|socket hang up|und_err|certificate|timed out|timeout|network/i.test(
+    error.message ?? "",
+  );
+}
+
+function isBlogDatabaseUnreachable(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const name = "name" in error ? String(error.name) : "";
+  const message = "message" in error ? String(error.message) : "";
+  return (
+    name === "BlogDatabaseUnreachableError" ||
+    message.startsWith("Blog database is unreachable:")
+  );
+}
+
+let warnedUnreachableDuringBuild = false;
+
+/**
+ * An empty static blog is opt-in. A production build that cannot reach
+ * Supabase must fail so a transient timeout does not publish zero posts.
+ * Set FAROWAY_BUILD_WITHOUT_BLOG_DB=1 only for a local build that accepts
+ * that empty collection. Coded outages still throw, and the empty result
+ * stays outside the Data Cache.
+ */
+function allowEmptyBlogCollection(): boolean {
+  return (
+    process.env.NEXT_PHASE === "phase-production-build" &&
+    process.env.FAROWAY_BUILD_WITHOUT_BLOG_DB === "1"
+  );
+}
+
+async function publishedMetasForPageCollection(
+  read: () => Promise<BlogPostMeta[]>,
+): Promise<BlogPostMeta[]> {
+  try {
+    return await read();
+  } catch (error) {
+    if (allowEmptyBlogCollection() && isBlogDatabaseUnreachable(error)) {
+      if (!warnedUnreachableDuringBuild) {
+        warnedUnreachableDuringBuild = true;
+        console.warn(
+          "FAROWAY_BUILD_WITHOUT_BLOG_DB=1: Supabase is unreachable during static page collection; continuing with no published blog posts.",
+        );
+      }
+      return [];
+    }
+    throw error;
+  }
+}
+
 /** Read all published metadata in a total order, including the 1000-row boundary. */
 async function fetchAllPostMetas(): Promise<BlogPostMeta[]> {
   const supabase = getBlogSupabase();
@@ -67,6 +131,11 @@ async function fetchAllPostMetas(): Promise<BlogPostMeta[]> {
       .range(from, from + pageSize - 1);
 
     if (error) {
+      if (isUnreachableSupabaseError(error)) {
+        throw new BlogDatabaseUnreachableError(
+          error.message || "network error",
+        );
+      }
       throw new Error(`getAllPostMetas failed (${error.code || "unknown"})`);
     }
     posts.push(...(data || []).map(rowToMeta));
@@ -86,10 +155,13 @@ const getCachedPostMetas = unstable_cache(
 
 // React cache deduplicates within a render; the Data Cache reuses public rows
 // across listing, category, guide, related-post and feed requests.
-export const getAllPostMetas = cache(getCachedPostMetas);
+export const getAllPostMetas = cache(() =>
+  publishedMetasForPageCollection(getCachedPostMetas),
+);
 
-// Sitemap generation reads a fresh complete set and propagates page failures.
-export const getAllSitemapPostMetas = fetchAllPostMetas;
+// Sitemap generation reads a fresh complete set and propagates coded failures.
+export const getAllSitemapPostMetas = () =>
+  publishedMetasForPageCollection(fetchAllPostMetas);
 
 export const getAllPosts = cache(async (): Promise<BlogPost[]> => {
   const supabase = getBlogSupabase();

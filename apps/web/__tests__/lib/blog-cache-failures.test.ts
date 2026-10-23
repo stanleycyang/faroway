@@ -133,4 +133,95 @@ describe("blog cache failure handling", () => {
       await expect(read()).rejects.toThrow("not configured");
     },
   );
+
+  it("does not treat an unreachable host as an empty cached list", async () => {
+    const unreachable = {
+      data: null,
+      error: {
+        code: "",
+        message: "Error: Was there a typo in the url or port?",
+      },
+    };
+    query.range.mockResolvedValue(unreachable);
+    query.limit.mockResolvedValue(unreachable);
+    await expect(getAllPostMetas()).rejects.toThrow("unreachable");
+    await expect(getAllSitemapPostMetas()).rejects.toThrow("unreachable");
+    await expect(getAllPosts()).rejects.toThrow("getAllPosts failed (unknown)");
+  });
+
+  it.each([
+    {
+      NEXT_PHASE: "phase-production-build",
+      FAROWAY_BUILD_WITHOUT_BLOG_DB: undefined,
+    },
+    {
+      NEXT_PHASE: "phase-production-build",
+      FAROWAY_BUILD_WITHOUT_BLOG_DB: "0",
+    },
+    {
+      NEXT_PHASE: "phase-production-build",
+      FAROWAY_BUILD_WITHOUT_BLOG_DB: "true",
+    },
+    { NEXT_PHASE: undefined, FAROWAY_BUILD_WITHOUT_BLOG_DB: "1" },
+  ])(
+    "still throws when the empty-blog build flag is off ($NEXT_PHASE, $FAROWAY_BUILD_WITHOUT_BLOG_DB)",
+    async (env) => {
+      const previous = {
+        NEXT_PHASE: process.env.NEXT_PHASE,
+        FAROWAY_BUILD_WITHOUT_BLOG_DB:
+          process.env.FAROWAY_BUILD_WITHOUT_BLOG_DB,
+      };
+      for (const [key, value] of Object.entries(env)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+      query.range.mockResolvedValue({
+        data: null,
+        error: {
+          code: "",
+          message: "TypeError: fetch failed",
+        },
+      });
+      try {
+        await expect(getAllPostMetas()).rejects.toThrow("unreachable");
+        await expect(getAllSitemapPostMetas()).rejects.toThrow("unreachable");
+      } finally {
+        for (const [key, value] of Object.entries(previous)) {
+          if (value === undefined) delete process.env[key];
+          else process.env[key] = value;
+        }
+      }
+    },
+  );
+
+  it("returns an empty collection only when FAROWAY_BUILD_WITHOUT_BLOG_DB=1 during the production build", async () => {
+    const previous = {
+      NEXT_PHASE: process.env.NEXT_PHASE,
+      FAROWAY_BUILD_WITHOUT_BLOG_DB: process.env.FAROWAY_BUILD_WITHOUT_BLOG_DB,
+    };
+    process.env.NEXT_PHASE = "phase-production-build";
+    process.env.FAROWAY_BUILD_WITHOUT_BLOG_DB = "1";
+    query.range.mockResolvedValue({
+      data: null,
+      error: {
+        code: "",
+        message: "Error: Was there a typo in the url or port?",
+      },
+    });
+    try {
+      await expect(getAllPostMetas()).resolves.toEqual([]);
+      await expect(getAllSitemapPostMetas()).resolves.toEqual([]);
+      query.range.mockResolvedValue({
+        data: null,
+        error: { code: "503", message: "database unavailable" },
+      });
+      await expect(getAllPostMetas()).rejects.toThrow("503");
+      await expect(getAllSitemapPostMetas()).rejects.toThrow("503");
+    } finally {
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+    }
+  });
 });
