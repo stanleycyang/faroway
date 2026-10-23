@@ -81,24 +81,30 @@ function isBlogDatabaseUnreachable(error: unknown): boolean {
 let warnedUnreachableDuringBuild = false;
 
 /**
- * Static generation with a placeholder or offline Supabase host should publish
- * an empty collection. Coded outages still throw, and the empty result stays
- * outside the Data Cache so a later request can load the real rows.
+ * An empty static blog is opt-in. A production build that cannot reach
+ * Supabase must fail so a transient timeout does not publish zero posts.
+ * Set FAROWAY_BUILD_WITHOUT_BLOG_DB=1 only for a local build that accepts
+ * that empty collection. Coded outages still throw, and the empty result
+ * stays outside the Data Cache.
  */
+function allowEmptyBlogCollection(): boolean {
+  return (
+    process.env.NEXT_PHASE === "phase-production-build" &&
+    process.env.FAROWAY_BUILD_WITHOUT_BLOG_DB === "1"
+  );
+}
+
 async function publishedMetasForPageCollection(
   read: () => Promise<BlogPostMeta[]>,
 ): Promise<BlogPostMeta[]> {
   try {
     return await read();
   } catch (error) {
-    if (
-      process.env.NEXT_PHASE === "phase-production-build" &&
-      isBlogDatabaseUnreachable(error)
-    ) {
+    if (allowEmptyBlogCollection() && isBlogDatabaseUnreachable(error)) {
       if (!warnedUnreachableDuringBuild) {
         warnedUnreachableDuringBuild = true;
         console.warn(
-          "Supabase is unreachable during static page collection; continuing with no published blog posts.",
+          "FAROWAY_BUILD_WITHOUT_BLOG_DB=1: Supabase is unreachable during static page collection; continuing with no published blog posts.",
         );
       }
       return [];

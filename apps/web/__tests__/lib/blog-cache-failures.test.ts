@@ -149,9 +149,58 @@ describe("blog cache failure handling", () => {
     await expect(getAllPosts()).rejects.toThrow("getAllPosts failed (unknown)");
   });
 
-  it("skips published posts only while collecting pages against an unreachable host", async () => {
-    const previous = process.env.NEXT_PHASE;
+  it.each([
+    {
+      NEXT_PHASE: "phase-production-build",
+      FAROWAY_BUILD_WITHOUT_BLOG_DB: undefined,
+    },
+    {
+      NEXT_PHASE: "phase-production-build",
+      FAROWAY_BUILD_WITHOUT_BLOG_DB: "0",
+    },
+    {
+      NEXT_PHASE: "phase-production-build",
+      FAROWAY_BUILD_WITHOUT_BLOG_DB: "true",
+    },
+    { NEXT_PHASE: undefined, FAROWAY_BUILD_WITHOUT_BLOG_DB: "1" },
+  ])(
+    "still throws when the empty-blog build flag is off ($NEXT_PHASE, $FAROWAY_BUILD_WITHOUT_BLOG_DB)",
+    async (env) => {
+      const previous = {
+        NEXT_PHASE: process.env.NEXT_PHASE,
+        FAROWAY_BUILD_WITHOUT_BLOG_DB:
+          process.env.FAROWAY_BUILD_WITHOUT_BLOG_DB,
+      };
+      for (const [key, value] of Object.entries(env)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
+      query.range.mockResolvedValue({
+        data: null,
+        error: {
+          code: "",
+          message: "TypeError: fetch failed",
+        },
+      });
+      try {
+        await expect(getAllPostMetas()).rejects.toThrow("unreachable");
+        await expect(getAllSitemapPostMetas()).rejects.toThrow("unreachable");
+      } finally {
+        for (const [key, value] of Object.entries(previous)) {
+          if (value === undefined) delete process.env[key];
+          else process.env[key] = value;
+        }
+      }
+    },
+  );
+
+  it("returns an empty collection only when FAROWAY_BUILD_WITHOUT_BLOG_DB=1 during the production build", async () => {
+    const previous = {
+      NEXT_PHASE: process.env.NEXT_PHASE,
+      FAROWAY_BUILD_WITHOUT_BLOG_DB: process.env.FAROWAY_BUILD_WITHOUT_BLOG_DB,
+    };
     process.env.NEXT_PHASE = "phase-production-build";
+    process.env.FAROWAY_BUILD_WITHOUT_BLOG_DB = "1";
     query.range.mockResolvedValue({
       data: null,
       error: {
@@ -169,8 +218,10 @@ describe("blog cache failure handling", () => {
       await expect(getAllPostMetas()).rejects.toThrow("503");
       await expect(getAllSitemapPostMetas()).rejects.toThrow("503");
     } finally {
-      if (previous === undefined) delete process.env.NEXT_PHASE;
-      else process.env.NEXT_PHASE = previous;
+      for (const [key, value] of Object.entries(previous)) {
+        if (value === undefined) delete process.env[key];
+        else process.env[key] = value;
+      }
     }
   });
 });

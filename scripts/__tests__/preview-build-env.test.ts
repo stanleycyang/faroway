@@ -94,6 +94,7 @@ describe("Preview build environment through Turbo", () => {
     for (const name of [
       "VERCEL_ENV",
       "FAROWAY_STAGING_SUPABASE_PROJECT_REF",
+      "FAROWAY_BUILD_WITHOUT_BLOG_DB",
       "FAROWAY_PLANNING_PAUSED",
       "FAROWAY_PLAN_EDITING_ENABLED",
       "FAROWAY_BOOKING_CHECKLIST_ENABLED",
