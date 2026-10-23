@@ -167,166 +167,147 @@ function CreateTripPlanner({
   const submissionLock = useRef(false);
   const [pendingRequest, setPendingRequest] =
     useState<PendingCreateTrip | null>(null);
-  const [generateError, setGenerateError] = useState<string | null>(null);
   useEffect(() => {
-    let cancelled = false;
-    queueMicrotask(() => {
-      if (cancelled) return;
-      setPendingRequest(null);
-      if (!session?.user.id) return;
-      try {
-        const saved = localStorage.getItem(
-          `faroway:pending-create:${session.user.id}`,
-        );
-        const value = saved ? JSON.parse(saved) : null;
-        const parsed = CreateTripSchema.safeParse(value);
-        if (parsed.success && parsed.data.requestId) {
-          setPendingRequest({
-            ...parsed.data,
-            requestId: parsed.data.requestId,
-          });
-        } else if (saved) {
-          setGenerateError(
-            "Your previous request couldn’t be read. Check My Trips before starting a new trip.",
-          );
-        }
-      } catch {
+    setPendingRequest(null);
+    if (!session?.user.id) return;
+    try {
+      const saved = localStorage.getItem(
+        `faroway:pending-create:${session.user.id}`,
+      );
+      const value = saved ? JSON.parse(saved) : null;
+      const parsed = CreateTripSchema.safeParse(value);
+      if (parsed.success && parsed.data.requestId) {
+        setPendingRequest({ ...parsed.data, requestId: parsed.data.requestId });
+      } else if (saved) {
         setGenerateError(
-          "Your unfinished request couldn’t be read. Check My Trips before starting a new trip.",
+          "Your previous request couldn’t be read. Check My Trips before starting a new trip.",
         );
       }
-    });
-    return () => {
-      cancelled = true;
-    };
+    } catch {
+      setGenerateError(
+        "Your unfinished request couldn’t be read. Check My Trips before starting a new trip.",
+      );
+    }
   }, [session?.user.id]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const [progressMessage, setProgressMessage] = useState("");
 
   useEffect(() => {
-    let cancelled = false;
-    queueMicrotask(() => {
-      if (cancelled) return;
-      const params = new URLSearchParams(window.location.search);
-      setDraftLoaded(true);
-      const draftId = params.get("draft");
-      let draft: Partial<StoredCreateDraft> | null = null;
+    const params = new URLSearchParams(window.location.search);
+    setDraftLoaded(true);
+    const draftId = params.get("draft");
+    let draft: Partial<StoredCreateDraft> | null = null;
 
-      if (draftId) {
-        try {
-          draft = takeCreateDraft<StoredCreateDraft>(localStorage, draftId);
-        } catch {
-          draft = null;
-        }
-        params.delete("draft");
-        const query = params.toString();
-        window.history.replaceState(
-          null,
-          "",
-          `/create${query ? `?${query}` : ""}`,
+    if (draftId) {
+      try {
+        draft = takeCreateDraft<StoredCreateDraft>(localStorage, draftId);
+      } catch {
+        draft = null;
+      }
+      params.delete("draft");
+      const query = params.toString();
+      window.history.replaceState(
+        null,
+        "",
+        `/create${query ? `?${query}` : ""}`,
+      );
+    }
+
+    if (!draft && !params.has("destination")) {
+      try {
+        draft = readEditorDraft<StoredCreateDraft>(sessionStorage);
+      } catch {
+        /* Setup still works when browser storage is unavailable. */
+      }
+    }
+
+    if (draft) {
+      const restoredStart = parseCreateDraftDate(draft.startDate);
+      const restoredEnd = parseCreateDraftDate(draft.endDate);
+
+      setSelectedPlace(plannerDestination(draft.selectedPlace, destinations));
+      if (restoredStart && !Number.isNaN(restoredStart.getTime())) {
+        setStartDate(restoredStart);
+      }
+      if (restoredEnd && (!restoredStart || restoredEnd >= restoredStart)) {
+        setEndDate(restoredEnd);
+      }
+      if (
+        typeof draft.travelers === "number" &&
+        Number.isInteger(draft.travelers) &&
+        draft.travelers >= 1 &&
+        draft.travelers <= 50
+      ) {
+        setTravelers(draft.travelers);
+      }
+      if (
+        typeof draft.travelerType === "string" &&
+        travelerTypes.some((type) => type.id === draft.travelerType)
+      ) {
+        setTravelerType(draft.travelerType);
+      }
+      if (Array.isArray(draft.selectedVibes)) {
+        setSelectedVibes(
+          [
+            ...new Set(
+              draft.selectedVibes.filter(
+                (value): value is string =>
+                  typeof value === "string" &&
+                  vibes.some((vibe) => vibe.id === value),
+              ),
+            ),
+          ].slice(0, 5),
         );
       }
-
-      if (!draft && !params.has("destination")) {
-        try {
-          draft = readEditorDraft<StoredCreateDraft>(sessionStorage);
-        } catch {
-          /* Setup still works when browser storage is unavailable. */
-        }
+      if (
+        draft.budget === "budget" ||
+        draft.budget === "moderate" ||
+        draft.budget === "luxury"
+      )
+        setBudget(draft.budget);
+      setShowAdvanced(draft.showAdvanced === true);
+      if (hotelSearchEnabled()) {
+        const restoredHotelSearch = restoreHotelSearchDraft(draft.hotelSearch);
+        setHotelSearch(restoredHotelSearch);
+        setHotelAgeText(
+          restoreHotelAgeTextDraft(draft.hotelAgeText, restoredHotelSearch),
+        );
+        if (validateHotelSearchDetails(restoredHotelSearch))
+          setTravelers(hotelGuestCounts(restoredHotelSearch).travelers);
       }
+      return;
+    }
 
-      if (draft) {
-        const restoredStart = parseCreateDraftDate(draft.startDate);
-        const restoredEnd = parseCreateDraftDate(draft.endDate);
-
-        setSelectedPlace(plannerDestination(draft.selectedPlace, destinations));
-        if (restoredStart && !Number.isNaN(restoredStart.getTime())) {
-          setStartDate(restoredStart);
-        }
-        if (restoredEnd && (!restoredStart || restoredEnd >= restoredStart)) {
-          setEndDate(restoredEnd);
-        }
-        if (
-          typeof draft.travelers === "number" &&
-          Number.isInteger(draft.travelers) &&
-          draft.travelers >= 1 &&
-          draft.travelers <= 50
-        ) {
-          setTravelers(draft.travelers);
-        }
-        if (
-          typeof draft.travelerType === "string" &&
-          travelerTypes.some((type) => type.id === draft.travelerType)
-        ) {
-          setTravelerType(draft.travelerType);
-        }
-        if (Array.isArray(draft.selectedVibes)) {
-          setSelectedVibes(
-            [
-              ...new Set(
-                draft.selectedVibes.filter(
-                  (value): value is string =>
-                    typeof value === "string" &&
-                    vibes.some((vibe) => vibe.id === value),
-                ),
-              ),
-            ].slice(0, 5),
-          );
-        }
-        if (
-          draft.budget === "budget" ||
-          draft.budget === "moderate" ||
-          draft.budget === "luxury"
-        )
-          setBudget(draft.budget);
-        setShowAdvanced(draft.showAdvanced === true);
-        if (hotelSearchEnabled()) {
-          const restoredHotelSearch = restoreHotelSearchDraft(
-            draft.hotelSearch,
-          );
-          setHotelSearch(restoredHotelSearch);
-          setHotelAgeText(
-            restoreHotelAgeTextDraft(draft.hotelAgeText, restoredHotelSearch),
-          );
-          if (validateHotelSearchDetails(restoredHotelSearch))
-            setTravelers(hotelGuestCounts(restoredHotelSearch).travelers);
-        }
-        return;
-      }
-
-      const requestedDestination = params.get("destination");
-      if (!requestedDestination) return;
-      const normalized = requestedDestination.trim().toLowerCase();
-      const recommended = destinations.find(
-        (destination) =>
-          destination.id === normalized ||
-          destination.name.toLowerCase() === normalized,
-      );
-      setSelectedPlace(
-        recommended
-          ? {
-              name: recommended.name,
-              lat: recommended.lat,
-              lng: recommended.lng,
-              placeId: recommended.id,
-              isRecommended: true,
-              source: "catalog",
-            }
-          : {
-              name: requestedDestination
-                .replace(/-/g, " ")
-                .replace(/\b\w/g, (letter) => letter.toUpperCase()),
-              lat: 0,
-              lng: 0,
-              placeId: "",
-              isRecommended: false,
-              source: "user",
-            },
-      );
-    });
-    return () => {
-      cancelled = true;
-    };
+    const requestedDestination = params.get("destination");
+    if (!requestedDestination) return;
+    const normalized = requestedDestination.trim().toLowerCase();
+    const recommended = destinations.find(
+      (destination) =>
+        destination.id === normalized ||
+        destination.name.toLowerCase() === normalized,
+    );
+    setSelectedPlace(
+      recommended
+        ? {
+            name: recommended.name,
+            lat: recommended.lat,
+            lng: recommended.lng,
+            placeId: recommended.id,
+            isRecommended: true,
+            source: "catalog",
+          }
+        : {
+            name: requestedDestination
+              .replace(/-/g, " ")
+              .replace(/\b\w/g, (letter) => letter.toUpperCase()),
+            lat: 0,
+            lng: 0,
+            placeId: "",
+            isRecommended: false,
+            source: "user",
+          },
+    );
   }, []);
 
   useEffect(() => {

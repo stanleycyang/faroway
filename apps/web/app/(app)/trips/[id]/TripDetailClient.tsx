@@ -554,24 +554,29 @@ export function TripDetailClient({
   const stickyBookingVisible =
     showStickyBar && !trip?.preferences?.planNeedsRefresh;
 
-  // Keep the completion dossier in sync during render. An effect would set
-  // this state in the same turn and trip the React Compiler hook lint.
-  if (isGenerating && !hasSeenGeneratingThisSession) {
-    setHasSeenGeneratingThisSession(true);
-  }
-  if (isGenerating && showCompletedDossier) {
-    setShowCompletedDossier(false);
-  }
-  if (
-    !isGenerating &&
-    hasSeenGeneratingThisSession &&
-    tripIsComplete &&
-    !!displayDays?.length &&
-    !showCompletedDossier
-  ) {
-    setShowCompletedDossier(true);
-    setHasSeenGeneratingThisSession(false);
-  }
+  useEffect(() => {
+    if (isGenerating) {
+      setHasSeenGeneratingThisSession(true);
+      setShowCompletedDossier(false);
+    }
+  }, [isGenerating]);
+
+  useEffect(() => {
+    if (
+      hasSeenGeneratingThisSession &&
+      tripIsComplete &&
+      !!displayDays?.length &&
+      !showCompletedDossier
+    ) {
+      setShowCompletedDossier(true);
+      setHasSeenGeneratingThisSession(false);
+    }
+  }, [
+    hasSeenGeneratingThisSession,
+    tripIsComplete,
+    displayDays?.length,
+    showCompletedDossier,
+  ]);
 
   // Loading state
   if (loading) {

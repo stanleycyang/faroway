@@ -133,4 +133,44 @@ describe("blog cache failure handling", () => {
       await expect(read()).rejects.toThrow("not configured");
     },
   );
+
+  it("does not treat an unreachable host as an empty cached list", async () => {
+    const unreachable = {
+      data: null,
+      error: {
+        code: "",
+        message: "Error: Was there a typo in the url or port?",
+      },
+    };
+    query.range.mockResolvedValue(unreachable);
+    query.limit.mockResolvedValue(unreachable);
+    await expect(getAllPostMetas()).rejects.toThrow("unreachable");
+    await expect(getAllSitemapPostMetas()).rejects.toThrow("unreachable");
+    await expect(getAllPosts()).rejects.toThrow("getAllPosts failed (unknown)");
+  });
+
+  it("skips published posts only while collecting pages against an unreachable host", async () => {
+    const previous = process.env.NEXT_PHASE;
+    process.env.NEXT_PHASE = "phase-production-build";
+    query.range.mockResolvedValue({
+      data: null,
+      error: {
+        code: "",
+        message: "Error: Was there a typo in the url or port?",
+      },
+    });
+    try {
+      await expect(getAllPostMetas()).resolves.toEqual([]);
+      await expect(getAllSitemapPostMetas()).resolves.toEqual([]);
+      query.range.mockResolvedValue({
+        data: null,
+        error: { code: "503", message: "database unavailable" },
+      });
+      await expect(getAllPostMetas()).rejects.toThrow("503");
+      await expect(getAllSitemapPostMetas()).rejects.toThrow("503");
+    } finally {
+      if (previous === undefined) delete process.env.NEXT_PHASE;
+      else process.env.NEXT_PHASE = previous;
+    }
+  });
 });

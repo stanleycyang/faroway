@@ -115,18 +115,12 @@ function CheckoutSession({ tripId, travelers, children }: TripCheckoutProps) {
     }
   }, [endpoint]);
   useEffect(() => {
-    let cancelled = false;
-    queueMicrotask(() => {
-      if (!cancelled) void refresh();
-    });
+    void refresh();
     const onFocus = () => {
       void refresh();
     };
     window.addEventListener("focus", onFocus);
-    return () => {
-      cancelled = true;
-      window.removeEventListener("focus", onFocus);
-    };
+    return () => window.removeEventListener("focus", onFocus);
   }, [refresh]);
   const close = () => {
     if (!busyRef.current) setSelection(null);

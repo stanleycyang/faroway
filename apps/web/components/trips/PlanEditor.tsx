@@ -91,34 +91,27 @@ export function PlanEditor({
     }
   }, [endpoint]);
   useEffect(() => {
-    let cancelled = false;
-    queueMicrotask(() => {
-      if (cancelled) return;
-      try {
-        const saved = localStorage.getItem(storageKey);
-        if (saved) {
-          const parsed = PlanCommand.safeParse(JSON.parse(saved));
-          if (parsed.success) setPending(parsed.data);
-          else {
-            setUnreadableRetry(true);
-            setMessage(
-              "The saved retry could not be read. Your current plan is still available; review it before making a new change.",
-            );
-          }
+    try {
+      const saved = localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = PlanCommand.safeParse(JSON.parse(saved));
+        if (parsed.success) setPending(parsed.data);
+        else {
+          setUnreadableRetry(true);
+          setMessage(
+            "The saved retry could not be read. Your current plan is still available; review it before making a new change.",
+          );
         }
-      } catch {
-        setUnreadableRetry(true);
-        setMessage(
-          "Saved retry recovery is unavailable. Your current plan is still available; review it before making a new change.",
-        );
       }
-      void refresh().catch((error) => {
-        if (mounted.current) setMessage(error.message);
-      });
+    } catch {
+      setUnreadableRetry(true);
+      setMessage(
+        "Saved retry recovery is unavailable. Your current plan is still available; review it before making a new change.",
+      );
+    }
+    void refresh().catch((error) => {
+      if (mounted.current) setMessage(error.message);
     });
-    return () => {
-      cancelled = true;
-    };
   }, [refresh, storageKey]);
   const clearPending = () => {
     // A verified server receipt can release the UI even if local cleanup fails.
