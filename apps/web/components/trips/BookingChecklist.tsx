@@ -93,19 +93,26 @@ export function BookingChecklist({
     removeLocalRetry(key);
   };
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(key);
-      if (stored) {
-        const parsed = BookingReportCommand.safeParse(JSON.parse(stored));
-        if (parsed.success) setPending(parsed.data);
-        else setUnreadableRetry(true);
+    let cancelled = false;
+    queueMicrotask(() => {
+      if (cancelled) return;
+      try {
+        const stored = localStorage.getItem(key);
+        if (stored) {
+          const parsed = BookingReportCommand.safeParse(JSON.parse(stored));
+          if (parsed.success) setPending(parsed.data);
+          else setUnreadableRetry(true);
+        }
+      } catch {
+        setUnreadableRetry(true);
       }
-    } catch {
-      setUnreadableRetry(true);
-    }
-    void refresh().catch((error) => {
-      if (mounted.current) setMessage(error.message);
+      void refresh().catch((error) => {
+        if (mounted.current) setMessage(error.message);
+      });
     });
+    return () => {
+      cancelled = true;
+    };
   }, [key, refresh]);
   const check = async () => {
     if (saving.current) return;

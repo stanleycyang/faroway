@@ -118,6 +118,10 @@ export function useUser(): UseUserReturn {
   useEffect(() => {
     let subscribed = true;
     activeRef.current = true;
+    // The first read has to start before Strict Mode runs this effect's
+    // cleanup. Deferring it lets the discarded mount consume the only
+    // in-flight session read.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- session read must start before cleanup
     void fetchUser();
 
     const supabase = createClient();
