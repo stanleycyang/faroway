@@ -494,14 +494,34 @@ test("keeps unsaved edits when another device changes the brief", async ({
   );
 });
 
-test("untouched legacy brief preserves its revision and public link", async ({
+test("saving unchecked legacy flight permission persists explicit refusal", async ({
+  page,
+  request,
+}) => {
+  await request.post("http://127.0.0.1:4401/fixture/trip", {
+    data: { ...baseTrip, preferences: { travelerType: "couple" } },
+  });
+  await page.goto(`/trips/${id}`);
+  await page.getByText("Your trip brief", { exact: true }).click();
+  await expect(page.getByLabel("Allow flight searches")).not.toBeChecked();
+  await page.getByRole("button", { name: "Save trip brief" }).click();
+  await expect(
+    page.getByText("Your updated brief is saved.", { exact: false }),
+  ).toBeVisible();
+  const state = await (
+    await request.get("http://127.0.0.1:4401/fixture/state")
+  ).json();
+  expect(state.trips[0].preferences.flightSearch).toBeNull();
+});
+
+test("unchanged brief with saved flight refusal preserves its revision and public link", async ({
   page,
   request,
 }) => {
   await request.post("http://127.0.0.1:4401/fixture/trip", {
     data: {
       ...baseTrip,
-      preferences: { travelerType: "couple" },
+      preferences: { travelerType: "couple", flightSearch: null },
       is_shared: true,
       share_token: "keep-public-link",
     },
@@ -526,7 +546,7 @@ test("untouched legacy brief preserves its revision and public link", async ({
     updated_at: baseTrip.updated_at,
     is_shared: true,
     share_token: "keep-public-link",
-    preferences: { travelerType: "couple" },
+    preferences: { travelerType: "couple", flightSearch: null },
   });
 });
 
