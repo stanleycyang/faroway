@@ -7,6 +7,8 @@ export default defineConfig({
   testMatch: ["checkout.spec.ts", "places.spec.ts"],
   workers: 1,
   use: {
+    trace: "retain-on-failure",
+    screenshot: "only-on-failure",
     launchOptions: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH
       ? { executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH }
       : {},

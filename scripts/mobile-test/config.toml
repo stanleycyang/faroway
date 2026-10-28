@@ -1,0 +1,51 @@
+# Dedicated, local-only integration stack. Never link or push this project.
+project_id = "faroway-mobile-test-stack"
+
+[api]
+enabled = true
+port = 55421
+schemas = ["public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 55422
+shadow_port = 55420
+major_version = 17
+
+[db.seed]
+enabled = false
+
+[studio]
+enabled = false
+port = 55423
+
+[inbucket]
+enabled = true
+port = 55424
+
+[auth]
+enabled = true
+site_url = "http://127.0.0.1:3011"
+additional_redirect_urls = ["exp://127.0.0.1:8092"]
+enable_signup = false
+jwt_expiry = 3600
+
+[auth.email]
+enable_signup = false
+enable_confirmations = true
+
+[auth.external.google]
+enabled = false
+
+[auth.external.apple]
+enabled = false
+
+[storage]
+enabled = true
+
+[analytics]
+enabled = false
+
+[edge_runtime]
+enabled = false

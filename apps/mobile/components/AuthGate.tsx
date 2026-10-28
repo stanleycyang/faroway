@@ -1,6 +1,9 @@
+import { testLoginEnabled } from '../lib/testLogin';
+import { TestEmailLogin } from './TestEmailLogin';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
+  KeyboardAvoidingView,
   Text,
   StyleSheet,
   TouchableOpacity,
@@ -78,6 +81,8 @@ export function AuthGate({
   const { signInWithGoogle, signInWithApple } = useAuthContext();
   const [loading, setLoading] = useState(false);
   const content = triggerContent[trigger];
+  const localTest = testLoginEnabled();
+  const Overlay = localTest ? KeyboardAvoidingView : View;
   const pending = useRef(false);
   const attempt = useRef<symbol | null>(null);
   const mounted = useRef(false);
@@ -161,7 +166,12 @@ export function AuthGate({
       statusBarTranslucent
       onRequestClose={dismiss}
     >
-      <View style={styles.overlay}>
+      <Overlay
+        style={styles.overlay}
+        {...(localTest
+          ? { behavior: Platform.OS === 'ios' ? ('padding' as const) : ('height' as const) }
+          : {})}
+      >
         {/* Blurred background with trip preview */}
         {tripPreview && (
           <View style={styles.previewContainer}>
@@ -197,18 +207,20 @@ export function AuthGate({
             <Text style={styles.subtitle}>{content.subtitle}</Text>
 
             {/* Benefits */}
-            <View style={styles.benefits}>
-              {benefits.map((benefit, index) => (
-                <View key={index} style={styles.benefitRow}>
-                  <Ionicons
-                    name={benefit.icon as React.ComponentProps<typeof Ionicons>['name']}
-                    size={20}
-                    color={colors.primary[500]}
-                  />
-                  <Text style={styles.benefitText}>{benefit.text}</Text>
-                </View>
-              ))}
-            </View>
+            {!localTest && (
+              <View style={styles.benefits}>
+                {benefits.map((benefit, index) => (
+                  <View key={index} style={styles.benefitRow}>
+                    <Ionicons
+                      name={benefit.icon as React.ComponentProps<typeof Ionicons>['name']}
+                      size={20}
+                      color={colors.primary[500]}
+                    />
+                    <Text style={styles.benefitText}>{benefit.text}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
 
             {/* Auth Buttons */}
             {loading ? (
@@ -219,28 +231,40 @@ export function AuthGate({
               />
             ) : (
               <View style={styles.authButtons}>
-                <TouchableOpacity
-                  style={styles.googleButton}
-                  onPress={handleGoogle}
-                  activeOpacity={0.9}
-                  accessibilityRole="button"
-                  accessibilityLabel="Continue with Google"
-                >
-                  <Ionicons name="logo-google" size={18} color="#DB4437" />
-                  <Text style={styles.googleButtonText}>Continue with Google</Text>
-                </TouchableOpacity>
+                <TestEmailLogin
+                  key={`${visible}-${trigger}-${tripPreview?.destination}`}
+                  active={visible}
+                  onAuthenticated={() => {
+                    onAuthenticated?.();
+                    onClose();
+                  }}
+                />
+                {!localTest && (
+                  <>
+                    <TouchableOpacity
+                      style={styles.googleButton}
+                      onPress={handleGoogle}
+                      activeOpacity={0.9}
+                      accessibilityRole="button"
+                      accessibilityLabel="Continue with Google"
+                    >
+                      <Ionicons name="logo-google" size={18} color="#DB4437" />
+                      <Text style={styles.googleButtonText}>Continue with Google</Text>
+                    </TouchableOpacity>
 
-                {Platform.OS === 'ios' && (
-                  <TouchableOpacity
-                    style={styles.appleButton}
-                    onPress={handleApple}
-                    activeOpacity={0.9}
-                    accessibilityRole="button"
-                    accessibilityLabel="Continue with Apple"
-                  >
-                    <Ionicons name="logo-apple" size={20} color="#fff" />
-                    <Text style={styles.appleButtonText}>Continue with Apple</Text>
-                  </TouchableOpacity>
+                    {Platform.OS === 'ios' && (
+                      <TouchableOpacity
+                        style={styles.appleButton}
+                        onPress={handleApple}
+                        activeOpacity={0.9}
+                        accessibilityRole="button"
+                        accessibilityLabel="Continue with Apple"
+                      >
+                        <Ionicons name="logo-apple" size={20} color="#fff" />
+                        <Text style={styles.appleButtonText}>Continue with Apple</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
                 )}
               </View>
             )}
@@ -278,7 +302,7 @@ export function AuthGate({
             </Text>
           </View>
         </View>
-      </View>
+      </Overlay>
     </Modal>
   );
 }

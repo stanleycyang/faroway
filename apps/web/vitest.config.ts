@@ -3,6 +3,9 @@ import path from "path";
 
 export default defineConfig({
   test: {
+    // Web and native suites run together through Turbo. Bound concurrency so
+    // subprocess/deadline tests are not starved on developer machines or CI.
+    maxWorkers: 4,
     environment: "node",
     globals: true,
     exclude: ["node_modules/**", "dist/**", "e2e/**", "playwright-report/**"],

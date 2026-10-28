@@ -1,3 +1,7 @@
+import {
+  localGenerationScenario,
+  completeLocalGeneration,
+} from "@/lib/testing/local-generation";
 import { isStalePlanningDisclosure } from "@/lib/ai/planning-disclosure";
 import { planningPauseResponse } from "@/lib/trips/planning-pause";
 /**
@@ -54,6 +58,7 @@ export async function POST(request: NextRequest, { params }: Params) {
         },
         { status: 409 },
       );
+    const scenario = localGenerationScenario();
     const userId = auth.userId;
     const paused = planningPauseResponse();
     if (paused) return paused;
@@ -249,6 +254,26 @@ export async function POST(request: NextRequest, { params }: Params) {
       p_key: "previewReady",
       p_value: true,
     });
+
+    if (scenario) {
+      await completeLocalGeneration(
+        {
+          tripId,
+          searchId,
+          userId,
+          destination: trip.destination,
+          startDate: trip.start_date,
+          endDate: trip.end_date,
+        },
+        scenario,
+      );
+      return NextResponse.json({
+        tripId,
+        searchId,
+        status: "generating",
+        testFixture: true,
+      });
+    }
 
     // Kick off durable workflow immediately (stream route only observes state).
     try {

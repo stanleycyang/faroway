@@ -44,7 +44,10 @@
     "clean:all": "turbo clean && rm -rf node_modules apps/*/node_modules packages/*/node_modules",
     "nuke": "turbo clean && rm -rf node_modules apps/*/node_modules packages/*/node_modules bun.lockb && bun install",
     "env:check": "bun run scripts/check-env.ts",
-    "preinstall": "node -e \"if(process.env.npm_execpath && !process.env.npm_execpath.includes('bun')) { console.error('\\x1b[31m\\nPlease use bun as the package manager:\\n  bun install\\n\\x1b[0m'); process.exit(1) }\""
+    "preinstall": "node -e \"if(process.env.npm_execpath && !process.env.npm_execpath.includes('bun')) { console.error('\\x1b[31m\\nPlease use bun as the package manager:\\n  bun install\\n\\x1b[0m'); process.exit(1) }\"",
+    "dev:mobile:test": "node scripts/mobile-test/run.mjs",
+    "test:mobile:integration": "node scripts/mobile-test/verify.mjs",
+    "test:mobile:native": "node scripts/mobile-test/native.mjs"
   },
   "overrides": {
     "@nestjs/common": "11.1.28",

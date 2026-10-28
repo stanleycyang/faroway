@@ -1,0 +1,35 @@
+appId: host.exp.Exponent
+---
+- stopApp
+- openLink: exp://127.0.0.1:8092/--/onboarding/login
+- tapOn:
+    text: Open
+    optional: true
+- extendedWaitUntil:
+    visible:
+      id: test-email
+    timeout: 60000
+- tapOn:
+    id: test-email
+- eraseText
+- inputText: ${TEST_EMAIL}
+- tapOn:
+    id: test-password
+- eraseText
+- inputText: ${TEST_PASSWORD}
+- pressKey: Enter
+- tapOn:
+    text: Not Now
+    optional: true
+- extendedWaitUntil:
+    visible: "Explore, tab,.*"
+    timeout: 30000
+- tapOn: "My Trips, tab,.*"
+- extendedWaitUntil:
+    visible: "QA Harbor.*"
+    timeout: 30000
+- tapOn: "QA Harbor.*"
+- extendedWaitUntil:
+    visible: "TEST PLAN.*|Synthetic neighborhood walk"
+    timeout: 30000
+- takeScreenshot: local-mobile-saved-trip

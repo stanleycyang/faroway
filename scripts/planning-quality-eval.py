@@ -5,6 +5,7 @@ This measures whether the rubric detects known fixture failures, not live AI qua
 from datetime import datetime
 from pathlib import Path
 import json
+import math
 import sys
 
 
@@ -12,6 +13,14 @@ def evaluate(case):
     brief, plan = case['brief'], case['plan']
     activities = plan['activities']
     checks = {}
+    checks['plan_coverage_and_integrity'] = bool(activities) and all(
+        any(a['date'] == day for a in activities) for day in brief['dates']
+    ) and all(a['date'] in brief['dates'] for a in activities) and len({a['id'] for a in activities}) == len(activities) and all(
+        isinstance(a['start_minutes'], int) and not isinstance(a['start_minutes'], bool)
+        and isinstance(a['end_minutes'], int) and not isinstance(a['end_minutes'], bool)
+        and 0 <= a['start_minutes'] < a['end_minutes'] <= 1440
+        for a in activities
+    )
     checks['dates_and_party'] = plan['dates'] == brief['dates'] and plan['party'] == brief['party']
     checks['interest_coverage'] = set(brief['interests']).issubset({tag for a in activities for tag in a['tags']})
     checks['pace_and_time'] = all(
@@ -26,14 +35,24 @@ def evaluate(case):
         set(brief['diet']).issubset(set(a.get('diet', []))) and bool(a.get('diet_evidence'))
         for a in activities if a['kind'] == 'meal'
     )
-    checks['schedule_feasibility'] = True
+    checks['schedule_feasibility'] = all(
+        isinstance(a['transfer_minutes'], (int, float))
+        and not isinstance(a['transfer_minutes'], bool)
+        and math.isfinite(a['transfer_minutes']) and a['transfer_minutes'] >= 0
+        for a in activities
+    )
     for day in brief['dates']:
         ordered = sorted((a for a in activities if a['date'] == day), key=lambda a: a['start_minutes'])
         for before, after in zip(ordered, ordered[1:]):
             if after['start_minutes'] < before['end_minutes'] + after['transfer_minutes']:
                 checks['schedule_feasibility'] = False
     prices = [a['price'] for a in activities]
-    checks['budget_and_units'] = all(p['currency'] == brief['currency'] and p['scope'] == 'whole_party' and p['taxes_included'] is True for p in prices) and sum(p['amount'] for p in prices) <= brief['budget']
+    checks['budget_and_units'] = all(
+        isinstance(p['amount'], (int, float)) and not isinstance(p['amount'], bool)
+        and math.isfinite(p['amount']) and p['amount'] >= 0
+        and p['currency'] == brief['currency'] and p['scope'] == 'whole_party'
+        and p['taxes_included'] is True for p in prices
+    ) and sum(p['amount'] for p in prices) <= brief['budget']
     checks['honest_price_claims'] = all(
         p['claim'] == 'estimate' or (
             p['claim'] == 'live_quote' and p.get('provider_evidence') and p.get('party') == brief['party']
@@ -56,7 +75,7 @@ def main():
     cases=json.loads(source.read_text())
     results=[evaluate(case) for case in cases]
     mismatches=[r['id'] for case,r in zip(cases,results) if r['accepted'] != case['expected_accepted'] or set(r['failed_checks']) != set(case['expected_failures'])]
-    report={'mode':'offline synthetic rubric calibration; no model/provider calls', 'fixture_count':len(cases), 'rubric_checks':10,
+    report={'mode':'offline synthetic rubric calibration; no model/provider calls', 'fixture_count':len(cases), 'rubric_checks':len(results[0]['checks']) if results else 0,
             'expected_outcome_matches':len(cases)-len(mismatches), 'mismatches':mismatches,
             'positive_acceptance':sum(r['accepted'] for case,r in zip(cases,results) if case['expected_accepted']),
             'negative_detection':sum(not r['accepted'] for case,r in zip(cases,results) if not case['expected_accepted']),

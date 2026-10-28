@@ -167,6 +167,11 @@ Key tables: `users`, `trips`, `itineraries`, `searches`, `search_results`, `dest
 
 ## Deployment
 
+Production releases require the [acceptance and cutover checks](docs/production-acceptance.md).
+The main Git deployment hold does not block manual CLI deployment. Reconcile and
+apply database changes in the reviewed dependency order; do not use a blanket
+migration push for the pending production release.
+
 ### Web (Vercel)
 
 ```bash
@@ -175,7 +180,7 @@ bun deploy:web:preview  # Deploy preview
 
 # Required Vercel environment variables (set in Vercel dashboard):
 # - All variables from apps/web/.env.example marked as required
-# - Apply all Supabase migrations before deploying
+# - Follow the reviewed database/application cutover order before production
 ```
 
 ### Mobile (EAS)
@@ -198,11 +203,23 @@ supabase migration up
 
 ## CI/CD
 
-GitHub Actions (`.github/workflows/ci.yml`) runs on every push:
+GitHub Actions (`.github/workflows/ci.yml`) runs on main pushes and pull requests
+targeting main or the release candidate:
 
 1. **Quality** — `type-check`, `lint`, `format:check`
 2. **Tests** — unit tests (web: Vitest, mobile: Jest)
-3. **Build** — `next build` for web
+
+The existing CI workflow's full database/browser and web-build jobs require a
+manual dispatch with `full_verification=true`. The separate
+`.github/workflows/release.yml` runs the complete local verification script,
+including the production web build, automatically for PRs from `release/`
+branches or with the `release-verification` label. It retains verification logs
+and browser failure screenshots/traces. It can also be dispatched manually and
+does not need hosted application credentials.
+
+See [production acceptance](docs/production-acceptance.md) for staging, signed
+device, live planning and cutover requirements. Passing CI alone is not launch
+acceptance; repository branch protection must separately require release checks.
 
 Mobile type-check is included in the quality step. Mobile EAS builds are triggered manually or via `bun deploy:mobile:*`.
 
@@ -215,6 +232,15 @@ Apple OAuth secret is auto-rotated monthly via `.github/workflows/rotate-apple-s
 
 ## Rollback
 
-**Web:** Vercel keeps the previous deployment; use the Vercel dashboard → Deployments → "Promote to Production" on the previous deploy.
+**Web:** Promote a previously verified, schema-compatible deployment. After
+restrictive database migrations, an arbitrary older deployment may no longer be
+compatible. Follow the paused rollback procedure in
+[release verification](docs/release-verification.md).
 
 **Mobile:** EAS OTA updates can be rolled back via `eas update --rollout`; binary releases require a new store submission.
+
+### Local mobile integration tests
+
+Use `bun run dev:mobile:test` for real local email authentication and deterministic
+AI fixtures. See [the mobile testing guide](docs/mobile-testing.md) for setup,
+Maestro commands, failure scenarios, and production guards.

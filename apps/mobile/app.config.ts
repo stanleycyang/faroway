@@ -30,6 +30,12 @@ const EAS_PROJECT_ID = 'b4813d98-52ec-4985-a462-3d30a7f681b9';
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   assertQaBuildEnvironment(process.env);
+  if (
+    process.env.EXPO_PUBLIC_TEST_LOGIN === 'true' &&
+    (process.env.EAS_BUILD_PROFILE === 'production' || process.env.NODE_ENV === 'production')
+  ) {
+    throw new Error('Local test login cannot be enabled in a release build');
+  }
   const googleIosUrlScheme = process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME;
   const plugins: NonNullable<ExpoConfig['plugins']> = [
     'expo-router',

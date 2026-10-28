@@ -291,6 +291,10 @@ console.log(`\n${BOLD}  Faroway Environment Check${RESET}`);
 console.log(`  ${"═".repeat(45)}`);
 
 let totalMissing = 0;
+if (mobileReleaseMode && process.env.EXPO_PUBLIC_TEST_LOGIN === "true") {
+  console.error("EXPO_PUBLIC_TEST_LOGIN must be disabled for mobile releases.");
+  process.exit(1);
+}
 if (mobileReleaseMode) {
   totalMissing += check("Mobile Release", MOBILE_RELEASE);
 } else {

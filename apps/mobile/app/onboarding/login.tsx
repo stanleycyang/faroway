@@ -1,6 +1,10 @@
+import { testLoginEnabled } from '../../lib/testLogin';
+import { TestEmailLogin } from '../../components/TestEmailLogin';
 import { useState } from 'react';
 import {
   View,
+  KeyboardAvoidingView,
+  ScrollView,
   Text,
   StyleSheet,
   TouchableOpacity,
@@ -60,71 +64,88 @@ export default function LoginScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <StatusBar style="light" />
-      {/* Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          accessibilityLabel="Back"
-        >
-          <Ionicons name="arrow-back" size={24} color={colors.surface[300]} />
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.content}>
-        {/* Title */}
-        <View style={styles.titleSection}>
-          <Text style={styles.title} accessibilityRole="header">
-            Sign in to Faroway
-          </Text>
-          <Text style={styles.subtitle}>
-            Sync your trips across devices and unlock personalized recommendations
-          </Text>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={testLoginEnabled() ? (Platform.OS === 'ios' ? 'padding' : 'height') : undefined}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel="Back"
+          >
+            <Ionicons name="arrow-back" size={24} color={colors.surface[300]} />
+          </TouchableOpacity>
         </View>
 
-        {/* Auth Buttons */}
-        {isLoading ? (
-          <ActivityIndicator size="large" color={colors.primary[500]} style={{ marginTop: 40 }} />
-        ) : (
-          <View style={styles.buttonSection}>
-            <TouchableOpacity
-              style={styles.socialButton}
-              onPress={handleGoogleLogin}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel="Continue with Google"
-            >
-              <Ionicons name="logo-google" size={20} color="#DB4437" />
-              <Text style={styles.socialButtonText}>Continue with Google</Text>
-            </TouchableOpacity>
-
-            {Platform.OS === 'ios' && (
-              <TouchableOpacity
-                style={[styles.socialButton, styles.appleButton]}
-                onPress={handleAppleLogin}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Continue with Apple"
-              >
-                <Ionicons name="logo-apple" size={20} color="#fff" />
-                <Text style={[styles.socialButtonText, styles.appleButtonText]}>
-                  Continue with Apple
-                </Text>
-              </TouchableOpacity>
-            )}
+        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+          {/* Title */}
+          <View style={styles.titleSection}>
+            <Text style={styles.title} accessibilityRole="header">
+              Sign in to Faroway
+            </Text>
+            <Text style={styles.subtitle}>
+              Sync your trips across devices and unlock personalized recommendations
+            </Text>
           </View>
-        )}
 
-        {/* Skip */}
-        <TouchableOpacity
-          style={styles.skipButton}
-          onPress={handleSkipLogin}
-          accessibilityRole="button"
-        >
-          <Text style={styles.skipText}>Skip for now</Text>
-        </TouchableOpacity>
-      </View>
+          {/* Auth Buttons */}
+          {!testLoginEnabled() &&
+            (isLoading ? (
+              <ActivityIndicator
+                size="large"
+                color={colors.primary[500]}
+                style={{ marginTop: 40 }}
+              />
+            ) : (
+              <View style={styles.buttonSection}>
+                <TouchableOpacity
+                  style={styles.socialButton}
+                  onPress={handleGoogleLogin}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Continue with Google"
+                >
+                  <Ionicons name="logo-google" size={20} color="#DB4437" />
+                  <Text style={styles.socialButtonText}>Continue with Google</Text>
+                </TouchableOpacity>
+
+                {Platform.OS === 'ios' && (
+                  <TouchableOpacity
+                    style={[styles.socialButton, styles.appleButton]}
+                    onPress={handleAppleLogin}
+                    activeOpacity={0.7}
+                    accessibilityRole="button"
+                    accessibilityLabel="Continue with Apple"
+                  >
+                    <Ionicons name="logo-apple" size={20} color="#fff" />
+                    <Text style={[styles.socialButtonText, styles.appleButtonText]}>
+                      Continue with Apple
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ))}
+
+          <TestEmailLogin
+            onAuthenticated={() => {
+              setOnboardingComplete(true);
+              router.replace('/(tabs)');
+            }}
+          />
+
+          {/* Skip */}
+          <TouchableOpacity
+            style={styles.skipButton}
+            onPress={handleSkipLogin}
+            accessibilityRole="button"
+          >
+            <Text style={styles.skipText}>Skip for now</Text>
+          </TouchableOpacity>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -147,7 +168,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   content: {
-    flex: 1,
+    flexGrow: 1,
     paddingHorizontal: 24,
     justifyContent: 'center',
   },

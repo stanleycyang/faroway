@@ -1,0 +1,180 @@
+# Faroway AI evaluation strategy
+
+Optimize for a trip someone can realistically follow, with honest uncertainty and
+their requirements preserved. Schema validity and fluent writing are necessary
+but cannot establish itinerary quality. Treat hard failures as release blockers;
+a high average score must never compensate for a violated requirement.
+
+## Start with the production contracts
+
+The active route uses `SearchInput` → orchestrator `SearchPlan` → specialized
+hotel/activity/dining/transport results → aggregator suggestions → saved
+`TripDay` records → web/native display. Evaluate those actual artifacts, including
+the transformed and displayed results. Keep the existing synthetic rubric as
+grader calibration rather than pretending its flat activity format is the
+production output schema.
+
+Current source gaps to resolve before promising constraint adherence:
+
+- The generation route selects `dietary_restrictions` and `mobility_needs` but
+  does not forward them into the workflow arguments. `SearchInput` has no typed
+  fields for these requirements. Test their preservation through every stage;
+  requirements embedded incidentally in interests are not a reliable substitute.
+- The orchestrator fallback assigns empty dietary needs and moderate pacing.
+  A timeout must preserve hard requirements or return a clearly limited result.
+- Activity and aggregator schemas still supply a default USD currency. Tests must
+  distinguish currency facts supplied by a source from values inserted by a
+  parser, mapper or renderer. Do not infer that every current output is wrong;
+  trace the source of each displayed price claim.
+- The existing rubric accepted empty plans, negative prices and overlaps hidden
+  by negative transfer times. Those cases are now rejected and included in the
+  17-case offline calibration set. Evidence strings remain synthetic: nonempty
+  strings alone cannot prove that a venue claim is true.
+
+## Separate four evaluation layers
+
+| Layer                    | What it proves                                                                                                     | Where it runs                                                |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------ |
+| Deterministic contracts  | Input propagation, dates, IDs, nonnegative quantities, price units, valid lineage and displayed claim preservation | Every PR, using saved fixtures and mocked providers          |
+| Frozen model comparisons | Whether a prompt/model change improves the same cases with the same permitted source snapshots                     | Bounded, explicitly scheduled model runs                     |
+| Live data acceptance     | Current venue existence, opening times, routing, supplier availability and quote terms where applicable            | Small staging sample against authoritative permitted sources |
+| Traveler usefulness      | Whether the plan fits the traveler, feels coherent and can be followed                                             | Human review and consented product feedback                  |
+
+Do not score missing hours as verified hours, absent accessibility information as
+step-free access, a restaurant's name as dietary suitability, a tracked click as a
+booking, or a generated price as a supplier quote. A useful answer can acknowledge
+unknown facts and tell the traveler what to verify. Impossible constraints should
+produce an explanation or clarification rather than fabricated compliance.
+
+## Build a representative case set
+
+Start with 40 development briefs and 20 independently reviewed holdout briefs.
+These are proposed starting sizes, not an established quality guarantee. Keep
+holdout cases out of prompt tuning. Use synthetic traveler data and reference
+facts whose processing and storage are permitted.
+
+| Slice             | Examples and required failure detection                                                                                                        |
+| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Dates and party   | One-day trip, month/year boundary, leap day, DST/time zones, infants/children, multi-room party, per-person versus whole-party cost            |
+| Geography         | Dense city, dispersed region, islands, same-name destinations, impossible inter-city transfers, misplaced coordinates                          |
+| Pace              | Slow pace, midday rest, short arrival/departure days, no early starts, fatigue and excessive backtracking                                      |
+| Requirements      | Step-free request, severe allergy, vegan/gluten-free needs, conflicting requests, insufficient verified information                            |
+| Budget            | Tight budget, mixed currencies, unknown price, zero/free item, per-room/night totals, taxes and quote expiry                                   |
+| Interests         | Family, culture, food, outdoors, lesser-known interests, repeat venues and generic suggestions that ignore the brief                           |
+| Supply and faults | No hotels, empty venue list, closed attractions, weather disruption, provider timeout, truncation, malformed output, fallback and retry        |
+| Product revisions | Locked activity, changed dates/party, old plan retained, stale checkout blocked, stream preview agrees with saved and native output            |
+| Adversarial input | Venue descriptions containing instructions, invented IDs/URLs, claims of confirmed bookings, malicious source text and impossible user demands |
+
+Use explicit expected properties and acceptable alternatives, not a single
+verbatim reference itinerary. Record unsupported capabilities as blocked; do not
+silently remove difficult cases from the denominator. Validate case definitions
+before calling any model. Store failures as regression cases after review.
+
+## Grade hard facts in code
+
+Use deterministic checks for exact date/party propagation, day coverage, valid
+time intervals, nonnegative finite costs and transfers, unique source IDs,
+referenced-ID membership, locked choices and unchanged requirements after retries.
+Handle arrival/rest days with explicit case-specific coverage rules.
+
+Keep price amount, currency, unit, party, taxes, source, timestamp and expiry
+together. Unknown components must remain unknown through totals and UI mapping.
+Check that every confirmed factual claim points to an allowed source record with
+matching fields. Geographic/temporal checks need authoritative coordinates,
+opening windows and route estimates; a model's own explanation is not evidence.
+Report unknown verification separately from pass and fail.
+
+Re-run these checks on raw agent output, normalized saved output, and the relevant
+web/native view models. This catches an accurate model response being damaged by
+deduplication, schema defaults, pricing transforms or rendering.
+
+## Grade usefulness with humans and calibrated judges
+
+Use a 1–5 anchored rubric for personalization, geographic coherence, pacing,
+variety, practical detail and clear uncertainty. A 1 is unusable; a 3 needs
+material editing; a 5 is ready for traveler verification with only minor edits.
+Require concrete reasons and cited output/source IDs for every deduction.
+
+Have two reviewers independently label an initial sample, resolve disagreements,
+and keep a separate judge-calibration holdout. Only then use an LLM judge for
+scale. Blind model/prompt names, randomize candidate order, allow ties, and repeat
+pairwise comparisons in reversed order. Treat inconsistent orderings and
+human/judge disagreements as review cases. Do not let a generator certify its own
+facts. Judge prompts must treat itinerary and supplier text as untrusted data.
+
+This combines task-specific automation, human calibration and comparisons in the
+way described by [OpenAI's evaluation guidance](https://developers.openai.com/api/docs/guides/evaluation-best-practices).
+Keep the harness provider-independent and repository-owned so comparisons and
+fixtures remain usable as hosted evaluation tools change.
+
+## Compare candidates under controlled conditions
+
+Pin source commit, prompt/schema hashes, requested and resolved model/provider,
+generation settings, tool snapshots, rubric version and judge version. Compare
+baseline and candidate on the same source snapshots. Run an initial three trials
+per brief to expose variability, then increase repetitions for unstable slices.
+Report paired case-level outcomes, slice counts and uncertainty, not only a
+single average or the best of several generations.
+
+Count timeouts, fallback plans, empty results and unsuccessful dispatches in the
+denominator. Track fallback rate and useful completion rate separately from
+transport success. Measure latency to first useful content and final saved plan,
+p50/p95 latency, tokens and cost per useful plan, including retries and judges.
+Keep live-source drift tests separate from frozen prompt comparisons.
+
+## Proposed release criteria
+
+These are initial product targets to calibrate with reviewer labels, not current
+measured results:
+
+- Zero known hard-requirement violations, fabricated verification/booking claims,
+  negative quantities, or unacknowledged stale pricing in the release suite.
+- All deterministic contracts pass. Unknown factual evidence is visible and
+  counted; a requirement that cannot be safely met blocks or limits the result.
+- Human-reviewed usefulness is at least 4/5 on each essential dimension for the
+  reviewed critical slices. Report the distribution and worst slices as well as
+  the mean. Do not average a failed accessibility case into a successful city break.
+- Candidate preference and useful completion show no material regression against
+  the baseline within reported uncertainty. Set practical improvement and latency
+  margins before looking at candidate results.
+- Native and web render the same substantive facts, dates, source identities,
+  prices and uncertainty. Include the actual native flow in release acceptance.
+
+Zero observed failures in a small suite does not prove zero real-world failures.
+Keep sample sizes visible and expand difficult slices as traffic and feedback
+reveal them. Latency and cost targets should be based on measured baselines and
+an agreed product budget, rather than invented performance promises.
+
+## Run and improve within a budget
+
+Every PR runs cheap deterministic replay and rubric calibration. For prompt,
+model, schema or transformation changes, manually run a bounded paired comparison
+before release. Start with a few cases to validate the harness, then spend the
+agreed budget on the representative set. Do not interpret sandbox hotel quotes
+as free model generations or as evidence of itinerary quality.
+
+Estimate generation, retry and judging cost before a batch. Dispatch sequentially
+with output-token limits, retries disabled or bounded, an explicit maximum case
+count and a stop threshold below any soft provider budget. Cache raw outputs so
+regrading does not regenerate itineraries. No paid run or provider activation is
+part of this strategy write-up.
+
+After launch, use consented, redacted samples and structured feedback reasons
+(wrong facts, impractical routing, missed preference, poor value) to prioritize
+new cases. Compare usefulness with edits and abandonment; a rating alone cannot
+tell whether a plan's factual claims were correct. Review failures weekly and
+hold back a small canary when promoting a tested candidate.
+
+## Implementation order
+
+1. Close typed requirement propagation and fallback-preservation gaps; add tests
+   from brief capture through workflow, agents and the native view model.
+2. Add an adapter that extracts evaluation records from actual generation traces
+   while retaining source/provenance and raw outputs. Reject malformed traces
+   explicitly instead of silently skipping them.
+3. Assemble the reviewed development/holdout cases and implement deterministic
+   reference checks. Keep provider failures and unknowns visible.
+4. Calibrate human labels and the pairwise judge. Validate order bias and fabricated
+   evidence before trusting automated judgments.
+5. With a confirmed budget, compare the current pipeline against one focused
+   candidate change, then promote only after native acceptance and slice review.

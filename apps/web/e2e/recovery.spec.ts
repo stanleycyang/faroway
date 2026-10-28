@@ -167,11 +167,16 @@ test("requires consent, explains canceled sharing, and permanently revokes the o
   ).trips[0];
   expect(shared.is_shared).toBe(true);
   const token = shared.share_token;
+  const published = await request.get(`/s/${token}`);
+  expect(published.status()).toBe(200);
+  expect(await published.text()).toContain("Saved Paris plan");
   await page.getByRole("button", { name: "Turn off public access" }).click();
   await expect(
     page.getByText("Public access has been turned off."),
   ).toBeVisible();
-  expect((await request.get(`/s/${token}`)).status()).toBe(404);
+  const revoked = await request.get(`/s/${token}`);
+  expect(revoked.status()).toBe(404);
+  expect(await revoked.text()).not.toContain("Saved Paris plan");
   await page.reload();
   await expect(
     page.getByRole("button", { name: "Create public share link" }),
@@ -571,8 +576,7 @@ test("locks favorites and reviews a swap before publishing a new plan", async ({
         ).planHistory.length,
     )
     .toBe(1);
-  await expect(editor).not.toHaveAttribute("open");
-  await editor.locator("summary").first().click();
+  await expect(editor).toHaveAttribute("open");
   await expect(
     editor.getByRole("button", { name: "Unlock Quiet walk", exact: true }),
   ).toBeVisible();
@@ -592,8 +596,7 @@ test("locks favorites and reviews a swap before publishing a new plan", async ({
         ).planHistory.length,
     )
     .toBe(2);
-  await expect(editor).not.toHaveAttribute("open");
-  await editor.locator("summary").first().click();
+  await expect(editor).toHaveAttribute("open");
   await editor
     .getByRole("combobox", { name: "First activity", exact: true })
     .selectOption({ label: "Quiet walk · 2099-06-01 morning" });
@@ -699,8 +702,7 @@ test("refreshes the main trip after a confirmed edit even when editor refresh fa
   await expect(
     page.getByRole("button", { name: "Create public share link", exact: true }),
   ).toBeVisible();
-  await expect(editor).not.toHaveAttribute("open");
-  await editor.locator("summary").first().click();
+  await expect(editor).toHaveAttribute("open");
   await expect(
     editor.getByRole("button", { name: "Refresh saved plan" }),
   ).toBeVisible();
