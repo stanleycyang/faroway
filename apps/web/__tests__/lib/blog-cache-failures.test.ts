@@ -7,7 +7,14 @@ import {
   getPostBySlug,
 } from "@/lib/blog";
 
-vi.mock("next/cache", () => ({ unstable_cache: (fn: unknown) => fn }));
+const cacheWrites = vi.hoisted(() => ({ values: [] as unknown[] }));
+vi.mock("next/cache", () => ({
+  unstable_cache: (fn: () => Promise<unknown>) => async () => {
+    const value = await fn();
+    cacheWrites.values.push(value);
+    return value;
+  },
+}));
 
 vi.mock("@/lib/blog/supabase", () => ({ getBlogSupabase: vi.fn() }));
 
@@ -33,6 +40,7 @@ const readers = [getAllPostMetas, getAllPosts, getAllSitemapPostMetas];
 describe("blog cache failure handling", () => {
   beforeEach(() => {
     vi.resetAllMocks();
+    cacheWrites.values = [];
     client.from.mockReturnValue(query);
     for (const method of [query.select, query.eq, query.order])
       method.mockReturnValue(query);
@@ -42,6 +50,30 @@ describe("blog cache failure handling", () => {
     vi.mocked(getBlogSupabase).mockReturnValue(
       client as unknown as ReturnType<typeof getBlogSupabase>,
     );
+  });
+
+  it("stores a large catalog below the cache entry limit without losing posts", async () => {
+    const pages = Array.from({ length: 3 }, (_, page) =>
+      Array.from({ length: 1000 }, (_, i) => ({
+        ...row,
+        slug: `post-${page * 1000 + i}`,
+        description: "Travel details ".repeat(100),
+      })),
+    );
+    for (const data of pages)
+      query.range.mockResolvedValueOnce({ data, error: null });
+    query.range.mockResolvedValueOnce({ data: [], error: null });
+    const posts = await getAllPostMetas();
+    expect(posts).toHaveLength(3000);
+    expect(posts[2999].slug).toBe("post-2999");
+    expect(Buffer.byteLength(JSON.stringify(posts))).toBeGreaterThan(
+      2 * 1024 * 1024,
+    );
+    expect(cacheWrites.values).toHaveLength(1);
+    expect(typeof cacheWrites.values[0]).toBe("string");
+    expect(
+      Buffer.byteLength(JSON.stringify(cacheWrites.values[0])),
+    ).toBeLessThan(2 * 1024 * 1024);
   });
 
   it.each(readers)(

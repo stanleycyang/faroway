@@ -1,3 +1,5 @@
+import { gzip, gunzip } from "node:zlib";
+import { promisify } from "node:util";
 import { cache } from "react";
 import { JOURNAL_COVER_FALLBACK } from "./fallback-image";
 import { unstable_cache } from "next/cache";
@@ -144,10 +146,18 @@ async function fetchAllPostMetas(): Promise<BlogPostMeta[]> {
   return posts;
 }
 
+const compress = promisify(gzip);
+const decompress = promisify(gunzip);
+
+// Keep one coherent catalog snapshot while staying below the Data Cache's
+// per-entry limit. Repeated author metadata otherwise pushes 3,000 posts over 2 MB.
 const getCachedPostMetas = unstable_cache(
-  fetchAllPostMetas,
+  async () =>
+    (await compress(JSON.stringify(await fetchAllPostMetas()))).toString(
+      "base64",
+    ),
   [
-    "published-blog-metadata-v3",
+    "published-blog-metadata-gzip-v4",
     process.env.NEXT_PUBLIC_SUPABASE_URL || "unconfigured",
   ],
   { revalidate: 21600, tags: ["published-blog-metadata"] },
@@ -156,7 +166,12 @@ const getCachedPostMetas = unstable_cache(
 // React cache deduplicates within a render; the Data Cache reuses public rows
 // across listing, category, guide, related-post and feed requests.
 export const getAllPostMetas = cache(() =>
-  publishedMetasForPageCollection(getCachedPostMetas),
+  publishedMetasForPageCollection(async () => {
+    const encoded = await getCachedPostMetas();
+    return JSON.parse(
+      (await decompress(Buffer.from(encoded, "base64"))).toString("utf8"),
+    ) as BlogPostMeta[];
+  }),
 );
 
 // Sitemap generation reads a fresh complete set and propagates coded failures.
