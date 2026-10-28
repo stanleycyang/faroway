@@ -14,22 +14,21 @@ the transformed and displayed results. Keep the existing synthetic rubric as
 grader calibration rather than pretending its flat activity format is the
 production output schema.
 
-Current source gaps to resolve before promising constraint adherence:
+Current limits to address before promising constraint adherence:
 
-- The generation route selects `dietary_restrictions` and `mobility_needs` but
-  does not forward them into the workflow arguments. `SearchInput` has no typed
-  fields for these requirements. Test their preservation through every stage;
-  requirements embedded incidentally in interests are not a reliable substitute.
-- The orchestrator fallback assigns empty dietary needs and moderate pacing.
-  A timeout must preserve hard requirements or return a clearly limited result.
+- Saved dietary and mobility requirements now reach the search plan, specialist
+  prompts and final aggregation, including fallback plans. The system does not
+  independently verify venue suitability; generated plans tell travelers to
+  confirm dietary safety and accessibility directly.
+- Adult-only hotel and flight provider searches are skipped when children are
+  explicitly present until age-aware party pricing is available.
 - Activity and aggregator schemas still supply a default USD currency. Tests must
   distinguish currency facts supplied by a source from values inserted by a
   parser, mapper or renderer. Do not infer that every current output is wrong;
   trace the source of each displayed price claim.
-- The existing rubric accepted empty plans, negative prices and overlaps hidden
-  by negative transfer times. Those cases are now rejected and included in the
-  17-case offline calibration set. Evidence strings remain synthetic: nonempty
-  strings alone cannot prove that a venue claim is true.
+- The offline rubric rejects empty plans, negative prices, outside-trip dates
+  and overlaps hidden by negative transfer times. Evidence strings remain
+  synthetic: nonempty strings alone cannot prove a venue claim is true.
 
 ## Separate four evaluation layers
 

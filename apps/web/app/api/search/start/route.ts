@@ -24,6 +24,14 @@ const SearchInputSchema = z
     startDate: DateOnlySchema,
     endDate: DateOnlySchema,
     travelers: z.number().int().min(1).max(50).optional(),
+    adults: z.number().int().min(1).max(50).optional(),
+    children: z.number().int().min(0).max(49).optional(),
+    interests: z.array(z.string().trim().min(1).max(50)).max(20).optional(),
+    dietaryRestrictions: z
+      .array(z.string().trim().min(1).max(100))
+      .max(20)
+      .optional(),
+    mobilityNeeds: z.string().trim().max(500).optional(),
     travelerType: z
       .enum(["solo", "couple", "family", "friends", "business"])
       .optional(),
@@ -32,6 +40,13 @@ const SearchInputSchema = z
     originCity: z.string().max(200).optional(),
     originAirport: z.string().max(10).optional(),
   })
+  .refine(
+    (data) =>
+      (data.adults == null && data.children == null) ||
+      (data.adults != null &&
+        data.adults + (data.children ?? 0) === (data.travelers ?? 2)),
+    { message: "Party counts must match travelers", path: ["travelers"] },
+  )
   .refine((data) => isValidDateRange(data.startDate, data.endDate), {
     message: "End date must be on or after start date",
     path: ["endDate"],
@@ -94,6 +109,11 @@ export async function POST(request: NextRequest) {
       startDate,
       endDate,
       travelers,
+      adults,
+      children,
+      interests,
+      dietaryRestrictions,
+      mobilityNeeds,
       travelerType,
       vibes,
       budget,
@@ -149,6 +169,11 @@ export async function POST(request: NextRequest) {
         startDate,
         endDate,
         travelers: travelers || 2,
+        adults,
+        children,
+        interests,
+        dietaryRestrictions,
+        mobilityNeeds,
         travelerType,
         vibes: vibes || [],
         budget: budget || "moderate",

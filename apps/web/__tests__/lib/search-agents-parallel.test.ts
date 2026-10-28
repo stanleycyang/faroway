@@ -55,6 +55,7 @@ vi.mock("@/lib/affiliates/tripadvisor", () => ({
 
 import { runActivitiesAgent } from "@/lib/search/agents/activities";
 import { runHotelsAgent } from "@/lib/search/agents/hotels";
+import { runTransportAgent } from "@/lib/search/agents/transport";
 
 const plan = {
   destination: "Tokyo",
@@ -207,6 +208,42 @@ describe("search agents internal parallelism", () => {
     const results = await runActivitiesAgent(plan as never);
     expect(results[0].description).toBe(description);
     expect(results[0]).toHaveProperty("viatorContentVersion", 1);
+  });
+
+  it("does not return adult-only flight quotes for a party with children", async () => {
+    const result = await runTransportAgent(
+      {
+        ...plan,
+        children: 1,
+        transportCriteria: { originAirport: "SFO", destinationAirport: "TYO" },
+      } as never,
+      3,
+    );
+    expect(result).toEqual([]);
+  });
+
+  it("uses the adult party size and skips adult-only hotel searches for children", async () => {
+    mocks.generateObject.mockResolvedValue({ object: { hotels: [] } });
+    mocks.searchBookingHotels.mockResolvedValue([]);
+    mocks.isAmadeusConfigured.mockReturnValue(false);
+    await runHotelsAgent({
+      ...plan,
+      travelers: 4,
+      adults: 4,
+      children: 0,
+    } as never);
+    expect(mocks.searchBookingHotels).toHaveBeenCalledWith(
+      expect.objectContaining({ guests: 4 }),
+    );
+    mocks.searchBookingHotels.mockClear();
+    await runHotelsAgent({
+      ...plan,
+      travelers: 3,
+      adults: 2,
+      children: 1,
+    } as never);
+    expect(mocks.searchBookingHotels).not.toHaveBeenCalled();
+    expect(mocks.searchAmadeusHotels).not.toHaveBeenCalled();
   });
 
   it("starts Booking.com and AI hotel fallback before awaiting either result", async () => {

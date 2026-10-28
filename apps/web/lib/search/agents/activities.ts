@@ -144,6 +144,8 @@ export async function runActivitiesAgent(
 - Pace: ${activityCriteria.pacePreference}
 - Must-see: ${activityCriteria.mustSee.join(", ") || "popular attractions"}
 - Interests: ${activityCriteria.interests.join(", ")}
+- Mobility needs: ${plan.mobilityNeeds || "none specified"}
+- Accessibility is unverified unless supported by reliable evidence; do not claim it is confirmed.
 
 **Vibes to match:** ${vibes.join(", ")}
 **Keywords to incorporate:** ${vibeInterpretation.searchKeywords.slice(0, 10).join(", ")}

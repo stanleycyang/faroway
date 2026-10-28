@@ -293,7 +293,28 @@ export async function POST(request: NextRequest, { params }: Params) {
             typeof tripPreferences.children === "number"
               ? tripPreferences.children
               : undefined,
-          interests: normalizeStringArray(tripPreferences.interests, 20, 50),
+          interests:
+            normalizeStringArray(tripPreferences.interests, 20, 50) ??
+            (Array.isArray(trip.interests)
+              ? trip.interests
+                  .filter(
+                    (value: unknown): value is string =>
+                      typeof value === "string" && !!value.trim(),
+                  )
+                  .map((value: string) => value.trim())
+              : undefined),
+          dietaryRestrictions: Array.isArray(trip.dietary_restrictions)
+            ? trip.dietary_restrictions
+                .filter(
+                  (value: unknown): value is string =>
+                    typeof value === "string" && !!value.trim(),
+                )
+                .map((value: string) => value.trim())
+            : undefined,
+          mobilityNeeds:
+            typeof trip.mobility_needs === "string"
+              ? trip.mobility_needs.trim() || undefined
+              : undefined,
           travelerType,
           vibes,
           budget: trip.budget_tier || "moderate",

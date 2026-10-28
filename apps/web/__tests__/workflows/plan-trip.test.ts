@@ -192,8 +192,8 @@ const searchPlan = {
     priorities: ["dining"],
   },
   hotelCriteria: {},
-  activityCriteria: {},
-  diningCriteria: {},
+  activityCriteria: { interests: [], pacePreference: "moderate" },
+  diningCriteria: { dietaryNeeds: [] },
   transportCriteria: {
     originAirport: "SFO",
     destinationAirport: "NRT",
@@ -214,6 +214,9 @@ const workflowInput = {
   endDate: "2026-06-05",
   travelers: 2,
   travelerType: "couple" as const,
+  interests: ["history"],
+  dietaryRestrictions: ["peanut allergy"],
+  mobilityNeeds: "step-free access",
   vibes: ["foodie"],
   budget: "moderate",
   originCity: "San Francisco",
@@ -365,6 +368,39 @@ describe("planTripWorkflow", () => {
     mocks.buildJsonRenderSpec.mockReturnValue([
       { type: "TripSummary", props: { destination: "Tokyo" } },
     ]);
+  });
+
+  it("retains verification reminders in the saved itinerary", async () => {
+    mocks.runOrchestratorAgent.mockResolvedValue({
+      ...searchPlan,
+      mobilityNeeds: "step-free",
+      diningCriteria: { dietaryNeeds: ["peanut allergy"] },
+    });
+    const slot = { activities: [], meals: [] };
+    mocks.mapSearchResultsToItinerary.mockReturnValue(
+      mappedItinerary({
+        days: [
+          {
+            dayNumber: 1,
+            date: "2026-06-01",
+            morning: slot,
+            afternoon: slot,
+            evening: slot,
+            tips: [],
+          },
+        ],
+      }),
+    );
+    const result = await planTripWorkflow(workflowInput);
+    expect(result.status).toBe("completed");
+    expect(result.result?.days[0].tips).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("allergen safety are unverified"),
+        expect.stringContaining(
+          "Accessibility for your mobility needs is unverified",
+        ),
+      ]),
+    );
   });
 
   it("rejects duplicate day identities before any persistence or completion", async () => {
@@ -726,6 +762,9 @@ describe("planTripWorkflow", () => {
         originCity: "San Francisco",
         originAirport: "SFO",
         travelerType: "couple",
+        interests: ["history"],
+        dietaryRestrictions: ["peanut allergy"],
+        mobilityNeeds: "step-free access",
       }),
     );
     expect(mocks.runAggregatorAgent).toHaveBeenCalledTimes(1);

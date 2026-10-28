@@ -143,12 +143,12 @@ export async function runHotelsAgent(
 
   const apiPromises: [Promise<HotelResult[]>, Promise<HotelResult[]>] = [
     // Booking.com
-    isBookingConfigured()
+    !plan.children && isBookingConfigured()
       ? searchBookingHotels({
           destination,
           checkIn: dates.start,
           checkOut: dates.end,
-          guests: 2,
+          guests: plan.adults ?? plan.travelers ?? 2,
           stars: starRating,
           priceMin: priceRange.min,
           priceMax: priceRange.max,
@@ -218,12 +218,12 @@ export async function runHotelsAgent(
       : Promise.resolve([] as HotelResult[]),
 
     // Amadeus
-    isAmadeusConfigured()
+    !plan.children && isAmadeusConfigured()
       ? searchAmadeusHotels({
           cityCode: resolveAmadeusCityCode(destination),
           checkIn: dates.start,
           checkOut: dates.end,
-          adults: 2,
+          adults: plan.adults ?? plan.travelers ?? 2,
           stars: starRating,
           priceMax: priceRange.max,
           limit: count,

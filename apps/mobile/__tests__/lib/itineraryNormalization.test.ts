@@ -91,3 +91,15 @@ test('transport preserves explicit direct service and leaves unknown duration an
   expect(convert({ duration: -20, stops: 1.5 }).stops).toBeUndefined();
   expect(convert({ duration: 90, stops: 0 })).toMatchObject({ duration: 90, stops: 0 });
 });
+
+test('retains verification reminders for display on native itineraries', () => {
+  const days = transformItineraryDays([
+    {
+      date: '2026-06-01',
+      dayNumber: 1,
+      title: 'Day 1',
+      tips: ['Confirm allergen safety with the restaurant', null, ''],
+    },
+  ]);
+  expect(days[0].tips).toEqual(['Confirm allergen safety with the restaurant']);
+});

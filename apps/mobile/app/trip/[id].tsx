@@ -923,6 +923,12 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                   <Text style={styles.dayTheme}>{trip.days[selectedDay]?.theme}</Text>
                 </View>
 
+                {trip.days[selectedDay]?.tips?.map((tip, index) => (
+                  <Text key={`${index}:${tip}`} style={styles.dayTip}>
+                    {tip}
+                  </Text>
+                ))}
+
                 {/* Transport */}
                 {trip.days[selectedDay]?.transport && (
                   <View style={styles.transportCardWrapper}>
@@ -1213,6 +1219,7 @@ const styles = StyleSheet.create({
   dayTabDateSelected: {
     color: 'rgba(255,255,255,0.7)',
   },
+  dayTip: { color: colors.surface[300], marginHorizontal: 24, marginBottom: 8 },
   dayThemeContainer: {
     paddingHorizontal: 24,
     marginBottom: 20,

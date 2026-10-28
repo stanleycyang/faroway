@@ -186,6 +186,11 @@ export function transformItineraryDays(apiDays: any[]): TripDay[] {
         date: displayText(day.date),
         dayNumber: Number.isInteger(day.dayNumber) && day.dayNumber > 0 ? day.dayNumber : 1,
         theme: displayText(day.title) || displayText(day.theme) || 'Your day',
+        tips: Array.isArray(day.tips)
+          ? day.tips.filter(
+              (tip: unknown): tip is string => typeof tip === 'string' && !!tip.trim()
+            )
+          : [],
         activities,
         transport,
       };

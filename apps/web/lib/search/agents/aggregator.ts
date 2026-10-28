@@ -174,6 +174,10 @@ export async function runAggregatorAgent(
 **Trip Dates:** ${dates.start} to ${dates.end}
 **Vibes:** ${plan.vibeInterpretation.vibes.join(", ")}
 **Pace:** ${plan.activityCriteria.pacePreference}
+**Interests:** ${plan.activityCriteria.interests?.join(", ") || "Not specified"}
+**Dietary restrictions:** ${plan.diningCriteria?.dietaryNeeds?.join(", ") || "Not specified"}
+**Mobility needs:** ${plan.mobilityNeeds || "Not specified"}
+Dietary and accessibility suitability are unverified; do not claim that they are confirmed.
 
 **Available Hotels (pick the best match):**
 ${JSON.stringify(hotelSummary, null, 2)}

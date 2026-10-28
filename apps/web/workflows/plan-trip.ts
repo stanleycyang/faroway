@@ -53,6 +53,8 @@ interface TripPlanInput {
   adults?: number;
   children?: number;
   interests?: string[];
+  dietaryRestrictions?: string[];
+  mobilityNeeds?: string;
   travelerType?: SearchInput["travelerType"];
   vibes?: string[];
   budget?: string;
@@ -87,6 +89,8 @@ export async function planTripWorkflow(
     adults,
     children,
     interests,
+    dietaryRestrictions,
+    mobilityNeeds,
     travelerType,
     vibes,
     budget,
@@ -110,6 +114,8 @@ export async function planTripWorkflow(
       adults,
       children,
       interests,
+      dietaryRestrictions,
+      mobilityNeeds,
       travelerType,
       vibes,
       budget,
@@ -332,6 +338,8 @@ async function buildSearchPlanStep(params: {
   adults?: number;
   children?: number;
   interests?: string[];
+  dietaryRestrictions?: string[];
+  mobilityNeeds?: string;
   travelerType?: SearchInput["travelerType"];
   vibes?: string[];
   budget?: string;
@@ -350,6 +358,8 @@ async function buildSearchPlanStep(params: {
     adults,
     children,
     interests,
+    dietaryRestrictions,
+    mobilityNeeds,
     travelerType,
     vibes,
     budget,
@@ -364,6 +374,8 @@ async function buildSearchPlanStep(params: {
     adults,
     children,
     interests,
+    dietaryRestrictions,
+    mobilityNeeds,
     travelerType,
     vibes: vibes || [],
     budget: (budget as "budget" | "moderate" | "luxury") || "moderate",
@@ -532,6 +544,26 @@ async function aggregateItineraryStep(params: {
     searchResults,
     topHotel || params.hotels[0] || null,
   );
+  const reminders = [
+    ...(params.plan.children
+      ? [
+          "Hotel and flight prices for children are unavailable here. Confirm party details and prices directly with providers.",
+        ]
+      : []),
+    ...(params.plan.diningCriteria?.dietaryNeeds?.length
+      ? [
+          "Dietary suitability and allergen safety are unverified. Confirm directly with each restaurant before eating.",
+        ]
+      : []),
+    ...(params.plan.mobilityNeeds
+      ? [
+          "Accessibility for your mobility needs is unverified. Confirm directly with each venue and transport provider before booking.",
+        ]
+      : []),
+  ];
+  if (reminders.length && mapped.days.length) {
+    mapped.days[0].tips = [...(mapped.days[0].tips || []), ...reminders];
+  }
 
   await Promise.all([
     mergeIntermediateResult(params.searchId, "days", mapped.days),

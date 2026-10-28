@@ -51,6 +51,7 @@ export interface TripDay {
   date: string;
   dayNumber: number;
   theme: string;
+  tips?: string[];
   activities: Activity[];
   transport?: {
     type: 'flight' | 'train' | 'bus' | 'ferry';

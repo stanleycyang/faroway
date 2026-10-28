@@ -63,7 +63,7 @@ function buildFallbackDining(plan: SearchPlan): DiningResult[] {
     cuisineTypes: [cuisine],
     priceLevel: 2,
     priceStatus: "unknown",
-    dietaryOptions: plan.diningCriteria.dietaryNeeds || [],
+    dietaryOptions: [],
     mealTypes: ["lunch", "dinner"],
     location: { name: plan.destination, address: "", lat: 0, lng: 0 },
     images: [],

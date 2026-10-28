@@ -40,6 +40,7 @@ const day = z
     date: text,
     dayNumber: amount,
     theme: text,
+    tips: z.array(text).optional(),
     activities: z.array(activity),
     transport: z
       .object({

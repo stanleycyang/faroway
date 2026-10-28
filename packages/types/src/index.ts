@@ -360,6 +360,8 @@ export interface SearchInput {
   adults?: number;
   children?: number;
   interests?: string[];
+  dietaryRestrictions?: string[];
+  mobilityNeeds?: string;
   destination: string;
   startDate: string;
   endDate: string;
@@ -406,6 +408,9 @@ export interface SearchRecord {
 }
 
 export interface SearchPlan {
+  travelers?: number;
+  adults?: number;
+  children?: number;
   destination: string;
   country: string;
   dates: {
@@ -413,6 +418,7 @@ export interface SearchPlan {
     end: string;
     nights: number;
   };
+  mobilityNeeds?: string;
   searchPriorities: ("hotels" | "activities" | "dining" | "transport")[];
   hotelCriteria: {
     priceRange: { min: number; max: number };

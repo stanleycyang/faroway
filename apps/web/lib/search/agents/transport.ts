@@ -35,6 +35,9 @@ export async function runTransportAgent(
   travelers: number,
   count: number = 5,
 ): Promise<TransportResult[]> {
+  // These provider adapters currently price every passenger as an adult.
+  if (plan.children) return [];
+
   // Transport is optional — skip if no origin airport
   if (!plan.transportCriteria?.originAirport) {
     console.log(

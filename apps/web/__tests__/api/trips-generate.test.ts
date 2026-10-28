@@ -59,6 +59,9 @@ function createTableChain(table: string) {
           travelers: 2,
           budget_tier: "moderate",
           vibes: ["foodie"],
+          interests: ["museums"],
+          dietary_restrictions: ["peanut allergy"],
+          mobility_needs: "step-free access",
           preferences: {
             travelerType: "family",
             originCity: "San Francisco",
@@ -204,6 +207,9 @@ describe("POST /api/trips/[id]/generate", () => {
     expect(startMock).toHaveBeenCalledWith(expect.any(Function), [
       expect.objectContaining({
         travelerType: "family",
+        interests: ["museums"],
+        dietaryRestrictions: ["peanut allergy"],
+        mobilityNeeds: "step-free access",
         originCity: "San Francisco",
         originAirport: "SFO",
         vibes: ["foodie"],

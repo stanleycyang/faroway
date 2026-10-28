@@ -93,6 +93,37 @@ describe("POST /api/search/start", () => {
     expect(startMock).toHaveBeenCalledOnce();
   });
 
+  it("passes party and accessibility requirements to the workflow", async () => {
+    const request = new NextRequest("http://localhost:3000/api/search/start", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-faroway-ai-disclosure": "planning-google-v1",
+      },
+      body: JSON.stringify({
+        destination: "Paris",
+        startDate: "2026-06-01",
+        endDate: "2026-06-03",
+        travelers: 3,
+        adults: 2,
+        children: 1,
+        interests: ["art"],
+        dietaryRestrictions: ["peanut allergy"],
+        mobilityNeeds: "step-free",
+      }),
+    });
+    expect((await POST(request)).status).toBe(200);
+    expect(startMock).toHaveBeenCalledWith(expect.any(Function), [
+      expect.objectContaining({
+        adults: 2,
+        children: 1,
+        interests: ["art"],
+        dietaryRestrictions: ["peanut allergy"],
+        mobilityNeeds: "step-free",
+      }),
+    ]);
+  });
+
   it("requires an authenticated user", async () => {
     authMock.mockResolvedValueOnce(
       NextResponse.json({ error: "Unauthorized" }, { status: 401 }),

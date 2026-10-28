@@ -2,6 +2,24 @@ import { describe, expect, it } from "vitest";
 import { buildFallbackSearchPlan } from "@/lib/search/agents/orchestrator";
 
 describe("orchestrator fallback search plan", () => {
+  it("preserves traveler needs and party details on fallback", () => {
+    const plan = buildFallbackSearchPlan({
+      destination: "Paris",
+      startDate: "2026-06-01",
+      endDate: "2026-06-03",
+      travelers: 3,
+      adults: 2,
+      children: 1,
+      vibes: [],
+      interests: ["art"],
+      dietaryRestrictions: ["peanut allergy"],
+      mobilityNeeds: "step-free access",
+    });
+    expect(plan.diningCriteria.dietaryNeeds).toEqual(["peanut allergy"]);
+    expect(plan.mobilityNeeds).toBe("step-free access");
+    expect(plan.activityCriteria.interests).toContain("art");
+    expect(plan).toMatchObject({ travelers: 3, adults: 2, children: 1 });
+  });
   it("includes a destination IATA code when origin airport is supplied", () => {
     const plan = buildFallbackSearchPlan({
       destination: "Tokyo, Japan",

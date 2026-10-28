@@ -111,6 +111,8 @@ export async function runDiningAgent(
 - Price range: ${priceRange} (levels ${priceLevels.join("-")})
 - Cuisine interests: ${cuisineTypes.join(", ") || "local cuisine"}
 - Dietary needs: ${dietaryNeeds.join(", ") || "none specified"}
+- Mobility needs: ${plan.mobilityNeeds || "none specified"}
+- Dietary and accessibility suitability require direct verification; do not claim they are confirmed without evidence.
 - Meal priorities: ${mealPriorities.join(", ")}
 
 **Vibes to match:** ${vibeInterpretation.vibes.join(", ")}
@@ -152,6 +154,7 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
     let restaurants = result.restaurants
       .map((restaurant, index) => ({
         ...restaurant,
+        dietaryOptions: [],
         rating: 0,
         reviewCount: 0,
         id: `dining_${Date.now()}_${index}`,

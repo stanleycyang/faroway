@@ -199,6 +199,8 @@ export async function runOrchestratorAgent(
 **Travelers:** ${input.travelers} people, ${input.travelerType || "general"} travel
 **Party composition:** ${input.adults == null ? "Not specified" : `${input.adults} adults and ${input.children ?? 0} children`}
 **Interests:** ${(input.interests ?? []).join(", ") || "Not specified"}
+**Dietary restrictions:** ${(input.dietaryRestrictions ?? []).join(", ") || "Not specified"}
+**Mobility needs:** ${input.mobilityNeeds || "Not specified"}
 **Vibes:** ${vibes.join(", ")}
 **Budget:** ${input.budget || "moderate"}${originInfo}
 
@@ -233,22 +235,45 @@ Create a detailed search plan with:
       "orchestrator AI",
     );
 
-    // Attach deterministic transport fields if the model omitted any of them.
+    // Preserve the saved trip identity and requirements even when the model rewrites them.
+    plan.destination = input.destination;
+    plan.dates = { start: input.startDate, end: input.endDate, nights };
+    plan.vibeInterpretation.vibes = [...vibes];
+    plan.diningCriteria.dietaryNeeds = [
+      ...new Set([
+        ...(input.dietaryRestrictions ?? []),
+        ...plan.diningCriteria.dietaryNeeds,
+      ]),
+    ];
+    plan.mobilityNeeds = input.mobilityNeeds;
+    plan.travelers = input.travelers;
+    plan.adults = input.adults;
+    plan.children = input.children;
+    plan.activityCriteria.interests = [
+      ...new Set([
+        ...(input.interests ?? []),
+        ...plan.activityCriteria.interests,
+      ]),
+    ];
+
+    // The explicitly supplied origin is authoritative.
     const inputTransportCriteria = buildTransportCriteriaFromInput(input);
     if (inputTransportCriteria) {
       plan.transportCriteria = {
         ...inputTransportCriteria,
         ...plan.transportCriteria,
         originCity:
-          plan.transportCriteria?.originCity ??
-          inputTransportCriteria.originCity,
+          inputTransportCriteria.originCity ??
+          plan.transportCriteria?.originCity,
         originAirport:
-          plan.transportCriteria?.originAirport ??
-          inputTransportCriteria.originAirport,
+          inputTransportCriteria.originAirport ??
+          plan.transportCriteria?.originAirport,
         destinationAirport:
-          plan.transportCriteria?.destinationAirport ??
-          inputTransportCriteria.destinationAirport,
+          inputTransportCriteria.destinationAirport ??
+          plan.transportCriteria?.destinationAirport,
       };
+    } else if (!input.originCity && !input.originAirport) {
+      plan.transportCriteria = undefined;
     }
 
     return plan;
@@ -279,12 +304,16 @@ export function buildFallbackSearchPlan(input: SearchInput): SearchPlan {
 
   return {
     destination: input.destination,
+    travelers: input.travelers,
+    adults: input.adults,
+    children: input.children,
     country: "",
     dates: {
       start: input.startDate,
       end: input.endDate,
       nights,
     },
+    mobilityNeeds: input.mobilityNeeds,
     searchPriorities: transportCriteria
       ? ["hotels", "activities", "dining", "transport"]
       : ["hotels", "activities", "dining"],
@@ -313,7 +342,7 @@ export function buildFallbackSearchPlan(input: SearchInput): SearchPlan {
           : input.budget === "budget"
             ? "budget"
             : "moderate",
-      dietaryNeeds: [],
+      dietaryNeeds: input.dietaryRestrictions ?? [],
       mealPriorities: ["dinner", "lunch", "breakfast"],
     },
     vibeInterpretation: {
