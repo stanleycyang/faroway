@@ -82,6 +82,55 @@ try:
         assert sql(f"SELECT has_function_privilege('service_role','{signature}','execute');") == 't'
     sql("SET ROLE service_role; SELECT * FROM public.get_destination_trip_counts(NULL); SELECT * FROM public.get_destination_search_counts(NULL); SELECT public.increment_blog_view_count('missing-fixture');")
     print('PASS editorial metrics reject direct client RPC access and preserve server routes', flush=True)
+    # Production still exposes the non-editorial helpers. Re-grant every
+    # signature, including ones staging already revoked, then apply once.
+    restriction = next(x for x in json.loads((ROOT / 'supabase/release-candidate/migrations.json').read_text())['application_order'] if x['path'].endswith('restrict_remaining_function_execute.sql'))
+    source = (ROOT / restriction['path']).read_bytes()
+    assert hashlib.sha256(source).hexdigest() == restriction['sha256']
+    assert restriction['applied'] is False
+    signatures = [
+        'public.get_destination_trip_counts(timestamptz)',
+        'public.get_destination_search_counts(timestamptz)',
+        'public.increment_blog_view_count(text)',
+        'public.cleanup_old_workflow_data()',
+        'public.normalize_destination(text)',
+        'public.update_updated_at_column()',
+        'public.update_push_token_timestamp()',
+    ]
+    sql(source.decode())
+    for signature in signatures:
+        sql(f'GRANT EXECUTE ON FUNCTION {signature} TO PUBLIC, anon, authenticated;')
+        for role in ['anon', 'authenticated', 'public']:
+            assert sql(f"SELECT has_function_privilege('{role}','{signature}','execute');") == 't'
+    sql(source.decode())
+    for signature in signatures:
+        for role in ['anon', 'authenticated', 'public']:
+            assert sql(f"SELECT has_function_privilege('{role}','{signature}','execute');") == 'f'
+        assert sql(f"SELECT has_function_privilege('service_role','{signature}','execute');") == 't'
+    sql("SET ROLE service_role; SELECT public.cleanup_old_workflow_data(); SELECT public.normalize_destination('  Paris, France '); SELECT * FROM public.get_destination_trip_counts(NULL); SELECT * FROM public.get_destination_search_counts(NULL); SELECT public.increment_blog_view_count('missing-fixture');")
+    for role in ['anon', 'authenticated']:
+        sql(f"SET ROLE {role}; SELECT public.normalize_destination('Paris');", False)
+        sql(f"SET ROLE {role}; SELECT public.cleanup_old_workflow_data();", False)
+        sql(f"SET ROLE {role}; SELECT public.update_updated_at_column();", False)
+        sql(f"SET ROLE {role}; SELECT public.update_push_token_timestamp();", False)
+    sql("ALTER TABLE public.users DISABLE TRIGGER update_users_updated_at; UPDATE public.users SET updated_at='2000-01-01', display_name='Before revoke' WHERE id='00000000-0000-4000-8000-000000000011'; ALTER TABLE public.users ENABLE TRIGGER update_users_updated_at;")
+    sql("SELECT set_config('request.jwt.claim.sub','00000000-0000-4000-8000-000000000011',false); SELECT set_config('request.jwt.claim.role','authenticated',false); SET ROLE authenticated; UPDATE public.users SET display_name='Client still updates' WHERE id='00000000-0000-4000-8000-000000000011';")
+    assert sql("SELECT display_name FROM public.users WHERE id='00000000-0000-4000-8000-000000000011';") == 'Client still updates'
+    assert sql("SELECT updated_at > '2000-01-01'::timestamptz FROM public.users WHERE id='00000000-0000-4000-8000-000000000011';") == 't'
+    sql("ALTER TABLE public.push_tokens DISABLE TRIGGER trigger_update_push_token_timestamp; UPDATE public.push_tokens SET updated_at='2000-01-01' WHERE token='ExpoPushToken[fixture]'; ALTER TABLE public.push_tokens ENABLE TRIGGER trigger_update_push_token_timestamp;")
+    sql("SET ROLE service_role; UPDATE public.push_tokens SET platform='ios' WHERE token='ExpoPushToken[fixture]';")
+    assert sql("SELECT updated_at > '2000-01-01'::timestamptz FROM public.push_tokens WHERE token='ExpoPushToken[fixture]';") == 't'
+    sql("SET ROLE service_role; INSERT INTO public.destinations(slug,name,country) VALUES('execute-grant-fixture','  Paris, France ','Fixture');")
+    assert sql("SELECT name_normalized FROM public.destinations WHERE slug='execute-grant-fixture';") == 'paris'
+    assert sql("SET ROLE anon; SELECT name_normalized FROM public.destinations WHERE slug='execute-grant-fixture';") == 'paris'
+    assert 'service-role only' in sql("SELECT obj_description('public.rate_limit_buckets'::regclass);")
+    sql("SET ROLE anon; SELECT * FROM public.rate_limit_buckets;", False)
+    sql("SET ROLE authenticated; SELECT * FROM public.rate_limit_buckets;", False)
+    sql(source.decode())
+    for signature in signatures:
+        assert sql(f"SELECT has_function_privilege('anon','{signature}','execute');") == 'f'
+        assert sql(f"SELECT has_function_privilege('service_role','{signature}','execute');") == 't'
+    print('PASS remaining execute grants are service-role only, idempotent, and triggers still fire', flush=True)
 
 finally:
     subprocess.run(['docker', 'rm', '--force', name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
