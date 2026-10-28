@@ -55,5 +55,19 @@ try:
     sql(source)
     assert sql(metadata) == before
     print('PASS qualified maintenance, trigger execution, normalization, client denial and repeat application', flush=True)
+    # Later hardening must stay in the reviewed inventory without changing the
+    # frozen bootstrap. Replacing functions must preserve its client denials.
+    latest = next(x for x in json.loads((ROOT / 'supabase/release-candidate/migrations.json').read_text())['application_order'] if x['path'].endswith('pin_empty_function_search_paths.sql'))
+    source = (ROOT / latest['path']).read_bytes()
+    assert hashlib.sha256(source).hexdigest() == latest['sha256']
+    sql(source.decode())
+    assert sql(metadata) == before
+    assert sql(f"SELECT count(*) FROM pg_proc WHERE pronamespace='public'::regnamespace AND proname IN ({functions}) AND proconfig=ARRAY['search_path=\"\"'];") == '5'
+    for role in ['anon', 'authenticated']:
+        sql(f"SET ROLE {role}; SELECT * FROM public.get_user_push_tokens('{owner}');", False)
+        sql(f"SET ROLE {role}; SELECT public.deactivate_push_token('ExpoPushToken[fixture]');", False)
+    sql("INSERT INTO auth.users(id,email) VALUES('00000000-0000-4000-8000-000000000012','second-fixture@example.invalid');")
+    assert sql("SELECT count(*) FROM public.users WHERE id='00000000-0000-4000-8000-000000000012';") == '1'
+    print('PASS later empty-path hardening preserves frozen bootstrap privileges and signup triggers', flush=True)
 finally:
     subprocess.run(['docker', 'rm', '--force', name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

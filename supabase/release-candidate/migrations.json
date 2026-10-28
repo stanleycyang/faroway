@@ -25,6 +25,12 @@
       "source": "supabase/release-candidate/hotel-brief-preferences.sql",
       "sha256": "edd14b2a912c1d93aa94dea511cdcaecfe95c4b8866ba7d3e70d48cd1b151d9e",
       "applied": false
+    },
+    {
+      "path": "supabase/migrations/20261023041435_pin_empty_function_search_paths.sql",
+      "source": "supabase/migrations/20261023041435_pin_empty_function_search_paths.sql",
+      "sha256": "129e585ca1b0fec2adec86b0c837a1f17a8a04e46354c813f1d551433b18e54b",
+      "applied": false
     }
   ],
   "constraints": [
