@@ -69,5 +69,19 @@ try:
     sql("INSERT INTO auth.users(id,email) VALUES('00000000-0000-4000-8000-000000000012','second-fixture@example.invalid');")
     assert sql("SELECT count(*) FROM public.users WHERE id='00000000-0000-4000-8000-000000000012';") == '1'
     print('PASS later empty-path hardening preserves frozen bootstrap privileges and signup triggers', flush=True)
+    editorial = next(x for x in json.loads((ROOT / 'supabase/release-candidate/migrations.json').read_text())['application_order'] if x['path'].endswith('restrict_editorial_metric_helpers.sql'))
+    source = (ROOT / editorial['path']).read_bytes()
+    assert hashlib.sha256(source).hexdigest() == editorial['sha256']
+    signatures = ['public.get_destination_trip_counts(timestamptz)', 'public.get_destination_search_counts(timestamptz)', 'public.increment_blog_view_count(text)']
+    for signature in signatures:
+        sql(f'GRANT EXECUTE ON FUNCTION {signature} TO PUBLIC, anon, authenticated;')
+    sql(source.decode())
+    for signature in signatures:
+        for role in ['anon', 'authenticated']:
+            assert sql(f"SELECT has_function_privilege('{role}','{signature}','execute');") == 'f'
+        assert sql(f"SELECT has_function_privilege('service_role','{signature}','execute');") == 't'
+    sql("SET ROLE service_role; SELECT * FROM public.get_destination_trip_counts(NULL); SELECT * FROM public.get_destination_search_counts(NULL); SELECT public.increment_blog_view_count('missing-fixture');")
+    print('PASS editorial metrics reject direct client RPC access and preserve server routes', flush=True)
+
 finally:
     subprocess.run(['docker', 'rm', '--force', name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

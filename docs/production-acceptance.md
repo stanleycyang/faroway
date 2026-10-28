@@ -7,6 +7,8 @@ result. A checked box requires observed evidence; older reports are baselines.
 See the [October 20 checkpoint](release-evidence/production-readiness-20261020.md)
 for the current local results and read-only hosted observations.
 
+The [October 28 production cutover receipt](release-evidence/production-cutover-20261028.json) records the completed web/database rollout, installed migration identities, preservation checks and remaining configuration/device limitations. Earlier checkpoints remain historical evidence.
+
 ## Automated release gate
 
 Run in a worktree without application dotenv files:

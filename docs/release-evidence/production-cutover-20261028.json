@@ -1,0 +1,164 @@
+{
+  "date_utc": "2026-10-28",
+  "authorization": "User explicitly approved the full production cutover.",
+  "application": {
+    "commit": "a3eb0a01bb3a1f314364eb71a120b2a044bf8318",
+    "subsequent_test_commit": "e599fda",
+    "deployment_id": "dpl_3Snjh4w6yLjsB6SeA7ieBhKRx3fe",
+    "url": "https://www.faroway.ai",
+    "immutable_url": "https://faroway-1zz8jj80w-testimonio.vercel.app",
+    "target": "production",
+    "state": "READY; promoted; project unpaused",
+    "team": "team_idxL5WtlJ0ci1y7tBwPL6AhC",
+    "project": "prj_fC34YwwfPMXckMb4vVpfkawHM17P",
+    "git_auto_deploy_hold": "Retained; this release was manually staged and promoted."
+  },
+  "database": {
+    "production_ref": "jcnephijkxgtprsutgsf",
+    "staging_ref": "omovikloadpvzijoaqus",
+    "cutover_hosted_version": "20261028050456",
+    "cutover_name": "production_cutover_plan_recovery_and_venue_evidence",
+    "bundle_sha256": "19b1227fad5ac6de959dbb3a3b15f52ef147e52a5938c5d3fa261a701bdd2051",
+    "canonical_migrations_in_dependency_order": [
+      {
+        "path": "supabase/migrations/20261003000000_met_weather_cache.sql",
+        "sha256": "244937b877e765d1681ca595ec595df927d6cd74d33d100c90181aa7789b25d7"
+      },
+      {
+        "path": "supabase/migrations/20261003001000_fence_trip_generation.sql",
+        "sha256": "e940023f301bf0f6975410211ec26bae4d527cb98fef38d68de975dca78f7e99"
+      },
+      {
+        "path": "supabase/migrations/20261003003000_protect_search_run_binding.sql",
+        "sha256": "14737afa33342cae9f5d3047cf2ae354d01c62085a6c7b6d05e8ae53d61e0124"
+      },
+      {
+        "path": "supabase/migrations/20261003004000_require_terminal_generation_evidence.sql",
+        "sha256": "3aca0e8d620b3dcc875e992c89bb5e0013f17ed086b8a17ad6c4a602c8661418"
+      },
+      {
+        "path": "supabase/migrations/20261003002000_protect_trip_lifecycle.sql",
+        "sha256": "6bc886a10e6cce4304d839a76fd35a1cb87d9cf137e612c03fe0f5ff1dcabafa"
+      },
+      {
+        "path": "supabase/migrations/20261003005000_version_trip_briefs.sql",
+        "sha256": "98cb9ca19e343ad6728cffa3f6012e13e37a5eaae0fb0953593ef76b5c8c0737"
+      },
+      {
+        "path": "supabase/migrations/20261003006000_version_checkout_handoffs.sql",
+        "sha256": "8a327032f9d466213381ff2f592db911c14c869e0b7102d63dd10090aea7b1e1"
+      },
+      {
+        "path": "supabase/migrations/20261003007000_revision_safe_plan_edits.sql",
+        "sha256": "21ffcbd0d6ed29079be1c6466db66510c26bcee4e1dd7261b71724fb3df06fb8"
+      },
+      {
+        "path": "supabase/migrations/20261003008000_trip_booking_checklist.sql",
+        "sha256": "54d0b593dd77d5c08298a2e6c04ff27650bc0fe9c403d6a6e780a9119151ceb1"
+      },
+      {
+        "path": "supabase/migrations/20261004001000_restrict_privileged_database_helpers.sql",
+        "sha256": "47fde907ec22bebdaf3a69fe330728b71f320d1e9dfb49e4dead6ccf682a4bf5"
+      },
+      {
+        "path": "supabase/migrations/20261011045031_account_and_push.sql",
+        "sha256": "f40d6c7509005fde86b0c8b5c1b9304fc774db6148017447150868a91e4d8eb6"
+      },
+      {
+        "path": "supabase/migrations/20261011045040_trip_creation_recovery.sql",
+        "sha256": "5d297725a25557476903f0e69d792c520168896f95a086e7bfa3884630520939"
+      },
+      {
+        "path": "supabase/migrations/20261011052745_pin_helper_search_paths.sql",
+        "sha256": "510697e0bba4ecf3345980d2ef9a70f5a867100afbd19c6417dc69dab43dd36c"
+      },
+      {
+        "path": "supabase/migrations/20261014001000_hotel_brief_preferences.sql",
+        "sha256": "edd14b2a912c1d93aa94dea511cdcaecfe95c4b8866ba7d3e70d48cd1b151d9e"
+      },
+      {
+        "path": "supabase/migrations/20261028035700_traveler_requirements_and_flight_consent.sql",
+        "sha256": "aafef07d9c561cc5a38120736280cd6a33433f6390cfc9ba215bb51f27c4e84c"
+      },
+      {
+        "path": "supabase/migrations/20261028044644_stable_venue_evidence_context.sql",
+        "sha256": "8a9b456b6517659d689ffb744aeec84345b7d198bc816e04a9cdfc797690cecc"
+      }
+    ],
+    "execution": "One atomic migration; removed only outer BEGIN/COMMIT wrappers; 2s lock timeout and 30s statement timeout; exclusive locks on trips/itineraries/searches/users/push_tokens; refused active planning or partially upgraded schema.",
+    "pre_existing_remote_migrations": [
+      {
+        "version": "20261014050317",
+        "name": "add_blog_posts_noindex",
+        "reconciled_statement": "alter table public.blog_posts add column if not exists noindex boolean not null default false;",
+        "replayed": false
+      },
+      {
+        "version": "20261023152751",
+        "canonical_path": "supabase/migrations/20261023041435_pin_empty_function_search_paths.sql",
+        "replayed": false
+      }
+    ],
+    "editorial_hardening": {
+      "canonical_path": "supabase/migrations/20261028050551_restrict_editorial_metric_helpers.sql",
+      "sha256": "a46da1f842b0a6b330451da208487314a22827c251ee281b09e5b50413c882bd",
+      "production_version": "20261028050646",
+      "staging_version": "20261028050645"
+    },
+    "ledger_note": "Hosted tool-assigned versions differ from canonical filenames. This receipt maps installed SQL; do not blindly replay canonical files with db push.",
+    "preservation": {
+      "trips": 67,
+      "itineraries": 52,
+      "trip_content_digest_before_and_after": "9361e9b65f968686845c87b8c4d62e83",
+      "itinerary_content_digest_before_and_after": "3f2c5f410e2efbde1ca18b67a99037a7",
+      "digest_exclusions": [
+        "new plan_revision_id",
+        "new booking_generation_id"
+      ]
+    },
+    "post_checks": [
+      "RLS enabled and clients denied access to private venue evidence",
+      "Service-only evidence read/write; old write RPC revoked",
+      "Sharing toggles retain reports; changed plan invalidates reports",
+      "Synthetic database smoke writes rolled back",
+      "Editorial metrics helper clients denied; service execution retained"
+    ]
+  },
+  "backup": {
+    "physical_backup_completed_at": "2026-10-27T10:26:59.692Z",
+    "pitr_enabled": false,
+    "private_local_directory": "/Users/stanley/.codex/backups/faroway-20261028",
+    "public_schema_and_data_restore": "Passed in networkless disposable PostgreSQL; auth identities stubbed locally, not a full hosted Auth restore.",
+    "atomic_migration_rollback": "Passed; original schema and itinerary content restored.",
+    "rehearsal_seconds": 0.173
+  },
+  "verification": {
+    "quality_tasks": 11,
+    "existing_lint_warnings": 9,
+    "web_tests": 1179,
+    "mobile_tests": 665,
+    "shared_tests": 136,
+    "script_tests": 22,
+    "offline_planning_fixtures": 17,
+    "checkout_places_browser_checks": 28,
+    "recovery_browser_checks": 34,
+    "database_suites": 7,
+    "standalone_normal_build": "passed",
+    "hosted_production_build": "passed; oversized metadata cache fixed with gzip, coherent snapshot retained",
+    "live_authenticated_smoke": "Passed create/replay, explicit flight refusal, evidence reads, sharing stability, anonymous denial; synthetic account and trip removed.",
+    "live_public_checks": {
+      "health": 200,
+      "popular_destinations": 200,
+      "trending_destinations": 200,
+      "unauthenticated_trips": 401
+    },
+    "runtime_error_scan": "No error/fatal entries observed for the new deployment since 2026-10-28T05:05:20Z."
+  },
+  "remaining_configuration": [
+    "Leaked-password protection remains disabled in Supabase Auth (only remaining security warning).",
+    "No Vercel log drains configured; Sentry build auth token absent, so source maps were not uploaded.",
+    "LiteAPI Flights remains disabled pending provider production access approval. No AI/provider purchase or flight/hotel search was made during acceptance.",
+    "Native physical-device acceptance and real provider/AI quality are not established by this web/database cutover."
+  ],
+  "rollback": "Do not roll back to the pre-cutover app alone: its writers are incompatible with the new schema. Pause the project before recovery; retain a compatible build or execute a reviewed database restore. The pre-cutover physical backup and private local snapshot are retained."
+}
