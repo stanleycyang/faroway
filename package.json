@@ -39,6 +39,7 @@
     "deploy:mobile:submit": "cd apps/mobile && eas submit --profile production",
     "deploy:mobile:update": "cd apps/mobile && eas update",
     "release:check:mobile": "cd apps/mobile && bun run release:check",
+    "qa:mobile": "bash scripts/mobile-qa.sh",
     "clean": "turbo clean",
     "clean:all": "turbo clean && rm -rf node_modules apps/*/node_modules packages/*/node_modules",
     "nuke": "turbo clean && rm -rf node_modules apps/*/node_modules packages/*/node_modules bun.lockb && bun install",

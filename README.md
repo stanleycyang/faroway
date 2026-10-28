@@ -182,8 +182,8 @@ bun deploy:web:preview  # Deploy preview
 
 ```bash
 bun deploy:mobile:dev       # Development build
-bun deploy:mobile:preview   # Preview/TestFlight build
-bun deploy:mobile:prod      # Production build
+bun deploy:mobile:preview   # Internal device build (iOS needs registered devices)
+bun deploy:mobile:prod      # Store build for TestFlight/App Store or Google Play
 bun deploy:mobile:submit    # Submit to App Store / Google Play
 bun deploy:mobile:update    # OTA update (JS-only change)
 ```
@@ -205,6 +205,11 @@ GitHub Actions (`.github/workflows/ci.yml`) runs on every push:
 3. **Build** — `next build` for web
 
 Mobile type-check is included in the quality step. Mobile EAS builds are triggered manually or via `bun deploy:mobile:*`.
+
+For isolated iPhone testing, follow [Mobile QA](docs/mobile/QA.md). Use the `qa`
+profile for a signed physical-device build; `qa-simulator` artifacts cannot be
+installed on an iPhone. A production JavaScript export alone is not an
+installable iOS app.
 
 Apple OAuth secret is auto-rotated monthly via `.github/workflows/rotate-apple-secret.yml`.
 

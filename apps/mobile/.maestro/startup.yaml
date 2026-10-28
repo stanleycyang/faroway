@@ -1,0 +1,21 @@
+appId: ai.faroway.app
+name: Startup and planner navigation
+---
+# No clearState, credentials, trip creation or AI requests.
+- launchApp
+- runFlow:
+    when:
+      visible: Get Started
+    commands:
+      - tapOn: Get Started
+- runFlow:
+    when:
+      visible: Skip introduction
+    commands:
+      - tapOn: Skip introduction
+- assertVisible: Create your trip
+- tapOn: Create your trip
+- assertVisible: Plan Your Trip
+- assertVisible: Close trip planner
+- tapOn: Close trip planner
+- assertVisible: Create your trip

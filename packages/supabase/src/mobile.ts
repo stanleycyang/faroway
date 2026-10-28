@@ -8,7 +8,11 @@ import * as SecureStore from 'expo-secure-store';
 import { Platform } from 'react-native';
 
 const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
-const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+// QA uses its own public key variable so EAS preview's production configuration
+// never becomes an accidental fallback. Expo inlines each EXPO_PUBLIC reference.
+const supabaseAnonKey = process.env.EXPO_PUBLIC_MOBILE_QA === '1'
+  ? process.env.EXPO_PUBLIC_QA_SUPABASE_ANON_KEY || ''
+  : process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
 
 const ExpoSecureStoreAdapter = {
   getItem: async (key: string): Promise<string | null> => {

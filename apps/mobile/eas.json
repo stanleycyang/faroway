@@ -4,6 +4,27 @@
     "appVersionSource": "remote"
   },
   "build": {
+    "qa": {
+      "environment": "preview",
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_MOBILE_QA": "1",
+        "EXPO_PUBLIC_SUPABASE_URL": "https://omovikloadpvzijoaqus.supabase.co",
+        "EXPO_PUBLIC_API_URL": "https://faroway-git-verify-staging-readiness-20261018-testimonio.vercel.app"
+      },
+      "ios": {
+        "simulator": false
+      },
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "qa-simulator": {
+      "extends": "qa",
+      "ios": {
+        "simulator": true
+      }
+    },
     "development": {
       "developmentClient": true,
       "distribution": "internal",

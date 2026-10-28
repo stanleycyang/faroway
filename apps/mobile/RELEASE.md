@@ -20,7 +20,7 @@ Required production environment variables or EAS environment values:
 The public EAS project ID used by builds and push notifications is committed in
 `app.config.ts`.
 
-Run `bun run env:check:mobile-release` from the repo root, or
+Run `bun run release:check:mobile` from the repo root, or
 `bun run release:check` from `apps/mobile`, before creating a production build.
 The local check reads the `production.env` values from `eas.json`, validates the
 release-shaped EAS profile, and runs Expo Doctor. Verify any remote-only EAS
@@ -58,6 +58,8 @@ support instead of pretending the website is a store listing. The website uses
 the `NEXT_PUBLIC_*` values in download buttons. Until those values are present,
 the website routes download buttons to support instead of a placeholder store
 URL.
+
+For isolated native test builds and device acceptance, follow [QA.md](../../docs/mobile/QA.md).
 
 ## Push Notification Validation
 
