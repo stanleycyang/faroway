@@ -14,7 +14,7 @@ export function matchesTransportProjection(
         (key) => candidate[endpoint]?.[key] === selected[endpoint]?.[key],
       ),
     ) &&
-    (["affiliateUrl", "affiliatePartner"] as const).every(
+    (["affiliateUrl", "affiliatePartner", "expiresAt"] as const).every(
       (key) => (candidate[key] || undefined) === (selected[key] || undefined),
     )
   );

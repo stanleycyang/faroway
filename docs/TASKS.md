@@ -23,7 +23,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 
 ### 🟠 Priority 2: AI Integration
 
-- [x] **TASK-006**: Design Claude prompts for itinerary generation ✅ COMPLETED
+- [x] **TASK-006**: Design the planning model prompts for itinerary generation ✅ COMPLETED
 - [x] **TASK-007**: Implement destination data enrichment ✅ COMPLETED
 - [x] **TASK-008**: Build activity recommendation engine ✅ COMPLETED
 - [x] **TASK-009**: Add real-time generation progress updates ✅ COMPLETED
@@ -49,7 +49,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 - [x] **TASK-020**: Search Agents Implementation ✅ COMPLETED
 - [x] **TASK-021**: Search API Endpoints ✅ COMPLETED
 - [x] **TASK-022**: Mobile App Integration ✅ COMPLETED
-- [x] **TASK-023**: Real affiliate API integration (Viator, Booking.com, etc.) ✅ CODE COMPLETE — live provider coverage depends on partner credentials/approval
+- [x] **TASK-023**: Real affiliate API integration (Viator, the former hotel supplier, etc.) ✅ CODE COMPLETE — live provider coverage depends on partner credentials/approval
 - [x] **TASK-024**: Affiliate click tracking & conversion analytics ✅ CODE COMPLETE — conversion webhooks require partner-side setup
 
 ### 🟣 Priority 6: Polish & Launch
@@ -368,7 +368,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 - 🚀 **PRIORITY 6 SPRINT LAUNCHED**: Polish & Launch phase started!
   - ✅ **Progress**: 22/28 tasks (79%)
   - ✅ **Completed Priorities**: Backend ✅ AI ✅ Web ✅ Mobile ✅
-  - 🔵 **Priority 5 Deferred**: Affiliate APIs pending (waiting on Viator/Booking.com approvals)
+  - 🔵 **Priority 5 Deferred**: Affiliate APIs pending (waiting on Viator/the former hotel supplier approvals)
   - 🟣 **Priority 6 Active**: 3 agents spawned (TASK-025, 026, 027)
   - **Current Sprint:**
     - 🏗️ faroway-performance → TASK-025 (Performance optimization)
@@ -620,7 +620,7 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 - 🔄 **SUPERVISOR ACTION**: Respawned 2 blocked agents
   - **faroway-mobile-supabase-retry** (TASK-015): Resuming Supabase connection work
   - **faroway-push-notifications-retry** (TASK-017): Resuming push notifications fixes
-  - Previous agents hit Anthropic API 500 errors at 7:28 AM when nearly complete
+  - Previous agents hit the former AI provider API 500 errors at 7:28 AM when nearly complete
   - Both agents given context of completed work and remaining tasks
   - **Progress:** 14/26 tasks (54%) — Priority 3 Web App ✅ complete, Priority 4 Mobile ⏳ resuming
 
@@ -818,9 +818,9 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 ### 2026-02-02 20:22 PST
 
 - ✅ **MIGRATED TO AI SDK + AI GATEWAY** (Per Stanley's request)
-  - **New architecture**: Vercel AI SDK + AI Gateway (replaces direct Anthropic SDK)
+  - **New architecture**: Vercel AI SDK + AI Gateway (replaces direct the former AI provider SDK)
   - **Benefits**:
-    - Single API key for 100+ models (anthropic/, openai/, google/, etc.)
+    - Single API key for 100+ models (multiple model providers)
     - Built-in caching, retries, and fallbacks
     - Usage monitoring via Vercel dashboard
     - Zero markup on token costs
@@ -828,7 +828,6 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
     - ✅ `lib/ai/client.ts` - AI SDK implementation with Zod schemas
     - ✅ `app/api/itinerary/generate/route.ts` - Streaming endpoint (Edge runtime)
     - ✅ `app/api/itinerary/route.ts` - Non-streaming endpoint
-  - **Dependencies added**: `ai`, `@ai-sdk/openai`, `zod`
   - **Environment**: `AI_GATEWAY_API_KEY` (get at vercel.com/ai-gateway)
   - **Build status**: ✅ Successful
 
@@ -837,13 +836,11 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 - ✅ **AI INTEGRATION FULLY COMPLETE** (TASK-006, TASK-008, TASK-009)
   - **7 files created** in `/backend/lib/ai/`:
     - ✅ `types.ts` (2.8 KB) - Complete TypeScript definitions
-    - ✅ `prompts.ts` (7.9 KB) - Claude prompt engineering
-    - ✅ `claude.ts` (9.3 KB) - Anthropic API wrapper (legacy, kept for reference)
+    - ✅ `prompts.ts` (7.9 KB) - the planning model prompt engineering
     - ✅ `index.ts` (630 B) - Clean module exports
     - ✅ `README.md` (2.0 KB) - Setup & usage guide
     - ✅ `EXAMPLE_USAGE.ts` (8.0 KB) - Working code examples
     - ✅ `AI_INTEGRATION_COMPLETE.md` (6.4 KB) - Full completion report
-  - **Dependencies added**: @anthropic-ai/sdk@^0.32.1 to package.json (legacy)
   - **Environment template**: .env.local.example with AI_GATEWAY_API_KEY
   - **Features delivered**:
     - ✅ Full itinerary generation with day-by-day breakdown
@@ -915,12 +912,10 @@ Build a production-ready AI travel planning app with mobile (Expo) + web (Next.j
 
 - ✅ AI integration complete (TASK-006, TASK-008, TASK-009)
 - Created `/backend/lib/ai/types.ts` with comprehensive type definitions
-- Created `/backend/lib/ai/prompts.ts` with Claude prompt templates
-- Created `/backend/lib/ai/claude.ts` with full API wrapper
+- Created `/backend/lib/ai/prompts.ts` with the planning model prompt templates
 - Created `/backend/lib/ai/index.ts` for clean exports
 - Created `/backend/lib/ai/README.md` with documentation
 - Created `/backend/lib/ai/EXAMPLE_USAGE.ts` with code examples
-- Added `@anthropic-ai/sdk` to package.json
 - Created `.env.local.example` template
 - Features implemented:
   - Complete itinerary generation with streaming support

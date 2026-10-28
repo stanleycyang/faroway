@@ -15,6 +15,8 @@ export interface Trip {
   travelers: number;
   budget_tier?: "budget" | "moderate" | "luxury";
   preferences?: Record<string, unknown>;
+  dietary_restrictions?: string[] | null;
+  mobility_needs?: string | null;
   vibes?: string[];
   status:
     | "draft"
@@ -52,7 +54,7 @@ export async function loadTripForUserUncached(
   const { data: trip, error } = await db
     .from("trips")
     .select(
-      "id, destination, start_date, end_date, status, travelers, budget, preferences, vibes, interests, budget_tier, user_id, search_id, is_shared, share_token, created_at, updated_at, itineraries(days, overview, total_cost, packing_list, general_tips, generated_at)",
+      "id, destination, start_date, end_date, status, travelers, budget, preferences, vibes, interests, dietary_restrictions, mobility_needs, budget_tier, user_id, search_id, is_shared, share_token, created_at, updated_at, itineraries(days, overview, total_cost, packing_list, general_tips, generated_at)",
     )
     .eq("id", id)
     .eq("user_id", userId)

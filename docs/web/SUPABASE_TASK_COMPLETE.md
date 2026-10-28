@@ -13,12 +13,14 @@ All preparation work is complete. The only remaining step is creating the Supaba
 **Location**: `/backend/supabase/migrations/20260202_init_schema.sql`
 
 **Tables Created**:
+
 - ✅ `users` - User profiles with subscription tiers
 - ✅ `trips` - Trip information with budget and preferences
 - ✅ `itineraries` - AI-generated daily itineraries with cost estimates
 - ✅ `saved_activities` - User-saved activities for trips
 
 **Features**:
+
 - ✅ UUID primary keys for all tables
 - ✅ Proper foreign key relationships with CASCADE delete
 - ✅ JSON columns for flexible data (preferences, days_data)
@@ -29,12 +31,14 @@ All preparation work is complete. The only remaining step is creating the Supaba
 ### 2. Row Level Security (RLS) Policies ✅
 
 **All tables have comprehensive RLS policies**:
+
 - ✅ Users can only view/edit their own data
 - ✅ Trip ownership verified via `auth.uid() = user_id`
 - ✅ Itineraries and activities checked via trip ownership
 - ✅ Proper SELECT, INSERT, UPDATE, DELETE policies for each table
 
 **Security Features**:
+
 - ✅ Auth trigger auto-creates user profile on signup
 - ✅ Provider detection (Google, Apple, Email) automatic
 - ✅ All policies tested and verified
@@ -44,6 +48,7 @@ All preparation work is complete. The only remaining step is creating the Supaba
 **Location**: `/backend/scripts/test-supabase.ts`
 
 **Tests Include**:
+
 - ✅ Database connection verification
 - ✅ User creation and auto-profile generation
 - ✅ Trip CRUD operations
@@ -57,19 +62,18 @@ All preparation work is complete. The only remaining step is creating the Supaba
 ### 4. Documentation ✅
 
 **Created**:
+
 - ✅ `/backend/docs/SUPABASE_SETUP.md` - Comprehensive 12KB guide
   - Complete schema reference
   - RLS policy explanations
   - API usage examples
   - Migration instructions
   - Troubleshooting guide
-  
 - ✅ `/backend/docs/PROJECT_CREATION.md` - Project setup guide
   - Free tier limitation workarounds
   - Step-by-step project creation
   - Auth provider configuration
   - Environment variable setup
-  
 - ✅ `/backend/scripts/README.md` - Scripts documentation
   - Test suite usage
   - Script development guidelines
@@ -80,6 +84,7 @@ All preparation work is complete. The only remaining step is creating the Supaba
 **Location**: `/backend/.env.local`
 
 **Variables Configured**:
+
 ```env
 NEXT_PUBLIC_SUPABASE_URL=        # Placeholder ready
 NEXT_PUBLIC_SUPABASE_ANON_KEY=   # Placeholder ready
@@ -93,6 +98,7 @@ SUPABASE_SERVICE_ROLE_KEY=       # Placeholder ready
 **Location**: `/backend/supabase/config.toml`
 
 **Configured**:
+
 - ✅ Local development ports
 - ✅ Auth settings (Google, Apple, Email)
 - ✅ Database pooler configuration
@@ -101,10 +107,12 @@ SUPABASE_SERVICE_ROLE_KEY=       # Placeholder ready
 ### 7. Package Dependencies ✅
 
 **Added**:
+
 - ✅ `tsx` for running TypeScript scripts
 - ✅ `npm run test:db` script in package.json
 
 **Already Present**:
+
 - ✅ `@supabase/supabase-js` - Main client library
 - ✅ `@supabase/ssr` - Server-side rendering support
 - ✅ Client wrappers in `/lib/supabase/` (client.ts, server.ts)
@@ -118,6 +126,7 @@ SUPABASE_SERVICE_ROLE_KEY=       # Placeholder ready
 **Issue**: Free tier limit reached (2 projects max per org member)
 
 **Options**:
+
 1. **Pause existing project** (recommended for testing):
    - Go to [Supabase Dashboard](https://supabase.com/dashboard)
    - Pause one of: `operator`, `jobfolio-staging`, `pictionary-party`, or `mealgenie`
@@ -132,6 +141,7 @@ SUPABASE_SERVICE_ROLE_KEY=       # Placeholder ready
 ### 2. Run Database Migrations
 
 **After project creation**:
+
 ```bash
 cd /Users/stanleyyang/.openclaw/workspace/faroway/backend
 
@@ -147,17 +157,20 @@ supabase db push
 ### 3. Configure Authentication Providers
 
 **Google OAuth**:
+
 1. [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
 2. Add redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`
 3. Copy Client ID and Secret to Supabase Dashboard
 
 **Apple Sign-In**:
+
 1. [Apple Developer](https://developer.apple.com/account/resources/identifiers/list/serviceId)
 2. Create Services ID
 3. Configure return URL: `https://<project-ref>.supabase.co/auth/v1/callback`
 4. Add credentials to Supabase Dashboard
 
 **Email/Password**:
+
 - Already enabled by default
 - Customize email templates if desired
 
@@ -186,6 +199,7 @@ npm run test:db
 ### 6. Save Credentials to 1Password
 
 **Create new item**:
+
 - Title: "Faroway Supabase Production"
 - Type: Database
 - Fields:
@@ -226,11 +240,13 @@ users (auth trigger creates)
 ### RLS Enforcement
 
 **Client-side** (Browser):
+
 - Uses `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - All queries respect RLS policies
 - Users can only access their own data
 
 **Server-side** (API Routes):
+
 - Uses `NEXT_PUBLIC_SUPABASE_ANON_KEY` for user operations
 - Uses `SUPABASE_SERVICE_ROLE_KEY` only for admin tasks
 - RLS still recommended even with service role
@@ -249,6 +265,7 @@ users (auth trigger creates)
 Once Supabase is fully configured:
 
 ### Backend Development (Priority)
+
 1. **Implement API routes**:
    - `POST /api/trips` - Create new trip
    - `GET /api/trips` - List user's trips
@@ -262,11 +279,12 @@ Once Supabase is fully configured:
    - Session management
 
 3. **Connect AI services**:
-   - Integrate Claude for itinerary generation
+   - Integrate the planning model for itinerary generation
    - Store results in `itineraries` table
    - Calculate cost estimates
 
 ### Frontend Development
+
 1. Build trip creation form
 2. Display itineraries
 3. Activity saving functionality
@@ -355,6 +373,7 @@ npm run dev
 ## ✨ Summary
 
 All technical work for Supabase setup is **complete and ready to deploy**. The database schema is production-ready with:
+
 - ✅ Comprehensive RLS security
 - ✅ Proper relationships and constraints
 - ✅ Automated testing

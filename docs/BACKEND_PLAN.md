@@ -8,16 +8,16 @@ A Next.js backend with Supabase for auth/database and Vercel Workflows for long-
 
 ## Tech Stack
 
-| Layer | Technology | Why |
-|-------|------------|-----|
-| **Frontend** | React Native + Expo | Cross-platform mobile app |
-| **Backend** | Next.js 15 (App Router) | API routes, server actions, edge functions |
-| **Database** | Supabase (PostgreSQL) | Auth + DB in one, real-time subscriptions, row-level security |
-| **Auth** | Supabase Auth | Google, Apple, Facebook OAuth + email/password |
-| **AI Orchestration** | Vercel Workflows | Long-running itinerary generation (up to 15 min) |
-| **AI Provider** | Anthropic Claude | Itinerary planning, recommendations |
-| **Hosting** | Vercel | Seamless Next.js deployment, edge functions |
-| **Affiliate APIs** | Booking.com, Viator, etc. | Hotel/experience booking with commission tracking |
+| Layer                | Technology                              | Why                                                           |
+| -------------------- | --------------------------------------- | ------------------------------------------------------------- |
+| **Frontend**         | React Native + Expo                     | Cross-platform mobile app                                     |
+| **Backend**          | Next.js 15 (App Router)                 | API routes, server actions, edge functions                    |
+| **Database**         | Supabase (PostgreSQL)                   | Auth + DB in one, real-time subscriptions, row-level security |
+| **Auth**             | Supabase Auth                           | Google, Apple, Facebook OAuth + email/password                |
+| **AI Orchestration** | Vercel Workflows                        | Long-running itinerary generation (up to 15 min)              |
+| **AI Provider**      | the former AI provider                  | Itinerary planning, recommendations                           |
+| **Hosting**          | Vercel                                  | Seamless Next.js deployment, edge functions                   |
+| **Affiliate APIs**   | the former hotel supplier, Viator, etc. | Hotel/experience booking with commission tracking             |
 
 ---
 
@@ -39,12 +39,14 @@ A Next.js backend with Supabase for auth/database and Vercel Workflows for long-
 ```
 
 ### Auth Providers
+
 - **Google** (most common)
 - **Apple** (required for iOS App Store)
 - **Facebook** (optional, good for travel demographic)
 - **Email/Password** (fallback)
 
 ### Value-First Flow
+
 1. User opens app → Can immediately create trips (stored locally)
 2. After 1-2 trips → Prompt: "Sign in to save your trips across devices"
 3. On sign in → Sync local trips to cloud
@@ -119,7 +121,7 @@ CREATE TABLE bookings (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID REFERENCES profiles(id),
   activity_id UUID REFERENCES activities(id),
-  affiliate_partner TEXT, -- booking_com, viator, etc.
+  affiliate_partner TEXT, -- legacy hotel supplier, viator, etc.
   affiliate_click_id TEXT,
   status TEXT DEFAULT 'clicked', -- clicked, booked, completed
   commission_amount DECIMAL(10,2),
@@ -189,43 +191,43 @@ export const workflow = new Workflow({
 
 workflow.step("gather-destination-info", async (ctx: WorkflowContext) => {
   const { destination, dates, vibes } = ctx.input;
-  
+
   // Fetch destination data (weather, events, local info)
   const destinationInfo = await fetchDestinationInfo(destination, dates);
-  
+
   return { destinationInfo };
 });
 
 workflow.step("generate-itinerary-ai", async (ctx: WorkflowContext) => {
   const { destinationInfo, vibes, travelers, budget } = ctx.input;
-  
-  // Call Claude to generate the itinerary
-  const itinerary = await generateWithClaude({
+
+  // Call the planning model to generate the itinerary
+  const itinerary = await generateItinerary({
     destination: destinationInfo,
     preferences: { vibes, travelers, budget },
   });
-  
+
   return { itinerary };
 });
 
 workflow.step("enrich-with-bookings", async (ctx: WorkflowContext) => {
   const { itinerary } = ctx.input;
-  
+
   // Add booking links and real prices from affiliate APIs
   const enrichedItinerary = await enrichWithAffiliateData(itinerary);
-  
+
   return { enrichedItinerary };
 });
 
 workflow.step("save-to-database", async (ctx: WorkflowContext) => {
   const { enrichedItinerary, tripId } = ctx.input;
-  
+
   // Save to Supabase
   await saveTripToDatabase(tripId, enrichedItinerary);
-  
+
   // Notify user via push notification
   await sendPushNotification(ctx.input.userId, "Your trip is ready!");
-  
+
   return { success: true };
 });
 
@@ -238,29 +240,35 @@ export const POST = workflow.handler();
 // In the mobile app
 const generateTrip = async (tripInput: TripInput) => {
   // 1. Create trip in "generating" status
-  const { tripId } = await api.post('/api/trips', {
+  const { tripId } = await api.post("/api/trips", {
     ...tripInput,
-    status: 'generating',
+    status: "generating",
   });
-  
+
   // 2. Trigger workflow
-  const { workflowRunId } = await api.post('/api/trips/' + tripId + '/generate');
-  
+  const { workflowRunId } = await api.post(
+    "/api/trips/" + tripId + "/generate",
+  );
+
   // 3. Poll for completion (or use Supabase realtime)
   return new Promise((resolve) => {
     const subscription = supabase
-      .channel('trip-' + tripId)
-      .on('postgres_changes', {
-        event: 'UPDATE',
-        schema: 'public',
-        table: 'trips',
-        filter: `id=eq.${tripId}`,
-      }, (payload) => {
-        if (payload.new.status === 'planned') {
-          subscription.unsubscribe();
-          resolve(payload.new);
-        }
-      })
+      .channel("trip-" + tripId)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "trips",
+          filter: `id=eq.${tripId}`,
+        },
+        (payload) => {
+          if (payload.new.status === "planned") {
+            subscription.unsubscribe();
+            resolve(payload.new);
+          }
+        },
+      )
       .subscribe();
   });
 };
@@ -271,15 +279,17 @@ const generateTrip = async (tripInput: TripInput) => {
 ## Affiliate Integration
 
 ### Partners
-| Partner | Category | Commission | Integration |
-|---------|----------|------------|-------------|
-| Booking.com | Hotels | 4-6% | Affiliate API |
-| Viator | Experiences | 8% | Affiliate API |
-| GetYourGuide | Tours | 8% | Affiliate API |
-| Skyscanner | Flights | CPC | Widget/API |
-| Klook | Activities | 5-8% | Affiliate API |
+
+| Partner                   | Category    | Commission | Integration   |
+| ------------------------- | ----------- | ---------- | ------------- |
+| the former hotel supplier | Hotels      | 4-6%       | Affiliate API |
+| Viator                    | Experiences | 8%         | Affiliate API |
+| GetYourGuide              | Tours       | 8%         | Affiliate API |
+| Skyscanner                | Flights     | CPC        | Widget/API    |
+| Klook                     | Activities  | 5-8%       | Affiliate API |
 
 ### Tracking Flow
+
 ```
 User clicks "Book Now"
        │
@@ -320,10 +330,8 @@ faroway-backend/
 │   │   ├── server.ts     # Server client
 │   │   └── admin.ts      # Admin client (for workflows)
 │   ├── ai/
-│   │   ├── claude.ts     # Claude API wrapper
 │   │   └── prompts.ts    # Itinerary generation prompts
 │   ├── affiliates/
-│   │   ├── booking.ts    # Booking.com API
 │   │   ├── viator.ts     # Viator API
 │   │   └── index.ts      # Unified affiliate interface
 │   └── utils/
@@ -347,10 +355,8 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ...
 
 # AI
-ANTHROPIC_API_KEY=sk-ant-...
 
 # Affiliates
-BOOKING_COM_AFFILIATE_ID=xxx
 VIATOR_API_KEY=xxx
 GETYOURGUIDE_API_KEY=xxx
 
@@ -363,6 +369,7 @@ VERCEL_WORKFLOW_SECRET=xxx
 ## Implementation Phases
 
 ### Phase 1: Foundation (Week 1)
+
 - [ ] Set up Next.js backend repo
 - [ ] Configure Supabase project
 - [ ] Create database schema
@@ -370,18 +377,21 @@ VERCEL_WORKFLOW_SECRET=xxx
 - [ ] Trip CRUD API routes
 
 ### Phase 2: AI Generation (Week 2)
+
 - [ ] Set up Vercel Workflows
-- [ ] Implement Claude itinerary generation
+- [ ] Implement the planning model itinerary generation
 - [ ] Real-time status updates via Supabase
 - [ ] Connect mobile app to backend
 
 ### Phase 3: Affiliates (Week 3)
-- [ ] Integrate Booking.com API
+
+- [ ] Integrate the former hotel supplier API
 - [ ] Integrate Viator API
 - [ ] Click tracking system
 - [ ] Conversion webhook handlers
 
 ### Phase 4: Polish (Week 4)
+
 - [ ] Push notifications
 - [ ] Offline sync
 - [ ] Analytics dashboard
@@ -397,7 +407,6 @@ npx create-next-app@latest faroway-backend --typescript --tailwind --app
 cd faroway-backend
 
 # Install dependencies
-npm install @supabase/supabase-js @anthropic-ai/sdk @vercel/workflow
 
 # Set up Supabase
 npx supabase init
@@ -411,15 +420,15 @@ npm run dev
 
 ## Cost Estimates (Monthly)
 
-| Service | Free Tier | Growth |
-|---------|-----------|--------|
-| Vercel | 100GB bandwidth | $20/mo Pro |
-| Supabase | 500MB DB, 50K auth | $25/mo Pro |
-| Anthropic | Pay-per-use | ~$50-200/mo |
-| **Total** | **$0** | **~$100-250/mo** |
+| Service                | Free Tier          | Growth           |
+| ---------------------- | ------------------ | ---------------- |
+| Vercel                 | 100GB bandwidth    | $20/mo Pro       |
+| Supabase               | 500MB DB, 50K auth | $25/mo Pro       |
+| the former AI provider | Pay-per-use        | ~$50-200/mo      |
+| **Total**              | **$0**             | **~$100-250/mo** |
 
 Revenue potential: 4-8% commission on bookings. If users book $1000/trip average → $40-80 commission per trip.
 
 ---
 
-*Ready to build! Start with Phase 1 when you give the go-ahead.* 🚀
+_Ready to build! Start with Phase 1 when you give the go-ahead._ 🚀

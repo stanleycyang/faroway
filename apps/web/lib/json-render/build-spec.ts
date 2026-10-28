@@ -30,6 +30,7 @@ export interface HotelInput {
   amenities?: string[];
   description?: string;
   affiliateUrl?: string;
+  affiliatePartner?: string;
   images?: string[];
   starRating?: number;
 }
@@ -191,7 +192,7 @@ export function buildHotelBlocks(
         props: {
           label: `Book ${topHotel.name}`,
           url: topHotel.affiliateUrl,
-          provider: "Booking.com",
+          provider: topHotel.affiliatePartner || "Hotel provider",
           price: topHotel.pricePerNight,
           currency: topHotel.currency,
         },
@@ -229,7 +230,7 @@ export function buildHotelBlocks(
           props: {
             label: `Book ${hotel.name}`,
             url: hotel.affiliateUrl,
-            provider: "Booking.com",
+            provider: hotel.affiliatePartner || "Hotel provider",
             price: hotel.pricePerNight,
             currency: hotel.currency,
           },

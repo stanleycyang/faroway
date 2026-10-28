@@ -7,7 +7,7 @@ jest.mock('react-native', () => ({
 }));
 
 jest.mock('../../services/api', () => ({
-  isAllowedAffiliateUrl: jest.fn((url: string) => url.startsWith('https://booking.com')),
+  isAllowedAffiliateUrl: jest.fn((url: string) => url.startsWith('https://viator.com')),
   openAffiliateLink: jest.fn(() => Promise.resolve()),
 }));
 
@@ -35,8 +35,8 @@ describe('affiliate checkout confirmation', () => {
   });
 
   it('normalizes common affiliate partner names', () => {
-    expect(formatAffiliatePartnerName('booking')).toBe('Booking.com');
-    expect(formatAffiliatePartnerName('Booking.com')).toBe('Booking.com');
+    expect(formatAffiliatePartnerName('viator')).toBe('Viator');
+    expect(formatAffiliatePartnerName('Viator')).toBe('Viator');
     expect(formatAffiliatePartnerName('opentable')).toBe('OpenTable');
   });
 
@@ -48,10 +48,10 @@ describe('affiliate checkout confirmation', () => {
   });
 
   it('maps generic booking providers to affiliate tracking item types', () => {
-    expect(itemTypeForAffiliatePartner('Booking.com')).toBe('hotel');
+    expect(itemTypeForAffiliatePartner('Viator')).toBe('activity');
     expect(itemTypeForAffiliatePartner('OpenTable')).toBe('restaurant');
     expect(itemTypeForAffiliatePartner('Duffel')).toBe('transport');
-    expect(itemTypeForAffiliatePartner('Viator')).toBe('activity');
+    expect(itemTypeForAffiliatePartner('unknown-provider')).toBe('activity');
   });
 
   it('labels sheet-level booking items without exposing day zero', () => {
@@ -64,16 +64,16 @@ describe('affiliate checkout confirmation', () => {
   it('builds copy with partner, price, cancellation, and next step context', () => {
     const copy = buildAffiliateCheckoutCopy({
       itemName: 'Hotel One',
-      affiliatePartner: 'booking',
+      affiliatePartner: 'viator',
       priceLabel: '$240/night estimate',
-      cancellationLabel: 'Room rules are confirmed by Booking.com.',
+      cancellationLabel: 'Room rules are confirmed by Viator.',
     });
 
-    expect(copy.title).toBe('Continue to Booking.com?');
+    expect(copy.title).toBe('Continue to Viator?');
     expect(copy.message).toContain('Hotel One');
-    expect(copy.message).toContain('Partner: Booking.com');
+    expect(copy.message).toContain('Partner: Viator');
     expect(copy.message).toContain('Estimated price: $240/night estimate');
-    expect(copy.message).toContain('Room rules are confirmed by Booking.com.');
+    expect(copy.message).toContain('Room rules are confirmed by Viator.');
     expect(copy.message).toContain('Availability, payment, and booking changes happen');
   });
 
@@ -85,11 +85,11 @@ describe('affiliate checkout confirmation', () => {
         itemType: 'hotel',
         itemId: 'hotel-1',
         itemName: 'Hotel One',
-        affiliatePartner: 'booking',
-        affiliateUrl: 'https://booking.com/hotel/1',
+        affiliatePartner: 'viator',
+        affiliateUrl: 'https://viator.com/hotel/1',
         price: 240,
         priceLabel: '$240/night estimate',
-        cancellationLabel: 'Room rules are confirmed by Booking.com.',
+        cancellationLabel: 'Room rules are confirmed by Viator.',
         source: 'itinerary',
       },
       openUrl
@@ -106,8 +106,8 @@ describe('affiliate checkout confirmation', () => {
         itemType: 'hotel',
         itemId: 'hotel-1',
         itemName: 'Hotel One',
-        affiliatePartner: 'booking',
-        affiliateUrl: 'https://booking.com/hotel/1',
+        affiliatePartner: 'viator',
+        affiliateUrl: 'https://viator.com/hotel/1',
         price: 240,
         source: 'itinerary',
       },
@@ -123,7 +123,7 @@ describe('affiliate checkout confirmation', () => {
         itemType: 'hotel',
         itemId: 'hotel-1',
         itemName: 'Hotel One',
-        affiliatePartner: 'booking',
+        affiliatePartner: 'viator',
         affiliateUrl: 'https://example.com/hotel/1',
         source: 'itinerary',
       },

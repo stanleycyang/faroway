@@ -64,11 +64,11 @@ bun dev:ios      # Open iOS simulator directly
 | `NEXT_PUBLIC_SUPABASE_URL`      | Yes      | Supabase project URL                                                                                                                                                   |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Yes      | Supabase anon key (safe to expose)                                                                                                                                     |
 | `SUPABASE_SERVICE_ROLE_KEY`     | Yes      | Service role key (server-only)                                                                                                                                         |
-| `OPENAI_API_KEY`                | For AI   | OpenAI GPT-4o for itinerary generation                                                                                                                                 |
-| `GOOGLE_AI_API_KEY`             | For AI   | Google Gemini (fallback)                                                                                                                                               |
 | `IP_HASH_SALT`                  | Prod     | Server-only HMAC salt for privacy-preserving distributed rate limits                                                                                                   |
 | `NEXT_PUBLIC_BASE_URL`          | Prod     | Production URL for OG tags/sitemap                                                                                                                                     |
 | `FAROWAY_BUILD_WITHOUT_BLOG_DB` | No       | Set to `1` only for a local `next build` that should publish an empty blog when Supabase is unreachable. Leave unset in production so a network error fails the build. |
+
+AI planning uses Google Gemini through Vercel AI Gateway (`AI_GATEWAY_API_KEY` where explicit authentication is required). Flight searches use Duffel; hotel quotes use the separate LiteAPI sandbox flow.
 
 See `apps/web/.env.example` for the full list including travel vendor API keys.
 
@@ -129,7 +129,7 @@ app/
 lib/
   workflow/      Durable workflow runtime
   json-render/   Block-based itinerary renderer specs
-  affiliates/    Affiliate link tracking (Booking.com, Viator, etc.)
+  affiliates/    Travel integrations (Duffel, LiteAPI, Viator, GetYourGuide)
   security/      Rate limiting (KV-backed in prod, in-memory in dev)
 workflows/
   plan-trip.ts   Main AI orchestration workflow
@@ -244,3 +244,15 @@ compatible. Follow the paused rollback procedure in
 Use `bun run dev:mobile:test` for real local email authentication and deterministic
 AI fixtures. See [the mobile testing guide](docs/mobile-testing.md) for setup,
 Maestro commands, failure scenarios, and production guards.
+
+## Flight supplier migration
+
+Duffel remains the default for existing searches. The trip brief can collect separate, versioned LiteAPI consent. Changing supplier clears the consent checkbox; explicit revocation prevents supplier requests. LiteAPI failure does not fall back to another recipient.
+
+The LiteAPI adapter supports one-way and return search, the supplier's adult/child/infant age bands, and validated currency, party, route, cabin and expiry. It uses the returned selling total, preserves all segments, and creates no checkout links or reservations. Production search requires both `LITEAPI_FLIGHTS_ENABLED=true` and `LITEAPI_FLIGHTS_PRODUCTION_APPROVED=true` with a production `LITEAPI_API_KEY`. Leave both disabled until access and live acceptance are complete. Sandbox quotes never enter saved itineraries.
+
+From `apps/web`, `bun scripts/rehearse-liteapi-flights.ts --help` describes the sandbox-only search harness; `bun scripts/compare-flight-fees.ts --help` describes an offline fee calculator. The sandbox harness requires `LITEAPI_FLIGHTS_SANDBOX_ENABLED=true` and a sandbox key.
+
+Published pricing checked October 28, 2026: [LiteAPI](https://docs.liteapi.travel/reference/api-pricing-usage-costs) lists 1% ticketing with a EUR 2 minimum and EUR 10 maximum per booking, EUR 25 voluntary servicing, and EUR 0.005 per excess search above 1,500 searches per booking. [Duffel](https://duffel.com/pricing) lists USD 3 per order, 1% Managed Content, USD 2 per paid ancillary, and USD 0.005 per excess search above the same ratio. These are headline fees, not an all-in comparison. Account settings, payment/merchant fees, ancillary fees, fare conditions, FX and underlying fares must be checked before migration approval; returned LiteAPI totals can already include platform fees, so do not add them twice.
+
+Production Flights access is not yet approved. [LiteAPI's access guide](https://docs.liteapi.travel/docs/getting-access-to-flights) requires separate approval and warns that sandbox prices cannot establish real availability or fare competitiveness. No live fare comparison or production switch has been performed.

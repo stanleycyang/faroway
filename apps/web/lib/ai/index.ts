@@ -28,6 +28,3 @@ export {
   buildActivityRecommendationPrompt,
   buildRestaurantPrompt,
 } from "./prompts";
-
-// Legacy direct Anthropic client (for reference/fallback)
-export * as legacyClient from "./claude";

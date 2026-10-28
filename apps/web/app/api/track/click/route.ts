@@ -14,8 +14,6 @@ import { z } from "zod";
 const ALLOWED_AFFILIATE_DOMAINS = [
   "viator.com",
   "www.viator.com",
-  "booking.com",
-  "www.booking.com",
   "getyourguide.com",
   "www.getyourguide.com",
   "tripadvisor.com",
@@ -24,8 +22,6 @@ const ALLOWED_AFFILIATE_DOMAINS = [
   "www.discovercars.com",
   "hostelworld.com",
   "www.hostelworld.com",
-  "amadeus.com",
-  "www.amadeus.com",
   "duffel.com",
   "www.duffel.com",
   "book.duffel.com",

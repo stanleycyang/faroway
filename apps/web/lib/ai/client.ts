@@ -1,3 +1,7 @@
+import {
+  PLANNING_MODEL,
+  PLANNING_PROVIDER_OPTIONS,
+} from "./planning-disclosure";
 /**
  * Faroway AI Client
  * Uses Vercel AI SDK with AI Gateway for unified model access
@@ -36,14 +40,13 @@ import {
 } from "./prompts";
 import { AI_AGENT_TIMEOUT_MS, withAbortTimeout } from "@/lib/search/runtime";
 
-// Configure AI Gateway — use the dedicated gateway provider (not createOpenAI,
-// which defaults to the OpenAI Responses API and doesn't work with the AI Gateway)
+// Configure the dedicated AI Gateway provider.
 const aiGateway = process.env.AI_GATEWAY_API_KEY
   ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
   : defaultGateway;
 
-// Default model via AI Gateway (supports anthropic/, openai/, etc.)
-const DEFAULT_MODEL = "anthropic/claude-sonnet-4-20250514";
+// Use the same consented Google routing as the active planner.
+const DEFAULT_MODEL = PLANNING_MODEL;
 
 // Zod schemas matching the TypeScript types
 const LocationSchema = z.object({
@@ -151,12 +154,11 @@ type StreamTextResult = unknown;
 export async function generateItinerary(
   preferences: TripPreferences,
   options?: {
-    model?: string;
     onProgress?: (progress: StreamingProgress) => void;
     userId?: string;
   },
 ): Promise<GeneratedItinerary> {
-  const modelName = options?.model || DEFAULT_MODEL;
+  const modelName = DEFAULT_MODEL;
   const onProgress = options?.onProgress;
 
   try {
@@ -182,6 +184,7 @@ export async function generateItinerary(
       (abortSignal) =>
         generateObject<GeneratedItineraryObject>({
           model: aiGateway(modelName),
+          providerOptions: PLANNING_PROVIDER_OPTIONS,
           system: SYSTEM_PROMPT,
           prompt,
           schema: ItinerarySchema,
@@ -275,13 +278,13 @@ export async function generateItinerary(
  */
 export async function streamItinerary(
   preferences: TripPreferences,
-  options?: { model?: string },
 ): Promise<StreamTextResult> {
-  const modelName = options?.model || DEFAULT_MODEL;
+  const modelName = DEFAULT_MODEL;
   const prompt = buildItineraryPrompt(preferences);
 
   return streamText({
     model: aiGateway(modelName),
+    providerOptions: PLANNING_PROVIDER_OPTIONS,
     system: SYSTEM_PROMPT,
     prompt,
     timeout: AI_AGENT_TIMEOUT_MS,
@@ -310,6 +313,7 @@ export async function generateActivities(
       (abortSignal) =>
         generateObject<GeneratedActivityObject[]>({
           model: aiGateway(DEFAULT_MODEL),
+          providerOptions: PLANNING_PROVIDER_OPTIONS,
           system: SYSTEM_PROMPT,
           prompt,
           schema: z.array(ActivitySchema),
@@ -357,6 +361,7 @@ export async function generateRestaurants(
       (abortSignal) =>
         generateObject<GeneratedRestaurantObject[]>({
           model: aiGateway(DEFAULT_MODEL),
+          providerOptions: PLANNING_PROVIDER_OPTIONS,
           system: SYSTEM_PROMPT,
           prompt,
           schema: z.array(RestaurantSchema),
@@ -387,6 +392,7 @@ export async function generateRestaurants(
 export async function generateText_AI(prompt: string, systemPrompt?: string) {
   const { text, usage } = await generateText({
     model: aiGateway(DEFAULT_MODEL),
+    providerOptions: PLANNING_PROVIDER_OPTIONS,
     system: systemPrompt || SYSTEM_PROMPT,
     prompt,
     timeout: AI_AGENT_TIMEOUT_MS,

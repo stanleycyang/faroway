@@ -1,7 +1,7 @@
 # Production Readiness Audit — Faroway
 
 **Date:** 2026-05-12 (updated 2026-07-25)
-**Auditor:** Claude Sonnet 4.6; production-hardening continuation by Codex
+**Auditor:** an automated reviewer; production-hardening continuation by Codex
 **Scope:** Full monorepo — `apps/mobile`, `apps/web`, `packages/*`, `supabase/`
 
 ## Next.js 16 Category-Major Review (2026-07-25)
@@ -514,6 +514,6 @@ Test on a physical iPhone (Safari) and Android device (Chrome):
 - Complete Google Cloud passkey confirmation, restrict the Places key, and
   verify OAuth consent/redirect configuration.
 - Create the Sentry organization/project and supply its DSNs and upload token.
-- Obtain or activate production access for TripAdvisor, Booking/Amadeus,
+- Obtain or activate production access for TripAdvisor, travel suppliers,
   Duffel, GetYourGuide, Tavily, and Viator as applicable. Faroway degrades to
   supported fallbacks when optional providers are absent.

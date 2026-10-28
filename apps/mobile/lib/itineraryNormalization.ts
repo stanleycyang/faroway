@@ -41,6 +41,7 @@ function transformTransport(value: unknown): TripDay['transport'] {
     };
   };
   return {
+    expiresAt: displayText(fields.expiresAt) || undefined,
     type: fields.type as NonNullable<TripDay['transport']>['type'],
     provider: displayText(fields.provider, 'Transport option'),
     departure: endpoint(fields.departure),

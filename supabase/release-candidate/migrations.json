@@ -1,5 +1,5 @@
 {
-  "status": "Registered follow-ups; existing staging receipts retained. Hotel preferences follow-up is local-only and unapplied to hosted staging/production.",
+  "status": "Follow-ups applied to hosted staging through stable venue evidence context; production installation remains pending the coordinated schema/application cutover.",
   "bootstrap_sha256": "09b820436a77967f95024abf4f724f4f2f1bb1d3378ee33b73656593ba729939",
   "application_order": [
     {
@@ -31,6 +31,18 @@
       "source": "supabase/migrations/20261023041435_pin_empty_function_search_paths.sql",
       "sha256": "129e585ca1b0fec2adec86b0c837a1f17a8a04e46354c813f1d551433b18e54b",
       "applied": false
+    },
+    {
+      "path": "supabase/migrations/20261028035700_traveler_requirements_and_flight_consent.sql",
+      "source": "supabase/migrations/20261028035700_traveler_requirements_and_flight_consent.sql",
+      "sha256": "aafef07d9c561cc5a38120736280cd6a33433f6390cfc9ba215bb51f27c4e84c",
+      "applied": false
+    },
+    {
+      "path": "supabase/migrations/20261028044644_stable_venue_evidence_context.sql",
+      "source": "supabase/migrations/20261028044644_stable_venue_evidence_context.sql",
+      "sha256": "8a9b456b6517659d689ffb744aeec84345b7d198bc816e04a9cdfc797690cecc",
+      "applied": false
     }
   ],
   "constraints": [
@@ -39,5 +51,6 @@
     "Production requires a separate migration ledger, backup and compatible application cutover."
   ],
   "staging_execution_receipt": "docs/release-evidence/staging-followups-20261011.json",
-  "applied_field_scope": "Production installation only; staging installation is recorded in the separate receipt."
+  "applied_field_scope": "Production installation only; staging installation is recorded in the separate receipt.",
+  "venue_evidence_staging_receipt": "docs/release-evidence/staging-venue-evidence-20261028.json"
 }

@@ -89,7 +89,7 @@ export const HotelCardSchema = z.object({
     .describe('Estimated price per night in the supplied currency'),
   currency: z.string().optional().describe('Explicit currency code; omit when unknown'),
   image: z.string().url().optional().describe('Hotel image URL'),
-  bookingUrl: z.string().url().optional().describe('Booking URL (booking.com, etc.)'),
+  bookingUrl: z.string().url().optional().describe('Booking URL (supplier website)'),
   amenities: z.array(z.string()).describe('List of amenities (e.g., ["WiFi", "Pool", "Gym"])'),
   description: z.string().optional().describe('Brief hotel description'),
   reviewCount: z.number().optional().describe('Number of reviews'),
@@ -201,7 +201,7 @@ export const DayTimeline = {
 export const BookingButtonSchema = z.object({
   label: z.string().describe('Button label (e.g., "Book on Viator", "Reserve Table")'),
   url: z.string().url().describe('Booking URL'),
-  provider: z.string().optional().describe('Provider name (e.g., "Viator", "Booking.com")'),
+  provider: z.string().optional().describe('Provider name (e.g., "Viator", "Duffel")'),
   price: z.number().optional().describe('Price in the supplied currency (optional)'),
   currency: z.string().optional().describe('Explicit currency code; omit when unknown'),
 });

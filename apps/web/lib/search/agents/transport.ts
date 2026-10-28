@@ -1,15 +1,12 @@
 /**
  * Transport Agent
- * Searches for flights via Amadeus and Duffel APIs
+ * Searches the consented flight supplier
  * Normalizes, deduplicates, and ranks results by price
  */
 
+import { searchLiteApiFlights } from "@/lib/affiliates/liteapi-flights";
+import { flightQuoteIsCurrent } from "@faroway/constants";
 import { SearchPlan, TransportResult } from "../types";
-import {
-  searchAmadeusFlights,
-  isAmadeusConfigured,
-  generateAmadeusAffiliateUrl,
-} from "@/lib/affiliates/amadeus";
 import {
   searchDuffelFlights,
   isDuffelConfigured,
@@ -17,10 +14,10 @@ import {
 } from "@/lib/affiliates/duffel";
 
 /**
- * Run the transport agent to search for flights across Amadeus and Duffel.
+ * Run the transport agent to search for flights through the selected supplier.
  *
  * - Returns empty array if no origin airport is specified (transport is optional)
- * - Searches both providers in parallel
+ * - Searches Duffel using the validated party composition
  * - Normalizes results to TransportResult[]
  * - Deduplicates by similar route + time (departure airports match, times within 30min)
  * - Sorts by price ascending
@@ -35,8 +32,17 @@ export async function runTransportAgent(
   travelers: number,
   count: number = 5,
 ): Promise<TransportResult[]> {
-  // These provider adapters currently price every passenger as an adult.
-  if (plan.children) return [];
+  if (plan.flightProvider === "none") return [];
+  if (plan.travelerType === "family" && plan.children == null) return [];
+  const ages = plan.childAges;
+  const familyReady =
+    Number.isInteger(plan.adults) &&
+    (plan.adults ?? 0) > 0 &&
+    Array.isArray(ages) &&
+    ages.length === plan.children &&
+    (plan.adults ?? 0) + ages.length === travelers &&
+    ages.every((age) => Number.isInteger(age) && age >= 0 && age <= 17);
+  if (plan.children && !familyReady) return [];
 
   // Transport is optional — skip if no origin airport
   if (!plan.transportCriteria?.originAirport) {
@@ -56,31 +62,47 @@ export async function runTransportAgent(
     return [];
   }
 
+  if (plan.flightProvider === "liteapi") {
+    // No cross-provider fallback: consent is specific to the selected recipient.
+    if (!familyReady) return [];
+    try {
+      const result = await searchLiteApiFlights({
+        origin,
+        destination,
+        departureDate: dates.start,
+        returnDate: dates.end,
+        adults: plan.adults!,
+        childAges: ages!,
+        currency: "USD",
+        cabinClass: transportCriteria.cabinClass,
+        maxStops: transportCriteria.maxStops,
+        limit: count,
+      });
+      return result.sandbox ? [] : result.offers;
+    } catch {
+      console.warn("[Transport Agent] LiteAPI flight quotes unavailable");
+      return [];
+    }
+  }
+
   console.log(
     `[Transport Agent] Searching flights: ${origin} → ${destination} on ${dates.start}`,
   );
 
-  // Search Amadeus and Duffel in parallel
-  const [amadeusResults, duffelResults] = await Promise.all([
-    searchAmadeusProvider(origin, destination, dates, travelers, {
-      cabinClass: transportCriteria.cabinClass,
-      maxPrice: transportCriteria.maxPrice,
-      maxStops: transportCriteria.maxStops,
-      limit: count,
-    }),
-    searchDuffelProvider(origin, destination, dates, travelers, {
+  const allResults = await searchDuffelProvider(
+    origin,
+    destination,
+    dates,
+    travelers,
+    {
+      ...(plan.children && familyReady
+        ? { adults: plan.adults, childAges: ages }
+        : {}),
       cabinClass: transportCriteria.cabinClass,
       maxConnections: transportCriteria.maxStops,
       limit: count,
-    }),
-  ]);
-
-  console.log(
-    `[Transport Agent] Raw results — Amadeus: ${amadeusResults.length}, Duffel: ${duffelResults.length}`,
+    },
   );
-
-  // Combine all results
-  const allResults = [...amadeusResults, ...duffelResults];
 
   // Deduplicate by similar route + time
   const deduplicated = deduplicateTransportResults(allResults);
@@ -96,96 +118,6 @@ export async function runTransportAgent(
   return deduplicated.slice(0, count);
 }
 
-/**
- * Search Amadeus for flights and normalize to TransportResult[].
- */
-async function searchAmadeusProvider(
-  origin: string,
-  destination: string,
-  dates: { start: string; end: string; nights: number },
-  travelers: number,
-  options: {
-    cabinClass?: "economy" | "premium_economy" | "business" | "first";
-    maxPrice?: number;
-    maxStops?: number;
-    limit?: number;
-  } = {},
-): Promise<TransportResult[]> {
-  if (!isAmadeusConfigured()) {
-    console.log("[Transport Agent] Amadeus not configured, skipping");
-    return [];
-  }
-
-  try {
-    const offers = await searchAmadeusFlights({
-      origin,
-      destination,
-      departureDate: dates.start,
-      returnDate: dates.end,
-      adults: travelers,
-      cabinClass: normalizeAmadeusCabinClass(options.cabinClass),
-      maxPrice: options.maxPrice,
-      maxStops: options.maxStops,
-      limit: options.limit,
-    });
-
-    const trackingId = `tg_${Date.now()}`;
-
-    return offers.map((offer, index) => ({
-      id: `transport_amadeus_${offer.offerId || index}`,
-      type: "flight" as const,
-      provider: offer.airlines.join(", ") || "Unknown Airline",
-      departure: {
-        airport: offer.departure.airport,
-        city: offer.departure.city,
-        dateTime: offer.departure.dateTime,
-        terminal: offer.departure.terminal,
-      },
-      arrival: {
-        airport: offer.arrival.airport,
-        city: offer.arrival.city,
-        dateTime: offer.arrival.dateTime,
-        terminal: offer.arrival.terminal,
-      },
-      duration: offer.duration,
-      stops: offer.stops,
-      price: offer.price.amount,
-      currency: offer.price.currency,
-      cabinClass: normalizeCabinClass(offer.cabinClass),
-      airlines: offer.airlines,
-      segments: offer.segments.map((seg) => ({
-        carrier: seg.carrier,
-        flightNumber: seg.flightNumber,
-        departure: {
-          airport: seg.departure.airport,
-          dateTime: seg.departure.dateTime,
-        },
-        arrival: {
-          airport: seg.arrival.airport,
-          dateTime: seg.arrival.dateTime,
-        },
-        duration: seg.duration,
-      })),
-      affiliateUrl: generateAmadeusAffiliateUrl(
-        "flight",
-        { origin, destination, date: dates.start },
-        trackingId,
-      ),
-      affiliatePartner: "amadeus",
-      source: "amadeus" as const,
-      vibeScore: 0,
-      vibeMatch: [],
-    }));
-  } catch (error) {
-    console.error("[Transport Agent] Amadeus search error:", error);
-    return [];
-  }
-}
-
-/**
- * Search Duffel for flights and normalize to TransportResult[].
- * Generates Duffel Links for each offer (where we earn markup revenue).
- */
 async function searchDuffelProvider(
   origin: string,
   destination: string,
@@ -194,6 +126,8 @@ async function searchDuffelProvider(
   options: {
     cabinClass?: "economy" | "premium_economy" | "business" | "first";
     maxConnections?: number;
+    adults?: number;
+    childAges?: number[];
     limit?: number;
   } = {},
 ): Promise<TransportResult[]> {
@@ -208,14 +142,25 @@ async function searchDuffelProvider(
       destination,
       departureDate: dates.start,
       returnDate: dates.end,
-      passengers: [{ type: "adult", count: travelers }],
+      passengers: options.childAges
+        ? [
+            { type: "adult", count: options.adults! },
+            ...options.childAges.map((age) => ({ age, count: 1 })),
+          ]
+        : [{ type: "adult", count: travelers }],
       cabinClass: options.cabinClass,
       maxConnections: options.maxConnections,
       limit: options.limit,
     });
 
+    const currentOffers = offers.filter((offer) =>
+      flightQuoteIsCurrent({
+        affiliatePartner: "duffel",
+        expiresAt: offer.expiresAt,
+      }),
+    );
     // Generate Duffel Links in parallel for all offers (not sequentially)
-    const linkPromises = offers.map(async (offer) => {
+    const linkPromises = currentOffers.map(async (offer) => {
       try {
         return (await generateDuffelLink(offer.offerId, 5)) || "";
       } catch (error) {
@@ -230,8 +175,8 @@ async function searchDuffelProvider(
 
     const results: TransportResult[] = [];
 
-    for (let i = 0; i < offers.length; i++) {
-      const offer = offers[i];
+    for (let i = 0; i < currentOffers.length; i++) {
+      const offer = currentOffers[i];
       const affiliateUrl = affiliateUrls[i];
 
       results.push({
@@ -254,6 +199,7 @@ async function searchDuffelProvider(
         stops: offer.stops,
         price: offer.price.amount,
         currency: offer.price.currency,
+        expiresAt: offer.expiresAt || undefined,
         cabinClass: normalizeCabinClass(offer.cabinClass),
         airlines: offer.airlines,
         segments: offer.segments.map((seg) => ({
@@ -301,17 +247,6 @@ function normalizeCabinClass(
   if (normalized.includes("economy")) return "economy";
 
   return undefined;
-}
-
-function normalizeAmadeusCabinClass(
-  cabinClass?: "economy" | "premium_economy" | "business" | "first",
-): "ECONOMY" | "PREMIUM_ECONOMY" | "BUSINESS" | "FIRST" | undefined {
-  if (!cabinClass) return undefined;
-  return cabinClass.toUpperCase() as
-    | "ECONOMY"
-    | "PREMIUM_ECONOMY"
-    | "BUSINESS"
-    | "FIRST";
 }
 
 /**

@@ -4,9 +4,6 @@ const mocks = vi.hoisted(() => ({
   generateObject: vi.fn(),
   searchViatorProducts: vi.fn(),
   searchGYGActivities: vi.fn(),
-  searchBookingHotels: vi.fn(),
-  searchAmadeusHotels: vi.fn(),
-  isAmadeusConfigured: vi.fn(),
 }));
 
 vi.mock("@/lib/ai/sdk", () => ({
@@ -29,23 +26,6 @@ vi.mock("@/lib/affiliates/getyourguide", () => ({
   generateGYGAffiliateUrl: (activityId: string) =>
     `https://getyourguide.test/${activityId}`,
   mapGYGCategoryToVibe: () => ["foodie"],
-}));
-
-vi.mock("@/lib/affiliates/booking", () => ({
-  isBookingConfigured: () => true,
-  searchBookingHotels: mocks.searchBookingHotels,
-  generateBookingAffiliateUrl: (hotelId: string) =>
-    `https://booking.test/${hotelId}`,
-}));
-
-vi.mock("@/lib/affiliates/amadeus", () => ({
-  isAmadeusConfigured: mocks.isAmadeusConfigured,
-  searchAmadeusHotels: mocks.searchAmadeusHotels,
-  generateAmadeusAffiliateUrl: () => "https://amadeus.test/hotel",
-  resolveAmadeusCityCode: (destination: string) =>
-    destination.toLowerCase().startsWith("tokyo")
-      ? "TYO"
-      : destination.slice(0, 3).toUpperCase(),
 }));
 
 vi.mock("@/lib/affiliates/tripadvisor", () => ({
@@ -137,8 +117,6 @@ describe("search agents internal parallelism", () => {
     vi.stubEnv("VIATOR_CONTENT_APPROVAL_REF", "test-approval");
     mocks.searchViatorProducts.mockResolvedValue([]);
     mocks.searchGYGActivities.mockResolvedValue([]);
-    mocks.isAmadeusConfigured.mockReturnValue(false);
-    mocks.searchAmadeusHotels.mockResolvedValue([]);
   });
 
   afterEach(() => vi.unstubAllEnvs());
@@ -236,76 +214,28 @@ describe("search agents internal parallelism", () => {
     expect(result).toEqual([]);
   });
 
-  it("uses the adult party size and skips adult-only hotel searches for children", async () => {
-    mocks.generateObject.mockResolvedValue({ object: { hotels: [] } });
-    mocks.searchBookingHotels.mockResolvedValue([]);
-    mocks.isAmadeusConfigured.mockReturnValue(false);
-    await runHotelsAgent({
-      ...plan,
-      travelers: 4,
-      adults: 4,
-      children: 0,
-    } as never);
-    expect(mocks.searchBookingHotels).toHaveBeenCalledWith(
-      expect.objectContaining({ guests: 4 }),
-    );
-    mocks.searchBookingHotels.mockClear();
-    await runHotelsAgent({
-      ...plan,
-      travelers: 3,
-      adults: 2,
-      children: 1,
-    } as never);
-    expect(mocks.searchBookingHotels).not.toHaveBeenCalled();
-    expect(mocks.searchAmadeusHotels).not.toHaveBeenCalled();
-    await runHotelsAgent({
-      ...plan,
-      travelers: 2,
-      adults: 2,
-      children: 0,
-      roomCount: 2,
-    } as never);
-    expect(mocks.searchBookingHotels).not.toHaveBeenCalled();
-  });
-
-  it("starts Booking.com and AI hotel fallback before awaiting either result", async () => {
-    const started: string[] = [];
-    let release!: () => void;
-    const gate = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-
-    mocks.searchBookingHotels.mockImplementation(async () => {
-      started.push("booking");
-      await gate;
-      return [];
-    });
-    mocks.generateObject.mockImplementation(async () => {
-      started.push("ai");
-      await gate;
-      return { object: { hotels: [aiHotel] } };
-    });
-
-    const search = runHotelsAgent(plan as never, 1);
-
-    await waitFor(() => started.length === 2);
-    expect(started.sort()).toEqual(["ai", "booking"]);
-
-    release();
-    const results = await search;
-
-    expect(results[0].name).toBe("AI Hotel");
-  });
+  it.each([0, 1])(
+    "keeps hotel suggestions unpriced for parties with %s children",
+    async (children) => {
+      mocks.generateObject.mockResolvedValue({ object: { hotels: [aiHotel] } });
+      const results = await runHotelsAgent(
+        { ...plan, adults: 2, children, travelers: 2 + children } as never,
+        1,
+      );
+      expect(results).toHaveLength(1);
+      expect(results[0].pricePerNight).toBeUndefined();
+      expect(results[0].affiliateUrl).toBeUndefined();
+    },
+  );
 
   it("strips model-generated booking links and ratings even when the model ignores instructions", async () => {
-    mocks.searchBookingHotels.mockResolvedValue([]);
     mocks.generateObject.mockResolvedValueOnce({
       object: {
         hotels: [
           {
             ...aiHotel,
-            affiliateUrl: "https://booking.com/invented",
-            affiliatePartner: "booking",
+            affiliateUrl: "https://retired-supplier.example/invented",
+            affiliatePartner: "retired-provider",
           },
         ],
       },
@@ -339,18 +269,5 @@ describe("search agents internal parallelism", () => {
     expect(activities[0].affiliateUrl).toBeUndefined();
     expect(activities[0].rating).toBe(0);
     expect(activities[0].reviewCount).toBe(0);
-  });
-
-  it("passes resolved Amadeus city codes into hotel search", async () => {
-    mocks.isAmadeusConfigured.mockReturnValue(true);
-    mocks.searchBookingHotels.mockResolvedValue([]);
-    mocks.searchAmadeusHotels.mockResolvedValue([]);
-    mocks.generateObject.mockResolvedValue({ object: { hotels: [aiHotel] } });
-
-    await runHotelsAgent(plan as never, 1);
-
-    expect(mocks.searchAmadeusHotels).toHaveBeenCalledWith(
-      expect.objectContaining({ cityCode: "TYO" }),
-    );
   });
 });

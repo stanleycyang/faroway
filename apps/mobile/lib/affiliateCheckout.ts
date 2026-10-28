@@ -3,8 +3,6 @@ import { isAllowedAffiliateUrl, openAffiliateLink, type TrackClickParams } from 
 import { hapticFeedback } from '../utils/haptics';
 
 const PARTNER_NAMES: Record<string, string> = {
-  booking: 'Booking.com',
-  bookingcom: 'Booking.com',
   viator: 'Viator',
   getyourguide: 'GetYourGuide',
   tripadvisor: 'Tripadvisor',
@@ -42,9 +40,8 @@ export function itemTypeForAffiliateActivityType(
 export function itemTypeForAffiliatePartner(partner: string): TrackClickParams['itemType'] {
   const normalized = partner.toLowerCase().replace(/[^a-z0-9]/g, '');
 
-  if (normalized === 'booking' || normalized === 'bookingcom') return 'hotel';
   if (normalized === 'opentable') return 'restaurant';
-  if (normalized === 'duffel' || normalized === 'amadeus') return 'transport';
+  if (normalized === 'duffel') return 'transport';
 
   return 'activity';
 }

@@ -1,17 +1,19 @@
-import type { ArticleEntry } from './batch1';
+import type { ArticleEntry } from "./batch1";
 
 export const batch5: ArticleEntry[] = [
   {
-    slug: 'dynamic-currency-conversion-scam',
-    title: 'Dynamic Currency Conversion: The Hidden Travel Scam at Every Terminal',
+    slug: "dynamic-currency-conversion-scam",
+    title:
+      "Dynamic Currency Conversion: The Hidden Travel Scam at Every Terminal",
     description:
-      'Learn how dynamic currency conversion quietly costs travelers billions each year and how to avoid this hidden fee at ATMs, hotels, and shops abroad.',
-    category: 'Budget Travel',
-    cluster: 'budget-travel',
-    tags: ['currency', 'scam', 'money', 'travel tips'],
-    imgId: 'photo-1553729459-afe8f2e2ed65',
-    cover_image_alt: 'Foreign currency exchange counter at an international airport terminal',
-    author_slug: 'tripgenie',
+      "Learn how dynamic currency conversion quietly costs travelers billions each year and how to avoid this hidden fee at ATMs, hotels, and shops abroad.",
+    category: "Budget Travel",
+    cluster: "budget-travel",
+    tags: ["currency", "scam", "money", "travel tips"],
+    imgId: "photo-1553729459-afe8f2e2ed65",
+    cover_image_alt:
+      "Foreign currency exchange counter at an international airport terminal",
+    author_slug: "tripgenie",
     reading_time: 5,
     content: `## What Is Dynamic Currency Conversion?
 
@@ -117,16 +119,17 @@ Your bank's exchange rate is not perfect, but it is vastly better than any DCC r
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'budget-trip-unknown-costs',
+    slug: "budget-trip-unknown-costs",
     title: "How to Budget for a Trip When You Don't Know the Costs",
     description:
-      'A practical framework for estimating travel costs when heading to unfamiliar destinations, with tools and strategies to build a realistic budget from scratch.',
-    category: 'Budget Travel',
-    cluster: 'budget-travel',
-    tags: ['budget', 'planning', 'cost estimation', 'money'],
-    imgId: 'photo-1554244933-d876deb6b2ff',
-    cover_image_alt: 'Traveler calculating expenses with a notebook and calculator at a cafe table',
-    author_slug: 'tripgenie',
+      "A practical framework for estimating travel costs when heading to unfamiliar destinations, with tools and strategies to build a realistic budget from scratch.",
+    category: "Budget Travel",
+    cluster: "budget-travel",
+    tags: ["budget", "planning", "cost estimation", "money"],
+    imgId: "photo-1554244933-d876deb6b2ff",
+    cover_image_alt:
+      "Traveler calculating expenses with a notebook and calculator at a cafe table",
+    author_slug: "tripgenie",
     reading_time: 6,
     content: `## The Budgeting Problem Every Traveler Faces
 
@@ -161,7 +164,7 @@ Three categories typically account for 70-80% of your trip spending. Research th
 
 ### Accommodation
 
-- Search Booking.com or Hostelworld for your destination dates
+- Search hotel comparison sites or Hostelworld for your destination dates
 - Filter by your style (hostel dorm, private room, mid-range hotel)
 - Note the average nightly rate for well-reviewed options
 - Multiply by your number of nights
@@ -215,7 +218,7 @@ These line items trip up even experienced travelers:
 
 If you do not have time for detailed research, use this quick method:
 
-1. Find the **average hotel price** for a mid-range option in your destination (5 minutes on Booking.com)
+1. Find the **average hotel price** for a mid-range option in your destination (5 minutes on hotel comparison sites)
 2. **Multiply by 2.5** for your total daily budget (including food, transport, activities)
 3. Multiply by the number of days
 4. Add flights and insurance separately
@@ -265,7 +268,7 @@ Here is how to fill in a budget template for a destination you have never visite
 | Category | Research Method | Estimated Cost |
 |----------|----------------|---------------|
 | Flights | Google Flights | $600 |
-| Accommodation (10 nights x $45) | Booking.com search | $450 |
+| Accommodation (10 nights x $45) | hotel comparison sites search | $450 |
 | Food (10 days x $20) | Numbeo + blog research | $200 |
 | Local transport | Rome2Rio + blog research | $80 |
 | Activities | GetYourGuide + TripAdvisor | $150 |
@@ -281,7 +284,7 @@ Here is how to fill in a budget template for a destination you have never visite
 - **Budget Your Trip:** Average daily costs by country and travel style
 - **Rome2Rio:** Transport cost estimates between cities
 - **Google Flights:** Flight price tracking with calendar view
-- **Booking.com:** Accommodation price research (you do not need to book)
+- **hotel comparison sites:** Accommodation price research (you do not need to book)
 - **XE.com:** Currency conversion for quick mental math
 
 ## The Most Important Budgeting Rule
@@ -293,16 +296,17 @@ When in doubt, **overestimate.** It is always better to come home with money lef
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'travel-expense-tracking-methods',
-    title: 'Travel Expense Tracking: Best Methods to Stay on Budget',
+    slug: "travel-expense-tracking-methods",
+    title: "Travel Expense Tracking: Best Methods to Stay on Budget",
     description:
-      'Compare the best travel expense tracking methods from apps to spreadsheets, and learn how to monitor spending on the road without obsessing over every purchase.',
-    category: 'Budget Travel',
-    cluster: 'budget-travel',
-    tags: ['expense tracking', 'budget', 'apps', 'money'],
-    imgId: 'photo-1554224155-6726b3ff858f',
-    cover_image_alt: 'Smartphone showing expense tracking app next to travel receipts',
-    author_slug: 'tripgenie',
+      "Compare the best travel expense tracking methods from apps to spreadsheets, and learn how to monitor spending on the road without obsessing over every purchase.",
+    category: "Budget Travel",
+    cluster: "budget-travel",
+    tags: ["expense tracking", "budget", "apps", "money"],
+    imgId: "photo-1554224155-6726b3ff858f",
+    cover_image_alt:
+      "Smartphone showing expense tracking app next to travel receipts",
+    author_slug: "tripgenie",
     reading_time: 6,
     content: `## Why Tracking Expenses on the Road Matters
 
@@ -497,16 +501,17 @@ Whatever method you use, spend 15 minutes after you return home reviewing your t
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'cash-vs-card-abroad-guide',
-    title: 'When to Use Cash vs Card Abroad: A Practical Guide by Region',
+    slug: "cash-vs-card-abroad-guide",
+    title: "When to Use Cash vs Card Abroad: A Practical Guide by Region",
     description:
-      'A region-by-region breakdown of when to use cash, credit cards, or mobile payments while traveling internationally, with tips to minimize fees.',
-    category: 'Budget Travel',
-    cluster: 'budget-travel',
-    tags: ['cash', 'credit card', 'currency', 'travel tips'],
-    imgId: 'photo-1526304640581-d334cdbbf45e',
-    cover_image_alt: 'Wallet with multiple foreign currency bills and credit cards on a table',
-    author_slug: 'tripgenie',
+      "A region-by-region breakdown of when to use cash, credit cards, or mobile payments while traveling internationally, with tips to minimize fees.",
+    category: "Budget Travel",
+    cluster: "budget-travel",
+    tags: ["cash", "credit card", "currency", "travel tips"],
+    imgId: "photo-1526304640581-d334cdbbf45e",
+    cover_image_alt:
+      "Wallet with multiple foreign currency bills and credit cards on a table",
+    author_slug: "tripgenie",
     reading_time: 6,
     content: `## The Cash vs Card Decision
 
@@ -657,16 +662,17 @@ South America varies city by city more than country by country.
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'how-to-plan-surprise-trip',
-    title: 'How to Plan a Surprise Trip for Someone',
+    slug: "how-to-plan-surprise-trip",
+    title: "How to Plan a Surprise Trip for Someone",
     description:
-      'A step-by-step guide to planning the perfect surprise trip, from secret research to the big reveal, without getting caught.',
-    category: 'Travel Planning',
-    cluster: 'trip-planning-packing',
-    tags: ['surprise trip', 'gift', 'planning', 'special occasion'],
-    imgId: 'photo-1513151233558-d860c5398176',
-    cover_image_alt: 'Gift box with a plane ticket and travel accessories inside',
-    author_slug: 'tripgenie',
+      "A step-by-step guide to planning the perfect surprise trip, from secret research to the big reveal, without getting caught.",
+    category: "Travel Planning",
+    cluster: "trip-planning-packing",
+    tags: ["surprise trip", "gift", "planning", "special occasion"],
+    imgId: "photo-1513151233558-d860c5398176",
+    cover_image_alt:
+      "Gift box with a plane ticket and travel accessories inside",
+    author_slug: "tripgenie",
     reading_time: 7,
     content: `## The Art of the Surprise Trip
 
@@ -852,16 +858,17 @@ Surprise trips do not have to be expensive. Here are options at every price poin
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'anniversary-trip-ideas-by-milestone',
-    title: 'Anniversary Trip Ideas: Romantic Destinations by Milestone Year',
+    slug: "anniversary-trip-ideas-by-milestone",
+    title: "Anniversary Trip Ideas: Romantic Destinations by Milestone Year",
     description:
-      'Discover the perfect anniversary trip destination for every milestone year, from first anniversaries to golden celebrations, with romantic itinerary ideas.',
-    category: 'Travel Planning',
-    cluster: 'vibe-based-travel',
-    tags: ['anniversary', 'romantic', 'couples', 'destinations'],
-    imgId: 'photo-1529636798458-92182e662485',
-    cover_image_alt: 'Couple watching sunset over the ocean from a romantic terrace',
-    author_slug: 'tripgenie',
+      "Discover the perfect anniversary trip destination for every milestone year, from first anniversaries to golden celebrations, with romantic itinerary ideas.",
+    category: "Travel Planning",
+    cluster: "vibe-based-travel",
+    tags: ["anniversary", "romantic", "couples", "destinations"],
+    imgId: "photo-1529636798458-92182e662485",
+    cover_image_alt:
+      "Couple watching sunset over the ocean from a romantic terrace",
+    author_slug: "tripgenie",
     reading_time: 6,
     content: `## Celebrating Your Love With Travel
 
@@ -1031,16 +1038,17 @@ Revisit your wedding vows. Write new ones that reflect fifty years of growth and
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'birthday-trip-planning-abroad',
-    title: 'Birthday Trip Planning: How to Celebrate Abroad',
+    slug: "birthday-trip-planning-abroad",
+    title: "Birthday Trip Planning: How to Celebrate Abroad",
     description:
-      'Everything you need to plan an unforgettable birthday trip abroad, from choosing the destination to organizing group celebrations in a foreign country.',
-    category: 'Travel Planning',
-    cluster: 'trip-planning-packing',
-    tags: ['birthday', 'celebration', 'planning', 'special occasion'],
-    imgId: 'photo-1464349095431-e9a21285b5f3',
-    cover_image_alt: 'Friends celebrating a birthday with sparklers at an outdoor restaurant',
-    author_slug: 'tripgenie',
+      "Everything you need to plan an unforgettable birthday trip abroad, from choosing the destination to organizing group celebrations in a foreign country.",
+    category: "Travel Planning",
+    cluster: "trip-planning-packing",
+    tags: ["birthday", "celebration", "planning", "special occasion"],
+    imgId: "photo-1464349095431-e9a21285b5f3",
+    cover_image_alt:
+      "Friends celebrating a birthday with sparklers at an outdoor restaurant",
+    author_slug: "tripgenie",
     reading_time: 6,
     content: `## Why Celebrate Your Birthday Abroad
 
@@ -1220,16 +1228,17 @@ The best birthday trips are not about perfection. They are about being somewhere
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'workcation-planning-productive',
+    slug: "workcation-planning-productive",
     title: "How to Plan a Workcation That's Actually Productive",
     description:
-      'Learn how to combine work and travel effectively with practical tips on choosing destinations, managing time zones, and maintaining productivity while working remotely.',
-    category: 'Travel Planning',
-    cluster: 'vibe-based-travel',
-    tags: ['workcation', 'remote work', 'productivity', 'planning'],
-    imgId: 'photo-1519389950473-47ba0277781c',
-    cover_image_alt: 'Laptop open on a desk overlooking a tropical beach through large windows',
-    author_slug: 'tripgenie',
+      "Learn how to combine work and travel effectively with practical tips on choosing destinations, managing time zones, and maintaining productivity while working remotely.",
+    category: "Travel Planning",
+    cluster: "vibe-based-travel",
+    tags: ["workcation", "remote work", "productivity", "planning"],
+    imgId: "photo-1519389950473-47ba0277781c",
+    cover_image_alt:
+      "Laptop open on a desk overlooking a tropical beach through large windows",
+    author_slug: "tripgenie",
     reading_time: 6,
     content: `## The Workcation Promise and Reality
 
@@ -1424,16 +1433,17 @@ For short workcations (1-4 weeks), most travelers use tourist visas without issu
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'staycation-ideas-travel-without-leaving',
-    title: 'Staycation Ideas: How to Travel Without Leaving Your City',
+    slug: "staycation-ideas-travel-without-leaving",
+    title: "Staycation Ideas: How to Travel Without Leaving Your City",
     description:
-      'Transform your hometown into a vacation destination with creative staycation ideas that bring the excitement of travel to your own backyard.',
-    category: 'Travel Tips',
-    cluster: 'insider-tips',
-    tags: ['staycation', 'local travel', 'budget', 'ideas'],
-    imgId: 'photo-1494783367193-149034c05e8f',
-    cover_image_alt: 'Person relaxing in a hammock in a backyard garden with string lights',
-    author_slug: 'tripgenie',
+      "Transform your hometown into a vacation destination with creative staycation ideas that bring the excitement of travel to your own backyard.",
+    category: "Travel Tips",
+    cluster: "insider-tips",
+    tags: ["staycation", "local travel", "budget", "ideas"],
+    imgId: "photo-1494783367193-149034c05e8f",
+    cover_image_alt:
+      "Person relaxing in a hammock in a backyard garden with string lights",
+    author_slug: "tripgenie",
     reading_time: 7,
     content: `## Why Staycations Work
 
@@ -1499,7 +1509,7 @@ Booking a hotel in your own city is the fastest way to make a staycation feel li
 
 - **Weeknight stays** are dramatically cheaper than weekends
 - **Off-season** for your city (when tourists are not visiting)
-- **Last-minute deals** on HotelTonight or Booking.com
+- **Last-minute deals** on HotelTonight or hotel comparison sites
 - **Loyalty program free nights** you have been saving
 
 ## Category 3: Adventure Staycation
@@ -1607,16 +1617,16 @@ The magic of travel is not the destination itself — it is the **state of mind.
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'last-minute-weekend-getaway-guide',
-    title: 'How to Plan a Last-Minute Weekend Getaway in Under an Hour',
+    slug: "last-minute-weekend-getaway-guide",
+    title: "How to Plan a Last-Minute Weekend Getaway in Under an Hour",
     description:
-      'A step-by-step system for booking a spontaneous weekend trip in under 60 minutes, from finding deals to packing and heading out the door.',
-    category: 'Travel Planning',
-    cluster: 'trip-planning-packing',
-    tags: ['last minute', 'weekend', 'quick planning', 'getaway'],
-    imgId: 'photo-1476900164809-ff19b8ae5968',
-    cover_image_alt: 'Car packed for a road trip on an open highway at sunset',
-    author_slug: 'tripgenie',
+      "A step-by-step system for booking a spontaneous weekend trip in under 60 minutes, from finding deals to packing and heading out the door.",
+    category: "Travel Planning",
+    cluster: "trip-planning-packing",
+    tags: ["last minute", "weekend", "quick planning", "getaway"],
+    imgId: "photo-1476900164809-ff19b8ae5968",
+    cover_image_alt: "Car packed for a road trip on an open highway at sunset",
+    author_slug: "tripgenie",
     reading_time: 6,
     content: `## The 60-Minute Getaway System
 
@@ -1691,7 +1701,7 @@ Set a timer for 15 minutes. When it goes off, pick a destination. The biggest en
 
 Do not spend 45 minutes comparing 30 hotels. Use this quick method:
 
-1. Open **Booking.com** or **Hotels.com**
+1. Open **hotel comparison sites** or **Hotels.com**
 2. Filter by: your dates, "Free cancellation," rating 8.0+, your budget
 3. Sort by "Top reviewed"
 4. Book the first option that looks good and is in a convenient location
@@ -1708,7 +1718,7 @@ Do not spend 45 minutes comparing 30 hotels. Use this quick method:
 
 For a 2-night stay, prioritize:
 1. **Location:** Central, walkable, near things to do
-2. **Reviews:** 8.0+ on Booking.com, 4.5+ on Airbnb
+2. **Reviews:** 8.0+ on hotel comparison sites, 4.5+ on Airbnb
 3. **Free cancellation:** In case plans change
 4. **Check-in flexibility:** Late check-in if you are arriving Friday night
 
@@ -1829,16 +1839,17 @@ Book it. Pack light. Go. You will never regret a weekend away, but you will alwa
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'heritage-travel-ancestral-homeland',
-    title: 'Heritage Travel: How to Plan a Trip to Your Ancestral Homeland',
+    slug: "heritage-travel-ancestral-homeland",
+    title: "Heritage Travel: How to Plan a Trip to Your Ancestral Homeland",
     description:
-      'A comprehensive guide to planning a heritage trip to your ancestral homeland, from researching your family history to making meaningful connections abroad.',
-    category: 'Travel Planning',
-    cluster: 'vibe-based-travel',
-    tags: ['heritage', 'ancestry', 'cultural travel', 'planning'],
-    imgId: 'photo-1527631746610-bca00a040d60',
-    cover_image_alt: 'Old family photographs spread on a wooden table with a map and passport',
-    author_slug: 'tripgenie',
+      "A comprehensive guide to planning a heritage trip to your ancestral homeland, from researching your family history to making meaningful connections abroad.",
+    category: "Travel Planning",
+    cluster: "vibe-based-travel",
+    tags: ["heritage", "ancestry", "cultural travel", "planning"],
+    imgId: "photo-1527631746610-bca00a040d60",
+    cover_image_alt:
+      "Old family photographs spread on a wooden table with a map and passport",
+    author_slug: "tripgenie",
     reading_time: 6,
     content: `## What Is Heritage Travel?
 
@@ -2020,16 +2031,17 @@ Take it slow. Give yourself permission to feel whatever comes up. This is not a 
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'solo-trip-after-life-change',
-    title: 'How to Plan a Transformative Solo Trip After a Major Life Change',
+    slug: "solo-trip-after-life-change",
+    title: "How to Plan a Transformative Solo Trip After a Major Life Change",
     description:
-      'A guide to planning a meaningful solo trip after a breakup, career change, loss, or other major life transition, with destination ideas and practical advice.',
-    category: 'Travel Planning',
-    cluster: 'vibe-based-travel',
-    tags: ['solo travel', 'transformation', 'wellness', 'personal growth'],
-    imgId: 'photo-1506126613408-eca07ce68773',
-    cover_image_alt: 'Solo traveler sitting on a cliff edge overlooking a vast mountain landscape',
-    author_slug: 'tripgenie',
+      "A guide to planning a meaningful solo trip after a breakup, career change, loss, or other major life transition, with destination ideas and practical advice.",
+    category: "Travel Planning",
+    cluster: "vibe-based-travel",
+    tags: ["solo travel", "transformation", "wellness", "personal growth"],
+    imgId: "photo-1506126613408-eca07ce68773",
+    cover_image_alt:
+      "Solo traveler sitting on a cliff edge overlooking a vast mountain landscape",
+    author_slug: "tripgenie",
     reading_time: 6,
     content: `## When Life Changes, Travel Helps
 
@@ -2210,16 +2222,17 @@ The most transformative trips are not the ones with the best Instagram photos. T
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'how-to-sleep-in-airports',
-    title: 'How to Sleep in Airports: The Complete Survival Guide',
+    slug: "how-to-sleep-in-airports",
+    title: "How to Sleep in Airports: The Complete Survival Guide",
     description:
-      'Everything you need to know about sleeping in airports, from the best airports to sleep in to gear tips and strategies for getting actual rest during layovers.',
-    category: 'Travel Tips',
-    cluster: 'insider-tips',
-    tags: ['airport', 'sleep', 'layover', 'travel hacks'],
-    imgId: 'photo-1544620347-c4fd4a3d5957',
-    cover_image_alt: 'Traveler sleeping across airport terminal seats with a backpack as pillow',
-    author_slug: 'tripgenie',
+      "Everything you need to know about sleeping in airports, from the best airports to sleep in to gear tips and strategies for getting actual rest during layovers.",
+    category: "Travel Tips",
+    cluster: "insider-tips",
+    tags: ["airport", "sleep", "layover", "travel hacks"],
+    imgId: "photo-1544620347-c4fd4a3d5957",
+    cover_image_alt:
+      "Traveler sleeping across airport terminal seats with a backpack as pillow",
+    author_slug: "tripgenie",
     reading_time: 7,
     content: `## Why Airport Sleeping Is a Skill Worth Learning
 
@@ -2381,16 +2394,17 @@ Some airports have hotels inside the terminal (airside), so you do not need to c
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'best-noise-canceling-headphones-travel-2026',
-    title: 'Best Noise-Canceling Headphones for Travel in 2026',
+    slug: "best-noise-canceling-headphones-travel-2026",
+    title: "Best Noise-Canceling Headphones for Travel in 2026",
     description:
-      'A practical comparison of the best noise-canceling headphones for travel in 2026, covering sound quality, comfort, battery life, and portability for every budget.',
-    category: 'Travel Tips',
-    cluster: 'insider-tips',
-    tags: ['headphones', 'noise canceling', 'gear', 'reviews'],
-    imgId: 'photo-1505740420928-5e560c06d30e',
-    cover_image_alt: 'Over-ear noise-canceling headphones resting on a window seat of an airplane',
-    author_slug: 'tripgenie',
+      "A practical comparison of the best noise-canceling headphones for travel in 2026, covering sound quality, comfort, battery life, and portability for every budget.",
+    category: "Travel Tips",
+    cluster: "insider-tips",
+    tags: ["headphones", "noise canceling", "gear", "reviews"],
+    imgId: "photo-1505740420928-5e560c06d30e",
+    cover_image_alt:
+      "Over-ear noise-canceling headphones resting on a window seat of an airplane",
+    author_slug: "tripgenie",
     reading_time: 7,
     content: `## Why Every Traveler Needs Noise-Canceling Headphones
 
@@ -2590,16 +2604,17 @@ Long-haul flyers who prioritize comfort above everything else.
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'pack-liquids-flight-tsa-rules',
-    title: 'How to Pack Liquids for a Flight: TSA Rules Simplified',
+    slug: "pack-liquids-flight-tsa-rules",
+    title: "How to Pack Liquids for a Flight: TSA Rules Simplified",
     description:
-      'A clear, simple guide to packing liquids for flights, covering TSA 3-1-1 rules, international variations, exemptions, and strategies for traveling with only carry-on luggage.',
-    category: 'Travel Tips',
-    cluster: 'trip-planning-packing',
-    tags: ['packing', 'TSA', 'liquids', 'airport'],
-    imgId: 'photo-1556740758-90de374c12ad',
-    cover_image_alt: 'Travel-sized toiletries neatly arranged in a clear quart-sized bag',
-    author_slug: 'tripgenie',
+      "A clear, simple guide to packing liquids for flights, covering TSA 3-1-1 rules, international variations, exemptions, and strategies for traveling with only carry-on luggage.",
+    category: "Travel Tips",
+    cluster: "trip-planning-packing",
+    tags: ["packing", "TSA", "liquids", "airport"],
+    imgId: "photo-1556740758-90de374c12ad",
+    cover_image_alt:
+      "Travel-sized toiletries neatly arranged in a clear quart-sized bag",
+    author_slug: "tripgenie",
     reading_time: 6,
     content: `## The TSA Liquids Rule: 3-1-1
 
@@ -2777,16 +2792,17 @@ These are commonly confiscated items that surprise travelers:
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'cheap-hotel-upgrades-strategies',
-    title: 'How to Get Cheap Upgrades at Hotels: Proven Strategies',
+    slug: "cheap-hotel-upgrades-strategies",
+    title: "How to Get Cheap Upgrades at Hotels: Proven Strategies",
     description:
-      'Practical strategies for scoring hotel room upgrades without paying full price, from loyalty programs to timing tricks and the art of the polite request.',
-    category: 'Travel Tips',
-    cluster: 'insider-tips',
-    tags: ['hotel', 'upgrades', 'travel hacks', 'tips'],
-    imgId: 'photo-1566073771259-6a8506099945',
-    cover_image_alt: 'Luxurious hotel room with a balcony view overlooking the ocean',
-    author_slug: 'tripgenie',
+      "Practical strategies for scoring hotel room upgrades without paying full price, from loyalty programs to timing tricks and the art of the polite request.",
+    category: "Travel Tips",
+    cluster: "insider-tips",
+    tags: ["hotel", "upgrades", "travel hacks", "tips"],
+    imgId: "photo-1566073771259-6a8506099945",
+    cover_image_alt:
+      "Luxurious hotel room with a balcony view overlooking the ocean",
+    author_slug: "tripgenie",
     reading_time: 7,
     content: `## The Upgrade Game: How Hotels Actually Work
 
@@ -2808,7 +2824,7 @@ Loyalty program members — even at the basic (free) level — are flagged in th
 
 - Sign up for the loyalty program of every major hotel chain **before** your stay
 - The programs are free: Marriott Bonvoy, Hilton Honors, IHG One Rewards, World of Hyatt, Accor Live Limitless
-- Book directly through the hotel's website or app (not Expedia or Booking.com) — this is essential, as third-party bookings are rarely upgraded
+- Book directly through the hotel's website or app (not Expedia or hotel comparison sites) — this is essential, as third-party bookings are rarely upgraded
 - Check in using the app and select any upgrade offers that appear
 
 ### The Status Fast-Track
@@ -2935,7 +2951,7 @@ Hotels love helping guests celebrate. If you are genuinely celebrating something
 
 ### Why Direct Booking Matters
 
-Third-party bookings (Expedia, Booking.com, Hotels.com) typically receive:
+Third-party bookings (Expedia, hotel comparison sites, Hotels.com) typically receive:
 - No loyalty points
 - No upgrade consideration
 - The lowest priority at the front desk
@@ -2981,16 +2997,17 @@ The best upgrade strategy is a long-term one: be the kind of guest hotels want t
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'travel-laundry-hacks-pack-less',
-    title: 'Travel Laundry Hacks: How to Pack Less and Wash on the Go',
+    slug: "travel-laundry-hacks-pack-less",
+    title: "Travel Laundry Hacks: How to Pack Less and Wash on the Go",
     description:
-      'Master the art of doing laundry while traveling so you can pack lighter, save luggage space, and extend your wardrobe for weeks with just a carry-on.',
-    category: 'Travel Tips',
-    cluster: 'trip-planning-packing',
-    tags: ['laundry', 'packing', 'travel hacks', 'tips'],
-    imgId: 'photo-1558171813-4c088753af8f',
-    cover_image_alt: 'Clothes hanging to dry on a line at a hostel balcony with city view',
-    author_slug: 'tripgenie',
+      "Master the art of doing laundry while traveling so you can pack lighter, save luggage space, and extend your wardrobe for weeks with just a carry-on.",
+    category: "Travel Tips",
+    cluster: "trip-planning-packing",
+    tags: ["laundry", "packing", "travel hacks", "tips"],
+    imgId: "photo-1558171813-4c088753af8f",
+    cover_image_alt:
+      "Clothes hanging to dry on a line at a hostel balcony with city view",
+    author_slug: "tripgenie",
     reading_time: 6,
     content: `## The Laundry Secret to Packing Light
 
@@ -3167,16 +3184,18 @@ That is a complete wardrobe that fits in a 30-40 liter backpack with room to spa
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'navigate-foreign-country-no-language',
-    title: "How to Navigate a Foreign Country When You Don't Speak the Language",
+    slug: "navigate-foreign-country-no-language",
+    title:
+      "How to Navigate a Foreign Country When You Don't Speak the Language",
     description:
-      'Practical strategies for communicating, navigating, and thriving in a country where you do not speak the local language, from tech tools to body language.',
-    category: 'Travel Tips',
-    cluster: 'insider-tips',
-    tags: ['language barrier', 'communication', 'travel tips', 'culture'],
-    imgId: 'photo-1488085061387-422e29b40080',
-    cover_image_alt: 'Traveler pointing at a map while asking a local for directions on a foreign street',
-    author_slug: 'tripgenie',
+      "Practical strategies for communicating, navigating, and thriving in a country where you do not speak the local language, from tech tools to body language.",
+    category: "Travel Tips",
+    cluster: "insider-tips",
+    tags: ["language barrier", "communication", "travel tips", "culture"],
+    imgId: "photo-1488085061387-422e29b40080",
+    cover_image_alt:
+      "Traveler pointing at a map while asking a local for directions on a foreign street",
+    author_slug: "tripgenie",
     reading_time: 7,
     content: `## The Language Barrier Is Not as Scary as You Think
 
@@ -3373,16 +3392,17 @@ Learn to say "I am trying to learn [language]. Can you teach me a word?" in the 
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'best-translation-apps-travel',
-    title: 'Best Translation Apps for Travel: Real-World Tested',
+    slug: "best-translation-apps-travel",
+    title: "Best Translation Apps for Travel: Real-World Tested",
     description:
-      'An honest comparison of the best translation apps for travelers in 2026, tested in real-world conditions including offline use, camera translation, and live conversation.',
-    category: 'Technology',
-    cluster: 'trip-planning-packing',
-    tags: ['translation', 'apps', 'language', 'technology'],
-    imgId: 'photo-1512820790803-83ca734da794',
-    cover_image_alt: 'Smartphone showing a translation app being used at a foreign restaurant',
-    author_slug: 'tripgenie',
+      "An honest comparison of the best translation apps for travelers in 2026, tested in real-world conditions including offline use, camera translation, and live conversation.",
+    category: "Technology",
+    cluster: "trip-planning-packing",
+    tags: ["translation", "apps", "language", "technology"],
+    imgId: "photo-1512820790803-83ca734da794",
+    cover_image_alt:
+      "Smartphone showing a translation app being used at a foreign restaurant",
+    author_slug: "tripgenie",
     reading_time: 7,
     content: `## Why Your Translation App Choice Matters
 
@@ -3576,16 +3596,18 @@ Regardless of which app you use:
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'post-travel-blues-recovery',
-    title: 'How to Recover From Post-Travel Blues: Beating the Vacation Hangover',
+    slug: "post-travel-blues-recovery",
+    title:
+      "How to Recover From Post-Travel Blues: Beating the Vacation Hangover",
     description:
-      'Understand why post-travel blues happen and learn practical strategies to beat the vacation hangover, re-integrate into daily life, and keep the travel mindset alive.',
-    category: 'Travel Tips',
-    cluster: 'insider-tips',
-    tags: ['post-travel', 'mental health', 'travel tips', 'lifestyle'],
-    imgId: 'photo-1503220317375-aaad61436b1b',
-    cover_image_alt: 'Person looking out of an airplane window with a reflective expression',
-    author_slug: 'tripgenie',
+      "Understand why post-travel blues happen and learn practical strategies to beat the vacation hangover, re-integrate into daily life, and keep the travel mindset alive.",
+    category: "Travel Tips",
+    cluster: "insider-tips",
+    tags: ["post-travel", "mental health", "travel tips", "lifestyle"],
+    imgId: "photo-1503220317375-aaad61436b1b",
+    cover_image_alt:
+      "Person looking out of an airplane window with a reflective expression",
+    author_slug: "tripgenie",
     reading_time: 7,
     content: `## Why Coming Home Feels So Bad
 

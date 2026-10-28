@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react";
+import { flightQuoteIsCurrent } from "@faroway/constants";
 import { Plane } from "lucide-react";
 import type { TripDay } from "@faroway/types";
 import { formatEstimate } from "@/lib/trips/budget";
@@ -30,6 +32,20 @@ export function FlightLeg({
   transport: NonNullable<TripDay["transport"]>;
   label: string;
 }) {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const update = () => setNow(Date.now());
+    const initial = setTimeout(update, 0);
+    const timer = setInterval(update, 30_000);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(timer);
+    };
+  }, []);
+  const current = flightQuoteIsCurrent(
+    transport,
+    now ?? Number.POSITIVE_INFINITY,
+  );
   return (
     <div className="flex-1 min-w-0">
       <p className="text-[11px] font-semibold text-blue-400 uppercase tracking-wider mb-2">
@@ -87,7 +103,9 @@ export function FlightLeg({
             : "Airline unavailable"}
         </p>
         <p className="text-sm font-bold text-white">
-          {formatEstimate(transport.price, transport.currency)}
+          {current
+            ? formatEstimate(transport.price, transport.currency)
+            : "Price expired or unavailable"}
         </p>
       </div>
     </div>

@@ -66,7 +66,7 @@ const helpCategories = [
     title: "Bookings & Payments",
     description: "How affiliate bookings and pricing work.",
     bullets: [
-      "Booking.com hotel reservations",
+      "Third-party hotel reservations",
       "Viator tours and activities",
       "Faroway is free to start",
       "Refunds handled by providers",
@@ -159,7 +159,7 @@ const faqItems = [
   {
     question: "How are bookings handled?",
     answer:
-      "Faroway is not a travel agency or booking platform. We provide affiliate links to third-party providers like Booking.com (hotels) and Viator (tours and activities). When you click a link and complete a booking, your contract is directly with that provider \u2014 not with us. All pricing, availability, cancellations, refunds, and customer service are handled entirely by the booking provider under their own terms.",
+      "Faroway is not a travel agency or booking platform. We provide affiliate links to third-party providers like Viator (tours and activities). When you click a link and complete a booking, your contract is directly with that provider \u2014 not with us. All pricing, availability, cancellations, refunds, and customer service are handled entirely by the booking provider under their own terms.",
   },
   {
     question: "Is my data secure?",

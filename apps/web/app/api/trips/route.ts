@@ -150,6 +150,8 @@ export async function POST(request: NextRequest) {
         children: preferences?.children,
         interests: preferences?.interests,
         hotelSearch: preferences?.hotelSearch,
+        flightSearch: preferences?.flightSearch,
+        requirements: preferences?.requirements,
       },
       status: "draft",
     };

@@ -156,7 +156,7 @@ export default function PrivacyPolicyPage() {
               </li>
               <li>
                 <strong>Affiliate tracking cookies</strong> &mdash; placed by
-                our affiliate partners (Booking.com, Viator) when you click an
+                our affiliate partners (such as Viator) when you click an
                 affiliate link. These cookies allow the partner to attribute
                 your booking to Faroway. These cookies are governed by the
                 respective partner&apos;s cookie policy.
@@ -263,24 +263,16 @@ export default function PrivacyPolicyPage() {
 
             <h3>5.2 Affiliate Partners</h3>
             <p>
+              Information previously shared with a former travel provider
+              remains subject to that provider’s privacy policy.
+            </p>
+            <p>
               When you click an affiliate link, you are directed to a
               third-party provider&apos;s website. At that point, the provider
               may collect your information under their own privacy policy. Our
               affiliate partners include:
             </p>
             <ul>
-              <li>
-                <a
-                  href="https://www.booking.com/content/privacy.html"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Booking.com
-                </a>{" "}
-                &mdash; hotel and accommodation bookings. When you click a
-                Booking.com link, a referral identifier is included in the URL.
-                Booking.com may set cookies on your device.
-              </li>
               <li>
                 <a
                   href="https://www.viator.com/support/privacyPolicy"

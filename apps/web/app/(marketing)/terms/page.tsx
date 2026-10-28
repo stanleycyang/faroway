@@ -59,8 +59,8 @@ export default function TermsOfServicePage() {
             </p>
             <ul>
               <li>
-                Links to booking providers (including but not limited to
-                Booking.com and Viator) are affiliate links.
+                Links to booking providers (including but not limited to Viator
+                and GetYourGuide) are affiliate links.
               </li>
               <li>
                 We may receive compensation when you complete a booking through
@@ -201,7 +201,8 @@ export default function TermsOfServicePage() {
                   Your contract is with the provider, not with us.
                 </strong>{" "}
                 All bookings, purchases, and transactions are between you and
-                the third-party provider (e.g., Booking.com, Viator, or others).
+                the third-party provider (e.g., Viator, GetYourGuide, or
+                others).
               </li>
               <li>
                 All bookings are subject to the respective provider&apos;s own

@@ -1,3 +1,4 @@
+import { flightQuoteIsCurrent } from '@faroway/constants';
 import { formatKnownPrice, summarizeTripCosts } from '../../lib/tripCost';
 import React, {
   useEffect,
@@ -266,6 +267,11 @@ function TransportCard({
   transport: NonNullable<import('../../stores/tripStore').TripDay['transport']>;
 }) {
   const reviewBooking = useBookingReview();
+  const [now, setNow] = useState(Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
   const formatDuration = (minutes: number | undefined) => {
     if (minutes === undefined || !Number.isFinite(minutes) || minutes < 0)
       return 'Duration unavailable';
@@ -302,7 +308,9 @@ function TransportCard({
             <Text style={styles.transportCardProvider}>{transport.provider}</Text>
           </View>
           <Text style={styles.transportCardPrice}>
-            {formatKnownPrice(transport.price, transport.currency)}
+            {flightQuoteIsCurrent(transport, now)
+              ? formatKnownPrice(transport.price, transport.currency)
+              : 'Price expired or unavailable'}
           </Text>
         </View>
         <View style={styles.transportCardRoute}>
@@ -493,7 +501,15 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   const scrollY = useRef(new Animated.Value(0)).current;
   const trip = selectTripDetail(id, trips, currentTrip);
 
-  const costReferences = useMemo(() => (trip ? summarizeTripCosts(trip) : []), [trip]);
+  const [quoteClock, setQuoteClock] = useState(0);
+  useEffect(() => {
+    const timer = setInterval(() => setQuoteClock(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
+  const costReferences = useMemo(
+    () => (trip ? summarizeTripCosts(trip, quoteClock || Date.now()) : []),
+    [trip, quoteClock]
+  );
 
   const bookableItems = useMemo(() => (trip ? collectBookingOptions(trip) : []), [trip]);
 

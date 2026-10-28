@@ -201,6 +201,10 @@ export async function runOrchestratorAgent(
 **Interests:** ${(input.interests ?? []).join(", ") || "Not specified"}
 **Dietary restrictions:** ${(input.dietaryRestrictions ?? []).join(", ") || "Not specified"}
 **Mobility needs:** ${input.mobilityNeeds || "Not specified"}
+**Allergies:** ${(input.requirements?.allergies ?? []).join(", ") || "Not specified"}
+**Dietary preferences:** ${(input.requirements?.dietaryPreferences ?? []).join(", ") || "Not specified"}
+**Accessibility requirements:** ${(input.requirements?.accessibility ?? []).join(", ") || "Not specified"}
+**Mobility details:** ${input.requirements?.mobilityNotes || "Not specified"}
 **Vibes:** ${vibes.join(", ")}
 **Budget:** ${input.budget || "moderate"}${originInfo}
 
@@ -242,14 +246,22 @@ Create a detailed search plan with:
     plan.diningCriteria.dietaryNeeds = [
       ...new Set([
         ...(input.dietaryRestrictions ?? []),
+        ...(input.requirements?.allergies ?? []).map(
+          (value) => `Allergy: ${value}`,
+        ),
+        ...(input.requirements?.dietaryPreferences ?? []),
         ...plan.diningCriteria.dietaryNeeds,
       ]),
     ];
     plan.mobilityNeeds = input.mobilityNeeds;
+    plan.travelerType = input.travelerType;
     plan.travelers = input.travelers;
     plan.adults = input.adults;
     plan.children = input.children;
     plan.roomCount = input.roomCount;
+    plan.childAges = input.childAges;
+    plan.flightProvider = input.flightProvider;
+    plan.requirements = input.requirements;
     plan.activityCriteria.interests = [
       ...new Set([
         ...(input.interests ?? []),
@@ -305,10 +317,14 @@ export function buildFallbackSearchPlan(input: SearchInput): SearchPlan {
 
   return {
     destination: input.destination,
+    travelerType: input.travelerType,
     travelers: input.travelers,
     adults: input.adults,
     children: input.children,
     roomCount: input.roomCount,
+    childAges: input.childAges,
+    flightProvider: input.flightProvider,
+    requirements: input.requirements,
     country: "",
     dates: {
       start: input.startDate,
@@ -344,7 +360,15 @@ export function buildFallbackSearchPlan(input: SearchInput): SearchPlan {
           : input.budget === "budget"
             ? "budget"
             : "moderate",
-      dietaryNeeds: input.dietaryRestrictions ?? [],
+      dietaryNeeds: [
+        ...new Set([
+          ...(input.dietaryRestrictions ?? []),
+          ...(input.requirements?.allergies ?? []).map(
+            (value) => `Allergy: ${value}`,
+          ),
+          ...(input.requirements?.dietaryPreferences ?? []),
+        ]),
+      ],
       mealPriorities: ["dinner", "lunch", "breakfast"],
     },
     vibeInterpretation: {

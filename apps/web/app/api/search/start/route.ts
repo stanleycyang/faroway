@@ -13,6 +13,7 @@ import { planTripWorkflow } from "@/workflows/plan-trip";
 import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 import { isValidDateOnly, isValidDateRange } from "@/lib/api/date-range";
 import { z } from "zod";
+import { TravelerRequirementsSchema } from "@/lib/trips/brief";
 
 const DateOnlySchema = z
   .string()
@@ -27,6 +28,7 @@ const SearchInputSchema = z
     adults: z.number().int().min(1).max(50).optional(),
     children: z.number().int().min(0).max(49).optional(),
     roomCount: z.number().int().min(1).max(4).optional(),
+    requirements: TravelerRequirementsSchema.optional(),
     interests: z.array(z.string().trim().min(1).max(50)).max(20).optional(),
     dietaryRestrictions: z
       .array(z.string().trim().min(1).max(100))
@@ -113,6 +115,7 @@ export async function POST(request: NextRequest) {
       adults,
       children,
       roomCount,
+      requirements,
       interests,
       dietaryRestrictions,
       mobilityNeeds,
@@ -174,6 +177,7 @@ export async function POST(request: NextRequest) {
         adults,
         children,
         roomCount,
+        requirements,
         interests,
         dietaryRestrictions,
         mobilityNeeds,

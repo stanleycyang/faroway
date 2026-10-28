@@ -14,16 +14,18 @@ export interface ArticleEntry {
 
 export const batch1: ArticleEntry[] = [
   {
-    slug: 'how-ai-is-changing-travel-planning',
-    title: 'How AI Is Changing Travel Planning in 2026',
-    description: 'Discover how artificial intelligence is revolutionizing the way we plan trips, from personalized itineraries to real-time recommendations.',
-    category: 'Technology',
-    cluster: 'trip-planning-packing',
-    tags: ['AI travel', 'technology', 'travel planning', 'trip planning'],
-    author_slug: 'tripgenie-team',
+    slug: "how-ai-is-changing-travel-planning",
+    title: "How AI Is Changing Travel Planning in 2026",
+    description:
+      "Discover how artificial intelligence is revolutionizing the way we plan trips, from personalized itineraries to real-time recommendations.",
+    category: "Technology",
+    cluster: "trip-planning-packing",
+    tags: ["AI travel", "technology", "travel planning", "trip planning"],
+    author_slug: "tripgenie-team",
     reading_time: 5,
-    cover_image_alt: 'Futuristic AI interface overlaid on a world map representing AI-powered travel planning',
-    imgId: 'photo-1677442136019-21780ecad995',
+    cover_image_alt:
+      "Futuristic AI interface overlaid on a world map representing AI-powered travel planning",
+    imgId: "photo-1677442136019-21780ecad995",
     content: `## The AI Travel Revolution Is Here
 
 Travel planning used to mean spending hours scrolling through review sites, juggling spreadsheets, and cross-referencing dozens of blog posts. In 2026, artificial intelligence has fundamentally changed the game. Whether you are planning a weekend getaway or a month-long backpacking adventure, AI tools can now handle the heavy lifting in minutes.
@@ -142,16 +144,18 @@ The era of spending entire weekends planning a single trip is over. AI is here t
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'chatgpt-vs-ai-trip-planners',
-    title: 'ChatGPT vs AI Trip Planners: Which Builds Better Itineraries?',
-    description: 'We compare ChatGPT with dedicated AI trip planners to see which creates better travel itineraries. The results may surprise you.',
-    category: 'Technology',
-    cluster: 'trip-planning-packing',
-    tags: ['AI travel', 'ChatGPT', 'trip planning', 'technology'],
-    author_slug: 'tripgenie-team',
+    slug: "chatgpt-vs-ai-trip-planners",
+    title: "ChatGPT vs AI Trip Planners: Which Builds Better Itineraries?",
+    description:
+      "We compare ChatGPT with dedicated AI trip planners to see which creates better travel itineraries. The results may surprise you.",
+    category: "Technology",
+    cluster: "trip-planning-packing",
+    tags: ["AI travel", "ChatGPT", "trip planning", "technology"],
+    author_slug: "tripgenie-team",
     reading_time: 5,
-    cover_image_alt: 'Split-screen comparison of AI tools on a laptop screen for travel planning',
-    imgId: 'photo-1531297484001-80022131f5a1',
+    cover_image_alt:
+      "Split-screen comparison of AI tools on a laptop screen for travel planning",
+    imgId: "photo-1531297484001-80022131f5a1",
     content: `## The Great AI Travel Debate
 
 With the rise of AI, travelers now have two main options for AI-assisted trip planning: **general-purpose AI chatbots** like ChatGPT and **dedicated AI trip planners** built specifically for travel. Both can generate itineraries, but they approach the task very differently.
@@ -277,16 +281,18 @@ The smartest travelers in 2026 are using both — ChatGPT for the dreaming phase
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'ai-find-hidden-flight-deals',
-    title: 'How to Use AI to Find Hidden Flight Deals',
-    description: 'Learn how AI-powered tools can uncover flight deals you will never find through traditional search. Save hundreds on your next booking.',
-    category: 'Technology',
-    cluster: 'budget-travel',
-    tags: ['AI travel', 'cheap flights', 'deals', 'technology'],
-    author_slug: 'tripgenie-team',
+    slug: "ai-find-hidden-flight-deals",
+    title: "How to Use AI to Find Hidden Flight Deals",
+    description:
+      "Learn how AI-powered tools can uncover flight deals you will never find through traditional search. Save hundreds on your next booking.",
+    category: "Technology",
+    cluster: "budget-travel",
+    tags: ["AI travel", "cheap flights", "deals", "technology"],
+    author_slug: "tripgenie-team",
     reading_time: 6,
-    cover_image_alt: 'Airplane flying above clouds at sunset representing flight deal opportunities',
-    imgId: 'photo-1485827404703-89b55fcc595e',
+    cover_image_alt:
+      "Airplane flying above clouds at sunset representing flight deal opportunities",
+    imgId: "photo-1485827404703-89b55fcc595e",
     content: `## Why Traditional Flight Search Falls Short
 
 If you are still searching for flights the old-fashioned way — typing your dates into a single search engine and booking the first reasonable price — you are almost certainly overpaying. The airline pricing landscape is extraordinarily complex, with fares changing thousands of times per day based on demand, competition, and sophisticated yield management algorithms.
@@ -449,16 +455,18 @@ The bottom line: AI has made it possible for everyday travelers to access the sa
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'future-personalized-travel-ai',
-    title: 'The Future of Personalized Travel: How AI Learns Your Preferences',
-    description: 'AI is learning to understand your unique travel style. Explore how personalization technology is creating trips tailored just for you.',
-    category: 'Technology',
-    cluster: 'trip-planning-packing',
-    tags: ['AI travel', 'personalization', 'technology', 'travel planning'],
-    author_slug: 'tripgenie-team',
+    slug: "future-personalized-travel-ai",
+    title: "The Future of Personalized Travel: How AI Learns Your Preferences",
+    description:
+      "AI is learning to understand your unique travel style. Explore how personalization technology is creating trips tailored just for you.",
+    category: "Technology",
+    cluster: "trip-planning-packing",
+    tags: ["AI travel", "personalization", "technology", "travel planning"],
+    author_slug: "tripgenie-team",
     reading_time: 6,
-    cover_image_alt: 'Abstract digital network visualization representing AI personalization algorithms',
-    imgId: 'photo-1526374965328-7f61d4dc18c5',
+    cover_image_alt:
+      "Abstract digital network visualization representing AI personalization algorithms",
+    imgId: "photo-1526374965328-7f61d4dc18c5",
     content: `## Travel Is Personal — Your Planning Should Be Too
 
 No two travelers are alike. Some people want to see every major landmark. Others want to find the one perfect cafe and sit there all afternoon. Some travelers need detailed hour-by-hour schedules. Others prefer loose frameworks with room for spontaneity.
@@ -616,16 +624,19 @@ The future of travel is not one-size-fits-all. It is a trip that feels like it w
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'ai-itineraries-vs-travel-agent',
-    title: 'AI-Generated Itineraries vs Travel Agent Itineraries: An Honest Comparison',
-    description: 'We compare AI-generated and travel agent itineraries side by side. Learn when to use each for the best trip planning experience.',
-    category: 'Technology',
-    cluster: 'trip-planning-packing',
-    tags: ['AI travel', 'travel agent', 'itinerary', 'comparison'],
-    author_slug: 'tripgenie-team',
+    slug: "ai-itineraries-vs-travel-agent",
+    title:
+      "AI-Generated Itineraries vs Travel Agent Itineraries: An Honest Comparison",
+    description:
+      "We compare AI-generated and travel agent itineraries side by side. Learn when to use each for the best trip planning experience.",
+    category: "Technology",
+    cluster: "trip-planning-packing",
+    tags: ["AI travel", "travel agent", "itinerary", "comparison"],
+    author_slug: "tripgenie-team",
     reading_time: 6,
-    cover_image_alt: 'Globe on a desk next to a laptop representing the intersection of traditional and AI travel planning',
-    imgId: 'photo-1451187580459-43490279c0fa',
+    cover_image_alt:
+      "Globe on a desk next to a laptop representing the intersection of traditional and AI travel planning",
+    imgId: "photo-1451187580459-43490279c0fa",
     content: `## The Old Guard vs The New Wave
 
 The travel industry is having an identity moment. On one side, traditional travel agents bring decades of personal experience, industry relationships, and human intuition. On the other, AI trip planners offer speed, data-driven optimization, and accessibility.
@@ -768,16 +779,18 @@ The future is not AI replacing travel agents — it is AI handling the logistics
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'fact-check-ai-travel-itinerary',
-    title: 'How to Fact-Check an AI Travel Itinerary Before You Go',
-    description: 'AI itineraries are not always perfect. Learn how to verify, validate, and improve AI-generated travel plans before your trip.',
-    category: 'Technology',
-    cluster: 'trip-planning-packing',
-    tags: ['AI travel', 'travel planning', 'tips', 'itinerary'],
-    author_slug: 'tripgenie-team',
+    slug: "fact-check-ai-travel-itinerary",
+    title: "How to Fact-Check an AI Travel Itinerary Before You Go",
+    description:
+      "AI itineraries are not always perfect. Learn how to verify, validate, and improve AI-generated travel plans before your trip.",
+    category: "Technology",
+    cluster: "trip-planning-packing",
+    tags: ["AI travel", "travel planning", "tips", "itinerary"],
+    author_slug: "tripgenie-team",
     reading_time: 6,
-    cover_image_alt: 'Person reviewing a travel itinerary on a tablet with a map spread on the table',
-    imgId: 'photo-1550751827-4bd374c3f58b',
+    cover_image_alt:
+      "Person reviewing a travel itinerary on a tablet with a map spread on the table",
+    imgId: "photo-1550751827-4bd374c3f58b",
     content: `## Trust But Verify: Your AI Itinerary Needs a Human Eye
 
 AI travel planners are powerful tools that can generate detailed itineraries in seconds. But they are not infallible. From outdated information to logistical impossibilities, AI-generated plans sometimes contain errors that could derail your trip if you do not catch them in advance.
@@ -925,16 +938,18 @@ AI travel planning is a game-changer, but it works best as a **starting point, n
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'ai-save-money-next-trip',
-    title: '10 Ways AI Can Save You Money on Your Next Trip',
-    description: 'From flight predictions to smart budgeting, discover 10 practical ways AI tools can cut your travel costs significantly.',
-    category: 'Technology',
-    cluster: 'budget-travel',
-    tags: ['AI travel', 'budget', 'money saving', 'technology'],
-    author_slug: 'tripgenie-team',
+    slug: "ai-save-money-next-trip",
+    title: "10 Ways AI Can Save You Money on Your Next Trip",
+    description:
+      "From flight predictions to smart budgeting, discover 10 practical ways AI tools can cut your travel costs significantly.",
+    category: "Technology",
+    cluster: "budget-travel",
+    tags: ["AI travel", "budget", "money saving", "technology"],
+    author_slug: "tripgenie-team",
     reading_time: 6,
-    cover_image_alt: 'Piggy bank next to a passport and boarding pass representing travel savings',
-    imgId: 'photo-1563986768609-322da13575f2',
+    cover_image_alt:
+      "Piggy bank next to a passport and boarding pass representing travel savings",
+    imgId: "photo-1563986768609-322da13575f2",
     content: `## Your Secret Weapon for Cheaper Travel
 
 AI is not just making travel planning faster and easier — it is making it cheaper. From predicting flight prices to optimizing your daily spending, artificial intelligence can save you hundreds or even thousands of dollars on a single trip.
@@ -1105,16 +1120,18 @@ The era of overpaying for travel because you did not have access to good data is
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'ai-trip-planners-vs-googling',
-    title: 'Why AI Trip Planners Are Better Than Googling for Hours',
-    description: 'Stop spending hours Googling your next trip. Learn why AI trip planners deliver better results in a fraction of the time.',
-    category: 'Technology',
-    cluster: 'trip-planning-packing',
-    tags: ['AI travel', 'trip planning', 'technology', 'productivity'],
-    author_slug: 'tripgenie-team',
+    slug: "ai-trip-planners-vs-googling",
+    title: "Why AI Trip Planners Are Better Than Googling for Hours",
+    description:
+      "Stop spending hours Googling your next trip. Learn why AI trip planners deliver better results in a fraction of the time.",
+    category: "Technology",
+    cluster: "trip-planning-packing",
+    tags: ["AI travel", "trip planning", "technology", "productivity"],
+    author_slug: "tripgenie-team",
     reading_time: 6,
-    cover_image_alt: 'Person looking stressed while searching on laptop surrounded by travel guides and notes',
-    imgId: 'photo-1483058712412-4245e9b90334',
+    cover_image_alt:
+      "Person looking stressed while searching on laptop surrounded by travel guides and notes",
+    imgId: "photo-1483058712412-4245e9b90334",
     content: `## The Google Rabbit Hole Problem
 
 We have all been there. You decide to plan a trip to, say, Portugal. You open Google and search "things to do in Lisbon." Two hours later, you have 47 browser tabs open, a half-finished spreadsheet, conflicting advice from three different travel blogs, and no actual plan.
@@ -1279,16 +1296,18 @@ Your time is valuable. Stop spending it on repetitive research that AI can do in
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'ai-plan-trip-around-food',
-    title: 'How to Use AI to Plan a Trip Around Food and Restaurants',
-    description: 'Love food travel? Learn how to use AI tools to build the ultimate foodie itinerary organized around meals, markets, and culinary experiences.',
-    category: 'Technology',
-    cluster: 'vibe-based-travel',
-    tags: ['AI travel', 'foodie', 'restaurants', 'trip planning'],
-    author_slug: 'tripgenie-team',
+    slug: "ai-plan-trip-around-food",
+    title: "How to Use AI to Plan a Trip Around Food and Restaurants",
+    description:
+      "Love food travel? Learn how to use AI tools to build the ultimate foodie itinerary organized around meals, markets, and culinary experiences.",
+    category: "Technology",
+    cluster: "vibe-based-travel",
+    tags: ["AI travel", "foodie", "restaurants", "trip planning"],
+    author_slug: "tripgenie-team",
     reading_time: 6,
-    cover_image_alt: 'Colorful spread of local dishes at an outdoor food market with travelers dining',
-    imgId: 'photo-1516321318423-f06f85e504b3',
+    cover_image_alt:
+      "Colorful spread of local dishes at an outdoor food market with travelers dining",
+    imgId: "photo-1516321318423-f06f85e504b3",
     content: `## When Food Is the Destination
 
 For many travelers, food is not just fuel — it is the primary reason they travel. A perfect bowl of ramen in Tokyo, fresh pasta in a Roman trattoria, or street tacos in Mexico City can be the highlight of an entire trip.
@@ -1446,16 +1465,18 @@ Food travel is one of the most rewarding ways to experience a new culture, and A
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'best-ai-tools-travel-planning',
-    title: 'The Best AI Tools for Every Stage of Travel Planning',
-    description: 'From inspiration to booking to on-the-ground navigation, these are the best AI tools for each phase of planning your trip.',
-    category: 'Technology',
-    cluster: 'trip-planning-packing',
-    tags: ['AI travel', 'tools', 'technology', 'travel planning'],
-    author_slug: 'tripgenie-team',
+    slug: "best-ai-tools-travel-planning",
+    title: "The Best AI Tools for Every Stage of Travel Planning",
+    description:
+      "From inspiration to booking to on-the-ground navigation, these are the best AI tools for each phase of planning your trip.",
+    category: "Technology",
+    cluster: "trip-planning-packing",
+    tags: ["AI travel", "tools", "technology", "travel planning"],
+    author_slug: "tripgenie-team",
     reading_time: 7,
-    cover_image_alt: 'Organized desk with travel planning tools including laptop, phone, and notebook',
-    imgId: 'photo-1504639725590-34d0984388bd',
+    cover_image_alt:
+      "Organized desk with travel planning tools including laptop, phone, and notebook",
+    imgId: "photo-1504639725590-34d0984388bd",
     content: `## The Right AI Tool for Every Phase
 
 Travel planning is not a single task — it is a series of distinct phases, each with different needs. The best approach is not to find one tool that does everything, but to use the right AI tool for each phase.
@@ -1671,16 +1692,18 @@ Start with these four, and you will have AI assistance at every stage of your jo
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'complete-guide-slow-travel',
-    title: 'The Complete Guide to Slow Travel: Why Less Is More',
-    description: 'Slow travel lets you experience destinations deeply instead of rushing through. Learn how to embrace this rewarding approach to seeing the world.',
-    category: 'Travel Tips',
-    cluster: 'vibe-based-travel',
-    tags: ['slow travel', 'long-term travel', 'mindful travel', 'travel tips'],
-    author_slug: 'tripgenie-team',
+    slug: "complete-guide-slow-travel",
+    title: "The Complete Guide to Slow Travel: Why Less Is More",
+    description:
+      "Slow travel lets you experience destinations deeply instead of rushing through. Learn how to embrace this rewarding approach to seeing the world.",
+    category: "Travel Tips",
+    cluster: "vibe-based-travel",
+    tags: ["slow travel", "long-term travel", "mindful travel", "travel tips"],
+    author_slug: "tripgenie-team",
     reading_time: 6,
-    cover_image_alt: 'Traveler sitting at a cafe in a quiet European town reading a book with a coffee',
-    imgId: 'photo-1502003148287-a82ef80a6abc',
+    cover_image_alt:
+      "Traveler sitting at a cafe in a quiet European town reading a book with a coffee",
+    imgId: "photo-1502003148287-a82ef80a6abc",
     content: `## What Is Slow Travel?
 
 Slow travel is exactly what it sounds like — traveling at a slower pace. Instead of cramming five cities into two weeks, you spend those two weeks in one or two places. Instead of rushing between landmarks with a checklist, you wander neighborhoods, become a regular at a local cafe, and let the rhythm of a place seep into you.
@@ -1846,16 +1869,18 @@ Slow travel is a mindset shift more than a logistics change. Once you experience
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'plan-3-month-trip-around-world',
-    title: 'How to Plan a 3-Month Trip Around the World',
-    description: 'Planning a round-the-world trip? This comprehensive guide covers route planning, budgeting, logistics, and everything you need to know.',
-    category: 'Travel Planning',
-    cluster: 'trip-planning-packing',
-    tags: ['round the world', 'long-term travel', 'planning', 'backpacking'],
-    author_slug: 'tripgenie-team',
+    slug: "plan-3-month-trip-around-world",
+    title: "How to Plan a 3-Month Trip Around the World",
+    description:
+      "Planning a round-the-world trip? This comprehensive guide covers route planning, budgeting, logistics, and everything you need to know.",
+    category: "Travel Planning",
+    cluster: "trip-planning-packing",
+    tags: ["round the world", "long-term travel", "planning", "backpacking"],
+    author_slug: "tripgenie-team",
     reading_time: 6,
-    cover_image_alt: 'World map with pins and string connecting multiple destinations for round-the-world trip planning',
-    imgId: 'photo-1529156069898-49953e39b3ac',
+    cover_image_alt:
+      "World map with pins and string connecting multiple destinations for round-the-world trip planning",
+    imgId: "photo-1529156069898-49953e39b3ac",
     content: `## The Trip of a Lifetime Starts With a Plan
 
 A three-month trip around the world is one of the most transformative experiences you can have. But it is also one of the most complex trips to plan. Unlike a two-week vacation, a round-the-world (RTW) trip requires careful thought about routing, budgeting, visas, packing, health, and logistics.
@@ -2069,16 +2094,18 @@ Before you leave:
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'slow-travel-europe-towns',
-    title: 'Slow Travel in Europe: 10 Towns Worth Staying a Month',
-    description: 'Skip the tourist rush and settle into these 10 charming European towns perfect for a month-long slow travel experience.',
-    category: 'Destinations',
-    cluster: 'vibe-based-travel',
-    tags: ['slow travel', 'Europe', 'long stay', 'destinations'],
-    author_slug: 'tripgenie-team',
+    slug: "slow-travel-europe-towns",
+    title: "Slow Travel in Europe: 10 Towns Worth Staying a Month",
+    description:
+      "Skip the tourist rush and settle into these 10 charming European towns perfect for a month-long slow travel experience.",
+    category: "Destinations",
+    cluster: "vibe-based-travel",
+    tags: ["slow travel", "Europe", "long stay", "destinations"],
+    author_slug: "tripgenie-team",
     reading_time: 6,
-    cover_image_alt: 'Charming European town with cobblestone streets, colorful buildings, and outdoor cafes',
-    imgId: 'photo-1520250497591-112f2f40a3f4',
+    cover_image_alt:
+      "Charming European town with cobblestone streets, colorful buildings, and outdoor cafes",
+    imgId: "photo-1520250497591-112f2f40a3f4",
     content: `## Why a Month Changes Everything
 
 Two days in a European town gives you photos. A week gives you familiarity. But a month? A month gives you a life. You learn the baker's name, find the bench with the best sunset view, and discover the restaurant that does not even have a sign but serves the best meal in town.
@@ -2254,16 +2281,18 @@ These ten European towns are perfect for exactly that kind of experience. They a
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'how-to-rent-apartment-abroad',
-    title: 'How to Rent an Apartment Abroad: A Step-by-Step Guide',
-    description: 'Renting an apartment abroad saves money and enriches your travel experience. Follow this step-by-step guide to find your perfect place.',
-    category: 'Travel Tips',
-    cluster: 'trip-planning-packing',
-    tags: ['accommodation', 'apartment rental', 'long-term travel', 'tips'],
-    author_slug: 'tripgenie-team',
+    slug: "how-to-rent-apartment-abroad",
+    title: "How to Rent an Apartment Abroad: A Step-by-Step Guide",
+    description:
+      "Renting an apartment abroad saves money and enriches your travel experience. Follow this step-by-step guide to find your perfect place.",
+    category: "Travel Tips",
+    cluster: "trip-planning-packing",
+    tags: ["accommodation", "apartment rental", "long-term travel", "tips"],
+    author_slug: "tripgenie-team",
     reading_time: 6,
-    cover_image_alt: 'Bright apartment interior with a view of a foreign city through large windows',
-    imgId: 'photo-1522708323590-d24dbb6b0267',
+    cover_image_alt:
+      "Bright apartment interior with a view of a foreign city through large windows",
+    imgId: "photo-1522708323590-d24dbb6b0267",
     content: `## Why Rent an Apartment Instead of Staying in Hotels
 
 Renting an apartment abroad transforms you from a tourist into a temporary resident. You get a kitchen to cook in, a living room to relax in, and a neighborhood to call your own. Beyond the lifestyle benefits, apartments are usually **40-60% cheaper** than hotels for stays of a week or longer.
@@ -2310,7 +2339,7 @@ Different platforms work better for different situations:
 - Host communication tools
 - Request weekly or monthly discounts (many hosts offer 20-50% off)
 
-**Vrbo / Booking.com Apartments:**
+**Vrbo / apartment rental platforms:**
 - Good alternative inventory, especially in Europe
 - Sometimes better prices than Airbnb
 - Strong cancellation policies
@@ -2454,16 +2483,19 @@ Renting an apartment abroad is one of the best travel decisions you can make. It
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'van-life-beginners-guide',
-    title: 'Van Life for Beginners: How to Plan Your First Road Trip Living in a Van',
-    description: 'Curious about van life? This beginner guide covers choosing a van, essential gear, route planning, budgeting, and daily life on the road.',
-    category: 'Travel Tips',
-    cluster: 'vibe-based-travel',
-    tags: ['van life', 'road trip', 'adventure', 'budget travel'],
-    author_slug: 'tripgenie-team',
+    slug: "van-life-beginners-guide",
+    title:
+      "Van Life for Beginners: How to Plan Your First Road Trip Living in a Van",
+    description:
+      "Curious about van life? This beginner guide covers choosing a van, essential gear, route planning, budgeting, and daily life on the road.",
+    category: "Travel Tips",
+    cluster: "vibe-based-travel",
+    tags: ["van life", "road trip", "adventure", "budget travel"],
+    author_slug: "tripgenie-team",
     reading_time: 6,
-    cover_image_alt: 'Camper van parked at a scenic overlook with mountains and a lake at sunset',
-    imgId: 'photo-1561361513-2d000a50f0dc',
+    cover_image_alt:
+      "Camper van parked at a scenic overlook with mountains and a lake at sunset",
+    imgId: "photo-1561361513-2d000a50f0dc",
     content: `## The Allure of Van Life
 
 Waking up to a mountain sunrise through your windshield. Making coffee in your tiny kitchen while waves crash on the beach outside. Deciding on a whim to stay an extra day because the spot is just too perfect to leave. This is the promise of van life — total freedom, minimal possessions, and the open road as your home.
@@ -2665,16 +2697,18 @@ Van life is not for everyone, but for those who embrace simplicity and freedom, 
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'travel-full-time-as-couple',
-    title: 'How to Travel Full-Time as a Couple Without Going Crazy',
-    description: 'Full-time travel tests even the strongest relationships. Learn how couples can thrive on the road with communication, space, and smart planning.',
-    category: 'Travel Tips',
-    cluster: 'vibe-based-travel',
-    tags: ['couples travel', 'long-term travel', 'relationship', 'tips'],
-    author_slug: 'tripgenie-team',
+    slug: "travel-full-time-as-couple",
+    title: "How to Travel Full-Time as a Couple Without Going Crazy",
+    description:
+      "Full-time travel tests even the strongest relationships. Learn how couples can thrive on the road with communication, space, and smart planning.",
+    category: "Travel Tips",
+    cluster: "vibe-based-travel",
+    tags: ["couples travel", "long-term travel", "relationship", "tips"],
+    author_slug: "tripgenie-team",
     reading_time: 6,
-    cover_image_alt: 'Couple walking hand in hand through a scenic coastal path during golden hour',
-    imgId: 'photo-1516483638261-f4dbaf036963',
+    cover_image_alt:
+      "Couple walking hand in hand through a scenic coastal path during golden hour",
+    imgId: "photo-1516483638261-f4dbaf036963",
     content: `## The Romance and Reality of Couples Travel
 
 Traveling the world together sounds like the ultimate romantic adventure. And it can be. But spending 24 hours a day with anyone — even someone you love deeply — in unfamiliar environments with constant decision-making is a recipe for tension if you do not manage it thoughtfully.
@@ -2850,16 +2884,18 @@ Full-time travel as a couple is one of life's great adventures. It is not always
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'sabbatical-travel-planning-guide',
-    title: 'Sabbatical Travel Planning: How to Make the Most of 3-6 Months Off',
-    description: 'Taking a sabbatical? Learn how to plan an unforgettable 3-6 month travel break including budgeting, route planning, and career re-entry.',
-    category: 'Travel Planning',
-    cluster: 'trip-planning-packing',
-    tags: ['sabbatical', 'long-term travel', 'career break', 'planning'],
-    author_slug: 'tripgenie-team',
+    slug: "sabbatical-travel-planning-guide",
+    title: "Sabbatical Travel Planning: How to Make the Most of 3-6 Months Off",
+    description:
+      "Taking a sabbatical? Learn how to plan an unforgettable 3-6 month travel break including budgeting, route planning, and career re-entry.",
+    category: "Travel Planning",
+    cluster: "trip-planning-packing",
+    tags: ["sabbatical", "long-term travel", "career break", "planning"],
+    author_slug: "tripgenie-team",
     reading_time: 7,
-    cover_image_alt: 'Person standing on a mountain summit overlooking a vast landscape at sunrise representing new beginnings',
-    imgId: 'photo-1507608616759-54f48f0af0ee',
+    cover_image_alt:
+      "Person standing on a mountain summit overlooking a vast landscape at sunrise representing new beginnings",
+    imgId: "photo-1507608616759-54f48f0af0ee",
     content: `## Your Sabbatical Is a Once-in-a-Career Opportunity
 
 A sabbatical — a planned break from work for travel, rest, and personal growth — is one of the most rewarding things you can do for yourself. Whether your employer offers it, you negotiate it, or you simply quit and take one, three to six months of dedicated travel time can reset your perspective, recharge your energy, and redirect your career in ways you cannot predict.
@@ -3051,16 +3087,18 @@ A sabbatical is an investment in yourself that pays dividends for years. Plan it
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'transition-vacation-to-long-term-travel',
-    title: 'How to Transition from Vacation Travel to Long-Term Travel',
-    description: 'Ready to go from two-week vacations to months on the road? Learn how to make the mental, financial, and practical shift to long-term travel.',
-    category: 'Travel Tips',
-    cluster: 'vibe-based-travel',
-    tags: ['long-term travel', 'lifestyle', 'travel tips', 'slow travel'],
-    author_slug: 'tripgenie-team',
+    slug: "transition-vacation-to-long-term-travel",
+    title: "How to Transition from Vacation Travel to Long-Term Travel",
+    description:
+      "Ready to go from two-week vacations to months on the road? Learn how to make the mental, financial, and practical shift to long-term travel.",
+    category: "Travel Tips",
+    cluster: "vibe-based-travel",
+    tags: ["long-term travel", "lifestyle", "travel tips", "slow travel"],
+    author_slug: "tripgenie-team",
     reading_time: 6,
-    cover_image_alt: 'Backpacker with a backpack looking at a departure board in an airport terminal',
-    imgId: 'photo-1501785888041-af3ef285b470',
+    cover_image_alt:
+      "Backpacker with a backpack looking at a departure board in an airport terminal",
+    imgId: "photo-1501785888041-af3ef285b470",
     content: `## Two Different Modes of Travel
 
 Vacation travel and long-term travel share the same airports but are fundamentally different experiences. A two-week vacation is a sprint — you pack in as much as possible because the clock is ticking. Long-term travel is a marathon — pacing, endurance, and adaptability matter more than speed.
@@ -3239,16 +3277,18 @@ All of this is normal and temporary. By month two, most long-term travelers hit 
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'digital-nomad-visas-2026',
-    title: 'Countries Offering Digital Nomad Visas in 2026: Complete List',
-    description: 'Over 50 countries now offer digital nomad visas. Find the right one for you with this complete guide to requirements, costs, and benefits.',
-    category: 'Travel Tips',
-    cluster: 'vibe-based-travel',
-    tags: ['digital nomad', 'visa', 'remote work', 'travel tips'],
-    author_slug: 'tripgenie-team',
+    slug: "digital-nomad-visas-2026",
+    title: "Countries Offering Digital Nomad Visas in 2026: Complete List",
+    description:
+      "Over 50 countries now offer digital nomad visas. Find the right one for you with this complete guide to requirements, costs, and benefits.",
+    category: "Travel Tips",
+    cluster: "vibe-based-travel",
+    tags: ["digital nomad", "visa", "remote work", "travel tips"],
+    author_slug: "tripgenie-team",
     reading_time: 7,
-    cover_image_alt: 'Digital nomad working on a laptop at a beachside cafe with palm trees in the background',
-    imgId: 'photo-1522202176988-66273c2fd55f',
+    cover_image_alt:
+      "Digital nomad working on a laptop at a beachside cafe with palm trees in the background",
+    imgId: "photo-1522202176988-66273c2fd55f",
     content: `## The Rise of the Digital Nomad Visa
 
 The digital nomad visa has gone from a niche experiment to a global standard. In 2026, over 50 countries offer some form of remote work visa, and the list keeps growing. These visas allow you to live and work remotely in a foreign country legally, typically for 6 months to 2 years.
@@ -3439,16 +3479,18 @@ The digital nomad visa is not just a travel document — it is a lifestyle enabl
 *Ready to plan your next trip? [Let TripGenie create your perfect itinerary](/) — free and takes just 60 seconds.*`,
   },
   {
-    slug: 'mobile-office-setup-travel',
-    title: 'How to Set Up a Mobile Office Anywhere in the World',
-    description: 'Work productively from anywhere with this guide to building the perfect mobile office setup for digital nomads and remote workers.',
-    category: 'Technology',
-    cluster: 'vibe-based-travel',
-    tags: ['digital nomad', 'remote work', 'tech', 'productivity'],
-    author_slug: 'tripgenie-team',
+    slug: "mobile-office-setup-travel",
+    title: "How to Set Up a Mobile Office Anywhere in the World",
+    description:
+      "Work productively from anywhere with this guide to building the perfect mobile office setup for digital nomads and remote workers.",
+    category: "Technology",
+    cluster: "vibe-based-travel",
+    tags: ["digital nomad", "remote work", "tech", "productivity"],
+    author_slug: "tripgenie-team",
     reading_time: 7,
-    cover_image_alt: 'Minimal laptop setup on a wooden desk in a bright coworking space with plants',
-    imgId: 'photo-1497366216548-37526070297c',
+    cover_image_alt:
+      "Minimal laptop setup on a wooden desk in a bright coworking space with plants",
+    imgId: "photo-1497366216548-37526070297c",
     content: `## Your Office Is Wherever You Are
 
 The promise of remote work is freedom — the ability to do your job from a cafe in Lisbon, a coworking space in Bali, or a rented apartment in Mexico City. But making that work in practice requires the right equipment, habits, and backup plans.

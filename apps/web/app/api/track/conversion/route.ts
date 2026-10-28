@@ -11,7 +11,6 @@ import crypto from "crypto";
 // Webhook secrets for each affiliate partner
 const WEBHOOK_SECRETS: Record<string, string | undefined> = {
   viator: process.env.VIATOR_WEBHOOK_SECRET,
-  booking: process.env.BOOKING_WEBHOOK_SECRET,
   getyourguide: process.env.GYG_WEBHOOK_SECRET,
   klook: process.env.KLOOK_WEBHOOK_SECRET,
 };
@@ -19,7 +18,7 @@ const WEBHOOK_SECRETS: Record<string, string | undefined> = {
 const ConversionSchema = z.object({
   // Required fields
   click_id: z.string().min(1).max(200),
-  partner: z.enum(["viator", "booking", "getyourguide", "klook"]),
+  partner: z.enum(["viator", "getyourguide", "klook"]),
 
   // Conversion details
   order_id: z.string().min(1).max(200).optional(),

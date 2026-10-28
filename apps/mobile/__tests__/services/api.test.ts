@@ -17,6 +17,7 @@ jest.mock('../../constants/api', () => ({
 }));
 
 import {
+  isAllowedAffiliateUrl,
   setAuthToken,
   getAuthToken,
   getUserProfile,
@@ -248,15 +249,16 @@ describe('trackAffiliateClick', () => {
   it('sends POST with click params', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: () => Promise.resolve({ clickId: 'click-1', redirectUrl: 'https://booking.com' }),
+      json: () =>
+        Promise.resolve({ clickId: 'click-1', redirectUrl: 'https://retired-supplier.example' }),
     });
 
     const result = await trackAffiliateClick({
       itemType: 'hotel',
       itemId: 'htl-1',
       itemName: 'Grand Hotel',
-      affiliatePartner: 'booking.com',
-      affiliateUrl: 'https://booking.com/hotel/1',
+      affiliatePartner: 'retired-supplier.example',
+      affiliateUrl: 'https://retired-supplier.example/hotel/1',
     });
 
     expect(result.data?.clickId).toBe('click-1');
@@ -319,8 +321,8 @@ describe('openAffiliateLink', () => {
           itemType: 'hotel',
           itemId: 'hotel-1',
           itemName: 'Hotel',
-          affiliatePartner: 'booking',
-          affiliateUrl: 'https://booking.com/hotel/1',
+          affiliatePartner: 'retired-provider',
+          affiliateUrl: 'https://retired-supplier.example/hotel/1',
         },
         openUrl
       )
@@ -385,5 +387,18 @@ describe('error handling', () => {
     const result = await getTrips();
     expect(result.error).toBe('Invalid server response');
     expect(result.code).toBe('INVALID_RESPONSE');
+  });
+});
+
+describe('retired affiliate suppliers', () => {
+  it.each([
+    'https://retired-supplier.example/hotel/1',
+    'https://www.retired-supplier.example/hotel/1',
+    'https://retired-air.example/offer/1',
+  ])('does not authorize retired outbound links: %s', (url) => {
+    expect(isAllowedAffiliateUrl(url)).toBe(false);
+  });
+  it('retains Duffel outbound links', () => {
+    expect(isAllowedAffiliateUrl('https://links.duffel.com/session/1')).toBe(true);
   });
 });

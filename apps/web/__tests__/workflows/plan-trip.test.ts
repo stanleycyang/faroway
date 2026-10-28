@@ -237,7 +237,7 @@ const hotel: HotelResult = {
   amenities: [],
   description: "Central hotel",
   affiliateUrl: "https://example.com/hotel",
-  affiliatePartner: "booking",
+  affiliatePartner: "retired-provider",
   images: [],
   starRating: 4,
 };

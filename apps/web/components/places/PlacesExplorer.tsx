@@ -248,6 +248,34 @@ export function PlacesExplorer({
                   Reported temporarily closed
                 </p>
               )}
+              {detail.accessibility && (
+                <div className="mt-3 text-sm text-gray-700">
+                  <p className="font-semibold">
+                    Accessibility reported by Google Maps
+                  </p>
+                  {(
+                    [
+                      ["wheelchairAccessibleEntrance", "Entrance"],
+                      ["wheelchairAccessibleRestroom", "Restroom"],
+                      ["wheelchairAccessibleSeating", "Seating"],
+                      ["wheelchairAccessibleParking", "Parking"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <p key={key}>
+                      {label}:{" "}
+                      {detail.accessibility?.[key] === true
+                        ? "Reported available"
+                        : detail.accessibility?.[key] === false
+                          ? "Reported unavailable"
+                          : "Unknown"}
+                    </p>
+                  ))}
+                  <p className="mt-1 text-xs">
+                    Confirm details with the venue; this does not establish
+                    accessibility for the entire visit.
+                  </p>
+                </div>
+              )}
               <p className="mt-2 text-xs text-gray-500">
                 Price and availability not verified. Check current hours and
                 booking terms before visiting.

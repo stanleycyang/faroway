@@ -492,12 +492,12 @@ export default function LandingPage() {
                       <Zap className="w-6 h-6 text-amber-400" />
                     </div>
                     <h3 className="text-xl font-bold text-white mb-2">
-                      Partner Booking Links
+                      Travel Suggestions
                     </h3>
                     <p className="text-white/60 leading-relaxed text-sm">
-                      Open Booking.com hotel options and Viator activities from
-                      your itinerary, then confirm pricing and checkout with the
-                      provider.
+                      Explore hotel suggestions and activities in your
+                      itinerary. Confirm current prices and availability
+                      directly with the provider.
                     </p>
                   </div>
                 </div>

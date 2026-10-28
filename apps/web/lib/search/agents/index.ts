@@ -4,11 +4,7 @@
  */
 
 export { runOrchestratorAgent } from "./orchestrator";
-export {
-  runHotelsAgent,
-  searchRapidAPIHotels,
-  calculateHotelVibeScore,
-} from "./hotels";
+export { runHotelsAgent, calculateHotelVibeScore } from "./hotels";
 export {
   runActivitiesAgent,
   searchGooglePlacesActivities,

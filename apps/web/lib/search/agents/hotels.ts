@@ -4,9 +4,8 @@ import {
 } from "@/lib/ai/planning-disclosure";
 /**
  * Hotels Agent
- * Searches for accommodation options from affiliate partners
- * Uses real API data from Booking.com and Amadeus, with TripAdvisor enrichment,
- * falling back to AI generation for remaining slots.
+ * Generates informational accommodation suggestions.
+ * Live hotel quotes use the separate consented LiteAPI flow.
  */
 
 import {
@@ -16,30 +15,9 @@ import {
 } from "@/lib/ai/sdk";
 import { z } from "zod";
 import { SearchPlan, HotelResult } from "../types";
-import {
-  VIBE_KEYWORDS,
-  readPrice,
-  reviewRating,
-  currencyCode,
-} from "@faroway/constants";
-import {
-  searchBookingHotels,
-  isBookingConfigured,
-  generateBookingAffiliateUrl,
-} from "@/lib/affiliates/booking";
-import {
-  searchAmadeusHotels,
-  isAmadeusConfigured,
-  generateAmadeusAffiliateUrl,
-  resolveAmadeusCityCode,
-} from "@/lib/affiliates/amadeus";
-import {
-  enrichWithTripAdvisor,
-  isTripAdvisorConfigured,
-} from "@/lib/affiliates/tripadvisor";
+import { VIBE_KEYWORDS } from "@faroway/constants";
 import {
   AI_AGENT_TIMEOUT_MS,
-  fetchWithTimeout,
   isOperationTimeoutError,
   withAbortTimeout,
 } from "@/lib/search/runtime";
@@ -139,188 +117,9 @@ export async function runHotelsAgent(
     count,
   });
 
-  // ── Step 1: Fetch real data from Booking.com and Amadeus in parallel ──
-
-  const apiPromises: [Promise<HotelResult[]>, Promise<HotelResult[]>] = [
-    // Booking.com
-    !plan.children && (plan.roomCount ?? 1) <= 1 && isBookingConfigured()
-      ? searchBookingHotels({
-          destination,
-          checkIn: dates.start,
-          checkOut: dates.end,
-          guests: plan.adults ?? plan.travelers ?? 2,
-          stars: starRating,
-          priceMin: priceRange.min,
-          priceMax: priceRange.max,
-          limit: count,
-        })
-          .then((bookingHotels) => {
-            console.log(
-              "[Hotels Agent] Booking.com returned",
-              bookingHotels.length,
-              "hotels",
-            );
-            return bookingHotels.map((hotel): HotelResult => {
-              const vibeResult = calculateHotelVibeScore(
-                {
-                  name: hotel.name,
-                  description: hotel.description,
-                  amenities: hotel.amenities,
-                },
-                vibeInterpretation.vibes,
-              );
-              return {
-                id: `hotel_bk_${hotel.hotelId}`,
-                dataSource: "provider",
-                name: hotel.name,
-                description: hotel.description,
-                starRating: reviewRating(hotel.starRating),
-                userRating: reviewRating(hotel.userRating, 10),
-                reviewCount: hotel.reviewCount,
-                pricePerNight: readPrice(
-                  hotel.price.perNight,
-                  hotel.price.currencyCode,
-                )?.amount,
-                totalPrice: readPrice(
-                  hotel.price.total,
-                  hotel.price.currencyCode,
-                )?.amount,
-                currency: currencyCode(hotel.price.currencyCode),
-                amenities: hotel.amenities,
-                location: {
-                  name: hotel.location.city,
-                  address: hotel.location.address,
-                  lat: hotel.location.latitude,
-                  lng: hotel.location.longitude,
-                  neighborhood: hotel.location.neighborhood,
-                },
-                images: hotel.images.map((i) => i.url),
-                affiliateUrl:
-                  hotel.bookingUrl ||
-                  generateBookingAffiliateUrl(
-                    hotel.hotelId,
-                    `tg_${Date.now()}`,
-                    {
-                      checkIn: dates.start,
-                      checkOut: dates.end,
-                    },
-                  ),
-                affiliatePartner: "booking",
-                vibeScore: vibeResult.score,
-                vibeMatch: vibeResult.matchedVibes,
-              };
-            });
-          })
-          .catch((err) => {
-            console.error("[Hotels Agent] Booking.com error:", err);
-            return [] as HotelResult[];
-          })
-      : Promise.resolve([] as HotelResult[]),
-
-    // Amadeus
-    !plan.children && (plan.roomCount ?? 1) <= 1 && isAmadeusConfigured()
-      ? searchAmadeusHotels({
-          cityCode: resolveAmadeusCityCode(destination),
-          checkIn: dates.start,
-          checkOut: dates.end,
-          adults: plan.adults ?? plan.travelers ?? 2,
-          stars: starRating,
-          priceMax: priceRange.max,
-          limit: count,
-        })
-          .then((amadeusHotels) => {
-            console.log(
-              "[Hotels Agent] Amadeus returned",
-              amadeusHotels.length,
-              "hotels",
-            );
-            return amadeusHotels.map((hotel): HotelResult => {
-              const vibeResult = calculateHotelVibeScore(
-                {
-                  name: hotel.name,
-                  description: hotel.description || "",
-                  amenities: hotel.amenities,
-                },
-                vibeInterpretation.vibes,
-              );
-              return {
-                id: `hotel_am_${hotel.hotelId}`,
-                dataSource: "provider",
-                name: hotel.name,
-                description: hotel.description || "",
-                starRating: reviewRating(hotel.starRating),
-                pricePerNight: readPrice(
-                  hotel.price.perNight,
-                  hotel.price.currency,
-                )?.amount,
-                totalPrice: readPrice(hotel.price.total, hotel.price.currency)
-                  ?.amount,
-                currency: currencyCode(hotel.price.currency),
-                amenities: hotel.amenities,
-                location: {
-                  name: hotel.location.cityCode || destination,
-                  address: hotel.location.address || "",
-                  lat: hotel.location.lat,
-                  lng: hotel.location.lng,
-                  neighborhood: undefined,
-                },
-                images: hotel.images,
-                affiliateUrl: generateAmadeusAffiliateUrl(
-                  "hotel",
-                  {
-                    hotelId: hotel.hotelId,
-                    checkIn: dates.start,
-                  },
-                  `tg_${Date.now()}`,
-                ),
-                affiliatePartner: "amadeus",
-                vibeScore: vibeResult.score,
-                vibeMatch: vibeResult.matchedVibes,
-              };
-            });
-          })
-          .catch((err) => {
-            console.error("[Hotels Agent] Amadeus error:", err);
-            return [] as HotelResult[];
-          })
-      : Promise.resolve([] as HotelResult[]),
-  ];
-
-  const [bookingResults, amadeusResults] = await Promise.all(apiPromises);
-
-  // ── Step 2: Merge and deduplicate ──
-
-  const merged = [...bookingResults, ...amadeusResults];
-  let realHotels = deduplicateHotels(merged);
-
-  console.log(
-    `[Hotels Agent] Real API results: ${bookingResults.length} Booking + ${amadeusResults.length} Amadeus = ${merged.length} total, ${realHotels.length} after dedup`,
-  );
-
-  // ── Step 3: Enrich with TripAdvisor ──
-
-  if (isTripAdvisorConfigured() && realHotels.length > 0) {
-    console.log("[Hotels Agent] Enriching with TripAdvisor data...");
-    realHotels = await enrichWithTripAdvisor(realHotels, "hotels");
-  }
-
-  // ── Step 4: Fall back to AI generation if we need more results ──
-
-  let aiHotels: HotelResult[] = [];
-
-  if (realHotels.length < count) {
-    const remaining = count - realHotels.length;
-    console.log(
-      `[Hotels Agent] Need ${remaining} more hotels, falling back to AI generation`,
-    );
-    aiHotels = await aiFallbackPromise;
-  }
-
-  // ── Step 5: Combine, sort by vibeScore descending, return up to count ──
-
-  const allHotels = [...realHotels, ...aiHotels];
-
-  return allHotels.sort((a, b) => b.vibeScore - a.vibeScore).slice(0, count);
+  // Live quotes are requested separately through the consented LiteAPI flow.
+  const hotels = deduplicateHotels(await aiFallbackPromise);
+  return hotels.sort((a, b) => b.vibeScore - a.vibeScore).slice(0, count);
 }
 
 async function generateAiHotelFallbacks(params: {
@@ -411,45 +210,6 @@ For vibes like:
     } else {
       console.error("[Hotels Agent] AI generation error:", error);
     }
-    return [];
-  }
-}
-
-/**
- * Search hotels via RapidAPI (optional integration)
- */
-export async function searchRapidAPIHotels(
-  destination: string,
-  checkIn: string,
-  checkOut: string,
-  guests: number,
-): Promise<Record<string, unknown>[]> {
-  const apiKey = process.env.RAPIDAPI_KEY;
-  if (!apiKey) {
-    console.log("[Hotels Agent] No RapidAPI key, using AI-generated data");
-    return [];
-  }
-
-  try {
-    // Booking.com API via RapidAPI
-    const response = await fetchWithTimeout(
-      `https://booking-com.p.rapidapi.com/v1/hotels/search?` +
-        `dest_type=city&dest_name=${encodeURIComponent(destination)}&` +
-        `checkin_date=${checkIn}&checkout_date=${checkOut}&` +
-        `adults_number=${guests}&room_number=1&` +
-        `order_by=popularity&filter_by_currency=USD&locale=en-us&units=metric`,
-      {
-        headers: {
-          "X-RapidAPI-Key": apiKey,
-          "X-RapidAPI-Host": "booking-com.p.rapidapi.com",
-        },
-      },
-    );
-
-    const data = await response.json();
-    return data.result || [];
-  } catch (error) {
-    console.error("[Hotels Agent] RapidAPI error:", error);
     return [];
   }
 }

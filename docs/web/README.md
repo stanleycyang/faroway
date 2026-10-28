@@ -89,31 +89,31 @@ npm start
 
 ### Health Check
 
-| Method | Endpoint       | Description        |
-| ------ | -------------- | ------------------ |
-| GET    | `/api/health`  | Check API status   |
+| Method | Endpoint      | Description      |
+| ------ | ------------- | ---------------- |
+| GET    | `/api/health` | Check API status |
 
 ### Authentication
 
-| Method | Endpoint                  | Description              | Auth Required |
-| ------ | ------------------------- | ------------------------ | ------------- |
-| POST   | `/api/auth/register`      | Register a new user      | No            |
-| POST   | `/api/auth/login`         | Login and get JWT token  | No            |
-| GET    | `/api/auth/me`            | Get current user profile | Yes           |
-| PUT    | `/api/auth/me`            | Update user profile      | Yes           |
-| POST   | `/api/auth/change-password` | Change password        | Yes           |
+| Method | Endpoint                    | Description              | Auth Required |
+| ------ | --------------------------- | ------------------------ | ------------- |
+| POST   | `/api/auth/register`        | Register a new user      | No            |
+| POST   | `/api/auth/login`           | Login and get JWT token  | No            |
+| GET    | `/api/auth/me`              | Get current user profile | Yes           |
+| PUT    | `/api/auth/me`              | Update user profile      | Yes           |
+| POST   | `/api/auth/change-password` | Change password          | Yes           |
 
 ### Trips
 
-| Method | Endpoint              | Description                | Auth Required |
-| ------ | --------------------- | -------------------------- | ------------- |
-| GET    | `/api/trips`          | List all user trips        | Yes           |
-| POST   | `/api/trips`          | Create a new trip          | Yes           |
-| GET    | `/api/trips/upcoming` | Get upcoming trips         | Yes           |
-| GET    | `/api/trips/stats`    | Get trip statistics        | Yes           |
-| GET    | `/api/trips/:id`      | Get trip by ID             | Yes           |
-| PUT    | `/api/trips/:id`      | Update a trip              | Yes           |
-| DELETE | `/api/trips/:id`      | Delete a trip              | Yes           |
+| Method | Endpoint              | Description         | Auth Required |
+| ------ | --------------------- | ------------------- | ------------- |
+| GET    | `/api/trips`          | List all user trips | Yes           |
+| POST   | `/api/trips`          | Create a new trip   | Yes           |
+| GET    | `/api/trips/upcoming` | Get upcoming trips  | Yes           |
+| GET    | `/api/trips/stats`    | Get trip statistics | Yes           |
+| GET    | `/api/trips/:id`      | Get trip by ID      | Yes           |
+| PUT    | `/api/trips/:id`      | Update a trip       | Yes           |
+| DELETE | `/api/trips/:id`      | Delete a trip       | Yes           |
 
 ## 📝 API Examples
 
@@ -181,16 +181,16 @@ See [docs/schema.md](docs/schema.md) for detailed schema documentation.
 
 ### Available Scripts
 
-| Script         | Description                          |
-| -------------- | ------------------------------------ |
-| `npm run dev`  | Start development server with watch  |
-| `npm run build`| Build for production                 |
-| `npm start`    | Start production server              |
-| `npm run lint` | Run ESLint                           |
-| `npm run lint:fix` | Run ESLint with auto-fix         |
-| `npm run format` | Format code with Prettier          |
-| `npm run migrate` | Run database migrations           |
-| `npm run test` | Run tests                            |
+| Script             | Description                         |
+| ------------------ | ----------------------------------- |
+| `npm run dev`      | Start development server with watch |
+| `npm run build`    | Build for production                |
+| `npm start`        | Start production server             |
+| `npm run lint`     | Run ESLint                          |
+| `npm run lint:fix` | Run ESLint with auto-fix            |
+| `npm run format`   | Format code with Prettier           |
+| `npm run migrate`  | Run database migrations             |
+| `npm run test`     | Run tests                           |
 
 ### Project Structure
 
@@ -226,7 +226,7 @@ The backend is designed to be ready for AI integration:
 
 - User preferences stored for personalized recommendations
 - Itineraries support structured activities (JSON format)
-- Placeholder for AI service integration (OpenAI/Anthropic)
+- Placeholder for AI service integration (AI Gateway)
 
 ## 📄 License
 

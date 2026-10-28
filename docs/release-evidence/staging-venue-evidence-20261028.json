@@ -1,0 +1,45 @@
+{
+  "date_utc": "2026-10-28",
+  "project_ref": "omovikloadpvzijoaqus",
+  "project_name": "faroway-staging",
+  "authorization": "User requested push and migrations.",
+  "migrations": [
+    {
+      "path": "supabase/migrations/20261028035700_traveler_requirements_and_flight_consent.sql",
+      "sha256": "aafef07d9c561cc5a38120736280cd6a33433f6390cfc9ba215bb51f27c4e84c",
+      "hosted_version": "20261028045341"
+    },
+    {
+      "path": "supabase/migrations/20261028044644_stable_venue_evidence_context.sql",
+      "sha256": "8a9b456b6517659d689ffb744aeec84345b7d198bc816e04a9cdfc797690cecc",
+      "hosted_version": "20261028045346"
+    }
+  ],
+  "execution": {
+    "lock_timeout": "2s",
+    "statement_timeout": "30s",
+    "tool": "Supabase apply_migration",
+    "result": "Both migrations succeeded"
+  },
+  "verification": {
+    "row_level_security": true,
+    "anonymous_and_authenticated_table_access": false,
+    "service_role_read_and_v2_save": true,
+    "anonymous_v2_save": false,
+    "legacy_service_role_save_revoked": true,
+    "absent_owner_read_returns_null": true,
+    "existing_context_hashes_valid": true,
+    "flight_consent_preserved": true
+  },
+  "advisor": "No new security warnings. Expected server-only RLS/no-policy notices; existing leaked-password-protection warning remains.",
+  "production": {
+    "project_ref": "jcnephijkxgtprsutgsf",
+    "modified": false,
+    "reason": "Missing older plan/recovery prerequisites; coordinated app cutover required. Main Git deployment hold preserved.",
+    "observed_itinerary_rows": 52,
+    "observed_itinerary_total_bytes": 1818624,
+    "active_generations_at_preflight": 0,
+    "latest_completed_physical_backup": "2026-10-27T10:26:59.692Z",
+    "restore_rehearsal_performed": false
+  }
+}

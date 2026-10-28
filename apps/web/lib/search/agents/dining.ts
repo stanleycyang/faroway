@@ -112,6 +112,7 @@ export async function runDiningAgent(
 - Cuisine interests: ${cuisineTypes.join(", ") || "local cuisine"}
 - Dietary needs: ${dietaryNeeds.join(", ") || "none specified"}
 - Mobility needs: ${plan.mobilityNeeds || "none specified"}
+- Structured requirements: ${JSON.stringify(plan.requirements ?? {})}
 - Dietary and accessibility suitability require direct verification; do not claim they are confirmed without evidence.
 - Meal priorities: ${mealPriorities.join(", ")}
 

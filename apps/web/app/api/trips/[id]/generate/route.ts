@@ -16,10 +16,13 @@ import { planningPauseResponse } from "@/lib/trips/planning-pause";
  */
 
 import { NextRequest, NextResponse } from "next/server";
+import { TravelerRequirementsSchema } from "@/lib/trips/brief";
 import { logger } from "@/lib/logger";
 import {
   hotelGuestCounts,
   validateHotelSearchDetails,
+  validateFlightSearchDetails,
+  flightSearchProvider,
 } from "@faroway/constants";
 import { getSupabase } from "@/lib/supabase/server";
 import { requireUserIdFromRequest } from "@/lib/auth/middleware";
@@ -154,6 +157,9 @@ export async function POST(request: NextRequest, { params }: Params) {
     const roomGuests = hotelDetails
       ? hotelGuestCounts(hotelDetails)
       : undefined;
+    const requirements = TravelerRequirementsSchema.safeParse(
+      tripPreferences.requirements,
+    );
     const bodyVibes = normalizeStringArray(bodyPreferences.vibes, 10, 50);
     const tripVibes = Array.isArray(trip.vibes) ? trip.vibes : [];
     const vibes = bodyVibes ?? tripVibes;
@@ -318,17 +324,43 @@ export async function POST(request: NextRequest, { params }: Params) {
                   )
                   .map((value: string) => value.trim())
               : undefined),
-          dietaryRestrictions: Array.isArray(trip.dietary_restrictions)
-            ? trip.dietary_restrictions
-                .filter(
-                  (value: unknown): value is string =>
-                    typeof value === "string" && !!value.trim(),
-                )
-                .map((value: string) => value.trim())
-            : undefined,
+          dietaryRestrictions: requirements.success
+            ? [
+                ...requirements.data.allergies.map(
+                  (value) => `Allergy: ${value}`,
+                ),
+                ...requirements.data.dietaryPreferences,
+              ]
+            : Array.isArray(trip.dietary_restrictions)
+              ? trip.dietary_restrictions
+                  .filter(
+                    (value: unknown): value is string =>
+                      typeof value === "string" && !!value.trim(),
+                  )
+                  .map((value: string) => value.trim())
+              : undefined,
+          requirements: requirements.success ? requirements.data : undefined,
           roomCount: hotelDetails?.rooms.length,
-          mobilityNeeds:
-            typeof trip.mobility_needs === "string"
+          flightProvider: Object.prototype.hasOwnProperty.call(
+            tripPreferences,
+            "flightSearch",
+          )
+            ? (flightSearchProvider(tripPreferences.flightSearch) ?? "none")
+            : undefined,
+          childAges:
+            (roomGuests?.children ?? tripPreferences.children) !== undefined &&
+            validateFlightSearchDetails(
+              tripPreferences.flightSearch,
+              roomGuests?.children ??
+                (typeof tripPreferences.children === "number"
+                  ? tripPreferences.children
+                  : undefined),
+            )
+              ? tripPreferences.flightSearch.childAges
+              : undefined,
+          mobilityNeeds: requirements.success
+            ? requirements.data.mobilityNotes || undefined
+            : typeof trip.mobility_needs === "string"
               ? trip.mobility_needs.trim() || undefined
               : undefined,
           travelerType,

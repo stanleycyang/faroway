@@ -14,6 +14,7 @@ beforeEach(() => {
   fetchMock.mockReset();
   limit.mockClear();
   vi.stubEnv("GOOGLE_PLACES_LIVE_ENABLED", "true");
+  vi.stubEnv("GOOGLE_PLACES_ACCESSIBILITY_ENABLED", "false");
   limit.mockResolvedValue({ allowed: true });
   vi.stubEnv("GOOGLE_PLACES_API_KEY", "test-key");
 });
@@ -87,3 +88,36 @@ describe("transient venue lookup", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
+
+it.each(["false", "true"])(
+  "requests accessibility only with explicit activation (%s)",
+  async (enabled) => {
+    vi.stubEnv("GOOGLE_PLACES_ACCESSIBILITY_ENABLED", enabled);
+    fetchMock.mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          id: "p1",
+          displayName: { text: "Museum" },
+          accessibilityOptions: {
+            wheelchairAccessibleEntrance: true,
+            wheelchairAccessibleRestroom: false,
+            wheelchairAccessibleSeating: "unknown",
+          },
+        }),
+      ),
+    );
+    const response = await GET(request("placeId=p1"));
+    expect(response.status).toBe(200);
+    expect(
+      fetchMock.mock.calls[0][1].headers["X-Goog-FieldMask"].includes(
+        "accessibilityOptions",
+      ),
+    ).toBe(enabled === "true");
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    const payload = await response.json();
+    expect(payload.place.accessibility).toEqual({
+      wheelchairAccessibleEntrance: true,
+      wheelchairAccessibleRestroom: false,
+    });
+  },
+);

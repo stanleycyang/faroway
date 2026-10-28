@@ -46,20 +46,12 @@ Configure these in Vercel project environment variables:
 AI provider keys are optional but required for live itinerary generation beyond fallback/test behavior:
 
 - `AI_GATEWAY_API_KEY`
-- `OPENAI_API_KEY`
-- `GOOGLE_AI_API_KEY`
 
 Travel and enrichment providers are optional. Missing provider credentials must degrade gracefully:
 
 - `GOOGLE_PLACES_API_KEY`
 - `VIATOR_API_KEY`
 - `VIATOR_PARTNER_ID`
-- `BOOKING_COM_TOKEN`
-- `BOOKING_COM_AFFILIATE_ID`
-- `BOOKING_COM_USERNAME`
-- `BOOKING_COM_PASSWORD`
-- `AMADEUS_CLIENT_ID`
-- `AMADEUS_CLIENT_SECRET`
 - `DUFFEL_API_TOKEN`
 - `TRIPADVISOR_API_KEY`
 - `GETYOURGUIDE_API_KEY`

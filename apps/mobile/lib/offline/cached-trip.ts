@@ -44,6 +44,7 @@ const day = z
     activities: z.array(activity),
     transport: z
       .object({
+        expiresAt: optionalText,
         type: z.enum(['flight', 'train', 'bus', 'ferry']),
         provider: text,
         departure: endpoint,

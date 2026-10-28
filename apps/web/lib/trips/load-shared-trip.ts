@@ -57,7 +57,11 @@ async function loadSharedTripUncached(
     ...filtered,
     preferences: filtered.preferences ? { ...filtered.preferences } : null,
   };
-  if (shared.preferences) delete shared.preferences.hotelSearch;
+  if (shared.preferences) {
+    delete shared.preferences.hotelSearch;
+    delete shared.preferences.flightSearch;
+    delete shared.preferences.requirements;
+  }
   const itineraries = Array.isArray(shared.itineraries)
     ? shared.itineraries
     : shared.itineraries

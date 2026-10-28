@@ -11,12 +11,10 @@ import { nanoid } from "nanoid";
 // Types
 export type AffiliatePartner =
   | "viator"
-  | "booking"
   | "getyourguide"
   | "tripadvisor"
   | "discovercars"
   | "hostelworld"
-  | "amadeus"
   | "duffel";
 
 export interface AffiliateClick {

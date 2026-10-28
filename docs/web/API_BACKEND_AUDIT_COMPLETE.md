@@ -9,6 +9,7 @@ I've completed a comprehensive audit and enhancement of the Faroway API & Backen
 ## ✅ 1. API Routes Audit & Fixes
 
 ### Supabase Client Setup ✓
+
 - **Location**: `lib/supabase/server.ts` and `lib/supabase/client.ts`
 - **Status**: ✅ Correctly configured with SSR support
 - **Features**:
@@ -17,27 +18,32 @@ I've completed a comprehensive audit and enhancement of the Faroway API & Backen
   - Lazy initialization to avoid build-time errors
 
 ### Auth API Routes ✓
+
 - **`/api/auth/callback`**: OAuth callback handling - ✅ Working
 - **`/api/health`**: Health check endpoint - ✅ Working
 
 ### Search & Itinerary API Routes ✓
+
 - **`/api/search/start`**: Starts Vercel Workflow for trip planning - ✅ Working
-- **`/api/search/[searchId]/route.ts`**: Get search status - ✅ Working  
+- **`/api/search/[searchId]/route.ts`**: Get search status - ✅ Working
 - **`/api/search/[searchId]/execute/route.ts`**: Execute search - ✅ Working
 - **`/api/itinerary/generate`**: AI streaming generation - ✅ Working
 
 ### Trips API Routes ⚠️
+
 - **`/api/trips/route.ts`**: GET/POST trips - ✅ Working
 - **`/api/trips/[id]/route.ts`**: GET/PUT/DELETE trip by ID - ⚠️ Has TODO placeholders
   - Database queries are commented out but structure is correct
   - Will work once database schema is confirmed
 
 ### Affiliate Tracking API Routes ✓
+
 - **`/api/track/click`**: Click tracking with Zod validation - ✅ Working
 - **`/api/track/conversion`**: Webhook with signature verification - ✅ Working
 - **`/api/affiliate/click`**: Records clicks and returns redirect URLs - ✅ Working
 
 ### User API Routes ✓
+
 - **`/api/user/profile`**: User profile management - ✅ Working
 
 ---
@@ -45,6 +51,7 @@ I've completed a comprehensive audit and enhancement of the Faroway API & Backen
 ## ✅ 2. json-render Streaming Endpoint (NEW!)
 
 ### Created Files
+
 1. **`lib/json-render/catalog.ts`** - Component catalog definition
    - ItineraryDay, HotelCard, ActivityCard, RestaurantCard
    - BookingButton, PriceTag, RatingDisplay, MapMarker
@@ -65,6 +72,7 @@ I've completed a comprehensive audit and enhancement of the Faroway API & Backen
    - Edge runtime for optimal streaming performance
 
 ### How It Works
+
 ```typescript
 // Mobile app makes request
 POST /api/itinerary/stream
@@ -88,22 +96,26 @@ data: {"status": "complete", "spec": { ... json-render spec ... }}
 ## ✅ 3. Viator/Affiliate Booking Flow
 
 ### Affiliate Integrations ✓
+
 **Location**: `lib/affiliates/`
 
 #### Viator Integration (`lib/affiliates/viator.ts`)
+
 - Full Viator API client
 - Product search, details, availability checking
 - Affiliate URL generation with tracking
 - Category mapping to vibe system
 - Commission: 15-20% per booking
 
-#### Booking.com Integration (`lib/affiliates/booking.ts`)
+#### the former hotel supplier Integration (`lib/affiliates/booking.ts`)
+
 - Hotel search and details
 - Affiliate URL generation
 - Amenity-to-vibe mapping
 - Commission: 25-40% per booking
 
 #### Click Tracking (`lib/affiliates/tracking.ts`)
+
 - Generates unique tracking IDs
 - Records clicks with user/trip context
 - Device type detection
@@ -112,6 +124,7 @@ data: {"status": "complete", "spec": { ... json-render spec ... }}
 - Analytics aggregation
 
 ### API Endpoints ✓
+
 1. **`POST /api/track/click`**
    - Full Zod validation
    - Stores click with metadata
@@ -121,7 +134,7 @@ data: {"status": "complete", "spec": { ... json-render spec ... }}
    - Webhook signature verification
    - Records successful bookings
    - Updates commission amounts
-   - Supports multiple partners (Viator, Booking.com, GetYourGuide, TripAdvisor)
+   - Supports multiple partners (Viator, the former hotel supplier, GetYourGuide, TripAdvisor)
 
 3. **`POST /api/affiliate/click`**
    - Records click
@@ -133,15 +146,16 @@ data: {"status": "complete", "spec": { ... json-render spec ... }}
 ## ✅ 4. Build Configuration
 
 ### Dependencies Installed ✓
+
 - `@json-render/core` and `@json-render/react` - NEW
 - `@supabase/ssr` and `@supabase/supabase-js`
-- `@ai-sdk/openai` and `ai`
 - `workflow` (Vercel Workflows)
 - `tailwindcss` and `@tailwindcss/postcss`
 - `zod` for validation
 - `nanoid` for ID generation
 
 ### Package.json Scripts Updated ✓
+
 ```json
 {
   "dev": "next dev",
@@ -154,6 +168,7 @@ data: {"status": "complete", "spec": { ... json-render spec ... }}
 ```
 
 ### PostCSS Configuration Fixed ✓
+
 - Updated to use `@tailwindcss/postcss` instead of deprecated `tailwindcss` plugin
 
 ---
@@ -163,6 +178,7 @@ data: {"status": "complete", "spec": { ... json-render spec ... }}
 The build currently fails due to **missing frontend UI components**. These are **outside the scope of API/Backend** work but are documented here for frontend team:
 
 ### Missing Components
+
 - `@/components/auth/AppleButton`
 - `@/components/auth/EmailPasswordForm`
 - `@/components/auth/GoogleButton`
@@ -171,6 +187,7 @@ The build currently fails due to **missing frontend UI components**. These are *
 - `@/components/trips/ItineraryDay`
 
 ### Frontend Work Needed
+
 1. Create auth UI components in `components/auth/`
 2. Create trip UI components in `components/trips/`
 3. Create shared components in `components/`
@@ -184,12 +201,13 @@ The build currently fails due to **missing frontend UI components**. These are *
 The unused `lib/agents/travel-agent.ts` prototype was removed during the October 2026 flow audit. It generated synthetic hotels, restaurant names, ratings, and prices and had no application, workflow, test, CLI, or package-export consumer. This historical audit does not describe the current planning implementation; current saved-trip orchestration starts in `apps/web/workflows/plan-trip.ts`.
 
 ### Multi-Agent Search System ✓
+
 **Location**: `lib/search/agents/`
 
 - **Orchestrator** (`orchestrator.ts`): Analyzes user input, creates search plan
 - **Hotels Agent** (`hotels.ts`): RapidAPI hotel search
 - **Activities Agent** (`activities.ts`): Google Places activities
-- **Dining Agent** (`dining.ts`): Restaurant recommendations  
+- **Dining Agent** (`dining.ts`): Restaurant recommendations
 - **Aggregator** (`aggregator.ts`): Combines results, ranks by vibe match
 
 All agents use **AI SDK** with **Vercel AI Gateway** for unified model access.
@@ -199,11 +217,13 @@ All agents use **AI SDK** with **Vercel AI Gateway** for unified model access.
 ## 🔐 Error Handling & Validation
 
 ### Input Validation ✓
+
 - All API routes use **Zod schemas** for type-safe validation
 - Proper error messages with details
 - HTTP status codes: 400 (bad request), 401 (unauthorized), 500 (server error)
 
 ### Auth Middleware ✓
+
 **Location**: `lib/auth/middleware.ts`
 
 - `validateAuth`: Validates Supabase auth token
@@ -243,6 +263,7 @@ The following Supabase tables are expected:
 ## 🚀 Next Steps
 
 ### To Complete Build
+
 1. **Frontend team**: Create missing UI components
 2. **Verify Supabase schema**: Ensure tables match expected structure
 3. **Environment variables**: Set in production
@@ -250,9 +271,10 @@ The following Supabase tables are expected:
    - `SUPABASE_SERVICE_ROLE_KEY`
    - `AI_GATEWAY_API_KEY` or `VERCEL_AI_GATEWAY_API_KEY`
    - `VIATOR_API_KEY`, `VIATOR_PARTNER_ID`
-   - `VIATOR_WEBHOOK_SECRET`, `BOOKING_WEBHOOK_SECRET`
+   - `VIATOR_WEBHOOK_SECRET`
 
 ### Testing Endpoints
+
 ```bash
 # Health check
 curl https://backend-eta-nine-28.vercel.app/api/health
@@ -273,37 +295,42 @@ curl -X POST https://backend-eta-nine-28.vercel.app/api/itinerary/stream \
 ## ✨ Highlights
 
 ### What Works Now
-✅ All API routes compile and have proper error handling  
-✅ Supabase auth integration with SSR support  
-✅ AI agent-based itinerary generation  
-✅ Multi-agent parallel search workflow  
-✅ Complete affiliate tracking with Viator/Booking.com  
-✅ **NEW**: json-render streaming endpoint for generative UI  
-✅ Zod validation on all inputs  
-✅ Webhook signature verification  
-✅ Edge runtime streaming support  
+
+✅ All API routes compile and have proper error handling
+✅ Supabase auth integration with SSR support
+✅ AI agent-based itinerary generation
+✅ Multi-agent parallel search workflow
+✅ Complete affiliate tracking with Viator/the former hotel supplier
+✅ **NEW**: json-render streaming endpoint for generative UI
+✅ Zod validation on all inputs
+✅ Webhook signature verification
+✅ Edge runtime streaming support
 
 ### New Features Added
-🆕 **json-render catalog** with 12 travel UI components  
-🆕 **json-render registry** with styled React components  
-🆕 **`/api/itinerary/stream`** endpoint for real-time UI generation  
-🆕 Component actions for affiliate tracking  
+
+🆕 **json-render catalog** with 12 travel UI components
+🆕 **json-render registry** with styled React components
+🆕 **`/api/itinerary/stream`** endpoint for real-time UI generation
+🆕 Component actions for affiliate tracking
 
 ---
 
 ## 📝 Files Created/Modified
 
 ### Created
+
 - `lib/json-render/catalog.ts` (new)
 - `lib/json-render/registry.tsx` (new)
 - `app/api/itinerary/stream/route.ts` (new)
 - `API_BACKEND_AUDIT_COMPLETE.md` (this file)
 
 ### Modified
+
 - `package.json` - Updated scripts for Next.js
 - `postcss.config.mjs` - Fixed Tailwind CSS plugin
 
 ### Verified (No changes needed)
+
 - All `app/api/**/*.ts` routes
 - `lib/supabase/**/*.ts`
 - `lib/agents/**/*.ts`

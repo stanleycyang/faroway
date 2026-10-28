@@ -179,7 +179,11 @@ test.each(["revision-a", "", null])(
 test("saving an unchanged brief confirms its state without an error or reload action", async () => {
   await act(async () => {
     renderer = create(
-      <TripBriefEditor trip={trip()} onSaved={saved} onReload={reload} />,
+      <TripBriefEditor
+        trip={{ ...trip(), preferences: { flightSearch: null } }}
+        onSaved={saved}
+        onReload={reload}
+      />,
     );
   });
   await act(async () => {
@@ -225,5 +229,74 @@ test.each(["same revision", "failed read", "wrong owner", "wrong trip"])(
     expect(renderer!.root.findAllByProps({ role: "alert" })).toHaveLength(
       outcome === "same revision" ? 0 : 1,
     );
+  },
+);
+
+test.each([false, true])(
+  "changing flight supplier requires fresh consent (granted=%s)",
+  async (grant) => {
+    const value = {
+      ...trip(),
+      preferences: {
+        adults: 2,
+        children: 0,
+        flightSearch: {
+          childAges: [],
+          consentVersion: "flight-search-duffel-v1",
+        },
+      },
+    };
+    fetchMock.mockResolvedValue(new Response("{}", { status: 503 }));
+    await mount(value);
+    const supplier = renderer!.root
+      .findAllByType("select")
+      .find((node) => node.props.value === "duffel")!;
+    await act(async () =>
+      supplier.props.onChange({ target: { value: "liteapi" } }),
+    );
+    const consent = () =>
+      renderer!.root
+        .findAllByType("input")
+        .filter((node) => node.props.type === "checkbox")
+        .at(-1)!;
+    expect(consent().props.checked).toBe(false);
+    if (grant)
+      await act(async () =>
+        consent().props.onChange({ target: { checked: true } }),
+      );
+    await act(async () =>
+      renderer!.root
+        .findByType("form")
+        .props.onSubmit({ preventDefault: vi.fn() }),
+    );
+    const body = JSON.parse(fetchMock.mock.calls[0][1].body);
+    expect(body.preferences.flightSearch).toEqual(
+      grant
+        ? { childAges: [], consentVersion: "flight-search-liteapi-v1" }
+        : null,
+    );
+  },
+);
+
+test.each([false, true])(
+  "unchecked flight permission persists refusal for a legacy brief (other edits=%s)",
+  async (otherEdits) => {
+    fetchMock.mockResolvedValue(new Response("{}", { status: 503 }));
+    await mount();
+    if (!otherEdits)
+      await act(async () =>
+        renderer!.root
+          .findAllByType("input")[0]
+          .props.onChange({ target: { value: "Tokyo" } }),
+      );
+    await act(async () =>
+      renderer!.root
+        .findByType("form")
+        .props.onSubmit({ preventDefault: vi.fn() }),
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(
+      JSON.parse(fetchMock.mock.calls[0][1].body).preferences.flightSearch,
+    ).toBeNull();
   },
 );

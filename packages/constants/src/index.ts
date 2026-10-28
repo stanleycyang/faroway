@@ -28,3 +28,5 @@ export {
 } from "./trip-dates";
 
 export * from "./hotel-search";
+export * from "./flight-search";
+export * from "./flight-quote";

@@ -57,6 +57,9 @@ interface TripPlanInput {
   dietaryRestrictions?: string[];
   mobilityNeeds?: string;
   roomCount?: number;
+  childAges?: number[];
+  flightProvider?: SearchInput["flightProvider"];
+  requirements?: SearchInput["requirements"];
   travelerType?: SearchInput["travelerType"];
   vibes?: string[];
   budget?: string;
@@ -94,6 +97,9 @@ export async function planTripWorkflow(
     dietaryRestrictions,
     mobilityNeeds,
     roomCount,
+    childAges,
+    flightProvider,
+    requirements,
     travelerType,
     vibes,
     budget,
@@ -120,6 +126,9 @@ export async function planTripWorkflow(
       dietaryRestrictions,
       mobilityNeeds,
       roomCount,
+      childAges,
+      flightProvider,
+      requirements,
       travelerType,
       vibes,
       budget,
@@ -347,6 +356,9 @@ async function buildSearchPlanStep(params: {
   dietaryRestrictions?: string[];
   mobilityNeeds?: string;
   roomCount?: number;
+  childAges?: number[];
+  flightProvider?: SearchInput["flightProvider"];
+  requirements?: SearchInput["requirements"];
   travelerType?: SearchInput["travelerType"];
   vibes?: string[];
   budget?: string;
@@ -368,6 +380,9 @@ async function buildSearchPlanStep(params: {
     dietaryRestrictions,
     mobilityNeeds,
     roomCount,
+    childAges,
+    flightProvider,
+    requirements,
     travelerType,
     vibes,
     budget,
@@ -385,6 +400,9 @@ async function buildSearchPlanStep(params: {
     dietaryRestrictions,
     mobilityNeeds,
     roomCount,
+    childAges,
+    flightProvider,
+    requirements,
     travelerType,
     vibes: vibes || [],
     budget: (budget as "budget" | "moderate" | "luxury") || "moderate",
@@ -575,22 +593,38 @@ async function aggregateItineraryStep(params: {
     topHotel || params.hotels[0] || null,
   );
   const reminders = [
+    ...(params.plan.flightProvider === "liteapi" && !params.transport.length
+      ? [
+          "LiteAPI flight quotes are unavailable. Confirm supplier access and availability before relying on flight prices.",
+        ]
+      : []),
     ...((params.plan.roomCount ?? 1) > 1
       ? [
           "Hotel prices for multiple rooms are unavailable here. Confirm room occupancy and prices directly with providers.",
         ]
       : []),
-    ...(params.plan.children
+    ...(params.plan.children ||
+    (params.plan.travelerType === "family" && params.plan.children == null)
       ? [
-          "Hotel and flight prices for children are unavailable here. Confirm party details and prices directly with providers.",
+          "Family hotel prices require a separate room and child-age search. Itinerary suggestions do not establish a family hotel quote.",
         ]
       : []),
-    ...(params.plan.diningCriteria?.dietaryNeeds?.length
+    ...((params.plan.children && !params.plan.childAges) ||
+    (params.plan.travelerType === "family" && params.plan.children == null)
+      ? [
+          "Family flight prices require adult and child counts, child ages and flight-search consent in your trip brief. Confirm final prices directly with providers.",
+        ]
+      : []),
+    ...(params.plan.diningCriteria?.dietaryNeeds?.length ||
+    params.plan.requirements?.allergies.length ||
+    params.plan.requirements?.dietaryPreferences.length
       ? [
           "Dietary suitability and allergen safety are unverified. Confirm directly with each restaurant before eating.",
         ]
       : []),
-    ...(params.plan.mobilityNeeds
+    ...(params.plan.mobilityNeeds ||
+    params.plan.requirements?.accessibility.length ||
+    params.plan.requirements?.mobilityNotes
       ? [
           "Accessibility for your mobility needs is unverified. Confirm directly with each venue and transport provider before booking.",
         ]
@@ -702,6 +736,7 @@ async function buildAndSaveSpec(
     amenities: h.amenities,
     description: h.description,
     affiliateUrl: h.affiliateUrl,
+    affiliatePartner: h.affiliatePartner,
     images: h.images,
   }));
 
@@ -853,6 +888,7 @@ async function buildAndSaveSpec(
           amenities: result.topHotel.amenities,
           description: result.topHotel.description,
           affiliateUrl: result.topHotel.affiliateUrl,
+          affiliatePartner: result.topHotel.affiliatePartner,
           images: result.topHotel.images,
           starRating: result.topHotel.starRating,
         }

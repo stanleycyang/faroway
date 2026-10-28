@@ -23,6 +23,7 @@ python3 scripts/test-staging-bootstrap.py
 python3 scripts/test-helper-search-paths.py
 python3 scripts/test-release-account-push.py
 python3 scripts/test-trip-creation-recovery.py
+python3 scripts/test-venue-evidence.py
 cd apps/web
 bunx playwright test -c playwright.checkout.config.ts
 bunx playwright test -c playwright.recovery.config.ts

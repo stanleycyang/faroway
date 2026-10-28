@@ -54,6 +54,7 @@ export interface TripDay {
   tips?: string[];
   activities: Activity[];
   transport?: {
+    expiresAt?: string;
     type: 'flight' | 'train' | 'bus' | 'ferry';
     provider: string;
     departure: { airport: string; city: string; dateTime: string };

@@ -6,6 +6,7 @@ import { requestPlanningConsent } from "@/lib/ai/planning-consent-client";
 import { BookingChecklist } from "@/components/trips/BookingChecklist";
 import { FlightLeg } from "@/components/trips/FlightLeg";
 import { PlanEditor } from "@/components/trips/PlanEditor";
+import { VenueEvidencePanel } from "@/components/trips/VenueEvidencePanel";
 import { TripBriefEditor } from "@/components/trips/TripBriefEditor";
 import { HotelQuotePanel } from "@/components/trips/HotelQuotePanel";
 
@@ -496,6 +497,17 @@ export function TripDetailClient({
     return count;
   }, [itinerary]);
 
+  const [quoteClock, setQuoteClock] = useState(0);
+  useEffect(() => {
+    const update = () => setQuoteClock(Date.now());
+    const initial = setTimeout(update, 0);
+    const timer = setInterval(update, 30_000);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(timer);
+    };
+  }, []);
+
   // Keep currencies separate; itinerary totals do not establish a party quote.
   const budgetBreakdown = useMemo(() => {
     if (!itinerary?.days?.length || !trip || trip.preferences?.planNeedsRefresh)
@@ -504,8 +516,9 @@ export function TripDetailClient({
       itinerary.days,
       { startDate: trip.start_date, endDate: trip.end_date },
       trip.travelers,
+      quoteClock || Number.POSITIVE_INFINITY,
     );
-  }, [itinerary, trip]);
+  }, [itinerary, trip, quoteClock]);
 
   // Trip length (days) from date range — used for nights estimate during generation / hotel card
   const skeletonDayCount = useMemo(() => {
@@ -1029,6 +1042,15 @@ export function TripDetailClient({
           <h2 className="mb-5 font-editorial text-2xl text-slate-900 sm:text-3xl">
             The details, taken care of
           </h2>
+          {itinerary?.days?.length && !trip.preferences?.planNeedsRefresh && (
+            <VenueEvidencePanel
+              key={`${trip.id}:${trip.updated_at}`}
+              tripId={trip.id}
+              ownerId={trip.user_id}
+              revision={trip.updated_at}
+              days={itinerary.days}
+            />
+          )}
           <TripBriefEditor
             key={`brief:${trip.updated_at}`}
             trip={trip}

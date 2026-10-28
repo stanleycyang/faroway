@@ -1,3 +1,5 @@
+import { flightQuoteIsCurrent } from '@faroway/constants';
+
 export interface TripCost {
   amount: number;
   currency: string;
@@ -32,13 +34,21 @@ export function formatKnownPrice(amount: unknown, currency?: string): string {
   return cost ? formatTripCost(cost) : 'Price unavailable';
 }
 
-export function summarizeTripCosts(trip: {
-  hotel?: { totalPrice: number; currency?: string };
-  days: {
-    transport?: { price?: number; currency: string };
-    activities: { estimatedCost?: TripCost }[];
-  }[];
-}): string[] {
+export function summarizeTripCosts(
+  trip: {
+    hotel?: { totalPrice: number; currency?: string };
+    days: {
+      transport?: {
+        price?: number;
+        currency: string;
+        affiliatePartner?: string;
+        expiresAt?: string;
+      };
+      activities: { estimatedCost?: TripCost }[];
+    }[];
+  },
+  now: number = Date.now()
+): string[] {
   const groups = new Map<string, { cost: TripCost; basis: string }>();
   const add = (value: unknown, basis: string) => {
     const cost = readTripCost(value);
@@ -51,7 +61,7 @@ export function summarizeTripCosts(trip: {
   if (trip.hotel && trip.hotel.totalPrice > 0)
     add({ amount: trip.hotel.totalPrice, currency: trip.hotel.currency }, 'stay');
   for (const day of trip.days) {
-    if (day.transport)
+    if (day.transport && flightQuoteIsCurrent(day.transport, now))
       add({ amount: day.transport.price, currency: day.transport.currency }, 'transport');
     for (const activity of day.activities)
       add(

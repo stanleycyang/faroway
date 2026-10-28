@@ -53,7 +53,11 @@ export async function GET(request: NextRequest) {
       "googleMapsUri",
       "attributions",
     ];
-    if (placeId) fields.push("businessStatus");
+    if (placeId) {
+      fields.push("businessStatus");
+      if (process.env.GOOGLE_PLACES_ACCESSIBILITY_ENABLED === "true")
+        fields.push("accessibilityOptions");
+    }
     const res = await fetchWithTimeout(
       placeId
         ? `https://places.googleapis.com/v1/places/${encodeURIComponent(placeId)}`

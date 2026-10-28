@@ -6,7 +6,7 @@ A production-ready Next.js 15 backend project with:
 
 - **Framework**: Next.js 15 with App Router
 - **Language**: TypeScript
-- **Styling**: Tailwind CSS  
+- **Styling**: Tailwind CSS
 - **Linting**: ESLint
 - **Database**: Supabase (ready for configuration)
 - **Auth**: Supabase Auth integration (placeholder)
@@ -123,7 +123,7 @@ All routes include authentication checks and are ready for database integration.
    - Add interactive UI components
 
 4. **AI Integration**
-   - Connect to Claude API
+   - Connect to the former AI API
    - Implement streaming responses
    - Add real-time progress updates
 

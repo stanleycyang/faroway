@@ -3,7 +3,6 @@
  *
  * This module provides integrations with travel affiliate partners:
  * - Viator (tours & experiences) - 15-20% commission
- * - Booking.com (hotels) - 25-40% commission
  * - Click tracking for commission attribution
  */
 
@@ -32,33 +31,6 @@ export {
   type GYGActivity,
   type GYGAvailability,
 } from "./getyourguide";
-
-// Booking.com (Hotels)
-export {
-  isBookingConfigured,
-  getBookingDestinationId,
-  searchBookingHotels,
-  getBookingHotel,
-  generateBookingAffiliateUrl,
-  generateBookingSearchUrl,
-  mapBookingAmenitiesToVibe,
-  calculateHotelVibeScore,
-  type BookingSearchParams,
-  type BookingHotel,
-  type BookingAvailability,
-} from "./booking";
-
-// Amadeus (Flights & Hotels)
-export {
-  isAmadeusConfigured,
-  searchAmadeusFlights,
-  searchAmadeusHotels,
-  generateAmadeusAffiliateUrl,
-  type AmadeusFlightSearchParams,
-  type AmadeusFlightOffer,
-  type AmadeusHotelSearchParams,
-  type AmadeusHotel,
-} from "./amadeus";
 
 // Duffel (Flights via Links)
 export {

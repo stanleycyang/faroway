@@ -177,6 +177,7 @@ export async function runAggregatorAgent(
 **Interests:** ${plan.activityCriteria.interests?.join(", ") || "Not specified"}
 **Dietary restrictions:** ${plan.diningCriteria?.dietaryNeeds?.join(", ") || "Not specified"}
 **Mobility needs:** ${plan.mobilityNeeds || "Not specified"}
+- Structured requirements: ${JSON.stringify(plan.requirements ?? {})}
 Dietary and accessibility suitability are unverified; do not claim that they are confirmed.
 
 **Available Hotels (pick the best match):**

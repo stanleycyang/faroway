@@ -364,8 +364,8 @@ describe("trackClickSchema", () => {
     itemType: "hotel" as const,
     itemId: "htl-123",
     itemName: "Grand Hotel Barcelona",
-    affiliatePartner: "booking.com",
-    affiliateUrl: "https://booking.com/hotel/grand-barcelona",
+    affiliatePartner: "retired-supplier.example",
+    affiliateUrl: "https://retired-supplier.example/hotel/grand-barcelona",
   };
 
   it("accepts a valid click", () => {

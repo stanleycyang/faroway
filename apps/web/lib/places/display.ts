@@ -9,6 +9,12 @@ export interface PlaceDisplay {
   address?: string;
   mapsUrl?: string;
   businessStatus?: string;
+  accessibility?: {
+    wheelchairAccessibleEntrance?: boolean;
+    wheelchairAccessibleRestroom?: boolean;
+    wheelchairAccessibleSeating?: boolean;
+    wheelchairAccessibleParking?: boolean;
+  };
   attributions: PlaceAttribution[];
 }
 
@@ -30,7 +36,29 @@ export function normalizePlaceDisplay(value: unknown): PlaceDisplay | null {
   const name = (p.displayName as { text?: unknown } | undefined)?.text;
   if (typeof p.id !== "string" || typeof name !== "string" || !name)
     return null;
+  const rawAccessibility = p.accessibilityOptions;
+  const accessibility =
+    rawAccessibility &&
+    typeof rawAccessibility === "object" &&
+    !Array.isArray(rawAccessibility)
+      ? (rawAccessibility as Record<string, unknown>)
+      : null;
+  const accessibilityKeys = [
+    "wheelchairAccessibleEntrance",
+    "wheelchairAccessibleRestroom",
+    "wheelchairAccessibleSeating",
+    "wheelchairAccessibleParking",
+  ] as const;
   return {
+    accessibility: accessibility
+      ? Object.fromEntries(
+          accessibilityKeys.flatMap((key) =>
+            typeof accessibility[key] === "boolean"
+              ? [[key, accessibility[key]]]
+              : [],
+          ),
+        )
+      : undefined,
     placeId: p.id,
     name,
     address:
@@ -65,6 +93,13 @@ export function isPlaceDisplay(value: unknown): value is PlaceDisplay {
     [place.address, place.mapsUrl, place.businessStatus].every(
       (field) => field === undefined || typeof field === "string",
     ) &&
+    (place.accessibility === undefined ||
+      (place.accessibility !== null &&
+        typeof place.accessibility === "object" &&
+        !Array.isArray(place.accessibility) &&
+        Object.values(place.accessibility).every(
+          (v) => typeof v === "boolean",
+        ))) &&
     Array.isArray(place.attributions) &&
     place.attributions.every((item: unknown) => {
       if (!item || typeof item !== "object") return false;

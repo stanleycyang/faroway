@@ -43,16 +43,6 @@ const WEB: EnvVar[] = [
     description: "Vercel AI Gateway API key for itinerary generation",
   },
   {
-    name: "OPENAI_API_KEY",
-    required: false,
-    description: "OpenAI API key for AI features",
-  },
-  {
-    name: "GOOGLE_AI_API_KEY",
-    required: false,
-    description: "Google AI API key",
-  },
-  {
     name: "NEXT_PUBLIC_APP_URL",
     required: false,
     description: "Public app URL",
@@ -77,36 +67,6 @@ const WEB: EnvVar[] = [
     name: "VIATOR_PARTNER_ID",
     required: false,
     description: "Viator partner ID for affiliate tracking",
-  },
-  {
-    name: "BOOKING_COM_TOKEN",
-    required: false,
-    description: "Booking.com Demand API bearer token for hotel inventory",
-  },
-  {
-    name: "BOOKING_COM_AFFILIATE_ID",
-    required: false,
-    description: "Booking.com affiliate ID for hotel inventory and links",
-  },
-  {
-    name: "BOOKING_COM_USERNAME",
-    required: false,
-    description: "Legacy Booking.com Distribution API username fallback",
-  },
-  {
-    name: "BOOKING_COM_PASSWORD",
-    required: false,
-    description: "Legacy Booking.com Distribution API password fallback",
-  },
-  {
-    name: "AMADEUS_CLIENT_ID",
-    required: false,
-    description: "Amadeus client ID for hotels and flights",
-  },
-  {
-    name: "AMADEUS_CLIENT_SECRET",
-    required: false,
-    description: "Amadeus client secret for hotels and flights",
   },
   {
     name: "DUFFEL_API_TOKEN",

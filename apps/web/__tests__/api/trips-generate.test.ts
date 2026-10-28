@@ -13,6 +13,7 @@ vi.mock("@/workflows/plan-trip", () => ({
 
 let tripStatus = "draft";
 let roomHasChild = false;
+let flightSearchDetails: unknown = undefined;
 let activeSearch: string | null = null;
 let searchCount = 0;
 let claimFails = false;
@@ -74,6 +75,9 @@ function createTableChain(table: string) {
               ],
               consentVersion: "hotel-search-nuitee-v1",
             },
+            ...(flightSearchDetails !== undefined
+              ? { flightSearch: flightSearchDetails }
+              : {}),
             originCity: "San Francisco",
             originAirport: "SFO",
           },
@@ -157,6 +161,7 @@ describe("POST /api/trips/[id]/generate", () => {
     deletedSearches.length = 0;
     tripStatus = "draft";
     roomHasChild = false;
+    flightSearchDetails = undefined;
     startMock.mockResolvedValue({ runId: "run-1" });
   });
 
@@ -216,6 +221,31 @@ describe("POST /api/trips/[id]/generate", () => {
     // request was forwarded to createClientFromRequest at all.
     expect(createClientFromRequestMock).toHaveBeenCalledWith(req);
   });
+
+  it.each([
+    {
+      value: { childAges: [], consentVersion: "flight-search-liteapi-v1" },
+      provider: "liteapi",
+    },
+    {
+      value: { childAges: [], consentVersion: "flight-search-duffel-v1" },
+      provider: "duffel",
+    },
+    { value: null, provider: "none" },
+    { value: { childAges: [], consentVersion: "invalid" }, provider: "none" },
+  ])(
+    "passes only the saved consented provider into the workflow: $provider",
+    async ({ value, provider }) => {
+      flightSearchDetails = value;
+      const response = await POST(makeReq(), {
+        params: Promise.resolve({ id: "trip-1" }),
+      });
+      expect(response.status).toBe(200);
+      expect(startMock).toHaveBeenCalledWith(expect.any(Function), [
+        expect.objectContaining({ flightProvider: provider }),
+      ]);
+    },
+  );
 
   it("starts durable workflow and seeds preview results", async () => {
     const res = await POST(makeReq(), {

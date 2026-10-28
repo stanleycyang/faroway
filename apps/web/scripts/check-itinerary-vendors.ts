@@ -9,16 +9,6 @@ import {
   searchTripAdvisorLocations,
 } from "../lib/affiliates/tripadvisor";
 import {
-  isBookingConfigured,
-  searchBookingHotels,
-} from "../lib/affiliates/booking";
-import {
-  isAmadeusConfigured,
-  searchAmadeusFlights,
-  searchAmadeusHotels,
-  resolveAmadeusCityCode,
-} from "../lib/affiliates/amadeus";
-import {
   generateDuffelLink,
   isDuffelConfigured,
   searchDuffelFlights,
@@ -34,7 +24,6 @@ import { fetchWithTimeout } from "../lib/search/runtime";
 type VendorState = "ok" | "skipped" | "failed";
 const REQUIRE_ALL_VENDORS = process.env.ITINERARY_VENDOR_REQUIRE_ALL === "true";
 const CHECK_START_DATE = formatDateOffset(45);
-const CHECK_END_DATE = formatDateOffset(49);
 
 interface VendorCheck {
   vendor: string;
@@ -133,70 +122,6 @@ async function checkGooglePlaces(): Promise<VendorCheck> {
         vendor: "Google Places",
         state: "failed",
         detail: `text search returned insufficient results (activities=${activities.length}, dining=${dining.length})`,
-      };
-}
-
-async function checkBooking(): Promise<VendorCheck> {
-  if (!isBookingConfigured()) {
-    return {
-      vendor: "Booking.com",
-      state: "skipped",
-      detail: "not configured",
-    };
-  }
-
-  const hotels = await searchBookingHotels({
-    destination: "Tokyo",
-    checkIn: CHECK_START_DATE,
-    checkOut: CHECK_END_DATE,
-    guests: 2,
-    limit: 1,
-  });
-  return hotels.length > 0
-    ? {
-        vendor: "Booking.com",
-        state: "ok",
-        detail: "hotel search returned inventory",
-      }
-    : {
-        vendor: "Booking.com",
-        state: "failed",
-        detail: "hotel search returned no inventory",
-      };
-}
-
-async function checkAmadeus(): Promise<VendorCheck> {
-  if (!isAmadeusConfigured()) {
-    return { vendor: "Amadeus", state: "skipped", detail: "not configured" };
-  }
-
-  const [flightOffers, hotelOffers] = await Promise.all([
-    searchAmadeusFlights({
-      origin: "SFO",
-      destination: "LAX",
-      departureDate: CHECK_START_DATE,
-      adults: 1,
-      limit: 1,
-    }),
-    searchAmadeusHotels({
-      cityCode: resolveAmadeusCityCode("Tokyo"),
-      checkIn: CHECK_START_DATE,
-      checkOut: CHECK_END_DATE,
-      adults: 2,
-      limit: 1,
-    }),
-  ]);
-
-  return flightOffers.length > 0 && hotelOffers.length > 0
-    ? {
-        vendor: "Amadeus",
-        state: "ok",
-        detail: "flight and hotel searches returned offers",
-      }
-    : {
-        vendor: "Amadeus",
-        state: "failed",
-        detail: `insufficient inventory (flights=${flightOffers.length}, hotels=${hotelOffers.length})`,
       };
 }
 
@@ -305,8 +230,6 @@ const checks = await Promise.allSettled([
   checkViator(),
   checkTripAdvisor(),
   checkGooglePlaces(),
-  checkBooking(),
-  checkAmadeus(),
   checkDuffel(),
   checkGetYourGuide(),
   checkTavily(),
@@ -318,8 +241,6 @@ const results: VendorCheck[] = checks.map((result, index) => {
     "Viator",
     "TripAdvisor",
     "Google Places",
-    "Booking.com",
-    "Amadeus",
     "Duffel",
     "GetYourGuide",
     "Tavily",

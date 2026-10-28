@@ -3,12 +3,21 @@
 import { useEffect, useRef, useState } from "react";
 import {
   validateHotelSearchDetails,
+  validateFlightSearchDetails,
+  FLIGHT_SEARCH_CONSENT_VERSION,
+  FLIGHT_SEARCH_DISCLOSURE,
+  LITEAPI_FLIGHT_CONSENT_VERSION,
+  LITEAPI_FLIGHT_DISCLOSURE,
+  flightSearchProvider,
+  type FlightSearchProvider,
+  parseHotelChildrenAges,
   hotelGuestCounts,
   type HotelSearchDetails,
 } from "@faroway/constants";
 import { HotelSearchFields } from "./HotelSearchFields";
 import { hotelSearchEnabled } from "@/lib/trips/hotel-quotes";
 import type { Trip } from "@/lib/trips/load-trip";
+import { TravelerRequirementsSchema } from "@/lib/trips/brief";
 
 interface TripBriefEditorProps {
   trip: Trip;
@@ -23,6 +32,27 @@ export function TripBriefEditor(props: TripBriefEditorProps) {
       {...props}
     />
   );
+}
+
+function requirementsForTrip(trip: Trip) {
+  const parsed = TravelerRequirementsSchema.safeParse(
+    trip.preferences?.requirements,
+  );
+  return parsed.success
+    ? parsed.data
+    : {
+        allergies: [],
+        dietaryPreferences: Array.isArray(trip.dietary_restrictions)
+          ? trip.dietary_restrictions
+          : [],
+        accessibility: [] as (
+          | "step_free_entrance"
+          | "accessible_restroom"
+          | "accessible_seating"
+          | "accessible_parking"
+        )[],
+        mobilityNotes: trip.mobility_needs ?? "",
+      };
 }
 
 function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
@@ -42,13 +72,45 @@ function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
       ? preferences.hotelSearch
       : null,
   );
+  const [flightProvider, setFlightProvider] = useState<FlightSearchProvider>(
+    flightSearchProvider(preferences.flightSearch) ?? "duffel",
+  );
+  const [flightConsent, setFlightConsent] = useState(
+    validateFlightSearchDetails(preferences.flightSearch),
+  );
+  const [flightAges, setFlightAges] = useState(
+    validateFlightSearchDetails(preferences.flightSearch)
+      ? preferences.flightSearch.childAges.join(", ")
+      : "",
+  );
+  const initialRequirements = requirementsForTrip(trip);
+  const [allergies, setAllergies] = useState(
+    initialRequirements.allergies.join(", "),
+  );
+  const [dietary, setDietary] = useState(
+    initialRequirements.dietaryPreferences.join(", "),
+  );
+  const [accessibility, setAccessibility] = useState(
+    initialRequirements.accessibility,
+  );
+  const [mobilityNotes, setMobilityNotes] = useState(
+    initialRequirements.mobilityNotes,
+  );
+  const savedHotelCounts = validateHotelSearchDetails(
+    preferences.hotelSearch,
+    trip.travelers,
+  )
+    ? hotelGuestCounts(preferences.hotelSearch)
+    : undefined;
   const [destination, setDestination] = useState(trip.destination);
   const [start, setStart] = useState(trip.start_date);
   const [end, setEnd] = useState(trip.end_date);
   const [adults, setAdults] = useState(
-    Number(preferences.adults ?? trip.travelers),
+    Number(preferences.adults ?? savedHotelCounts?.adults ?? trip.travelers),
   );
-  const [children, setChildren] = useState(Number(preferences.children ?? 0));
+  const [children, setChildren] = useState(
+    Number(preferences.children ?? savedHotelCounts?.children ?? 0),
+  );
   const [budget, setBudget] = useState(trip.budget_tier ?? "moderate");
   const [type, setType] = useState(
     String(
@@ -111,8 +173,22 @@ function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
       setDestination(latest.destination);
       setStart(latest.start_date);
       setEnd(latest.end_date);
-      setAdults(Number(latestPreferences.adults ?? latest.travelers));
-      setChildren(Number(latestPreferences.children ?? 0));
+      const latestHotelCounts = validateHotelSearchDetails(
+        latestPreferences.hotelSearch,
+        latest.travelers,
+      )
+        ? hotelGuestCounts(latestPreferences.hotelSearch)
+        : undefined;
+      setAdults(
+        Number(
+          latestPreferences.adults ??
+            latestHotelCounts?.adults ??
+            latest.travelers,
+        ),
+      );
+      setChildren(
+        Number(latestPreferences.children ?? latestHotelCounts?.children ?? 0),
+      );
       setBudget(latest.budget_tier ?? "moderate");
       setType(
         String(
@@ -128,6 +204,22 @@ function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
           : "",
       );
       setVibes((latest.vibes ?? []).join(", "));
+      const latestNeeds = requirementsForTrip(latest);
+      setAllergies(latestNeeds.allergies.join(", "));
+      setDietary(latestNeeds.dietaryPreferences.join(", "));
+      setAccessibility(latestNeeds.accessibility);
+      setMobilityNotes(latestNeeds.mobilityNotes);
+      setFlightProvider(
+        flightSearchProvider(latestPreferences.flightSearch) ?? "duffel",
+      );
+      setFlightConsent(
+        validateFlightSearchDetails(latestPreferences.flightSearch),
+      );
+      setFlightAges(
+        validateFlightSearchDetails(latestPreferences.flightSearch)
+          ? latestPreferences.flightSearch.childAges.join(", ")
+          : "",
+      );
       setHotelSearch(
         validateHotelSearchDetails(latestPreferences.hotelSearch)
           ? latestPreferences.hotelSearch
@@ -192,8 +284,12 @@ function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
       changedPreferences,
     );
     if (
-      adults !== Number(preferences.adults ?? trip.travelers) ||
-      children !== Number(preferences.children ?? 0)
+      adults !==
+        Number(
+          preferences.adults ?? savedHotelCounts?.adults ?? trip.travelers,
+        ) ||
+      children !==
+        Number(preferences.children ?? savedHotelCounts?.children ?? 0)
     ) {
       changes.travelers = adults + children;
       Object.assign(changedPreferences, { adults, children });
@@ -205,6 +301,43 @@ function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
         preferences.hotelSearch ?? null,
         changedPreferences,
       );
+    const flightSearch = flightConsent
+      ? {
+          consentVersion:
+            flightProvider === "liteapi"
+              ? LITEAPI_FLIGHT_CONSENT_VERSION
+              : FLIGHT_SEARCH_CONSENT_VERSION,
+          childAges: children > 0 ? parseHotelChildrenAges(flightAges) : [],
+        }
+      : null;
+    if (flightConsent && !validateFlightSearchDetails(flightSearch, children)) {
+      setMessage({
+        text: "Enter an age from 0 to 17 for each child before saving flight-search consent.",
+        kind: "error",
+      });
+      return;
+    }
+    if (flightConsent) {
+      changed("adults", adults, preferences.adults, changedPreferences);
+      changed("children", children, preferences.children, changedPreferences);
+    }
+    changed(
+      "flightSearch",
+      flightSearch,
+      preferences.flightSearch,
+      changedPreferences,
+    );
+    changed(
+      "requirements",
+      {
+        allergies: list(allergies),
+        dietaryPreferences: list(dietary),
+        accessibility,
+        mobilityNotes: mobilityNotes.trim(),
+      },
+      initialRequirements,
+      changedPreferences,
+    );
     if (Object.keys(changedPreferences).length)
       changes.preferences = changedPreferences;
     if (!Object.keys(changes).length) {
@@ -416,6 +549,68 @@ function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
               className={inputStyle}
             />
           </label>
+          <fieldset className="sm:col-span-2 rounded-xl border border-gray-200 p-4">
+            <legend className="px-1 font-semibold">
+              Dietary and accessibility needs
+            </legend>
+            <p className="text-sm text-gray-600">
+              We use these to plan. Venue suitability still needs direct
+              confirmation.
+            </p>
+            <label className="mt-3 block text-sm">
+              Food allergies, separated by commas
+              <input
+                value={allergies}
+                onChange={(event) => setAllergies(event.target.value)}
+                className={inputStyle}
+                placeholder="For example: peanuts"
+              />
+            </label>
+            <label className="mt-3 block text-sm">
+              Dietary preferences, separated by commas
+              <input
+                value={dietary}
+                onChange={(event) => setDietary(event.target.value)}
+                className={inputStyle}
+                placeholder="For example: vegetarian"
+              />
+            </label>
+            {(
+              [
+                ["step_free_entrance", "Step-free entrance"],
+                ["accessible_restroom", "Accessible restroom"],
+                ["accessible_seating", "Accessible seating"],
+                ["accessible_parking", "Accessible parking"],
+              ] as const
+            ).map(([value, label]) => (
+              <label
+                className="mt-3 flex items-center gap-2 text-sm"
+                key={value}
+              >
+                <input
+                  type="checkbox"
+                  checked={accessibility.includes(value)}
+                  onChange={(event) =>
+                    setAccessibility((current) =>
+                      event.target.checked
+                        ? [...current, value]
+                        : current.filter((entry) => entry !== value),
+                    )
+                  }
+                />
+                {label}
+              </label>
+            ))}
+            <label className="mt-3 block text-sm">
+              Other mobility details
+              <textarea
+                value={mobilityNotes}
+                maxLength={500}
+                onChange={(event) => setMobilityNotes(event.target.value)}
+                className={inputStyle}
+              />
+            </label>
+          </fieldset>
           {hotelSearchEnabled() && (
             <div className="sm:col-span-2">
               <HotelSearchFields
@@ -438,6 +633,50 @@ function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
               />
             </div>
           )}
+          {
+            <div className="sm:col-span-2 rounded-xl border border-gray-200 p-4">
+              <label className="mb-3 block text-sm">
+                Flight supplier
+                <select
+                  className={inputStyle}
+                  value={flightProvider}
+                  onChange={(event) => {
+                    setFlightProvider(
+                      event.target.value as FlightSearchProvider,
+                    );
+                    setFlightConsent(false);
+                  }}
+                >
+                  <option value="liteapi">LiteAPI</option>
+                  <option value="duffel">Duffel</option>
+                </select>
+              </label>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={flightConsent}
+                  onChange={(event) => setFlightConsent(event.target.checked)}
+                />
+                <span>Allow flight searches with this supplier</span>
+              </label>
+              <p className="mt-2 text-sm text-gray-600">
+                {flightProvider === "liteapi"
+                  ? LITEAPI_FLIGHT_DISCLOSURE
+                  : FLIGHT_SEARCH_DISCLOSURE}
+              </p>
+              {flightConsent && children > 0 && (
+                <label className="mt-3 block text-sm">
+                  Children’s ages at travel, separated by commas
+                  <input
+                    value={flightAges}
+                    onChange={(event) => setFlightAges(event.target.value)}
+                    placeholder="For example: 4, 12"
+                    className={inputStyle}
+                  />
+                </label>
+              )}
+            </div>
+          }
           <p className="text-sm text-gray-500 sm:col-span-2">
             Changing your brief keeps your previous plan and turns off its
             public link. Choose Start planning when you are ready to build a

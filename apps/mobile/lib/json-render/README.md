@@ -150,7 +150,7 @@ interface JsonRenderDocument {
       rating: 4.8,
       pricePerNight: 850,
       amenities: ['WiFi', 'Spa', 'Restaurant'],
-      bookingUrl: 'https://booking.com/...',
+      bookingUrl: 'https://supplier.example/...',
     },
   },
   {

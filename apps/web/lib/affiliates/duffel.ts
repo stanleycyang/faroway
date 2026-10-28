@@ -36,7 +36,8 @@ export interface DuffelFlightSearchParams {
   departureDate: string;
   returnDate?: string;
   passengers: {
-    type: "adult" | "child" | "infant_without_seat";
+    type?: "adult";
+    age?: number;
     count: number;
   }[];
   cabinClass?: "economy" | "premium_economy" | "business" | "first";
@@ -239,12 +240,28 @@ export async function searchDuffelFlights(
     }
 
     // Expand passenger counts into individual passenger objects
-    const passengers: Array<{ type: string }> = [];
+    const passengers: Array<{ type: "adult" } | { age: number }> = [];
     for (const pax of params.passengers) {
+      if (
+        !Number.isInteger(pax.count) ||
+        pax.count < 1 ||
+        pax.count > 50 ||
+        (pax.age !== undefined &&
+          (!Number.isInteger(pax.age) ||
+            pax.age < 0 ||
+            pax.age > 17 ||
+            pax.type !== undefined)) ||
+        (pax.age === undefined && pax.type !== "adult")
+      )
+        throw new Error("Invalid flight passenger details");
       for (let i = 0; i < pax.count; i++) {
-        passengers.push({ type: pax.type });
+        passengers.push(
+          pax.age === undefined ? { type: "adult" } : { age: pax.age },
+        );
       }
     }
+    if (!passengers.length || passengers.length > 50)
+      throw new Error("Invalid flight passenger count");
 
     const body = {
       data: {

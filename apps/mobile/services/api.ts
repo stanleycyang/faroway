@@ -255,12 +255,10 @@ export async function removePushToken(token?: string): Promise<ApiResponse<{ del
 // trustworthy-looking CTA for a URL the backend will reject as SSRF.
 const ALLOWED_AFFILIATE_DOMAINS = [
   'viator.com',
-  'booking.com',
   'getyourguide.com',
   'tripadvisor.com',
   'discovercars.com',
   'hostelworld.com',
-  'amadeus.com',
   'duffel.com',
 ];
 

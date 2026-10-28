@@ -1,3 +1,4 @@
+import { flightQuoteIsCurrent } from "@faroway/constants";
 import type { TripDay } from "@faroway/types";
 
 export type BudgetCategory =
@@ -109,6 +110,7 @@ export function summarizeBudget(
   days: TripDay[],
   stay: StayDates | null,
   travelers: number,
+  now: number = Date.now(),
 ) {
   const groups = new Map<string, CurrencyBudget>();
   let unknownItems = 0;
@@ -154,8 +156,11 @@ export function summarizeBudget(
         );
   }
   for (const day of days) {
-    if (day.transport)
-      add("transport", day.transport.price, day.transport.currency);
+    if (day.transport) {
+      if (flightQuoteIsCurrent(day.transport, now))
+        add("transport", day.transport.price, day.transport.currency);
+      else unknownItems++;
+    }
     for (const slot of [day.morning, day.afternoon, day.evening]) {
       if (!slot) continue;
       for (const activity of Array.isArray(slot.activities)

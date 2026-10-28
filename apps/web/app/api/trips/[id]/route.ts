@@ -155,28 +155,36 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         { status: 503 },
       );
 
-    if (
-      changes.preferences &&
-      "hotelSearch" in changes.preferences &&
-      !isDeepStrictEqual(
-        typeof trip === "object" &&
-          trip !== null &&
-          "preferences" in trip &&
-          typeof trip.preferences === "object" &&
-          trip.preferences !== null &&
-          "hotelSearch" in trip.preferences
-          ? trip.preferences.hotelSearch
-          : null,
-        preferences.hotelSearch ?? null,
-      )
-    )
-      return NextResponse.json(
-        {
-          error:
-            "Hotel preference changes could not be confirmed. Load the latest brief before retrying.",
-        },
-        { status: 503 },
-      );
+    const returnedPreferences =
+      typeof trip === "object" &&
+      trip !== null &&
+      "preferences" in trip &&
+      typeof trip.preferences === "object" &&
+      trip.preferences !== null
+        ? (trip.preferences as Record<string, unknown>)
+        : {};
+    for (const key of [
+      "hotelSearch",
+      "flightSearch",
+      "requirements",
+    ] as const) {
+      if (
+        changes.preferences &&
+        key in changes.preferences &&
+        !isDeepStrictEqual(
+          returnedPreferences[key] ?? null,
+          preferences[key] ?? null,
+        )
+      ) {
+        return NextResponse.json(
+          {
+            error:
+              "Your preference changes could not be confirmed. Load the latest brief before retrying.",
+          },
+          { status: 503 },
+        );
+      }
+    }
     return NextResponse.json({ trip });
   } catch (error) {
     console.error("Error updating trip:", error);

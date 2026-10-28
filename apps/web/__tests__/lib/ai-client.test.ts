@@ -51,6 +51,8 @@ describe("AI client runtime bounds", () => {
         timeout: 1234,
         abortSignal: expect.any(AbortSignal),
         maxRetries: 0,
+        model: { model: "google/gemini-3-flash" },
+        providerOptions: { gateway: { only: ["google", "vertex"] } },
       }),
     );
   });
@@ -74,6 +76,8 @@ describe("AI client runtime bounds", () => {
       expect.objectContaining({
         timeout: 1234,
         maxRetries: 0,
+        model: { model: "google/gemini-3-flash" },
+        providerOptions: { gateway: { only: ["google", "vertex"] } },
       }),
     );
   });
@@ -91,6 +95,8 @@ describe("AI client runtime bounds", () => {
       expect.objectContaining({
         timeout: 1234,
         maxRetries: 0,
+        model: { model: "google/gemini-3-flash" },
+        providerOptions: { gateway: { only: ["google", "vertex"] } },
       }),
     );
   });

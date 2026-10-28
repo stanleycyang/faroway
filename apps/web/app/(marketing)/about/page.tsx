@@ -132,7 +132,7 @@ const timeline = [
   {
     label: "Growing & Improving",
     description:
-      "Three specialized AI agents for hotels, activities, and dining. Real affiliate integrations with Booking.com, Viator, and more. A growing blog with 200+ destination guides.",
+      "Three specialized AI agents for hotels, activities, and dining. Real affiliate integrations with Viator, GetYourGuide, and Duffel. A growing blog with 200+ destination guides.",
     icon: Users,
   },
   {

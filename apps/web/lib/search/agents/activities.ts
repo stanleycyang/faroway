@@ -149,6 +149,7 @@ export async function runActivitiesAgent(
 - Must-see: ${activityCriteria.mustSee.join(", ") || "popular attractions"}
 - Interests: ${activityCriteria.interests.join(", ")}
 - Mobility needs: ${plan.mobilityNeeds || "none specified"}
+- Structured requirements: ${JSON.stringify(plan.requirements ?? {})}
 - Accessibility is unverified unless supported by reliable evidence; do not claim it is confirmed.
 
 **Vibes to match:** ${vibes.join(", ")}

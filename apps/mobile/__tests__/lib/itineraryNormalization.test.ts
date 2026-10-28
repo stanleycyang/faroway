@@ -128,3 +128,27 @@ test('does not show legacy unknown costs as free or revive a fallback price', ()
   expect(day.activities.map((activity) => activity.estimatedCost)).toEqual([undefined, undefined]);
   expect(day.activities.map((activity) => activity.price)).toEqual([undefined, undefined]);
 });
+
+test('saved trips remain readable when their supplier is no longer integrated', () => {
+  const days = transformItineraryDays([
+    {
+      dayNumber: 1,
+      date: '2027-01-01',
+      transport: {
+        type: 'flight',
+        provider: 'Historic airline',
+        affiliatePartner: 'retired-provider',
+        source: 'retired-provider',
+        departure: { airport: 'LAX' },
+        arrival: { airport: 'JFK' },
+      },
+      morning: { activities: [{ name: 'Museum' }] },
+    },
+  ]);
+  expect(days[0].transport).toMatchObject({
+    provider: 'Historic airline',
+    departure: { airport: 'LAX' },
+    arrival: { airport: 'JFK' },
+  });
+  expect(days[0].activities[0].title).toBe('Museum');
+});

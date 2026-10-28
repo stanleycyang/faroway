@@ -276,6 +276,7 @@ export interface Restaurant {
 }
 
 export interface TripDayTransport {
+  expiresAt?: string;
   type: "flight" | "train" | "bus" | "ferry";
   provider: string;
   departure: { airport: string; city: string; dateTime: string };
@@ -356,6 +357,18 @@ export interface AIGenerationError {
 // Search Types
 // =============================================================================
 
+export interface TravelerRequirements {
+  allergies: string[];
+  dietaryPreferences: string[];
+  accessibility: (
+    | "step_free_entrance"
+    | "accessible_restroom"
+    | "accessible_seating"
+    | "accessible_parking"
+  )[];
+  mobilityNotes: string;
+}
+
 export interface SearchInput {
   adults?: number;
   children?: number;
@@ -363,6 +376,9 @@ export interface SearchInput {
   dietaryRestrictions?: string[];
   mobilityNeeds?: string;
   roomCount?: number;
+  childAges?: number[];
+  flightProvider?: "duffel" | "liteapi" | "none";
+  requirements?: TravelerRequirements;
   destination: string;
   startDate: string;
   endDate: string;
@@ -409,10 +425,14 @@ export interface SearchRecord {
 }
 
 export interface SearchPlan {
+  travelerType?: TravelerType;
   travelers?: number;
   adults?: number;
   children?: number;
   roomCount?: number;
+  childAges?: number[];
+  flightProvider?: "duffel" | "liteapi" | "none";
+  requirements?: TravelerRequirements;
   destination: string;
   country: string;
   dates: {
@@ -545,6 +565,7 @@ export interface TransportSegment {
 }
 
 export interface TransportResult {
+  expiresAt?: string;
   id: string;
   type: "flight" | "train" | "bus" | "ferry";
   provider: string;
@@ -569,7 +590,7 @@ export interface TransportResult {
   segments: TransportSegment[];
   affiliateUrl: string;
   affiliatePartner: string;
-  source: "amadeus" | "duffel";
+  source: "duffel" | "liteapi";
   vibeScore: number;
   vibeMatch: string[];
 }

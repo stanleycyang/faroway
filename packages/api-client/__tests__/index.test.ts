@@ -221,7 +221,7 @@ describe("FarowayClient", () => {
         json: () =>
           Promise.resolve({
             clickId: "c-1",
-            redirectUrl: "https://booking.com",
+            redirectUrl: "https://retired-supplier.example",
           }),
       });
 
@@ -229,8 +229,8 @@ describe("FarowayClient", () => {
         itemType: "hotel",
         itemId: "htl-1",
         itemName: "Grand Hotel",
-        affiliatePartner: "booking.com",
-        affiliateUrl: "https://booking.com/htl-1",
+        affiliatePartner: "retired-supplier.example",
+        affiliateUrl: "https://retired-supplier.example/htl-1",
       });
 
       expect(result.data?.clickId).toBe("c-1");
@@ -254,8 +254,8 @@ describe("FarowayClient", () => {
           itemType: "hotel",
           itemId: "htl-1",
           itemName: "Hotel",
-          affiliatePartner: "booking.com",
-          affiliateUrl: "https://booking.com/original",
+          affiliatePartner: "retired-supplier.example",
+          affiliateUrl: "https://retired-supplier.example/original",
         },
         openUrl,
       );
@@ -275,13 +275,15 @@ describe("FarowayClient", () => {
           itemType: "hotel",
           itemId: "htl-1",
           itemName: "Hotel",
-          affiliatePartner: "booking.com",
-          affiliateUrl: "https://booking.com/original",
+          affiliatePartner: "retired-supplier.example",
+          affiliateUrl: "https://retired-supplier.example/original",
         },
         openUrl,
       );
 
-      expect(openUrl).toHaveBeenCalledWith("https://booking.com/original");
+      expect(openUrl).toHaveBeenCalledWith(
+        "https://retired-supplier.example/original",
+      );
     });
   });
 

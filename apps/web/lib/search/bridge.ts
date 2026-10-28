@@ -146,6 +146,7 @@ function mapSlot(
 function mapTransport(t: TransportResult): TripDayTransport & { id: string } {
   return {
     id: t.id,
+    expiresAt: t.expiresAt,
     type: t.type,
     provider: t.provider,
     departure: {

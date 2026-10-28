@@ -171,7 +171,7 @@ async function testItineraryCreation(tripId: string) {
             ],
           },
         ],
-        ai_model_used: "claude-3-5-sonnet",
+        ai_model_used: "google/gemini-3-flash",
         total_cost_estimate: 4500.0,
       })
       .select()
