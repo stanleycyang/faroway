@@ -20,7 +20,7 @@ function probe(extra: Record<string, string>, dry = false) {
     JSON.stringify({
       name: "preview-build-env-probe",
       private: true,
-      packageManager: "bun@1.3.9",
+      packageManager: "bun@1.4.4",
       scripts: { build: "bun probe.ts" },
     }),
   );
