@@ -53,7 +53,6 @@ export function buildInstantPreview(input: PreviewInput): TripDay[] {
     const morningTitle = MORNING_THEMES[index % MORNING_THEMES.length];
     const afternoonTitle = AFTERNOON_THEMES[index % AFTERNOON_THEMES.length];
     const eveningTitle = EVENING_THEMES[index % EVENING_THEMES.length];
-    const estimatedCost = 180 + dayNumber * 25;
 
     return {
       dayNumber,
@@ -68,10 +67,6 @@ export function buildInstantPreview(input: PreviewInput): TripDay[] {
         `${afternoonTitle} matched to your vibe`,
         `${eveningTitle} for ${input.travelers} traveler${input.travelers === 1 ? "" : "s"}`,
       ],
-      totalEstimatedCost: {
-        amount: estimatedCost,
-        currency: "USD",
-      },
     };
   });
 }

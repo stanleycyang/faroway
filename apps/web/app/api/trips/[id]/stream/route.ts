@@ -472,9 +472,7 @@ async function pollAndStream(
           const budgetBlocks = buildBudgetBlocks({
             topHotel: (ir.topHotel as HotelInput | undefined) || undefined,
             activities: ((ir.activities as ActivityInput[]) || []).slice(0, 20),
-            totalEstimatedCost: 0,
             nights,
-            currency: "USD",
           });
           if (budgetBlocks.length > 0) {
             send("spec-block", { chapter: "budget", blocks: budgetBlocks });

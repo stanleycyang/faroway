@@ -18,6 +18,7 @@ import {
   canProcessViatorContent,
   isViatorContentEnabled,
 } from "@/lib/affiliates/viator-policy";
+import { readPrice } from "@faroway/constants";
 import { SearchPlan, ActivityResult } from "../types";
 import { VIBE_KEYWORDS } from "@faroway/constants";
 import {
@@ -53,8 +54,8 @@ const ActivitySchema = z.object({
   description: z.string(),
   category: z.string(),
   duration: z.number(), // minutes
-  price: z.number(),
-  currency: z.string().default("USD"),
+  price: z.number().optional(),
+  currency: z.string().optional(),
   rating: z.number().min(0).max(5),
   reviewCount: z.number(),
   location: z.object({
@@ -77,7 +78,10 @@ const ActivityListSchema = z.object({
   activities: z.array(ActivitySchema),
 });
 
-type GeneratedActivity = Omit<ActivityResult, "id">;
+type GeneratedActivity = Omit<ActivityResult, "id" | "currency" | "price"> & {
+  price?: number;
+  currency?: string;
+};
 
 interface ActivityListResult {
   activities: GeneratedActivity[];
@@ -90,7 +94,7 @@ When real Viator data is provided as context, use those activity names and price
 For each activity, provide:
 1. Real attraction/tour names that exist at the destination
 2. Accurate descriptions of what visitors will experience
-3. Realistic pricing (use Viator as reference)
+3. Leave price unspecified unless supplied by a provider
 4. Appropriate duration estimates
 5. Best time of day to visit
 6. How well it matches the traveler's vibes
@@ -173,6 +177,9 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
       result.activities.map((activity, index) => ({
         ...activity,
         id: `activity_${Date.now()}_${index}`,
+        price: 0,
+        currency: "",
+        priceStatus: "unknown" as const,
         affiliateUrl: undefined,
         affiliatePartner: undefined,
         rating: 0,
@@ -225,6 +232,9 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
       duration: durationMinutes,
       price: product.price.amount,
       currency: product.price.currencyCode,
+      priceStatus: readPrice(product.price.amount, product.price.currencyCode)
+        ? undefined
+        : "unknown",
       rating: product.rating,
       reviewCount: product.reviewCount,
       location: {
@@ -281,6 +291,12 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
         duration: durationMinutes,
         price: activity.price.amount,
         currency: activity.price.currencyCode,
+        priceStatus: readPrice(
+          activity.price.amount,
+          activity.price.currencyCode,
+        )
+          ? undefined
+          : "unknown",
         rating: activity.rating,
         reviewCount: activity.reviewCount,
         location: {

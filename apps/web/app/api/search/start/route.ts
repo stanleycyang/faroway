@@ -26,6 +26,7 @@ const SearchInputSchema = z
     travelers: z.number().int().min(1).max(50).optional(),
     adults: z.number().int().min(1).max(50).optional(),
     children: z.number().int().min(0).max(49).optional(),
+    roomCount: z.number().int().min(1).max(4).optional(),
     interests: z.array(z.string().trim().min(1).max(50)).max(20).optional(),
     dietaryRestrictions: z
       .array(z.string().trim().min(1).max(100))
@@ -111,6 +112,7 @@ export async function POST(request: NextRequest) {
       travelers,
       adults,
       children,
+      roomCount,
       interests,
       dietaryRestrictions,
       mobilityNeeds,
@@ -171,6 +173,7 @@ export async function POST(request: NextRequest) {
         travelers: travelers || 2,
         adults,
         children,
+        roomCount,
         interests,
         dietaryRestrictions,
         mobilityNeeds,

@@ -402,7 +402,7 @@ export function buildItineraryBlocks(
 export interface BuildBudgetInput {
   topHotel?: HotelInput;
   activities?: ActivityInput[];
-  totalEstimatedCost: number;
+  totalEstimatedCost?: number;
   nights: number;
   currency?: string;
 }

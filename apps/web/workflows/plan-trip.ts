@@ -1,3 +1,4 @@
+import { readPrice } from "@faroway/constants";
 import { matchesTransportProjection } from "@/lib/search/transport-reference";
 import { applyGenerationUpdate } from "@/lib/trips/apply-generation-update";
 import { getWorkflowMetadata } from "workflow";
@@ -55,6 +56,7 @@ interface TripPlanInput {
   interests?: string[];
   dietaryRestrictions?: string[];
   mobilityNeeds?: string;
+  roomCount?: number;
   travelerType?: SearchInput["travelerType"];
   vibes?: string[];
   budget?: string;
@@ -91,6 +93,7 @@ export async function planTripWorkflow(
     interests,
     dietaryRestrictions,
     mobilityNeeds,
+    roomCount,
     travelerType,
     vibes,
     budget,
@@ -116,6 +119,7 @@ export async function planTripWorkflow(
       interests,
       dietaryRestrictions,
       mobilityNeeds,
+      roomCount,
       travelerType,
       vibes,
       budget,
@@ -185,6 +189,8 @@ export async function planTripWorkflow(
     const result = await aggregateItineraryStep({
       searchId,
       tripId,
+      startDate,
+      endDate,
       plan: searchPlan,
       hotels,
       activities: [...activities, ...enrichment.activities],
@@ -340,6 +346,7 @@ async function buildSearchPlanStep(params: {
   interests?: string[];
   dietaryRestrictions?: string[];
   mobilityNeeds?: string;
+  roomCount?: number;
   travelerType?: SearchInput["travelerType"];
   vibes?: string[];
   budget?: string;
@@ -360,6 +367,7 @@ async function buildSearchPlanStep(params: {
     interests,
     dietaryRestrictions,
     mobilityNeeds,
+    roomCount,
     travelerType,
     vibes,
     budget,
@@ -376,6 +384,7 @@ async function buildSearchPlanStep(params: {
     interests,
     dietaryRestrictions,
     mobilityNeeds,
+    roomCount,
     travelerType,
     vibes: vibes || [],
     budget: (budget as "budget" | "moderate" | "luxury") || "moderate",
@@ -515,6 +524,8 @@ async function runEnrichmentStep(
 async function aggregateItineraryStep(params: {
   searchId: string;
   tripId?: string;
+  startDate: string;
+  endDate: string;
   plan: SearchPlan;
   hotels: HotelResult[];
   activities: ActivityResult[];
@@ -532,6 +543,25 @@ async function aggregateItineraryStep(params: {
     params.transport,
   );
 
+  const start = Date.parse(`${params.startDate}T00:00:00Z`);
+  const end = Date.parse(`${params.endDate}T00:00:00Z`);
+  const expectedDays = Math.floor((end - start) / 86400000) + 1;
+  if (
+    !Number.isFinite(expectedDays) ||
+    expectedDays < 1 ||
+    days.length !== expectedDays ||
+    days.some(
+      (day, index) =>
+        day.dayNumber !== index + 1 ||
+        day.date !==
+          new Date(start + index * 86400000).toISOString().slice(0, 10),
+    )
+  ) {
+    throw new Error(
+      "The generated itinerary does not cover the saved trip dates. Please retry planning.",
+    );
+  }
+
   const searchResults: SearchResults = {
     searchId: params.searchId,
     hotels: params.hotels,
@@ -545,6 +575,11 @@ async function aggregateItineraryStep(params: {
     topHotel || params.hotels[0] || null,
   );
   const reminders = [
+    ...((params.plan.roomCount ?? 1) > 1
+      ? [
+          "Hotel prices for multiple rooms are unavailable here. Confirm room occupancy and prices directly with providers.",
+        ]
+      : []),
     ...(params.plan.children
       ? [
           "Hotel and flight prices for children are unavailable here. Confirm party details and prices directly with providers.",
@@ -896,7 +931,7 @@ async function bridgeToItineraries(
     start_date: meta.startDate,
     end_date: meta.endDate,
     overview: `Your personalized trip to ${meta.destination}`,
-    total_cost: result.totalEstimatedCost || 0,
+    total_cost: result.totalEstimatedCost ?? null,
     days: itineraryDays,
     packing_list: [],
     general_tips: [],
@@ -982,8 +1017,10 @@ export async function saveSearchResults(
       data: hotel,
       affiliate_url: hotel.affiliateUrl,
       affiliate_partner: hotel.affiliatePartner,
-      price_amount: hotel.pricePerNight,
-      price_currency: hotel.currency || "USD",
+      price_amount:
+        readPrice(hotel.pricePerNight, hotel.currency)?.amount ?? null,
+      price_currency:
+        readPrice(hotel.pricePerNight, hotel.currency)?.currency ?? null,
       rating: hotel.userRating,
     })),
     ...(result.activities || []).map((activity) => ({
@@ -994,8 +1031,14 @@ export async function saveSearchResults(
       data: activity,
       affiliate_url: activity.affiliateUrl,
       affiliate_partner: activity.affiliatePartner,
-      price_amount: activity.price,
-      price_currency: activity.currency || "USD",
+      price_amount:
+        activity.priceStatus === "unknown"
+          ? null
+          : (readPrice(activity.price, activity.currency)?.amount ?? null),
+      price_currency:
+        activity.priceStatus === "unknown"
+          ? null
+          : (readPrice(activity.price, activity.currency)?.currency ?? null),
       rating: activity.rating,
     })),
     ...(result.dining || []).map((restaurant) => ({
@@ -1016,8 +1059,10 @@ export async function saveSearchResults(
       data: transport,
       affiliate_url: transport.affiliateUrl,
       affiliate_partner: transport.affiliatePartner,
-      price_amount: transport.price,
-      price_currency: transport.currency || "USD",
+      price_amount:
+        readPrice(transport.price, transport.currency)?.amount ?? null,
+      price_currency:
+        readPrice(transport.price, transport.currency)?.currency ?? null,
       rating: null,
     })),
   ];
@@ -1098,7 +1143,7 @@ export async function saveSearchResults(
         ),
       ],
       estimated_cost: day.totalEstimatedCost?.amount ?? null,
-      cost_currency: day.totalEstimatedCost?.currency || "USD",
+      cost_currency: day.totalEstimatedCost?.currency || null,
       tips: day.tips || [],
     }));
 

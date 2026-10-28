@@ -11,6 +11,7 @@
  * @see https://github.com/viator-docs/Viator-Partner-API-v2
  */
 
+import { providerAmount, currencyCode, formatPrice } from "@faroway/constants";
 import { fetchWithTimeout } from "@/lib/search/runtime";
 import { buildViatorHandoffUrl } from "./viator-link";
 import { isViatorContentEnabled } from "./viator-policy";
@@ -463,6 +464,21 @@ export function generateViatorAffiliateUrl(
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeViatorProduct(raw: any): ViatorProduct {
+  const candidates = [
+    {
+      amount: raw.pricing?.summary?.fromPrice,
+      currency: raw.pricing?.currency,
+    },
+    { amount: raw.price?.amount, currency: raw.price?.currencyCode },
+  ];
+  const source = candidates.find(
+    (value) =>
+      providerAmount(value.amount) !== undefined &&
+      currencyCode(value.currency),
+  );
+  const amount = providerAmount(source?.amount);
+  const currency = currencyCode(source?.currency);
+  const knownPrice = amount !== undefined && currency !== undefined;
   // v2 images: images[].variants[].url — pick highest res variant
   const images = (raw.images || [])
     .map(
@@ -492,12 +508,9 @@ function normalizeViatorProduct(raw: any): ViatorProduct {
     rating: raw.reviews?.combinedAverageRating || raw.rating || 0,
     reviewCount: raw.reviews?.totalReviews || raw.reviewCount || 0,
     price: {
-      // v2: pricing.summary.fromPrice
-      amount: raw.pricing?.summary?.fromPrice || raw.price?.amount || 0,
-      currencyCode: raw.pricing?.currency || raw.price?.currencyCode || "USD",
-      formattedPrice:
-        raw.pricing?.summary?.fromPriceFormatted ||
-        `$${raw.pricing?.summary?.fromPrice || raw.price?.amount || 0}`,
+      amount: knownPrice ? amount : 0,
+      currencyCode: knownPrice ? currency : "",
+      formattedPrice: knownPrice ? (formatPrice(amount, currency) ?? "") : "",
     },
     duration: {
       fixedDurationInMinutes: raw.duration?.fixedDurationInMinutes,

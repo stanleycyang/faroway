@@ -1,3 +1,4 @@
+import { readPrice } from "@faroway/constants";
 import { viatorContentMetadata } from "@/lib/affiliates/viator-policy";
 /**
  * Type Bridge: Multi-Agent Search Results → Frontend Itinerary Types
@@ -39,6 +40,8 @@ function mapActivity(
     nightlife: "entertainment",
   };
 
+  const price =
+    a.priceStatus === "unknown" ? undefined : readPrice(a.price, a.currency);
   return {
     ...viatorContentMetadata(a),
     id: a.id,
@@ -46,9 +49,9 @@ function mapActivity(
     description: a.description,
     duration: a.duration, // already in minutes from activities agent
     estimatedCost: {
-      amount: a.priceStatus === "unknown" ? 0 : a.price,
-      status: a.priceStatus,
-      currency: a.currency || "USD",
+      amount: price?.amount ?? 0,
+      status: price ? a.priceStatus : "unknown",
+      currency: price?.currency ?? "",
     },
     timeOfDay:
       a.bestTimeOfDay === "any"
@@ -87,13 +90,6 @@ function mapDining(
   d: DiningResult,
   mealType: "breakfast" | "lunch" | "dinner",
 ): Restaurant {
-  const priceLevelCostMap: Record<number, number> = {
-    1: 15,
-    2: 30,
-    3: 55,
-    4: 100,
-  };
-
   return {
     id: d.id,
     name: d.name,
@@ -101,10 +97,9 @@ function mapDining(
     priceLevel: d.priceLevel as 1 | 2 | 3 | 4,
     description: d.description,
     estimatedCost: {
-      amount:
-        d.priceStatus === "unknown" ? 0 : priceLevelCostMap[d.priceLevel] || 30,
-      status: d.priceStatus ?? "estimate",
-      currency: "USD",
+      amount: 0,
+      status: "unknown",
+      currency: "",
       perPerson: true,
     },
     mealType,
@@ -188,8 +183,9 @@ function mapDay(day: SuggestedDay): MappedItinerary["days"][number] {
     totalEstimatedCost:
       typeof day.estimatedCost === "number" &&
       Number.isFinite(day.estimatedCost) &&
-      day.estimatedCost >= 0
-        ? { amount: day.estimatedCost, currency: day.currency || "USD" }
+      day.estimatedCost >= 0 &&
+      readPrice(day.estimatedCost, day.currency)
+        ? readPrice(day.estimatedCost, day.currency)
         : undefined,
     tips: day.tips || [],
   };

@@ -362,6 +362,7 @@ export interface SearchInput {
   interests?: string[];
   dietaryRestrictions?: string[];
   mobilityNeeds?: string;
+  roomCount?: number;
   destination: string;
   startDate: string;
   endDate: string;
@@ -411,6 +412,7 @@ export interface SearchPlan {
   travelers?: number;
   adults?: number;
   children?: number;
+  roomCount?: number;
   destination: string;
   country: string;
   dates: {
@@ -601,7 +603,7 @@ export interface SuggestedDay {
   };
   transport?: TransportResult;
   estimatedCost?: number;
-  currency: string;
+  currency?: string;
   tips: string[];
 }
 

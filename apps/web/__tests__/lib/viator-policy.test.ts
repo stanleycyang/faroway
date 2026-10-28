@@ -154,6 +154,29 @@ describe("Viator commercial approval gates", () => {
     expect(product?.shortDescription).toBe("");
   });
 
+  it("does not combine prices from different provider objects", async () => {
+    vi.resetModules();
+    approveContent();
+    vi.stubEnv("VIATOR_API_KEY", "test-only-placeholder");
+    vi.stubEnv("VIATOR_PARTNER_ID", "P123");
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          productCode: "123P1",
+          pricing: { summary: { fromPrice: 10 } },
+          price: { currencyCode: "EUR" },
+        }),
+      ),
+    );
+    const { getViatorProduct } = await import("@/lib/affiliates/viator");
+    const product = await getViatorProduct("123P1");
+    expect(product?.price).toMatchObject({
+      amount: 0,
+      currencyCode: "",
+      formattedPrice: "",
+    });
+  });
+
   it("does not send provider names to external enrichment without approval", async () => {
     vi.resetModules();
     approveContent();

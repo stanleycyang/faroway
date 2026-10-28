@@ -53,8 +53,8 @@ const SuggestedDaySchema = z.object({
     mealId: z.string().optional(),
   }),
   transportId: z.string().optional(),
-  estimatedCost: z.number(),
-  currency: z.string().default("USD"),
+  estimatedCost: z.number().optional(),
+  currency: z.string().optional(),
   tips: z.array(z.string()),
 });
 
@@ -83,7 +83,7 @@ interface GeneratedSuggestedDay {
   };
   transportId?: string;
   estimatedCost?: number;
-  currency: string;
+  currency?: string;
   tips: string[];
 }
 
@@ -193,8 +193,7 @@ Create an itinerary that:
 2. Spreads activities across days (2-4 per day based on pace)
 3. Assigns appropriate meals to each time slot
 4. Gives each day a fun title and summary
-5. Estimates daily cost
-6. Includes helpful tips${transportSummary.length > 0 ? "\n7. Selects one outbound alternative for Day 1 via transportId and omits transportId on all other days" : ""}
+5. Includes helpful tips${transportSummary.length > 0 ? "\n6. Selects one outbound alternative for Day 1 via transportId and omits transportId on all other days" : ""}
 
 Reference items by their IDs. Morning activities should be morning/any time, afternoon activities in afternoon, etc.`;
 
@@ -329,15 +328,6 @@ function mapAggregatorResult(
         ? transport.find((t) => t.id === day.transportId)
         : undefined;
 
-    const removedContents =
-      morningActivities.length !== day.morning.activityIds.length ||
-      afternoonActivities.length !== day.afternoon.activityIds.length ||
-      eveningActivities.length !== day.evening.activityIds.length ||
-      (day.morning.mealId !== undefined && !morningMeal) ||
-      (day.afternoon.mealId !== undefined && !afternoonMeal) ||
-      (day.evening.mealId !== undefined && !eveningMeal) ||
-      (day.transportId !== undefined && !dayTransport);
-
     // Missing or unknown day choices retain the existing top-hotel fallback.
     const dayHotel =
       (day.hotelId ? hotels.find((h) => h.id === day.hotelId) : undefined) ||
@@ -363,16 +353,9 @@ function mapAggregatorResult(
         meal: eveningMeal,
       },
       transport: dayTransport,
-      // The model's total no longer describes a day whose contents changed.
-      // Unknown is absence, never a free/zero estimate.
-      estimatedCost:
-        !removedContents &&
-        typeof day.estimatedCost === "number" &&
-        Number.isFinite(day.estimatedCost) &&
-        day.estimatedCost >= 0
-          ? day.estimatedCost
-          : undefined,
-      currency: day.currency,
+      // A model-generated total is not a verified sum of priced items.
+      estimatedCost: undefined,
+      currency: undefined,
       tips: day.tips,
     };
   });
@@ -472,7 +455,7 @@ function recoverFromRawText(
         },
         transportId: d.transportId,
         estimatedCost: d.estimatedCost,
-        currency: d.currency || "USD",
+        currency: d.currency,
         tips: Array.isArray(d.tips) ? d.tips : [],
       }));
 
@@ -571,7 +554,7 @@ function createFallbackItinerary(
       },
       transport: dayTransport,
       estimatedCost: undefined,
-      currency: "USD",
+      currency: undefined,
       tips: [
         "Book popular attractions in advance",
         "Check opening hours before visiting",

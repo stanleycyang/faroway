@@ -3,6 +3,7 @@
  * POST /api/track/click - Track when user clicks an affiliate link
  */
 
+import { readPrice } from "@faroway/constants";
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase/server";
 import { optionalAuth } from "@/lib/auth";
@@ -122,7 +123,8 @@ export async function POST(request: NextRequest) {
       data.clickId ||
       `click_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Store click in database
+    // Store only a complete price/currency pair.
+    const price = readPrice(data.price, data.currency);
     const { error } = await getSupabase()
       .from("affiliate_clicks")
       .insert({
@@ -135,8 +137,8 @@ export async function POST(request: NextRequest) {
         affiliate_url: data.affiliateUrl,
         search_id: data.searchId || null,
         trip_id: data.tripId || null,
-        price: data.price ?? null,
-        currency: data.currency || "USD",
+        price: price?.amount ?? null,
+        currency: price?.currency ?? null,
         source: data.source || "search_results",
         clicked_at: new Date().toISOString(),
         converted: false,

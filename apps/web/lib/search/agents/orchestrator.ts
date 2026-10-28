@@ -249,6 +249,7 @@ Create a detailed search plan with:
     plan.travelers = input.travelers;
     plan.adults = input.adults;
     plan.children = input.children;
+    plan.roomCount = input.roomCount;
     plan.activityCriteria.interests = [
       ...new Set([
         ...(input.interests ?? []),
@@ -307,6 +308,7 @@ export function buildFallbackSearchPlan(input: SearchInput): SearchPlan {
     travelers: input.travelers,
     adults: input.adults,
     children: input.children,
+    roomCount: input.roomCount,
     country: "",
     dates: {
       start: input.startDate,

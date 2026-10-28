@@ -4,6 +4,7 @@ import { canDisplayViatorContent } from "@/lib/affiliates/viator-policy";
 import { useViatorContentEnabled } from "./ViatorContentPolicy";
 
 import React from "react";
+import { readPrice } from "@faroway/constants";
 import Image from "next/image";
 import { useTripCheckout } from "./TripCheckout";
 import {
@@ -350,8 +351,12 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
           <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-lg font-semibold text-gray-700">
             <DollarSign className="w-3.5 h-3.5 text-gray-400" />
             {activity.estimatedCost?.status !== "unknown" &&
-            activity.estimatedCost?.amount > 0
-              ? `Est. ${formatCost(activity.estimatedCost.amount, activity.estimatedCost.currency || "USD")}`
+            activity.estimatedCost?.amount > 0 &&
+            readPrice(
+              activity.estimatedCost.amount,
+              activity.estimatedCost.currency,
+            )
+              ? `Est. ${formatCost(activity.estimatedCost.amount, activity.estimatedCost.currency)}`
               : "Price unknown"}
           </span>
           {activity.location?.name && (
@@ -529,11 +534,19 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
               <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-lg font-semibold text-gray-700">
                 <DollarSign className="w-3.5 h-3.5 text-gray-400" />
                 {restaurant.estimatedCost?.status !== "unknown" &&
-                restaurant.estimatedCost?.amount > 0
-                  ? `Est. ${formatCost(restaurant.estimatedCost.amount, restaurant.estimatedCost.currency || "USD")}`
+                restaurant.estimatedCost?.amount > 0 &&
+                readPrice(
+                  restaurant.estimatedCost.amount,
+                  restaurant.estimatedCost.currency,
+                )
+                  ? `Est. ${formatCost(restaurant.estimatedCost.amount, restaurant.estimatedCost.currency)}`
                   : "Price unknown"}
                 {restaurant.estimatedCost?.status !== "unknown" &&
                   restaurant.estimatedCost?.amount > 0 &&
+                  readPrice(
+                    restaurant.estimatedCost.amount,
+                    restaurant.estimatedCost.currency,
+                  ) &&
                   restaurant.estimatedCost.perPerson && (
                     <span className="text-gray-400">/pp</span>
                   )}

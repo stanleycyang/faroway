@@ -12,6 +12,7 @@
  * @see https://duffel.com/docs/api
  */
 
+import { providerAmount, currencyCode } from "@faroway/constants";
 import { fetchWithTimeout, getEnvNumber } from "@/lib/search/runtime";
 
 // Environment variables
@@ -136,8 +137,8 @@ function normalizeOffer(raw: any): DuffelOffer {
     offerId: raw.id,
     airlines: Array.from(airlineSet),
     price: {
-      amount: parseFloat(raw.total_amount || "0"),
-      currency: raw.total_currency || "USD",
+      amount: providerAmount(raw.total_amount)!,
+      currency: currencyCode(raw.total_currency)!,
     },
     departure: {
       airport: firstSegment?.origin?.iata_code || "",
@@ -288,6 +289,11 @@ export async function searchDuffelFlights(
 
     // Normalize, sort by price ascending, and limit
     const offers = rawOffers
+      .filter(
+        (offer: { total_amount?: unknown; total_currency?: unknown }) =>
+          providerAmount(offer.total_amount) !== undefined &&
+          currencyCode(offer.total_currency),
+      )
       .map(normalizeOffer)
       .sort(
         (a: DuffelOffer, b: DuffelOffer) => a.price.amount - b.price.amount,

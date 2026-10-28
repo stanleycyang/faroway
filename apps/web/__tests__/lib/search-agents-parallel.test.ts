@@ -143,6 +143,20 @@ describe("search agents internal parallelism", () => {
 
   afterEach(() => vi.unstubAllEnvs());
 
+  it("does not present an AI-generated activity price as a supplier estimate", async () => {
+    vi.stubEnv("VIATOR_CONTENT_ENABLED", "false");
+    mocks.searchGYGActivities.mockResolvedValue([]);
+    mocks.generateObject.mockResolvedValue({
+      object: { activities: [aiActivity] },
+    });
+    const results = await runActivitiesAgent(plan as never);
+    expect(results[0]).toMatchObject({
+      priceStatus: "unknown",
+      price: 0,
+      currency: "",
+    });
+  });
+
   it("starts Viator, GetYourGuide, and AI activity generation before awaiting any result", async () => {
     const started: string[] = [];
     let release!: () => void;
@@ -244,6 +258,14 @@ describe("search agents internal parallelism", () => {
     } as never);
     expect(mocks.searchBookingHotels).not.toHaveBeenCalled();
     expect(mocks.searchAmadeusHotels).not.toHaveBeenCalled();
+    await runHotelsAgent({
+      ...plan,
+      travelers: 2,
+      adults: 2,
+      children: 0,
+      roomCount: 2,
+    } as never);
+    expect(mocks.searchBookingHotels).not.toHaveBeenCalled();
   });
 
   it("starts Booking.com and AI hotel fallback before awaiting either result", async () => {

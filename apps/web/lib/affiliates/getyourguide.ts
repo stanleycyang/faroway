@@ -8,6 +8,7 @@
  * @see https://partner.getyourguide.com/
  */
 
+import { providerAmount, currencyCode, formatPrice } from "@faroway/constants";
 import { fetchWithTimeout } from "@/lib/search/runtime";
 
 // Environment variables
@@ -232,17 +233,23 @@ export async function checkGYGAvailability(
         startTimes?: string[];
         price?: { amount?: number; currency?: string };
         retail_price?: { amount?: number; currency?: string };
-      }) => ({
-        activityId,
-        date: avail.date || date,
-        available: avail.available ?? true,
-        startTimes: avail.start_times || avail.startTimes || [],
-        pricing: {
-          amount: avail.price?.amount || avail.retail_price?.amount || 0,
-          currencyCode:
-            avail.price?.currency || avail.retail_price?.currency || "USD",
-        },
-      }),
+      }) => {
+        const source = [avail.price, avail.retail_price].find(
+          (price) =>
+            providerAmount(price?.amount) !== undefined &&
+            currencyCode(price?.currency),
+        );
+        return {
+          activityId,
+          date: avail.date || date,
+          available: avail.available ?? true,
+          startTimes: avail.start_times || avail.startTimes || [],
+          pricing: {
+            amount: providerAmount(source?.amount) ?? 0,
+            currencyCode: currencyCode(source?.currency) ?? "",
+          },
+        };
+      },
     );
   } catch (error) {
     console.error("[GYG] Availability check error:", error);
@@ -275,6 +282,14 @@ export function generateGYGAffiliateUrl(
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function normalizeGYGActivity(raw: any): GYGActivity {
+  const candidates = [raw.price?.values, raw.retail_price, raw.price];
+  const source = candidates.find(
+    (value) =>
+      providerAmount(value?.amount) !== undefined &&
+      currencyCode(value?.currency ?? value?.currencyCode),
+  );
+  const amount = providerAmount(source?.amount);
+  const currency = currencyCode(source?.currency ?? source?.currencyCode);
   return {
     activityId: String(
       raw.tour_id || raw.tourId || raw.activity_id || raw.activityId || raw.id,
@@ -290,20 +305,9 @@ function normalizeGYGActivity(raw: any): GYGActivity {
     reviewCount:
       raw.number_of_ratings || raw.reviewCount || raw.reviews?.count || 0,
     price: {
-      amount:
-        raw.price?.values?.amount ||
-        raw.retail_price?.amount ||
-        raw.price?.amount ||
-        0,
-      currencyCode:
-        raw.price?.values?.currency ||
-        raw.retail_price?.currency ||
-        raw.price?.currencyCode ||
-        "USD",
-      formattedPrice:
-        raw.retail_price?.formatted ||
-        raw.price?.formattedPrice ||
-        `$${raw.price?.values?.amount || raw.retail_price?.amount || raw.price?.amount || 0}`,
+      amount: amount ?? 0,
+      currencyCode: currency ?? "",
+      formattedPrice: formatPrice(amount, currency) ?? "",
     },
     duration: {
       fixedDurationInMinutes: raw.duration?.value

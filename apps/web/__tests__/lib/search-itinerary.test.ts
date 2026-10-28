@@ -339,7 +339,7 @@ describe.each(["successful", "recovered"] as const)(
       ]);
       expect(result.days[0].transport).toBe(alternative);
       expect(result.days.map((day) => day.estimatedCost)).toEqual([
-        1200,
+        undefined,
         undefined,
         undefined,
         undefined,
@@ -374,9 +374,7 @@ describe.each(["successful", "recovered"] as const)(
         expect(result.days[0].transport).toBe(
           transportId === outbound.id ? outbound : undefined,
         );
-        expect(result.days[0].estimatedCost).toBe(
-          transportId === "unknown-offer" ? undefined : 900,
-        );
+        expect(result.days[0].estimatedCost).toBeUndefined();
       },
     );
 
@@ -396,7 +394,7 @@ describe.each(["successful", "recovered"] as const)(
       expect(result.days[0].estimatedCost).toBeUndefined();
     });
 
-    it("consumes activities only in compatible slots and invalidates only changed day estimates", async () => {
+    it("consumes activities only in compatible slots without trusting model totals", async () => {
       const night = { ...activity("night", "evening"), price: 50 };
       const morning = activity("morning", "morning");
       const days = [generatedDay(1), generatedDay(2), generatedDay(3)];
@@ -418,7 +416,7 @@ describe.each(["successful", "recovered"] as const)(
       expect(result.days[2].evening.activities).toEqual([]);
       expect(result.days.map((day) => day.estimatedCost)).toEqual([
         undefined,
-        150,
+        undefined,
         undefined,
       ]);
       const mapped = mapSearchResultsToItinerary(
@@ -434,7 +432,7 @@ describe.each(["successful", "recovered"] as const)(
       );
       expect(mapped.days.map((day) => day.totalEstimatedCost)).toEqual([
         undefined,
-        { amount: 150, currency: "USD" },
+        undefined,
         undefined,
       ]);
     });

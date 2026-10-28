@@ -261,8 +261,18 @@ export async function searchAmadeusFlights(
     );
     const offers = response.data || [];
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return offers.map((offer: any) => normalizeFlightOffer(offer));
+    return offers
+      .filter((value: unknown) => {
+        if (!value || typeof value !== "object") return false;
+        const offer = value as {
+          price?: { total?: unknown; currency?: unknown };
+        };
+        return (
+          providerAmount(offer.price?.total) !== undefined &&
+          !!currencyCode(offer.price?.currency)
+        );
+      })
+      .map(normalizeFlightOffer);
   } catch (error) {
     console.error("[Amadeus] Flight search error:", error);
     return [];
@@ -298,8 +308,8 @@ function normalizeFlightOffer(offer: any): AmadeusFlightOffer {
     offerId: offer.id || "",
     airlines,
     price: {
-      amount: parseFloat(offer.price?.total || "0"),
-      currency: offer.price?.currency || "USD",
+      amount: providerAmount(offer.price?.total)!,
+      currency: currencyCode(offer.price?.currency)!,
     },
     departure: {
       airport: firstSegment.departure?.iataCode || "",

@@ -103,3 +103,28 @@ test('retains verification reminders for display on native itineraries', () => {
   ]);
   expect(days[0].tips).toEqual(['Confirm allergen safety with the restaurant']);
 });
+
+test('does not show legacy unknown costs as free or revive a fallback price', () => {
+  const [day] = transformItineraryDays([
+    {
+      morning: {
+        activities: [
+          {
+            name: 'Walk',
+            price: 50,
+            estimatedCost: { amount: 0, currency: 'USD', status: 'unknown' },
+          },
+        ],
+        meals: [
+          {
+            name: 'Meal',
+            price: 50,
+            estimatedCost: { amount: 0, currency: 'USD', status: 'unknown' },
+          },
+        ],
+      },
+    },
+  ]);
+  expect(day.activities.map((activity) => activity.estimatedCost)).toEqual([undefined, undefined]);
+  expect(day.activities.map((activity) => activity.price)).toEqual([undefined, undefined]);
+});

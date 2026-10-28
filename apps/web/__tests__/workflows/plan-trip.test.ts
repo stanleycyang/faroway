@@ -356,7 +356,13 @@ describe("planTripWorkflow", () => {
       dining: [],
       notes: [],
     });
-    mocks.runAggregatorAgent.mockResolvedValue({ days: [], topHotel: hotel });
+    mocks.runAggregatorAgent.mockResolvedValue({
+      days: Array.from({ length: 5 }, (_, index) => ({
+        dayNumber: index + 1,
+        date: `2026-06-0${index + 1}`,
+      })),
+      topHotel: hotel,
+    });
     mocks.mapSearchResultsToItinerary.mockImplementation((results) =>
       mappedItinerary({
         hotels: results.hotels,
@@ -368,6 +374,18 @@ describe("planTripWorkflow", () => {
     mocks.buildJsonRenderSpec.mockReturnValue([
       { type: "TripSummary", props: { destination: "Tokyo" } },
     ]);
+  });
+
+  it("rejects an incomplete or misdated itinerary before saving it", async () => {
+    mocks.runAggregatorAgent.mockResolvedValue({
+      days: [{ dayNumber: 1, date: "2026-06-02" }],
+      topHotel: hotel,
+    });
+    const result = await planTripWorkflow(workflowInput);
+    expect(result.status).toBe("error");
+    expect(result.error).toContain("does not cover the saved trip dates");
+    expect(mocks.mapSearchResultsToItinerary).not.toHaveBeenCalled();
+    expect(mocks.dispatchItineraryReady).not.toHaveBeenCalled();
   });
 
   it("retains verification reminders in the saved itinerary", async () => {
@@ -590,6 +608,46 @@ describe("planTripWorkflow", () => {
         );
     },
   );
+
+  it("persists only price and currency pairs with valid provenance", async () => {
+    const missingCurrency = {
+      ...activity,
+      id: "no-currency",
+      price: 40,
+      currency: "",
+    };
+    const unknown = {
+      ...activity,
+      id: "unknown",
+      price: 0,
+      currency: "USD",
+      priceStatus: "unknown" as const,
+    };
+    const valid = { ...activity, id: "valid", price: 25, currency: "EUR" };
+    await saveSearchResults(
+      "search-1",
+      mappedItinerary({
+        hotels: [],
+        dining: [],
+        transport: [],
+        activities: [missingCurrency, unknown, valid],
+        days: [],
+      }),
+    );
+    const rows = persistedResults as (ResultRow & {
+      price_amount: number | null;
+      price_currency: string | null;
+    })[];
+    expect(
+      rows.find((row) => (row.data as { id: string }).id === "no-currency"),
+    ).toMatchObject({ price_amount: null, price_currency: null });
+    expect(
+      rows.find((row) => (row.data as { id: string }).id === "unknown"),
+    ).toMatchObject({ price_amount: null, price_currency: null });
+    expect(
+      rows.find((row) => (row.data as { id: string }).id === "valid"),
+    ).toMatchObject({ price_amount: 25, price_currency: "EUR" });
+  });
 
   it("round-trips logical activity and meal IDs through UUID columns without changing scheduled order", async () => {
     vi.stubEnv("VIATOR_CONTENT_ENABLED", "true");
@@ -839,7 +897,14 @@ describe("planTripWorkflow", () => {
       topHotel: hotel,
     });
 
-    const result = await planTripWorkflow(workflowInput);
+    mocks.runOrchestratorAgent.mockResolvedValue({
+      ...searchPlan,
+      dates: { start: "2026-06-01", end: "2026-06-02", nights: 1 },
+    });
+    const result = await planTripWorkflow({
+      ...workflowInput,
+      endDate: "2026-06-02",
+    });
 
     expect(result.status).toBe("completed");
     expect(supabaseMock.rpc).toHaveBeenCalledWith(

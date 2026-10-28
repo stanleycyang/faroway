@@ -83,8 +83,14 @@ function transformApiActivity(a: any, timeOfDay: string): Activity {
               ].includes(a.type)
             ? a.type
             : 'activity',
-    estimatedCost: readTripCost(a.estimatedCost) || readTripCost(a.price),
-    price: formatCostValue(a.estimatedCost) || formatCostValue(a.price),
+    estimatedCost:
+      a.estimatedCost?.status === 'unknown' || a.priceStatus === 'unknown'
+        ? undefined
+        : readTripCost(a.estimatedCost) || readTripCost(a.price),
+    price:
+      a.estimatedCost?.status === 'unknown' || a.priceStatus === 'unknown'
+        ? undefined
+        : formatCostValue(a.estimatedCost) || formatCostValue(a.price),
     bookingUrl:
       displayText(a.bookingInfo?.bookingUrl) ||
       displayText(a.bookingUrl) ||
@@ -114,8 +120,14 @@ function transformApiRestaurant(r: any): Activity {
     location: displayText(r.location?.name) || displayText(r.location),
     duration: '1-2 hours',
     type: 'restaurant',
-    estimatedCost: readTripCost(r.estimatedCost) || readTripCost(r.price),
-    price: formatCostValue(r.estimatedCost) || formatCostValue(r.price),
+    estimatedCost:
+      r.estimatedCost?.status === 'unknown' || r.priceStatus === 'unknown'
+        ? undefined
+        : readTripCost(r.estimatedCost) || readTripCost(r.price),
+    price:
+      r.estimatedCost?.status === 'unknown' || r.priceStatus === 'unknown'
+        ? undefined
+        : formatCostValue(r.estimatedCost) || formatCostValue(r.price),
     bookingUrl:
       displayText(r.reservationInfo?.url) ||
       displayText(r.bookingUrl) ||

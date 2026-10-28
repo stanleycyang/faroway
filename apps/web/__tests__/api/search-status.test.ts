@@ -91,6 +91,35 @@ describe("GET /api/search/[searchId]", () => {
     expect(json.error).toBe("Search not found");
   });
 
+  it("does not attach a default currency to an amount with unknown currency", async () => {
+    searchRecord = {
+      ...searchRecord,
+      status: "completed",
+      search_itineraries: [
+        {
+          day_number: 1,
+          date: "2026-06-01",
+          title: "Explore",
+          summary: "Day",
+          morning_activities: [],
+          afternoon_activities: [],
+          evening_activities: [],
+          meals: [],
+          estimated_cost: 125,
+          cost_currency: null,
+          tips: [],
+          hotel_id: null,
+        },
+      ],
+    };
+    const json = await (await GET(makeReq(), makeParams())).json();
+    expect(json.results.itinerary[0]).not.toHaveProperty("estimatedCost");
+    expect(
+      mapSearchResultsToItinerary(json.results, null).days[0]
+        .totalEstimatedCost,
+    ).toBeUndefined();
+  });
+
   it("keeps null day costs unavailable across the search read and bridge while preserving known zero and estimates", async () => {
     searchRecord = {
       ...searchRecord,

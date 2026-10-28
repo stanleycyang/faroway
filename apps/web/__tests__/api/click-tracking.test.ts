@@ -103,6 +103,8 @@ describe("POST /api/track/click", () => {
         id: "click_restaurant_123",
         item_type: "restaurant",
         affiliate_partner: "opentable",
+        price: null,
+        currency: null,
       }),
     );
   });

@@ -17,6 +17,10 @@ import { planningPauseResponse } from "@/lib/trips/planning-pause";
 
 import { NextRequest, NextResponse } from "next/server";
 import { logger } from "@/lib/logger";
+import {
+  hotelGuestCounts,
+  validateHotelSearchDetails,
+} from "@faroway/constants";
 import { getSupabase } from "@/lib/supabase/server";
 import { requireUserIdFromRequest } from "@/lib/auth/middleware";
 import {
@@ -141,6 +145,15 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     const tripPreferences = (trip.preferences || {}) as Record<string, unknown>;
+    const hotelDetails = validateHotelSearchDetails(
+      tripPreferences.hotelSearch,
+      trip.travelers,
+    )
+      ? tripPreferences.hotelSearch
+      : undefined;
+    const roomGuests = hotelDetails
+      ? hotelGuestCounts(hotelDetails)
+      : undefined;
     const bodyVibes = normalizeStringArray(bodyPreferences.vibes, 10, 50);
     const tripVibes = Array.isArray(trip.vibes) ? trip.vibes : [];
     const vibes = bodyVibes ?? tripVibes;
@@ -286,13 +299,15 @@ export async function POST(request: NextRequest, { params }: Params) {
           endDate: trip.end_date,
           travelers: trip.travelers || 2,
           adults:
-            typeof tripPreferences.adults === "number"
+            roomGuests?.adults ??
+            (typeof tripPreferences.adults === "number"
               ? tripPreferences.adults
-              : undefined,
+              : undefined),
           children:
-            typeof tripPreferences.children === "number"
+            roomGuests?.children ??
+            (typeof tripPreferences.children === "number"
               ? tripPreferences.children
-              : undefined,
+              : undefined),
           interests:
             normalizeStringArray(tripPreferences.interests, 20, 50) ??
             (Array.isArray(trip.interests)
@@ -311,6 +326,7 @@ export async function POST(request: NextRequest, { params }: Params) {
                 )
                 .map((value: string) => value.trim())
             : undefined,
+          roomCount: hotelDetails?.rooms.length,
           mobilityNeeds:
             typeof trip.mobility_needs === "string"
               ? trip.mobility_needs.trim() || undefined

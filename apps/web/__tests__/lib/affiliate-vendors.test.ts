@@ -68,6 +68,32 @@ describe("Duffel affiliate client", () => {
     expect(offers[0].departure.airport).toBe("SFO");
   });
 
+  it("drops flight offers with missing or invalid amount or currency", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          data: {
+            offers: [
+              { id: "missing-currency", total_amount: "50" },
+              { id: "missing-amount", total_currency: "USD" },
+              { id: "valid-zero", total_amount: "0", total_currency: "EUR" },
+            ],
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+    const { searchDuffelFlights } = await import("@/lib/affiliates/duffel");
+    const offers = await searchDuffelFlights({
+      origin: "SFO",
+      destination: "LAX",
+      departureDate: "2026-06-01",
+      passengers: [{ type: "adult", count: 1 }],
+    });
+    expect(offers.map((offer) => offer.offerId)).toEqual(["valid-zero"]);
+    expect(offers[0].price).toEqual({ amount: 0, currency: "EUR" });
+  });
+
   it("creates a Duffel Links session with the current endpoint", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
       new Response(
@@ -333,6 +359,42 @@ describe("GetYourGuide affiliate client", () => {
     vi.resetModules();
     vi.stubEnv("GETYOURGUIDE_API_KEY", "test-gyg-token");
     vi.stubEnv("GETYOURGUIDE_PARTNER_ID", "test-partner");
+  });
+
+  it("does not combine an amount and currency from different supplier price objects", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          data: {
+            tours: [
+              {
+                id: 1,
+                title: "Unknown",
+                price: { values: { amount: 10 }, currencyCode: "EUR" },
+              },
+              {
+                id: 2,
+                title: "Free",
+                retail_price: { amount: 0, currency: "JPY" },
+              },
+            ],
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+    const { searchGYGActivities } =
+      await import("@/lib/affiliates/getyourguide");
+    const activities = await searchGYGActivities({ destination: "Tokyo" });
+    expect(activities[0].price).toMatchObject({
+      amount: 0,
+      currencyCode: "",
+      formattedPrice: "",
+    });
+    expect(activities[1].price).toMatchObject({
+      amount: 0,
+      currencyCode: "JPY",
+    });
   });
 
   it("searches the current tours endpoint with required partner query parameters", async () => {

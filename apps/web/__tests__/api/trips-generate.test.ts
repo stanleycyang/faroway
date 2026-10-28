@@ -12,6 +12,7 @@ vi.mock("@/workflows/plan-trip", () => ({
 }));
 
 let tripStatus = "draft";
+let roomHasChild = false;
 let activeSearch: string | null = null;
 let searchCount = 0;
 let claimFails = false;
@@ -64,6 +65,15 @@ function createTableChain(table: string) {
           mobility_needs: "step-free access",
           preferences: {
             travelerType: "family",
+            hotelSearch: {
+              countryCode: "JP",
+              guestNationality: "US",
+              rooms: [
+                { adults: 1, children: roomHasChild ? [5] : [] },
+                ...(roomHasChild ? [] : [{ adults: 1, children: [] }]),
+              ],
+              consentVersion: "hotel-search-nuitee-v1",
+            },
             originCity: "San Francisco",
             originAirport: "SFO",
           },
@@ -146,7 +156,19 @@ describe("POST /api/trips/[id]/generate", () => {
     briefChangedBeforeClaim = false;
     deletedSearches.length = 0;
     tripStatus = "draft";
+    roomHasChild = false;
     startMock.mockResolvedValue({ runId: "run-1" });
+  });
+
+  it("derives children from saved room occupancy when separate counts are absent", async () => {
+    roomHasChild = true;
+    const response = await POST(makeReq(), {
+      params: Promise.resolve({ id: "trip-1" }),
+    });
+    expect(response.status).toBe(200);
+    expect(startMock).toHaveBeenCalledWith(expect.any(Function), [
+      expect.objectContaining({ adults: 1, children: 1, roomCount: 1 }),
+    ]);
   });
 
   it("does not dispatch a plan if the brief changed after it was read", async () => {
@@ -210,6 +232,7 @@ describe("POST /api/trips/[id]/generate", () => {
         interests: ["museums"],
         dietaryRestrictions: ["peanut allergy"],
         mobilityNeeds: "step-free access",
+        roomCount: 2,
         originCity: "San Francisco",
         originAirport: "SFO",
         vibes: ["foodie"],

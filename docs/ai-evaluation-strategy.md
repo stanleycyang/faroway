@@ -21,11 +21,12 @@ Current limits to address before promising constraint adherence:
   independently verify venue suitability; generated plans tell travelers to
   confirm dietary safety and accessibility directly.
 - Adult-only hotel and flight provider searches are skipped when children are
-  explicitly present until age-aware party pricing is available.
-- Activity and aggregator schemas still supply a default USD currency. Tests must
-  distinguish currency facts supplied by a source from values inserted by a
-  parser, mapper or renderer. Do not infer that every current output is wrong;
-  trace the source of each displayed price claim.
+  explicitly present. Hotel searches that cannot represent multiple rooms are
+  skipped too; age- and room-aware pricing requires the appropriate supplier flow.
+- Missing supplier amounts and currencies remain unknown; model-generated day,
+  activity and price-level totals are not treated as verified prices. Currency,
+  party size, room configuration and quote terms still need end-to-end checks for
+  each supplier and for historical records.
 - The offline rubric rejects empty plans, negative prices, outside-trip dates
   and overlaps hidden by negative transfer times. Evidence strings remain
   synthetic: nonempty strings alone cannot prove a venue claim is true.
@@ -166,8 +167,8 @@ hold back a small canary when promoting a tested candidate.
 
 ## Implementation order
 
-1. Close typed requirement propagation and fallback-preservation gaps; add tests
-   from brief capture through workflow, agents and the native view model.
+1. Expand end-to-end tests from brief capture through workflow, agents and the
+   native view model, including cases requiring external factual verification.
 2. Add an adapter that extracts evaluation records from actual generation traces
    while retaining source/provenance and raw outputs. Reject malformed traces
    explicitly instead of silently skipping them.

@@ -143,7 +143,7 @@ export async function runHotelsAgent(
 
   const apiPromises: [Promise<HotelResult[]>, Promise<HotelResult[]>] = [
     // Booking.com
-    !plan.children && isBookingConfigured()
+    !plan.children && (plan.roomCount ?? 1) <= 1 && isBookingConfigured()
       ? searchBookingHotels({
           destination,
           checkIn: dates.start,
@@ -218,7 +218,7 @@ export async function runHotelsAgent(
       : Promise.resolve([] as HotelResult[]),
 
     // Amadeus
-    !plan.children && isAmadeusConfigured()
+    !plan.children && (plan.roomCount ?? 1) <= 1 && isAmadeusConfigured()
       ? searchAmadeusHotels({
           cityCode: resolveAmadeusCityCode(destination),
           checkIn: dates.start,

@@ -179,7 +179,7 @@ export async function recordConversion(
       converted: true,
       converted_at: new Date().toISOString(),
       commission_amount: input.commissionAmount,
-      commission_currency: input.currency || "USD",
+      commission_currency: input.currency || null,
     })
     .eq("tracking_id", input.trackingId);
 

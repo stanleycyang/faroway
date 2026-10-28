@@ -61,6 +61,16 @@ describe("honest enrichment presentation", () => {
     expect(diningHtml).not.toContain("$$");
   });
 
+  it("does not display USD for a price without currency", () => {
+    const html = renderToStaticMarkup(
+      createElement(ActivityCard, {
+        activity: { ...activity, estimatedCost: { amount: 20, currency: "" } },
+      }),
+    );
+    expect(html).toContain("Price unknown");
+    expect(html).not.toContain("$20");
+  });
+
   it("labels positive activity amounts as estimates", () => {
     const html = renderToStaticMarkup(
       createElement(ActivityCard, {

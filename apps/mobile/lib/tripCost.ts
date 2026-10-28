@@ -8,6 +8,7 @@ export function readTripCost(value: unknown): TripCost | undefined {
   if (!value || typeof value !== 'object') return undefined;
   const cost = value as Record<string, unknown>;
   if (
+    cost.status === 'unknown' ||
     typeof cost.amount !== 'number' ||
     !Number.isFinite(cost.amount) ||
     cost.amount < 0 ||

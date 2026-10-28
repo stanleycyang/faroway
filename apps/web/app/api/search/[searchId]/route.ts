@@ -1,3 +1,4 @@
+import { readPrice } from "@faroway/constants";
 import { matchesTransportProjection } from "@/lib/search/transport-reference";
 import { filterViatorDisplay } from "@/lib/affiliates/viator-policy";
 /**
@@ -74,7 +75,7 @@ export async function GET(
         evening_activities: string[] | null;
         meals: string[] | null;
         estimated_cost: number | null;
-        cost_currency: string;
+        cost_currency: string | null;
         tips: string[];
         hotel_id: string | null;
         transport_id: string | null;
@@ -300,8 +301,10 @@ export async function GET(
                 meal: meals.evening,
               },
               transport: transportForDay(day),
-              estimatedCost: day.estimated_cost ?? undefined,
-              currency: day.cost_currency,
+              estimatedCost: readPrice(day.estimated_cost, day.cost_currency)
+                ?.amount,
+              currency: readPrice(day.estimated_cost, day.cost_currency)
+                ?.currency,
               tips: day.tips || [],
             };
           },

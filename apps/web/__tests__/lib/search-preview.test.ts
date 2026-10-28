@@ -30,6 +30,6 @@ describe("buildInstantPreview", () => {
     expect(preview[0].morning.activities).toEqual([]);
     expect(preview[0].afternoon.activities).toEqual([]);
     expect(preview[0].evening.activities).toEqual([]);
-    expect(preview[0].totalEstimatedCost?.currency).toBe("USD");
+    expect(preview[0].totalEstimatedCost).toBeUndefined();
   });
 });
