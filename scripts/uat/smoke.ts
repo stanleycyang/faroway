@@ -51,10 +51,10 @@ async function main() {
   if (has("--help")) {
     console.log(`Usage:
   bun run uat:smoke -- --dry-run --tier 0,1,2 --supabase-url https://omovikloadpvzijoaqus.supabase.co
-  bun run uat:smoke -- --tier 0 --supabase-url https://omovikloadpvzijoaqus.supabase.co --api-url https://staging.example
-  bun run uat:smoke -- --tier 2 --live --supabase-url https://omovikloadpvzijoaqus.supabase.co --api-url https://staging.example
+  bun run uat:smoke -- --tier 0 --supabase-url https://omovikloadpvzijoaqus.supabase.co --api-url https://faroway-git-verify-staging-readiness-20261018-testimonio.vercel.app
+  bun run uat:smoke -- --tier 2 --live --supabase-url https://omovikloadpvzijoaqus.supabase.co --api-url https://faroway-git-verify-staging-readiness-20261018-testimonio.vercel.app
 
-Refuses production (${"jcnephijkxgtprsutgsf"}) and any project other than staging (omovikloadpvzijoaqus).
+Refuses production (${"jcnephijkxgtprsutgsf"}), faroway.ai, and any API host that is not a faroway staging preview.
 Tier 2 is not dispatched unless --live is set. Existing uat:api, uat:images and uat:native scripts are unchanged.`);
     return;
   }

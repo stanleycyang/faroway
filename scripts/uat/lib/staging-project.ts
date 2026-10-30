@@ -1,6 +1,13 @@
 export const STAGING_PROJECT_REF = "omovikloadpvzijoaqus";
 export const PRODUCTION_PROJECT_REF = "jcnephijkxgtprsutgsf";
 
+/** Preview API alias recorded for staging readiness. Other faroway-*-testimonio hosts are also accepted. */
+export const STAGING_PREVIEW_API_URL =
+  "https://faroway-git-verify-staging-readiness-20261018-testimonio.vercel.app";
+
+const STAGING_PREVIEW_HOST =
+  /^faroway(?:-git)?-[a-z0-9-]+-testimonio\.vercel\.app$/;
+
 const PROJECT_REF = /^[a-z]{20}$/;
 
 export class StagingGuardError extends Error {
@@ -44,6 +51,45 @@ export function projectRefFromAnonKey(key: string): string | null {
       : null;
   } catch {
     return null;
+  }
+}
+
+function productionAppHost(host: string): boolean {
+  return host === "faroway.ai" || host.endsWith(".faroway.ai");
+}
+
+/** Reject production and any host that is not a Faroway staging preview deployment. */
+export function assertStagingApiUrl(value: string): void {
+  let url: URL;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new StagingGuardError(
+      "unknown",
+      "Refusing to run: API URL is not a valid URL",
+    );
+  }
+  const host = url.hostname.toLowerCase();
+  if (productionAppHost(host)) {
+    throw new StagingGuardError(
+      "production",
+      `Refusing to run: API host ${host} is the production app`,
+    );
+  }
+  if (
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    url.port ||
+    (url.pathname !== "/" && url.pathname !== "") ||
+    url.search ||
+    url.hash ||
+    !STAGING_PREVIEW_HOST.test(host)
+  ) {
+    throw new StagingGuardError(
+      "unknown",
+      `Refusing to run: API host ${host || value} is not a staging deployment`,
+    );
   }
 }
 
@@ -107,6 +153,7 @@ export function assertStagingTarget(input: StagingTargetInput): {
       );
     }
   }
+  if (input.apiUrl?.trim()) assertStagingApiUrl(input.apiUrl.trim());
   return {
     projectRef: STAGING_PROJECT_REF,
     supabaseUrl: input.supabaseUrl,

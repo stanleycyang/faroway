@@ -13,6 +13,7 @@ import {
   generatePlanningObject,
   planningModel,
   resolvePlanningStepConfig,
+  usageFromModelError,
 } from "@/lib/ai/planning-step";
 
 afterEach(() => {
@@ -96,6 +97,56 @@ describe("planning step configuration", () => {
     expect(line).toContain('"thinkingExplicit":false');
     expect(line).toContain('"inputTokens":12');
     expect(line).toContain('"reasoningTokens":20');
+    info.mockRestore();
+  });
+
+  it("logs summed token usage when generation fails or retries", async () => {
+    const retried = {
+      errors: [
+        {
+          usage: { inputTokens: 100, outputTokens: 20, totalTokens: 120 },
+          responseBody: JSON.stringify({
+            usage: { inputTokens: 999, outputTokens: 999 },
+          }),
+        },
+        {
+          usage: {
+            inputTokens: 40,
+            outputTokens: 15,
+            outputTokenDetails: { textTokens: 5, reasoningTokens: 10 },
+          },
+          cause: { message: "schema" },
+        },
+      ],
+    };
+    expect(usageFromModelError(retried)).toMatchObject({
+      inputTokens: 140,
+      outputTokens: 35,
+    });
+    generateObject.mockRejectedValueOnce(retried);
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    await expect(
+      generatePlanningObject("aggregator", { prompt: "bad" }),
+    ).rejects.toBe(retried);
+    const line = info.mock.calls.map((call) => String(call[0])).join("\n");
+    expect(line).toContain('"event":"planning.step.usage"');
+    expect(line).toContain('"inputTokens":140');
+    expect(line).toContain('"outputTokens":35');
+    expect(line).toContain('"reasoningTokens":10');
+    info.mockRestore();
+  });
+
+  it("does not invent token usage for an error that has none", async () => {
+    const failure = new Error("socket hang up");
+    generateObject.mockRejectedValueOnce(failure);
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    await expect(
+      generatePlanningObject("hotels", { prompt: "x" }),
+    ).rejects.toBe(failure);
+    expect(usageFromModelError(failure)).toBeUndefined();
+    expect(
+      info.mock.calls.map((call) => String(call[0])).join("\n"),
+    ).not.toContain("planning.step.usage");
     info.mockRestore();
   });
 });

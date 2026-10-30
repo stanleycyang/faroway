@@ -2,37 +2,27 @@ import { z } from "zod";
 import type { TransportResult } from "@faroway/types";
 import { fetchWithTimeout } from "@/lib/search/runtime";
 import { isValidDateOnly } from "@/lib/api/date-range";
+import {
+  buildLiteApiFlightRequest,
+  LiteApiFlightSearchSchema,
+  liteApiFlightAirport,
+  liteApiFlightCurrency,
+  liteApiPassengerCounts,
+  type LiteApiFlightSearch,
+  type LiteApiFlightSearchParsed,
+} from "./liteapi-flight-request";
 
-// Contract: https://docs.liteapi.travel/reference/post_flights-rates
-const date = z.string().refine(isValidDateOnly);
-const airport = z.string().regex(/^[A-Z]{3}$/);
-const currency = z.string().regex(/^[A-Z]{3}$/);
+export {
+  buildLiteApiFlightRequest,
+  LiteApiFlightSearchSchema,
+  liteApiPassengerCounts,
+  type LiteApiFlightSearch,
+} from "./liteapi-flight-request";
+
+const airport = liteApiFlightAirport;
+const currency = liteApiFlightCurrency;
 const money = z.number().finite().nonnegative();
-export const LiteApiFlightSearchSchema = z
-  .object({
-    origin: airport,
-    destination: airport,
-    departureDate: date,
-    returnDate: date.optional(),
-    adults: z.number().int().min(1).max(50),
-    childAges: z.array(z.number().int().min(0).max(17)).max(49),
-    currency,
-    cabinClass: z
-      .enum(["economy", "premium_economy", "business", "first"])
-      .default("economy"),
-    maxStops: z.number().int().min(0).max(2).default(1),
-    limit: z.number().int().min(1).max(20).default(5),
-  })
-  .strict()
-  .refine(
-    (p) =>
-      p.origin !== p.destination &&
-      (!p.returnDate || p.returnDate > p.departureDate) &&
-      p.adults + p.childAges.length <= 50,
-    "Invalid itinerary or party",
-  );
-export type LiteApiFlightSearch = z.input<typeof LiteApiFlightSearchSchema>;
-type Search = z.output<typeof LiteApiFlightSearchSchema>;
+type Search = LiteApiFlightSearchParsed;
 export type FlightMode = "sandbox" | "production";
 
 export function liteApiFlightsConfigured(mode: FlightMode = "production") {
@@ -44,69 +34,6 @@ export function liteApiFlightsConfigured(mode: FlightMode = "production") {
     : process.env.LITEAPI_FLIGHTS_ENABLED === "true" &&
         process.env.LITEAPI_FLIGHTS_PRODUCTION_APPROVED === "true" &&
         !key.startsWith("sand_");
-}
-
-/** LiteAPI classifies 12–17-year-olds as adults, unlike the trip's child count. */
-export function liteApiPassengerCounts(adults: number, ages: number[]) {
-  const childrenAges = ages.filter((age) => age >= 2 && age < 12);
-  const infantAges = ages.filter((age) => age < 2);
-  return {
-    adults: adults + ages.filter((age) => age >= 12).length,
-    children: childrenAges.length,
-    infants: infantAges.length,
-    childrenAges,
-    infantAges,
-  };
-}
-
-export function buildLiteApiFlightRequest(
-  input: LiteApiFlightSearch,
-  now = Date.now(),
-) {
-  const p = LiteApiFlightSearchSchema.parse(input);
-  const horizon = new Date(now);
-  const originalDay = horizon.getUTCDate();
-  horizon.setUTCDate(1);
-  horizon.setUTCMonth(horizon.getUTCMonth() + 11);
-  const lastDay = new Date(
-    Date.UTC(horizon.getUTCFullYear(), horizon.getUTCMonth() + 1, 0),
-  ).getUTCDate();
-  horizon.setUTCDate(Math.min(originalDay, lastDay));
-  const today = new Date(now).toISOString().slice(0, 10);
-  const latest = horizon.toISOString().slice(0, 10);
-  if (p.departureDate < today || (p.returnDate ?? p.departureDate) > latest)
-    throw new Error("Flight dates must be within 11 months");
-  const party = liteApiPassengerCounts(p.adults, p.childAges);
-  if (party.infants > p.adults)
-    throw new Error("Each infant requires an accompanying adult");
-  return {
-    legs: [
-      {
-        origin: p.origin,
-        destination: p.destination,
-        date: p.departureDate,
-        direction: "OUTBOUND",
-      },
-      ...(p.returnDate
-        ? [
-            {
-              origin: p.destination,
-              destination: p.origin,
-              date: p.returnDate,
-              direction: "INBOUND",
-            },
-          ]
-        : []),
-    ],
-    ...party,
-    currency: p.currency,
-    cabinClass: p.cabinClass.toUpperCase(),
-    filters: {
-      maxStops: p.maxStops,
-      cabinClass: p.cabinClass.toUpperCase(),
-      cabinClassMatch: "exactly",
-    },
-  };
 }
 
 // Airport-local wall-clock times may have no offset. Never calculate elapsed

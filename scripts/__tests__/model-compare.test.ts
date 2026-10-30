@@ -83,6 +83,57 @@ describe("model comparison harness", () => {
     expect(report.rows).toHaveLength(1);
   });
 
+  test("counts fallback and schema-failure tokens toward the $20 cap", async () => {
+    let calls = 0;
+    const report = await runModelComparison({
+      mode: "live",
+      target: { supabaseUrl: stagingUrl },
+      executeStep: async () => {
+        calls += 1;
+        return {
+          model: "google/gemini-3-flash",
+          thinkingLevel: "high",
+          latencyMs: 4,
+          usage: {
+            inputTokens: 2_000_000,
+            outputTokens: 8_000_000,
+            reasoningTokens: 1_000_000,
+          },
+          fallback: {
+            reason: "schema_recovery",
+            outcome: "recovered_itinerary",
+          },
+        };
+      },
+    });
+    expect(calls).toBe(1);
+    expect(report.aborted).toBe(true);
+    expect(report.spentUsd).toBeGreaterThanOrEqual(20);
+    expect(report.rows[0]?.fallbacks).toBe(1);
+    expect(report.rows[0]?.outputTokens).toBe(8_000_000);
+    expect(report.rows[0]?.reasoningTokens).toBe(1_000_000);
+  });
+
+  test("refuses a production API host before any comparison", async () => {
+    let calls = 0;
+    await expect(
+      runModelComparison({
+        mode: "dry-run",
+        target: { supabaseUrl: stagingUrl, apiUrl: "https://faroway.ai" },
+        executeStep: async () => {
+          calls += 1;
+          return {
+            model: "google/gemini-3-flash",
+            thinkingLevel: "high",
+            latencyMs: 1,
+            usage: { inputTokens: 1, outputTokens: 1 },
+          };
+        },
+      }),
+    ).rejects.toThrow(/production app/);
+    expect(calls).toBe(0);
+  });
+
   test("refuses an unpriced model instead of continuing", async () => {
     await expect(
       runModelComparison({

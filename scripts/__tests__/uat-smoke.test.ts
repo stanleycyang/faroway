@@ -4,14 +4,16 @@ import { resolve } from "node:path";
 import { IMAGE_PATHS } from "../../packages/constants/src/images";
 import { runSmoke } from "../uat/lib/smoke-runner";
 import { evaluateSavedPlan } from "../uat/lib/plan-quality";
+import { buildLiteApiFlightRequest } from "../../apps/web/lib/affiliates/liteapi-flight-request";
 import {
   PRODUCTION_PROJECT_REF,
+  STAGING_PREVIEW_API_URL,
   STAGING_PROJECT_REF,
 } from "../uat/lib/staging-project";
 
 const root = resolve(import.meta.dirname, "../..");
 const stagingUrl = `https://${STAGING_PROJECT_REF}.supabase.co`;
-const apiUrl = "https://staging.example";
+const apiUrl = STAGING_PREVIEW_API_URL;
 
 function anon(ref: string): string {
   const payload = Buffer.from(JSON.stringify({ ref, role: "anon" })).toString(
@@ -64,6 +66,27 @@ describe("UAT smoke suite", () => {
     await expect(
       runSmoke({ tiers: [0], target: {}, fetchImpl }),
     ).rejects.toThrow(/no Supabase project ref/);
+    await expect(
+      runSmoke({
+        tiers: [0],
+        target: { supabaseUrl: stagingUrl, apiUrl: "https://www.faroway.ai" },
+        fetchImpl,
+      }),
+    ).rejects.toThrow(/production app/);
+    await expect(
+      runSmoke({
+        tiers: [0],
+        target: { supabaseUrl: stagingUrl, apiUrl: "https://faroway.ai/api" },
+        fetchImpl,
+      }),
+    ).rejects.toThrow(/production app/);
+    await expect(
+      runSmoke({
+        tiers: [0],
+        target: { supabaseUrl: stagingUrl, apiUrl: "https://evil.example" },
+        fetchImpl,
+      }),
+    ).rejects.toThrow(/not a staging deployment/);
   });
 
   test("dry-run does not call the network", async () => {
@@ -189,6 +212,113 @@ describe("UAT smoke suite", () => {
     expect(
       report.checks.find((item) => item.name === "getyourguide")?.status,
     ).toBe("skipped");
+  });
+
+  test("HTTP 5xx fails the check", async () => {
+    const fetchImpl = async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/health")) return response(500, { status: "ok" });
+      if (url.includes("/api/destinations/popular"))
+        return response(200, { destinations: [] });
+      if (url.endsWith("/api/trips")) return response(401, {});
+      if (url.endsWith("/api/cron/cleanup")) return response(401, {});
+      if (url.includes("/api/places/venues"))
+        return response(500, { error: "upstream" });
+      if (url.includes("/api/weather"))
+        return response(503, { status: "available" });
+      return response(200, null, "image/jpeg");
+    };
+    const report = await runSmoke({
+      tiers: [0],
+      target: {
+        supabaseUrl: stagingUrl,
+        apiUrl,
+        anonKey: anon(STAGING_PROJECT_REF),
+      },
+      env: {
+        FAROWAY_UAT_PLACES_LIVE: "1",
+        FAROWAY_UAT_MET_ENABLED: "1",
+      },
+      fetchImpl: fetchImpl as typeof fetch,
+      imagePaths: ["destinations/lisbon.jpg"],
+      expectedImageCount: 1,
+      repoRoot: root,
+    });
+    expect(report.ok).toBe(false);
+    for (const name of ["health", "places", "weather"]) {
+      const item = report.checks.find((check) => check.name === name);
+      expect(item?.status).toBe("failed");
+      expect(item?.detail).toMatch(/^HTTP 5/);
+    }
+    expect(
+      report.checks.find((check) => check.name === "places")?.status,
+    ).not.toBe("skipped");
+  });
+
+  test("LiteAPI flight probe posts legs and does not treat a sandbox flag as success", async () => {
+    let body: Record<string, unknown> | undefined;
+    const fetchImpl = async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.endsWith("/flights/rates")) {
+        body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        return response(200, { sandbox: true });
+      }
+      if (url.endsWith("/hotels/rates"))
+        return response(500, { sandbox: true });
+      return response(200, { data: [] });
+    };
+    const failed = await runSmoke({
+      tiers: [1],
+      target: { projectRef: STAGING_PROJECT_REF },
+      env: {
+        LITEAPI_SANDBOX_ENABLED: "true",
+        LITEAPI_FLIGHTS_SANDBOX_ENABLED: "true",
+        LITEAPI_API_KEY: "sand_uat_test_key",
+      },
+      fetchImpl: fetchImpl as typeof fetch,
+    });
+    const legs = body?.legs as Array<Record<string, unknown>> | undefined;
+    expect(legs?.[0]).toMatchObject({
+      origin: "LIS",
+      destination: "OPO",
+      direction: "OUTBOUND",
+    });
+    expect(body).not.toHaveProperty("origin");
+    expect(body).not.toHaveProperty("departureDate");
+    expect(body).toEqual(
+      buildLiteApiFlightRequest({
+        origin: "LIS",
+        destination: "OPO",
+        departureDate: String(legs?.[0]?.date),
+        adults: 1,
+        childAges: [],
+        currency: "USD",
+      }),
+    );
+    expect(
+      failed.checks.find((item) => item.name === "liteapi-flights-sandbox")
+        ?.status,
+    ).toBe("failed");
+    expect(
+      failed.checks.find((item) => item.name === "liteapi-hotels-sandbox"),
+    ).toMatchObject({ status: "failed", detail: "HTTP 500" });
+
+    const passed = await runSmoke({
+      tiers: [1],
+      target: { projectRef: STAGING_PROJECT_REF },
+      env: {
+        LITEAPI_FLIGHTS_SANDBOX_ENABLED: "true",
+        LITEAPI_API_KEY: "sand_uat_test_key",
+      },
+      fetchImpl: (async (input: RequestInfo | URL) => {
+        if (String(input).endsWith("/flights/rates"))
+          return response(502, { data: [] });
+        return response(200, { data: [{ journeys: [] }] });
+      }) as typeof fetch,
+    });
+    expect(
+      passed.checks.find((item) => item.name === "liteapi-flights-sandbox"),
+    ).toMatchObject({ status: "failed", detail: "HTTP 502" });
   });
 
   test("tier 2 is not dispatched unless --live is set", async () => {

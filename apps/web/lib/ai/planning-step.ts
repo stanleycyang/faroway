@@ -279,6 +279,117 @@ export function logPlanningFallback(
   return record;
 }
 
+function numeric(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isFinite(value)
+    ? value
+    : undefined;
+}
+
+function usageFromValue(value: unknown): AiUsage | null {
+  if (!value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const details =
+    record.outputTokenDetails && typeof record.outputTokenDetails === "object"
+      ? (record.outputTokenDetails as Record<string, unknown>)
+      : undefined;
+  const inputTokens = numeric(record.inputTokens);
+  const outputTokens = numeric(record.outputTokens);
+  const totalTokens = numeric(record.totalTokens);
+  const reasoningTokens = numeric(record.reasoningTokens);
+  const textTokens = numeric(details?.textTokens);
+  const detailReasoning = numeric(details?.reasoningTokens);
+  if (
+    inputTokens == null &&
+    outputTokens == null &&
+    totalTokens == null &&
+    reasoningTokens == null &&
+    textTokens == null &&
+    detailReasoning == null
+  ) {
+    return null;
+  }
+  return {
+    inputTokens,
+    outputTokens,
+    totalTokens,
+    reasoningTokens,
+    outputTokenDetails: details
+      ? { textTokens, reasoningTokens: detailReasoning }
+      : undefined,
+  };
+}
+
+function addUsage(left: AiUsage, right: AiUsage): AiUsage {
+  const add = (a: number | undefined, b: number | undefined) =>
+    (a ?? 0) + (b ?? 0);
+  return {
+    inputTokens: add(left.inputTokens, right.inputTokens),
+    outputTokens: add(left.outputTokens, right.outputTokens),
+    totalTokens: add(left.totalTokens, right.totalTokens),
+    reasoningTokens: add(left.reasoningTokens, right.reasoningTokens),
+    outputTokenDetails: {
+      textTokens: add(
+        left.outputTokenDetails?.textTokens,
+        right.outputTokenDetails?.textTokens,
+      ),
+      reasoningTokens: add(
+        left.outputTokenDetails?.reasoningTokens,
+        right.outputTokenDetails?.reasoningTokens,
+      ),
+    },
+  };
+}
+
+function collectUsage(error: unknown, seen: Set<object>, out: AiUsage[]) {
+  if (!error || typeof error !== "object" || seen.has(error)) return;
+  seen.add(error);
+  const record = error as {
+    usage?: unknown;
+    responseBody?: unknown;
+    errors?: unknown;
+    cause?: unknown;
+  };
+  const direct = usageFromValue(record.usage);
+  if (direct) out.push(direct);
+  else if (typeof record.responseBody === "string") {
+    try {
+      const parsed = JSON.parse(record.responseBody) as {
+        usage?: unknown;
+      };
+      const fromBody = usageFromValue(parsed.usage) ?? usageFromValue(parsed);
+      if (fromBody) out.push(fromBody);
+    } catch {
+      // Response bodies are not always JSON.
+    }
+  }
+  if (Array.isArray(record.errors)) {
+    for (const item of record.errors) collectUsage(item, seen, out);
+  }
+  collectUsage(record.cause, seen, out);
+}
+
+/** Token usage from a failed generation, including each retry nested on the error. */
+export function usageFromModelError(error: unknown): AiUsage | undefined {
+  const found: AiUsage[] = [];
+  collectUsage(error, new Set(), found);
+  if (!found.length) return undefined;
+  return found.reduce(addUsage);
+}
+
+export function sumPlanningUsage(
+  records: PlanningUsageRecord[],
+): PlanningUsageRecord | undefined {
+  if (!records.length) return undefined;
+  return records.reduce((sum, record) => ({
+    ...record,
+    inputTokens: (sum.inputTokens ?? 0) + (record.inputTokens ?? 0),
+    outputTokens: (sum.outputTokens ?? 0) + (record.outputTokens ?? 0),
+    reasoningTokens: (sum.reasoningTokens ?? 0) + (record.reasoningTokens ?? 0),
+    totalTokens: (sum.totalTokens ?? 0) + (record.totalTokens ?? 0),
+    latencyMs: sum.latencyMs + record.latencyMs,
+  }));
+}
+
 function logPlanningUsage(
   step: PlanningStep,
   config: PlanningStepConfig,
@@ -313,7 +424,13 @@ export async function generatePlanningObject<T>(
   const started = Date.now();
   const config = resolvePlanningStepConfig(step);
   for (const rejection of config.rejections) logPlanningConfig(step, rejection);
-  const result = await generateObject<T>(applyPlanningStepArgs(step, args));
-  logPlanningUsage(step, config, result.usage, Date.now() - started);
-  return result;
+  try {
+    const result = await generateObject<T>(applyPlanningStepArgs(step, args));
+    logPlanningUsage(step, config, result.usage, Date.now() - started);
+    return result;
+  } catch (error) {
+    const usage = usageFromModelError(error);
+    if (usage) logPlanningUsage(step, config, usage, Date.now() - started);
+    throw error;
+  }
 }

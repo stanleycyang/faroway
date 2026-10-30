@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   PRODUCTION_PROJECT_REF,
+  STAGING_PREVIEW_API_URL,
   STAGING_PROJECT_REF,
   StagingGuardError,
   assertStagingTarget,
@@ -24,7 +25,7 @@ describe("staging project guard", () => {
         supabaseUrl: stagingUrl,
         projectRef: STAGING_PROJECT_REF,
         anonKey: anon(STAGING_PROJECT_REF),
-        apiUrl: "https://staging.example",
+        apiUrl: STAGING_PREVIEW_API_URL,
       }).projectRef,
     ).toBe(STAGING_PROJECT_REF);
   });
@@ -56,6 +57,36 @@ describe("staging project guard", () => {
     ).toThrow(/not staging/);
     expect(() => assertStagingTarget({})).toThrow(/no Supabase project ref/);
     expect(projectRefFromAnonKey("not-a-jwt")).toBe(null);
+  });
+
+  test("refuses production and unknown API hosts", () => {
+    for (const apiUrl of [
+      "https://faroway.ai",
+      "https://www.faroway.ai",
+      "https://api.faroway.ai/anything",
+    ]) {
+      expect(() =>
+        assertStagingTarget({ supabaseUrl: stagingUrl, apiUrl }),
+      ).toThrow(/production app/);
+    }
+    expect(() =>
+      assertStagingTarget({
+        supabaseUrl: stagingUrl,
+        apiUrl: "https://evil.example",
+      }),
+    ).toThrow(/not a staging deployment/);
+    expect(() =>
+      assertStagingTarget({
+        supabaseUrl: stagingUrl,
+        apiUrl: "http://faroway-abc-testimonio.vercel.app",
+      }),
+    ).toThrow(/not a staging deployment/);
+    expect(
+      assertStagingTarget({
+        supabaseUrl: stagingUrl,
+        apiUrl: "https://faroway-abc123-testimonio.vercel.app",
+      }).projectRef,
+    ).toBe(STAGING_PROJECT_REF);
   });
 
   test("refuses a non-supabase host", () => {

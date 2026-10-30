@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { buildLiteApiFlightRequest } from "../../../apps/web/lib/affiliates/liteapi-flight-request";
 import { buildViatorHandoffUrl } from "../../../apps/web/lib/affiliates/viator-link";
 import { UAT_BRIEFS, type UatBrief } from "./briefs";
 import { evaluateSavedPlan } from "./plan-quality";
@@ -92,6 +93,17 @@ function check(
   detail?: string,
 ): CheckResult {
   return { tier, name, status, ...(detail ? { detail } : {}) };
+}
+
+function serverFailure(
+  tier: 0 | 1 | 2,
+  name: string,
+  status: number,
+): CheckResult | null {
+  if (status >= 500 && status < 600) {
+    return check(tier, name, "failed", `HTTP ${status}`);
+  }
+  return null;
 }
 
 function planned(tier: 0 | 1 | 2, names: string[]): CheckResult[] {
@@ -282,9 +294,10 @@ async function runTier0(
   } else {
     const health = await http(fetchImpl, `${api}/api/health`);
     checks.push(
-      health.status === 200 && record(health.data)?.status === "ok"
-        ? check(0, "health", "passed")
-        : check(0, "health", "failed", `status ${health.status}`),
+      serverFailure(0, "health", health.status) ??
+        (health.status === 200 && record(health.data)?.status === "ok"
+          ? check(0, "health", "passed")
+          : check(0, "health", "failed", `status ${health.status}`)),
     );
     const destinations = await http(
       fetchImpl,
@@ -313,34 +326,48 @@ async function runTier0(
       `${api}/api/places/venues?query=Lisbon`,
     );
     const placesError = record(places.data)?.error;
-    if (envFlag(env, "FAROWAY_UAT_PLACES_LIVE")) {
+    // 501 plus the explicit unavailable message is the disabled contract, not an outage.
+    const placesDisabled =
+      !envFlag(env, "FAROWAY_UAT_PLACES_LIVE") &&
+      places.status === 501 &&
+      typeof placesError === "string" &&
+      placesError.toLowerCase().includes("not available");
+    const placesDown = placesDisabled
+      ? null
+      : serverFailure(0, "places", places.status);
+    if (placesDisabled) {
+      checks.push(check(0, "places", "passed", "disabled state is explicit"));
+    } else if (placesDown) {
+      checks.push(placesDown);
+    } else if (envFlag(env, "FAROWAY_UAT_PLACES_LIVE")) {
       checks.push(
-        places.status !== 501
+        places.status === 200
           ? check(0, "places", "passed", "live places enabled")
-          : check(0, "places", "failed", "expected live places, got 501"),
-      );
-    } else {
-      checks.push(
-        places.status === 501 &&
-          typeof placesError === "string" &&
-          placesError.toLowerCase().includes("not available")
-          ? check(0, "places", "passed", "disabled state is explicit")
           : check(0, "places", "failed", `status ${places.status}`),
       );
+    } else {
+      checks.push(check(0, "places", "failed", `status ${places.status}`));
     }
     const weather = await http(
       fetchImpl,
       `${api}/api/weather?destinationId=lisbon&start=2026-12-07&end=2026-12-09`,
     );
     const weatherStatus = record(weather.data)?.status;
+    const weatherDown = serverFailure(0, "weather", weather.status);
+    const enabledWeather =
+      weather.status === 200 &&
+      (weatherStatus === "available" ||
+        weatherStatus === "unavailable" ||
+        weatherStatus === "outside_forecast");
     checks.push(
-      envFlag(env, "FAROWAY_UAT_MET_ENABLED")
-        ? weatherStatus !== "disabled"
-          ? check(0, "weather", "passed", String(weatherStatus))
-          : check(0, "weather", "failed", "expected MET to be enabled")
-        : weatherStatus === "disabled"
-          ? check(0, "weather", "passed", "disabled")
-          : check(0, "weather", "failed", `status ${String(weatherStatus)}`),
+      weatherDown ??
+        (envFlag(env, "FAROWAY_UAT_MET_ENABLED")
+          ? enabledWeather
+            ? check(0, "weather", "passed", String(weatherStatus))
+            : check(0, "weather", "failed", `status ${weather.status}`)
+          : weather.status === 200 && weatherStatus === "disabled"
+            ? check(0, "weather", "passed", "disabled")
+            : check(0, "weather", "failed", `status ${weather.status}`)),
     );
   }
   checks.push(...localContracts(repoRoot));
@@ -768,9 +795,12 @@ async function liteApiHotels(
       }),
     },
   );
-  return record(result.data)?.sandbox === true
-    ? check(1, "liteapi-hotels-sandbox", "passed")
-    : check(1, "liteapi-hotels-sandbox", "failed", `status ${result.status}`);
+  return (
+    serverFailure(1, "liteapi-hotels-sandbox", result.status) ??
+    (record(result.data)?.sandbox === true
+      ? check(1, "liteapi-hotels-sandbox", "passed")
+      : check(1, "liteapi-hotels-sandbox", "failed", `status ${result.status}`))
+  );
 }
 
 async function liteApiFlights(
@@ -785,6 +815,17 @@ async function liteApiFlights(
       "needs LITEAPI_FLIGHTS_SANDBOX_ENABLED and a sand_ key",
     );
   }
+  const departureDate = new Date(Date.now() + 21 * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  const body = buildLiteApiFlightRequest({
+    origin: "LIS",
+    destination: "OPO",
+    departureDate,
+    adults: 1,
+    childAges: [],
+    currency: "USD",
+  });
   const result = await http(
     fetchImpl,
     "https://api.liteapi.travel/v3.0/flights/rates",
@@ -793,18 +834,20 @@ async function liteApiFlights(
       headers: {
         "X-API-Key": sandboxKey(env)!,
         "Content-Type": "application/json",
+        Accept: "application/json",
       },
-      body: JSON.stringify({
-        origin: "LIS",
-        destination: "OPO",
-        departureDate: "2026-12-07",
-        adults: 1,
-        currency: "USD",
-      }),
+      body: JSON.stringify(body),
     },
   );
-  return record(result.data)?.sandbox === true
-    ? check(1, "liteapi-flights-sandbox", "passed")
+  const down = serverFailure(1, "liteapi-flights-sandbox", result.status);
+  if (down) return down;
+  const batches = record(result.data)?.data;
+  const shaped =
+    result.status === 200 &&
+    Array.isArray(batches) &&
+    batches.every((batch) => Array.isArray(record(batch)?.journeys));
+  return shaped
+    ? check(1, "liteapi-flights-sandbox", "passed", "provider data array")
     : check(1, "liteapi-flights-sandbox", "failed", `status ${result.status}`);
 }
 
@@ -842,6 +885,8 @@ async function viatorSandbox(
       "refusing non-sandbox Viator host",
     );
   }
+  const down = serverFailure(1, "viator-sandbox", result.status);
+  if (down) return down;
   if (result.status !== 200) {
     return check(1, "viator-sandbox", "failed", `status ${result.status}`);
   }
@@ -905,6 +950,8 @@ async function duffelTest(
   const offerId = record(
     (record(record(offers.data)?.data)?.offers as unknown[] | undefined)?.[0],
   )?.id;
+  const offersDown = serverFailure(1, "duffel-test", offers.status);
+  if (offersDown) return offersDown;
   if (offers.status !== 200 && offers.status !== 201) {
     return check(1, "duffel-test", "failed", `offer status ${offers.status}`);
   }
@@ -931,14 +978,17 @@ async function duffelTest(
       },
     }),
   });
-  return link.status === 200 || link.status === 201
-    ? check(
-        1,
-        "duffel-test",
-        "passed",
-        "test offer and links session; no order",
-      )
-    : check(1, "duffel-test", "failed", `links status ${link.status}`);
+  return (
+    serverFailure(1, "duffel-test", link.status) ??
+    (link.status === 200 || link.status === 201
+      ? check(
+          1,
+          "duffel-test",
+          "passed",
+          "test offer and links session; no order",
+        )
+      : check(1, "duffel-test", "failed", `links status ${link.status}`))
+  );
 }
 
 async function optionalLiveRead(
@@ -964,9 +1014,12 @@ async function optionalLiveRead(
         max_results: 1,
       }),
     });
-    return result.status === 200
-      ? check(1, name, "passed", "one basic search")
-      : check(1, name, "failed", `status ${result.status}`);
+    return (
+      serverFailure(1, name, result.status) ??
+      (result.status === 200
+        ? check(1, name, "passed", "one basic search")
+        : check(1, name, "failed", `status ${result.status}`))
+    );
   }
   const url = new URL(
     "https://api.content.tripadvisor.com/api/v1/location/search",
@@ -978,9 +1031,12 @@ async function optionalLiveRead(
   const result = await http(fetchImpl, url.toString(), {
     headers: { Accept: "application/json" },
   });
-  return result.status === 200
-    ? check(1, name, "passed", "one location search")
-    : check(1, name, "failed", `status ${result.status}`);
+  return (
+    serverFailure(1, name, result.status) ??
+    (result.status === 200
+      ? check(1, name, "passed", "one location search")
+      : check(1, name, "failed", `status ${result.status}`))
+  );
 }
 
 async function runTier2(
@@ -1071,6 +1127,8 @@ async function liveBrief(
     }),
   });
   const tripId = record(record(created.data)?.trip)?.id;
+  const createdDown = serverFailure(2, `live-plan:${brief.id}`, created.status);
+  if (createdDown) return createdDown;
   if (created.status !== 201 || typeof tripId !== "string") {
     return check(
       2,
@@ -1085,6 +1143,12 @@ async function liveBrief(
       method: "POST",
       headers,
     });
+    const dispatchDown = serverFailure(
+      2,
+      `live-plan:${brief.id}`,
+      dispatch.status,
+    );
+    if (dispatchDown) return dispatchDown;
     if (dispatch.status !== 200) {
       return check(
         2,
@@ -1101,6 +1165,12 @@ async function liveBrief(
         );
       }
       const progress = await http(fetchImpl, `${route}/generate`, { headers });
+      const progressDown = serverFailure(
+        2,
+        `live-plan:${brief.id}`,
+        progress.status,
+      );
+      if (progressDown) return progressDown;
       const status = record(progress.data)?.status;
       if (status === "completed") finished = true;
       if (status === "failed" || status === "error") {
@@ -1115,9 +1185,13 @@ async function liveBrief(
     if (!finished)
       return check(2, `live-plan:${brief.id}`, "failed", "timed out");
     const saved = await http(fetchImpl, route, { headers });
+    const savedDown = serverFailure(2, `live-plan:${brief.id}`, saved.status);
+    if (savedDown) return savedDown;
     const quality = evaluateSavedPlan(saved.data, brief);
     for (const url of quality.reservationUrls) {
       const head = await http(fetchImpl, url, { method: "HEAD" });
+      const headDown = serverFailure(2, `live-plan:${brief.id}`, head.status);
+      if (headDown) return headDown;
       if (head.status < 200 || head.status >= 400) {
         quality.failures.push(
           `reservation URL did not resolve (${head.status})`,

@@ -42,7 +42,8 @@ async function main() {
 
 --dry-run and --mock do not call a model and do not need the gateway key.
 --live reads FAROWAY_STAGING_AI_GATEWAY_KEY from the environment, refuses to start without it, and aborts once estimated spend reaches $20.
-The key is never accepted as a command argument.`);
+The key is never accepted as a command argument.
+An API URL, when set, must be a faroway staging preview host. faroway.ai and www.faroway.ai are refused.`);
     return;
   }
   const mode = has("--dry-run") ? "dry-run" : has("--mock") ? "mock" : "live";

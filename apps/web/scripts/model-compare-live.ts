@@ -5,6 +5,7 @@ import {
   onPlanningUsage,
   planningModel,
   replacePlanningStepEnv,
+  sumPlanningUsage,
   type PlanningFallbackRecord,
   type PlanningUsageRecord,
 } from "../lib/ai/planning-step";
@@ -101,12 +102,12 @@ async function main() {
         diningResults = [];
       }
       const fallbacks: PlanningFallbackRecord[] = [];
-      let usage: PlanningUsageRecord | undefined;
+      const usages: PlanningUsageRecord[] = [];
       const stopFallback = onPlanningFallback((record) => {
         if (record.step === step) fallbacks.push(record);
       });
       const stopUsage = onPlanningUsage((record) => {
-        if (record.step === step) usage = record;
+        if (record.step === step) usages.push(record);
       });
       const started = Date.now();
       const notes: string[] = [];
@@ -147,6 +148,7 @@ async function main() {
         stopFallback();
         stopUsage();
       }
+      const usage = sumPlanningUsage(usages);
       const execution: StepExecution = {
         model: usage?.model ?? planningModel(step as CompareStep),
         thinkingLevel: usage?.thinkingLevel ?? "high",
