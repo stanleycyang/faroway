@@ -1,3 +1,4 @@
+import { destinationImage } from '../destinationImage';
 import { readOwnedTripPages } from '../tripListPages';
 import { retainTripDetail } from '../tripSummary';
 /**
@@ -10,7 +11,6 @@ import { networkMonitor } from './network';
 import { API_BASE_URL } from '../supabase';
 import { normalizeTripStatus } from '../tripStatus';
 import type { Trip, TripInput } from '../../stores/tripStore';
-import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 
 import { requestWithTimeout } from '../../services/request';
 import * as Crypto from 'expo-crypto';
@@ -657,12 +657,10 @@ class SyncService {
       travelers: apiTrip.travelers,
       travelerType: apiTrip.traveler_type || 'solo',
       vibes: apiTrip.vibes || [],
-      budget: apiTrip.budget,
+      budget: apiTrip.budget_tier || apiTrip.budget || undefined,
       planNeedsRefresh: apiTrip.preferences?.planNeedsRefresh === true,
       days: apiTrip.preferences?.planNeedsRefresh ? [] : apiTrip.itinerary?.days || [],
-      coverImage:
-        apiTrip.cover_image ||
-        getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
+      coverImage: apiTrip.cover_image || destinationImage(apiTrip.destination),
       createdAt: apiTrip.created_at,
       updatedAt: apiTrip.updated_at,
       status: normalizeTripStatus(apiTrip.status),

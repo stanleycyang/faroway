@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
-    color: colors.surface[400],
+    color: colors.surface[600],
   },
   grid: {
     flexDirection: 'row',
@@ -109,10 +109,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   vibeButton: {
+    width: '48%',
+    minHeight: 48,
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ffffff',
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     paddingVertical: 12,
     borderRadius: borderRadius.full,
     borderWidth: 1.5,
@@ -120,7 +122,7 @@ const styles = StyleSheet.create({
   },
   vibeButtonSelected: {
     backgroundColor: '#FFF5F4',
-    borderColor: colors.primary[500],
+    borderColor: colors.action.primary,
     ...Platform.select({
       web: { boxShadow: '0 0 8px rgba(249, 112, 102, 0.25)' },
       default: {
@@ -136,6 +138,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   vibeLabel: {
+    flexShrink: 1,
     fontSize: 14,
     fontWeight: '600',
     color: colors.surface[600],

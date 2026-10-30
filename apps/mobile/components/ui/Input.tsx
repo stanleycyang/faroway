@@ -64,7 +64,7 @@ export function Input({
           <Ionicons
             name={icon}
             size={20}
-            color={isFocused ? colors.primary[400] : colors.surface[500]}
+            color={isFocused ? colors.action.primary : colors.surface[500]}
             style={styles.leftIcon}
           />
         )}
@@ -82,11 +82,15 @@ export function Input({
           multiline={multiline}
           numberOfLines={numberOfLines}
           editable={editable}
+          accessibilityLabel={label || placeholder}
+          accessibilityHint={error}
         />
         {secureTextEntry && (
           <TouchableOpacity
             onPress={() => setIsPasswordVisible(!isPasswordVisible)}
             style={styles.rightIconButton}
+            accessibilityRole="button"
+            accessibilityLabel={isPasswordVisible ? 'Hide password' : 'Show password'}
           >
             <Ionicons
               name={isPasswordVisible ? 'eye-off' : 'eye'}
@@ -169,7 +173,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   inputFocused: {
-    borderColor: colors.primary[500],
+    borderColor: colors.action.primary,
     backgroundColor: '#ffffff',
     ...Platform.select({
       web: { boxShadow: '0 0 8px rgba(249, 112, 102, 0.2)' },
@@ -202,7 +206,10 @@ const styles = StyleSheet.create({
     minHeight: 100,
   },
   rightIconButton: {
-    padding: 4,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   errorText: {
     fontSize: 12,

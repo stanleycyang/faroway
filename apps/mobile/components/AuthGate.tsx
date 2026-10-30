@@ -1,8 +1,9 @@
-import { testLoginEnabled } from '../lib/testLogin';
+import { emailLoginEnabled } from '../lib/testLogin';
 import { TestEmailLogin } from './TestEmailLogin';
 import React, { useEffect, useRef, useState } from 'react';
 import {
   View,
+  ScrollView,
   KeyboardAvoidingView,
   Text,
   StyleSheet,
@@ -81,7 +82,7 @@ export function AuthGate({
   const { signInWithGoogle, signInWithApple } = useAuthContext();
   const [loading, setLoading] = useState(false);
   const content = triggerContent[trigger];
-  const localTest = testLoginEnabled();
+  const localTest = emailLoginEnabled();
   const Overlay = localTest ? KeyboardAvoidingView : View;
   const pending = useRef(false);
   const attempt = useRef<symbol | null>(null);
@@ -194,10 +195,14 @@ export function AuthGate({
           <View style={styles.handle} />
 
           {/* Content */}
-          <View style={styles.content}>
+          <ScrollView
+            contentContainerStyle={styles.content}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
             {/* Emoji/Icon */}
             <View style={styles.iconContainer}>
-              <Text style={styles.emoji}>✨</Text>
+              <Ionicons name="map-outline" size={30} color="#143D46" />
             </View>
 
             {/* Title & Subtitle */}
@@ -300,7 +305,7 @@ export function AuthGate({
                 Privacy Policy
               </Text>
             </Text>
-          </View>
+          </ScrollView>
         </View>
       </Overlay>
     </Modal>
@@ -332,7 +337,8 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   bottomSheet: {
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#fff',
+    maxHeight: '90%',
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     paddingTop: 12,
@@ -355,7 +361,7 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: 'rgba(99,102,241,0.15)',
+    backgroundColor: '#EFF5F3',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 16,
@@ -365,21 +371,21 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: '800',
-    color: '#fff',
+    fontWeight: '700',
+    color: '#182B31',
     marginBottom: 8,
     textAlign: 'center',
   },
   subtitle: {
     fontSize: 16,
-    color: colors.surface[400],
+    color: colors.surface[600],
     textAlign: 'center',
     marginBottom: 24,
     lineHeight: 22,
   },
   benefits: {
     width: '100%',
-    backgroundColor: colors.surface[700],
+    backgroundColor: '#EFF5F3',
     borderRadius: borderRadius.lg,
     padding: 16,
     marginBottom: 24,
@@ -392,7 +398,7 @@ const styles = StyleSheet.create({
   },
   benefitText: {
     fontSize: 15,
-    color: colors.surface[300],
+    color: colors.surface[600],
     fontWeight: '500',
   },
   authButtons: {
@@ -405,7 +411,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    backgroundColor: colors.surface[700],
+    backgroundColor: '#EFF5F3',
     paddingVertical: 16,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
@@ -414,7 +420,7 @@ const styles = StyleSheet.create({
   googleButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: '#182B31',
   },
   appleButton: {
     flexDirection: 'row',
@@ -438,7 +444,7 @@ const styles = StyleSheet.create({
   },
   maybeLaterText: {
     fontSize: 15,
-    color: colors.surface[300],
+    color: colors.surface[600],
     fontWeight: '600',
   },
   terms: {

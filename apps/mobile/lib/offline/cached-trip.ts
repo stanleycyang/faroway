@@ -92,7 +92,9 @@ const cachedTrip: z.ZodType<Trip> = z
     originCity: optionalText,
     originAirport: optionalText,
     vibes: z.array(text),
-    budget: optionalText,
+    // Older sync summaries stored an absent server budget as null. Preserve the
+    // trip and normalize that one legacy representation instead of rejecting it.
+    budget: text.nullish().transform((value) => value ?? undefined),
     days: z.array(day),
     hotel: hotel.optional(),
     coverImage: text,

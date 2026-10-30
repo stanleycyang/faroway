@@ -10,6 +10,9 @@ const staging = {
 it('requires the isolated database and API for QA without changing ordinary builds', () => {
   expect(() => assertQaBuildEnvironment(staging)).not.toThrow();
   expect(() => assertQaBuildEnvironment({})).not.toThrow();
+  expect(() => assertQaBuildEnvironment({ ...staging, EAS_BUILD_PROFILE: 'production' })).toThrow(
+    'production store build'
+  );
   for (const EXPO_PUBLIC_SUPABASE_URL of [undefined, 'https://jcnephijkxgtprsutgsf.supabase.co']) {
     expect(() => assertQaBuildEnvironment({ ...staging, EXPO_PUBLIC_SUPABASE_URL })).toThrow(
       'isolated'

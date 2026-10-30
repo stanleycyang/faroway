@@ -1,5 +1,6 @@
+import { TravelImage } from './TravelImage';
 import React from 'react';
-import { View, Text, Image, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, borderRadius, shadows } from '../../constants/theme';
 
@@ -46,7 +47,7 @@ export function DestinationCard({
         style={StyleSheet.absoluteFill}
         accessible={false}
       />
-      <Image source={{ uri: image }} style={styles.cardImage} accessible={false} />
+      <TravelImage source={{ uri: image }} style={styles.cardImage} accessible={false} />
       <LinearGradient colors={['transparent', 'rgba(0,0,0,0.85)']} style={styles.gradient} />
       {/* Glassmorphic info overlay */}
       <View style={styles.cardContent}>
@@ -90,14 +91,16 @@ export function TripCard({
   daysCount,
   onPress,
 }: TripCardProps) {
+  const displayDestination = !country ? destination.split(',')[0].trim() : destination;
+  const displayCountry = country || destination.split(',').slice(1).join(',').trim();
   const durationLabel =
     daysCount === null
       ? 'Duration unavailable'
       : `${daysCount} ${daysCount === 1 ? 'day' : 'days'}`;
   const statusColors: Record<string, string> = {
     draft: colors.surface[500],
-    planned: colors.primary[500],
-    active: colors.accent[500],
+    planned: colors.action.primary,
+    active: colors.accent[700],
     completed: colors.surface[600],
   };
 
@@ -112,17 +115,16 @@ export function TripCard({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.9}
-      style={[styles.tripCard, shadows.md]}
+      style={styles.tripCard}
       accessibilityRole="button"
       accessibilityLabel={`${country ? `${destination}, ${country}` : destination}. ${statusLabels[status]}. ${dates}. ${durationLabel}`}
     >
-      <Image source={{ uri: image }} style={styles.tripImage} accessible={false} />
-      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.5)']} style={styles.tripImageOverlay} />
+      <TravelImage source={{ uri: image }} style={styles.tripImage} accessible={false} />
       <View style={styles.tripContent}>
         <View style={styles.tripHeader}>
-          <View>
-            <Text style={styles.tripDestination}>{destination}</Text>
-            <Text style={styles.tripCountry}>{country}</Text>
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.tripDestination}>{displayDestination}</Text>
+            {!!displayCountry && <Text style={styles.tripCountry}>{displayCountry}</Text>}
           </View>
           <View style={[styles.statusBadge, { backgroundColor: `${statusColors[status]}20` }]}>
             <View style={[styles.statusDot, { backgroundColor: statusColors[status] }]} />
@@ -132,7 +134,7 @@ export function TripCard({
           </View>
         </View>
         <View style={styles.tripFooter}>
-          <Text style={styles.tripDates}>📅 {dates}</Text>
+          <Text style={styles.tripDates}>{dates}</Text>
           <Text style={styles.tripDays}>{durationLabel}</Text>
         </View>
       </View>
@@ -142,7 +144,7 @@ export function TripCard({
 
 const styles = StyleSheet.create({
   cardContainer: {
-    borderRadius: borderRadius.xl,
+    borderRadius: 20,
     overflow: 'hidden',
     backgroundColor: '#ffffff',
   },
@@ -166,11 +168,10 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   cardCountry: {
-    color: colors.primary[300],
+    color: '#FFFFFF',
     fontSize: 12,
     fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    letterSpacing: 0,
     marginBottom: 4,
   },
   cardName: {
@@ -205,34 +206,36 @@ const styles = StyleSheet.create({
   },
   tripCard: {
     backgroundColor: '#ffffff',
-    borderRadius: borderRadius.xl,
+    borderRadius: 20,
     overflow: 'hidden',
-    marginBottom: 16,
+    marginBottom: 24,
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
   tripImage: {
     width: '100%',
-    height: 160,
+    height: 180,
+    backgroundColor: '#EFF5F3',
   },
   tripImageOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
-    height: 160,
+    height: 180,
+    backgroundColor: '#EFF5F3',
   },
   tripContent: {
     padding: 16,
   },
   tripHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    gap: 10,
     alignItems: 'flex-start',
     marginBottom: 12,
   },
   tripDestination: {
-    fontSize: 18,
+    fontSize: 21,
+    lineHeight: 28,
     fontWeight: '700',
     color: '#0f172a',
   },
@@ -262,6 +265,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
   },
   tripDates: {
     fontSize: 14,
@@ -269,7 +274,7 @@ const styles = StyleSheet.create({
   },
   tripDays: {
     fontSize: 14,
-    color: colors.primary[400],
+    color: colors.action.primary,
     fontWeight: '600',
   },
 });

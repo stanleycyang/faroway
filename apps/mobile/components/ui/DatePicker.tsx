@@ -94,13 +94,13 @@ export function DateRangePicker({
       textDayHeaderFontSize: 12,
       textDayHeaderFontWeight: '600' as const,
       'stylesheet.calendar.header': {
-        dayTextAtIndex0: { color: colors.surface[400] },
-        dayTextAtIndex1: { color: colors.surface[400] },
-        dayTextAtIndex2: { color: colors.surface[400] },
-        dayTextAtIndex3: { color: colors.surface[400] },
-        dayTextAtIndex4: { color: colors.surface[400] },
-        dayTextAtIndex5: { color: colors.surface[400] },
-        dayTextAtIndex6: { color: colors.surface[400] },
+        dayTextAtIndex0: { color: colors.surface[600] },
+        dayTextAtIndex1: { color: colors.surface[600] },
+        dayTextAtIndex2: { color: colors.surface[600] },
+        dayTextAtIndex3: { color: colors.surface[600] },
+        dayTextAtIndex4: { color: colors.surface[600] },
+        dayTextAtIndex5: { color: colors.surface[600] },
+        dayTextAtIndex6: { color: colors.surface[600] },
       },
     }),
     []
@@ -273,7 +273,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ffffff',
-    padding: 16,
+    padding: 12,
     borderRadius: borderRadius.md,
     borderWidth: 1.5,
     borderColor: '#e2e8f0',
@@ -283,11 +283,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF5F4',
   },
   dateButtonText: {
-    marginLeft: 12,
+    marginLeft: 8,
+    flex: 1,
   },
   dateLabel: {
     fontSize: 12,
-    color: colors.surface[400],
+    color: colors.surface[600],
     marginBottom: 2,
   },
   dateValue: {
@@ -367,10 +368,9 @@ const styles = StyleSheet.create({
   chipLabel: {
     fontSize: 11,
     fontWeight: '600',
-    color: colors.surface[400],
+    color: colors.surface[600],
     marginBottom: 2,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   },
   chipLabelActive: {
     color: colors.primary[400],
@@ -397,7 +397,7 @@ const styles = StyleSheet.create({
     borderTopColor: '#e2e8f0',
   },
   doneButton: {
-    backgroundColor: colors.primary[500],
+    backgroundColor: colors.action.primary,
     paddingVertical: 16,
     borderRadius: borderRadius.md,
     alignItems: 'center',
