@@ -5,6 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useUserStore } from '../stores/userStore';
 import { Button } from '../components/ui';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors } from '../constants/theme';
 import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 import { useReduceMotion } from '../hooks/useReduceMotion';
@@ -95,7 +96,7 @@ export default function WelcomeScreen() {
   useEffect(() => {
     // Auto-redirect if already onboarded
     if (hasCompletedOnboarding && isAuthenticated) {
-      const redirect = setTimeout(() => router.replace('/(tabs)'), 1500);
+      const redirect = setTimeout(() => router.replace('/(tabs)'), 0);
       return () => clearTimeout(redirect);
     }
   }, [hasCompletedOnboarding, isAuthenticated, router]);
@@ -118,9 +119,12 @@ export default function WelcomeScreen() {
         style={styles.backgroundImage}
         accessible={false}
       />
-      <LinearGradient colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']} style={styles.gradient} />
+      <LinearGradient
+        colors={['rgba(20,61,70,0.1)', 'rgba(20,61,70,0.9)']}
+        style={styles.gradient}
+      />
 
-      <View style={styles.content}>
+      <SafeAreaView style={styles.content} edges={['top', 'bottom']}>
         <View style={styles.header}>
           <Animated.View
             style={[
@@ -132,7 +136,7 @@ export default function WelcomeScreen() {
             ]}
           >
             <LinearGradient
-              colors={[colors.primary[500], '#f59e0b']}
+              colors={[colors.action.primary, colors.action.primary]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.logoGradient}
@@ -176,7 +180,7 @@ export default function WelcomeScreen() {
             textStyle={styles.ghostButtonText}
           />
         </Animated.View>
-      </View>
+      </SafeAreaView>
     </View>
   );
 }
@@ -200,30 +204,31 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'space-between',
     paddingHorizontal: 24,
-    paddingTop: 120,
-    paddingBottom: 60,
+    paddingTop: 48,
+    paddingBottom: 24,
   },
   header: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
+    marginTop: 48,
   },
   logoContainer: {
     marginBottom: 24,
   },
   logoGradient: {
-    width: 100,
-    height: 100,
-    borderRadius: 30,
+    width: 64,
+    height: 64,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
   },
   logoIcon: {
-    fontSize: 48,
+    fontSize: 36,
     color: '#fff',
     fontWeight: '700',
   },
   title: {
     fontSize: 44,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#fff',
     marginBottom: 16,
     letterSpacing: -1,
@@ -231,7 +236,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 18,
     color: 'rgba(255,255,255,0.85)',
-    textAlign: 'center',
+    textAlign: 'left',
     lineHeight: 26,
   },
   buttonContainer: {

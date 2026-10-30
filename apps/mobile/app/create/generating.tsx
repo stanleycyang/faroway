@@ -1,3 +1,4 @@
+import { destinationImage } from '../../lib/destinationImage';
 import { getMissingTripRequirements } from '../../lib/tripRequirements';
 import { formatTripDate } from '../../lib/tripDate';
 import { transformItineraryDays, transformApiHotel } from '../../lib/itineraryNormalization';
@@ -25,7 +26,7 @@ import { useUserStore } from '../../stores/userStore';
 import { usePromptStore } from '../../stores/promptStore';
 import { useAuthContext } from '../../components/AuthProvider';
 import { RatingPrompt } from '../../components/RatingPrompt';
-import { popularDestinations, IMAGE_PATHS, getImageUrl } from '@faroway/constants';
+import { popularDestinations } from '@faroway/constants';
 import { colors } from '../../constants/theme';
 import { useStreamingItinerary, StreamingBlock } from '../../hooks/useStreamingItinerary';
 import {
@@ -109,10 +110,7 @@ function convertStreamingDataToTrip(
     budget: input.budget,
     days: transformItineraryDays(itineraryDays),
     hotel,
-    coverImage:
-      destinationInfo?.image ||
-      hotel?.images[0] ||
-      getImageUrl(IMAGE_PATHS.inspirations['beach-getaway']),
+    coverImage: destinationImage(input.destination),
     createdAt: new Date().toISOString(),
     status: 'planned',
   };
@@ -323,7 +321,7 @@ function HotelPreviewCard({ hotel }: { hotel: Record<string, unknown> }) {
       style={[styles.hotelPreview, { opacity: fadeAnim, transform: [{ scale: scaleAnim }] }]}
     >
       <View style={styles.hotelPreviewHeader}>
-        <Text style={styles.hotelPreviewLabel}>🏨 Your Top Hotel Match</Text>
+        <Text style={styles.hotelPreviewLabel}>A place to stay</Text>
       </View>
       <View style={styles.hotelPreviewContent}>
         <GenerationHotelFacts hotel={hotel} styles={styles} />
@@ -414,9 +412,7 @@ function StepIndicator({
       <View style={styles.stepContent}>
         <Text style={[styles.stepText, status === 'done' && styles.stepTextDone]}>{step.text}</Text>
         {microMessage && status === 'searching' && (
-          <Text style={styles.stepMicro} numberOfLines={1}>
-            {microMessage}
-          </Text>
+          <Text style={styles.stepMicro}>{microMessage}</Text>
         )}
         {count !== undefined && count > 0 && status === 'done' && (
           <Text style={[styles.stepCount, { color: step.color }]}>{count} found</Text>
@@ -517,8 +513,8 @@ function CelebrationOverlay({ onComplete }: { onComplete: () => void }) {
     <Animated.View style={[styles.celebrationOverlay, { opacity: opacityAnim }]}>
       <Animated.View style={[styles.celebrationContent, { transform: [{ scale: scaleAnim }] }]}>
         <Text style={styles.celebrationEmoji}>🎉</Text>
-        <Text style={styles.celebrationTitle}>Your Trip is Ready!</Text>
-        <Text style={styles.celebrationSubtitle}>Personalized just for you</Text>
+        <Text style={styles.celebrationTitle}>Your trip is ready</Text>
+        <Text style={styles.celebrationSubtitle}>Take a look at your day-by-day plan</Text>
       </Animated.View>
     </Animated.View>
   );
@@ -762,7 +758,7 @@ function GenerationSession() {
         <Image
           source={{ uri: destinationInfo.image }}
           style={styles.bgImage}
-          blurRadius={25}
+          blurRadius={8}
           accessible={false}
         />
       )}
@@ -849,7 +845,6 @@ function GenerationSession() {
           {/* Error state */}
           {streaming.error && (
             <View style={styles.errorBox}>
-              <Text style={styles.errorEmoji}>😔</Text>
               <Text style={styles.errorTitle}>
                 {streaming.tripId ? 'Your trip is saved' : 'Planning interrupted'}
               </Text>
@@ -979,7 +974,7 @@ const styles = StyleSheet.create({
     fontSize: 15,
     color: colors.neutral[400],
   },
-  container: { flex: 1, backgroundColor: '#000' },
+  container: { flex: 1, backgroundColor: '#143D46' },
   bgImage: { position: 'absolute', width, height, resizeMode: 'cover' },
   overlay: { position: 'absolute', width, height },
   scroll: { flex: 1 },
@@ -1030,7 +1025,7 @@ const styles = StyleSheet.create({
   stepContent: { flex: 1 },
   stepText: { fontSize: 16, color: 'rgba(255,255,255,0.8)', fontWeight: '600' },
   stepTextDone: { color: '#fff' },
-  stepMicro: { fontSize: 12, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
+  stepMicro: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
   stepCount: { fontSize: 13, fontWeight: '700', marginTop: 2 },
   stepCheckBadge: {
     width: 24,

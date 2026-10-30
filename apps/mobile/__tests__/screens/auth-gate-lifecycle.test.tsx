@@ -5,6 +5,7 @@ const mockGoogle = jest.fn();
 const mockAlert = jest.fn();
 jest.mock('react-native', () => ({
   View: 'View',
+  ScrollView: 'ScrollView',
   Text: 'Text',
   TouchableOpacity: 'TouchableOpacity',
   Modal: 'Modal',

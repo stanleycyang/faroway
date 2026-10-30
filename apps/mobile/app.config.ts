@@ -8,6 +8,9 @@ export const QA_API_ORIGIN =
 
 export function assertQaBuildEnvironment(env: Record<string, string | undefined>): void {
   if (env.EXPO_PUBLIC_MOBILE_QA !== '1') return;
+  if (env.EAS_BUILD_PROFILE === 'production') {
+    throw new Error('QA mode cannot be used in a production store build.');
+  }
   if (env.EXPO_PUBLIC_SUPABASE_URL !== `https://${QA_SUPABASE_PROJECT_REF}.supabase.co`) {
     throw new Error('Mobile QA requires the isolated Faroway staging database.');
   }
@@ -30,6 +33,7 @@ const EAS_PROJECT_ID = 'b4813d98-52ec-4985-a462-3d30a7f681b9';
 
 export default ({ config }: ConfigContext): ExpoConfig => {
   assertQaBuildEnvironment(process.env);
+  const qa = process.env.EXPO_PUBLIC_MOBILE_QA === '1';
   if (
     process.env.EXPO_PUBLIC_TEST_LOGIN === 'true' &&
     (process.env.EAS_BUILD_PROFILE === 'production' || process.env.NODE_ENV === 'production')
@@ -65,14 +69,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
     ...config,
-    name: 'Faroway',
+    name: qa ? 'Faroway QA' : 'Faroway',
     slug: 'faroway',
     owner: 'testimonio',
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
-    scheme: 'faroway',
+    scheme: qa ? 'faroway-qa' : 'faroway',
     splash: {
       image: './assets/splash.png',
       resizeMode: 'contain',
@@ -81,7 +85,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     assetBundlePatterns: ['**/*'],
     ios: {
       supportsTablet: true,
-      bundleIdentifier: 'ai.faroway.app',
+      bundleIdentifier: qa ? 'ai.faroway.app.qa' : 'ai.faroway.app',
       usesAppleSignIn: true,
       config: {
         usesNonExemptEncryption: false,
@@ -92,7 +96,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         foregroundImage: './assets/adaptive-icon.png',
         backgroundColor: '#0a0a0a',
       },
-      package: 'ai.faroway.app',
+      package: qa ? 'ai.faroway.app.qa' : 'ai.faroway.app',
       blockedPermissions: [
         'android.permission.READ_EXTERNAL_STORAGE',
         'android.permission.WRITE_EXTERNAL_STORAGE',

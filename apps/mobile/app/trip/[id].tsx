@@ -146,9 +146,7 @@ function ActivityCard({ activity }: ActivityCardProps) {
           </View>
           {activity.price && <Text style={styles.activityPrice}>{activity.price}</Text>}
         </View>
-        <Text style={styles.activityDescription} numberOfLines={2}>
-          {activity.description}
-        </Text>
+        <Text style={styles.activityDescription}>{activity.description}</Text>
         {activity.rating && (
           <View style={styles.activityRating}>
             <Ionicons name="star" size={14} color="#fbbf24" />
@@ -218,21 +216,25 @@ function FeaturedHotelCard({
         <View style={styles.hotelCardHeader}>
           <View style={{ flex: 1 }}>
             <Text style={styles.hotelCardName}>{hotel.name}</Text>
-            <View style={styles.hotelCardRating}>
-              <Ionicons name="star" size={14} color="#fbbf24" />
-              <Text style={styles.hotelCardRatingText}>{hotel.rating}</Text>
-              {hotel.reviewCount != null && hotel.reviewCount > 0 && (
-                <Text style={styles.hotelCardReviewCount}>
-                  ({hotel.reviewCount.toLocaleString()} reviews)
-                </Text>
-              )}
-            </View>
+            {hotel.rating > 0 && (
+              <View style={styles.hotelCardRating}>
+                <Ionicons name="star" size={14} color="#fbbf24" />
+                <Text style={styles.hotelCardRatingText}>{hotel.rating}</Text>
+                {hotel.reviewCount != null && hotel.reviewCount > 0 && (
+                  <Text style={styles.hotelCardReviewCount}>
+                    ({hotel.reviewCount.toLocaleString()} reviews)
+                  </Text>
+                )}
+              </View>
+            )}
           </View>
           <View style={styles.hotelCardPriceContainer}>
             <Text style={styles.hotelCardPrice}>
               {formatKnownPrice(hotel.pricePerNight, hotel.currency)}
             </Text>
-            <Text style={styles.hotelCardPriceLabel}>per night</Text>
+            {Number.isFinite(hotel.pricePerNight) && !!hotel.currency && (
+              <Text style={styles.hotelCardPriceLabel}>per night</Text>
+            )}
           </View>
         </View>
         {hotel.amenities && hotel.amenities.length > 0 && (
@@ -939,12 +941,6 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                   <Text style={styles.dayTheme}>{trip.days[selectedDay]?.theme}</Text>
                 </View>
 
-                {trip.days[selectedDay]?.tips?.map((tip, index) => (
-                  <Text key={`${index}:${tip}`} style={styles.dayTip}>
-                    {tip}
-                  </Text>
-                ))}
-
                 {/* Transport */}
                 {trip.days[selectedDay]?.transport && (
                   <View style={styles.transportCardWrapper}>
@@ -958,6 +954,26 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                     <ActivityCard key={activity.id} activity={activity} />
                   ))}
                 </View>
+                {!!trip.days[selectedDay]?.tips?.length && (
+                  <View style={{ paddingVertical: 20, backgroundColor: '#EFF5F3', marginTop: 8 }}>
+                    <Text
+                      style={{
+                        fontSize: 18,
+                        fontWeight: '700',
+                        color: '#182B31',
+                        marginHorizontal: 24,
+                        marginBottom: 12,
+                      }}
+                    >
+                      Before you go
+                    </Text>
+                    {trip.days[selectedDay]?.tips?.map((tip, index) => (
+                      <Text key={`${index}:${tip}`} style={styles.dayTip}>
+                        {tip}
+                      </Text>
+                    ))}
+                  </View>
+                )}
               </>
             )}
           </View>
@@ -965,25 +981,18 @@ function TripDetailSession({ id }: { id: string | undefined }) {
 
         {/* Bottom Bar */}
         {bookableCount > 0 && (
-          <View style={styles.bottomBar}>
-            <View style={styles.bottomBarInfo}>
-              <Text style={styles.bottomBarLabel}>Price references</Text>
-              <Text style={styles.bottomBarPrice}>
-                {costReferences.length
-                  ? `${costReferences.length} known estimates`
-                  : 'Check partner prices'}
-              </Text>
-            </View>
+          <SafeAreaView edges={['bottom']} style={styles.bottomBar}>
+            <Text style={styles.bottomBarLabel}>Check availability and prices with providers</Text>
             <Button
               title="Review options"
               onPress={() => {
                 hapticFeedback.light();
                 setShowBookingsSheet(true);
               }}
-              size="lg"
-              style={styles.bookAllButton}
+              size="md"
+              fullWidth
             />
-          </View>
+          </SafeAreaView>
         )}
 
         {/* Bookings Bottom Sheet */}
@@ -1049,7 +1058,7 @@ const styles = StyleSheet.create({
   },
   errorStateTitle: {
     fontSize: 24,
-    fontWeight: '800',
+    fontWeight: '700',
     color: colors.neutral[900],
     textAlign: 'center',
   },
@@ -1131,20 +1140,20 @@ const styles = StyleSheet.create({
   },
   heroCountry: {
     fontSize: 14,
-    color: colors.primary[300],
+    color: '#fff',
     fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0,
     marginBottom: 4,
   },
   heroTitle: {
     fontSize: 32,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#fff',
     marginBottom: 12,
   },
   heroMeta: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 16,
   },
   heroMetaItem: {
@@ -1217,7 +1226,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dayTabSelected: {
-    backgroundColor: colors.primary[500],
+    backgroundColor: colors.action.primary,
   },
   dayTabNumber: {
     fontSize: 14,
@@ -1235,7 +1244,13 @@ const styles = StyleSheet.create({
   dayTabDateSelected: {
     color: 'rgba(255,255,255,0.7)',
   },
-  dayTip: { color: colors.surface[300], marginHorizontal: 24, marginBottom: 8 },
+  dayTip: {
+    color: '#53676C',
+    fontSize: 14,
+    lineHeight: 21,
+    marginHorizontal: 24,
+    marginBottom: 12,
+  },
   dayThemeContainer: {
     paddingHorizontal: 24,
     marginBottom: 20,
@@ -1254,8 +1269,8 @@ const styles = StyleSheet.create({
   },
   activityTime: {
     alignItems: 'center',
-    width: 50,
-    marginRight: 16,
+    width: 54,
+    marginRight: 10,
   },
   activityTimeText: {
     fontSize: 12,
@@ -1376,19 +1391,19 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 10,
     backgroundColor: '#ffffff',
     paddingHorizontal: 24,
-    paddingVertical: 16,
-    paddingBottom: 40,
+    paddingVertical: 12,
+    paddingBottom: 12,
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
   },
   bottomBarInfo: { flex: 1, minWidth: 0, paddingRight: 12 },
   bottomBarLabel: {
-    fontSize: 12,
+    fontSize: 13,
+    textAlign: 'center',
+    lineHeight: 18,
     color: '#64748b',
     marginBottom: 2,
   },
@@ -1420,9 +1435,7 @@ const styles = StyleSheet.create({
     padding: 16,
   },
   hotelCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    gap: 8,
     marginBottom: 12,
   },
   hotelCardName: {
@@ -1447,11 +1460,13 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   hotelCardPriceContainer: {
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
   },
   hotelCardPrice: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '500',
     color: '#0f172a',
   },
   hotelCardPriceLabel: {
@@ -1520,7 +1535,7 @@ const styles = StyleSheet.create({
   },
   transportCardPrice: {
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#fff',
   },
   transportCardRoute: {
@@ -1609,7 +1624,7 @@ const styles = StyleSheet.create({
   },
   sheetTitle: {
     fontSize: 22,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0f172a',
   },
   sheetClose: {
@@ -1666,7 +1681,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: colors.primary[500],
+    backgroundColor: colors.action.primary,
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: borderRadius.lg,

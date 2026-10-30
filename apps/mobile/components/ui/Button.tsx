@@ -7,7 +7,6 @@ import {
   TextStyle,
   Animated,
   Pressable,
-  Platform,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, borderRadius } from '../../constants/theme';
@@ -126,7 +125,7 @@ export function Button({
 
     return {
       fontWeight: '700',
-      letterSpacing: 0.3,
+      letterSpacing: 0,
       ...textSizeStyles[size],
       ...variantStyles[variant],
     };
@@ -167,18 +166,11 @@ export function Button({
       accessibilityHint={accessibilityHint}
       accessibilityState={{ disabled: disabled || loading, busy: loading }}
     >
-      <Animated.View
-        style={[
-          getButtonStyles(),
-          isPrimary && !disabled && styles.primaryGlow,
-          { transform: [{ scale: scaleAnim }] },
-          style,
-        ]}
-      >
+      <Animated.View style={[getButtonStyles(), { transform: [{ scale: scaleAnim }] }, style]}>
         {isPrimary ? (
           <LinearGradient
             colors={
-              disabled ? ['#cbd5e1', '#cbd5e1'] : [colors.action.primary, colors.action.primaryEnd]
+              disabled ? ['#cbd5e1', '#cbd5e1'] : [colors.action.primary, colors.action.primary]
             }
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
@@ -190,18 +182,3 @@ export function Button({
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  primaryGlow: {
-    ...Platform.select({
-      web: { boxShadow: '0 4px 16px rgba(250, 140, 132, 0.35)' },
-      default: {
-        shadowColor: '#FA8C84',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.35,
-        shadowRadius: 16,
-        elevation: 8,
-      },
-    }),
-  },
-});

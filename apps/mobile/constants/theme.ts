@@ -115,22 +115,22 @@ const createShadow = (boxShadow: string, nativeStyle: ViewStyle): ViewStyle =>
   typeof document === 'undefined' ? nativeStyle : { boxShadow };
 
 export const shadows: Record<'sm' | 'md' | 'lg' | 'glow', ViewStyle> = {
-  sm: createShadow('0 1px 4px rgba(249, 112, 102, 0.08)', {
-    shadowColor: '#F97066',
+  sm: createShadow('0 1px 4px rgba(24, 43, 49, 0.06)', {
+    shadowColor: '#182B31',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
   }),
-  md: createShadow('0 4px 12px rgba(249, 112, 102, 0.12)', {
-    shadowColor: '#F97066',
+  md: createShadow('0 4px 12px rgba(24, 43, 49, 0.08)', {
+    shadowColor: '#182B31',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12,
     shadowRadius: 12,
     elevation: 4,
   }),
-  lg: createShadow('0 8px 24px rgba(249, 112, 102, 0.18)', {
-    shadowColor: '#F97066',
+  lg: createShadow('0 8px 24px rgba(24, 43, 49, 0.10)', {
+    shadowColor: '#182B31',
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.18,
     shadowRadius: 24,
@@ -162,4 +162,15 @@ export const glass = {
     borderColor: 'rgba(255,255,255,0.08)',
     borderWidth: 1,
   },
+};
+
+// Travel surfaces: photography leads, quiet chrome supports the itinerary.
+export const travel = {
+  ink: '#182B31',
+  ocean: '#143D46',
+  mist: '#EFF5F3',
+  paper: '#FFFFFF',
+  muted: '#53676C',
+  line: '#DCE5E3',
+  pageGutter: 24,
 };

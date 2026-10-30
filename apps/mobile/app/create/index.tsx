@@ -225,7 +225,7 @@ export default function CreateTripScreen() {
     : null;
 
   return (
-    <SafeAreaView style={styles.container} edges={['top']}>
+    <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -241,7 +241,7 @@ export default function CreateTripScreen() {
             <Ionicons name="close" size={24} color={colors.neutral[700]} />
           </TouchableOpacity>
           <Text style={styles.headerTitle} accessibilityRole="header">
-            Plan Your Trip
+            Plan your trip
           </Text>
           <View style={{ width: 44 }} />
         </View>
@@ -331,6 +331,12 @@ export default function CreateTripScreen() {
               </Text>
             </TouchableOpacity>
           )}
+
+          <View style={styles.section}>
+            <Text style={{ fontSize: 16, lineHeight: 24, color: '#53676C' }}>
+              Choose a place and your dates. We’ll bring the days together.
+            </Text>
+          </View>
 
           {/* Destination Selection */}
           <View style={styles.section}>
@@ -534,13 +540,13 @@ export default function CreateTripScreen() {
           </View>
 
           {/* Spacer for button */}
-          <View style={{ height: 100 }} />
+          <View style={{ height: 16 }} />
         </ScrollView>
 
         {/* Continue Button */}
         <View style={styles.bottomBar}>
           <Button
-            title="Generate Itinerary ✨"
+            title="Generate itinerary"
             onPress={handleContinue}
             disabled={!canProceed}
             size="lg"
@@ -724,8 +730,8 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   selectedDestination: {
-    height: 180,
-    borderRadius: borderRadius.xl,
+    height: 160,
+    borderRadius: borderRadius.lg,
     overflow: 'hidden',
     backgroundColor: '#f1f5f9',
     ...shadows.md,
@@ -756,10 +762,9 @@ const styles = StyleSheet.create({
   },
   selectedDestinationCountry: {
     fontSize: 12,
-    color: colors.primary[300],
+    color: '#fff',
     fontWeight: '600',
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+    letterSpacing: 0,
     marginBottom: 4,
   },
   selectedDestinationName: {
@@ -825,9 +830,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   travelerCounter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    gap: 12,
     backgroundColor: '#ffffff',
     padding: 16,
     borderRadius: borderRadius.lg,
@@ -844,6 +847,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
+    justifyContent: 'space-between',
   },
   counterButton: {
     width: 44,
@@ -889,14 +893,10 @@ const styles = StyleSheet.create({
     color: colors.primary[400],
   },
   bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
     backgroundColor: '#ffffff',
     paddingHorizontal: 24,
     paddingVertical: 16,
-    paddingBottom: 40,
+    paddingBottom: 12,
     borderTopWidth: 1,
     borderTopColor: '#e2e8f0',
   },
