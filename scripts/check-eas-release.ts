@@ -2,6 +2,8 @@
 
 import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
+import { execFileSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const MOBILE = resolve(ROOT, "apps/mobile");
@@ -226,14 +228,49 @@ requireCondition(
     ),
   "EAS submit credentials must be documented when submit profiles omit account identifiers.",
 );
-requireCondition(
-  hasText(appConfigPath, /bundleIdentifier:\s*['"]ai\.faroway\.app['"]/),
-  "iOS bundleIdentifier must be ai.faroway.app.",
-);
-requireCondition(
-  hasText(appConfigPath, /package:\s*['"]ai\.faroway\.app['"]/),
-  "Android package must be ai.faroway.app.",
-);
+// Evaluate the store profile: source-text matching cannot validate conditional
+// QA identities. Return only identity fields, never the config's public keys.
+try {
+  const identity = JSON.parse(
+    execFileSync(
+      process.execPath,
+      [
+        "-e",
+        `const { default: configure } = await import(${JSON.stringify(pathToFileURL(appConfigPath).href)});
+         const config = configure({ config: {} });
+         console.log(JSON.stringify({ ios: config.ios?.bundleIdentifier, android: config.android?.package, scheme: config.scheme }));`,
+      ],
+      {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "pipe"],
+        env: {
+          ...process.env,
+          ...productionEnv,
+          NODE_ENV: "production",
+          EAS_BUILD_PROFILE: "production",
+          EXPO_PUBLIC_MOBILE_QA: productionEnv.EXPO_PUBLIC_MOBILE_QA ?? "",
+          EXPO_PUBLIC_TEST_LOGIN: productionEnv.EXPO_PUBLIC_TEST_LOGIN ?? "",
+        },
+      },
+    ),
+  );
+  requireCondition(
+    identity.ios === "ai.faroway.app",
+    "iOS bundleIdentifier must be ai.faroway.app.",
+  );
+  requireCondition(
+    identity.android === "ai.faroway.app",
+    "Android package must be ai.faroway.app.",
+  );
+  requireCondition(
+    identity.scheme === "faroway",
+    "Production URL scheme must be faroway.",
+  );
+} catch {
+  failures.push(
+    "Unable to resolve the production Expo identity; check app.config.ts and the production profile.",
+  );
+}
 requireCondition(
   hasText(appConfigPath, /usesAppleSignIn:\s*true/),
   "Apple Sign-In must stay enabled for iOS release.",
