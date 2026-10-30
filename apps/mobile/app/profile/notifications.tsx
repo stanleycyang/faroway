@@ -167,7 +167,7 @@ function NotificationsEditor() {
           Choose which notifications you'd like to receive.
         </Text>
 
-        <View style={styles.settingItem}>
+        <View style={[styles.settingItem, { marginBottom: 16 }]}>
           <View style={styles.settingContent}>
             <Text style={styles.settingTitle}>Notifications on this device</Text>
             <Text style={styles.settingDescription}>
@@ -274,7 +274,10 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0f172a',
+    color: '#182B31',
+    flexShrink: 1,
+    textAlign: 'center',
+    marginHorizontal: 8,
   },
   scrollContent: {
     padding: 24,
@@ -292,7 +295,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ffffff',
-    padding: 16,
+    paddingVertical: 20,
+    paddingHorizontal: 12,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
     borderColor: '#e2e8f0',
@@ -304,7 +308,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF5F4',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 14,
+    marginRight: 10,
   },
   settingContent: {
     flex: 1,
@@ -317,8 +321,8 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   settingDescription: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#64748b',
-    lineHeight: 18,
+    lineHeight: 21,
   },
 });

@@ -74,3 +74,34 @@ it('hides the panel outside development even with the flag set', async () => {
     renderer.unmount();
   });
 });
+
+it('uses real password authentication in an isolated release QA build', async () => {
+  Object.assign(globalThis, { __DEV__: false });
+  process.env.EXPO_PUBLIC_MOBILE_QA = '1';
+  process.env.EXPO_PUBLIC_SUPABASE_URL = 'https://omovikloadpvzijoaqus.supabase.co';
+  process.env.EXPO_PUBLIC_API_URL =
+    'https://faroway-git-verify-staging-readiness-20261018-testimonio.vercel.app';
+  mockSignIn.mockResolvedValue({ error: null });
+  const authenticated = jest.fn();
+  let renderer!: ReturnType<typeof create>;
+  await act(async () => {
+    renderer = create(<TestEmailLogin onAuthenticated={authenticated} />);
+  });
+  await act(async () => {
+    renderer.root
+      .findByProps({ testID: 'test-email' })
+      .props.onChangeText('qa@faroway-test.invalid');
+    renderer.root.findByProps({ testID: 'test-password' }).props.onChangeText('synthetic-password');
+  });
+  await act(async () => {
+    await renderer.root.findByProps({ testID: 'test-sign-in' }).props.onPress();
+  });
+  expect(mockSignIn).toHaveBeenCalledWith({
+    email: 'qa@faroway-test.invalid',
+    password: 'synthetic-password',
+  });
+  expect(authenticated).toHaveBeenCalledTimes(1);
+  await act(async () => {
+    renderer.unmount();
+  });
+});

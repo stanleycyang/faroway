@@ -1,3 +1,4 @@
+import { TravelImage } from '../../components/ui/TravelImage';
 import { useState, useEffect, useRef } from 'react';
 import {
   View,
@@ -7,14 +8,13 @@ import {
   TouchableOpacity,
   Dimensions,
   Animated,
-  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { PlacesAutocomplete, DestinationCard } from '../../components/ui';
-import { popularDestinations } from '@faroway/constants';
+import { popularDestinations, IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 import { getPopularDestinations, getTrendingDestinations } from '../../services/api';
 import type { DestinationInfo } from '@faroway/types';
 import { useTripStore } from '../../stores/tripStore';
@@ -129,10 +129,10 @@ export default function ExploreScreen() {
         <Animated.View
           style={[styles.header, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}
         >
-          <View>
-            <Text style={styles.greeting}>{greeting} 👋</Text>
+          <View style={{ flex: 1, paddingRight: 12 }}>
+            <Text style={styles.greeting}>{greeting}</Text>
             <Text style={styles.headerTitle} accessibilityRole="header">
-              {hasTrips ? 'Where to next?' : 'Plan your dream trip'}
+              {hasTrips ? 'Where to next?' : 'Where would you go?'}
             </Text>
           </View>
           {isAuthenticated && (
@@ -172,49 +172,24 @@ export default function ExploreScreen() {
           accessibilityLabel="Create your trip"
           accessibilityHint="Starts the AI trip planning flow"
         >
-          <LinearGradient
-            colors={[colors.action.primary, colors.action.primaryEnd, '#74342F']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.heroCard}
-          >
-            {/* Background pattern */}
-            <View style={styles.heroPattern} accessible={false}>
-              <Text style={styles.heroPatternEmoji}>✈️</Text>
-              <Text style={[styles.heroPatternEmoji, styles.heroPattern2]}>🗺️</Text>
-              <Text style={[styles.heroPatternEmoji, styles.heroPattern3]}>🌴</Text>
-            </View>
-
+          <View style={styles.heroCard}>
+            <TravelImage
+              source={{ uri: getImageUrl(IMAGE_PATHS.destinations.lisbon) }}
+              style={StyleSheet.absoluteFill}
+            />
+            <LinearGradient
+              colors={['rgba(20,61,70,0.45)', 'rgba(20,61,70,0.92)']}
+              style={StyleSheet.absoluteFill}
+            />
             <View style={styles.heroContent}>
-              <View style={styles.heroBadge}>
-                <Ionicons name="sparkles" size={14} color="#fff" />
-                <Text style={styles.heroBadgeText}>AI-Powered</Text>
-              </View>
-
-              <Text style={styles.heroTitle}>Create Your Trip</Text>
-              <Text style={styles.heroSubtitle}>
-                Tell us where you want to go, and we'll build a day-by-day plan step by step
-              </Text>
-
+              <Text style={styles.heroTitle}>Your next trip, your way.</Text>
+              <Text style={styles.heroSubtitle}>A day-by-day plan around what you love.</Text>
               <View style={styles.heroButton}>
-                <Text style={styles.heroButtonText}>Start Planning</Text>
-                <Ionicons name="arrow-forward" size={18} color={colors.action.primary} />
-              </View>
-
-              <View style={styles.heroFeatures}>
-                <View style={styles.heroFeature}>
-                  <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.8)" />
-                  <Text style={styles.heroFeatureText}>
-                    {isAuthenticated ? 'Synced across devices' : 'Sign in to generate'}
-                  </Text>
-                </View>
-                <View style={styles.heroFeature}>
-                  <Ionicons name="checkmark" size={14} color="rgba(255,255,255,0.8)" />
-                  <Text style={styles.heroFeatureText}>Personalized plans</Text>
-                </View>
+                <Text style={styles.heroButtonText}>Create your trip</Text>
+                <Ionicons name="add" size={20} color={colors.action.primary} />
               </View>
             </View>
-          </LinearGradient>
+          </View>
         </TouchableOpacity>
 
         {/* Quick Inspirations */}
@@ -241,16 +216,16 @@ export default function ExploreScreen() {
           </ScrollView>
         </View>
 
-        {/* Popular Destinations */}
+        {/* Places to fall in love with */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Popular Destinations</Text>
+            <Text style={styles.sectionTitle}>Places to fall in love with</Text>
             <TouchableOpacity
               onPress={handleCreateTrip}
               accessibilityRole="button"
               accessibilityLabel="Search all destinations"
             >
-              <Text style={styles.seeAllButton}>See all</Text>
+              <Text style={styles.seeAllButton}>Find a place</Text>
             </TouchableOpacity>
           </View>
           <ScrollView
@@ -294,7 +269,7 @@ export default function ExploreScreen() {
                   style={StyleSheet.absoluteFill}
                   accessible={false}
                 />
-                <Image
+                <TravelImage
                   source={{ uri: destination.image }}
                   style={styles.trendingImage}
                   accessible={false}
@@ -313,7 +288,7 @@ export default function ExploreScreen() {
         </View>
 
         {/* Bottom padding */}
-        <View style={{ height: 100 }} />
+        <View style={{ height: 32 }} />
       </Animated.ScrollView>
     </SafeAreaView>
   );
@@ -340,8 +315,10 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '800',
+    fontSize: 30,
+    lineHeight: 36,
+    letterSpacing: -0.7,
+    fontWeight: '700',
     color: '#0f172a',
   },
   notificationButton: {
@@ -365,7 +342,8 @@ const styles = StyleSheet.create({
     padding: 24,
     marginBottom: 24,
     overflow: 'hidden',
-    ...shadows.lg,
+    minHeight: 240,
+    justifyContent: 'flex-end',
   },
   heroPattern: {
     position: 'absolute',

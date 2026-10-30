@@ -108,7 +108,7 @@ function EditProfileScreenEditor({ profile }: { profile: EditorProfile }) {
             <Ionicons name="arrow-back" size={24} color={'#475569'} />
           </TouchableOpacity>
           <Text style={styles.headerTitle} accessibilityRole="header">
-            Edit Profile
+            Edit profile
           </Text>
           <TouchableOpacity
             style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
@@ -137,13 +137,15 @@ function EditProfileScreenEditor({ profile }: { profile: EditorProfile }) {
                 </View>
               )}
             </View>
-            <Text style={styles.avatarHint}>Avatar is synced from your sign-in provider</Text>
+            <Text style={styles.avatarHint}>
+              Your profile photo comes from your sign-in account
+            </Text>
           </View>
 
           {/* Form */}
           <View style={styles.formSection}>
             <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Display Name</Text>
+              <Text style={styles.inputLabel}>Display name</Text>
               <View style={styles.inputContainer}>
                 <Ionicons
                   name="person-outline"
@@ -210,14 +212,17 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0f172a',
+    color: '#182B31',
+    flexShrink: 1,
+    textAlign: 'center',
+    marginHorizontal: 8,
   },
   saveButton: {
     paddingHorizontal: 16,
     minHeight: 44,
     justifyContent: 'center',
     borderRadius: borderRadius.md,
-    backgroundColor: colors.primary[500],
+    backgroundColor: colors.action.primary,
   },
   saveButtonDisabled: {
     opacity: 0.5,
@@ -299,7 +304,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   inputHint: {
-    fontSize: 12,
+    fontSize: 14,
     color: '#64748b',
   },
 });

@@ -75,7 +75,7 @@ function GuestTripsView() {
       <View style={styles.heroSection}>
         <View style={styles.heroIconContainer} accessible={false}>
           <LinearGradient colors={[colors.primary[50], '#fff']} style={styles.heroIconGradient}>
-            <Ionicons name="airplane" size={48} color={colors.primary[500]} />
+            <Ionicons name="airplane" size={48} color={colors.action.primary} />
           </LinearGradient>
         </View>
 
@@ -91,7 +91,7 @@ function GuestTripsView() {
       {isLoading ? (
         <ActivityIndicator
           size="small"
-          color={colors.primary[500]}
+          color={colors.action.primary}
           style={{ marginVertical: 20 }}
         />
       ) : (
@@ -252,7 +252,7 @@ function AuthenticatedTripsView() {
 
         {initialLoad && loading ? (
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color={colors.primary[500]} />
+            <ActivityIndicator size="large" color={colors.action.primary} />
           </View>
         ) : error && trips.length === 0 ? (
           <View style={styles.emptyState}>
@@ -268,8 +268,7 @@ function AuthenticatedTripsView() {
             </View>
             <Text style={styles.emptyStateTitle}>No trips yet</Text>
             <Text style={styles.emptyStateSubtitle}>
-              Start planning your next adventure!{'\n'}
-              Shape a day-by-day plan around what you love.
+              Your next adventure starts with a place. We’ll help you bring the days together.
             </Text>
             <Button
               title="Create Your First Trip"
@@ -326,7 +325,7 @@ export default function TripsScreen() {
           accessibilityRole="button"
           accessibilityLabel="Plan a new trip"
         >
-          <Ionicons name="add" size={24} color={colors.primary[500]} />
+          <Ionicons name="add" size={24} color={colors.action.primary} />
         </TouchableOpacity>
       </View>
 
@@ -352,7 +351,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0f172a',
   },
   addButton: {
@@ -367,7 +366,7 @@ const styles = StyleSheet.create({
   // ─── Guest / Signed-Out ──────────
   guestScrollContent: {
     paddingHorizontal: 24,
-    paddingBottom: 100,
+    paddingBottom: 32,
   },
   heroSection: {
     alignItems: 'center',
@@ -459,7 +458,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#f1f5f9',
   },
   tabActive: {
-    backgroundColor: colors.primary[500],
+    backgroundColor: colors.action.primary,
   },
   tabText: {
     fontSize: 14,
@@ -471,7 +470,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingHorizontal: 24,
-    paddingBottom: 100,
+    paddingBottom: 32,
   },
   emptyState: {
     alignItems: 'center',

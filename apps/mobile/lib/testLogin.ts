@@ -29,3 +29,28 @@ export function testLoginEnabled(): boolean {
     process.env.EXPO_PUBLIC_API_URL
   );
 }
+
+/** QA uses ordinary password authentication against the isolated staging project. */
+export function isQaLoginEnabled(
+  flag: string | undefined,
+  authUrl: string | undefined,
+  apiUrl: string | undefined
+): boolean {
+  return (
+    flag === '1' &&
+    authUrl === 'https://omovikloadpvzijoaqus.supabase.co' &&
+    apiUrl === 'https://faroway-git-verify-staging-readiness-20261018-testimonio.vercel.app'
+  );
+}
+
+export function qaLoginEnabled(): boolean {
+  return isQaLoginEnabled(
+    process.env.EXPO_PUBLIC_MOBILE_QA,
+    process.env.EXPO_PUBLIC_SUPABASE_URL,
+    process.env.EXPO_PUBLIC_API_URL
+  );
+}
+
+export function emailLoginEnabled(): boolean {
+  return testLoginEnabled() || qaLoginEnabled();
+}

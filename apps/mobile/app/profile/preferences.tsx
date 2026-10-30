@@ -106,7 +106,7 @@ function PreferencesScreenEditor({ profile }: { profile: EditorProfile }) {
           <Ionicons name="arrow-back" size={24} color={'#475569'} />
         </TouchableOpacity>
         <Text style={styles.headerTitle} accessibilityRole="header">
-          Travel Preferences
+          Travel preferences
         </Text>
         <TouchableOpacity
           style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
@@ -123,6 +123,10 @@ function PreferencesScreenEditor({ profile }: { profile: EditorProfile }) {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <Text style={{ fontSize: 16, lineHeight: 24, color: '#53676C', marginBottom: 24 }}>
+          A starting point for your next adventure. Choose up to five interests and the budget that
+          feels right.
+        </Text>
         {/* Vibes */}
         <View style={styles.section}>
           <VibeSelector
@@ -202,14 +206,17 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#0f172a',
+    color: '#182B31',
+    flexShrink: 1,
+    textAlign: 'center',
+    marginHorizontal: 8,
   },
   saveButton: {
     paddingHorizontal: 16,
     minHeight: 44,
     justifyContent: 'center',
     borderRadius: borderRadius.md,
-    backgroundColor: colors.primary[500],
+    backgroundColor: colors.action.primary,
   },
   saveButtonDisabled: {
     opacity: 0.6,
@@ -242,7 +249,7 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: borderRadius.lg,
     borderWidth: 2,
-    borderColor: 'transparent',
+    borderColor: '#DCE5E3',
   },
   budgetOptionSelected: {
     backgroundColor: '#FFF5F4',
@@ -261,7 +268,7 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   budgetLabelSelected: {
-    color: colors.primary[400],
+    color: colors.action.primary,
   },
   budgetDescription: {
     fontSize: 13,

@@ -47,7 +47,11 @@
     "preinstall": "node -e \"if(process.env.npm_execpath && !process.env.npm_execpath.includes('bun')) { console.error('\\x1b[31m\\nPlease use bun as the package manager:\\n  bun install\\n\\x1b[0m'); process.exit(1) }\"",
     "dev:mobile:test": "node scripts/mobile-test/run.mjs",
     "test:mobile:integration": "node scripts/mobile-test/verify.mjs",
-    "test:mobile:native": "node scripts/mobile-test/native.mjs"
+    "test:mobile:native": "node scripts/mobile-test/native.mjs",
+    "uat:api": "bash scripts/uat/api.sh",
+    "uat:images": "bun scripts/uat/images.ts",
+    "uat:native": "python3 scripts/uat/native-adb.py",
+    "uat:native:maestro": "node scripts/uat/native.mjs"
   },
   "overrides": {
     "@nestjs/common": "11.1.28",

@@ -1,5 +1,8 @@
 # Mobile QA preparation
 
+For the configured Android UAT build, staging accounts, and repeatable API/device
+commands, see [Android UAT](UAT.md).
+
 Use the `qa` EAS profile for physical devices and `qa-simulator` for iOS
 simulators. These are release-mode builds, not Expo Go or development clients.
 Production store submission is a separate step.

@@ -1,4 +1,4 @@
-appId: ai.faroway.app
+appId: ai.faroway.app.qa
 name: Startup and planner navigation
 ---
 # No clearState, credentials, trip creation or AI requests.
