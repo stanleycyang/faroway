@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "noImplicitReturns": true,
+    "types": ["node"],
+    "lib": ["ES2022", "DOM"]
+  },
+  "include": [
+    "bun-test.d.ts",
+    "uat/**/*.ts",
+    "__tests__/uat-staging-guard.test.ts",
+    "__tests__/uat-smoke.test.ts",
+    "__tests__/model-compare.test.ts"
+  ]
+}

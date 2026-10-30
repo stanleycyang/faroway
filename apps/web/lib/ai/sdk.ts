@@ -3,7 +3,19 @@ import { createRequire } from "node:module";
 const requireAi = createRequire(import.meta.url);
 
 export type AiGateway = (model: string) => unknown;
-export type AiUsage = { totalTokens?: number };
+export type AiUsage = {
+  inputTokens?: number;
+  outputTokens?: number;
+  totalTokens?: number;
+  reasoningTokens?: number;
+  cachedInputTokens?: number;
+  outputTokenDetails?: { textTokens?: number; reasoningTokens?: number };
+  inputTokenDetails?: {
+    noCacheTokens?: number;
+    cacheReadTokens?: number;
+    cacheWriteTokens?: number;
+  };
+};
 export type GenerateObjectResult<T> = { object: T; usage?: AiUsage };
 export type GenerateTextResult = { text: string; usage?: AiUsage };
 

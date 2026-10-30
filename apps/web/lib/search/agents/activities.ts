@@ -8,11 +8,12 @@ import {
  * Uses real activity vendors + AI for matching and ranking
  */
 
+import { gateway as defaultGateway, createGateway } from "@/lib/ai/sdk";
 import {
-  generateObject,
-  gateway as defaultGateway,
-  createGateway,
-} from "@/lib/ai/sdk";
+  generatePlanningObject,
+  logPlanningFallback,
+  planningModel,
+} from "@/lib/ai/planning-step";
 import { z } from "zod";
 import {
   canProcessViatorContent,
@@ -161,8 +162,8 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
 
   const aiPromise = withAbortTimeout(
     (abortSignal) =>
-      generateObject<ActivityListResult>({
-        model: aiGateway(MODEL),
+      generatePlanningObject<ActivityListResult>("activities", {
+        model: aiGateway(planningModel("activities", MODEL)),
         providerOptions: PLANNING_PROVIDER_OPTIONS,
         system: SYSTEM_PROMPT,
         prompt,
@@ -187,15 +188,23 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
         reviewCount: 0,
       })),
     )
-    .catch((error) => {
-      if (isOperationTimeoutError(error)) {
+    .catch((error: unknown) => {
+      const timedOut = isOperationTimeoutError(error);
+      const detail = error instanceof Error ? error.message : String(error);
+      if (timedOut) {
         console.warn(
           "[Activities Agent] AI timed out, using vendor/fallback results:",
-          error.message,
+          detail,
         );
       } else {
         console.error("[Activities Agent] AI generation error:", error);
       }
+      logPlanningFallback(
+        "activities",
+        timedOut ? "timeout" : "error",
+        "empty",
+        detail,
+      );
       return [] as ActivityResult[];
     });
 

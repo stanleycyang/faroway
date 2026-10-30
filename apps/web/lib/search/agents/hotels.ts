@@ -8,11 +8,12 @@ import {
  * Live hotel quotes use the separate consented LiteAPI flow.
  */
 
+import { gateway as defaultGateway, createGateway } from "@/lib/ai/sdk";
 import {
-  generateObject,
-  gateway as defaultGateway,
-  createGateway,
-} from "@/lib/ai/sdk";
+  generatePlanningObject,
+  logPlanningFallback,
+  planningModel,
+} from "@/lib/ai/planning-step";
 import { z } from "zod";
 import { SearchPlan, HotelResult } from "../types";
 import { VIBE_KEYWORDS } from "@faroway/constants";
@@ -166,7 +167,8 @@ For vibes like:
 - "Relaxation" → spa hotels, beach resorts`;
 
   try {
-    console.log("[Hotels Agent] Using AI Gateway with model:", MODEL);
+    const modelName = planningModel("hotels", MODEL);
+    console.log("[Hotels Agent] Using AI Gateway with model:", modelName);
     console.log(
       "[Hotels Agent] API Key present:",
       !!process.env.AI_GATEWAY_API_KEY ||
@@ -175,8 +177,8 @@ For vibes like:
 
     const { object: result } = await withAbortTimeout(
       (abortSignal) =>
-        generateObject<HotelListResult>({
-          model: aiGateway(MODEL),
+        generatePlanningObject<HotelListResult>("hotels", {
+          model: aiGateway(modelName),
           providerOptions: PLANNING_PROVIDER_OPTIONS,
           system: SYSTEM_PROMPT,
           prompt,
@@ -202,14 +204,22 @@ For vibes like:
       };
     });
   } catch (error) {
-    if (isOperationTimeoutError(error)) {
+    const timedOut = isOperationTimeoutError(error);
+    const detail = error instanceof Error ? error.message : String(error);
+    if (timedOut) {
       console.warn(
         "[Hotels Agent] AI timed out, returning available hotel results:",
-        error instanceof Error ? error.message : String(error),
+        detail,
       );
     } else {
       console.error("[Hotels Agent] AI generation error:", error);
     }
+    logPlanningFallback(
+      "hotels",
+      timedOut ? "timeout" : "error",
+      "empty",
+      detail,
+    );
     return [];
   }
 }

@@ -7,11 +7,12 @@ import {
  * Analyzes user input and creates a search plan for other agents
  */
 
+import { gateway as defaultGateway, createGateway } from "@/lib/ai/sdk";
 import {
-  generateObject,
-  gateway as defaultGateway,
-  createGateway,
-} from "@/lib/ai/sdk";
+  generatePlanningObject,
+  logPlanningFallback,
+  planningModel,
+} from "@/lib/ai/planning-step";
 import { z } from "zod";
 import { SearchInput, SearchPlan } from "../types";
 import { VIBE_KEYWORDS, BUDGET_RANGES } from "@faroway/constants";
@@ -225,8 +226,8 @@ Create a detailed search plan with:
   try {
     const { object: plan } = await withAbortTimeout(
       (abortSignal) =>
-        generateObject<SearchPlan>({
-          model: aiGateway(MODEL),
+        generatePlanningObject<SearchPlan>("orchestrator", {
+          model: aiGateway(planningModel("orchestrator", MODEL)),
           providerOptions: PLANNING_PROVIDER_OPTIONS,
           system: SYSTEM_PROMPT,
           prompt,
@@ -291,14 +292,22 @@ Create a detailed search plan with:
 
     return plan;
   } catch (error) {
-    if (isOperationTimeoutError(error)) {
+    const timedOut = isOperationTimeoutError(error);
+    const detail = error instanceof Error ? error.message : String(error);
+    if (timedOut) {
       console.warn(
         "[Orchestrator Agent] Timed out, using fallback search plan:",
-        error instanceof Error ? error.message : String(error),
+        detail,
       );
     } else {
       console.error("[Orchestrator Agent] Error:", error);
     }
+    logPlanningFallback(
+      "orchestrator",
+      timedOut ? "timeout" : "error",
+      "fallback_plan",
+      detail,
+    );
     return buildFallbackSearchPlan(input);
   }
 }
