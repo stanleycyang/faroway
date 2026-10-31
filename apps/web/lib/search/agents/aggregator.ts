@@ -182,7 +182,7 @@ export async function runAggregatorAgent(
   activities: ActivityResult[],
   dining: DiningResult[],
   transport: TransportResult[] = [],
-  options: { structuredSchedule?: boolean } = {},
+  options: { structuredSchedule?: boolean; explicitDailyBudget?: boolean } = {},
 ): Promise<{ days: SuggestedDay[]; topHotel: HotelResult | null }> {
   const { destination, dates } = plan;
   activities = activities.filter(canProcessViatorContent);
@@ -284,6 +284,17 @@ Create an itinerary that:
 
 Reference items by their IDs. Morning activities should be morning/any time, afternoon activities in afternoon, etc.`;
 
+  const pace = plan.activityCriteria.pacePreference;
+  const dailyBudget =
+    pace === "relaxed"
+      ? { visits: 2, minutes: 240 }
+      : pace === "packed"
+        ? { visits: 5, minutes: 600 }
+        : { visits: 4, minutes: 420 };
+  const budgetPrompt = options.explicitDailyBudget
+    ? `\nDAILY FEASIBILITY CHECK: Each day must have at least one visit, no more than ${dailyBudget.visits} visits, and no more than ${dailyBudget.minutes} total activity minutes summed across morning, afternoon and evening. Use supplied durationMinutes unchanged; meals, transfers and rest are additional time. Before finalizing each day, add its selected activity durations and remove or move visits until both limits hold. Leave spare time rather than exhausting the inventory. Do not reuse activity IDs or shorten visits to fit. If inventory cannot cover all days, disclose the gap instead of inventing visits.`
+    : "";
+
   try {
     const { object: result } = await withAbortTimeout(
       (abortSignal) =>
@@ -293,8 +304,9 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
           system: SYSTEM_PROMPT,
           prompt: options.structuredSchedule
             ? prompt +
+              budgetPrompt +
               "\nUse the daily activities array with id and slot for each selected visit. The schema limits total visits per day according to pace. Use breakfastId, lunchId and dinnerId for meals, or null when not separately planned. Do not put activity IDs in meal fields."
-            : prompt,
+            : prompt + budgetPrompt,
           schema: options.structuredSchedule
             ? structuredItinerarySchema(
                 numDays,

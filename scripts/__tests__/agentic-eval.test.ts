@@ -1,4 +1,5 @@
 import { DEVELOPMENT_BRIEFS, HOLDOUT_BRIEFS } from "../uat/lib/eval-briefs";
+import romeOverload from "../fixtures/agentic-rome-overload.json";
 import { suppliedDistanceKm } from "../uat/lib/route-eval";
 import { describe, expect, test } from "bun:test";
 import { evaluateVenueConstraints } from "../uat/lib/venue-constraints";
@@ -89,6 +90,15 @@ function fixture(): AgenticTrace {
 }
 
 describe("production-shape agentic evaluation", () => {
+  test("flags the observed Rome plan despite successful generation and intact IDs", () => {
+    const trace = romeOverload.trace as unknown as AgenticTrace;
+    const result = evaluateAgenticTrace(trace);
+    expect(result.contractPass).toBe(true);
+    expect(result.metrics.fallbackSteps).toBe(0);
+    expect(result.warnings).toEqual(romeOverload.expected.paceWarnings);
+    const inventory = trace.steps[2].output as Array<{ duration: number }>;
+    expect(inventory.reduce((sum, item) => sum + item.duration, 0)).toBe(525);
+  });
   test("passes intact contracts without certifying generated venue claims", () => {
     const result = evaluateAgenticTrace(fixture());
     expect(result.contractPass).toBe(true);

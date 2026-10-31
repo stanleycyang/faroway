@@ -79,6 +79,7 @@ async function main() {
     delete process.env[name];
   process.env.VIATOR_CONTENT_ENABLED = "false";
   const structuredSchedule = process.argv.includes("--structured-schedule");
+  const explicitDailyBudget = process.argv.includes("--explicit-daily-budget");
   const settings = {
     PLANNING_MODEL_AGGREGATOR: "google/gemini-3-flash",
     PLANNING_THINKING_AGGREGATOR: thinking,
@@ -103,9 +104,18 @@ async function main() {
   const trace: AgenticTrace = {
     ...frozen,
     runId: randomUUID(),
-    configId: `aggregator-replay-${thinking}`,
+    configId: [
+      "aggregator-replay",
+      thinking,
+      ...(structuredSchedule ? ["bounded-schema"] : []),
+      ...(explicitDailyBudget ? ["daily-budget"] : []),
+    ].join("-"),
     startedAt: new Date().toISOString(),
-    settings: { ...settings, structuredSchedule: String(structuredSchedule) },
+    settings: {
+      ...settings,
+      structuredSchedule: String(structuredSchedule),
+      explicitDailyBudget: String(explicitDailyBudget),
+    },
     source: {
       commit: execFileSync("git", ["rev-parse", "HEAD"], {
         cwd: root,
@@ -160,7 +170,7 @@ async function main() {
       upstream[2].output as ActivityResult[],
       upstream[3].output as DiningResult[],
       [],
-      { structuredSchedule },
+      { structuredSchedule, explicitDailyBudget },
     );
     trace.mappedItinerary = mapSearchResultsToItinerary(
       {

@@ -517,3 +517,80 @@ Test trips were deleted by the runner. Planning remains paused with a nonfunctio
 AI key; no live model calls were made in this application check. Gateway budget
 reconciliation still reports **$0.85/$20**. This is a deployed application
 baseline, not a live-AI acceptance result or a production release approval.
+
+### Explicit daily-budget hillclimb (2026-10-31)
+
+The replay runner now accepts `--explicit-daily-budget`. This adds an explicit
+per-day count and activity-minute ceiling (relaxed 2/240, moderate 4/420, packed
+5/600), asks the model to sum unchanged supplied durations, and prohibits filling
+days by shortening or inventing visits. It remains opt-in; production behavior
+is unchanged. Frozen upstream inputs and the independent existing evaluator were
+kept fixed throughout these trials.
+
+| Candidate                                    | Trials | Aggregator latency | Outcome                                                                                      |
+| -------------------------------------------- | ------ | ------------------ | -------------------------------------------------------------------------------------------- |
+| Daily budget, medium reasoning               | 1      | 30.02 s            | Copenhagen timed out; batch stopped on unknown token billing                                 |
+| Daily budget, low reasoning                  | 4      | 5.95–11.51 s       | All completed, but every plan exceeded daily pace limits                                     |
+| Daily budget + bounded schema, low reasoning | 4      | 5.74–6.27 s        | One schema fallback; all three successful plans still had pace and/or meal-distance warnings |
+
+The eight low-reasoning trials cost an estimated $0.04674 in token usage,
+including the schema-failure trial. The timed-out medium call has unknown
+per-call token cost and is not treated as free. A gateway budget check was made
+before resuming paid calls. All nine trials remain in the evidence, including
+failures; the fallback's empty warning list is not a quality win.
+
+The independent frozen venue-fact audit also flagged Monday monastery visits in
+both bounded-schema Lisbon trials, and reopening confirmation in all four Lisbon
+trials. Short latency and schema compliance therefore do not establish usable
+itineraries. Neither candidate is promoted. The evidence favors separating
+deterministic scheduling constraints from model-written descriptions rather than
+adding more arithmetic instructions to the prompt.
+
+Artifacts: `artifacts/uat/traces/daily-budget-replay-20261031`,
+`daily-budget-low-replay-20261031`, and `bounded-budget-low-replay-20261031`.
+Repository checks and the 49 itinerary tests passed with the experimental option.
+
+### Fresh destination baseline and safety review (2026-10-31)
+
+Three additional development briefs ran through all five agents using `flash-low`
+(low reasoning for inventory, medium for aggregation). No fallback occurred.
+These are serial harness timings, not application latency, and token costs are
+estimates rather than full billing receipts.
+
+| Brief                    | Serial duration | Estimated tokens cost | Observed quality issues                                                       |
+| ------------------------ | --------------- | --------------------- | ----------------------------------------------------------------------------- |
+| Rome, one day            | 66.53 s         | $0.04633              | 525 activity minutes before meals/transfers despite moderate pace             |
+| Tokyo, solo budget       | 59.24 s         | $0.04284              | Overfilled final day and two remote meals                                     |
+| New York, peanut allergy | 68.46 s         | $0.05291              | Overfilled first day, two remote meals, unsupported premise in allergy advice |
+
+The New York plan retained the structured allergy requirement and included
+cross-contact checks, but also said to “re-verify their peanut-free kitchen
+protocols” for a named restaurant. No provider evidence established such
+protocols. This assistant review flags an unsupported safety premise, not a
+finding about that restaurant's actual practices. The deterministic requirement
+retention check currently misses this semantic defect. It must not be used as
+allergy-suitability acceptance; independent evidence and careful wording remain
+required.
+
+The observed Rome failure is now a committed, projected synthetic regression
+fixture (`scripts/fixtures/agentic-rome-overload.json`), with the original trace
+hash and an explicit unverified-content label. CI can reproduce its pace warning
+without credentials or paid calls. Only scheduled inventory and evaluator-required
+mapped fields are retained; it is a negative example, not a reference itinerary.
+The regression demonstrates why intact IDs and successful generation are
+insufficient. Thirteen evaluator tests pass, including this actual model output.
+
+All full traces remain in `artifacts/uat/traces/expanded-baseline-20261031`.
+Five destinations now show scheduling problems (Lisbon, Copenhagen, Rome, Tokyo,
+New York). Holdouts remain unused. Cumulative Gateway UAT spend after this batch:
+**$1.07/$20**. No candidate from this round is promoted.
+
+Next experiment: compile a feasible schedule before asking for narrative. The
+compiler must preserve inventory IDs/durations, enforce day and slot budgets,
+avoid duplicate visits, retain complete date coverage, and expose supply gaps.
+Descriptions must refer only to the compiled stops; removed stops must not remain
+in titles or summaries. Missing meals and unavailable evidence must remain visible
+in the scorecard, so deleting difficult content cannot manufacture a quality win.
+Coordinate-based clustering is only a heuristic until locations and routes are
+verified. This scheduling change cannot by itself resolve venue grounding or the
+unsupported allergy wording; both remain separate acceptance requirements.
