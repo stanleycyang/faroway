@@ -876,3 +876,27 @@ These calls reuse frozen upstream inventory; they do not measure end-to-end API 
 Validation: all 1,255 web tests and 92 script tests pass; workspace checks pass. Tests cover production/wrong-project/config rejection, app entry-point routing, unchanged schedule data, malformed references, stalled narration/abort, no retry, supplier-content filtering, empty supply, deterministic hotel choice, and the legacy path when disabled or over seven days. Removed unused-variable warnings from the narration tests. An isolated Next.js build in `/tmp/faroway-compiled-integration-20261031` passes with the experiment enabled, staging public-read credentials, and disabled AI/service credentials. The first build with placeholder public credentials correctly failed on blog data reads; it was not treated as a code/build success.
 
 Next release gate: exercise a bounded consented request through the deployed staging API and inspect persisted/streamed itinerary rendering before considering broader rollout. This requires explicitly configuring the preview experiment; the current remote deployment remains paused. No production deployment or merge of PR #55 is justified by these two replays.
+
+### Deployed durable-workflow eval exposes narration failure (2026-10-31)
+
+Ran one consented Lisbon development brief through the actual protected preview API at commit `2ef8e378f57d39b1eb4164eab59ddca449eeb12c`, using the isolated staging database and dedicated $20-capped test key. The temporary deployment used low thinking for all five planning steps, the compiler/narrator flag, an 8,000-token global ceiling, and the existing 2,000-token narration bound. Runtime logs confirm the experiment executed, excluded one known closed candidate/date, and made five model calls. This tests the durable workflow and persistence rather than frozen upstream replays.
+
+The API created the trip, accepted generation, returned progress through completion, and returned the saved three-day itinerary after **51.635 seconds** from the first API request (completion observed at 50.410 seconds). Deletion returned 200 at 52.290 seconds. The old smoke grader reported success, **incorrectly for experience quality**: narration failed its exact visit-reference guard (`Narration references a different selection of visits`), and the saved itinerary contained the compiled fallback titles, summaries, and explicit failure tip. The fallback protected the schedule and did not retry the model. The raw rejected narration was not retained, so the precise omitted/altered reference is unknown; do not claim a root cause or a narration fix from this run.
+
+| Step | Model latency | Input tokens | Output tokens | Reasoning tokens (within output) |
+| --- | ---: | ---: | ---: | ---: |
+| Orchestrator | 6.819 s | 1,751 | 1,286 | 651 |
+| Hotels | 18.009 s | 781 | 3,319 | 1,013 |
+| Activities | 13.466 s | 1,056 | 2,630 | 0 |
+| Dining | 21.103 s | 1,152 | 4,659 | 1,575 |
+| Narrator | 2.531 s | 1,031 | 358 | 0 |
+
+Total reported usage: 5,771 input / 12,252 output tokens, with parallel upstream steps. Gateway reconciled at **$1.51/$20** after the run (previously $1.47; displayed spend is rounded). This is one development case, not a latency distribution or cost estimate for all trips. Saved content also retains uncertain addresses/availability and two separate-journey meal warnings. No browser rendering or native Android check was performed in this iteration.
+
+Added a sanitized regression fixture, `scripts/fixtures/agentic-deployed-narration-fallback.json`, containing only the saved day text and selected names, without accounts, trip IDs, credentials or supplier verification claims. The saved-plan grader now rejects compiled fallback summaries and explicit unavailable-narration tips, including a single affected day in an otherwise narrated itinerary. Ordinary uncertainty tips continue to pass this structural check. The original private smoke report remains preserved as evidence of the false positive; it must not be used as release approval. Private API receipts and runtime usage/fallback logs are in `artifacts/uat/deployed-compiled-20261031/`.
+
+After the test, restored the branch alias to the prior paused deployment (`dpl_9uRDNdkzSq6XkkAQaKzYJU6niDvp`) and deleted the temporary live deployment (`dpl_Bgzo5W1U5ouFxucaMUrha5P7FK6r`, API confirmed `DELETED`). Branch configuration again pauses planning and uses a disabled AI key for subsequent builds; experiment/low-thinking settings remain branch-specific. Production is unchanged.
+
+Next hillclimb: reproduce and reduce narration-reference failures using realistic long IDs and preserve rejected responses in private experiment receipts; then repeat the deployed eval and inspect the rendered result. Keep the exact reference guard and no-retry bound intact. The candidate remains unfit for production, and reserved holdouts remain unused.
+
+Validation for the grader change: 93 script tests and the script TypeScript check pass. Existing app-code validation remains 1,255 web tests at `2ef8e378`; this iteration changes only evaluation code, its regression fixture and evidence documentation.
