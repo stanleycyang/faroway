@@ -54,7 +54,14 @@ const ActivitySchema = z.object({
   name: z.string(),
   description: z.string(),
   category: z.string(),
-  duration: z.number(), // minutes
+  duration: z
+    .number()
+    .int()
+    .min(1)
+    .max(1440)
+    .describe(
+      "Estimated visit duration in whole MINUTES, never hours. Example: a 2.5-hour visit is 150.",
+    ),
   price: z.number().optional(),
   currency: z.string().optional(),
   rating: z.number().min(0).max(5),
@@ -96,7 +103,7 @@ For each activity, provide:
 1. Real attraction/tour names that exist at the destination
 2. Accurate descriptions of what visitors will experience
 3. Leave price unspecified unless supplied by a provider
-4. Appropriate duration estimates
+4. Duration in whole MINUTES, never hours (30-minute stop = 30; 2-hour museum visit = 120; 2.5-hour tour = 150)
 5. Best time of day to visit
 6. How well it matches the traveler's vibes
 
