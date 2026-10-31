@@ -178,3 +178,63 @@ hold back a small canary when promoting a tested candidate.
    evidence before trusting automated judgments.
 5. With a confirmed budget, compare the current pipeline against one focused
    candidate change, then promote only after native acceptance and slice review.
+
+
+## Executable trace evaluation (2026-10-31)
+
+`uat:model-compare -- --live` now preserves each agent output and the production
+itinerary bridge output in private files under `artifacts/uat/traces/<run-id>`.
+The trace records source commit/dirty state, a hash of the agent/bridge/config
+sources and lockfile, explicit overrides, per-step usage, timings and fallbacks.
+Files are written after each step, including failed steps, so interrupted and
+partial runs remain in the evaluation denominator. Trace directories must be
+empty to prevent overwriting earlier trials. These are agent outputs after their
+normalization; they are not raw provider responses or verified venue facts.
+
+Bound a live experiment with `--configs baseline-flash-high`,
+`--briefs lisbon-city-break`, `--cap-usd 0.5`, and an optional `--trace-dir`.
+The dedicated gateway key's non-renewing $20 quota bounds cumulative live spend;
+the per-run threshold only stops between steps. Reconcile gateway spend after a
+run with unknown usage before starting another one. Never substitute a production
+key. These flags currently select live runs; mock mode remains fixture-based.
+
+Replay saved traces without model calls:
+
+```sh
+bun run uat:eval -- artifacts/uat/traces/<run-id> scripts/fixtures/agentic-venue-constraints.json
+```
+
+The deterministic grader checks step completion/fallbacks, dates, party,
+requirements, selected source identities, whole-minute durations, time-of-day
+compatibility, repeated activities, day coverage, meals, and preservation across
+the app's itinerary bridge. It flags sparse restaurant variety and overloaded
+slots. A contract pass does not certify usefulness, geographic feasibility,
+prices, actual opening hours, or accessibility/dietary suitability. Serial agent
+time must not be reported as app latency: the app parallelizes specialist calls.
+
+The optional venue constraints are independently reviewed, dated public-source
+facts. Current fixtures detect a Monday interior visit to Jerónimos and require
+reopening confirmation for the National Tile Museum. A current temporary closure
+does not establish closure on a future trip date. Name matching flags a review
+case, including potential exterior-only visits; absence of a matching fact is not
+evidence of availability. These development facts are not a general venue index.
+
+The first Lisbon baseline cost an estimated $0.06203 and had no fallbacks, but
+review found hours encoded as minutes, a closed-weekday visit, an unacknowledged
+museum closure, and a dinner experience paired with another dinner. The low-
+thinking pilot completed its specialists faster but timed out in aggregation;
+its total cost is unknown from response usage. Neither pilot supports changing
+production model defaults. The duration schema/prompt fix is being tested while
+the case set, factual evidence, schedule coherence checks, repeated trials,
+holdout review, and native/web experience measurements are still incomplete.
+
+
+The explicit-minute follow-up pilot returned all 15 generated activity durations
+as whole minutes, completed without fallback, and passed structural contracts.
+It cost an estimated $0.06760 versus $0.06203 in the original pilot; one trial
+cannot establish a cost or latency improvement. Correct units exposed two
+four-hour-plus afternoon slots before meals and transfers. These become pacing
+regressions for the next iteration. Production model defaults remain unchanged.
+Local validation after this iteration: 1,194 web, 673 mobile, 136 shared-package,
+and 61 script tests pass; typechecking, lint and formatting checks pass with the
+existing nine lint warnings.

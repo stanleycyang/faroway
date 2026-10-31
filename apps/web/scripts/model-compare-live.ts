@@ -1,5 +1,19 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  renameSync,
+  readdirSync,
+} from "node:fs";
 import { resolve } from "node:path";
+import { createHash, randomUUID } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import {
+  evaluateAgenticTrace,
+  type AgenticTrace,
+} from "../../../scripts/uat/lib/agentic-eval";
+import { UAT_BRIEFS } from "../../../scripts/uat/lib/briefs";
+import { mapSearchResultsToItinerary } from "../lib/search/bridge";
 import {
   onPlanningFallback,
   onPlanningUsage,
@@ -12,6 +26,7 @@ import {
 import type { SearchInput } from "../lib/search/types";
 import {
   runModelComparison,
+  MODEL_COMPARE_CONFIGS,
   type CompareStep,
   type StepExecution,
 } from "../../../scripts/uat/lib/model-compare";
@@ -86,6 +101,72 @@ async function main() {
       import("../lib/search/agents/aggregator"),
     ]);
 
+  const select = <T extends { id: string }>(items: T[], flag: string): T[] => {
+    const ids = arg(flag)?.split(",");
+    if (!ids) return items;
+    if (
+      new Set(ids).size !== ids.length ||
+      ids.some((id) => !items.some((item) => item.id === id))
+    )
+      throw new Error(`Invalid ${flag} selection`);
+    return ids.map((id) => items.find((item) => item.id === id)!);
+  };
+  const configs = select(MODEL_COMPARE_CONFIGS, "--configs");
+  const briefs = select(UAT_BRIEFS, "--briefs");
+  const capUsd = Number(arg("--cap-usd") ?? "20");
+  const root = resolve(import.meta.dirname, "../../..");
+  const runId = randomUUID();
+  const traceDir = resolve(
+    arg("--trace-dir") ?? resolve(root, "artifacts/uat/traces", runId),
+  );
+  mkdirSync(traceDir, { recursive: true, mode: 0o700 });
+  if (readdirSync(traceDir).length)
+    throw new Error("Trace directory must be empty; preserve prior trials");
+  const sourceFiles = [
+    ...["orchestrator", "hotels", "activities", "dining", "aggregator"].map(
+      (name) => `apps/web/lib/search/agents/${name}.ts`,
+    ),
+    "apps/web/lib/search/bridge.ts",
+    "apps/web/lib/ai/planning-step.ts",
+    "apps/web/lib/ai/sdk.ts",
+    "apps/web/lib/ai/planning-disclosure.ts",
+    "scripts/uat/lib/briefs.ts",
+    "bun.lock",
+  ];
+  const hash = createHash("sha256");
+  for (const file of sourceFiles) {
+    hash.update(file);
+    hash.update(readFileSync(resolve(root, file)));
+  }
+  const source = {
+    commit: execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: root,
+      encoding: "utf8",
+    }).trim(),
+    dirty: Boolean(
+      execFileSync("git", ["status", "--porcelain"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim(),
+    ),
+    filesSha256: hash.digest("hex"),
+  };
+  let trace: AgenticTrace;
+  const saveTrace = () => {
+    const file = resolve(traceDir, `${trace.configId}--${trace.brief.id}.json`);
+    writeFileSync(
+      file + ".tmp",
+      JSON.stringify(
+        { trace, evaluation: evaluateAgenticTrace(trace) },
+        null,
+        2,
+      ),
+      { mode: 0o600 },
+    );
+    renameSync(file + ".tmp", file);
+  };
+  console.error(`Trace directory: ${traceDir}`);
+
   let plan: Awaited<ReturnType<typeof runOrchestratorAgent>> | undefined;
   let hotelResults: Awaited<ReturnType<typeof hotels.runHotelsAgent>> = [];
   let activityResults: Awaited<
@@ -95,6 +176,9 @@ async function main() {
 
   const report = await runModelComparison({
     mode: "live",
+    configs,
+    briefs,
+    capUsd,
     target: { supabaseUrl, projectRef },
     executeStep: async ({ config, brief, step }) => {
       replacePlanningStepEnv(config.env);
@@ -103,6 +187,17 @@ async function main() {
         hotelResults = [];
         activityResults = [];
         diningResults = [];
+        trace = {
+          version: 1,
+          runId,
+          configId: config.id,
+          brief,
+          source,
+          startedAt: new Date().toISOString(),
+          settings: config.env,
+          steps: [],
+        };
+        saveTrace();
       }
       const fallbacks: PlanningFallbackRecord[] = [];
       const usages: PlanningUsageRecord[] = [];
@@ -114,13 +209,16 @@ async function main() {
       });
       const started = Date.now();
       const notes: string[] = [];
+      let output: unknown;
       try {
         if (step === "orchestrator") {
           plan = await runOrchestratorAgent(briefInput(brief));
+          output = plan;
         } else if (!plan) {
           throw new Error("orchestrator did not produce a plan");
         } else if (step === "hotels") {
           hotelResults = await hotels.runHotelsAgent(plan);
+          output = hotelResults;
           const priced = hotelResults.filter(
             (hotel) => hotel.pricePerNight != null,
           );
@@ -129,8 +227,10 @@ async function main() {
           );
         } else if (step === "activities") {
           activityResults = await activities.runActivitiesAgent(plan);
+          output = activityResults;
         } else if (step === "dining") {
           diningResults = await dining.runDiningAgent(plan);
+          output = diningResults;
           const links = diningResults.filter((item) => item.reservationUrl);
           notes.push(
             links.length
@@ -145,11 +245,31 @@ async function main() {
             diningResults,
             [],
           );
+          output = aggregated;
+          trace.mappedItinerary = mapSearchResultsToItinerary(
+            {
+              searchId: runId,
+              hotels: hotelResults,
+              activities: activityResults,
+              dining: diningResults,
+              transport: [],
+              itinerary: aggregated.days,
+            },
+            aggregated.topHotel,
+          );
           notes.push(`${aggregated.days.length} days`);
         }
       } finally {
         stopFallback();
         stopUsage();
+        trace.steps.push({
+          step,
+          output,
+          latencyMs: Date.now() - started,
+          usage: usages,
+          fallbacks,
+        });
+        saveTrace();
       }
       const usage = sumPlanningUsage(usages);
       const execution: StepExecution = {

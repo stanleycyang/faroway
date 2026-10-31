@@ -229,3 +229,21 @@ test("CLI requires one explicit mode even when a key is present", () => {
     expect(result.stderr).toContain("Choose exactly one");
   }
 });
+
+test("unknown billing still counts elapsed time and fallback failures", async () => {
+  const report = await runModelComparison({
+    mode: "live",
+    target: { supabaseUrl: stagingUrl },
+    executeStep: () => ({
+      model: "google/gemini-3-flash",
+      thinkingLevel: "medium",
+      latencyMs: 30000,
+      usage: {},
+      fallback: { reason: "timeout", outcome: "fallback_itinerary" },
+    }),
+  });
+  expect(report.rows[0]?.latencyMs).toBe(30000);
+  expect(report.rows[0]?.fallbacks).toBe(1);
+  expect(report.rows[0]?.fallbackRate).toBe(1);
+  expect(report.rows[0]?.estimatedUsd).toBe(null);
+});

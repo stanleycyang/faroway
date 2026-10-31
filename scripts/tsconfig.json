@@ -15,6 +15,7 @@
     "uat/**/*.ts",
     "__tests__/uat-staging-guard.test.ts",
     "__tests__/uat-smoke.test.ts",
-    "__tests__/model-compare.test.ts"
+    "__tests__/model-compare.test.ts",
+    "__tests__/agentic-eval.test.ts"
   ]
 }

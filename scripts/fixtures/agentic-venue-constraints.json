@@ -1,0 +1,18 @@
+[
+  {
+    "id": "jeronimos-monastery-interior",
+    "destination": "Lisbon",
+    "aliases": ["Jerónimos Monastery", "Mosteiro dos Jerónimos"],
+    "sourceUrl": "https://mosteirojeronimos.torrebelem.gov.pt/regulamento-interno",
+    "observedAt": "2026-10-31",
+    "closedWeekdays": [1]
+  },
+  {
+    "id": "national-tile-museum",
+    "destination": "Lisbon",
+    "aliases": ["National Tile Museum", "Museu Nacional do Azulejo"],
+    "sourceUrl": "https://mnazulejo.gov.pt/",
+    "observedAt": "2026-10-31",
+    "temporarilyClosed": true
+  }
+]
