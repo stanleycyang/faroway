@@ -10,7 +10,8 @@
   ],
   "git": {
     "deploymentEnabled": {
-      "main": false
+      "main": false,
+      "fix/trip-cover-catalog-20261031": false
     }
   }
 }

@@ -1,3 +1,4 @@
+import { destinationImage } from "../../lib/trips/destination-image";
 import { TripCard } from "../../components/dashboard/TripCard";
 import React, { useState } from "react";
 import { createRoot } from "react-dom/client";
@@ -12,6 +13,7 @@ import { cover, sampleDays } from "./planning-data";
 const days = sampleDays;
 function Fixture() {
   const initial = new URLSearchParams(location.search).get("screen") || "trip";
+  const destination = new URLSearchParams(location.search).get("destination");
   const [screen, setScreen] = useState(initial);
   const [selected, setSelected] = useState(0);
   if (screen === "saved")
@@ -102,9 +104,11 @@ function Fixture() {
   return (
     <div className="min-h-screen bg-slate-50">
       <TripHeader
-        destination="Paris"
+        destination={destination || "Paris"}
         heroImageUrl={
-          "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=1200&auto=format&fit=crop&q=80"
+          destination
+            ? destinationImage(destination)
+            : "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?w=1200&auto=format&fit=crop&q=80"
         }
         startDate="2099-06-01"
         endDate="2099-06-03"
