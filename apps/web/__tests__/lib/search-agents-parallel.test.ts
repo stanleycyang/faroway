@@ -270,4 +270,22 @@ describe("search agents internal parallelism", () => {
     expect(activities[0].rating).toBe(0);
     expect(activities[0].reviewCount).toBe(0);
   });
+  it("asks for whole minutes and rejects the observed hours-as-minutes response", async () => {
+    vi.stubEnv("VIATOR_CONTENT_ENABLED", "false");
+    mocks.generateObject.mockResolvedValueOnce({
+      object: { activities: [{ ...aiActivity, duration: 150 }] },
+    });
+    const result = await runActivitiesAgent(plan as never, 1);
+    const args = mocks.generateObject.mock.calls[0][0];
+    expect(args.system).toContain("whole MINUTES, never hours");
+    expect(
+      args.schema.safeParse({ activities: [{ ...aiActivity, duration: 2.5 }] })
+        .success,
+    ).toBe(false);
+    expect(
+      args.schema.safeParse({ activities: [{ ...aiActivity, duration: 150 }] })
+        .success,
+    ).toBe(true);
+    expect(result[0].duration).toBe(150);
+  });
 });
