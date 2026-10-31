@@ -12,6 +12,10 @@ import {
   evaluateAgenticTrace,
   type AgenticTrace,
 } from "../../../scripts/uat/lib/agentic-eval";
+import {
+  DEVELOPMENT_BRIEFS,
+  HOLDOUT_BRIEFS,
+} from "../../../scripts/uat/lib/eval-briefs";
 import { UAT_BRIEFS } from "../../../scripts/uat/lib/briefs";
 import { mapSearchResultsToItinerary } from "../lib/search/bridge";
 import {
@@ -112,7 +116,17 @@ async function main() {
     return ids.map((id) => items.find((item) => item.id === id)!);
   };
   const configs = select(MODEL_COMPARE_CONFIGS, "--configs");
-  const briefs = select(UAT_BRIEFS, "--briefs");
+  const suite = arg("--suite") ?? "uat";
+  if (!["uat", "development", "holdout"].includes(suite))
+    throw new Error("Invalid --suite");
+  const briefs = select(
+    suite === "development"
+      ? DEVELOPMENT_BRIEFS
+      : suite === "holdout"
+        ? HOLDOUT_BRIEFS
+        : UAT_BRIEFS,
+    "--briefs",
+  );
   const capUsd = Number(arg("--cap-usd") ?? "20");
   const root = resolve(import.meta.dirname, "../../..");
   const runId = randomUUID();
@@ -131,6 +145,7 @@ async function main() {
     "apps/web/lib/ai/sdk.ts",
     "apps/web/lib/ai/planning-disclosure.ts",
     "scripts/uat/lib/briefs.ts",
+    "scripts/uat/lib/eval-briefs.ts",
     "bun.lock",
   ];
   const hash = createHash("sha256");

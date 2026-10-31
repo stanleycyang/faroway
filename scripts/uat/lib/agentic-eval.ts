@@ -1,3 +1,4 @@
+import { suppliedDistanceKm } from "./route-eval";
 import { inclusiveDays, type UatBrief } from "./briefs";
 
 /** Agent outputs, not fabricated reference answers or externally verified facts. */
@@ -189,6 +190,16 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
         }[slotName];
         if (!strings(meal.mealTypes).includes(expectedMeal))
           fail(`day_${index + 1}:${slotName}:incompatible_meal_type`);
+        const distances = items.map((item) =>
+          suppliedDistanceKm(object(item).location, meal.location),
+        );
+        if (
+          distances.length &&
+          distances.every((distance) => distance != null && distance > 3)
+        )
+          warnings.push(
+            `day_${index + 1}:${slotName}:meal_over_3km_from_all_activities_on_unverified_coordinates`,
+          );
         restaurants.add(meal.id);
         meals += 1;
       } else if (mappedMeals.length)

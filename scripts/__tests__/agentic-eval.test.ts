@@ -1,3 +1,5 @@
+import { DEVELOPMENT_BRIEFS, HOLDOUT_BRIEFS } from "../uat/lib/eval-briefs";
+import { suppliedDistanceKm } from "../uat/lib/route-eval";
 import { describe, expect, test } from "bun:test";
 import { evaluateVenueConstraints } from "../uat/lib/venue-constraints";
 import {
@@ -234,4 +236,33 @@ test("rejects fractional hours accidentally represented as minutes", () => {
   expect(evaluateAgenticTrace(trace).failures).toContain(
     "invalid_duration:walk",
   );
+});
+
+test("route screening treats missing, invalid and placeholder coordinates as unknown", () => {
+  expect(suppliedDistanceKm(undefined, {})).toBe(null);
+  expect(suppliedDistanceKm({ lat: 0, lng: 0 }, { lat: 38, lng: -9 })).toBe(
+    null,
+  );
+  expect(suppliedDistanceKm({ lat: 91, lng: 2 }, { lat: 38, lng: -9 })).toBe(
+    null,
+  );
+  expect(
+    suppliedDistanceKm(
+      { lat: 38.6979, lng: -9.2067 },
+      { lat: 38.7165, lng: -9.1398 },
+    ),
+  ).toBeGreaterThan(5);
+});
+
+test("development and reserved holdout briefs have distinct IDs and valid bounded dates and parties", () => {
+  const cases = [...DEVELOPMENT_BRIEFS, ...HOLDOUT_BRIEFS];
+  expect(new Set(cases.map((c) => c.id)).size).toBe(cases.length);
+  expect(DEVELOPMENT_BRIEFS.length).toBe(12);
+  expect(HOLDOUT_BRIEFS.length).toBe(6);
+  for (const brief of cases) {
+    expect(brief.travelers).toBe(brief.adults + brief.children);
+    const trace = fixture();
+    trace.brief = brief;
+    expect(() => evaluateAgenticTrace(trace)).not.toThrow();
+  }
 });

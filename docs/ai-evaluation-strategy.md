@@ -264,3 +264,44 @@ Next: replay frozen upstream inventories to isolate aggregator prompt/model
 changes, then repeat successful candidates across broader briefs and independent
 holdouts. Preserve the failed trace in comparisons and measure actual application
 latency separately from this sequential harness.
+
+### Frozen-input aggregator comparison (2026-10-31)
+
+`apps/web/scripts/aggregator-replay-live.ts` makes exactly one paid aggregator call
+against saved, non-fallback upstream outputs. It requires `--live`, a staging
+target, a dedicated staging key, `--input`, and a new `--out` path. Optional
+`--thinking` accepts minimal, low, medium, or high. Reused upstream steps have zero
+replay latency and empty replay usage; provenance records the original source and
+input-file SHA-256. Replay latency is **not** complete-trip or application latency.
+Unknown billing exits 3 and requires gateway reconciliation before another call.
+The gateway key's $20 quota remains the cumulative billing cap.
+
+Five trials used the identical minute-correct Lisbon inventory from
+`minutes-pilot-20261031`. All used the current scheduling prompt and explicit
+nullable meal mapping. Artifacts are in `artifacts/uat/traces/replay-20261031`.
+
+| Thinking | Trials completed | Aggregator latency | Estimated replay cost | Quality observations                                                                                    |
+| -------- | ---------------- | ------------------ | --------------------- | ------------------------------------------------------------------------------------------------------- |
+| Low      | 2/2              | 6.36–6.44 s        | $0.00686–$0.00694     | Both overload two slots and assign two remote meals; one schedules the reported Monday closure.         |
+| Medium   | 2/2              | 15.91–16.24 s      | $0.01325–$0.01388     | Zero or one overloaded slots; two or three remote meals; neither schedules the reported Monday closure. |
+| High     | 0/1              | 30.01 s timeout    | Unknown               | Fallback used; second planned trial was not run after unknown billing.                                  |
+
+All five require review of the Tile Museum's reopening before the future visit.
+These are small, exploratory samples, not statistical proof of a winning setting.
+**No model setting is promoted.** The next quality intervention must address
+unverified venue availability and deficient geographic supply, rather than merely
+lowering thinking. There were no dining candidates in Belém in this frozen input;
+a planner cannot invent a nearby restaurant ID to fix the geographic defect.
+
+The offline evaluator now flags a meal more than 3 km from every activity in its
+slot, using supplied coordinates only. This is a review screen, not verified
+routing; invalid/missing/placeholder coordinates remain unknown. Regrade all
+saved traces with the current evaluator when comparing experiments.
+
+`--suite development` now selects 12 authored coverage briefs; `--suite holdout`
+selects six reserved cases. The default remains the original three UAT briefs.
+The reserved cases have not been run or used for tuning and still need independent
+review. This is initial coverage, short of the proposed 40/20 suite. Revision,
+provider failure, full application/native behavior, factual grounding, and human
+usefulness evaluation remain required. Latest gateway reconciliation: **$0.56 of
+$20 cumulative UAT spend**.
