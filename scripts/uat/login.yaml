@@ -1,0 +1,34 @@
+appId: ai.faroway.app.qa
+name: Staging login and saved trips
+---
+- launchApp
+- openLink: faroway-qa://onboarding/login
+- extendedWaitUntil:
+    visible:
+      id: test-email
+    timeout: 60000
+- tapOn:
+    id: test-email
+- eraseText
+- inputText: ${MAESTRO_UAT_EMAIL}
+- tapOn:
+    id: test-password
+- eraseText
+- inputText: ${MAESTRO_UAT_PASSWORD}
+- hideKeyboard
+- tapOn:
+    id: test-sign-in
+- extendedWaitUntil:
+    visible: "Explore.*"
+    timeout: 30000
+- tapOn: "My Trips.*"
+- extendedWaitUntil:
+    visible: "Your Trips|My Trips"
+    timeout: 30000
+- takeScreenshot: qa-saved-trips
+- stopApp
+- launchApp
+- tapOn: "My Trips.*"
+- assertNotVisible:
+    id: test-email
+- takeScreenshot: qa-session-restored

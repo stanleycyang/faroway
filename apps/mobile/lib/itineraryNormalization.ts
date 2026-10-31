@@ -1,3 +1,4 @@
+import { durationLabel } from './durationLabel';
 import type { Activity, Hotel, TripDay } from '../stores/tripStore';
 import { readTripCost, formatTripCost } from './tripCost';
 
@@ -68,7 +69,9 @@ function transformApiActivity(a: any, timeOfDay: string): Activity {
     description: displayText(a.description),
     location: displayText(a.location?.name) || displayText(a.location),
     duration:
-      displayNumber(a.duration) !== undefined ? `${a.duration} min` : displayText(a.duration),
+      displayNumber(a.duration) !== undefined
+        ? durationLabel(`${a.duration} min`)
+        : durationLabel(displayText(a.duration)),
     type:
       a.category === 'sightseeing' || a.category === 'adventure' || a.category === 'cultural'
         ? 'attraction'

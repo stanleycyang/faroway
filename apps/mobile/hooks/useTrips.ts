@@ -1,3 +1,4 @@
+import { destinationImage } from '../lib/destinationImage';
 import { retainTripDetail } from '../lib/tripSummary';
 import { readOwnedTripPages } from '../lib/tripListPages';
 import { transformItineraryDays, transformApiHotel } from '../lib/itineraryNormalization';
@@ -16,7 +17,6 @@ import { API_BASE_URL } from '../lib/supabase';
 import { useTripStore, Trip, TripInput } from '../stores/tripStore';
 import { syncService, networkMonitor, offlineStorage } from '../lib/offline';
 import { normalizeTripStatus } from '../lib/tripStatus';
-import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 
 interface ApiItinerary {
   days?: unknown[];
@@ -69,14 +69,13 @@ function transformApiTrip(apiTrip: ApiTrip, itinerary?: ApiItinerary): Trip {
     originCity: apiTrip.preferences?.originCity,
     originAirport: apiTrip.preferences?.originAirport,
     vibes: apiTrip.vibes || [],
-    budget: apiTrip.budget_tier || apiTrip.budget,
+    budget: apiTrip.budget_tier || apiTrip.budget || undefined,
     planNeedsRefresh: apiTrip.preferences?.planNeedsRefresh === true,
     days: apiTrip.preferences?.planNeedsRefresh ? [] : transformItineraryDays(rawDays),
     hotel: apiTrip.preferences?.planNeedsRefresh
       ? undefined
       : transformApiHotel(itineraryData?.topHotel),
-    coverImage:
-      apiTrip.cover_image || getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
+    coverImage: apiTrip.cover_image || destinationImage(apiTrip.destination),
     createdAt: apiTrip.created_at,
     updatedAt: apiTrip.updated_at,
     status: normalizeTripStatus(apiTrip.status),
@@ -213,7 +212,7 @@ export function useTrips() {
             vibes: [...submittedInput.vibes],
             budget: submittedInput.budget,
             days: [],
-            coverImage: getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai']),
+            coverImage: destinationImage(submittedInput.destination),
             createdAt: new Date().toISOString(),
             status: 'draft',
           };

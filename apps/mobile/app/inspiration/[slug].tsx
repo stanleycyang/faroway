@@ -211,17 +211,12 @@ export default function InspirationDetailScreen() {
             accessible={false}
           />
           <LinearGradient
-            colors={[
-              'transparent',
-              inspiration.gradientColors[0] + 'CC',
-              inspiration.gradientColors[1],
-            ]}
+            colors={['rgba(20,61,70,0.05)', 'rgba(20,61,70,0.35)', 'rgba(20,61,70,0.95)']}
             locations={[0, 0.6, 1]}
             style={styles.heroGradient}
           />
           <View style={[styles.heroContent, { paddingTop: insets.top }]}>
             <View style={styles.heroTextContainer}>
-              <Text style={styles.heroEmoji}>{inspiration.emoji}</Text>
               <Text style={styles.heroTitle} accessibilityRole="header">
                 {inspiration.title}
               </Text>
@@ -253,7 +248,7 @@ export default function InspirationDetailScreen() {
 
         {/* Perfect Destinations */}
         <Animated.View style={[styles.section, makeSectionStyle(sectionAnims[1])]}>
-          <Text style={styles.sectionTitle}>Perfect destinations</Text>
+          <Text style={styles.sectionTitle}>Places for this kind of trip</Text>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -303,14 +298,14 @@ export default function InspirationDetailScreen() {
       {/* Bottom Sticky CTA */}
       <Animated.View style={[styles.bottomCta, makeSectionStyle(sectionAnims[2])]}>
         <TouchableOpacity
-          style={[styles.surpriseButton, { backgroundColor: inspiration.gradientColors[0] }]}
+          style={[styles.surpriseButton, { backgroundColor: colors.action.primary }]}
           activeOpacity={0.85}
           onPress={handleSurpriseMe}
           accessibilityRole="button"
           accessibilityLabel="Surprise me with a destination"
         >
           <Ionicons name="sparkles" size={20} color="#fff" />
-          <Text style={styles.surpriseButtonText}>Surprise Me</Text>
+          <Text style={styles.surpriseButtonText}>Find a destination</Text>
         </TouchableOpacity>
         <Text style={styles.ctaSubtext}>or pick a destination above</Text>
       </Animated.View>
@@ -353,7 +348,7 @@ const styles = StyleSheet.create({
   },
   heroTitle: {
     fontSize: 34,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#fff',
     marginBottom: 6,
   },
@@ -365,8 +360,8 @@ const styles = StyleSheet.create({
   backButton: {
     position: 'absolute',
     left: 16,
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 20,
     backgroundColor: 'rgba(0,0,0,0.35)',
     justifyContent: 'center',

@@ -19,9 +19,18 @@ const profile = JSON.parse(readFileSync(resolve(mobile, "eas.json"), "utf8"))
 Object.assign(process.env, profile.env);
 process.env.EXPO_NO_DOTENV = "1";
 process.env.CI = "1";
-process.env.JAVA_HOME ||=
-  "/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home";
-process.env.ANDROID_HOME ||= "/opt/homebrew/share/android-commandlinetools";
+if (!existsSync(`${process.env.JAVA_HOME}/bin/java`)) {
+  const javaHome = [
+    "/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home",
+    "/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home",
+  ].find((directory) => existsSync(`${directory}/bin/java`));
+  if (javaHome) process.env.JAVA_HOME = javaHome;
+}
+process.env.ANDROID_HOME ||= existsSync(
+  `${process.env.HOME}/Library/Android/sdk`,
+)
+  ? `${process.env.HOME}/Library/Android/sdk`
+  : "/opt/homebrew/share/android-commandlinetools";
 process.env.ANDROID_SDK_ROOT = process.env.ANDROID_HOME;
 process.env.PATH = `${process.env.JAVA_HOME}/bin:${process.env.ANDROID_HOME}/platform-tools:${process.env.PATH}`;
 
@@ -59,6 +68,7 @@ if (
 ) {
   await assertQaApiReachable(process.env.EXPO_PUBLIC_API_URL);
   console.log("Staging API: directly reachable, healthy JSON response.");
+  run("bun", [resolve(root, "scripts/uat/images.ts")], root);
 }
 const disk = statfsSync(root);
 const freeGiB = (Number(disk.bavail) * Number(disk.bsize)) / 1024 ** 3;
@@ -70,7 +80,7 @@ if (["android", "ios-simulator"].includes(action) && freeGiB < 12) {
 switch (action) {
   case "preflight": {
     console.log(
-      `Java 17: ${existsSync(`${process.env.JAVA_HOME}/bin/java`) ? "available" : "missing"}`,
+      `Java 17+: ${existsSync(`${process.env.JAVA_HOME}/bin/java`) ? "available" : "missing"}`,
     );
     console.log(`Android SDK: ${process.env.ANDROID_HOME}`);
     console.log(

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { View, Text, TextInput, Pressable, StyleSheet } from 'react-native';
-import { testLoginEnabled } from '../lib/testLogin';
+import { emailLoginEnabled, qaLoginEnabled } from '../lib/testLogin';
 
 /** Uses real Auth and the normal session listener; contains no preset credentials. */
 export function TestEmailLogin({
@@ -22,7 +22,9 @@ export function TestEmailLogin({
   const [password, setPassword] = useState('');
   const [pending, setPending] = useState(false);
   const [error, setError] = useState('');
-  const enabled = testLoginEnabled();
+  const enabled = emailLoginEnabled();
+  const qa = qaLoginEnabled();
+  const signInLabel = qa ? 'Sign in to QA account' : 'Sign in to local test account';
   if (!enabled) return null;
   const signIn = async () => {
     if (busy.current || !live.current) return;
@@ -46,7 +48,9 @@ export function TestEmailLogin({
   };
   return (
     <View style={styles.panel} testID="test-email-login">
-      <Text style={styles.label}>LOCAL TEST LOGIN — synthetic accounts only</Text>
+      <Text style={styles.label}>
+        {qa ? 'Faroway QA · Staging account' : 'LOCAL TEST LOGIN — synthetic accounts only'}
+      </Text>
       <TextInput
         style={styles.input}
         testID="test-email"
@@ -82,20 +86,35 @@ export function TestEmailLogin({
       )}
       <Pressable
         accessibilityRole="button"
-        accessibilityLabel="Sign in to local test account"
+        accessibilityLabel={signInLabel}
         testID="test-sign-in"
         disabled={pending || !email.trim() || !password}
         onPress={() => void signIn()}
-        style={styles.button}
+        style={[styles.button, (pending || !email.trim() || !password) && { opacity: 0.5 }]}
       >
-        <Text>{pending ? 'Signing in…' : 'Sign in to local test account'}</Text>
+        <Text style={{ color: '#fff', fontWeight: '600', fontSize: 16 }}>
+          {pending ? 'Signing in…' : signInLabel}
+        </Text>
       </Pressable>
     </View>
   );
 }
 const styles = StyleSheet.create({
-  panel: { padding: 10, gap: 8, backgroundColor: '#fff3cd', borderRadius: 12 },
-  label: { color: '#553c00', fontSize: 12 },
-  input: { backgroundColor: '#fff', color: '#111', padding: 10, borderRadius: 6 },
-  button: { backgroundColor: '#f5ce65', padding: 12, borderRadius: 6, alignItems: 'center' },
+  panel: { padding: 16, gap: 12, backgroundColor: '#EFF5F3', borderRadius: 16, width: '100%' },
+  label: { color: '#53676C', fontSize: 13, lineHeight: 18 },
+  input: {
+    backgroundColor: '#fff',
+    color: '#111',
+    padding: 14,
+    minHeight: 48,
+    fontSize: 16,
+    borderRadius: 10,
+  },
+  button: {
+    backgroundColor: '#C03A31',
+    minHeight: 48,
+    padding: 14,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
 });

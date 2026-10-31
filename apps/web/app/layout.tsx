@@ -2,27 +2,39 @@ import { ViatorContentPolicy } from "@/components/trips/ViatorContentPolicy";
 import { SkipToContent } from "@/components/SkipToContent";
 import { isViatorContentEnabled } from "@/lib/affiliates/viator-policy";
 import type { Metadata, Viewport } from "next";
-import { Plus_Jakarta_Sans, Playfair_Display } from "next/font/google";
+import localFont from "next/font/local";
 import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
-const plusJakarta = Plus_Jakarta_Sans({
+// Bundle fonts so production builds do not depend on Google Fonts URL formats.
+const plusJakarta = localFont({
+  src: "./fonts/PlusJakartaSans-Variable.woff2",
   variable: "--font-plus-jakarta",
-  subsets: ["latin"],
   display: "swap",
-  weight: ["300", "400", "500", "600", "700", "800"],
+  weight: "300 800",
+  style: "normal",
   fallback: ["system-ui", "arial"],
 });
 
-// Editorial serif for the world-map atlas. latin-ext keeps diacritics in
+// Editorial serif for the world-map atlas. Full glyph coverage keeps diacritics in
 // country names readable ("Côte d'Ivoire", "São Tomé"). Italic style is
 // used by the magazine-cover hero numeral ("Forty-Three") on /tools/world-map.
-const playfair = Playfair_Display({
+const playfair = localFont({
+  src: [
+    {
+      path: "./fonts/PlayfairDisplay-Variable.woff2",
+      weight: "700 900",
+      style: "normal",
+    },
+    {
+      path: "./fonts/PlayfairDisplay-Italic-Variable.woff2",
+      weight: "700 900",
+      style: "italic",
+    },
+  ],
   variable: "--font-playfair",
-  subsets: ["latin", "latin-ext"],
   display: "swap",
-  weight: ["700", "900"],
-  style: ["normal", "italic"],
+  adjustFontFallback: "Times New Roman",
   fallback: ["Georgia", "serif"],
 });
 

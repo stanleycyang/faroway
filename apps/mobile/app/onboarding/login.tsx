@@ -1,4 +1,4 @@
-import { testLoginEnabled } from '../../lib/testLogin';
+import { emailLoginEnabled } from '../../lib/testLogin';
 import { TestEmailLogin } from '../../components/TestEmailLogin';
 import { useState } from 'react';
 import {
@@ -63,10 +63,10 @@ export default function LoginScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={testLoginEnabled() ? (Platform.OS === 'ios' ? 'padding' : 'height') : undefined}
+        behavior={emailLoginEnabled() ? (Platform.OS === 'ios' ? 'padding' : 'height') : undefined}
       >
         {/* Header */}
         <View style={styles.header}>
@@ -76,7 +76,7 @@ export default function LoginScreen() {
             accessibilityRole="button"
             accessibilityLabel="Back"
           >
-            <Ionicons name="arrow-back" size={24} color={colors.surface[300]} />
+            <Ionicons name="arrow-back" size={24} color={colors.surface[700]} />
           </TouchableOpacity>
         </View>
 
@@ -87,12 +87,12 @@ export default function LoginScreen() {
               Sign in to Faroway
             </Text>
             <Text style={styles.subtitle}>
-              Sync your trips across devices and unlock personalized recommendations
+              Keep your plans together, wherever you go. Sign in to save and create your trips.
             </Text>
           </View>
 
           {/* Auth Buttons */}
-          {!testLoginEnabled() &&
+          {!emailLoginEnabled() &&
             (isLoading ? (
               <ActivityIndicator
                 size="large"
@@ -153,7 +153,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: colors.surface[900],
+    backgroundColor: '#ffffff',
   },
   header: {
     paddingHorizontal: 16,
@@ -163,27 +163,28 @@ const styles = StyleSheet.create({
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#EFF5F3',
     justifyContent: 'center',
     alignItems: 'center',
   },
   content: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    justifyContent: 'center',
+    paddingTop: 40,
+    paddingBottom: 24,
   },
   titleSection: {
-    marginBottom: 40,
+    marginBottom: 32,
   },
   title: {
     fontSize: 32,
-    fontWeight: '800',
-    color: '#fff',
+    fontWeight: '700',
+    color: '#182B31',
     marginBottom: 12,
   },
   subtitle: {
     fontSize: 16,
-    color: colors.surface[400],
+    color: colors.surface[600],
     lineHeight: 24,
   },
   buttonSection: {
@@ -193,7 +194,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surface[800],
+    backgroundColor: '#EFF5F3',
     paddingVertical: 16,
     borderRadius: borderRadius.lg,
     borderWidth: 1,
@@ -207,7 +208,7 @@ const styles = StyleSheet.create({
   socialButtonText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#fff',
+    color: '#182B31',
   },
   appleButtonText: {
     color: '#fff',

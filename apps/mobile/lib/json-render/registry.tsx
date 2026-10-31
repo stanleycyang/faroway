@@ -1,3 +1,4 @@
+import { durationLabel } from '../durationLabel';
 import React from 'react';
 import { formatTripDate } from '../tripDate';
 import { formatPrice } from '@faroway/constants';
@@ -278,14 +279,12 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
             </View>
           )}
 
-          <RNText style={styles.activityCardDescription} numberOfLines={2}>
-            {description}
-          </RNText>
+          <RNText style={styles.activityCardDescription}>{description}</RNText>
 
           <View style={styles.activityCardMeta}>
             <View style={styles.activityCardMetaItem}>
               <Ionicons name="time" size={14} color={colors.neutral[500]} />
-              <RNText style={styles.activityCardMetaText}>{duration}</RNText>
+              <RNText style={styles.activityCardMetaText}>{durationLabel(duration)}</RNText>
             </View>
             {typeof rating === 'number' && rating > 0 && (
               <View style={styles.activityCardMetaItem}>
@@ -309,7 +308,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
               onPress={() => openURL(bookingUrl)}
               activeOpacity={0.8}
             >
-              <RNText style={styles.activityCardButtonText}>View Details</RNText>
+              <RNText style={styles.activityCardButtonText}>Review activity</RNText>
               <Ionicons name="arrow-forward" size={16} color={colors.primary[600]} />
             </TouchableOpacity>
           )}
@@ -359,11 +358,7 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
             <RNText style={styles.restaurantCardPriceLevel}>{priceLevelString}</RNText>
           </View>
 
-          {description && (
-            <RNText style={styles.restaurantCardDescription} numberOfLines={2}>
-              {description}
-            </RNText>
-          )}
+          {description && <RNText style={styles.restaurantCardDescription}>{description}</RNText>}
 
           {typeof rating === 'number' && rating > 0 && (
             <View style={styles.restaurantCardRating}>
@@ -381,7 +376,7 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
               onPress={() => openURL(reservationUrl)}
               activeOpacity={0.8}
             >
-              <RNText style={styles.restaurantCardButtonText}>Reserve Table</RNText>
+              <RNText style={styles.restaurantCardButtonText}>Review restaurant</RNText>
               <Ionicons name="arrow-forward" size={16} color="#ef4444" />
             </TouchableOpacity>
           )}
@@ -701,7 +696,7 @@ const styles = StyleSheet.create({
     height: 200,
   },
   hotelCardContent: {
-    padding: spacing.lg,
+    padding: spacing.md,
   },
   hotelCardHeader: {
     marginBottom: spacing.sm,
@@ -741,9 +736,9 @@ const styles = StyleSheet.create({
     marginRight: spacing.xs,
   },
   hotelCardPriceAmount: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: colors.primary[600],
+    fontSize: 16,
+    fontWeight: '500',
+    color: colors.neutral[600],
   },
   hotelCardPricePeriod: {
     fontSize: 14,
@@ -833,12 +828,12 @@ const styles = StyleSheet.create({
     color: colors.primary[700],
   },
   activityCardBody: {
-    flexDirection: 'row',
+    gap: 12,
     padding: spacing.md,
   },
   activityCardImage: {
-    width: 100,
-    height: 100,
+    width: '100%',
+    height: 140,
     borderRadius: borderRadius.md,
     marginRight: spacing.md,
   },
@@ -852,11 +847,13 @@ const styles = StyleSheet.create({
   },
   activityCardLocation: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: spacing.xs,
     marginBottom: spacing.xs,
   },
   activityCardLocationText: {
+    flexShrink: 1,
     fontSize: 12,
     color: colors.neutral[500],
   },
@@ -867,8 +864,9 @@ const styles = StyleSheet.create({
   },
   activityCardMeta: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
-    gap: spacing.md,
+    gap: spacing.sm,
     marginBottom: spacing.sm,
   },
   activityCardMetaItem: {
@@ -887,8 +885,7 @@ const styles = StyleSheet.create({
   activityCardPrice: {
     fontSize: 14,
     fontWeight: '700',
-    color: colors.primary[600],
-    marginLeft: 'auto',
+    color: colors.neutral[600],
   },
   activityCardButton: {
     flexDirection: 'row',
@@ -922,12 +919,12 @@ const styles = StyleSheet.create({
     color: '#dc2626',
   },
   restaurantCardBody: {
-    flexDirection: 'row',
+    gap: 12,
     padding: spacing.md,
   },
   restaurantCardImage: {
-    width: 100,
-    height: 100,
+    width: '100%',
+    height: 140,
     borderRadius: borderRadius.md,
     marginRight: spacing.md,
   },
@@ -941,18 +938,20 @@ const styles = StyleSheet.create({
   },
   restaurantCardCuisine: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: spacing.sm,
     marginBottom: spacing.xs,
   },
   restaurantCardCuisineText: {
+    flexShrink: 1,
     fontSize: 14,
     color: colors.neutral[600],
   },
   restaurantCardPriceLevel: {
     fontSize: 14,
     fontWeight: '700',
-    color: colors.primary[600],
+    color: colors.neutral[600],
   },
   restaurantCardDescription: {
     ...typography.bodySmall,
@@ -961,6 +960,7 @@ const styles = StyleSheet.create({
   },
   restaurantCardRating: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     alignItems: 'center',
     gap: spacing.xs,
     marginBottom: spacing.sm,

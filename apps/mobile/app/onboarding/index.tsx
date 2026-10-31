@@ -55,7 +55,7 @@ const SLIDES: OnboardingSlide[] = [
   {
     id: '3',
     emoji: '🎯',
-    title: 'Your Whole Trip\nIn One Place',
+    title: 'Your whole trip.\nOne place.',
     subtitle: 'Hotels, restaurants, and experiences organized day by day',
     highlight: 'ready when you are',
     image: getImageUrl(IMAGE_PATHS.marketing.travelDiscovery),
@@ -127,7 +127,7 @@ export default function OnboardingScreen() {
       <View accessible={false} style={[styles.atlasRing, styles.atlasRingInner]} />
       <Image source={{ uri: item.image }} style={styles.slideImage} accessible={false} />
       <LinearGradient
-        colors={['rgba(0,0,0,0)', 'rgba(0,0,0,0.7)', 'rgba(0,0,0,0.95)']}
+        colors={['rgba(20,61,70,0.08)', 'rgba(20,61,70,0.5)', 'rgba(20,61,70,0.98)']}
         style={styles.slideGradient}
         locations={[0, 0.5, 1]}
       />
@@ -182,7 +182,9 @@ export default function OnboardingScreen() {
             },
           ]}
         >
-          <Text style={styles.emoji}>{currentSlide.emoji}</Text>
+          <Text style={{ color: '#fff', fontSize: 20, fontWeight: '700', letterSpacing: -0.5 }}>
+            faroway
+          </Text>
         </Animated.View>
 
         {/* Title */}
@@ -211,10 +213,7 @@ export default function OnboardingScreen() {
           ]}
         >
           <Text style={styles.subtitle}>
-            {currentSlide.subtitle}{' '}
-            <Text style={[styles.highlight, { color: currentSlide.gradient[0] }]}>
-              {currentSlide.highlight}
-            </Text>
+            {currentSlide.subtitle} <Text style={styles.highlight}>{currentSlide.highlight}</Text>
           </Text>
         </Animated.View>
 
@@ -339,7 +338,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     paddingHorizontal: 28,
-    paddingBottom: 40,
+    paddingBottom: 24,
   },
   emojiContainer: {
     marginBottom: 16,
@@ -348,14 +347,14 @@ const styles = StyleSheet.create({
     fontSize: 56,
   },
   title: {
-    fontSize: 42,
-    fontWeight: '800',
+    fontSize: 36,
+    fontWeight: '700',
     color: '#fff',
     marginBottom: 16,
-    lineHeight: 48,
+    lineHeight: 42,
   },
   subtitleContainer: {
-    marginBottom: 32,
+    marginBottom: 24,
   },
   subtitle: {
     fontSize: 18,

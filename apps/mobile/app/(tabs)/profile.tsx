@@ -273,12 +273,12 @@ export default function ProfileScreen() {
             <Text style={styles.menuSectionTitle}>Account</Text>
             <MenuItem
               icon="person-outline"
-              label="Edit Profile"
+              label="Edit profile"
               onPress={() => router.push('/profile/edit-profile')}
             />
             <MenuItem
               icon="heart-outline"
-              label="Travel Preferences"
+              label="Travel preferences"
               value={
                 user?.preferences?.vibes?.length
                   ? `${user.preferences.vibes.length} vibes selected`
@@ -338,14 +338,14 @@ export default function ProfileScreen() {
           <View style={styles.menuSection}>
             <MenuItem
               icon="log-out-outline"
-              label="Log Out"
+              label="Log out"
               onPress={handleLogout}
               showChevron={false}
               danger
             />
             <MenuItem
               icon="trash-outline"
-              label="Delete Account"
+              label="Delete account"
               onPress={handleDeleteAccount}
               showChevron={false}
               danger
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffffff',
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 32,
   },
   header: {
     flexDirection: 'row',
@@ -378,7 +378,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 28,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#0f172a',
   },
   // ─── Guest / Logged-Out ──────────
@@ -468,6 +468,7 @@ const styles = StyleSheet.create({
   profileCard: {
     alignItems: 'center',
     paddingVertical: 24,
+    paddingHorizontal: 16,
     marginHorizontal: 24,
     marginBottom: 24,
     backgroundColor: '#ffffff',
@@ -476,12 +477,11 @@ const styles = StyleSheet.create({
     borderColor: '#e2e8f0',
   },
   avatar: {
-    width: 100,
-    height: 100,
-    borderRadius: 50,
+    width: 72,
+    height: 72,
+    borderRadius: 36,
     marginBottom: 16,
-    borderWidth: 3,
-    borderColor: colors.primary[500],
+    borderWidth: 0,
   },
   avatarPlaceholder: {
     backgroundColor: '#f1f5f9',
@@ -498,6 +498,8 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#475569',
     marginBottom: 24,
+    textAlign: 'center',
+    flexShrink: 1,
   },
   statsContainer: {
     flexDirection: 'row',
@@ -505,8 +507,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#f8fafc',
     borderRadius: borderRadius.lg,
     paddingVertical: 16,
-    paddingHorizontal: 24,
-    marginHorizontal: 16,
+    paddingHorizontal: 8,
+    width: '100%',
   },
   statItem: {
     flex: 1,
@@ -538,8 +540,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#64748b',
     marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0,
   },
   menuItem: {
     flexDirection: 'row',

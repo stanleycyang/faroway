@@ -16,7 +16,9 @@
         "simulator": false
       },
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "credentialsSource": "local",
+        "autoIncrement": true
       }
     },
     "qa-simulator": {
