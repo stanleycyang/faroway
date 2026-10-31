@@ -6,6 +6,7 @@ import { execFileSync } from "node:child_process";
 import { createHash, randomUUID } from "node:crypto";
 import { z } from "zod";
 import { createGateway, generateObject } from "../lib/ai/sdk";
+import { usageFromModelError } from "../lib/ai/planning-step";
 import { assertStagingTarget } from "../../../scripts/uat/lib/staging-project";
 import {
   evaluateAgenticTrace,
@@ -30,6 +31,9 @@ const arg = (name: string) => {
 async function main() {
   if (!process.argv.includes("--live"))
     throw new Error("Explicit --live required");
+  const thinkingLevel = arg("--thinking") ?? "low";
+  if (thinkingLevel !== "low" && thinkingLevel !== "minimal")
+    throw new Error("Narration thinking must be low or minimal");
   assertStagingTarget({
     supabaseUrl: arg("--supabase-url"),
     projectRef: process.env.FAROWAY_STAGING_SUPABASE_PROJECT_REF,
@@ -67,6 +71,7 @@ async function main() {
     "apps/web/lib/search/narration-prompt.ts",
     "apps/web/lib/search/bridge.ts",
     "apps/web/lib/ai/sdk.ts",
+    "apps/web/lib/ai/planning-step.ts",
     "bun.lock",
   ])
     sourceHash.update(file).update(readFileSync(resolve(root, file)));
@@ -85,12 +90,14 @@ async function main() {
     ),
     filesSha256: sourceHash.digest("hex"),
   };
-  trace.settings = { model: "google/gemini-3-flash", thinkingLevel: "low" };
+  trace.settings = { model: "google/gemini-3-flash", thinkingLevel };
   const provenance = {
     kind: "fixed-schedule-narration",
     inputSha256: createHash("sha256").update(bytes).digest("hex"),
     promptSha256: createHash("sha256").update(prompt).digest("hex"),
     model: "google/gemini-3-flash",
+    thinkingLevel,
+    referenceFormat: "date-slot-position-v1",
     modelCallsMaximum: 1,
     semanticReviewRequired: true,
     qualityAccepted: false,
@@ -103,10 +110,11 @@ async function main() {
   });
   const started = Date.now();
   let usage: unknown;
+  let narration: DayNarration[] | undefined;
   try {
     const result = await generateObject<{ days: DayNarration[] }>({
       model: createGateway({ apiKey: key })(provenance.model),
-      providerOptions: { google: { thinkingConfig: { thinkingLevel: "low" } } },
+      providerOptions: { google: { thinkingConfig: { thinkingLevel } } },
       schema: z.object({
         days: z
           .array(
@@ -125,8 +133,10 @@ async function main() {
       abortSignal: AbortSignal.timeout(30000),
     });
     usage = result.usage;
+    // Private experiment evidence: retain rejected references for diagnosis.
+    narration = result.object.days;
     const days = applyScheduleNarration(itinerary.days, result.object.days);
-    trace.configId = "fixed-schedule-narration-low";
+    trace.configId = `fixed-schedule-narration-compact-${thinkingLevel}`;
     trace.steps = trace.steps.map((step) => ({
       ...step,
       latencyMs: 0,
@@ -154,7 +164,14 @@ async function main() {
     writeFileSync(
       out,
       JSON.stringify(
-        { status: "completed", provenance, trace, evaluation, usage },
+        {
+          status: "completed",
+          provenance,
+          trace,
+          evaluation,
+          usage,
+          narration,
+        },
         null,
         2,
       ),
@@ -170,12 +187,23 @@ async function main() {
     if (result.usage?.inputTokens == null || result.usage?.outputTokens == null)
       process.exitCode = 3;
   } catch (error) {
+    usage ??= usageFromModelError(error);
+    const failure = error as { text?: unknown; finishReason?: unknown } | null;
     writeFileSync(
       out,
       JSON.stringify({
         status: "failed",
         provenance,
         usage,
+        narration,
+        rejectedText:
+          typeof failure?.text === "string"
+            ? failure.text.slice(0, 20_000)
+            : undefined,
+        finishReason:
+          typeof failure?.finishReason === "string"
+            ? failure.finishReason
+            : undefined,
         latencyMs: Date.now() - started,
         error: error instanceof Error ? error.message : "unknown",
         billing: "Reconcile gateway before another call",

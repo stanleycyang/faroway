@@ -9,15 +9,11 @@ import type { SuggestedDay } from "@/lib/search/types";
 const days = (rome.trace.steps[4].output as unknown as { days: SuggestedDay[] })
   .days;
 const entries = (): DayNarration[] =>
-  days.map((d) => ({
+  narrationContext(days).map((d) => ({
     date: d.date,
     title: "A day of discovery",
     summary: "Explore the selected stops at your own pace.",
-    activityIds: [
-      ...d.morning.activities,
-      ...d.afternoon.activities,
-      ...d.evening.activities,
-    ].map((a) => a.id),
+    activityIds: d.slots.flatMap((slot) => slot.activities.map((a) => a.id)),
   }));
 it("changes only narration and preserves uncertainty tips and original objects", () => {
   const snapshot = structuredClone(days),
@@ -67,10 +63,56 @@ it("refuses changed dates and incomplete or oversized narration", () => {
   }
   expect(() => applyScheduleNarration(days, [])).toThrow();
 });
+it("rejects unverified suitability labels in titles and summaries", () => {
+  for (const label of [
+    "accessible",
+    "wheelchair-friendly",
+    "step free",
+    "allergy-safe",
+    "gluten-free",
+    "vegan",
+    "halal",
+  ]) {
+    for (const field of ["title", "summary"] as const) {
+      const draft = entries();
+      draft[0][field] = `Explore this ${label} tour.`;
+      expect(() => applyScheduleNarration(days, draft)).toThrow(/suitability/);
+    }
+  }
+});
 it("limits context to selected names and schedule fields, excluding generated descriptions", () => {
   const context = narrationContext(days);
   expect(JSON.stringify(context)).not.toContain('"description"');
-  expect(context[0].slots[0].activities[0].id).toBe(
+  expect(context[0].slots[0].activities[0].id).toBe("d1s1v1");
+  expect(JSON.stringify(context)).not.toContain(
     days[0].morning.activities[0].id,
   );
+});
+it("binds compact references to their date and preserves long inventory IDs", () => {
+  const input = [structuredClone(days[0]), structuredClone(days[0])];
+  input[1].date = "2026-12-08";
+  input.forEach((day, dayIndex) => {
+    let index = 0;
+    for (const slot of ["morning", "afternoon", "evening"] as const)
+      for (const activity of day[slot].activities)
+        activity.id = `activity_1793425034104_${dayIndex}_${index++}`;
+  });
+  const context = narrationContext(input);
+  const updates = context.map((day) => ({
+    date: day.date,
+    title: "Selected visits",
+    summary: "Explore the selected stops.",
+    activityIds: day.slots.flatMap((slot) => slot.activities.map((a) => a.id)),
+  }));
+  const result = applyScheduleNarration(input, [...updates].reverse());
+  expect(result[0].morning).toEqual(input[0].morning);
+  expect(result[1].afternoon).toEqual(input[1].afternoon);
+  const swapped = structuredClone(updates);
+  [swapped[0].activityIds, swapped[1].activityIds] = [
+    swapped[1].activityIds,
+    swapped[0].activityIds,
+  ];
+  expect(() => applyScheduleNarration(input, swapped)).toThrow(/selection/);
+  updates[0].activityIds[0] = input[0].morning.activities[0].id;
+  expect(() => applyScheduleNarration(input, updates)).toThrow(/selection/);
 });

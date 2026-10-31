@@ -11,6 +11,7 @@ import {
   runStagingCompiledSchedule,
 } from "@/lib/search/staging-schedule-experiment";
 import { runAggregatorAgent } from "@/lib/search/agents/aggregator";
+import { narrationContext } from "@/lib/search/schedule-narration";
 import { compileSchedule } from "@/lib/search/schedule-compiler";
 import { onPlanningFallback } from "@/lib/ai/planning-step";
 import type {
@@ -31,15 +32,13 @@ const env = {
 const compiled = () => compileSchedule(plan, activities, dining).days;
 const narration = () => ({
   object: {
-    days: compiled().map((day) => ({
+    days: narrationContext(compiled()).map((day) => ({
       date: day.date,
       title: "Selected visits",
       summary: "Explore the selected visits.",
-      activityIds: [
-        ...day.morning.activities,
-        ...day.afternoon.activities,
-        ...day.evening.activities,
-      ].map((a) => a.id),
+      activityIds: day.slots.flatMap((slot) =>
+        slot.activities.map((a) => a.id),
+      ),
     })),
   },
   usage: { inputTokens: 100, outputTokens: 100 },
@@ -53,6 +52,12 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 it("requires exact staging project, explicit opt-in and measured model settings", () => {
   expect(compiledScheduleExperimentEnabled(env)).toBe(true);
+  expect(
+    compiledScheduleExperimentEnabled({
+      ...env,
+      PLANNING_THINKING_AGGREGATOR: "minimal",
+    }),
+  ).toBe(true);
   for (const patch of [
     { FAROWAY_SCHEDULE_EXPERIMENT: undefined },
     { VERCEL_ENV: "production" },
@@ -74,6 +79,19 @@ it("requires exact staging project, explicit opt-in and measured model settings"
       NODE_ENV: "development",
     }),
   ).toBe(true);
+});
+it("passes the measured minimal thinking setting through the app boundary", async () => {
+  vi.stubEnv("PLANNING_THINKING_AGGREGATOR", "minimal");
+  await runAggregatorAgent(plan, [], activities, dining);
+  expect(mocks.generateObject).toHaveBeenCalledTimes(1);
+  expect(
+    mocks.generateObject.mock.calls[0][0].providerOptions.google.thinkingConfig
+      .thinkingLevel,
+  ).toBe("minimal");
+  expect(
+    mocks.generateObject.mock.calls[0][0].providerOptions.vertex.thinkingConfig
+      .thinkingLevel,
+  ).toBe("minimal");
 });
 it("routes the app aggregator through one guarded narration call and preserves the draft", async () => {
   const result = await runAggregatorAgent(plan, [], activities, dining);

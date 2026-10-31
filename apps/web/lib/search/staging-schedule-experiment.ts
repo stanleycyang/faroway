@@ -29,7 +29,7 @@ export function compiledScheduleExperimentEnabled(
 ): boolean {
   if (
     env.FAROWAY_SCHEDULE_EXPERIMENT !== "compiled-narrated-v1" ||
-    env.PLANNING_THINKING_AGGREGATOR !== "low"
+    !["low", "minimal"].includes(env.PLANNING_THINKING_AGGREGATOR ?? "")
   )
     return false;
   if (

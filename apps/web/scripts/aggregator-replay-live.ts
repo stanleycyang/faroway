@@ -83,10 +83,12 @@ async function main() {
   const compiledNarrated = process.argv.includes("--compiled-narrated");
   if (
     compiledNarrated &&
-    (thinking !== "low" || structuredSchedule || explicitDailyBudget)
+    (!["low", "minimal"].includes(thinking) ||
+      structuredSchedule ||
+      explicitDailyBudget)
   )
     throw new Error(
-      "Compiled narration requires low thinking and no legacy schedule flags",
+      "Compiled narration requires low or minimal thinking and no legacy schedule flags",
     );
   if (compiledNarrated)
     process.env.FAROWAY_SCHEDULE_EXPERIMENT = "compiled-narrated-v1";
