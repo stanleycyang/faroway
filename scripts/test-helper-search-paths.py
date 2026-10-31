@@ -87,7 +87,7 @@ try:
     restriction = next(x for x in json.loads((ROOT / 'supabase/release-candidate/migrations.json').read_text())['application_order'] if x['path'].endswith('restrict_remaining_function_execute.sql'))
     source = (ROOT / restriction['path']).read_bytes()
     assert hashlib.sha256(source).hexdigest() == restriction['sha256']
-    assert restriction['applied'] is False
+    # Rehearse from permissive grants regardless of hosted application status.
     signatures = [
         'public.get_destination_trip_counts(timestamptz)',
         'public.get_destination_search_counts(timestamptz)',

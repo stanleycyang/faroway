@@ -1,5 +1,5 @@
 {
-  "status": "Applied to hosted staging and production through editorial metric helper restrictions; production application cutover completed 2026-10-28. restrict_remaining_function_execute is registered and has not been applied to staging or production.",
+  "status": "Applied to hosted staging and production through remaining function EXECUTE restrictions on 2026-10-31 UTC; production application cutover completed 2026-10-28.",
   "bootstrap_sha256": "09b820436a77967f95024abf4f724f4f2f1bb1d3378ee33b73656593ba729939",
   "application_order": [
     {
@@ -54,7 +54,7 @@
       "path": "supabase/migrations/20261028164200_restrict_remaining_function_execute.sql",
       "source": "supabase/migrations/20261028164200_restrict_remaining_function_execute.sql",
       "sha256": "4c1d56993eb1b6463d890a0bc85ff326c5acd2df3ce9b75f0c9b6747328bb13d",
-      "applied": false
+      "applied": true
     }
   ],
   "constraints": [
@@ -65,5 +65,6 @@
   "staging_execution_receipt": "docs/release-evidence/staging-followups-20261011.json",
   "applied_field_scope": "Production installation only; staging installation is recorded in the separate receipt.",
   "venue_evidence_staging_receipt": "docs/release-evidence/staging-venue-evidence-20261028.json",
-  "production_execution_receipt": "docs/release-evidence/production-cutover-20261028.json"
+  "production_execution_receipt": "docs/release-evidence/production-cutover-20261028.json",
+  "function_execute_receipt": "docs/release-evidence/function-execute-20261031.json"
 }

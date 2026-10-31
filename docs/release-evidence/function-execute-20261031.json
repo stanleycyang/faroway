@@ -1,0 +1,41 @@
+{
+  "migration": "supabase/migrations/20261028164200_restrict_remaining_function_execute.sql",
+  "sha256": "4c1d56993eb1b6463d890a0bc85ff326c5acd2df3ce9b75f0c9b6747328bb13d",
+  "application_method": "Supabase apply_migration; exact reviewed SQL",
+  "staging": {
+    "project_ref": "omovikloadpvzijoaqus",
+    "migration_version": "20261031035918",
+    "verified": true
+  },
+  "production": {
+    "project_ref": "jcnephijkxgtprsutgsf",
+    "migration_version": "20261031035922",
+    "verified": true
+  },
+  "verification": {
+    "functions_checked": 7,
+    "anon_execute": false,
+    "authenticated_execute": false,
+    "service_role_execute": true,
+    "production_service_role_normalization": true,
+    "production_service_role_trip_metrics": true,
+    "production_service_role_search_metrics": true,
+    "migration_history_confirmed_on_both_projects": true,
+    "production_public_execute_grants": 0
+  },
+  "data_changes": "None; privileges and table comment only. Verification queries were read-only.",
+  "security_advisors": {
+    "both_projects": {
+      "errors": 0,
+      "warnings": [
+        "auth_leaked_password_protection"
+      ],
+      "informational": [
+        "rls_enabled_no_policy"
+      ]
+    },
+    "password_protection_reference": "https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection",
+    "rls_reference": "https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy",
+    "scope": "Auth configuration was not changed. Service-only tables retain RLS without client policies."
+  }
+}
