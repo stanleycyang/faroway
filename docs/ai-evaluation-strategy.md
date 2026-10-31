@@ -412,3 +412,50 @@ not treat model-authored links as retrieved evidence.
 Gateway reconciliation after these experiments: **$0.78/$20 cumulative UAT
 spend**. No model, provider recipient list, timeout default, or product grounding
 path has been changed.
+
+### Official-page structured extraction (2026-10-31)
+
+The isolated grounding probe now accepts `--official-pages`. It uses Google's URL
+context tool against the two independently identified official eval URLs, extracts
+structured closure facts, and never asks the model to declare future availability.
+Temporary closure is `true` or `null`; normal opening hours cannot establish that
+no temporary closure exists. The output uses explicit JSON Schema plus runtime
+Zod validation to avoid excessive cross-version TypeScript inference.
+
+The first extraction produced the expected facts but a non-verbatim monastery
+quote. The provider's grounding support metadata also associated both venues with
+the monastery page, despite successful URL retrieval metadata for both URLs. This
+is additional evidence that retrieval success and citation presence alone are
+insufficient. That first receipt remains preserved as a failing case.
+
+A revised prompt requires one contiguous quote with no ellipses or paraphrasing.
+Both the revised trial and final typed implementation linked both quotes to
+independently fetched official-page text. The final call took 2.509 s and cost
+$0.0029585 according to Gateway metadata, versus $0.0721255 for the earlier
+unrestricted search probe. This comparison is specific to two already-known
+sources: source discovery cost and broad coverage are not included.
+
+Reproduction (network source fetch, then offline audit):
+
+```sh
+python3 scripts/uat/fetch-grounding-pages.py NEW_PAGES_JSON
+bun scripts/uat/evaluate-grounding.ts STRUCTURED_RECEIPT NEW_PAGES_JSON 2026-12-07
+```
+
+The fetcher uses only the reviewed eval URLs, refuses redirects, limits response
+size and time, records observation timestamps, and saves private evidence. The
+pure audit rejects missing/duplicate venues, unapproved sources, absent page
+retrieval, non-verbatim quotes, invalid weekdays, and invalid visit dates. It
+computes calendar review flags without accepting a model-authored “open” status.
+Matching unrelated text deliberately **does not verify claim semantics**. All
+results retain `claimVerified: false` and `futureAvailabilityVerified: false`.
+
+Artifacts: `artifacts/uat/grounding/official-lisbon-20261031.json` (rejected quote),
+`official-lisbon-v2-20261031.json`, `official-lisbon-final-20261031.json`, and
+`official-pages-v2-20261031.json`. These two cases support the extraction and
+linkage mechanism, not general venue verification or production readiness. Source
+discovery, semantic validation, freshness policy, wider coverage, and integration
+with itinerary generation remain open. No product grounding path is enabled.
+
+Latest gateway reconciliation after the three official-page probes:
+**$0.79/$20 cumulative UAT spend**. Repository checks and 74 script tests pass.

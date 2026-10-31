@@ -13,7 +13,8 @@
     "lib": [
       "ES2022",
       "DOM"
-    ]
+    ],
+    "resolveJsonModule": true
   },
   "include": [
     "bun-test.d.ts",
@@ -22,6 +23,7 @@
     "__tests__/uat-smoke.test.ts",
     "__tests__/model-compare.test.ts",
     "__tests__/agentic-eval.test.ts",
-    "__tests__/aggregator-replay.test.ts"
+    "__tests__/aggregator-replay.test.ts",
+    "__tests__/grounding-evidence.test.ts"
   ]
 }
