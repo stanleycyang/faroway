@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   PRODUCTION_PROJECT_REF,
+  AGENTIC_PREVIEW_API_URL,
   STAGING_PREVIEW_API_URL,
   STAGING_PROJECT_REF,
   StagingGuardError,
@@ -114,4 +115,22 @@ test("rejects credentials, alternate ports and paths on a staging Supabase URL",
     JSON.stringify({ ref: STAGING_PROJECT_REF, role: "service_role" }),
   ).toString("base64url");
   expect(projectRefFromAnonKey(`header.${payload}.sig`)).toBe(null);
+});
+
+test("accepts the provisioned agentic preview while rejecting lookalikes", () => {
+  expect(
+    assertStagingTarget({
+      supabaseUrl: stagingUrl,
+      apiUrl: AGENTIC_PREVIEW_API_URL,
+    }).projectRef,
+  ).toBe(STAGING_PROJECT_REF);
+  for (const apiUrl of [
+    AGENTIC_PREVIEW_API_URL + ".evil.example",
+    AGENTIC_PREVIEW_API_URL + "/other",
+    AGENTIC_PREVIEW_API_URL + "?redirect=https://faroway.ai",
+  ]) {
+    expect(() =>
+      assertStagingTarget({ supabaseUrl: stagingUrl, apiUrl }),
+    ).toThrow();
+  }
 });

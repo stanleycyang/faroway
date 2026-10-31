@@ -1,0 +1,66 @@
+[
+  {
+    "id": "jeronimos-monastery-interior",
+    "destination": "Lisbon",
+    "aliases": ["Jerónimos Monastery", "Mosteiro dos Jerónimos"],
+    "sourceUrl": "https://mosteirojeronimos.torrebelem.gov.pt/regulamento-interno",
+    "observedAt": "2026-10-31",
+    "closedWeekdays": [1]
+  },
+  {
+    "id": "national-tile-museum",
+    "destination": "Lisbon",
+    "aliases": ["National Tile Museum", "Museu Nacional do Azulejo"],
+    "sourceUrl": "https://mnazulejo.gov.pt/",
+    "observedAt": "2026-10-31",
+    "temporarilyClosed": true
+  },
+  {
+    "id": "designmuseum-danmark-december-monday",
+    "destination": "Copenhagen",
+    "aliases": ["Designmuseum Danmark"],
+    "sourceUrl": "https://designmuseum.dk/en/besog-os/opening-hours-admission-2/",
+    "observedAt": "2026-10-31",
+    "closedDates": ["2026-12-07"]
+  },
+  {
+    "id": "frick-madison-former-location",
+    "destination": "New York",
+    "aliases": ["Frick Madison"],
+    "sourceUrl": "https://www.frick.org/about/frick_madison",
+    "observedAt": "2026-10-31",
+    "closedFrom": "2024-03-04"
+  },
+  {
+    "id": "muerren-gimmelwald-via-ferrata-season",
+    "destination": "Interlaken",
+    "aliases": ["Mürren-Gimmelwald Via Ferrata"],
+    "sourceUrl": "https://intersport-muerren.ch/via-ferrata-muerren/?lang=en",
+    "observedAt": "2026-10-31",
+    "reportedOperatingMonths": [6, 7, 8, 9, 10]
+  },
+  {
+    "id": "grimsel-canyoning-published-season",
+    "destination": "Interlaken",
+    "aliases": ["Canyoning Grimsel Adventure"],
+    "sourceUrl": "https://www.outdoor.ch/en/outdoor-adventure/canyoning-grimsel",
+    "observedAt": "2026-10-31",
+    "reportedOperatingMonths": [5, 6, 7, 8, 9, 10]
+  },
+  {
+    "id": "louvre-weekly-closure",
+    "destination": "Paris",
+    "aliases": ["Louvre Museum Tour"],
+    "sourceUrl": "https://www.louvre.fr/en/visit/hours-admission/tickets-and-prices",
+    "observedAt": "2026-10-31",
+    "closedWeekdays": [2]
+  },
+  {
+    "id": "orsay-weekly-closure",
+    "destination": "Paris",
+    "aliases": ["Musée d'Orsay Private Guided Tour"],
+    "sourceUrl": "https://www.musee-orsay.fr/en/visit",
+    "observedAt": "2026-10-31",
+    "closedWeekdays": [1]
+  }
+]

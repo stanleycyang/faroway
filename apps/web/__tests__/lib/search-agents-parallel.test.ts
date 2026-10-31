@@ -34,6 +34,8 @@ vi.mock("@/lib/affiliates/tripadvisor", () => ({
 }));
 
 import { runActivitiesAgent } from "@/lib/search/agents/activities";
+import { runDiningAgent } from "@/lib/search/agents/dining";
+import type { SearchPlan } from "@/lib/search/types";
 import { runHotelsAgent } from "@/lib/search/agents/hotels";
 import { runTransportAgent } from "@/lib/search/agents/transport";
 
@@ -288,4 +290,27 @@ describe("search agents internal parallelism", () => {
     ).toBe(true);
     expect(result[0].duration).toBe(150);
   });
+});
+
+it("focused dining repair removes conflicting city-wide meal quotas", async () => {
+  mocks.generateObject.mockResolvedValue({ object: { restaurants: [] } });
+  const input = {
+    ...plan,
+    diningCriteria: {
+      cuisineTypes: [],
+      priceRange: "moderate",
+      dietaryNeeds: [],
+      mealPriorities: [],
+    },
+  } as unknown as SearchPlan;
+  await runDiningAgent(input, 2, {
+    coverageTargets: [{ area: "Belém", mealTypes: ["breakfast"] }],
+  });
+  const focused = mocks.generateObject.mock.calls.at(-1)![0].prompt;
+  expect(focused).toContain("Only return venues serving a requested meal");
+  expect(focused).not.toContain("3-4 breakfast/brunch spots");
+  await runDiningAgent(input);
+  const normal = mocks.generateObject.mock.calls.at(-1)![0].prompt;
+  expect(normal).toContain("3-4 breakfast/brunch spots");
+  expect(normal).not.toContain("focused inventory-repair");
 });

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   ActivityResult,
+  DiningResult,
   HotelResult,
   SearchPlan,
   SuggestedDay,
@@ -138,6 +139,49 @@ function generatedDay(dayNumber: number, hotelId?: string) {
     tips: [],
   };
 }
+
+it("preserves an explicit no-extra-meal choice for a dinner experience", async () => {
+  const day = {
+    ...generatedDay(1),
+    evening: { activityIds: ["dinner-experience"], mealId: null },
+  };
+  mocks.generateObject.mockResolvedValue({
+    object: { days: [day], topHotelId: hotel.id },
+  });
+  const dinner: DiningResult = {
+    ...activity("extra-dinner"),
+    cuisineTypes: ["Japanese"],
+    priceLevel: 2,
+    mealTypes: ["dinner"],
+    dietaryOptions: [],
+  };
+  const result = await runAggregatorAgent(
+    plan,
+    [hotel],
+    [activity("dinner-experience", "evening")],
+    [dinner],
+  );
+  expect(result.days[0].evening.meal).toBeUndefined();
+  expect(result.days[0].evening.activities[0].id).toBe("dinner-experience");
+});
+
+it("supplies calendar, neighborhood, and minute context for feasible scheduling", async () => {
+  mocks.generateObject.mockResolvedValue({
+    object: { days: [generatedDay(1)], topHotelId: hotel.id },
+  });
+  const stop = {
+    ...activity("museum"),
+    duration: 150,
+    location: { ...activity("museum").location, neighborhood: "Ueno" },
+  };
+  await runAggregatorAgent(plan, [hotel], [stop], []);
+  const request = mocks.generateObject.mock.calls.at(-1)?.[0];
+  expect(request.prompt).toContain("2026-06-01 Monday");
+  expect(request.prompt).toContain('"durationMinutes":150');
+  expect(request.prompt).toContain('"neighborhood":"Ueno"');
+  expect(request.prompt).toContain("at least 60 minutes");
+  expect(request.prompt).toContain("not verified venue facts");
+});
 
 describe.each(["successful", "recovered"] as const)(
   "%s AI itinerary mapping",
@@ -464,7 +508,128 @@ describe.each(["successful", "recovered"] as const)(
   },
 );
 
+it("constrains total daily visits in the experimental structured schedule and preserves IDs", async () => {
+  const relaxed = {
+    ...plan,
+    dates: { ...plan.dates, end: plan.dates.start, nights: 0 },
+    activityCriteria: {
+      ...plan.activityCriteria,
+      pacePreference: "relaxed" as const,
+    },
+  };
+  const day = {
+    ...generatedDay(1),
+    activities: [
+      { id: "walk", slot: "morning" },
+      { id: "museum", slot: "afternoon" },
+    ],
+    breakfastId: null,
+    lunchId: null,
+    dinnerId: null,
+  };
+  const object = { days: [day], topHotelId: hotel.id };
+  mocks.generateObject.mockResolvedValue({ object });
+  const result = await runAggregatorAgent(
+    relaxed,
+    [hotel],
+    [activity("walk"), activity("museum")],
+    [],
+    [],
+    { structuredSchedule: true },
+  );
+  expect(result.days[0].morning.activities.map((a) => a.id)).toEqual(["walk"]);
+  expect(result.days[0].afternoon.activities.map((a) => a.id)).toEqual([
+    "museum",
+  ]);
+  const schema = mocks.generateObject.mock.calls.at(-1)?.[0].schema;
+  expect(schema.safeParse(object).success).toBe(true);
+  expect(
+    schema.safeParse({
+      ...object,
+      days: [
+        {
+          ...day,
+          activities: [...day.activities, { id: "third", slot: "evening" }],
+        },
+      ],
+    }).success,
+  ).toBe(false);
+  expect(schema.safeParse({ ...object, days: [day, day] }).success).toBe(false);
+});
+
 describe("search itinerary fallback", () => {
+  it("prefers nearby meals and discloses distant-only supply", async () => {
+    const near: DiningResult = {
+      ...activity("near-cafe"),
+      cuisineTypes: [],
+      priceLevel: 2,
+      mealTypes: ["breakfast"],
+      dietaryOptions: [],
+    };
+    const far = {
+      ...near,
+      id: "far-cafe",
+      name: "Far cafe",
+      location: { ...near.location, lat: 36.6 },
+    };
+    const nearby = await runAggregatorAgent(
+      plan,
+      [],
+      [activity("walk")],
+      [far, near],
+    );
+    expect(nearby.days[0].morning.meal?.id).toBe("near-cafe");
+    const distant = await runAggregatorAgent(
+      plan,
+      [],
+      [activity("walk")],
+      [far],
+    );
+    expect(distant.days[0].morning.meal?.id).toBe("far-cafe");
+    expect(distant.days[0].tips.join(" ")).toContain(
+      "Far cafe may require a separate journey",
+    );
+  });
+
+  it("keeps relaxed fallback days within two visits and four activity hours", async () => {
+    const slowPlan = {
+      ...plan,
+      activityCriteria: {
+        ...plan.activityCriteria,
+        pacePreference: "relaxed" as const,
+      },
+    };
+    const candidates = Array.from({ length: 10 }, (_, i) => ({
+      ...activity(`museum-${i}`),
+      duration: 120,
+    }));
+    const { days } = await runAggregatorAgent(slowPlan, [], candidates, []);
+    for (const day of days) {
+      const stops = [day.morning, day.afternoon, day.evening].flatMap(
+        (slot) => slot.activities,
+      );
+      expect(stops).toHaveLength(2);
+      expect(stops.reduce((sum, a) => sum + a.duration, 0)).toBeLessThanOrEqual(
+        240,
+      );
+      expect(day.summary).toContain("Backup draft");
+      expect(day.tips.join(" ")).toContain("seated breaks");
+    }
+  });
+  it("does not pack another visit beside a long visit or schedule invalid durations", async () => {
+    const candidates = [
+      { ...activity("long"), duration: 240 },
+      { ...activity("short"), duration: 60 },
+      { ...activity("invalid"), duration: 2.5 },
+      { ...activity("too-long"), duration: 800 },
+    ];
+    const { days } = await runAggregatorAgent(plan, [], candidates, []);
+    expect(days[0].morning.activities.map((a) => a.id)).toEqual(["long"]);
+    expect(days[0].tips.join(" ")).toContain("longer visit");
+    expect(scheduledIds(days).sort()).toEqual(["long", "short"]);
+    expect(days[1].morning.activities.map((a) => a.id)).toEqual(["short"]);
+  });
+
   it.each([0, 1, 3])(
     "uses only one outbound alternative for a %s-night trip and leaves daily costs unavailable",
     async (nights) => {

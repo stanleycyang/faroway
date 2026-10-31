@@ -66,6 +66,8 @@ describe("dining agent reservation links", () => {
     const prompt = String(generateObject.mock.calls[0][0].system);
     expect(prompt).not.toContain("https://opentable.com/r/");
     expect(prompt).toContain("Do not invent reservation URLs");
+    expect(prompt).not.toContain("realistic-sounding names");
+    expect(prompt).toContain("Never invent a name");
     expect(info.mock.calls.map((call) => String(call[0])).join("\n")).toContain(
       "planning.step.reservation_url_omitted",
     );

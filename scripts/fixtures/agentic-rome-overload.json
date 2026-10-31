@@ -1,0 +1,383 @@
+{
+  "provenance": {
+    "kind": "projected-synthetic-live-regression",
+    "originalTraceSha256": "1d713bb7225244add9576c1d9911b0665f510bc571c39defb16c4d699db160e4",
+    "notes": "Only scheduled inventory and evaluator-required mapped fields retained. Generated venue claims are unverified; this is a negative scheduling regression, not a reference itinerary."
+  },
+  "expected": {
+    "activityMinutes": 525,
+    "paceWarnings": ["day_1:exceeds_moderate_pace_budget"]
+  },
+  "trace": {
+    "version": 1,
+    "runId": "e7ee0829-44eb-4efe-8b57-01633e65c9ec",
+    "configId": "flash-low",
+    "brief": {
+      "id": "rome-single-day",
+      "destination": "Rome, Italy",
+      "startDate": "2027-01-11",
+      "endDate": "2027-01-11",
+      "travelers": 2,
+      "adults": 2,
+      "children": 0,
+      "interests": ["history", "food"],
+      "budget": "moderate",
+      "vibes": ["cultural"],
+      "travelerType": "couple"
+    },
+    "source": {
+      "commit": "d1f01d2f09999b73290140927e1b695bab73b4b0",
+      "dirty": true,
+      "filesSha256": "9a26b35c95856b238fc8591af28ec5717194e3c3b4393af50e5ba8d50b07f0f3"
+    },
+    "startedAt": "2026-10-31T04:40:42.648Z",
+    "settings": {
+      "PLANNING_THINKING_ORCHESTRATOR": "low",
+      "PLANNING_THINKING_HOTELS": "low",
+      "PLANNING_THINKING_ACTIVITIES": "low",
+      "PLANNING_THINKING_DINING": "low",
+      "PLANNING_THINKING_AGGREGATOR": "medium"
+    },
+    "steps": [
+      {
+        "step": "orchestrator",
+        "output": {
+          "destination": "Rome, Italy",
+          "country": "Italy",
+          "dates": {
+            "start": "2027-01-11",
+            "end": "2027-01-11",
+            "nights": 0
+          },
+          "searchPriorities": ["hotels", "activities", "dining"],
+          "hotelCriteria": {
+            "priceRange": {
+              "min": 100,
+              "max": 250
+            },
+            "starRating": [3, 4],
+            "amenities": [
+              "Breakfast included",
+              "Historical building",
+              "Central location",
+              "Free Wi-Fi",
+              "Boutique style"
+            ],
+            "neighborhoods": ["Monti", "Trastevere", "Prati", "Centro Storico"]
+          },
+          "activityCriteria": {
+            "categories": [
+              "Historical Tours",
+              "Art Museums",
+              "Culinary Experiences",
+              "Walking Tours"
+            ],
+            "pacePreference": "moderate",
+            "mustSee": [
+              "Colosseum",
+              "Roman Forum",
+              "Pantheon",
+              "Vatican Museums"
+            ],
+            "interests": [
+              "history",
+              "food",
+              "Archeology",
+              "Renaissance Art",
+              "Ancient History",
+              "Food History"
+            ]
+          },
+          "diningCriteria": {
+            "cuisineTypes": [
+              "Roman",
+              "Italian",
+              "Traditional Pasta",
+              "Gelato",
+              "Artisanal Bakery"
+            ],
+            "priceRange": "moderate",
+            "dietaryNeeds": [],
+            "mealPriorities": ["lunch", "dinner"]
+          },
+          "vibeInterpretation": {
+            "vibes": ["cultural"],
+            "searchKeywords": [
+              "museum",
+              "history",
+              "art",
+              "heritage",
+              "traditional",
+              "local",
+              "architecture",
+              "historical",
+              "UNESCO",
+              "Authentic"
+            ],
+            "avoidKeywords": [
+              "nightclub",
+              "modern",
+              "shopping mall",
+              "theme park",
+              "fast food",
+              "tourist trap"
+            ]
+          },
+          "travelerType": "couple",
+          "travelers": 2,
+          "adults": 2,
+          "children": 0,
+          "flightProvider": "none"
+        },
+        "latencyMs": 6992,
+        "usage": [],
+        "fallbacks": []
+      },
+      {
+        "step": "hotels",
+        "output": [],
+        "latencyMs": 16085,
+        "usage": [],
+        "fallbacks": []
+      },
+      {
+        "step": "activities",
+        "output": [
+          {
+            "id": "activity_1793421684913_0",
+            "name": "Colosseum Underground and Ancient Rome Small-Group Tour",
+            "duration": 210,
+            "bestTimeOfDay": "morning",
+            "location": {
+              "name": "Colosseum",
+              "address": "Piazza del Colosseo, 1, 00184 Roma RM, Italy",
+              "lat": 41.89021,
+              "lng": 12.492231,
+              "neighborhood": "Monti"
+            }
+          },
+          {
+            "id": "activity_1793421684913_13",
+            "name": "San Clemente Basilica Underground Tour",
+            "duration": 60,
+            "bestTimeOfDay": "afternoon",
+            "location": {
+              "name": "Basilica di San Clemente",
+              "address": "Via Labicana, 95, 00184 Roma RM, Italy",
+              "lat": 41.889444,
+              "lng": 12.4975,
+              "neighborhood": "Monti"
+            }
+          },
+          {
+            "id": "activity_1793421684913_2",
+            "name": "Pantheon Architectural & Historical Tour",
+            "duration": 45,
+            "bestTimeOfDay": "afternoon",
+            "location": {
+              "name": "Pantheon",
+              "address": "Piazza della Rotonda, 00186 Roma RM, Italy",
+              "lat": 41.898611,
+              "lng": 12.476944,
+              "neighborhood": "Centro Storico"
+            }
+          },
+          {
+            "id": "activity_1793421684913_3",
+            "name": "Trastevere Authentic Food & Heritage Walking Tour",
+            "duration": 210,
+            "bestTimeOfDay": "evening",
+            "location": {
+              "name": "Piazza Santa Maria in Trastevere",
+              "address": "Piazza di Santa Maria in Trastevere, 00153 Roma RM, Italy",
+              "lat": 41.889399,
+              "lng": 12.469854,
+              "neighborhood": "Trastevere"
+            }
+          }
+        ],
+        "latencyMs": 19183,
+        "usage": [],
+        "fallbacks": []
+      },
+      {
+        "step": "dining",
+        "output": [
+          {
+            "id": "dining_1793421694332_8",
+            "name": "Regoli Pasticceria",
+            "mealTypes": ["breakfast"],
+            "location": {
+              "name": "Regoli Pasticceria",
+              "address": "Via dello Statuto, 60, 00185 Roma RM, Italy",
+              "lat": 41.8942,
+              "lng": 12.5019,
+              "neighborhood": "Monti"
+            }
+          },
+          {
+            "id": "dining_1793421694332_1",
+            "name": "Armando al Pantheon",
+            "mealTypes": ["lunch", "dinner"],
+            "location": {
+              "name": "Armando al Pantheon",
+              "address": "Salita de' Crescenzi, 31, 00186 Roma RM, Italy",
+              "lat": 41.8993,
+              "lng": 12.4764,
+              "neighborhood": "Centro Storico"
+            }
+          }
+        ],
+        "latencyMs": 9416,
+        "usage": [],
+        "fallbacks": []
+      },
+      {
+        "step": "aggregator",
+        "output": {
+          "days": [
+            {
+              "dayNumber": 1,
+              "date": "2027-01-11",
+              "title": "Ancient Echoes and Culinary Heritage",
+              "summary": "Immerse yourself in Rome's archaeological depths starting at the Colosseum and San Clemente, followed by an architectural study of the Pantheon and a historic food tour in Trastevere.",
+              "morning": {
+                "activities": [
+                  {
+                    "id": "activity_1793421684913_0",
+                    "name": "Colosseum Underground and Ancient Rome Small-Group Tour",
+                    "duration": 210,
+                    "bestTimeOfDay": "morning",
+                    "location": {
+                      "name": "Colosseum",
+                      "address": "Piazza del Colosseo, 1, 00184 Roma RM, Italy",
+                      "lat": 41.89021,
+                      "lng": 12.492231,
+                      "neighborhood": "Monti"
+                    }
+                  }
+                ],
+                "meal": {
+                  "id": "dining_1793421694332_8",
+                  "name": "Regoli Pasticceria",
+                  "mealTypes": ["breakfast"],
+                  "location": {
+                    "name": "Regoli Pasticceria",
+                    "address": "Via dello Statuto, 60, 00185 Roma RM, Italy",
+                    "lat": 41.8942,
+                    "lng": 12.5019,
+                    "neighborhood": "Monti"
+                  }
+                }
+              },
+              "afternoon": {
+                "activities": [
+                  {
+                    "id": "activity_1793421684913_13",
+                    "name": "San Clemente Basilica Underground Tour",
+                    "duration": 60,
+                    "bestTimeOfDay": "afternoon",
+                    "location": {
+                      "name": "Basilica di San Clemente",
+                      "address": "Via Labicana, 95, 00184 Roma RM, Italy",
+                      "lat": 41.889444,
+                      "lng": 12.4975,
+                      "neighborhood": "Monti"
+                    }
+                  },
+                  {
+                    "id": "activity_1793421684913_2",
+                    "name": "Pantheon Architectural & Historical Tour",
+                    "duration": 45,
+                    "bestTimeOfDay": "afternoon",
+                    "location": {
+                      "name": "Pantheon",
+                      "address": "Piazza della Rotonda, 00186 Roma RM, Italy",
+                      "lat": 41.898611,
+                      "lng": 12.476944,
+                      "neighborhood": "Centro Storico"
+                    }
+                  }
+                ],
+                "meal": {
+                  "id": "dining_1793421694332_1",
+                  "name": "Armando al Pantheon",
+                  "mealTypes": ["lunch", "dinner"],
+                  "location": {
+                    "name": "Armando al Pantheon",
+                    "address": "Salita de' Crescenzi, 31, 00186 Roma RM, Italy",
+                    "lat": 41.8993,
+                    "lng": 12.4764,
+                    "neighborhood": "Centro Storico"
+                  }
+                }
+              },
+              "evening": {
+                "activities": [
+                  {
+                    "id": "activity_1793421684913_3",
+                    "name": "Trastevere Authentic Food & Heritage Walking Tour",
+                    "duration": 210,
+                    "bestTimeOfDay": "evening",
+                    "location": {
+                      "name": "Piazza Santa Maria in Trastevere",
+                      "address": "Piazza di Santa Maria in Trastevere, 00153 Roma RM, Italy",
+                      "lat": 41.889399,
+                      "lng": 12.469854,
+                      "neighborhood": "Trastevere"
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "latencyMs": 14850,
+        "usage": [],
+        "fallbacks": []
+      }
+    ],
+    "mappedItinerary": {
+      "days": [
+        {
+          "date": "2027-01-11",
+          "morning": {
+            "activities": [
+              {
+                "id": "activity_1793421684913_0"
+              }
+            ],
+            "meals": [
+              {
+                "id": "dining_1793421694332_8"
+              }
+            ]
+          },
+          "afternoon": {
+            "activities": [
+              {
+                "id": "activity_1793421684913_13"
+              },
+              {
+                "id": "activity_1793421684913_2"
+              }
+            ],
+            "meals": [
+              {
+                "id": "dining_1793421694332_1"
+              }
+            ]
+          },
+          "evening": {
+            "activities": [
+              {
+                "id": "activity_1793421684913_3"
+              }
+            ],
+            "meals": []
+          }
+        }
+      ]
+    }
+  }
+}
