@@ -1,3 +1,7 @@
+import {
+  compiledScheduleExperimentEnabled,
+  runStagingCompiledSchedule,
+} from "../staging-schedule-experiment";
 import { createFallbackItinerary } from "../fallback-itinerary";
 import {
   PLANNING_MODEL,
@@ -194,6 +198,17 @@ export async function runAggregatorAgent(
     Math.ceil(
       (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
     ) + 1;
+
+  if (
+    compiledScheduleExperimentEnabled() &&
+    numDays >= 1 &&
+    numDays <= 7 &&
+    transport.length === 0 &&
+    !options.structuredSchedule &&
+    !options.explicitDailyBudget
+  ) {
+    return runStagingCompiledSchedule(plan, hotels, activities, dining);
+  }
 
   // Format data for the AI
   const hotelSummary = hotels.slice(0, 5).map((h) => ({

@@ -23,8 +23,22 @@ it("changes only narration and preserves uncertainty tips and original objects",
   const snapshot = structuredClone(days),
     result = applyScheduleNarration(days, entries());
   expect(days).toEqual(snapshot);
-  expect(result.map(({ title: _t, summary: _s, ...rest }) => rest)).toEqual(
-    days.map(({ title: _t, summary: _s, ...rest }) => rest),
+  expect(
+    result.map((day) =>
+      Object.fromEntries(
+        Object.entries(day).filter(
+          ([key]) => !["title", "summary"].includes(key),
+        ),
+      ),
+    ),
+  ).toEqual(
+    days.map((day) =>
+      Object.fromEntries(
+        Object.entries(day).filter(
+          ([key]) => !["title", "summary"].includes(key),
+        ),
+      ),
+    ),
   );
   expect(result[0].title).toBe("A day of discovery");
   expect(result[0]).not.toBe(days[0]);

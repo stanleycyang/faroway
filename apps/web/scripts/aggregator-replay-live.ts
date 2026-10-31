@@ -80,6 +80,30 @@ async function main() {
   process.env.VIATOR_CONTENT_ENABLED = "false";
   const structuredSchedule = process.argv.includes("--structured-schedule");
   const explicitDailyBudget = process.argv.includes("--explicit-daily-budget");
+  const compiledNarrated = process.argv.includes("--compiled-narrated");
+  if (
+    compiledNarrated &&
+    (thinking !== "low" || structuredSchedule || explicitDailyBudget)
+  )
+    throw new Error(
+      "Compiled narration requires low thinking and no legacy schedule flags",
+    );
+  if (compiledNarrated)
+    process.env.FAROWAY_SCHEDULE_EXPERIMENT = "compiled-narrated-v1";
+  else delete process.env.FAROWAY_SCHEDULE_EXPERIMENT;
+  if (compiledNarrated) {
+    const { compiledScheduleExperimentEnabled } =
+      await import("../lib/search/staging-schedule-experiment");
+    if (
+      !compiledScheduleExperimentEnabled({
+        ...process.env,
+        PLANNING_THINKING_AGGREGATOR: thinking,
+      })
+    )
+      throw new Error(
+        "Compiled narration requires the isolated staging environment",
+      );
+  }
   const settings = {
     PLANNING_MODEL_AGGREGATOR: "google/gemini-3-flash",
     PLANNING_THINKING_AGGREGATOR: thinking,
@@ -92,6 +116,14 @@ async function main() {
   for (const file of [
     "apps/web/scripts/aggregator-replay-live.ts",
     "apps/web/lib/search/agents/aggregator.ts",
+    "apps/web/lib/search/staging-schedule-experiment.ts",
+    "apps/web/lib/search/narration-prompt.ts",
+    "apps/web/lib/search/schedule-narration.ts",
+    "apps/web/lib/search/schedule-compiler.ts",
+    "apps/web/lib/search/highlight-match.ts",
+    "apps/web/lib/search/party-suitability.ts",
+    "scripts/uat/lib/venue-constraints.ts",
+    "scripts/fixtures/agentic-venue-constraints.json",
     "apps/web/lib/search/supplied-distance.ts",
     "apps/web/lib/search/bridge.ts",
     "apps/web/lib/search/fallback-itinerary.ts",
@@ -107,12 +139,14 @@ async function main() {
     configId: [
       "aggregator-replay",
       thinking,
+      ...(compiledNarrated ? ["compiled-narrated"] : []),
       ...(structuredSchedule ? ["bounded-schema"] : []),
       ...(explicitDailyBudget ? ["daily-budget"] : []),
     ].join("-"),
     startedAt: new Date().toISOString(),
     settings: {
       ...settings,
+      compiledNarrated: String(compiledNarrated),
       structuredSchedule: String(structuredSchedule),
       explicitDailyBudget: String(explicitDailyBudget),
     },

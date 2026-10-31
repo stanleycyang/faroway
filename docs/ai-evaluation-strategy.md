@@ -849,3 +849,30 @@ Manual review of the four revised outputs found no added selected visits or date
 Receipts: `artifacts/uat/traces/narration-pilot-20261031/` (initial) and `narration-v2-20261031/` (revised). Estimates exclude all upstream generation and compiler work. These one-sample-per-case results support investigating a compiler-plus-narrator pipeline, not a claim about delivered app latency or broad quality acceptance. No production integration or default-model change. Gateway reconciled at **$1.46/$20** after six calls. Holdouts remain unused.
 
 Validation: 1,247 web tests, 92 script tests, and workspace type/lint/format checks pass (the same nine pre-existing lint warnings).
+
+
+### Integrate the candidate at the app aggregator boundary (2026-10-31)
+
+The shared `runAggregatorAgent` now has an explicitly gated compiler-plus-narrator path, so both inline search and the durable planning workflow can exercise the same candidate. It remains **off by default and blocked in production**. The gate requires all of:
+
+- `FAROWAY_SCHEDULE_EXPERIMENT=compiled-narrated-v1`;
+- `VERCEL_ENV=preview`, or local `NODE_ENV=development` without a Vercel environment;
+- the exact isolated Supabase origin `https://omovikloadpvzijoaqus.supabase.co`, with no credentials/path/query/fragment;
+- `PLANNING_THINKING_AGGREGATOR=low`, the existing Gemini 3 Flash model (unset or explicit), and the aggregator output cap unset or exactly `2000`.
+
+The candidate applies only to one-to-seven-day trips without transport candidates and without the legacy structured-schedule/daily-budget experiment options. Other requests use the existing aggregator. Production defaults, disclosure recipients, consent checks, booking behavior and provider gates remain unchanged. The deployed preview still has planning paused and its AI key disabled; no remote environment settings were changed in this iteration.
+
+The integrated path filters unapproved Viator content before compilation and narration; applies the manually reviewed closure/season fixture to each candidate/date; chooses the highest supplied hotel vibe score without changing its quote; and makes one bounded narration call through the existing planning-usage logger. It preserves compiler uncertainty and omitted-highlight tips. Empty-activity days skip narration and report a supply-gap fallback. Timeouts, malformed output or mismatched references return the compiled draft with an explicit explanation and an observable fallback event, **without a second AI call**. This is not general grounding: the small fixture's coverage limitations and generated coordinates remain unchanged.
+
+Extracted the exact evaluated narration prompt into a shared helper used by the pilot and app path. Added an explicit `--compiled-narrated` mode to `aggregator-replay-live.ts`, with configuration/source hashes and safeguards against mixing legacy experiments or accidentally inheriting this mode from ambient environment variables.
+
+| Integrated app-aggregator replay | Latency | Estimated stage USD | Result |
+| --- | ---: | ---: | --- |
+| Paris | 5.933 s | $0.004070 | 9 visits / 9 meals, no fallback, no listed closure violations |
+| Marrakech | 3.553 s | $0.002424 | 12 visits / 12 meals, no fallback; prior baseline aggregation timed out |
+
+These calls reuse frozen upstream inventory; they do not measure end-to-end API or device latency. Paris consumed 798 reasoning tokens despite the low setting, illustrating variation compared with the standalone narration samples. Both outputs were manually checked against the selected stops; supplier claims, vegan suitability and bookability still need independent evidence. Receipts: `artifacts/uat/traces/integrated-schedule-20261031/`. Gateway reconciled after both calls at **$1.47/$20**.
+
+Validation: all 1,255 web tests and 92 script tests pass; workspace checks pass. Tests cover production/wrong-project/config rejection, app entry-point routing, unchanged schedule data, malformed references, stalled narration/abort, no retry, supplier-content filtering, empty supply, deterministic hotel choice, and the legacy path when disabled or over seven days. Removed unused-variable warnings from the narration tests. An isolated Next.js build in `/tmp/faroway-compiled-integration-20261031` passes with the experiment enabled, staging public-read credentials, and disabled AI/service credentials. The first build with placeholder public credentials correctly failed on blog data reads; it was not treated as a code/build success.
+
+Next release gate: exercise a bounded consented request through the deployed staging API and inspect persisted/streamed itinerary rendering before considering broader rollout. This requires explicitly configuring the preview experiment; the current remote deployment remains paused. No production deployment or merge of PR #55 is justified by these two replays.
