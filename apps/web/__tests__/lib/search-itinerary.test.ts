@@ -509,6 +509,78 @@ describe.each(["successful", "recovered"] as const)(
 );
 
 describe("search itinerary fallback", () => {
+  it("prefers nearby meals and discloses distant-only supply", async () => {
+    const near: DiningResult = {
+      ...activity("near-cafe"),
+      cuisineTypes: [],
+      priceLevel: 2,
+      mealTypes: ["breakfast"],
+      dietaryOptions: [],
+    };
+    const far = {
+      ...near,
+      id: "far-cafe",
+      name: "Far cafe",
+      location: { ...near.location, lat: 36.6 },
+    };
+    const nearby = await runAggregatorAgent(
+      plan,
+      [],
+      [activity("walk")],
+      [far, near],
+    );
+    expect(nearby.days[0].morning.meal?.id).toBe("near-cafe");
+    const distant = await runAggregatorAgent(
+      plan,
+      [],
+      [activity("walk")],
+      [far],
+    );
+    expect(distant.days[0].morning.meal?.id).toBe("far-cafe");
+    expect(distant.days[0].tips.join(" ")).toContain(
+      "Far cafe may require a separate journey",
+    );
+  });
+
+  it("keeps relaxed fallback days within two visits and four activity hours", async () => {
+    const slowPlan = {
+      ...plan,
+      activityCriteria: {
+        ...plan.activityCriteria,
+        pacePreference: "relaxed" as const,
+      },
+    };
+    const candidates = Array.from({ length: 10 }, (_, i) => ({
+      ...activity(`museum-${i}`),
+      duration: 120,
+    }));
+    const { days } = await runAggregatorAgent(slowPlan, [], candidates, []);
+    for (const day of days) {
+      const stops = [day.morning, day.afternoon, day.evening].flatMap(
+        (slot) => slot.activities,
+      );
+      expect(stops).toHaveLength(2);
+      expect(stops.reduce((sum, a) => sum + a.duration, 0)).toBeLessThanOrEqual(
+        240,
+      );
+      expect(day.summary).toContain("Backup draft");
+      expect(day.tips.join(" ")).toContain("seated breaks");
+    }
+  });
+  it("does not pack another visit beside a long visit or schedule invalid durations", async () => {
+    const candidates = [
+      { ...activity("long"), duration: 240 },
+      { ...activity("short"), duration: 60 },
+      { ...activity("invalid"), duration: 2.5 },
+      { ...activity("too-long"), duration: 800 },
+    ];
+    const { days } = await runAggregatorAgent(plan, [], candidates, []);
+    expect(days[0].morning.activities.map((a) => a.id)).toEqual(["long"]);
+    expect(days[0].tips.join(" ")).toContain("longer visit");
+    expect(scheduledIds(days).sort()).toEqual(["long", "short"]);
+    expect(days[1].morning.activities.map((a) => a.id)).toEqual(["short"]);
+  });
+
   it.each([0, 1, 3])(
     "uses only one outbound alternative for a %s-night trip and leaves daily costs unavailable",
     async (nights) => {

@@ -1,3 +1,4 @@
+import { createFallbackItinerary } from "../fallback-itinerary";
 import {
   PLANNING_MODEL,
   PLANNING_PROVIDER_OPTIONS,
@@ -514,92 +515,4 @@ function recoverFromRawText(
   } catch {
     return null;
   }
-}
-
-/**
- * Create a simple fallback itinerary when AI generation fails
- */
-function createFallbackItinerary(
-  plan: SearchPlan,
-  hotels: HotelResult[],
-  activities: ActivityResult[],
-  dining: DiningResult[],
-  transport: TransportResult[] = [],
-): { days: SuggestedDay[]; topHotel: HotelResult | null } {
-  const { dates } = plan;
-  const startDate = new Date(dates.start);
-  const numDays = dates.nights + 1;
-
-  const topHotel = hotels[0] || null;
-  const days: SuggestedDay[] = [];
-  // Flexible activities belong to multiple candidate lists, but should only
-  // be scheduled once across the entire trip.
-  const usedActivityIds = new Set<string>();
-  const takeActivities = (candidates: ActivityResult[], limit: number) => {
-    const selected: ActivityResult[] = [];
-    for (const activity of candidates) {
-      if (usedActivityIds.has(activity.id)) continue;
-      usedActivityIds.add(activity.id);
-      selected.push(activity);
-      if (selected.length === limit) break;
-    }
-    return selected;
-  };
-
-  // Sort activities by best time
-  const morningActivities = activities.filter(
-    (a) => a.bestTimeOfDay === "morning" || a.bestTimeOfDay === "any",
-  );
-  const afternoonActivities = activities.filter(
-    (a) => a.bestTimeOfDay === "afternoon" || a.bestTimeOfDay === "any",
-  );
-  const eveningActivities = activities.filter(
-    (a) => a.bestTimeOfDay === "evening" || a.bestTimeOfDay === "any",
-  );
-
-  // Sort dining by meal type
-  const breakfastSpots = dining.filter((d) =>
-    d.mealTypes.includes("breakfast"),
-  );
-  const lunchSpots = dining.filter((d) => d.mealTypes.includes("lunch"));
-  const dinnerSpots = dining.filter((d) => d.mealTypes.includes("dinner"));
-
-  // These are alternative outbound offers, not outbound/return legs.
-  const outboundFlight = transport[0];
-
-  for (let i = 0; i < numDays; i++) {
-    const date = new Date(startDate);
-    date.setUTCDate(date.getUTCDate() + i);
-
-    const dayTransport = i === 0 ? outboundFlight : undefined;
-
-    days.push({
-      dayNumber: i + 1,
-      date: date.toISOString().split("T")[0],
-      title: `Day ${i + 1} in ${plan.destination}`,
-      summary: `Explore ${plan.destination} with a mix of activities and dining.`,
-      hotel: topHotel || undefined,
-      morning: {
-        activities: takeActivities(morningActivities, 2),
-        meal: breakfastSpots[i % breakfastSpots.length],
-      },
-      afternoon: {
-        activities: takeActivities(afternoonActivities, 2),
-        meal: lunchSpots[i % lunchSpots.length],
-      },
-      evening: {
-        activities: takeActivities(eveningActivities, 1),
-        meal: dinnerSpots[i % dinnerSpots.length],
-      },
-      transport: dayTransport,
-      estimatedCost: undefined,
-      currency: undefined,
-      tips: [
-        "Book popular attractions in advance",
-        "Check opening hours before visiting",
-      ],
-    });
-  }
-
-  return { days, topHotel };
 }

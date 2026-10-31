@@ -337,3 +337,34 @@ as tested. Trace: `artifacts/uat/traces/broader-20261031`. The dedicated gateway
 budget was reconciled to **$0.63/$20** after this run. This extends the timeout
 finding beyond Lisbon and makes fallback pacing a release concern. No production
 model or timeout default was changed.
+
+### Duration-aware fallback (2026-10-31)
+
+The fallback scheduler is now a pure module with bounded daily activity counts
+and minute budgets (relaxed: two visits/240 minutes; moderate: four/420; packed:
+five/600). It spreads unused candidates across remaining days, excludes invalid
+or over-budget durations, isolates longer visits in a slot, preserves time-of-day
+compatibility and original IDs, and leaves unsupplied days explicitly incomplete.
+These are planning heuristics, not individualized accessibility guarantees.
+
+Fallback meal selection prefers supplied nearby coordinates and variety within
+that set. If every candidate is distant, it retains the nearest candidate and
+adds a specific separate-journey warning rather than pretending supply is local.
+Unknown coordinates remain unknown. Draft summaries and tips now disclose the
+fallback and outstanding checks.
+
+`apps/web/scripts/fallback-replay.ts INPUT_TRACE NEW_OUTPUT` runs without model,
+provider, or database calls and records source/input hashes. Replays in
+`artifacts/uat/traces/fallback-pacing-v2-20261031` show:
+
+- Copenhagen: six activities over three days instead of the failed live run's
+  fifteen; no slot-overload warnings; nine meals and nine distinct restaurants.
+- Lisbon: ten activities, no slot-overload warnings, nine meals; two remote-meal
+  warnings remain because the inventory lacks nearby options. Explicit journey
+  warnings are included in the day tips.
+
+Both continue to fail the overall `fallback_used` gate. A better fallback does
+not establish successful AI generation, factual availability, or traveler
+usefulness. The change makes failure behavior less misleading and better paced;
+aggregation reliability and independent factual verification remain open. These
+replays made zero model calls; cumulative live spend remains $0.63/$20.

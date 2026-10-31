@@ -92,6 +92,7 @@ async function main() {
     "apps/web/lib/search/agents/aggregator.ts",
     "apps/web/lib/search/supplied-distance.ts",
     "apps/web/lib/search/bridge.ts",
+    "apps/web/lib/search/fallback-itinerary.ts",
     "apps/web/lib/ai/planning-step.ts",
     "apps/web/lib/ai/sdk.ts",
     "apps/web/lib/search/runtime.ts",
