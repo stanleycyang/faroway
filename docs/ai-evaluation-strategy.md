@@ -179,7 +179,6 @@ hold back a small canary when promoting a tested candidate.
 5. With a confirmed budget, compare the current pipeline against one focused
    candidate change, then promote only after native acceptance and slice review.
 
-
 ## Executable trace evaluation (2026-10-31)
 
 `uat:model-compare -- --live` now preserves each agent output and the production
@@ -228,7 +227,6 @@ production model defaults. The duration schema/prompt fix is being tested while
 the case set, factual evidence, schedule coherence checks, repeated trials,
 holdout review, and native/web experience measurements are still incomplete.
 
-
 The explicit-minute follow-up pilot returned all 15 generated activity durations
 as whole minutes, completed without fallback, and passed structural contracts.
 It cost an estimated $0.06760 versus $0.06203 in the original pilot; one trial
@@ -238,3 +236,31 @@ regressions for the next iteration. Production model defaults remain unchanged.
 Local validation after this iteration: 1,194 web, 673 mobile, 136 shared-package,
 and 61 script tests pass; typechecking, lint and formatting checks pass with the
 existing nine lint warnings.
+
+### Scheduling candidate: failed latency gate (2026-10-31)
+
+The next candidate supplies activity and restaurant neighborhoods/descriptions,
+explicit calendar weekdays, minute-based pacing, meal breaks, and uncertainty
+instructions to the aggregator. These fields were previously absent despite
+instructions to group stops geographically. A separate mapping fix adds explicit
+`mealId: null` so an included-dinner experience can suppress an extra restaurant;
+omitted meal IDs retain the existing fallback behavior. Contract evaluation now
+also rejects restaurants scheduled outside their declared meal types.
+
+The live batch in `artifacts/uat/traces/scheduling-pilot-20261031` loaded the
+scheduling prompt **before** the nullable-meal mapping change. It requested all
+three development briefs but stopped on the first, Lisbon: the aggregator timed
+out at 30,038 ms, used a fallback, and produced two overloaded-slot warnings.
+Total serial agent duration was 99,996 ms. Aggregator billing usage was unavailable;
+the harness correctly aborted rather than assuming zero cost. Gateway budget
+reconciliation reported $0.46 cumulative UAT spend against the $20 cap. Copenhagen
+and Interlaken were not executed. This candidate has not passed the promotion gate
+and has not been deployed. The nullable-meal change has unit coverage, not live
+acceptance evidence yet.
+
+All repository tests pass (2,067 total), including 45 itinerary mapping tests and
+62 script tests. Passing these checks does not override the live latency failure.
+Next: replay frozen upstream inventories to isolate aggregator prompt/model
+changes, then repeat successful candidates across broader briefs and independent
+holdouts. Preserve the failed trace in comparisons and measure actual application
+latency separately from this sequential harness.

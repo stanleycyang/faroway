@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   ActivityResult,
+  DiningResult,
   HotelResult,
   SearchPlan,
   SuggestedDay,
@@ -138,6 +139,49 @@ function generatedDay(dayNumber: number, hotelId?: string) {
     tips: [],
   };
 }
+
+it("preserves an explicit no-extra-meal choice for a dinner experience", async () => {
+  const day = {
+    ...generatedDay(1),
+    evening: { activityIds: ["dinner-experience"], mealId: null },
+  };
+  mocks.generateObject.mockResolvedValue({
+    object: { days: [day], topHotelId: hotel.id },
+  });
+  const dinner: DiningResult = {
+    ...activity("extra-dinner"),
+    cuisineTypes: ["Japanese"],
+    priceLevel: 2,
+    mealTypes: ["dinner"],
+    dietaryOptions: [],
+  };
+  const result = await runAggregatorAgent(
+    plan,
+    [hotel],
+    [activity("dinner-experience", "evening")],
+    [dinner],
+  );
+  expect(result.days[0].evening.meal).toBeUndefined();
+  expect(result.days[0].evening.activities[0].id).toBe("dinner-experience");
+});
+
+it("supplies calendar, neighborhood, and minute context for feasible scheduling", async () => {
+  mocks.generateObject.mockResolvedValue({
+    object: { days: [generatedDay(1)], topHotelId: hotel.id },
+  });
+  const stop = {
+    ...activity("museum"),
+    duration: 150,
+    location: { ...activity("museum").location, neighborhood: "Ueno" },
+  };
+  await runAggregatorAgent(plan, [hotel], [stop], []);
+  const request = mocks.generateObject.mock.calls.at(-1)?.[0];
+  expect(request.prompt).toContain("2026-06-01 Monday");
+  expect(request.prompt).toContain('"durationMinutes": 150');
+  expect(request.prompt).toContain('"neighborhood": "Ueno"');
+  expect(request.prompt).toContain("at least 60 minutes");
+  expect(request.prompt).toContain("not verified venue facts");
+});
 
 describe.each(["successful", "recovered"] as const)(
   "%s AI itinerary mapping",

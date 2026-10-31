@@ -12,7 +12,7 @@ function fixture(): AgenticTrace {
     duration: 60,
     bestTimeOfDay: "morning",
   };
-  const meal = { id: "cafe", name: "Cafe" };
+  const meal = { id: "cafe", name: "Cafe", mealTypes: ["breakfast"] };
   const day = {
     date: "2026-12-07",
     dayNumber: 1,
@@ -97,6 +97,14 @@ describe("production-shape agentic evaluation", () => {
       meals: 1,
       serialAgentMs: 50,
     });
+  });
+  test("rejects a dinner-only restaurant scheduled for breakfast", () => {
+    const trace = fixture();
+    const meals = trace.steps[3].output as Array<{ mealTypes: string[] }>;
+    meals[0].mealTypes = ["dinner"];
+    expect(evaluateAgenticTrace(trace).failures).toContain(
+      "day_1:morning:incompatible_meal_type",
+    );
   });
   test("counts incomplete and fallback runs as failures", () => {
     const trace = fixture();
