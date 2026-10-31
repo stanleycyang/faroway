@@ -1,5 +1,5 @@
 {
-  "status": "Applied to hosted staging and production through editorial metric helper restrictions; production application cutover completed 2026-10-28.",
+  "status": "Applied to hosted staging and production through editorial metric helper restrictions; production application cutover completed 2026-10-28. restrict_remaining_function_execute is registered and has not been applied to staging or production.",
   "bootstrap_sha256": "09b820436a77967f95024abf4f724f4f2f1bb1d3378ee33b73656593ba729939",
   "application_order": [
     {
@@ -49,6 +49,12 @@
       "source": "supabase/migrations/20261028050551_restrict_editorial_metric_helpers.sql",
       "sha256": "a46da1f842b0a6b330451da208487314a22827c251ee281b09e5b50413c882bd",
       "applied": true
+    },
+    {
+      "path": "supabase/migrations/20261028164200_restrict_remaining_function_execute.sql",
+      "source": "supabase/migrations/20261028164200_restrict_remaining_function_execute.sql",
+      "sha256": "4c1d56993eb1b6463d890a0bc85ff326c5acd2df3ce9b75f0c9b6747328bb13d",
+      "applied": false
     }
   ],
   "constraints": [
