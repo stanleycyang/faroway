@@ -829,3 +829,23 @@ A broader ordered-word matcher was tried and **rejected**. It recognized Perlan 
 The rejected trial is preserved in private `compiled-highlights-explained-20261031` artifacts. The accepted explanation-only revision is in `compiled-long-visit-explanations-20261031`: all twelve development cases pass structural checks with zero listed constraint findings, and exact date/slot/activity-ID/meal-ID signatures remain unchanged from the prior evidence-constrained schedules. Existing geography, duration and source-verification limitations therefore remain; this is an explanation improvement, not a new quality approval. No paid model calls were made; last reconciled budget remains $1.45/$20. No production callers use this compiler yet.
 
 Validation: 1,243 web tests and 91 script tests pass; workspace type/lint/format checks pass with the existing nine lint warnings.
+
+
+### Separate fixed-schedule narration pilot (2026-10-31)
+
+Added `schedule-narration.ts` with a compact selected-stop context and an atomic application guard: one entry per date, exact activity-ID membership without duplicates, bounded title/summary text, and changes limited to those two text fields. The runner requires a passing frozen compiler trace, explicit live/staging credentials, and a new private receipt; it limits the pilot to seven days, one model call, 2,000 output tokens, 30 seconds, and zero retries. Input/prompt/source hashes, usage and latency are recorded. Every original uncertainty tip, visit, meal and hotel is preserved. This structural guard cannot prove the prose's facts or meaning; every receipt remains `semanticReviewRequired: true` and `qualityAccepted: false`.
+
+Two initial calls (Lisbon 2.623 s / ~$0.0018015, Copenhagen 2.556 s / ~$0.0014375) showed that short narration is feasible, but Copenhagen added “coastal atmosphere” and “festive lights” while Lisbon used “castle views” in a title. These embellishments were unnecessary and not explicitly in the supplied stop names. Tightened the instructions to avoid added sensory/geographic claims, formulaic travel language and reciting every restaurant. Preserved the initial receipts rather than counting only the better revision.
+
+| Revised case | Narration latency | Estimated narration USD | Structural preservation |
+| --- | ---: | ---: | --- |
+| Lisbon | 2.509 s | $0.0015545 | All dates, visits, meals and tips unchanged |
+| Copenhagen | 2.582 s | $0.0013495 | All dates, visits, meals and tips unchanged |
+| Paris | 3.677 s | $0.002009 | All dates, visits, meals and tips unchanged |
+| Reykjavik | 3.643 s | $0.002520 | All dates, visits, meals and tips unchanged |
+
+Manual review of the four revised outputs found no added selected visits or date/slot contradictions. The titles and summaries now describe the supplied stops more directly. Reykjavik's summary does not reintroduce the omitted Golden Circle excursion, and its original explanation remains in the tips. This is neither independent traveler review nor a guarantee that all prose claims are true: names such as “private VIP tour” and “Michelin-starred” originate in unverified inventory and still need supplier/source evidence. Do not infer bookability from narration.
+
+Receipts: `artifacts/uat/traces/narration-pilot-20261031/` (initial) and `narration-v2-20261031/` (revised). Estimates exclude all upstream generation and compiler work. These one-sample-per-case results support investigating a compiler-plus-narrator pipeline, not a claim about delivered app latency or broad quality acceptance. No production integration or default-model change. Gateway reconciled at **$1.46/$20** after six calls. Holdouts remain unused.
+
+Validation: 1,247 web tests, 92 script tests, and workspace type/lint/format checks pass (the same nine pre-existing lint warnings).
