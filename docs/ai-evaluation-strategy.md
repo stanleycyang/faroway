@@ -459,3 +459,30 @@ with itinerary generation remain open. No product grounding path is enabled.
 
 Latest gateway reconciliation after the three official-page probes:
 **$0.79/$20 cumulative UAT spend**. Repository checks and 74 script tests pass.
+
+### Schema-bounded scheduling candidate and review preview (2026-10-31)
+
+Aggregator replay now accepts `--structured-schedule`, which uses a flat daily
+activity list capped at two/four/five visits for relaxed/moderate/packed pace and
+requires the expected number of days. The adapter preserves real inventory IDs
+and the existing app-facing slot shape. This is an internal opt-in argument;
+ordinary product calls retain their existing schema. Experimental malformed
+outputs fall back rather than bypassing the cap through legacy raw-text recovery.
+
+Four frozen-input medium-thinking trials are preserved under
+`artifacts/uat/traces/structured-replay-20261031`. Copenhagen trial 1 produced six
+visits but exceeded the relaxed minute budget on one day (25.26 s); trial 2 failed
+schema validation and used fallback (17.35 s). Lisbon trials completed in
+18.05/27.26 s; one still exceeded its daily minute budget and both retained remote
+meals. The candidate is **not promoted**: limiting count alone neither guarantees
+feasible timing nor improves reliability. All failed outcomes remain in the
+denominator. Cumulative gateway UAT spend is **$0.85/$20**.
+
+Work is now published in draft PR #55. The review branch is configured with its
+own isolated staging Supabase values, planning paused, a nonfunctional review AI
+key, and optional provider features disabled. Secrets are branch-scoped and were
+not copied from production or committed. The first push preceded environment
+provisioning because Vercel requires an existing remote branch; subsequent builds
+must be checked on the head containing this note. Draft status is intentional:
+quality gates, wider/holdout evaluations, application/native validation, and the
+source-grounding integration remain incomplete.
