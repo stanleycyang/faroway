@@ -486,3 +486,34 @@ provisioning because Vercel requires an existing remote branch; subsequent build
 must be checked on the head containing this note. Draft status is intentional:
 quality gates, wider/holdout evaluations, application/native validation, and the
 source-grounding integration remain incomplete.
+
+### Deployed application baseline (2026-10-31)
+
+Commit `2c318e7` passed GitHub CI run `41169003225` (quality checks and tests;
+release verification/build jobs skipped by workflow policy). Vercel deployment
+`dpl_ASLtsQUkCirB3no7utimii3vWcjw` completed its actual application build and is
+ready at the branch preview. The UAT guard now explicitly allows that provisioned
+alias while still rejecting production, lookalikes, paths, and query parameters.
+Eight guard tests pass with 26 assertions.
+
+Planning component Playwright tests passed 20/20 across Chromium and Mobile
+Chrome, including streaming, recovery, small-screen completion, and day navigation.
+Mobile screenshots were inspected. These use simulated model responses and do
+not establish live generation quality or physical Android behavior.
+
+The deployed tier-0 smoke test passed 17 checks: health, destinations, guest/cron
+authorization, disabled provider states, images (79 HEAD requests), map tile,
+staging sign-in, AI consent, idempotent creation, cross-account isolation, edit
+conflicts, sharing/revocation, and cleanup. Two of those checks (planning-pause
+and rate-limit contracts) inspect source rather than dispatching live requests.
+The optional active rate-limit probe was skipped. Receipt:
+`artifacts/uat/agentic-preview-smoke-auth.json`.
+
+Initial unauthenticated and local OIDC requests reached Vercel protection rather
+than application routes. The successful run used a temporary preview access link
+to obtain an origin-scoped cookie, with redirects still disabled for test calls.
+Protection remained enabled; access material stayed in private temporary files.
+Test trips were deleted by the runner. Planning remains paused with a nonfunctional
+AI key; no live model calls were made in this application check. Gateway budget
+reconciliation still reports **$0.85/$20**. This is a deployed application
+baseline, not a live-AI acceptance result or a production release approval.
