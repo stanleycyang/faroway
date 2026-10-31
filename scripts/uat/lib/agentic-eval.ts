@@ -193,7 +193,11 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
         }[slotName];
         if (!strings(meal.mealTypes).includes(expectedMeal))
           fail(`day_${index + 1}:${slotName}:incompatible_meal_type`);
-        const distances = items.map((item) =>
+        // An empty activity slot still needs a meal near the day's other stops.
+        const anchors = items.length
+          ? items
+          : slots.flatMap((name) => array(object(day[name]).activities));
+        const distances = anchors.map((item) =>
           suppliedDistanceKm(object(item).location, meal.location),
         );
         if (
@@ -201,7 +205,7 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
           distances.every((distance) => distance != null && distance > 3)
         )
           warnings.push(
-            `day_${index + 1}:${slotName}:meal_over_3km_from_all_activities_on_unverified_coordinates`,
+            `day_${index + 1}:${slotName}:meal_over_3km_from_${items.length ? "all" : "day"}_activities_on_unverified_coordinates`,
           );
         restaurants.add(meal.id);
         meals += 1;

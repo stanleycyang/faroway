@@ -14,5 +14,21 @@
     "sourceUrl": "https://mnazulejo.gov.pt/",
     "observedAt": "2026-10-31",
     "temporarilyClosed": true
+  },
+  {
+    "id": "designmuseum-danmark-december-monday",
+    "destination": "Copenhagen",
+    "aliases": ["Designmuseum Danmark"],
+    "sourceUrl": "https://designmuseum.dk/en/besog-os/opening-hours-admission-2/",
+    "observedAt": "2026-10-31",
+    "closedDates": ["2026-12-07"]
+  },
+  {
+    "id": "frick-madison-former-location",
+    "destination": "New York",
+    "aliases": ["Frick Madison"],
+    "sourceUrl": "https://www.frick.org/about/frick_madison",
+    "observedAt": "2026-10-31",
+    "closedFrom": "2024-03-04"
   }
 ]

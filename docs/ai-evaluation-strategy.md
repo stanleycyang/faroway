@@ -594,3 +594,84 @@ in the scorecard, so deleting difficult content cannot manufacture a quality win
 Coordinate-based clustering is only a heuristic until locations and routes are
 verified. This scheduling change cannot by itself resolve venue grounding or the
 unsupported allergy wording; both remain separate acceptance requirements.
+
+### Deterministic schedule compiler experiment (2026-10-31)
+
+`compileSchedule` now provides an experimental allocation path with no model or
+network calls. It preserves inventory objects and durations, bounds activity
+count/minutes per day, respects time-of-day compatibility, reports sparse supply,
+and uses supplied coordinates only as a clustering heuristic. A long visit may
+occupy its own slot with a timing caveat. Search is bounded to 24 candidates and a
+32-state beam; truncation is reported. This is not a globally optimal route solver.
+No production caller uses it yet.
+
+Offline replay supports `--compiled-schedule` and optional `--exclusions FILE`.
+Exclusions carry an activity ID, visit date, reason, source URL and observation
+date. They are caller-supplied evidence, not a claim that the compiler retrieved
+or verified a source. The experiment manually mapped reviewed official evidence
+to inventory IDs; general source discovery/grounding remains unfinished. The
+National Tile Museum was conservatively excluded pending reopening confirmation,
+not asserted closed on all future travel dates. The original hotel choice and
+upstream inventory were frozen, and all upstream generation costs are excluded
+from this stage's zero-model-call cost.
+
+Two adversarial tests failed before their fixes:
+
+- Greedy selection consumed the only visit available on the final day. A
+  bipartite matching check now preserves future day coverage when complete
+  coverage is feasible from the candidate inventory and supplied exclusions.
+- Early short visits crowded out long evening highlights. The beam now keeps
+  states with different visit counts until later slots have been considered,
+  and rewards literal matches to the search plan's suggested highlights.
+
+These highlights are model-interpreted planning preferences, not necessarily
+explicit user priorities. Name matching is intentionally conservative; missing
+matches and unselected highlights are reported. Matching names does not establish
+venue identity, suitability, opening hours, or traveler usefulness.
+
+The final five frozen-input replays took **3–15 ms** for allocation/mapping, had
+complete date coverage, and produced no pace-budget violations. This is local
+stage timing, not application latency. Highlight retention increased from 11/22
+to 18/22 across the same supplied plans, with important tradeoffs:
+
+| Case       | Activities | Suggested highlights retained | Remote meal warnings |
+| ---------- | ---------- | ----------------------------- | -------------------- |
+| Lisbon     | 9          | 5/5                           | 1                    |
+| Copenhagen | 6          | 3/4                           | 0                    |
+| Rome       | 3          | 2/4                           | 0                    |
+| Tokyo      | 9          | 4/5                           | 5                    |
+| New York   | 9          | 4/4                           | 0                    |
+
+Tokyo's meal warnings increased from three to five when highlight retention was
+prioritized; Lisbon decreased from three to one. Rome's choice omitted the
+Colosseum and Vatican Museums. Copenhagen retained the evening Christmas market
+but also selected a mulled-wine experience for a family with a child; suitability
+has not been established. These are **unresolved selection/suitability defects**,
+not acceptable tradeoffs merely because the schedule fits its time budget.
+
+The evaluator now checks meals in empty activity slots against the other stops
+that day, closing a distance-screening gap. It also supports date-specific and
+location-closure facts. Newly reviewed official sources report winter Tuesday–
+Sunday hours for [Designmuseum Danmark](https://designmuseum.dk/en/besog-os/opening-hours-admission-2/)
+and closure of the former [Frick Madison](https://www.frick.org/about/frick_madison)
+location in March 2024. The Designmuseum fixture is limited to the reviewed
+December 7 case; it is not generalized to summer or holiday exceptions. The Frick
+finding matches the obsolete Madison location, not the institution's current
+museum. The Frick official-page search result supplied the closure statement;
+direct page retrieval returned HTTP 418. No full-page extraction receipt is
+claimed for it.
+
+With the manually supplied exclusions, the final replays have no findings for
+the four listed venue constraints. That narrow result does not verify other
+venues. `verified` remains false. Day descriptions currently use inventory-name
+templates, not a polished narrative model; no ready-for-travel status is implied.
+
+Artifacts: `compiled-schedule-20261031` (initial compiler),
+`compiled-constrained-20261031` (reviewed exclusions), and
+`compiled-highlight-20261031` (coverage/highlight corrections), all under
+`artifacts/uat/traces`. The final compiler has nine tests, including the two
+adversarial regressions. Full repository checks/tests passed (1,209 web tests;
+78 script tests). No paid model calls were made this round; the last reconciled
+UAT spend remains **$1.07/$20**. The compiler is **not promoted** until selection
+quality, family suitability, restaurant supply, broader grounding, narrative
+integration, and application validation are addressed.

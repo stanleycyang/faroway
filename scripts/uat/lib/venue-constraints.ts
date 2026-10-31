@@ -7,6 +7,9 @@ export interface VenueConstraint {
   sourceUrl: string;
   observedAt: string;
   closedWeekdays?: number[];
+  closedDates?: string[];
+  /** Closure of the matched venue/location, not necessarily the institution. */
+  closedFrom?: string;
   temporarilyClosed?: boolean;
 }
 const normalize = (s: string) =>
@@ -53,6 +56,17 @@ export function evaluateVenueConstraints(
           )
             continue;
           const weekday = new Date(day.date + "T12:00:00Z").getUTCDay();
+          if (
+            fact.closedDates?.includes(day.date) ||
+            (fact.closedFrom && day.date >= fact.closedFrom)
+          )
+            matches.push({
+              venueId: fact.id,
+              date: day.date,
+              finding: "scheduled_on_reported_closed_date",
+              sourceUrl: fact.sourceUrl,
+              observedAt: fact.observedAt,
+            });
           if (fact.closedWeekdays?.includes(weekday))
             matches.push({
               venueId: fact.id,

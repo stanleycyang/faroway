@@ -4,6 +4,10 @@ import { resolve, dirname } from "node:path";
 import { createHash } from "node:crypto";
 import { execFileSync } from "node:child_process";
 import { createFallbackItinerary } from "../lib/search/fallback-itinerary";
+import {
+  compileSchedule,
+  type ScheduleExclusion,
+} from "../lib/search/schedule-compiler";
 import { mapSearchResultsToItinerary } from "../lib/search/bridge";
 import {
   evaluateAgenticTrace,
@@ -16,8 +20,21 @@ import type {
   DiningResult,
 } from "../lib/search/types";
 const [input, output] = process.argv.slice(2);
+const compiledSchedule = process.argv.includes("--compiled-schedule");
+const exclusionsIndex = process.argv.indexOf("--exclusions");
+const exclusionsBytes =
+  exclusionsIndex >= 0
+    ? readFileSync(process.argv[exclusionsIndex + 1])
+    : undefined;
+const exclusions: ScheduleExclusion[] = exclusionsBytes
+  ? JSON.parse(exclusionsBytes.toString())
+  : [];
+if (exclusionsIndex >= 0 && !compiledSchedule)
+  throw new Error("Exclusions require --compiled-schedule");
 if (!input || !output || existsSync(output))
-  throw new Error("Usage: fallback-replay.ts INPUT_TRACE NEW_OUTPUT");
+  throw new Error(
+    "Usage: fallback-replay.ts INPUT_TRACE NEW_OUTPUT [--compiled-schedule]",
+  );
 const bytes = readFileSync(input);
 const original: AgenticTrace = JSON.parse(bytes.toString()).trace;
 evaluateAgenticTrace(original);
@@ -31,12 +48,29 @@ const hotels = upstream[1].output as HotelResult[];
 const activities = upstream[2].output as ActivityResult[];
 const dining = upstream[3].output as DiningResult[];
 const started = Date.now();
-const result = createFallbackItinerary(plan, hotels, activities, dining);
+const compiled = compiledSchedule
+  ? compileSchedule(plan, activities, dining, exclusions)
+  : undefined;
+// Freeze the existing hotel choice so this experiment only changes scheduling.
+const originalHotel = (
+  original.steps[4]?.output as { topHotel?: HotelResult } | undefined
+)?.topHotel;
+const topHotel =
+  hotels.find((hotel) => hotel.id === originalHotel?.id) ?? hotels[0] ?? null;
+const result = compiled
+  ? {
+      days: compiled.days.map((day) => ({
+        ...day,
+        hotel: topHotel ?? undefined,
+      })),
+      topHotel,
+    }
+  : createFallbackItinerary(plan, hotels, activities, dining);
 const elapsed = Date.now() - started;
 const root = resolve(import.meta.dirname, "../../..");
 const hash = createHash("sha256");
 for (const file of [
-  "apps/web/lib/search/fallback-itinerary.ts",
+  "apps/web/lib/search/schedule-compiler.ts",
   "apps/web/lib/search/bridge.ts",
   "apps/web/lib/search/supplied-distance.ts",
   "apps/web/lib/search/fallback-itinerary.ts",
@@ -46,7 +80,9 @@ for (const file of [
   hash.update(file).update(readFileSync(resolve(root, file)));
 const trace: AgenticTrace = {
   ...original,
-  configId: "offline-fallback-replay",
+  configId: compiledSchedule
+    ? "offline-compiled-schedule"
+    : "offline-fallback-replay",
   startedAt: new Date().toISOString(),
   source: {
     commit: execFileSync("git", ["rev-parse", "HEAD"], {
@@ -68,9 +104,14 @@ const trace: AgenticTrace = {
       output: result,
       latencyMs: elapsed,
       usage: [],
-      fallbacks: [
-        { reason: "offline_forced_fallback", outcome: "fallback_itinerary" },
-      ],
+      fallbacks: compiledSchedule
+        ? []
+        : [
+            {
+              reason: "offline_forced_fallback",
+              outcome: "fallback_itinerary",
+            },
+          ],
     },
   ],
   mappedItinerary: mapSearchResultsToItinerary(
@@ -93,10 +134,34 @@ writeFileSync(
     {
       trace,
       provenance: {
-        kind: "offline-fallback-replay",
+        kind: compiledSchedule
+          ? "offline-compiled-schedule"
+          : "offline-fallback-replay",
         originalInputSha256: createHash("sha256").update(bytes).digest("hex"),
         modelCalls: 0,
+        upstreamGenerationCostExcluded: true,
+        ...(exclusionsBytes
+          ? {
+              inputExclusionsSha256: createHash("sha256")
+                .update(exclusionsBytes)
+                .digest("hex"),
+              exclusions,
+            }
+          : {}),
+        ...(compiled
+          ? { experimental: true, narration: "inventory-name-template" }
+          : {}),
       },
+      ...(compiled
+        ? {
+            compiler: {
+              issues: compiled.issues,
+              unselectedActivityIds: compiled.unselectedActivityIds,
+              unfulfilledHighlights: compiled.unfulfilledHighlights,
+              verified: compiled.verified,
+            },
+          }
+        : {}),
       evaluation,
     },
     null,
@@ -104,4 +169,10 @@ writeFileSync(
   ),
   { mode: 0o600, flag: "wx" },
 );
-console.log(JSON.stringify({ evaluation, modelCalls: 0 }));
+console.log(
+  JSON.stringify({
+    evaluation,
+    modelCalls: 0,
+    ...(compiled ? { issues: compiled.issues } : {}),
+  }),
+);

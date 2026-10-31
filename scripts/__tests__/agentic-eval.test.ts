@@ -128,6 +128,27 @@ describe("production-shape agentic evaluation", () => {
       "day_1:exceeds_relaxed_pace_budget",
     );
   });
+  test("checks meals against the day's stops when their own slot has no activity", () => {
+    const trace = fixture();
+    Object.assign((trace.steps[2].output as object[])[0], {
+      location: { lat: 40, lng: -74 },
+    });
+    Object.assign((trace.steps[3].output as object[])[0], {
+      mealTypes: ["breakfast", "lunch"],
+      location: { lat: 41, lng: -74 },
+    });
+    const day = (
+      trace.steps[4].output as { days: Array<Record<string, unknown>> }
+    ).days[0];
+    day.afternoon = {
+      activities: [],
+      meal: (trace.steps[3].output as object[])[0],
+    };
+    const result = evaluateAgenticTrace(trace);
+    expect(result.warnings).toContain(
+      "day_1:afternoon:meal_over_3km_from_day_activities_on_unverified_coordinates",
+    );
+  });
   test("counts incomplete and fallback runs as failures", () => {
     const trace = fixture();
     trace.steps[0].fallbacks.push({
@@ -256,6 +277,46 @@ test("rejects fractional hours accidentally represented as minutes", () => {
   expect(evaluateAgenticTrace(trace).failures).toContain(
     "invalid_duration:walk",
   );
+});
+
+test("distinguishes a closed former location from the institution and limits date-specific closures", () => {
+  const trace = fixture();
+  trace.brief.destination = "New York";
+  const day = (
+    trace.steps[4].output as {
+      days: Array<{
+        date: string;
+        morning: { activities: Array<{ name: string }> };
+      }>;
+    }
+  ).days[0];
+  const facts = [
+    {
+      id: "old-location",
+      destination: "New York",
+      aliases: ["Frick Madison"],
+      sourceUrl: "https://www.frick.org/about/frick_madison",
+      observedAt: "2026-10-31",
+      closedFrom: "2024-03-04",
+    },
+  ];
+  day.morning.activities = [{ name: "The Frick Collection at Frick Madison" }];
+  expect(evaluateVenueConstraints(trace, facts).findings[0]?.finding).toBe(
+    "scheduled_on_reported_closed_date",
+  );
+  day.morning.activities = [{ name: "The Frick Collection" }];
+  expect(evaluateVenueConstraints(trace, facts).findings).toHaveLength(0);
+  const dated = [
+    {
+      ...facts[0],
+      aliases: ["The Frick Collection"],
+      closedFrom: undefined,
+      closedDates: [day.date],
+    },
+  ];
+  expect(evaluateVenueConstraints(trace, dated).findings).toHaveLength(1);
+  day.date = "2026-12-08";
+  expect(evaluateVenueConstraints(trace, dated).findings).toHaveLength(0);
 });
 
 test("route screening treats missing, invalid and placeholder coordinates as unknown", () => {
