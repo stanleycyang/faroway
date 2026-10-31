@@ -110,6 +110,7 @@ const root = resolve(import.meta.dirname, "../../..");
 const hash = createHash("sha256");
 for (const file of [
   "apps/web/lib/search/schedule-compiler.ts",
+  "apps/web/lib/search/highlight-match.ts",
   "apps/web/lib/search/party-suitability.ts",
   "apps/web/lib/search/bridge.ts",
   "apps/web/lib/search/supplied-distance.ts",
@@ -208,6 +209,7 @@ writeFileSync(
             compiler: {
               issues: compiled.issues,
               unselectedActivityIds: compiled.unselectedActivityIds,
+              deferredLongVisits: compiled.deferredLongVisits,
               unfulfilledHighlights: compiled.unfulfilledHighlights,
               reviewRequiredActivities: compiled.reviewRequiredActivities,
               verified: compiled.verified,

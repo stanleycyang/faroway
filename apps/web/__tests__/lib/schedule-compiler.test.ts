@@ -320,3 +320,74 @@ it("uses reviewed opening-day evidence before allocating Paris museum visits", (
   }
   expect(result.verified).toBe(false);
 });
+
+it("explains an omitted long highlight without silently relaxing the pace", () => {
+  const input = {
+    ...plan,
+    activityCriteria: {
+      ...plan.activityCriteria,
+      pacePreference: "moderate" as const,
+      mustSee: ["Golden Circle"],
+    },
+  };
+  const result = compileSchedule(
+    input,
+    [
+      { ...visit("long", 600), name: "Golden Circle and Glacier Tour" },
+      visit("short", 60),
+    ],
+    [],
+  );
+  expect(result.deferredLongVisits).toEqual([
+    {
+      id: "long",
+      name: "Golden Circle and Glacier Tour",
+      durationMinutes: 600,
+      dailyBudgetMinutes: 420,
+      matchedHighlights: ["Golden Circle"],
+    },
+  ]);
+  expect(result.days[0].tips.join(" ")).toContain("10h");
+  expect(result.days[0].tips.join(" ")).toContain("7h daily activity limit");
+  expect(
+    result.days
+      .flatMap((d) => slots.flatMap((slot) => d[slot].activities))
+      .map((a) => a.id),
+  ).not.toContain("long");
+});
+it("does not offer a long alcohol-focused visit as a family pace adjustment", () => {
+  const input = {
+    ...plan,
+    children: 1,
+    activityCriteria: { ...plan.activityCriteria, mustSee: ["Wine Tasting"] },
+  };
+  const result = compileSchedule(
+    input,
+    [
+      { ...visit("wine", 600), name: "Wine Tasting Experience" },
+      visit("short", 60),
+    ],
+    [],
+  );
+  expect(result.deferredLongVisits).toEqual([]);
+  expect(result.days[0].tips.join(" ")).not.toContain("review the pace");
+});
+it("leaves descriptive aliases unresolved without verified identity evidence", () => {
+  const input = {
+    ...plan,
+    activityCriteria: { ...plan.activityCriteria, mustSee: ["Perlan Museum"] },
+  };
+  const result = compileSchedule(
+    input,
+    [
+      {
+        ...visit("perlan", 150),
+        name: "Perlan - Wonders of Iceland Nature Museum",
+      },
+    ],
+    [],
+  );
+  expect(result.unfulfilledHighlights).toEqual(["Perlan Museum"]);
+  expect(result.days[0].tips.join(" ")).toContain("not matched by name");
+  expect(result.verified).toBe(false);
+});

@@ -1,3 +1,4 @@
+import { matchesSuggestedHighlight } from "./highlight-match";
 import { suppliedDistanceKm } from "./supplied-distance";
 import { familyActivityReviewReason } from "./party-suitability";
 import type {
@@ -36,6 +37,13 @@ export interface CompiledSchedule {
   days: SuggestedDay[];
   unselectedActivityIds: string[];
   unfulfilledHighlights: string[];
+  deferredLongVisits: Array<{
+    id: string;
+    name: string;
+    durationMinutes: number;
+    dailyBudgetMinutes: number;
+    matchedHighlights: string[];
+  }>;
   reviewRequiredActivities: Array<{ id: string; reason: string }>;
   issues: string[];
   /** A feasible allocation is not evidence that venues are open or suitable. */
@@ -117,20 +125,11 @@ export function compileSchedule(
     issues.push("inventory_search_limit");
   const activities = candidates.slice(0, INVENTORY_LIMIT);
   const highlights = [...new Set(plan.activityCriteria.mustSee ?? [])];
-  const normalize = (value: string) =>
-    ` ${value
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .toLowerCase()
-      .replace(/[^\p{Letter}\p{Number}]+/gu, " ")
-      .trim()} `;
   const matches = new Map(
     activities.map((activity) => [
       activity.id,
-      highlights.filter(
-        (highlight) =>
-          highlight.trim() &&
-          normalize(activity.name).includes(normalize(highlight)),
+      highlights.filter((highlight) =>
+        matchesSuggestedHighlight(activity.name, highlight),
       ),
     ]),
   );
@@ -286,6 +285,28 @@ export function compileSchedule(
   );
   for (const highlight of unfulfilledHighlights)
     issues.push(`suggested_highlight_not_scheduled:${highlight}`);
+  const deferredLongVisits = inventory
+    .filter(
+      (activity, index) =>
+        activity.id &&
+        inventory.findIndex((a) => a.id === activity.id) === index &&
+        Number.isInteger(activity.duration) &&
+        activity.duration > limits.minutes &&
+        activity.duration <= 1440 &&
+        [...SLOTS, "any"].includes(activity.bestTimeOfDay) &&
+        !(
+          (plan.children ?? 0) > 0 && familyActivityReviewReason(activity.name)
+        ),
+    )
+    .map((activity) => ({
+      id: activity.id,
+      name: activity.name,
+      durationMinutes: activity.duration,
+      dailyBudgetMinutes: limits.minutes,
+      matchedHighlights: unfulfilledHighlights.filter((highlight) =>
+        matchesSuggestedHighlight(activity.name, highlight),
+      ),
+    }));
   const usedMeals = new Set<string>();
   const days: SuggestedDay[] = Array.from({ length: daysCount }, (_, day) => {
     const selected = best.selected.filter((s) => s.day === day);
@@ -293,6 +314,32 @@ export function compileSchedule(
       "Planning draft: confirm opening hours, availability, travel times and suitability before booking.",
       "Leave the unscheduled time for meals, travel and rest.",
     ];
+    if (day === 0) {
+      for (const highlight of unfulfilledHighlights.slice(0, 3)) {
+        const longVisit = deferredLongVisits.find((visit) =>
+          visit.matchedHighlights.includes(highlight),
+        );
+        if (
+          longVisit &&
+          !activities.some((activity) =>
+            matchesSuggestedHighlight(activity.name, highlight),
+          )
+        ) {
+          const duration = (minutes: number) =>
+            `${Math.floor(minutes / 60)}h${minutes % 60 ? ` ${minutes % 60}min` : ""}`;
+          tips.push(
+            `Suggested highlight not included: ${highlight}. The supplied option, ${longVisit.name}, is estimated at ${duration(longVisit.durationMinutes)}, above this draft's ${duration(longVisit.dailyBudgetMinutes)} daily activity limit. Look for a shorter alternative or review the pace before adding it.`,
+          );
+        } else
+          tips.push(
+            `Suggested highlight not matched by name: ${highlight}. It may be absent or listed under a different title; check the selected visits before adding or replacing anything. Availability has not been verified.`,
+          );
+      }
+      if (unfulfilledHighlights.length > 3)
+        tips.push(
+          `${unfulfilledHighlights.length - 3} other suggested highlights are also not matched by name. Review the remaining choices before finalizing this draft.`,
+        );
+    }
     if (!selected.length) {
       issues.push(`day_${day + 1}:activity_supply_gap`);
       tips.push(
@@ -377,6 +424,7 @@ export function compileSchedule(
       .filter((a) => !best.used.has(a.id))
       .map((a) => a.id),
     unfulfilledHighlights,
+    deferredLongVisits,
     reviewRequiredActivities,
     issues,
     verified: false,
