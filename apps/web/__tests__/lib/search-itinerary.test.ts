@@ -508,6 +508,55 @@ describe.each(["successful", "recovered"] as const)(
   },
 );
 
+it("constrains total daily visits in the experimental structured schedule and preserves IDs", async () => {
+  const relaxed = {
+    ...plan,
+    dates: { ...plan.dates, end: plan.dates.start, nights: 0 },
+    activityCriteria: {
+      ...plan.activityCriteria,
+      pacePreference: "relaxed" as const,
+    },
+  };
+  const day = {
+    ...generatedDay(1),
+    activities: [
+      { id: "walk", slot: "morning" },
+      { id: "museum", slot: "afternoon" },
+    ],
+    breakfastId: null,
+    lunchId: null,
+    dinnerId: null,
+  };
+  const object = { days: [day], topHotelId: hotel.id };
+  mocks.generateObject.mockResolvedValue({ object });
+  const result = await runAggregatorAgent(
+    relaxed,
+    [hotel],
+    [activity("walk"), activity("museum")],
+    [],
+    [],
+    { structuredSchedule: true },
+  );
+  expect(result.days[0].morning.activities.map((a) => a.id)).toEqual(["walk"]);
+  expect(result.days[0].afternoon.activities.map((a) => a.id)).toEqual([
+    "museum",
+  ]);
+  const schema = mocks.generateObject.mock.calls.at(-1)?.[0].schema;
+  expect(schema.safeParse(object).success).toBe(true);
+  expect(
+    schema.safeParse({
+      ...object,
+      days: [
+        {
+          ...day,
+          activities: [...day.activities, { id: "third", slot: "evening" }],
+        },
+      ],
+    }).success,
+  ).toBe(false);
+  expect(schema.safeParse({ ...object, days: [day, day] }).success).toBe(false);
+});
+
 describe("search itinerary fallback", () => {
   it("prefers nearby meals and discloses distant-only supply", async () => {
     const near: DiningResult = {

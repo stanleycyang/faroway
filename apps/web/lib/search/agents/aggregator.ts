@@ -65,6 +65,75 @@ const ItinerarySchema = z.object({
   topHotelId: z.string(),
 });
 
+function structuredItinerarySchema(
+  days: number,
+  pace: SearchPlan["activityCriteria"]["pacePreference"],
+) {
+  const count = pace === "relaxed" ? 2 : pace === "packed" ? 5 : 4;
+  return z.object({
+    days: z
+      .array(
+        SuggestedDaySchema.omit({
+          morning: true,
+          afternoon: true,
+          evening: true,
+        }).extend({
+          activities: z
+            .array(
+              z.object({
+                id: z.string(),
+                slot: z.enum(["morning", "afternoon", "evening"]),
+              }),
+            )
+            .max(count),
+          breakfastId: z.string().nullable(),
+          lunchId: z.string().nullable(),
+          dinnerId: z.string().nullable(),
+        }),
+      )
+      .length(days),
+    topHotelId: z.string(),
+  });
+}
+interface StructuredDay extends Omit<
+  GeneratedSuggestedDay,
+  "morning" | "afternoon" | "evening"
+> {
+  activities: Array<{ id: string; slot: "morning" | "afternoon" | "evening" }>;
+  breakfastId: string | null;
+  lunchId: string | null;
+  dinnerId: string | null;
+}
+function expandStructuredDays(result: {
+  days: StructuredDay[];
+  topHotelId?: string;
+}): ItineraryResult {
+  return {
+    topHotelId: result.topHotelId,
+    days: result.days.map((day) => ({
+      ...day,
+      morning: {
+        activityIds: day.activities
+          .filter((a) => a.slot === "morning")
+          .map((a) => a.id),
+        mealId: day.breakfastId,
+      },
+      afternoon: {
+        activityIds: day.activities
+          .filter((a) => a.slot === "afternoon")
+          .map((a) => a.id),
+        mealId: day.lunchId,
+      },
+      evening: {
+        activityIds: day.activities
+          .filter((a) => a.slot === "evening")
+          .map((a) => a.id),
+        mealId: day.dinnerId,
+      },
+    })),
+  };
+}
+
 interface GeneratedSuggestedDay {
   dayNumber: number;
   date: string;
@@ -113,6 +182,7 @@ export async function runAggregatorAgent(
   activities: ActivityResult[],
   dining: DiningResult[],
   transport: TransportResult[] = [],
+  options: { structuredSchedule?: boolean } = {},
 ): Promise<{ days: SuggestedDay[]; topHotel: HotelResult | null }> {
   const { destination, dates } = plan;
   activities = activities.filter(canProcessViatorContent);
@@ -221,8 +291,16 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
           model: aiGateway(planningModel("aggregator", MODEL)),
           providerOptions: PLANNING_PROVIDER_OPTIONS,
           system: SYSTEM_PROMPT,
-          prompt,
-          schema: ItinerarySchema,
+          prompt: options.structuredSchedule
+            ? prompt +
+              "\nUse the daily activities array with id and slot for each selected visit. The schema limits total visits per day according to pace. Use breakfastId, lunchId and dinnerId for meals, or null when not separately planned. Do not put activity IDs in meal fields."
+            : prompt,
+          schema: options.structuredSchedule
+            ? structuredItinerarySchema(
+                numDays,
+                plan.activityCriteria.pacePreference,
+              )
+            : ItinerarySchema,
           timeout: AGGREGATOR_TIMEOUT_MS,
           abortSignal,
           maxRetries: 0,
@@ -231,8 +309,16 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
       "aggregator AI",
     );
 
+    const mappedResult = options.structuredSchedule
+      ? expandStructuredDays(
+          structuredItinerarySchema(
+            numDays,
+            plan.activityCriteria.pacePreference,
+          ).parse(result),
+        )
+      : result;
     return mapAggregatorResult(
-      result,
+      mappedResult,
       dates.start,
       hotels,
       activities,
@@ -257,7 +343,7 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
     // Common failure: model returns `days` as a JSON string instead of an array,
     // with topHotelId sometimes embedded inside that string.
     const rawText = (error as { text?: string })?.text;
-    if (rawText) {
+    if (rawText && !options.structuredSchedule) {
       const recovered = recoverFromRawText(
         rawText,
         dates.start,

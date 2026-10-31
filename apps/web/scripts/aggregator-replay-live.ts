@@ -78,6 +78,7 @@ async function main() {
   ])
     delete process.env[name];
   process.env.VIATOR_CONTENT_ENABLED = "false";
+  const structuredSchedule = process.argv.includes("--structured-schedule");
   const settings = {
     PLANNING_MODEL_AGGREGATOR: "google/gemini-3-flash",
     PLANNING_THINKING_AGGREGATOR: thinking,
@@ -104,7 +105,7 @@ async function main() {
     runId: randomUUID(),
     configId: `aggregator-replay-${thinking}`,
     startedAt: new Date().toISOString(),
-    settings,
+    settings: { ...settings, structuredSchedule: String(structuredSchedule) },
     source: {
       commit: execFileSync("git", ["rev-parse", "HEAD"], {
         cwd: root,
@@ -159,6 +160,7 @@ async function main() {
       upstream[2].output as ActivityResult[],
       upstream[3].output as DiningResult[],
       [],
+      { structuredSchedule },
     );
     trace.mappedItinerary = mapSearchResultsToItinerary(
       {
