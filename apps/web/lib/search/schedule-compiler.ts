@@ -1,4 +1,5 @@
 import { suppliedDistanceKm } from "./supplied-distance";
+import { familyActivityReviewReason } from "./party-suitability";
 import type {
   ActivityResult,
   DiningResult,
@@ -35,6 +36,7 @@ export interface CompiledSchedule {
   days: SuggestedDay[];
   unselectedActivityIds: string[];
   unfulfilledHighlights: string[];
+  reviewRequiredActivities: Array<{ id: string; reason: string }>;
   issues: string[];
   /** A feasible allocation is not evidence that venues are open or suitable. */
   verified: false;
@@ -80,6 +82,8 @@ export function compileSchedule(
       issues.push(`constraint_activity_not_found:${item.activityId}`);
   }
   const ids = new Set<string>();
+  const reviewRequiredActivities: CompiledSchedule["reviewRequiredActivities"] =
+    [];
   const candidates = inventory
     .filter((activity) => {
       if (
@@ -94,6 +98,18 @@ export function compileSchedule(
         return false;
       }
       ids.add(activity.id);
+      const familyReview =
+        (plan.children ?? 0) > 0
+          ? familyActivityReviewReason(activity.name)
+          : null;
+      if (familyReview) {
+        reviewRequiredActivities.push({
+          id: activity.id,
+          reason: familyReview,
+        });
+        issues.push(`family_suitability_review_required:${activity.id}`);
+        return false;
+      }
       return true;
     })
     .sort((a, b) => preference(b) - preference(a) || a.id.localeCompare(b.id));
@@ -361,6 +377,7 @@ export function compileSchedule(
       .filter((a) => !best.used.has(a.id))
       .map((a) => a.id),
     unfulfilledHighlights,
+    reviewRequiredActivities,
     issues,
     verified: false,
   };

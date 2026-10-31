@@ -31,6 +31,37 @@ function visit(
 }
 
 describe("experimental schedule compiler", () => {
+  it("defers alcohol-focused stops for a party with children and exposes the missing highlight", () => {
+    const input = {
+      ...plan,
+      children: 1,
+      activityCriteria: {
+        ...plan.activityCriteria,
+        mustSee: ["Mulled Wine Experience"],
+      },
+    };
+    const supply = [
+      {
+        ...visit("wine", 60),
+        name: "Hviids Vinstue Mulled Wine Experience",
+        vibeScore: 100,
+      },
+      visit("market", 60),
+    ];
+    const result = compileSchedule(input, supply, []);
+    expect(
+      slots.flatMap((slot) => result.days[0][slot].activities).map((a) => a.id),
+    ).toEqual(["market"]);
+    expect(result.reviewRequiredActivities).toEqual([
+      { id: "wine", reason: "alcohol_focused_title" },
+    ]);
+    expect(result.unfulfilledHighlights).toContain("Mulled Wine Experience");
+    expect(result.verified).toBe(false);
+    expect(
+      compileSchedule({ ...input, children: 0 }, supply, [])
+        .reviewRequiredActivities,
+    ).toEqual([]);
+  });
   it("keeps room for a long evening highlight rather than filling the day with short visits", () => {
     const input = {
       ...plan,

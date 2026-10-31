@@ -675,3 +675,57 @@ adversarial regressions. Full repository checks/tests passed (1,209 web tests;
 UAT spend remains **$1.07/$20**. The compiler is **not promoted** until selection
 quality, family suitability, restaurant supply, broader grounding, narrative
 integration, and application validation are addressed.
+
+### Family screening, fresh constraint cases, and first merged fix (2026-10-31)
+
+The experimental compiler now defers activities with explicit adult-only labels
+or alcohol-focused titles when the party includes children. Deferred IDs/reasons
+are recorded in `reviewRequiredActivities`; missing highlights and supply gaps
+remain visible. The title screen is deliberately conservative and incomplete:
+it is not a legal age policy, does not inspect provider admission terms, and
+does not establish that an unflagged activity is suitable for children. General
+party-suitability evidence is still required before production promotion.
+
+Fifteen title-screen cases and ten compiler tests pass. Cases include the observed
+mulled-wine experience, pub crawls, adult-only labels, and negative controls such
+as a wine-history museum and a non-alcoholic cocktail class. Replaying the same
+five inventories under `compiled-family-20261031` replaced Copenhagen's
+mulled-wine stop, retained its Christmas market and six total visits, and kept
+the other four schedules unchanged. All five retain complete dates and no pace
+violations; known meal-distance and selection defects remain.
+
+Two fresh development briefs ran through all five agents with `flash-low`:
+
+| Brief                                       | Serial duration | Estimated token cost | Baseline outcome                                          | Compiled outcome                                                  |
+| ------------------------------------------- | --------------- | -------------------- | --------------------------------------------------------- | ----------------------------------------------------------------- |
+| Singapore, family, short walks/midday rests | 61.78 s         | $0.04753             | No fallback; three overfilled days and three remote meals | Eight visits over four days; no pace violations; two remote meals |
+| Edinburgh, wheelchair access                | 56.74 s         | $0.04349             | No fallback; one overfilled day and two remote meals      | Six visits over three days; no pace violations; one remote meal   |
+
+Compiler timings were 16/4 ms, excluding upstream inventory generation. These new
+cases used no manually supplied venue exclusions, so they do not establish
+opening-hour correctness. The Singapore requirement for a midday rest every day
+is retained as input but is not explicitly represented by the slot-level schedule;
+its fulfillment is unverified. Edinburgh venue names and descriptions include
+accessibility claims without independent route/access evidence. Zero pacing
+warnings must not be read as wheelchair-suitability acceptance. Full traces:
+`access-baseline-20261031`; offline results: `compiled-access-20261031`, both
+under `artifacts/uat/traces`. Reserved holdouts remain unused.
+
+Full repository checks/tests passed (1,225 web, 673 mobile, 136 shared and 78
+script tests). Cumulative Gateway UAT spend is now **$1.16/$20**.
+
+The verified activity-duration correction was extracted into
+[PR #56](https://github.com/stanleycyang/faroway/pull/56) and merged as
+`626d9d797b14e201e55ebde723ed39db771a6daf`. Only the activity schema/prompt and its
+regression test changed in that PR. An isolated checkout passed repository
+checks and full tests; GitHub CI and Vercel preview build passed, and authenticated
+preview health returned 200. The review preview has branch-scoped staging
+credentials and planning paused.
+
+**Merged does not mean deployed:** `apps/web/vercel.json` explicitly disables
+automatic main deployments. Current production is still deployment
+`dpl_3Snjh4w6yLjsB6SeA7ieBhKRx3fe`, matching the October 28 cutover receipt at
+`a3eb0a01bb3a1f314364eb71a120b2a044bf8318`. Main contains additional previously
+merged changes beyond this two-file fix; a production rollout needs verification
+of that full release delta. The deployment hold was not changed. Experimental
+compiler and grounding work stays in draft PR #55 and is not released.
