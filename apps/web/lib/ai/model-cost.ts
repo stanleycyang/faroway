@@ -69,7 +69,16 @@ export function estimateUsageUsd(model: string, usage: TokenUsage): number {
 export class SpendTracker {
   spentUsd = 0;
 
-  constructor(readonly capUsd = MODEL_COMPARE_SPEND_CAP_USD) {}
+  constructor(readonly capUsd = MODEL_COMPARE_SPEND_CAP_USD) {
+    if (
+      !Number.isFinite(capUsd) ||
+      capUsd <= 0 ||
+      capUsd > MODEL_COMPARE_SPEND_CAP_USD
+    )
+      throw new Error(
+        "Spend threshold must be greater than zero and at most $20",
+      );
+  }
 
   get capped(): boolean {
     return this.spentUsd >= this.capUsd;

@@ -4,6 +4,7 @@ import { buildLiteApiFlightRequest } from "../../../apps/web/lib/affiliates/lite
 import { buildViatorHandoffUrl } from "../../../apps/web/lib/affiliates/viator-link";
 import { UAT_BRIEFS, type UatBrief } from "./briefs";
 import { evaluateSavedPlan } from "./plan-quality";
+import { isOpenTableReservationUrl } from "../../../apps/web/lib/search/reservation-url";
 import {
   assertStagingTarget,
   type StagingTargetInput,
@@ -643,6 +644,9 @@ async function accountFlow(
       body: JSON.stringify({ publicConsent: true }),
     });
     const shareUrl = record(share.data)?.shareUrl;
+    if (typeof shareUrl === "string" && new URL(shareUrl).origin !== apiUrl) {
+      throw new Error("Share URL points outside the staging API origin");
+    }
     const shared =
       typeof shareUrl === "string"
         ? await http(fetchImpl, shareUrl)
@@ -1189,10 +1193,16 @@ async function liveBrief(
     if (savedDown) return savedDown;
     const quality = evaluateSavedPlan(saved.data, brief);
     for (const url of quality.reservationUrls) {
+      if (!isOpenTableReservationUrl(url)) {
+        quality.failures.push(
+          "reservation URL is not an approved OpenTable URL",
+        );
+        continue;
+      }
       const head = await http(fetchImpl, url, { method: "HEAD" });
       const headDown = serverFailure(2, `live-plan:${brief.id}`, head.status);
       if (headDown) return headDown;
-      if (head.status < 200 || head.status >= 400) {
+      if (head.status < 200 || head.status >= 300) {
         quality.failures.push(
           `reservation URL did not resolve (${head.status})`,
         );

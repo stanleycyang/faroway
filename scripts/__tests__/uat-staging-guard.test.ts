@@ -81,12 +81,15 @@ describe("staging project guard", () => {
         apiUrl: "http://faroway-abc-testimonio.vercel.app",
       }),
     ).toThrow(/not a staging deployment/);
-    expect(
-      assertStagingTarget({
-        supabaseUrl: stagingUrl,
-        apiUrl: "https://faroway-abc123-testimonio.vercel.app",
-      }).projectRef,
-    ).toBe(STAGING_PROJECT_REF);
+    for (const apiUrl of [
+      "https://faroway-abc123-testimonio.vercel.app",
+      "https://faroway-git-main-testimonio.vercel.app",
+      `${STAGING_PREVIEW_API_URL}:8443`,
+    ]) {
+      expect(() =>
+        assertStagingTarget({ supabaseUrl: stagingUrl, apiUrl }),
+      ).toThrow(/not a staging deployment/);
+    }
   });
 
   test("refuses a non-supabase host", () => {
@@ -94,4 +97,21 @@ describe("staging project guard", () => {
       assertStagingTarget({ supabaseUrl: "https://example.com" }),
     ).toThrow(/not a recognized project host/);
   });
+});
+
+test("rejects credentials, alternate ports and paths on a staging Supabase URL", () => {
+  for (const supabaseUrl of [
+    stagingUrl + ":8443",
+    stagingUrl + "/other",
+    stagingUrl + "?x=1",
+    stagingUrl + "#x",
+    stagingUrl.replace("https://", "https://user:password@"),
+  ])
+    expect(() => assertStagingTarget({ supabaseUrl })).toThrow(
+      /not a recognized project host/,
+    );
+  const payload = Buffer.from(
+    JSON.stringify({ ref: STAGING_PROJECT_REF, role: "service_role" }),
+  ).toString("base64url");
+  expect(projectRefFromAnonKey(`header.${payload}.sig`)).toBe(null);
 });

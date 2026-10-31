@@ -380,12 +380,14 @@ export function sumPlanningUsage(
   records: PlanningUsageRecord[],
 ): PlanningUsageRecord | undefined {
   if (!records.length) return undefined;
+  const add = (a: number | null, b: number | null) =>
+    a == null || b == null ? null : a + b;
   return records.reduce((sum, record) => ({
     ...record,
-    inputTokens: (sum.inputTokens ?? 0) + (record.inputTokens ?? 0),
-    outputTokens: (sum.outputTokens ?? 0) + (record.outputTokens ?? 0),
-    reasoningTokens: (sum.reasoningTokens ?? 0) + (record.reasoningTokens ?? 0),
-    totalTokens: (sum.totalTokens ?? 0) + (record.totalTokens ?? 0),
+    inputTokens: add(sum.inputTokens, record.inputTokens),
+    outputTokens: add(sum.outputTokens, record.outputTokens),
+    reasoningTokens: add(sum.reasoningTokens, record.reasoningTokens),
+    totalTokens: add(sum.totalTokens, record.totalTokens),
     latencyMs: sum.latencyMs + record.latencyMs,
   }));
 }

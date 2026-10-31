@@ -14,6 +14,8 @@ import {
   planningModel,
   resolvePlanningStepConfig,
   usageFromModelError,
+  sumPlanningUsage,
+  type PlanningUsageRecord,
 } from "@/lib/ai/planning-step";
 
 afterEach(() => {
@@ -149,4 +151,26 @@ describe("planning step configuration", () => {
     ).not.toContain("planning.step.usage");
     info.mockRestore();
   });
+});
+
+it("does not turn missing usage in one attempt into a zero-cost attempt", () => {
+  const base: PlanningUsageRecord = {
+    event: "planning.step.usage",
+    step: "hotels",
+    model: PLANNING_MODEL,
+    thinkingLevel: "high",
+    thinkingExplicit: false,
+    maxOutputTokens: null,
+    inputTokens: 10,
+    outputTokens: 20,
+    reasoningTokens: null,
+    totalTokens: 30,
+    latencyMs: 1,
+  };
+  expect(
+    sumPlanningUsage([
+      base,
+      { ...base, inputTokens: null, outputTokens: null },
+    ]),
+  ).toMatchObject({ inputTokens: null, outputTokens: null });
 });

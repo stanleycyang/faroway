@@ -153,6 +153,9 @@ export async function runModelComparison(options: {
   }) => StepExecution | Promise<StepExecution>;
 }): Promise<CompareReport> {
   const target = assertStagingTarget(options.target);
+  if (options.mode === "live" && !options.executeStep) {
+    throw new Error("Live comparison requires a real step executor");
+  }
   const configs = options.configs ?? MODEL_COMPARE_CONFIGS;
   const briefs = options.briefs ?? UAT_BRIEFS;
   const capUsd = options.capUsd ?? MODEL_COMPARE_SPEND_CAP_USD;
@@ -187,7 +190,7 @@ export async function runModelComparison(options: {
       let inputTokens = 0;
       let outputTokens = 0;
       let reasoningTokens = 0;
-      let estimatedUsd = 0;
+      let estimatedUsd: number | null = 0;
       let fallbacks = 0;
       let stepsRun = 0;
       for (const step of COMPARE_STEPS) {
@@ -197,6 +200,20 @@ export async function runModelComparison(options: {
           break;
         }
         const execution = await execute({ config, brief, step });
+        if (
+          options.mode === "live" &&
+          ![execution.usage.inputTokens, execution.usage.outputTokens].every(
+            (value) =>
+              typeof value === "number" && Number.isFinite(value) && value >= 0,
+          )
+        ) {
+          aborted = true;
+          estimatedUsd = null;
+          notes.add(
+            `aborted after ${step}: billing usage is unknown; reconcile gateway spend before another live run`,
+          );
+          break;
+        }
         const usd = estimateUsageUsd(execution.model, execution.usage);
         tracker.add(usd);
         estimatedUsd += usd;
@@ -221,8 +238,7 @@ export async function runModelComparison(options: {
       rows.push({
         configId: config.id,
         briefId: brief.id,
-        status:
-          aborted && stepsRun < COMPARE_STEPS.length ? "aborted" : "completed",
+        status: aborted ? "aborted" : "completed",
         latencyMs,
         inputTokens,
         outputTokens,
@@ -285,7 +301,7 @@ export function renderCompareMarkdown(input: {
   const lines = [
     `# Model comparison (${input.mode})`,
     "",
-    `Staging project \`${input.projectRef}\`. Spend cap $${input.capUsd}. Estimated spend $${input.spentUsd.toFixed(6)}. ${input.aborted ? "Aborted at the cap." : "Finished under the cap."}`,
+    `Staging project \`${input.projectRef}\`. Estimated-spend stop threshold $${input.capUsd}. Recorded estimated spend $${input.spentUsd.toFixed(6)}. ${input.aborted ? "Aborted; see row notes. Total cost may be unknown." : "Finished under the threshold."} An in-flight call can exceed the threshold; use a gateway key budget for a billing cap.`,
     "",
     "| config | trip | latency ms | input | output | reasoning | est. USD | fallback rate | notes |",
     "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | --- |",

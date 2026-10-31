@@ -41,11 +41,14 @@ async function main() {
   FAROWAY_STAGING_AI_GATEWAY_KEY=... bun run uat:model-compare -- --live --supabase-url https://omovikloadpvzijoaqus.supabase.co
 
 --dry-run and --mock do not call a model and do not need the gateway key.
---live reads FAROWAY_STAGING_AI_GATEWAY_KEY from the environment, refuses to start without it, and aborts once estimated spend reaches $20.
+--live reads FAROWAY_STAGING_AI_GATEWAY_KEY from the environment, refuses to start without it, and stops between steps once estimated spend reaches $20 or usage is unknown. An in-flight call can exceed this threshold; configure the dedicated gateway key with a billing cap.
 The key is never accepted as a command argument.
-An API URL, when set, must be a faroway staging preview host. faroway.ai and www.faroway.ai are refused.`);
+An API URL, when set, must match the pinned staging readiness alias. Production and arbitrary preview hosts are refused.`);
     return;
   }
+  const modes = ["--dry-run", "--mock", "--live"].filter(has);
+  if (modes.length !== 1)
+    throw new Error("Choose exactly one of --dry-run, --mock or --live");
   const mode = has("--dry-run") ? "dry-run" : has("--mock") ? "mock" : "live";
   const target = targetFromEnv();
   if (mode !== "live") {
@@ -71,6 +74,7 @@ An API URL, when set, must be a faroway staging preview host. faroway.ai and www
     process.execPath.includes("bun") ? process.execPath : "bun",
     [
       resolve(root, "apps/web/scripts/model-compare-live.ts"),
+      "--live",
       "--supabase-url",
       staging,
     ],

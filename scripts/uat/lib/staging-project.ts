@@ -1,12 +1,9 @@
 export const STAGING_PROJECT_REF = "omovikloadpvzijoaqus";
 export const PRODUCTION_PROJECT_REF = "jcnephijkxgtprsutgsf";
 
-/** Preview API alias recorded for staging readiness. Other faroway-*-testimonio hosts are also accepted. */
+/** Explicitly provisioned staging alias. A Vercel hostname alone proves no isolation. */
 export const STAGING_PREVIEW_API_URL =
   "https://faroway-git-verify-staging-readiness-20261018-testimonio.vercel.app";
-
-const STAGING_PREVIEW_HOST =
-  /^faroway(?:-git)?-[a-z0-9-]+-testimonio\.vercel\.app$/;
 
 const PROJECT_REF = /^[a-z]{20}$/;
 
@@ -31,7 +28,16 @@ export interface StagingTargetInput {
 export function projectRefFromSupabaseUrl(value: string): string | null {
   try {
     const url = new URL(value);
-    if (url.protocol !== "https:") return null;
+    if (
+      url.protocol !== "https:" ||
+      url.username ||
+      url.password ||
+      url.port ||
+      url.pathname !== "/" ||
+      url.search ||
+      url.hash
+    )
+      return null;
     const match = url.hostname.match(/^([a-z]{20})\.supabase\.co$/);
     return match?.[1] ?? null;
   } catch {
@@ -45,8 +51,10 @@ export function projectRefFromAnonKey(key: string): string | null {
   try {
     const json = JSON.parse(
       Buffer.from(payload, "base64url").toString("utf8"),
-    ) as { ref?: unknown };
-    return typeof json.ref === "string" && PROJECT_REF.test(json.ref)
+    ) as { ref?: unknown; role?: unknown };
+    return json.role === "anon" &&
+      typeof json.ref === "string" &&
+      PROJECT_REF.test(json.ref)
       ? json.ref
       : null;
   } catch {
@@ -84,7 +92,7 @@ export function assertStagingApiUrl(value: string): void {
     (url.pathname !== "/" && url.pathname !== "") ||
     url.search ||
     url.hash ||
-    !STAGING_PREVIEW_HOST.test(host)
+    url.origin !== STAGING_PREVIEW_API_URL
   ) {
     throw new StagingGuardError(
       "unknown",

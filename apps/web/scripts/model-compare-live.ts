@@ -25,6 +25,7 @@ const VENDOR_ENV = [
   "TAVILY_API_KEY",
   "DUFFEL_API_TOKEN",
   "LITEAPI_API_KEY",
+  "GOOGLE_PLACES_API_KEY",
 ];
 
 function arg(name: string): string | undefined {
@@ -59,6 +60,8 @@ function briefInput(brief: UatBrief): SearchInput {
 }
 
 async function main() {
+  if (!process.argv.includes("--live"))
+    throw new Error("Live model calls require --live");
   const supabaseUrl = arg("--supabase-url");
   const projectRef = process.env.FAROWAY_STAGING_SUPABASE_PROJECT_REF;
   assertStagingTarget({ supabaseUrl, projectRef });
@@ -176,7 +179,7 @@ async function main() {
   const out = arg("--out");
   if (out) {
     mkdirSync(resolve(out, ".."), { recursive: true });
-    writeFileSync(out, JSON.stringify(report, null, 2));
+    writeFileSync(out, JSON.stringify(report, null, 2), { mode: 0o600 });
   }
   console.log(`FAROWAY_MODEL_COMPARE_JSON:${JSON.stringify(report)}`);
   if (report.aborted) process.exitCode = 3;

@@ -395,6 +395,7 @@ describe("UAT smoke CLI", () => {
     const dry = spawnSync(
       process.execPath,
       [
+        "--no-env-file",
         "scripts/uat/smoke.ts",
         "--dry-run",
         "--tier",
@@ -413,6 +414,7 @@ describe("UAT smoke CLI", () => {
     const prod = spawnSync(
       process.execPath,
       [
+        "--no-env-file",
         "scripts/uat/smoke.ts",
         "--dry-run",
         "--supabase-url",
@@ -427,4 +429,56 @@ describe("UAT smoke CLI", () => {
     expect(prod.status).not.toBe(0);
     expect(`${prod.stdout}\n${prod.stderr}`).toContain("production");
   });
+});
+
+test("live reservation probes refuse lookalike hosts and redirects", async () => {
+  for (const reservationUrl of [
+    "https://opentable.com.evil.example/r/fake",
+    "https://www.opentable.com/r/redirect",
+  ]) {
+    const requested: string[] = [];
+    const report = await runSmoke({
+      tiers: [2],
+      liveAi: true,
+      briefIds: ["lisbon-city-break"],
+      pollIntervalMs: 0,
+      target: {
+        supabaseUrl: stagingUrl,
+        apiUrl,
+        anonKey: anon(STAGING_PROJECT_REF),
+      },
+      accounts: [{ email: "a@faroway-test.invalid", password: "test" }],
+      fetchImpl: (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        requested.push(url);
+        if (url.includes("/auth/v1/token"))
+          return response(200, { access_token: "qa" });
+        if (url.endsWith("/api/trips"))
+          return response(201, { trip: { id: "qa" } });
+        if (url.endsWith("/generate"))
+          return response(200, { status: "completed" });
+        if (init?.method === "DELETE") return response(200, {});
+        if (init?.method === "HEAD")
+          return new Response(null, {
+            status: 302,
+            headers: { location: "https://evil.example" },
+          });
+        return response(200, {
+          trip: { status: "planned" },
+          itinerary: {
+            days: ["2026-12-07", "2026-12-08", "2026-12-09"].map((date) => ({
+              date,
+              title: "Specific day",
+              morning: {
+                activities: [{ name: "Walk" }],
+                meal: { name: "Dinner", reservationUrl },
+              },
+            })),
+          },
+        });
+      }) as typeof fetch,
+    });
+    expect(report.ok).toBe(false);
+    expect(requested.some((url) => url.includes("evil.example"))).toBe(false);
+  }
 });

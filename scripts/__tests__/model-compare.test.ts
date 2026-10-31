@@ -13,7 +13,7 @@ const productionUrl = "https://jcnephijkxgtprsutgsf.supabase.co";
 function runCli(args: string[], env: Record<string, string> = {}) {
   return spawnSync(
     process.execPath,
-    ["scripts/uat/model-compare.ts", ...args],
+    ["--no-env-file", "scripts/uat/model-compare.ts", ...args],
     {
       cwd: root,
       encoding: "utf8",
@@ -190,4 +190,42 @@ describe("model comparison CLI", () => {
     expect(mock.stdout).toContain("mixed-lite");
     expect(mock.stdout).toContain("fallback");
   });
+});
+
+test("live comparison cannot silently substitute a mock executor", async () => {
+  await expect(
+    runModelComparison({ mode: "live", target: { supabaseUrl: stagingUrl } }),
+  ).rejects.toThrow(/real step executor/);
+});
+
+test("unknown billing usage aborts before another paid call", async () => {
+  let calls = 0;
+  const report = await runModelComparison({
+    mode: "live",
+    target: { supabaseUrl: stagingUrl },
+    executeStep: () => {
+      calls += 1;
+      return {
+        model: "google/gemini-3-flash",
+        thinkingLevel: "high",
+        latencyMs: 1,
+        usage: {},
+      };
+    },
+  });
+  expect(calls).toBe(1);
+  expect(report.ok).toBe(false);
+  expect(report.rows[0]?.status).toBe("aborted");
+  expect(report.rows[0]?.estimatedUsd).toBe(null);
+  expect(report.markdown).toContain("billing usage is unknown");
+});
+
+test("CLI requires one explicit mode even when a key is present", () => {
+  for (const args of [[], ["--mock", "--live"]]) {
+    const result = runCli([...args, "--supabase-url", stagingUrl], {
+      FAROWAY_STAGING_AI_GATEWAY_KEY: "unused-test-key",
+    });
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain("Choose exactly one");
+  }
 });

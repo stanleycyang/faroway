@@ -16,7 +16,8 @@ const RID = /^\d{3,12}$/;
 export function isOpenTableReservationUrl(value: string): boolean {
   try {
     const url = new URL(value);
-    if (url.protocol !== "https:" || url.username || url.password) return false;
+    if (url.protocol !== "https:" || url.username || url.password || url.port)
+      return false;
     if (
       url.hostname !== "www.opentable.com" &&
       url.hostname !== "opentable.com"

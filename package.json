@@ -19,7 +19,7 @@
     "type-check": "turbo type-check && tsc -p scripts/tsconfig.json",
     "format": "turbo format",
     "format:check": "turbo format:check",
-    "check": "turbo type-check lint format:check",
+    "check": "turbo type-check lint format:check && tsc -p scripts/tsconfig.json",
     "test": "turbo test && bun run test:scripts",
     "test:scripts": "bun test scripts/__tests__",
     "test:web": "turbo test --filter=@faroway/web",
