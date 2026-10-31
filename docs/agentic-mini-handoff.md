@@ -1,6 +1,6 @@
 # Faroway agentic optimization — Mac Mini handoff
 
-Prepared 2026-10-31 UTC. Treat repository and external state as authoritative; revalidate before paid or deployment actions.
+Prepared 2026-10-31 UTC. **Superseded in part by the resumed-work section at the end of `docs/ai-evaluation-strategy.md`: the current candidate has now had one successful saved-plan/browser inspection; total spend is $1.61; the narrow cover-photo fix is PR #57.** Treat repository and external state as authoritative; revalidate before paid or deployment actions.
 
 ## Goal to create on the receiving machine
 
