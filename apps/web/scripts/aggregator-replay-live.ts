@@ -90,6 +90,7 @@ async function main() {
   for (const file of [
     "apps/web/scripts/aggregator-replay-live.ts",
     "apps/web/lib/search/agents/aggregator.ts",
+    "apps/web/lib/search/supplied-distance.ts",
     "apps/web/lib/search/bridge.ts",
     "apps/web/lib/ai/planning-step.ts",
     "apps/web/lib/ai/sdk.ts",

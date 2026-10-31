@@ -305,3 +305,35 @@ review. This is initial coverage, short of the proposed 40/20 suite. Revision,
 provider failure, full application/native behavior, factual grounding, and human
 usefulness evaluation remain required. Latest gateway reconciliation: **$0.56 of
 $20 cumulative UAT spend**.
+
+### Rejected nearby-meal prompt experiment (2026-10-31)
+
+A candidate added computed nearby restaurant IDs to each activity and instructions
+to leave a named local-meal gap rather than substitute a distant restaurant. On
+the same frozen Lisbon inventory, medium-thinking trial 1 took 17.34 s, still
+selected one remote meal, overloaded one slot, and left three meal slots
+unassigned (including meal experiences). Trial 2 timed out at 30.03 s and used the
+fallback. The prompt change was **reverted**; its patch and traces are preserved
+privately in `artifacts/uat/traces/supply-replay-20261031`. More prompt context is
+not an established solution to missing local supply or scheduling reliability.
+
+The evaluator now exposes `unassignedMealSlots` alongside meal count so reduced
+restaurant coverage cannot be mistaken for a complete dining plan. This metric
+requires interpretation: a meal experience may legitimately replace a restaurant,
+whereas an unresolved local dining gap still requires work. The coordinate screen
+is shared pure code with no network access and does not certify route feasibility.
+
+Separately, the dining prompt no longer explicitly permits “realistic-sounding”
+restaurant names. It requires fewer candidates rather than invented names, and
+asks for geographic coverage. This removes a bad instruction but is not proof of
+venue existence; current factual verification remains outstanding.
+
+The subsequent full-flow `flash-low` Copenhagen family trial preserved the brief's
+structured requirements but timed out in aggregation after 30,037 ms. Its fallback
+scheduled 15 activities over three days and overloaded one morning, despite the
+slow-pace/accessibility request. Total serial duration was 75,621 ms. The runner
+stopped on unknown aggregator billing before Interlaken; do not count Interlaken
+as tested. Trace: `artifacts/uat/traces/broader-20261031`. The dedicated gateway
+budget was reconciled to **$0.63/$20** after this run. This extends the timeout
+finding beyond Lisbon and makes fallback pacing a release concern. No production
+model or timeout default was changed.

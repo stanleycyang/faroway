@@ -72,7 +72,7 @@ interface DiningListResult {
 const SYSTEM_PROMPT = `You are a food and restaurant expert. Generate realistic restaurant recommendations for travelers.
 
 For each restaurant, provide:
-1. Real restaurant names that exist at the destination (or realistic-sounding names)
+1. Only real restaurant names you have reason to believe exist at the destination. Never invent a name to meet the requested count; return fewer candidates when uncertain. Names, hours, prices and suitability still require current verification.
 2. Accurate cuisine types and pricing
 3. Set rating and reviewCount to 0; unverified reviews must not be invented
 4. Which meals they're best for (breakfast, lunch, dinner)
@@ -126,6 +126,7 @@ Generate a diverse mix of:
 - 4-5 dinner restaurants
 - Include both local favorites and hidden gems
 - Mix of price levels within the range
+- Cover the major sightseeing neighborhoods and the requested hotel areas: ${plan.hotelCriteria?.neighborhoods?.join(", ") || "central visitor areas"}. Include breakfast and lunch options outside the central nightlife district. Do not invent a venue to fill geographic gaps.
 
 For vibes like:
 - "Foodie" → renowned restaurants, food markets, unique experiences

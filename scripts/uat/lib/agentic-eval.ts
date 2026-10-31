@@ -31,6 +31,7 @@ export interface AgenticEvaluation {
     activities: number;
     meals: number;
     uniqueRestaurants: number;
+    unassignedMealSlots: number;
     fallbackSteps: number;
     serialAgentMs: number;
   };
@@ -230,6 +231,7 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
       activities: activityCount,
       meals: mealCount,
       uniqueRestaurants: restaurants.size,
+      unassignedMealSlots: days.length * 3 - mealCount,
       fallbackSteps,
       serialAgentMs: trace.steps.reduce((n, s) => n + s.latencyMs, 0),
     },
