@@ -16,10 +16,10 @@
     "build:web": "turbo build --filter=@faroway/web",
     "build:mobile": "turbo build --filter=@faroway/mobile",
     "lint": "turbo lint",
-    "type-check": "turbo type-check",
+    "type-check": "turbo type-check && tsc -p scripts/tsconfig.json",
     "format": "turbo format",
     "format:check": "turbo format:check",
-    "check": "turbo type-check lint format:check",
+    "check": "turbo type-check lint format:check && tsc -p scripts/tsconfig.json",
     "test": "turbo test && bun run test:scripts",
     "test:scripts": "bun test scripts/__tests__",
     "test:web": "turbo test --filter=@faroway/web",
@@ -51,7 +51,9 @@
     "uat:api": "bash scripts/uat/api.sh",
     "uat:images": "bun scripts/uat/images.ts",
     "uat:native": "python3 scripts/uat/native-adb.py",
-    "uat:native:maestro": "node scripts/uat/native.mjs"
+    "uat:native:maestro": "node scripts/uat/native.mjs",
+    "uat:smoke": "bun scripts/uat/smoke.ts",
+    "uat:model-compare": "bun scripts/uat/model-compare.ts"
   },
   "overrides": {
     "@nestjs/common": "11.1.28",

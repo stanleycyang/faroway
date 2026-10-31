@@ -11,7 +11,7 @@ const paths = [
   ),
 ];
 const seed = process.argv.includes("--seed");
-let client;
+let client: ReturnType<typeof createClient> | undefined;
 if (seed) {
   // Capture credentials in memory; never log them or persist them to disk.
   const keys = JSON.parse(

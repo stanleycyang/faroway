@@ -7,11 +7,12 @@ import {
  * Combines results from all agents into a cohesive itinerary
  */
 
+import { gateway as defaultGateway, createGateway } from "@/lib/ai/sdk";
 import {
-  generateObject,
-  gateway as defaultGateway,
-  createGateway,
-} from "@/lib/ai/sdk";
+  generatePlanningObject,
+  logPlanningFallback,
+  planningModel,
+} from "@/lib/ai/planning-step";
 import { z } from "zod";
 import { canProcessViatorContent } from "@/lib/affiliates/viator-policy";
 import {
@@ -201,8 +202,8 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
   try {
     const { object: result } = await withAbortTimeout(
       (abortSignal) =>
-        generateObject<ItineraryResult>({
-          model: aiGateway(MODEL),
+        generatePlanningObject<ItineraryResult>("aggregator", {
+          model: aiGateway(planningModel("aggregator", MODEL)),
           providerOptions: PLANNING_PROVIDER_OPTIONS,
           system: SYSTEM_PROMPT,
           prompt,
@@ -224,10 +225,12 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
       transport,
     );
   } catch (error) {
-    if (isOperationTimeoutError(error)) {
+    const timedOut = isOperationTimeoutError(error);
+    const detail = error instanceof Error ? error.message : String(error);
+    if (timedOut) {
       console.warn(
         "[Aggregator Agent] AI timed out, attempting recovery:",
-        error instanceof Error ? error.message : String(error),
+        detail,
       );
     } else {
       console.error(
@@ -250,12 +253,24 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
       );
       if (recovered) {
         console.log("[Aggregator Agent] Recovered from raw text successfully");
+        logPlanningFallback(
+          "aggregator",
+          "schema_recovery",
+          "recovered_itinerary",
+          detail,
+        );
         return recovered;
       }
     }
 
     console.error(
       "[Aggregator Agent] Recovery failed, using fallback itinerary",
+    );
+    logPlanningFallback(
+      "aggregator",
+      timedOut ? "timeout" : "error",
+      "fallback_itinerary",
+      detail,
     );
     return createFallbackItinerary(plan, hotels, activities, dining, transport);
   }

@@ -8,11 +8,13 @@ import {
  * Uses AI generation + optional Google Places integration
  */
 
+import { gateway as defaultGateway, createGateway } from "@/lib/ai/sdk";
 import {
-  generateObject,
-  gateway as defaultGateway,
-  createGateway,
-} from "@/lib/ai/sdk";
+  generatePlanningObject,
+  logPlanningFallback,
+  planningModel,
+} from "@/lib/ai/planning-step";
+import { reservationUrlFromEvidence } from "@/lib/search/reservation-url";
 import { z } from "zod";
 import { SearchPlan, DiningResult } from "../types";
 import { VIBE_KEYWORDS } from "@faroway/constants";
@@ -84,7 +86,7 @@ Price levels:
 
 Include common dietary options if applicable (vegetarian, vegan, gluten-free, halal, kosher).
 
-For reservation URLs, use format: https://opentable.com/r/[restaurant-slug] or leave empty if not needed.
+Do not invent reservation URLs or OpenTable links. Leave reservationUrl empty. A reservation link is added only from verified provider data.
 
 IMPORTANT: For the "images" field, return an EMPTY array []. Do NOT generate or guess image URLs.`;
 
@@ -137,8 +139,8 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
   try {
     const { object: result } = await withAbortTimeout(
       (abortSignal) =>
-        generateObject<DiningListResult>({
-          model: aiGateway(MODEL),
+        generatePlanningObject<DiningListResult>("dining", {
+          model: aiGateway(planningModel("dining", MODEL)),
           providerOptions: PLANNING_PROVIDER_OPTIONS,
           system: SYSTEM_PROMPT,
           prompt,
@@ -151,17 +153,39 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
       "dining AI",
     );
 
-    // Add unique IDs and sort by vibe score
+    let omittedReservationUrls = 0;
+    // Add unique IDs and sort by vibe score. Model-authored reservation
+    // links are dropped unless constructed from verified provider data.
     let restaurants = result.restaurants
-      .map((restaurant, index) => ({
-        ...restaurant,
-        dietaryOptions: [],
-        rating: 0,
-        reviewCount: 0,
-        id: `dining_${Date.now()}_${index}`,
-        priceLevel: restaurant.priceLevel as 1 | 2 | 3 | 4,
-      }))
+      .map((restaurant, index) => {
+        const keptUrl = reservationUrlFromEvidence(restaurant.reservationUrl, {
+          kind: "none",
+        });
+        if (restaurant.reservationUrl && !keptUrl) omittedReservationUrls += 1;
+        const safe = { ...restaurant };
+        delete safe.reservationUrl;
+        delete safe.affiliatePartner;
+        return {
+          ...safe,
+          ...(keptUrl ? { reservationUrl: keptUrl } : {}),
+          dietaryOptions: [],
+          rating: 0,
+          reviewCount: 0,
+          id: `dining_${Date.now()}_${index}`,
+          priceLevel: restaurant.priceLevel as 1 | 2 | 3 | 4,
+        };
+      })
       .sort((a, b) => b.vibeScore - a.vibeScore);
+    if (omittedReservationUrls > 0) {
+      console.info(
+        JSON.stringify({
+          event: "planning.step.reservation_url_omitted",
+          step: "dining",
+          omitted: omittedReservationUrls,
+          at: new Date().toISOString(),
+        }),
+      );
+    }
 
     // Enrich with TripAdvisor ratings and reviews
     if (isTripAdvisorConfigured()) {
@@ -174,14 +198,22 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
 
     return restaurants;
   } catch (error) {
-    if (isOperationTimeoutError(error)) {
+    const timedOut = isOperationTimeoutError(error);
+    const detail = error instanceof Error ? error.message : String(error);
+    if (timedOut) {
       console.warn(
         "[Dining Agent] AI timed out, returning available dining results:",
-        error instanceof Error ? error.message : String(error),
+        detail,
       );
     } else {
       console.error("[Dining Agent] Error:", error);
     }
+    logPlanningFallback(
+      "dining",
+      timedOut ? "timeout" : "error",
+      "empty",
+      detail,
+    );
     return [];
   }
 }
