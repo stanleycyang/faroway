@@ -1,3 +1,9 @@
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
+import { evaluateVenueAddresses } from "../uat/lib/venue-address-evidence";
+import addressFacts from "../fixtures/agentic-venue-addresses.json";
 import { DEVELOPMENT_BRIEFS, HOLDOUT_BRIEFS } from "../uat/lib/eval-briefs";
 import romeOverload from "../fixtures/agentic-rome-overload.json";
 import { suppliedDistanceKm } from "../uat/lib/route-eval";
@@ -345,5 +351,117 @@ test("development and reserved holdout briefs have distinct IDs and valid bounde
     const trace = fixture();
     trace.brief = brief;
     expect(() => evaluateAgenticTrace(trace)).not.toThrow();
+  }
+});
+
+describe("reviewed venue address evidence", () => {
+  const fact = addressFacts[1];
+  function addressTrace(
+    name = "Afuri Roppongi Hills",
+    address = fact.contradictedAddresses[0],
+  ) {
+    const trace = fixture();
+    trace.brief.destination = "Tokyo, Japan";
+    trace.steps[4].output = {
+      days: [
+        {
+          date: "2027-01-11",
+          morning: { meal: { name, location: { address } } },
+        },
+      ],
+    };
+    return trace;
+  }
+  test("catches the live AFURI conflict without trusting generated coordinates", () => {
+    const result = evaluateVenueAddresses(
+      addressTrace(),
+      addressFacts,
+      "2026-10-31",
+    );
+    expect(result.contradicted).toBe(1);
+    expect(result.futureAvailabilityVerified).toBe(false);
+  });
+  test("does not transfer evidence between branches or cities", () => {
+    expect(
+      evaluateVenueAddresses(
+        addressTrace("Afuri Roppongi"),
+        addressFacts,
+        "2026-10-31",
+      ).unresolved,
+    ).toBe(1);
+    const trace = addressTrace();
+    trace.brief.destination = "Kyoto";
+    expect(
+      evaluateVenueAddresses(trace, addressFacts, "2026-10-31").unresolved,
+    ).toBe(1);
+  });
+  test("unreviewed spellings, missing addresses and stale evidence remain unresolved", () => {
+    for (const address of ["", "6-4-1 Roppongi"]) {
+      expect(
+        evaluateVenueAddresses(
+          addressTrace(undefined, address),
+          addressFacts,
+          "2026-10-31",
+        ).unresolved,
+      ).toBe(1);
+    }
+    expect(
+      evaluateVenueAddresses(addressTrace(), addressFacts, "2027-03-01")
+        .unresolved,
+    ).toBe(1);
+    expect(
+      evaluateVenueAddresses(addressTrace(), addressFacts, "2026-10-01")
+        .unresolved,
+    ).toBe(1);
+  });
+  test("supports only the reviewed address, not dining suitability", () => {
+    const result = evaluateVenueAddresses(
+      addressTrace("Sakura-tei", addressFacts[2].supportedAddresses[0]),
+      addressFacts,
+      "2026-10-31",
+    );
+    expect(result.supported).toBe(1);
+    expect(result.mealServiceVerified).toBe(false);
+    expect(result.routeFeasibilityVerified).toBe(false);
+  });
+  test("conflicting and duplicate reviews cannot support a claim", () => {
+    const conflict = {
+      ...fact,
+      supportedAddresses: fact.contradictedAddresses,
+    };
+    expect(
+      evaluateVenueAddresses(addressTrace(), [conflict], "2026-10-31")
+        .results[0].reason,
+    ).toBe("conflicting_evidence");
+    expect(
+      evaluateVenueAddresses(addressTrace(), [fact, fact], "2026-10-31")
+        .results[0].reason,
+    ).toBe("ambiguous_evidence");
+  });
+});
+
+test("offline CLI rejects unfinished receipts rather than grading frozen outputs", () => {
+  const dir = mkdtempSync(join(tmpdir(), "faroway-incomplete-eval-"));
+  try {
+    for (const status of ["started", "failed"]) {
+      writeFileSync(
+        join(dir, "trace.json"),
+        JSON.stringify({ status, trace: fixture() }),
+      );
+      const result = spawnSync(
+        process.execPath,
+        ["--no-env-file", "scripts/uat/evaluate-traces.ts", dir],
+        {
+          cwd: resolve(import.meta.dirname, "../.."),
+          env: { PATH: process.env.PATH },
+          encoding: "utf8",
+          timeout: 10000,
+        },
+      );
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain("incomplete trace");
+    }
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
   }
 });

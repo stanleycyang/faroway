@@ -752,3 +752,25 @@ Manual source review exposes why these results are not ready for production:
 Next gate: build venue identity/address/meal-service evidence checks from official sources, with explicit contradicted and unresolved outcomes, then re-evaluate repaired schedules. Do not optimize solely for generated-coordinate coverage. Existing release gates (holdouts, accessibility/allergy evidence, highlighted visit retention, narration and app latency) still apply.
 
 Validation: workspace type/lint/format checks pass (9 pre-existing lint warnings); 1,230 web tests and 79 script tests pass. Dedicated nonrenewing Gateway budget reconciled at **$1.18 / $20** after these four calls. No production deployment or default-model change.
+
+
+### Independent address evidence gate (2026-10-31)
+
+Added `scripts/fixtures/agentic-venue-addresses.json` and an offline selected-meal address audit. Records are manually adjudicated branch/address cases from official pages, not model-produced ground truth. Exact destination, branch alias, and reviewed address variants are required. Unknown spellings, unmatched venues, duplicate/conflicting records, missing source metadata, and evidence outside a 90-day review window remain unresolved. The 90-day window is a conservative evaluation policy, not a guarantee of freshness. Supported addresses do not establish coordinates, routing, menus, dietary suitability, accessibility, or future availability.
+
+The focused repair now grades as:
+
+| Case | Supported address occurrences | Contradicted | Unresolved |
+| --- | --- | --- | --- |
+| Lisbon | 1 | 0 | 8 |
+| Tokyo | 1 | 1 | 7 |
+
+In addition to the initial AFURI conflict, focused Tokyo generated **2-33-8 Sendagaya** for Monmouth Tea. The [official site](https://monmouth.jp/), retrieved 2026-10-31, lists **1-21-2 Sendagaya**. The [official Sakura-tei page](https://www.sakuratei.co.jp/access), retrieved the same date, supports the generated **3-20-1 Jingumae** address. The fixture does not assert that unknown venues do not exist. Neither repair passes the broader evidence gate.
+
+Replay with:
+
+```sh
+bun --no-env-file scripts/uat/evaluate-traces.ts artifacts/uat/traces/dining-repair-focused-20261031 scripts/fixtures/agentic-venue-constraints.json scripts/fixtures/agentic-venue-addresses.json
+```
+
+Known address contradictions now make this command exit 1; unresolved counts remain explicit and must not be interpreted as approval. The CLI also refuses envelopes marked `started` or `failed`, preventing failed paid-call receipts from passing on copied upstream output. Legacy receipts without a status remain supported. No new live AI calls or production changes in this iteration; budget remains last reconciled at $1.18/$20.

@@ -6,6 +6,11 @@ import {
   type VenueConstraint,
 } from "./lib/venue-constraints";
 
+import {
+  evaluateVenueAddresses,
+  type VenueAddressEvidence,
+} from "./lib/venue-address-evidence";
+
 // Offline replay: never imports agents or makes network requests.
 const directory = process.argv[2];
 if (!directory)
@@ -20,10 +25,18 @@ if (!files.length)
 const facts: VenueConstraint[] = process.argv[3]
   ? JSON.parse(readFileSync(process.argv[3], "utf8"))
   : [];
+const addresses: VenueAddressEvidence[] = process.argv[4]
+  ? JSON.parse(readFileSync(process.argv[4], "utf8"))
+  : [];
+const asOf = new Date().toISOString().slice(0, 10);
 const rows = files.map((file) => {
-  const { trace } = JSON.parse(
+  const { trace, status } = JSON.parse(
     readFileSync(resolve(directory, file), "utf8"),
-  ) as { trace: AgenticTrace };
+  ) as { trace: AgenticTrace; status?: string };
+  if (status && status !== "completed")
+    throw new Error(
+      `${file}: incomplete trace (${status}) cannot be evaluated as a finished run`,
+    );
   const evaluation = evaluateAgenticTrace(trace);
   return {
     file,
@@ -32,12 +45,14 @@ const rows = files.map((file) => {
     runId: trace.runId,
     ...evaluation,
     venueConstraints: evaluateVenueConstraints(trace, facts),
+    venueAddresses: evaluateVenueAddresses(trace, addresses, asOf),
   };
 });
 console.log(
   JSON.stringify(
     {
       mode: "offline-agent-trace-replay",
+      addressEvidenceAsOf: asOf,
       count: rows.length,
       contractPassCount: rows.filter((row) => row.contractPass).length,
       travelerUsefulnessMeasured: false,
@@ -52,7 +67,10 @@ console.log(
 );
 if (
   rows.some(
-    (row) => !row.contractPass || row.venueConstraints.findings.length > 0,
+    (row) =>
+      !row.contractPass ||
+      row.venueConstraints.findings.length > 0 ||
+      row.venueAddresses.contradicted > 0,
   )
 )
   process.exitCode = 1;
