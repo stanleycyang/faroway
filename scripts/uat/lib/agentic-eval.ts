@@ -144,6 +144,7 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
       fail(`day_${index + 1}:missing_description`);
     let count = 0;
     let meals = 0;
+    let dayMinutes = 0;
     for (const slotName of slots) {
       const slot = object(day[slotName]);
       const items = array(slot.activities);
@@ -176,6 +177,7 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
         warnings.push(
           `day_${index + 1}:${slotName}:over_four_hours_before_meals_and_transfers`,
         );
+      dayMinutes += minutes;
       count += items.length;
       const meal = object(slot.meal);
       const mappedMeals = array(mappedSlot.meals);
@@ -206,6 +208,17 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
       } else if (mappedMeals.length)
         fail(`day_${index + 1}:${slotName}:invented_mapped_meal`);
     }
+    const pace = object(plan.activityCriteria).pacePreference;
+    const dayLimit =
+      pace === "relaxed"
+        ? { count: 2, minutes: 240 }
+        : pace === "packed"
+          ? { count: 5, minutes: 600 }
+          : { count: 4, minutes: 420 };
+    if (count > dayLimit.count || dayMinutes > dayLimit.minutes)
+      warnings.push(
+        `day_${index + 1}:exceeds_${String(pace ?? "moderate")}_pace_budget`,
+      );
     if (!count) fail(`day_${index + 1}:no_activities`);
     if (!meals) fail(`day_${index + 1}:no_meals`);
     if (day.transport && index !== 0)

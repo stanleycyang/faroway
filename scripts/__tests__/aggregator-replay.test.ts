@@ -42,3 +42,29 @@ test("aggregator replay requires a dedicated staging credential", () => {
   expect(result.status).toBe(1);
   expect(result.stderr).toContain("Dedicated staging key required");
 });
+
+test("grounding probe refuses implicit paid calls and production targets", () => {
+  for (const args of [
+    [],
+    ["--live", "--supabase-url", "https://jcnephijkxgtprsutgsf.supabase.co"],
+  ]) {
+    const result = spawnSync(
+      process.execPath,
+      ["--no-env-file", "apps/web/scripts/grounding-pilot-live.ts", ...args],
+      {
+        cwd: root,
+        env: {
+          PATH: process.env.PATH,
+          HOME: process.env.HOME,
+          FAROWAY_STAGING_SUPABASE_PROJECT_REF: "omovikloadpvzijoaqus",
+        },
+        encoding: "utf8",
+        timeout: 10000,
+      },
+    );
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      args.length ? "production" : "Explicit --live required",
+    );
+  }
+});

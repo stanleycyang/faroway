@@ -177,8 +177,8 @@ it("supplies calendar, neighborhood, and minute context for feasible scheduling"
   await runAggregatorAgent(plan, [hotel], [stop], []);
   const request = mocks.generateObject.mock.calls.at(-1)?.[0];
   expect(request.prompt).toContain("2026-06-01 Monday");
-  expect(request.prompt).toContain('"durationMinutes": 150');
-  expect(request.prompt).toContain('"neighborhood": "Ueno"');
+  expect(request.prompt).toContain('"durationMinutes":150');
+  expect(request.prompt).toContain('"neighborhood":"Ueno"');
   expect(request.prompt).toContain("at least 60 minutes");
   expect(request.prompt).toContain("not verified venue facts");
 });

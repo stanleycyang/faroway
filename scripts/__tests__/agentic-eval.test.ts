@@ -108,6 +108,16 @@ describe("production-shape agentic evaluation", () => {
       "day_1:morning:incompatible_meal_type",
     );
   });
+  test("flags a relaxed day that exceeds its daily time budget", () => {
+    const trace = fixture();
+    (
+      trace.steps[0].output as { activityCriteria: { pacePreference?: string } }
+    ).activityCriteria.pacePreference = "relaxed";
+    (trace.steps[2].output as Array<{ duration: number }>)[0].duration = 300;
+    expect(evaluateAgenticTrace(trace).warnings).toContain(
+      "day_1:exceeds_relaxed_pace_budget",
+    );
+  });
   test("counts incomplete and fallback runs as failures", () => {
     const trace = fixture();
     trace.steps[0].fallbacks.push({

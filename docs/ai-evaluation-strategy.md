@@ -368,3 +368,47 @@ not establish successful AI generation, factual availability, or traveler
 usefulness. The change makes failure behavior less misleading and better paced;
 aggregation reliability and independent factual verification remain open. These
 replays made zero model calls; cumulative live spend remains $0.63/$20.
+
+### Compact input and public-source grounding probe (2026-10-31)
+
+Inventory JSON passed to the aggregator is now compact rather than pretty-printed;
+fields, instructions, and values are unchanged. Four medium-thinking replays
+(two Lisbon, two Copenhagen) completed without fallback. Lisbon input tokens fell
+from 5,556 to 4,286 (22.9%). Latencies were 12.44/17.64 s for Lisbon and
+5.97/21.56 s for Copenhagen. This small sample supports an input-token saving,
+not a statistically established latency or reliability improvement. Original
+source hashes and outputs are in `artifacts/uat/traces/compact-replay-20261031`.
+
+A new daily pace screen catches count/minute excesses even when no individual
+slot exceeds four hours. Regrading shows both Copenhagen AI outputs still exceed
+the relaxed pace budget on multiple days; Lisbon still has distant meals and
+unresolved venue reopening. Contract passes are not release acceptance.
+
+`apps/web/scripts/grounding-pilot-live.ts` is an isolated, explicitly live probe
+using public venue names only, the dedicated capped UAT key, and Google-only
+Gateway routing. It is not connected to production planning or user trip data.
+The live probe used `@ai-sdk/google` 3.0.140, whose newer utility types then
+failed this repo’s type check. The dev dependency is now pinned to 3.0.33, which
+uses the same provider/utility versions as installed AI SDK 6.0.90. The live
+receipt predates that pin; the request’s search-tool identifier and empty options
+are unchanged. SDK 7 is current; a major upgrade is a separate validation task.
+The implementation was checked against installed SDK source and the official
+[Gateway search documentation](https://vercel.com/docs/ai-gateway/models-and-providers/web-search).
+
+The first search probe completed in 5.90 s, with resolved provider `google`.
+Gateway metadata reports five billable searches, $0.0021255 inference cost, and
+**$0.0721255 total cost**. Token-only cost estimation would materially undercount
+this call. Private receipt: `artifacts/uat/grounding/lisbon-20261031.json`.
+
+The output found the Tile Museum closure and said reopening was unknown, but
+contradicted itself by labelling the monastery's proposed Monday visit both open
+and closed. Its prose also named official URLs absent from the returned source
+list (which includes provider redirect URLs). These findings reject unchecked
+search-generated text as verification. Before integration, require structured
+claims, source-to-claim linkage, calendar consistency, source quality checks,
+and explicit unknown states. Preserve provider source and search metadata; do
+not treat model-authored links as retrieved evidence.
+
+Gateway reconciliation after these experiments: **$0.78/$20 cumulative UAT
+spend**. No model, provider recipient list, timeout default, or product grounding
+path has been changed.
