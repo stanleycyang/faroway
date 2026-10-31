@@ -20,13 +20,13 @@ supabase/
   migrations/ SQL migrations (applied via `bun db:push`)
 ```
 
-**Package manager:** Bun 1.3+  
+**Package manager:** Bun 1.4.4  
 **Build system:** Turborepo
 
 ## Prerequisites
 
-- [Bun](https://bun.sh) ≥ 1.3
-- [Node.js](https://nodejs.org) ≥ 20 (for Expo tooling)
+- [Bun](https://bun.sh) 1.4.4 (1.0.21–1.4.3 are affected by CVE-2026-111497)
+- [Node.js](https://nodejs.org) ≥ 22.23.4 (for Expo tooling; Node 20 is EOL, and 22.x before 22.23.4 is affected by CVE-2026-111497)
 - [Supabase CLI](https://supabase.com/docs/guides/cli) for local database
 - [EAS CLI](https://docs.expo.dev/eas/) for mobile builds (`bun add -g eas-cli`)
 
