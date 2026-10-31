@@ -30,5 +30,37 @@
     "sourceUrl": "https://www.frick.org/about/frick_madison",
     "observedAt": "2026-10-31",
     "closedFrom": "2024-03-04"
+  },
+  {
+    "id": "muerren-gimmelwald-via-ferrata-season",
+    "destination": "Interlaken",
+    "aliases": ["Mürren-Gimmelwald Via Ferrata"],
+    "sourceUrl": "https://intersport-muerren.ch/via-ferrata-muerren/?lang=en",
+    "observedAt": "2026-10-31",
+    "reportedOperatingMonths": [6, 7, 8, 9, 10]
+  },
+  {
+    "id": "grimsel-canyoning-published-season",
+    "destination": "Interlaken",
+    "aliases": ["Canyoning Grimsel Adventure"],
+    "sourceUrl": "https://www.outdoor.ch/en/outdoor-adventure/canyoning-grimsel",
+    "observedAt": "2026-10-31",
+    "reportedOperatingMonths": [5, 6, 7, 8, 9, 10]
+  },
+  {
+    "id": "louvre-weekly-closure",
+    "destination": "Paris",
+    "aliases": ["Louvre Museum Tour"],
+    "sourceUrl": "https://www.louvre.fr/en/visit/hours-admission/tickets-and-prices",
+    "observedAt": "2026-10-31",
+    "closedWeekdays": [2]
+  },
+  {
+    "id": "orsay-weekly-closure",
+    "destination": "Paris",
+    "aliases": ["Musée d'Orsay Private Guided Tour"],
+    "sourceUrl": "https://www.musee-orsay.fr/en/visit",
+    "observedAt": "2026-10-31",
+    "closedWeekdays": [1]
   }
 ]

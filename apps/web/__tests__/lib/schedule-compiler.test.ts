@@ -1,3 +1,5 @@
+import { venueConstraintsForDate } from "../../../../scripts/uat/lib/venue-constraints";
+import venueFacts from "../../../../scripts/fixtures/agentic-venue-constraints.json";
 import { describe, expect, it } from "vitest";
 import rome from "../../../../scripts/fixtures/agentic-rome-overload.json";
 import { compileSchedule } from "@/lib/search/schedule-compiler";
@@ -278,4 +280,43 @@ describe("experimental schedule compiler", () => {
         compileSchedule({ ...plan, dates }, activities, dining),
       ).toThrow(/valid dates/);
   });
+});
+
+it("uses reviewed opening-day evidence before allocating Paris museum visits", () => {
+  const input = { ...extended, destination: "Paris, France" };
+  const supply = [
+    {
+      ...visit("louvre", 120),
+      name: "Private VIP Louvre Museum Tour with Art Historian",
+    },
+    { ...visit("orsay", 120), name: "Musée d'Orsay Private Guided Tour" },
+    visit("walk", 60),
+  ];
+  const exclusions = ["2027-01-11", "2027-01-12", "2027-01-13"].flatMap(
+    (date) =>
+      supply.flatMap((activity) =>
+        venueConstraintsForDate(
+          input.destination,
+          activity.name,
+          date,
+          venueFacts,
+        ).map((finding) => ({
+          activityId: activity.id,
+          date,
+          reason: finding.finding,
+          sourceUrl: finding.sourceUrl,
+          observedAt: finding.observedAt,
+        })),
+      ),
+  );
+  const result = compileSchedule(input, supply, [], exclusions);
+  expect(
+    result.days.flatMap((d) => slots.flatMap((slot) => d[slot].activities)),
+  ).toHaveLength(3);
+  for (const day of result.days) {
+    const ids = slots.flatMap((slot) => day[slot].activities.map((a) => a.id));
+    if (day.date === "2027-01-11") expect(ids).not.toContain("orsay");
+    if (day.date === "2027-01-12") expect(ids).not.toContain("louvre");
+  }
+  expect(result.verified).toBe(false);
 });

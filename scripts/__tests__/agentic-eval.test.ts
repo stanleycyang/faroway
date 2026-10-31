@@ -1,3 +1,4 @@
+import seasonalFacts from "../fixtures/agentic-venue-constraints.json";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
@@ -464,4 +465,58 @@ test("offline CLI rejects unfinished receipts rather than grading frozen outputs
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
+});
+
+test("seasonal evidence flags winter dates without certifying summer availability", () => {
+  const trace = fixture();
+  const fact = {
+    id: "river-walk",
+    destination: trace.brief.destination,
+    aliases: ["Riverside walk"],
+    sourceUrl: "https://official.example/season",
+    observedAt: "2026-10-31",
+    reportedOperatingMonths: [6, 7, 8, 9, 10],
+  };
+  expect(evaluateVenueConstraints(trace, [fact]).findings[0].finding).toBe(
+    "outside_reported_operating_season",
+  );
+  const output = trace.steps[4].output as { days: Array<{ date: string }> };
+  output.days[0].date = "2027-07-01";
+  expect(evaluateVenueConstraints(trace, [fact]).findings).toHaveLength(0);
+  expect(evaluateVenueConstraints(trace, [fact]).coverage).toContain(
+    "does not establish availability",
+  );
+  expect(() =>
+    evaluateVenueConstraints(trace, [
+      { ...fact, reportedOperatingMonths: [0, 13] },
+    ]),
+  ).toThrow();
+});
+
+test("the observed November Interlaken recommendations fail published-season checks", () => {
+  const trace = fixture();
+  trace.brief.destination = "Interlaken, Switzerland";
+  trace.steps[4].output = {
+    days: [
+      {
+        date: "2026-11-05",
+        morning: {
+          activities: [
+            { name: "Mürren-Gimmelwald Via Ferrata" },
+            { name: "Canyoning Grimsel Adventure" },
+          ],
+        },
+      },
+    ],
+  };
+  const result = evaluateVenueConstraints(trace, seasonalFacts);
+  expect(result.findings.map((f) => f.venueId).sort()).toEqual([
+    "grimsel-canyoning-published-season",
+    "muerren-gimmelwald-via-ferrata-season",
+  ]);
+  expect(
+    result.findings.every(
+      (f) => f.finding === "outside_reported_operating_season",
+    ),
+  ).toBe(true);
 });

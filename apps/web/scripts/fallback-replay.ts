@@ -1,3 +1,8 @@
+import {
+  venueConstraintsForDate,
+  type VenueConstraint,
+} from "../../../scripts/uat/lib/venue-constraints";
+import { inclusiveDays } from "../../../scripts/uat/lib/briefs";
 /** Offline-only regression replay: no model, database, or provider calls. */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { resolve, dirname } from "node:path";
@@ -26,10 +31,16 @@ const exclusionsBytes =
   exclusionsIndex >= 0
     ? readFileSync(process.argv[exclusionsIndex + 1])
     : undefined;
+const factsIndex = process.argv.indexOf("--venue-constraints");
+const factsBytes =
+  factsIndex >= 0 ? readFileSync(process.argv[factsIndex + 1]) : undefined;
+const facts: VenueConstraint[] = factsBytes
+  ? JSON.parse(factsBytes.toString())
+  : [];
 const exclusions: ScheduleExclusion[] = exclusionsBytes
   ? JSON.parse(exclusionsBytes.toString())
   : [];
-if (exclusionsIndex >= 0 && !compiledSchedule)
+if ((exclusionsIndex >= 0 || factsIndex >= 0) && !compiledSchedule)
   throw new Error("Exclusions require --compiled-schedule");
 if (!input || !output || existsSync(output))
   throw new Error(
@@ -47,6 +58,34 @@ const plan = upstream[0].output as SearchPlan;
 const hotels = upstream[1].output as HotelResult[];
 const activities = upstream[2].output as ActivityResult[];
 const dining = upstream[3].output as DiningResult[];
+if (factsBytes) {
+  const span =
+    (Date.parse(`${plan.dates.end}T00:00:00Z`) -
+      Date.parse(`${plan.dates.start}T00:00:00Z`)) /
+      86400000 +
+    1;
+  if (!Number.isInteger(span) || span < 1 || span > 31)
+    throw new Error("Evidence replay requires 1–31 valid days");
+  const dates = inclusiveDays(plan.dates.start, plan.dates.end);
+  if (dates.length > 31) throw new Error("Evidence replay limited to 31 days");
+  for (const date of dates)
+    for (const activity of activities) {
+      for (const finding of venueConstraintsForDate(
+        plan.destination,
+        activity.name,
+        date,
+        facts,
+      )) {
+        exclusions.push({
+          activityId: activity.id,
+          date,
+          reason: finding.finding,
+          sourceUrl: finding.sourceUrl,
+          observedAt: finding.observedAt,
+        });
+      }
+    }
+}
 const started = Date.now();
 const compiled = compiledSchedule
   ? compileSchedule(plan, activities, dining, exclusions)
@@ -76,6 +115,8 @@ for (const file of [
   "apps/web/lib/search/supplied-distance.ts",
   "apps/web/lib/search/fallback-itinerary.ts",
   "scripts/uat/lib/agentic-eval.ts",
+  "scripts/uat/lib/venue-constraints.ts",
+  "scripts/uat/lib/briefs.ts",
   "apps/web/scripts/fallback-replay.ts",
 ])
   hash.update(file).update(readFileSync(resolve(root, file)));
@@ -141,6 +182,15 @@ writeFileSync(
         originalInputSha256: createHash("sha256").update(bytes).digest("hex"),
         modelCalls: 0,
         upstreamGenerationCostExcluded: true,
+        ...(factsBytes
+          ? {
+              inputVenueConstraintsSha256: createHash("sha256")
+                .update(factsBytes)
+                .digest("hex"),
+              constraintSource: "manually-reviewed-fixture",
+              exclusions,
+            }
+          : {}),
         ...(exclusionsBytes
           ? {
               inputExclusionsSha256: createHash("sha256")

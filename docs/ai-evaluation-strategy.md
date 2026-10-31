@@ -787,3 +787,34 @@ The AFURI and Monmouth extractions recover the official addresses that contradic
 Private artifacts: `artifacts/uat/address-pages-20261031.json` and `artifacts/uat/address-extraction-20261031.json`. Next work should connect retrieval, branch adjudication and correction into the experimental planner with explicit uncertainty and cost bounds, then evaluate on fresh destinations/holdouts. Do not present this four-page extraction pilot as end-to-end traveler acceptance.
 
 Validation: workspace type/lint/format checks pass, and all 89 script tests pass. Dedicated Gateway budget reconciled after the extraction call: **$1.19 / $20**.
+
+
+### Remaining development cases and evidence-constrained scheduling (2026-10-31)
+
+Ran fresh `flash-low` baselines for the previously unrun development briefs. The first batch completed Interlaken and stopped at Marrakech's 30-second aggregation timeout because usage for that call was unknown. Reconciled Gateway billing before continuing the remaining cases; did not retry the timed-out call. Raw traces: `remaining-development-20261031` and `remaining-development-tail-20261031`. Holdouts remain untouched.
+
+Frozen-supply compiler comparisons (one sample each; costs and latencies below are not full app measurements):
+
+| Case | Baseline visits / meals | Compiler visits / meals | Daily pace violations, before → after | Remote-meal warnings, before → after |
+| --- | --- | --- | --- | --- |
+| Interlaken | 12 / 16 | 11 / 21 | 2 → 0 | 10 → 13 |
+| Marrakech | 14 / 12 (fallback) | 12 / 12 | 0 → 0 | 0 → 0 |
+| Paris | 9 / 7 | 9 / 9 | 1 → 0 | 0 → 0 |
+| Reykjavik | 11 / 11 | 11 / 15 | 3 → 0 | 2 → 5 |
+| Istanbul | 11 / 9 (fallback) | 9 / 9 | 0 → 0 | 1 → 0 |
+
+Baseline serial agent durations: Interlaken 63.076 s, Marrakech 81.796 s including failed aggregation, Paris 78.535 s, Reykjavik 78.550 s. Compiler-only replays take 6–19 ms and exclude all upstream generation. More meals can create more remote-meal warnings; do not treat full slots as verified coverage. Reykjavik drops the Golden Circle because its supplied duration exceeds the current daily limit. Literal highlight matching also falsely reports an omitted Perlan Museum despite selecting Perlan under a longer inventory title; this metric is not semantic identity verification.
+
+Independent review found consequential failures:
+
+- Interlaken in November schedules Mürren–Gimmelwald Via Ferrata and Grimsel canyoning. The [equipment station's published via ferrata season](https://intersport-muerren.ch/via-ferrata-muerren/?lang=en) ends in October and says use outside the season is not permitted; [OUTDOOR's Grimsel product](https://www.outdoor.ch/en/outdoor-adventure/canyoning-grimsel) lists May–October. Both pages retrieved 2026-10-31. Added `reportedOperatingMonths` evidence and regression tests; this flags outside-season dates without certifying dates within the season or other providers' availability.
+- The unconstrained Paris compiler regresses against the baseline: it places Orsay on Monday and Louvre on Tuesday. Official [Orsay visitor information](https://www.musee-orsay.fr/en/visit) and [Louvre hours](https://www.louvre.fr/en/visit/hours-admission/tickets-and-prices), checked 2026-10-31, report those weekly closures. Added scoped aliases and closure facts. A generated “private/VIP” tour name does not establish an exception or an actual bookable product.
+- Interlaken's model-written day-one summary mentions paragliding, but no paragliding activity is selected that day. Other descriptions also mention omitted activities. Narrative-to-ID consistency remains an unsatisfied quality gate.
+
+Connected reviewed evidence to the offline compiler through `fallback-replay.ts --compiled-schedule --venue-constraints FILE`. It evaluates every supplied candidate/date, derives source-attributed exclusions, and preserves the evidence file hash and exclusions in provenance. This is programmatic application of a manually reviewed fixture, **not** automated source discovery. No model calls or production default changes. With constraints, Paris still has nine visits/nine meals and zero pacing/remote warnings, while moving Louvre to Monday and Orsay to Tuesday. Interlaken's manual seasonal replay retains seven populated days and eleven visits while excluding both seasonal activities, but geographic and duration issues remain. Regression tests exercise the evidence-to-compiler path.
+
+Istanbul also hit the 30-second aggregation timeout; its serial agent duration was 73.362 s. No retry was hidden from the denominator. All twelve authored development briefs now have live traces (including failed/fallback outcomes), and all six reserved holdouts remain unrun. This is still smaller than the proposed 40/20 case set and lacks independent traveler labeling.
+
+A final evidence-enabled replay of all five new traces is in `artifacts/uat/traces/compiled-evidence-remaining-20261031/`. All five pass deterministic contracts and have zero violations of the **listed** venue constraints. Unknown venues, travel times, prices, suitability and holiday exceptions remain unknown; this is not five quality approvals. Seasonal/closure facts are small, manually reviewed fixtures and do not generalize source discovery.
+
+Validation: 1,231 web tests and 91 script tests pass; workspace checks pass with nine pre-existing lint warnings. The previous pushed head's GitHub CI run 41171686299 succeeded. Dedicated Gateway spend reconciled after both batches at **$1.45 / $20**. Known estimates for successful full baselines were Interlaken $0.0478725, Paris $0.058643, Reykjavik $0.0579985; exact failed-call attribution remains unknown despite aggregate billing reconciliation. No production deployment or default scheduler change.
