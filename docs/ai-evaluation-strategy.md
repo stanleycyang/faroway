@@ -774,3 +774,16 @@ bun --no-env-file scripts/uat/evaluate-traces.ts artifacts/uat/traces/dining-rep
 ```
 
 Known address contradictions now make this command exit 1; unresolved counts remain explicit and must not be interpreted as approval. The CLI also refuses envelopes marked `started` or `failed`, preventing failed paid-call receipts from passing on copied upstream output. Legacy receipts without a status remain supported. No new live AI calls or production changes in this iteration; budget remains last reconciled at $1.18/$20.
+
+
+### Frozen official-page address extraction pilot (2026-10-31)
+
+Added an isolated `address-extraction-live.ts` runner using the existing SDK/Gateway stack, with explicit-live, staging and dedicated-key guards, one model call, no retries, output-token/time limits, private receipts, and input/prompt hashes. `fetch-grounding-pages.py --addresses` fetches only the four reviewed official URLs, with redirects disabled and response-size/time limits. All four pages retrieved successfully. Raw page text stays in ignored private artifacts; the model receives the requested branch names and retrieved text, **not** the fixture's reviewed or rejected addresses. The runner never edits trips, coordinates, evidence fixtures, or production state.
+
+One low-thinking Gemini 3 Flash call: **2.446 s**, 6,059 input / 430 output tokens, approximately **$0.0043195** at the existing model estimate. No search/tool charges; the four HTTP fetches are outside model latency. All four extracted address strings occur verbatim inside contiguous quotes in the supplied pages. AFURI Roppongi Hills, Sakura-tei and Monmouth Tea exactly match the reviewed source addresses. Pastéis de Belém copied the page's whitespace-separated address while the manually authored fixture inserted commas: evidence linkage passes but strict reviewed-string equality fails. This is a formatting review case, not evidence of a wrong venue. Do not loosen identity matching merely to turn this case green.
+
+The AFURI and Monmouth extractions recover the official addresses that contradict the earlier generated recommendations. This is a useful correction capability, but not yet automatic verification: the audit deliberately keeps `branchIdentityVerified` and `coordinatesVerified` false. A genuine quote for a different branch remains possible and has a negative regression test. Tests also reject invented address fragments, mismatched sources, duplicate claims, missing pages and unknown addresses. Current official URL selection is manually reviewed; scalable discovery and branch matching are still missing.
+
+Private artifacts: `artifacts/uat/address-pages-20261031.json` and `artifacts/uat/address-extraction-20261031.json`. Next work should connect retrieval, branch adjudication and correction into the experimental planner with explicit uncertainty and cost bounds, then evaluate on fresh destinations/holdouts. Do not present this four-page extraction pilot as end-to-end traveler acceptance.
+
+Validation: workspace type/lint/format checks pass, and all 89 script tests pass. Dedicated Gateway budget reconciled after the extraction call: **$1.19 / $20**.

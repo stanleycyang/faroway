@@ -70,3 +70,74 @@ test("refuses invalid calendar dates", () => {
     auditGroundingEvidence([claim], { museum: url }, [page], "2026-02-30"),
   ).toThrow();
 });
+
+import { auditAddressExtraction } from "../uat/lib/address-extraction";
+const addressFact = {
+  id: "branch",
+  destination: "Tokyo, Japan",
+  aliases: ["Branch"],
+  sourceUrl: url,
+  observedAt: "2026-10-31",
+  sourceAddress: "6-4-1 Roppongi",
+  supportedAddresses: [],
+  contradictedAddresses: [],
+};
+const addressPage = {
+  url,
+  text: "Branch address: 6-4-1 Roppongi. Other branch: 1-2-3 Shibuya.",
+};
+const addressClaim = {
+  id: "branch",
+  sourceUrl: url,
+  address: "6-4-1 Roppongi",
+  evidenceQuote: "Branch address: 6-4-1 Roppongi.",
+};
+test("address extraction links exact text without certifying branch identity", () => {
+  const r = auditAddressExtraction(
+    [addressClaim],
+    [addressFact],
+    [addressPage],
+  )[0];
+  expect(r.evidenceLinked).toBe(true);
+  expect(r.matchesReviewedAddress).toBe(true);
+  expect(r.branchIdentityVerified).toBe(false);
+  expect(r.coordinatesVerified).toBe(false);
+});
+test("another branch's real quote cannot match the reviewed address", () => {
+  const r = auditAddressExtraction(
+    [
+      {
+        ...addressClaim,
+        address: "1-2-3 Shibuya",
+        evidenceQuote: "Other branch: 1-2-3 Shibuya.",
+      },
+    ],
+    [addressFact],
+    [addressPage],
+  )[0];
+  expect(r.evidenceLinked).toBe(true);
+  expect(r.matchesReviewedAddress).toBe(false);
+});
+test("fabricated corrections and unavailable pages cannot link evidence", () => {
+  for (const claim of [
+    { ...addressClaim, address: "6-2-31 Roppongi" },
+    { ...addressClaim, evidenceQuote: "Branch address: 6-2-31 Roppongi." },
+    { ...addressClaim, sourceUrl: "https://other.example" },
+    { ...addressClaim, address: null },
+  ]) {
+    expect(
+      auditAddressExtraction([claim], [addressFact], [addressPage])[0]
+        .evidenceLinked,
+    ).toBe(false);
+  }
+  expect(
+    auditAddressExtraction([addressClaim], [addressFact], [])[0].evidenceLinked,
+  ).toBe(false);
+  expect(
+    auditAddressExtraction(
+      [addressClaim, addressClaim],
+      [addressFact],
+      [addressPage],
+    )[0].issues,
+  ).toContain("duplicate_claim");
+});

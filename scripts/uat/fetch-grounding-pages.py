@@ -51,12 +51,13 @@ def fetch_page(url):
         return {"url": url, "observedAt": observed, "error": str(error)}
 
 
-if len(sys.argv) != 2:
-    sys.exit("Usage: python3 scripts/uat/fetch-grounding-pages.py NEW_OUTPUT_JSON")
+if len(sys.argv) not in (2, 3) or (len(sys.argv) == 3 and sys.argv[2] != "--addresses"):
+    sys.exit("Usage: python3 scripts/uat/fetch-grounding-pages.py NEW_OUTPUT_JSON [--addresses]")
 output = pathlib.Path(sys.argv[1])
 if output.exists():
     sys.exit("Output exists; preserve previous evidence")
-facts = json.loads((pathlib.Path(__file__).parent.parent / "fixtures/agentic-venue-constraints.json").read_text())
+fixture = "agentic-venue-addresses.json" if len(sys.argv) == 3 else "agentic-venue-constraints.json"
+facts = json.loads((pathlib.Path(__file__).parent.parent / "fixtures" / fixture).read_text())
 urls = sorted({fact["sourceUrl"] for fact in facts})
 with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
     pages = list(pool.map(fetch_page, urls))
