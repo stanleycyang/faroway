@@ -729,3 +729,26 @@ automatic main deployments. Current production is still deployment
 merged changes beyond this two-file fix; a production rollout needs verification
 of that full release delta. The deployment hold was not changed. Experimental
 compiler and grounding work stays in draft PR #55 and is not released.
+
+
+### Bounded dining resupply experiment (2026-10-31)
+
+Diagnosed compatible-meal inventory gaps against frozen compiled visits: Lisbon had one Belém breakfast gap (nearest supplied candidate 4.87 km); Tokyo had five gaps (nearest candidates roughly 6–9 km). Distances use generated coordinates and are not route evidence. Added an offline coverage analyzer and an explicit-live, staging-only runner that refuses source drift before spending, freezes visit/date/slot assignments, records one-call usage and provenance, preserves hotel selection, and aborts further paid batching when billing is unknown. Unknown coordinates request evidence rather than automatic resupply. Production callers and defaults are unchanged.
+
+| Frozen case | Initial repair: candidates / latency / estimated USD | Focused repair: candidates / latency / estimated USD | Apparent coverage gaps |
+| --- | --- | --- | --- |
+| Lisbon | 11 / 9.127 s / $0.0062135 | 2 / 3.172 s / $0.0021175 | 1 → 0 in both |
+| Tokyo | 12 / 14.825 s / $0.0105525 | 8 / 6.350 s / $0.0045445 | 5 → 0 in both |
+
+All four calls recorded usage with no fallback and retained the exact selected visits. Estimates exclude the frozen upstream generation. These are one sample per case per revision, not statistically established savings. Initial repair still requested the generic city-wide meal mix and returned unrelated venues: rejected as a targeting result. Focused revision removes that conflicting paragraph and requests at most two candidates per target area (maximum 12). The model can still supply extra meal labels; no claim that prompt obedience establishes identity, availability, or suitability. Raw receipts are private ignored artifacts under `artifacts/uat/traces/dining-repair[-focused]-20261031/`.
+
+Manual source review exposes why these results are not ready for production:
+
+- Lisbon's selected Pastéis de Belém address agrees with its [official contact page](https://pasteisdebelem.pt/en/contact/), observed 2026-10-31. Current published hours support morning service, not a guarantee of future-date availability, dietary suitability, or queue time.
+- Initial Tokyo selected “Afuri Roppongi Hills” at **6-2-31 Roppongi**. Its [official branch directory](https://www.afuri.com/findus/), observed 2026-10-31, instead lists **6-4-1 Roppongi**, METRO HAT/HOLLYWOOD PLAZA B2F. Treat the generated branch address as contradicted even though coordinate coverage passed.
+- Initial Tokyo selected “Monk” at **3-21-1 Sendagaya**. Search did not establish that venue/address identity; this remains unresolved, not proof of nonexistence. Do not silently substitute a similarly named venue elsewhere.
+- Focused Tokyo selections (Ippudo Roppongi, Sakura-tei, Monmouth Tea, Maisen Aoyama, Daikanyama Hyoushi) have not yet been independently verified. Both focused cases remain `qualityAccepted: false`.
+
+Next gate: build venue identity/address/meal-service evidence checks from official sources, with explicit contradicted and unresolved outcomes, then re-evaluate repaired schedules. Do not optimize solely for generated-coordinate coverage. Existing release gates (holdouts, accessibility/allergy evidence, highlighted visit retention, narration and app latency) still apply.
+
+Validation: workspace type/lint/format checks pass (9 pre-existing lint warnings); 1,230 web tests and 79 script tests pass. Dedicated nonrenewing Gateway budget reconciled at **$1.18 / $20** after these four calls. No production deployment or default-model change.

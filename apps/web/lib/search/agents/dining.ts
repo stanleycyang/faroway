@@ -17,6 +17,7 @@ import {
 import { reservationUrlFromEvidence } from "@/lib/search/reservation-url";
 import { z } from "zod";
 import { SearchPlan, DiningResult } from "../types";
+import type { DiningCoverageTarget } from "../dining-coverage";
 import { VIBE_KEYWORDS } from "@faroway/constants";
 import {
   enrichWithTripAdvisor,
@@ -93,6 +94,10 @@ IMPORTANT: For the "images" field, return an EMPTY array []. Do NOT generate or 
 export async function runDiningAgent(
   plan: SearchPlan,
   count: number = 12,
+  options: {
+    coverageTargets?: DiningCoverageTarget[];
+    existingNames?: string[];
+  } = {},
 ): Promise<DiningResult[]> {
   const { destination, dates, diningCriteria, vibeInterpretation } = plan;
   const { cuisineTypes, priceRange, dietaryNeeds, mealPriorities } =
@@ -106,7 +111,14 @@ export async function runDiningAgent(
   };
   const priceLevels = priceLevelMap[priceRange] || [2, 3];
 
-  const prompt = `Generate ${count} restaurant recommendations for ${destination}.
+  const targets = options.coverageTargets?.slice(0, 8);
+  const coveragePrompt = targets?.length
+    ? `\nThis is a focused inventory-repair request. Return at most ${count} new real venues for these missing areas and meal types: ${JSON.stringify(targets)}.
+The area labels come from unverified activity inventory, not verified routes. Prioritize these targets over the generic meal mix below. Do not fill other areas just to meet the count; return fewer venues if uncertain. Do not invent names, locations, hours, prices, or suitability to satisfy a target.
+Existing venue names (do not repeat): ${JSON.stringify(options.existingNames ?? [])}.
+Party: ${plan.adults ?? "unspecified"} adults, ${plan.children ?? 0} children. Suitability still requires current evidence.\n`
+    : "";
+  const prompt = `Generate ${count} restaurant recommendations for ${destination}.${coveragePrompt}
 
 **Dining Preferences:**
 - ${dates.nights + 1} days of dining
@@ -120,13 +132,17 @@ export async function runDiningAgent(
 
 **Vibes to match:** ${vibeInterpretation.vibes.join(", ")}
 
-Generate a diverse mix of:
+${
+  targets?.length
+    ? "Only return venues serving a requested meal in a requested area. Omit generic city-wide recommendations and all unrelated meal types. Returning an empty list is preferable to guessing."
+    : `Generate a diverse mix of:
 - 3-4 breakfast/brunch spots
 - 4-5 lunch options
 - 4-5 dinner restaurants
 - Include both local favorites and hidden gems
 - Mix of price levels within the range
-- Cover the major sightseeing neighborhoods and the requested hotel areas: ${plan.hotelCriteria?.neighborhoods?.join(", ") || "central visitor areas"}. Include breakfast and lunch options outside the central nightlife district. Do not invent a venue to fill geographic gaps.
+- Cover the major sightseeing neighborhoods and the requested hotel areas: ${plan.hotelCriteria?.neighborhoods?.join(", ") || "central visitor areas"}. Include breakfast and lunch options outside the central nightlife district. Do not invent a venue to fill geographic gaps.`
+}
 
 For vibes like:
 - "Foodie" → renowned restaurants, food markets, unique experiences
