@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { test, expect } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { resolve, join } from "node:path";
@@ -212,6 +213,90 @@ test("hotel replay refuses unsafe or incomplete trials before a model call", () 
     expect(result.status).toBe(1);
     expect(result.stderr).toContain("Output already exists");
     expect(readFileSync(out, "utf8")).toBe("preserve this receipt");
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("hotel comparison refuses missing usage, changed inputs and mixed implementations", () => {
+  const directory = mkdtempSync(join(tmpdir(), "hotel-pair-eval-"));
+  const plan = { destination: "Singapore", children: 0 };
+  const hash = (value: unknown) =>
+    createHash("sha256").update(JSON.stringify(value)).digest("hex");
+  const trials = ["low", "minimal"].map((thinking) => ({
+    brief: "case",
+    thinking,
+    repeat: 1,
+  }));
+  writeFileSync(
+    join(directory, "manifest.json"),
+    JSON.stringify({ inputs: { case: { sha256: "a".repeat(64) } }, trials }),
+  );
+  const receipt = (thinking: string) => ({
+    kind: "hotel-only-frozen-plan-replay",
+    status: "completed",
+    briefId: "case",
+    settings: {
+      PLANNING_THINKING_HOTELS: thinking,
+      PLANNING_MODEL_HOTELS: "google/gemini-3-flash",
+    },
+    fallbacks: [],
+    estimatedUsd: 0.01,
+    latencyMs: 100,
+    hotels: Array.from({ length: 10 }, (_, i) => ({
+      name: `Unknown ${i}`,
+      amenities: [],
+    })),
+    usageRecords: [
+      {
+        step: "hotels",
+        model: "google/gemini-3-flash",
+        thinkingLevel: thinking,
+        inputTokens: 100,
+        outputTokens: 100,
+        reasoningTokens: 0,
+      },
+    ],
+    provenance: {
+      frozenInputSha256: "a".repeat(64),
+      sourceSha256: "b".repeat(64),
+      planSha256: hash(plan),
+      plan,
+    },
+  });
+  const run = () =>
+    spawnSync(
+      process.execPath,
+      ["--no-env-file", "scripts/uat/evaluate-hotel-replays.ts", directory],
+      { cwd: root, encoding: "utf8" },
+    );
+  try {
+    writeFileSync(
+      join(directory, "case--low--1.json"),
+      JSON.stringify(receipt("low")),
+    );
+    const path = join(directory, "case--minimal--1.json");
+    writeFileSync(path, JSON.stringify(receipt("minimal")));
+    const valid = run();
+    expect(valid.status).toBe(0);
+    expect(JSON.parse(valid.stdout).qualityAccepted).toBe(false);
+    for (const mutate of [
+      (r: ReturnType<typeof receipt>) => {
+        r.usageRecords = [];
+      },
+      (r: ReturnType<typeof receipt>) => {
+        r.provenance.plan.children = 1;
+        r.provenance.planSha256 = hash(r.provenance.plan);
+      },
+      (r: ReturnType<typeof receipt>) => {
+        r.provenance.sourceSha256 = "c".repeat(64);
+      },
+    ]) {
+      const changed = structuredClone(receipt("minimal"));
+      mutate(changed);
+      writeFileSync(path, JSON.stringify(changed));
+      expect(run().status).toBe(1);
+    }
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

@@ -1,3 +1,5 @@
+import hotelFacts from "../fixtures/agentic-hotel-constraints.json";
+import { evaluateHotelConstraints } from "../uat/lib/hotel-constraints";
 import seasonalFacts from "../fixtures/agentic-venue-constraints.json";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -648,4 +650,53 @@ test("new live NYC conflicts use exact reviewed venues without transferring hour
       seasonalFacts,
     ).map((f) => f.venueId),
   ).toEqual(["frick-madison-former-location"]);
+});
+
+test("reviewed hotel policies detect the family and invented-lift regression without transferring branch facts", () => {
+  const hotel = {
+    name: "Heritage Collection on Chinatown",
+    amenities: ["Elevator"],
+  };
+  const family = { destination: "Singapore, Singapore", children: 2 };
+  const result = evaluateHotelConstraints(family, [hotel], hotelFacts);
+  expect(result.findings.map((f) => f.finding)).toEqual([
+    "party_conflicts_with_published_minimum_guest_age",
+    "lift_amenity_contradicted_by_published_property_information",
+  ]);
+  expect(result.qualityAccepted).toBe(false);
+  expect(result.uncheckedHotels).toBe(0);
+  expect(
+    evaluateHotelConstraints(
+      { ...family, children: 0 },
+      [{ ...hotel, amenities: ["No elevator"] }],
+      hotelFacts,
+    ).findings,
+  ).toHaveLength(0);
+  expect(
+    evaluateHotelConstraints(
+      { ...family, children: 0, childAges: [0] },
+      [{ ...hotel, amenities: [] }],
+      hotelFacts,
+    ).findings,
+  ).toHaveLength(1);
+  for (const name of [
+    "Heritage Collection on Clarke Quay",
+    "Heritage Collection on Chinatown Annex",
+  ]) {
+    const unknown = evaluateHotelConstraints(
+      family,
+      [{ ...hotel, name }],
+      hotelFacts,
+    );
+    expect(unknown.findings).toHaveLength(0);
+    expect(unknown.uncheckedHotels).toBe(1);
+    expect(unknown.qualityAccepted).toBe(false);
+  }
+  expect(
+    evaluateHotelConstraints(
+      { ...family, destination: "New York, USA" },
+      [hotel],
+      hotelFacts,
+    ).matchedHotels,
+  ).toBe(0);
 });
