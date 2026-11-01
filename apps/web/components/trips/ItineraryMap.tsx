@@ -1,5 +1,6 @@
 "use client";
 
+import { suppliedCoordinates } from "@/lib/location-coordinates";
 import { useEffect, useRef, useMemo } from "react";
 import L from "leaflet";
 import type { GeneratedItinerary } from "@/lib/ai/types";
@@ -23,16 +24,6 @@ const TIME_COLORS: Record<string, string> = {
   afternoon: "#F25D3B", // primary/red-orange
   evening: "#8B5CF6", // purple
 };
-
-function validCoordinates(coords: { lat: number; lng: number } | undefined) {
-  return (
-    coords &&
-    Number.isFinite(coords.lat) &&
-    Number.isFinite(coords.lng) &&
-    Math.abs(coords.lat) <= 90 &&
-    Math.abs(coords.lng) <= 180
-  );
-}
 
 export function extractMarkers(itinerary: GeneratedItinerary): MapMarker[] {
   const markers: MapMarker[] = [];
@@ -62,7 +53,7 @@ export function extractMarkers(itinerary: GeneratedItinerary): MapMarker[] {
       ) as SlotItem[];
       for (const activity of activities) {
         const coords = activity.location?.coordinates;
-        if (coords && validCoordinates(coords) && activity.name) {
+        if (coords && suppliedCoordinates(coords) && activity.name) {
           markers.push({
             lat: coords.lat,
             lng: coords.lng,
@@ -75,7 +66,7 @@ export function extractMarkers(itinerary: GeneratedItinerary): MapMarker[] {
       }
       for (const meal of meals) {
         const coords = meal.location?.coordinates;
-        if (coords && validCoordinates(coords) && meal.name) {
+        if (coords && suppliedCoordinates(coords) && meal.name) {
           markers.push({
             lat: coords.lat,
             lng: coords.lng,
