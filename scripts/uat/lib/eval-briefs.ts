@@ -24,6 +24,21 @@ function brief(
 }
 export const DEVELOPMENT_BRIEFS: UatBrief[] = [
   ...UAT_BRIEFS,
+  brief("queenstown-regional", "Queenstown, New Zealand", 5, {
+    interests: ["nature", "food"],
+    vibes: ["relaxed"],
+    mobilityNeeds:
+      "Prefer short walks, avoid strenuous hikes, and allow rest between excursions",
+  }),
+  brief("athens-group", "Athens, Greece", 3, {
+    travelers: 6,
+    adults: 6,
+    travelerType: "friends",
+    budget: "budget",
+    interests: ["history", "food"],
+    mobilityNeeds:
+      "Keep the group together and leave time for relaxed shared meals",
+  }),
   brief("tokyo-solo-budget", "Tokyo, Japan", 3, {
     travelers: 1,
     adults: 1,

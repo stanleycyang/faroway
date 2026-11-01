@@ -115,7 +115,33 @@ async function main() {
       throw new Error(`Invalid ${flag} selection`);
     return ids.map((id) => items.find((item) => item.id === id)!);
   };
-  const configs = select(MODEL_COMPARE_CONFIGS, "--configs");
+  const compiledNarrated = process.argv.includes("--compiled-narrated");
+  const selectedConfigs = select(MODEL_COMPARE_CONFIGS, "--configs");
+  if (
+    compiledNarrated &&
+    (selectedConfigs.length !== 1 || selectedConfigs[0].id !== "flash-low")
+  )
+    throw new Error("Compiled candidate requires --configs flash-low");
+  const configs = compiledNarrated
+    ? selectedConfigs.map((config) => ({
+        ...config,
+        id: "compiled-minimal",
+        label:
+          "Compiled schedule with minimal narration and low-thinking upstream agents",
+        env: { ...config.env, PLANNING_THINKING_AGGREGATOR: "minimal" },
+      }))
+    : selectedConfigs;
+  if (compiledNarrated) {
+    process.env.FAROWAY_SCHEDULE_EXPERIMENT = "compiled-narrated-v1";
+    const { compiledScheduleExperimentEnabled } =
+      await import("../lib/search/staging-schedule-experiment");
+    if (
+      !compiledScheduleExperimentEnabled({ ...process.env, ...configs[0].env })
+    )
+      throw new Error(
+        "Compiled candidate requires the isolated staging environment",
+      );
+  } else delete process.env.FAROWAY_SCHEDULE_EXPERIMENT;
   const suite = arg("--suite") ?? "uat";
   if (!["uat", "development", "holdout"].includes(suite))
     throw new Error("Invalid --suite");
@@ -140,6 +166,16 @@ async function main() {
     ...["orchestrator", "hotels", "activities", "dining", "aggregator"].map(
       (name) => `apps/web/lib/search/agents/${name}.ts`,
     ),
+    "apps/web/scripts/model-compare-live.ts",
+    "apps/web/lib/search/staging-schedule-experiment.ts",
+    "apps/web/lib/search/schedule-compiler.ts",
+    "apps/web/lib/search/meal-boundaries.ts",
+    "apps/web/lib/search/schedule-narration.ts",
+    "apps/web/lib/search/narration-prompt.ts",
+    "apps/web/lib/search/highlight-match.ts",
+    "apps/web/lib/search/party-suitability.ts",
+    "scripts/uat/lib/venue-constraints.ts",
+    "scripts/fixtures/agentic-venue-constraints.json",
     "apps/web/lib/search/bridge.ts",
     "apps/web/lib/search/supplied-distance.ts",
     "apps/web/lib/search/fallback-itinerary.ts",
@@ -211,7 +247,12 @@ async function main() {
           brief,
           source,
           startedAt: new Date().toISOString(),
-          settings: config.env,
+          settings: {
+            ...config.env,
+            ...(compiledNarrated
+              ? { FAROWAY_SCHEDULE_EXPERIMENT: "compiled-narrated-v1" }
+              : {}),
+          },
           steps: [],
         };
         saveTrace();

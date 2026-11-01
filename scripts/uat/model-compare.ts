@@ -43,6 +43,7 @@ async function main() {
 --dry-run and --mock do not call a model and do not need the gateway key.
 --live reads FAROWAY_STAGING_AI_GATEWAY_KEY from the environment, refuses to start without it, and stops between steps once estimated spend reaches $20 or usage is unknown. An in-flight call can exceed this threshold; configure the dedicated gateway key with a billing cap.
 Use --suite development|holdout|uat (default uat) to select a case set. Holdouts are reserved for final validation, not tuning.
+Use --compiled-narrated with --configs flash-low for the isolated staging candidate (minimal narration).
 Use --configs and --briefs with comma-separated IDs to bound a live batch; --cap-usd can lower its stop threshold. --trace-dir stores replayable agent outputs and deterministic evaluations (0600).
 The key is never accepted as a command argument.
 An API URL, when set, must match the pinned staging readiness alias. Production and arbitrary preview hosts are refused.`);
@@ -79,6 +80,7 @@ An API URL, when set, must match the pinned staging readiness alias. Production 
       "--live",
       "--supabase-url",
       staging,
+      ...(has("--compiled-narrated") ? ["--compiled-narrated"] : []),
       ...[
         "--configs",
         "--briefs",

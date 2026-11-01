@@ -193,6 +193,18 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
         }[slotName];
         if (!strings(meal.mealTypes).includes(expectedMeal))
           fail(`day_${index + 1}:${slotName}:incompatible_meal_type`);
+        // A meal named in an activity is a review signal, not proof that food
+        // is included. Preserve both options until inclusion is verified.
+        if (
+          items.some((item) =>
+            new RegExp(`\\b${expectedMeal}\\b`, "i").test(
+              String(object(item).name ?? ""),
+            ),
+          )
+        )
+          warnings.push(
+            `day_${index + 1}:${slotName}:possible_duplicate_${expectedMeal}_activity_and_restaurant`,
+          );
         // An empty activity slot still needs a meal near the day's other stops.
         const anchors = items.length
           ? items

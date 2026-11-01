@@ -345,7 +345,7 @@ test("route screening treats missing, invalid and placeholder coordinates as unk
 test("development and reserved holdout briefs have distinct IDs and valid bounded dates and parties", () => {
   const cases = [...DEVELOPMENT_BRIEFS, ...HOLDOUT_BRIEFS];
   expect(new Set(cases.map((c) => c.id)).size).toBe(cases.length);
-  expect(DEVELOPMENT_BRIEFS.length).toBe(12);
+  expect(DEVELOPMENT_BRIEFS.length).toBe(14);
   expect(HOLDOUT_BRIEFS.length).toBe(6);
   for (const brief of cases) {
     expect(brief.travelers).toBe(brief.adults + brief.children);
@@ -567,4 +567,19 @@ test("meal comparison exposes unknowns and rejects mismatched or changed traces"
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("flags a named meal experience plus a separate restaurant without asserting meal inclusion", () => {
+  const trace = fixture();
+  const activities = trace.steps[2].output as Array<{ name: string }>;
+  activities[0].name = "Winery Breakfast & Tasting";
+  const result = evaluateAgenticTrace(trace);
+  expect(result.contractPass).toBe(true);
+  expect(result.warnings).toContain(
+    "day_1:morning:possible_duplicate_breakfast_activity_and_restaurant",
+  );
+  activities[0].name = "Winery Tour";
+  expect(evaluateAgenticTrace(trace).warnings.join(" ")).not.toContain(
+    "possible_duplicate",
+  );
 });

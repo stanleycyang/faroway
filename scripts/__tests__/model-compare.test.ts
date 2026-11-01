@@ -247,3 +247,19 @@ test("unknown billing still counts elapsed time and fallback failures", async ()
   expect(report.rows[0]?.fallbackRate).toBe(1);
   expect(report.rows[0]?.estimatedUsd).toBe(null);
 });
+
+test("compiled live candidate rejects unsupported mixes and non-staging environments before model calls", () => {
+  const args = ["--live", "--compiled-narrated", "--supabase-url", stagingUrl];
+  const env = {
+    FAROWAY_STAGING_AI_GATEWAY_KEY: "invalid-preflight-test-key",
+    FAROWAY_STAGING_SUPABASE_PROJECT_REF: STAGING_PROJECT_REF,
+  };
+  const mixed = runCli(args, env);
+  expect(mixed.status).not.toBe(0);
+  expect(mixed.stderr).toContain("requires --configs flash-low");
+  const nonStaging = runCli([...args, "--configs", "flash-low"], env);
+  expect(nonStaging.status).not.toBe(0);
+  expect(nonStaging.stderr).toContain(
+    "requires the isolated staging environment",
+  );
+});
