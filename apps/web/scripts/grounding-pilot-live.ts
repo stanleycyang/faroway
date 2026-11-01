@@ -297,6 +297,8 @@ async function main() {
     );
     if (!billingKnown) process.exitCode = 3;
     else if (venueAudit && !venueAudit.shapeValid) process.exitCode = 4;
+    else if (venueAudit && !venueAudit.retrievalEvidencePresent)
+      process.exitCode = 5;
     console.log(
       JSON.stringify({
         status: "completed",

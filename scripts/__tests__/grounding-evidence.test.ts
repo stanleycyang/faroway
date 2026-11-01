@@ -541,3 +541,21 @@ test("venue discovery rejects missing, duplicate, substituted and malformed clai
       auditVenueSourceDiscovery({ venues }, [publicVenue], []).shapeValid,
     ).toBe(false);
 });
+
+test("venue discovery requires URL retrieval evidence independently of valid output", () => {
+  const output = { venues: [venueLead] };
+  for (const sources of [[], [{ title: "Claimed official source" }]]) {
+    const audit = auditVenueSourceDiscovery(output, [publicVenue], sources);
+    expect(audit.shapeValid).toBe(true);
+    expect(audit.retrievalEvidencePresent).toBe(false);
+    expect(audit.qualityAccepted).toBe(false);
+  }
+  const audit = auditVenueSourceDiscovery(
+    output,
+    [publicVenue],
+    [{ url: "https://search.example/redirect" }],
+  );
+  expect(audit.retrievalEvidencePresent).toBe(true);
+  expect(audit.leads[0]?.returnedUrlInSources).toBe(false);
+  expect(audit.identityVerified).toBe(false);
+});

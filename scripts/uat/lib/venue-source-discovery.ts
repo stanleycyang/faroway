@@ -160,6 +160,7 @@ export function auditVenueSourceDiscovery(
     issues,
     leads,
     retrievedSourceCount: retrievedSources.length,
+    retrievalEvidencePresent: retrievedUrls.size > 0,
     automaticFetchAllowed: false as const,
     identityVerified: false as const,
     factsVerified: false as const,
