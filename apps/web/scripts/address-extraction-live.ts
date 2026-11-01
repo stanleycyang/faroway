@@ -2,15 +2,16 @@
 import { createGateway, generateText, Output, jsonSchema } from "ai";
 import { z } from "zod";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { dirname, resolve } from "node:path";
 import { createHash } from "node:crypto";
 import { assertStagingTarget } from "../../../scripts/uat/lib/staging-project";
 import {
   auditAddressExtraction,
+  validateAddressRequests,
   type ExtractedAddress,
 } from "../../../scripts/uat/lib/address-extraction";
 import type { RetrievedVenuePage } from "../../../scripts/uat/lib/grounding-evidence";
-import facts from "../../../scripts/fixtures/agentic-venue-addresses.json";
+import defaultFacts from "../../../scripts/fixtures/agentic-venue-addresses.json";
 const arg = (name: string) => {
   const i = process.argv.indexOf(name);
   return i < 0 ? undefined : process.argv[i + 1];
@@ -29,11 +30,26 @@ async function main() {
   if (!input || !out || existsSync(out))
     throw new Error("Existing --pages and new --out required");
   const bytes = readFileSync(input);
+  const requestPath = arg("--requests");
+  const requestBytes = requestPath ? readFileSync(requestPath) : undefined;
+  if (requestBytes && requestBytes.length > 25_000)
+    throw new Error("Request manifest exceeds limit");
+  const facts = validateAddressRequests(
+    requestBytes ? JSON.parse(requestBytes.toString()) : defaultFacts,
+  );
+  const expectedUrls = new Set(facts.map((fact) => fact.sourceUrl));
   const pages = JSON.parse(bytes.toString()) as RetrievedVenuePage[];
   if (
     !Array.isArray(pages) ||
-    pages.length !== facts.length ||
-    bytes.length > 150000
+    pages.length !== expectedUrls.size ||
+    bytes.length > 150000 ||
+    pages.some(
+      (page) =>
+        typeof page?.url !== "string" ||
+        typeof page.text !== "string" ||
+        !page.text.trim() ||
+        page.error,
+    )
   )
     throw new Error("Invalid or oversized page batch");
   for (const fact of facts) {
@@ -93,6 +109,25 @@ async function main() {
     model: "google/gemini-3-flash",
     modelCallsMaximum: 1,
     automaticTripEdits: false,
+    requestSha256: createHash("sha256")
+      .update(JSON.stringify(facts))
+      .digest("hex"),
+    expectedRequests: facts.length,
+    implementationSha256: createHash("sha256")
+      .update(
+        readFileSync(
+          resolve(import.meta.dirname, "address-extraction-live.ts"),
+        ),
+      )
+      .update(
+        readFileSync(
+          resolve(
+            import.meta.dirname,
+            "../../../scripts/uat/lib/address-extraction.ts",
+          ),
+        ),
+      )
+      .digest("hex"),
   };
   mkdirSync(dirname(out), { recursive: true, mode: 0o700 });
   writeFileSync(out, JSON.stringify({ status: "started", provenance }), {
@@ -133,6 +168,7 @@ async function main() {
     );
     if (result.usage.inputTokens == null || result.usage.outputTokens == null)
       process.exitCode = 3;
+    else if (audit.some((row) => !row.evidenceLinked)) process.exitCode = 4;
   } catch (error) {
     writeFileSync(
       out,

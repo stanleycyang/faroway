@@ -72,7 +72,10 @@ test("refuses invalid calendar dates", () => {
   ).toThrow();
 });
 
-import { auditAddressExtraction } from "../uat/lib/address-extraction";
+import {
+  auditAddressExtraction,
+  validateAddressRequests,
+} from "../uat/lib/address-extraction";
 const addressFact = {
   id: "branch",
   destination: "Tokyo, Japan",
@@ -103,6 +106,32 @@ test("address extraction links exact text without certifying branch identity", (
   expect(r.matchesReviewedAddress).toBe(true);
   expect(r.branchIdentityVerified).toBe(false);
   expect(r.coordinatesVerified).toBe(false);
+});
+test("generic requests do not manufacture a reviewed reference address", () => {
+  const requests = validateAddressRequests([
+    {
+      id: "branch",
+      destination: "Tokyo, Japan",
+      aliases: ["Branch"],
+      sourceUrl: url,
+    },
+  ]);
+  const result = auditAddressExtraction([addressClaim], requests, [
+    addressPage,
+  ])[0];
+  expect(result.evidenceLinked).toBe(true);
+  expect(result.referenceAddressProvided).toBe(false);
+  expect(result.matchesReviewedAddress).toBe(null);
+  expect(result.branchIdentityVerified).toBe(false);
+  for (const invalid of [
+    [],
+    Array(9).fill(requests[0]),
+    [requests[0], requests[0]],
+    [{ ...requests[0], aliases: [] }],
+    [{ ...requests[0], sourceUrl: "http://example.com" }],
+    [{ ...requests[0], sourceUrl: "https://user:password@example.com" }],
+  ])
+    expect(() => validateAddressRequests(invalid)).toThrow();
 });
 test("another branch's real quote cannot match the reviewed address", () => {
   const r = auditAddressExtraction(

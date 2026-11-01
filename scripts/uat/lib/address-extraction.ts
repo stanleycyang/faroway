@@ -1,6 +1,59 @@
 import type { VenueAddressEvidence } from "./venue-address-evidence";
 import type { RetrievedVenuePage } from "./grounding-evidence";
 
+export type AddressExtractionRequest = Pick<
+  VenueAddressEvidence,
+  "id" | "destination" | "aliases" | "sourceUrl"
+> & { sourceAddress?: string };
+
+export function validateAddressRequests(
+  value: unknown,
+): AddressExtractionRequest[] {
+  if (!Array.isArray(value) || !value.length || value.length > 8)
+    throw new Error("Requires 1–8 address requests");
+  const ids = new Set<string>();
+  for (const row of value) {
+    if (
+      !row ||
+      typeof row !== "object" ||
+      typeof row.id !== "string" ||
+      !row.id.trim() ||
+      row.id.length > 100 ||
+      ids.has(row.id) ||
+      typeof row.destination !== "string" ||
+      !row.destination.trim() ||
+      row.destination.length > 200 ||
+      !Array.isArray(row.aliases) ||
+      !row.aliases.length ||
+      row.aliases.length > 5 ||
+      !row.aliases.every(
+        (name: unknown) =>
+          typeof name === "string" && name.trim() && name.length <= 200,
+      ) ||
+      typeof row.sourceUrl !== "string" ||
+      row.sourceUrl.length > 2048 ||
+      (row.sourceAddress !== undefined &&
+        (typeof row.sourceAddress !== "string" ||
+          !row.sourceAddress.trim() ||
+          row.sourceAddress.length > 500))
+    )
+      throw new Error("Invalid or duplicate address request");
+    const url = new URL(row.sourceUrl);
+    if (url.protocol !== "https:" || url.username || url.password)
+      throw new Error("Approved source must be HTTPS without credentials");
+    ids.add(row.id);
+  }
+  return value.map(
+    ({ id, destination, aliases, sourceUrl, sourceAddress }) => ({
+      id,
+      destination,
+      aliases,
+      sourceUrl,
+      ...(sourceAddress === undefined ? {} : { sourceAddress }),
+    }),
+  );
+}
+
 export interface ExtractedAddress {
   id: string;
   sourceUrl: string;
@@ -13,7 +66,7 @@ const normalize = (s: string) =>
 /** Verifies copied text, not branch identity or suitability. No automatic itinerary edits. */
 export function auditAddressExtraction(
   claims: ExtractedAddress[],
-  facts: VenueAddressEvidence[],
+  facts: AddressExtractionRequest[],
   pages: RetrievedVenuePage[],
 ) {
   return facts.map((fact) => {
@@ -42,7 +95,10 @@ export function auditAddressExtraction(
       id: fact.id,
       evidenceLinked: issues.length === 0,
       matchesReviewedAddress:
-        issues.length === 0 && address === normalize(fact.sourceAddress),
+        fact.sourceAddress === undefined
+          ? null
+          : issues.length === 0 && address === normalize(fact.sourceAddress),
+      referenceAddressProvided: fact.sourceAddress !== undefined,
       branchIdentityVerified: false as const,
       coordinatesVerified: false as const,
       issues,
