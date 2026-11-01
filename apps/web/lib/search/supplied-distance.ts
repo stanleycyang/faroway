@@ -1,20 +1,9 @@
+import { suppliedCoordinates } from "../location-coordinates";
+
 /** Screening on supplied coordinates, not verified route or travel-time evidence. */
 export function suppliedDistanceKm(a: unknown, b: unknown): number | null {
-  function point(value: unknown): { lat: number; lng: number } | null {
-    if (!value || typeof value !== "object") return null;
-    const { lat, lng } = value as { lat?: unknown; lng?: unknown };
-    return typeof lat === "number" &&
-      Number.isFinite(lat) &&
-      Math.abs(lat) <= 90 &&
-      typeof lng === "number" &&
-      Number.isFinite(lng) &&
-      Math.abs(lng) <= 180 &&
-      !(lat === 0 && lng === 0)
-      ? { lat, lng }
-      : null;
-  }
-  const x = point(a),
-    y = point(b);
+  const x = suppliedCoordinates(a),
+    y = suppliedCoordinates(b);
   if (!x || !y) return null;
   const rad = Math.PI / 180;
   const h =

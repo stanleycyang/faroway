@@ -115,6 +115,7 @@ for (const file of [
   "apps/web/lib/search/party-suitability.ts",
   "apps/web/lib/search/bridge.ts",
   "apps/web/lib/search/supplied-distance.ts",
+  "apps/web/lib/location-coordinates.ts",
   "apps/web/lib/search/fallback-itinerary.ts",
   "scripts/uat/lib/agentic-eval.ts",
   "scripts/uat/lib/venue-constraints.ts",

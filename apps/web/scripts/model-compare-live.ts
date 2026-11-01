@@ -178,6 +178,7 @@ async function main() {
     "scripts/fixtures/agentic-venue-constraints.json",
     "apps/web/lib/search/bridge.ts",
     "apps/web/lib/search/supplied-distance.ts",
+    "apps/web/lib/location-coordinates.ts",
     "apps/web/lib/search/fallback-itinerary.ts",
     "apps/web/lib/ai/planning-step.ts",
     "apps/web/lib/ai/sdk.ts",
