@@ -6,6 +6,7 @@ import {
   isTimingNote,
   type DayTimingProposal,
 } from "@faroway/types";
+import { SourceNote } from "./SourceNote";
 import { ProposedTiming } from "./ProposedTiming";
 import { parseTripDate } from "@/lib/trips/date-duration";
 import { formatEstimate, knownEstimate } from "@/lib/trips/budget";
@@ -332,21 +333,23 @@ export function ItineraryDay({
 
           {/* Daily Tips */}
           {displayTips.length > 0 && (
-            <div className="mt-6 p-4 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl border border-primary-100/50">
-              <div className="flex items-center gap-2 text-primary-700 font-bold mb-2">
-                <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center">
+            <div className="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+              <div className="flex items-center gap-2 text-slate-900 font-semibold mb-3">
+                <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center">
                   <Lightbulb className="w-3.5 h-3.5" />
                 </div>
-                <span className="text-sm">Insider Tips</span>
+                <span className="text-sm">Before you go</span>
               </div>
               <ul className="space-y-1.5">
                 {displayTips.map((tip, i) => (
                   <li
                     key={i}
-                    className="text-sm text-primary-700 flex items-start gap-2"
+                    className="text-sm leading-relaxed text-slate-600 flex items-start gap-2"
                   >
-                    <span className="text-primary-400 mt-0.5">•</span>
-                    <span>{tip}</span>
+                    <span className="text-slate-400 mt-0.5">•</span>
+                    <span className="min-w-0 break-words">
+                      <SourceNote text={tip} />
+                    </span>
                   </li>
                 ))}
               </ul>

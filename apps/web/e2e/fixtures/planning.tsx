@@ -1,3 +1,4 @@
+import reviewedDiningOptions from "../../../../scripts/fixtures/reviewed-dining-options.json";
 import { destinationImage } from "../../lib/trips/destination-image";
 import { TripCard } from "../../components/dashboard/TripCard";
 import React, { useState } from "react";
@@ -16,8 +17,18 @@ function Fixture() {
   const destination = new URLSearchParams(location.search).get("destination");
   const [screen, setScreen] = useState(initial);
   const [selected, setSelected] = useState(0);
-  if (screen === "timing" || screen === "timing-conflict") {
+  if (
+    screen === "timing" ||
+    screen === "timing-conflict" ||
+    screen === "dining-review"
+  ) {
     const day = timingFixtureDay(screen === "timing-conflict");
+    if (screen === "dining-review") {
+      const option = reviewedDiningOptions[0];
+      day.tips = [
+        `Breakfast alternative to review: ${option.name}. ${option.supportedSummary} ${option.unresolvedSummary} This is an option to check, not a scheduled meal. Sources reviewed ${option.observedAt}: ${option.sources.join("; ")}`,
+      ];
+    }
     return (
       <main className="mx-auto min-h-screen max-w-3xl bg-slate-50 px-4 py-8">
         <ItineraryDay {...day} />

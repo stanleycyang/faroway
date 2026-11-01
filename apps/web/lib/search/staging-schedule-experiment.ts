@@ -1,3 +1,5 @@
+import { appendReviewedDiningOptions } from "./reviewed-dining-options";
+import reviewedDiningOptions from "../../../../scripts/fixtures/reviewed-dining-options.json";
 import { z } from "zod";
 import { gateway, createGateway } from "../ai/sdk";
 import {
@@ -106,7 +108,12 @@ export async function runStagingCompiledSchedule(
     [...hotelReview.selectionCandidates].sort(
       (a, b) => score(b) - score(a),
     )[0] ?? null;
-  const days = compiled.days.map((day) => ({
+  const days = appendReviewedDiningOptions(
+    plan,
+    compiled.days,
+    dining,
+    reviewedDiningOptions,
+  ).map((day) => ({
     ...day,
     hotel: topHotel ?? undefined,
   }));

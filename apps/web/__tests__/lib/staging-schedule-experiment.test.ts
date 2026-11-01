@@ -239,3 +239,48 @@ it("aborts stalled narration and returns the same draft without retrying", async
     vi.useRealTimers();
   }
 });
+
+it("keeps published dining alternatives in staging notes through narration without selecting them", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-01T00:00:00Z"));
+  try {
+    const localPlan = {
+      ...plan,
+      destination: "Singapore",
+      dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 },
+    };
+    const visit = {
+      ...activities[0],
+      name: "Singapore Botanic Gardens & National Orchid Garden",
+      duration: 60,
+      bestTimeOfDay: "morning" as const,
+    };
+    mocks.generateObject.mockResolvedValueOnce({
+      object: {
+        days: [
+          {
+            date: "2027-01-11",
+            title: "Garden day",
+            summary: "Explore the garden.",
+            activityIds: [visit.id],
+          },
+        ],
+      },
+      usage: { inputTokens: 100, outputTokens: 100 },
+    });
+    const result = await runStagingCompiledSchedule(localPlan, [], [visit], []);
+    expect(
+      result.days[0].tips.some(
+        (tip) =>
+          tip.includes("The Bloomhouse by Little Farms") &&
+          tip.includes("not a scheduled meal"),
+      ),
+    ).toBe(true);
+    expect(result.days[0].morning.meal).toBeUndefined();
+    expect(result.days[0].morning.activities.map((item) => item.id)).toEqual([
+      visit.id,
+    ]);
+  } finally {
+    vi.useRealTimers();
+  }
+});

@@ -600,3 +600,26 @@ test("proposed timing shows rest and uncertainty without duplicate notes or over
     path: testInfo.outputPath("timing-conflict.png"),
   });
 });
+
+test("dining review sources stay readable and leave the selected plan intact", async ({
+  page,
+}, testInfo) => {
+  await page.goto(`${fixtureUrl}/?screen=dining-review`);
+  await expect(page.getByText("Before you go", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(/Breakfast alternative to review: The Bloomhouse/),
+  ).toBeVisible();
+  await expect(page.getByText(/not a scheduled meal/)).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: /Source: littlefarmscafe.com/ }),
+  ).toHaveCount(2);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await page
+    .getByText("Before you go", { exact: true })
+    .locator("../..")
+    .screenshot({ path: testInfo.outputPath("dining-review.png") });
+});
