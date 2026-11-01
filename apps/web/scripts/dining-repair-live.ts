@@ -119,6 +119,8 @@ async function main() {
     "apps/web/lib/search/dining-coverage.ts",
     "apps/web/lib/search/meal-boundaries.ts",
     "apps/web/lib/search/schedule-compiler.ts",
+    "apps/web/lib/search/schedule-timing.ts",
+    "scripts/uat/lib/timing-proposal.ts",
     "apps/web/lib/search/highlight-match.ts",
     "apps/web/lib/search/party-suitability.ts",
     "apps/web/lib/search/supplied-distance.ts",

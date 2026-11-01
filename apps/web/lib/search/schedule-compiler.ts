@@ -1,3 +1,4 @@
+import { requestsMiddayRest, proposeRestDayTiming } from "./schedule-timing";
 import { mealBoundaryAnchors, type VisitSlots } from "./meal-boundaries";
 import { matchesSuggestedHighlight } from "./highlight-match";
 import { suppliedDistanceKm } from "./supplied-distance";
@@ -50,6 +51,7 @@ export interface CompiledSchedule {
   }>;
   reviewRequiredActivities: Array<{ id: string; reason: string }>;
   issues: string[];
+  timingProposals: ReturnType<typeof proposeRestDayTiming>[];
   /** A feasible allocation is not evidence that venues are open or suitable. */
   verified: false;
 }
@@ -479,8 +481,18 @@ export function compileSchedule(
       tips,
     };
   });
+  const timingProposals = requestsMiddayRest(plan)
+    ? days.map(proposeRestDayTiming)
+    : [];
+  for (const proposal of timingProposals) {
+    const day = days.find((item) => item.date === proposal.date)!;
+    day.tips.unshift(...proposal.tips);
+    if (!proposal.fitsPolicy)
+      issues.push(`day_${day.dayNumber}:midday_rest_timing_conflict`);
+  }
   return {
     days,
+    timingProposals,
     unselectedActivityIds: inventory
       .filter((a) => !best.used.has(a.id))
       .map((a) => a.id),

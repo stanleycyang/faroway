@@ -449,3 +449,26 @@ it("explains an unavoidable meal transition without inventing a route", () => {
   ).toBe(true);
   expect(result.verified).toBe(false);
 });
+
+it("adds a proposed daily rest timetable without changing selected visits", () => {
+  const supply = [
+    visit("garden", 90, "morning"),
+    visit("museum", 90, "afternoon"),
+  ];
+  const baseline = compileSchedule(plan, supply, []);
+  const result = compileSchedule(
+    { ...plan, mobilityNeeds: "Short walks and a midday rest every day" },
+    supply,
+    [],
+  );
+  expect(result.days[0].morning.activities).toEqual(
+    baseline.days[0].morning.activities,
+  );
+  expect(result.days[0].afternoon.activities).toEqual(
+    baseline.days[0].afternoon.activities,
+  );
+  expect(result.timingProposals).toHaveLength(result.days.length);
+  expect(result.timingProposals[0].fitsPolicy).toBe(true);
+  expect(result.days[0].tips[0]).toContain("Proposed local timing");
+  expect(baseline.timingProposals).toEqual([]);
+});
