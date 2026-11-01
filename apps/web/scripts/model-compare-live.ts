@@ -211,6 +211,7 @@ async function main() {
     "scripts/uat/lib/venue-constraints.ts",
     "scripts/fixtures/agentic-venue-constraints.json",
     "apps/web/lib/search/bridge.ts",
+    "packages/types/src/day-timing.ts",
     "apps/web/lib/search/supplied-distance.ts",
     "apps/web/lib/location-coordinates.ts",
     "apps/web/lib/search/fallback-itinerary.ts",

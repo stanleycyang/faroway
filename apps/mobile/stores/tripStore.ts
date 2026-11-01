@@ -1,9 +1,12 @@
+import type { DayTimingProposal } from '@faroway/types';
 import { create } from 'zustand';
 import { offlineStorage } from '../lib/offline';
 import { logger } from '../lib/logger';
 import { useUserStore } from './userStore';
 
 export interface Activity {
+  scheduleSlot?: 'morning' | 'afternoon' | 'evening';
+  durationMinutes?: number;
   id: string;
   time: string;
   title: string;
@@ -48,6 +51,7 @@ export interface Hotel {
 }
 
 export interface TripDay {
+  timingProposal?: DayTimingProposal;
   date: string;
   dayNumber: number;
   theme: string;

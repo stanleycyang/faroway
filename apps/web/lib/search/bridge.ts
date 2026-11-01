@@ -1,3 +1,4 @@
+import { readDayTiming, dayTimingTips } from "@faroway/types";
 import { suppliedCoordinates } from "../location-coordinates";
 import { readPrice } from "@faroway/constants";
 import { viatorContentMetadata } from "@/lib/affiliates/viator-policy";
@@ -183,7 +184,8 @@ function mapDay(day: SuggestedDay): MappedItinerary["days"][number] {
       readPrice(day.estimatedCost, day.currency)
         ? readPrice(day.estimatedCost, day.currency)
         : undefined,
-    tips: day.tips || [],
+    timingProposal: readDayTiming(day),
+    tips: dayTimingTips(day),
   };
 }
 

@@ -1,7 +1,8 @@
+import type { DayTimingProposal } from "./day-timing";
 /**
  * @faroway/types
- * Shared type definitions for Faroway web and mobile apps.
- * Pure TypeScript interfaces — zero runtime dependencies.
+ * Shared types and validation helpers for Faroway web and mobile apps.
+ * Zero external runtime dependencies.
  */
 
 // =============================================================================
@@ -290,6 +291,7 @@ export interface TripDayTransport {
 }
 
 export interface TripDay {
+  timingProposal?: DayTimingProposal;
   dayNumber: number;
   date: string;
   title: string;
@@ -605,6 +607,7 @@ export interface SearchResults {
 }
 
 export interface SuggestedDay {
+  timingProposal?: DayTimingProposal;
   dayNumber: number;
   date: string;
   title: string;
@@ -750,3 +753,6 @@ export interface HotelQuoteResult {
     }>;
   }>;
 }
+
+export { dayTimingBasis, readDayTiming, dayTimingTips } from "./day-timing";
+export type { DayTimingProposal } from "./day-timing";

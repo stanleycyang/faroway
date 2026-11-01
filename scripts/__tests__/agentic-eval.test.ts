@@ -821,3 +821,65 @@ test("restoration notice requires reopening review without treating a calendar e
     ),
   ).toEqual([]);
 });
+
+import { dayTimingBasis } from "../../packages/types/src/day-timing";
+test("trace contracts reject unresolved or lost structured timing", () => {
+  const trace = fixture();
+  const day = (trace.steps[4].output as { days: Record<string, unknown>[] })
+    .days[0];
+  const mapped = (trace.mappedItinerary as { days: Record<string, unknown>[] })
+    .days[0];
+  const proposal = {
+    policy: "midday-rest-v1",
+    basis: dayTimingBasis(day),
+    fitsPolicy: true,
+    verified: false,
+    conflict: null,
+    events: [
+      {
+        id: "meal:morning:cafe",
+        kind: "meal",
+        durationMinutes: 45,
+        startMinute: 480,
+        endMinute: 525,
+        bufferBeforeMinutes: 0,
+      },
+      {
+        id: "activity:walk",
+        kind: "activity",
+        durationMinutes: 60,
+        startMinute: 555,
+        endMinute: 615,
+        bufferBeforeMinutes: 30,
+      },
+      {
+        id: "rest:midday",
+        kind: "rest",
+        durationMinutes: 60,
+        startMinute: 780,
+        endMinute: 840,
+        bufferBeforeMinutes: 0,
+      },
+    ],
+  };
+  day.timingProposal = proposal;
+  mapped.timingProposal = structuredClone(proposal);
+  expect(
+    evaluateAgenticTrace(trace).failures.filter((f) => f.includes("timing")),
+  ).toEqual([]);
+  delete mapped.timingProposal;
+  expect(evaluateAgenticTrace(trace).failures).toContain(
+    "day_1:mapped_timing_changed",
+  );
+  const conflict = {
+    ...proposal,
+    fitsPolicy: false,
+    events: [],
+    conflict: { eventId: "activity:walk", overrunMinutes: 15 },
+  };
+  day.timingProposal = conflict;
+  mapped.timingProposal = structuredClone(conflict);
+  expect(evaluateAgenticTrace(trace).failures).toContain(
+    "day_1:midday_rest_timing_conflict",
+  );
+});

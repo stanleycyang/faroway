@@ -116,6 +116,7 @@ for (const file of [
   "apps/web/lib/search/highlight-match.ts",
   "apps/web/lib/search/party-suitability.ts",
   "apps/web/lib/search/bridge.ts",
+  "packages/types/src/day-timing.ts",
   "apps/web/lib/search/supplied-distance.ts",
   "apps/web/lib/location-coordinates.ts",
   "apps/web/lib/search/fallback-itinerary.ts",

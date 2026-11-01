@@ -1,3 +1,4 @@
+import { readDayTiming } from "../../../packages/types/src/day-timing";
 import { suppliedDistanceKm } from "./route-eval";
 import { inclusiveDays, assertValidBriefParty, type UatBrief } from "./briefs";
 
@@ -27,7 +28,7 @@ export interface AgenticEvaluation {
   warnings: string[];
   unknowns: string[];
   timing: {
-    representation: "day_parts_only";
+    representation: "day_parts_only" | "day_parts_with_proposed_times";
     feasibility: "unverified";
     /** A mention can be positive or negative; this does not infer a request. */
     restInstructionPresent: boolean;
@@ -156,6 +157,21 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
   for (const [index, rawDay] of days.entries()) {
     const day = object(rawDay);
     const mapped = object(mappedDays[index]);
+    if (
+      day.timingProposal !== undefined ||
+      mapped.timingProposal !== undefined
+    ) {
+      const timing = readDayTiming(day);
+      if (!timing) fail(`day_${index + 1}:invalid_timing_proposal`);
+      else if (!timing.fitsPolicy)
+        fail(`day_${index + 1}:midday_rest_timing_conflict`);
+      if (
+        !readDayTiming(mapped) ||
+        JSON.stringify(day.timingProposal) !==
+          JSON.stringify(mapped.timingProposal)
+      )
+        fail(`day_${index + 1}:mapped_timing_changed`);
+    }
     if (day.dayNumber !== index + 1) fail(`day_${index + 1}:number`);
     if (!day.title || !day.summary)
       fail(`day_${index + 1}:missing_description`);
@@ -274,7 +290,11 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
       "Serial agent duration is not app latency or time to first useful content.",
     ],
     timing: {
-      representation: "day_parts_only",
+      representation: days.some(
+        (day) => object(day).timingProposal !== undefined,
+      )
+        ? "day_parts_with_proposed_times"
+        : "day_parts_only",
       feasibility: "unverified",
       restInstructionPresent: /\b(?:rests?|breaks?|naps?)\b/i.test(
         `${brief.mobilityNeeds ?? ""} ${brief.requirements?.mobilityNotes ?? ""}`,

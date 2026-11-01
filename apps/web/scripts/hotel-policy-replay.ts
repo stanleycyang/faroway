@@ -100,6 +100,7 @@ for (const file of [
   "scripts/uat/lib/hotel-constraints.ts",
   "scripts/fixtures/agentic-hotel-constraints.json",
   "apps/web/lib/search/bridge.ts",
+  "packages/types/src/day-timing.ts",
   "apps/web/lib/location-coordinates.ts",
 ])
   implementation.update(file).update(readFileSync(resolve(root, file)));

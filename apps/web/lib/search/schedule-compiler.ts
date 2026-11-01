@@ -486,6 +486,14 @@ export function compileSchedule(
     : [];
   for (const proposal of timingProposals) {
     const day = days.find((item) => item.date === proposal.date)!;
+    day.timingProposal = {
+      policy: proposal.policy,
+      basis: proposal.basis,
+      fitsPolicy: proposal.fitsPolicy,
+      verified: false,
+      events: proposal.events,
+      conflict: proposal.conflict,
+    };
     day.tips.unshift(...proposal.tips);
     if (!proposal.fitsPolicy)
       issues.push(`day_${day.dayNumber}:midday_rest_timing_conflict`);

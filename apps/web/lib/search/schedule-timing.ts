@@ -1,3 +1,4 @@
+import { dayTimingBasis } from "@faroway/types";
 import {
   proposeTiming,
   type TimingEvent,
@@ -97,5 +98,11 @@ export function proposeRestDayTiming(day: SuggestedDay) {
     : [
         "The selected visits do not fit the proposed meal, buffer and one-hour midday-rest windows. Review the visits and timing before using this day; your rest request remains unresolved. No visits have been shortened or removed.",
       ];
-  return { date: day.date, ...result, tips };
+  return {
+    policy: "midday-rest-v1" as const,
+    basis: dayTimingBasis(day),
+    date: day.date,
+    ...result,
+    tips,
+  };
 }
