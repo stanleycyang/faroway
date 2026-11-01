@@ -280,9 +280,9 @@ export function generateTripAdvisorAffiliateUrl(
 /**
  * Enrich an array of items with TripAdvisor rating data.
  *
- * For each item, searches TripAdvisor by name + location, and if a match is
- * found (first result), attaches tripadvisorRating, tripadvisorReviewCount,
- * and tripadvisorUrl to the item.
+ * For each item, searches TripAdvisor by name + location. A unique name and
+ * full-address match can supply tripadvisorRating, tripadvisorReviewCount
+ * and tripadvisorUrl. Unreviewed address abbreviations remain unmatched.
  *
  * Rate limited to process max 3 items concurrently, capped to a small number
  * of top items, and timeboxed so enrichment cannot delay itinerary generation.
@@ -290,10 +290,10 @@ export function generateTripAdvisorAffiliateUrl(
  *
  * @param items - Array of items with name and location.name properties
  * @param category - TripAdvisor category to search within
- * @returns The enriched array (same reference, mutated in place)
+ * @returns A new array when configured; input objects are not mutated
  */
 export async function enrichWithTripAdvisor<
-  T extends { name: string; location: { name: string } },
+  T extends { name: string; location: { name: string; address?: string } },
 >(
   items: T[],
   category: "hotels" | "restaurants" | "attractions",
@@ -327,6 +327,13 @@ export async function enrichWithTripAdvisor<
       batchIndices.map(async (idx) => {
         const item = enrichedItems[idx];
         if (!canProcessViatorContent(item)) return;
+        // Search rank is not venue identity. Missing identity evidence should
+        // cost no lookup and must not borrow another branch's reviews.
+        if (
+          !normalizeIdentity(item.name) ||
+          !normalizeIdentity(item.location.address ?? "")
+        )
+          return;
         try {
           const query = `${item.name} ${item.location.name}`;
           const results = await searchTripAdvisorLocations(
@@ -336,8 +343,15 @@ export async function enrichWithTripAdvisor<
             remainingMs,
           );
 
-          if (results.length > 0) {
-            const match = results[0];
+          const matches = results.filter(
+            (result) =>
+              result.locationId &&
+              normalizeIdentity(result.name) === normalizeIdentity(item.name) &&
+              normalizeIdentity(result.address) ===
+                normalizeIdentity(item.location.address!),
+          );
+          if (matches.length === 1) {
+            const match = matches[0];
             enrichedItems[idx] = {
               ...item,
               tripadvisorRating: match.rating,
@@ -359,6 +373,16 @@ export async function enrichWithTripAdvisor<
   return enrichedItems;
 }
 
+// Conservative presentation normalization only: do not remove branch names,
+// street numbers, postcode digits or diacritics, or infer address equivalence.
+function normalizeIdentity(value: string): string {
+  return value
+    .normalize("NFKC")
+    .toLowerCase()
+    .replace(/[,\s]+/g, " ")
+    .trim();
+}
+
 // ── Normalizers ─────────────────────────────────────────────────────────────
 
 /**
@@ -369,16 +393,20 @@ function normalizeTripAdvisorLocation(raw: any): TripAdvisorLocation {
   return {
     locationId: raw.location_id || "",
     name: raw.name || "",
-    address: raw.address_obj
-      ? [
-          raw.address_obj.street1,
-          raw.address_obj.city,
-          raw.address_obj.state,
-          raw.address_obj.country,
-        ]
-          .filter(Boolean)
-          .join(", ")
-      : "",
+    address:
+      raw.address_obj?.address_string ||
+      (raw.address_obj
+        ? [
+            raw.address_obj.street1,
+            raw.address_obj.street2,
+            raw.address_obj.city,
+            raw.address_obj.state,
+            raw.address_obj.postalcode,
+            raw.address_obj.country,
+          ]
+            .filter(Boolean)
+            .join(", ")
+        : ""),
     latitude: parseFloat(raw.latitude) || 0,
     longitude: parseFloat(raw.longitude) || 0,
     rating: parseFloat(raw.rating) || 0,
