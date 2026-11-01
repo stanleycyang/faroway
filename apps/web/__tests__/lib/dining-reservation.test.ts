@@ -40,8 +40,9 @@ describe("dining agent reservation links", () => {
         restaurants: [
           {
             name: "Invented Bistro",
-            description: "A model guess",
-            cuisineTypes: ["local"],
+            description:
+              "A model guess. They are experienced in managing severe allergies.",
+            cuisineTypes: ["local", "gluten-free"],
             priceLevel: 2,
             rating: 4.8,
             reviewCount: 90,
@@ -51,7 +52,7 @@ describe("dining agent reservation links", () => {
             affiliatePartner: "opentable",
             mealTypes: ["dinner"],
             vibeScore: 80,
-            vibeMatch: ["foodie"],
+            vibeMatch: ["foodie", "Allergy-safe"],
             dietaryOptions: ["vegan"],
           },
         ],
@@ -63,13 +64,24 @@ describe("dining agent reservation links", () => {
     expect(restaurant.reservationUrl).toBeUndefined();
     expect(restaurant.affiliatePartner).toBeUndefined();
     expect(restaurant.rating).toBe(0);
+    expect(restaurant.description).not.toContain("experienced in managing");
+    expect(restaurant.description).toContain(
+      "allergy handling has not been verified",
+    );
+    expect(restaurant.cuisineTypes).toEqual(["local"]);
+    expect(restaurant.vibeMatch).toEqual(["foodie"]);
+    expect(restaurant.dietaryOptions).toEqual([]);
     const prompt = String(generateObject.mock.calls[0][0].system);
     expect(prompt).not.toContain("https://opentable.com/r/");
     expect(prompt).toContain("Do not invent reservation URLs");
     expect(prompt).not.toContain("realistic-sounding names");
     expect(prompt).toContain("Never invent a name");
+    expect(prompt).toContain("Leave dietaryOptions empty");
     expect(info.mock.calls.map((call) => String(call[0])).join("\n")).toContain(
       "planning.step.reservation_url_omitted",
+    );
+    expect(info.mock.calls.map((call) => String(call[0])).join("\n")).toContain(
+      '"event":"planning.step.generated_dining_copy_reviewed","step":"dining","candidates":1',
     );
     info.mockRestore();
   });

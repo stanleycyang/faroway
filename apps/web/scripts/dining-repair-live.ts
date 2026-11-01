@@ -116,6 +116,7 @@ async function main() {
   for (const file of [
     "apps/web/scripts/dining-repair-live.ts",
     "apps/web/lib/search/agents/dining.ts",
+    "apps/web/lib/search/generated-dining-copy.ts",
     "apps/web/lib/search/dining-coverage.ts",
     "apps/web/lib/search/meal-boundaries.ts",
     "apps/web/lib/search/schedule-compiler.ts",

@@ -15,6 +15,7 @@ import {
   planningModel,
 } from "@/lib/ai/planning-step";
 import { reservationUrlFromEvidence } from "@/lib/search/reservation-url";
+import { screenGeneratedDiningCopy } from "../generated-dining-copy";
 import { z } from "zod";
 import { SearchPlan, DiningResult } from "../types";
 import type { DiningCoverageTarget } from "../dining-coverage";
@@ -85,7 +86,7 @@ Price levels:
 - 3 ($$$): Upscale, ~$40-80/person
 - 4 ($$$$): Fine dining, ~$80+/person
 
-Include common dietary options if applicable (vegetarian, vegan, gluten-free, halal, kosher).
+Leave dietaryOptions empty. Do not assert allergy safety, cross-contact controls, suitability for celiac disease, staff expertise with allergies, or ability to accommodate dietary restrictions in descriptions, cuisine types or vibe labels. The traveler's requirements are not evidence that a venue can meet them. Describe food and atmosphere without inventing suitability; direct confirmation remains necessary.
 
 Do not invent reservation URLs or OpenTable links. Leave reservationUrl empty. A reservation link is added only from verified provider data.
 
@@ -171,6 +172,7 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
     );
 
     let omittedReservationUrls = 0;
+    let reviewedCopyCount = 0;
     // Add unique IDs and sort by vibe score. Model-authored reservation
     // links are dropped unless constructed from verified provider data.
     let restaurants = result.restaurants
@@ -179,7 +181,13 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
           kind: "none",
         });
         if (restaurant.reservationUrl && !keptUrl) omittedReservationUrls += 1;
-        const safe = { ...restaurant };
+        const safe = screenGeneratedDiningCopy(restaurant);
+        if (
+          safe.description !== restaurant.description ||
+          safe.vibeMatch.length !== restaurant.vibeMatch.length ||
+          safe.cuisineTypes.length !== restaurant.cuisineTypes.length
+        )
+          reviewedCopyCount += 1;
         delete safe.reservationUrl;
         delete safe.affiliatePartner;
         return {
@@ -193,6 +201,14 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
         };
       })
       .sort((a, b) => b.vibeScore - a.vibeScore);
+    if (reviewedCopyCount > 0)
+      console.info(
+        JSON.stringify({
+          event: "planning.step.generated_dining_copy_reviewed",
+          step: "dining",
+          candidates: reviewedCopyCount,
+        }),
+      );
     if (omittedReservationUrls > 0) {
       console.info(
         JSON.stringify({
