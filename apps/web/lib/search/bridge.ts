@@ -1,3 +1,4 @@
+import { suppliedCoordinates } from "../location-coordinates";
 import { readPrice } from "@faroway/constants";
 import { viatorContentMetadata } from "@/lib/affiliates/viator-policy";
 /**
@@ -61,10 +62,7 @@ function mapActivity(
     location: {
       name: a.location?.name || a.location?.neighborhood || "",
       address: a.location?.address,
-      coordinates:
-        a.location?.lat != null
-          ? { lat: a.location.lat, lng: a.location.lng }
-          : undefined,
+      coordinates: suppliedCoordinates(a.location) ?? undefined,
     },
     vibeMatch: {
       matchedVibes: a.vibeMatch || [],
@@ -106,10 +104,7 @@ function mapDining(
     location: {
       name: d.location?.name || d.location?.neighborhood || "",
       address: d.location?.address,
-      coordinates:
-        d.location?.lat != null
-          ? { lat: d.location.lat, lng: d.location.lng }
-          : undefined,
+      coordinates: suppliedCoordinates(d.location) ?? undefined,
     },
     dietaryOptions: d.dietaryOptions || [],
     vibeMatch: {
