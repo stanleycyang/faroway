@@ -908,3 +908,23 @@ test("trace contracts reject unresolved or lost structured timing", () => {
     "day_1:midday_rest_timing_conflict",
   );
 });
+
+test("surfaces event evidence gaps even for confident generated titles", () => {
+  for (const name of [
+    "Carpentry Exhibition (Check Local Schedules)",
+    "Performance at Carnegie Hall",
+    "Winter Jazz Festival",
+  ]) {
+    const trace = fixture();
+    const items = trace.steps[2].output as Array<{ name: string }>;
+    items[0].name = name;
+    const result = evaluateAgenticTrace(trace);
+    expect(result.warnings).toContain(
+      "event_date_and_venue_evidence_required:walk",
+    );
+    expect(result.contractPass).toBe(true);
+  }
+  expect(evaluateAgenticTrace(fixture()).warnings).not.toContain(
+    "event_date_and_venue_evidence_required:walk",
+  );
+});

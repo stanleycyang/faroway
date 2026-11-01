@@ -1,3 +1,4 @@
+import { isSpeculativeEventTitle } from "./speculative-event";
 import { requestsMiddayRest, proposeRestDayTiming } from "./schedule-timing";
 import { mealBoundaryAnchors, type VisitSlots } from "./meal-boundaries";
 import { matchesSuggestedHighlight } from "./highlight-match";
@@ -143,6 +144,14 @@ export function compileSchedule(
         return false;
       }
       ids.add(activity.id);
+      if (isSpeculativeEventTitle(activity.name)) {
+        reviewRequiredActivities.push({
+          id: activity.id,
+          reason: "speculative_event_title",
+        });
+        issues.push(`event_evidence_review_required:${activity.id}`);
+        return false;
+      }
       const familyReview =
         (plan.children ?? 0) > 0
           ? familyActivityReviewReason(activity.name)
@@ -393,6 +402,16 @@ export function compileSchedule(
       "Leave the unscheduled time for meals, travel and rest.",
     ];
     if (day === 0) {
+      for (const review of reviewRequiredActivities
+        .filter((item) => item.reason === "speculative_event_title")
+        .slice(0, 3)) {
+        const name = inventory.find(
+          (activity) => activity.id === review.id,
+        )?.name;
+        tips.push(
+          `Event to review, not scheduled: ${name}. The supplied title makes its schedule conditional. Confirm the event's dates and venue with the organizer before adding it.`,
+        );
+      }
       if (needsRest)
         tips.push(
           "This draft limits visit combinations to leave room for the proposed meal, buffer and midday-rest windows. Review any omitted visits before adding them.",

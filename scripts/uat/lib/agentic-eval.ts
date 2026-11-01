@@ -196,6 +196,16 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
         if (usedActivities.has(a.id))
           fail(`duplicate_activity:${String(a.id)}`);
         usedActivities.add(a.id);
+        // Generated names/descriptions cannot establish an event's actual dates,
+        // venue or tickets. Keep this evidence gap visible even without an
+        // explicit uncertainty label; this is a warning, not proof of absence.
+        if (
+          typeof a.name === "string" &&
+          /\b(?:concert|performance|festival|exhibition)\b/i.test(a.name)
+        )
+          warnings.push(
+            `event_date_and_venue_evidence_required:${String(a.id)}`,
+          );
         if (a.bestTimeOfDay !== "any" && a.bestTimeOfDay !== slotName)
           fail(`wrong_time_of_day:${String(a.id)}`);
         if (

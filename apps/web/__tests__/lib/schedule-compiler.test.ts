@@ -569,3 +569,25 @@ it("keeps the non-rest selection unchanged for a negated request", () => {
     ),
   );
 });
+
+it("keeps explicitly speculative events as review leads rather than dated visits", () => {
+  const event = {
+    ...visit("event", 90),
+    name: "Carpentry Exhibition (Check Local Schedules)",
+    vibeScore: 100,
+  };
+  const result = compileSchedule(plan, [event, visit("museum", 90)], dining);
+  expect(
+    result.days
+      .flatMap((day) => slots.flatMap((slot) => day[slot].activities))
+      .map((a) => a.id),
+  ).not.toContain("event");
+  expect(result.reviewRequiredActivities).toContainEqual({
+    id: "event",
+    reason: "speculative_event_title",
+  });
+  expect(result.days[0].tips.join(" ")).toContain(
+    "Confirm the event's dates and venue",
+  );
+  expect(result.unselectedActivityIds).toContain("event");
+});
