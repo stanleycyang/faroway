@@ -424,3 +424,28 @@ it("does not schedule a supplied stair conflict over a stroller-access request",
   expect(result.verified).toBe(false);
   expect(JSON.stringify(supply)).toBe(original);
 });
+
+it("explains an unavoidable meal transition without inventing a route", () => {
+  const supply = [
+    {
+      ...visit("near", 60, "morning"),
+      location: { name: "near", address: "", lat: 41.9, lng: 12.5 },
+    },
+    {
+      ...visit("far", 60, "afternoon"),
+      location: { name: "far", address: "", lat: 42, lng: 12.5 },
+    },
+  ];
+  const result = compileSchedule(
+    { ...plan, activityCriteria: { ...plan.activityCriteria, mustSee: [] } },
+    supply,
+    [],
+  );
+  expect(result.issues).toContain("day_1:lunch:separated_visit_anchors");
+  expect(
+    result.days[0].tips?.some((tip) =>
+      tip.includes("choose which area to eat in"),
+    ),
+  ).toBe(true);
+  expect(result.verified).toBe(false);
+});

@@ -76,3 +76,49 @@ it("requires evidence for unknown locations instead of treating them as remote",
   ).toBe(true);
   expect(diningCoverageTargets(gaps)).toEqual([]);
 });
+
+it("does not request restaurant resupply to solve separated visit anchors", () => {
+  const { days, close } = fixture();
+  days[0].afternoon.activities = [
+    {
+      ...days[0].morning.activities[0],
+      id: "remote",
+      location: { ...close.location, lat: 42 },
+    },
+  ];
+  const gaps = findDiningCoverageGaps(days, [close]);
+  const lunch = gaps.find((gap) => gap.mealType === "lunch")!;
+  expect(lunch.reason).toBe("separated_visit_anchors");
+  expect(lunch.maxSuppliedAnchorKm).toBeGreaterThan(6);
+  expect(diningCoverageTargets([lunch])).toEqual([]);
+  expect(
+    findDiningCoverageGaps(days, []).find((g) => g.mealType === "lunch")
+      ?.reason,
+  ).toBe("separated_visit_anchors");
+});
+
+it("keeps close-anchor shortages actionable and missing anchor locations unknown", () => {
+  const { days, close } = fixture();
+  days[0].afternoon.activities = [
+    {
+      ...days[0].morning.activities[0],
+      id: "near",
+      location: { ...close.location, lat: 41.92 },
+    },
+  ];
+  const lunch = findDiningCoverageGaps(days, []).find(
+    (gap) => gap.mealType === "lunch",
+  )!;
+  expect(lunch.reason).toBe("missing_candidates");
+  expect(diningCoverageTargets([lunch])).toHaveLength(1);
+  days[0].afternoon.activities[0].location = {
+    ...close.location,
+    lat: 0,
+    lng: 0,
+  };
+  const unknown = findDiningCoverageGaps(days, [close]).find(
+    (gap) => gap.mealType === "lunch",
+  )!;
+  expect(unknown.reason).toBe("unknown_locations");
+  expect(diningCoverageTargets([unknown])).toEqual([]);
+});

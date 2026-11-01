@@ -394,6 +394,18 @@ export function compileSchedule(
     const slots = SLOTS.map((name, slot) => {
       const stops = visitSlots[name].activities;
       const anchors = mealBoundaryAnchors(visitSlots, name);
+      if (anchors.length === 2) {
+        const separation = suppliedDistanceKm(
+          anchors[0].location,
+          anchors[1].location,
+        );
+        if (separation != null && separation > 6) {
+          issues.push(`day_${day + 1}:${MEALS[slot]}:separated_visit_anchors`);
+          tips.push(
+            `The visits around ${MEALS[slot]} are far apart on the supplied locations. Plan the transfer and choose which area to eat in, or move a visit; a restaurant change alone cannot make both legs short. Routes and locations need confirmation.`,
+          );
+        }
+      }
       const choices = dining.filter((meal) =>
         meal.mealTypes.includes(MEALS[slot]),
       );
