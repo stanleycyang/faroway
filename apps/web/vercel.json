@@ -10,7 +10,8 @@
   ],
   "git": {
     "deploymentEnabled": {
-      "main": false
+      "main": false,
+      "fix/tripadvisor-identity-20261031": false
     }
   }
 }
