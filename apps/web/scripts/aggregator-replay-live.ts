@@ -119,6 +119,8 @@ async function main() {
     "apps/web/scripts/aggregator-replay-live.ts",
     "apps/web/lib/search/agents/aggregator.ts",
     "apps/web/lib/search/staging-schedule-experiment.ts",
+    "apps/web/lib/search/reviewed-venue-hours.ts",
+    "scripts/fixtures/reviewed-venue-hours.json",
     "apps/web/lib/search/schedule-experiment-gate.ts",
     "apps/web/lib/search/reviewed-dining-addresses.ts",
     "apps/web/lib/search/reviewed-dining-closures.ts",

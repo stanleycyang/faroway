@@ -760,3 +760,29 @@ it("shows original legacy dietary restrictions without presenting model-added di
     expect(note).not.toContain("model-added preference");
   }
 });
+
+it("respects a slot-specific exclusion without excluding compatible times on that date", () => {
+  const candidate = visit("museum-hours", 60, "any");
+  const result = compileSchedule(
+    plan,
+    [candidate],
+    [],
+    [
+      {
+        activityId: candidate.id,
+        date: plan.dates.start,
+        slot: "morning",
+        reason: "hours",
+        sourceUrl: "https://example.com",
+        observedAt: "2026-11-01",
+      },
+    ],
+  );
+  expect(result.days[0].morning.activities).toEqual([]);
+  expect(
+    [
+      ...result.days[0].afternoon.activities,
+      ...result.days[0].evening.activities,
+    ].map((a) => a.id),
+  ).toContain(candidate.id);
+});

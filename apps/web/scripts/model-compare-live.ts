@@ -136,6 +136,8 @@ async function main() {
     "scripts/uat/lib/comparison-contracts.ts",
     "scripts/uat/lib/comparison-selection.ts",
     "apps/web/lib/search/staging-schedule-experiment.ts",
+    "apps/web/lib/search/reviewed-venue-hours.ts",
+    "scripts/fixtures/reviewed-venue-hours.json",
     "apps/web/lib/search/reviewed-dining-options.ts",
     "apps/web/lib/search/reviewed-event-options.ts",
     "scripts/fixtures/reviewed-event-options.json",

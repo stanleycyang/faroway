@@ -1,3 +1,5 @@
+import { reviewedHoursExclusions } from "./reviewed-venue-hours";
+import reviewedHours from "../../../../scripts/fixtures/reviewed-venue-hours.json";
 import {
   appendReviewedEventOptions,
   type ReviewedEventOption,
@@ -76,6 +78,15 @@ export async function runStagingCompiledSchedule(
           observedAt: finding.observedAt,
         });
   }
+  const hourExclusions = reviewedHoursExclusions(
+    plan,
+    activities,
+    Array.from({ length: count }, (_, i) =>
+      new Date(start + i * 86400000).toISOString().slice(0, 10),
+    ),
+    reviewedHours as import("./reviewed-venue-hours").ReviewedVenueHours[],
+  );
+  exclusions.push(...hourExclusions);
   const addressReview = reconcileGeneratedDiningAddresses(
     plan,
     dining,
@@ -93,6 +104,31 @@ export async function runStagingCompiledSchedule(
     reviewedDining,
     exclusions,
   );
+  for (const day of compiled.days) {
+    const names = [
+      ...new Set(
+        hourExclusions
+          .filter((e) => e.date === day.date)
+          .map((e) => e.activityId),
+      ),
+    ];
+    for (const id of names) {
+      const activity = activities.find((a) => a.id === id)!;
+      const records = hourExclusions.filter(
+        (e) =>
+          e.date === day.date &&
+          e.activityId === id &&
+          (!e.slot ||
+            activity.bestTimeOfDay === "any" ||
+            e.slot === activity.bestTimeOfDay),
+      );
+      if (!records.length) continue;
+      const record = records[0];
+      day.tips.push(
+        `Hours review: ${activity.name} is excluded from ${records.some((e) => !e.slot) ? "this date" : records.map((e) => e.slot).join(", ")} in this draft. The supplied visit duration does not fit the reviewed ordinary hours, or the source needs review. Confirm any exceptional opening before adding it. Source reviewed ${record.observedAt}: ${record.sourceUrl}`,
+      );
+    }
+  }
   const score = (hotel: HotelResult) =>
     Number.isFinite(hotel.vibeScore) ? hotel.vibeScore : 0;
   const hotelReview = screenHotelCandidates(plan, hotels, reviewedHotelFacts);

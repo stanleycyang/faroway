@@ -42,6 +42,7 @@ interface State {
 export interface ScheduleExclusion {
   activityId: string;
   date: string;
+  slot?: "morning" | "afternoon" | "evening";
   reason: string;
   sourceUrl: string;
   observedAt: string;
@@ -133,6 +134,13 @@ export function compileSchedule(
   const availability = travelerAvailability(plan, daysCount);
   if (availability.needsReview)
     issues.push("traveler_availability_interpretation_required");
+  const excluded = new Set(
+    exclusions.map(
+      (item) => `${item.date}:${item.activityId}:${item.slot ?? "all"}`,
+    ),
+  );
+  const isExcluded = (date: string, id: string, slot: string) =>
+    excluded.has(`${date}:${id}:all`) || excluded.has(`${date}:${id}:${slot}`);
   const mealMinutes = [45, 60, 60];
   const slotFits = (
     day: number,
@@ -152,6 +160,11 @@ export function compileSchedule(
     SLOTS.some(
       (slot, index) =>
         (activity.bestTimeOfDay === "any" || activity.bestTimeOfDay === slot) &&
+        !isExcluded(
+          new Date(start + day * 86400000).toISOString().slice(0, 10),
+          activity.id,
+          slot,
+        ) &&
         slotFits(day, index, [activity]),
     );
   // A short arrival/departure window can fit a meal but no visit plus its
@@ -213,9 +226,6 @@ export function compileSchedule(
     restFitCache.set(key, fits);
     return fits;
   };
-  const excluded = new Set(
-    exclusions.map((item) => `${item.date}:${item.activityId}`),
-  );
   for (const item of exclusions) {
     if (!inventory.some((activity) => activity.id === item.activityId))
       issues.push(`constraint_activity_not_found:${item.activityId}`);
@@ -324,12 +334,10 @@ export function compileSchedule(
     if (cached != null) return cached;
     const assigned = new Map<string, number>();
     const assign = (day: number, visited: Set<string>): boolean => {
-      const date = new Date(start + day * 86400000).toISOString().slice(0, 10);
       for (const activity of activities) {
         if (
           used.has(activity.id) ||
           visited.has(activity.id) ||
-          excluded.has(`${date}:${activity.id}`) ||
           !canUseDay(activity, day)
         )
           continue;
@@ -381,7 +389,7 @@ export function compileSchedule(
         const eligible = activities.filter(
           (a) =>
             !state.used.has(a.id) &&
-            !excluded.has(`${date}:${a.id}`) &&
+            !isExcluded(date, a.id, SLOTS[slot]) &&
             (a.bestTimeOfDay === "any" || a.bestTimeOfDay === SLOTS[slot]) &&
             slotFits(day, slot, [a]),
         );
