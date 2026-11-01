@@ -7,13 +7,8 @@
     "noEmit": true,
     "skipLibCheck": true,
     "noImplicitReturns": true,
-    "types": [
-      "node"
-    ],
-    "lib": [
-      "ES2022",
-      "DOM"
-    ],
+    "types": ["node"],
+    "lib": ["ES2022", "DOM"],
     "resolveJsonModule": true
   },
   "include": [
@@ -25,6 +20,7 @@
     "__tests__/agentic-eval.test.ts",
     "__tests__/aggregator-replay.test.ts",
     "__tests__/grounding-evidence.test.ts",
-    "__tests__/timing-proposal.test.ts"
+    "__tests__/timing-proposal.test.ts",
+    "__tests__/fixed-visit-refinement.test.ts"
   ]
 }
