@@ -1,4 +1,4 @@
-import { afterEach, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ generateObject: vi.fn() }));
 vi.mock("@/lib/ai/sdk", () => ({
   generateObject: mocks.generateObject,
@@ -41,7 +41,12 @@ const hotel = (
   vibeMatch: [],
   dataSource: "ai",
 });
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-01T12:00:00Z"));
+});
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllEnvs();
   vi.clearAllMocks();
 });
@@ -110,7 +115,7 @@ it("screens before agent results, hotel selection and saved mapping in the stagi
   expect(withheld.topHotel).toBeNull();
   expect(withheld.days.every((day) => !day.hotel)).toBe(true);
   expect(withheld.days[0].tips.join(" ")).toContain(
-    "No hotel suggestion is included",
+    "No hotel has been selected",
   );
   expect(withheld.days[0].tips.join(" ")).toContain(facts[0].sourceUrl);
 });
@@ -135,4 +140,67 @@ it("does not turn check-in or shared-room age limits into a property-wide child 
     expect(result.candidates).toHaveLength(1);
     expect(result.suitabilityVerified).toBe(false);
   }
+});
+
+it("keeps stale policy visible for review without duplicating notices or mutating raw ideas", () => {
+  const raw = hotel("stale");
+  const first = screenHotelCandidates(plan, [raw], facts, "2026-11-30");
+  expect(first.withheld).toHaveLength(0);
+  expect(first.selectionCandidates).toHaveLength(0);
+  expect(first.selectionPendingReview).toEqual(["stale"]);
+  expect(first.reviewRequired[0].reason).toBe("source_review_due");
+  expect(first.candidates[0].description).toContain("needs checking again");
+  const second = screenHotelCandidates(
+    plan,
+    first.candidates,
+    facts,
+    "2026-11-30",
+  );
+  expect(second.candidates[0].description).toBe(
+    first.candidates[0].description,
+  );
+  expect(raw.description).toBe("Generated idea");
+  expect(second.suitabilityVerified).toBe(false);
+});
+
+it("carries scoped policy review into the draft instead of rejecting a family-friendly room option", async () => {
+  for (const [key, value] of Object.entries({
+    FAROWAY_SCHEDULE_EXPERIMENT: "compiled-narrated-v1",
+    VERCEL_ENV: "preview",
+    NEXT_PUBLIC_SUPABASE_URL: "https://omovikloadpvzijoaqus.supabase.co",
+    PLANNING_THINKING_AGGREGATOR: "low",
+  }))
+    vi.stubEnv(key, value);
+  const candidate = hotel("scoped", "Steel House Copenhagen");
+  const result = await runAggregatorAgent(
+    { ...plan, destination: "Copenhagen" },
+    [candidate],
+    [],
+    [],
+  );
+  expect(result.topHotel?.name).toBe(candidate.name);
+  expect(result.topHotel?.description).toContain(
+    "exact room and check-in arrangement",
+  );
+  expect(result.days[0].tips.join(" ")).toContain(
+    "Check the age rules for the exact room",
+  );
+  expect(result.days[0].tips.join(" ")).toContain(facts[1].sourceUrl);
+});
+
+it("does not automatically select a previously conflicted hotel when its evidence expires", async () => {
+  vi.setSystemTime(new Date("2026-11-30T12:00:00Z"));
+  for (const [key, value] of Object.entries({
+    FAROWAY_SCHEDULE_EXPERIMENT: "compiled-narrated-v1",
+    VERCEL_ENV: "preview",
+    NEXT_PUBLIC_SUPABASE_URL: "https://omovikloadpvzijoaqus.supabase.co",
+    PLANNING_THINKING_AGGREGATOR: "low",
+  }))
+    vi.stubEnv(key, value);
+  const raw = hotel("expired");
+  const result = await runAggregatorAgent(plan, [raw], [], []);
+  expect(result.topHotel).toBeNull();
+  expect(result.days.every((day) => !day.hotel)).toBe(true);
+  expect(result.days[0].tips.join(" ")).toContain("needs checking again");
+  expect(result.days[0].tips.join(" ")).toContain("No hotel has been selected");
 });

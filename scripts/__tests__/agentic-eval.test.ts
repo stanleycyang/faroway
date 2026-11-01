@@ -1,5 +1,11 @@
 import hotelFacts from "../fixtures/agentic-hotel-constraints.json";
-import { evaluateHotelConstraints } from "../uat/lib/hotel-constraints";
+import { evaluateHotelConstraints as evaluateHotelConstraintsAt } from "../uat/lib/hotel-constraints";
+const evaluateHotelConstraints: typeof evaluateHotelConstraintsAt = (
+  plan,
+  hotels,
+  evidence,
+  asOfDate = "2026-11-01",
+) => evaluateHotelConstraintsAt(plan, hotels, evidence, asOfDate);
 import seasonalFacts from "../fixtures/agentic-venue-constraints.json";
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -699,4 +705,53 @@ test("reviewed hotel policies detect the family and invented-lift regression wit
       hotelFacts,
     ).matchedHotels,
   ).toBe(0);
+});
+
+test("hotel evidence expires into review rather than a permanent exclusion or verified result", () => {
+  const plan = { destination: "Singapore", children: 2 };
+  const hotels = [{ name: hotelFacts[0].name, amenities: ["Elevator"] }];
+  expect(
+    evaluateHotelConstraints(plan, hotels, hotelFacts, "2026-10-31").findings,
+  ).toHaveLength(2);
+  for (const [date, reason] of [
+    ["2026-10-30", "observation_is_in_the_future"],
+    ["2026-11-30", "source_review_due"],
+    ["2027-01-11", "source_review_due"],
+  ]) {
+    const result = evaluateHotelConstraints(plan, hotels, hotelFacts, date);
+    expect(result.findings).toHaveLength(0);
+    expect(result.reviewRequired[0].reason).toBe(reason);
+    expect(result.currentEvidenceHotels).toBe(0);
+    expect(result.uncheckedHotels).toBe(1);
+    expect(result.qualityAccepted).toBe(false);
+  }
+  for (const patch of [
+    { reviewAfter: undefined },
+    { observedAt: "2026-02-31" },
+    { reviewAfter: "2026-10-30" },
+  ]) {
+    const result = evaluateHotelConstraints(plan, hotels, [
+      { ...hotelFacts[0], ...patch },
+    ]);
+    expect(result.findings).toHaveLength(0);
+    expect(result.reviewRequired[0].reason).toBe(
+      "invalid_or_missing_review_dates",
+    );
+  }
+  expect(() =>
+    evaluateHotelConstraints(plan, hotels, hotelFacts, "2026-02-31"),
+  ).toThrow("Valid evidence evaluation date");
+});
+
+test("reviewed Copenhagen private-room policy prompts room review rather than excluding families", () => {
+  const result = evaluateHotelConstraints(
+    { destination: "Copenhagen, Denmark", children: 1 },
+    [{ name: "Steel House Copenhagen", amenities: [] }],
+    hotelFacts,
+  );
+  expect(result.findings).toHaveLength(0);
+  expect(result.reviewRequired[0].reason).toBe(
+    "age_policy_requires_room_or_check_in_review",
+  );
+  expect(result.qualityAccepted).toBe(false);
 });

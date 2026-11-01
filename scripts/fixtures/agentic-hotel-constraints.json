@@ -8,6 +8,18 @@
     "sourceUrl": "https://hericoll.com/frequently-asked-questions/",
     "observedAt": "2026-10-31",
     "sourceNote": "Official FAQ retrieved and reviewed. Names Chinatown as a walk-up property and states a minimum stay age of 18. Current published policy, not dated booking availability. Do not transfer lift policy to other Heritage Collection branches.",
-    "agePolicyScope": "all_guests"
+    "agePolicyScope": "all_guests",
+    "reviewAfter": "2026-11-30"
+  },
+  {
+    "id": "steel-house-copenhagen-shared-room-age-policy",
+    "destination": "Copenhagen",
+    "name": "Steel House Copenhagen",
+    "minimumGuestAge": 18,
+    "agePolicyScope": "shared_rooms",
+    "sourceUrl": "https://www.steelhousecopenhagen.com/vaerelser-og-senge",
+    "observedAt": "2026-10-31",
+    "reviewAfter": "2026-11-30",
+    "sourceNote": "Official room page retrieved and reviewed: guests under 18 must stay in private rooms with a parent or guardian. This is not a property-wide ban on children, nor proof of room availability."
   }
 ]

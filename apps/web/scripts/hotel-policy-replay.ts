@@ -12,7 +12,8 @@ import type {
   SuggestedDay,
 } from "../lib/search/types";
 
-const [directory, out] = process.argv.slice(2);
+const [directory, out, asOfDate = new Date().toISOString().slice(0, 10)] =
+  process.argv.slice(2);
 if (!directory || !out || existsSync(out))
   throw new Error("Input trial directory and new output required");
 const root = resolve(import.meta.dirname, "../../..");
@@ -41,11 +42,12 @@ const rows = manifest.trials.map(
       throw new Error("Completed matching frozen hotel input required");
     const hotels = receipt.hotels as HotelResult[];
     const original = JSON.stringify(hotels);
-    const review = screenHotelCandidates(plan, hotels, facts);
+    const review = screenHotelCandidates(plan, hotels, facts, asOfDate);
     const score = (hotel: HotelResult) =>
       Number.isFinite(hotel.vibeScore) ? hotel.vibeScore : 0;
     const topHotel =
-      [...review.candidates].sort((a, b) => score(b) - score(a))[0] ?? null;
+      [...review.selectionCandidates].sort((a, b) => score(b) - score(a))[0] ??
+      null;
     const sourceDays = source.steps[4].output.days as SuggestedDay[];
     const days = sourceDays.map((day) => ({
       ...day,
@@ -62,8 +64,15 @@ const rows = manifest.trials.map(
       },
       topHotel,
     );
-    const after = evaluateHotelConstraints(plan, mapped.hotels, facts);
+    const after = evaluateHotelConstraints(
+      plan,
+      mapped.hotels,
+      facts,
+      asOfDate,
+    );
     if (
+      (mapped.topHotel &&
+        review.selectionPendingReview.includes(mapped.topHotel.id)) ||
       after.findings.length ||
       JSON.stringify(hotels) !== original ||
       mapped.hotels.some((hotel) =>
@@ -74,9 +83,10 @@ const rows = manifest.trials.map(
     return {
       id,
       inputSha256: sha(bytes),
-      before: evaluateHotelConstraints(plan, hotels, facts),
+      before: evaluateHotelConstraints(plan, hotels, facts, asOfDate),
       after,
       withheld: review.withheld,
+      selectionPendingReview: review.selectionPendingReview,
       remainingCount: mapped.hotels.length,
       topHotel: mapped.topHotel?.name ?? null,
       mappedItinerary: mapped,
@@ -98,6 +108,7 @@ writeFileSync(
   out,
   JSON.stringify(
     {
+      asOfDate,
       modelCalls: 0,
       qualityAccepted: false,
       implementationSha256: implementation.digest("hex"),

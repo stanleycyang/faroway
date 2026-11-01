@@ -32,7 +32,7 @@ const env = {
 const compiled = () => {
   const days = compileSchedule(plan, activities, dining).days;
   days[0].tips.push(
-    "No hotel suggestion is included. Check suitable accommodation and room availability before arranging this trip.",
+    "No hotel has been selected. Check suitable accommodation and room availability before arranging this trip.",
   );
   return days;
 };

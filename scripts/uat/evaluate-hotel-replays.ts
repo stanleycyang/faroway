@@ -5,6 +5,7 @@ import facts from "../fixtures/agentic-hotel-constraints.json";
 import { evaluateHotelConstraints } from "./lib/hotel-constraints";
 
 const directory = process.argv[2];
+const evaluationAsOf = process.argv[3] ?? new Date().toISOString().slice(0, 10);
 if (!directory) throw new Error("Hotel replay directory required");
 const manifest = JSON.parse(
   readFileSync(join(directory, "manifest.json"), "utf8"),
@@ -80,6 +81,7 @@ const rows = manifest.trials.map((trial) => {
       receipt.provenance.plan,
       receipt.hotels,
       facts,
+      evaluationAsOf,
     ),
   };
 });
@@ -123,6 +125,7 @@ console.log(
           ),
         )
         .digest("hex"),
+      evaluationAsOf,
       qualityAccepted: false,
       count: rows.length,
       estimatedTotalUsd: rows.reduce((sum, row) => sum + row.estimatedUsd, 0),

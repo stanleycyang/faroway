@@ -103,7 +103,9 @@ export async function runStagingCompiledSchedule(
     Number.isFinite(hotel.vibeScore) ? hotel.vibeScore : 0;
   const hotelReview = screenHotelCandidates(plan, hotels, reviewedHotelFacts);
   const topHotel =
-    [...hotelReview.candidates].sort((a, b) => score(b) - score(a))[0] ?? null;
+    [...hotelReview.selectionCandidates].sort(
+      (a, b) => score(b) - score(a),
+    )[0] ?? null;
   const days = compiled.days.map((day) => ({
     ...day,
     hotel: topHotel ?? undefined,
@@ -120,9 +122,18 @@ export async function runStagingCompiledSchedule(
       `Hotel review: ${item.hotelName} was left out because published information conflicts with the party or generated amenities. ${sources.join("; ")}. Other hotel ideas still need suitability and availability checks.`,
     );
   }
+  for (const item of hotelReview.reviewRequired) {
+    const action =
+      item.reason === "age_policy_requires_room_or_check_in_review"
+        ? "Check the age rules for the exact room and check-in arrangement before choosing this hotel."
+        : "Previously reviewed policy information needs checking again before choosing this hotel.";
+    days[0].tips.push(
+      `Hotel review: ${item.hotelName}. ${action} Source: ${item.sourceUrl} (recorded review ${item.observedAt}). Suitability and availability remain unverified.`,
+    );
+  }
   if (!topHotel)
     days[0].tips.push(
-      "No hotel suggestion is included. Check suitable accommodation and room availability before arranging this trip.",
+      "No hotel has been selected. Check suitable accommodation and room availability before arranging this trip.",
     );
   console.info(
     JSON.stringify({

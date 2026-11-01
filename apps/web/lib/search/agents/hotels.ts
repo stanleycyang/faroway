@@ -130,16 +130,17 @@ export async function runHotelsAgent(
   if (compiledScheduleExperimentEnabled()) {
     const review = screenHotelCandidates(plan, hotels, reviewedHotelFacts);
     hotels = review.candidates;
-    if (review.withheld.length) {
+    if (review.withheld.length || review.reviewRequired.length) {
       console.info(
         JSON.stringify({
           event: "planning.hotel.policy_screen",
           withheldCount: review.withheld.length,
+          reviewRequiredCount: review.reviewRequired.length,
           remainingCount: hotels.length,
           suitabilityVerified: false,
         }),
       );
-      if (!hotels.length)
+      if (!hotels.length && review.withheld.length)
         logPlanningFallback("hotels", "published_policy_conflict", "empty");
     }
   }
