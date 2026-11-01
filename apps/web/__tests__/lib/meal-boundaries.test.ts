@@ -85,3 +85,34 @@ it("places lunch near the morning-to-evening transition and dinner by the last v
   expect(day.evening.meal?.id).toBe("tower-meal");
   expect(result.verified).toBe(false);
 });
+
+it("keeps unverified meal options but explains a possible overlap with a named meal experience", () => {
+  const activity = {
+    ...visit("winery-lunch", 48.86, "afternoon"),
+    name: "Winery Lunch & Tasting",
+  };
+  const restaurants = [
+    {
+      ...meal,
+      id: "lunch-cafe",
+      name: "Lunch Cafe",
+      mealTypes: ["lunch"],
+      location: activity.location,
+    },
+  ] as DiningResult[];
+  const result = compileSchedule(plan, [activity], restaurants);
+  const day = result.days[0];
+  expect(day.afternoon.activities[0].id).toBe(activity.id);
+  expect(day.afternoon.meal?.id).toBe("lunch-cafe");
+  expect(result.issues).toContain("day_1:lunch:possible_meal_overlap");
+  expect(day.tips.join(" ")).toContain("inclusion has not been verified");
+  expect(day.tips.join(" ")).toContain(
+    "before arranging a separate meal at Lunch Cafe",
+  );
+  const ordinary = compileSchedule(
+    plan,
+    [{ ...activity, name: "Winery Tour" }],
+    restaurants,
+  );
+  expect(ordinary.issues.join(" ")).not.toContain("possible_meal_overlap");
+});

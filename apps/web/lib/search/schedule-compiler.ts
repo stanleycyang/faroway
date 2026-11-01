@@ -399,6 +399,17 @@ export function compileSchedule(
           );
         });
       const chosen = ranked[0];
+      if (chosen) {
+        const mealExperiences = stops.filter((activity) =>
+          new RegExp(`\\b${MEALS[slot]}\\b`, "i").test(activity.name),
+        );
+        if (mealExperiences.length) {
+          issues.push(`day_${day + 1}:${MEALS[slot]}:possible_meal_overlap`);
+          tips.push(
+            `${mealExperiences.map((activity) => activity.name).join("; ")} may already cover ${MEALS[slot]}. Check the exact experience and meal inclusions before arranging a separate meal at ${chosen.meal.name}; inclusion has not been verified.`,
+          );
+        }
+      }
       if (!chosen) {
         issues.push(`day_${day + 1}:${MEALS[slot]}:meal_supply_gap`);
         tips.push(
