@@ -2,6 +2,7 @@
   {
     "id": "ngv-ordinary-hours-20261101",
     "destination": "Melbourne, Australia",
+    "country": "Australia",
     "aliases": [
       "National Gallery of Victoria (NGV) International Evening Visit"
     ],
@@ -46,6 +47,7 @@
   {
     "id": "matisse-ordinary-hours-20261101",
     "destination": "Nice, France",
+    "country": "France",
     "aliases": ["Musée Matisse"],
     "addresses": ["164 Avenue des Arènes de Cimiez, 06000 Nice, France"],
     "sourceUrl": "https://www.musee-matisse-nice.org/en/practical-information/",
@@ -88,6 +90,7 @@
   {
     "id": "chagall-ordinary-hours-20261101",
     "destination": "Nice, France",
+    "country": "France",
     "aliases": ["Musée National Marc Chagall"],
     "addresses": ["36 Avenue Dr Ménard, 06000 Nice, France"],
     "sourceUrl": "https://musees-nationaux-alpesmaritimes.fr/chagall/en/opening-times",
@@ -130,6 +133,7 @@
   {
     "id": "bill-reid-ordinary-hours-20261101",
     "destination": "Vancouver, Canada",
+    "country": "Canada",
     "aliases": ["Bill Reid Gallery of Northwest Coast Art"],
     "addresses": ["639 Hornby St, Vancouver, BC V6C 2G3, Canada"],
     "sourceUrl": "https://www.billreidgallery.ca/pages/hours-admissions",

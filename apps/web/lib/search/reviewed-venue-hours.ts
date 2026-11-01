@@ -6,6 +6,8 @@ export interface ReviewedVenueHours {
   destination: string;
   aliases: string[];
   addresses: string[];
+  /** Enables only the documented address conventions for this reviewed country. */
+  country?: "Australia" | "Canada" | "France";
   sourceUrl: string;
   sourceSha256: string;
   observedAt: string;
@@ -17,6 +19,25 @@ export interface ReviewedVenueHours {
 }
 const normalize = (s: string) =>
   s.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
+// These bounded equivalences preserve names, branch numbers and unit details.
+// In particular, exterior walks and dated events are not stripped from titles.
+const venueTitle = (s: string) =>
+  normalize(s.replace(/[()]/g, " "))
+    .replace(/\s+(?:(?:morning|afternoon|evening)\s+)?visit$/, "")
+    .trim();
+function venueAddress(s: string, country?: ReviewedVenueHours["country"]) {
+  let address = normalize(s);
+  if (country) {
+    const suffix = `, ${country.toLowerCase()}`;
+    if (address.endsWith(suffix)) address = address.slice(0, -suffix.length);
+  }
+  if (country === "France") {
+    address = address
+      .replace(/\bav\.?\s/g, "avenue ")
+      .replace(/\bdr\.?\s/g, "docteur ");
+  }
+  return address;
+}
 const validDate = (s: string) =>
   /^\d{4}-\d{2}-\d{2}$/.test(s) &&
   Number.isFinite(Date.parse(`${s}T00:00:00Z`)) &&
@@ -80,9 +101,11 @@ export function reviewedHoursExclusions(
     const matches = facts.filter(
       (f) =>
         normalize(f.destination) === normalize(plan.destination) &&
-        f.aliases.some((n) => normalize(n) === normalize(activity.name)) &&
+        f.aliases.some((n) => venueTitle(n) === venueTitle(activity.name)) &&
         f.addresses.some(
-          (a) => normalize(a) === normalize(activity.location.address),
+          (a) =>
+            venueAddress(a, f.country) ===
+            venueAddress(activity.location.address, f.country),
         ),
     );
     if (!matches.length) continue;

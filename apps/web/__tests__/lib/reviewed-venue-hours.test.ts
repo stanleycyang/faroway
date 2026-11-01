@@ -27,6 +27,41 @@ const fact: ReviewedVenueHours = {
     { weekday: 2, intervals: [] },
   ],
 };
+it("matches bounded title and reviewed-country address conventions without fuzzy branch matching", () => {
+  const reviewed: ReviewedVenueHours = {
+    ...fact,
+    country: "France",
+    aliases: ["Museum (ABC) International Evening Visit"],
+    addresses: ["36 Avenue Dr Ménard, 06000 Nice, France"],
+  };
+  const candidate = {
+    ...activity,
+    name: "Museum (ABC International)",
+    location: {
+      ...activity.location,
+      address: "36 Av. Docteur Ménard, 06000 Nice",
+    },
+  };
+  const check = (a: ActivityResult, f = reviewed) =>
+    reviewedHoursExclusions(plan, [a], ["2027-01-11"], [f], "2026-11-01");
+  expect(check(candidate).map((r) => r.slot)).toEqual(["evening"]);
+  expect(check(candidate, { ...reviewed, country: undefined })).toEqual([]);
+  for (const name of [
+    "Museum (ABC International) Exterior Walk",
+    "Museum (ABC International) Friday Night Concert",
+    "Museum (XYZ International)",
+  ])
+    expect(check({ ...candidate, name })).toEqual([]);
+  for (const address of [
+    "37 Av. Docteur Ménard, 06000 Nice",
+    "36 Av. Docteur Ménard, 06001 Nice",
+    "36 Av. Docteur Ménard, 06000 Nice, Canada",
+    "36 Av. Docteur Ménard, Unit 2, 06000 Nice",
+  ])
+    expect(
+      check({ ...candidate, location: { ...candidate.location, address } }),
+    ).toEqual([]);
+});
 it("excludes incompatible slots and explicit closures without treating missing days or months as closed", () => {
   const results = reviewedHoursExclusions(
     plan,
