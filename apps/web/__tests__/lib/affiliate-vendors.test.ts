@@ -273,13 +273,16 @@ describe("TripAdvisor affiliate client", () => {
 
   it("caps enrichment work so TripAdvisor cannot delay every candidate", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(
-      async () =>
+      async (input) =>
         new Response(
           JSON.stringify({
             data: [
               {
                 location_id: "ta_1",
-                name: "Matched place",
+                name: new URL(String(input)).searchParams
+                  .get("searchQuery")!
+                  .replace(" Tokyo", ""),
+                address_obj: { address_string: "1 Main Street, Tokyo, Japan" },
                 rating: "4.7",
                 num_reviews: "120",
                 web_url: "https://tripadvisor.test/place",
@@ -294,7 +297,7 @@ describe("TripAdvisor affiliate client", () => {
       await import("@/lib/affiliates/tripadvisor");
     const items = Array.from({ length: 5 }, (_, index) => ({
       name: `Candidate ${index + 1}`,
-      location: { name: "Tokyo" },
+      location: { name: "Tokyo", address: "1 Main Street, Tokyo, Japan" },
     }));
 
     const enriched = await enrichWithTripAdvisor(items, "attractions");
