@@ -329,9 +329,39 @@ test("hotel discovery rejects conflicting probe modes before a paid request", ()
       },
     );
     expect(result.status).toBe(1);
-    expect(result.stderr).toContain(
-      "Choose official-page extraction or hotel discovery",
+    expect(result.stderr).toContain("Choose one extraction/discovery mode");
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("venue discovery rejects missing input before a paid request", () => {
+  const directory = mkdtempSync(join(tmpdir(), "hotel-discovery-preflight-"));
+  try {
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--no-env-file",
+        "apps/web/scripts/grounding-pilot-live.ts",
+        "--live",
+        "--venue-candidates",
+        "--out",
+        join(directory, "receipt.json"),
+      ],
+      {
+        cwd: root,
+        encoding: "utf8",
+        timeout: 10000,
+        env: {
+          PATH: process.env.PATH,
+          HOME: process.env.HOME,
+          FAROWAY_STAGING_SUPABASE_PROJECT_REF: "omovikloadpvzijoaqus",
+          FAROWAY_STAGING_AI_GATEWAY_KEY: "invalid-preflight-only-key",
+        },
+      },
     );
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("--venue-candidates requires a file path");
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

@@ -436,3 +436,108 @@ test("reviewed alternative quotes retain scope context rather than matching an a
     ).passed,
   ).toBe(false);
 });
+
+import {
+  validateVenueDiscoveryRequests,
+  auditVenueSourceDiscovery,
+  venueDiscoveryPrompt,
+} from "../uat/lib/venue-source-discovery";
+const publicVenue = {
+  id: "venue-a",
+  name: "Museum A",
+  destination: "Example City",
+  address: "1 Example Street",
+};
+const venueLead = {
+  id: "venue-a",
+  status: "candidate",
+  officialUrl: "https://museum.example/visit",
+  matchedName: "Museum A",
+  matchedAddress: "1 Example Street",
+  note: "Official page candidate; identity needs review.",
+};
+
+test("venue discovery accepts only bounded public identity inputs", () => {
+  expect(validateVenueDiscoveryRequests([publicVenue])).toEqual([publicVenue]);
+  for (const invalid of [
+    [],
+    Array(7).fill(publicVenue),
+    [publicVenue, publicVenue],
+    [{ ...publicVenue, dietaryPreferences: ["vegan"] }],
+    [{ ...publicVenue, name: "" }],
+    [{ ...publicVenue, address: "x".repeat(501) }],
+  ])
+    expect(() => validateVenueDiscoveryRequests(invalid)).toThrow();
+  expect(venueDiscoveryPrompt([publicVenue])).toContain(
+    "Do not silently replace",
+  );
+});
+
+test("venue discovery preserves uncertainty and source linkage without certifying facts", () => {
+  const audit = auditVenueSourceDiscovery(
+    { venues: [venueLead] },
+    [publicVenue],
+    [{ sourceType: "url", url: venueLead.officialUrl }],
+  );
+  expect(audit.shapeValid).toBe(true);
+  expect(audit.leads[0].returnedUrlInSources).toBe(true);
+  expect(audit.identityVerified).toBe(false);
+  expect(audit.factsVerified).toBe(false);
+  expect(audit.automaticFetchAllowed).toBe(false);
+  const changed = auditVenueSourceDiscovery(
+    { venues: [{ ...venueLead, matchedName: "Museum B" }] },
+    [publicVenue],
+    [],
+  );
+  expect(changed.leads[0].nameDiffersFromCandidate).toBe(true);
+  expect(changed.leads[0].returnedUrlInSources).toBe(false);
+  for (const status of ["ambiguous", "unresolved"])
+    expect(
+      auditVenueSourceDiscovery(
+        {
+          venues: [
+            {
+              ...venueLead,
+              status,
+              officialUrl: null,
+              matchedName: null,
+              matchedAddress: null,
+            },
+          ],
+        },
+        [publicVenue],
+        [],
+      ).shapeValid,
+    ).toBe(true);
+});
+
+test("venue discovery rejects missing, duplicate, substituted and malformed claims", () => {
+  for (const venues of [
+    [],
+    [venueLead, venueLead],
+    [{ ...venueLead, id: "another-id" }],
+    [{ ...venueLead, status: ["candidate"] }],
+    [
+      {
+        ...venueLead,
+        status: ["unresolved"],
+        officialUrl: null,
+        matchedName: null,
+        matchedAddress: null,
+      },
+    ],
+    [{ ...venueLead, openingHours: "9-5" }],
+    [{ ...venueLead, status: "unresolved" }],
+    [{ ...venueLead, matchedName: null }],
+    ...[
+      "http://museum.example",
+      "https://user:pass@museum.example",
+      "https://127.0.0.1",
+      "https://site.localhost",
+      "https://museum.example/#fragment",
+    ].map((officialUrl) => [{ ...venueLead, officialUrl }]),
+  ])
+    expect(
+      auditVenueSourceDiscovery({ venues }, [publicVenue], []).shapeValid,
+    ).toBe(false);
+});
