@@ -62,5 +62,35 @@
     "sourceUrl": "https://www.musee-orsay.fr/en/visit",
     "observedAt": "2026-10-31",
     "closedWeekdays": [1]
+  },
+  {
+    "id": "morgan-library-weekly-closure",
+    "destination": "New York",
+    "aliases": ["The Morgan Library & Museum"],
+    "exactName": true,
+    "sourceUrl": "https://www.themorgan.org/visit",
+    "observedAt": "2026-10-31",
+    "closedWeekdays": [1],
+    "sourceNote": "Official search extract reviewed; direct page fetch blocked. Published recurring hours, not confirmation of January availability."
+  },
+  {
+    "id": "frick-fifth-avenue-weekly-closure",
+    "destination": "New York",
+    "aliases": ["The Frick Collection"],
+    "exactName": true,
+    "sourceUrl": "https://www.frick.org/visit",
+    "observedAt": "2026-10-31",
+    "closedWeekdays": [2],
+    "sourceNote": "Official search extract reviewed; direct page fetch blocked. Applies to the Fifth Avenue museum, not former Frick Madison or Pittsburgh."
+  },
+  {
+    "id": "met-fifth-avenue-weekly-closure",
+    "destination": "New York",
+    "aliases": ["The Metropolitan Museum of Art"],
+    "exactName": true,
+    "sourceUrl": "https://www.metmuseum.org/plan-your-visit",
+    "observedAt": "2026-10-31",
+    "closedWeekdays": [3],
+    "sourceNote": "Official visitor page retrieved. Exact observed museum name only; does not apply to exterior stops or establish availability on other days."
   }
 ]

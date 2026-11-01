@@ -263,3 +263,27 @@ test("compiled live candidate rejects unsupported mixes and non-staging environm
     "requires the isolated staging environment",
   );
 });
+
+test("upstream thinking experiment rejects invalid or silently ignored settings before model calls", () => {
+  const args = [
+    "--live",
+    "--supabase-url",
+    stagingUrl,
+    "--configs",
+    "flash-low",
+  ];
+  const env = {
+    FAROWAY_STAGING_AI_GATEWAY_KEY: "invalid-preflight-test-key",
+    FAROWAY_STAGING_SUPABASE_PROJECT_REF: STAGING_PROJECT_REF,
+  };
+  for (const flags of [
+    ["--upstream-thinking", "minimal"],
+    ["--compiled-narrated", "--upstream-thinking", "high"],
+  ]) {
+    const result = runCli([...args, ...flags], env);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain(
+      "requires compiled narration and low or minimal",
+    );
+  }
+});

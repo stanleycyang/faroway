@@ -4,6 +4,9 @@ export interface VenueConstraint {
   id: string;
   destination: string;
   aliases: string[];
+  /** Use for branch-specific reviewed names; unreviewed variants stay unknown. */
+  exactName?: boolean;
+  sourceNote?: string;
   sourceUrl: string;
   observedAt: string;
   closedWeekdays?: number[];
@@ -47,7 +50,11 @@ export function venueConstraintsForDate(
   for (const fact of facts) {
     if (
       !normalize(destination).includes(normalize(fact.destination)) ||
-      !fact.aliases.some((alias) => normalize(name).includes(normalize(alias)))
+      !fact.aliases.some((alias) =>
+        fact.exactName
+          ? normalize(name) === normalize(alias)
+          : normalize(name).includes(normalize(alias)),
+      )
     )
       continue;
     const weekday = new Date(date + "T12:00:00Z").getUTCDay();

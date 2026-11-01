@@ -9,7 +9,10 @@ import { DEVELOPMENT_BRIEFS, HOLDOUT_BRIEFS } from "../uat/lib/eval-briefs";
 import romeOverload from "../fixtures/agentic-rome-overload.json";
 import { suppliedDistanceKm } from "../uat/lib/route-eval";
 import { describe, expect, test } from "bun:test";
-import { evaluateVenueConstraints } from "../uat/lib/venue-constraints";
+import {
+  evaluateVenueConstraints,
+  venueConstraintsForDate,
+} from "../uat/lib/venue-constraints";
 import {
   evaluateAgenticTrace,
   type AgenticTrace,
@@ -604,4 +607,45 @@ test("does not certify requested rest timing from day parts or a generic rest ti
   expect(evaluateAgenticTrace(trace).timing.restInstructionPresent).toBe(true);
   trace.brief.mobilityNeeds = "Short walks";
   expect(evaluateAgenticTrace(trace).timing.restInstructionPresent).toBe(false);
+});
+
+test("new live NYC conflicts use exact reviewed venues without transferring hours to another branch", () => {
+  for (const [name, date, id] of [
+    [
+      "The Morgan Library & Museum",
+      "2027-01-11",
+      "morgan-library-weekly-closure",
+    ],
+    ["The Frick Collection", "2027-01-12", "frick-fifth-avenue-weekly-closure"],
+    [
+      "The Metropolitan Museum of Art",
+      "2027-01-13",
+      "met-fifth-avenue-weekly-closure",
+    ],
+  ]) {
+    expect(
+      venueConstraintsForDate("New York, USA", name, date, seasonalFacts).map(
+        (f) => f.venueId,
+      ),
+    ).toContain(id);
+    expect(
+      venueConstraintsForDate(
+        "New York, USA",
+        `${name} Exterior Walk`,
+        date,
+        seasonalFacts,
+      ),
+    ).toHaveLength(0);
+    expect(
+      venueConstraintsForDate("Pittsburgh, USA", name, date, seasonalFacts),
+    ).toHaveLength(0);
+  }
+  expect(
+    venueConstraintsForDate(
+      "New York, USA",
+      "The Frick Collection (Frick Madison)",
+      "2027-01-12",
+      seasonalFacts,
+    ).map((f) => f.venueId),
+  ).toEqual(["frick-madison-former-location"]);
 });
