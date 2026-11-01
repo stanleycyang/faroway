@@ -83,6 +83,14 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
   if (fallbackSteps) fail("fallback_used");
   const { brief } = trace;
   assertValidBriefParty(brief);
+  const explicitMinuteLimit = brief.expectedMaxActivityMinutesPerDay;
+  if (
+    explicitMinuteLimit !== undefined &&
+    (!Number.isInteger(explicitMinuteLimit) ||
+      explicitMinuteLimit < 0 ||
+      explicitMinuteLimit > 1440)
+  )
+    throw new Error("Invalid reference daily activity limit");
   const start = Date.parse(brief.startDate + "T00:00:00Z");
   const end = Date.parse(brief.endDate + "T00:00:00Z");
   if (
@@ -284,6 +292,8 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
       } else if (mappedMeals.length)
         fail(`day_${index + 1}:${slotName}:invented_mapped_meal`);
     }
+    if (explicitMinuteLimit !== undefined && dayMinutes > explicitMinuteLimit)
+      fail(`day_${index + 1}:exceeds_explicit_activity_minutes`);
     const pace = object(plan.activityCriteria).pacePreference;
     const dayLimit =
       pace === "relaxed"

@@ -15,6 +15,8 @@ export interface UatBrief {
   travelerType: "solo" | "couple" | "family" | "friends" | "business";
   /** Evaluation reference only; not passed to the planner as an extra input. */
   expectedDayAvailability?: DayAvailability[];
+  /** Evaluation-only ceiling authored from an explicit traveler request. */
+  expectedMaxActivityMinutesPerDay?: number;
   dietaryRestrictions?: string[];
   mobilityNeeds?: string;
   requirements?: {

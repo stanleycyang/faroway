@@ -96,6 +96,23 @@ export function compileSchedule(
         ? { count: 5, minutes: 600, slot: 240, target: 4 }
         : { count: 4, minutes: 420, slot: 210, target: 3 };
   const issues: string[] = [];
+  const requestedDetails = [
+    plan.requirements?.allergies.length
+      ? `Allergies: ${plan.requirements.allergies.join(", ")}`
+      : "",
+    plan.requirements?.dietaryPreferences.length
+      ? `Dietary preferences: ${plan.requirements.dietaryPreferences.join(", ")}`
+      : "",
+    plan.requirements?.accessibility.length
+      ? `Access needs: ${plan.requirements.accessibility.map((item) => item.replaceAll("_", " ")).join(", ")}`
+      : "",
+    ...new Set(
+      [plan.mobilityNeeds, plan.requirements?.mobilityNotes].filter(Boolean),
+    ),
+  ].filter(Boolean);
+  const requirementNote = requestedDetails.length
+    ? `Your requirements: ${requestedDetails.join("; ")}. These are your requests, not verified venue features. Confirm them directly with each venue before relying on this plan.`
+    : undefined;
   const needsRest = requestsMiddayRest(plan);
   const availability = travelerAvailability(plan, daysCount);
   if (availability.needsReview)
@@ -586,6 +603,7 @@ export function compileSchedule(
       tips.push(
         "A long visit occupies its own slot; confirm its timing before adding other plans.",
       );
+    if (requirementNote) tips.push(requirementNote);
     if (plan.requirements?.allergies.length)
       tips.push(
         "Contact each restaurant directly about your allergies and cross-contact precautions. No venue's allergy handling has been verified.",

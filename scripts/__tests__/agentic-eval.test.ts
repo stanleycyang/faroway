@@ -1074,3 +1074,19 @@ test("address review retains unselected inventory contradictions and its unresol
   expect(fixed.futureAvailabilityVerified).toBe(false);
   expect(fixed.routeFeasibilityVerified).toBe(false);
 });
+
+test("explicit daily duration ceilings fail independently of relaxed pace defaults", () => {
+  const trace = fixture();
+  trace.brief.expectedMaxActivityMinutesPerDay = 59;
+  expect(evaluateAgenticTrace(trace).failures).toContain(
+    "day_1:exceeds_explicit_activity_minutes",
+  );
+  trace.brief.expectedMaxActivityMinutesPerDay = 60;
+  expect(evaluateAgenticTrace(trace).failures).not.toContain(
+    "day_1:exceeds_explicit_activity_minutes",
+  );
+  for (const invalid of [-1, 1.5, 1441, Number.NaN]) {
+    trace.brief.expectedMaxActivityMinutesPerDay = invalid;
+    expect(() => evaluateAgenticTrace(trace)).toThrow();
+  }
+});

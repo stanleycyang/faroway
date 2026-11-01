@@ -555,19 +555,19 @@ it("keeps the non-rest selection unchanged for a negated request", () => {
     visit("walk", 60, "morning"),
     visit("gallery", 180, "afternoon"),
   ];
-  expect(
-    compileSchedule(
-      { ...restPlan, mobilityNeeds: "No midday rest every day" },
-      input,
-      restMeals,
-    ),
-  ).toEqual(
-    compileSchedule(
-      { ...restPlan, mobilityNeeds: undefined },
-      input,
-      restMeals,
-    ),
+  const negated = compileSchedule(
+    { ...restPlan, mobilityNeeds: "No midday rest every day" },
+    input,
+    restMeals,
   );
+  const baseline = compileSchedule(
+    { ...restPlan, mobilityNeeds: undefined },
+    input,
+    restMeals,
+  );
+  for (const day of negated.days)
+    day.tips = day.tips.filter((tip) => !tip.startsWith("Your requirements:"));
+  expect(negated).toEqual(baseline);
 });
 
 it("keeps explicitly speculative events as review leads rather than dated visits", () => {
@@ -685,4 +685,38 @@ it("does not show a midday rest before a declared evening arrival", () => {
   expect(result.timingProposals[0].fitsPolicy).toBe(false);
   expect(result.days[0].timingProposal?.events).toEqual([]);
   expect(result.issues).toContain("day_1:midday_rest_timing_conflict");
+});
+
+it("keeps explicit dietary, access and mobility requirements visible on every day without certifying venues", () => {
+  const input: SearchPlan = {
+    ...extended,
+    mobilityNeeds: "Wheelchair access and step-free routes",
+    requirements: {
+      allergies: [],
+      dietaryPreferences: ["gluten-free"],
+      accessibility: ["step_free_entrance"],
+      mobilityNotes:
+        "Celiac disease; direct kitchen cross-contact confirmation required",
+    },
+  };
+  const supplied = activities.map((activity) => ({
+    ...activity,
+    description: activity.description ?? "Museum visit.",
+  }));
+  const baseline = compileSchedule(
+    { ...input, requirements: undefined },
+    supplied,
+    dining,
+  );
+  const result = compileSchedule(input, supplied, dining);
+  for (const day of result.days) {
+    const note = day.tips.find((tip) => tip.startsWith("Your requirements:"));
+    expect(note).toContain(input.requirements!.mobilityNotes);
+    expect(note).toContain("gluten-free");
+    expect(note).toContain("step free entrance");
+    expect(note).toContain("not verified venue features");
+  }
+  expect(result.days.map((d) => slots.map((s) => d[s].meal?.id))).toEqual(
+    baseline.days.map((d) => slots.map((s) => d[s].meal?.id)),
+  );
 });
