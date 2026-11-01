@@ -4,7 +4,7 @@ import {
   estimateUsageUsd,
   type TokenUsage,
 } from "../../../apps/web/lib/ai/model-cost";
-import { UAT_BRIEFS, type UatBrief } from "./briefs";
+import { UAT_BRIEFS, assertValidBriefParty, type UatBrief } from "./briefs";
 import {
   assertStagingTarget,
   type StagingTargetInput,
@@ -158,6 +158,7 @@ export async function runModelComparison(options: {
   }
   const configs = options.configs ?? MODEL_COMPARE_CONFIGS;
   const briefs = options.briefs ?? UAT_BRIEFS;
+  briefs.forEach(assertValidBriefParty);
   const capUsd = options.capUsd ?? MODEL_COMPARE_SPEND_CAP_USD;
   const rows: CompareRow[] = [];
   if (options.mode === "dry-run") {

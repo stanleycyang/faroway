@@ -99,6 +99,27 @@ export const DEVELOPMENT_BRIEFS: UatBrief[] = [
     interests: ["history", "food"],
     dietaryRestrictions: ["halal"],
   }),
+  brief("singapore-infant-two-rooms", "Singapore", 3, {
+    travelers: 4,
+    adults: 2,
+    children: 2,
+    childAges: [0, 7],
+    roomCount: 2,
+    travelerType: "family",
+    interests: ["nature", "science"],
+    mobilityNeeds: "Stroller access, short walks and a midday rest every day",
+  }),
+  brief("athens-three-rooms", "Athens, Greece", 3, {
+    travelers: 6,
+    adults: 6,
+    children: 0,
+    childAges: [],
+    roomCount: 3,
+    travelerType: "friends",
+    budget: "budget",
+    interests: ["history", "food"],
+    mobilityNeeds: "Keep the group together; allow relaxed shared meals",
+  }),
 ];
 
 // Reserved for final validation, not prompt tuning. Independent review is still required.

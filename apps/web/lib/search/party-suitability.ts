@@ -24,3 +24,40 @@ export function familyActivityReviewReason(
     return "alcohol_focused_title";
   return null;
 }
+
+/** Narrow contradiction screen over supplied descriptions, not an accessibility verifier. */
+export function activityMobilityReviewReason(
+  needs: {
+    mobilityNeeds?: string;
+    requirements?: { accessibility?: readonly string[] };
+  },
+  description: string,
+): "supplied_access_conflict" | null {
+  const request = (needs.mobilityNeeds ?? "").normalize("NFKC").toLowerCase();
+  const explicitRequest =
+    /^(?:stroller access|wheelchair access|step[- ]free)\b/.test(
+      request.trim(),
+    ) && !/\b(?:not required|not needed|unnecessary)\b/.test(request);
+  if (
+    !needs.requirements?.accessibility?.includes("step_free_entrance") &&
+    !explicitRequest
+  )
+    return null;
+  const text = description.normalize("NFKC").toLowerCase();
+  if (
+    /\b(?:not wheelchair accessible|not stroller accessible|no step[- ]free access)\b/.test(
+      text,
+    )
+  )
+    return "supplied_access_conflict";
+  // Preserve negated requirements. Optional stairs alone do not establish a conflict.
+  const positive = text.replace(
+    /\b(?:(?:does|do) not|doesn't|don't)\s+(?:have|include|require|involve)\s+[^.;!?]*/g,
+    "",
+  );
+  return /\b(?:has|have|includes?|requires?|involves?)\s+(?:(?:some|many|several|steep|narrow|unavoidable|multiple|a flight of)\s+){0,3}(?:stairs|steps)\b/.test(
+    positive,
+  )
+    ? "supplied_access_conflict"
+    : null;
+}

@@ -6,6 +6,8 @@ export interface UatBrief {
   travelers: number;
   adults: number;
   children: number;
+  childAges?: number[];
+  roomCount?: number;
   interests: string[];
   budget: "budget" | "moderate" | "luxury";
   vibes: string[];
@@ -18,6 +20,26 @@ export interface UatBrief {
     accessibility: string[];
     mobilityNotes?: string;
   };
+}
+
+export function assertValidBriefParty(brief: UatBrief): void {
+  if (
+    ![brief.travelers, brief.adults, brief.children].every(Number.isInteger) ||
+    brief.adults < 1 ||
+    brief.children < 0 ||
+    brief.travelers !== brief.adults + brief.children ||
+    (brief.roomCount !== undefined &&
+      (!Number.isInteger(brief.roomCount) ||
+        brief.roomCount < 1 ||
+        brief.roomCount > brief.travelers)) ||
+    (brief.childAges !== undefined &&
+      (!Array.isArray(brief.childAges) ||
+        brief.childAges.length !== brief.children ||
+        brief.childAges.some(
+          (age) => !Number.isInteger(age) || age < 0 || age > 17,
+        )))
+  )
+    throw new Error("Invalid evaluation brief party, child ages or room count");
 }
 
 export const UAT_BRIEFS: UatBrief[] = [

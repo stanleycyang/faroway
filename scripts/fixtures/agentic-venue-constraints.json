@@ -92,5 +92,15 @@
     "observedAt": "2026-10-31",
     "closedWeekdays": [3],
     "sourceNote": "Official visitor page retrieved. Exact observed museum name only; does not apply to exterior stops or establish availability on other days."
+  },
+  {
+    "id": "sun-yat-sen-nanyang-restoration",
+    "destination": "Singapore",
+    "aliases": ["Sun Yat Sen Nanyang Memorial Hall"],
+    "exactName": true,
+    "sourceUrl": "https://www.sysnmh.org.sg/en/whats-on/events/closure-notice",
+    "observedAt": "2026-10-31",
+    "temporarilyClosed": true,
+    "sourceNote": "Official closure notice reviewed: closed for restoration from September 2024 to 2027, until further notice. Reopening is not confirmed for the trip dates. Do not treat the page calendar end date as a confirmed reopening or apply this to offsite programmes."
   }
 ]

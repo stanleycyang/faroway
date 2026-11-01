@@ -391,3 +391,36 @@ it("leaves descriptive aliases unresolved without verified identity evidence", (
   expect(result.days[0].tips.join(" ")).toContain("not matched by name");
   expect(result.verified).toBe(false);
 });
+
+it("does not schedule a supplied stair conflict over a stroller-access request", () => {
+  const input = {
+    ...plan,
+    mobilityNeeds: "Stroller access, short walks",
+    activityCriteria: { ...plan.activityCriteria, mustSee: [] },
+  };
+  const supply = [
+    {
+      ...visit("bunker", 90),
+      description:
+        "While it has some stairs, this is a great historical visit.",
+      vibeScore: 100,
+    },
+    { ...visit("garden", 60), description: "A botanical collection." },
+  ];
+  const original = JSON.stringify(supply);
+  const result = compileSchedule(input, supply, []);
+  expect(
+    result.days
+      .flatMap((day) => slots.flatMap((slot) => day[slot].activities))
+      .map((a) => a.id),
+  ).not.toContain("bunker");
+  expect(result.reviewRequiredActivities).toContainEqual({
+    id: "bunker",
+    reason: "supplied_access_conflict",
+  });
+  expect(result.days[0].tips?.join(" ")).toContain(
+    "Confirm an accessible route",
+  );
+  expect(result.verified).toBe(false);
+  expect(JSON.stringify(supply)).toBe(original);
+});

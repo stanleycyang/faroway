@@ -1,7 +1,10 @@
 import { mealBoundaryAnchors, type VisitSlots } from "./meal-boundaries";
 import { matchesSuggestedHighlight } from "./highlight-match";
 import { suppliedDistanceKm } from "./supplied-distance";
-import { familyActivityReviewReason } from "./party-suitability";
+import {
+  familyActivityReviewReason,
+  activityMobilityReviewReason,
+} from "./party-suitability";
 import type {
   ActivityResult,
   DiningResult,
@@ -117,6 +120,18 @@ export function compileSchedule(
           reason: familyReview,
         });
         issues.push(`family_suitability_review_required:${activity.id}`);
+        return false;
+      }
+      const mobilityReview = activityMobilityReviewReason(
+        plan,
+        activity.description,
+      );
+      if (mobilityReview) {
+        reviewRequiredActivities.push({
+          id: activity.id,
+          reason: mobilityReview,
+        });
+        issues.push(`mobility_suitability_review_required:${activity.id}`);
         return false;
       }
       return true;
@@ -294,6 +309,7 @@ export function compileSchedule(
         Number.isInteger(activity.duration) &&
         activity.duration > limits.minutes &&
         activity.duration <= 1440 &&
+        !activityMobilityReviewReason(plan, activity.description) &&
         [...SLOTS, "any"].includes(activity.bestTimeOfDay) &&
         !(
           (plan.children ?? 0) > 0 && familyActivityReviewReason(activity.name)
@@ -316,6 +332,16 @@ export function compileSchedule(
       "Leave the unscheduled time for meals, travel and rest.",
     ];
     if (day === 0) {
+      for (const review of reviewRequiredActivities
+        .filter((item) => item.reason === "supplied_access_conflict")
+        .slice(0, 3)) {
+        const name = inventory.find(
+          (activity) => activity.id === review.id,
+        )?.name;
+        tips.push(
+          `Not scheduled: ${name}. Its supplied description reports an access obstacle that conflicts with your request. Confirm an accessible route before adding it.`,
+        );
+      }
       for (const highlight of unfulfilledHighlights.slice(0, 3)) {
         const longVisit = deferredLongVisits.find((visit) =>
           visit.matchedHighlights.includes(highlight),

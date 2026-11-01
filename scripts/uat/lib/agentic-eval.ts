@@ -1,5 +1,5 @@
 import { suppliedDistanceKm } from "./route-eval";
-import { inclusiveDays, type UatBrief } from "./briefs";
+import { inclusiveDays, assertValidBriefParty, type UatBrief } from "./briefs";
 
 /** Agent outputs, not fabricated reference answers or externally verified facts. */
 export interface AgenticTrace {
@@ -77,6 +77,7 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
   ).length;
   if (fallbackSteps) fail("fallback_used");
   const { brief } = trace;
+  assertValidBriefParty(brief);
   const start = Date.parse(brief.startDate + "T00:00:00Z");
   const end = Date.parse(brief.endDate + "T00:00:00Z");
   if (
@@ -97,6 +98,13 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
     fail("orchestrator_dates_changed");
   for (const field of ["travelers", "adults", "children"] as const)
     if (plan[field] !== brief[field]) fail(`orchestrator_${field}_changed`);
+  if (brief.roomCount !== undefined && plan.roomCount !== brief.roomCount)
+    fail("orchestrator_room_count_changed");
+  if (
+    brief.childAges !== undefined &&
+    JSON.stringify(plan.childAges) !== JSON.stringify(brief.childAges)
+  )
+    fail("orchestrator_child_ages_changed");
   const interests = strings(object(plan.activityCriteria).interests);
   if (brief.interests.some((i) => !interests.includes(i)))
     fail("interests_lost");

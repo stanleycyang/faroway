@@ -356,7 +356,7 @@ test("route screening treats missing, invalid and placeholder coordinates as unk
 test("development and reserved holdout briefs have distinct IDs and valid bounded dates and parties", () => {
   const cases = [...DEVELOPMENT_BRIEFS, ...HOLDOUT_BRIEFS];
   expect(new Set(cases.map((c) => c.id)).size).toBe(cases.length);
-  expect(DEVELOPMENT_BRIEFS.length).toBe(14);
+  expect(DEVELOPMENT_BRIEFS.length).toBe(16);
   expect(HOLDOUT_BRIEFS.length).toBe(6);
   for (const brief of cases) {
     expect(brief.travelers).toBe(brief.adults + brief.children);
@@ -754,4 +754,70 @@ test("reviewed Copenhagen private-room policy prompts room review rather than ex
     "age_policy_requires_room_or_check_in_review",
   );
   expect(result.qualityAccepted).toBe(false);
+});
+
+test("full-chain contract preserves infant age zero, explicit empty ages and room count", () => {
+  for (const ages of [[0, 7], []]) {
+    const trace = fixture();
+    trace.brief.children = ages.length;
+    trace.brief.travelers = trace.brief.adults + ages.length;
+    trace.brief.childAges = ages;
+    trace.brief.roomCount = 2;
+    const plan = trace.steps[0].output as Record<string, unknown>;
+    plan.children = trace.brief.children;
+    plan.travelers = trace.brief.travelers;
+    plan.childAges = [...ages];
+    plan.roomCount = 2;
+    expect(evaluateAgenticTrace(trace).failures).not.toContain(
+      "orchestrator_child_ages_changed",
+    );
+    expect(evaluateAgenticTrace(trace).failures).not.toContain(
+      "orchestrator_room_count_changed",
+    );
+    delete plan.childAges;
+    plan.roomCount = 1;
+    expect(evaluateAgenticTrace(trace).failures).toContain(
+      "orchestrator_child_ages_changed",
+    );
+    expect(evaluateAgenticTrace(trace).failures).toContain(
+      "orchestrator_room_count_changed",
+    );
+  }
+});
+
+test("invalid eval party definitions are rejected instead of measured", () => {
+  for (const change of [
+    { childAges: [0] },
+    { roomCount: 0 },
+    { roomCount: 1.5 },
+    { adults: -1 },
+    { travelers: 3 },
+  ]) {
+    const trace = fixture();
+    Object.assign(trace.brief, change);
+    expect(() => evaluateAgenticTrace(trace)).toThrow(
+      "Invalid evaluation brief party",
+    );
+  }
+});
+
+test("restoration notice requires reopening review without treating a calendar end as availability", () => {
+  for (const date of ["2027-01-11", "2028-01-01"]) {
+    expect(
+      venueConstraintsForDate(
+        "Singapore",
+        "Sun Yat Sen Nanyang Memorial Hall",
+        date,
+        seasonalFacts,
+      ).some((f) => f.finding === "reopening_confirmation_required"),
+    ).toBe(true);
+  }
+  expect(
+    venueConstraintsForDate(
+      "Singapore",
+      "Sun Yat Sen Nanyang Memorial Hall offsite programme",
+      "2027-01-11",
+      seasonalFacts,
+    ),
+  ).toEqual([]);
 });

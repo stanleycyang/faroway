@@ -60,6 +60,8 @@ function briefInput(brief: UatBrief): SearchInput {
     travelers: brief.travelers,
     adults: brief.adults,
     children: brief.children,
+    childAges: brief.childAges,
+    roomCount: brief.roomCount,
     interests: brief.interests,
     budget: brief.budget,
     vibes: brief.vibes,

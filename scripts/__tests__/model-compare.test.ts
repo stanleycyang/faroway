@@ -321,3 +321,20 @@ test("hotel-only experiment rejects mixed or ignored settings before model calls
     );
   }
 });
+
+test("invalid child-age briefs fail before invoking any paid step", async () => {
+  const { UAT_BRIEFS } = await import("../uat/lib/briefs");
+  let called = false;
+  await expect(
+    runModelComparison({
+      mode: "live",
+      target: { supabaseUrl: stagingUrl },
+      briefs: [{ ...UAT_BRIEFS[0], childAges: [0] }],
+      executeStep: () => {
+        called = true;
+        throw new Error("Should never execute");
+      },
+    }),
+  ).rejects.toThrow("Invalid evaluation brief party");
+  expect(called).toBe(false);
+});
