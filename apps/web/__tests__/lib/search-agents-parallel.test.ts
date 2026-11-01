@@ -35,6 +35,7 @@ vi.mock("@/lib/affiliates/tripadvisor", () => ({
 
 import { runActivitiesAgent } from "@/lib/search/agents/activities";
 import { runHotelsAgent } from "@/lib/search/agents/hotels";
+import type { SearchPlan } from "@/lib/search/types";
 import { runTransportAgent } from "@/lib/search/agents/transport";
 
 const plan = {
@@ -227,6 +228,59 @@ describe("search agents internal parallelism", () => {
       expect(results[0].affiliateUrl).toBeUndefined();
     },
   );
+
+  it("passes the saved hotel party and access needs even when inferred amenities omit them", async () => {
+    mocks.generateObject.mockResolvedValue({ object: { hotels: [aiHotel] } });
+    await runHotelsAgent(
+      {
+        ...plan,
+        travelers: 4,
+        adults: 2,
+        children: 2,
+        childAges: [0, 7],
+        roomCount: 2,
+        mobilityNeeds: "Short walks and daily midday rest",
+        requirements: {
+          allergies: ["peanuts"],
+          dietaryPreferences: ["vegetarian"],
+          accessibility: ["step_free_entrance"],
+          mobilityNotes: "Lift access to the room",
+        },
+      } as unknown as SearchPlan,
+      1,
+    );
+    const { prompt, system } = mocks.generateObject.mock.calls[0][0];
+    for (const detail of [
+      "Travelers: 4",
+      "Adults: 2",
+      "Children: 2",
+      "Child ages: 0, 7",
+      "Requested rooms: 2",
+      "Short walks and daily midday rest",
+      "peanuts",
+      "vegetarian",
+      "step_free_entrance",
+      "Lift access to the room",
+    ])
+      expect(prompt).toContain(detail);
+    expect(system).toContain(
+      "Room capacity, accessibility and dietary suitability are unverified",
+    );
+  });
+
+  it("does not invent hotel occupancy or child ages when they are unspecified", async () => {
+    mocks.generateObject.mockResolvedValue({ object: { hotels: [aiHotel] } });
+    await runHotelsAgent(plan as never, 1);
+    const { prompt } = mocks.generateObject.mock.calls[0][0];
+    for (const field of [
+      "Travelers",
+      "Adults",
+      "Children",
+      "Child ages",
+      "Requested rooms",
+    ])
+      expect(prompt).toContain(`${field}: Not specified`);
+  });
 
   it("strips model-generated booking links and ratings even when the model ignores instructions", async () => {
     mocks.generateObject.mockResolvedValueOnce({
