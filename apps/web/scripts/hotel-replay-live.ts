@@ -64,6 +64,8 @@ async function main() {
   const sha = (value: string | Buffer) =>
     createHash("sha256").update(value).digest("hex");
   process.env.AI_GATEWAY_API_KEY = key;
+  // This runner measures raw generation; policy screening has its own offline replay.
+  delete process.env.FAROWAY_SCHEDULE_EXPERIMENT;
   for (const name of [
     "VIATOR_API_KEY",
     "GETYOURGUIDE_API_KEY",
@@ -85,6 +87,10 @@ async function main() {
   for (const file of [
     "apps/web/scripts/hotel-replay-live.ts",
     "apps/web/lib/search/agents/hotels.ts",
+    "apps/web/lib/search/staging-schedule-experiment.ts",
+    "apps/web/lib/search/hotel-policy-screen.ts",
+    "scripts/uat/lib/hotel-constraints.ts",
+    "scripts/fixtures/agentic-hotel-constraints.json",
     "apps/web/lib/ai/planning-step.ts",
     "apps/web/lib/ai/planning-disclosure.ts",
     "apps/web/lib/ai/sdk.ts",

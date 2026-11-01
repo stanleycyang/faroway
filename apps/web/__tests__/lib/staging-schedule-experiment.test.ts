@@ -29,7 +29,13 @@ const env = {
   NEXT_PUBLIC_SUPABASE_URL: "https://omovikloadpvzijoaqus.supabase.co",
   PLANNING_THINKING_AGGREGATOR: "low",
 };
-const compiled = () => compileSchedule(plan, activities, dining).days;
+const compiled = () => {
+  const days = compileSchedule(plan, activities, dining).days;
+  days[0].tips.push(
+    "No hotel suggestion is included. Check suitable accommodation and room availability before arranging this trip.",
+  );
+  return days;
+};
 const narration = () => ({
   object: {
     days: narrationContext(compiled()).map((day) => ({

@@ -17,6 +17,9 @@ import {
 import { z } from "zod";
 import { SearchPlan, HotelResult } from "../types";
 import { VIBE_KEYWORDS } from "@faroway/constants";
+import { compiledScheduleExperimentEnabled } from "../staging-schedule-experiment";
+import { screenHotelCandidates } from "../hotel-policy-screen";
+import reviewedHotelFacts from "../../../../../scripts/fixtures/agentic-hotel-constraints.json";
 import {
   AI_AGENT_TIMEOUT_MS,
   isOperationTimeoutError,
@@ -123,7 +126,23 @@ export async function runHotelsAgent(
   });
 
   // Live quotes are requested separately through the consented LiteAPI flow.
-  const hotels = deduplicateHotels(await aiFallbackPromise);
+  let hotels = deduplicateHotels(await aiFallbackPromise);
+  if (compiledScheduleExperimentEnabled()) {
+    const review = screenHotelCandidates(plan, hotels, reviewedHotelFacts);
+    hotels = review.candidates;
+    if (review.withheld.length) {
+      console.info(
+        JSON.stringify({
+          event: "planning.hotel.policy_screen",
+          withheldCount: review.withheld.length,
+          remainingCount: hotels.length,
+          suitabilityVerified: false,
+        }),
+      );
+      if (!hotels.length)
+        logPlanningFallback("hotels", "published_policy_conflict", "empty");
+    }
+  }
   return hotels.sort((a, b) => b.vibeScore - a.vibeScore).slice(0, count);
 }
 

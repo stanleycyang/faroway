@@ -22,6 +22,8 @@ import type {
 } from "./types";
 import { venueConstraintsForDate } from "../../../../scripts/uat/lib/venue-constraints";
 import reviewedFacts from "../../../../scripts/fixtures/agentic-venue-constraints.json";
+import reviewedHotelFacts from "../../../../scripts/fixtures/agentic-hotel-constraints.json";
+import { screenHotelCandidates } from "./hotel-policy-screen";
 
 /** Explicit staging-only integration. The small reviewed fixture is not general grounding. */
 export function compiledScheduleExperimentEnabled(
@@ -99,11 +101,29 @@ export async function runStagingCompiledSchedule(
   const compiled = compileSchedule(plan, activities, dining, exclusions);
   const score = (hotel: HotelResult) =>
     Number.isFinite(hotel.vibeScore) ? hotel.vibeScore : 0;
-  const topHotel = [...hotels].sort((a, b) => score(b) - score(a))[0] ?? null;
+  const hotelReview = screenHotelCandidates(plan, hotels, reviewedHotelFacts);
+  const topHotel =
+    [...hotelReview.candidates].sort((a, b) => score(b) - score(a))[0] ?? null;
   const days = compiled.days.map((day) => ({
     ...day,
     hotel: topHotel ?? undefined,
   }));
+  for (const item of hotelReview.withheld) {
+    const sources = [
+      ...new Set(
+        item.findings.map(
+          (finding) => `${finding.sourceUrl} (reviewed ${finding.observedAt})`,
+        ),
+      ),
+    ];
+    days[0].tips.push(
+      `Hotel review: ${item.hotelName} was left out because published information conflicts with the party or generated amenities. ${sources.join("; ")}. Other hotel ideas still need suitability and availability checks.`,
+    );
+  }
+  if (!topHotel)
+    days[0].tips.push(
+      "No hotel suggestion is included. Check suitable accommodation and room availability before arranging this trip.",
+    );
   console.info(
     JSON.stringify({
       event: "planning.schedule.experiment",

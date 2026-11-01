@@ -4,6 +4,8 @@ export interface HotelConstraint {
   destination: string;
   name: string;
   minimumGuestAge?: number;
+  /** Only a reviewed all-guests rule can exclude an entire property. */
+  agePolicyScope?: string; // Missing or unrecognized scopes remain unresolved.
   hasLift?: boolean;
   sourceUrl: string;
   observedAt: string;
@@ -43,7 +45,10 @@ export function evaluateHotelConstraints(
           sourceUrl: fact.sourceUrl,
           observedAt: fact.observedAt,
         });
-      if (fact.minimumGuestAge != null) {
+      if (
+        fact.minimumGuestAge != null &&
+        fact.agePolicyScope === "all_guests"
+      ) {
         if (!Number.isInteger(fact.minimumGuestAge) || fact.minimumGuestAge < 0)
           throw new Error("Invalid minimum guest age evidence");
         if (
