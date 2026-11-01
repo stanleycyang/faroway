@@ -221,3 +221,43 @@ test("hotel refresh flags failed, ambiguous, stale, future and changed sources",
     reviewHotelSourceRefresh([], [fresh], "2026-11-01T12:00:00Z"),
   ).toThrow("Nonempty hotel evidence");
 });
+
+import { auditHotelSourceDiscovery } from "../uat/lib/hotel-source-discovery";
+
+test("hotel source leads never authorize fetching or certify policy", () => {
+  const result = auditHotelSourceDiscovery(
+    {
+      hotels: [
+        { id: "a", homepageUrl: "https://example.com/hotel" },
+        { id: "b", homepageUrl: null },
+      ],
+    },
+    ["a", "b"],
+  );
+  expect(result.shapeValid).toBe(true);
+  expect(result.automaticFetchAllowed).toBe(false);
+  expect(result.policyVerified).toBe(false);
+  expect(result.qualityAccepted).toBe(false);
+});
+
+test("hotel discovery refuses policy fields, duplicate identities and unsafe URL shapes", () => {
+  for (const hotels of [
+    [{ id: "a", homepageUrl: "https://example.com", accessible: true }],
+    [
+      { id: "a", homepageUrl: null },
+      { id: "a", homepageUrl: null },
+    ],
+    [{ id: "other", homepageUrl: null }],
+    [],
+    ...[
+      "http://example.com",
+      "https://user:pass@example.com",
+      "https://example.com/a.jpg",
+      "https://example.com/?redirect=elsewhere",
+      "https://example.com/#fragment",
+      undefined,
+    ].map((homepageUrl) => [{ id: "a", homepageUrl }]),
+  ]) {
+    expect(auditHotelSourceDiscovery({ hotels }, ["a"]).shapeValid).toBe(false);
+  }
+});

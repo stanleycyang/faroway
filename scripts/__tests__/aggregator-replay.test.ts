@@ -301,3 +301,38 @@ test("hotel comparison refuses missing usage, changed inputs and mixed implement
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("hotel discovery rejects conflicting probe modes before a paid request", () => {
+  const directory = mkdtempSync(join(tmpdir(), "hotel-discovery-preflight-"));
+  try {
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--no-env-file",
+        "apps/web/scripts/grounding-pilot-live.ts",
+        "--live",
+        "--hotel-discovery",
+        "--official-pages",
+        "--out",
+        join(directory, "receipt.json"),
+      ],
+      {
+        cwd: root,
+        encoding: "utf8",
+        timeout: 10000,
+        env: {
+          PATH: process.env.PATH,
+          HOME: process.env.HOME,
+          FAROWAY_STAGING_SUPABASE_PROJECT_REF: "omovikloadpvzijoaqus",
+          FAROWAY_STAGING_AI_GATEWAY_KEY: "invalid-preflight-only-key",
+        },
+      },
+    );
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      "Choose official-page extraction or hotel discovery",
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
