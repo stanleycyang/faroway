@@ -117,6 +117,7 @@ for (const file of [
   "apps/web/lib/search/meal-boundaries.ts",
   "apps/web/lib/search/highlight-match.ts",
   "apps/web/lib/search/party-suitability.ts",
+  "apps/web/lib/search/generated-activity-copy.ts",
   "apps/web/lib/search/bridge.ts",
   "packages/types/src/day-timing.ts",
   "apps/web/lib/search/supplied-distance.ts",

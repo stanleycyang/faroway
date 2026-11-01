@@ -1,3 +1,4 @@
+import { GENERATED_ACCESS_CONCERN_NOTE } from "./generated-activity-copy";
 /**
  * Conservative title screening for shared itineraries that include children.
  * These are reasons to seek suitability evidence, not legal age restrictions.
@@ -43,6 +44,8 @@ export function activityMobilityReviewReason(
     !explicitRequest
   )
     return null;
+  if (description.includes(GENERATED_ACCESS_CONCERN_NOTE))
+    return "supplied_access_conflict";
   const text = description.normalize("NFKC").toLowerCase();
   if (
     /\b(?:not wheelchair accessible|not stroller accessible|no step[- ]free access)\b/.test(

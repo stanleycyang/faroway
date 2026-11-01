@@ -123,6 +123,28 @@ describe("search agents internal parallelism", () => {
 
   afterEach(() => vi.unstubAllEnvs());
 
+  it("screens generated access promises before returning activity inventory", async () => {
+    vi.stubEnv("VIATOR_CONTENT_ENABLED", "false");
+    mocks.generateObject.mockResolvedValue({
+      object: {
+        activities: [
+          {
+            ...aiActivity,
+            name: "Accessible Food Walk",
+            description:
+              "Taste local food. The tour is fully wheelchair accessible.",
+            vibeMatch: ["foodie", "step-free"],
+          },
+        ],
+      },
+    });
+    const results = await runActivitiesAgent(plan as never);
+    expect(results[0].name).toBe("Food Walk");
+    expect(results[0].description).toContain("Access has not been verified");
+    expect(results[0].description).not.toContain("fully wheelchair accessible");
+    expect(results[0].vibeMatch).toEqual(["foodie"]);
+  });
+
   it("does not present an AI-generated activity price as a supplier estimate", async () => {
     vi.stubEnv("VIATOR_CONTENT_ENABLED", "false");
     mocks.searchGYGActivities.mockResolvedValue([]);

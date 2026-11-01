@@ -139,6 +139,7 @@ async function main() {
     "apps/web/lib/search/meal-boundaries.ts",
     "apps/web/lib/search/highlight-match.ts",
     "apps/web/lib/search/party-suitability.ts",
+    "apps/web/lib/search/generated-activity-copy.ts",
     "scripts/uat/lib/venue-constraints.ts",
     "scripts/uat/lib/agentic-eval.ts",
     "scripts/uat/lib/day-availability.ts",

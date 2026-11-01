@@ -8,6 +8,7 @@ import {
  * Uses real activity vendors + AI for matching and ranking
  */
 
+import { screenGeneratedActivityCopy } from "../generated-activity-copy";
 import { gateway as defaultGateway, createGateway } from "@/lib/ai/sdk";
 import {
   generatePlanningObject,
@@ -101,7 +102,7 @@ When real Viator data is provided as context, use those activity names and price
 
 For each activity, provide:
 1. Real attraction/tour names that exist at the destination
-2. Accurate descriptions of what visitors will experience
+2. Describe the experience without inventing wheelchair accessibility, lifts, ramps, step-free routes, accessible toilets or boarding assistance. Do not put unverified access promises in names or vibe labels. Access requirements must be confirmed with the venue.
 3. Leave price unspecified unless supplied by a provider
 4. Duration in whole MINUTES, never hours (30-minute stop = 30; 2-hour museum visit = 120; 2.5-hour tour = 150)
 5. Best time of day to visit
@@ -184,7 +185,7 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
   )
     .then(({ object: result }) =>
       result.activities.map((activity, index) => ({
-        ...activity,
+        ...screenGeneratedActivityCopy(activity),
         id: `activity_${Date.now()}_${index}`,
         price: 0,
         currency: "",

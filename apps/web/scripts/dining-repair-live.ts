@@ -130,6 +130,7 @@ async function main() {
     "scripts/uat/lib/timing-proposal.ts",
     "apps/web/lib/search/highlight-match.ts",
     "apps/web/lib/search/party-suitability.ts",
+    "apps/web/lib/search/generated-activity-copy.ts",
     "apps/web/lib/search/supplied-distance.ts",
     "apps/web/lib/location-coordinates.ts",
     "apps/web/lib/ai/planning-step.ts",

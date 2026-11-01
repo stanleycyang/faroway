@@ -141,6 +141,7 @@ async function main() {
     "scripts/fixtures/reviewed-event-options.json",
     "apps/web/lib/search/dining-coverage.ts",
     "apps/web/lib/search/generated-dining-copy.ts",
+    "apps/web/lib/search/generated-activity-copy.ts",
     "apps/web/lib/search/reviewed-dining-addresses.ts",
     "apps/web/lib/search/reviewed-dining-closures.ts",
     "scripts/fixtures/reviewed-dining-closures.json",
