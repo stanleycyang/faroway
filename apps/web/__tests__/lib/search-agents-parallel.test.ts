@@ -37,6 +37,7 @@ import { runActivitiesAgent } from "@/lib/search/agents/activities";
 import { runDiningAgent } from "@/lib/search/agents/dining";
 import type { SearchPlan } from "@/lib/search/types";
 import { runHotelsAgent } from "@/lib/search/agents/hotels";
+import type { SearchPlan } from "@/lib/search/types";
 import { runTransportAgent } from "@/lib/search/agents/transport";
 
 const plan = {
