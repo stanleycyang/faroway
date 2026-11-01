@@ -284,3 +284,62 @@ it("keeps published dining alternatives in staging notes through narration witho
     vi.useRealTimers();
   }
 });
+
+it("retains a dated organizer lead after deferring an unidentified performance", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-01T12:00:00Z"));
+  try {
+    const localPlan = {
+      ...plan,
+      destination: "New York, USA",
+      dates: { start: "2027-01-12", end: "2027-01-12", nights: 0 },
+    };
+    const generic = {
+      ...activities[0],
+      id: "generic-event",
+      name: "Performance at Carnegie Hall",
+      duration: 150,
+      bestTimeOfDay: "evening" as const,
+    };
+    const museum = {
+      ...activities[0],
+      id: "museum",
+      name: "Museum",
+      duration: 60,
+      bestTimeOfDay: "morning" as const,
+    };
+    const context = narrationContext(
+      compileSchedule(localPlan, [generic, museum], []).days,
+    );
+    mocks.generateObject.mockResolvedValueOnce({
+      object: {
+        days: context.map((day) => ({
+          date: day.date,
+          title: "A museum visit",
+          summary: "Explore the selected museum.",
+          activityIds: day.slots.flatMap((slot) =>
+            slot.activities.map((a) => a.id),
+          ),
+        })),
+      },
+      usage: { inputTokens: 100, outputTokens: 100 },
+    });
+    const result = await runStagingCompiledSchedule(
+      localPlan,
+      [],
+      [generic, museum],
+      [],
+    );
+    expect(result.days[0].evening.activities).toEqual([]);
+    expect(
+      result.days[0].tips.some((t) =>
+        t.startsWith(
+          "Published event to review (not scheduled): On the Town in Concert — 2027-01-12",
+        ),
+      ),
+    ).toBe(true);
+    expect(result.days[0].tips.join(" ")).not.toContain("2027-01-11, 19:00");
+  } finally {
+    vi.useRealTimers();
+  }
+});

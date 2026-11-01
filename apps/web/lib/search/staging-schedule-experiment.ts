@@ -1,3 +1,8 @@
+import {
+  appendReviewedEventOptions,
+  type ReviewedEventOption,
+} from "./reviewed-event-options";
+import reviewedEventOptions from "../../../../scripts/fixtures/reviewed-event-options.json";
 import { appendReviewedDiningOptions } from "./reviewed-dining-options";
 import reviewedDiningOptions from "../../../../scripts/fixtures/reviewed-dining-options.json";
 import { z } from "zod";
@@ -108,11 +113,26 @@ export async function runStagingCompiledSchedule(
     [...hotelReview.selectionCandidates].sort(
       (a, b) => score(b) - score(a),
     )[0] ?? null;
-  const days = appendReviewedDiningOptions(
+  const diningDays = appendReviewedDiningOptions(
     plan,
     compiled.days,
     dining,
     reviewedDiningOptions,
+  );
+  const eventDeferredIds = new Set(
+    compiled.reviewRequiredActivities
+      .filter((item) =>
+        ["generic_event_title", "speculative_event_title"].includes(
+          item.reason,
+        ),
+      )
+      .map((item) => item.id),
+  );
+  const days = appendReviewedEventOptions(
+    plan,
+    diningDays,
+    activities.filter((activity) => eventDeferredIds.has(activity.id)),
+    reviewedEventOptions as ReviewedEventOption[],
   ).map((day) => ({
     ...day,
     hotel: topHotel ?? undefined,

@@ -960,3 +960,47 @@ test("only an explicit reference allowance permits an empty travel day", () => {
   );
   expect(evaluateAgenticTrace(trace).failures).not.toContain("day_1:no_meals");
 });
+
+test("reviewed New York aliases retain weekly closure scope without blocking separate venues or private tours", () => {
+  expect(
+    venueConstraintsForDate(
+      "New York, USA",
+      "The Metropolitan Museum of Art (The Met)",
+      "2027-01-13",
+      seasonalFacts,
+    ).some((f) => f.finding === "scheduled_on_reported_closed_weekday"),
+  ).toBe(true);
+  expect(
+    venueConstraintsForDate(
+      "New York, USA",
+      "The Met Cloisters",
+      "2027-01-13",
+      seasonalFacts,
+    ).filter((f) => f.venueId === "met-fifth-avenue-weekly-closure"),
+  ).toEqual([]);
+  for (const date of ["2027-01-11", "2027-01-12"])
+    expect(
+      venueConstraintsForDate(
+        "New York, USA",
+        "Merchant's House Museum",
+        date,
+        seasonalFacts,
+      ).some((f) => f.venueId === "merchants-house-public-visiting-days"),
+    ).toBe(true);
+  expect(
+    venueConstraintsForDate(
+      "New York, USA",
+      "Merchant's House Museum private group tour",
+      "2027-01-11",
+      seasonalFacts,
+    ),
+  ).toEqual([]);
+  expect(
+    venueConstraintsForDate(
+      "New York, USA",
+      "Merchant's House Museum",
+      "2027-01-13",
+      seasonalFacts,
+    ),
+  ).toEqual([]);
+});

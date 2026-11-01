@@ -2,7 +2,10 @@ import {
   travelerAvailability,
   availableSlotMinutes,
 } from "./traveler-availability";
-import { isSpeculativeEventTitle } from "./speculative-event";
+import {
+  isSpeculativeEventTitle,
+  isGenericEventTitle,
+} from "./speculative-event";
 import { requestsMiddayRest, proposeRestDayTiming } from "./schedule-timing";
 import { mealBoundaryAnchors, type VisitSlots } from "./meal-boundaries";
 import { matchesSuggestedHighlight } from "./highlight-match";
@@ -180,10 +183,15 @@ export function compileSchedule(
         return false;
       }
       ids.add(activity.id);
-      if (isSpeculativeEventTitle(activity.name)) {
+      if (
+        isSpeculativeEventTitle(activity.name) ||
+        isGenericEventTitle(activity.name)
+      ) {
         reviewRequiredActivities.push({
           id: activity.id,
-          reason: "speculative_event_title",
+          reason: isSpeculativeEventTitle(activity.name)
+            ? "speculative_event_title"
+            : "generic_event_title",
         });
         issues.push(`event_evidence_review_required:${activity.id}`);
         return false;
@@ -480,6 +488,16 @@ export function compileSchedule(
         )?.name;
         tips.push(
           `Event to review, not scheduled: ${name}. The supplied title makes its schedule conditional. Confirm the event's dates and venue with the organizer before adding it.`,
+        );
+      }
+      for (const review of reviewRequiredActivities
+        .filter((item) => item.reason === "generic_event_title")
+        .slice(0, 3)) {
+        const name = inventory.find(
+          (activity) => activity.id === review.id,
+        )?.name;
+        tips.push(
+          `Event idea to review, not scheduled: ${name}. This names a venue or broad show category rather than a specific production. Confirm the event name, date and duration before adding it.`,
         );
       }
       if (needsRest)

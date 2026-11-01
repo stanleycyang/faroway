@@ -86,12 +86,15 @@
   {
     "id": "met-fifth-avenue-weekly-closure",
     "destination": "New York",
-    "aliases": ["The Metropolitan Museum of Art"],
+    "aliases": [
+      "The Metropolitan Museum of Art",
+      "The Metropolitan Museum of Art (The Met)"
+    ],
     "exactName": true,
     "sourceUrl": "https://www.metmuseum.org/plan-your-visit",
-    "observedAt": "2026-10-31",
+    "observedAt": "2026-11-01",
     "closedWeekdays": [3],
-    "sourceNote": "Official visitor page retrieved. Exact observed museum name only; does not apply to exterior stops or establish availability on other days."
+    "sourceNote": "Official Fifth Avenue visitor hours reviewed again; generated parenthetical name matched the 1000 Fifth Avenue address. Exact reviewed names only, not Met Cloisters or exterior stops. Other dates still require availability checks."
   },
   {
     "id": "sun-yat-sen-nanyang-restoration",
@@ -102,5 +105,15 @@
     "observedAt": "2026-10-31",
     "temporarilyClosed": true,
     "sourceNote": "Official closure notice reviewed: closed for restoration from September 2024 to 2027, until further notice. Reopening is not confirmed for the trip dates. Do not treat the page calendar end date as a confirmed reopening or apply this to offsite programmes."
+  },
+  {
+    "id": "merchants-house-public-visiting-days",
+    "destination": "New York",
+    "aliases": ["Merchant's House Museum"],
+    "exactName": true,
+    "sourceUrl": "https://merchantshouse.org/visit/",
+    "observedAt": "2026-11-01",
+    "closedWeekdays": [1, 2],
+    "sourceNote": "Routine public self-guided and noon guided house visits are published Wednesday–Sunday. Separately arranged group tours can operate Monday/Tuesday with reservations and a minimum party; this rule does not apply to explicitly identified private/group tours or establish availability on other days."
   }
 ]

@@ -19,3 +19,21 @@ describe("explicitly speculative event titles", () => {
     expect(isSpeculativeEventTitle(title)).toBe(false),
   );
 });
+
+import { isGenericEventTitle } from "@/lib/search/speculative-event";
+it.each([
+  "Performance at Carnegie Hall",
+  "Classical Music Performance at Carnegie Hall",
+  "Concert at Carnegie Hall",
+  "Broadway Show",
+])("defers the unidentified event %s", (title) =>
+  expect(isGenericEventTitle(title)).toBe(true),
+);
+it.each([
+  "Tour of Carnegie Hall",
+  "On the Town in Concert",
+  "Concert at Carnegie Hall featuring a named artist",
+  "Museum of the Performing Arts",
+])("does not infer a generic performance from %s", (title) =>
+  expect(isGenericEventTitle(title)).toBe(false),
+);

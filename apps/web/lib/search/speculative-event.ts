@@ -10,3 +10,14 @@ export function isSpeculativeEventTitle(title: string): boolean {
     )
   );
 }
+
+/** A venue or broad show category does not identify a particular performance. */
+export function isGenericEventTitle(title: string): boolean {
+  const text = title.normalize("NFKC").toLowerCase().trim();
+  return (
+    /^(?:a )?broadway show$/.test(text) ||
+    /^(?:classical (?:music )?)?(?:performance|concert|show) at (?!.*\b(?:with|featuring)\b)[^:;()]+$/.test(
+      text,
+    )
+  );
+}
