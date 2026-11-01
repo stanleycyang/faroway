@@ -591,3 +591,68 @@ it("keeps explicitly speculative events as review leads rather than dated visits
   );
   expect(result.unselectedActivityIds).toContain("event");
 });
+
+it("leaves pre-arrival visits and meals unscheduled without losing later-day coverage", () => {
+  const result = compileSchedule(
+    { ...extended, mobilityNeeds: "Arrive on the first day at 18:00" },
+    [
+      visit("morning-a", 90, "morning"),
+      visit("morning-b", 90, "morning"),
+      visit("afternoon-a", 90, "afternoon"),
+      visit("evening-only", 60, "evening"),
+    ],
+    restMeals,
+  );
+  expect(result.days[0].morning.activities).toEqual([]);
+  expect(result.days[0].morning.meal).toBeUndefined();
+  expect(result.days[0].afternoon.activities).toEqual([]);
+  expect(result.days[0].afternoon.meal).toBeUndefined();
+  expect(result.days[0].evening.activities.map((a) => a.id)).toEqual([
+    "evening-only",
+  ]);
+  expect(
+    result.days
+      .slice(1)
+      .every((day) => slots.flatMap((slot) => day[slot].activities).length > 0),
+  ).toBe(true);
+  expect(result.days[0].tips.join(" ")).toContain("18:00–24:00");
+});
+it("keeps visits within a shortened day-part budget including a meal and buffer", () => {
+  const result = compileSchedule(
+    { ...plan, mobilityNeeds: "No starts before 11am" },
+    [visit("morning", 60, "morning"), visit("afternoon", 60, "afternoon")],
+    restMeals,
+  );
+  expect(result.days[0].morning.activities).toEqual([]);
+  expect(result.days[0].morning.meal).toBeDefined();
+  expect(result.unselectedActivityIds).toContain("morning");
+});
+it("leaves conflicting availability empty and exposes the conflict", () => {
+  const result = compileSchedule(
+    {
+      ...plan,
+      mobilityNeeds:
+        "Arrive on the first day at 18:00; depart on the final day at 09:00",
+    },
+    [visit("walk", 30)],
+    restMeals,
+  );
+  expect(slots.flatMap((slot) => result.days[0][slot].activities)).toEqual([]);
+  expect(slots.every((slot) => !result.days[0][slot].meal)).toBe(true);
+  expect(result.issues).toContain("day_1:conflicting_traveler_availability");
+});
+
+it("does not show a midday rest before a declared evening arrival", () => {
+  const result = compileSchedule(
+    {
+      ...restPlan,
+      mobilityNeeds:
+        "Arrive on the first day at 18:00; a midday rest every day",
+    },
+    [visit("evening", 60, "evening")],
+    restMeals,
+  );
+  expect(result.timingProposals[0].fitsPolicy).toBe(false);
+  expect(result.days[0].timingProposal?.events).toEqual([]);
+  expect(result.issues).toContain("day_1:midday_rest_timing_conflict");
+});

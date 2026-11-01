@@ -1,3 +1,4 @@
+import type { TravelerDayWindow } from "./traveler-availability";
 import { dayTimingBasis } from "@faroway/types";
 import {
   proposeTiming,
@@ -25,7 +26,10 @@ export function requestsMiddayRest(
 }
 
 /** Proposed local windows only. Never infers opening hours or route durations. */
-export function proposeRestDayTiming(day: SuggestedDay) {
+export function proposeRestDayTiming(
+  day: SuggestedDay,
+  availability?: TravelerDayWindow,
+) {
   const events: TimingEvent[] = [];
   const labels = new Map<string, string>();
   const add = (
@@ -41,8 +45,8 @@ export function proposeRestDayTiming(day: SuggestedDay) {
       id,
       kind,
       durationMinutes,
-      earliestStart,
-      latestEnd,
+      earliestStart: Math.max(earliestStart, availability?.earliestMinute ?? 0),
+      latestEnd: Math.min(latestEnd, availability?.latestMinute ?? 1440),
       bufferBeforeMinutes: events.length && kind !== "rest" ? 30 : 0,
     });
   };
@@ -85,7 +89,26 @@ export function proposeRestDayTiming(day: SuggestedDay) {
   visits("afternoon", 840, 1080);
   visits("evening", 1080, 1320);
   meal("evening", "Dinner", 60, 1080, 1320);
-  const result = proposeTiming(events);
+  const impossible = events.find(
+    (event) => event.earliestStart >= event.latestEnd,
+  );
+  const result = impossible
+    ? {
+        fitsPolicy: false as const,
+        verified: false as const,
+        events: [],
+        conflict: {
+          eventId: impossible.id,
+          earliestPossibleStart: impossible.earliestStart,
+          requiredEnd: impossible.earliestStart + impossible.durationMinutes,
+          latestEnd: impossible.latestEnd,
+          overrunMinutes:
+            impossible.earliestStart +
+            impossible.durationMinutes -
+            impossible.latestEnd,
+        },
+      }
+    : proposeTiming(events);
   const clock = (minute: number) =>
     `${Math.floor(minute / 60)
       .toString()
@@ -96,7 +119,7 @@ export function proposeRestDayTiming(day: SuggestedDay) {
         "This draft reserves a suggested one-hour midday rest. Meal lengths and 30-minute buffers are planning assumptions, not opening hours or travel estimates. Rest is assumed near lunch; a hotel return needs separate travel time. Confirm these details before using the times.",
       ]
     : [
-        "The selected visits do not fit the proposed meal, buffer and one-hour midday-rest windows. Review the visits and timing before using this day; your rest request remains unresolved. No visits have been shortened or removed.",
+        "The selected visits do not fit the proposed meal, buffer and one-hour midday-rest windows within your available hours. Review the visits and timing before using this day; your rest request remains unresolved. No visits have been shortened or removed.",
       ];
   return {
     policy: "midday-rest-v1" as const,

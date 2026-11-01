@@ -141,6 +141,7 @@ async function main() {
     "scripts/fixtures/reviewed-dining-options.json",
     "apps/web/lib/search/schedule-compiler.ts",
     "apps/web/lib/search/speculative-event.ts",
+    "apps/web/lib/search/traveler-availability.ts",
     "apps/web/lib/search/schedule-timing.ts",
     "scripts/uat/lib/timing-proposal.ts",
     "apps/web/lib/search/meal-boundaries.ts",

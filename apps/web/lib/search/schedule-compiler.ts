@@ -1,3 +1,7 @@
+import {
+  travelerAvailability,
+  availableSlotMinutes,
+} from "./traveler-availability";
 import { isSpeculativeEventTitle } from "./speculative-event";
 import { requestsMiddayRest, proposeRestDayTiming } from "./schedule-timing";
 import { mealBoundaryAnchors, type VisitSlots } from "./meal-boundaries";
@@ -90,6 +94,38 @@ export function compileSchedule(
         : { count: 4, minutes: 420, slot: 210, target: 3 };
   const issues: string[] = [];
   const needsRest = requestsMiddayRest(plan);
+  const availability = travelerAvailability(plan, daysCount);
+  if (availability.needsReview)
+    issues.push("traveler_availability_interpretation_required");
+  const mealMinutes = [45, 60, 60];
+  const slotFits = (
+    day: number,
+    slot: number,
+    visits: ActivityResult[],
+  ): boolean => {
+    const capacity = availableSlotMinutes(availability.windows[day], slot);
+    if (!Number.isFinite(capacity)) return true;
+    const meal = dining.some((item) => item.mealTypes.includes(MEALS[slot]));
+    const total =
+      visits.reduce((sum, visit) => sum + visit.duration, 0) +
+      (meal ? mealMinutes[slot] : 0) +
+      Math.max(0, visits.length + Number(meal) - 1) * 30;
+    return capacity > 0 && total <= capacity;
+  };
+  const canUseDay = (activity: ActivityResult, day: number) =>
+    SLOTS.some(
+      (slot, index) =>
+        (activity.bestTimeOfDay === "any" || activity.bestTimeOfDay === slot) &&
+        slotFits(day, index, [activity]),
+    );
+  const requiredDays = Array.from(
+    { length: daysCount },
+    (_, day) => day,
+  ).filter((day) =>
+    SLOTS.some(
+      (_, slot) => availableSlotMinutes(availability.windows[day], slot) > 0,
+    ),
+  );
   // Meal identities do not affect this provisional policy's fixed durations.
   // Reserve each meal that the later assignment step can actually supply.
   const timingMeals = MEALS.map((type) =>
@@ -216,7 +252,11 @@ export function compileSchedule(
     firstDay: number,
     used: ReadonlySet<string>,
   ): boolean => {
-    if (activities.length - used.size < daysCount - firstDay) return false;
+    if (
+      activities.length - used.size <
+      requiredDays.filter((day) => day >= firstDay).length
+    )
+      return false;
     const key = JSON.stringify([firstDay, [...used].sort()]);
     const cached = coverageCache.get(key);
     if (cached != null) return cached;
@@ -227,7 +267,8 @@ export function compileSchedule(
         if (
           used.has(activity.id) ||
           visited.has(activity.id) ||
-          excluded.has(`${date}:${activity.id}`)
+          excluded.has(`${date}:${activity.id}`) ||
+          !canUseDay(activity, day)
         )
           continue;
         visited.add(activity.id);
@@ -240,7 +281,7 @@ export function compileSchedule(
       return false;
     };
     let possible = true;
-    for (let day = firstDay; day < daysCount; day++) {
+    for (const day of requiredDays.filter((day) => day >= firstDay)) {
       if (!assign(day, new Set())) {
         possible = false;
         break;
@@ -249,7 +290,9 @@ export function compileSchedule(
     coverageCache.set(key, possible);
     return possible;
   };
-  const protectCoverage = exclusions.length > 0 && canCoverDays(0, new Set());
+  const protectCoverage =
+    (exclusions.length > 0 || availability.windows.some(Boolean)) &&
+    canCoverDays(0, new Set());
   let beam: State[] = [{ selected: [], used: new Set(), score: 0 }];
   for (let day = 0; day < daysCount; day++) {
     for (let slot = 0; slot < SLOTS.length; slot++) {
@@ -261,7 +304,7 @@ export function compileSchedule(
           (sum, s) => sum + s.activity.duration,
           0,
         );
-        const remainingDays = daysCount - day - 1;
+        const remainingDays = requiredDays.filter((next) => next > day).length;
         // Reserve enough unused visits to cover later days when supply permits.
         const countLimit = Math.min(
           limits.count,
@@ -277,7 +320,8 @@ export function compileSchedule(
           (a) =>
             !state.used.has(a.id) &&
             !excluded.has(`${date}:${a.id}`) &&
-            (a.bestTimeOfDay === "any" || a.bestTimeOfDay === SLOTS[slot]),
+            (a.bestTimeOfDay === "any" || a.bestTimeOfDay === SLOTS[slot]) &&
+            slotFits(day, slot, [a]),
         );
         const choices = eligible.map((a) => [a]);
         if (pace !== "relaxed") {
@@ -291,7 +335,13 @@ export function compileSchedule(
           if (
             today.length + choice.length > countLimit ||
             usedMinutes + minutes > limits.minutes ||
-            (choice.length > 1 && minutes > limits.slot)
+            (choice.length > 1 && minutes > limits.slot) ||
+            !slotFits(day, slot, [
+              ...today
+                .filter((item) => item.slot === slot)
+                .map((item) => item.activity),
+              ...choice,
+            ])
           )
             continue;
           if (
@@ -401,7 +451,27 @@ export function compileSchedule(
       "Planning draft: confirm opening hours, availability, travel times and suitability before booking.",
       "Leave the unscheduled time for meals, travel and rest.",
     ];
+    const window = availability.windows[day];
+    if (window) {
+      const clock = (minute: number) =>
+        `${Math.floor(minute / 60)
+          .toString()
+          .padStart(2, "0")}:${(minute % 60).toString().padStart(2, "0")}`;
+      tips.push(
+        `Your local-time availability: ${clock(window.earliestMinute)}–${clock(window.latestMinute)}. This draft leaves other periods free and reserves provisional meal and buffer time within each day part. Confirm exact visit times and airport or station transfers before booking.`,
+      );
+      if (window.earliestMinute >= window.latestMinute) {
+        issues.push(`day_${day + 1}:conflicting_traveler_availability`);
+        tips.push(
+          "Your arrival and departure limits conflict. Review them before adding visits or meals.",
+        );
+      }
+    }
     if (day === 0) {
+      if (availability.needsReview)
+        tips.push(
+          "Some arrival, departure or working-time instructions need review. This draft may not honor them; confirm your available hours before using the schedule.",
+        );
       for (const review of reviewRequiredActivities
         .filter((item) => item.reason === "speculative_event_title")
         .slice(0, 3)) {
@@ -487,6 +557,13 @@ export function compileSchedule(
     ) as VisitSlots;
     const slots = SLOTS.map((name, slot) => {
       const stops = visitSlots[name].activities;
+      if (availableSlotMinutes(window, slot) < mealMinutes[slot]) {
+        if (window)
+          issues.push(
+            `day_${day + 1}:${MEALS[slot]}:outside_traveler_availability`,
+          );
+        return { activities: stops };
+      }
       const anchors = mealBoundaryAnchors(visitSlots, name);
       if (anchors.length === 2) {
         const separation = suppliedDistanceKm(
@@ -573,7 +650,11 @@ export function compileSchedule(
       tips,
     };
   });
-  const timingProposals = needsRest ? days.map(proposeRestDayTiming) : [];
+  const timingProposals = needsRest
+    ? days.map((day, index) =>
+        proposeRestDayTiming(day, availability.windows[index]),
+      )
+    : [];
   for (const proposal of timingProposals) {
     const day = days.find((item) => item.date === proposal.date)!;
     day.timingProposal = {
