@@ -1,4 +1,5 @@
-import type { SuggestedDay } from "./types";
+import type { SearchPlan, SuggestedDay } from "./types";
+import { travelerAvailability } from "./traveler-availability";
 export interface DayNarration {
   date: string;
   title: string;
@@ -32,6 +33,7 @@ export function narrationContext(days: SuggestedDay[]) {
 export function applyScheduleNarration(
   days: SuggestedDay[],
   narration: DayNarration[],
+  plan?: Pick<SearchPlan, "mobilityNeeds" | "requirements">,
 ): SuggestedDay[] {
   if (
     narration.length !== days.length ||
@@ -39,6 +41,9 @@ export function applyScheduleNarration(
   )
     throw new Error("Narration must cover each date exactly once");
   const context = narrationContext(days);
+  const availability = plan
+    ? travelerAvailability(plan, days.length)
+    : undefined;
   const updates = days.map((day, dayIndex) => {
     const entry = narration.find((n) => n.date === day.date);
     if (
@@ -60,6 +65,27 @@ export function applyScheduleNarration(
       ids.some((id) => !entry.activityIds.includes(id))
     )
       throw new Error("Narration references a different selection of visits");
+    const window = availability?.windows[dayIndex];
+    if (
+      !ids.length &&
+      window &&
+      !availability?.needsReview &&
+      window.earliestMinute < window.latestMinute &&
+      (window.earliestMinute > 0 || window.latestMinute < 1440)
+    ) {
+      const clock = (minute: number) =>
+        `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
+      const hours =
+        window.earliestMinute === 0
+          ? `until ${clock(window.latestMinute)}`
+          : window.latestMinute === 1440
+            ? `from ${clock(window.earliestMinute)}`
+            : `from ${clock(window.earliestMinute)} to ${clock(window.latestMinute)}`;
+      return {
+        title: "Limited time today",
+        summary: `You're available ${hours} local time. No visits are planned; confirm transfer time before keeping any suggested meals.`,
+      };
+    }
     return { title: entry.title.trim(), summary: entry.summary.trim() };
   });
   return structuredClone(days).map((day, index) => ({

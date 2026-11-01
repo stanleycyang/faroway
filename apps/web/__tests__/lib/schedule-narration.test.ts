@@ -116,3 +116,39 @@ it("binds compact references to their date and preserves long inventory IDs", ()
   updates[0].activityIds[0] = input[0].morning.activities[0].id;
   expect(() => applyScheduleNarration(input, updates)).toThrow(/selection/);
 });
+
+it("uses traveler hours for empty constrained days without inventing availability", () => {
+  const input = structuredClone(days);
+  for (const slot of ["morning", "afternoon", "evening"] as const)
+    input.at(-1)![slot].activities = [];
+  const updates = narrationContext(input).map((day) => ({
+    date: day.date,
+    title: "A day of dining",
+    summary: "Activities are available until 9am.",
+    activityIds: day.slots.flatMap((slot) => slot.activities.map((a) => a.id)),
+  }));
+  const result = applyScheduleNarration(input, updates, {
+    mobilityNeeds: "Depart on the final day at 09:00",
+  });
+  expect(result.at(-1)!.title).toBe("Limited time today");
+  expect(result.at(-1)!.summary).toBe(
+    "You're available until 09:00 local time. No visits are planned; confirm transfer time before keeping any suggested meals.",
+  );
+  expect(result.at(-1)!.morning).toEqual(input.at(-1)!.morning);
+  expect(result.at(-1)!.tips).toEqual(input.at(-1)!.tips);
+  expect(applyScheduleNarration(input, updates).at(-1)!.title).toBe(
+    "A day of dining",
+  );
+  // Conflicting instructions must not become apparently settled narration.
+  const oneDay = [input.at(-1)!];
+  expect(
+    applyScheduleNarration(oneDay, [updates.at(-1)!], {
+      mobilityNeeds:
+        "Arrive on the first day at 18:00; depart on the final day at 09:00",
+    })[0].title,
+  ).toBe("A day of dining");
+  const arrival = applyScheduleNarration(oneDay, [updates.at(-1)!], {
+    mobilityNeeds: "Arrive on the first day at 23:00",
+  });
+  expect(arrival[0].summary).toContain("from 23:00 local time");
+});

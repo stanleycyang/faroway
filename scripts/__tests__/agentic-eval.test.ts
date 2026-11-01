@@ -432,6 +432,24 @@ describe("reviewed venue address evidence", () => {
       evaluateVenueAddresses(trace, addressFacts, "2026-10-31").unresolved,
     ).toBe(1);
   });
+  test("flags reviewed Cambridge restaurant addresses without transferring them to England", () => {
+    for (const fact of addressFacts.filter(
+      (item) => item.destination === "Cambridge, Massachusetts, USA",
+    )) {
+      const trace = addressTrace(
+        fact.aliases[0],
+        fact.contradictedAddresses[0],
+      );
+      trace.brief.destination = "Cambridge, Massachusetts, USA";
+      const result = evaluateVenueAddresses(trace, addressFacts, "2026-11-01");
+      expect(result.contradicted).toBe(1);
+      expect(result.futureAvailabilityVerified).toBe(false);
+      trace.brief.destination = "Cambridge, England, UK";
+      expect(
+        evaluateVenueAddresses(trace, addressFacts, "2026-11-01").unresolved,
+      ).toBe(1);
+    }
+  });
   test("unreviewed spellings, missing addresses and stale evidence remain unresolved", () => {
     for (const address of ["", "6-4-1 Roppongi"]) {
       expect(

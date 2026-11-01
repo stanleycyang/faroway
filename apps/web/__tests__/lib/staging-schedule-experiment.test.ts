@@ -206,7 +206,8 @@ it("narrates an intentionally quiet departure day without an activity-supply fal
     );
     expect(mocks.generateObject).toHaveBeenCalledTimes(1);
     expect(events).toEqual([]);
-    expect(result.days[2].title).toBe("Your day");
+    expect(result.days[2].title).toBe("Limited time today");
+    expect(result.days[2].summary).toContain("until 09:00 local time");
     expect(result.days[2].tips.join(" ")).toContain("confirm transfer time");
     expect(
       ["morning", "afternoon", "evening"].flatMap(

@@ -50,5 +50,25 @@
       "Blk 2, 1 Cluny Rd, Ginger Garden Singapore Botanic Gardens, 259569"
     ],
     "contradictedAddresses": []
+  },
+  {
+    "id": "row34-cambridge",
+    "destination": "Cambridge, Massachusetts, USA",
+    "aliases": ["Row 34"],
+    "sourceUrl": "https://www.row34.com/location/row34-cambridge/",
+    "observedAt": "2026-11-01",
+    "sourceAddress": "314 Main Street, Cambridge, MA 02142",
+    "supportedAddresses": ["314 Main Street, Cambridge, MA 02142"],
+    "contradictedAddresses": ["383 Binney St, Cambridge, MA 02139"]
+  },
+  {
+    "id": "friendly-toast-cambridge",
+    "destination": "Cambridge, Massachusetts, USA",
+    "aliases": ["The Friendly Toast"],
+    "sourceUrl": "https://thefriendlytoast.com/cambridge-ma",
+    "observedAt": "2026-11-01",
+    "sourceAddress": "1230 Massachusetts Ave, Cambridge, MA 02138",
+    "supportedAddresses": ["1230 Massachusetts Ave, Cambridge, MA 02138"],
+    "contradictedAddresses": ["1 Kendall Square, Cambridge, MA 02139"]
   }
 ]

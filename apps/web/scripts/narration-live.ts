@@ -69,6 +69,7 @@ async function main() {
     "apps/web/scripts/narration-live.ts",
     "apps/web/lib/search/schedule-narration.ts",
     "apps/web/lib/search/narration-prompt.ts",
+    "apps/web/lib/search/traveler-availability.ts",
     "apps/web/lib/search/bridge.ts",
     "apps/web/lib/ai/sdk.ts",
     "apps/web/lib/ai/planning-step.ts",
@@ -135,7 +136,11 @@ async function main() {
     usage = result.usage;
     // Private experiment evidence: retain rejected references for diagnosis.
     narration = result.object.days;
-    const days = applyScheduleNarration(itinerary.days, result.object.days);
+    const days = applyScheduleNarration(
+      itinerary.days,
+      result.object.days,
+      plan,
+    );
     trace.configId = `fixed-schedule-narration-compact-${thinkingLevel}`;
     trace.steps = trace.steps.map((step) => ({
       ...step,

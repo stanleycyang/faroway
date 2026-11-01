@@ -210,7 +210,10 @@ export async function runStagingCompiledSchedule(
       30000,
       "schedule narration",
     );
-    return { days: applyScheduleNarration(days, result.object.days), topHotel };
+    return {
+      days: applyScheduleNarration(days, result.object.days, plan),
+      topHotel,
+    };
   } catch (error) {
     logPlanningFallback(
       "aggregator",
