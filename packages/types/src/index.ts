@@ -246,7 +246,7 @@ export interface Restaurant {
   id: string;
   name: string;
   cuisineType: string[];
-  priceLevel: 1 | 2 | 3 | 4;
+  priceLevel?: 1 | 2 | 3 | 4;
   description: string;
   estimatedCost: {
     amount: number;
@@ -537,10 +537,11 @@ export interface DiningResult {
   name: string;
   description: string;
   cuisineTypes: string[];
-  priceLevel: 1 | 2 | 3 | 4;
-  rating: number;
-  reviewCount: number;
-  location: LocationInfo;
+  priceLevel?: 1 | 2 | 3 | 4;
+  rating?: number;
+  reviewCount?: number;
+  location: Omit<LocationInfo, "lat" | "lng"> &
+    Partial<Pick<LocationInfo, "lat" | "lng">>;
   images: string[];
   reservationUrl?: string;
   affiliatePartner?: string;

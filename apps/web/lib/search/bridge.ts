@@ -93,7 +93,7 @@ function mapDining(
     id: d.id,
     name: d.name,
     cuisineType: d.cuisineTypes || [],
-    priceLevel: d.priceLevel as 1 | 2 | 3 | 4,
+    priceLevel: d.priceStatus === "unknown" ? undefined : d.priceLevel,
     description: d.description,
     estimatedCost: {
       amount: 0,

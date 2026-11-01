@@ -230,3 +230,37 @@ test('proposed timing survives native flattening and cache normalization, then e
     expect(reloaded.activities.find((a) => a.id === 'cafe')?.duration).toBe('Duration not set');
   }
 });
+
+test('partially supported dining keeps unknown ratings and prices through a cache reload', () => {
+  const days = transformItineraryDays([
+    {
+      date: '2027-01-11',
+      dayNumber: 1,
+      title: 'Breakfast review',
+      morning: {
+        activities: [],
+        meals: [
+          {
+            id: 'reviewed-bloomhouse-ginger-garden',
+            name: 'The Bloomhouse by Little Farms',
+            description: 'Confirm service times, availability and stroller access.',
+            mealType: 'breakfast',
+            location: { name: 'Ginger Garden, Singapore Botanic Gardens' },
+            estimatedCost: { amount: 0, status: 'unknown', currency: '', perPerson: true },
+          },
+        ],
+      },
+      afternoon: { activities: [], meals: [] },
+      evening: { activities: [], meals: [] },
+    },
+  ]);
+  const cached = transformItineraryDays(JSON.parse(JSON.stringify(days)));
+  for (const day of [days[0], cached[0]]) {
+    expect(day.activities[0].title).toBe('The Bloomhouse by Little Farms');
+    expect(day.activities[0].description).toContain('Confirm service times');
+    expect(day.activities[0].rating).toBeUndefined();
+    expect(day.activities[0].reviewCount).toBeUndefined();
+    expect(day.activities[0].price).toBeUndefined();
+    expect(day.activities[0].estimatedCost).toBeUndefined();
+  }
+});
