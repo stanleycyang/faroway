@@ -472,3 +472,100 @@ it("adds a proposed daily rest timetable without changing selected visits", () =
   expect(result.days[0].tips[0]).toContain("Proposed local timing");
   expect(baseline.timingProposals).toEqual([]);
 });
+
+const restPlan: SearchPlan = {
+  ...plan,
+  dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 },
+  mobilityNeeds: "Short walks and a midday rest every day",
+  activityCriteria: {
+    ...plan.activityCriteria,
+    pacePreference: "moderate",
+    mustSee: ["museum"],
+  },
+};
+const restMeals: DiningResult[] = (
+  ["breakfast", "lunch", "dinner"] as const
+).map((type) => ({
+  ...dining[0],
+  id: type,
+  mealTypes: [type],
+}));
+it("screens the live 210-minute morning conflict before selecting visits", () => {
+  const input = [
+    visit("museum", 150, "morning"),
+    visit("walk", 60, "morning"),
+    visit("gallery", 180, "afternoon"),
+  ];
+  const original = structuredClone(input);
+  const result = compileSchedule(restPlan, input, restMeals);
+  expect(result.timingProposals.every((proposal) => proposal.fitsPolicy)).toBe(
+    true,
+  );
+  expect(result.days[0].morning.activities.map((a) => a.id)).toEqual([
+    "museum",
+  ]);
+  expect(result.unselectedActivityIds).toContain("walk");
+  expect(input).toEqual(original);
+  for (const item of slots.flatMap((slot) => result.days[0][slot].activities))
+    expect(item).toEqual(input.find((a) => a.id === item.id));
+  expect(result.days[0].tips.join(" ")).toContain("Review any omitted visits");
+});
+it("does not reserve coverage for visits that cannot fit any permitted rest window", () => {
+  const result = compileSchedule(
+    {
+      ...restPlan,
+      dates: { start: "2027-01-11", end: "2027-01-12", nights: 1 },
+    },
+    [
+      visit("too-long", 300, "morning"),
+      visit("short-a", 60),
+      visit("short-b", 60),
+    ],
+    restMeals,
+  );
+  expect(
+    result.days.every(
+      (day) => slots.flatMap((slot) => day[slot].activities).length > 0,
+    ),
+  ).toBe(true);
+  expect(result.timingProposals.every((proposal) => proposal.fitsPolicy)).toBe(
+    true,
+  );
+  expect(result.reviewRequiredActivities).toContainEqual({
+    id: "too-long",
+    reason: "does_not_fit_proposed_rest_windows",
+  });
+  expect(result.days[0].tips.join(" ")).toContain(
+    "visit has not been shortened",
+  );
+});
+it("reports insufficient supply when all supplied visits conflict with the rest policy", () => {
+  const result = compileSchedule(
+    restPlan,
+    [visit("too-long", 300, "morning")],
+    restMeals,
+  );
+  expect(slots.flatMap((slot) => result.days[0][slot].activities)).toEqual([]);
+  expect(result.issues).toContain("day_1:activity_supply_gap");
+  expect(result.unselectedActivityIds).toEqual(["too-long"]);
+});
+it("keeps the non-rest selection unchanged for a negated request", () => {
+  const input = [
+    visit("museum", 150, "morning"),
+    visit("walk", 60, "morning"),
+    visit("gallery", 180, "afternoon"),
+  ];
+  expect(
+    compileSchedule(
+      { ...restPlan, mobilityNeeds: "No midday rest every day" },
+      input,
+      restMeals,
+    ),
+  ).toEqual(
+    compileSchedule(
+      { ...restPlan, mobilityNeeds: undefined },
+      input,
+      restMeals,
+    ),
+  );
+});

@@ -88,6 +88,37 @@ export function compileSchedule(
         ? { count: 5, minutes: 600, slot: 240, target: 4 }
         : { count: 4, minutes: 420, slot: 210, target: 3 };
   const issues: string[] = [];
+  const needsRest = requestsMiddayRest(plan);
+  // Meal identities do not affect this provisional policy's fixed durations.
+  // Reserve each meal that the later assignment step can actually supply.
+  const timingMeals = MEALS.map((type) =>
+    dining.find((meal) => meal.mealTypes.includes(type)),
+  );
+  const restFitCache = new Map<string, boolean>();
+  const fitsRestWindows = (visits: ActivityResult[][]): boolean => {
+    if (!needsRest) return true;
+    const key = JSON.stringify(
+      visits.map((slot) => slot.map((a) => a.duration)),
+    );
+    const cached = restFitCache.get(key);
+    if (cached !== undefined) return cached;
+    const blocks = visits.map((activities, slot) => ({
+      activities,
+      meal: timingMeals[slot],
+    }));
+    const fits = proposeRestDayTiming({
+      dayNumber: 1,
+      date: plan.dates.start,
+      title: "Timing screen",
+      summary: "",
+      tips: [],
+      morning: blocks[0],
+      afternoon: blocks[1],
+      evening: blocks[2],
+    }).fitsPolicy;
+    restFitCache.set(key, fits);
+    return fits;
+  };
   const excluded = new Set(
     exclusions.map((item) => `${item.date}:${item.activityId}`),
   );
@@ -134,6 +165,24 @@ export function compileSchedule(
           reason: mobilityReview,
         });
         issues.push(`mobility_suitability_review_required:${activity.id}`);
+        return false;
+      }
+      if (
+        needsRest &&
+        !SLOTS.some(
+          (slot, index) =>
+            (activity.bestTimeOfDay === "any" ||
+              activity.bestTimeOfDay === slot) &&
+            fitsRestWindows(
+              SLOTS.map((_, i) => (i === index ? [activity] : [])),
+            ),
+        )
+      ) {
+        reviewRequiredActivities.push({
+          id: activity.id,
+          reason: "does_not_fit_proposed_rest_windows",
+        });
+        issues.push(`midday_rest_visit_deferred:${activity.id}`);
         return false;
       }
       return true;
@@ -236,6 +285,16 @@ export function compileSchedule(
             (choice.length > 1 && minutes > limits.slot)
           )
             continue;
+          if (
+            needsRest &&
+            !fitsRestWindows(
+              SLOTS.map((_, index) => [
+                ...today.filter((s) => s.slot === index).map((s) => s.activity),
+                ...(index === slot ? choice : []),
+              ]),
+            )
+          )
+            continue;
           const used = new Set([...state.used, ...choice.map((a) => a.id)]);
           if (protectCoverage && !canCoverDays(day + 1, used)) continue;
           let score = state.score;
@@ -334,6 +393,20 @@ export function compileSchedule(
       "Leave the unscheduled time for meals, travel and rest.",
     ];
     if (day === 0) {
+      if (needsRest)
+        tips.push(
+          "This draft limits visit combinations to leave room for the proposed meal, buffer and midday-rest windows. Review any omitted visits before adding them.",
+        );
+      for (const review of reviewRequiredActivities
+        .filter((item) => item.reason === "does_not_fit_proposed_rest_windows")
+        .slice(0, 3)) {
+        const name = inventory.find(
+          (activity) => activity.id === review.id,
+        )?.name;
+        tips.push(
+          `Not scheduled: ${name}. Its supplied duration and preferred time do not fit this draft's proposed meal, buffer and midday-rest windows. Review the timing before adding it; the visit has not been shortened.`,
+        );
+      }
       for (const review of reviewRequiredActivities
         .filter((item) => item.reason === "supplied_access_conflict")
         .slice(0, 3)) {
@@ -481,9 +554,7 @@ export function compileSchedule(
       tips,
     };
   });
-  const timingProposals = requestsMiddayRest(plan)
-    ? days.map(proposeRestDayTiming)
-    : [];
+  const timingProposals = needsRest ? days.map(proposeRestDayTiming) : [];
   for (const proposal of timingProposals) {
     const day = days.find((item) => item.date === proposal.date)!;
     day.timingProposal = {
