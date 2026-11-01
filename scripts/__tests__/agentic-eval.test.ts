@@ -928,3 +928,35 @@ test("surfaces event evidence gaps even for confident generated titles", () => {
     "event_date_and_venue_evidence_required:walk",
   );
 });
+
+test("reference arrival windows catch visits even when request text is preserved", () => {
+  const trace = fixture();
+  trace.brief.expectedDayAvailability = [
+    { date: trace.brief.startDate, earliestMinute: 1080, latestMinute: 1440 },
+  ];
+  expect(evaluateAgenticTrace(trace).failures).toContain(
+    "day_1:day_part_outside_availability:morning",
+  );
+});
+test("only an explicit reference allowance permits an empty travel day", () => {
+  const trace = fixture();
+  const day = (trace.steps[4].output as { days: Record<string, unknown>[] })
+    .days[0];
+  day.morning = { activities: [] };
+  (
+    trace.mappedItinerary as { days: Record<string, unknown>[] }
+  ).days[0].morning = { activities: [], meals: [] };
+  expect(evaluateAgenticTrace(trace).failures).toContain("day_1:no_activities");
+  trace.brief.expectedDayAvailability = [
+    {
+      date: trace.brief.startDate,
+      earliestMinute: 0,
+      latestMinute: 540,
+      allowEmptyDay: true,
+    },
+  ];
+  expect(evaluateAgenticTrace(trace).failures).not.toContain(
+    "day_1:no_activities",
+  );
+  expect(evaluateAgenticTrace(trace).failures).not.toContain("day_1:no_meals");
+});

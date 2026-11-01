@@ -1,3 +1,7 @@
+import {
+  evaluateDayAvailability,
+  validateDayAvailability,
+} from "./day-availability";
 import { readDayTiming } from "../../../packages/types/src/day-timing";
 import { suppliedDistanceKm } from "./route-eval";
 import { inclusiveDays, assertValidBriefParty, type UatBrief } from "./briefs";
@@ -93,6 +97,7 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
       "Evaluation brief requires valid dates spanning at most 31 days",
     );
   const expectedDates = inclusiveDays(brief.startDate, brief.endDate);
+  validateDayAvailability(brief.expectedDayAvailability ?? [], expectedDates);
   const plan = object(output("orchestrator"));
   const dates = object(plan.dates);
   if (dates.start !== brief.startDate || dates.end !== brief.endDate)
@@ -157,6 +162,18 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
   for (const [index, rawDay] of days.entries()) {
     const day = object(rawDay);
     const mapped = object(mappedDays[index]);
+    const availability = brief.expectedDayAvailability?.find(
+      (item) => item.date === day.date,
+    );
+    if (availability) {
+      const result = evaluateDayAvailability(day, availability);
+      result.violations.forEach((finding) =>
+        fail(`day_${index + 1}:${finding}`),
+      );
+      result.unknowns.forEach((finding) =>
+        warnings.push(`day_${index + 1}:${finding}`),
+      );
+    }
     if (
       day.timingProposal !== undefined ||
       mapped.timingProposal !== undefined
@@ -278,8 +295,10 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
       warnings.push(
         `day_${index + 1}:exceeds_${String(pace ?? "moderate")}_pace_budget`,
       );
-    if (!count) fail(`day_${index + 1}:no_activities`);
-    if (!meals) fail(`day_${index + 1}:no_meals`);
+    if (!count && !availability?.allowEmptyDay)
+      fail(`day_${index + 1}:no_activities`);
+    if (!meals && !availability?.allowEmptyDay)
+      fail(`day_${index + 1}:no_meals`);
     if (day.transport && index !== 0)
       fail(`day_${index + 1}:repeated_outbound_transport`);
     timingDays.push({ date: String(day.date), activityMinutes: dayMinutes });

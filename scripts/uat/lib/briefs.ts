@@ -1,3 +1,4 @@
+import type { DayAvailability } from "./day-availability";
 export interface UatBrief {
   id: string;
   destination: string;
@@ -12,6 +13,8 @@ export interface UatBrief {
   budget: "budget" | "moderate" | "luxury";
   vibes: string[];
   travelerType: "solo" | "couple" | "family" | "friends" | "business";
+  /** Evaluation reference only; not passed to the planner as an extra input. */
+  expectedDayAvailability?: DayAvailability[];
   dietaryRestrictions?: string[];
   mobilityNeeds?: string;
   requirements?: {

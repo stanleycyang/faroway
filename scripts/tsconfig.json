@@ -22,6 +22,7 @@
     "__tests__/grounding-evidence.test.ts",
     "__tests__/timing-proposal.test.ts",
     "__tests__/fixed-visit-refinement.test.ts",
-    "__tests__/comparison-contracts.test.ts"
+    "__tests__/comparison-contracts.test.ts",
+    "__tests__/day-availability.test.ts"
   ]
 }

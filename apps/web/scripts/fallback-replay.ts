@@ -122,6 +122,7 @@ for (const file of [
   "apps/web/lib/location-coordinates.ts",
   "apps/web/lib/search/fallback-itinerary.ts",
   "scripts/uat/lib/agentic-eval.ts",
+  "scripts/uat/lib/day-availability.ts",
   "scripts/uat/lib/venue-constraints.ts",
   "scripts/uat/lib/briefs.ts",
   "apps/web/scripts/fallback-replay.ts",

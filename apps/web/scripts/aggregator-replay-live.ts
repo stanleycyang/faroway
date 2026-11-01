@@ -131,6 +131,7 @@ async function main() {
     "apps/web/lib/search/party-suitability.ts",
     "scripts/uat/lib/venue-constraints.ts",
     "scripts/uat/lib/agentic-eval.ts",
+    "scripts/uat/lib/day-availability.ts",
     "scripts/fixtures/agentic-venue-constraints.json",
     "apps/web/lib/search/supplied-distance.ts",
     "apps/web/lib/location-coordinates.ts",

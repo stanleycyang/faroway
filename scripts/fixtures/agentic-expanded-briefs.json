@@ -189,7 +189,27 @@
         "budget": "moderate",
         "vibes": ["cultural"],
         "travelerType": "couple",
-        "mobilityNeeds": "No starts before 10am; allow relaxed meals"
+        "mobilityNeeds": "No starts before 10am; allow relaxed meals",
+        "expectedDayAvailability": [
+          {
+            "date": "2027-01-11",
+            "earliestMinute": 600,
+            "latestMinute": 1440,
+            "allowEmptyDay": false
+          },
+          {
+            "date": "2027-01-12",
+            "earliestMinute": 600,
+            "latestMinute": 1440,
+            "allowEmptyDay": false
+          },
+          {
+            "date": "2027-01-13",
+            "earliestMinute": 600,
+            "latestMinute": 1440,
+            "allowEmptyDay": false
+          }
+        ]
       },
       "reviewChecks": ["Do not schedule morning starts before 10am"],
       "reviewStatus": "unreviewed"
@@ -207,7 +227,15 @@
         "budget": "moderate",
         "vibes": ["cultural"],
         "travelerType": "couple",
-        "mobilityNeeds": "Arrive on the first day at 18:00; no activities before arrival"
+        "mobilityNeeds": "Arrive on the first day at 18:00; no activities before arrival",
+        "expectedDayAvailability": [
+          {
+            "date": "2027-01-11",
+            "earliestMinute": 1080,
+            "latestMinute": 1440,
+            "allowEmptyDay": false
+          }
+        ]
       },
       "reviewChecks": [
         "First day begins after 18:00; report unsupported arrival constraints rather than filling the morning"
@@ -227,7 +255,15 @@
         "budget": "moderate",
         "vibes": ["cultural"],
         "travelerType": "couple",
-        "mobilityNeeds": "Depart on the final day at 09:00; reserve time to reach the airport"
+        "mobilityNeeds": "Depart on the final day at 09:00; reserve time to reach the airport",
+        "expectedDayAvailability": [
+          {
+            "date": "2027-01-13",
+            "earliestMinute": 0,
+            "latestMinute": 540,
+            "allowEmptyDay": true
+          }
+        ]
       },
       "reviewChecks": ["No visits after the final-day 09:00 departure"],
       "reviewStatus": "unreviewed"
@@ -664,7 +700,27 @@
         "budget": "moderate",
         "vibes": ["cultural"],
         "travelerType": "couple",
-        "mobilityNeeds": "No starts before 11am"
+        "mobilityNeeds": "No starts before 11am",
+        "expectedDayAvailability": [
+          {
+            "date": "2027-01-11",
+            "earliestMinute": 660,
+            "latestMinute": 1440,
+            "allowEmptyDay": false
+          },
+          {
+            "date": "2027-01-12",
+            "earliestMinute": 660,
+            "latestMinute": 1440,
+            "allowEmptyDay": false
+          },
+          {
+            "date": "2027-01-13",
+            "earliestMinute": 660,
+            "latestMinute": 1440,
+            "allowEmptyDay": false
+          }
+        ]
       },
       "reviewChecks": ["No scheduled starts before 11am"],
       "reviewStatus": "unreviewed"
@@ -682,7 +738,15 @@
         "budget": "moderate",
         "vibes": ["cultural"],
         "travelerType": "couple",
-        "mobilityNeeds": "First-day arrival at 19:00; do not plan visits before arrival"
+        "mobilityNeeds": "First-day arrival at 19:00; do not plan visits before arrival",
+        "expectedDayAvailability": [
+          {
+            "date": "2027-01-11",
+            "earliestMinute": 1140,
+            "latestMinute": 1440,
+            "allowEmptyDay": false
+          }
+        ]
       },
       "reviewChecks": ["No first-day activities before 19:00 arrival"],
       "reviewStatus": "unreviewed"
@@ -700,7 +764,15 @@
         "budget": "moderate",
         "vibes": ["cultural"],
         "travelerType": "couple",
-        "mobilityNeeds": "Depart at 08:00 on the last day"
+        "mobilityNeeds": "Depart at 08:00 on the last day",
+        "expectedDayAvailability": [
+          {
+            "date": "2027-01-13",
+            "earliestMinute": 0,
+            "latestMinute": 480,
+            "allowEmptyDay": true
+          }
+        ]
       },
       "reviewChecks": [
         "Do not schedule final-day visits after 08:00 departure"
