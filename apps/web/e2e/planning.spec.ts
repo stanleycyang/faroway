@@ -1,6 +1,10 @@
 import { test, expect } from "@playwright/test";
 import { execFileSync } from "node:child_process";
-import { sampleDays, sampleHotel } from "./fixtures/planning-data";
+import {
+  sampleDays,
+  sampleHotel,
+  arrivalFixtureDay,
+} from "./fixtures/planning-data";
 import { createServer, type Server, type ServerResponse } from "node:http";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -107,6 +111,14 @@ test.beforeAll(async () => {
       response.end(
         JSON.stringify({ status: completed ? "completed" : "generating" }),
       );
+    } else if (url.pathname === "/arrival.json") {
+      // Optional local replay input stays outside the committed browser bundle.
+      const source = process.env.FAROWAY_E2E_ARRIVAL_TRACE;
+      const day = source
+        ? JSON.parse(readFileSync(source, "utf8")).trace.mappedItinerary.days[0]
+        : arrivalFixtureDay;
+      response.setHeader("Content-Type", "application/json");
+      response.end(JSON.stringify(day));
     } else if (request.url === "/planning.js") {
       response.setHeader(
         "Content-Type",
@@ -622,4 +634,53 @@ test("dining review sources stay readable and leave the selected plan intact", a
     .getByText("Before you go", { exact: true })
     .locator("../..")
     .screenshot({ path: testInfo.outputPath("dining-review.png") });
+});
+
+test("arrival day keeps pre-arrival periods empty in the rendered saved itinerary", async ({
+  page,
+}, testInfo) => {
+  const errors: string[] = [];
+  page.on("pageerror", (error) => errors.push(error.message));
+  await page.goto(`${fixtureUrl}/?screen=arrival`);
+  await expect(page.getByText("Evening", { exact: true })).toBeVisible();
+  await expect(page.getByText("Morning", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Afternoon", { exact: true })).toHaveCount(0);
+  await expect(
+    page.getByRole("heading", {
+      name: "Plaza Mayor Walking Tour",
+      exact: true,
+    }),
+  ).toBeVisible();
+  const availability = page.getByRole("region", {
+    name: "Your available hours",
+  });
+  await expect(availability).toBeVisible();
+  await expect(
+    page.getByText(/Your local-time availability: 18:00–24:00/),
+  ).toHaveCount(1);
+  const windowBox = await availability.boundingBox();
+  const visitBox = await page
+    .getByRole("heading", { name: "Plaza Mayor Walking Tour", exact: true })
+    .boundingBox();
+  expect(windowBox!.y + windowBox!.height).toBeLessThan(visitBox!.y);
+  await expect(
+    page.getByText(
+      /Confirm exact visit times and airport or station transfers/,
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: /Prado Museum|Thyssen-Bornemisza|La Mallorquina|Casa Alberto/,
+    }),
+  ).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  expect(errors).toEqual([]);
+  await page.screenshot({
+    path: testInfo.outputPath("arrival-day.png"),
+    fullPage: true,
+  });
 });

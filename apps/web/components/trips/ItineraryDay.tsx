@@ -88,6 +88,13 @@ export function ItineraryDay({
   const displayTips = dayTimingTips(timingDay).filter(
     (tip) => !validTiming || !isTimingNote(tip),
   );
+  // Reorder an existing compiler note without interpreting it as verified timing.
+  const availabilityTips = displayTips.filter((tip) =>
+    tip.startsWith("Your local-time availability:"),
+  );
+  const generalTips = displayTips.filter(
+    (tip) => !tip.startsWith("Your local-time availability:"),
+  );
   const timingNames: Record<string, string> = {};
   for (const [slot, block] of Object.entries({ morning, afternoon, evening })) {
     for (const activity of Array.isArray(block?.activities)
@@ -212,6 +219,25 @@ export function ItineraryDay({
             {summary}
           </p>
 
+          {availabilityTips.length > 0 && (
+            <section
+              aria-label="Your available hours"
+              className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4"
+            >
+              <h4 className="mb-2 text-sm font-semibold text-slate-900">
+                Your available hours
+              </h4>
+              {availabilityTips.map((tip, index) => (
+                <p
+                  key={index}
+                  className="text-sm leading-relaxed text-slate-600 break-words"
+                >
+                  <SourceNote text={tip} />
+                </p>
+              ))}
+            </section>
+          )}
+
           {/* Hotel Card */}
           {hotel && (
             <div className="mb-6 p-4 sm:p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-100 transition-shadow hover:shadow-md">
@@ -220,8 +246,8 @@ export function ItineraryDay({
                   <Hotel className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-bold text-gray-900 text-sm truncate">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <h4 className="font-bold text-gray-900 text-sm break-words">
                       {hotel.name}
                     </h4>
                     {typeof hotel.starRating === "number" &&
@@ -233,7 +259,7 @@ export function ItineraryDay({
                         </span>
                       )}
                   </div>
-                  <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
+                  <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3 mt-0.5 text-xs text-gray-500">
                     <span className="font-bold text-gray-800 text-sm">
                       {formatEstimate(
                         hotel.pricePerNight,
@@ -251,7 +277,7 @@ export function ItineraryDay({
                       </span>
                     </span>
                     {hotel.amenities && hotel.amenities.length > 0 && (
-                      <span className="truncate text-gray-500">
+                      <span className="max-w-full truncate text-gray-500">
                         {hotel.amenities.slice(0, 3).join(" · ")}
                       </span>
                     )}
@@ -332,7 +358,7 @@ export function ItineraryDay({
           </div>
 
           {/* Daily Tips */}
-          {displayTips.length > 0 && (
+          {generalTips.length > 0 && (
             <div className="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-200">
               <div className="flex items-center gap-2 text-slate-900 font-semibold mb-3">
                 <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center">
@@ -341,7 +367,7 @@ export function ItineraryDay({
                 <span className="text-sm">Before you go</span>
               </div>
               <ul className="space-y-1.5">
-                {displayTips.map((tip, i) => (
+                {generalTips.map((tip, i) => (
                   <li
                     key={i}
                     className="text-sm leading-relaxed text-slate-600 flex items-start gap-2"

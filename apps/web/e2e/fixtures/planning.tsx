@@ -1,7 +1,8 @@
 import reviewedDiningOptions from "../../../../scripts/fixtures/reviewed-dining-options.json";
 import { destinationImage } from "../../lib/trips/destination-image";
 import { TripCard } from "../../components/dashboard/TripCard";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import type { TripDay } from "@faroway/types";
 import { createRoot } from "react-dom/client";
 import { TripDayNavigation } from "../../components/trips/TripDayNavigation";
 import { ItineraryDay } from "../../components/trips/ItineraryDay";
@@ -17,6 +18,7 @@ function Fixture() {
   const destination = new URLSearchParams(location.search).get("destination");
   const [screen, setScreen] = useState(initial);
   const [selected, setSelected] = useState(0);
+  if (screen === "arrival") return <ArrivalFixture />;
   if (
     screen === "timing" ||
     screen === "timing-conflict" ||
@@ -252,5 +254,36 @@ function LiveFixture({ onOpenTrip }: { onOpenTrip: () => void }) {
         </button>
       </aside>
     </ItineraryGenerationLoader>
+  );
+}
+
+function ArrivalFixture() {
+  const [day, setDay] = useState<TripDay | null>(null);
+  const [error, setError] = useState(false);
+  useEffect(() => {
+    let active = true;
+    fetch("/arrival.json")
+      .then((response) => {
+        if (!response.ok) throw new Error("Fixture unavailable");
+        return response.json();
+      })
+      .then((value) => {
+        if (active) setDay(value);
+      })
+      .catch(() => {
+        if (active) setError(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+  return (
+    <main className="mx-auto min-h-screen max-w-3xl bg-slate-50 px-4 py-8">
+      {day ? (
+        <ItineraryDay {...day} />
+      ) : (
+        <p>{error ? "Arrival fixture unavailable" : "Loading arrival plan"}</p>
+      )}
+    </main>
   );
 }

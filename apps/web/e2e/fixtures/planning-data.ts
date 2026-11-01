@@ -134,3 +134,28 @@ export function timingFixtureDay(conflict = false): TripDay {
   };
   return day;
 }
+
+/** Synthetic display fixture; private replay data can replace it in local tests. */
+export const arrivalFixtureDay: TripDay = {
+  ...sampleDays[0],
+  date: "2027-01-11",
+  title: "An evening in Madrid",
+  summary:
+    "A walking tour and dinner after arrival, with exact timing still to review.",
+  morning: { activities: [], meals: [] },
+  afternoon: { activities: [], meals: [] },
+  evening: {
+    activities: [
+      {
+        ...activity,
+        id: "arrival-walk",
+        name: "Plaza Mayor Walking Tour",
+        timeOfDay: "evening",
+      },
+    ],
+    meals: [],
+  },
+  tips: [
+    "Your local-time availability: 18:00–24:00. This draft leaves other periods free and reserves provisional meal and buffer time within each day part. Confirm exact visit times and airport or station transfers before booking.",
+  ],
+};

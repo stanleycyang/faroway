@@ -264,3 +264,29 @@ test('partially supported dining keeps unknown ratings and prices through a cach
     expect(day.activities[0].estimatedCost).toBeUndefined();
   }
 });
+
+test('arrival-day empty periods and availability note survive native normalization and cache reload', () => {
+  const note =
+    'Your local-time availability: 18:00–24:00. Confirm exact visit times and airport transfers.';
+  const [day] = transformItineraryDays([
+    {
+      date: '2027-01-11',
+      dayNumber: 1,
+      title: 'Arrival evening',
+      summary: 'An evening after arrival',
+      morning: { activities: [], meals: [] },
+      afternoon: { activities: [], meals: [] },
+      evening: {
+        activities: [{ id: 'walk', name: 'Evening walk', duration: 60 }],
+        meals: [{ id: 'dinner', name: 'Dinner' }],
+      },
+      tips: [note],
+    },
+  ]);
+  const [cached] = transformItineraryDays(JSON.parse(JSON.stringify([day])));
+  expect(cached.activities.map((a) => [a.id, a.scheduleSlot])).toEqual([
+    ['walk', 'evening'],
+    ['dinner', 'evening'],
+  ]);
+  expect(cached.tips).toEqual([note]);
+});
