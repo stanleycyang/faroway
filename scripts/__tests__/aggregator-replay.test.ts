@@ -1,6 +1,8 @@
 import { test, expect } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { resolve } from "node:path";
+import { resolve, join } from "node:path";
+import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 
 const root = resolve(import.meta.dirname, "../..");
 function replay(args: string[]) {
@@ -150,5 +152,67 @@ test("narration refuses implicit paid calls and production targets", () => {
     );
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(message);
+  }
+});
+
+test("hotel replay refuses unsafe or incomplete trials before a model call", () => {
+  const directory = mkdtempSync(join(tmpdir(), "hotel-replay-preflight-"));
+  const input = join(directory, "input.json");
+  const out = join(directory, "out.json");
+  writeFileSync(input, JSON.stringify({ status: "failed", trace: {} }));
+  const run = (args: string[], key = true) =>
+    spawnSync(
+      process.execPath,
+      ["--no-env-file", "apps/web/scripts/hotel-replay-live.ts", ...args],
+      {
+        cwd: root,
+        encoding: "utf8",
+        timeout: 10000,
+        env: {
+          PATH: process.env.PATH,
+          HOME: process.env.HOME,
+          FAROWAY_STAGING_SUPABASE_PROJECT_REF: "omovikloadpvzijoaqus",
+          ...(key
+            ? { FAROWAY_STAGING_AI_GATEWAY_KEY: "invalid-preflight-only-key" }
+            : {}),
+        },
+      },
+    );
+  const live = ["--live", "--input", input, "--out", out];
+  try {
+    for (const [args, expected, key] of [
+      [[], "Explicit --live required", true],
+      [
+        [
+          "--live",
+          "--supabase-url",
+          "https://jcnephijkxgtprsutgsf.supabase.co",
+        ],
+        "production",
+        true,
+      ],
+      [live, "Dedicated staging key required", false],
+      [
+        [...live, "--thinking", "high"],
+        "Explicit low or minimal thinking required",
+        true,
+      ],
+      [
+        [...live, "--thinking", "low"],
+        "Completed passing non-fallback trace required",
+        true,
+      ],
+    ] as Array<[string[], string, boolean]>) {
+      const result = run(args, key);
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(expected);
+    }
+    writeFileSync(out, "preserve this receipt");
+    const result = run([...live, "--thinking", "minimal"]);
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("Output already exists");
+    expect(readFileSync(out, "utf8")).toBe("preserve this receipt");
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
   }
 });
