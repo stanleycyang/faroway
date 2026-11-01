@@ -583,3 +583,25 @@ test("flags a named meal experience plus a separate restaurant without asserting
     "possible_duplicate",
   );
 });
+
+test("does not certify requested rest timing from day parts or a generic rest tip", () => {
+  const trace = fixture();
+  const result = evaluateAgenticTrace(trace);
+  expect(result.contractPass).toBe(true);
+  expect(result.timing).toMatchObject({
+    representation: "day_parts_only",
+    feasibility: "unverified",
+    restInstructionPresent: true,
+    days: [{ date: "2026-12-07", activityMinutes: 60 }],
+  });
+  const day = (trace.steps[4].output as { days: Array<{ tips?: string[] }> })
+    .days[0];
+  day.tips = ["Leave time for rest."];
+  expect(evaluateAgenticTrace(trace).timing).toEqual(result.timing);
+  trace.brief.mobilityNeeds = "No midday rest needed";
+  trace.brief.requirements = undefined;
+  // A negative instruction is still an instruction to review, not a rest request.
+  expect(evaluateAgenticTrace(trace).timing.restInstructionPresent).toBe(true);
+  trace.brief.mobilityNeeds = "Short walks";
+  expect(evaluateAgenticTrace(trace).timing.restInstructionPresent).toBe(false);
+});

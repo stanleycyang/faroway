@@ -26,6 +26,14 @@ export interface AgenticEvaluation {
   failures: string[];
   warnings: string[];
   unknowns: string[];
+  timing: {
+    representation: "day_parts_only";
+    feasibility: "unverified";
+    /** A mention can be positive or negative; this does not infer a request. */
+    restInstructionPresent: boolean;
+    days: Array<{ date: string; activityMinutes: number }>;
+    missingEvidence: string[];
+  };
   metrics: {
     days: number;
     activities: number;
@@ -134,6 +142,7 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
     fail("mapped_day_coverage");
   const usedActivities = new Set<unknown>();
   const restaurants = new Set<unknown>();
+  const timingDays: AgenticEvaluation["timing"]["days"] = [];
   let activityCount = 0;
   let mealCount = 0;
   for (const [index, rawDay] of days.entries()) {
@@ -239,6 +248,7 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
     if (!meals) fail(`day_${index + 1}:no_meals`);
     if (day.transport && index !== 0)
       fail(`day_${index + 1}:repeated_outbound_transport`);
+    timingDays.push({ date: String(day.date), activityMinutes: dayMinutes });
     activityCount += count;
     mealCount += meals;
   }
@@ -255,6 +265,20 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
       "Traveler usefulness requires separate review; contract pass is not quality acceptance.",
       "Serial agent duration is not app latency or time to first useful content.",
     ],
+    timing: {
+      representation: "day_parts_only",
+      feasibility: "unverified",
+      restInstructionPresent: /\b(?:rests?|breaks?|naps?)\b/i.test(
+        `${brief.mobilityNeeds ?? ""} ${brief.requirements?.mobilityNotes ?? ""}`,
+      ),
+      days: timingDays,
+      missingEvidence: [
+        "Visit start/end times and operating windows",
+        "Meal durations and reservation times",
+        "Travel durations between stops and any hotel return",
+        "Explicit rest intervals and their fit with traveler instructions",
+      ],
+    },
     metrics: {
       days: days.length,
       activities: activityCount,
