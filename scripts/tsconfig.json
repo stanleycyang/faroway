@@ -25,6 +25,7 @@
     "__tests__/comparison-contracts.test.ts",
     "__tests__/day-availability.test.ts",
     "__tests__/published-events.test.ts",
-    "__tests__/published-venue-addresses.test.ts"
+    "__tests__/published-venue-addresses.test.ts",
+    "__tests__/reviewed-hours-eval.test.ts"
   ]
 }
