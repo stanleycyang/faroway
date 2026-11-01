@@ -67,6 +67,9 @@ Do not generate booking or affiliate URLs. Only live provider results may have
 booking links; AI-generated recommendations are informational only.
 Do not invent or supply prices, currencies, review scores, review counts, star
 classifications, availability or cancellation terms. These require provider data.
+Room capacity, accessibility and dietary suitability are unverified; do not claim
+they are confirmed. Use the supplied party and requirements to identify options
+to check, without inventing room configurations, child policies or guarantees.
 
 IMPORTANT: For the "images" field, return an EMPTY array []. Do NOT generate or guess image URLs.`;
 
@@ -115,6 +118,7 @@ export async function runHotelsAgent(
     amenities,
     neighborhoods,
     vibes: vibeInterpretation.vibes,
+    travelerContext: plan,
     count,
   });
 
@@ -131,6 +135,16 @@ async function generateAiHotelFallbacks(params: {
   amenities: string[];
   neighborhoods: string[];
   vibes: string[];
+  travelerContext: Pick<
+    SearchPlan,
+    | "travelers"
+    | "adults"
+    | "children"
+    | "childAges"
+    | "roomCount"
+    | "mobilityNeeds"
+    | "requirements"
+  >;
   count: number;
 }): Promise<HotelResult[]> {
   const {
@@ -141,6 +155,7 @@ async function generateAiHotelFallbacks(params: {
     amenities,
     neighborhoods,
     vibes,
+    travelerContext,
     count,
   } = params;
   const prompt = `Generate ${count} real hotel recommendations for ${destination}.
@@ -151,6 +166,15 @@ async function generateAiHotelFallbacks(params: {
 - Preferred star ratings: ${starRating.join(", ")}-star
 - Desired amenities: ${amenities.join(", ") || "wifi, breakfast"}
 - Preferred neighborhoods: ${neighborhoods.join(", ") || "central/popular areas"}
+
+**Saved traveler details (take precedence over inferred amenities):**
+- Travelers: ${travelerContext.travelers ?? "Not specified"}
+- Adults: ${travelerContext.adults ?? "Not specified"}
+- Children: ${travelerContext.children ?? "Not specified"}
+- Child ages: ${travelerContext.childAges?.join(", ") || "Not specified"}
+- Requested rooms: ${travelerContext.roomCount ?? "Not specified"}
+- Mobility needs: ${travelerContext.mobilityNeeds || "Not specified"}
+- Structured requirements: ${JSON.stringify(travelerContext.requirements ?? {})}
 
 **Vibes to match:** ${vibes.join(", ")}
 
