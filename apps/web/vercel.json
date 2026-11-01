@@ -10,8 +10,7 @@
   ],
   "git": {
     "deploymentEnabled": {
-      "main": false,
-      "fix/itinerary-coordinates-20261031": false
+      "main": false
     }
   }
 }
