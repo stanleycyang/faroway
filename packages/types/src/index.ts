@@ -510,6 +510,8 @@ export interface HotelResult {
 }
 
 export interface ActivityResult {
+  /** An inspiration/search lead, not a schedulable venue or experience. */
+  planningIdea?: true;
   priceStatus?: "unknown" | "estimate";
   id: string;
   name: string;
@@ -534,6 +536,8 @@ export interface ActivityResult {
 }
 
 export interface DiningResult {
+  /** A cuisine/area idea that still needs a named restaurant. */
+  planningIdea?: true;
   priceStatus?: "unknown" | "estimate";
   id: string;
   name: string;

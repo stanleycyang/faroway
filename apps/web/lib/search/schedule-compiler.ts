@@ -75,9 +75,10 @@ export interface CompiledSchedule {
 export function compileSchedule(
   plan: SearchPlan,
   inventory: ActivityResult[],
-  dining: DiningResult[],
+  diningInventory: DiningResult[],
   exclusions: readonly ScheduleExclusion[] = [],
 ): CompiledSchedule {
+  const dining = diningInventory.filter((meal) => !meal.planningIdea);
   const start = Date.parse(`${plan.dates.start}T00:00:00Z`);
   const end = Date.parse(`${plan.dates.end}T00:00:00Z`);
   const daysCount = (end - start) / 86400000 + 1;
@@ -103,6 +104,8 @@ export function compileSchedule(
   if (activityBudget.maxMinutes !== undefined)
     limits.minutes = Math.min(limits.minutes, activityBudget.maxMinutes);
   const issues: string[] = [];
+  for (const meal of diningInventory.filter((meal) => meal.planningIdea))
+    issues.push(`dining_idea_requires_venue_review:${meal.id}`);
   if (visitAvailability.needsReview)
     issues.push("traveler_visit_slots_interpretation_required");
   if (activityBudget.needsReview)
@@ -241,6 +244,14 @@ export function compileSchedule(
     [];
   const candidates = inventory
     .filter((activity) => {
+      if (activity.planningIdea) {
+        reviewRequiredActivities.push({
+          id: activity.id,
+          reason: "planning_idea_requires_venue_review",
+        });
+        issues.push(`activity_idea_requires_venue_review:${activity.id}`);
+        return false;
+      }
       if (
         !activity.id ||
         ids.has(activity.id) ||
@@ -503,6 +514,7 @@ export function compileSchedule(
     .filter(
       (activity, index) =>
         activity.id &&
+        !activity.planningIdea &&
         inventory.findIndex((a) => a.id === activity.id) === index &&
         Number.isInteger(activity.duration) &&
         activity.duration > limits.minutes &&

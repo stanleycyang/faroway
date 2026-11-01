@@ -50,6 +50,11 @@ describe("enrichNonAffiliateCandidates", () => {
     expect(result.activities.every((a) => !a.affiliatePartner)).toBe(true);
     expect(result.dining.every((d) => !d.affiliatePartner)).toBe(true);
     expect(result.notes[0]).toContain("not configured");
+    expect(
+      [...result.activities, ...result.dining].every(
+        (item) => item.planningIdea,
+      ),
+    ).toBe(true);
   });
 
   it("adds tavily-backed activities when configured", async () => {
@@ -73,6 +78,7 @@ describe("enrichNonAffiliateCandidates", () => {
     expect(result.activities.some((a) => a.name.includes("Yanaka"))).toBe(true);
     expect(result.activities.every((a) => !a.affiliateUrl)).toBe(true);
     expect(result.notes.join(" ")).toContain("Tavily");
+    expect(result.activities.every((item) => item.planningIdea)).toBe(true);
     expect(
       result.activities.every(
         (a) =>

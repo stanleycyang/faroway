@@ -41,6 +41,12 @@ it("uses day visits to cover meals in empty activity slots", () => {
   expect(days[0].evening.activities).toHaveLength(0);
   expect(findDiningCoverageGaps(days, [close])).toEqual([]);
 });
+it("does not count a planning idea as coverage even when supplied coordinates look nearby", () => {
+  const { days, close } = fixture();
+  const gaps = findDiningCoverageGaps(days, [{ ...close, planningIdea: true }]);
+  expect(gaps).toHaveLength(3);
+  expect(gaps.every((gap) => gap.reason === "missing_candidates")).toBe(true);
+});
 it("does not count a nearby dinner-only venue as breakfast supply", () => {
   const { days, close } = fixture();
   const gaps = findDiningCoverageGaps(days, [

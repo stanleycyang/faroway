@@ -53,6 +53,8 @@ describe("experimental schedule compiler", () => {
       [
         ...enrichment.activities,
         visit("museum-evening", 60, "evening"),
+        visit("gallery-evening", 60, "evening"),
+        visit("landmark-evening", 60, "evening"),
         visit("morning-only", 60, "morning"),
       ],
       meals,
@@ -66,6 +68,32 @@ describe("experimental schedule compiler", () => {
       expect(day.tips.join(" ")).toContain("Meals are planned separately");
     }
     expect(result.unselectedActivityIds).toContain("morning-only");
+    expect(
+      result.days
+        .flatMap((day) => day.evening.activities)
+        .every((a) => !a.planningIdea),
+    ).toBe(true);
+  });
+  it("exposes missing supply instead of scheduling generic enrichment or unresolved web leads", async () => {
+    vi.stubEnv("TAVILY_API_KEY", "");
+    const enrichment = await enrichNonAffiliateCandidates(extended);
+    const result = compileSchedule(
+      extended,
+      enrichment.activities,
+      enrichment.dining,
+    );
+    for (const day of result.days) {
+      for (const slot of slots) {
+        expect(day[slot].activities).toEqual([]);
+        expect(day[slot].meal).toBeUndefined();
+      }
+    }
+    expect(result.reviewRequiredActivities).toHaveLength(
+      enrichment.activities.length,
+    );
+    expect(
+      result.issues.filter((i) => i.endsWith("meal_supply_gap")),
+    ).toHaveLength(9);
   });
   it("defers alcohol-focused stops for a party with children and exposes the missing highlight", () => {
     const input = {

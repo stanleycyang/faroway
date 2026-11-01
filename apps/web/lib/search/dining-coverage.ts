@@ -32,8 +32,8 @@ export function findDiningCoverageGaps(
   for (const day of days) {
     for (const [index, slot] of slots.entries()) {
       const stops = mealBoundaryAnchors(day, slot);
-      const candidates = dining.filter((meal) =>
-        meal.mealTypes.includes(meals[index]),
+      const candidates = dining.filter(
+        (meal) => !meal.planningIdea && meal.mealTypes.includes(meals[index]),
       );
       const distances = candidates.map((meal) => {
         const values = stops.map((stop) =>
