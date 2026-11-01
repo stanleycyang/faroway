@@ -344,10 +344,10 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
 
   const realActivities = [...viatorActivities, ...getYourGuideActivities];
 
-  let allActivities = deduplicateActivities([
-    ...realActivities,
-    ...aiActivities,
-  ])
+  let allActivities = deduplicateActivities(
+    [...realActivities, ...aiActivities],
+    new Set(realActivities.map((activity) => activity.id)),
+  )
     .sort((a, b) => b.vibeScore - a.vibeScore)
     .slice(0, count);
 
@@ -366,13 +366,28 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
   return allActivities;
 }
 
-function deduplicateActivities(activities: ActivityResult[]): ActivityResult[] {
+function deduplicateActivities(
+  activities: ActivityResult[],
+  supplierIds: ReadonlySet<string>,
+): ActivityResult[] {
   const seen = new Map<string, ActivityResult>();
 
   for (const activity of activities) {
-    const key = activity.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const name = activity.name
+      .normalize("NFKC")
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]/gu, "");
+    const key = name ? `name:${name}` : `id:${activity.id}`;
     const existing = seen.get(key);
-    if (!existing || activity.vibeScore > existing.vibeScore) {
+    // Provenance comes from the actual supplier responses, not generated labels.
+    // A generated score must not erase a supplier's price, media or booking link.
+    const supplied = supplierIds.has(activity.id);
+    const existingSupplied = existing && supplierIds.has(existing.id);
+    if (
+      !existing ||
+      (supplied && !existingSupplied) ||
+      (supplied === existingSupplied && activity.vibeScore > existing.vibeScore)
+    ) {
       seen.set(key, activity);
     }
   }

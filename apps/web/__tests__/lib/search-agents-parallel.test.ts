@@ -226,6 +226,60 @@ describe("search agents internal parallelism", () => {
     expect(results[0]).toHaveProperty("viatorContentVersion", 1);
   });
 
+  it.each(["viator", "getyourguide"])(
+    "preserves %s source fields when a generated duplicate assigns itself a higher score",
+    async (partner) => {
+      const product = {
+        productCode: "123P1",
+        activityId: "123P1",
+        title: "Museum tour",
+        description: "Supplier description",
+        duration: { fixedDurationInMinutes: 90 },
+        categories: ["museum"],
+        price: { amount: 30, currencyCode: "USD" },
+        rating: 4,
+        reviewCount: 10,
+        location: { city: "Tokyo", address: "1 Museum Street" },
+        images: [{ url: "https://supplier.example/photo.jpg" }],
+      };
+      (partner === "viator"
+        ? mocks.searchViatorProducts
+        : mocks.searchGYGActivities
+      ).mockResolvedValue([product]);
+      mocks.generateObject.mockResolvedValue({
+        object: {
+          activities: [{ ...aiActivity, name: "Museum Tour!", vibeScore: 100 }],
+        },
+      });
+      const results = await runActivitiesAgent(plan as never);
+      expect(results).toHaveLength(1);
+      expect(results[0]).toMatchObject({
+        name: "Museum tour",
+        description: "Supplier description",
+        price: 30,
+        currency: "USD",
+        affiliatePartner: partner,
+        duration: 90,
+        images: ["https://supplier.example/photo.jpg"],
+      });
+      expect(results[0].affiliateUrl).toContain("123P1");
+      expect(results[0].vibeScore).toBeLessThan(100);
+    },
+  );
+
+  it("does not collapse distinct non-Latin activity names into an empty deduplication key", async () => {
+    mocks.generateObject.mockResolvedValue({
+      object: {
+        activities: [
+          { ...aiActivity, name: "東京国立博物館" },
+          { ...aiActivity, name: "浅草寺" },
+        ],
+      },
+    });
+    const results = await runActivitiesAgent(plan as never);
+    expect(results.map((a) => a.name)).toEqual(["東京国立博物館", "浅草寺"]);
+  });
+
   it("does not return adult-only flight quotes for a party with children", async () => {
     const result = await runTransportAgent(
       {
