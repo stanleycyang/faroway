@@ -23,6 +23,7 @@
     "__tests__/timing-proposal.test.ts",
     "__tests__/fixed-visit-refinement.test.ts",
     "__tests__/comparison-contracts.test.ts",
-    "__tests__/day-availability.test.ts"
+    "__tests__/day-availability.test.ts",
+    "__tests__/published-events.test.ts"
   ]
 }
