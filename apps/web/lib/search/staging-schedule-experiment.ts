@@ -31,45 +31,16 @@ import { venueConstraintsForDate } from "../../../../scripts/uat/lib/venue-const
 import reviewedFacts from "../../../../scripts/fixtures/agentic-venue-constraints.json";
 import reviewedHotelFacts from "../../../../scripts/fixtures/agentic-hotel-constraints.json";
 import { screenHotelCandidates } from "./hotel-policy-screen";
+import {
+  reconcileGeneratedDiningAddresses,
+  appendReviewedAddressNotes,
+} from "./reviewed-dining-addresses";
+import reviewedAddresses from "../../../../scripts/fixtures/reviewed-dining-addresses.json";
+import { screenReportedDiningClosures } from "./reviewed-dining-closures";
+import reviewedClosures from "../../../../scripts/fixtures/reviewed-dining-closures.json";
 
-/** Explicit staging-only integration. The small reviewed fixture is not general grounding. */
-export function compiledScheduleExperimentEnabled(
-  env: Record<string, string | undefined> = process.env,
-): boolean {
-  if (
-    env.FAROWAY_SCHEDULE_EXPERIMENT !== "compiled-narrated-v1" ||
-    !["low", "minimal"].includes(env.PLANNING_THINKING_AGGREGATOR ?? "")
-  )
-    return false;
-  if (
-    env.VERCEL_ENV !== "preview" &&
-    !(env.NODE_ENV === "development" && !env.VERCEL_ENV)
-  )
-    return false;
-  if (
-    env.PLANNING_MODEL_AGGREGATOR &&
-    env.PLANNING_MODEL_AGGREGATOR !== "google/gemini-3-flash"
-  )
-    return false;
-  if (
-    env.PLANNING_MAX_OUTPUT_TOKENS_AGGREGATOR &&
-    env.PLANNING_MAX_OUTPUT_TOKENS_AGGREGATOR !== "2000"
-  )
-    return false;
-  try {
-    const url = new URL(env.NEXT_PUBLIC_SUPABASE_URL ?? "");
-    return (
-      url.origin === "https://omovikloadpvzijoaqus.supabase.co" &&
-      !url.username &&
-      !url.password &&
-      url.pathname === "/" &&
-      !url.search &&
-      !url.hash
-    );
-  } catch {
-    return false;
-  }
-}
+import { compiledScheduleExperimentEnabled } from "./schedule-experiment-gate";
+export { compiledScheduleExperimentEnabled } from "./schedule-experiment-gate";
 
 export async function runStagingCompiledSchedule(
   plan: SearchPlan,
@@ -105,7 +76,23 @@ export async function runStagingCompiledSchedule(
           observedAt: finding.observedAt,
         });
   }
-  const compiled = compileSchedule(plan, activities, dining, exclusions);
+  const addressReview = reconcileGeneratedDiningAddresses(
+    plan,
+    dining,
+    reviewedAddresses,
+  );
+  const diningClosures = screenReportedDiningClosures(
+    plan,
+    addressReview.candidates,
+    reviewedClosures,
+  );
+  const reviewedDining = diningClosures.candidates;
+  const compiled = compileSchedule(
+    plan,
+    activities,
+    reviewedDining,
+    exclusions,
+  );
   const score = (hotel: HotelResult) =>
     Number.isFinite(hotel.vibeScore) ? hotel.vibeScore : 0;
   const hotelReview = screenHotelCandidates(plan, hotels, reviewedHotelFacts);
@@ -115,8 +102,8 @@ export async function runStagingCompiledSchedule(
     )[0] ?? null;
   const diningDays = appendReviewedDiningOptions(
     plan,
-    compiled.days,
-    dining,
+    appendReviewedAddressNotes(plan, compiled.days, reviewedAddresses),
+    reviewedDining,
     reviewedDiningOptions,
   );
   const eventDeferredIds = new Set(

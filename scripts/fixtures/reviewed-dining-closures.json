@@ -1,0 +1,15 @@
+[
+  {
+    "id": "loyal-nine-cambridge-reopening-required",
+    "destination": "Cambridge, Massachusetts, USA",
+    "name": "Loyal Nine",
+    "address": "660 Cambridge St, Cambridge, MA 02141",
+    "reportedClosedFrom": "2021-12-19",
+    "observedAt": "2026-11-01",
+    "sources": [
+      "https://boston.eater.com/venue/12059/loyal-nine",
+      "https://www.boston.com/food/restaurants/2021/12/03/loyal-nine-will-close-dec-18/?amp=1"
+    ],
+    "sourceNote": "Eater identifies this venue/address as permanently closed. Boston.com reports the venue's own announcement that its final service was December 18, 2021. These are secondary published sources; no reviewed reopening evidence is present. Withhold this exact generated venue/address pending a reopening check rather than asserting future availability."
+  }
+]

@@ -16,6 +16,11 @@ import {
 } from "@/lib/ai/planning-step";
 import { reservationUrlFromEvidence } from "@/lib/search/reservation-url";
 import { screenGeneratedDiningCopy } from "../generated-dining-copy";
+import { reconcileGeneratedDiningAddresses } from "../reviewed-dining-addresses";
+import { compiledScheduleExperimentEnabled } from "../schedule-experiment-gate";
+import reviewedAddresses from "../../../../../scripts/fixtures/reviewed-dining-addresses.json";
+import { screenReportedDiningClosures } from "../reviewed-dining-closures";
+import reviewedClosures from "../../../../../scripts/fixtures/reviewed-dining-closures.json";
 import { z } from "zod";
 import { SearchPlan, DiningResult } from "../types";
 import type { DiningCoverageTarget } from "../dining-coverage";
@@ -175,7 +180,7 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
     let reviewedCopyCount = 0;
     // Add unique IDs and sort by vibe score. Model-authored reservation
     // links are dropped unless constructed from verified provider data.
-    let restaurants = result.restaurants
+    let restaurants: DiningResult[] = result.restaurants
       .map((restaurant, index) => {
         const keptUrl = reservationUrlFromEvidence(restaurant.reservationUrl, {
           kind: "none",
@@ -218,6 +223,35 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
           at: new Date().toISOString(),
         }),
       );
+    }
+
+    // Correct reviewed generated addresses before any optional provider identity lookup.
+    if (compiledScheduleExperimentEnabled()) {
+      const review = reconcileGeneratedDiningAddresses(
+        plan,
+        restaurants,
+        reviewedAddresses,
+      );
+      const closures = screenReportedDiningClosures(
+        plan,
+        review.candidates,
+        reviewedClosures,
+      );
+      restaurants = closures.candidates;
+      if (
+        review.applied.length ||
+        review.withheld.length ||
+        closures.withheld.length
+      )
+        console.info(
+          JSON.stringify({
+            event: "planning.step.dining_address_review",
+            step: "dining",
+            corrected: review.applied.length,
+            withheld: review.withheld.length,
+            reopeningReviewRequired: closures.withheld.length,
+          }),
+        );
     }
 
     // Enrich with TripAdvisor ratings and reviews
