@@ -31,3 +31,17 @@ export function isSpecialOpeningTitle(title: string): boolean {
     title.normalize("NFKC"),
   );
 }
+
+/** A recurring weekday label is not evidence that an event runs on this trip.
+ * Deliberately bounded to weekday + event/day-part phrases, not every proper
+ * name containing a weekday. Named venues still need their own verification.
+ */
+export function isWeekdayEventTitle(title: string): boolean {
+  const day = "(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)s?";
+  const event =
+    "(?:nights?|evenings?|mornings?|markets?|concerts?|performances?|festivals?|shows?|tours?|openings?)";
+  return new RegExp(
+    `\\b(?:${day}[-\\s]+${event}|${event}\\s+on\\s+${day})\\b`,
+    "i",
+  ).test(title.normalize("NFKC"));
+}

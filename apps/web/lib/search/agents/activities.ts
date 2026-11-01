@@ -96,9 +96,9 @@ interface ActivityListResult {
   activities: GeneratedActivity[];
 }
 
-const SYSTEM_PROMPT = `You are a travel activities expert. Generate realistic, bookable activities and attractions for the destination.
+const SYSTEM_PROMPT = `You are a travel activities expert. Suggest real activities and attractions for the destination. Suggestions are not verified bookings; never invent an attraction, tour or event to fill the requested count.
 
-When real Viator data is provided as context, use those activity names and prices. Only generate synthetic data for categories not covered by the real results.
+Prefer ordinary, enduring places and experiences. Without supplied date-specific organizer evidence, omit recurring weekday events, temporary exhibitions, performances and special late openings. Do not turn an ordinary daytime venue into an evening event to satisfy the traveler's schedule. Return fewer options if necessary.
 
 For each activity, provide:
 1. Real attraction/tour names that exist at the destination

@@ -890,3 +890,33 @@ it("retains special-opening ideas for review without scheduling unsupported admi
   );
   expect(result.unselectedActivityIds).toContain("late-view");
 });
+
+it.each(["2027-01-13", "2027-01-15"])(
+  "does not schedule a weekday-named event on %s without dated evidence",
+  (date) => {
+    const result = compileSchedule(
+      { ...plan, dates: { start: date, end: date, nights: 0 } },
+      [
+        {
+          ...visit("friday-event", 120, "evening"),
+          name: "NGV Friday Nights",
+          vibeScore: 100,
+        },
+        visit("ordinary", 60),
+      ],
+      dining,
+    );
+    expect(
+      result.days
+        .flatMap((d) => slots.flatMap((s) => d[s].activities))
+        .map((a) => a.id),
+    ).toEqual(["ordinary"]);
+    expect(result.reviewRequiredActivities).toContainEqual({
+      id: "friday-event",
+      reason: "weekday_event_requires_date_review",
+    });
+    expect(result.days[0].tips.join(" ")).toContain(
+      "A weekday in the name does not confirm that it runs during your trip",
+    );
+  },
+);

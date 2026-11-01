@@ -281,6 +281,35 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
           )
         )
           fail(`unverified_special_opening:${String(a.id)}`);
+        if (typeof a.name === "string") {
+          const title = a.name.normalize("NFKC");
+          const namedDays = [
+            "sunday",
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+          ].flatMap((weekday, index) => {
+            const event =
+              "(?:nights?|evenings?|mornings?|markets?|concerts?|performances?|festivals?|shows?|tours?|openings?)";
+            return new RegExp(
+              `\\b(?:${weekday}s?[-\\s]+${event}|${event}\\s+on\\s+${weekday}s?)\\b`,
+              "i",
+            ).test(title)
+              ? [index]
+              : [];
+          });
+          if (namedDays.length) {
+            fail(`unverified_weekday_event:${String(a.id)}`);
+            const weekday = new Date(
+              `${String(day.date)}T12:00:00Z`,
+            ).getUTCDay();
+            if (Number.isFinite(weekday) && !namedDays.includes(weekday))
+              fail(`event_weekday_conflict:${String(a.id)}`);
+          }
+        }
         if (a.bestTimeOfDay !== "any" && a.bestTimeOfDay !== slotName)
           fail(`wrong_time_of_day:${String(a.id)}`);
         if (

@@ -55,3 +55,26 @@ it.each([
 ])("does not infer special admission from %s", (title) =>
   expect(isSpecialOpeningTitle(title)).toBe(false),
 );
+
+import { isWeekdayEventTitle } from "@/lib/search/speculative-event";
+it.each([
+  "NGV Friday Nights",
+  "Saturday market",
+  "Concert on Sundays",
+  "Monday-morning tour",
+  "Thursday performances",
+  "Tuesday evening lecture",
+  "Wednesday Night Market",
+])("requires trip-date evidence for %s", (title) =>
+  expect(isWeekdayEventTitle(title)).toBe(true),
+);
+it.each([
+  "Friday Harbor Museum",
+  "Tuesday Weld exhibition history",
+  "Friday Street architecture",
+  "Saturday House",
+  "Night market",
+  "Sunday",
+])("does not infer a weekday event from %s", (title) =>
+  expect(isWeekdayEventTitle(title)).toBe(false),
+);

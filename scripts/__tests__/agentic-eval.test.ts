@@ -1159,3 +1159,26 @@ test("unused enrichment ideas do not fail an otherwise valid schedule", () => {
     "invalid_activity_inventory_ids",
   );
 });
+
+test("rejects weekday events even on a matching day and distinguishes explicit weekday conflicts", () => {
+  const trace = fixture(); // Monday, 2026-12-07
+  (trace.steps[2].output as Array<{ name: string }>)[0].name =
+    "NGV Friday Nights";
+  expect(evaluateAgenticTrace(trace).failures).toContain(
+    "event_weekday_conflict:walk",
+  );
+  expect(evaluateAgenticTrace(trace).failures).toContain(
+    "unverified_weekday_event:walk",
+  );
+  (trace.steps[2].output as Array<{ name: string }>)[0].name =
+    "Monday Night Market";
+  expect(evaluateAgenticTrace(trace).failures).not.toContain(
+    "event_weekday_conflict:walk",
+  );
+  expect(evaluateAgenticTrace(trace).failures).toContain(
+    "unverified_weekday_event:walk",
+  );
+  (trace.steps[2].output as Array<{ name: string }>)[0].name =
+    "Friday Harbor Museum";
+  expect(evaluateAgenticTrace(trace).contractPass).toBe(true);
+});

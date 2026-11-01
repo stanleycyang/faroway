@@ -8,6 +8,7 @@ import {
   isSpeculativeEventTitle,
   isGenericEventTitle,
   isSpecialOpeningTitle,
+  isWeekdayEventTitle,
 } from "./speculative-event";
 import { requestsMiddayRest, proposeRestDayTiming } from "./schedule-timing";
 import { mealBoundaryAnchors, type VisitSlots } from "./meal-boundaries";
@@ -268,7 +269,8 @@ export function compileSchedule(
       if (
         isSpeculativeEventTitle(activity.name) ||
         isGenericEventTitle(activity.name) ||
-        isSpecialOpeningTitle(activity.name)
+        isSpecialOpeningTitle(activity.name) ||
+        isWeekdayEventTitle(activity.name)
       ) {
         reviewRequiredActivities.push({
           id: activity.id,
@@ -276,7 +278,9 @@ export function compileSchedule(
             ? "speculative_event_title"
             : isGenericEventTitle(activity.name)
               ? "generic_event_title"
-              : "special_opening_requires_date_review",
+              : isWeekdayEventTitle(activity.name)
+                ? "weekday_event_requires_date_review"
+                : "special_opening_requires_date_review",
         });
         issues.push(`event_evidence_review_required:${activity.id}`);
         return false;
@@ -614,6 +618,16 @@ export function compileSchedule(
         )?.name;
         tips.push(
           `Special opening to review, not scheduled: ${name}. Confirm the organizer's opening date, admission hours and availability before adding it. Ordinary venue hours do not verify this special opening.`,
+        );
+      }
+      for (const review of reviewRequiredActivities
+        .filter((item) => item.reason === "weekday_event_requires_date_review")
+        .slice(0, 3)) {
+        const name = inventory.find(
+          (activity) => activity.id === review.id,
+        )?.name;
+        tips.push(
+          `Event to review, not scheduled: ${name}. A weekday in the name does not confirm that it runs during your trip. Check the organizer's exact dates, times and admission before adding it.`,
         );
       }
       if (needsRest)
