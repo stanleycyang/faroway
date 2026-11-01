@@ -10,8 +10,7 @@
   ],
   "git": {
     "deploymentEnabled": {
-      "main": false,
-      "fix/hotel-traveler-context-20261031": false
+      "main": false
     }
   }
 }
