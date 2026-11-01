@@ -121,13 +121,34 @@ export function compileSchedule(
         (activity.bestTimeOfDay === "any" || activity.bestTimeOfDay === slot) &&
         slotFits(day, index, [activity]),
     );
+  // A short arrival/departure window can fit a meal but no visit plus its
+  // buffer. Do not demand sightseeing on those days or penalize other days
+  // while trying to fill them. Conflicting instructions still require review.
+  const availabilityLeavesNoVisitRoom = (day: number) => {
+    const window = availability.windows[day];
+    return Boolean(
+      window &&
+      window.earliestMinute < window.latestMinute &&
+      SLOTS.every((_, slot) => {
+        const meal = dining.some((item) =>
+          item.mealTypes.includes(MEALS[slot]),
+        );
+        return (
+          availableSlotMinutes(window, slot) <=
+          (meal ? mealMinutes[slot] + 30 : 0)
+        );
+      }),
+    );
+  };
   const requiredDays = Array.from(
     { length: daysCount },
     (_, day) => day,
-  ).filter((day) =>
-    SLOTS.some(
-      (_, slot) => availableSlotMinutes(availability.windows[day], slot) > 0,
-    ),
+  ).filter(
+    (day) =>
+      !availabilityLeavesNoVisitRoom(day) &&
+      SLOTS.some(
+        (_, slot) => availableSlotMinutes(availability.windows[day], slot) > 0,
+      ),
   );
   // Meal identities do not affect this provisional policy's fixed durations.
   // Reserve each meal that the later assignment step can actually supply.
@@ -550,10 +571,16 @@ export function compileSchedule(
         );
     }
     if (!selected.length) {
-      issues.push(`day_${day + 1}:activity_supply_gap`);
-      tips.push(
-        "No suitable unused visits fit this day; local suggestions are still needed.",
-      );
+      if (availabilityLeavesNoVisitRoom(day)) {
+        tips.push(
+          "No visits are scheduled within your limited available hours. The draft leaves room for provisional meals and buffers; confirm transfer time before keeping any meal or adding a visit.",
+        );
+      } else {
+        issues.push(`day_${day + 1}:activity_supply_gap`);
+        tips.push(
+          "No suitable unused visits fit this day; local suggestions are still needed.",
+        );
+      }
     }
     if (selected.some((s) => s.activity.duration > limits.slot))
       tips.push(

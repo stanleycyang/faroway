@@ -640,6 +640,36 @@ it("leaves conflicting availability empty and exposes the conflict", () => {
   expect(slots.flatMap((slot) => result.days[0][slot].activities)).toEqual([]);
   expect(slots.every((slot) => !result.days[0][slot].meal)).toBe(true);
   expect(result.issues).toContain("day_1:conflicting_traveler_availability");
+  expect(result.issues).toContain("day_1:activity_supply_gap");
+});
+
+it("leaves an early departure day free of visits without reporting missing supply", () => {
+  const result = compileSchedule(
+    { ...extended, mobilityNeeds: "Depart on the final day at 09:00" },
+    [visit("museum", 90), visit("gallery", 90), visit("walk", 60)],
+    restMeals,
+  );
+  const last = result.days[2];
+  expect(slots.flatMap((slot) => last[slot].activities)).toEqual([]);
+  expect(last.morning.meal).toBeDefined();
+  expect(last.afternoon.meal).toBeUndefined();
+  expect(last.evening.meal).toBeUndefined();
+  expect(result.issues).not.toContain("day_3:activity_supply_gap");
+  expect(last.tips.join(" ")).toContain("confirm transfer time");
+  expect(
+    result.days
+      .slice(0, 2)
+      .every((day) => slots.flatMap((slot) => day[slot].activities).length > 0),
+  ).toBe(true);
+});
+
+it("still reports missing supply when a restricted day has room for visits", () => {
+  const result = compileSchedule(
+    { ...plan, mobilityNeeds: "Depart on the final day at 12:00" },
+    [],
+    restMeals,
+  );
+  expect(result.issues).toContain("day_1:activity_supply_gap");
 });
 
 it("does not show a midday rest before a declared evening arrival", () => {

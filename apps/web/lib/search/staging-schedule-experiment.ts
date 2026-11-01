@@ -173,16 +173,7 @@ export async function runStagingCompiledSchedule(
     }),
   );
   const draft = () => ({ days, topHotel });
-  if (
-    days.some(
-      (day) =>
-        ![
-          ...day.morning.activities,
-          ...day.afternoon.activities,
-          ...day.evening.activities,
-        ].length,
-    )
-  ) {
+  if (compiled.issues.some((issue) => issue.endsWith(":activity_supply_gap"))) {
     logPlanningFallback(
       "aggregator",
       "activity_supply_gap",

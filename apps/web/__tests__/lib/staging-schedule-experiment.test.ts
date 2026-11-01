@@ -174,6 +174,49 @@ it("does not call AI when no activity fits, and cannot be invoked in production"
   ).rejects.toThrow("not enabled");
   expect(mocks.generateObject).not.toHaveBeenCalled();
 });
+
+it("narrates an intentionally quiet departure day without an activity-supply fallback", async () => {
+  const localPlan = {
+    ...plan,
+    mobilityNeeds: "Depart on the final day at 09:00",
+    dates: { start: "2027-01-11", end: "2027-01-13", nights: 2 },
+  };
+  const days = compileSchedule(localPlan, activities, dining).days;
+  mocks.generateObject.mockResolvedValueOnce({
+    object: {
+      days: narrationContext(days).map((day) => ({
+        date: day.date,
+        title: "Your day",
+        summary: "Review the selected stops and available hours.",
+        activityIds: day.slots.flatMap((slot) =>
+          slot.activities.map((a) => a.id),
+        ),
+      })),
+    },
+    usage: { inputTokens: 100, outputTokens: 100 },
+  });
+  const events: unknown[] = [];
+  const stop = onPlanningFallback((event) => events.push(event));
+  try {
+    const result = await runStagingCompiledSchedule(
+      localPlan,
+      [],
+      activities,
+      dining,
+    );
+    expect(mocks.generateObject).toHaveBeenCalledTimes(1);
+    expect(events).toEqual([]);
+    expect(result.days[2].title).toBe("Your day");
+    expect(result.days[2].tips.join(" ")).toContain("confirm transfer time");
+    expect(
+      ["morning", "afternoon", "evening"].flatMap(
+        (slot) => result.days[2][slot as "morning"].activities,
+      ),
+    ).toEqual([]);
+  } finally {
+    stop();
+  }
+});
 it("selects the highest supplied hotel score without mutating inventory or inventing a quote", async () => {
   const hotels = [
     { id: "low", vibeScore: 1 },
