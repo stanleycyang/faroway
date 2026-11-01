@@ -232,6 +232,26 @@ describe("experimental schedule compiler", () => {
     );
   });
 
+  it("chooses a different nearby restaurant for each meal when local supply permits", () => {
+    const point = { ...activities[0].location, lat: 40, lng: -74 };
+    const options = [0, 1, 2].map((i) => ({
+      ...dining[0],
+      id: `local-${i}`,
+      location: { ...point, lat: 40 + i * 0.01 },
+      mealTypes: ["breakfast", "lunch", "dinner"],
+    })) as DiningResult[];
+    const result = compileSchedule(
+      plan,
+      [{ ...visit("nearby", 60), location: point }],
+      options,
+    );
+    expect(slots.map((slot) => result.days[0][slot].meal?.id)).toEqual([
+      "local-0",
+      "local-1",
+      "local-2",
+    ]);
+  });
+
   it("enforces independent pace, duration, identity and slot constraints across varied inventories", () => {
     for (const pace of ["relaxed", "moderate", "packed"] as const) {
       const supply = Array.from({ length: 12 }, (_, i) =>

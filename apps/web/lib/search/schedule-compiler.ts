@@ -516,6 +516,7 @@ export function compileSchedule(
     }));
   const usedMeals = new Set<string>();
   const days: SuggestedDay[] = Array.from({ length: daysCount }, (_, day) => {
+    const mealsToday = new Set<string>();
     const selected = best.selected.filter((s) => s.day === day);
     const tips = [
       "Planning draft: confirm opening hours, availability, travel times and suitability before booking.",
@@ -707,6 +708,12 @@ export function compileSchedule(
             distance == null ? 2 : distance <= 3 ? 0 : 1;
           return (
             group(a.distance) - group(b.distance) ||
+            // Prefer variety among nearby options, without trading it for
+            // a distant meal or a location whose distance is unknown.
+            (group(a.distance) === 0
+              ? Number(mealsToday.has(a.meal.id)) -
+                Number(mealsToday.has(b.meal.id))
+              : 0) ||
             a.score - b.score ||
             a.meal.id.localeCompare(b.meal.id)
           );
@@ -730,6 +737,7 @@ export function compileSchedule(
         );
       } else {
         usedMeals.add(chosen.meal.id);
+        mealsToday.add(chosen.meal.id);
         if (chosen.distance == null)
           issues.push(`day_${day + 1}:${MEALS[slot]}:route_unknown`);
         else if (chosen.distance > 3) {
