@@ -44,8 +44,10 @@ function measure({ days, inventory }: ReturnType<typeof read>) {
     far = 0,
     avoidableFar = 0,
     regretOver1Km = 0;
+  let sameDayRepeats = 0;
   const restaurants = new Set<string>();
   for (const day of days) {
+    const dailyRestaurants = new Set<string>();
     // Independent rubric: breakfast before first visit, lunch between periods,
     // dinner after last visit. Deliberately do not import the compiler helper.
     const visits = slots.flatMap((slot) => day[slot].activities);
@@ -64,6 +66,8 @@ function measure({ days, inventory }: ReturnType<typeof read>) {
         continue;
       }
       restaurants.add(meal.id);
+      if (dailyRestaurants.has(meal.id)) sameDayRepeats++;
+      dailyRestaurants.add(meal.id);
       const score = (m: DiningResult) => {
         const legs = anchors[i].map((a) =>
           suppliedDistanceKm(a!.location, m.location),
@@ -106,6 +110,7 @@ function measure({ days, inventory }: ReturnType<typeof read>) {
     avoidableFar,
     regretOver1Km,
     uniqueRestaurants: restaurants.size,
+    sameDayRepeats,
   };
 }
 

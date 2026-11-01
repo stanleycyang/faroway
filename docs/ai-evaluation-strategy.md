@@ -943,3 +943,10 @@ Regional Interlaken and Reykjavik gaps remain; these may need hotel-return conte
 Evidence: `artifacts/uat/meal-boundary-comparison-20261031.json` and `artifacts/uat/meal-boundary-variety-comparison-20261031.json`, backed by matching `compiled-meal-boundaries-20261031` and `compiled-meal-boundaries-variety-20261031` trace directories. The independent comparison is committed; private traces remain ignored. Replay source hashes include the new boundary helper.
 
 Validation: all 1,263 web tests pass, including ordered-boundary and lunch/dinner placement regressions. Workspace type, lint and format checks pass (nine existing lint warnings). Both 12-trace candidates pass the independent comparison and preserve every scheduled activity object.
+
+
+### Rejected same-day dining penalty (2026-10-31)
+
+The retained candidate repeats a restaurant within four days (one each in New York and Reykjavik, two in Interlaken). Tested an additional three-point same-day reuse penalty, preserving the existing near/far/unknown location tiers. The 12 offline replays preserve every activity and pass contracts, but only Interlaken changes: two same-day repeats disappear while summed boundary distance rises from 675.2 to 678.1 km. Total distinct restaurants remains 106, and the city repeats remain. This does not establish a better traveler experience, so reverted the compiler change. Retained `sameDayRepeats` in the independent comparison to make this tradeoff visible in later supply and scheduling experiments. Evidence: `artifacts/uat/meal-daily-variety-comparison-20261031.json` and `compiled-meal-daily-variety-20261031` traces.
+
+Added a CLI regression verifying that empty/mismatched trace sets, altered scheduled activities, changed briefs and failed contracts cannot produce a successful comparison. The valid sparse fixture explicitly reports unknown coordinates and missing meals without accepting overall quality. All 24 agentic evaluation tests pass. No live requests or additional AI spend.

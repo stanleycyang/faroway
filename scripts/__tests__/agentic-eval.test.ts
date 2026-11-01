@@ -1,5 +1,5 @@
 import seasonalFacts from "../fixtures/agentic-venue-constraints.json";
-import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -519,4 +519,52 @@ test("the observed November Interlaken recommendations fail published-season che
       (f) => f.finding === "outside_reported_operating_season",
     ),
   ).toBe(true);
+});
+
+test("meal comparison exposes unknowns and rejects mismatched or changed traces", () => {
+  const root = mkdtempSync(join(tmpdir(), "meal-comparison-"));
+  const before = join(root, "before"),
+    after = join(root, "after");
+  mkdirSync(before);
+  mkdirSync(after);
+  const run = () =>
+    spawnSync(
+      process.execPath,
+      [resolve("scripts/uat/evaluate-meal-geography.ts"), before, after],
+      { encoding: "utf8" },
+    );
+  const save = (dir: string, trace: AgenticTrace) =>
+    writeFileSync(join(dir, "fixture.json"), JSON.stringify({ trace }));
+  try {
+    expect(run().status).not.toBe(0);
+    const trace = fixture();
+    save(before, trace);
+    expect(run().status).not.toBe(0);
+    save(after, trace);
+    const result = run();
+    expect(result.status).toBe(0);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      qualityAccepted: false,
+      results: [
+        { before: { known: 0, unknown: 1, missing: 2, sameDayRepeats: 0 } },
+      ],
+    });
+    const changed = structuredClone(trace);
+    (
+      changed.steps[4].output as {
+        days: Array<{ morning: { activities: Array<{ duration: number }> } }>;
+      }
+    ).days[0].morning.activities[0].duration = 90;
+    save(after, changed);
+    expect(run().status).not.toBe(0);
+    save(after, {
+      ...trace,
+      brief: { ...trace.brief, destination: "Different city" },
+    });
+    expect(run().status).not.toBe(0);
+    save(after, { ...trace, steps: trace.steps.slice(1) });
+    expect(run().status).not.toBe(0);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });
