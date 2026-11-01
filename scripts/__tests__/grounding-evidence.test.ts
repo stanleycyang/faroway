@@ -1,3 +1,4 @@
+import { reviewHotelSourceRefresh } from "../uat/lib/hotel-evidence-refresh";
 import { test, expect } from "bun:test";
 import {
   auditGroundingEvidence,
@@ -140,4 +141,83 @@ test("fabricated corrections and unavailable pages cannot link evidence", () => 
       [addressPage],
     )[0].issues,
   ).toContain("duplicate_claim");
+});
+
+test("hotel source refresh prepares review without renewing policy on matching text", () => {
+  const facts = [
+    {
+      id: "hotel",
+      name: "Example Hotel",
+      destination: "Example City",
+      sourceUrl: url,
+      observedAt: "2026-10-01",
+      reviewAfter: "2026-10-31",
+      sourceNote: "Reviewed policy",
+      reviewChecks: ["Minimum guest age is 18."],
+    },
+  ];
+  const before = JSON.stringify(facts);
+  const result = reviewHotelSourceRefresh(
+    facts,
+    [
+      {
+        url,
+        observedAt: "2026-11-01T11:00:00Z",
+        text: "Example Hotel. Minimum guest age is 18. Other conditions may override this statement.",
+      },
+    ],
+    "2026-11-01T12:00:00Z",
+  );
+  expect(result.rows[0].status).toBe("ready_for_policy_review");
+  expect(result.rows[0].canRenewAutomatically).toBe(false);
+  expect(result.policyVerified).toBe(false);
+  expect(result.evidenceUpdated).toBe(false);
+  expect(JSON.stringify(facts)).toBe(before);
+});
+
+test("hotel refresh flags failed, ambiguous, stale, future and changed sources", () => {
+  const fact = {
+    id: "hotel",
+    name: "Example Hotel",
+    destination: "Example City",
+    sourceUrl: url,
+    observedAt: "2026-10-01",
+    sourceNote: "Reviewed policy",
+    reviewChecks: ["Minimum guest age is 18."],
+  };
+  const fresh = {
+    url,
+    observedAt: "2026-11-01T11:00:00Z",
+    text: "Minimum guest age is 18.",
+  };
+  for (const pages of [
+    [],
+    [fresh, fresh],
+    [{ ...fresh, error: "HTTP 403" }],
+    [{ ...fresh, url: "https://another.example/visit" }],
+    [{ ...fresh, text: "Guests of all ages are welcome." }],
+    [{ ...fresh, observedAt: "2026-10-31T11:59:59Z" }],
+    [{ ...fresh, observedAt: "2026-11-01T12:00:01Z" }],
+    [{ ...fresh, observedAt: "invalid" }],
+    [{ ...fresh, observedAt: "2026-02-31T11:00:00Z" }],
+  ]) {
+    const result = reviewHotelSourceRefresh(
+      [fact],
+      pages,
+      "2026-11-01T12:00:00Z",
+    );
+    expect(result.rows[0].status).toBe("needs_investigation");
+    expect(result.rows[0].canRenewAutomatically).toBe(false);
+    expect(result.policyVerified).toBe(false);
+  }
+  expect(
+    reviewHotelSourceRefresh(
+      [{ ...fact, reviewChecks: [] }],
+      [fresh],
+      "2026-11-01T12:00:00Z",
+    ).rows[0].issues,
+  ).toContain("review_anchors_missing_or_invalid");
+  expect(() =>
+    reviewHotelSourceRefresh([], [fresh], "2026-11-01T12:00:00Z"),
+  ).toThrow("Nonempty hotel evidence");
 });

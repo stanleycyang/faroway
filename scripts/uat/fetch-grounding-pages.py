@@ -8,6 +8,7 @@ import pathlib
 import re
 import sys
 import urllib.request
+import urllib.parse
 
 
 class PageText(HTMLParser):
@@ -37,6 +38,9 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 def fetch_page(url):
     observed = datetime.datetime.now(datetime.timezone.utc).isoformat()
     try:
+        parsed = urllib.parse.urlsplit(url)
+        if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password:
+            raise ValueError("Reviewed source must be an HTTPS URL without credentials")
         opener = urllib.request.build_opener(NoRedirect)
         request = urllib.request.Request(url, headers={"User-Agent": "Faroway UAT evidence check"})
         with opener.open(request, timeout=15) as response:
@@ -51,17 +55,25 @@ def fetch_page(url):
         return {"url": url, "observedAt": observed, "error": str(error)}
 
 
-if len(sys.argv) not in (2, 3) or (len(sys.argv) == 3 and sys.argv[2] != "--addresses"):
-    sys.exit("Usage: python3 scripts/uat/fetch-grounding-pages.py NEW_OUTPUT_JSON [--addresses]")
-output = pathlib.Path(sys.argv[1])
-if output.exists():
-    sys.exit("Output exists; preserve previous evidence")
-fixture = "agentic-venue-addresses.json" if len(sys.argv) == 3 else "agentic-venue-constraints.json"
-facts = json.loads((pathlib.Path(__file__).parent.parent / "fixtures" / fixture).read_text())
-urls = sorted({fact["sourceUrl"] for fact in facts})
-with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
-    pages = list(pool.map(fetch_page, urls))
-output.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
-with os.fdopen(os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as file:
-    json.dump(pages, file, ensure_ascii=False, indent=2)
-print(json.dumps({"pages": len(pages), "retrieved": sum("text" in p for p in pages), "modelCalls": 0}))
+def main():
+    if len(sys.argv) not in (2, 3) or (len(sys.argv) == 3 and sys.argv[2] not in ("--addresses", "--hotels")):
+        sys.exit("Usage: python3 scripts/uat/fetch-grounding-pages.py NEW_OUTPUT_JSON [--addresses|--hotels]")
+    output = pathlib.Path(sys.argv[1])
+    if output.exists():
+        sys.exit("Output exists; preserve previous evidence")
+    fixture = {
+        "--addresses": "agentic-venue-addresses.json",
+        "--hotels": "agentic-hotel-constraints.json",
+    }.get(sys.argv[2] if len(sys.argv) == 3 else "", "agentic-venue-constraints.json")
+    facts = json.loads((pathlib.Path(__file__).parent.parent / "fixtures" / fixture).read_text())
+    urls = sorted({fact["sourceUrl"] for fact in facts})
+    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+        pages = list(pool.map(fetch_page, urls))
+    output.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    with os.fdopen(os.open(output, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600), "w") as file:
+        json.dump(pages, file, ensure_ascii=False, indent=2)
+    print(json.dumps({"pages": len(pages), "retrieved": sum("text" in p for p in pages), "modelCalls": 0}))
+
+
+if __name__ == "__main__":
+    main()

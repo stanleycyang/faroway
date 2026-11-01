@@ -11,6 +11,8 @@ export interface HotelConstraint {
   observedAt: string;
   /** Editorial review deadline, not a claim that the policy lasts until this date. */
   reviewAfter?: string;
+  /** Short source anchors for a refresh review, not automatic semantic verification. */
+  reviewChecks?: string[];
   sourceNote: string;
 }
 
