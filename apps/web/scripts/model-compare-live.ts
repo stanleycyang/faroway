@@ -1,5 +1,24 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { comparisonSelection } from "../../../scripts/uat/lib/comparison-selection";
+import {
+  attachComparisonContracts,
+  type ComparisonContractResult,
+} from "../../../scripts/uat/lib/comparison-contracts";
+import {
+  mkdirSync,
+  writeFileSync,
+  readFileSync,
+  renameSync,
+  readdirSync,
+} from "node:fs";
 import { resolve } from "node:path";
+import { createHash, randomUUID } from "node:crypto";
+import { execFileSync } from "node:child_process";
+import {
+  evaluateAgenticTrace,
+  type AgenticTrace,
+} from "../../../scripts/uat/lib/agentic-eval";
+import { mapSearchResultsToItinerary } from "../lib/search/bridge";
+import { runSearchEnrichment } from "../lib/search/enrichment";
 import {
   onPlanningFallback,
   onPlanningUsage,
@@ -41,6 +60,8 @@ function briefInput(brief: UatBrief): SearchInput {
     travelers: brief.travelers,
     adults: brief.adults,
     children: brief.children,
+    childAges: brief.childAges,
+    roomCount: brief.roomCount,
     interests: brief.interests,
     budget: brief.budget,
     vibes: brief.vibes,
@@ -86,6 +107,120 @@ async function main() {
       import("../lib/search/agents/aggregator"),
     ]);
 
+  const { configs, briefs, capUsd, compiledNarrated } = comparisonSelection(
+    process.argv,
+  );
+  if (compiledNarrated) {
+    process.env.FAROWAY_SCHEDULE_EXPERIMENT = "compiled-narrated-v1";
+    const { compiledScheduleExperimentEnabled } =
+      await import("../lib/search/staging-schedule-experiment");
+    if (
+      !compiledScheduleExperimentEnabled({ ...process.env, ...configs[0].env })
+    )
+      throw new Error(
+        "Compiled candidate requires the isolated staging environment",
+      );
+  } else delete process.env.FAROWAY_SCHEDULE_EXPERIMENT;
+  const root = resolve(import.meta.dirname, "../../..");
+  const runId = randomUUID();
+  const traceDir = resolve(
+    arg("--trace-dir") ?? resolve(root, "artifacts/uat/traces", runId),
+  );
+  mkdirSync(traceDir, { recursive: true, mode: 0o700 });
+  if (readdirSync(traceDir).length)
+    throw new Error("Trace directory must be empty; preserve prior trials");
+  const sourceFiles = [
+    ...["orchestrator", "hotels", "activities", "dining", "aggregator"].map(
+      (name) => `apps/web/lib/search/agents/${name}.ts`,
+    ),
+    "apps/web/scripts/model-compare-live.ts",
+    "apps/web/lib/search/enrichment.ts",
+    "scripts/uat/lib/comparison-contracts.ts",
+    "scripts/uat/lib/comparison-selection.ts",
+    "apps/web/lib/search/staging-schedule-experiment.ts",
+    "apps/web/lib/search/reviewed-venue-hours.ts",
+    "apps/web/lib/search/venue-identity.ts",
+    "scripts/fixtures/reviewed-venue-hours.json",
+    "apps/web/lib/search/reviewed-dining-options.ts",
+    "apps/web/lib/search/reviewed-event-options.ts",
+    "scripts/fixtures/reviewed-event-options.json",
+    "apps/web/lib/search/dining-coverage.ts",
+    "apps/web/lib/search/generated-dining-copy.ts",
+    "apps/web/lib/search/generated-activity-copy.ts",
+    "apps/web/lib/search/reviewed-dining-addresses.ts",
+    "apps/web/lib/search/reviewed-dining-closures.ts",
+    "scripts/fixtures/reviewed-dining-closures.json",
+    "apps/web/lib/search/schedule-experiment-gate.ts",
+    "scripts/fixtures/reviewed-dining-addresses.json",
+    "scripts/fixtures/reviewed-dining-options.json",
+    "apps/web/lib/search/schedule-compiler.ts",
+    "apps/web/lib/search/speculative-event.ts",
+    "apps/web/lib/search/traveler-availability.ts",
+    "apps/web/lib/search/schedule-timing.ts",
+    "scripts/uat/lib/timing-proposal.ts",
+    "apps/web/lib/search/meal-boundaries.ts",
+    "apps/web/lib/search/schedule-narration.ts",
+    "apps/web/lib/search/narration-prompt.ts",
+    "apps/web/lib/search/highlight-match.ts",
+    "apps/web/lib/search/party-suitability.ts",
+    "scripts/uat/lib/venue-constraints.ts",
+    "scripts/uat/lib/agentic-eval.ts",
+    "scripts/uat/lib/day-availability.ts",
+    "scripts/fixtures/agentic-venue-constraints.json",
+    "apps/web/lib/search/bridge.ts",
+    "packages/types/src/day-timing.ts",
+    "apps/web/lib/search/supplied-distance.ts",
+    "apps/web/lib/location-coordinates.ts",
+    "apps/web/lib/search/fallback-itinerary.ts",
+    "apps/web/lib/search/hotel-policy-screen.ts",
+    "scripts/uat/lib/hotel-constraints.ts",
+    "scripts/fixtures/agentic-hotel-constraints.json",
+    "apps/web/lib/ai/planning-step.ts",
+    "apps/web/lib/ai/sdk.ts",
+    "apps/web/lib/ai/planning-disclosure.ts",
+    "scripts/uat/lib/briefs.ts",
+    "scripts/uat/lib/eval-briefs.ts",
+    "scripts/fixtures/agentic-expanded-briefs.json",
+    "bun.lock",
+  ];
+  const hash = createHash("sha256");
+  for (const file of sourceFiles) {
+    hash.update(file);
+    hash.update(readFileSync(resolve(root, file)));
+  }
+  const source = {
+    commit: execFileSync("git", ["rev-parse", "HEAD"], {
+      cwd: root,
+      encoding: "utf8",
+    }).trim(),
+    dirty: Boolean(
+      execFileSync("git", ["status", "--porcelain"], {
+        cwd: root,
+        encoding: "utf8",
+      }).trim(),
+    ),
+    filesSha256: hash.digest("hex"),
+  };
+  let trace: AgenticTrace;
+  const contractResults = new Map<string, ComparisonContractResult>();
+  const saveTrace = () => {
+    const evaluation = evaluateAgenticTrace(trace);
+    contractResults.set(JSON.stringify([trace.configId, trace.brief.id]), {
+      configId: trace.configId,
+      briefId: trace.brief.id,
+      contractPass: evaluation.contractPass,
+      failures: evaluation.failures,
+    });
+    const file = resolve(traceDir, `${trace.configId}--${trace.brief.id}.json`);
+    writeFileSync(
+      file + ".tmp",
+      JSON.stringify({ trace, evaluation }, null, 2),
+      { mode: 0o600 },
+    );
+    renameSync(file + ".tmp", file);
+  };
+  console.error(`Trace directory: ${traceDir}`);
+
   let plan: Awaited<ReturnType<typeof runOrchestratorAgent>> | undefined;
   let hotelResults: Awaited<ReturnType<typeof hotels.runHotelsAgent>> = [];
   let activityResults: Awaited<
@@ -93,8 +228,11 @@ async function main() {
   > = [];
   let diningResults: Awaited<ReturnType<typeof dining.runDiningAgent>> = [];
 
-  const report = await runModelComparison({
+  const executionReport = await runModelComparison({
     mode: "live",
+    configs,
+    briefs,
+    capUsd,
     target: { supabaseUrl, projectRef },
     executeStep: async ({ config, brief, step }) => {
       replacePlanningStepEnv(config.env);
@@ -103,6 +241,23 @@ async function main() {
         hotelResults = [];
         activityResults = [];
         diningResults = [];
+        trace = {
+          version: 1,
+          runId,
+          configId: config.id,
+          brief,
+          source,
+          startedAt: new Date().toISOString(),
+          settings: {
+            ...config.env,
+            FAROWAY_EVAL_ENRICHMENT: "deterministic",
+            ...(compiledNarrated
+              ? { FAROWAY_SCHEDULE_EXPERIMENT: "compiled-narrated-v1" }
+              : {}),
+          },
+          steps: [],
+        };
+        saveTrace();
       }
       const fallbacks: PlanningFallbackRecord[] = [];
       const usages: PlanningUsageRecord[] = [];
@@ -114,13 +269,16 @@ async function main() {
       });
       const started = Date.now();
       const notes: string[] = [];
+      let output: unknown;
       try {
         if (step === "orchestrator") {
           plan = await runOrchestratorAgent(briefInput(brief));
+          output = plan;
         } else if (!plan) {
           throw new Error("orchestrator did not produce a plan");
         } else if (step === "hotels") {
           hotelResults = await hotels.runHotelsAgent(plan);
+          output = hotelResults;
           const priced = hotelResults.filter(
             (hotel) => hotel.pricePerNight != null,
           );
@@ -129,8 +287,10 @@ async function main() {
           );
         } else if (step === "activities") {
           activityResults = await activities.runActivitiesAgent(plan);
+          output = activityResults;
         } else if (step === "dining") {
           diningResults = await dining.runDiningAgent(plan);
+          output = diningResults;
           const links = diningResults.filter((item) => item.reservationUrl);
           notes.push(
             links.length
@@ -138,18 +298,53 @@ async function main() {
               : "no reservation URLs",
           );
         } else if (step === "aggregator") {
+          const enrichmentStarted = Date.now();
+          const enrichment = await runSearchEnrichment(plan);
+          trace.enrichment = {
+            ...enrichment,
+            mode: "deterministic",
+            latencyMs: Date.now() - enrichmentStarted,
+          };
+          const combinedActivities = [
+            ...activityResults,
+            ...enrichment.activities,
+          ];
+          const combinedDining = [...diningResults, ...enrichment.dining];
           const aggregated = await aggregator.runAggregatorAgent(
             plan,
             hotelResults,
-            activityResults,
-            diningResults,
+            combinedActivities,
+            combinedDining,
             [],
           );
+          output = aggregated;
+          trace.mappedItinerary = mapSearchResultsToItinerary(
+            {
+              searchId: runId,
+              hotels: hotelResults,
+              activities: combinedActivities,
+              dining: combinedDining,
+              transport: [],
+              itinerary: aggregated.days,
+            },
+            aggregated.topHotel,
+          );
           notes.push(`${aggregated.days.length} days`);
+          notes.push(
+            "workflow deterministic enrichment included; supplier/search calls remain disabled",
+          );
         }
       } finally {
         stopFallback();
         stopUsage();
+        trace.steps.push({
+          step,
+          output,
+          latencyMs: Date.now() - started,
+          usage: usages,
+          fallbacks,
+        });
+        saveTrace();
       }
       const usage = sumPlanningUsage(usages);
       const execution: StepExecution = {
@@ -176,6 +371,13 @@ async function main() {
     },
   });
 
+  const report = attachComparisonContracts(
+    executionReport,
+    configs.flatMap((config) =>
+      briefs.map((brief) => ({ configId: config.id, briefId: brief.id })),
+    ),
+    [...contractResults.values()],
+  );
   const out = arg("--out");
   if (out) {
     mkdirSync(resolve(out, ".."), { recursive: true });
@@ -183,6 +385,7 @@ async function main() {
   }
   console.log(`FAROWAY_MODEL_COMPARE_JSON:${JSON.stringify(report)}`);
   if (report.aborted) process.exitCode = 3;
+  else if (!report.ok) process.exitCode = 4;
 }
 
 main().catch((error: unknown) => {

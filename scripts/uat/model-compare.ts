@@ -1,3 +1,4 @@
+import { comparisonSelection } from "./lib/comparison-selection";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -42,6 +43,12 @@ async function main() {
 
 --dry-run and --mock do not call a model and do not need the gateway key.
 --live reads FAROWAY_STAGING_AI_GATEWAY_KEY from the environment, refuses to start without it, and stops between steps once estimated spend reaches $20 or usage is unknown. An in-flight call can exceed this threshold; configure the dedicated gateway key with a billing cap.
+Use --suite development|holdout|uat (default uat) to select a case set. Holdouts are reserved for final validation, not tuning.
+Use --compiled-narrated with --configs flash-low for the isolated staging candidate (minimal narration).
+Use --upstream-thinking low|minimal only with --compiled-narrated to compare upstream reasoning; default low.
+Use --hotel-thinking minimal with compiled narration and low upstream thinking to isolate the hotel change.
+Use --configs and --briefs with comma-separated IDs to bound a live batch; --cap-usd can lower its stop threshold. --trace-dir stores replayable agent outputs and deterministic evaluations (0600).
+Live exit codes: 3 for billing/spend abort, 4 for failed or missing structural contracts. Contract success is not traveler-quality acceptance.
 The key is never accepted as a command argument.
 An API URL, when set, must match the pinned staging readiness alias. Production and arbitrary preview hosts are refused.`);
     return;
@@ -51,10 +58,14 @@ An API URL, when set, must match the pinned staging readiness alias. Production 
     throw new Error("Choose exactly one of --dry-run, --mock or --live");
   const mode = has("--dry-run") ? "dry-run" : has("--mock") ? "mock" : "live";
   const target = targetFromEnv();
+  const selection = comparisonSelection(process.argv);
   if (mode !== "live") {
     const report = await runModelComparison({
       mode,
       target,
+      configs: selection.configs,
+      briefs: selection.briefs,
+      capUsd: selection.capUsd,
       ...(mode === "mock" ? { executeStep: mockStepExecution } : {}),
     });
     writeReport(report.markdown, report);
@@ -77,6 +88,16 @@ An API URL, when set, must match the pinned staging readiness alias. Production 
       "--live",
       "--supabase-url",
       staging,
+      ...(has("--compiled-narrated") ? ["--compiled-narrated"] : []),
+      ...[
+        "--upstream-thinking",
+        "--hotel-thinking",
+        "--configs",
+        "--briefs",
+        "--cap-usd",
+        "--trace-dir",
+        "--suite",
+      ].flatMap((flag) => (arg(flag) ? [flag, arg(flag)!] : [])),
     ],
     {
       cwd: root,

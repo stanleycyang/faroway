@@ -1,3 +1,6 @@
+import { isTimingNote } from '@faroway/types';
+import { transformItineraryDays } from '../../lib/itineraryNormalization';
+import { ProposedTiming } from '../../components/ProposedTiming';
 import { flightQuoteIsCurrent } from '@faroway/constants';
 import { formatKnownPrice, summarizeTripCosts } from '../../lib/tripCost';
 import React, {
@@ -739,6 +742,20 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   }
 
   const isLocalTrip = trip.id.startsWith('local_');
+  const timingDay = trip.days[selectedDay]
+    ? transformItineraryDays([trip.days[selectedDay]])[0]
+    : undefined;
+  const visibleTips = (timingDay?.tips ?? []).filter(
+    (tip) => !timingDay?.timingProposal || !isTimingNote(tip)
+  );
+  const timingNames: Record<string, string> = {};
+  for (const activity of timingDay?.activities ?? []) {
+    const eventId =
+      activity.type === 'restaurant'
+        ? `meal:${activity.scheduleSlot}:${activity.id}`
+        : `activity:${activity.id}`;
+    timingNames[eventId] = activity.title;
+  }
 
   const formatDateRange = () => {
     const start = formatTripDate(trip.startDate, { month: 'short', day: 'numeric' });
@@ -948,13 +965,16 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                   </View>
                 )}
 
+                {timingDay?.timingProposal && (
+                  <ProposedTiming proposal={timingDay.timingProposal} names={timingNames} />
+                )}
                 {/* Activities */}
                 <View style={styles.activitiesContainer}>
-                  {trip.days[selectedDay]?.activities.map((activity) => (
+                  {timingDay?.activities.map((activity) => (
                     <ActivityCard key={activity.id} activity={activity} />
                   ))}
                 </View>
-                {!!trip.days[selectedDay]?.tips?.length && (
+                {visibleTips.length > 0 && (
                   <View style={{ paddingVertical: 20, backgroundColor: '#EFF5F3', marginTop: 8 }}>
                     <Text
                       style={{
@@ -967,7 +987,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                     >
                       Before you go
                     </Text>
-                    {trip.days[selectedDay]?.tips?.map((tip, index) => (
+                    {visibleTips.map((tip, index) => (
                       <Text key={`${index}:${tip}`} style={styles.dayTip}>
                         {tip}
                       </Text>

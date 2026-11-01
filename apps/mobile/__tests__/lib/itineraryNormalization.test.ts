@@ -152,3 +152,141 @@ test('saved trips remain readable when their supplier is no longer integrated', 
   });
   expect(days[0].activities[0].title).toBe('Museum');
 });
+
+import { dayTimingBasis } from '@faroway/types';
+test('proposed timing survives native flattening and cache normalization, then expires after edits', () => {
+  const day = {
+    date: '2027-01-11',
+    dayNumber: 1,
+    title: 'Test',
+    tips: ['Proposed local timing: breakfast, walk, rest'],
+    morning: {
+      activities: [{ id: 'walk', name: 'Walk', duration: 60 }],
+      meals: [{ id: 'cafe', name: 'Cafe', mealType: 'breakfast' }],
+    },
+    afternoon: { activities: [], meals: [] },
+    evening: { activities: [], meals: [] },
+  };
+  const timingProposal = {
+    policy: 'midday-rest-v1',
+    basis: dayTimingBasis(day),
+    fitsPolicy: true,
+    verified: false,
+    conflict: null,
+    events: [
+      {
+        id: 'meal:morning:cafe',
+        kind: 'meal',
+        durationMinutes: 45,
+        startMinute: 480,
+        endMinute: 525,
+        bufferBeforeMinutes: 0,
+      },
+      {
+        id: 'activity:walk',
+        kind: 'activity',
+        durationMinutes: 60,
+        startMinute: 555,
+        endMinute: 615,
+        bufferBeforeMinutes: 30,
+      },
+      {
+        id: 'rest:midday',
+        kind: 'rest',
+        durationMinutes: 60,
+        startMinute: 780,
+        endMinute: 840,
+        bufferBeforeMinutes: 0,
+      },
+    ],
+  };
+  const normalized = transformItineraryDays([{ ...day, timingProposal }]);
+  expect(normalized[0].timingProposal).toEqual(timingProposal);
+  expect(normalized[0].activities.find((a) => a.id === 'cafe')?.duration).toBe('45 min planned');
+  const cached = transformItineraryDays(JSON.parse(JSON.stringify(normalized)));
+  expect(cached[0].timingProposal).toEqual(timingProposal);
+  expect(cached[0].activities.find((a) => a.id === 'cafe')?.duration).toBe('45 min planned');
+  const changedDuration = JSON.parse(JSON.stringify(cached));
+  changedDuration[0].activities.find((a: { id: string }) => a.id === 'walk').duration = '2 hr';
+  expect(transformItineraryDays(changedDuration)[0].timingProposal).toBeUndefined();
+  cached[0].date = '2027-01-12';
+  const changed = transformItineraryDays(cached)[0];
+  expect(changed.timingProposal).toBeUndefined();
+  expect(changed.activities.find((a) => a.id === 'cafe')?.duration).toBe('Duration not set');
+  expect(changed.tips).toEqual(['Proposed times need a fresh review.']);
+  const untimed = transformItineraryDays([day])[0];
+  expect(untimed.activities.find((a) => a.id === 'cafe')?.duration).toBe('Duration not set');
+  for (const proposal of [
+    undefined,
+    { ...timingProposal, basis: 'outdated' },
+    {
+      ...timingProposal,
+      fitsPolicy: false,
+      events: [],
+      conflict: { eventId: 'activity:walk', overrunMinutes: 30 },
+    },
+  ]) {
+    const reloaded = transformItineraryDays([{ ...normalized[0], timingProposal: proposal }])[0];
+    expect(reloaded.activities.find((a) => a.id === 'cafe')?.duration).toBe('Duration not set');
+  }
+});
+
+test('partially supported dining keeps unknown ratings and prices through a cache reload', () => {
+  const days = transformItineraryDays([
+    {
+      date: '2027-01-11',
+      dayNumber: 1,
+      title: 'Breakfast review',
+      morning: {
+        activities: [],
+        meals: [
+          {
+            id: 'reviewed-bloomhouse-ginger-garden',
+            name: 'The Bloomhouse by Little Farms',
+            description: 'Confirm service times, availability and stroller access.',
+            mealType: 'breakfast',
+            location: { name: 'Ginger Garden, Singapore Botanic Gardens' },
+            estimatedCost: { amount: 0, status: 'unknown', currency: '', perPerson: true },
+          },
+        ],
+      },
+      afternoon: { activities: [], meals: [] },
+      evening: { activities: [], meals: [] },
+    },
+  ]);
+  const cached = transformItineraryDays(JSON.parse(JSON.stringify(days)));
+  for (const day of [days[0], cached[0]]) {
+    expect(day.activities[0].title).toBe('The Bloomhouse by Little Farms');
+    expect(day.activities[0].description).toContain('Confirm service times');
+    expect(day.activities[0].rating).toBeUndefined();
+    expect(day.activities[0].reviewCount).toBeUndefined();
+    expect(day.activities[0].price).toBeUndefined();
+    expect(day.activities[0].estimatedCost).toBeUndefined();
+  }
+});
+
+test('arrival-day empty periods and availability note survive native normalization and cache reload', () => {
+  const note =
+    'Your local-time availability: 18:00–24:00. Confirm exact visit times and airport transfers.';
+  const [day] = transformItineraryDays([
+    {
+      date: '2027-01-11',
+      dayNumber: 1,
+      title: 'Arrival evening',
+      summary: 'An evening after arrival',
+      morning: { activities: [], meals: [] },
+      afternoon: { activities: [], meals: [] },
+      evening: {
+        activities: [{ id: 'walk', name: 'Evening walk', duration: 60 }],
+        meals: [{ id: 'dinner', name: 'Dinner' }],
+      },
+      tips: [note],
+    },
+  ]);
+  const [cached] = transformItineraryDays(JSON.parse(JSON.stringify([day])));
+  expect(cached.activities.map((a) => [a.id, a.scheduleSlot])).toEqual([
+    ['walk', 'evening'],
+    ['dinner', 'evening'],
+  ]);
+  expect(cached.tips).toEqual([note]);
+});

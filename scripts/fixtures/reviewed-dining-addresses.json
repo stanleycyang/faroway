@@ -1,0 +1,26 @@
+[
+  {
+    "id": "row34-cambridge-address-20261101",
+    "destination": "Cambridge, Massachusetts, USA",
+    "aliases": ["Row 34"],
+    "previousAddresses": ["383 Binney St, Cambridge, MA 02139"],
+    "publishedAddress": "314 Main Street, Cambridge, MA 02142",
+    "sourceUrl": "https://www.row34.com/location/row34-cambridge/",
+    "sourceSha256": "b1e83afdf070a7c7b721a921444bfc5c24e4fec4f6119cd8a402ea56c651860f",
+    "observedAt": "2026-11-01",
+    "reviewAfter": "2026-12-01",
+    "branchReview": "The official Row 34 Cambridge branch page identifies Cambridge, MA and displays 314 Main Street. Its FoodEstablishment node has the same page-scoped @id and address fields. The generic node name Cambridge, MA alone is not the identity evidence. This binds the exact generated Cambridge Massachusetts restaurant/address pair only; no coordinates, opening hours or future availability are verified."
+  },
+  {
+    "id": "friendly-toast-cambridge-address-20261101",
+    "destination": "Cambridge, Massachusetts, USA",
+    "aliases": ["The Friendly Toast"],
+    "previousAddresses": ["1 Kendall Square, Cambridge, MA 02139"],
+    "publishedAddress": "1230 Massachusetts Ave, Cambridge, MA 02138",
+    "sourceUrl": "https://thefriendlytoast.com/cambridge-ma",
+    "sourceSha256": "3a6870d4876576e08608e1e0289263b1df9135275f6c33a4fee92a385e9c248e",
+    "observedAt": "2026-11-01",
+    "reviewAfter": "2026-12-01",
+    "branchReview": "The official Friendly Toast Cambridge branch page explicitly identifies its return to Cambridge in Harvard Square and publishes 1230 Massachusetts Ave. This binds only the exact generated restaurant and former Kendall Square address in Cambridge Massachusetts. Coordinates, current menu claims, opening hours and future availability are not transferred."
+  }
+]

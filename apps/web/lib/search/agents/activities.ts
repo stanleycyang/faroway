@@ -8,6 +8,7 @@ import {
  * Uses real activity vendors + AI for matching and ranking
  */
 
+import { screenGeneratedActivityCopy } from "../generated-activity-copy";
 import { gateway as defaultGateway, createGateway } from "@/lib/ai/sdk";
 import {
   generatePlanningObject,
@@ -95,13 +96,13 @@ interface ActivityListResult {
   activities: GeneratedActivity[];
 }
 
-const SYSTEM_PROMPT = `You are a travel activities expert. Generate realistic, bookable activities and attractions for the destination.
+const SYSTEM_PROMPT = `You are a travel activities expert. Suggest real activities and attractions for the destination. Suggestions are not verified bookings; never invent an attraction, tour or event to fill the requested count.
 
-When real Viator data is provided as context, use those activity names and prices. Only generate synthetic data for categories not covered by the real results.
+Prefer ordinary, enduring places and experiences. Without supplied date-specific organizer evidence, omit recurring weekday events, temporary exhibitions, performances and special late openings. Do not turn an ordinary daytime venue into an evening event to satisfy the traveler's schedule. Return fewer options if necessary.
 
 For each activity, provide:
 1. Real attraction/tour names that exist at the destination
-2. Accurate descriptions of what visitors will experience
+2. Describe the experience without inventing wheelchair accessibility, lifts, ramps, step-free routes, accessible toilets or boarding assistance. Do not put unverified access promises in names or vibe labels. Access requirements must be confirmed with the venue.
 3. Leave price unspecified unless supplied by a provider
 4. Duration in whole MINUTES, never hours (30-minute stop = 30; 2-hour museum visit = 120; 2.5-hour tour = 150)
 5. Best time of day to visit
@@ -184,7 +185,7 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
   )
     .then(({ object: result }) =>
       result.activities.map((activity, index) => ({
-        ...activity,
+        ...screenGeneratedActivityCopy(activity),
         id: `activity_${Date.now()}_${index}`,
         price: 0,
         currency: "",
@@ -343,10 +344,10 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
 
   const realActivities = [...viatorActivities, ...getYourGuideActivities];
 
-  let allActivities = deduplicateActivities([
-    ...realActivities,
-    ...aiActivities,
-  ])
+  let allActivities = deduplicateActivities(
+    [...realActivities, ...aiActivities],
+    new Set(realActivities.map((activity) => activity.id)),
+  )
     .sort((a, b) => b.vibeScore - a.vibeScore)
     .slice(0, count);
 
@@ -365,13 +366,28 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
   return allActivities;
 }
 
-function deduplicateActivities(activities: ActivityResult[]): ActivityResult[] {
+function deduplicateActivities(
+  activities: ActivityResult[],
+  supplierIds: ReadonlySet<string>,
+): ActivityResult[] {
   const seen = new Map<string, ActivityResult>();
 
   for (const activity of activities) {
-    const key = activity.name.toLowerCase().replace(/[^a-z0-9]/g, "");
+    const name = activity.name
+      .normalize("NFKC")
+      .toLowerCase()
+      .replace(/[^\p{L}\p{N}]/gu, "");
+    const key = name ? `name:${name}` : `id:${activity.id}`;
     const existing = seen.get(key);
-    if (!existing || activity.vibeScore > existing.vibeScore) {
+    // Provenance comes from the actual supplier responses, not generated labels.
+    // A generated score must not erase a supplier's price, media or booking link.
+    const supplied = supplierIds.has(activity.id);
+    const existingSupplied = existing && supplierIds.has(existing.id);
+    if (
+      !existing ||
+      (supplied && !existingSupplied) ||
+      (supplied === existingSupplied && activity.vibeScore > existing.vibeScore)
+    ) {
       seen.set(key, activity);
     }
   }

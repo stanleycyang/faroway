@@ -34,6 +34,7 @@ vi.mock("@/lib/affiliates/tripadvisor", () => ({
 }));
 
 import { runActivitiesAgent } from "@/lib/search/agents/activities";
+import { runDiningAgent } from "@/lib/search/agents/dining";
 import { runHotelsAgent } from "@/lib/search/agents/hotels";
 import type { SearchPlan } from "@/lib/search/types";
 import { runTransportAgent } from "@/lib/search/agents/transport";
@@ -122,6 +123,28 @@ describe("search agents internal parallelism", () => {
 
   afterEach(() => vi.unstubAllEnvs());
 
+  it("screens generated access promises before returning activity inventory", async () => {
+    vi.stubEnv("VIATOR_CONTENT_ENABLED", "false");
+    mocks.generateObject.mockResolvedValue({
+      object: {
+        activities: [
+          {
+            ...aiActivity,
+            name: "Accessible Food Walk",
+            description:
+              "Taste local food. The tour is fully wheelchair accessible.",
+            vibeMatch: ["foodie", "step-free"],
+          },
+        ],
+      },
+    });
+    const results = await runActivitiesAgent(plan as never);
+    expect(results[0].name).toBe("Food Walk");
+    expect(results[0].description).toContain("Access has not been verified");
+    expect(results[0].description).not.toContain("fully wheelchair accessible");
+    expect(results[0].vibeMatch).toEqual(["foodie"]);
+  });
+
   it("does not present an AI-generated activity price as a supplier estimate", async () => {
     vi.stubEnv("VIATOR_CONTENT_ENABLED", "false");
     mocks.searchGYGActivities.mockResolvedValue([]);
@@ -201,6 +224,60 @@ describe("search agents internal parallelism", () => {
     const results = await runActivitiesAgent(plan as never);
     expect(results[0].description).toBe(description);
     expect(results[0]).toHaveProperty("viatorContentVersion", 1);
+  });
+
+  it.each(["viator", "getyourguide"])(
+    "preserves %s source fields when a generated duplicate assigns itself a higher score",
+    async (partner) => {
+      const product = {
+        productCode: "123P1",
+        activityId: "123P1",
+        title: "Museum tour",
+        description: "Supplier description",
+        duration: { fixedDurationInMinutes: 90 },
+        categories: ["museum"],
+        price: { amount: 30, currencyCode: "USD" },
+        rating: 4,
+        reviewCount: 10,
+        location: { city: "Tokyo", address: "1 Museum Street" },
+        images: [{ url: "https://supplier.example/photo.jpg" }],
+      };
+      (partner === "viator"
+        ? mocks.searchViatorProducts
+        : mocks.searchGYGActivities
+      ).mockResolvedValue([product]);
+      mocks.generateObject.mockResolvedValue({
+        object: {
+          activities: [{ ...aiActivity, name: "Museum Tour!", vibeScore: 100 }],
+        },
+      });
+      const results = await runActivitiesAgent(plan as never);
+      expect(results).toHaveLength(1);
+      expect(results[0]).toMatchObject({
+        name: "Museum tour",
+        description: "Supplier description",
+        price: 30,
+        currency: "USD",
+        affiliatePartner: partner,
+        duration: 90,
+        images: ["https://supplier.example/photo.jpg"],
+      });
+      expect(results[0].affiliateUrl).toContain("123P1");
+      expect(results[0].vibeScore).toBeLessThan(100);
+    },
+  );
+
+  it("does not collapse distinct non-Latin activity names into an empty deduplication key", async () => {
+    mocks.generateObject.mockResolvedValue({
+      object: {
+        activities: [
+          { ...aiActivity, name: "東京国立博物館" },
+          { ...aiActivity, name: "浅草寺" },
+        ],
+      },
+    });
+    const results = await runActivitiesAgent(plan as never);
+    expect(results.map((a) => a.name)).toEqual(["東京国立博物館", "浅草寺"]);
   });
 
   it("does not return adult-only flight quotes for a party with children", async () => {
@@ -342,4 +419,27 @@ describe("search agents internal parallelism", () => {
     ).toBe(true);
     expect(result[0].duration).toBe(150);
   });
+});
+
+it("focused dining repair removes conflicting city-wide meal quotas", async () => {
+  mocks.generateObject.mockResolvedValue({ object: { restaurants: [] } });
+  const input = {
+    ...plan,
+    diningCriteria: {
+      cuisineTypes: [],
+      priceRange: "moderate",
+      dietaryNeeds: [],
+      mealPriorities: [],
+    },
+  } as unknown as SearchPlan;
+  await runDiningAgent(input, 2, {
+    coverageTargets: [{ area: "Belém", mealTypes: ["breakfast"] }],
+  });
+  const focused = mocks.generateObject.mock.calls.at(-1)![0].prompt;
+  expect(focused).toContain("Only return venues serving a requested meal");
+  expect(focused).not.toContain("3-4 breakfast/brunch spots");
+  await runDiningAgent(input);
+  const normal = mocks.generateObject.mock.calls.at(-1)![0].prompt;
+  expect(normal).toContain("3-4 breakfast/brunch spots");
+  expect(normal).not.toContain("focused inventory-repair");
 });

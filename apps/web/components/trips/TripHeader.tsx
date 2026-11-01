@@ -65,9 +65,11 @@ export function TripHeader({
 
   return (
     <header className="relative overflow-hidden bg-slate-900 text-white">
-      {heroImageUrl && (
-        <TripCoverImage src={heroImageUrl} className="object-cover" />
-      )}
+      <TripCoverImage
+        src={heroImageUrl}
+        className="object-cover"
+        journeyFallback
+      />
       <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/20 to-black/80" />
       <div className="relative mx-auto max-w-4xl px-5 sm:px-6">
         <div className="flex h-20 items-center justify-between">

@@ -1,3 +1,4 @@
+import { readDayTiming, dayTimingTips } from '@faroway/types';
 import { durationLabel } from './durationLabel';
 import type { Activity, Hotel, TripDay } from '../stores/tripStore';
 import { readTripCost, formatTripCost } from './tripCost';
@@ -64,6 +65,16 @@ function transformTransport(value: unknown): TripDay['transport'] {
 function transformApiActivity(a: any, timeOfDay: string): Activity {
   return {
     id: displayText(a.id) || `activity_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+    scheduleSlot: ['morning', 'afternoon', 'evening'].includes(a.scheduleSlot)
+      ? a.scheduleSlot
+      : undefined,
+    durationMinutes:
+      displayNumber(a.duration) ??
+      (displayNumber(a.durationMinutes) !== undefined &&
+      (typeof a.duration !== 'string' ||
+        durationLabel(a.duration) === durationLabel(`${a.durationMinutes} min`))
+        ? a.durationMinutes
+        : undefined),
     time: displayText(a.timeOfDay) || displayText(a.time) || timeOfDay,
     title: displayText(a.name) || displayText(a.title),
     description: displayText(a.description),
@@ -122,7 +133,7 @@ function transformApiRestaurant(r: any): Activity {
     title: displayText(r.name) || displayText(r.title),
     description: displayText(r.description),
     location: displayText(r.location?.name) || displayText(r.location),
-    duration: '1-2 hours',
+    duration: 'Duration not set',
     type: 'restaurant',
     estimatedCost:
       r.estimatedCost?.status === 'unknown' || r.priceStatus === 'unknown'
@@ -178,7 +189,7 @@ export function transformItineraryDays(apiDays: any[]): TripDay[] {
         if (Array.isArray(block.activities)) {
           for (const a of block.activities) {
             if (hasActivityTitle(a)) {
-              activities.push(transformApiActivity(a, timeOfDay));
+              activities.push({ ...transformApiActivity(a, timeOfDay), scheduleSlot: timeOfDay });
             }
           }
         }
@@ -191,22 +202,56 @@ export function transformItineraryDays(apiDays: any[]): TripDay[] {
             : [];
         for (const m of meals) {
           if (hasActivityTitle(m)) {
-            activities.push(transformApiRestaurant(m));
+            activities.push({ ...transformApiRestaurant(m), scheduleSlot: timeOfDay });
           }
         }
       }
 
       const transport = transformTransport(day.transport);
+      // Cached mobile days are flat. Reconstruct only the identity/duration basis,
+      // using preserved slot metadata; older caches without it cannot certify times.
+      const timingDay =
+        Array.isArray(day.activities) && !day.morning && !day.afternoon && !day.evening
+          ? {
+              ...day,
+              ...Object.fromEntries(
+                ['morning', 'afternoon', 'evening'].map((slot) => [
+                  slot,
+                  {
+                    activities: activities
+                      .filter((a) => a.scheduleSlot === slot && a.type !== 'restaurant')
+                      .map((a) => ({ id: a.id, name: a.title, duration: a.durationMinutes })),
+                    meals: activities
+                      .filter((a) => a.scheduleSlot === slot && a.type === 'restaurant')
+                      .map((a) => ({ id: a.id, name: a.title })),
+                  },
+                ])
+              ),
+            }
+          : day;
+
+      const timingProposal = readDayTiming(timingDay);
+      // Meal durations are planning assumptions, not restaurant facts. Rebuild
+      // labels on every normalization so an invalidated cache cannot retain them.
+      const mealDurations = new Map(
+        timingProposal?.events
+          .filter((event) => event.kind === 'meal')
+          .map((event) => [event.id, event.durationMinutes]) ?? []
+      );
+      for (const activity of activities) {
+        if (activity.type !== 'restaurant') continue;
+        const minutes = mealDurations.get(`meal:${activity.scheduleSlot}:${activity.id}`);
+        activity.duration =
+          minutes === undefined ? 'Duration not set' : `${durationLabel(`${minutes} min`)} planned`;
+        delete activity.durationMinutes;
+      }
 
       return {
         date: displayText(day.date),
         dayNumber: Number.isInteger(day.dayNumber) && day.dayNumber > 0 ? day.dayNumber : 1,
         theme: displayText(day.title) || displayText(day.theme) || 'Your day',
-        tips: Array.isArray(day.tips)
-          ? day.tips.filter(
-              (tip: unknown): tip is string => typeof tip === 'string' && !!tip.trim()
-            )
-          : [],
+        timingProposal,
+        tips: dayTimingTips(timingDay),
         activities,
         transport,
       };

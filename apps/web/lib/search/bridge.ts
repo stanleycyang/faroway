@@ -1,3 +1,4 @@
+import { readDayTiming, dayTimingTips } from "@faroway/types";
 import { suppliedCoordinates } from "../location-coordinates";
 import { readPrice } from "@faroway/constants";
 import { viatorContentMetadata } from "@/lib/affiliates/viator-policy";
@@ -92,7 +93,7 @@ function mapDining(
     id: d.id,
     name: d.name,
     cuisineType: d.cuisineTypes || [],
-    priceLevel: d.priceLevel as 1 | 2 | 3 | 4,
+    priceLevel: d.priceStatus === "unknown" ? undefined : d.priceLevel,
     description: d.description,
     estimatedCost: {
       amount: 0,
@@ -183,7 +184,8 @@ function mapDay(day: SuggestedDay): MappedItinerary["days"][number] {
       readPrice(day.estimatedCost, day.currency)
         ? readPrice(day.estimatedCost, day.currency)
         : undefined,
-    tips: day.tips || [],
+    timingProposal: readDayTiming(day),
+    tips: dayTimingTips(day),
   };
 }
 

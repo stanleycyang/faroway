@@ -1,0 +1,176 @@
+[
+  {
+    "id": "ngv-ordinary-hours-20261101",
+    "destination": "Melbourne, Australia",
+    "country": "Australia",
+    "aliases": [
+      "National Gallery of Victoria (NGV) International Evening Visit"
+    ],
+    "addresses": ["180 St Kilda Rd, Melbourne VIC 3006"],
+    "sourceUrl": "https://www.ngv.vic.gov.au/plan-your-visit/",
+    "sourceSha256": "c3e79d3272c8f4395bbd27003eb132bc2489583e47c233cd8102f0f5877fedf1",
+    "observedAt": "2026-11-01",
+    "reviewAfter": "2026-12-01",
+    "branchReview": "Reviewed the official branch visitor page and its named venue/address against this exact generated candidate. These are ordinary published hours only; holidays, exceptional openings, tickets and future availability remain unverified. No coordinates are certified.",
+    "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "matisse-ordinary-hours-20261101",
+    "destination": "Nice, France",
+    "country": "France",
+    "aliases": ["Musée Matisse"],
+    "addresses": ["164 Avenue des Arènes de Cimiez, 06000 Nice, France"],
+    "sourceUrl": "https://www.musee-matisse-nice.org/en/practical-information/",
+    "sourceSha256": "d905be94029bca2d70af3f589f067faec10bda19576888c6d599978d86a72131",
+    "observedAt": "2026-11-01",
+    "reviewAfter": "2026-12-01",
+    "branchReview": "Reviewed the official branch visitor page and its named venue/address against this exact generated candidate. These are ordinary published hours only; holidays, exceptional openings, tickets and future availability remain unverified. No coordinates are certified.",
+    "months": [1, 2, 3, 11, 12],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 2,
+        "intervals": []
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "chagall-ordinary-hours-20261101",
+    "destination": "Nice, France",
+    "country": "France",
+    "aliases": ["Musée National Marc Chagall"],
+    "addresses": ["36 Avenue Dr Ménard, 06000 Nice, France"],
+    "sourceUrl": "https://musees-nationaux-alpesmaritimes.fr/chagall/en/opening-times",
+    "sourceSha256": "5a4318cdd72dec54e7788e21bc98b2cceaa10fd63a63a64cda4ba8cb56722bf4",
+    "observedAt": "2026-11-01",
+    "reviewAfter": "2026-12-01",
+    "branchReview": "The official museum hours page supplies the ordinary schedule. Its legal-notice page independently identifies Musee national Marc Chagall at 36 avenue Docteur Menard: https://musees-nationaux-alpesmaritimes.fr/chagall/mentions-legales-conditions-generales-dutilisation-et-credits . Bound only to the reviewed generated name/address representation. Coordinates and future exceptions remain unverified.",
+    "months": [1, 2, 3, 4, 11, 12],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 2,
+        "intervals": []
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "bill-reid-ordinary-hours-20261101",
+    "destination": "Vancouver, Canada",
+    "country": "Canada",
+    "aliases": ["Bill Reid Gallery of Northwest Coast Art"],
+    "addresses": ["639 Hornby St, Vancouver, BC V6C 2G3, Canada"],
+    "sourceUrl": "https://www.billreidgallery.ca/pages/hours-admissions",
+    "sourceSha256": "d3c1cf4ec02d8332e4517402cce2b06e1b7988d6a3b6e3a9b266e13da326bdd3",
+    "observedAt": "2026-11-01",
+    "reviewAfter": "2026-12-01",
+    "branchReview": "Reviewed the official branch visitor page and its named venue/address against this exact generated candidate. These are ordinary published hours only; holidays, exceptional openings, tickets and future availability remain unverified. No coordinates are certified.",
+    "months": [1, 2, 3, 4, 5, 10, 11, 12],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": []
+      },
+      {
+        "weekday": 1,
+        "intervals": []
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1020]]
+      }
+    ]
+  }
+]

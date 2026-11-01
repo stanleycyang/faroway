@@ -67,7 +67,7 @@ export interface Restaurant {
   id: string;
   name: string;
   cuisineType: string[];
-  priceLevel: 1 | 2 | 3 | 4;
+  priceLevel?: 1 | 2 | 3 | 4;
   description: string;
   estimatedCost: {
     amount: number;

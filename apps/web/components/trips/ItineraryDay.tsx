@@ -1,5 +1,13 @@
 "use client";
 
+import {
+  readDayTiming,
+  dayTimingTips,
+  isTimingNote,
+  type DayTimingProposal,
+} from "@faroway/types";
+import { SourceNote } from "./SourceNote";
+import { ProposedTiming } from "./ProposedTiming";
 import { parseTripDate } from "@/lib/trips/date-duration";
 import { formatEstimate, knownEstimate } from "@/lib/trips/budget";
 
@@ -41,6 +49,7 @@ interface HotelInfo {
 }
 
 interface ItineraryDayProps {
+  timingProposal?: DayTimingProposal;
   dayNumber: number;
   date: string;
   title: string;
@@ -60,6 +69,7 @@ interface ItineraryDayProps {
 
 export function ItineraryDay({
   dayNumber,
+  timingProposal,
   date,
   title,
   summary,
@@ -73,12 +83,27 @@ export function ItineraryDay({
   transport,
 }: ItineraryDayProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-  const displayTips = Array.isArray(tips)
-    ? tips.filter(
-        (tip): tip is string =>
-          typeof tip === "string" && tip.trim().length > 0,
-      )
-    : [];
+  const timingDay = { date, morning, afternoon, evening, tips, timingProposal };
+  const validTiming = readDayTiming(timingDay);
+  const displayTips = dayTimingTips(timingDay).filter(
+    (tip) => !validTiming || !isTimingNote(tip),
+  );
+  // Reorder an existing compiler note without interpreting it as verified timing.
+  const availabilityTips = displayTips.filter((tip) =>
+    tip.startsWith("Your local-time availability:"),
+  );
+  const generalTips = displayTips.filter(
+    (tip) => !tip.startsWith("Your local-time availability:"),
+  );
+  const timingNames: Record<string, string> = {};
+  for (const [slot, block] of Object.entries({ morning, afternoon, evening })) {
+    for (const activity of Array.isArray(block?.activities)
+      ? block.activities
+      : [])
+      if (activity) timingNames[`activity:${activity.id}`] = activity.name;
+    for (const meal of Array.isArray(block?.meals) ? block.meals : [])
+      if (meal) timingNames[`meal:${slot}:${meal.id}`] = meal.name;
+  }
 
   const formatDate = (value: string) => {
     const parsed = parseTripDate(value);
@@ -194,6 +219,25 @@ export function ItineraryDay({
             {summary}
           </p>
 
+          {availabilityTips.length > 0 && (
+            <section
+              aria-label="Your available hours"
+              className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4"
+            >
+              <h4 className="mb-2 text-sm font-semibold text-slate-900">
+                Your available hours
+              </h4>
+              {availabilityTips.map((tip, index) => (
+                <p
+                  key={index}
+                  className="text-sm leading-relaxed text-slate-600 break-words"
+                >
+                  <SourceNote text={tip} />
+                </p>
+              ))}
+            </section>
+          )}
+
           {/* Hotel Card */}
           {hotel && (
             <div className="mb-6 p-4 sm:p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-100 transition-shadow hover:shadow-md">
@@ -202,8 +246,8 @@ export function ItineraryDay({
                   <Hotel className="w-6 h-6 text-white" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h4 className="font-bold text-gray-900 text-sm truncate">
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <h4 className="font-bold text-gray-900 text-sm break-words">
                       {hotel.name}
                     </h4>
                     {typeof hotel.starRating === "number" &&
@@ -215,7 +259,7 @@ export function ItineraryDay({
                         </span>
                       )}
                   </div>
-                  <div className="flex items-center gap-3 mt-0.5 text-xs text-gray-500">
+                  <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3 mt-0.5 text-xs text-gray-500">
                     <span className="font-bold text-gray-800 text-sm">
                       {formatEstimate(
                         hotel.pricePerNight,
@@ -233,7 +277,7 @@ export function ItineraryDay({
                       </span>
                     </span>
                     {hotel.amenities && hotel.amenities.length > 0 && (
-                      <span className="truncate text-gray-500">
+                      <span className="max-w-full truncate text-gray-500">
                         {hotel.amenities.slice(0, 3).join(" · ")}
                       </span>
                     )}
@@ -274,6 +318,9 @@ export function ItineraryDay({
             </div>
           )}
 
+          {validTiming && (
+            <ProposedTiming proposal={validTiming} names={timingNames} />
+          )}
           {/* Timeline with vertical connector */}
           <div className="relative">
             {/* Vertical timeline line */}
@@ -311,22 +358,24 @@ export function ItineraryDay({
           </div>
 
           {/* Daily Tips */}
-          {displayTips.length > 0 && (
-            <div className="mt-6 p-4 bg-gradient-to-r from-primary-50 to-amber-50 rounded-2xl border border-primary-100/50">
-              <div className="flex items-center gap-2 text-primary-700 font-bold mb-2">
-                <div className="w-6 h-6 rounded-full bg-primary-100 flex items-center justify-center">
+          {generalTips.length > 0 && (
+            <div className="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-200">
+              <div className="flex items-center gap-2 text-slate-900 font-semibold mb-3">
+                <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center">
                   <Lightbulb className="w-3.5 h-3.5" />
                 </div>
-                <span className="text-sm">Insider Tips</span>
+                <span className="text-sm">Before you go</span>
               </div>
               <ul className="space-y-1.5">
-                {displayTips.map((tip, i) => (
+                {generalTips.map((tip, i) => (
                   <li
                     key={i}
-                    className="text-sm text-primary-700 flex items-start gap-2"
+                    className="text-sm leading-relaxed text-slate-600 flex items-start gap-2"
                   >
-                    <span className="text-primary-400 mt-0.5">•</span>
-                    <span>{tip}</span>
+                    <span className="text-slate-400 mt-0.5">•</span>
+                    <span className="min-w-0 break-words">
+                      <SourceNote text={tip} />
+                    </span>
                   </li>
                 ))}
               </ul>

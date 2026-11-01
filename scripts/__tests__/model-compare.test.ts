@@ -1,3 +1,4 @@
+import { comparisonSelection } from "../uat/lib/comparison-selection";
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync } from "node:fs";
@@ -228,4 +229,174 @@ test("CLI requires one explicit mode even when a key is present", () => {
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("Choose exactly one");
   }
+});
+
+test("unknown billing still counts elapsed time and fallback failures", async () => {
+  const report = await runModelComparison({
+    mode: "live",
+    target: { supabaseUrl: stagingUrl },
+    executeStep: () => ({
+      model: "google/gemini-3-flash",
+      thinkingLevel: "medium",
+      latencyMs: 30000,
+      usage: {},
+      fallback: { reason: "timeout", outcome: "fallback_itinerary" },
+    }),
+  });
+  expect(report.rows[0]?.latencyMs).toBe(30000);
+  expect(report.rows[0]?.fallbacks).toBe(1);
+  expect(report.rows[0]?.fallbackRate).toBe(1);
+  expect(report.rows[0]?.estimatedUsd).toBe(null);
+});
+
+test("compiled live candidate rejects unsupported mixes and non-staging environments before model calls", () => {
+  const args = ["--live", "--compiled-narrated", "--supabase-url", stagingUrl];
+  const env = {
+    FAROWAY_STAGING_AI_GATEWAY_KEY: "invalid-preflight-test-key",
+    FAROWAY_STAGING_SUPABASE_PROJECT_REF: STAGING_PROJECT_REF,
+  };
+  const mixed = runCli(args, env);
+  expect(mixed.status).not.toBe(0);
+  expect(mixed.stderr).toContain("requires --configs flash-low");
+  const nonStaging = runCli([...args, "--configs", "flash-low"], env);
+  expect(nonStaging.status).not.toBe(0);
+  expect(nonStaging.stderr).toContain(
+    "requires the isolated staging environment",
+  );
+});
+
+test("upstream thinking experiment rejects invalid or silently ignored settings before model calls", () => {
+  const args = [
+    "--live",
+    "--supabase-url",
+    stagingUrl,
+    "--configs",
+    "flash-low",
+  ];
+  const env = {
+    FAROWAY_STAGING_AI_GATEWAY_KEY: "invalid-preflight-test-key",
+    FAROWAY_STAGING_SUPABASE_PROJECT_REF: STAGING_PROJECT_REF,
+  };
+  for (const flags of [
+    ["--upstream-thinking", "minimal"],
+    ["--compiled-narrated", "--upstream-thinking", "high"],
+  ]) {
+    const result = runCli([...args, ...flags], env);
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain(
+      "requires compiled narration and low or minimal",
+    );
+  }
+});
+
+test("hotel-only experiment rejects mixed or ignored settings before model calls", () => {
+  const env = {
+    FAROWAY_STAGING_AI_GATEWAY_KEY: "invalid-preflight-test-key",
+    FAROWAY_STAGING_SUPABASE_PROJECT_REF: STAGING_PROJECT_REF,
+  };
+  for (const flags of [
+    ["--hotel-thinking", "minimal"],
+    ["--compiled-narrated", "--hotel-thinking", "high"],
+    [
+      "--compiled-narrated",
+      "--hotel-thinking",
+      "minimal",
+      "--upstream-thinking",
+      "minimal",
+    ],
+  ]) {
+    const result = runCli(
+      [
+        "--live",
+        "--supabase-url",
+        stagingUrl,
+        "--configs",
+        "flash-low",
+        ...flags,
+      ],
+      env,
+    );
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain(
+      "--hotel-thinking requires minimal, compiled narration and low upstream thinking",
+    );
+  }
+});
+
+test("invalid child-age briefs fail before invoking any paid step", async () => {
+  const { UAT_BRIEFS } = await import("../uat/lib/briefs");
+  let called = false;
+  await expect(
+    runModelComparison({
+      mode: "live",
+      target: { supabaseUrl: stagingUrl },
+      briefs: [{ ...UAT_BRIEFS[0], childAges: [0] }],
+      executeStep: () => {
+        called = true;
+        throw new Error("Should never execute");
+      },
+    }),
+  ).rejects.toThrow("Invalid evaluation brief party");
+  expect(called).toBe(false);
+});
+
+test("preflight selects the same bounded compiled cases as live", () => {
+  const result = comparisonSelection([
+    "--suite",
+    "development",
+    "--briefs",
+    "london-leap-day,boston-single-parent-infant",
+    "--configs",
+    "flash-low",
+    "--compiled-narrated",
+    "--cap-usd",
+    "0.5",
+  ]);
+  expect(result.briefs.map((b) => b.id)).toEqual([
+    "london-leap-day",
+    "boston-single-parent-infant",
+  ]);
+  expect(result.configs.map((c) => c.id)).toEqual(["compiled-minimal"]);
+  expect(result.capUsd).toBe(0.5);
+  expect(comparisonSelection(["--suite", "development"]).briefs).toHaveLength(
+    40,
+  );
+  expect(comparisonSelection(["--suite", "holdout"]).briefs).toHaveLength(20);
+});
+test("rejects invalid preflight selections and budget caps", () => {
+  for (const args of [
+    ["--suite", "bad"],
+    ["--suite"],
+    ["--briefs", "missing"],
+    ["--briefs", "lisbon-city-break,lisbon-city-break"],
+    ["--cap-usd", "NaN"],
+    ["--cap-usd", "21"],
+    ["--cap-usd", "0"],
+    ["--compiled-narrated"],
+  ])
+    expect(() => comparisonSelection(args)).toThrow();
+});
+test("CLI dry run honors suite, case and compiled configuration filters", () => {
+  const out = join(
+    mkdtempSync(join(tmpdir(), "faroway-selected-preflight-")),
+    "report",
+  );
+  const result = runCli([
+    "--dry-run",
+    "--supabase-url",
+    stagingUrl,
+    "--suite",
+    "development",
+    "--briefs",
+    "london-leap-day",
+    "--configs",
+    "flash-low",
+    "--compiled-narrated",
+    "--out",
+    out,
+  ]);
+  expect(result.status).toBe(0);
+  expect(result.stdout).toContain("london-leap-day");
+  expect(result.stdout).toContain("compiled-minimal");
+  expect(result.stdout).not.toContain("lisbon-city-break");
 });

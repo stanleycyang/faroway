@@ -120,7 +120,9 @@ async function exampleGenerateRestaurants() {
     restaurants.forEach((restaurant) => {
       console.log(`\n🍽️  ${restaurant.name}`);
       console.log(`   Cuisine: ${restaurant.cuisineType.join(", ")}`);
-      console.log(`   Price: ${"$".repeat(restaurant.priceLevel)}`);
+      console.log(
+        `   Price: ${restaurant.priceLevel ? "$".repeat(restaurant.priceLevel) : "unknown"}`,
+      );
       console.log(`   ${restaurant.description}`);
       console.log(
         `   ~${restaurant.estimatedCost.amount} ${restaurant.estimatedCost.currency} per person`,

@@ -1,0 +1,58 @@
+[
+  {
+    "id": "carnegie-on-the-town-2027-01-11",
+    "destination": "New York, USA",
+    "triggerNames": [
+      "Performance at Carnegie Hall",
+      "Classical Music Performance at Carnegie Hall",
+      "Concert at Carnegie Hall"
+    ],
+    "sourceSha256": "e93a29eb8529491a80e64a627e7d600d83b43c6a9046e6fa0fe306d1a64dd53b",
+    "reviewAfter": "2026-12-01",
+    "event": {
+      "name": "On the Town in Concert",
+      "venueName": "Stern Auditorium/Perelman Stage, Carnegie Hall",
+      "startDate": "2027-01-11T19:00:00-05:00",
+      "localDate": "2027-01-11",
+      "localTime": "19:00",
+      "reportedEndDate": "2027-01-11T19:00:00-05:00",
+      "status": "unspecified",
+      "sourceUrl": "https://oslmusic.org/calendar/2027/01/11/on-the-town-in-concert-7pm/",
+      "observedAt": "2026-11-01T02:21:25.393+00:00",
+      "issues": [
+        "reported_end_does_not_establish_single_day_duration",
+        "duration_unverified"
+      ],
+      "ticketAvailability": "unknown",
+      "claimVerified": false
+    }
+  },
+  {
+    "id": "carnegie-on-the-town-2027-01-12",
+    "destination": "New York, USA",
+    "triggerNames": [
+      "Performance at Carnegie Hall",
+      "Classical Music Performance at Carnegie Hall",
+      "Concert at Carnegie Hall"
+    ],
+    "sourceSha256": "b04504120cad2d3fcb351c97a888acc765ba73af34dc87df135be9c798a2a6dd",
+    "reviewAfter": "2026-12-01",
+    "event": {
+      "name": "On the Town in Concert",
+      "venueName": "Stern Auditorium/Perelman Stage, Carnegie Hall",
+      "startDate": "2027-01-12T19:00:00-05:00",
+      "localDate": "2027-01-12",
+      "localTime": "19:00",
+      "reportedEndDate": "2027-01-12T19:00:00-05:00",
+      "status": "unspecified",
+      "sourceUrl": "https://oslmusic.org/calendar/2027/01/12/on-the-town-in-concert-2-7pm/",
+      "observedAt": "2026-11-01T02:22:20.514+00:00",
+      "issues": [
+        "reported_end_does_not_establish_single_day_duration",
+        "duration_unverified"
+      ],
+      "ticketAvailability": "unknown",
+      "claimVerified": false
+    }
+  }
+]

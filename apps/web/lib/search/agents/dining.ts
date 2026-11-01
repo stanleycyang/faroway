@@ -15,8 +15,15 @@ import {
   planningModel,
 } from "@/lib/ai/planning-step";
 import { reservationUrlFromEvidence } from "@/lib/search/reservation-url";
+import { screenGeneratedDiningCopy } from "../generated-dining-copy";
+import { reconcileGeneratedDiningAddresses } from "../reviewed-dining-addresses";
+import { compiledScheduleExperimentEnabled } from "../schedule-experiment-gate";
+import reviewedAddresses from "../../../../../scripts/fixtures/reviewed-dining-addresses.json";
+import { screenReportedDiningClosures } from "../reviewed-dining-closures";
+import reviewedClosures from "../../../../../scripts/fixtures/reviewed-dining-closures.json";
 import { z } from "zod";
 import { SearchPlan, DiningResult } from "../types";
+import type { DiningCoverageTarget } from "../dining-coverage";
 import { VIBE_KEYWORDS } from "@faroway/constants";
 import {
   enrichWithTripAdvisor,
@@ -72,7 +79,7 @@ interface DiningListResult {
 const SYSTEM_PROMPT = `You are a food and restaurant expert. Generate realistic restaurant recommendations for travelers.
 
 For each restaurant, provide:
-1. Real restaurant names that exist at the destination (or realistic-sounding names)
+1. Only real restaurant names you have reason to believe exist at the destination. Never invent a name to meet the requested count; return fewer candidates when uncertain. Names, hours, prices and suitability still require current verification.
 2. Accurate cuisine types and pricing
 3. Set rating and reviewCount to 0; unverified reviews must not be invented
 4. Which meals they're best for (breakfast, lunch, dinner)
@@ -84,7 +91,7 @@ Price levels:
 - 3 ($$$): Upscale, ~$40-80/person
 - 4 ($$$$): Fine dining, ~$80+/person
 
-Include common dietary options if applicable (vegetarian, vegan, gluten-free, halal, kosher).
+Leave dietaryOptions empty. Do not assert allergy safety, cross-contact controls, suitability for celiac disease, staff expertise with allergies, or ability to accommodate dietary restrictions in descriptions, cuisine types or vibe labels. The traveler's requirements are not evidence that a venue can meet them. Describe food and atmosphere without inventing suitability; direct confirmation remains necessary.
 
 Do not invent reservation URLs or OpenTable links. Leave reservationUrl empty. A reservation link is added only from verified provider data.
 
@@ -93,6 +100,10 @@ IMPORTANT: For the "images" field, return an EMPTY array []. Do NOT generate or 
 export async function runDiningAgent(
   plan: SearchPlan,
   count: number = 12,
+  options: {
+    coverageTargets?: DiningCoverageTarget[];
+    existingNames?: string[];
+  } = {},
 ): Promise<DiningResult[]> {
   const { destination, dates, diningCriteria, vibeInterpretation } = plan;
   const { cuisineTypes, priceRange, dietaryNeeds, mealPriorities } =
@@ -106,7 +117,14 @@ export async function runDiningAgent(
   };
   const priceLevels = priceLevelMap[priceRange] || [2, 3];
 
-  const prompt = `Generate ${count} restaurant recommendations for ${destination}.
+  const targets = options.coverageTargets?.slice(0, 8);
+  const coveragePrompt = targets?.length
+    ? `\nThis is a focused inventory-repair request. Return at most ${count} new real venues for these missing areas and meal types: ${JSON.stringify(targets)}.
+The area labels come from unverified activity inventory, not verified routes. Prioritize these targets over the generic meal mix below. Do not fill other areas just to meet the count; return fewer venues if uncertain. Do not invent names, locations, hours, prices, or suitability to satisfy a target.
+Existing venue names (do not repeat): ${JSON.stringify(options.existingNames ?? [])}.
+Party: ${plan.adults ?? "unspecified"} adults, ${plan.children ?? 0} children. Suitability still requires current evidence.\n`
+    : "";
+  const prompt = `Generate ${count} restaurant recommendations for ${destination}.${coveragePrompt}
 
 **Dining Preferences:**
 - ${dates.nights + 1} days of dining
@@ -116,16 +134,23 @@ export async function runDiningAgent(
 - Mobility needs: ${plan.mobilityNeeds || "none specified"}
 - Structured requirements: ${JSON.stringify(plan.requirements ?? {})}
 - Dietary and accessibility suitability require direct verification; do not claim they are confirmed without evidence.
-- Meal priorities: ${mealPriorities.join(", ")}
+- Meal preference ranking (not an exclusive list): ${mealPriorities.join(", ")}
+- Sightseeing availability is separate from dining: "only evening visits" does not exclude breakfast or lunch. Working hours alone do not imply skipped meals.
+- Honor explicit meal exclusions or meals already arranged in the traveler's requirements above. For a full inventory request, otherwise include breakfast, lunch, and dinner even when the preference ranking lists only dinner. For focused inventory repair, return only the requested target meal types.
 
 **Vibes to match:** ${vibeInterpretation.vibes.join(", ")}
 
-Generate a diverse mix of:
+${
+  targets?.length
+    ? "Only return venues serving a requested meal in a requested area. Omit generic city-wide recommendations and all unrelated meal types. Returning an empty list is preferable to guessing."
+    : `Generate a diverse mix of:
 - 3-4 breakfast/brunch spots
 - 4-5 lunch options
 - 4-5 dinner restaurants
 - Include both local favorites and hidden gems
 - Mix of price levels within the range
+- Cover the major sightseeing neighborhoods and the requested hotel areas: ${plan.hotelCriteria?.neighborhoods?.join(", ") || "central visitor areas"}. Include breakfast and lunch options outside the central nightlife district. Do not invent a venue to fill geographic gaps.`
+}
 
 For vibes like:
 - "Foodie" → renowned restaurants, food markets, unique experiences
@@ -154,15 +179,22 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
     );
 
     let omittedReservationUrls = 0;
+    let reviewedCopyCount = 0;
     // Add unique IDs and sort by vibe score. Model-authored reservation
     // links are dropped unless constructed from verified provider data.
-    let restaurants = result.restaurants
+    let restaurants: DiningResult[] = result.restaurants
       .map((restaurant, index) => {
         const keptUrl = reservationUrlFromEvidence(restaurant.reservationUrl, {
           kind: "none",
         });
         if (restaurant.reservationUrl && !keptUrl) omittedReservationUrls += 1;
-        const safe = { ...restaurant };
+        const safe = screenGeneratedDiningCopy(restaurant);
+        if (
+          safe.description !== restaurant.description ||
+          safe.vibeMatch.length !== restaurant.vibeMatch.length ||
+          safe.cuisineTypes.length !== restaurant.cuisineTypes.length
+        )
+          reviewedCopyCount += 1;
         delete safe.reservationUrl;
         delete safe.affiliatePartner;
         return {
@@ -176,6 +208,14 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
         };
       })
       .sort((a, b) => b.vibeScore - a.vibeScore);
+    if (reviewedCopyCount > 0)
+      console.info(
+        JSON.stringify({
+          event: "planning.step.generated_dining_copy_reviewed",
+          step: "dining",
+          candidates: reviewedCopyCount,
+        }),
+      );
     if (omittedReservationUrls > 0) {
       console.info(
         JSON.stringify({
@@ -185,6 +225,35 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
           at: new Date().toISOString(),
         }),
       );
+    }
+
+    // Correct reviewed generated addresses before any optional provider identity lookup.
+    if (compiledScheduleExperimentEnabled()) {
+      const review = reconcileGeneratedDiningAddresses(
+        plan,
+        restaurants,
+        reviewedAddresses,
+      );
+      const closures = screenReportedDiningClosures(
+        plan,
+        review.candidates,
+        reviewedClosures,
+      );
+      restaurants = closures.candidates;
+      if (
+        review.applied.length ||
+        review.withheld.length ||
+        closures.withheld.length
+      )
+        console.info(
+          JSON.stringify({
+            event: "planning.step.dining_address_review",
+            step: "dining",
+            corrected: review.applied.length,
+            withheld: review.withheld.length,
+            reopeningReviewRequired: closures.withheld.length,
+          }),
+        );
     }
 
     // Enrich with TripAdvisor ratings and reviews

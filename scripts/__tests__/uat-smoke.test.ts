@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 import { IMAGE_PATHS } from "../../packages/constants/src/images";
 import { runSmoke } from "../uat/lib/smoke-runner";
 import { evaluateSavedPlan } from "../uat/lib/plan-quality";
+import deployedNarrationFallback from "../fixtures/agentic-deployed-narration-fallback.json";
 import { buildLiteApiFlightRequest } from "../../apps/web/lib/affiliates/liteapi-flight-request";
 import {
   PRODUCTION_PROJECT_REF,
@@ -331,6 +332,34 @@ describe("UAT smoke suite", () => {
     });
     expect(report.ok).toBe(false);
     expect(report.checks[0]?.detail).toContain("--live");
+  });
+
+  test("rejects the deployed compiled-narration failure that previously passed smoke", () => {
+    const dates = { startDate: "2026-12-07", endDate: "2026-12-09" };
+    const result = evaluateSavedPlan(deployedNarrationFallback.body, dates);
+    expect(result.ok).toBe(false);
+    expect(result.failures).toContain(
+      "3 day(s) use an aggregator fallback template or unavailable narration",
+    );
+    const mixed = structuredClone(deployedNarrationFallback.body);
+    for (const day of mixed.itinerary.days) {
+      day.title = "A specific cultural day";
+      day.summary = "Visit the stops selected for this date.";
+    }
+    // A failure tip must still fail even if other titles are customized.
+    expect(evaluateSavedPlan(mixed, dates).ok).toBe(false);
+    for (const day of mixed.itinerary.days) {
+      day.tips = day.tips.filter(
+        (tip) =>
+          !tip.startsWith("The day descriptions could not be generated."),
+      );
+    }
+    // Ordinary uncertainty tips do not by themselves mean model fallback.
+    expect(evaluateSavedPlan(mixed, dates).ok).toBe(true);
+    mixed.itinerary.days[1] = structuredClone(
+      deployedNarrationFallback.body.itinerary.days[1],
+    );
+    expect(evaluateSavedPlan(mixed, dates).ok).toBe(false);
   });
 
   test("saved-plan quality rejects the aggregator fallback template and invented links", () => {
