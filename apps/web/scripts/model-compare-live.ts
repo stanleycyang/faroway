@@ -1,4 +1,8 @@
 import {
+  attachComparisonContracts,
+  type ComparisonContractResult,
+} from "../../../scripts/uat/lib/comparison-contracts";
+import {
   mkdirSync,
   writeFileSync,
   readFileSync,
@@ -199,6 +203,7 @@ async function main() {
       (name) => `apps/web/lib/search/agents/${name}.ts`,
     ),
     "apps/web/scripts/model-compare-live.ts",
+    "scripts/uat/lib/comparison-contracts.ts",
     "apps/web/lib/search/staging-schedule-experiment.ts",
     "apps/web/lib/search/reviewed-dining-options.ts",
     "apps/web/lib/search/dining-coverage.ts",
@@ -247,15 +252,19 @@ async function main() {
     filesSha256: hash.digest("hex"),
   };
   let trace: AgenticTrace;
+  const contractResults = new Map<string, ComparisonContractResult>();
   const saveTrace = () => {
+    const evaluation = evaluateAgenticTrace(trace);
+    contractResults.set(JSON.stringify([trace.configId, trace.brief.id]), {
+      configId: trace.configId,
+      briefId: trace.brief.id,
+      contractPass: evaluation.contractPass,
+      failures: evaluation.failures,
+    });
     const file = resolve(traceDir, `${trace.configId}--${trace.brief.id}.json`);
     writeFileSync(
       file + ".tmp",
-      JSON.stringify(
-        { trace, evaluation: evaluateAgenticTrace(trace) },
-        null,
-        2,
-      ),
+      JSON.stringify({ trace, evaluation }, null, 2),
       { mode: 0o600 },
     );
     renameSync(file + ".tmp", file);
@@ -269,7 +278,7 @@ async function main() {
   > = [];
   let diningResults: Awaited<ReturnType<typeof dining.runDiningAgent>> = [];
 
-  const report = await runModelComparison({
+  const executionReport = await runModelComparison({
     mode: "live",
     configs,
     briefs,
@@ -396,6 +405,13 @@ async function main() {
     },
   });
 
+  const report = attachComparisonContracts(
+    executionReport,
+    configs.flatMap((config) =>
+      briefs.map((brief) => ({ configId: config.id, briefId: brief.id })),
+    ),
+    [...contractResults.values()],
+  );
   const out = arg("--out");
   if (out) {
     mkdirSync(resolve(out, ".."), { recursive: true });
@@ -403,6 +419,7 @@ async function main() {
   }
   console.log(`FAROWAY_MODEL_COMPARE_JSON:${JSON.stringify(report)}`);
   if (report.aborted) process.exitCode = 3;
+  else if (!report.ok) process.exitCode = 4;
 }
 
 main().catch((error: unknown) => {
