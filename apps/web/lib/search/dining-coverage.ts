@@ -1,3 +1,4 @@
+import { mealBoundaryAnchors } from "./meal-boundaries";
 import type { DiningResult, SuggestedDay } from "./types";
 import { suppliedDistanceKm } from "./supplied-distance";
 
@@ -10,6 +11,7 @@ export interface DiningCoverageGap {
   slot: "morning" | "afternoon" | "evening";
   mealType: "breakfast" | "lunch" | "dinner";
   areas: string[];
+  /** Best candidate's farthest boundary leg, from unverified coordinates. */
   nearestSuppliedKm: number | null;
   reason: "missing_candidates" | "distant_candidates" | "unknown_locations";
 }
@@ -23,11 +25,8 @@ export function findDiningCoverageGaps(
   const slots = ["morning", "afternoon", "evening"] as const;
   const meals = ["breakfast", "lunch", "dinner"] as const;
   for (const day of days) {
-    const allStops = slots.flatMap((slot) => day[slot].activities);
     for (const [index, slot] of slots.entries()) {
-      const stops = day[slot].activities.length
-        ? day[slot].activities
-        : allStops;
+      const stops = mealBoundaryAnchors(day, slot);
       const candidates = dining.filter((meal) =>
         meal.mealTypes.includes(meals[index]),
       );
@@ -36,7 +35,7 @@ export function findDiningCoverageGaps(
           suppliedDistanceKm(stop.location, meal.location),
         );
         return values.length && values.every((value) => value != null)
-          ? Math.min(...(values as number[]))
+          ? Math.max(...(values as number[]))
           : null;
       });
       if (distances.some((distance) => distance != null && distance <= 3))

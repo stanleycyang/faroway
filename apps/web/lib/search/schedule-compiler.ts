@@ -1,3 +1,4 @@
+import { mealBoundaryAnchors, type VisitSlots } from "./meal-boundaries";
 import { matchesSuggestedHighlight } from "./highlight-match";
 import { suppliedDistanceKm } from "./supplied-distance";
 import { familyActivityReviewReason } from "./party-suitability";
@@ -354,11 +355,19 @@ export function compileSchedule(
       tips.push(
         "Contact each restaurant directly about your allergies and cross-contact precautions. No venue's allergy handling has been verified.",
       );
-    const slots = SLOTS.map((_, slot) => {
-      const stops = selected
-        .filter((s) => s.slot === slot)
-        .map((s) => s.activity);
-      const anchors = stops.length ? stops : selected.map((s) => s.activity);
+    const visitSlots = Object.fromEntries(
+      SLOTS.map((name, slot) => [
+        name,
+        {
+          activities: selected
+            .filter((s) => s.slot === slot)
+            .map((s) => s.activity),
+        },
+      ]),
+    ) as VisitSlots;
+    const slots = SLOTS.map((name, slot) => {
+      const stops = visitSlots[name].activities;
+      const anchors = mealBoundaryAnchors(visitSlots, name);
       const choices = dining.filter((meal) =>
         meal.mealTypes.includes(MEALS[slot]),
       );
@@ -368,12 +377,15 @@ export function compileSchedule(
             suppliedDistanceKm(a.location, meal.location),
           );
           const known = distances.length && distances.every((d) => d != null);
-          const distance = known ? Math.min(...(distances as number[])) : null;
+          const distance = known ? Math.max(...(distances as number[])) : null;
+          const totalDistance = known
+            ? (distances as number[]).reduce((sum, value) => sum + value, 0)
+            : null;
           return {
             meal,
             distance,
             score:
-              (distance == null ? 10 : Math.min(distance, 50)) +
+              (totalDistance == null ? 10 : totalDistance) +
               (usedMeals.has(meal.id) ? 3 : 0),
           };
         })

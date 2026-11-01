@@ -122,6 +122,7 @@ async function main() {
     "apps/web/lib/search/narration-prompt.ts",
     "apps/web/lib/search/schedule-narration.ts",
     "apps/web/lib/search/schedule-compiler.ts",
+    "apps/web/lib/search/meal-boundaries.ts",
     "apps/web/lib/search/highlight-match.ts",
     "apps/web/lib/search/party-suitability.ts",
     "scripts/uat/lib/venue-constraints.ts",
