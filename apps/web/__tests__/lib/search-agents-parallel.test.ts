@@ -35,6 +35,7 @@ vi.mock("@/lib/affiliates/tripadvisor", () => ({
 
 import { runActivitiesAgent } from "@/lib/search/agents/activities";
 import { runHotelsAgent } from "@/lib/search/agents/hotels";
+import type { SearchPlan } from "@/lib/search/types";
 import { runTransportAgent } from "@/lib/search/agents/transport";
 
 const plan = {
