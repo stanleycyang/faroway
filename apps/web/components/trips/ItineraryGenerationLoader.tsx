@@ -132,9 +132,11 @@ export function ItineraryGenerationLoader({
     <div className="concierge-dossier fixed inset-0 z-[100] overflow-y-auto bg-[#f7f8fa] text-slate-900">
       <div className="mx-auto min-h-dvh lg:grid lg:grid-cols-[minmax(340px,0.82fr)_minmax(0,1.18fr)]">
         <aside className="relative min-h-[380px] overflow-hidden bg-slate-900 text-white sm:min-h-[440px] lg:sticky lg:top-0 lg:h-dvh lg:overflow-y-auto">
-          {heroImageUrl && (
-            <TripCoverImage src={heroImageUrl} className="object-cover" />
-          )}
+          <TripCoverImage
+            src={heroImageUrl}
+            className="object-cover"
+            journeyFallback
+          />
           <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/20 to-slate-950/95" />
           <div className="relative flex min-h-[380px] flex-col justify-between p-6 sm:min-h-[440px] sm:p-10 lg:h-full lg:p-12 xl:p-16">
             <div className="flex items-center justify-between">
