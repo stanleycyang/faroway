@@ -2,7 +2,43 @@ import { expect, it } from "vitest";
 import {
   travelerAvailability,
   availableSlotMinutes,
+  travelerVisitSlots,
 } from "@/lib/search/traveler-availability";
+it("interprets visit-only day parts without changing meal availability", () => {
+  for (const slot of ["morning", "afternoon", "evening"]) {
+    for (const text of [
+      `Only ${slot} visits`,
+      `${slot} activities only each day`,
+    ]) {
+      expect(travelerVisitSlots({ mobilityNeeds: text })).toEqual({
+        allowed: [slot],
+        restricted: true,
+        needsReview: false,
+      });
+      expect(travelerAvailability({ mobilityNeeds: text }, 3).windows).toEqual([
+        undefined,
+        undefined,
+        undefined,
+      ]);
+    }
+  }
+  const conflict = travelerVisitSlots({
+    mobilityNeeds: "Only morning visits; only evening visits",
+  });
+  expect(conflict.allowed).toEqual([]);
+  expect(conflict.needsReview).toBe(true);
+});
+it("does not infer visit restrictions from negated, partial-day or alternative wording", () => {
+  for (const text of [
+    "Not only evening visits",
+    "Only evening visits on day 2",
+    "Only morning or evening visits",
+  ]) {
+    const result = travelerVisitSlots({ mobilityNeeds: text });
+    expect(result.allowed).toEqual(["morning", "afternoon", "evening"]);
+    expect(result.needsReview).toBe(true);
+  }
+});
 it.each([
   ["Arrive on the first day at 18:00", 0, 1080, 1440],
   ["First-day arrival at 7pm", 0, 1140, 1440],

@@ -1,8 +1,9 @@
 import { venueConstraintsForDate } from "../../../../scripts/uat/lib/venue-constraints";
 import venueFacts from "../../../../scripts/fixtures/agentic-venue-constraints.json";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import rome from "../../../../scripts/fixtures/agentic-rome-overload.json";
 import { compileSchedule } from "@/lib/search/schedule-compiler";
+import { enrichNonAffiliateCandidates } from "@/lib/search/enrichment";
 import type {
   ActivityResult,
   DiningResult,
@@ -13,6 +14,7 @@ const plan = rome.trace.steps[0].output as unknown as SearchPlan;
 const activities = rome.trace.steps[2].output as unknown as ActivityResult[];
 const dining = rome.trace.steps[3].output as unknown as DiningResult[];
 const slots = ["morning", "afternoon", "evening"] as const;
+afterEach(() => vi.unstubAllEnvs());
 const extended = {
   ...plan,
   dates: { start: "2027-01-11", end: "2027-01-13", nights: 0 },
@@ -33,6 +35,38 @@ function visit(
 }
 
 describe("experimental schedule compiler", () => {
+  it("keeps enrichment visits inside explicit visit-only slots while retaining meals", async () => {
+    vi.stubEnv("TAVILY_API_KEY", "");
+    const restricted = {
+      ...extended,
+      mobilityNeeds:
+        "Working 09:00–17:00 on each trip day; only evening visits",
+    };
+    const enrichment = await enrichNonAffiliateCandidates(restricted);
+    const meals = ["breakfast", "lunch", "dinner"].map((type) => ({
+      ...dining[0],
+      id: type,
+      mealTypes: [type],
+    })) as DiningResult[];
+    const result = compileSchedule(
+      restricted,
+      [
+        ...enrichment.activities,
+        visit("museum-evening", 60, "evening"),
+        visit("morning-only", 60, "morning"),
+      ],
+      meals,
+    );
+    for (const day of result.days) {
+      expect(day.morning.activities).toEqual([]);
+      expect(day.afternoon.activities).toEqual([]);
+      expect(day.evening.activities.length).toBeGreaterThan(0);
+      expect(day.morning.meal?.id).toBe("breakfast");
+      expect(day.afternoon.meal?.id).toBe("lunch");
+      expect(day.tips.join(" ")).toContain("Meals are planned separately");
+    }
+    expect(result.unselectedActivityIds).toContain("morning-only");
+  });
   it("defers alcohol-focused stops for a party with children and exposes the missing highlight", () => {
     const input = {
       ...plan,

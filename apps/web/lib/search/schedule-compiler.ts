@@ -1,6 +1,7 @@
 import {
   travelerAvailability,
   travelerActivityBudget,
+  travelerVisitSlots,
   availableSlotMinutes,
 } from "./traveler-availability";
 import {
@@ -98,9 +99,12 @@ export function compileSchedule(
         ? { count: 5, minutes: 600, slot: 240, target: 4 }
         : { count: 4, minutes: 420, slot: 210, target: 3 };
   const activityBudget = travelerActivityBudget(plan);
+  const visitAvailability = travelerVisitSlots(plan);
   if (activityBudget.maxMinutes !== undefined)
     limits.minutes = Math.min(limits.minutes, activityBudget.maxMinutes);
   const issues: string[] = [];
+  if (visitAvailability.needsReview)
+    issues.push("traveler_visit_slots_interpretation_required");
   if (activityBudget.needsReview)
     issues.push("traveler_activity_limit_interpretation_required");
   const otherDietaryNeeds = (plan.dietaryRestrictions ?? []).filter(
@@ -147,6 +151,8 @@ export function compileSchedule(
     slot: number,
     visits: ActivityResult[],
   ): boolean => {
+    if (visits.length && !visitAvailability.allowed.includes(SLOTS[slot]))
+      return false;
     const capacity = availableSlotMinutes(availability.windows[day], slot);
     if (!Number.isFinite(capacity)) return true;
     const meal = dining.some((item) => item.mealTypes.includes(MEALS[slot]));
@@ -361,7 +367,9 @@ export function compileSchedule(
     return possible;
   };
   const protectCoverage =
-    (exclusions.length > 0 || availability.windows.some(Boolean)) &&
+    (exclusions.length > 0 ||
+      availability.windows.some(Boolean) ||
+      visitAvailability.restricted) &&
     canCoverDays(0, new Set());
   let beam: State[] = [{ selected: [], used: new Set(), score: 0 }];
   for (let day = 0; day < daysCount; day++) {
@@ -646,6 +654,16 @@ export function compileSchedule(
         "A long visit occupies its own slot; confirm its timing before adding other plans.",
       );
     if (requirementNote) tips.push(requirementNote);
+    if (visitAvailability.restricted)
+      tips.push(
+        visitAvailability.allowed.length
+          ? `Visits are limited to your requested ${visitAvailability.allowed.join(", ")} slots. Meals are planned separately; venue hours and travel still need confirmation.`
+          : "Your visit-only time instructions conflict. No visits are scheduled; review the requested time slots.",
+      );
+    if (visitAvailability.needsReview && visitAvailability.allowed.length)
+      tips.push(
+        "Some visit-only time instructions need review; confirm which days and time slots they apply to.",
+      );
     if (plan.requirements?.allergies.length)
       tips.push(
         "Contact each restaurant directly about your allergies and cross-contact precautions. No venue's allergy handling has been verified.",

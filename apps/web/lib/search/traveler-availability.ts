@@ -1,5 +1,43 @@
 import type { SearchPlan } from "./types";
 
+/** Visit-only day-part restrictions never remove meal slots. Unrecognized scope
+ * (specific days, negation or alternatives) requires review rather than guessing.
+ */
+export function travelerVisitSlots(
+  plan: Pick<SearchPlan, "mobilityNeeds" | "requirements">,
+) {
+  let allowed = ["morning", "afternoon", "evening"];
+  let restricted = false;
+  let needsReview = false;
+  for (const source of [plan.mobilityNeeds, plan.requirements?.mobilityNotes]) {
+    if (!source) continue;
+    for (const raw of source
+      .normalize("NFKC")
+      .toLowerCase()
+      .split(/[.;\n]/)) {
+      const clause = raw.trim();
+      const match =
+        /^only (morning|afternoon|evening) (?:visits|activities)(?: (?:daily|each day|every day))?$/.exec(
+          clause,
+        ) ??
+        /^(morning|afternoon|evening) (?:visits|activities) only(?: (?:daily|each day|every day))?$/.exec(
+          clause,
+        );
+      if (match) {
+        allowed = allowed.filter((slot) => slot === match[1]);
+        restricted = true;
+      } else if (
+        /\bonly\b/.test(clause) &&
+        /\b(?:visits|activities)\b/.test(clause) &&
+        /\b(?:morning|afternoon|evening)\b/.test(clause)
+      ) {
+        needsReview = true;
+      }
+    }
+  }
+  return { allowed, restricted, needsReview: needsReview || !allowed.length };
+}
+
 export interface TravelerDayWindow {
   earliestMinute: number;
   latestMinute: number;
