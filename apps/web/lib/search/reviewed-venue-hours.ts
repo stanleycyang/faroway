@@ -1,13 +1,11 @@
+import {
+  resolveReviewedVenue,
+  type ReviewedVenueIdentity,
+} from "./venue-identity";
 import { travelerAvailability } from "./traveler-availability";
 import type { ActivityResult, SearchPlan } from "./types";
 import type { ScheduleExclusion } from "./schedule-compiler";
-export interface ReviewedVenueHours {
-  id: string;
-  destination: string;
-  aliases: string[];
-  addresses: string[];
-  /** Enables only the documented address conventions for this reviewed country. */
-  country?: "Australia" | "Canada" | "France";
+export interface ReviewedVenueHours extends ReviewedVenueIdentity {
   sourceUrl: string;
   sourceSha256: string;
   observedAt: string;
@@ -16,27 +14,6 @@ export interface ReviewedVenueHours {
   months: number[];
   /** UTC weekday numbers represent local calendar weekdays, not UTC opening times. */
   week: Array<{ weekday: number; intervals: Array<[number, number]> }>;
-}
-const normalize = (s: string) =>
-  s.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
-// These bounded equivalences preserve names, branch numbers and unit details.
-// In particular, exterior walks and dated events are not stripped from titles.
-const venueTitle = (s: string) =>
-  normalize(s.replace(/[()]/g, " "))
-    .replace(/\s+(?:(?:morning|afternoon|evening)\s+)?visit$/, "")
-    .trim();
-function venueAddress(s: string, country?: ReviewedVenueHours["country"]) {
-  let address = normalize(s);
-  if (country) {
-    const suffix = `, ${country.toLowerCase()}`;
-    if (address.endsWith(suffix)) address = address.slice(0, -suffix.length);
-  }
-  if (country === "France") {
-    address = address
-      .replace(/\bav\.?\s/g, "avenue ")
-      .replace(/\bdr\.?\s/g, "docteur ");
-  }
-  return address;
 }
 const validDate = (s: string) =>
   /^\d{4}-\d{2}-\d{2}$/.test(s) &&
@@ -98,15 +75,14 @@ export function reviewedHoursExclusions(
   const windows = travelerAvailability(plan, dates.length).windows;
   const exclusions: ScheduleExclusion[] = [];
   for (const activity of activities) {
-    const matches = facts.filter(
-      (f) =>
-        normalize(f.destination) === normalize(plan.destination) &&
-        f.aliases.some((n) => venueTitle(n) === venueTitle(activity.name)) &&
-        f.addresses.some(
-          (a) =>
-            venueAddress(a, f.country) ===
-            venueAddress(activity.location.address, f.country),
-        ),
+    const { matches } = resolveReviewedVenue(
+      {
+        destination: plan.destination,
+        name: activity.name,
+        address: activity.location.address,
+      },
+      facts,
+      "ordinary_visit",
     );
     if (!matches.length) continue;
     for (const [dayIndex, date] of dates.entries()) {
