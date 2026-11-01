@@ -173,3 +173,38 @@ export function dayTimingTips(value: unknown): string[] {
     ),
   ];
 }
+
+export function isTimingNote(tip: string): boolean {
+  return /^(Proposed local timing:|This draft reserves a suggested one-hour midday rest\.|The selected visits do not fit the proposed meal, buffer and one-hour midday-rest windows\.)/.test(
+    tip,
+  );
+}
+
+export function timingPresentation(
+  proposal: DayTimingProposal,
+  names: Record<string, string>,
+) {
+  const clock = (minute: number) =>
+    `${Math.floor(minute / 60)
+      .toString()
+      .padStart(2, "0")}:${(minute % 60).toString().padStart(2, "0")}`;
+  return {
+    heading: proposal.fitsPolicy ? "Suggested timing" : "Timing needs review",
+    description: proposal.fitsPolicy
+      ? "Local times, not confirmed bookings. Check opening hours and routes."
+      : "These visits do not fit the proposed meal, buffer and midday-rest windows. Review the schedule before using it.",
+    rows: proposal.fitsPolicy
+      ? proposal.events.map((event) => ({
+          id: event.id,
+          kind: event.kind,
+          time: `${clock(event.startMinute)}–${clock(event.endMinute)}`,
+          label:
+            event.kind === "rest"
+              ? "Midday rest"
+              : names[event.id] || (event.kind === "meal" ? "Meal" : "Visit"),
+        }))
+      : [],
+    assumptions:
+      "One-hour rest near lunch; 45 minutes for breakfast, one hour for other meals, and 30-minute planning buffers. Actual travel and any hotel return need checking.",
+  };
+}

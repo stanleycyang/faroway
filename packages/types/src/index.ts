@@ -754,5 +754,11 @@ export interface HotelQuoteResult {
   }>;
 }
 
-export { dayTimingBasis, readDayTiming, dayTimingTips } from "./day-timing";
+export {
+  dayTimingBasis,
+  readDayTiming,
+  dayTimingTips,
+  isTimingNote,
+  timingPresentation,
+} from "./day-timing";
 export type { DayTimingProposal } from "./day-timing";

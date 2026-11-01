@@ -563,3 +563,40 @@ test("a generated city-and-country label displays its catalog cover", async ({
     page.viewportSize()!.width,
   );
 });
+
+test("proposed timing shows rest and uncertainty without duplicate notes or overflow", async ({
+  page,
+}, testInfo) => {
+  await page.goto(`${fixtureUrl}/?screen=timing`);
+  const panel = page.getByRole("region", { name: "Suggested timing" });
+  await expect(panel).toBeVisible();
+  await expect(panel.getByText("Midday rest", { exact: true })).toBeVisible();
+  await expect(panel.getByText("13:00–14:00", { exact: true })).toBeVisible();
+  await expect(
+    panel.getByText(
+      "Local times, not confirmed bookings. Check opening hours and routes.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Proposed local timing: duplicated legacy text"),
+  ).toHaveCount(0);
+  await expect(
+    page.getByText("Bring water for the garden walk."),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= window.innerWidth,
+    ),
+  ).toBe(true);
+  await panel.screenshot({ path: testInfo.outputPath("proposed-timing.png") });
+  await page.goto(`${fixtureUrl}/?screen=timing-conflict`);
+  const conflict = page.getByRole("region", { name: "Timing needs review" });
+  await expect(conflict).toBeVisible();
+  await expect(conflict.getByRole("listitem")).toHaveCount(0);
+  await expect(
+    conflict.getByText(/Review the schedule before using it/),
+  ).toBeVisible();
+  await conflict.screenshot({
+    path: testInfo.outputPath("timing-conflict.png"),
+  });
+});

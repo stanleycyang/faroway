@@ -1,5 +1,12 @@
 "use client";
 
+import {
+  readDayTiming,
+  dayTimingTips,
+  isTimingNote,
+  type DayTimingProposal,
+} from "@faroway/types";
+import { ProposedTiming } from "./ProposedTiming";
 import { parseTripDate } from "@/lib/trips/date-duration";
 import { formatEstimate, knownEstimate } from "@/lib/trips/budget";
 
@@ -41,6 +48,7 @@ interface HotelInfo {
 }
 
 interface ItineraryDayProps {
+  timingProposal?: DayTimingProposal;
   dayNumber: number;
   date: string;
   title: string;
@@ -60,6 +68,7 @@ interface ItineraryDayProps {
 
 export function ItineraryDay({
   dayNumber,
+  timingProposal,
   date,
   title,
   summary,
@@ -73,12 +82,20 @@ export function ItineraryDay({
   transport,
 }: ItineraryDayProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
-  const displayTips = Array.isArray(tips)
-    ? tips.filter(
-        (tip): tip is string =>
-          typeof tip === "string" && tip.trim().length > 0,
-      )
-    : [];
+  const timingDay = { date, morning, afternoon, evening, tips, timingProposal };
+  const validTiming = readDayTiming(timingDay);
+  const displayTips = dayTimingTips(timingDay).filter(
+    (tip) => !validTiming || !isTimingNote(tip),
+  );
+  const timingNames: Record<string, string> = {};
+  for (const [slot, block] of Object.entries({ morning, afternoon, evening })) {
+    for (const activity of Array.isArray(block?.activities)
+      ? block.activities
+      : [])
+      if (activity) timingNames[`activity:${activity.id}`] = activity.name;
+    for (const meal of Array.isArray(block?.meals) ? block.meals : [])
+      if (meal) timingNames[`meal:${slot}:${meal.id}`] = meal.name;
+  }
 
   const formatDate = (value: string) => {
     const parsed = parseTripDate(value);
@@ -274,6 +291,9 @@ export function ItineraryDay({
             </div>
           )}
 
+          {validTiming && (
+            <ProposedTiming proposal={validTiming} names={timingNames} />
+          )}
           {/* Timeline with vertical connector */}
           <div className="relative">
             {/* Vertical timeline line */}

@@ -8,7 +8,7 @@ import { TripHeader } from "../../components/trips/TripHeader";
 import { ItineraryGenerationLoader } from "../../components/trips/ItineraryGenerationLoader";
 import { useTripGeneration } from "../../hooks/useTripGeneration";
 import { FeaturedHotelCard } from "../../components/trips/FeaturedHotelCard";
-import { cover, sampleDays } from "./planning-data";
+import { cover, sampleDays, timingFixtureDay } from "./planning-data";
 
 const days = sampleDays;
 function Fixture() {
@@ -16,6 +16,15 @@ function Fixture() {
   const destination = new URLSearchParams(location.search).get("destination");
   const [screen, setScreen] = useState(initial);
   const [selected, setSelected] = useState(0);
+  if (screen === "timing" || screen === "timing-conflict") {
+    const day = timingFixtureDay(screen === "timing-conflict");
+    return (
+      <main className="mx-auto min-h-screen max-w-3xl bg-slate-50 px-4 py-8">
+        <ItineraryDay {...day} />
+      </main>
+    );
+  }
+
   if (screen === "saved")
     return (
       <main className="mx-auto min-h-screen max-w-6xl bg-slate-50 px-5 py-12">

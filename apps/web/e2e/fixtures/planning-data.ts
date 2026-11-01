@@ -57,3 +57,80 @@ export const sampleHotel: HotelResult = {
   vibeScore: 90,
   vibeMatch: ["cultural"],
 };
+
+export function timingFixtureDay(conflict = false): TripDay {
+  const day: TripDay = {
+    ...sampleDays[0],
+    date: "2027-01-11",
+    title: "Gardens, a pause, and an afternoon of discovery",
+    morning: {
+      activities: [
+        {
+          ...activity,
+          id: "garden",
+          name: "Singapore Botanic Gardens & National Orchid Garden",
+        },
+      ],
+      meals: [],
+    },
+    afternoon: {
+      activities: [
+        {
+          ...activity,
+          id: "museum",
+          name: "ArtScience Museum",
+          timeOfDay: "afternoon",
+        },
+      ],
+      meals: [],
+    },
+    tips: [
+      "Proposed local timing: duplicated legacy text",
+      "Bring water for the garden walk.",
+    ],
+  };
+  day.timingProposal = {
+    policy: "midday-rest-v1",
+    basis: JSON.stringify({
+      date: day.date,
+      slots: [day.morning, day.afternoon, day.evening].map((slot) => ({
+        activities: slot.activities.map((a) => [a.id, a.name, a.duration]),
+        meals: slot.meals.map((m) => [m.id, m.name]),
+      })),
+    }),
+    fitsPolicy: !conflict,
+    verified: false,
+    conflict: conflict
+      ? { eventId: "activity:museum", overrunMinutes: 30 }
+      : null,
+    events: conflict
+      ? []
+      : [
+          {
+            id: "activity:garden",
+            kind: "activity",
+            durationMinutes: 90,
+            startMinute: 540,
+            endMinute: 630,
+            bufferBeforeMinutes: 0,
+          },
+          {
+            id: "rest:midday",
+            kind: "rest",
+            durationMinutes: 60,
+            startMinute: 780,
+            endMinute: 840,
+            bufferBeforeMinutes: 0,
+          },
+          {
+            id: "activity:museum",
+            kind: "activity",
+            durationMinutes: 90,
+            startMinute: 870,
+            endMinute: 960,
+            bufferBeforeMinutes: 30,
+          },
+        ],
+  };
+  return day;
+}
