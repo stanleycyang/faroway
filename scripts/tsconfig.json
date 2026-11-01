@@ -24,6 +24,7 @@
     "__tests__/model-compare.test.ts",
     "__tests__/agentic-eval.test.ts",
     "__tests__/aggregator-replay.test.ts",
-    "__tests__/grounding-evidence.test.ts"
+    "__tests__/grounding-evidence.test.ts",
+    "__tests__/timing-proposal.test.ts"
   ]
 }
