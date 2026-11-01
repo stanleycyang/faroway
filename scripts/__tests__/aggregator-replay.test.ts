@@ -336,3 +336,35 @@ test("hotel discovery rejects conflicting probe modes before a paid request", ()
     rmSync(directory, { recursive: true, force: true });
   }
 });
+
+test("hotel fact extraction refuses implicit paid calls and production targets", () => {
+  for (const [args, message] of [
+    [[], "Explicit --live required"],
+    [
+      ["--live", "--supabase-url", "https://jcnephijkxgtprsutgsf.supabase.co"],
+      "production",
+    ],
+    [["--live"], "Dedicated staging key required"],
+  ] as Array<[string[], string]>) {
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--no-env-file",
+        "apps/web/scripts/hotel-fact-extraction-live.ts",
+        ...args,
+      ],
+      {
+        cwd: root,
+        env: {
+          PATH: process.env.PATH,
+          HOME: process.env.HOME,
+          FAROWAY_STAGING_SUPABASE_PROJECT_REF: "omovikloadpvzijoaqus",
+        },
+        encoding: "utf8",
+        timeout: 10000,
+      },
+    );
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(message);
+  }
+});

@@ -56,14 +56,15 @@ def fetch_page(url):
 
 
 def main():
-    if len(sys.argv) not in (2, 3) or (len(sys.argv) == 3 and sys.argv[2] not in ("--addresses", "--hotels")):
-        sys.exit("Usage: python3 scripts/uat/fetch-grounding-pages.py NEW_OUTPUT_JSON [--addresses|--hotels]")
+    if len(sys.argv) not in (2, 3) or (len(sys.argv) == 3 and sys.argv[2] not in ("--addresses", "--hotels", "--hotel-facts")):
+        sys.exit("Usage: python3 scripts/uat/fetch-grounding-pages.py NEW_OUTPUT_JSON [--addresses|--hotels|--hotel-facts]")
     output = pathlib.Path(sys.argv[1])
     if output.exists():
         sys.exit("Output exists; preserve previous evidence")
     fixture = {
         "--addresses": "agentic-venue-addresses.json",
         "--hotels": "agentic-hotel-constraints.json",
+        "--hotel-facts": "agentic-hotel-extraction.json",
     }.get(sys.argv[2] if len(sys.argv) == 3 else "", "agentic-venue-constraints.json")
     facts = json.loads((pathlib.Path(__file__).parent.parent / "fixtures" / fixture).read_text())
     urls = sorted({fact["sourceUrl"] for fact in facts})

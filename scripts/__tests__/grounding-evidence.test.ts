@@ -261,3 +261,149 @@ test("hotel discovery refuses policy fields, duplicate identities and unsafe URL
     expect(auditHotelSourceDiscovery({ hotels }, ["a"]).shapeValid).toBe(false);
   }
 });
+
+import { evaluateHotelFacts } from "../uat/lib/hotel-fact-extraction";
+
+test("hotel extraction separates shared-room restrictions from property-wide bans", () => {
+  const sourceUrl = "https://example.com/rooms";
+  const evidenceQuote =
+    "Guests under 18 must stay in private rooms with a guardian.";
+  const fact = {
+    id: "age",
+    sourceUrl,
+    expectedValue: 18,
+    expectedScope: "shared_rooms",
+    expectedRoom: null,
+    quoteAnchors: ["under 18", "private rooms", "guardian"],
+  };
+  const claim = {
+    id: "age",
+    sourceUrl,
+    value: 18,
+    scope: "shared_rooms",
+    room: null,
+    evidenceQuote,
+  };
+  const pages = [{ url: sourceUrl, text: evidenceQuote }];
+  expect(evaluateHotelFacts([claim], [fact], pages).passed).toBe(true);
+  expect(
+    evaluateHotelFacts([{ ...claim, scope: "all_guests" }], [fact], pages)
+      .passed,
+  ).toBe(false);
+  expect(
+    evaluateHotelFacts(
+      [{ ...claim, evidenceQuote: "Guests under 18" }],
+      [fact],
+      pages,
+    ).passed,
+  ).toBe(false);
+  expect(evaluateHotelFacts([claim, claim], [fact], pages).passed).toBe(false);
+  expect(evaluateHotelFacts([claim], [fact], [...pages, ...pages]).passed).toBe(
+    false,
+  );
+  expect(
+    evaluateHotelFacts([claim, { ...claim, id: "other" }], [fact], pages)
+      .passed,
+  ).toBe(false);
+});
+
+test("absent hotel accessibility information stays unknown, never false or true", () => {
+  const sourceUrl = "https://example.com/rooms";
+  const fact = {
+    id: "lift",
+    sourceUrl,
+    expectedValue: null,
+    expectedScope: "unknown",
+    expectedRoom: null,
+    quoteAnchors: [],
+  };
+  const claim = {
+    id: "lift",
+    sourceUrl,
+    value: null,
+    scope: "unknown",
+    room: null,
+    evidenceQuote: "",
+  };
+  const pages = [{ url: sourceUrl, text: "Rooms have comfortable beds." }];
+  expect(evaluateHotelFacts([claim], [fact], pages).passed).toBe(true);
+  for (const value of [true, false]) {
+    expect(
+      evaluateHotelFacts(
+        [{ ...claim, value, scope: "property" }],
+        [fact],
+        pages,
+      ).passed,
+    ).toBe(false);
+  }
+  expect(evaluateHotelFacts([claim], [fact], []).passed).toBe(false);
+});
+
+test("room capacity requires the named room and its source evidence", () => {
+  const sourceUrl = "https://example.com/rooms";
+  const evidenceQuote =
+    "Family Room: up to 3 guests. Double Room: up to 2 guests.";
+  const fact = {
+    id: "capacity",
+    sourceUrl,
+    expectedValue: 3,
+    expectedScope: "named_room",
+    expectedRoom: "Family Room",
+    quoteAnchors: ["Family Room", "3 guests"],
+  };
+  const claim = {
+    id: "capacity",
+    sourceUrl,
+    value: 3,
+    scope: "named_room",
+    room: "Family Room",
+    evidenceQuote,
+  };
+  const pages = [{ url: sourceUrl, text: evidenceQuote }];
+  expect(evaluateHotelFacts([claim], [fact], pages).passed).toBe(true);
+  for (const change of [
+    { room: "Double Room" },
+    { scope: "property" },
+    { value: 6 },
+    { sourceUrl: "https://other.example.com" },
+    { evidenceQuote: "Family Room accommodates three." },
+  ]) {
+    expect(
+      evaluateHotelFacts([{ ...claim, ...change }], [fact], pages).passed,
+    ).toBe(false);
+  }
+});
+
+test("reviewed alternative quotes retain scope context rather than matching an age alone", () => {
+  const sourceUrl = "https://example.com/faq";
+  const evidenceQuote =
+    "Not suitable for families with children: minimum age requirement is 18 years old.";
+  const fact = {
+    id: "age",
+    sourceUrl,
+    expectedValue: 18,
+    expectedScope: "all_guests",
+    expectedRoom: null,
+    quoteAnchors: ["minimum age to stay is 18"],
+    quoteAnchorAlternatives: [
+      ["families with children", "minimum age requirement is 18 years old"],
+    ],
+  };
+  const claim = {
+    id: "age",
+    sourceUrl,
+    value: 18,
+    scope: "all_guests",
+    room: null,
+    evidenceQuote,
+  };
+  const pages = [{ url: sourceUrl, text: evidenceQuote }];
+  expect(evaluateHotelFacts([claim], [fact], pages).passed).toBe(true);
+  expect(
+    evaluateHotelFacts(
+      [{ ...claim, evidenceQuote: "minimum age requirement is 18 years old" }],
+      [fact],
+      pages,
+    ).passed,
+  ).toBe(false);
+});

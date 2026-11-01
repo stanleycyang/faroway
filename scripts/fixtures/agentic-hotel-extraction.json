@@ -1,0 +1,89 @@
+[
+  {
+    "id": "heritage-min-age",
+    "property": "Heritage Collection on Chinatown, Singapore",
+    "question": "What is the minimum age to stay, and does it apply to all guests or only check-in?",
+    "sourceUrl": "https://hericoll.com/frequently-asked-questions/",
+    "expectedValue": 18,
+    "expectedScope": "all_guests",
+    "expectedRoom": null,
+    "quoteAnchors": ["minimum age to stay is 18"],
+    "quoteAnchorAlternatives": [
+      ["families with children", "minimum age requirement is 18 years old"]
+    ]
+  },
+  {
+    "id": "heritage-lift",
+    "property": "Heritage Collection on Chinatown, Singapore",
+    "question": "Does this exact branch have a lift?",
+    "sourceUrl": "https://hericoll.com/frequently-asked-questions/",
+    "expectedValue": false,
+    "expectedScope": "property",
+    "expectedRoom": null,
+    "quoteAnchors": ["no lift", "Heritage Collection on Chinatown"]
+  },
+  {
+    "id": "steel-age",
+    "property": "Steel House Copenhagen",
+    "question": "What minimum age applies to unaccompanied shared-room stays? Do not turn a private-room exception into a property-wide ban.",
+    "sourceUrl": "https://www.steelhousecopenhagen.com/vaerelser-og-senge",
+    "expectedValue": 18,
+    "expectedScope": "shared_rooms",
+    "expectedRoom": null,
+    "quoteAnchors": [
+      "under 18 years old",
+      "private rooms",
+      "parent or guardian"
+    ]
+  },
+  {
+    "id": "village-checkin",
+    "property": "Village Hotel Albert Court, Singapore",
+    "question": "What minimum age is stated for check-in? Distinguish this from minimum guest age.",
+    "sourceUrl": "https://www.villagehotels.asia/en/hotels/village-hotel-albert-court",
+    "expectedValue": 18,
+    "expectedScope": "check_in",
+    "expectedRoom": null,
+    "quoteAnchors": ["18 years", "check-in"]
+  },
+  {
+    "id": "village-family-capacity",
+    "property": "Village Hotel Albert Court, Singapore",
+    "question": "How many persons does the named Family Room accommodate?",
+    "sourceUrl": "https://www.villagehotels.asia/en/hotels/village-hotel-albert-court",
+    "expectedValue": 3,
+    "expectedScope": "named_room",
+    "expectedRoom": "Family Room",
+    "quoteAnchors": ["Family Room", "3 persons"]
+  },
+  {
+    "id": "athens-gaia-capacity",
+    "property": "A for Athens, Athens",
+    "question": "How many guests does the Gaia Suite with Acropolis View accommodate?",
+    "sourceUrl": "https://aforathens.com/accommodation/",
+    "expectedValue": 2,
+    "expectedScope": "named_room",
+    "expectedRoom": "Gaia Suite with Acropolis View",
+    "quoteAnchors": ["Gaia Suite", "Up to 2 guests"]
+  },
+  {
+    "id": "athens-lift-unknown",
+    "property": "A for Athens, Athens",
+    "question": "Does the supplied accommodation page explicitly establish a lift? Absence of a lift statement means unknown, not false.",
+    "sourceUrl": "https://aforathens.com/accommodation/",
+    "expectedValue": null,
+    "expectedScope": "unknown",
+    "expectedRoom": null,
+    "quoteAnchors": []
+  },
+  {
+    "id": "alexandra-access-unknown",
+    "property": "Hotel Alexandra, Copenhagen",
+    "question": "Does the supplied homepage explicitly establish wheelchair-accessible rooms? Do not infer access from room photographs or general comfort.",
+    "sourceUrl": "https://www.hotelalexandra.dk/",
+    "expectedValue": null,
+    "expectedScope": "unknown",
+    "expectedRoom": null,
+    "quoteAnchors": []
+  }
+]
