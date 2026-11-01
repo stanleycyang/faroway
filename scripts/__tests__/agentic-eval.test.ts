@@ -1022,3 +1022,55 @@ test("reviewed New York aliases retain weekly closure scope without blocking sep
     ),
   ).toEqual([]);
 });
+
+test("address review retains unselected inventory contradictions and its unresolved denominator", () => {
+  const trace = fixture();
+  const fact = addressFacts.find((f) => f.id === "row34-cambridge")!;
+  trace.brief.destination = fact.destination;
+  trace.steps[4].output = { days: [] };
+  trace.steps[3].output = [
+    {
+      name: fact.aliases[0],
+      location: { address: fact.contradictedAddresses[0] },
+    },
+    {
+      name: "Unreviewed restaurant",
+      location: { address: "Unreviewed address" },
+    },
+  ];
+  const selected = evaluateVenueAddresses(trace, addressFacts, "2026-11-01");
+  const inventory = evaluateVenueAddresses(
+    trace,
+    addressFacts,
+    "2026-11-01",
+    "dining_inventory",
+  );
+  expect(selected.evaluatedCount).toBe(0);
+  expect(selected.contradicted).toBe(0);
+  expect(inventory.evaluatedCount).toBe(2);
+  expect(inventory.contradicted).toBe(1);
+  expect(inventory.unresolved).toBe(1);
+  expect(inventory.supported).toBe(0);
+  expect(inventory.results[0].date).toBe(null);
+  expect(inventory.results[0].slot).toBe("inventory");
+  trace.steps[3].output = [
+    {
+      name: fact.aliases[0],
+      location: { address: fact.supportedAddresses[0] },
+    },
+    {
+      name: "Unreviewed restaurant",
+      location: { address: "Unreviewed address" },
+    },
+  ];
+  const fixed = evaluateVenueAddresses(
+    trace,
+    addressFacts,
+    "2026-11-01",
+    "dining_inventory",
+  );
+  expect(fixed.supported).toBe(1);
+  expect(fixed.unresolved).toBe(1);
+  expect(fixed.futureAvailabilityVerified).toBe(false);
+  expect(fixed.routeFeasibilityVerified).toBe(false);
+});

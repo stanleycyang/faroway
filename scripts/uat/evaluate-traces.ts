@@ -46,6 +46,12 @@ const rows = files.map((file) => {
     ...evaluation,
     venueConstraints: evaluateVenueConstraints(trace, facts),
     venueAddresses: evaluateVenueAddresses(trace, addresses, asOf),
+    inventoryVenueAddresses: evaluateVenueAddresses(
+      trace,
+      addresses,
+      asOf,
+      "dining_inventory",
+    ),
   };
 });
 console.log(
@@ -70,7 +76,8 @@ if (
     (row) =>
       !row.contractPass ||
       row.venueConstraints.findings.length > 0 ||
-      row.venueAddresses.contradicted > 0,
+      row.venueAddresses.contradicted > 0 ||
+      row.inventoryVenueAddresses.contradicted > 0,
   )
 )
   process.exitCode = 1;
