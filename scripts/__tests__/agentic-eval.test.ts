@@ -367,6 +367,31 @@ test("development and reserved holdout briefs have distinct IDs and valid bounde
 });
 
 describe("reviewed venue address evidence", () => {
+  test("a reviewed garden restaurant address does not establish its entrance or meal service", () => {
+    const trace = fixture();
+    const bloomhouse = addressFacts.find(
+      (item) => item.id === "bloomhouse-ginger-garden",
+    )!;
+    trace.brief.destination = "Singapore";
+    trace.steps[4].output = {
+      days: [
+        {
+          date: "2027-01-11",
+          morning: {
+            meal: {
+              name: "The Bloomhouse by Little Farms",
+              location: { address: bloomhouse.sourceAddress },
+            },
+          },
+        },
+      ],
+    };
+    const result = evaluateVenueAddresses(trace, addressFacts, "2026-10-31");
+    expect(result.supported).toBe(1);
+    expect(result.routeFeasibilityVerified).toBe(false);
+    expect(result.mealServiceVerified).toBe(false);
+    expect(result.futureAvailabilityVerified).toBe(false);
+  });
   const fact = addressFacts[1];
   function addressTrace(
     name = "Afuri Roppongi Hills",
