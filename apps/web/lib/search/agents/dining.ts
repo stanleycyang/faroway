@@ -134,7 +134,9 @@ Party: ${plan.adults ?? "unspecified"} adults, ${plan.children ?? 0} children. S
 - Mobility needs: ${plan.mobilityNeeds || "none specified"}
 - Structured requirements: ${JSON.stringify(plan.requirements ?? {})}
 - Dietary and accessibility suitability require direct verification; do not claim they are confirmed without evidence.
-- Meal priorities: ${mealPriorities.join(", ")}
+- Meal preference ranking (not an exclusive list): ${mealPriorities.join(", ")}
+- Sightseeing availability is separate from dining: "only evening visits" does not exclude breakfast or lunch. Working hours alone do not imply skipped meals.
+- Honor explicit meal exclusions or meals already arranged in the traveler's requirements above. For a full inventory request, otherwise include breakfast, lunch, and dinner even when the preference ranking lists only dinner. For focused inventory repair, return only the requested target meal types.
 
 **Vibes to match:** ${vibeInterpretation.vibes.join(", ")}
 
