@@ -133,7 +133,7 @@ function transformApiRestaurant(r: any): Activity {
     title: displayText(r.name) || displayText(r.title),
     description: displayText(r.description),
     location: displayText(r.location?.name) || displayText(r.location),
-    duration: '1-2 hours',
+    duration: 'Duration not set',
     type: 'restaurant',
     estimatedCost:
       r.estimatedCost?.status === 'unknown' || r.priceStatus === 'unknown'
@@ -230,11 +230,27 @@ export function transformItineraryDays(apiDays: any[]): TripDay[] {
             }
           : day;
 
+      const timingProposal = readDayTiming(timingDay);
+      // Meal durations are planning assumptions, not restaurant facts. Rebuild
+      // labels on every normalization so an invalidated cache cannot retain them.
+      const mealDurations = new Map(
+        timingProposal?.events
+          .filter((event) => event.kind === 'meal')
+          .map((event) => [event.id, event.durationMinutes]) ?? []
+      );
+      for (const activity of activities) {
+        if (activity.type !== 'restaurant') continue;
+        const minutes = mealDurations.get(`meal:${activity.scheduleSlot}:${activity.id}`);
+        activity.duration =
+          minutes === undefined ? 'Duration not set' : `${durationLabel(`${minutes} min`)} planned`;
+        delete activity.durationMinutes;
+      }
+
       return {
         date: displayText(day.date),
         dayNumber: Number.isInteger(day.dayNumber) && day.dayNumber > 0 ? day.dayNumber : 1,
         theme: displayText(day.title) || displayText(day.theme) || 'Your day',
-        timingProposal: readDayTiming(timingDay),
+        timingProposal,
         tips: dayTimingTips(timingDay),
         activities,
         transport,

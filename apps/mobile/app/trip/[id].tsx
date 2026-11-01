@@ -970,7 +970,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                 )}
                 {/* Activities */}
                 <View style={styles.activitiesContainer}>
-                  {trip.days[selectedDay]?.activities.map((activity) => (
+                  {timingDay?.activities.map((activity) => (
                     <ActivityCard key={activity.id} activity={activity} />
                   ))}
                 </View>

@@ -202,13 +202,31 @@ test('proposed timing survives native flattening and cache normalization, then e
   };
   const normalized = transformItineraryDays([{ ...day, timingProposal }]);
   expect(normalized[0].timingProposal).toEqual(timingProposal);
+  expect(normalized[0].activities.find((a) => a.id === 'cafe')?.duration).toBe('45 min planned');
   const cached = transformItineraryDays(JSON.parse(JSON.stringify(normalized)));
   expect(cached[0].timingProposal).toEqual(timingProposal);
+  expect(cached[0].activities.find((a) => a.id === 'cafe')?.duration).toBe('45 min planned');
   const changedDuration = JSON.parse(JSON.stringify(cached));
   changedDuration[0].activities.find((a: { id: string }) => a.id === 'walk').duration = '2 hr';
   expect(transformItineraryDays(changedDuration)[0].timingProposal).toBeUndefined();
   cached[0].date = '2027-01-12';
   const changed = transformItineraryDays(cached)[0];
   expect(changed.timingProposal).toBeUndefined();
+  expect(changed.activities.find((a) => a.id === 'cafe')?.duration).toBe('Duration not set');
   expect(changed.tips).toEqual(['Proposed times need a fresh review.']);
+  const untimed = transformItineraryDays([day])[0];
+  expect(untimed.activities.find((a) => a.id === 'cafe')?.duration).toBe('Duration not set');
+  for (const proposal of [
+    undefined,
+    { ...timingProposal, basis: 'outdated' },
+    {
+      ...timingProposal,
+      fitsPolicy: false,
+      events: [],
+      conflict: { eventId: 'activity:walk', overrunMinutes: 30 },
+    },
+  ]) {
+    const reloaded = transformItineraryDays([{ ...normalized[0], timingProposal: proposal }])[0];
+    expect(reloaded.activities.find((a) => a.id === 'cafe')?.duration).toBe('Duration not set');
+  }
 });
