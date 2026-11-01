@@ -34,6 +34,8 @@ it("keeps saved requirements and origin when the model omits or changes them", a
     originCity: "New York",
     originAirport: "JFK",
   });
+  modelPlan.dietaryRestrictions = ["model-added restriction"];
+  modelPlan.diningCriteria.dietaryNeeds = ["model-added preference"];
   modelPlan.destination = "Wrong destination";
   modelPlan.dates = { start: "2026-01-01", end: "2026-01-02", nights: 1 };
   generateObject.mockResolvedValue({ object: modelPlan });
@@ -44,6 +46,7 @@ it("keeps saved requirements and origin when the model omits or changes them", a
     end: "2026-06-03",
     nights: 2,
   });
+  expect(plan.dietaryRestrictions).toEqual(["peanut allergy"]);
   expect(plan.diningCriteria.dietaryNeeds).toContain("peanut allergy");
   expect(plan.mobilityNeeds).toBe("step-free access");
   expect(plan.activityCriteria.interests).toContain("art");

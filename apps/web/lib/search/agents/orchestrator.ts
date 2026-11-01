@@ -263,6 +263,7 @@ Create a detailed search plan with:
     plan.childAges = input.childAges;
     plan.flightProvider = input.flightProvider;
     plan.requirements = input.requirements;
+    plan.dietaryRestrictions = [...(input.dietaryRestrictions ?? [])];
     plan.activityCriteria.interests = [
       ...new Set([
         ...(input.interests ?? []),
@@ -334,6 +335,7 @@ export function buildFallbackSearchPlan(input: SearchInput): SearchPlan {
     childAges: input.childAges,
     flightProvider: input.flightProvider,
     requirements: input.requirements,
+    dietaryRestrictions: [...(input.dietaryRestrictions ?? [])],
     country: "",
     dates: {
       start: input.startDate,

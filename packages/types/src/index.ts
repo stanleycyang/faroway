@@ -427,6 +427,8 @@ export interface SearchRecord {
 }
 
 export interface SearchPlan {
+  /** Original traveler restrictions, separate from model-added dining criteria. */
+  dietaryRestrictions?: string[];
   travelerType?: TravelerType;
   travelers?: number;
   adults?: number;

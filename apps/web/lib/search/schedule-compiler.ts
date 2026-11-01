@@ -102,7 +102,17 @@ export function compileSchedule(
   const issues: string[] = [];
   if (activityBudget.needsReview)
     issues.push("traveler_activity_limit_interpretation_required");
+  const otherDietaryNeeds = (plan.dietaryRestrictions ?? []).filter(
+    (item) =>
+      !plan.requirements?.dietaryPreferences.some(
+        (preference) =>
+          preference.trim().toLowerCase() === item.trim().toLowerCase(),
+      ),
+  );
   const requestedDetails = [
+    otherDietaryNeeds.length
+      ? `Dietary restrictions: ${otherDietaryNeeds.join(", ")}`
+      : "",
     plan.requirements?.allergies.length
       ? `Allergies: ${plan.requirements.allergies.join(", ")}`
       : "",

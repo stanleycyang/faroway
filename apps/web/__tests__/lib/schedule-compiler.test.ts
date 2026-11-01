@@ -742,3 +742,21 @@ it("honors the explicit duration ceiling without shortening visits or claiming t
   }
   expect(supply).toEqual(original);
 });
+
+it("shows original legacy dietary restrictions without presenting model-added dining criteria as traveler requests", () => {
+  const input: SearchPlan = {
+    ...plan,
+    dietaryRestrictions: ["vegan"],
+    requirements: undefined,
+    diningCriteria: {
+      ...plan.diningCriteria,
+      dietaryNeeds: ["vegan", "model-added preference"],
+    },
+  };
+  const result = compileSchedule(input, activities, dining);
+  for (const day of result.days) {
+    const note = day.tips.find((tip) => tip.startsWith("Your requirements:"));
+    expect(note).toContain("Dietary restrictions: vegan");
+    expect(note).not.toContain("model-added preference");
+  }
+});
