@@ -720,3 +720,25 @@ it("keeps explicit dietary, access and mobility requirements visible on every da
     baseline.days.map((d) => slots.map((s) => d[s].meal?.id)),
   );
 });
+
+it("honors the explicit duration ceiling without shortening visits or claiming the requested count fits", () => {
+  const input = {
+    ...extended,
+    mobilityNeeds:
+      "At least eight museums each day, no more than two hours of activities daily, and a midday rest every day",
+  };
+  const supply = Array.from({ length: 12 }, (_, i) => visit(`museum-${i}`, 90));
+  const original = structuredClone(supply);
+  const result = compileSchedule(input, supply, dining);
+  for (const day of result.days) {
+    const visits = slots.flatMap((slot) => day[slot].activities);
+    expect(visits.reduce((sum, a) => sum + a.duration, 0)).toBeLessThanOrEqual(
+      120,
+    );
+    expect(visits.length).toBeGreaterThan(0);
+    expect(day.tips.join(" ")).toContain(
+      "does not meet your request for at least 8 museums",
+    );
+  }
+  expect(supply).toEqual(original);
+});

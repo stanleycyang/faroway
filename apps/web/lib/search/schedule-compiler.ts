@@ -1,5 +1,6 @@
 import {
   travelerAvailability,
+  travelerActivityBudget,
   availableSlotMinutes,
 } from "./traveler-availability";
 import {
@@ -95,7 +96,12 @@ export function compileSchedule(
       : pace === "packed"
         ? { count: 5, minutes: 600, slot: 240, target: 4 }
         : { count: 4, minutes: 420, slot: 210, target: 3 };
+  const activityBudget = travelerActivityBudget(plan);
+  if (activityBudget.maxMinutes !== undefined)
+    limits.minutes = Math.min(limits.minutes, activityBudget.maxMinutes);
   const issues: string[] = [];
+  if (activityBudget.needsReview)
+    issues.push("traveler_activity_limit_interpretation_required");
   const requestedDetails = [
     plan.requirements?.allergies.length
       ? `Allergies: ${plan.requirements.allergies.join(", ")}`
@@ -497,6 +503,23 @@ export function compileSchedule(
       "Planning draft: confirm opening hours, availability, travel times and suitability before booking.",
       "Leave the unscheduled time for meals, travel and rest.",
     ];
+    if (activityBudget.maxMinutes !== undefined)
+      tips.push(
+        `Your daily visit limit is ${activityBudget.maxMinutes} minutes. This draft keeps supplied visit durations within that limit; meals, travel and rest need additional time.`,
+      );
+    if (
+      activityBudget.minimum &&
+      selected.length < activityBudget.minimum.count
+    ) {
+      issues.push(`day_${day + 1}:requested_visit_count_not_met`);
+      tips.push(
+        `This draft includes ${selected.length} visits and does not meet your request for at least ${activityBudget.minimum.count} ${activityBudget.minimum.kind} each day. Review the duration limit and remaining suggestions before adding visits; the supplied visit lengths have not been shortened.`,
+      );
+    }
+    if (activityBudget.needsReview)
+      tips.push(
+        "Some visit-duration instructions need review. Confirm your daily activity limit before using this draft.",
+      );
     const window = availability.windows[day];
     if (window) {
       const clock = (minute: number) =>

@@ -64,3 +64,41 @@ it("recognizes a restatement of a parsed arrival constraint regardless of clause
       .needsReview,
   ).toBe(true);
 });
+
+import { travelerActivityBudget } from "@/lib/search/traveler-availability";
+it.each([
+  ["No more than two hours of activities daily", 120],
+  ["At most 90 minutes of visits each day", 90],
+  ["Maximum of 1.5 hours of sightseeing per day", 90],
+])("reads an explicit daily visit ceiling: %s", (text, expected) => {
+  expect(travelerActivityBudget({ mobilityNeeds: text }).maxMinutes).toBe(
+    expected,
+  );
+});
+it("intersects ceilings and retains the unmet-count request without reading venue text", () => {
+  const result = travelerActivityBudget({
+    mobilityNeeds:
+      "At least eight museums each day, no more than two hours of activities daily, and a midday rest every day",
+    requirements: {
+      allergies: [],
+      dietaryPreferences: [],
+      accessibility: [],
+      mobilityNotes: "At most 90 minutes of visits each day",
+    },
+  });
+  expect(result.maxMinutes).toBe(90);
+  expect(result.minimum).toEqual({ count: 8, kind: "museums" });
+});
+it.each([
+  "Do not impose at most two hours of activities daily",
+  "At most two hours of activities on the first day",
+  "At most zero minutes of visits daily",
+  "At most 25 hours of visits daily",
+])(
+  "does not silently interpret a negated, partial-day or invalid ceiling: %s",
+  (text) => {
+    const result = travelerActivityBudget({ mobilityNeeds: text });
+    expect(result.maxMinutes).toBeUndefined();
+    expect(result.needsReview).toBe(true);
+  },
+);

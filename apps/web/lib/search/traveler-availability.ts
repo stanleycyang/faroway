@@ -97,3 +97,75 @@ export function availableSlotMinutes(
     Math.min(end, window.latestMinute) - Math.max(start, window.earliestMinute),
   );
 }
+
+/** Explicit English daily visit-duration ceilings from preserved traveler text.
+ * Does not read generated venue prose or evaluation reference limits.
+ */
+export function travelerActivityBudget(
+  plan: Pick<SearchPlan, "mobilityNeeds" | "requirements">,
+) {
+  const words: Record<string, number> = {
+    one: 1,
+    two: 2,
+    three: 3,
+    four: 4,
+    five: 5,
+    six: 6,
+    seven: 7,
+    eight: 8,
+    nine: 9,
+    ten: 10,
+    eleven: 11,
+    twelve: 12,
+  };
+  const number = (value: string) => words[value] ?? Number(value);
+  const clauses = [plan.mobilityNeeds, plan.requirements?.mobilityNotes]
+    .filter((text): text is string => Boolean(text))
+    .flatMap((text) =>
+      text
+        .normalize("NFKC")
+        .toLowerCase()
+        .split(/[,;\n]|\.(?!\d)/),
+    )
+    .map((clause) => clause.trim().replace(/^and\s+/, ""));
+  const ceilings: number[] = [];
+  let minimum: { count: number; kind: string } | undefined;
+  let needsReview = false;
+  for (const clause of clauses) {
+    const ceiling =
+      /^(?:no more than|at most|maximum of) ([a-z]+|\d+(?:\.\d+)?) (hours?|minutes?) of (?:activities|visits|sightseeing) (?:daily|each day|every day|per day)$/.exec(
+        clause,
+      );
+    const request =
+      /^at least ([a-z]+|\d+) (museums|visits|activities) (?:daily|each day|every day|per day)$/.exec(
+        clause,
+      );
+    if (ceiling) {
+      const minutes =
+        number(ceiling[1]) * (ceiling[2].startsWith("hour") ? 60 : 1);
+      if (Number.isInteger(minutes) && minutes > 0 && minutes <= 1440)
+        ceilings.push(minutes);
+      else needsReview = true;
+    } else if (
+      /\b(?:no more than|at most|maximum)\b.*\b(?:hours?|minutes?)\b.*\b(?:activities|visits|sightseeing)\b/.test(
+        clause,
+      )
+    )
+      needsReview = true;
+    if (request) {
+      const count = number(request[1]);
+      if (
+        Number.isInteger(count) &&
+        count > 0 &&
+        count <= 100 &&
+        (!minimum || count > minimum.count)
+      )
+        minimum = { count, kind: request[2] };
+    }
+  }
+  return {
+    maxMinutes: ceilings.length ? Math.min(...ceilings) : undefined,
+    minimum,
+    needsReview,
+  };
+}
