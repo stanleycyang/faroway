@@ -37,3 +37,21 @@ it.each([
 ])("does not infer a generic performance from %s", (title) =>
   expect(isGenericEventTitle(title)).toBe(false),
 );
+
+import { isSpecialOpeningTitle } from "@/lib/search/speculative-event";
+it.each([
+  "National Gallery of Victoria (NGV International) Late View",
+  "Museum late-opening",
+  "After-hours admission to the gallery",
+  "After hours tour of the museum",
+])("requires dated special-opening evidence for %s", (title) =>
+  expect(isSpecialOpeningTitle(title)).toBe(true),
+);
+it.each([
+  "Royal Exhibition Building Twilight Viewing",
+  "Gallery evening visit",
+  "Riverside night walk",
+  "Late lunch",
+])("does not infer special admission from %s", (title) =>
+  expect(isSpecialOpeningTitle(title)).toBe(false),
+);

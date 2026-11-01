@@ -868,3 +868,25 @@ it("respects a slot-specific exclusion without excluding compatible times on tha
     ].map((a) => a.id),
   ).toContain(candidate.id);
 });
+
+it("retains special-opening ideas for review without scheduling unsupported admission", () => {
+  const opening = {
+    ...visit("late-view", 90, "evening"),
+    name: "Gallery Late View",
+    vibeScore: 100,
+  };
+  const result = compileSchedule(plan, [opening, visit("walk", 60)], dining);
+  expect(
+    result.days
+      .flatMap((d) => slots.flatMap((s) => d[s].activities))
+      .map((a) => a.id),
+  ).toEqual(["walk"]);
+  expect(result.reviewRequiredActivities).toContainEqual({
+    id: "late-view",
+    reason: "special_opening_requires_date_review",
+  });
+  expect(result.days[0].tips.join(" ")).toContain(
+    "Special opening to review, not scheduled: Gallery Late View",
+  );
+  expect(result.unselectedActivityIds).toContain("late-view");
+});

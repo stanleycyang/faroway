@@ -21,3 +21,13 @@ export function isGenericEventTitle(title: string): boolean {
     )
   );
 }
+
+/** Special admission needs dated opening evidence, not ordinary venue hours.
+ * Outdoor evening walks and ordinary evening visits do not imply special admission.
+ * This is a bounded review screen, not an opening-hours verifier.
+ */
+export function isSpecialOpeningTitle(title: string): boolean {
+  return /\b(?:late[-\s]+(?:view(?:ing)?s?|openings?)|after[-\s]+hours?\s+(?:admission|access|visit|viewing|opening|tour)s?)\b/i.test(
+    title.normalize("NFKC"),
+  );
+}

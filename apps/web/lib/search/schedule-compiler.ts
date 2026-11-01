@@ -7,6 +7,7 @@ import {
 import {
   isSpeculativeEventTitle,
   isGenericEventTitle,
+  isSpecialOpeningTitle,
 } from "./speculative-event";
 import { requestsMiddayRest, proposeRestDayTiming } from "./schedule-timing";
 import { mealBoundaryAnchors, type VisitSlots } from "./meal-boundaries";
@@ -266,13 +267,16 @@ export function compileSchedule(
       ids.add(activity.id);
       if (
         isSpeculativeEventTitle(activity.name) ||
-        isGenericEventTitle(activity.name)
+        isGenericEventTitle(activity.name) ||
+        isSpecialOpeningTitle(activity.name)
       ) {
         reviewRequiredActivities.push({
           id: activity.id,
           reason: isSpeculativeEventTitle(activity.name)
             ? "speculative_event_title"
-            : "generic_event_title",
+            : isGenericEventTitle(activity.name)
+              ? "generic_event_title"
+              : "special_opening_requires_date_review",
         });
         issues.push(`event_evidence_review_required:${activity.id}`);
         return false;
@@ -598,6 +602,18 @@ export function compileSchedule(
         )?.name;
         tips.push(
           `Event idea to review, not scheduled: ${name}. This names a venue or broad show category rather than a specific production. Confirm the event name, date and duration before adding it.`,
+        );
+      }
+      for (const review of reviewRequiredActivities
+        .filter(
+          (item) => item.reason === "special_opening_requires_date_review",
+        )
+        .slice(0, 3)) {
+        const name = inventory.find(
+          (activity) => activity.id === review.id,
+        )?.name;
+        tips.push(
+          `Special opening to review, not scheduled: ${name}. Confirm the organizer's opening date, admission hours and availability before adding it. Ordinary venue hours do not verify this special opening.`,
         );
       }
       if (needsRest)

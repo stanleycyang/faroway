@@ -226,11 +226,26 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
         // explicit uncertainty label; this is a warning, not proof of absence.
         if (
           typeof a.name === "string" &&
-          /\b(?:concert|performance|festival|exhibition)\b/i.test(a.name)
+          /\b(?:concert|performance|festival|exhibition)\b/i.test(
+            a.name.replace(
+              /\bexhibition\s+(?:building|hall|centre|center)\b/gi,
+              "",
+            ),
+          )
         )
           warnings.push(
             `event_date_and_venue_evidence_required:${String(a.id)}`,
           );
+        // The trace has no dated special-admission evidence. These explicit
+        // claims cannot be accepted merely because they fit an evening slot.
+        // Keep this check independent of the runtime candidate filter.
+        if (
+          typeof a.name === "string" &&
+          /\b(?:late[-\s]+(?:view(?:ing)?s?|openings?)|after[-\s]+hours?\s+(?:admission|access|visit|viewing|opening|tour)s?)\b/i.test(
+            a.name.normalize("NFKC"),
+          )
+        )
+          fail(`unverified_special_opening:${String(a.id)}`);
         if (a.bestTimeOfDay !== "any" && a.bestTimeOfDay !== slotName)
           fail(`wrong_time_of_day:${String(a.id)}`);
         if (

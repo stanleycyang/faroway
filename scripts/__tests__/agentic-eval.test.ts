@@ -1090,3 +1090,29 @@ test("explicit daily duration ceilings fail independently of relaxed pace defaul
     expect(() => evaluateAgenticTrace(trace)).toThrow();
   }
 });
+
+test("rejects explicit special-opening claims without flagging a venue's name as an exhibition", () => {
+  for (const name of ["Gallery Late View", "Museum after-hours admission"]) {
+    const trace = fixture();
+    (trace.steps[2].output as Array<{ name: string }>)[0].name = name;
+    const result = evaluateAgenticTrace(trace);
+    expect(result.contractPass).toBe(false);
+    expect(result.failures).toContain("unverified_special_opening:walk");
+  }
+  for (const name of [
+    "Royal Exhibition Building Twilight Viewing",
+    "Exhibition Hall walk",
+  ]) {
+    const trace = fixture();
+    (trace.steps[2].output as Array<{ name: string }>)[0].name = name;
+    expect(evaluateAgenticTrace(trace).warnings).not.toContain(
+      "event_date_and_venue_evidence_required:walk",
+    );
+  }
+  const trace = fixture();
+  (trace.steps[2].output as Array<{ name: string }>)[0].name =
+    "Concert at Royal Exhibition Building";
+  expect(evaluateAgenticTrace(trace).warnings).toContain(
+    "event_date_and_venue_evidence_required:walk",
+  );
+});
