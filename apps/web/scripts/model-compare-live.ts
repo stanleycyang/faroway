@@ -124,6 +124,16 @@ async function main() {
     throw new Error(
       "--upstream-thinking requires compiled narration and low or minimal",
     );
+  const hotelThinking = arg("--hotel-thinking");
+  if (
+    hotelThinking !== undefined &&
+    (!compiledNarrated ||
+      upstreamThinking !== "low" ||
+      hotelThinking !== "minimal")
+  )
+    throw new Error(
+      "--hotel-thinking requires minimal, compiled narration and low upstream thinking",
+    );
   const selectedConfigs = select(MODEL_COMPARE_CONFIGS, "--configs");
   if (
     compiledNarrated &&
@@ -133,15 +143,18 @@ async function main() {
   const configs = compiledNarrated
     ? selectedConfigs.map((config) => ({
         ...config,
-        id:
-          upstreamThinking === "minimal"
+        id: hotelThinking
+          ? "compiled-hotel-minimal"
+          : upstreamThinking === "minimal"
             ? "compiled-upstream-minimal"
             : "compiled-minimal",
-        label: `Compiled schedule with minimal narration and ${upstreamThinking}-thinking upstream agents`,
+        label: hotelThinking
+          ? "Compiled schedule with minimal hotel thinking and narration; other upstream agents low"
+          : `Compiled schedule with minimal narration and ${upstreamThinking}-thinking upstream agents`,
         env: {
           ...config.env,
           PLANNING_THINKING_ORCHESTRATOR: upstreamThinking,
-          PLANNING_THINKING_HOTELS: upstreamThinking,
+          PLANNING_THINKING_HOTELS: hotelThinking ?? upstreamThinking,
           PLANNING_THINKING_ACTIVITIES: upstreamThinking,
           PLANNING_THINKING_DINING: upstreamThinking,
           PLANNING_THINKING_AGGREGATOR: "minimal",

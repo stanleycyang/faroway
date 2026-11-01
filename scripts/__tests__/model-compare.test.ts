@@ -287,3 +287,37 @@ test("upstream thinking experiment rejects invalid or silently ignored settings 
     );
   }
 });
+
+test("hotel-only experiment rejects mixed or ignored settings before model calls", () => {
+  const env = {
+    FAROWAY_STAGING_AI_GATEWAY_KEY: "invalid-preflight-test-key",
+    FAROWAY_STAGING_SUPABASE_PROJECT_REF: STAGING_PROJECT_REF,
+  };
+  for (const flags of [
+    ["--hotel-thinking", "minimal"],
+    ["--compiled-narrated", "--hotel-thinking", "high"],
+    [
+      "--compiled-narrated",
+      "--hotel-thinking",
+      "minimal",
+      "--upstream-thinking",
+      "minimal",
+    ],
+  ]) {
+    const result = runCli(
+      [
+        "--live",
+        "--supabase-url",
+        stagingUrl,
+        "--configs",
+        "flash-low",
+        ...flags,
+      ],
+      env,
+    );
+    expect(result.status).not.toBe(0);
+    expect(result.stderr).toContain(
+      "--hotel-thinking requires minimal, compiled narration and low upstream thinking",
+    );
+  }
+});
