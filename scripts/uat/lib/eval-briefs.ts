@@ -1,3 +1,4 @@
+import expanded from "../../fixtures/agentic-expanded-briefs.json";
 import { UAT_BRIEFS, type UatBrief } from "./briefs";
 
 // Authored coverage fixtures, not independently reviewed traveler reference answers.
@@ -24,6 +25,7 @@ function brief(
 }
 export const DEVELOPMENT_BRIEFS: UatBrief[] = [
   ...UAT_BRIEFS,
+  ...expanded.development.map((item) => item.brief as UatBrief),
   brief("queenstown-regional", "Queenstown, New Zealand", 5, {
     interests: ["nature", "food"],
     vibes: ["relaxed"],
@@ -124,6 +126,7 @@ export const DEVELOPMENT_BRIEFS: UatBrief[] = [
 
 // Reserved for final validation, not prompt tuning. Independent review is still required.
 export const HOLDOUT_BRIEFS: UatBrief[] = [
+  ...expanded.holdout.map((item) => item.brief as UatBrief),
   brief("osaka-solo-food", "Osaka, Japan", 3, {
     travelers: 1,
     adults: 1,

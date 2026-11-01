@@ -1,3 +1,4 @@
+import { comparisonSelection } from "./lib/comparison-selection";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -57,10 +58,14 @@ An API URL, when set, must match the pinned staging readiness alias. Production 
     throw new Error("Choose exactly one of --dry-run, --mock or --live");
   const mode = has("--dry-run") ? "dry-run" : has("--mock") ? "mock" : "live";
   const target = targetFromEnv();
+  const selection = comparisonSelection(process.argv);
   if (mode !== "live") {
     const report = await runModelComparison({
       mode,
       target,
+      configs: selection.configs,
+      briefs: selection.briefs,
+      capUsd: selection.capUsd,
       ...(mode === "mock" ? { executeStep: mockStepExecution } : {}),
     });
     writeReport(report.markdown, report);

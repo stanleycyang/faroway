@@ -1,3 +1,4 @@
+import { comparisonSelection } from "../uat/lib/comparison-selection";
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { mkdtempSync } from "node:fs";
@@ -337,4 +338,65 @@ test("invalid child-age briefs fail before invoking any paid step", async () => 
     }),
   ).rejects.toThrow("Invalid evaluation brief party");
   expect(called).toBe(false);
+});
+
+test("preflight selects the same bounded compiled cases as live", () => {
+  const result = comparisonSelection([
+    "--suite",
+    "development",
+    "--briefs",
+    "london-leap-day,boston-single-parent-infant",
+    "--configs",
+    "flash-low",
+    "--compiled-narrated",
+    "--cap-usd",
+    "0.5",
+  ]);
+  expect(result.briefs.map((b) => b.id)).toEqual([
+    "london-leap-day",
+    "boston-single-parent-infant",
+  ]);
+  expect(result.configs.map((c) => c.id)).toEqual(["compiled-minimal"]);
+  expect(result.capUsd).toBe(0.5);
+  expect(comparisonSelection(["--suite", "development"]).briefs).toHaveLength(
+    40,
+  );
+  expect(comparisonSelection(["--suite", "holdout"]).briefs).toHaveLength(20);
+});
+test("rejects invalid preflight selections and budget caps", () => {
+  for (const args of [
+    ["--suite", "bad"],
+    ["--suite"],
+    ["--briefs", "missing"],
+    ["--briefs", "lisbon-city-break,lisbon-city-break"],
+    ["--cap-usd", "NaN"],
+    ["--cap-usd", "21"],
+    ["--cap-usd", "0"],
+    ["--compiled-narrated"],
+  ])
+    expect(() => comparisonSelection(args)).toThrow();
+});
+test("CLI dry run honors suite, case and compiled configuration filters", () => {
+  const out = join(
+    mkdtempSync(join(tmpdir(), "faroway-selected-preflight-")),
+    "report",
+  );
+  const result = runCli([
+    "--dry-run",
+    "--supabase-url",
+    stagingUrl,
+    "--suite",
+    "development",
+    "--briefs",
+    "london-leap-day",
+    "--configs",
+    "flash-low",
+    "--compiled-narrated",
+    "--out",
+    out,
+  ]);
+  expect(result.status).toBe(0);
+  expect(result.stdout).toContain("london-leap-day");
+  expect(result.stdout).toContain("compiled-minimal");
+  expect(result.stdout).not.toContain("lisbon-city-break");
 });

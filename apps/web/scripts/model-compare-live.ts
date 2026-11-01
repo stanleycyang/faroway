@@ -1,3 +1,4 @@
+import { comparisonSelection } from "../../../scripts/uat/lib/comparison-selection";
 import {
   attachComparisonContracts,
   type ComparisonContractResult,
@@ -16,11 +17,6 @@ import {
   evaluateAgenticTrace,
   type AgenticTrace,
 } from "../../../scripts/uat/lib/agentic-eval";
-import {
-  DEVELOPMENT_BRIEFS,
-  HOLDOUT_BRIEFS,
-} from "../../../scripts/uat/lib/eval-briefs";
-import { UAT_BRIEFS } from "../../../scripts/uat/lib/briefs";
 import { mapSearchResultsToItinerary } from "../lib/search/bridge";
 import {
   onPlanningFallback,
@@ -34,7 +30,6 @@ import {
 import type { SearchInput } from "../lib/search/types";
 import {
   runModelComparison,
-  MODEL_COMPARE_CONFIGS,
   type CompareStep,
   type StepExecution,
 } from "../../../scripts/uat/lib/model-compare";
@@ -111,62 +106,9 @@ async function main() {
       import("../lib/search/agents/aggregator"),
     ]);
 
-  const select = <T extends { id: string }>(items: T[], flag: string): T[] => {
-    const ids = arg(flag)?.split(",");
-    if (!ids) return items;
-    if (
-      new Set(ids).size !== ids.length ||
-      ids.some((id) => !items.some((item) => item.id === id))
-    )
-      throw new Error(`Invalid ${flag} selection`);
-    return ids.map((id) => items.find((item) => item.id === id)!);
-  };
-  const compiledNarrated = process.argv.includes("--compiled-narrated");
-  const upstreamThinking = arg("--upstream-thinking") ?? "low";
-  if (
-    !["low", "minimal"].includes(upstreamThinking) ||
-    (arg("--upstream-thinking") && !compiledNarrated)
-  )
-    throw new Error(
-      "--upstream-thinking requires compiled narration and low or minimal",
-    );
-  const hotelThinking = arg("--hotel-thinking");
-  if (
-    hotelThinking !== undefined &&
-    (!compiledNarrated ||
-      upstreamThinking !== "low" ||
-      hotelThinking !== "minimal")
-  )
-    throw new Error(
-      "--hotel-thinking requires minimal, compiled narration and low upstream thinking",
-    );
-  const selectedConfigs = select(MODEL_COMPARE_CONFIGS, "--configs");
-  if (
-    compiledNarrated &&
-    (selectedConfigs.length !== 1 || selectedConfigs[0].id !== "flash-low")
-  )
-    throw new Error("Compiled candidate requires --configs flash-low");
-  const configs = compiledNarrated
-    ? selectedConfigs.map((config) => ({
-        ...config,
-        id: hotelThinking
-          ? "compiled-hotel-minimal"
-          : upstreamThinking === "minimal"
-            ? "compiled-upstream-minimal"
-            : "compiled-minimal",
-        label: hotelThinking
-          ? "Compiled schedule with minimal hotel thinking and narration; other upstream agents low"
-          : `Compiled schedule with minimal narration and ${upstreamThinking}-thinking upstream agents`,
-        env: {
-          ...config.env,
-          PLANNING_THINKING_ORCHESTRATOR: upstreamThinking,
-          PLANNING_THINKING_HOTELS: hotelThinking ?? upstreamThinking,
-          PLANNING_THINKING_ACTIVITIES: upstreamThinking,
-          PLANNING_THINKING_DINING: upstreamThinking,
-          PLANNING_THINKING_AGGREGATOR: "minimal",
-        },
-      }))
-    : selectedConfigs;
+  const { configs, briefs, capUsd, compiledNarrated } = comparisonSelection(
+    process.argv,
+  );
   if (compiledNarrated) {
     process.env.FAROWAY_SCHEDULE_EXPERIMENT = "compiled-narrated-v1";
     const { compiledScheduleExperimentEnabled } =
@@ -178,18 +120,6 @@ async function main() {
         "Compiled candidate requires the isolated staging environment",
       );
   } else delete process.env.FAROWAY_SCHEDULE_EXPERIMENT;
-  const suite = arg("--suite") ?? "uat";
-  if (!["uat", "development", "holdout"].includes(suite))
-    throw new Error("Invalid --suite");
-  const briefs = select(
-    suite === "development"
-      ? DEVELOPMENT_BRIEFS
-      : suite === "holdout"
-        ? HOLDOUT_BRIEFS
-        : UAT_BRIEFS,
-    "--briefs",
-  );
-  const capUsd = Number(arg("--cap-usd") ?? "20");
   const root = resolve(import.meta.dirname, "../../..");
   const runId = randomUUID();
   const traceDir = resolve(
@@ -204,6 +134,7 @@ async function main() {
     ),
     "apps/web/scripts/model-compare-live.ts",
     "scripts/uat/lib/comparison-contracts.ts",
+    "scripts/uat/lib/comparison-selection.ts",
     "apps/web/lib/search/staging-schedule-experiment.ts",
     "apps/web/lib/search/reviewed-dining-options.ts",
     "apps/web/lib/search/dining-coverage.ts",
@@ -233,6 +164,7 @@ async function main() {
     "apps/web/lib/ai/planning-disclosure.ts",
     "scripts/uat/lib/briefs.ts",
     "scripts/uat/lib/eval-briefs.ts",
+    "scripts/fixtures/agentic-expanded-briefs.json",
     "bun.lock",
   ];
   const hash = createHash("sha256");

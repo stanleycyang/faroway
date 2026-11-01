@@ -1,0 +1,764 @@
+{
+  "development": [
+    {
+      "brief": {
+        "id": "london-leap-day",
+        "destination": "London, UK",
+        "startDate": "2028-02-28",
+        "endDate": "2028-03-01",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple"
+      },
+      "reviewChecks": ["Preserve February 29 and all three dates"],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "chicago-dst",
+        "destination": "Chicago, USA",
+        "startDate": "2027-03-13",
+        "endDate": "2027-03-15",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple"
+      },
+      "reviewChecks": [
+        "Preserve local calendar dates across the DST transition"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "sydney-month-boundary",
+        "destination": "Sydney, Australia",
+        "startDate": "2027-01-30",
+        "endDate": "2027-02-01",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple"
+      },
+      "reviewChecks": ["Preserve January and February dates"],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "apia-local-dates",
+        "destination": "Apia, Samoa",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple"
+      },
+      "reviewChecks": [
+        "Keep destination-local dates; do not shift dates using the host timezone"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "cambridge-massachusetts",
+        "destination": "Cambridge, Massachusetts, USA",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple"
+      },
+      "reviewChecks": [
+        "Keep venues in the requested Cambridge; reject UK substitutions"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "cambridge-england",
+        "destination": "Cambridge, England, UK",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple"
+      },
+      "reviewChecks": [
+        "Keep venues in the requested Cambridge; reject Massachusetts substitutions"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "honolulu-no-interisland",
+        "destination": "Honolulu, Hawaii, USA",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-14",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple",
+        "mobilityNeeds": "Stay on Oahu; no inter-island flights"
+      },
+      "reviewChecks": [
+        "Do not schedule visits on another island without a feasible transfer"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "vancouver-no-car",
+        "destination": "Vancouver, Canada",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-14",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple",
+        "mobilityNeeds": "No rental car; use transit and short walks"
+      },
+      "reviewChecks": [
+        "Do not assume a rental car; expose uncertain transit and transfer times"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "venice-step-free",
+        "destination": "Venice, Italy",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple",
+        "mobilityNeeds": "Wheelchair access and step-free routes",
+        "requirements": {
+          "allergies": [],
+          "dietaryPreferences": [],
+          "accessibility": ["step_free_entrance"],
+          "mobilityNotes": "Confirm accessible boat boarding and toilets"
+        }
+      },
+      "reviewChecks": [
+        "Check bridge and boat access rather than equating nearby with accessible"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "kyoto-no-early-start",
+        "destination": "Kyoto, Japan",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple",
+        "mobilityNeeds": "No starts before 10am; allow relaxed meals"
+      },
+      "reviewChecks": ["Do not schedule morning starts before 10am"],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "madrid-late-arrival",
+        "destination": "Madrid, Spain",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple",
+        "mobilityNeeds": "Arrive on the first day at 18:00; no activities before arrival"
+      },
+      "reviewChecks": [
+        "First day begins after 18:00; report unsupported arrival constraints rather than filling the morning"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "zurich-early-departure",
+        "destination": "Zurich, Switzerland",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple",
+        "mobilityNeeds": "Depart on the final day at 09:00; reserve time to reach the airport"
+      },
+      "reviewChecks": ["No visits after the final-day 09:00 departure"],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "boston-single-parent-infant",
+        "destination": "Boston, USA",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 1,
+        "children": 1,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "family",
+        "childAges": [0],
+        "roomCount": 1,
+        "mobilityNeeds": "Stroller access and a midday rest every day"
+      },
+      "reviewChecks": [
+        "Preserve one adult, infant age and room count; do not claim infant suitability without evidence"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "berlin-multigeneration",
+        "destination": "Berlin, Germany",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-14",
+        "travelers": 6,
+        "adults": 4,
+        "children": 2,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "family",
+        "childAges": [4, 15],
+        "roomCount": 3,
+        "mobilityNeeds": "Short walks and frequent seated breaks"
+      },
+      "reviewChecks": [
+        "Preserve mixed child ages and three rooms; verify room capacity and access"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "florence-celiac",
+        "destination": "Florence, Italy",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple",
+        "dietaryRestrictions": ["gluten-free"],
+        "requirements": {
+          "allergies": [],
+          "dietaryPreferences": ["gluten-free"],
+          "accessibility": [],
+          "mobilityNotes": "Celiac disease; direct kitchen cross-contact confirmation required"
+        }
+      },
+      "reviewChecks": [
+        "Do not equate gluten-free menu labels with confirmed celiac cross-contact handling"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "bangkok-multiple-allergies",
+        "destination": "Bangkok, Thailand",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple",
+        "dietaryRestrictions": ["peanut allergy", "shellfish allergy"],
+        "requirements": {
+          "allergies": ["peanuts", "shellfish"],
+          "dietaryPreferences": [],
+          "accessibility": [],
+          "mobilityNotes": ""
+        }
+      },
+      "reviewChecks": [
+        "Preserve both allergens; never assert a restaurant is allergy-safe from generated prose"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "taipei-vegan-budget",
+        "destination": "Taipei, Taiwan",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-14",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["food", "design"],
+        "budget": "budget",
+        "vibes": ["cultural"],
+        "travelerType": "couple",
+        "dietaryRestrictions": ["vegan"]
+      },
+      "reviewChecks": [
+        "Preserve vegan preference and budget; disclose unknown prices"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "oslo-free-preference",
+        "destination": "Oslo, Norway",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "budget",
+        "vibes": ["cultural"],
+        "travelerType": "couple",
+        "mobilityNeeds": "Prefer free attractions; unknown admission prices must remain unknown"
+      },
+      "reviewChecks": [
+        "Prioritize free visits without converting unknown prices into zero"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "mexico-city-design",
+        "destination": "Mexico City, Mexico",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-14",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["design", "architecture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple"
+      },
+      "reviewChecks": [
+        "Keep design and architecture interests represented instead of generic popularity"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "melbourne-business",
+        "destination": "Melbourne, Australia",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 1,
+        "adults": 1,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "business",
+        "mobilityNeeds": "Working 09:00–17:00 on each trip day; only evening visits"
+      },
+      "reviewChecks": [
+        "Respect work blocks; report inability to schedule around them"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "prague-rest-negation",
+        "destination": "Prague, Czechia",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple",
+        "mobilityNeeds": "No midday rest is required; prefer a moderate pace"
+      },
+      "reviewChecks": [
+        "Do not invent a required midday rest from a negated request"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "nice-week-long",
+        "destination": "Nice, France",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-17",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["art", "food", "architecture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple"
+      },
+      "reviewChecks": [
+        "Maintain day coverage and variety without repeated filler visits"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "new-orleans-live-music",
+        "destination": "New Orleans, USA",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["music", "history"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple"
+      },
+      "reviewChecks": [
+        "Require event date and venue evidence; distinguish venue visits from confirmed performances"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "san-francisco-conflicting-pace",
+        "destination": "San Francisco, USA",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-12",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple",
+        "mobilityNeeds": "At least eight museums each day, no more than two hours of activities daily, and a midday rest every day"
+      },
+      "reviewChecks": [
+        "Explain or clarify conflicting demands rather than claim all are satisfied"
+      ],
+      "reviewStatus": "unreviewed"
+    }
+  ],
+  "holdout": [
+    {
+      "brief": {
+        "id": "dublin-leap-boundary",
+        "destination": "Dublin, Ireland",
+        "startDate": "2028-02-28",
+        "endDate": "2028-03-01",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple"
+      },
+      "reviewChecks": ["Preserve leap day and calendar coverage"],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "toronto-dst",
+        "destination": "Toronto, Canada",
+        "startDate": "2027-03-13",
+        "endDate": "2027-03-15",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple"
+      },
+      "reviewChecks": ["Preserve destination-local dates across DST"],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "perth-australia",
+        "destination": "Perth, Western Australia",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple"
+      },
+      "reviewChecks": [
+        "Avoid same-name destinations outside Western Australia"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "funchal-island",
+        "destination": "Funchal, Madeira, Portugal",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-14",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple",
+        "mobilityNeeds": "Stay on Madeira; no flights during the trip"
+      },
+      "reviewChecks": [
+        "Avoid mainland excursions without feasible transfer evidence"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "helsinki-stroller",
+        "destination": "Helsinki, Finland",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 3,
+        "adults": 2,
+        "children": 1,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "family",
+        "childAges": [1],
+        "roomCount": 1,
+        "mobilityNeeds": "Stroller access and a midday rest every day"
+      },
+      "reviewChecks": [
+        "Preserve infant age and daily rest; review winter stroller access"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "munich-four-rooms",
+        "destination": "Munich, Germany",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-14",
+        "travelers": 8,
+        "adults": 8,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "friends",
+        "roomCount": 4
+      },
+      "reviewChecks": [
+        "Preserve eight adults and four rooms; do not treat a per-room price as the party total"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "montreal-celiac",
+        "destination": "Montreal, Canada",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple",
+        "dietaryRestrictions": ["gluten-free"],
+        "requirements": {
+          "allergies": [],
+          "dietaryPreferences": ["gluten-free"],
+          "accessibility": [],
+          "mobilityNotes": "Celiac disease; confirm cross-contact handling directly"
+        }
+      },
+      "reviewChecks": ["Require direct cross-contact confirmation"],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "hanoi-sesame-allergy",
+        "destination": "Hanoi, Vietnam",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple",
+        "requirements": {
+          "allergies": ["sesame"],
+          "dietaryPreferences": [],
+          "accessibility": [],
+          "mobilityNotes": ""
+        }
+      },
+      "reviewChecks": [
+        "Preserve sesame allergy without fabricating restaurant safety"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "valencia-late-start",
+        "destination": "Valencia, Spain",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple",
+        "mobilityNeeds": "No starts before 11am"
+      },
+      "reviewChecks": ["No scheduled starts before 11am"],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "geneva-arrival-evening",
+        "destination": "Geneva, Switzerland",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple",
+        "mobilityNeeds": "First-day arrival at 19:00; do not plan visits before arrival"
+      },
+      "reviewChecks": ["No first-day activities before 19:00 arrival"],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "brisbane-departure-morning",
+        "destination": "Brisbane, Australia",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["culture"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple",
+        "mobilityNeeds": "Depart at 08:00 on the last day"
+      },
+      "reviewChecks": [
+        "Do not schedule final-day visits after 08:00 departure"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "wellington-design",
+        "destination": "Wellington, New Zealand",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-14",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["architecture", "design"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple"
+      },
+      "reviewChecks": ["Represent architecture and design interests"],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "buenos-aires-performance",
+        "destination": "Buenos Aires, Argentina",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-13",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["music", "dance"],
+        "budget": "moderate",
+        "vibes": ["cultural"],
+        "travelerType": "couple"
+      },
+      "reviewChecks": [
+        "Distinguish venue existence from dated performance availability"
+      ],
+      "reviewStatus": "unreviewed"
+    },
+    {
+      "brief": {
+        "id": "ljubljana-long-stay",
+        "destination": "Ljubljana, Slovenia",
+        "startDate": "2027-01-11",
+        "endDate": "2027-01-17",
+        "travelers": 2,
+        "adults": 2,
+        "children": 0,
+        "interests": ["nature", "art"],
+        "budget": "budget",
+        "vibes": ["cultural"],
+        "travelerType": "couple"
+      },
+      "reviewChecks": ["Maintain variety and honest sparse-supply handling"],
+      "reviewStatus": "unreviewed"
+    }
+  ]
+}

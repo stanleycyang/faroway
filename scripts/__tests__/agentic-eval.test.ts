@@ -356,8 +356,8 @@ test("route screening treats missing, invalid and placeholder coordinates as unk
 test("development and reserved holdout briefs have distinct IDs and valid bounded dates and parties", () => {
   const cases = [...DEVELOPMENT_BRIEFS, ...HOLDOUT_BRIEFS];
   expect(new Set(cases.map((c) => c.id)).size).toBe(cases.length);
-  expect(DEVELOPMENT_BRIEFS.length).toBe(16);
-  expect(HOLDOUT_BRIEFS.length).toBe(6);
+  expect(DEVELOPMENT_BRIEFS.length).toBe(40);
+  expect(HOLDOUT_BRIEFS.length).toBe(20);
   for (const brief of cases) {
     expect(brief.travelers).toBe(brief.adults + brief.children);
     const trace = fixture();
