@@ -1116,3 +1116,46 @@ test("rejects explicit special-opening claims without flagging a venue's name as
     "event_date_and_venue_evidence_required:walk",
   );
 });
+
+test("evaluates enrichment inventory without allowing planning ideas to masquerade as visits or meals", () => {
+  const trace = fixture();
+  trace.settings.FAROWAY_EVAL_ENRICHMENT = "deterministic";
+  expect(evaluateAgenticTrace(trace).failures).toContain(
+    "missing_workflow_enrichment",
+  );
+  const activity = (trace.steps[2].output as unknown[])[0];
+  const meal = (trace.steps[3].output as unknown[])[0];
+  // The selected projections omit provenance; the input inventory still owns it.
+  trace.steps[2].output = [];
+  trace.steps[3].output = [];
+  trace.enrichment = {
+    mode: "deterministic",
+    activities: [{ ...(activity as object), planningIdea: true }],
+    dining: [{ ...(meal as object), planningIdea: true }],
+    notes: [],
+    latencyMs: 0,
+  };
+  const result = evaluateAgenticTrace(trace);
+  expect(result.failures).toContain("scheduled_planning_idea:walk");
+  expect(result.failures).toContain("scheduled_planning_idea:cafe");
+  expect(result.failures).not.toContain("unknown_activity:walk");
+  expect(result.failures).not.toContain("unknown_restaurant:cafe");
+  expect(result.failures).not.toContain("missing_workflow_enrichment");
+});
+
+test("unused enrichment ideas do not fail an otherwise valid schedule", () => {
+  const trace = fixture();
+  trace.settings.FAROWAY_EVAL_ENRICHMENT = "deterministic";
+  trace.enrichment = {
+    mode: "deterministic",
+    activities: [{ id: "generic-walk", planningIdea: true }],
+    dining: [{ id: "generic-lunch", planningIdea: true }],
+    notes: [],
+    latencyMs: 0,
+  };
+  expect(evaluateAgenticTrace(trace).contractPass).toBe(true);
+  trace.enrichment.activities.push({ id: "walk", planningIdea: true });
+  expect(evaluateAgenticTrace(trace).failures).toContain(
+    "invalid_activity_inventory_ids",
+  );
+});

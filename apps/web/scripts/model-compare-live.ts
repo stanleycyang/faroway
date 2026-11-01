@@ -18,6 +18,7 @@ import {
   type AgenticTrace,
 } from "../../../scripts/uat/lib/agentic-eval";
 import { mapSearchResultsToItinerary } from "../lib/search/bridge";
+import { runSearchEnrichment } from "../lib/search/enrichment";
 import {
   onPlanningFallback,
   onPlanningUsage,
@@ -133,6 +134,7 @@ async function main() {
       (name) => `apps/web/lib/search/agents/${name}.ts`,
     ),
     "apps/web/scripts/model-compare-live.ts",
+    "apps/web/lib/search/enrichment.ts",
     "scripts/uat/lib/comparison-contracts.ts",
     "scripts/uat/lib/comparison-selection.ts",
     "apps/web/lib/search/staging-schedule-experiment.ts",
@@ -247,6 +249,7 @@ async function main() {
           startedAt: new Date().toISOString(),
           settings: {
             ...config.env,
+            FAROWAY_EVAL_ENRICHMENT: "deterministic",
             ...(compiledNarrated
               ? { FAROWAY_SCHEDULE_EXPERIMENT: "compiled-narrated-v1" }
               : {}),
@@ -294,11 +297,23 @@ async function main() {
               : "no reservation URLs",
           );
         } else if (step === "aggregator") {
+          const enrichmentStarted = Date.now();
+          const enrichment = await runSearchEnrichment(plan);
+          trace.enrichment = {
+            ...enrichment,
+            mode: "deterministic",
+            latencyMs: Date.now() - enrichmentStarted,
+          };
+          const combinedActivities = [
+            ...activityResults,
+            ...enrichment.activities,
+          ];
+          const combinedDining = [...diningResults, ...enrichment.dining];
           const aggregated = await aggregator.runAggregatorAgent(
             plan,
             hotelResults,
-            activityResults,
-            diningResults,
+            combinedActivities,
+            combinedDining,
             [],
           );
           output = aggregated;
@@ -306,14 +321,17 @@ async function main() {
             {
               searchId: runId,
               hotels: hotelResults,
-              activities: activityResults,
-              dining: diningResults,
+              activities: combinedActivities,
+              dining: combinedDining,
               transport: [],
               itinerary: aggregated.days,
             },
             aggregated.topHotel,
           );
           notes.push(`${aggregated.days.length} days`);
+          notes.push(
+            "workflow deterministic enrichment included; supplier/search calls remain disabled",
+          );
         }
       } finally {
         stopFallback();

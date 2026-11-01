@@ -15,6 +15,14 @@ export interface AgenticTrace {
   source: { commit: string; dirty: boolean; filesSha256: string };
   startedAt: string;
   settings: Record<string, string>;
+  /** Separate from raw specialist output; merged before aggregation by the app. */
+  enrichment?: {
+    mode: "deterministic";
+    activities: unknown[];
+    dining: unknown[];
+    notes: string[];
+    latencyMs: number;
+  };
   steps: Array<{
     step: string;
     output: unknown;
@@ -146,8 +154,33 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
     )
       fail("requirements_mobility_notes_lost");
   }
-  const activities = array(output("activities"));
-  const dining = array(output("dining"));
+  if (
+    trace.settings.FAROWAY_EVAL_ENRICHMENT === "deterministic" &&
+    (!trace.enrichment || trace.enrichment.mode !== "deterministic")
+  )
+    fail("missing_workflow_enrichment");
+  if (
+    trace.enrichment &&
+    (!Array.isArray(trace.enrichment.activities) ||
+      !Array.isArray(trace.enrichment.dining) ||
+      !Array.isArray(trace.enrichment.notes) ||
+      !Number.isFinite(trace.enrichment.latencyMs) ||
+      trace.enrichment.latencyMs < 0)
+  )
+    fail("invalid_workflow_enrichment");
+  const activities = [
+    ...array(output("activities")),
+    ...array(trace.enrichment?.activities),
+  ];
+  const dining = [
+    ...array(output("dining")),
+    ...array(trace.enrichment?.dining),
+  ];
+  const planningIdeaIds = new Set(
+    [...activities, ...dining]
+      .filter((candidate) => object(candidate).planningIdea === true)
+      .map((candidate) => object(candidate).id),
+  );
   const activityIds = new Set(activities.map((a) => object(a).id));
   const diningIds = new Set(dining.map((a) => object(a).id));
   if (!activities.length) fail("empty_activity_inventory");
@@ -218,6 +251,8 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
       for (const raw of items) {
         const a = object(raw);
         if (!activityIds.has(a.id)) fail(`unknown_activity:${String(a.id)}`);
+        if (a.planningIdea === true || planningIdeaIds.has(a.id))
+          fail(`scheduled_planning_idea:${String(a.id)}`);
         if (usedActivities.has(a.id))
           fail(`duplicate_activity:${String(a.id)}`);
         usedActivities.add(a.id);
@@ -267,6 +302,8 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
       if (slot.meal) {
         if (!diningIds.has(meal.id))
           fail(`unknown_restaurant:${String(meal.id)}`);
+        if (meal.planningIdea === true || planningIdeaIds.has(meal.id))
+          fail(`scheduled_planning_idea:${String(meal.id)}`);
         if (mappedMeals.length !== 1 || object(mappedMeals[0]).id !== meal.id)
           fail(`day_${index + 1}:${slotName}:mapped_meal_identity`);
         const expectedMeal = {
