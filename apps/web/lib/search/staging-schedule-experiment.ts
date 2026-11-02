@@ -154,6 +154,12 @@ export async function runStagingCompiledSchedule(
       );
       if (!records.length) continue;
       const record = records[0];
+      if (record.reason === "venue_visit_scope_requires_review") {
+        day.tips.push(
+          `Visit review: ${activity.name} was left unscheduled because the reviewed hours cover ordinary entry, while this visit's scope is different or unclear. Confirm access for the intended experience; this does not establish that it is closed. Source reviewed ${record.observedAt}: ${record.sourceUrl}`,
+        );
+        continue;
+      }
       if (record.reason === "venue_identity_requires_review") {
         day.tips.push(
           `Venue identity review: ${activity.name} was left unscheduled because its exact venue and visit type could not be resolved against reviewed information for this address. Confirm the exact place and visit type; this does not establish that it is closed. Source reviewed ${record.observedAt}: ${record.sourceUrl}`,

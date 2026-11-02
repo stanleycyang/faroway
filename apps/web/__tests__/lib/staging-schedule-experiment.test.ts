@@ -388,68 +388,88 @@ it("retains a dated organizer lead after deferring an unidentified performance",
   }
 });
 
-it("withholds a closed venue and a renamed walk at its address with distinct explanations", async () => {
-  vi.useFakeTimers({ toFake: ["Date"] });
-  vi.setSystemTime(new Date("2026-11-01T12:00:00Z"));
-  try {
-    const input: SearchPlan = {
-      ...plan,
-      destination: "Melbourne, Australia",
-      dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 },
-    };
-    const ngv: ActivityResult = {
-      ...activities[0],
-      id: "ngv",
-      name: "National Gallery of Victoria (NGV) International Evening Visit",
-      description: "Gallery visit.",
-      duration: 60,
-      bestTimeOfDay: "evening",
-      location: {
-        name: "NGV",
-        address: "180 St Kilda Rd, Melbourne VIC 3006",
-        lat: -37.82,
-        lng: 144.96,
-      },
-    };
-    const alternative: ActivityResult = {
-      ...ngv,
-      id: "alternative",
-      name: "Unverified alternative walk",
-    };
-    mocks.generateObject.mockResolvedValue({
-      object: {
-        days: [
-          {
-            date: input.dates.start,
-            title: "Evening plan",
-            summary: "Review the selected walk before travel.",
-            activityIds: [alternative.id],
-          },
-        ],
-      },
-      usage: { inputTokens: 100, outputTokens: 100 },
-    });
-    const result = await runStagingCompiledSchedule(
-      input,
-      [],
-      [ngv, alternative],
-      [],
-    );
-    expect(result.days[0].evening.activities).toEqual([]);
-    expect(result.days[0].tips.join(" ")).toContain(
-      "Venue identity review: Unverified alternative walk",
-    );
-    expect(result.days[0].tips.join(" ")).toContain(
-      "this does not establish that it is closed",
-    );
-    expect(result.days[0].tips.join(" ")).toContain(
-      "https://www.ngv.vic.gov.au/plan-your-visit/",
-    );
-    expect(result.days[0].tips.join(" ")).toContain("excluded from evening");
-  } finally {
-    vi.useRealTimers();
-  }
-});
+it.each([
+  "ordinary_entry",
+  "unknown",
+  "exterior_walk",
+  "guided_tour",
+  "event",
+  undefined,
+] as const)(
+  "distinguishes hours, identity and visit scope review for %s",
+  async (proposedVisitType) => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-01T12:00:00Z"));
+    try {
+      const input: SearchPlan = {
+        ...plan,
+        destination: "Melbourne, Australia",
+        dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 },
+      };
+      const ngv: ActivityResult = {
+        ...activities[0],
+        id: "ngv",
+        proposedVisitType,
+        name: "National Gallery of Victoria (NGV) International Evening Visit",
+        description: "Gallery visit.",
+        duration: 60,
+        bestTimeOfDay: "evening",
+        location: {
+          name: "NGV",
+          address: "180 St Kilda Rd, Melbourne VIC 3006",
+          lat: -37.82,
+          lng: 144.96,
+        },
+      };
+      const alternative: ActivityResult = {
+        ...ngv,
+        id: "alternative",
+        name: "Unverified alternative walk",
+      };
+      mocks.generateObject.mockResolvedValue({
+        object: {
+          days: [
+            {
+              date: input.dates.start,
+              title: "Evening plan",
+              summary: "Review the selected walk before travel.",
+              activityIds: [alternative.id],
+            },
+          ],
+        },
+        usage: { inputTokens: 100, outputTokens: 100 },
+      });
+      const result = await runStagingCompiledSchedule(
+        input,
+        [],
+        [ngv, alternative],
+        [],
+      );
+      expect(result.days[0].evening.activities).toEqual([]);
+      expect(result.days[0].tips.join(" ")).toContain(
+        "Venue identity review: Unverified alternative walk",
+      );
+      expect(result.days[0].tips.join(" ")).toContain(
+        "this does not establish that it is closed",
+      );
+      expect(result.days[0].tips.join(" ")).toContain(
+        "https://www.ngv.vic.gov.au/plan-your-visit/",
+      );
+      if (proposedVisitType === "ordinary_entry") {
+        expect(result.days[0].tips.join(" ")).toContain(
+          "excluded from evening",
+        );
+      } else {
+        expect(result.days[0].tips.join(" ")).toContain(
+          "Visit review: National Gallery",
+        );
+        expect(result.days[0].tips.join(" ")).not.toContain("Hours review:");
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  },
+);
 
 it("keeps the reviewed Skydeck and withholds its unresolved generated lookalike in the saved full inventory", async () => {
   vi.useFakeTimers({ toFake: ["Date"] });

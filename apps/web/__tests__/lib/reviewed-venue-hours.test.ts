@@ -6,6 +6,7 @@ import {
 import type { ActivityResult } from "@/lib/search/types";
 const plan = { destination: "City" };
 const activity = {
+  proposedVisitType: "ordinary_entry",
   id: "venue",
   name: "Museum",
   location: { address: "1 Museum Street" },
@@ -264,3 +265,31 @@ it("withholds renamed visits and co-located tenants for identity review without 
     ),
   ).toEqual([]);
 });
+
+it.each([
+  undefined,
+  "unknown",
+  "exterior_walk",
+  "guided_tour",
+  "event",
+] as const)(
+  "keeps intent %s unresolved even when the exact venue identity matches",
+  (proposedVisitType) => {
+    const results = reviewedHoursExclusions(
+      plan,
+      [{ ...activity, proposedVisitType }],
+      ["2027-01-11", "2027-01-12"],
+      [fact],
+      "2026-11-01",
+    );
+    expect(results).toEqual(
+      ["2027-01-11", "2027-01-12"].map((date) => ({
+        activityId: activity.id,
+        date,
+        reason: "venue_visit_scope_requires_review",
+        sourceUrl: fact.sourceUrl,
+        observedAt: fact.observedAt,
+      })),
+    );
+  },
+);

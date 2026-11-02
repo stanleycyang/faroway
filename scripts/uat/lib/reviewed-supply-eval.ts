@@ -31,6 +31,7 @@ function expected(record: (typeof catalog)[number]) {
     description: record.description,
     category: record.category,
     duration: record.durationMinutes,
+    proposedVisitType: "ordinary_entry",
     price: 0,
     currency: "",
     priceStatus: "unknown",

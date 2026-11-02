@@ -119,6 +119,16 @@ export function reviewedHoursExclusions(
         });
         continue;
       }
+      if (activity.proposedVisitType !== "ordinary_entry") {
+        exclusions.push({
+          activityId: activity.id,
+          date,
+          reason: "venue_visit_scope_requires_review",
+          sourceUrl: fact.sourceUrl,
+          observedAt: fact.observedAt,
+        });
+        continue;
+      }
       const calendar = new Date(`${date}T12:00:00Z`);
       if (!fact.months.includes(calendar.getUTCMonth() + 1)) continue;
       const day = fact.week.find((d) => d.weekday === calendar.getUTCDay());
