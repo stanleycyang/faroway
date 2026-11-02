@@ -51,8 +51,13 @@ const replayBytes = replayPath ? readFileSync(replayPath) : undefined;
 if (replayBytes && replayBytes.length > 500000)
   throw Error("Replay receipt too large");
 const replay = replayBytes
-  ? prepareDiningReplay(JSON.parse(replayBytes.toString()))
+  ? prepareDiningReplay(
+      JSON.parse(replayBytes.toString()),
+      process.argv.includes("--screen-sources"),
+    )
   : undefined;
+if (process.argv.includes("--screen-sources") && !replay)
+  throw Error("Source screening requires frozen retrieval");
 if (replay && JSON.stringify(replay.brief) !== JSON.stringify(brief))
   throw Error("Replay brief must match the original public request");
 if (replay && policy !== "baseline")
@@ -81,6 +86,7 @@ const provenance = {
   ),
   promptPolicy: policy,
   mode: replay ? "frozen-source-selection" : "live-discovery",
+  screenSources: replay?.screenSources ?? false,
   ...(replayBytes ? { replaySha256: hash(replayBytes) } : {}),
   model: "google/gemini-3-flash",
   clientRequestsMaximum: 1,

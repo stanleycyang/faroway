@@ -761,6 +761,65 @@ test("source-first dining keeps missing service and location facts unknown", () 
     address: venue.address,
     mealQuote: venue.mealQuote,
   };
+  const screened = prepareDiningReplay(
+    { status: "completed", brief, retrievalResults: [tool] },
+    true,
+  );
+  for (const assessment of [
+    {
+      sourceId: "source-0",
+      publisherKind: "third_party",
+      mealSupport: "explicit",
+    },
+    {
+      sourceId: "source-0",
+      publisherKind: "uncertain",
+      mealSupport: "explicit",
+    },
+    {
+      sourceId: "source-0",
+      publisherKind: "operator_page",
+      mealSupport: "contradicted",
+    },
+    {
+      sourceId: "source-0",
+      publisherKind: "operator_page",
+      mealSupport: "not_established",
+    },
+  ])
+    expect(
+      auditDiningDiscovery(
+        bindDiningReplay(
+          { venues: [selected], screening: [assessment] },
+          screened,
+        ),
+        [tool],
+        brief,
+      ).options,
+    ).toHaveLength(0);
+  const assessment = {
+    sourceId: "source-0",
+    publisherKind: "operator_page",
+    mealSupport: "explicit",
+  };
+  expect(
+    auditDiningDiscovery(
+      bindDiningReplay(
+        { venues: [selected], screening: [assessment] },
+        screened,
+      ),
+      [tool],
+      brief,
+    ).options,
+  ).toHaveLength(1);
+  for (const screening of [
+    [],
+    [assessment, assessment],
+    [{ ...assessment, sourceId: "invented" }],
+  ])
+    expect(bindDiningReplay({ venues: [selected], screening }, screened)).toBe(
+      null,
+    );
   expect(
     auditDiningDiscovery(
       bindDiningReplay({ venues: [selected] }, replay),

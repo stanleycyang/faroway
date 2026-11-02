@@ -22,7 +22,13 @@ const rows = files.map((file) => {
   const selection = parseDiningDiscovery(receipt.text);
   const audit = auditDiningDiscovery(
     receipt.provenance?.mode === "frozen-source-selection"
-      ? bindDiningReplay(selection, prepareDiningReplay(receipt))
+      ? bindDiningReplay(
+          selection,
+          prepareDiningReplay(
+            receipt,
+            receipt.provenance.screenSources === true,
+          ),
+        )
       : selection,
     receipt.retrievalResults,
     brief,
