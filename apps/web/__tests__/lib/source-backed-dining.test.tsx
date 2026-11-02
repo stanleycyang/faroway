@@ -49,6 +49,39 @@ function mapped(meal = candidate) {
   );
 }
 describe("partially supported dining candidates", () => {
+  it("preserves source attribution through saved JSON and renders it separately from booking", () => {
+    const source = {
+      url: "https://restaurant.example/visit",
+      retrievedOn: "2026-11-02",
+    };
+    const meal = JSON.parse(
+      JSON.stringify(mapped({ ...candidate, source }).days[0].morning.meals[0]),
+    );
+    expect(meal.source).toEqual(source);
+    const html = renderToStaticMarkup(
+      createElement(RestaurantCard, { restaurant: meal }),
+    );
+    expect(html).toContain('href="https://restaurant.example/visit"');
+    expect(html).toContain('rel="noopener noreferrer"');
+    expect(html).toContain("Retrieved 2026-11-02");
+    expect(html).toContain("Confirm opening hours and availability");
+    expect(html).not.toContain("Restaurant booking unavailable");
+    expect(html).not.toContain("verified");
+    for (const url of [
+      "javascript:alert(1)",
+      "http://restaurant.example/",
+      "https://user:secret@restaurant.example/",
+    ]) {
+      const invalid = mapped({ ...candidate, source: { ...source, url } })
+        .days[0].morning.meals[0];
+      expect(invalid.source).toBeUndefined();
+      expect(
+        renderToStaticMarkup(
+          createElement(RestaurantCard, { restaurant: invalid }),
+        ),
+      ).not.toContain("View source");
+    }
+  });
   it("preserves a reviewed address without inventing price, ratings or coordinates through saved mapping and web rendering", () => {
     const result = mapped(),
       meal = result.days[0].morning.meals[0];

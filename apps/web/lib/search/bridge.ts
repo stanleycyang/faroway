@@ -1,4 +1,4 @@
-import { readDayTiming, dayTimingTips } from "@faroway/types";
+import { readDayTiming, dayTimingTips, readVenueSource } from "@faroway/types";
 import { suppliedCoordinates } from "../location-coordinates";
 import { readPrice } from "@faroway/constants";
 import { viatorContentMetadata } from "@/lib/affiliates/viator-policy";
@@ -90,6 +90,7 @@ function mapDining(
   mealType: "breakfast" | "lunch" | "dinner",
 ): Restaurant {
   return {
+    source: readVenueSource(d.source),
     id: d.id,
     name: d.name,
     cuisineType: d.cuisineTypes || [],

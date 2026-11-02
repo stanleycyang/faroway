@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { readVenueSource, type DiningResult } from "@faroway/types";
 import { auditVenueIdentityExcerpts } from "./venue-identity-excerpts";
 import { parallelVenueSources } from "./venue-source-discovery";
 
@@ -151,4 +152,34 @@ export function auditDiningDiscovery(
     ];
   });
   return { shapeValid: true, options, rejected, sources };
+}
+
+/** App-shaped review options. The schedule compiler excludes planningIdea items. */
+export function diningOptionsForReview(
+  audit: ReturnType<typeof auditDiningDiscovery>,
+  retrievedOn: string,
+): DiningResult[] {
+  if (!audit.shapeValid) return [];
+  return audit.options.flatMap((option) => {
+    const source = readVenueSource({ url: option.sourceUrl, retrievedOn });
+    if (!source || !option.identityEvidence.copiedIdentityTextLinked) return [];
+    return [
+      {
+        id: option.id,
+        planningIdea: true as const,
+        name: option.name,
+        description:
+          "Dining option to review. Confirm the venue, meal service and availability for your dates before choosing it.",
+        source,
+        cuisineTypes: [],
+        priceStatus: "unknown" as const,
+        location: { name: option.name, address: option.address },
+        images: [],
+        mealTypes: [],
+        vibeScore: 0,
+        vibeMatch: [],
+        dietaryOptions: [],
+      },
+    ];
+  });
 }

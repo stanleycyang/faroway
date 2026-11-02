@@ -1,4 +1,21 @@
 import { transformApiHotel, transformItineraryDays } from '../../lib/itineraryNormalization';
+test('retrieved venue sources survive both API meal and cached activity normalization', () => {
+  const source = { url: 'https://restaurant.example/visit', retrievedOn: '2026-11-02' };
+  const days = transformItineraryDays([
+    { dayNumber: 1, morning: { meals: [{ id: 'meal', name: 'Cafe', source }] } },
+  ]);
+  expect(days[0].activities[0].source).toEqual(source);
+  expect(transformItineraryDays(JSON.parse(JSON.stringify(days)))[0].activities[0].source).toEqual(
+    source
+  );
+  const invalid = transformItineraryDays([
+    {
+      dayNumber: 1,
+      morning: { meals: [{ name: 'Cafe', source: { ...source, url: 'javascript:alert(1)' } }] },
+    },
+  ]);
+  expect(invalid[0].activities[0].source).toBeUndefined();
+});
 test('hotel keeps usable provider facts and excludes malformed display arrays or invented stay totals', () => {
   const hotel = transformApiHotel({
     name: 'A real hotel',

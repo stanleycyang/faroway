@@ -95,6 +95,7 @@ try {
     Number.isFinite(result.usage.outputTokens);
   const receipt = {
     status: "completed",
+    retrievedAt: new Date().toISOString(),
     provenance,
     prompt,
     brief,

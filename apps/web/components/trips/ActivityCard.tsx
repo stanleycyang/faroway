@@ -4,6 +4,7 @@ import { canDisplayViatorContent } from "@/lib/affiliates/viator-policy";
 import { useViatorContentEnabled } from "./ViatorContentPolicy";
 
 import React from "react";
+import { readVenueSource, type VenueSource } from "@faroway/types";
 import { readPrice } from "@faroway/constants";
 import Image from "next/image";
 import { useTripCheckout } from "./TripCheckout";
@@ -64,6 +65,7 @@ export interface Activity {
 }
 
 export interface Restaurant {
+  source?: VenueSource;
   id: string;
   name: string;
   cuisineType: string[];
@@ -475,6 +477,7 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
     mealTypeConfig[restaurant.mealType] || mealTypeConfig.dinner;
   const badge = getBadge(rating, reviewCount);
   const hasReservation = !!restaurant.reservationInfo?.url;
+  const source = readVenueSource(restaurant.source);
 
   const formatCost = (amount: number, currency: string) => {
     return new Intl.NumberFormat("en-US", {
@@ -614,6 +617,25 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
                   )}
                 </div>
               )}
+
+            {source && (
+              <div className="mt-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
+                <a
+                  href={source.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-8 items-center gap-1 font-medium text-slate-900 underline underline-offset-2"
+                >
+                  View source · {new URL(source.url).hostname}
+                  <ExternalLink className="h-3 w-3" aria-hidden="true" />
+                  <span className="sr-only"> (opens in a new tab)</span>
+                </a>
+                <p>
+                  Retrieved {source.retrievedOn}. Confirm opening hours and
+                  availability for your dates.
+                </p>
+              </div>
+            )}
 
             {/* Reserve CTA */}
             {hasReservation && (

@@ -694,6 +694,7 @@ import {
   auditDiningDiscovery,
   validatePublicDiningBrief,
   parseDiningDiscovery,
+  diningOptionsForReview,
 } from "../uat/lib/dining-discovery";
 
 test("dining JSON permits a complete code fence without recovering arbitrary prose", () => {
@@ -744,6 +745,14 @@ test("source-first dining keeps missing service and location facts unknown", () 
   };
   const audit = auditDiningDiscovery({ venues: [venue] }, [tool], brief);
   expect(audit.options).toHaveLength(1);
+  const [reviewOption] = diningOptionsForReview(audit, "2026-11-02");
+  expect(reviewOption.planningIdea).toBe(true);
+  expect(reviewOption.source?.url).toBe(venue.url);
+  expect(reviewOption.mealTypes).toEqual([]);
+  expect(reviewOption.location.lat).toBeUndefined();
+  expect(reviewOption.priceLevel).toBeUndefined();
+  expect(reviewOption.reservationUrl).toBeUndefined();
+  expect(diningOptionsForReview(audit, "2026-02-30")).toEqual([]);
   expect(audit.options[0]).toMatchObject({
     name: "Cafe A",
     coordinates: null,

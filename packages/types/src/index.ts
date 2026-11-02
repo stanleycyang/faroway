@@ -1,4 +1,7 @@
 import type { DayTimingProposal } from "./day-timing";
+import type { VenueSource } from "./venue-source";
+export { readVenueSource } from "./venue-source";
+export type { VenueSource } from "./venue-source";
 /**
  * @faroway/types
  * Shared types and validation helpers for Faroway web and mobile apps.
@@ -243,6 +246,7 @@ export interface ItineraryActivity {
 }
 
 export interface Restaurant {
+  source?: VenueSource;
   id: string;
   name: string;
   cuisineType: string[];
@@ -536,6 +540,7 @@ export interface ActivityResult {
 }
 
 export interface DiningResult {
+  source?: VenueSource;
   /** A cuisine/area idea that still needs a named restaurant. */
   planningIdea?: true;
   priceStatus?: "unknown" | "estimate";

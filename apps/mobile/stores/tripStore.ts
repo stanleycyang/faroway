@@ -1,10 +1,11 @@
-import type { DayTimingProposal } from '@faroway/types';
+import type { DayTimingProposal, VenueSource } from '@faroway/types';
 import { create } from 'zustand';
 import { offlineStorage } from '../lib/offline';
 import { logger } from '../lib/logger';
 import { useUserStore } from './userStore';
 
 export interface Activity {
+  source?: VenueSource;
   scheduleSlot?: 'morning' | 'afternoon' | 'evening';
   durationMinutes?: number;
   id: string;

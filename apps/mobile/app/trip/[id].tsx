@@ -1,6 +1,7 @@
 import { isTimingNote } from '@faroway/types';
 import { transformItineraryDays } from '../../lib/itineraryNormalization';
 import { ProposedTiming } from '../../components/ProposedTiming';
+import { VenueSourceNotice } from '../../components/VenueSourceNotice';
 import { flightQuoteIsCurrent } from '@faroway/constants';
 import { formatKnownPrice, summarizeTripCosts } from '../../lib/tripCost';
 import React, {
@@ -150,6 +151,7 @@ function ActivityCard({ activity }: ActivityCardProps) {
           {activity.price && <Text style={styles.activityPrice}>{activity.price}</Text>}
         </View>
         <Text style={styles.activityDescription}>{activity.description}</Text>
+        <VenueSourceNotice source={activity.source} />
         {activity.rating && (
           <View style={styles.activityRating}>
             <Ionicons name="star" size={14} color="#fbbf24" />

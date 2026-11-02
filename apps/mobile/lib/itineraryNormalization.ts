@@ -1,4 +1,4 @@
-import { readDayTiming, dayTimingTips } from '@faroway/types';
+import { readDayTiming, dayTimingTips, readVenueSource } from '@faroway/types';
 import { durationLabel } from './durationLabel';
 import type { Activity, Hotel, TripDay } from '../stores/tripStore';
 import { readTripCost, formatTripCost } from './tripCost';
@@ -64,6 +64,7 @@ function transformTransport(value: unknown): TripDay['transport'] {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformApiActivity(a: any, timeOfDay: string): Activity {
   return {
+    source: readVenueSource(a.source),
     id: displayText(a.id) || `activity_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
     scheduleSlot: ['morning', 'afternoon', 'evening'].includes(a.scheduleSlot)
       ? a.scheduleSlot
@@ -128,6 +129,7 @@ function transformApiActivity(a: any, timeOfDay: string): Activity {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformApiRestaurant(r: any): Activity {
   return {
+    source: readVenueSource(r.source),
     id: displayText(r.id) || `restaurant_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
     time: displayText(r.mealType) || 'dining',
     title: displayText(r.name) || displayText(r.title),
