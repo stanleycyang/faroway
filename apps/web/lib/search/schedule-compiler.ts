@@ -3,6 +3,8 @@ import {
   travelerActivityBudget,
   travelerVisitSlots,
   availableSlotMinutes,
+  availableMealMinutes,
+  availableIntervals,
 } from "./traveler-availability";
 import {
   isSpeculativeEventTitle,
@@ -160,7 +162,10 @@ export function compileSchedule(
       return false;
     const capacity = availableSlotMinutes(availability.windows[day], slot);
     if (!Number.isFinite(capacity)) return true;
-    const meal = dining.some((item) => item.mealTypes.includes(MEALS[slot]));
+    const meal =
+      availableMealMinutes(availability.windows[day], slot) >=
+        mealMinutes[slot] &&
+      dining.some((item) => item.mealTypes.includes(MEALS[slot]));
     const total =
       visits.reduce((sum, visit) => sum + visit.duration, 0) +
       (meal ? mealMinutes[slot] : 0) +
@@ -187,9 +192,9 @@ export function compileSchedule(
       window &&
       window.earliestMinute < window.latestMinute &&
       SLOTS.every((_, slot) => {
-        const meal = dining.some((item) =>
-          item.mealTypes.includes(MEALS[slot]),
-        );
+        const meal =
+          availableMealMinutes(window, slot) >= mealMinutes[slot] &&
+          dining.some((item) => item.mealTypes.includes(MEALS[slot]));
         return (
           availableSlotMinutes(window, slot) <=
           (meal ? mealMinutes[slot] + 30 : 0)
@@ -574,12 +579,16 @@ export function compileSchedule(
           .toString()
           .padStart(2, "0")}:${(minute % 60).toString().padStart(2, "0")}`;
       tips.push(
-        `Your local-time availability: ${clock(window.earliestMinute)}–${clock(window.latestMinute)}. This draft leaves other periods free and reserves provisional meal and buffer time within each day part. Confirm exact visit times and airport or station transfers before booking.`,
+        `Your local-time availability: ${
+          availableIntervals(window, 0, 1440)
+            .map(([a, b]) => `${clock(a)}–${clock(b)}`)
+            .join("; ") || "no available interval"
+        }. This draft leaves other periods free and reserves provisional meal and buffer time within each day part. Confirm exact visit times and airport or station transfers before booking.`,
       );
-      if (window.earliestMinute >= window.latestMinute) {
+      if (!availableIntervals(window, 0, 1440).length) {
         issues.push(`day_${day + 1}:conflicting_traveler_availability`);
         tips.push(
-          "Your arrival and departure limits conflict. Review them before adding visits or meals.",
+          "Your available hours and blocked periods leave no free interval. Review them before adding visits or meals.",
         );
       }
     }
@@ -722,7 +731,11 @@ export function compileSchedule(
     ) as VisitSlots;
     const slots = SLOTS.map((name, slot) => {
       const stops = visitSlots[name].activities;
-      if (availableSlotMinutes(window, slot) < mealMinutes[slot]) {
+      if (availableMealMinutes(window, slot) < mealMinutes[slot]) {
+        if (window?.unavailable?.length)
+          tips.push(
+            `No ${MEALS[slot]} is scheduled: it does not fit the proposed meal window outside your blocked periods. Arrange a break before adding it.`,
+          );
         if (window)
           issues.push(
             `day_${day + 1}:${MEALS[slot]}:outside_traveler_availability`,

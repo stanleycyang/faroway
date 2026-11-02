@@ -152,3 +152,28 @@ it("uses traveler hours for empty constrained days without inventing availabilit
   });
   expect(arrival[0].summary).toContain("from 23:00 local time");
 });
+
+it("describes both free periods around work instead of claiming all-day availability", () => {
+  const empty = {
+    ...days[0],
+    morning: { activities: [] },
+    afternoon: { activities: [] },
+    evening: { activities: [] },
+  };
+  const result = applyScheduleNarration(
+    [empty],
+    [
+      {
+        date: empty.date,
+        title: "Free day",
+        summary: "A day to explore.",
+        activityIds: [],
+      },
+    ],
+    { mobilityNeeds: "Working 09:00–17:00 daily" },
+  );
+  expect(result[0].summary).toContain(
+    "from 00:00 to 09:00 and from 17:00 to 24:00",
+  );
+  expect(result[0].title).toBe("Limited time today");
+});

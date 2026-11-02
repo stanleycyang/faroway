@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import {
   travelerAvailability,
+  availableIntervals,
   availableSlotMinutes,
   travelerVisitSlots,
 } from "@/lib/search/traveler-availability";
@@ -62,7 +63,10 @@ it.each([
   "Arrive on the first day at 25:00",
   "Arrival time is unknown",
   "Arrive on the first day at 9",
-  "Working 09:00–17:00 each day",
+  "Working 09:00–17:00 on day 2",
+  "Not working 09:00–17:00 each day",
+  "Working 22:00–06:00 each day",
+  "Working 09:00–09:00 each day",
 ])("requires review without guessing: %s", (text) => {
   const result = travelerAvailability({ mobilityNeeds: text }, 3);
   expect(result.windows.every((w) => w === undefined)).toBe(true);
@@ -138,3 +142,38 @@ it.each([
     expect(result.needsReview).toBe(true);
   },
 );
+
+it.each([
+  "Working 09:00–17:00 each day",
+  "Working 9am - 5pm daily",
+  "Working 09:00–17:00 on each trip day",
+])("preserves both free intervals around explicit daily work: %s", (text) => {
+  const result = travelerAvailability({ mobilityNeeds: text }, 3);
+  expect(result.needsReview).toBe(false);
+  for (const window of result.windows) {
+    expect(availableIntervals(window, 480, 1320)).toEqual([
+      [480, 540],
+      [1020, 1320],
+    ]);
+    expect([0, 1, 2].map((slot) => availableSlotMinutes(window, slot))).toEqual(
+      [60, 60, 240],
+    );
+  }
+});
+it("intersects arrival, departure and overlapping work blocks without summing disconnected gaps", () => {
+  const clauses = [
+    "Working 10:00–12:00 daily",
+    "Working 11:00–13:00 daily",
+    "Arrive on the first day at 09:00",
+    "Depart on the final day at 17:00",
+  ];
+  for (const list of [clauses, [...clauses].reverse()]) {
+    const result = travelerAvailability({ mobilityNeeds: list.join("; ") }, 1);
+    expect(availableIntervals(result.windows[0], 0, 1440)).toEqual([
+      [540, 600],
+      [780, 1020],
+    ]);
+    expect(availableSlotMinutes(result.windows[0], 0)).toBe(60);
+    expect(result.needsReview).toBe(false);
+  }
+});

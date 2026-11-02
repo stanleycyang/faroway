@@ -1,5 +1,8 @@
 import type { SearchPlan, SuggestedDay } from "./types";
-import { travelerAvailability } from "./traveler-availability";
+import {
+  travelerAvailability,
+  availableIntervals,
+} from "./traveler-availability";
 export interface DayNarration {
   date: string;
   title: string;
@@ -71,12 +74,17 @@ export function applyScheduleNarration(
       window &&
       !availability?.needsReview &&
       window.earliestMinute < window.latestMinute &&
-      (window.earliestMinute > 0 || window.latestMinute < 1440)
+      (window.earliestMinute > 0 ||
+        window.latestMinute < 1440 ||
+        !!window.unavailable?.length)
     ) {
       const clock = (minute: number) =>
         `${String(Math.floor(minute / 60)).padStart(2, "0")}:${String(minute % 60).padStart(2, "0")}`;
-      const hours =
-        window.earliestMinute === 0
+      const hours = window.unavailable?.length
+        ? availableIntervals(window, 0, 1440)
+            .map(([a, b]) => `from ${clock(a)} to ${clock(b)}`)
+            .join(" and ") || "for no free interval"
+        : window.earliestMinute === 0
           ? `until ${clock(window.latestMinute)}`
           : window.latestMinute === 1440
             ? `from ${clock(window.earliestMinute)}`

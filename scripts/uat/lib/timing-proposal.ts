@@ -17,7 +17,22 @@ export interface ProposedTiming extends TimingEvent {
  * No visits are dropped, reordered, shortened or silently moved across windows.
  * A fit does not establish opening hours, travel times or booking availability.
  */
-export function proposeTiming(events: readonly TimingEvent[]) {
+export function proposeTiming(
+  events: readonly TimingEvent[],
+  unavailable: ReadonlyArray<readonly [number, number]> = [],
+) {
+  if (
+    unavailable.some(
+      ([a, b]) =>
+        !Number.isInteger(a) ||
+        !Number.isInteger(b) ||
+        a < 0 ||
+        b > 1440 ||
+        a >= b,
+    )
+  )
+    throw new Error("Invalid unavailable interval");
+  const blocked = [...unavailable].sort((a, b) => a[0] - b[0]);
   if (!events.length) throw new Error("Nonempty event list required");
   const ids = new Set<string>();
   for (const event of events) {
@@ -42,10 +57,16 @@ export function proposeTiming(events: readonly TimingEvent[]) {
   const proposed: ProposedTiming[] = [];
   let cursor = 0;
   for (const event of events) {
-    const startMinute = Math.max(
+    let startMinute = Math.max(
       event.earliestStart,
       cursor + event.bufferBeforeMinutes,
     );
+    for (const [start, end] of blocked)
+      if (
+        startMinute - event.bufferBeforeMinutes < end &&
+        startMinute + event.durationMinutes > start
+      )
+        startMinute = end + event.bufferBeforeMinutes;
     const endMinute = startMinute + event.durationMinutes;
     if (endMinute > event.latestEnd)
       return {

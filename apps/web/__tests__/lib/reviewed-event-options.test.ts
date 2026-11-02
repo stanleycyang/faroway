@@ -94,3 +94,15 @@ it("does not offer an event that starts before the declared arrival", () => {
     ),
   ).toEqual(days);
 });
+
+it("does not present an event starting during an explicit work block", () => {
+  expect(
+    appendReviewedEventOptions(
+      { ...plan, mobilityNeeds: "Working 18:00–20:00 daily" },
+      days,
+      [generic],
+      options,
+      "2026-11-01",
+    ),
+  ).toEqual(days);
+});

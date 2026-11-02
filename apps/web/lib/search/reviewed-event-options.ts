@@ -1,4 +1,7 @@
-import { travelerAvailability } from "./traveler-availability";
+import {
+  travelerAvailability,
+  availableIntervals,
+} from "./traveler-availability";
 import type { PublishedEvent } from "../../../../scripts/uat/lib/published-events";
 import type { ActivityResult, SearchPlan, SuggestedDay } from "./types";
 export interface ReviewedEventOption {
@@ -58,9 +61,7 @@ export function appendReviewedEventOptions(
           validDate(event.localDate) &&
           day.date === event.localDate &&
           day.date >= asOf &&
-          (!window ||
-            (startMinute >= window.earliestMinute &&
-              startMinute < window.latestMinute)) &&
+          availableIntervals(window, startMinute, startMinute + 1).length > 0 &&
           /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(event.localTime) &&
           event.startDate.startsWith(
             `${event.localDate}T${event.localTime}:`,

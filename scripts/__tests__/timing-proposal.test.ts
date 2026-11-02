@@ -67,3 +67,41 @@ test("rejects empty proposals instead of presenting them as successful days", ()
   expect(() => proposeTiming([])).toThrow();
   expect(() => proposeTiming([event(" ")])).toThrow();
 });
+
+test("keeps events and their reserved buffers outside work blocks", () => {
+  const work: Array<[number, number]> = [
+    [600, 720],
+    [660, 780],
+  ];
+  const result = proposeTiming(
+    [
+      event("morning", { durationMinutes: 60 }),
+      event("later", { bufferBeforeMinutes: 30 }),
+    ],
+    work,
+  );
+  expect(result.fitsPolicy).toBe(true);
+  expect(result.events.map((e) => [e.startMinute, e.endMinute])).toEqual([
+    [540, 600],
+    [810, 870],
+  ]);
+  expect(work).toEqual([
+    [600, 720],
+    [660, 780],
+  ]);
+  expect(
+    proposeTiming(
+      [event("long", { durationMinutes: 240, latestEnd: 900 })],
+      [[600, 780]],
+    ).fitsPolicy,
+  ).toBe(false);
+  for (const invalid of [
+    [-1, 60],
+    [600, 600],
+    [1200, 1500],
+    [600.5, 700],
+  ])
+    expect(() =>
+      proposeTiming([event("test")], [invalid as [number, number]]),
+    ).toThrow();
+});

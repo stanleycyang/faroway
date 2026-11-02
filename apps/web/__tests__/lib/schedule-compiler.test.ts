@@ -35,7 +35,7 @@ function visit(
 }
 
 describe("experimental schedule compiler", () => {
-  it("keeps enrichment visits inside explicit visit-only slots while retaining meals", async () => {
+  it("keeps visits in evening slots and leaves blocked meal windows unscheduled", async () => {
     vi.stubEnv("TAVILY_API_KEY", "");
     const restricted = {
       ...extended,
@@ -64,7 +64,8 @@ describe("experimental schedule compiler", () => {
       expect(day.afternoon.activities).toEqual([]);
       expect(day.evening.activities.length).toBeGreaterThan(0);
       expect(day.morning.meal?.id).toBe("breakfast");
-      expect(day.afternoon.meal?.id).toBe("lunch");
+      expect(day.afternoon.meal).toBeUndefined();
+      expect(day.tips.join(" ")).toContain("No lunch is scheduled");
       expect(day.tips.join(" ")).toContain("Meals are planned separately");
     }
     expect(result.unselectedActivityIds).toContain("morning-only");
@@ -920,3 +921,30 @@ it.each(["2027-01-13", "2027-01-15"])(
     );
   },
 );
+
+it("honors explicit work blocks in compiled visit capacity and disclosed free intervals", () => {
+  const result = compileSchedule(
+    { ...extended, mobilityNeeds: "Working 09:00–17:00 on each trip day" },
+    [
+      visit("long-morning", 120, "morning"),
+      visit("long-afternoon", 120, "afternoon"),
+      visit("after-work", 60, "evening"),
+    ],
+    [],
+  );
+  expect(result.issues).not.toContain(
+    "traveler_availability_interpretation_required",
+  );
+  expect(result.unselectedActivityIds).toContain("long-morning");
+  expect(result.unselectedActivityIds).toContain("long-afternoon");
+  expect(
+    result.days
+      .flatMap((d) => d.evening.activities)
+      .some((a) => a.id === "after-work"),
+  ).toBe(true);
+  for (const day of result.days) {
+    expect(day.tips.join(" ")).toContain("00:00–09:00; 17:00–24:00");
+    expect(day.morning.activities).toEqual([]);
+    expect(day.afternoon.activities).toEqual([]);
+  }
+});

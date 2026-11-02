@@ -41,6 +41,7 @@ export function travelerVisitSlots(
 export interface TravelerDayWindow {
   earliestMinute: number;
   latestMinute: number;
+  unavailable?: Array<[number, number]>;
 }
 const CLOCK =
   "((?:[01]?\\d|2[0-3]):[0-5]\\d|(?:1[0-2]|[1-9])(?::[0-5]\\d)?\\s*(?:am|pm))";
@@ -71,6 +72,7 @@ export function travelerAvailability(
   const set = (day: number, lower: number, upper: number) => {
     const prior = windows[day] ?? { earliestMinute: 0, latestMinute: 1440 };
     windows[day] = {
+      ...prior,
       earliestMinute: Math.max(prior.earliestMinute, lower),
       latestMinute: Math.min(prior.latestMinute, upper),
     };
@@ -96,7 +98,19 @@ export function travelerAvailability(
           `^(?:depart|departure) (?:at )?${CLOCK} on (?:the )?(?:final|last) day$`,
         ).exec(clause);
       const lateStart = new RegExp(`^no starts? before ${CLOCK}$`).exec(clause);
-      if (arrival) set(0, minute(arrival[1]), 1440);
+      const working = new RegExp(
+        `^working ${CLOCK}\\s*[-–—]\\s*${CLOCK} (?:daily|(?:on )?(?:each|every)(?: trip)? day)$`,
+      ).exec(clause);
+      if (working) {
+        const lower = minute(working[1]),
+          upper = minute(working[2]);
+        if (lower >= upper) unresolvedClauses.push(clause);
+        else
+          for (let day = 0; day < days; day++) {
+            set(day, 0, 1440);
+            (windows[day]!.unavailable ??= []).push([lower, upper]);
+          }
+      } else if (arrival) set(0, minute(arrival[1]), 1440);
       else if (departure) set(days - 1, 0, minute(departure[1]));
       else if (lateStart)
         for (let day = 0; day < days; day++)
@@ -124,6 +138,31 @@ const SLOT_WINDOWS = [
   [720, 1080],
   [1080, 1320],
 ] as const;
+/** Intersections preserve gaps: durations cannot be added across a work block. */
+export function availableIntervals(
+  window: TravelerDayWindow | undefined,
+  start: number,
+  end: number,
+): Array<[number, number]> {
+  const lower = Math.max(start, window?.earliestMinute ?? 0);
+  const upper = Math.min(end, window?.latestMinute ?? 1440);
+  let intervals: Array<[number, number]> =
+    lower < upper ? [[lower, upper]] : [];
+  for (const [blockedStart, blockedEnd] of window?.unavailable ?? [])
+    intervals = intervals.flatMap(
+      ([a, b]): Array<[number, number]> =>
+        blockedEnd <= a || blockedStart >= b
+          ? [[a, b]]
+          : [
+              ...(a < blockedStart
+                ? [[a, blockedStart] as [number, number]]
+                : []),
+              ...(blockedEnd < b ? [[blockedEnd, b] as [number, number]] : []),
+            ],
+    );
+  return intervals;
+}
+
 export function availableSlotMinutes(
   window: TravelerDayWindow | undefined,
   slot: number,
@@ -132,7 +171,26 @@ export function availableSlotMinutes(
   const [start, end] = SLOT_WINDOWS[slot];
   return Math.max(
     0,
-    Math.min(end, window.latestMinute) - Math.max(start, window.earliestMinute),
+    ...availableIntervals(window, start, end).map(([a, b]) => b - a),
+  );
+}
+
+/** Work blocks must not move lunch to the end of the broad afternoon visit slot.
+ * These are the same provisional meal windows used by the timing proposal.
+ */
+export function availableMealMinutes(
+  window: TravelerDayWindow | undefined,
+  slot: number,
+) {
+  if (!window?.unavailable?.length) return availableSlotMinutes(window, slot);
+  const [start, end] = [
+    [480, 600],
+    [720, 840],
+    [1080, 1320],
+  ][slot];
+  return Math.max(
+    0,
+    ...availableIntervals(window, start, end).map(([a, b]) => b - a),
   );
 }
 

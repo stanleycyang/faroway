@@ -2,7 +2,10 @@ import {
   resolveReviewedVenue,
   type ReviewedVenueIdentity,
 } from "./venue-identity";
-import { travelerAvailability } from "./traveler-availability";
+import {
+  travelerAvailability,
+  availableIntervals,
+} from "./traveler-availability";
 import type { ActivityResult, SearchPlan } from "./types";
 import type { ScheduleExclusion } from "./schedule-compiler";
 export interface ReviewedVenueHours extends ReviewedVenueIdentity {
@@ -103,11 +106,12 @@ export function reviewedHoursExclusions(
       if (!day) continue;
       for (const [slot, [start, end]] of Object.entries(slots)) {
         // Separate intervals are not added: a visit cannot span a published closure.
-        const fits = day.intervals.some(
-          ([opens, closes]) =>
-            Math.min(end, closes, windows[dayIndex]?.latestMinute ?? 1440) -
-              Math.max(start, opens, windows[dayIndex]?.earliestMinute ?? 0) >=
-            activity.duration,
+        const fits = day.intervals.some(([opens, closes]) =>
+          availableIntervals(
+            windows[dayIndex],
+            Math.max(start, opens),
+            Math.min(end, closes),
+          ).some(([a, b]) => b - a >= activity.duration),
         );
         if (!fits)
           exclusions.push({

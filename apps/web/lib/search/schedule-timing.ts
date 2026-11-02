@@ -108,7 +108,7 @@ export function proposeRestDayTiming(
             impossible.latestEnd,
         },
       }
-    : proposeTiming(events);
+    : proposeTiming(events, availability?.unavailable);
   const clock = (minute: number) =>
     `${Math.floor(minute / 60)
       .toString()

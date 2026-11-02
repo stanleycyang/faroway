@@ -161,3 +161,18 @@ it("intersects venue hours with traveler availability rather than checking each 
     "evening",
   ]);
 });
+
+it("intersects publisher opening intervals with work blocks rather than adding separate gaps", () => {
+  const exclusions = reviewedHoursExclusions(
+    { ...plan, mobilityNeeds: "Working 11:00–16:00 daily" },
+    [activity],
+    ["2027-01-11"],
+    [fact],
+    "2026-11-01",
+  );
+  expect(exclusions.map((e) => e.slot)).toEqual([
+    "morning",
+    "afternoon",
+    "evening",
+  ]);
+});

@@ -80,3 +80,14 @@ it("shows a conflict without a partial timetable or silently dropping visits", (
   expect(result.tips.join(" ")).toContain("rest request remains unresolved");
   expect(JSON.stringify(overloaded)).toBe(before);
 });
+
+it("does not present a midday rest overlapping an explicit work block as feasible", () => {
+  const result = proposeRestDayTiming(day, {
+    earliestMinute: 0,
+    latestMinute: 1440,
+    unavailable: [[780, 900]],
+  });
+  expect(result.fitsPolicy).toBe(false);
+  expect(result.events).toEqual([]);
+  expect(result.conflict?.eventId).toBe("rest:midday");
+});
