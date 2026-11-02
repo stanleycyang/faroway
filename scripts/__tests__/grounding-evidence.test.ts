@@ -1062,3 +1062,101 @@ test("Maps prose cannot supply a second place citation missing from provider met
     ).modelMapCitationCount,
   ).toBe(0);
 });
+
+import {
+  validatePublicVenueBrief,
+  publicVenueDiscoveryPrompt,
+  retrievedVenueSeeds,
+} from "../uat/lib/retrieved-venue-seeds";
+const publicBrief = {
+  destination: "Example City",
+  category: "cafe" as const,
+  maxCandidates: 3,
+};
+test("retrieval-first briefs accept only bounded public search fields", () => {
+  expect(validatePublicVenueBrief(publicBrief)).toEqual(publicBrief);
+  for (const value of [
+    null,
+    { ...publicBrief, dietaryNeeds: ["vegan"] },
+    { ...publicBrief, userId: "private" },
+    { ...publicBrief, maxCandidates: 0 },
+    { ...publicBrief, maxCandidates: 9 },
+    { ...publicBrief, maxCandidates: 1.5 },
+    { ...publicBrief, category: "anything" },
+    { ...publicBrief, area: "" },
+  ])
+    expect(() => validatePublicVenueBrief(value)).toThrow();
+  expect(publicVenueDiscoveryPrompt(publicBrief)).toContain(
+    "no preselected venue names",
+  );
+});
+test("retrieval-first seeds preserve provider branches and never fill unknown planning fields", () => {
+  const second = {
+    ...mapPlace,
+    placeId: "ChIJanotherbranch123",
+    uri: "https://maps.google.com/maps?cid=987654321",
+  };
+  const seeds = retrievedVenueSeeds(
+    publicBrief,
+    mapMetadata([
+      { maps: mapPlace },
+      { maps: second },
+      {
+        maps: {
+          ...mapPlace,
+          uri: "https://www.google.com/maps/reviews/data=review",
+        },
+      },
+    ]),
+  );
+  expect(seeds.candidates).toHaveLength(2);
+  expect(seeds.candidates[0]?.name).toBe("Museum A");
+  expect(seeds.candidates[0]?.id).not.toBe(seeds.candidates[1]?.id);
+  expect(seeds.requestedCountReached).toBe(false);
+  expect(seeds.candidates[0]).toMatchObject({
+    address: null,
+    coordinates: null,
+    mealTypes: [],
+    hours: null,
+    priceStatus: "unknown",
+    locationVerified: false,
+    categoryVerified: false,
+    schedulable: false,
+  });
+  expect(seeds.userSelectedOrLockedVenuesChanged).toBe(false);
+  const limited = retrievedVenueSeeds(
+    { ...publicBrief, maxCandidates: 1 },
+    mapMetadata([{ maps: mapPlace }, { maps: second }]),
+  );
+  expect(limited.candidates).toHaveLength(1);
+  expect(limited.omittedByLimit).toBe(1);
+  expect(
+    retrievedVenueSeeds(
+      publicBrief,
+      mapMetadata([
+        { web: mapPlace },
+        {
+          maps: {
+            ...mapPlace,
+            uri: "https://www.google.com/maps/reviews/data=review",
+          },
+        },
+      ]),
+    ).candidates,
+  ).toEqual([]);
+});
+
+test("retrieved seed IDs remain bounded and conflicting provider records cannot be rescued by another URL", () => {
+  const longId = retrievedVenueSeeds(
+    publicBrief,
+    mapMetadata([{ maps: { ...mapPlace, placeId: "x".repeat(255) } }]),
+  ).candidates[0]!;
+  expect(longId.id.length).toBeLessThanOrEqual(100);
+  expect(longId.providerPlaceId).toHaveLength(255);
+  const conflicting = mapMetadata([
+    { maps: mapPlace },
+    { maps: { ...mapPlace, placeId: "ChIJotherbranch123" } },
+    { maps: { ...mapPlace, uri: "https://maps.google.com/maps?cid=456789" } },
+  ]);
+  expect(retrievedVenueSeeds(publicBrief, conflicting).candidates).toEqual([]);
+});
