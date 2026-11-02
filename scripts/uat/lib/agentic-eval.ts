@@ -50,7 +50,16 @@ export interface AgenticEvaluation {
     feasibility: "unverified";
     /** A mention can be positive or negative; this does not infer a request. */
     restInstructionPresent: boolean;
-    days: Array<{ date: string; activityMinutes: number }>;
+    /** Supplied estimates, excluding meals/transfers. Counts alone are not a
+     * coverage score: one four-hour visit can occupy more time than three stops.
+     */
+    days: Array<{
+      date: string;
+      activities: number;
+      meals: number;
+      activityMinutes: number;
+      longestActivityMinutes: number;
+    }>;
     missingEvidence: string[];
   };
   metrics: {
@@ -256,6 +265,7 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
     let count = 0;
     let meals = 0;
     let dayMinutes = 0;
+    let longestActivityMinutes = 0;
     for (const slotName of slots) {
       const slot = object(day[slotName]);
       const items = array(slot.activities);
@@ -350,7 +360,10 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
           a.duration <= 0
         )
           fail(`invalid_duration:${String(a.id)}`);
-        else minutes += a.duration;
+        else {
+          minutes += a.duration;
+          longestActivityMinutes = Math.max(longestActivityMinutes, a.duration);
+        }
       }
       if (minutes > 240)
         warnings.push(
@@ -424,7 +437,13 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
       fail(`day_${index + 1}:no_meals`);
     if (day.transport && index !== 0)
       fail(`day_${index + 1}:repeated_outbound_transport`);
-    timingDays.push({ date: String(day.date), activityMinutes: dayMinutes });
+    timingDays.push({
+      date: String(day.date),
+      activities: count,
+      meals,
+      activityMinutes: dayMinutes,
+      longestActivityMinutes,
+    });
     activityCount += count;
     mealCount += meals;
   }

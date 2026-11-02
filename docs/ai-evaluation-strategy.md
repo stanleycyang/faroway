@@ -2286,3 +2286,23 @@ Private original traces, predeclared criteria, dispatch/exit receipts, independe
 During the batch, GitHub CI run `41398436898` passed quality checks but failed one existing web test: the 10 ms stalled-checker timeout could expire while compiling, before checker dispatch. The test now controls its clock, asserts dispatch and a non-aborted signal before advancing time, then verifies abort, one dispatch and no unchecked selections. Runtime timeout behavior is unchanged. An initial local edit used the wrong relative path and made no changes; the corrected patch was subsequently validated.
 
 Final local validation: **1,624 web tests across 181 files** and all 11 workspace check tasks pass (nine existing lint warnings). Gateway reconciliation after the completed batch reports **$5.33/$20** cumulative spend. The CI fix still needs confirmation on the next remote run. PR 55 remains draft.
+
+
+## Correct count-only coverage interpretation (2026-11-02 UTC)
+
+Inspection of the retained New York six-candidate trace contradicts the preceding interpretation of an underfilled day: January 12 contains a **240-minute Metropolitan Museum visit**, compared with 255 and 210 activity minutes on the adjacent days. Its one-visit day is not evidence of a scheduling shortage. The original two-visits-per-day criterion and failed receipt remain unchanged, but that criterion is insufficient to conclude that six candidates caused a poor allocation. The preceding blanket-reduction rejection should be read as **do not promote without stronger evidence**, not proof that the shorter plan is worse. No scheduler change was made to optimize against this weak count metric.
+
+The independent agentic evaluator now reports per-day activity count, meal count, supplied activity minutes and longest supplied visit together. These are diagnostics, not a new acceptance score. Invalid durations still fail contracts and do not contribute time. A regression verifies that a single 240-minute visit remains an unverified plan rather than acquiring an invented underfill failure. Existing factual, timing and consent checks remain in place.
+
+Frozen replay of all four original traces:
+
+| Brief and candidate pool | Daily activity minutes | Daily visit counts |
+| --- | --- | --- |
+| Edinburgh, 6 | 225 / 240 / 240 | 2 / 2 / 2 |
+| Edinburgh, 15 | 180 / 240 / 240 | 2 / 2 / 2 |
+| New York, 6 | 255 / 240 / 210 | 3 / 1 / 2 |
+| New York, 15 | 390 / 420 / 375 | 3 / 3 / 3 |
+
+The larger New York pool produces substantially more planned activity time, before meals and transfers; more visits do not alone prove greater usefulness. Both arms still need source-backed feasibility and traveler-appropriate pace assessment. The activity-count default remains fifteen pending a stronger repeated experiment, not because a count-only threshold settled the tradeoff. Original traces and failed predeclared criterion are preserved; new hash-bound results are in `artifacts/uat/activity-count-constrained-20261102/duration-replay.ts` and `.json`.
+
+Validation: **219 script tests / 1,328 assertions** and workspace checks pass with nine existing lint warnings. No paid calls or enabled deployments; cumulative reconciled spend remains **$5.33/$20**. Remote CI for the prior timeout-test fix is still running. PR 55 stays draft.

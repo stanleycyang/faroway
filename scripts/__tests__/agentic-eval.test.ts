@@ -640,6 +640,32 @@ test("flags a named meal experience plus a separate restaurant without asserting
   );
 });
 
+test("reports duration alongside counts without labeling a long single visit underfilled", () => {
+  const trace = fixture();
+  const activity = (trace.steps[2].output as Array<{ duration: number }>)[0];
+  activity.duration = 240;
+  const result = evaluateAgenticTrace(trace);
+  expect(result.contractPass).toBe(true);
+  expect(result.timing.days).toEqual([
+    {
+      date: "2026-12-07",
+      activities: 1,
+      meals: 1,
+      activityMinutes: 240,
+      longestActivityMinutes: 240,
+    },
+  ]);
+  expect(result.timing.feasibility).toBe("unverified");
+  activity.duration = -1;
+  const invalid = evaluateAgenticTrace(trace);
+  expect(invalid.failures).toContain("invalid_duration:walk");
+  expect(invalid.timing.days[0]).toMatchObject({
+    activities: 1,
+    activityMinutes: 0,
+    longestActivityMinutes: 0,
+  });
+});
+
 test("does not certify requested rest timing from day parts or a generic rest tip", () => {
   const trace = fixture();
   const result = evaluateAgenticTrace(trace);
