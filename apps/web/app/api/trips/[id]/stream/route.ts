@@ -1,3 +1,4 @@
+import { mappedDaysToSpec } from "@/lib/json-render/mapped-days";
 import { reconcileGeneration } from "@/lib/trips/reconcile-generation";
 import { filterViatorDisplay } from "@/lib/affiliates/viator-policy";
 /**
@@ -32,7 +33,6 @@ import {
   buildBudgetBlocks,
   type HotelInput,
   type ActivityInput,
-  type ItineraryDayInput,
 } from "@/lib/json-render/build-spec";
 
 export const maxDuration = 300;
@@ -459,9 +459,7 @@ async function pollAndStream(
       if (itineraryJson !== lastItineraryJson) {
         lastItineraryJson = itineraryJson;
         send("itinerary", { days, topHotel: ir.topHotel || null });
-        const itineraryBlocks = buildItineraryBlocks(days, {
-          activityDurationUnit: "minutes",
-        });
+        const itineraryBlocks = buildItineraryBlocks(mappedDaysToSpec(days));
         if (itineraryBlocks.length > 0) {
           send("spec-block", { chapter: "itinerary", blocks: itineraryBlocks });
         }
@@ -530,16 +528,13 @@ async function pollAndStream(
   }
 }
 
-function normalizeItineraryDays(value: unknown): ItineraryDayInput[] | null {
-  if (Array.isArray(value))
-    return filterViatorDisplay(value) as ItineraryDayInput[];
+function normalizeItineraryDays(value: unknown): unknown[] | null {
+  if (Array.isArray(value)) return filterViatorDisplay(value);
   if (typeof value !== "string") return null;
 
   try {
     const parsed = JSON.parse(value) as unknown;
-    return Array.isArray(parsed)
-      ? (filterViatorDisplay(parsed) as ItineraryDayInput[])
-      : null;
+    return Array.isArray(parsed) ? filterViatorDisplay(parsed) : null;
   } catch {
     return null;
   }

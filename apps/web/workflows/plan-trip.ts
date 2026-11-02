@@ -1,3 +1,4 @@
+import { mappedDaysToSpec } from "@/lib/json-render/mapped-days";
 import { readPrice } from "@faroway/constants";
 import { matchesTransportProjection } from "@/lib/search/transport-reference";
 import { applyGenerationUpdate } from "@/lib/trips/apply-generation-update";
@@ -777,98 +778,7 @@ async function buildAndSaveSpec(
     images: d.images,
   }));
 
-  // Map days for build-spec: each slot's meals[0] → meal
-  const dayInputs = result.days.map((day) => ({
-    dayNumber: day.dayNumber,
-    date: day.date,
-    title: day.title,
-    morning: {
-      activities: day.morning.activities.map((a: ItineraryActivity) => ({
-        ...viatorContentMetadata(a),
-        id: a.id,
-        name: a.name,
-        description: a.description,
-        proposedVisitType: a.proposedVisitType,
-        duration: a.duration / 60, // minutes → hours for build-spec
-        price: a.estimatedCost.amount,
-        priceStatus: a.estimatedCost.status,
-        currency: a.estimatedCost.currency,
-        rating: undefined,
-        category: a.category,
-        affiliateUrl: a.bookingInfo?.bookingUrl,
-        location: { name: a.location.name },
-      })),
-      meal: day.morning.meals[0]
-        ? {
-            name: day.morning.meals[0].name,
-            cuisine: day.morning.meals[0].cuisineType.join(", "),
-            priceLevel: day.morning.meals[0].priceLevel,
-            priceStatus: day.morning.meals[0].estimatedCost.status,
-            rating: undefined,
-            description: day.morning.meals[0].description,
-            reservationUrl: day.morning.meals[0].reservationInfo?.url,
-          }
-        : undefined,
-    },
-    afternoon: {
-      activities: day.afternoon.activities.map((a: ItineraryActivity) => ({
-        ...viatorContentMetadata(a),
-        id: a.id,
-        name: a.name,
-        description: a.description,
-        proposedVisitType: a.proposedVisitType,
-        duration: a.duration / 60,
-        price: a.estimatedCost.amount,
-        priceStatus: a.estimatedCost.status,
-        currency: a.estimatedCost.currency,
-        rating: undefined,
-        category: a.category,
-        affiliateUrl: a.bookingInfo?.bookingUrl,
-        location: { name: a.location.name },
-      })),
-      meal: day.afternoon.meals[0]
-        ? {
-            name: day.afternoon.meals[0].name,
-            cuisine: day.afternoon.meals[0].cuisineType.join(", "),
-            priceLevel: day.afternoon.meals[0].priceLevel,
-            priceStatus: day.afternoon.meals[0].estimatedCost.status,
-            rating: undefined,
-            description: day.afternoon.meals[0].description,
-            reservationUrl: day.afternoon.meals[0].reservationInfo?.url,
-          }
-        : undefined,
-    },
-    evening: {
-      activities: day.evening.activities.map((a: ItineraryActivity) => ({
-        ...viatorContentMetadata(a),
-        id: a.id,
-        name: a.name,
-        description: a.description,
-        proposedVisitType: a.proposedVisitType,
-        duration: a.duration / 60,
-        price: a.estimatedCost.amount,
-        priceStatus: a.estimatedCost.status,
-        currency: a.estimatedCost.currency,
-        rating: undefined,
-        category: a.category,
-        affiliateUrl: a.bookingInfo?.bookingUrl,
-        location: { name: a.location.name },
-      })),
-      meal: day.evening.meals[0]
-        ? {
-            name: day.evening.meals[0].name,
-            cuisine: day.evening.meals[0].cuisineType.join(", "),
-            priceLevel: day.evening.meals[0].priceLevel,
-            priceStatus: day.evening.meals[0].estimatedCost.status,
-            rating: undefined,
-            description: day.evening.meals[0].description,
-            reservationUrl: day.evening.meals[0].reservationInfo?.url,
-          }
-        : undefined,
-    },
-    estimatedCost: day.totalEstimatedCost?.amount,
-    currency: day.totalEstimatedCost?.currency,
-  }));
+  const dayInputs = mappedDaysToSpec(result.days);
 
   // Build the json-render spec
   const specInput: BuildSpecInput = {

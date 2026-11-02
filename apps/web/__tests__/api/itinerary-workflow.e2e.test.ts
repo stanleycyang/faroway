@@ -330,7 +330,17 @@ describe("Itinerary workflow API e2e", () => {
             dayNumber: 1,
             title: "Day 1",
             date: "2026-05-10",
-            morning: { activities: [{ name: "Museum", duration: 150 }] },
+            morning: {
+              activities: [{ name: "Museum", duration: 150 }],
+              meals: [
+                {
+                  id: "breakfast",
+                  name: "Cafe",
+                  cuisineType: ["French"],
+                  estimatedCost: { amount: 0, currency: "", status: "unknown" },
+                },
+              ],
+            },
           },
         ],
       },
@@ -362,10 +372,18 @@ describe("Itinerary workflow API e2e", () => {
           chapter: "itinerary",
           blocks: expect.arrayContaining([
             expect.objectContaining({
+              type: "RestaurantCard",
+              props: expect.objectContaining({
+                name: "Cafe",
+                priceStatus: "unknown",
+                time: "Morning",
+              }),
+            }),
+            expect.objectContaining({
               type: "ActivityCard",
               props: expect.objectContaining({
                 name: "Museum",
-                duration: "150 minutes",
+                duration: "2.5 hours",
                 time: "Morning",
               }),
             }),

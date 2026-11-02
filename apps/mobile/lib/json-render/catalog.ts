@@ -124,6 +124,7 @@ export const ItineraryDay = {
 // =============================================================================
 
 export const ActivityCardSchema = z.object({
+  id: z.string().optional(),
   proposedVisitType: z
     .enum(['ordinary_entry', 'exterior_walk', 'guided_tour', 'event', 'unknown'])
     .optional(),
@@ -153,6 +154,7 @@ export const ActivityCard = {
 // =============================================================================
 
 export const RestaurantCardSchema = z.object({
+  id: z.string().optional(),
   name: z.string().describe('Restaurant name'),
   cuisine: z.string().describe('Cuisine type (e.g., "Italian", "Seafood", "Local")'),
   priceLevel: z.number().min(1).max(4).optional().describe('Estimated price level, when known'),

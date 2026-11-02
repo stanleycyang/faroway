@@ -453,6 +453,7 @@ describe("planTripWorkflow", () => {
           {
             dayNumber: 1,
             date: "2026-06-01",
+            title: "Arrival",
             morning: slot,
             afternoon: slot,
             evening: slot,
@@ -549,6 +550,7 @@ describe("planTripWorkflow", () => {
     const days = [hotel, other, undefined].map((assigned, index) => ({
       dayNumber: index + 1,
       date: `2026-06-0${index + 1}`,
+      title: `Day ${index + 1}`,
       hotel: assigned,
       morning: slot,
       afternoon: slot,

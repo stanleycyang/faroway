@@ -103,17 +103,14 @@ it("does not invent clock times or durations when only day parts are supplied", 
 it.each([undefined, 0, -1, NaN, Infinity])(
   "does not invent a duration from %s",
   (duration) => {
-    const blocks = buildItineraryBlocks(
-      [
-        {
-          dayNumber: 1,
-          date: "2027-01-11",
-          title: "Day",
-          morning: { activities: [{ name: "Visit", duration }] },
-        },
-      ],
-      { activityDurationUnit: "minutes" },
-    );
+    const blocks = buildItineraryBlocks([
+      {
+        dayNumber: 1,
+        date: "2027-01-11",
+        title: "Day",
+        morning: { activities: [{ name: "Visit", duration }] },
+      },
+    ]);
     expect(blocks.find((b) => b.type === "ActivityCard")?.props.duration).toBe(
       "Duration not set",
     );

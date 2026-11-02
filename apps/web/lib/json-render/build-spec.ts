@@ -42,7 +42,7 @@ export interface ActivityInput {
   id?: string;
   name: string;
   description?: string;
-  duration?: number; // hours by default; minute-valued partial streams opt in explicitly
+  duration?: number; // hours; saved minutes must pass through mappedDaysToSpec
   price?: number;
   currency?: string;
   rating?: number;
@@ -73,14 +73,17 @@ export interface ItineraryDayInput {
   morning?: {
     activities?: ActivityInput[];
     meal?: RestaurantInput;
+    meals?: RestaurantInput[];
   };
   afternoon?: {
     activities?: ActivityInput[];
     meal?: RestaurantInput;
+    meals?: RestaurantInput[];
   };
   evening?: {
     activities?: ActivityInput[];
     meal?: RestaurantInput;
+    meals?: RestaurantInput[];
   };
   estimatedCost?: number;
   currency?: string;
@@ -251,7 +254,6 @@ export function buildHotelBlocks(
  */
 export function buildItineraryBlocks(
   days: ItineraryDayInput[],
-  options: { activityDurationUnit?: "hours" | "minutes" } = {},
 ): JsonRenderComponent[] {
   days = filterViatorDisplay(days);
   const components: JsonRenderComponent[] = [];
@@ -263,6 +265,8 @@ export function buildItineraryBlocks(
     props: { title: "Your Itinerary" },
   });
 
+  const mealsFor = (slot: ItineraryDayInput["morning"]) =>
+    slot?.meals ?? (slot?.meal ? [slot.meal] : []);
   for (const day of days) {
     components.push({
       type: "ItineraryDay",
@@ -276,10 +280,10 @@ export function buildItineraryBlocks(
     const timelineItems: Array<{ time: string; title: string; type: string }> =
       [];
 
-    if (day.morning?.meal) {
+    for (const meal of mealsFor(day.morning)) {
       timelineItems.push({
         time: "Morning",
-        title: day.morning.meal.name,
+        title: meal.name,
         type: "restaurant",
       });
     }
@@ -291,10 +295,10 @@ export function buildItineraryBlocks(
       });
     });
 
-    if (day.afternoon?.meal) {
+    for (const meal of mealsFor(day.afternoon)) {
       timelineItems.push({
         time: "Afternoon",
-        title: day.afternoon.meal.name,
+        title: meal.name,
         type: "restaurant",
       });
     }
@@ -313,10 +317,10 @@ export function buildItineraryBlocks(
         type: "activity",
       });
     });
-    if (day.evening?.meal) {
+    for (const meal of mealsFor(day.evening)) {
       timelineItems.push({
         time: "Evening",
-        title: day.evening.meal.name,
+        title: meal.name,
         type: "restaurant",
       });
     }
@@ -332,6 +336,7 @@ export function buildItineraryBlocks(
       components.push({
         type: "ActivityCard",
         props: {
+          id: activity.id,
           name: activity.name,
           proposedVisitType: readProposedVisitType(activity.proposedVisitType),
           description:
@@ -341,7 +346,7 @@ export function buildItineraryBlocks(
             typeof activity.duration === "number" &&
             Number.isFinite(activity.duration) &&
             activity.duration > 0
-              ? `${activity.duration} ${options.activityDurationUnit ?? "hours"}`
+              ? `${activity.duration} hours`
               : "Duration not set",
           price: activity.price,
           currency: activity.currency,
@@ -369,6 +374,7 @@ export function buildItineraryBlocks(
       components.push({
         type: "RestaurantCard",
         props: {
+          id: restaurant.id,
           name: restaurant.name,
           cuisine: restaurant.cuisine || "Local",
           priceLevel:
@@ -386,14 +392,17 @@ export function buildItineraryBlocks(
       });
     };
 
-    if (day.morning?.meal) addRestaurantCard(day.morning.meal, "Morning");
+    for (const meal of mealsFor(day.morning))
+      addRestaurantCard(meal, "Morning");
     day.morning?.activities?.forEach((a) => addActivityCard(a, "Morning"));
 
-    if (day.afternoon?.meal) addRestaurantCard(day.afternoon.meal, "Afternoon");
+    for (const meal of mealsFor(day.afternoon))
+      addRestaurantCard(meal, "Afternoon");
     day.afternoon?.activities?.forEach((a) => addActivityCard(a, "Afternoon"));
 
     day.evening?.activities?.forEach((a) => addActivityCard(a, "Evening"));
-    if (day.evening?.meal) addRestaurantCard(day.evening.meal, "Evening");
+    for (const meal of mealsFor(day.evening))
+      addRestaurantCard(meal, "Evening");
   }
 
   return components;

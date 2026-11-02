@@ -1,6 +1,7 @@
 import {
   HotelCardSchema,
   ActivityCardSchema,
+  RestaurantCardSchema,
   BookingButtonSchema,
   PriceTagSchema,
 } from '../../lib/json-render/catalog';
@@ -53,4 +54,19 @@ describe('streamed visit scope', () => {
       false
     );
   });
+});
+
+it('retains supplied identities on streamed activity and meal cards', () => {
+  expect(
+    ActivityCardSchema.parse({
+      id: 'visit-1',
+      name: 'Visit',
+      description: '',
+      duration: '1 hour',
+      time: 'Morning',
+    }).id
+  ).toBe('visit-1');
+  expect(RestaurantCardSchema.parse({ id: 'meal-1', name: 'Cafe', cuisine: 'French' }).id).toBe(
+    'meal-1'
+  );
 });
