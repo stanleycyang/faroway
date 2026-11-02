@@ -69,6 +69,7 @@ export async function discoverDiningReviewOptions(
         gatewayCostUsd: result.providerMetadata?.gateway?.cost ?? null,
         retainedOptions: options.length,
         rejectedOptions: audit.rejected.length,
+        rejectionReasons: audit.rejected,
         shapeValid: audit.shapeValid,
       }),
     );
