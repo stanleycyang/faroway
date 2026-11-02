@@ -102,6 +102,81 @@ test("rejects invalid replay dates before interpreting evidence", async () => {
   ).rejects.toThrow("Valid review date");
 });
 
+test("exception review is bound to the visit date and complete retained context", async () => {
+  const quote = "Open daily 6pm–10pm*, last entry 9pm.";
+  const excerpt = `${quote}\n*Public holidays may have different hours.`;
+  const withContext = {
+    ...receipt(inventory[1], excerpt),
+    hoursQuote: quote,
+  };
+  const exceptionReview = {
+    date: "2027-01-11",
+    excerptSha256: evidenceTextSha256(excerpt),
+    rationale: "Synthetic date-specific review; not a real venue claim.",
+    supportingSources: [
+      { url: "https://example.org/synthetic-calendar", sha256: "b".repeat(64) },
+    ],
+  };
+  const valid = await repairWithReviewedHours(
+    input,
+    [evidence[0], { ...withContext, exceptionReview }],
+    "2026-11-02",
+  );
+  expect(valid.selectedVisits).toBe(1);
+  expect(valid.qualityAccepted).toBe(false);
+  expect(valid.assessments.at(-1)?.sourceUrls).toContain(
+    "https://example.org/synthetic-calendar",
+  );
+  for (const review of [
+    undefined,
+    { ...exceptionReview, date: "2027-01-12" },
+    { ...exceptionReview, excerptSha256: "c".repeat(64) },
+    { ...exceptionReview, rationale: " " },
+    { ...exceptionReview, supportingSources: [] },
+    {
+      ...exceptionReview,
+      supportingSources: [
+        { url: "http://example.org", sha256: "b".repeat(64) },
+      ],
+    },
+    {
+      ...exceptionReview,
+      supportingSources: [{ url: "https://example.org", sha256: "bad" }],
+    },
+  ]) {
+    const result = await repairWithReviewedHours(
+      input,
+      [evidence[0], { ...withContext, exceptionReview: review }],
+      "2026-11-02",
+    );
+    expect(result.selectedVisits).toBe(0);
+    expect(
+      result.assessments.some(
+        (a) => a.reason === "exception_context_requires_review",
+      ),
+    ).toBe(true);
+  }
+  const tooMany = await repairWithReviewedHours(
+    input,
+    [
+      evidence[0],
+      {
+        ...withContext,
+        exceptionReview: {
+          ...exceptionReview,
+          supportingSources: Array.from({ length: 6 }, (_, index) => ({
+            url: `https://example.org/source-${index}`,
+            sha256: "b".repeat(64),
+          })),
+        },
+      },
+    ],
+    "2026-11-02",
+  );
+  expect(tooMany.selectedVisits).toBe(0);
+  expect(tooMany.assessments.at(-1)?.reason).toBe("excessive_evidence_sources");
+});
+
 test("CLI retains inconclusive results and refuses to overwrite an existing receipt", () => {
   const folder = mkdtempSync(join(tmpdir(), "faroway-repair-"));
   try {

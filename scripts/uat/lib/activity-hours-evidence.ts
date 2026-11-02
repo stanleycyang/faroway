@@ -32,6 +32,15 @@ export interface AdjudicatedHoursEvidence {
   appliesFrom: string;
   appliesThrough: string;
   identityAndScopeReview: string;
+  /** Explicit human/source adjudication for ONE visit date, never model output
+   * or blanket permission to ignore exceptions. Retain supporting source bytes.
+   */
+  exceptionReview?: {
+    date: string;
+    excerptSha256: string;
+    rationale: string;
+    supportingSources: Array<{ url: string; sha256: string }>;
+  };
 }
 export const evidenceTextSha256 = (text: string) =>
   createHash("sha256").update(text).digest("hex");
@@ -147,6 +156,7 @@ export function assessOrdinaryHoursEvidence(
   if (!evidence.length || evidence.length > 6)
     return unknown("missing_or_excessive_evidence");
   const windows: NonNullable<ReturnType<typeof parseOrdinaryDailyHours>>[] = [];
+  const sourceUrls = new Set<string>();
   for (const receipt of evidence) {
     try {
       const url = new URL(receipt.sourceUrl);
@@ -179,13 +189,49 @@ export function assessOrdinaryHoursEvidence(
     }
     // A shorter extracted quote must not hide a visible exception in the
     // retained context. Unsupported exceptions need a richer checker.
-    if (
+    const exceptionContext =
       /\b(?:except|holidays?|by appointment|seasonal|special opening|closed for)\b/i.test(
         receipt.excerpt,
-      )
-    )
-      return unknown("exception_context_requires_review");
-    const hours = parseOrdinaryDailyHours(receipt.hoursQuote);
+      ) || /\*/.test(receipt.hoursQuote);
+    if (exceptionContext) {
+      const review = receipt.exceptionReview;
+      try {
+        if (
+          !review ||
+          review.date !== visit.date ||
+          review.excerptSha256 !== receipt.excerptSha256 ||
+          typeof review.rationale !== "string" ||
+          !review.rationale.trim() ||
+          review.rationale.length > 2000 ||
+          !Array.isArray(review.supportingSources) ||
+          !review.supportingSources.length ||
+          review.supportingSources.length > 6 ||
+          review.supportingSources.some((source) => {
+            const url = new URL(source.url);
+            return (
+              url.protocol !== "https:" ||
+              !!url.username ||
+              !!url.password ||
+              !/^[a-f0-9]{64}$/.test(source.sha256)
+            );
+          })
+        )
+          return unknown("exception_context_requires_review");
+      } catch {
+        return unknown("exception_context_requires_review");
+      }
+      for (const source of receipt.exceptionReview!.supportingSources)
+        sourceUrls.add(source.url);
+    }
+    sourceUrls.add(receipt.sourceUrl);
+    if (sourceUrls.size > 6) return unknown("excessive_evidence_sources");
+    // Only a date-bound exception review can resolve this retained footnote.
+    // The receipt's exact quote and full context remain unchanged and hashed.
+    const hours = parseOrdinaryDailyHours(
+      exceptionContext
+        ? receipt.hoursQuote.replace(/(am|pm)\*/gi, "$1")
+        : receipt.hoursQuote,
+    );
     if (!hours) return unknown("unsupported_hours_statement");
     windows.push(hours);
   }
@@ -229,6 +275,6 @@ export function assessOrdinaryHoursEvidence(
     evidenceSha256: evidenceTextSha256(
       JSON.stringify({ visit, evidence, asOf }),
     ),
-    sourceUrls: [...new Set(evidence.map((receipt) => receipt.sourceUrl))],
+    sourceUrls: [...sourceUrls],
   };
 }
