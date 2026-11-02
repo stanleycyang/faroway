@@ -781,3 +781,42 @@ test("identity copy audit requires identity and source references", () => {
       )[0]?.copiedIdentityTextLinked,
     ).toBe(false);
 });
+
+test("identity evidence recovers original spans for whitespace changes without rewriting words", () => {
+  const source = {
+    ...identitySource,
+    excerptSegments: [
+      "🗺️ Welcome to Museum A. Visit us at 12 Main Street.\nBranch details: 12 Main Street  \nExample City",
+    ],
+  };
+  const lead = {
+    ...identityLead,
+    matchedAddress: "12 Main Street Example City",
+    addressQuote: "Branch details: 12 Main Street\nExample City",
+  };
+  const row = auditVenueIdentityExcerpts([lead], [source])[0]!;
+  expect(row.copiedIdentityTextLinked).toBe(true);
+  const binding = row.bindings.find((b) => b.field === "matchedAddress")!;
+  expect(binding.sourceText).toBe(
+    "Branch details: 12 Main Street  \nExample City",
+  );
+  expect(binding.sourceValue).toBe("12 Main Street  \nExample City");
+  expect(
+    source.excerptSegments[binding.segmentIndex]!.slice(
+      binding.startUtf16,
+      binding.endUtf16,
+    ),
+  ).toBe(binding.sourceText);
+  for (const address of [
+    "12 Main St Example City",
+    "12 Main Street, Example City",
+    "15 Main Street Example City",
+    "12 Main Street Example City 12345",
+  ])
+    expect(
+      auditVenueIdentityExcerpts(
+        [{ ...lead, matchedAddress: address }],
+        [source],
+      )[0]?.copiedIdentityTextLinked,
+    ).toBe(false);
+});

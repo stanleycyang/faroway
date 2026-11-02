@@ -7,6 +7,33 @@ const object = (value: unknown): Record<string, unknown> =>
 const text = (value: unknown, max: number): value is string =>
   typeof value === "string" && !!value.trim() && value.length <= max;
 
+/** Match whitespace only, returning offsets into the original UTF-16 string. */
+function sourceSpan(source: string, requested: string) {
+  let normalized = "";
+  const starts: number[] = [];
+  const ends: number[] = [];
+  for (let i = 0; i < source.length; i++) {
+    const char = /\s/u.test(source[i]!) ? " " : source[i]!;
+    if (char === " " && normalized.endsWith(" ")) {
+      ends[ends.length - 1] = i + 1;
+      continue;
+    }
+    normalized += char;
+    starts.push(i);
+    ends.push(i + 1);
+  }
+  const needle = requested.replace(/\s+/gu, " ").trim();
+  const index = needle ? normalized.indexOf(needle) : -1;
+  if (index < 0) return undefined;
+  const startUtf16 = starts[index]!;
+  const endUtf16 = ends[index + needle.length - 1]!;
+  return {
+    startUtf16,
+    endUtf16,
+    sourceText: source.slice(startUtf16, endUtf16),
+  };
+}
+
 /** Copy evidence only. A page can describe multiple branches or be unauthoritative. */
 export function auditVenueIdentityExcerpts(
   rawLeads: readonly unknown[],
@@ -15,6 +42,14 @@ export function auditVenueIdentityExcerpts(
   return rawLeads.map((raw) => {
     const lead = object(raw);
     const issues: string[] = [];
+    const bindings: Array<{
+      field: string;
+      segmentIndex: number;
+      startUtf16: number;
+      endUtf16: number;
+      sourceText: string;
+      sourceValue: string;
+    }> = [];
     if (!text(lead.id, 100) || !text(lead.officialUrl, 2048))
       issues.push("invalid_identity_or_source_reference");
     const sources = rawSources
@@ -38,18 +73,37 @@ export function auditVenueIdentityExcerpts(
       const value = lead[field];
       const quote = lead[quoteField];
       if (!text(value, max)) issues.push(`${field}_unknown`);
-      if (
-        !text(quote, 1000) ||
-        !validSegments ||
-        !segments.some((segment) => segment.includes(quote))
-      )
-        issues.push(`${quoteField}_not_in_source_segment`);
-      if (!text(value, max) || !text(quote, 1000) || !quote.includes(value))
-        issues.push(`${field}_not_in_quote`);
+      const match =
+        text(quote, 1000) && validSegments
+          ? segments
+              .map((segment, segmentIndex) => ({
+                segmentIndex,
+                span: sourceSpan(segment, quote),
+              }))
+              .find((row) => row.span)
+          : undefined;
+      if (!match?.span) issues.push(`${quoteField}_not_in_source_segment`);
+      const valueSpan =
+        text(value, max) && text(quote, 1000)
+          ? sourceSpan(quote, value)
+          : undefined;
+      if (!valueSpan) issues.push(`${field}_not_in_quote`);
+      if (match?.span && valueSpan && text(value, max)) {
+        const originalValue = sourceSpan(match.span.sourceText, value);
+        if (originalValue)
+          bindings.push({
+            field,
+            segmentIndex: match.segmentIndex,
+            ...match.span,
+            sourceValue: originalValue.sourceText,
+          });
+        else issues.push(`${field}_not_in_original_quote`);
+      }
     }
     return {
       id: typeof lead.id === "string" ? lead.id : null,
       copiedIdentityTextLinked: issues.length === 0,
+      bindings,
       sourceContentSha256:
         source && validSegments
           ? createHash("sha256")
