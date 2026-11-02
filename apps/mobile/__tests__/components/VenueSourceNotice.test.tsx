@@ -15,8 +15,19 @@ jest.mock('expo-web-browser', () => ({
 import * as WebBrowser from 'expo-web-browser';
 import { Alert } from 'react-native';
 import { VenueSourceNotice } from '../../components/VenueSourceNotice';
+import { DiningReviewOptions } from '../../components/DiningReviewOptions';
 const { renderToStaticMarkup } = require('react-dom/server');
 const source = { url: 'https://restaurant.example/', retrievedOn: '2026-11-02' };
+it('labels review options as unscheduled and preserves the published address', () => {
+  const html = renderToStaticMarkup(
+    <DiningReviewOptions
+      options={[{ id: 'review', name: 'Cafe', address: '12 Main Street', source }]}
+    />
+  );
+  expect(html).toContain('These options are not scheduled');
+  expect(html).toContain('12 Main Street');
+  expect(html).not.toContain('Book');
+});
 it('shows attribution and uncertainty without a booking claim', () => {
   const html = renderToStaticMarkup(<VenueSourceNotice source={source} />);
   expect(html).toContain('View source');

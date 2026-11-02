@@ -4,6 +4,40 @@ export interface VenueSource {
   retrievedOn: string;
 }
 
+export interface DiningReviewOption {
+  id: string;
+  name: string;
+  address: string;
+  source: VenueSource;
+}
+
+/** Small public review collection, never converted into scheduled meals. */
+export function readDiningReviewOptions(value: unknown): DiningReviewOption[] {
+  if (!Array.isArray(value)) return [];
+  const seen = new Set<string>();
+  return value.slice(0, 6).flatMap((raw) => {
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) return [];
+    const row = raw as Record<string, unknown>;
+    const source = readVenueSource(row.source);
+    if (
+      !source ||
+      typeof row.id !== "string" ||
+      !row.id.trim() ||
+      row.id.length > 100 ||
+      seen.has(row.id) ||
+      typeof row.name !== "string" ||
+      !row.name.trim() ||
+      row.name.length > 200 ||
+      typeof row.address !== "string" ||
+      !row.address.trim() ||
+      row.address.length > 500
+    )
+      return [];
+    seen.add(row.id);
+    return [{ id: row.id, name: row.name, address: row.address, source }];
+  });
+}
+
 export function readVenueSource(value: unknown): VenueSource | undefined {
   if (!value || typeof value !== "object" || Array.isArray(value)) return;
   const row = value as Record<string, unknown>;

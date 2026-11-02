@@ -1,4 +1,20 @@
 import { transformApiHotel, transformItineraryDays } from '../../lib/itineraryNormalization';
+test('unscheduled options persist through cache normalization without becoming activities', () => {
+  const option = {
+    id: 'review-1',
+    name: 'Cafe',
+    address: '12 Main Street',
+    source: { url: 'https://restaurant.example/', retrievedOn: '2026-11-02' },
+  };
+  const first = transformItineraryDays([
+    { dayNumber: 1, diningOptions: [option, option], morning: { activities: [], meals: [] } },
+  ]);
+  expect(first[0].diningOptions).toEqual([option]);
+  expect(first[0].activities).toEqual([]);
+  const cached = transformItineraryDays(JSON.parse(JSON.stringify(first)));
+  expect(cached[0].diningOptions).toEqual([option]);
+  expect(cached[0].activities).toEqual([]);
+});
 test('retrieved venue sources survive both API meal and cached activity normalization', () => {
   const source = { url: 'https://restaurant.example/visit', retrievedOn: '2026-11-02' };
   const days = transformItineraryDays([

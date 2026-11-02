@@ -2,6 +2,7 @@ import { isTimingNote } from '@faroway/types';
 import { transformItineraryDays } from '../../lib/itineraryNormalization';
 import { ProposedTiming } from '../../components/ProposedTiming';
 import { VenueSourceNotice } from '../../components/VenueSourceNotice';
+import { DiningReviewOptions } from '../../components/DiningReviewOptions';
 import { flightQuoteIsCurrent } from '@faroway/constants';
 import { formatKnownPrice, summarizeTripCosts } from '../../lib/tripCost';
 import React, {
@@ -976,6 +977,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                     <ActivityCard key={activity.id} activity={activity} />
                   ))}
                 </View>
+                <DiningReviewOptions options={timingDay?.diningOptions} />
                 {visibleTips.length > 0 && (
                   <View style={{ paddingVertical: 20, backgroundColor: '#EFF5F3', marginTop: 8 }}>
                     <Text

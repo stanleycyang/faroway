@@ -863,6 +863,14 @@ describe("planTripWorkflow", () => {
   });
 
   it("preserves day hotel and transport through the real bridge and saved payload", async () => {
+    const review = {
+      ...dining,
+      id: "source-review",
+      planningIdea: true,
+      location: { ...dining.location, address: "12 Example Street" },
+      source: { url: "https://restaurant.example/", retrievedOn: "2026-11-02" },
+    };
+    mocks.runDiningAgent.mockResolvedValue([dining, review]);
     const { mapSearchResultsToItinerary } = await vi.importActual<
       typeof import("@/lib/search/bridge")
     >("@/lib/search/bridge");
@@ -914,6 +922,14 @@ describe("planTripWorkflow", () => {
         p_payload: expect.objectContaining({
           days: [
             expect.objectContaining({
+              diningOptions: [
+                {
+                  id: review.id,
+                  name: review.name,
+                  address: review.location.address,
+                  source: review.source,
+                },
+              ],
               hotel,
               transport: expect.objectContaining({
                 type: transport.type,

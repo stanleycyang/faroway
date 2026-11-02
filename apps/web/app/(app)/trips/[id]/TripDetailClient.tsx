@@ -985,6 +985,7 @@ export function TripDetailClient({
                         afternoon={day.afternoon}
                         evening={day.evening}
                         tips={day.tips}
+                        diningOptions={day.diningOptions}
                         timingProposal={day.timingProposal}
                         defaultExpanded={true}
                         transport={day.transport}

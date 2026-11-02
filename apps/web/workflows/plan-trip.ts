@@ -958,6 +958,7 @@ async function bridgeToItineraries(
     hotel: day.hotel,
     totalEstimatedCost: day.totalEstimatedCost,
     tips: day.tips || [],
+    diningOptions: day.diningOptions,
   }));
 
   const itineraryPayload = {

@@ -8,6 +8,7 @@ import {
 } from "@faroway/types";
 import { SourceNote } from "./SourceNote";
 import { ProposedTiming } from "./ProposedTiming";
+import { DiningReviewOptions } from "./DiningReviewOptions";
 import { parseTripDate } from "@/lib/trips/date-duration";
 import { formatEstimate, knownEstimate } from "@/lib/trips/budget";
 
@@ -49,6 +50,7 @@ interface HotelInfo {
 }
 
 interface ItineraryDayProps {
+  diningOptions?: import("@faroway/types").DiningReviewOption[];
   timingProposal?: DayTimingProposal;
   dayNumber: number;
   date: string;
@@ -68,6 +70,7 @@ interface ItineraryDayProps {
 }
 
 export function ItineraryDay({
+  diningOptions,
   dayNumber,
   timingProposal,
   date,
@@ -357,6 +360,7 @@ export function ItineraryDay({
             )}
           </div>
 
+          <DiningReviewOptions options={diningOptions} />
           {/* Daily Tips */}
           {generalTips.length > 0 && (
             <div className="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-200">

@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import type { DiningResult, SuggestedDay } from "@faroway/types";
 import { mapSearchResultsToItinerary } from "@/lib/search/bridge";
 import { RestaurantCard } from "@/components/trips/ActivityCard";
+import { DiningReviewOptions } from "@/components/trips/DiningReviewOptions";
 
 // Reviewed branch evidence supports identity/address, not ratings, coordinates,
 // a party price, January availability or stroller access. Never assign placeholders.
@@ -49,6 +50,48 @@ function mapped(meal = candidate) {
   );
 }
 describe("partially supported dining candidates", () => {
+  it("keeps retrieved review options outside every scheduled meal block", () => {
+    const source = {
+      url: "https://restaurant.example/visit",
+      retrievedOn: "2026-11-02",
+    };
+    const review = { ...candidate, planningIdea: true as const, source };
+    const day: SuggestedDay = {
+      date: "2027-01-11",
+      dayNumber: 1,
+      title: "Day",
+      summary: "",
+      tips: [],
+      morning: { activities: [] },
+      afternoon: { activities: [] },
+      evening: { activities: [] },
+    };
+    const result = mapSearchResultsToItinerary(
+      {
+        searchId: "review",
+        hotels: [],
+        activities: [],
+        dining: [review, review],
+        transport: [],
+        itinerary: [day],
+      },
+      null,
+    );
+    const saved = JSON.parse(JSON.stringify(result.days[0]));
+    expect(saved.diningOptions).toHaveLength(1);
+    expect(saved.morning.meals).toEqual([]);
+    expect(saved.afternoon.meals).toEqual([]);
+    expect(saved.evening.meals).toEqual([]);
+    const html = renderToStaticMarkup(
+      createElement(DiningReviewOptions, { options: saved.diningOptions }),
+    );
+    expect(html).toContain("These options are not scheduled");
+    expect(html).toContain(candidate.location.address);
+    expect(html).toContain(source.url);
+    expect(html).not.toContain("<button");
+    const scheduled = mapped(review).days[0];
+    expect(scheduled.diningOptions).toBeUndefined();
+  });
   it("preserves source attribution through saved JSON and renders it separately from booking", () => {
     const source = {
       url: "https://restaurant.example/visit",

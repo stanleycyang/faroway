@@ -1,4 +1,9 @@
-import { readDayTiming, dayTimingTips, readVenueSource } from '@faroway/types';
+import {
+  readDayTiming,
+  dayTimingTips,
+  readVenueSource,
+  readDiningReviewOptions,
+} from '@faroway/types';
 import { durationLabel } from './durationLabel';
 import type { Activity, Hotel, TripDay } from '../stores/tripStore';
 import { readTripCost, formatTripCost } from './tripCost';
@@ -254,6 +259,7 @@ export function transformItineraryDays(apiDays: any[]): TripDay[] {
         theme: displayText(day.title) || displayText(day.theme) || 'Your day',
         timingProposal,
         tips: dayTimingTips(timingDay),
+        diningOptions: readDiningReviewOptions(day.diningOptions),
         activities,
         transport,
       };

@@ -87,6 +87,10 @@ async function main() {
   const projectRef = process.env.FAROWAY_STAGING_SUPABASE_PROJECT_REF;
   assertStagingTarget({ supabaseUrl, projectRef });
   const key = process.env.FAROWAY_STAGING_AI_GATEWAY_KEY?.trim();
+  if (process.env.FAROWAY_DINING_SOURCE_EXPERIMENT)
+    throw Error(
+      "Source-search fees are outside this comparison's token-only accounting; use a dedicated source-review acceptance run",
+    );
   if (!key) {
     console.error("Refusing to run: FAROWAY_STAGING_AI_GATEWAY_KEY is not set");
     process.exit(2);

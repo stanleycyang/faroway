@@ -1,4 +1,4 @@
-import type { DayTimingProposal, VenueSource } from '@faroway/types';
+import type { DayTimingProposal, VenueSource, DiningReviewOption } from '@faroway/types';
 import { create } from 'zustand';
 import { offlineStorage } from '../lib/offline';
 import { logger } from '../lib/logger';
@@ -52,6 +52,7 @@ export interface Hotel {
 }
 
 export interface TripDay {
+  diningOptions?: DiningReviewOption[];
   timingProposal?: DayTimingProposal;
   date: string;
   dayNumber: number;

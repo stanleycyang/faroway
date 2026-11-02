@@ -1,4 +1,9 @@
-import { readDayTiming, dayTimingTips, readVenueSource } from "@faroway/types";
+import {
+  readDayTiming,
+  dayTimingTips,
+  readVenueSource,
+  readDiningReviewOptions,
+} from "@faroway/types";
 import { suppliedCoordinates } from "../location-coordinates";
 import { readPrice } from "@faroway/constants";
 import { viatorContentMetadata } from "@/lib/affiliates/viator-policy";
@@ -211,6 +216,24 @@ export function mapSearchResultsToItinerary(
   topHotel: HotelResult | null,
 ): MappedItinerary {
   const days = (results.itinerary || []).map(mapDay);
+  const scheduledIds = new Set(
+    days.flatMap((day) =>
+      [day.morning, day.afternoon, day.evening].flatMap((slot) =>
+        slot.meals.map((meal) => meal.id),
+      ),
+    ),
+  );
+  const reviewOptions = readDiningReviewOptions(
+    (results.dining ?? [])
+      .filter((meal) => meal.planningIdea && !scheduledIds.has(meal.id))
+      .map((meal) => ({
+        id: meal.id,
+        name: meal.name,
+        address: meal.location?.address,
+        source: meal.source,
+      })),
+  );
+  if (days[0] && reviewOptions.length) days[0].diningOptions = reviewOptions;
 
   // The aggregator's daily estimate can include transport, and provider prices
   // can use different currencies/quantities. Do not invent a complete total by

@@ -18,6 +18,7 @@ import { reservationUrlFromEvidence } from "@/lib/search/reservation-url";
 import { screenGeneratedDiningCopy } from "../generated-dining-copy";
 import { reconcileGeneratedDiningAddresses } from "../reviewed-dining-addresses";
 import { compiledScheduleExperimentEnabled } from "../schedule-experiment-gate";
+import { discoverDiningReviewOptions } from "../dining-source-review";
 import reviewedAddresses from "../../../../../scripts/fixtures/reviewed-dining-addresses.json";
 import { screenReportedDiningClosures } from "../reviewed-dining-closures";
 import reviewedClosures from "../../../../../scripts/fixtures/reviewed-dining-closures.json";
@@ -265,7 +266,13 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
       }
     }
 
-    return restaurants;
+    // Review options stay separate from scheduled candidates and provider enrichment.
+    return [
+      ...restaurants,
+      ...(options.coverageTargets?.length
+        ? []
+        : await discoverDiningReviewOptions(plan)),
+    ];
   } catch (error) {
     const timedOut = isOperationTimeoutError(error);
     const detail = error instanceof Error ? error.message : String(error);

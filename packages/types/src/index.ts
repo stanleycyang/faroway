@@ -1,7 +1,7 @@
 import type { DayTimingProposal } from "./day-timing";
-import type { VenueSource } from "./venue-source";
-export { readVenueSource } from "./venue-source";
-export type { VenueSource } from "./venue-source";
+import type { VenueSource, DiningReviewOption } from "./venue-source";
+export { readVenueSource, readDiningReviewOptions } from "./venue-source";
+export type { VenueSource, DiningReviewOption } from "./venue-source";
 /**
  * @faroway/types
  * Shared types and validation helpers for Faroway web and mobile apps.
@@ -295,6 +295,7 @@ export interface TripDayTransport {
 }
 
 export interface TripDay {
+  diningOptions?: DiningReviewOption[];
   timingProposal?: DayTimingProposal;
   dayNumber: number;
   date: string;
