@@ -450,3 +450,91 @@ it("withholds a closed venue and a renamed walk at its address with distinct exp
     vi.useRealTimers();
   }
 });
+
+it("keeps the reviewed Skydeck and withholds its unresolved generated lookalike in the saved full inventory", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-02T12:00:00Z"));
+  try {
+    const { default: observed } =
+      await import("../../../../scripts/fixtures/agentic-melbourne-supply-ranking.json");
+    const input = observed.plan as unknown as SearchPlan;
+    const inventory = (
+      observed.activities as unknown as ActivityResult[]
+    ).filter((a) => a.id !== "reviewed-melbourne-skydeck");
+    const result = await runStagingCompiledSchedule(
+      input,
+      [],
+      inventory,
+      observed.dining as unknown as DiningResult[],
+    );
+    const selected = result.days.flatMap((day) => [
+      ...day.morning.activities,
+      ...day.afternoon.activities,
+      ...day.evening.activities,
+    ]);
+    expect(selected.map((a) => a.name)).toContain("Melbourne Skydeck");
+    expect(selected.map((a) => a.name)).not.toContain(
+      "Eureka Skydeck 88 Cultural View",
+    );
+    expect(result.days.every((day) => day.evening.activities.length > 0)).toBe(
+      true,
+    );
+    expect(result.days[0].tips.join(" ")).toContain(
+      "Venue identity review: Eureka Skydeck 88 Cultural View",
+    );
+    expect(result.days[0].tips.join(" ")).toContain(
+      "https://whatson.melbourne.vic.gov.au/things-to-do/melbourne-skydeck",
+    );
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it("does not fill a second day with an unresolved Skydeck lookalike", async () => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-11-02T12:00:00Z"));
+  try {
+    const { default: observed } =
+      await import("../../../../scripts/fixtures/agentic-melbourne-supply-ranking.json");
+    const input: SearchPlan = {
+      ...(observed.plan as unknown as SearchPlan),
+      dates: { start: "2027-01-11", end: "2027-01-12", nights: 1 },
+    };
+    const inventory = (
+      observed.activities as unknown as ActivityResult[]
+    ).filter((a) => a.name === "Eureka Skydeck 88 Cultural View");
+    const { addReviewedActivitySupply } =
+      await import("@/lib/search/reviewed-activity-supply");
+    const { default: sourceRecords } =
+      await import("../../../../scripts/fixtures/reviewed-activity-supply.json");
+    const supply = addReviewedActivitySupply(
+      input,
+      inventory,
+      ["2027-01-11", "2027-01-12"],
+      sourceRecords,
+    );
+    const baseline = compileSchedule(
+      input,
+      supply.activities,
+      [],
+      supply.exclusions,
+      {
+        reviewedActivityIds: supply.admitted.map((record) => record.id),
+      },
+    );
+    expect(baseline.days.flatMap((day) => day.evening.activities)).toHaveLength(
+      2,
+    );
+    const result = await runStagingCompiledSchedule(input, [], inventory, []);
+    expect(
+      result.days.flatMap((day) =>
+        day.evening.activities.map((activity) => activity.name),
+      ),
+    ).toEqual(["Melbourne Skydeck"]);
+    expect(
+      result.days.filter((day) => day.evening.activities.length === 0),
+    ).toHaveLength(1);
+  } finally {
+    vi.useRealTimers();
+  }
+});

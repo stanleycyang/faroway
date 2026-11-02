@@ -149,6 +149,8 @@ async function main() {
     "scripts/fixtures/reviewed-activity-supply.json",
     "scripts/uat/lib/reviewed-supply-eval.ts",
     "apps/web/lib/search/reviewed-venue-hours.ts",
+    "apps/web/lib/search/reviewed-venue-identities.ts",
+    "scripts/fixtures/reviewed-venue-identities.json",
     "apps/web/lib/search/venue-identity.ts",
     "scripts/fixtures/reviewed-venue-hours.json",
     "apps/web/lib/search/reviewed-dining-options.ts",

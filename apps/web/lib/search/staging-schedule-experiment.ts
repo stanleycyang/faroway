@@ -6,6 +6,11 @@ import reviewedSupply from "../../../../scripts/fixtures/reviewed-activity-suppl
 import { reviewedHoursExclusions } from "./reviewed-venue-hours";
 import reviewedHours from "../../../../scripts/fixtures/reviewed-venue-hours.json";
 import {
+  reviewedIdentityExclusions,
+  type ReviewedIdentityEvidence,
+} from "./reviewed-venue-identities";
+import reviewedIdentities from "../../../../scripts/fixtures/reviewed-venue-identities.json";
+import {
   appendReviewedEventOptions,
   type ReviewedEventOption,
 } from "./reviewed-event-options";
@@ -99,6 +104,16 @@ export async function runStagingCompiledSchedule(
     ),
     reviewedHours as import("./reviewed-venue-hours").ReviewedVenueHours[],
   );
+  hourExclusions.push(
+    ...reviewedIdentityExclusions(
+      plan,
+      activities,
+      Array.from({ length: count }, (_, i) =>
+        new Date(start + i * 86400000).toISOString().slice(0, 10),
+      ),
+      reviewedIdentities as ReviewedIdentityEvidence[],
+    ),
+  );
   exclusions.push(...hourExclusions);
   const addressReview = reconcileGeneratedDiningAddresses(
     plan,
@@ -141,7 +156,7 @@ export async function runStagingCompiledSchedule(
       const record = records[0];
       if (record.reason === "venue_identity_requires_review") {
         day.tips.push(
-          `Venue identity review: ${activity.name} was left unscheduled because its name does not match the reviewed venue at this address. Confirm the exact place and visit type; this does not establish that it is closed. Source reviewed ${record.observedAt}: ${record.sourceUrl}`,
+          `Venue identity review: ${activity.name} was left unscheduled because its exact venue and visit type could not be resolved against reviewed information for this address. Confirm the exact place and visit type; this does not establish that it is closed. Source reviewed ${record.observedAt}: ${record.sourceUrl}`,
         );
         continue;
       }
