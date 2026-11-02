@@ -2358,3 +2358,12 @@ A source-reviewed component replay builds the existing curated general-admission
 No paid AI calls or enabled deployments; cumulative spend remains **$5.33/$20**. CI on the preceding `4eef098` revision passed. Exact-time support for partial windows, wider source coverage and a useful end-to-end repaired itinerary remain outstanding.
 
 Final validation: **226 script tests / 1,508 assertions** and all workspace checks pass (nine existing lint warnings). PR 55 remains draft.
+
+
+## Dining source attribution in streamed meal cards (2026-11-02 UTC)
+
+Saved meals retain validated `source` metadata, but the shared preview adapter and mobile JSON-render schema dropped it. The adapter and builder now carry validated dining source URL/retrieval date, and the streamed restaurant card reuses the existing `VenueSourceNotice`. Travelers can inspect the source with its retrieval date and availability caveat while the preview is visible. No source is invented for unsourced meals; invalid source metadata does not produce a clickable notice. Activity-source notes and unscheduled dining-review collections are separate paths and are not expanded by this change.
+
+Coverage verifies source metadata through the actual SSE route, shared partial/final projection and mobile schema/component render. A component interaction check confirms the external source opens only after a tap; malformed retrieval dates render no link. Booking actions retain their existing saved-revision checks. The reused source component supplies its existing 44-point link target and opening-error handling; no new effect, asynchronous render work or automatic external navigation is introduced.
+
+Validation: the full root test command passes, including **1,627 web tests**, **709 mobile tests**, shared-package suites and **226 script tests / 1,508 assertions**. Workspace checks pass with nine existing lint warnings. This verifies propagation and component behavior, not physical Android rendering or source truth. No additional paid calls or enabled deployments; spend remains **$5.33/$20**. PR 55 remains draft.

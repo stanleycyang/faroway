@@ -154,6 +154,7 @@ export const ActivityCard = {
 // =============================================================================
 
 export const RestaurantCardSchema = z.object({
+  source: z.object({ url: z.string().url(), retrievedOn: z.string() }).optional(),
   id: z.string().optional(),
   name: z.string().describe('Restaurant name'),
   cuisine: z.string().describe('Cuisine type (e.g., "Italian", "Seafood", "Local")'),

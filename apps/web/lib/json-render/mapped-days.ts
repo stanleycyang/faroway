@@ -1,4 +1,8 @@
-import { dayTimingTips, readProposedVisitType } from "@faroway/types";
+import {
+  dayTimingTips,
+  readProposedVisitType,
+  readVenueSource,
+} from "@faroway/types";
 import { viatorContentMetadata } from "@/lib/affiliates/viator-policy";
 import type {
   ActivityInput,
@@ -65,6 +69,7 @@ export function mappedDaysToSpec(
         id: text(m.id),
         name,
         cuisine: strings(m.cuisineType).join(", "),
+        source: readVenueSource(m.source),
         description: text(m.description),
         priceLevel: number(m.priceLevel),
         priceStatus: priceStatus(record(m.estimatedCost).status),

@@ -1,5 +1,10 @@
 import { formatPrice, readPrice } from "@faroway/constants";
-import { readProposedVisitType, type ActivityResult } from "@faroway/types";
+import {
+  readProposedVisitType,
+  readVenueSource,
+  type ActivityResult,
+  type VenueSource,
+} from "@faroway/types";
 import {
   containsViatorContent,
   filterViatorDisplay,
@@ -54,6 +59,7 @@ export interface ActivityInput {
 }
 
 export interface RestaurantInput {
+  source?: VenueSource;
   priceStatus?: "unknown" | "estimate";
   id?: string;
   name: string;
@@ -384,6 +390,7 @@ export function buildItineraryBlocks(
         type: "RestaurantCard",
         props: {
           id: restaurant.id,
+          source: readVenueSource(restaurant.source),
           name: restaurant.name,
           cuisine: restaurant.cuisine || "Local",
           priceLevel:

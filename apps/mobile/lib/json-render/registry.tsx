@@ -1,4 +1,5 @@
 import { proposedVisitNote } from '@faroway/types';
+import { VenueSourceNotice } from '../../components/VenueSourceNotice';
 import { durationLabel } from '../durationLabel';
 import React from 'react';
 import { formatTripDate } from '../tripDate';
@@ -329,6 +330,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
 type RestaurantCardProps = z.infer<typeof RestaurantCardSchema>;
 
 export const RestaurantCard: React.FC<RestaurantCardProps> = ({
+  source,
   name,
   cuisine,
   priceLevel,
@@ -363,6 +365,7 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
           </View>
 
           {description && <RNText style={styles.restaurantCardDescription}>{description}</RNText>}
+          <VenueSourceNotice source={source} />
 
           {typeof rating === 'number' && rating > 0 && (
             <View style={styles.restaurantCardRating}>

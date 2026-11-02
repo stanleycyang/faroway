@@ -12,6 +12,7 @@ const visit = {
 const meal = {
   id: "meal",
   name: "Cafe",
+  source: { url: "https://example.org/cafe", retrievedOn: "2026-11-02" },
   cuisineType: ["French"],
   priceLevel: 3,
   estimatedCost: { amount: 0, currency: "", status: "unknown" },
@@ -70,6 +71,9 @@ it("projects all saved meals and canonical activity fields without changing the 
     "second",
   ]);
   const blocks = buildItineraryBlocks(result);
+  expect(blocks.find((b) => b.type === "RestaurantCard")?.props.source).toEqual(
+    meal.source,
+  );
   expect(
     blocks.filter((b) => b.type === "RestaurantCard").map((b) => b.props.name),
   ).toEqual(["Cafe", "Second cafe", "Dinner"]);

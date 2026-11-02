@@ -336,6 +336,10 @@ describe("Itinerary workflow API e2e", () => {
               meals: [
                 {
                   id: "breakfast",
+                  source: {
+                    url: "https://example.org/cafe",
+                    retrievedOn: "2026-11-02",
+                  },
                   name: "Cafe",
                   cuisineType: ["French"],
                   estimatedCost: { amount: 0, currency: "", status: "unknown" },
@@ -385,6 +389,10 @@ describe("Itinerary workflow API e2e", () => {
               props: expect.objectContaining({
                 name: "Cafe",
                 priceStatus: "unknown",
+                source: {
+                  url: "https://example.org/cafe",
+                  retrievedOn: "2026-11-02",
+                },
                 time: "Morning",
               }),
             }),
