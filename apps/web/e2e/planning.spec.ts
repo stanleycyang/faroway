@@ -545,36 +545,49 @@ test("completed dossier exposes its primary action immediately on a short phone"
   expect(chapterBox!.y + chapterBox!.height).toBeLessThanOrEqual(actionBox!.y);
 });
 
-test("a generated city-and-country label displays its catalog cover", async ({
-  page,
-}) => {
-  const imagePath =
-    "/storage/v1/object/public/images/destinations/lisbon-photo-1585208798174-6cedd86e019a.jpg";
-  // Test the real resolver + header boundary without a storage/network dependency.
-  await page.route(`**${imagePath}`, (route) =>
-    route.fulfill({
-      contentType: "image/svg+xml",
-      body: '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600"><rect width="1200" height="600" fill="#4b7481"/></svg>',
-    }),
-  );
-  await page.goto(`${fixtureUrl}?destination=Lisbon%2C%20Portugal`);
-  await expect(
-    page.getByRole("heading", { name: "Lisbon, Portugal", exact: true }),
-  ).toBeVisible();
-  const cover = page.locator(`img[src="${imagePath}"]`);
-  await expect(cover).toBeVisible();
-  await expect
-    .poll(() =>
-      cover.evaluate(
-        (img: HTMLImageElement) => img.complete && img.naturalWidth > 0,
-      ),
-    )
-    .toBe(true);
-  await expect(page.locator("body")).toHaveJSProperty(
-    "scrollWidth",
-    page.viewportSize()!.width,
-  );
-});
+for (const [destination, imagePath] of [
+  [
+    "Lisbon, Portugal",
+    "/storage/v1/object/public/images/destinations/lisbon-photo-1585208798174-6cedd86e019a.jpg",
+  ],
+  [
+    "Melbourne, Australia",
+    "https://images.unsplash.com/photo-1634172770871-28ab3ddb6a56?auto=format&fit=crop&fm=jpg&q=80&w=1600",
+  ],
+]) {
+  test(`generated ${destination} displays its catalog cover`, async ({
+    page,
+  }) => {
+    // Test the real resolver + header boundary without a storage/network dependency.
+    await page.route(
+      (url) => url.href.endsWith(imagePath),
+      (route) =>
+        route.fulfill({
+          contentType: "image/svg+xml",
+          body: '<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="600"><rect width="1200" height="600" fill="#4b7481"/></svg>',
+        }),
+    );
+    await page.goto(
+      `${fixtureUrl}?destination=${encodeURIComponent(destination)}`,
+    );
+    await expect(
+      page.getByRole("heading", { name: destination, exact: true }),
+    ).toBeVisible();
+    const cover = page.locator(`img[src="${imagePath}"]`);
+    await expect(cover).toBeVisible();
+    await expect
+      .poll(() =>
+        cover.evaluate(
+          (img: HTMLImageElement) => img.complete && img.naturalWidth > 0,
+        ),
+      )
+      .toBe(true);
+    await expect(page.locator("body")).toHaveJSProperty(
+      "scrollWidth",
+      page.viewportSize()!.width,
+    );
+  });
+}
 
 test("proposed timing shows rest and uncertainty without duplicate notes or overflow", async ({
   page,

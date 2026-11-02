@@ -30,3 +30,9 @@ export {
 export * from "./hotel-search";
 export * from "./flight-search";
 export * from "./flight-quote";
+
+export {
+  destinationImage,
+  destinationCoverCatalog,
+  supplementalDestinationPhotos,
+} from "./destination-covers";

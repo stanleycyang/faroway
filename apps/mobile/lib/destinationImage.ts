@@ -1,17 +1,9 @@
-import { IMAGE_PATHS, getImageUrl } from '@faroway/constants';
+import { destinationImage as catalogImage, IMAGE_PATHS, getImageUrl } from '@faroway/constants';
 
-/** Resolve catalog photography for city-only and "City, Country" trip briefs. */
+/** Same city/country matching as web; unknown places keep general travel art. */
 export function destinationImage(destination: string): string {
-  const city = destination
-    .split(',')[0]
-    .trim()
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/\s+/g, '-');
-  const paths = IMAGE_PATHS.destinations;
-  const path = Object.prototype.hasOwnProperty.call(paths, city)
-    ? paths[city as keyof typeof paths]
-    : IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai'];
-  return getImageUrl(path);
+  return (
+    catalogImage(destination) ||
+    getImageUrl(IMAGE_PATHS.blog['ultimate-guide-planning-trip-with-ai'])
+  );
 }
