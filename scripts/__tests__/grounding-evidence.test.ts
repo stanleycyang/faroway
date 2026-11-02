@@ -848,3 +848,112 @@ test("discovery preserves supplied address differences instead of resolving them
     audit("1 Example St", "1 Example Street").leads[0]?.addressComparison,
   ).toBe("different_text");
 });
+
+import {
+  prepareVenueSourceSelection,
+  bindVenueSourceSelection,
+} from "../uat/lib/venue-source-selection";
+const selectionReceipt = {
+  status: "completed",
+  provenance: { inputSha256: "a".repeat(64) },
+  retrievalResults: [
+    {
+      toolName: "parallel_search",
+      toolCallId: "search-call",
+      providerExecuted: true,
+      output: {
+        search_id: "search-id",
+        results: [
+          {
+            url: "https://museum.example/visit",
+            title: "Museum A",
+            excerpts: ["Museum A at 12 Main Street."],
+          },
+        ],
+      },
+    },
+  ],
+};
+test("source selection requires retained retrieval bound to the exact candidate input", () => {
+  const sources = prepareVenueSourceSelection(selectionReceipt, "a".repeat(64));
+  expect(sources[0]?.selectionId).toBe("source_1");
+  expect(sources[0]?.url).toBe("https://museum.example/visit");
+  for (const receipt of [
+    { ...selectionReceipt, status: "started" },
+    { ...selectionReceipt, provenance: { inputSha256: "b".repeat(64) } },
+    { ...selectionReceipt, retrievalResults: [] },
+    {
+      ...selectionReceipt,
+      retrievalResults: [
+        { ...selectionReceipt.retrievalResults[0], providerExecuted: false },
+      ],
+    },
+  ])
+    expect(() =>
+      prepareVenueSourceSelection(receipt, "a".repeat(64)),
+    ).toThrow();
+  expect(() =>
+    prepareVenueSourceSelection(selectionReceipt, "invalid"),
+  ).toThrow();
+});
+test("source selection supplies URLs from retained records and rejects invented references", () => {
+  const sources = prepareVenueSourceSelection(selectionReceipt, "a".repeat(64));
+  const lead = {
+    id: "venue-a",
+    status: "candidate",
+    sourceId: "source_1",
+    matchedName: "Museum A",
+    matchedAddress: "12 Main Street",
+    nameQuote: "Museum A",
+    addressQuote: "12 Main Street",
+    note: "Retained source candidate.",
+  };
+  const bound = bindVenueSourceSelection(
+    { venues: [lead] },
+    "venue-a",
+    sources,
+  );
+  expect(bound.issues).toEqual([]);
+  expect(bound.extracted?.venues[0]?.officialUrl).toBe(sources[0]?.url);
+  expect(bound.selectedSources).toEqual([sources[0]!]);
+  for (const change of [
+    { sourceId: "source_999" },
+    { sourceId: null },
+    { id: "other-candidate" },
+    { officialUrl: "https://invented.example/" },
+    { status: "ambiguous" },
+  ])
+    expect(
+      bindVenueSourceSelection(
+        { venues: [{ ...lead, ...change }] },
+        "venue-a",
+        sources,
+      ).issues.length,
+    ).toBeGreaterThan(0);
+  expect(
+    bindVenueSourceSelection({ venues: [lead] }, "venue-a", [
+      ...sources,
+      ...sources,
+    ]).issues.length,
+  ).toBeGreaterThan(0);
+  const unresolved = bindVenueSourceSelection(
+    {
+      venues: [
+        {
+          ...lead,
+          status: "unresolved",
+          sourceId: null,
+          matchedName: null,
+          matchedAddress: null,
+          nameQuote: null,
+          addressQuote: null,
+        },
+      ],
+    },
+    "venue-a",
+    sources,
+  );
+  expect(unresolved.issues).toEqual([]);
+  expect(unresolved.extracted?.venues[0]?.officialUrl).toBe(null);
+  expect(unresolved.selectedSources).toEqual([]);
+});
