@@ -176,3 +176,10 @@ const anon = createClient(url, anonKey);
 ---
 
 **Questions?** Check the main docs in `/backend/docs/` or Supabase dashboard logs.
+
+
+### Opening-hours retrieval probe
+
+`grounding-pilot-live.ts --venue-candidates FILE --parallel-search --venue-hours-search` searches for operator visitor-hours pages while returning identity leads only. It requires the existing explicit `--live`, staging target, dedicated capped gateway key, and a new `--out` receipt. The candidate file permits only public ID/name/destination/address fields; do not include traveler dates or requirements. Pulled `[SENSITIVE]` values are placeholders and are rejected before dispatch.
+
+The mode retains raw search excerpts; it does not approve venue identity, extract a date-specific schedule, modify trips, or enable any product feature. Use `extractOrdinaryDailyHoursStatements` on individual retained excerpt segments for exact quote-span candidates. Those spans still need identity, date-scope and exception review before entering the adjudicated-hours checker.
