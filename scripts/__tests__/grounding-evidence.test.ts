@@ -782,6 +782,52 @@ test("identity copy audit requires identity and source references", () => {
     ).toBe(false);
 });
 
+test("retrieved titles can support names with explicit metadata provenance, never addresses", () => {
+  const source = {
+    ...identitySource,
+    title: "🗺️ Access | Museum A",
+    excerptSegments: ["Visit us at 12 Main Street."],
+  };
+  const lead = { ...identityLead, nameQuote: "Museum A" };
+  const row = auditVenueIdentityExcerpts([lead], [source])[0]!;
+  expect(row.copiedIdentityTextLinked).toBe(true);
+  const name = row.bindings.find((b) => b.field === "matchedName")!;
+  expect(name.sourceField).toBe("title");
+  expect(name.segmentIndex).toBe(-1);
+  expect(source.title.slice(name.startUtf16, name.endUtf16)).toBe("Museum A");
+  expect(
+    row.bindings.find((b) => b.field === "matchedAddress")?.sourceField,
+  ).toBe("excerpt");
+  expect(row.sourceAuthorityVerified).toBe(false);
+  expect(row.branchIdentityVerified).toBe(false);
+  expect(row.qualityAccepted).toBe(false);
+  for (const badSource of [
+    { ...source, title: "Access | Museum B" },
+    {
+      ...source,
+      title: "Access | Museum A at 12 Main Street",
+      excerptSegments: ["Welcome."],
+    },
+    { ...source, url: "https://other.example/" },
+    {
+      ...source,
+      title: "Museum",
+      excerptSegments: ["A. Visit us at 12 Main Street."],
+    },
+  ]) {
+    expect(
+      auditVenueIdentityExcerpts([lead], [badSource])[0]
+        ?.copiedIdentityTextLinked,
+    ).toBe(false);
+  }
+  expect(
+    auditVenueIdentityExcerpts(
+      [lead],
+      [{ ...source, title: "Access | Museum A" }],
+    )[0]?.sourceContentSha256,
+  ).not.toBe(row.sourceContentSha256);
+});
+
 test("identity evidence recovers original spans for whitespace changes without rewriting words", () => {
   const source = {
     ...identitySource,

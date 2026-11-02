@@ -44,6 +44,8 @@ export function auditVenueIdentityExcerpts(
     const issues: string[] = [];
     const bindings: Array<{
       field: string;
+      sourceField: "title" | "excerpt";
+      /** -1 for title evidence; otherwise an original excerpt segment index. */
       segmentIndex: number;
       startUtf16: number;
       endUtf16: number;
@@ -73,15 +75,30 @@ export function auditVenueIdentityExcerpts(
       const value = lead[field];
       const quote = lead[quoteField];
       if (!text(value, max)) issues.push(`${field}_unknown`);
-      const match =
+      const excerptMatch =
         text(quote, 1000) && validSegments
           ? segments
               .map((segment, segmentIndex) => ({
+                sourceField: "excerpt" as const,
                 segmentIndex,
                 span: sourceSpan(segment, quote),
               }))
               .find((row) => row.span)
           : undefined;
+      // Search titles are retained metadata, not page-body excerpts. Only names
+      // may use them, and the binding makes that weaker evidence explicit.
+      const titleSpan =
+        field === "matchedName" &&
+        source &&
+        text(source.title, 2000) &&
+        text(quote, 1000)
+          ? sourceSpan(source.title, quote)
+          : undefined;
+      const match =
+        excerptMatch ??
+        (titleSpan
+          ? { sourceField: "title" as const, segmentIndex: -1, span: titleSpan }
+          : undefined);
       if (!match?.span) issues.push(`${quoteField}_not_in_source_segment`);
       const valueSpan =
         text(value, max) && text(quote, 1000)
@@ -93,6 +110,7 @@ export function auditVenueIdentityExcerpts(
         if (originalValue)
           bindings.push({
             field,
+            sourceField: match.sourceField,
             segmentIndex: match.segmentIndex,
             ...match.span,
             sourceValue: originalValue.sourceText,
@@ -107,7 +125,13 @@ export function auditVenueIdentityExcerpts(
       sourceContentSha256:
         source && validSegments
           ? createHash("sha256")
-              .update(JSON.stringify({ url: source.url, segments }))
+              .update(
+                JSON.stringify({
+                  url: source.url,
+                  title: text(source.title, 2000) ? source.title : null,
+                  segments,
+                }),
+              )
               .digest("hex")
           : null,
       issues,
