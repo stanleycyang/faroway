@@ -691,6 +691,10 @@ test("discovery candidates cannot silently change names or present unlinked URLs
 
 import { auditVenueIdentityExcerpts } from "../uat/lib/venue-identity-excerpts";
 import {
+  prepareDiningReplay,
+  bindDiningReplay,
+} from "../uat/lib/dining-replay";
+import {
   auditDiningDiscovery,
   validatePublicDiningBrief,
   parseDiningDiscovery,
@@ -744,6 +748,50 @@ test("source-first dining keeps missing service and location facts unknown", () 
     },
   };
   const audit = auditDiningDiscovery({ venues: [venue] }, [tool], brief);
+  const replay = prepareDiningReplay({
+    status: "completed",
+    brief,
+    retrievalResults: [tool],
+    text: "DO_NOT_REPLAY_PRIOR_ANSWER",
+  });
+  expect(replay.prompt.includes("DO_NOT_REPLAY_PRIOR_ANSWER")).toBe(false);
+  const selected = {
+    sourceId: "source-0",
+    name: venue.name,
+    address: venue.address,
+    mealQuote: venue.mealQuote,
+  };
+  expect(
+    auditDiningDiscovery(
+      bindDiningReplay({ venues: [selected] }, replay),
+      [tool],
+      brief,
+    ).options,
+  ).toHaveLength(1);
+  for (const change of [
+    { sourceId: "source-99" },
+    { url: "https://invented.example" },
+    { address: "13 Main Street" },
+    { name: "Another Cafe" },
+    { mealQuote: "Dinner daily" },
+  ])
+    expect(
+      auditDiningDiscovery(
+        bindDiningReplay({ venues: [{ ...selected, ...change }] }, replay),
+        [tool],
+        brief,
+      ).options,
+    ).toHaveLength(0);
+  expect(() =>
+    prepareDiningReplay({ status: "started", brief, retrievalResults: [tool] }),
+  ).toThrow();
+  expect(() =>
+    prepareDiningReplay({
+      status: "completed",
+      brief,
+      retrievalResults: [{ ...tool, providerExecuted: false }],
+    }),
+  ).toThrow();
   expect(audit.options).toHaveLength(1);
   const [reviewOption] = diningOptionsForReview(audit, "2026-11-02");
   expect(reviewOption.planningIdea).toBe(true);

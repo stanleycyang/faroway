@@ -5,6 +5,10 @@ import { createHash } from "node:crypto";
 import { dirname, resolve } from "node:path";
 import { assertStagingTarget } from "../../../scripts/uat/lib/staging-project";
 import {
+  prepareDiningReplay,
+  bindDiningReplay,
+} from "../../../scripts/uat/lib/dining-replay";
+import {
   validatePublicDiningBrief,
   diningDiscoveryPrompt,
   auditDiningDiscovery,
@@ -37,7 +41,23 @@ const brief = validatePublicDiningBrief(JSON.parse(bytes.toString()));
 const policy = arg("--prompt-policy") ?? "baseline";
 if (policy !== "baseline" && policy !== "operator-literal")
   throw Error("Unknown prompt policy");
-const prompt = diningDiscoveryPrompt(brief, policy);
+const replayPath = arg("--retrieval-replay");
+if (
+  process.argv.includes("--retrieval-replay") &&
+  (!replayPath || replayPath.startsWith("--"))
+)
+  throw Error("--retrieval-replay requires a receipt path");
+const replayBytes = replayPath ? readFileSync(replayPath) : undefined;
+if (replayBytes && replayBytes.length > 500000)
+  throw Error("Replay receipt too large");
+const replay = replayBytes
+  ? prepareDiningReplay(JSON.parse(replayBytes.toString()))
+  : undefined;
+if (replay && JSON.stringify(replay.brief) !== JSON.stringify(brief))
+  throw Error("Replay brief must match the original public request");
+if (replay && policy !== "baseline")
+  throw Error("Replay uses its own fixed extraction policy");
+const prompt = replay?.prompt ?? diningDiscoveryPrompt(brief, policy);
 const hash = (data: string | Buffer) =>
   createHash("sha256").update(data).digest("hex");
 const provenance = {
@@ -47,6 +67,7 @@ const provenance = {
   helpers: Object.fromEntries(
     [
       "dining-discovery",
+      "dining-replay",
       "venue-identity-excerpts",
       "venue-source-discovery",
     ].map((name) => [
@@ -59,10 +80,12 @@ const provenance = {
     ]),
   ),
   promptPolicy: policy,
+  mode: replay ? "frozen-source-selection" : "live-discovery",
+  ...(replayBytes ? { replaySha256: hash(replayBytes) } : {}),
   model: "google/gemini-3-flash",
   clientRequestsMaximum: 1,
   automaticTripEdits: false,
-  searchProvider: "parallel",
+  searchProvider: replay ? null : "parallel",
 };
 mkdirSync(dirname(resolve(out)), { recursive: true, mode: 0o700 });
 writeFileSync(out, JSON.stringify({ status: "started", provenance }), {
@@ -75,14 +98,16 @@ try {
   const result = await generateText({
     model: gateway(provenance.model),
     prompt,
-    tools: {
-      parallel_search: gateway.tools.parallelSearch({
-        mode: "agentic",
-        maxResults: 6,
-        excerpts: { maxCharsPerResult: 2500, maxCharsTotal: 12000 },
-      }),
-    },
-    toolChoice: "required",
+    tools: replay
+      ? {}
+      : {
+          parallel_search: gateway.tools.parallelSearch({
+            mode: "agentic",
+            maxResults: 6,
+            excerpts: { maxCharsPerResult: 2500, maxCharsTotal: 12000 },
+          }),
+        },
+    ...(replay ? {} : { toolChoice: "required" as const }),
     providerOptions: {
       gateway: { only: ["google"] },
       google: { thinkingConfig: { thinkingLevel: "low" } },
@@ -91,8 +116,11 @@ try {
     maxRetries: 0,
     abortSignal: AbortSignal.timeout(60000),
   });
-  const retrievalResults = result.steps.flatMap((step) => step.toolResults);
-  const extracted = parseDiningDiscovery(result.text);
+  const retrievalResults =
+    replay?.retrievalResults ??
+    result.steps.flatMap((step) => step.toolResults);
+  const selection = parseDiningDiscovery(result.text);
+  const extracted = replay ? bindDiningReplay(selection, replay) : selection;
   const audit = auditDiningDiscovery(extracted, retrievalResults, brief);
   const billingKnown =
     Number.isFinite(result.usage.inputTokens) &&
@@ -106,6 +134,7 @@ try {
     latencyMs: Date.now() - started,
     billingKnown,
     text: result.text,
+    ...(replay ? { selection } : {}),
     extracted,
     audit,
     retrievalResults,

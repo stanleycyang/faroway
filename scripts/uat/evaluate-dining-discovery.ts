@@ -1,6 +1,7 @@
 /** Offline receipt replay. No provider imports, network access or trip writes. */
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { bindDiningReplay, prepareDiningReplay } from "./lib/dining-replay";
 import {
   auditDiningDiscovery,
   parseDiningDiscovery,
@@ -18,8 +19,11 @@ const rows = files.map((file) => {
     !Array.isArray(receipt.retrievalResults)
   )
     throw Error(`${file}: incomplete receipt cannot count as a completed run`);
+  const selection = parseDiningDiscovery(receipt.text);
   const audit = auditDiningDiscovery(
-    parseDiningDiscovery(receipt.text),
+    receipt.provenance?.mode === "frozen-source-selection"
+      ? bindDiningReplay(selection, prepareDiningReplay(receipt))
+      : selection,
     receipt.retrievalResults,
     brief,
   );
