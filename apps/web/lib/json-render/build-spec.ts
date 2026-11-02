@@ -67,6 +67,7 @@ export interface RestaurantInput {
 }
 
 export interface ItineraryDayInput {
+  tips?: string[];
   dayNumber: number;
   date: string;
   title: string;
@@ -279,6 +280,14 @@ export function buildItineraryBlocks(
 
     const timelineItems: Array<{ time: string; title: string; type: string }> =
       [];
+
+    for (const tip of day.tips ?? []) {
+      if (tip.trim())
+        components.push({
+          type: "Text",
+          props: { content: tip, variant: "body" },
+        });
+    }
 
     for (const meal of mealsFor(day.morning)) {
       timelineItems.push({

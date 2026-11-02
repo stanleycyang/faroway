@@ -1,4 +1,4 @@
-import { readProposedVisitType } from "@faroway/types";
+import { dayTimingTips, readProposedVisitType } from "@faroway/types";
 import { viatorContentMetadata } from "@/lib/affiliates/viator-policy";
 import type {
   ActivityInput,
@@ -99,6 +99,7 @@ export function mappedDaysToSpec(
       dayNumber,
       date,
       title,
+      tips: dayTimingTips(day),
       morning: slot(day.morning),
       afternoon: slot(day.afternoon),
       evening: slot(day.evening),

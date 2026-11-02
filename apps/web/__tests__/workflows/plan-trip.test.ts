@@ -440,7 +440,7 @@ describe("planTripWorkflow", () => {
     expect(mocks.dispatchItineraryReady).not.toHaveBeenCalled();
   });
 
-  it("retains verification reminders in the saved itinerary", async () => {
+  it("retains verification reminders in saved and preview itineraries", async () => {
     mocks.runOrchestratorAgent.mockResolvedValue({
       ...searchPlan,
       mobilityNeeds: "step-free",
@@ -471,6 +471,9 @@ describe("planTripWorkflow", () => {
           "Accessibility for your mobility needs is unverified",
         ),
       ]),
+    );
+    expect(mocks.buildJsonRenderSpec.mock.lastCall?.[0].days[0].tips).toEqual(
+      result.result?.days[0].tips,
     );
   });
 

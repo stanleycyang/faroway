@@ -330,6 +330,7 @@ describe("Itinerary workflow API e2e", () => {
             dayNumber: 1,
             title: "Day 1",
             date: "2026-05-10",
+            tips: ["Confirm allergen safety directly with the restaurant."],
             morning: {
               activities: [{ name: "Museum", duration: 150 }],
               meals: [
@@ -371,6 +372,14 @@ describe("Itinerary workflow API e2e", () => {
         data: expect.objectContaining({
           chapter: "itinerary",
           blocks: expect.arrayContaining([
+            {
+              type: "Text",
+              props: {
+                content:
+                  "Confirm allergen safety directly with the restaurant.",
+                variant: "body",
+              },
+            },
             expect.objectContaining({
               type: "RestaurantCard",
               props: expect.objectContaining({

@@ -31,6 +31,30 @@ const day = {
     meals: [{ ...meal, id: "dinner", name: "Dinner" }],
   },
 };
+it("shows saved verification notes before visits and replaces stale timing claims", () => {
+  const warnings = [
+    "Dietary suitability and allergen safety are unverified.",
+    "Accessibility for your mobility needs is unverified.",
+  ];
+  const blocks = buildItineraryBlocks(
+    mappedDaysToSpec([
+      {
+        ...day,
+        timingProposal: { invalid: true },
+        tips: ["Proposed local timing: 09:00", ...warnings, null, "  "],
+      },
+    ]),
+  );
+  const notes = blocks.filter((block) => block.type === "Text");
+  expect(notes.map((block) => block.props.content)).toEqual([
+    "Proposed times need a fresh review.",
+    ...warnings,
+  ]);
+  expect(blocks.indexOf(notes.at(-1)!)).toBeLessThan(
+    blocks.findIndex((block) => block.type === "RestaurantCard"),
+  );
+  expect(notes.every((block) => block.props.variant === "body")).toBe(true);
+});
 it("projects all saved meals and canonical activity fields without changing the source", () => {
   const original = structuredClone(day);
   const result = mappedDaysToSpec([day]);
