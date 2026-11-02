@@ -34,7 +34,10 @@ if (
 const bytes = readFileSync(input);
 if (bytes.length > 4000) throw Error("Brief too large");
 const brief = validatePublicDiningBrief(JSON.parse(bytes.toString()));
-const prompt = diningDiscoveryPrompt(brief);
+const policy = arg("--prompt-policy") ?? "baseline";
+if (policy !== "baseline" && policy !== "operator-literal")
+  throw Error("Unknown prompt policy");
+const prompt = diningDiscoveryPrompt(brief, policy);
 const hash = (data: string | Buffer) =>
   createHash("sha256").update(data).digest("hex");
 const provenance = {
@@ -55,6 +58,7 @@ const provenance = {
       ),
     ]),
   ),
+  promptPolicy: policy,
   model: "google/gemini-3-flash",
   clientRequestsMaximum: 1,
   automaticTripEdits: false,
