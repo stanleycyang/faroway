@@ -42,7 +42,7 @@ export interface ActivityInput {
   id?: string;
   name: string;
   description?: string;
-  duration?: number; // hours
+  duration?: number; // hours by default; minute-valued partial streams opt in explicitly
   price?: number;
   currency?: string;
   rating?: number;
@@ -251,6 +251,7 @@ export function buildHotelBlocks(
  */
 export function buildItineraryBlocks(
   days: ItineraryDayInput[],
+  options: { activityDurationUnit?: "hours" | "minutes" } = {},
 ): JsonRenderComponent[] {
   days = filterViatorDisplay(days);
   const components: JsonRenderComponent[] = [];
@@ -277,14 +278,14 @@ export function buildItineraryBlocks(
 
     if (day.morning?.meal) {
       timelineItems.push({
-        time: "08:00",
+        time: "Morning",
         title: day.morning.meal.name,
         type: "restaurant",
       });
     }
-    day.morning?.activities?.forEach((a, i) => {
+    day.morning?.activities?.forEach((a) => {
       timelineItems.push({
-        time: `${9 + i}:00`,
+        time: "Morning",
         title: a.name,
         type: "activity",
       });
@@ -292,29 +293,29 @@ export function buildItineraryBlocks(
 
     if (day.afternoon?.meal) {
       timelineItems.push({
-        time: "12:30",
+        time: "Afternoon",
         title: day.afternoon.meal.name,
         type: "restaurant",
       });
     }
-    day.afternoon?.activities?.forEach((a, i) => {
+    day.afternoon?.activities?.forEach((a) => {
       timelineItems.push({
-        time: `${14 + i}:00`,
+        time: "Afternoon",
         title: a.name,
         type: "activity",
       });
     });
 
-    day.evening?.activities?.forEach((a, i) => {
+    day.evening?.activities?.forEach((a) => {
       timelineItems.push({
-        time: `${18 + i}:00`,
+        time: "Evening",
         title: a.name,
         type: "activity",
       });
     });
     if (day.evening?.meal) {
       timelineItems.push({
-        time: "19:30",
+        time: "Evening",
         title: day.evening.meal.name,
         type: "restaurant",
       });
@@ -336,9 +337,12 @@ export function buildItineraryBlocks(
           description:
             activity.description ||
             (isViatorContent(activity) ? "" : `Enjoy ${activity.name}`),
-          duration: activity.duration
-            ? `${activity.duration} hours`
-            : "2 hours",
+          duration:
+            typeof activity.duration === "number" &&
+            Number.isFinite(activity.duration) &&
+            activity.duration > 0
+              ? `${activity.duration} ${options.activityDurationUnit ?? "hours"}`
+              : "Duration not set",
           price: activity.price,
           currency: activity.currency,
           priceStatus: activity.priceStatus,
@@ -382,20 +386,14 @@ export function buildItineraryBlocks(
       });
     };
 
-    if (day.morning?.meal) addRestaurantCard(day.morning.meal, "08:00");
-    day.morning?.activities?.forEach((a, i) =>
-      addActivityCard(a, `${9 + i}:00`),
-    );
+    if (day.morning?.meal) addRestaurantCard(day.morning.meal, "Morning");
+    day.morning?.activities?.forEach((a) => addActivityCard(a, "Morning"));
 
-    if (day.afternoon?.meal) addRestaurantCard(day.afternoon.meal, "12:30");
-    day.afternoon?.activities?.forEach((a, i) =>
-      addActivityCard(a, `${14 + i}:00`),
-    );
+    if (day.afternoon?.meal) addRestaurantCard(day.afternoon.meal, "Afternoon");
+    day.afternoon?.activities?.forEach((a) => addActivityCard(a, "Afternoon"));
 
-    day.evening?.activities?.forEach((a, i) =>
-      addActivityCard(a, `${18 + i}:00`),
-    );
-    if (day.evening?.meal) addRestaurantCard(day.evening.meal, "19:30");
+    day.evening?.activities?.forEach((a) => addActivityCard(a, "Evening"));
+    if (day.evening?.meal) addRestaurantCard(day.evening.meal, "Evening");
   }
 
   return components;

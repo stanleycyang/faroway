@@ -325,7 +325,14 @@ describe("Itinerary workflow API e2e", () => {
         activitiesCount: 6,
         diningCount: 5,
         transportCount: 2,
-        days: [{ dayNumber: 1, title: "Day 1", date: "2026-05-10" }],
+        days: [
+          {
+            dayNumber: 1,
+            title: "Day 1",
+            date: "2026-05-10",
+            morning: { activities: [{ name: "Museum", duration: 150 }] },
+          },
+        ],
       },
       json_render_spec: [
         { type: "TripSummary", props: { destination: "Tokyo" } },
@@ -347,6 +354,25 @@ describe("Itinerary workflow API e2e", () => {
     const text = await streamRes.text();
     const events = parseSse(text);
     const eventNames = events.map((e) => e.event);
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        event: "spec-block",
+        data: expect.objectContaining({
+          chapter: "itinerary",
+          blocks: expect.arrayContaining([
+            expect.objectContaining({
+              type: "ActivityCard",
+              props: expect.objectContaining({
+                name: "Museum",
+                duration: "150 minutes",
+                time: "Morning",
+              }),
+            }),
+          ]),
+        }),
+      }),
+    );
 
     expect(eventNames).toContain("spec-block");
     expect(eventNames).toContain("hotels");

@@ -459,7 +459,9 @@ async function pollAndStream(
       if (itineraryJson !== lastItineraryJson) {
         lastItineraryJson = itineraryJson;
         send("itinerary", { days, topHotel: ir.topHotel || null });
-        const itineraryBlocks = buildItineraryBlocks(days);
+        const itineraryBlocks = buildItineraryBlocks(days, {
+          activityDurationUnit: "minutes",
+        });
         if (itineraryBlocks.length > 0) {
           send("spec-block", { chapter: "itinerary", blocks: itineraryBlocks });
         }

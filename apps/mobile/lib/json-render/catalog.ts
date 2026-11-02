@@ -137,7 +137,7 @@ export const ActivityCardSchema = z.object({
   reviewCount: z.number().optional().describe('Number of reviews'),
   image: z.string().url().optional().describe('Activity image URL'),
   bookingUrl: z.string().url().optional().describe('Viator or booking URL'),
-  time: z.string().describe('Suggested time (e.g., "09:00", "14:30")'),
+  time: z.string().describe('Supplied day part or explicit time; never infer a clock time'),
   location: z.string().optional().describe('Location name or address'),
 });
 
@@ -162,7 +162,7 @@ export const RestaurantCardSchema = z.object({
   image: z.string().url().optional().describe('Restaurant image URL'),
   reservationUrl: z.string().url().optional().describe('OpenTable or reservation URL'),
   description: z.string().optional().describe('Brief description of the restaurant'),
-  time: z.string().optional().describe('Suggested meal time (e.g., "12:30", "19:00")'),
+  time: z.string().optional().describe('Supplied meal day part or explicit time'),
 });
 
 export const RestaurantCard = {
@@ -180,7 +180,7 @@ export const DayTimelineSchema = z.object({
   items: z
     .array(
       z.object({
-        time: z.string().describe('Time (e.g., "09:00")'),
+        time: z.string().describe('Supplied day part or explicit time'),
         title: z.string().describe('Activity/meal title'),
         type: z
           .enum(['activity', 'restaurant', 'transport', 'rest'])

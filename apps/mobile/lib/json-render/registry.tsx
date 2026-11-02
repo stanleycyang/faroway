@@ -1003,7 +1003,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   timelineTime: {
-    width: 60,
+    width: 80,
     paddingTop: spacing.xs,
   },
   timelineTimeText: {

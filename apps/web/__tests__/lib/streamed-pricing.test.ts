@@ -67,3 +67,55 @@ describe("streamed price currency contracts", () => {
     );
   });
 });
+
+it("does not invent clock times or durations when only day parts are supplied", () => {
+  const blocks = buildItineraryBlocks([
+    {
+      dayNumber: 1,
+      date: "2027-01-11",
+      title: "Day",
+      morning: {
+        activities: [
+          { name: "Long visit", duration: 3 },
+          { name: "Unknown duration" },
+        ],
+        meal: { name: "Breakfast" },
+      },
+      afternoon: { activities: [{ name: "Museum", duration: 1.5 }] },
+      evening: { meal: { name: "Dinner" } },
+    },
+  ]);
+  const cards = blocks.filter(
+    (b) => b.type === "ActivityCard" || b.type === "RestaurantCard",
+  );
+  expect(cards.map((b) => b.props.time)).toEqual([
+    "Morning",
+    "Morning",
+    "Morning",
+    "Afternoon",
+    "Evening",
+  ]);
+  expect(
+    cards.filter((b) => b.type === "ActivityCard").map((b) => b.props.duration),
+  ).toEqual(["3 hours", "Duration not set", "1.5 hours"]);
+  expect(JSON.stringify(blocks)).not.toMatch(/\d{1,2}:\d{2}/);
+});
+it.each([undefined, 0, -1, NaN, Infinity])(
+  "does not invent a duration from %s",
+  (duration) => {
+    const blocks = buildItineraryBlocks(
+      [
+        {
+          dayNumber: 1,
+          date: "2027-01-11",
+          title: "Day",
+          morning: { activities: [{ name: "Visit", duration }] },
+        },
+      ],
+      { activityDurationUnit: "minutes" },
+    );
+    expect(blocks.find((b) => b.type === "ActivityCard")?.props.duration).toBe(
+      "Duration not set",
+    );
+  },
+);
