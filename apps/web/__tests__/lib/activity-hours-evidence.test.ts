@@ -4,6 +4,7 @@ import {
   availabilityCandidateSha256,
   evidenceTextSha256,
   parseOrdinaryDailyHours,
+  extractOrdinaryDailyHoursStatements,
   type AdjudicatedHoursEvidence,
   type AvailabilityVisit,
 } from "../../../../scripts/uat/lib/activity-hours-evidence";
@@ -225,4 +226,17 @@ it("does not let an extracted quote hide an exception elsewhere in retained cont
       { ...original, excerpt, excerptSha256: evidenceTextSha256(excerpt) },
     ]).reason,
   ).toBe("exception_context_requires_review");
+});
+
+it("extracts original daily-hours spans without joining snippets or accepting exception text", () => {
+  const excerpt =
+    "🏛️ Source\r\n **Open daily 10am – 5pm**  \r\nOpen daily 12pm–10pm, last entry 9:30pm\nOpen daily 10am–5pm except holidays\nOpen daily 10am–\n5pm";
+  const found = extractOrdinaryDailyHoursStatements(excerpt);
+  expect(found).toHaveLength(2);
+  for (const span of found) {
+    expect(excerpt.slice(span.start, span.end)).toBe(span.quote);
+    expect(span.excerptSha256).toBe(evidenceTextSha256(excerpt));
+  }
+  expect(found[0].hours).toEqual({ opens: 600, closes: 1020, lastEntry: null });
+  expect(extractOrdinaryDailyHoursStatements("x".repeat(20001))).toEqual([]);
 });

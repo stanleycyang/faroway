@@ -81,6 +81,40 @@ export function parseOrdinaryDailyHours(quote: string) {
   return { opens, closes, lastEntry };
 }
 
+/** Candidate spans only, not adjudicated hours. Offsets refer to the original
+ * retained excerpt (UTF-16), never a normalized or reassembled source page.
+ * Pass individual retrieval segments to avoid crossing excerpt boundaries.
+ */
+export function extractOrdinaryDailyHoursStatements(excerpt: string) {
+  const statements: Array<{
+    quote: string;
+    start: number;
+    end: number;
+    excerptSha256: string;
+    hours: NonNullable<ReturnType<typeof parseOrdinaryDailyHours>>;
+  }> = [];
+  if (!excerpt || excerpt.length > 20000) return statements;
+  let offset = 0;
+  for (const line of excerpt.split("\n")) {
+    let quote = line.trim();
+    if (quote.startsWith("**") && quote.endsWith("**"))
+      quote = quote.slice(2, -2);
+    const hours = parseOrdinaryDailyHours(quote);
+    if (hours) {
+      const start = offset + line.indexOf(quote);
+      statements.push({
+        quote,
+        start,
+        end: start + quote.length,
+        excerptSha256: evidenceTextSha256(excerpt),
+        hours,
+      });
+    }
+    offset += line.length + 1;
+  }
+  return statements;
+}
+
 /** Offline evidence checker for the repair prototype. No fetching, paid calls or
  * production integration. Compatible means whole-slot ordinary-hours fit only;
  * prices, reservations, routes, queues and accessibility remain unverified.

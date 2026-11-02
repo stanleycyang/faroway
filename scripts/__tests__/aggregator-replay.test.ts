@@ -2,7 +2,13 @@ import { createHash } from "node:crypto";
 import { test, expect } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { resolve, join } from "node:path";
-import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
+import {
+  mkdtempSync,
+  writeFileSync,
+  readFileSync,
+  rmSync,
+  existsSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 
 const root = resolve(import.meta.dirname, "../..");
@@ -490,5 +496,48 @@ test("Maps identity probe refuses implicit paid calls and production targets", (
     );
     expect(result.status).toBe(1);
     expect(result.stderr).toContain(message);
+  }
+});
+
+test("grounding probe rejects pulled secret placeholders and invalid hours-search scope before dispatch", () => {
+  const directory = mkdtempSync(join(tmpdir(), "hours-discovery-preflight-"));
+  try {
+    for (const [key, flags, message] of [
+      ["[SENSITIVE]", [], "pulled secret placeholders are not credentials"],
+      [
+        "invalid-preflight-only-key",
+        ["--venue-hours-search"],
+        "--venue-hours-search requires",
+      ],
+    ] as const) {
+      const out = join(directory, "receipt.json");
+      const result = spawnSync(
+        process.execPath,
+        [
+          "--no-env-file",
+          "apps/web/scripts/grounding-pilot-live.ts",
+          "--live",
+          ...flags,
+          "--out",
+          out,
+        ],
+        {
+          cwd: root,
+          encoding: "utf8",
+          timeout: 10000,
+          env: {
+            PATH: process.env.PATH,
+            HOME: process.env.HOME,
+            FAROWAY_STAGING_SUPABASE_PROJECT_REF: "omovikloadpvzijoaqus",
+            FAROWAY_STAGING_AI_GATEWAY_KEY: key,
+          },
+        },
+      );
+      expect(result.status).toBe(1);
+      expect(result.stderr).toContain(message);
+      expect(existsSync(out)).toBe(false);
+    }
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
   }
 });
