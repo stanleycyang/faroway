@@ -6,6 +6,8 @@ export interface VenueConstraint {
   aliases: string[];
   /** Use for branch-specific reviewed names; unreviewed variants stay unknown. */
   exactName?: boolean;
+  /** Ordinary public admission evidence does not resolve other visit types. */
+  ordinaryEntryOnly?: boolean;
   sourceNote?: string;
   sourceUrl: string;
   observedAt: string;
@@ -29,6 +31,7 @@ export function venueConstraintsForDate(
   name: string,
   date: string,
   facts: VenueConstraint[],
+  proposedVisitType?: string,
 ) {
   for (const fact of facts) {
     if (
@@ -58,6 +61,10 @@ export function venueConstraintsForDate(
     )
       continue;
     const weekday = new Date(date + "T12:00:00Z").getUTCDay();
+    const findingForScope = (finding: string) =>
+      fact.ordinaryEntryOnly && proposedVisitType !== "ordinary_entry"
+        ? "venue_visit_scope_requires_review"
+        : finding;
     if (
       fact.closedDates?.includes(date) ||
       (fact.closedFrom && date >= fact.closedFrom)
@@ -65,7 +72,7 @@ export function venueConstraintsForDate(
       matches.push({
         venueId: fact.id,
         date: date,
-        finding: "scheduled_on_reported_closed_date",
+        finding: findingForScope("scheduled_on_reported_closed_date"),
         sourceUrl: fact.sourceUrl,
         observedAt: fact.observedAt,
       });
@@ -73,7 +80,7 @@ export function venueConstraintsForDate(
       matches.push({
         venueId: fact.id,
         date: date,
-        finding: "scheduled_on_reported_closed_weekday",
+        finding: findingForScope("scheduled_on_reported_closed_weekday"),
         sourceUrl: fact.sourceUrl,
         observedAt: fact.observedAt,
       });
@@ -86,7 +93,7 @@ export function venueConstraintsForDate(
       matches.push({
         venueId: fact.id,
         date: date,
-        finding: "outside_reported_operating_season",
+        finding: findingForScope("outside_reported_operating_season"),
         sourceUrl: fact.sourceUrl,
         observedAt: fact.observedAt,
       });
@@ -94,7 +101,7 @@ export function venueConstraintsForDate(
       matches.push({
         venueId: fact.id,
         date: date,
-        finding: "reopening_confirmation_required",
+        finding: findingForScope("reopening_confirmation_required"),
         sourceUrl: fact.sourceUrl,
         observedAt: fact.observedAt,
       });
@@ -120,8 +127,16 @@ export function evaluateVenueConstraints(
   for (const day of output?.days ?? []) {
     for (const slot of ["morning", "afternoon", "evening"]) {
       const items =
-        (day[slot] as { activities?: Array<{ name: string }> } | undefined)
-          ?.activities ?? [];
+        (
+          day[slot] as
+            | {
+                activities?: Array<{
+                  name: string;
+                  proposedVisitType?: string;
+                }>;
+              }
+            | undefined
+        )?.activities ?? [];
       for (const item of items)
         matches.push(
           ...venueConstraintsForDate(
@@ -129,6 +144,7 @@ export function evaluateVenueConstraints(
             item.name,
             day.date,
             facts,
+            item.proposedVisitType,
           ),
         );
     }

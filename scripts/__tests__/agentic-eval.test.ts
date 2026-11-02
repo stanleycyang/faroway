@@ -1014,6 +1014,7 @@ test("reviewed New York aliases retain weekly closure scope without blocking sep
       "The Metropolitan Museum of Art (The Met)",
       "2027-01-13",
       seasonalFacts,
+      "ordinary_entry",
     ).some((f) => f.finding === "scheduled_on_reported_closed_weekday"),
   ).toBe(true);
   expect(
@@ -1373,4 +1374,36 @@ test("detects dropped, changed and invented mapped visit intent independently", 
   original.proposedVisitType = "guided_tour";
   saved.proposedVisitType = "guided_tour";
   expect(evaluateAgenticTrace(trace).contractPass).toBe(true);
+});
+
+test("ordinary venue closure facts preserve unresolved visit scope", () => {
+  for (const intent of [
+    "exterior_walk",
+    "guided_tour",
+    "event",
+    "unknown",
+    undefined,
+  ]) {
+    const findings = venueConstraintsForDate(
+      "New York, USA",
+      "The Metropolitan Museum of Art",
+      "2027-01-13",
+      seasonalFacts,
+      intent,
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0].finding).toBe("venue_visit_scope_requires_review");
+    expect(findings[0].sourceUrl).toBe(
+      "https://www.metmuseum.org/plan-your-visit",
+    );
+  }
+  expect(
+    venueConstraintsForDate(
+      "New York, USA",
+      "The Metropolitan Museum of Art",
+      "2027-01-13",
+      seasonalFacts,
+      "ordinary_entry",
+    )[0].finding,
+  ).toBe("scheduled_on_reported_closed_weekday");
 });

@@ -87,6 +87,7 @@ export async function runStagingCompiledSchedule(
         activity.name,
         date,
         reviewedFacts,
+        activity.proposedVisitType,
       ))
         exclusions.push({
           activityId: activity.id,
@@ -115,6 +116,14 @@ export async function runStagingCompiledSchedule(
     ),
   );
   exclusions.push(...hourExclusions);
+  const displayExclusions = [
+    ...hourExclusions,
+    ...exclusions.filter(
+      (e) =>
+        e.reason === "venue_visit_scope_requires_review" &&
+        !hourExclusions.includes(e),
+    ),
+  ];
   const addressReview = reconcileGeneratedDiningAddresses(
     plan,
     dining,
@@ -137,14 +146,14 @@ export async function runStagingCompiledSchedule(
   for (const day of compiled.days) {
     const names = [
       ...new Set(
-        hourExclusions
+        displayExclusions
           .filter((e) => e.date === day.date)
           .map((e) => e.activityId),
       ),
     ];
     for (const id of names) {
       const activity = activities.find((a) => a.id === id)!;
-      const records = hourExclusions.filter(
+      const records = displayExclusions.filter(
         (e) =>
           e.date === day.date &&
           e.activityId === id &&

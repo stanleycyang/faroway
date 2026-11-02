@@ -558,3 +558,52 @@ it("does not fill a second day with an unresolved Skydeck lookalike", async () =
     vi.useRealTimers();
   }
 });
+
+it.each(["exterior_walk", "guided_tour", undefined] as const)(
+  "retains a scope-review explanation for a matched ordinary closure: %s",
+  async (proposedVisitType) => {
+    const date = "2027-01-13";
+    const input: SearchPlan = {
+      ...plan,
+      destination: "New York, USA",
+      dates: { start: date, end: date, nights: 0 },
+    };
+    mocks.generateObject.mockResolvedValue({
+      object: {
+        days: [
+          {
+            date,
+            title: "Review visits",
+            summary: "Check the intended visit.",
+            activityIds: [],
+          },
+        ],
+      },
+      usage: { inputTokens: 10, outputTokens: 10 },
+    });
+    const result = await runStagingCompiledSchedule(
+      input,
+      [],
+      [
+        {
+          ...activities[0],
+          id: "met-scope",
+          name: "The Metropolitan Museum of Art",
+          proposedVisitType,
+          bestTimeOfDay: "morning",
+        },
+      ],
+      [],
+    );
+    const day = result.days[0];
+    expect(
+      [day.morning, day.afternoon, day.evening].flatMap(
+        (slot) => slot.activities,
+      ),
+    ).toEqual([]);
+    expect(day.tips.join(" ")).toContain("reviewed hours cover ordinary entry");
+    expect(day.tips.join(" ")).toContain(
+      "does not establish that it is closed",
+    );
+  },
+);

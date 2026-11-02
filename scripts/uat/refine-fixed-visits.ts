@@ -51,10 +51,10 @@ const rows = (files as string[]).map((file) => {
       days: SuggestedDay[];
     }
   ).days;
-  const names = new Map(
+  const visits = new Map(
     days.flatMap((day) =>
       [day.morning, day.afternoon, day.evening].flatMap((slot) =>
-        slot.activities.map((a) => [a.id, a.name] as const),
+        slot.activities.map((a) => [a.id, a] as const),
       ),
     ),
   );
@@ -62,9 +62,10 @@ const rows = (files as string[]).map((file) => {
     blocked: (id, date) =>
       venueConstraintsForDate(
         receipt.trace.brief.destination,
-        names.get(id)!,
+        visits.get(id)!.name,
         date,
         facts,
+        visits.get(id)!.proposedVisitType,
       ).length > 0,
   });
   return { ...provenance, eligible: true, result };

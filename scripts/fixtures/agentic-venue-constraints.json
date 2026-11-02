@@ -71,7 +71,8 @@
     "sourceUrl": "https://www.themorgan.org/visit",
     "observedAt": "2026-10-31",
     "closedWeekdays": [1],
-    "sourceNote": "Official search extract reviewed; direct page fetch blocked. Published recurring hours, not confirmation of January availability."
+    "sourceNote": "Official search extract reviewed; direct page fetch blocked. Published recurring hours, not confirmation of January availability.",
+    "ordinaryEntryOnly": true
   },
   {
     "id": "frick-fifth-avenue-weekly-closure",
@@ -81,7 +82,8 @@
     "sourceUrl": "https://www.frick.org/visit",
     "observedAt": "2026-10-31",
     "closedWeekdays": [2],
-    "sourceNote": "Official search extract reviewed; direct page fetch blocked. Applies to the Fifth Avenue museum, not former Frick Madison or Pittsburgh."
+    "sourceNote": "Official search extract reviewed; direct page fetch blocked. Applies to the Fifth Avenue museum, not former Frick Madison or Pittsburgh.",
+    "ordinaryEntryOnly": true
   },
   {
     "id": "met-fifth-avenue-weekly-closure",
@@ -94,7 +96,8 @@
     "sourceUrl": "https://www.metmuseum.org/plan-your-visit",
     "observedAt": "2026-11-01",
     "closedWeekdays": [3],
-    "sourceNote": "Official Fifth Avenue visitor hours reviewed again; generated parenthetical name matched the 1000 Fifth Avenue address. Exact reviewed names only, not Met Cloisters or exterior stops. Other dates still require availability checks."
+    "sourceNote": "Official Fifth Avenue visitor hours reviewed again; generated parenthetical name matched the 1000 Fifth Avenue address. Exact reviewed names only, not Met Cloisters or exterior stops. Other dates still require availability checks.",
+    "ordinaryEntryOnly": true
   },
   {
     "id": "sun-yat-sen-nanyang-restoration",
@@ -114,6 +117,7 @@
     "sourceUrl": "https://merchantshouse.org/visit/",
     "observedAt": "2026-11-01",
     "closedWeekdays": [1, 2],
-    "sourceNote": "Routine public self-guided and noon guided house visits are published Wednesday–Sunday. Separately arranged group tours can operate Monday/Tuesday with reservations and a minimum party; this rule does not apply to explicitly identified private/group tours or establish availability on other days."
+    "sourceNote": "Routine public self-guided and noon guided house visits are published Wednesday–Sunday. Separately arranged group tours can operate Monday/Tuesday with reservations and a minimum party; this rule does not apply to explicitly identified private/group tours or establish availability on other days.",
+    "ordinaryEntryOnly": true
   }
 ]

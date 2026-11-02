@@ -75,6 +75,7 @@ if (factsBytes) {
         activity.name,
         date,
         facts,
+        activity.proposedVisitType,
       )) {
         exclusions.push({
           activityId: activity.id,
