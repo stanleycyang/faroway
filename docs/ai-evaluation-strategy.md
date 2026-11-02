@@ -2266,3 +2266,23 @@ The shared preview projection still omitted saved day tips, including workflow-g
 Regression coverage checks the actual SSE note payload, final workflow projection equality with saved reminders, and note ordering plus stale timing replacement. Frozen three-city replay retains **27/27 notes** through the mobile Text schema (Edinburgh 9, Rome 4, New York 14); private hash-bound results are in `artifacts/uat/intent-quality-20261102/notes-replay.ts` and `.json`. These CLI traces do not include every workflow-only reminder; those are covered separately by the workflow test. Schema preservation is not physical-device readability or factual-quality acceptance.
 
 Validation: **1,624 web tests across 181 files** pass. The first workspace check identified formatting in two changed tests; targeted formatting was applied, and all 11 final workspace check tasks pass with nine existing lint warnings. No paid calls or enabled deployments; cumulative spend remains **$5.20/$20**. Production readiness still requires source-backed itinerary feasibility, repeated broader quality evaluation and native acceptance.
+
+
+## Constrained three-day candidate-budget diagnostic (2026-11-02 UTC)
+
+At `d7a047d`, ran four complete development pipelines in order Edinburgh wheelchair 6/15, then New York allergy 15/6. Predeclared criteria required two visits and three meals on every day, unique activity IDs, no fallback and successful structural contracts. Each run had a $0.10 stop threshold and the batch $0.60, within the existing dedicated $20 budget. The gateway total before dispatch was $5.21, correcting the previously observed rounded $5.20. No holdouts, production configuration changes or enabled deployments were used.
+
+| Brief | Activity tokens, 6 / 15 | Estimated total USD, 6 / 15 | Daily visits, 6 / 15 |
+| --- | --- | --- | --- |
+| Edinburgh wheelchair | 1,179 / 5,905 | 0.029114 / 0.0328415 | 2,2,2 / 2,2,2 |
+| New York allergy | 1,916 / 5,194 | 0.0243325 / 0.033035 | 3,1,2 / 3,3,3 |
+
+All four runs completed without fallback and passed structural checks; all retained nine meals. Six candidates reduced activity output tokens by 80.0% and 63.1%, and estimated total cost by 11.3% and 26.3%, respectively. **Reject a blanket six-candidate default:** the New York candidate fails the predeclared daily coverage floor despite a structural pass. This is one sample per city/arm with independently regenerated upstream plans, not a controlled causal comparison or statistical superiority claim. Keep the production default at fifteen. A future candidate-budget experiment should account for trip length and constraint-driven exclusions, while keeping this failed case as regression evidence.
+
+Spot source review also prevents treating Edinburgh's count pass as quality acceptance. The generated Britannia description still suggests smooth movement between levels; its [operator accessibility statement](https://www.royalyachtbritannia.co.uk/accessibility-statement/) specifies wheelchair-width and electric-wheelchair restrictions that require equipment-specific review. The generated Queen's Gallery name differs from the [operator's King's Gallery page](https://www.rct.uk/visit/the-kings-gallery-palace-of-holyroodhouse), whose retrieved exhibition dates did not establish January availability. A Tuesday Holyroodhouse selection conflicts with the weekday pattern in the [operator overview](https://www.rct.uk/visit), but January-specific applicability was not established, so this remains a review finding rather than an asserted closure. More regex screening alone cannot establish these facts.
+
+Private original traces, predeclared criteria, dispatch/exit receipts, independent audit and source-review notes: `artifacts/uat/activity-count-constrained-20261102/`. Estimated batch spend: **$0.119323**. No trial was restarted. The Android device list remains empty; native acceptance remains outstanding.
+
+During the batch, GitHub CI run `41398436898` passed quality checks but failed one existing web test: the 10 ms stalled-checker timeout could expire while compiling, before checker dispatch. The test now controls its clock, asserts dispatch and a non-aborted signal before advancing time, then verifies abort, one dispatch and no unchecked selections. Runtime timeout behavior is unchanged. An initial local edit used the wrong relative path and made no changes; the corrected patch was subsequently validated.
+
+Final local validation: **1,624 web tests across 181 files** and all 11 workspace check tasks pass (nine existing lint warnings). Gateway reconciliation after the completed batch reports **$5.33/$20** cumulative spend. The CI fix still needs confirmation on the next remote run. PR 55 remains draft.

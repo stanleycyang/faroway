@@ -164,15 +164,26 @@ it("aborts a stalled checker without redispatching or selecting unchecked visits
       return new Promise<readonly ActivityAvailabilityAssessment[]>(() => {});
     },
   );
-  const result = await repairActivityAvailability(input, check, {
-    maxRounds: 3,
-    maxChecks: 24,
-    timeoutMs: 10,
-  });
-  expect(received?.aborted).toBe(true);
-  expect(check).toHaveBeenCalledTimes(1);
-  expect(names(result)).toEqual([]);
-  expect(result.outcome).toBe("checker_unavailable");
+  // A real 10ms deadline can expire during compilation on a busy CI runner,
+  // before the stalled checker under test has even been dispatched.
+  vi.useFakeTimers();
+  try {
+    const pending = repairActivityAvailability(input, check, {
+      maxRounds: 3,
+      maxChecks: 24,
+      timeoutMs: 10,
+    });
+    expect(check).toHaveBeenCalledTimes(1);
+    expect(received?.aborted).toBe(false);
+    await vi.advanceTimersByTimeAsync(10);
+    const result = await pending;
+    expect(received?.aborted).toBe(true);
+    expect(check).toHaveBeenCalledTimes(1);
+    expect(names(result)).toEqual([]);
+    expect(result.outcome).toBe("checker_unavailable");
+  } finally {
+    vi.useRealTimers();
+  }
 });
 
 it("does not let a checker mutate the caller's inventory or change the scheduled visit", async () => {
