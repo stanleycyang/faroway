@@ -27,6 +27,40 @@ export function parseDiningDiscovery(text: string): unknown {
   }
 }
 
+/** Compact output uses identity fields as literal evidence, without generating them twice. */
+export function expandCompactDiningDiscovery(value: unknown): unknown {
+  const root = object(value);
+  if (
+    Object.keys(root).some((k) => k !== "venues") ||
+    !Array.isArray(root.venues)
+  )
+    return null;
+  return {
+    venues: root.venues.map((raw) => {
+      const row = object(raw);
+      if (
+        Object.keys(row).some(
+          (k) => !["name", "url", "address", "mealQuote"].includes(k),
+        )
+      )
+        return { invalid: true };
+      return { ...row, nameQuote: row.name, addressQuote: row.address };
+    }),
+  };
+}
+
+export function compactDiningDiscoveryPrompt(brief: PublicDiningBrief) {
+  return diningDiscoveryPrompt(brief)
+    .replace(
+      ',"nameQuote":"contiguous source title or excerpt containing name","addressQuote":"contiguous excerpt containing address"',
+      "",
+    )
+    .replace(
+      "All quotes must come from the same returned source record.",
+      "Name, address and mealQuote must come from the same returned source record. Name and address are themselves exact literal source spans: preserve capitalization, accents, punctuation and line breaks. Do not return separate nameQuote or addressQuote fields.",
+    );
+}
+
 export function validatePublicDiningBrief(value: unknown): PublicDiningBrief {
   const row = object(value);
   if (

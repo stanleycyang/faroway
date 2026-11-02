@@ -13,6 +13,8 @@ import {
   diningDiscoveryPrompt,
   auditDiningDiscovery,
   parseDiningDiscovery,
+  compactDiningDiscoveryPrompt,
+  expandCompactDiningDiscovery,
 } from "../../../scripts/uat/lib/dining-discovery";
 const arg = (name: string) => {
   const i = process.argv.indexOf(name);
@@ -62,7 +64,14 @@ if (replay && JSON.stringify(replay.brief) !== JSON.stringify(brief))
   throw Error("Replay brief must match the original public request");
 if (replay && policy !== "baseline")
   throw Error("Replay uses its own fixed extraction policy");
-const prompt = replay?.prompt ?? diningDiscoveryPrompt(brief, policy);
+const compactEvidence = process.argv.includes("--compact-evidence");
+if (compactEvidence && (replay || policy !== "baseline"))
+  throw Error("Compact evidence is a baseline live-discovery experiment only");
+const prompt =
+  replay?.prompt ??
+  (compactEvidence
+    ? compactDiningDiscoveryPrompt(brief)
+    : diningDiscoveryPrompt(brief, policy));
 const hash = (data: string | Buffer) =>
   createHash("sha256").update(data).digest("hex");
 const provenance = {
@@ -85,6 +94,7 @@ const provenance = {
     ]),
   ),
   promptPolicy: policy,
+  compactEvidence,
   mode: replay ? "frozen-source-selection" : "live-discovery",
   screenSources: replay?.screenSources ?? false,
   ...(replayBytes ? { replaySha256: hash(replayBytes) } : {}),
@@ -126,7 +136,11 @@ try {
     replay?.retrievalResults ??
     result.steps.flatMap((step) => step.toolResults);
   const selection = parseDiningDiscovery(result.text);
-  const extracted = replay ? bindDiningReplay(selection, replay) : selection;
+  const extracted = replay
+    ? bindDiningReplay(selection, replay)
+    : compactEvidence
+      ? expandCompactDiningDiscovery(selection)
+      : selection;
   const audit = auditDiningDiscovery(extracted, retrievalResults, brief);
   const billingKnown =
     Number.isFinite(result.usage.inputTokens) &&

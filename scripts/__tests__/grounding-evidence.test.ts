@@ -699,6 +699,7 @@ import {
   validatePublicDiningBrief,
   parseDiningDiscovery,
   diningOptionsForReview,
+  expandCompactDiningDiscovery,
 } from "../uat/lib/dining-discovery";
 
 test("dining JSON permits a complete code fence without recovering arbitrary prose", () => {
@@ -748,6 +749,33 @@ test("source-first dining keeps missing service and location facts unknown", () 
     },
   };
   const audit = auditDiningDiscovery({ venues: [venue] }, [tool], brief);
+  const compact = {
+    name: venue.name,
+    url: venue.url,
+    address: venue.address,
+    mealQuote: venue.mealQuote,
+  };
+  expect(
+    auditDiningDiscovery(
+      expandCompactDiningDiscovery({ venues: [compact] }),
+      [tool],
+      brief,
+    ).options,
+  ).toHaveLength(1);
+  for (const change of [
+    { address: "13 Main Street" },
+    { name: "Unpublished Name" },
+    { url: "https://invented.example/" },
+    { nameQuote: "Cafe A" },
+    { mealQuote: "Dinner daily" },
+  ])
+    expect(
+      auditDiningDiscovery(
+        expandCompactDiningDiscovery({ venues: [{ ...compact, ...change }] }),
+        [tool],
+        brief,
+      ).options,
+    ).toHaveLength(0);
   const replay = prepareDiningReplay({
     status: "completed",
     brief,

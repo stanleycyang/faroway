@@ -6,6 +6,7 @@ import {
   auditDiningDiscovery,
   parseDiningDiscovery,
   validatePublicDiningBrief,
+  expandCompactDiningDiscovery,
 } from "./lib/dining-discovery";
 
 const files = process.argv.slice(2);
@@ -29,7 +30,9 @@ const rows = files.map((file) => {
             receipt.provenance.screenSources === true,
           ),
         )
-      : selection,
+      : receipt.provenance?.compactEvidence === true
+        ? expandCompactDiningDiscovery(selection)
+        : selection,
     receipt.retrievalResults,
     brief,
   );

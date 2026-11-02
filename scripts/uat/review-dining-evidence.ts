@@ -7,6 +7,7 @@ import {
   auditDiningDiscovery,
   parseDiningDiscovery,
   validatePublicDiningBrief,
+  expandCompactDiningDiscovery,
 } from "./lib/dining-discovery";
 import { prepareDiningReplay, bindDiningReplay } from "./lib/dining-replay";
 const [reviewPath, ...paths] = process.argv.slice(2);
@@ -34,7 +35,9 @@ const rows = paths.map((file) => {
             receipt.provenance.screenSources === true,
           ),
         )
-      : parsed;
+      : receipt.provenance?.compactEvidence === true
+        ? expandCompactDiningDiscovery(parsed)
+        : parsed;
   const audit = auditDiningDiscovery(
     output,
     receipt.retrievalResults,

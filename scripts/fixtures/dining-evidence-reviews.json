@@ -47,5 +47,101 @@
       "https://formelbgroup.dk/uformel/en/food",
       "https://www.visitcopenhagen.com/copenhagen/planning/uformel-gdk915835"
     ]
+  },
+  {
+    "receiptSha256": "74ff7717329c93f826c83001baf0167fe184f5593cbef1b22bbf435c561bb357",
+    "optionId": "web:003a0dcf4d26f1c7a1114e2f1ad590a4792cca5854a24e287486ef2e6336f54c",
+    "reviewer": "agent-source-review-2026-11-02",
+    "publisher": "corroborated_operator",
+    "mealEvidence": "supports_requested_meal",
+    "note": "Independent signed restaurant reporting links the Jayi domain. Retained Spanish evidence is under a breakfast section and explicitly describes breakfast. No specific date, allergy suitability or availability is inferred.",
+    "evidenceUrls": [
+      "https://www.jayirestaurante.com/",
+      "https://foodandpleasure.com/restaurantes-comida-arabe-cdmx/"
+    ]
+  },
+  {
+    "receiptSha256": "a1aa33cb2cf9ebc4ec2610528f135cbb7faf836f22bfa667e98bea0bf7bebb06",
+    "optionId": "web:6727695c54ee0ce42d768c0bddb0672a1b0d051a73ef2a95752a0d22458f448e",
+    "reviewer": "agent-source-review-2026-11-02",
+    "publisher": "unresolved",
+    "mealEvidence": "supports_requested_meal",
+    "note": "Hotel site identifies the restaurant at the matching address and selected evidence states lunch service. The extra group page is on the same domain, not independent corroboration. A third-party directory has a different address and cannot resolve this association reliably; publisher label remains unresolved under this rubric.",
+    "evidenceUrls": [
+      "https://www.hoteldabaixa.com/en/sebastiao-restaurant-bar",
+      "https://www.hoteldabaixa.com/baixa-hotels-group"
+    ]
+  },
+  {
+    "receiptSha256": "b2a9cd8151ee2ea99ab43e1f8d2240398949ceca1178f03063a395323297196f",
+    "optionId": "web:5fd582482c9e41a53136fc2edc02f80cc7d2a37b47918e4ce2d1c0ccf4471ed7",
+    "reviewer": "agent-source-review-2026-11-02",
+    "publisher": "corroborated_operator",
+    "mealEvidence": "supports_requested_meal",
+    "note": "The operating group links THE SODOH domain. Retained selected evidence explicitly identifies a lunch course restricted to weekdays. Direct current sushi-page fetch failed, so no freshness or future availability approval is implied.",
+    "evidenceUrls": [
+      "https://www.thesodoh.com/en/sushi",
+      "https://plandosee.co.jp/en/"
+    ]
+  },
+  {
+    "receiptSha256": "b2a9cd8151ee2ea99ab43e1f8d2240398949ceca1178f03063a395323297196f",
+    "optionId": "web:db51f012278e494bef7818dea0ccdd62820d2332fb340bdf61afd84894510903",
+    "reviewer": "agent-source-review-2026-11-02",
+    "publisher": "corroborated_operator",
+    "mealEvidence": "supports_requested_meal",
+    "note": "Independent guide links the Tousuiro operator domain for another branch; the retained Gion page identifies the specific branch and lunch service. Current Gion page contains conflicting dinner closing times and year-end closure statements between sections. Publisher corroboration does not resolve those conflicts or verify a trip date.",
+    "evidenceUrls": [
+      "https://tousuiro.com/en-gion",
+      "https://www.insidekyoto.com/tousuiro"
+    ]
+  },
+  {
+    "receiptSha256": "b2a9cd8151ee2ea99ab43e1f8d2240398949ceca1178f03063a395323297196f",
+    "optionId": "web:91d369f69ecb1ba5f822367bf38c44ab925c7425c48f6270a584caa46d961268",
+    "reviewer": "agent-source-review-2026-11-02",
+    "publisher": "corroborated_operator",
+    "mealEvidence": "supports_requested_meal",
+    "note": "Restaurant-group roster links the Gion domain at the matching Yasaka main-branch address. Selected evidence explicitly labels a lunch set menu and service window. No date-specific availability is verified.",
+    "evidenceUrls": [
+      "https://www.gion-endo.com/en/menu_lunch/",
+      "https://www.endo.kyoto/"
+    ]
+  },
+  {
+    "receiptSha256": "5fc7cd4a50acb43f56db9d0d983eac8e568ff826dfb139f43d4d0ac07061e424",
+    "optionId": "web:b6a37ff1ac18f8f595056af4d77697caa0cedd217f1cee5ce4503d13aae9d430",
+    "reviewer": "agent-source-review-2026-11-02",
+    "publisher": "corroborated_operator",
+    "mealEvidence": "supports_requested_meal",
+    "note": "Reservation partner identifies the same restaurant, address and operator URL. Retained evidence explicitly labels dinner hours. Partner lists closure/booking restrictions; do not generalize this into daily service or guaranteed tables.",
+    "evidenceUrls": [
+      "https://asakusa-hirayama.com/en",
+      "https://omakaseje.com/restaurants/mq856673"
+    ]
+  },
+  {
+    "receiptSha256": "9b2a21e7c22dbebd30486e65d3e5187475e0df808d63f440e833380429a60f74",
+    "optionId": "web:d19fe610198bc193c5cbbb3144f04dd7f3d6a9e396fff78a2511e8e384732159",
+    "reviewer": "agent-source-review-2026-11-02",
+    "publisher": "corroborated_operator",
+    "mealEvidence": "supports_requested_meal",
+    "note": "Official tourism page links this domain and matching address. Selected source statement explicitly includes breakfast. Tourism listing reports weekend closures, so the generic meal statement must not be treated as daily/date-specific service.",
+    "evidenceUrls": [
+      "https://henryandthefox.com.au/",
+      "https://www.visitmelbourne.com/regions/melbourne/eat-and-drink/restaurants/henry-and-the-fox"
+    ]
+  },
+  {
+    "receiptSha256": "acd2f469c89b79841e9310bcd8cfa5604f36e61c412b26954615e38788d47ea5",
+    "optionId": "web:da8300ffd879a1bb8598ff65162f2ee9e6ea03fc33d96d1595057117b9428e7f",
+    "reviewer": "agent-source-review-2026-11-02",
+    "publisher": "corroborated_operator",
+    "mealEvidence": "supports_requested_meal",
+    "note": "Official tourism listing links COFOCO and matches the venue address. Selected heading identifies a dinner menu. Current page bounds that menu to September 24–November 9, 2026; this does not establish a menu or service for later trip dates.",
+    "evidenceUrls": [
+      "https://cofoco.dk/en/restaurant/hoest",
+      "https://www.visitcopenhagen.com/copenhagen/planning/host-gdk723032"
+    ]
   }
 ]
