@@ -1,4 +1,4 @@
-/** Independently reviewed, date-specific reference windows. Never model output.
+/** Independently reviewed, date-specific ordinary-entry windows. Never model output.
  * The byte hash binds reviewer-adjudicated candidate IDs to one immutable receipt.
  */
 export interface HoursReview {
@@ -113,6 +113,10 @@ export function evaluateReviewedHours(
           (a.duration as number) <= 0
         ) {
           result.reason = "invalid_visit_identity_or_duration";
+        } else if (a.proposedVisitType !== "ordinary_entry") {
+          // Keep this independent of runtime scope matching. Building admission
+          // hours establish neither a tour/event time nor exterior access.
+          result.reason = "visit_intent_requires_separate_scope_review";
         } else if (matches.length > 1) {
           result.reason = "ambiguous_review";
         } else if (f && !usable(f, asOf)) {
@@ -136,7 +140,7 @@ export function evaluateReviewedHours(
   const count = (status: (typeof results)[number]["status"]) =>
     results.filter((r) => r.status === status).length;
   return {
-    rubric: "receipt-bound-ordinary-hours-v1",
+    rubric: "receipt-bound-ordinary-hours-v2",
     selectedVisits: results.length,
     conflicts: count("conflict"),
     compatible: count("ordinary_hours_compatible"),

@@ -4,8 +4,17 @@ import {
   type HoursReview,
 } from "../uat/lib/reviewed-hours-eval";
 const hash = "a".repeat(64);
-const activity = { id: "museum", name: "Generated title", duration: 120 };
-const trace = (slot = "evening", duration = 120) => ({
+const activity = {
+  id: "museum",
+  name: "Generated title",
+  duration: 120,
+  proposedVisitType: "ordinary_entry",
+};
+const trace = (
+  slot = "evening",
+  duration = 120,
+  scope: { proposedVisitType: unknown } = activity,
+) => ({
   steps: [
     {
       step: "aggregator",
@@ -17,7 +26,8 @@ const trace = (slot = "evening", duration = 120) => ({
               ["morning", "afternoon", "evening"].map((s) => [
                 s,
                 {
-                  activities: s === slot ? [{ ...activity, duration }] : [],
+                  activities:
+                    s === slot ? [{ ...activity, ...scope, duration }] : [],
                 },
               ]),
             ),
@@ -41,6 +51,30 @@ const review: HoursReview = {
 };
 const evaluate = (t = trace(), facts = [review]) =>
   evaluateReviewedHours(t, hash, facts, "2026-11-01");
+test("ordinary admission windows do not certify or reject other visit scopes", () => {
+  for (const proposedVisitType of [
+    "guided_tour",
+    "event",
+    "exterior_walk",
+    "unknown",
+    undefined,
+    "confirmed",
+  ]) {
+    for (const slot of ["morning", "evening"]) {
+      const input = trace(slot, 120, { proposedVisitType });
+      for (const intervals of [review.intervals, []]) {
+        const result = evaluate(input, [{ ...review, intervals }]);
+        expect(result.unreviewed).toBe(1);
+        expect(result.compatible).toBe(0);
+        expect(result.conflicts).toBe(0);
+        expect(result.evidenceComplete).toBe(false);
+        expect(result.results[0].reason).toBe(
+          "visit_intent_requires_separate_scope_review",
+        );
+      }
+    }
+  }
+});
 test("detects an evening conflict independently of generated title matching", () => {
   const result = evaluate();
   expect(result.conflicts).toBe(1);
