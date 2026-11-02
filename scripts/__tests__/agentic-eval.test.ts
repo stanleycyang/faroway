@@ -1321,3 +1321,30 @@ describe("reviewed supply provenance", () => {
     );
   });
 });
+
+test("detects dropped, changed and invented mapped visit intent independently", () => {
+  const trace = fixture();
+  const output = trace.steps[4].output as {
+    days: Array<{
+      morning: { activities: Array<{ proposedVisitType?: string }> };
+    }>;
+  };
+  trace.mappedItinerary = structuredClone(trace.mappedItinerary);
+  const mapped = trace.mappedItinerary as typeof output;
+  const original = output.days[0].morning.activities[0];
+  const saved = mapped.days[0].morning.activities[0];
+  for (const [source, target] of [
+    ["guided_tour", undefined],
+    ["ordinary_entry", "exterior_walk"],
+    [undefined, "ordinary_entry"],
+  ]) {
+    original.proposedVisitType = source;
+    saved.proposedVisitType = target;
+    expect(evaluateAgenticTrace(trace).failures).toContain(
+      "mapped_visit_intent_changed:walk",
+    );
+  }
+  original.proposedVisitType = "guided_tour";
+  saved.proposedVisitType = "guided_tour";
+  expect(evaluateAgenticTrace(trace).contractPass).toBe(true);
+});

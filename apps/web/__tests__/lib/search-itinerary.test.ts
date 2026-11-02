@@ -766,3 +766,44 @@ describe("search itinerary bridge", () => {
     expect(result.totalEstimatedCost).toBeUndefined();
   });
 });
+
+it.each([
+  "ordinary_entry",
+  "exterior_walk",
+  "guided_tour",
+  "event",
+  "unknown",
+  undefined,
+] as const)(
+  "retains proposed visit intent %s through persisted itinerary serialization",
+  (proposedVisitType) => {
+    const stop = { ...activity("visit"), proposedVisitType };
+    const day: SuggestedDay = {
+      dayNumber: 1,
+      date: "2027-01-11",
+      title: "Visit",
+      summary: "Draft",
+      morning: { activities: [stop] },
+      afternoon: { activities: [] },
+      evening: { activities: [] },
+      estimatedCost: 0,
+      currency: "",
+      tips: [],
+    };
+    const result = mapSearchResultsToItinerary(
+      {
+        searchId: "test",
+        hotels: [],
+        activities: [stop],
+        dining: [],
+        transport: [],
+        itinerary: [day],
+      },
+      null,
+    );
+    const saved = JSON.parse(JSON.stringify(result));
+    expect(saved.days[0].morning.activities[0].proposedVisitType).toBe(
+      proposedVisitType,
+    );
+  },
+);

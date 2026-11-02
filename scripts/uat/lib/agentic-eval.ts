@@ -270,6 +270,11 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
       let minutes = 0;
       for (const raw of items) {
         const a = object(raw);
+        const mappedActivity = object(
+          array(mappedSlot.activities).find((item) => object(item).id === a.id),
+        );
+        if (a.proposedVisitType !== mappedActivity.proposedVisitType)
+          fail(`mapped_visit_intent_changed:${String(a.id)}`);
         if (!activityIds.has(a.id)) fail(`unknown_activity:${String(a.id)}`);
         if (typeof a.id === "string" && suppliedIds.has(a.id))
           reviewedSupplySelectionFailures(

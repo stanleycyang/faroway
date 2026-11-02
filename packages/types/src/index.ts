@@ -206,6 +206,8 @@ export interface Coordinates {
 // =============================================================================
 
 export interface ItineraryActivity {
+  /** Proposed visit scope retained from planning; not verified access. */
+  proposedVisitType?: ActivityResult["proposedVisitType"];
   id: string;
   name: string;
   description: string;

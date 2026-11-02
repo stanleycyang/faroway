@@ -55,6 +55,7 @@ function mapActivity(
     name: a.name,
     description: a.description,
     duration: a.duration, // already in minutes from activities agent
+    proposedVisitType: a.proposedVisitType,
     estimatedCost: {
       amount: price?.amount ?? 0,
       status: price ? a.priceStatus : "unknown",
