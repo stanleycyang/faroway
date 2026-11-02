@@ -2069,3 +2069,12 @@ The compiled staging path explicitly passes IDs admitted from reviewed supply. I
 The full preserved inventory replay now selects Flinders Street Station Architectural View, Federation Square Cultural Precinct Walk and Melbourne Skydeck across three evenings. Reviewed-supply selection increases from zero to one, while work-hour restrictions and three-day coverage remain intact. The library is excluded by ordinary hours; the renamed NGV candidate is withheld for identity review. The other two selected visits remain unverified. Generated Eureka Skydeck duplication is still unresolved, and no historical saved trip was changed.
 
 Validation: **1,512 tests across 175 web test files pass**, and workspace checks pass with nine existing warnings. The initial full-suite failure exposed an old expectation that a renamed walk at the NGV address should be scheduled; the regression now asserts the distinct identity-review explanation. No paid calls or enabled deployments were created; cumulative spend remains **$4.82/$20**. Fresh workflow acceptance, broader evidence coverage and physical-device acceptance remain outstanding. PR 55 remains draft and is not ready for production merge.
+
+
+## Preserve requested highlights at the inventory cap (2026-11-02 UTC)
+
+Review of the evidence-ranking change found a mismatch between candidate pruning and beam ranking: 24 reviewed alternatives could remove a requested highlight before the beam could prioritize it. A failing regression reproduced this with a single evening, 24 reviewed alternatives and a low-score requested museum; the old result selected an alternative.
+
+When reviewed IDs are supplied, candidate pruning now prioritizes requested-highlight name matches before reviewed status and preference score, matching the beam's intended highlight-before-evidence policy. Ordinary calls without reviewed IDs retain their previous ordering. This protects the observed case, not arbitrary distinct-highlight coverage in an over-cap inventory; the existing bounded-search issue remains visible. Matching a requested name does not verify its facts or bypass schedule exclusions.
+
+Validation: **1,513 web tests** and **215 offline script tests (1,296 assertions)** pass; workspace checks pass with nine existing warnings. No paid calls, source-catalog changes or enabled deployments. Spend remains **$4.82/$20**. Reviewed identity evidence for the generated Eureka/Skydeck duplicate and fresh live acceptance remain outstanding; PR 55 stays draft.

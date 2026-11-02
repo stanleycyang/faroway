@@ -252,6 +252,11 @@ export function compileSchedule(
   const ids = new Set<string>();
   const reviewRequiredActivities: CompiledSchedule["reviewRequiredActivities"] =
     [];
+  const highlights = [...new Set(plan.activityCriteria.mustSee ?? [])];
+  const isRequestedHighlight = (activity: ActivityResult) =>
+    highlights.some((highlight) =>
+      matchesSuggestedHighlight(activity.name, highlight),
+    );
   const candidates = inventory
     .filter((activity) => {
       if (activity.planningIdea) {
@@ -339,6 +344,10 @@ export function compileSchedule(
     })
     .sort(
       (a, b) =>
+        // Preserve requested highlights before pruning the bounded search.
+        (reviewedIds.size
+          ? Number(isRequestedHighlight(b)) - Number(isRequestedHighlight(a))
+          : 0) ||
         Number(reviewedIds.has(b.id)) - Number(reviewedIds.has(a.id)) ||
         preference(b) - preference(a) ||
         a.id.localeCompare(b.id),
@@ -346,7 +355,6 @@ export function compileSchedule(
   if (candidates.length > INVENTORY_LIMIT)
     issues.push("inventory_search_limit");
   const activities = candidates.slice(0, INVENTORY_LIMIT);
-  const highlights = [...new Set(plan.activityCriteria.mustSee ?? [])];
   const matches = new Map(
     activities.map((activity) => [
       activity.id,

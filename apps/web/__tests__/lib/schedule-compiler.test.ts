@@ -1048,3 +1048,30 @@ it("prefers admitted source evidence over generated scores while preserving requ
     ),
   ).toEqual([generated.id]);
 });
+
+it("retains a requested highlight before the bounded inventory search with reviewed alternatives", () => {
+  const input: SearchPlan = {
+    ...extended,
+    dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 },
+    mobilityNeeds: "only evening visits",
+    requirements: undefined,
+    activityCriteria: {
+      ...extended.activityCriteria,
+      mustSee: ["Requested museum"],
+    },
+  };
+  const requested = {
+    ...visit("Requested museum", 180, "evening"),
+    vibeScore: 1,
+  };
+  const alternatives = Array.from({ length: 24 }, (_, index) =>
+    visit(`Reviewed alternative ${index}`, 180, "evening"),
+  );
+  const result = compileSchedule(input, [...alternatives, requested], [], [], {
+    reviewedActivityIds: alternatives.map((activity) => activity.id),
+  });
+  expect(result.issues).toContain("inventory_search_limit");
+  expect(
+    result.days[0].evening.activities.map((activity) => activity.id),
+  ).toEqual([requested.id]);
+});
