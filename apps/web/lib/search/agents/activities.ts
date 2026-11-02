@@ -113,7 +113,7 @@ Prefer ordinary, enduring places and experiences. Without supplied date-specific
 
 For each activity, provide:
 1. Real attraction/tour names that exist at the destination
-2. Describe the experience without inventing wheelchair accessibility, lifts, ramps, step-free routes, accessible toilets or boarding assistance. Do not put unverified access promises in names or vibe labels. Access requirements must be confirmed with the venue. Do not state opening/closing hours, last admission or daily/late opening: no operating-hours evidence is supplied to you. Keep descriptions focused on the experience, not unverified operating schedules.
+2. Describe the experience without inventing wheelchair accessibility, lifts, ramps, step-free routes, accessible toilets or boarding assistance. Do not infer level interiors, flat or smooth paths, easy movement between floors or an accessible alternative route from a venue's name or reputation. If you mention an obstacle, do not imply that a different route solves it without evidence. Do not put unverified access promises in names or vibe labels. Access requirements must be confirmed with the venue. Do not state opening/closing hours, last admission or daily/late opening: no operating-hours evidence is supplied to you. Keep descriptions focused on the experience, not unverified operating schedules.
 3. Leave price unspecified unless supplied by a provider
 4. Duration in whole MINUTES, never hours (30-minute stop = 30; 2-hour museum visit = 120; 2.5-hour tour = 150)
 5. Best time of day to visit

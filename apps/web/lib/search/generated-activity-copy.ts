@@ -2,17 +2,22 @@
  * Provider/source copy must never enter this generated-only boundary.
  */
 const accessTopic =
-  /\b(?:accessib\w*|wheelchairs?|step[ -]free|stair[ -]free|ramps?|elevators?|lifts?)\b|\bwithout (?:stairs|steps)\b/i;
+  /\b(?:accessib\w*|wheelchairs?|step[ -]free|stair[ -]free|ramps?|elevators?|lifts?)\b|\bwithout (?:stairs|steps)\b|\b(?:no|without)\s+(?:steep|sloped|uneven|narrow)\s+(?:paths?|routes?|surfaces?|terrain|entrances?|passages?)\b|\b(?:level|flat|flatter|smooth)\s+(?:walking\s+)?(?:interiors?|entrances?|paths?|routes?|surfaces?|floors?|terrain|environment)\b|\b(?:interiors?|entrances?|paths?|routes?|surfaces?|floors?|terrain)\s+(?:(?:is|are|remains?|largely|mostly|generally|relatively|completely)\s+){1,3}(?:level|flat|smooth)\b|\b(?:improved|easy|easier|seamless)\s+(?:connectivity|movement|access)\s+between\s+floors\b/i;
 const obstacle =
-  /\binaccessible\b|\bno wheelchair access\b|\b(?:not|never)\s+(?:(?:wheelchair|stroller)[ -])?accessible\b|\b(?:no|without)\s+(?:step[ -]free access|lifts?|elevators?|ramps?)\b|\b(?:has|have|includes?|requires?|involves?)\s+(?:(?:some|many|several|steep|narrow|unavoidable|multiple|a flight of)\s+){0,3}(?:stairs|steps)\b/i;
+  /\binaccessible\b|\bno wheelchair access\b|\b(?:not|never)\s+(?:(?:wheelchair|stroller)[ -])?accessible\b|\b(?:no|without)\s+(?:step[ -]free access|lifts?|elevators?|ramps?)\b|\b(?:has|have|includes?|requires?|involves?)\s+(?:(?:some|many|several|steep|narrow|unavoidable|multiple|small|raised|a flight of)\s+){0,3}(?:stairs|steps|thresholds)\b|\b(?:steep|sloped|uneven|narrow)\s+(?:paths?|routes?|surfaces?|terrain|entrances?|passages?)\b|\b(?:paths?|routes?|surfaces?|terrain|sections)\s+(?:(?:is|are|can be|sometimes|quite)\s+){1,2}(?:steep|sloped|uneven|narrow)\b/i;
 const normalize = (text: string) =>
   text.normalize("NFKC").replace(/[\u200B-\u200D\uFEFF]/g, "");
 const hasObstacle = (text: string) =>
   obstacle.test(
-    normalize(text).replace(
-      /\b(?:(?:does|do) not|doesn't|don't)\s+(?:have|include|require|involve)\s+[^.;!?]*/gi,
-      "",
-    ),
+    normalize(text)
+      .replace(
+        /\b(?:no|without)\s+(?:steep|sloped|uneven|narrow)\s+(?:paths?|routes?|surfaces?|terrain|entrances?|passages?)\b/gi,
+        "",
+      )
+      .replace(
+        /\b(?:(?:does|do) not|doesn't|don't)\s+(?:have|include|require|involve)\s+[^.;!?]*/gi,
+        "",
+      ),
   );
 const sentences = new Intl.Segmenter("en", { granularity: "sentence" });
 export const GENERATED_ACCESS_REVIEW_NOTE =

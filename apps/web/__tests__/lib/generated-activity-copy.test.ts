@@ -125,3 +125,65 @@ it("preserves experience descriptions, duration estimates and access concerns", 
   expect(result.description).toContain(GENERATED_ACCESS_CONCERN_NOTE);
   expect(screenGeneratedActivityCopy(result)).toEqual(result);
 });
+
+it.each([
+  "The interior is largely level, though some side chapels have small thresholds.",
+  "The Glasshouses provide a level environment to see exotic plants (some sections might have narrow paths).",
+  "While sections are sloped, the lower paths provide a flatter walking route.",
+])(
+  "retains access review for mixed reassurance and obstacles: %s",
+  (description) => {
+    const result = screenGeneratedActivityCopy({
+      ...candidate,
+      name: "Visit",
+      vibeMatch: [],
+      description: `See the collection. ${description}`,
+    });
+    expect(result.description).toBe(
+      `See the collection. ${GENERATED_ACCESS_CONCERN_NOTE}`,
+    );
+    expect(
+      activityMobilityReviewReason(
+        { requirements: { accessibility: ["step_free_entrance"] } },
+        result.description,
+      ),
+    ).toBe("supplied_access_conflict");
+    expect(screenGeneratedActivityCopy(result)).toEqual(result);
+  },
+);
+
+it.each([
+  "The interior is largely level.",
+  "A flat route connects the collections.",
+  "The lower path provides a flatter walking route.",
+  "The extension offers improved connectivity between floors.",
+  "Smooth surfaces make movement easier.",
+  "There are no steep paths.",
+  "A route without narrow passages.",
+])("does not present unverified surface reassurance: %s", (description) => {
+  const result = screenGeneratedActivityCopy({
+    ...candidate,
+    name: "Visit",
+    vibeMatch: [],
+    description,
+  });
+  expect(result.description).toBe(GENERATED_ACCESS_REVIEW_NOTE);
+});
+
+it.each([
+  "Admire the level of detail in the mosaics.",
+  "The upper level houses the sculpture collection.",
+  "Visit the flat where the writer lived.",
+  "The tour does not involve steep paths. View the gardens.",
+])(
+  "does not invent an access obstacle from unrelated or negated copy: %s",
+  (description) => {
+    const result = screenGeneratedActivityCopy({
+      ...candidate,
+      name: "Visit",
+      vibeMatch: [],
+      description,
+    });
+    expect(result.description).toBe(description);
+  },
+);
