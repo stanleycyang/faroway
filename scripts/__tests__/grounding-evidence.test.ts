@@ -607,3 +607,60 @@ test("parallel discovery uses only provider-executed search results with excerpt
     ]),
   ).toEqual([]);
 });
+
+test("parallel discovery supports the observed raw Gateway response without guessing mixed formats", () => {
+  const result = {
+    toolName: "parallel_search",
+    toolCallId: "call-raw",
+    providerExecuted: true,
+    output: {
+      search_id: "search-raw",
+      results: [
+        {
+          url: "https://museum.example/",
+          title: "Museum",
+          excerpts: ["Museum A", "1 Example Street."],
+        },
+      ],
+    },
+  };
+  expect(parallelVenueSources([result])[0]?.excerpt).toBe(
+    "Museum A\n\n1 Example Street.",
+  );
+  expect(
+    parallelVenueSources([
+      { ...result, output: { ...result.output, searchId: "different" } },
+    ]),
+  ).toEqual([]);
+  for (const excerpts of [
+    [],
+    [null],
+    [42],
+    [""],
+    ["x".repeat(20001)],
+    ["a".repeat(15000), "b".repeat(15000)],
+  ]) {
+    expect(
+      parallelVenueSources([
+        {
+          ...result,
+          output: {
+            ...result.output,
+            results: [{ ...result.output.results[0], excerpts }],
+          },
+        },
+      ]),
+    ).toEqual([]);
+  }
+  expect(
+    parallelVenueSources([
+      {
+        ...result,
+        output: {
+          ...result.output,
+          results: [{ ...result.output.results[0], excerpt: "other" }],
+        },
+      },
+    ]),
+  ).toEqual([]);
+});

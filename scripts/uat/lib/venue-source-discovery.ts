@@ -173,31 +173,48 @@ export function parallelVenueSources(toolResults: readonly unknown[]) {
   return toolResults.flatMap((raw) => {
     const result = record(raw);
     const output = record(result.output);
+    const rawFormat =
+      output.searchId === undefined && bounded(output.search_id, 200);
+    const searchId = rawFormat ? output.search_id : output.searchId;
     if (
       result.toolName !== "parallel_search" ||
       result.providerExecuted !== true ||
       !bounded(result.toolCallId, 200) ||
-      !bounded(output.searchId, 200) ||
+      !bounded(searchId, 200) ||
+      (output.searchId !== undefined && output.search_id !== undefined) ||
       !Array.isArray(output.results) ||
       output.error !== undefined
     )
       return [];
     return output.results.flatMap((rawSource, index) => {
       const source = record(rawSource);
+      const excerpt =
+        rawFormat &&
+        Array.isArray(source.excerpts) &&
+        source.excerpts.length > 0 &&
+        source.excerpts.length <= 20 &&
+        source.excerpts.every((part) => bounded(part, 20000))
+          ? source.excerpts.join("\n\n")
+          : rawFormat
+            ? undefined
+            : source.excerpt;
       if (
         !sourceUrl(source.url) ||
         !bounded(source.title, 2000) ||
-        !bounded(source.excerpt, 20000)
+        !bounded(excerpt, 20000) ||
+        (rawFormat
+          ? source.excerpt !== undefined
+          : source.excerpts !== undefined)
       )
         return [];
       return [
         {
           type: "source",
           sourceType: "url",
-          id: `parallel:${output.searchId}:${index}`,
+          id: `parallel:${searchId}:${index}`,
           url: source.url,
           title: source.title,
-          excerpt: source.excerpt,
+          excerpt,
           retrievalToolCallId: result.toolCallId,
         },
       ];
