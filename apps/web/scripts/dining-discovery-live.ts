@@ -56,9 +56,14 @@ const replay = replayBytes
   ? prepareDiningReplay(
       JSON.parse(replayBytes.toString()),
       process.argv.includes("--screen-sources"),
+      process.argv.includes("--indexed-meal-evidence"),
     )
   : undefined;
-if (process.argv.includes("--screen-sources") && !replay)
+if (
+  (process.argv.includes("--screen-sources") ||
+    process.argv.includes("--indexed-meal-evidence")) &&
+  !replay
+)
   throw Error("Source screening requires frozen retrieval");
 if (replay && JSON.stringify(replay.brief) !== JSON.stringify(brief))
   throw Error("Replay brief must match the original public request");
@@ -97,6 +102,7 @@ const provenance = {
   compactEvidence,
   mode: replay ? "frozen-source-selection" : "live-discovery",
   screenSources: replay?.screenSources ?? false,
+  indexedMealEvidence: replay?.indexedMealEvidence ?? false,
   ...(replayBytes ? { replaySha256: hash(replayBytes) } : {}),
   model: "google/gemini-3-flash",
   clientRequestsMaximum: 1,

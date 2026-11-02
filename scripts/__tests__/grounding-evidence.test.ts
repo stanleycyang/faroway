@@ -1479,3 +1479,86 @@ test("retrieved pool excludes uncited context records and model-only names", () 
       .candidates,
   ).toEqual([]);
 });
+
+test("indexed meal evidence copies one source range and rejects invalid selectors", () => {
+  const brief = {
+    destination: "Example City",
+    area: "Centre",
+    meal: "lunch",
+    maxCandidates: 3,
+  };
+  const tool = {
+    toolName: "parallel_search",
+    providerExecuted: true,
+    toolCallId: "indexed",
+    output: {
+      search_id: "indexed",
+      results: [
+        {
+          url: "https://cafe.example/",
+          title: "Cafe A",
+          excerpts: [
+            "12 Main Street\nLunch menu\nWeekdays only\nReservations required",
+            "Dinner is not served",
+          ],
+        },
+      ],
+    },
+  };
+  const input = { status: "completed", brief, retrievalResults: [tool] };
+  const replay = prepareDiningReplay(input, true, true);
+  const selection = {
+    screening: [
+      {
+        sourceId: "source-0",
+        publisherKind: "operator_page",
+        mealSupport: "explicit",
+      },
+    ],
+    venues: [
+      {
+        sourceId: "source-0",
+        name: "Cafe A",
+        address: "12 Main Street",
+        mealEvidence: { excerpt: 0, startLine: 1, endLine: 3 },
+      },
+    ],
+  };
+  const audit = (value: unknown) =>
+    auditDiningDiscovery(bindDiningReplay(value, replay), [tool], replay.brief);
+  expect(audit(selection).options[0]?.mealQuote).toBe(
+    "Lunch menu\nWeekdays only\nReservations required",
+  );
+  expect(audit(selection).options[0]?.schedulable).toBe(false);
+  for (const span of [
+    null,
+    {},
+    { excerpt: 0, startLine: -1, endLine: 1 },
+    { excerpt: 0, startLine: 2, endLine: 1 },
+    { excerpt: 1, startLine: 0, endLine: 1 },
+    { excerpt: 99, startLine: 0, endLine: 0 },
+    { excerpt: "__proto__", startLine: 0, endLine: 0 },
+    { excerpt: 0, startLine: "1", endLine: 2 },
+    { excerpt: 0, startLine: 1.5, endLine: 2 },
+    { excerpt: 0, startLine: 1, endLine: 2, quote: "Lunch daily" },
+  ])
+    expect(
+      audit({
+        ...selection,
+        venues: [{ ...selection.venues[0], mealEvidence: span }],
+      }).options,
+    ).toHaveLength(0);
+  expect(
+    audit({
+      ...selection,
+      venues: [{ ...selection.venues[0], mealQuote: "Lunch daily" }],
+    }).options,
+  ).toHaveLength(0);
+  expect(
+    audit({
+      ...selection,
+      screening: [{ ...selection.screening[0], publisherKind: "third_party" }],
+    }).options,
+  ).toHaveLength(0);
+  expect(() => prepareDiningReplay(input, false, true)).toThrow();
+});

@@ -33,6 +33,7 @@ const rows = paths.map((file) => {
           prepareDiningReplay(
             receipt,
             receipt.provenance.screenSources === true,
+            receipt.provenance.indexedMealEvidence === true,
           ),
         )
       : receipt.provenance?.compactEvidence === true
