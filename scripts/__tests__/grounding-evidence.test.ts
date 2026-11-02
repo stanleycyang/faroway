@@ -690,6 +690,90 @@ test("discovery candidates cannot silently change names or present unlinked URLs
 });
 
 import { auditVenueIdentityExcerpts } from "../uat/lib/venue-identity-excerpts";
+import {
+  auditDiningDiscovery,
+  validatePublicDiningBrief,
+} from "../uat/lib/dining-discovery";
+
+test("source-first dining keeps missing service and location facts unknown", () => {
+  const brief = validatePublicDiningBrief({
+    destination: "Example City",
+    area: "Centre",
+    meal: "breakfast",
+    maxCandidates: 3,
+  });
+  const venue = {
+    name: "Cafe A",
+    url: "https://cafe.example/",
+    address: "12 Main Street",
+    nameQuote: "Cafe A",
+    addressQuote: "12 Main Street",
+    mealQuote: "Breakfast daily",
+  };
+  const tool = {
+    toolName: "parallel_search",
+    providerExecuted: true,
+    toolCallId: "call1",
+    output: {
+      search_id: "search1",
+      results: [
+        {
+          url: venue.url,
+          title: "Cafe A",
+          excerpts: ["12 Main Street. Breakfast daily."],
+        },
+      ],
+    },
+  };
+  const audit = auditDiningDiscovery({ venues: [venue] }, [tool], brief);
+  expect(audit.options).toHaveLength(1);
+  expect(audit.options[0]).toMatchObject({
+    name: "Cafe A",
+    coordinates: null,
+    priceStatus: "unknown",
+    mealTypes: [],
+    mealServiceVerified: false,
+    schedulable: false,
+    sourceAuthorityVerified: false,
+  });
+  expect(
+    auditDiningDiscovery(
+      { venues: [{ ...venue, mealQuote: null }] },
+      [tool],
+      brief,
+    ).options[0]?.mealQuote,
+  ).toBe(null);
+  for (const change of [
+    { address: "14 Main Street" },
+    { url: "https://invented.example/" },
+    { mealQuote: "Breakfast and dinner daily" },
+    { rating: 4.9 },
+  ])
+    expect(
+      auditDiningDiscovery({ venues: [{ ...venue, ...change }] }, [tool], brief)
+        .options,
+    ).toHaveLength(0);
+  expect(
+    auditDiningDiscovery({ venues: [venue, venue] }, [tool], brief).rejected,
+  ).toHaveLength(1);
+  expect(
+    auditDiningDiscovery(
+      { venues: [venue] },
+      [{ ...tool, providerExecuted: false }],
+      brief,
+    ).options,
+  ).toHaveLength(0);
+  expect(
+    auditDiningDiscovery(
+      { venues: [venue, venue, venue, venue] },
+      [tool],
+      brief,
+    ).shapeValid,
+  ).toBe(false);
+  expect(() =>
+    validatePublicDiningBrief({ ...brief, dietaryNeeds: "private" }),
+  ).toThrow();
+});
 const identityLead = {
   id: "museum",
   status: "candidate",
