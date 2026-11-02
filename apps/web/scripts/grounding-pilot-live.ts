@@ -1,3 +1,4 @@
+import { auditVenueIdentityExcerpts } from "../../../scripts/uat/lib/venue-identity-excerpts";
 import {
   validateVenueDiscoveryRequests,
   venueDiscoveryPrompt,
@@ -170,6 +171,7 @@ async function main() {
                 "matchedName",
                 "matchedAddress",
                 "note",
+                ...(parallel ? ["nameQuote", "addressQuote"] : []),
               ],
               properties: {
                 id: { type: "string", enum: venueRequests.map((r) => r.id) },
@@ -181,6 +183,15 @@ async function main() {
                 matchedName: { type: ["string", "null"], maxLength: 200 },
                 matchedAddress: { type: ["string", "null"], maxLength: 500 },
                 note: { type: "string", maxLength: 600 },
+                ...(parallel
+                  ? {
+                      nameQuote: { type: ["string", "null"], maxLength: 1000 },
+                      addressQuote: {
+                        type: ["string", "null"],
+                        maxLength: 1000,
+                      },
+                    }
+                  : {}),
               },
             },
           },
@@ -200,7 +211,7 @@ async function main() {
           "Google Search",
           "Parallel Search",
         ) +
-        "\nCall parallel_search exactly once before answering. Use only retrieved excerpts, never memory. An empty search result means unresolved, never nonexistent. Return only a JSON object without markdown, matching this schema: " +
+        "\nCall parallel_search exactly once before answering. Use only retrieved excerpts, never memory. An empty search result means unresolved, never nonexistent. For candidate status, nameQuote and addressQuote must each be one contiguous verbatim excerpt from the returned officialUrl page containing the exact matchedName or matchedAddress respectively. Preserve whitespace, punctuation and language; never join separate excerpts, translate, add postal codes or complete an address. If no address is explicit, return matchedAddress and addressQuote null. For ambiguous or unresolved, both quotes must be null. A quote proves text was retrieved, not that a branch or source is authoritative. Return only a JSON object without markdown, matching this schema: " +
         JSON.stringify(venueSchema?.jsonSchema)
       : venueDiscoveryPrompt(venueRequests)
     : hotelDiscovery
@@ -213,6 +224,16 @@ async function main() {
     ...(venueBytes
       ? {
           inputSha256: createHash("sha256").update(venueBytes).digest("hex"),
+          identityExcerptImplementationSha256: createHash("sha256")
+            .update(
+              readFileSync(
+                resolve(
+                  import.meta.dirname,
+                  "../../../scripts/uat/lib/venue-identity-excerpts.ts",
+                ),
+              ),
+            )
+            .digest("hex"),
           discoveryImplementationSha256: createHash("sha256")
             .update(
               readFileSync(
@@ -303,6 +324,10 @@ async function main() {
     const venueAudit = venueRequests
       ? auditVenueSourceDiscovery(extracted, venueRequests, retrievedSources)
       : undefined;
+    const identityExcerptAudit =
+      parallel && venueAudit
+        ? auditVenueIdentityExcerpts(venueAudit.leads, retrievedSources)
+        : undefined;
     const billingKnown =
       Number.isFinite(result.usage.inputTokens) &&
       Number.isFinite(result.usage.outputTokens);
@@ -321,6 +346,7 @@ async function main() {
             ? { extracted, ...(outputParseError ? { outputParseError } : {}) }
             : {}),
           ...(venueAudit ? { venueDiscoveryAudit: venueAudit } : {}),
+          ...(identityExcerptAudit ? { identityExcerptAudit } : {}),
           ...(hotelDiscovery
             ? {
                 discoveryAudit: auditHotelSourceDiscovery(result.output, [
@@ -359,6 +385,8 @@ async function main() {
       process.exitCode = 5;
     else if (venueAudit && venueAudit.candidateIssues.length > 0)
       process.exitCode = 6;
+    else if (identityExcerptAudit?.some((row) => !row.copiedIdentityTextLinked))
+      process.exitCode = 7;
     console.log(
       JSON.stringify({
         status: "completed",

@@ -688,3 +688,96 @@ test("discovery candidates cannot silently change names or present unlinked URLs
     ]).candidateIssues,
   ).toEqual([]);
 });
+
+import { auditVenueIdentityExcerpts } from "../uat/lib/venue-identity-excerpts";
+const identityLead = {
+  id: "museum",
+  status: "candidate",
+  officialUrl: "https://museum.example/visit",
+  matchedName: "Museum A",
+  matchedAddress: "12 Main Street",
+  nameQuote: "Welcome to Museum A.",
+  addressQuote: "Visit us at 12 Main Street.",
+};
+const identitySource = {
+  url: identityLead.officialUrl,
+  excerptSegments: ["Welcome to Museum A. Visit us at 12 Main Street."],
+};
+test("identity copy evidence binds both fields to the same unique source without verifying a branch", () => {
+  const row = auditVenueIdentityExcerpts([identityLead], [identitySource])[0]!;
+  expect(row.copiedIdentityTextLinked).toBe(true);
+  expect(row.sourceContentSha256).toMatch(/^[a-f0-9]{64}$/);
+  expect(row.branchIdentityVerified).toBe(false);
+  expect(row.sourceAuthorityVerified).toBe(false);
+  expect(row.qualityAccepted).toBe(false);
+  for (const sources of [
+    [],
+    [identitySource, identitySource],
+    [{ ...identitySource, url: "https://other.example/" }],
+    [{ ...identitySource, excerptSegments: ["Welcome to Museum A."] }],
+  ])
+    expect(
+      auditVenueIdentityExcerpts([identityLead], sources)[0]
+        ?.copiedIdentityTextLinked,
+    ).toBe(false);
+});
+test("identity copy audit rejects paraphrases, filled-in addresses and stitched snippets", () => {
+  for (const change of [
+    { matchedName: "Museum B" },
+    { matchedAddress: "12 Main Street, 12345" },
+    { nameQuote: "Welcome to the Museum A." },
+    { addressQuote: "Visit us at 12 Main St." },
+    { addressQuote: null },
+    { status: "ambiguous" },
+    { matchedAddress: null },
+    { nameQuote: 42 },
+  ])
+    expect(
+      auditVenueIdentityExcerpts(
+        [{ ...identityLead, ...change }],
+        [identitySource],
+      )[0]?.copiedIdentityTextLinked,
+    ).toBe(false);
+  expect(
+    auditVenueIdentityExcerpts(
+      [
+        {
+          ...identityLead,
+          nameQuote: "Welcome to Museum A.\n\nVisit us at 12 Main Street.",
+        },
+      ],
+      [
+        {
+          ...identitySource,
+          excerptSegments: [
+            "Welcome to Museum A.",
+            "Visit us at 12 Main Street.",
+          ],
+        },
+      ],
+    )[0]?.copiedIdentityTextLinked,
+  ).toBe(false);
+  const changed = {
+    ...identitySource,
+    excerptSegments: [
+      identitySource.excerptSegments[0] + " Other branch at 15 Main Street.",
+    ],
+  };
+  expect(
+    auditVenueIdentityExcerpts([identityLead], [changed])[0]
+      ?.sourceContentSha256,
+  ).not.toBe(
+    auditVenueIdentityExcerpts([identityLead], [identitySource])[0]
+      ?.sourceContentSha256,
+  );
+});
+
+test("identity copy audit requires identity and source references", () => {
+  for (const change of [{ id: null }, { officialUrl: null }, { id: "" }])
+    expect(
+      auditVenueIdentityExcerpts(
+        [{ ...identityLead, ...change }],
+        [{ ...identitySource, url: change.officialUrl ?? identitySource.url }],
+      )[0]?.copiedIdentityTextLinked,
+    ).toBe(false);
+});

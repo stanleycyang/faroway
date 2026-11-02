@@ -12,6 +12,8 @@ export interface VenueSourceLead {
   matchedName: string | null;
   matchedAddress: string | null;
   note: string;
+  nameQuote?: string | null;
+  addressQuote?: string | null;
 }
 const record = (value: unknown): Record<string, unknown> =>
   value && typeof value === "object" && !Array.isArray(value)
@@ -119,6 +121,8 @@ export function auditVenueSourceDiscovery(
               "matchedName",
               "matchedAddress",
               "note",
+              "nameQuote",
+              "addressQuote",
             ].includes(key),
         )
       ) {
@@ -227,6 +231,9 @@ export function parallelVenueSources(toolResults: readonly unknown[]) {
           url: source.url,
           title: source.title,
           excerpt,
+          excerptSegments: rawFormat
+            ? (source.excerpts as string[])
+            : [excerpt],
           retrievalToolCallId: result.toolCallId,
         },
       ];
