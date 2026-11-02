@@ -1,4 +1,5 @@
 import {
+  readProposedVisitType,
   readDayTiming,
   dayTimingTips,
   readVenueSource,
@@ -69,6 +70,7 @@ function transformTransport(value: unknown): TripDay['transport'] {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformApiActivity(a: any, timeOfDay: string): Activity {
   return {
+    proposedVisitType: readProposedVisitType(a.proposedVisitType),
     source: readVenueSource(a.source),
     id: displayText(a.id) || `activity_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
     scheduleSlot: ['morning', 'afternoon', 'evening'].includes(a.scheduleSlot)

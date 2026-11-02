@@ -784,3 +784,5 @@ export {
   timingPresentation,
 } from "./day-timing";
 export type { DayTimingProposal } from "./day-timing";
+
+export { readProposedVisitType, proposedVisitNote } from "./visit-intent";

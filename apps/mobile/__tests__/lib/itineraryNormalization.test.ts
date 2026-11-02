@@ -323,3 +323,23 @@ test('arrival-day empty periods and availability note survive native normalizati
   ]);
   expect(cached.tips).toEqual([note]);
 });
+
+test.each(['ordinary_entry', 'exterior_walk', 'guided_tour', 'event', 'unknown'])(
+  'preserves proposed visit intent %s across API and cached data',
+  (proposedVisitType) => {
+    const first = transformItineraryDays([
+      { morning: { activities: [{ id: 'visit', name: 'Visit', proposedVisitType }] } },
+    ]);
+    const cached = transformItineraryDays(JSON.parse(JSON.stringify(first)));
+    expect(cached[0].activities[0].proposedVisitType).toBe(proposedVisitType);
+  }
+);
+test.each([undefined, null, 'confirmed', 'constructor', '__proto__', {}])(
+  'does not invent visit intent from %s',
+  (proposedVisitType) => {
+    const result = transformItineraryDays([
+      { activities: [{ id: 'visit', name: 'Visit', proposedVisitType }] },
+    ]);
+    expect(result[0].activities[0].proposedVisitType).toBeUndefined();
+  }
+);

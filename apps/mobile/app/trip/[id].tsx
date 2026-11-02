@@ -1,4 +1,4 @@
-import { isTimingNote } from '@faroway/types';
+import { isTimingNote, proposedVisitNote } from '@faroway/types';
 import { transformItineraryDays } from '../../lib/itineraryNormalization';
 import { ProposedTiming } from '../../components/ProposedTiming';
 import { VenueSourceNotice } from '../../components/VenueSourceNotice';
@@ -80,6 +80,7 @@ interface ActivityCardProps {
 }
 
 function ActivityCard({ activity }: ActivityCardProps) {
+  const visitNote = proposedVisitNote(activity.proposedVisitType);
   const reviewBooking = useBookingReview();
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -152,6 +153,7 @@ function ActivityCard({ activity }: ActivityCardProps) {
           {activity.price && <Text style={styles.activityPrice}>{activity.price}</Text>}
         </View>
         <Text style={styles.activityDescription}>{activity.description}</Text>
+        {visitNote && <Text style={styles.activityDescription}>{visitNote}</Text>}
         <VenueSourceNotice source={activity.source} />
         {activity.rating && (
           <View style={styles.activityRating}>
