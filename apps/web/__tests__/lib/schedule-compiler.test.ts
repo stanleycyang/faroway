@@ -948,3 +948,42 @@ it("honors explicit work blocks in compiled visit capacity and disclosed free in
     expect(day.afternoon.activities).toEqual([]);
   }
 });
+
+it("does not fill an evening-only brief with the library after its published closing time", async () => {
+  const { reviewedHoursExclusions } =
+    await import("@/lib/search/reviewed-venue-hours");
+  const { default: records } =
+    await import("../../../../scripts/fixtures/reviewed-venue-hours.json");
+  const input: SearchPlan = {
+    ...extended,
+    destination: "Melbourne, Australia",
+    dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 },
+    mobilityNeeds: "Working 09:00–17:00 on each trip day; only evening visits",
+  };
+  const library = {
+    ...visit("library", 60, "evening"),
+    name: "State Library Victoria",
+    location: {
+      ...activities[0].location,
+      address: "328 Swanston St, Melbourne VIC 3000, Australia",
+    },
+  };
+  const baseline = compileSchedule(input, [library], []);
+  expect(baseline.days[0].evening.activities.map((a) => a.id)).toContain(
+    "library",
+  );
+  const exclusions = reviewedHoursExclusions(
+    input,
+    [library],
+    ["2027-01-11"],
+    records as import("@/lib/search/reviewed-venue-hours").ReviewedVenueHours[],
+    "2026-11-02",
+  );
+  const corrected = compileSchedule(input, [library], [], exclusions);
+  expect(
+    corrected.days.flatMap((day) =>
+      slots.flatMap((slot) => day[slot].activities),
+    ),
+  ).toEqual([]);
+  expect(corrected.unselectedActivityIds).toContain("library");
+});

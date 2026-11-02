@@ -176,3 +176,47 @@ it("intersects publisher opening intervals with work blocks rather than adding s
     "evening",
   ]);
 });
+
+it("excludes the observed library evening visit using the reviewed official record", async () => {
+  const { default: records } =
+    await import("../../../../scripts/fixtures/reviewed-venue-hours.json");
+  const library = {
+    ...activity,
+    id: "saved-library",
+    name: "State Library Victoria",
+    duration: 60,
+    location: {
+      ...activity.location,
+      address: "328 Swanston St, Melbourne VIC 3000, Australia",
+    },
+  };
+  const results = reviewedHoursExclusions(
+    { destination: "Melbourne, Australia" },
+    [library],
+    ["2027-01-11"],
+    records as ReviewedVenueHours[],
+    "2026-11-02",
+  );
+  expect(results).toEqual([
+    expect.objectContaining({
+      activityId: "saved-library",
+      date: "2027-01-11",
+      slot: "evening",
+      reason: "visit_does_not_fit_published_ordinary_hours",
+      sourceUrl: "https://www.slv.vic.gov.au/visit/opening-hours",
+    }),
+  ]);
+  for (const name of [
+    "State Library Victoria Exterior Walk",
+    "State Library Victoria Night Concert",
+  ])
+    expect(
+      reviewedHoursExclusions(
+        { destination: "Melbourne, Australia" },
+        [{ ...library, name }],
+        ["2027-01-11"],
+        records as ReviewedVenueHours[],
+        "2026-11-02",
+      ),
+    ).toEqual([]);
+});

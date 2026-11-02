@@ -48,8 +48,8 @@
     "id": "matisse-ordinary-hours-20261101",
     "destination": "Nice, France",
     "country": "France",
-    "aliases": ["Musée Matisse"],
-    "addresses": ["164 Avenue des Arènes de Cimiez, 06000 Nice, France"],
+    "aliases": ["Mus\u00e9e Matisse"],
+    "addresses": ["164 Avenue des Ar\u00e8nes de Cimiez, 06000 Nice, France"],
     "sourceUrl": "https://www.musee-matisse-nice.org/en/practical-information/",
     "sourceSha256": "d905be94029bca2d70af3f589f067faec10bda19576888c6d599978d86a72131",
     "observedAt": "2026-11-01",
@@ -91,8 +91,8 @@
     "id": "chagall-ordinary-hours-20261101",
     "destination": "Nice, France",
     "country": "France",
-    "aliases": ["Musée National Marc Chagall"],
-    "addresses": ["36 Avenue Dr Ménard, 06000 Nice, France"],
+    "aliases": ["Mus\u00e9e National Marc Chagall"],
+    "addresses": ["36 Avenue Dr M\u00e9nard, 06000 Nice, France"],
     "sourceUrl": "https://musees-nationaux-alpesmaritimes.fr/chagall/en/opening-times",
     "sourceSha256": "5a4318cdd72dec54e7788e21bc98b2cceaa10fd63a63a64cda4ba8cb56722bf4",
     "observedAt": "2026-11-01",
@@ -170,6 +170,52 @@
       {
         "weekday": 6,
         "intervals": [[600, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "slv-ordinary-hours-20261102",
+    "destination": "Melbourne, Australia",
+    "country": "Australia",
+    "aliases": ["State Library Victoria"],
+    "addresses": [
+      "328 Swanston Street, Melbourne 3000, Australia",
+      "328 Swanston St, Melbourne VIC 3000, Australia"
+    ],
+    "sourceUrl": "https://www.slv.vic.gov.au/visit/opening-hours",
+    "sourceSha256": "67d7dc8738e41528204e8f3e51ebfa34c517f7db326c9d4bed266e712e39479d",
+    "observedAt": "2026-11-02",
+    "reviewAfter": "2026-12-02",
+    "branchReview": "Official State Library Victoria visitor page identifies 328 Swanston Street, Melbourne 3000, Australia. Reviewed the saved candidate at the same street number, street, city and postcode; St abbreviation and VIC state label are recorded as an explicit reviewed address variant, not a fuzzy match. Ordinary main-library hours only; individual rooms can close earlier, named public holidays are closed, and special events/future availability are not verified. Exterior visits and event names must not inherit this record.",
+    "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1080]]
       }
     ]
   }
