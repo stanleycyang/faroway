@@ -71,6 +71,11 @@ if (replay && JSON.stringify(replay.brief) !== JSON.stringify(brief))
   throw Error("Replay brief must match the original public request");
 if (replay && policy !== "baseline")
   throw Error("Replay uses its own fixed extraction policy");
+const thinkingLevel = arg("--thinking-level") ?? "low";
+if (!["low", "medium", "high"].includes(thinkingLevel))
+  throw Error("Thinking level must be low, medium or high");
+if (thinkingLevel !== "low" && !replay)
+  throw Error("Thinking comparison requires frozen retrieval");
 const compactEvidence = process.argv.includes("--compact-evidence");
 if (compactEvidence && (replay || policy !== "baseline"))
   throw Error("Compact evidence is a baseline live-discovery experiment only");
@@ -108,6 +113,7 @@ const provenance = {
   screenArea: replay?.screenArea ?? false,
   ...(replayBytes ? { replaySha256: hash(replayBytes) } : {}),
   model: "google/gemini-3-flash",
+  thinkingLevel,
   clientRequestsMaximum: 1,
   automaticTripEdits: false,
   searchProvider: replay ? null : "parallel",
@@ -135,7 +141,7 @@ try {
     ...(replay ? {} : { toolChoice: "required" as const }),
     providerOptions: {
       gateway: { only: ["google"] },
-      google: { thinkingConfig: { thinkingLevel: "low" } },
+      google: { thinkingConfig: { thinkingLevel } },
     },
     maxOutputTokens: 2500,
     maxRetries: 0,
@@ -161,6 +167,7 @@ try {
     prompt,
     brief,
     latencyMs: Date.now() - started,
+    finishReason: result.finishReason,
     billingKnown,
     text: result.text,
     ...(replay ? { selection } : {}),
