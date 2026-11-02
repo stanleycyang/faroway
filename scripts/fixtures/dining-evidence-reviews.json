@@ -1,0 +1,51 @@
+[
+  {
+    "receiptSha256": "74ff7717329c93f826c83001baf0167fe184f5593cbef1b22bbf435c561bb357",
+    "optionId": "web:39386bd14c7c85e071d992ec8e95eeae0afa7106b05f65c1aad10cb007f3f939",
+    "reviewer": "agent-source-review-2026-11-02",
+    "publisher": "unresolved",
+    "mealEvidence": "supports_requested_meal",
+    "note": "Selected text describes breakfast, but publisher ownership was not corroborated. Historical reporting names a different domain; that alone does not prove this domain is unofficial. Keep unresolved.",
+    "evidenceUrls": [
+      "https://fournierrousseau.shop/",
+      "https://fournierrousseau.shop/menu",
+      "https://foodandpleasure.com/fournier-rousseau/"
+    ]
+  },
+  {
+    "receiptSha256": "5fc7cd4a50acb43f56db9d0d983eac8e568ff826dfb139f43d4d0ac07061e424",
+    "optionId": "web:942fa2368bb1cc1809e6f9c74a55e76ce23a8a93f0cf3380dae8b48d3ac887cf",
+    "reviewer": "agent-source-review-2026-11-02",
+    "publisher": "corroborated_operator",
+    "mealEvidence": "insufficient",
+    "note": "Area association listing links this operator domain at the matching Kokusai Street address. Selected span gives reservation and last-order times without naming dinner. It does not independently establish the requested meal under the strict quote rubric.",
+    "evidenceUrls": [
+      "https://www.asakusaimahan.co.jp/en/kokusai",
+      "https://asakusa.gr.jp/en/archives/7"
+    ]
+  },
+  {
+    "receiptSha256": "9b2a21e7c22dbebd30486e65d3e5187475e0df808d63f440e833380429a60f74",
+    "optionId": "web:0ceb395e831b5a70c7a4748d6cd502d155034f9e2b9e0be95f95b8b995cb9cc3",
+    "reviewer": "agent-source-review-2026-11-02",
+    "publisher": "corroborated_operator",
+    "mealEvidence": "supports_requested_meal",
+    "note": "Darling Group links this venue website and lists the same street address. Selected source span explicitly describes breakfast. This review does not establish availability on trip dates.",
+    "evidenceUrls": [
+      "https://highergroundmelbourne.com.au/",
+      "https://darlinggroup.com.au/higher-ground/"
+    ]
+  },
+  {
+    "receiptSha256": "acd2f469c89b79841e9310bcd8cfa5604f36e61c412b26954615e38788d47ea5",
+    "optionId": "web:63249701be85cfff800aa35bf8f6d2036dc05bff6185c396f11e6ff452147287",
+    "reviewer": "agent-source-review-2026-11-02",
+    "publisher": "corroborated_operator",
+    "mealEvidence": "insufficient",
+    "note": "Official tourism listing links the operator domain and matching address. Selected span is under a business-menu heading and does not establish ordinary dinner service by itself. This is an evidence-selection failure, not a finding that dinner is unavailable.",
+    "evidenceUrls": [
+      "https://formelbgroup.dk/uformel/en/food",
+      "https://www.visitcopenhagen.com/copenhagen/planning/uformel-gdk915835"
+    ]
+  }
+]
