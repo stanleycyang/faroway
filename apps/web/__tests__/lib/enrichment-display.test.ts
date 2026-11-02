@@ -122,3 +122,31 @@ describe("honest enrichment presentation", () => {
     );
   });
 });
+
+it.each([
+  "ordinary_entry",
+  "exterior_walk",
+  "guided_tour",
+  "event",
+  "unknown",
+] as const)(
+  "retains %s in all streamed activity slots",
+  (proposedVisitType) => {
+    const stop = { name: "Visit", proposedVisitType };
+    const cards = buildItineraryBlocks([
+      {
+        dayNumber: 1,
+        date: "2027-01-11",
+        title: "Day",
+        morning: { activities: [stop] },
+        afternoon: { activities: [stop] },
+        evening: { activities: [stop] },
+      },
+    ]);
+    expect(
+      cards
+        .filter((c) => c.type === "ActivityCard")
+        .map((c) => c.props.proposedVisitType),
+    ).toEqual([proposedVisitType, proposedVisitType, proposedVisitType]);
+  },
+);

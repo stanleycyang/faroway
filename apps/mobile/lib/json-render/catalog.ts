@@ -124,6 +124,9 @@ export const ItineraryDay = {
 // =============================================================================
 
 export const ActivityCardSchema = z.object({
+  proposedVisitType: z
+    .enum(['ordinary_entry', 'exterior_walk', 'guided_tour', 'event', 'unknown'])
+    .optional(),
   name: z.string().describe('Activity name'),
   description: z.string().describe('Activity description'),
   duration: z.string().describe('Duration (e.g., "2 hours", "3-4 hours")'),

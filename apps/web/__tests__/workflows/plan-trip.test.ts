@@ -1041,6 +1041,7 @@ describe("planTripWorkflow", () => {
           mocks.runHotelsAgent.mockResolvedValue([]);
           const nightActivity = {
             ...activity,
+            proposedVisitType: "ordinary_entry" as const,
             id: "local-night",
             affiliatePartner: undefined,
             bestTimeOfDay: "evening",
@@ -1110,6 +1111,13 @@ describe("planTripWorkflow", () => {
           expect(saved.days[0].evening.activities.map((a) => a.id)).toEqual([
             nightActivity.id,
           ]);
+          expect(saved.days[0].evening.activities[0].proposedVisitType).toBe(
+            "ordinary_entry",
+          );
+          expect(
+            mocks.buildJsonRenderSpec.mock.lastCall![0].days[0].evening
+              .activities[0].proposedVisitType,
+          ).toBe("ordinary_entry");
           expect(
             saved.days.every(
               (day) => !Object.hasOwn(day, "totalEstimatedCost"),

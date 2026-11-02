@@ -1,4 +1,5 @@
 import { formatPrice, readPrice } from "@faroway/constants";
+import { readProposedVisitType, type ActivityResult } from "@faroway/types";
 import {
   containsViatorContent,
   filterViatorDisplay,
@@ -36,6 +37,7 @@ export interface HotelInput {
 }
 
 export interface ActivityInput {
+  proposedVisitType?: ActivityResult["proposedVisitType"];
   priceStatus?: "unknown" | "estimate";
   id?: string;
   name: string;
@@ -330,6 +332,7 @@ export function buildItineraryBlocks(
         type: "ActivityCard",
         props: {
           name: activity.name,
+          proposedVisitType: readProposedVisitType(activity.proposedVisitType),
           description:
             activity.description ||
             (isViatorContent(activity) ? "" : `Enjoy ${activity.name}`),
