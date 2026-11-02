@@ -664,3 +664,27 @@ test("parallel discovery supports the observed raw Gateway response without gues
     ]),
   ).toEqual([]);
 });
+
+test("discovery candidates cannot silently change names or present unlinked URLs", () => {
+  const audit = (lead: typeof venueLead, sources: unknown[]) =>
+    auditVenueSourceDiscovery({ venues: [lead] }, [publicVenue], sources);
+  expect(
+    audit(venueLead, [{ url: venueLead.officialUrl }]).candidateIssues,
+  ).toEqual([]);
+  expect(
+    audit({ ...venueLead, matchedName: "Museum B" }, [
+      { url: venueLead.officialUrl },
+    ]).candidateIssues,
+  ).toEqual(["identity_name_change_requires_review:venue-a"]);
+  expect(
+    audit(venueLead, [{ url: "https://other.example/" }]).candidateIssues,
+  ).toEqual(["official_url_not_in_retrieved_sources:venue-a"]);
+  expect(
+    audit({ ...venueLead, matchedName: "Museum B" }, []).candidateIssues,
+  ).toHaveLength(2);
+  expect(
+    audit({ ...venueLead, matchedName: "  MUSEUM A  " }, [
+      { url: venueLead.officialUrl },
+    ]).candidateIssues,
+  ).toEqual([]);
+});

@@ -159,6 +159,18 @@ export function auditVenueSourceDiscovery(
     shapeValid: issues.length === 0,
     issues,
     leads,
+    candidateIssues: leads.flatMap((lead) =>
+      lead.status !== "candidate"
+        ? []
+        : [
+            ...(lead.nameDiffersFromCandidate
+              ? [`identity_name_change_requires_review:${lead.id}`]
+              : []),
+            ...(!lead.returnedUrlInSources
+              ? [`official_url_not_in_retrieved_sources:${lead.id}`]
+              : []),
+          ],
+    ),
     retrievedSourceCount: retrievedSources.length,
     retrievalEvidencePresent: retrievedUrls.size > 0,
     automaticFetchAllowed: false as const,

@@ -357,6 +357,8 @@ async function main() {
     else if (venueAudit && !venueAudit.shapeValid) process.exitCode = 4;
     else if (venueAudit && !venueAudit.retrievalEvidencePresent)
       process.exitCode = 5;
+    else if (venueAudit && venueAudit.candidateIssues.length > 0)
+      process.exitCode = 6;
     console.log(
       JSON.stringify({
         status: "completed",
