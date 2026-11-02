@@ -820,3 +820,31 @@ test("identity evidence recovers original spans for whitespace changes without r
       )[0]?.copiedIdentityTextLinked,
     ).toBe(false);
 });
+
+test("discovery preserves supplied address differences instead of resolving them silently", () => {
+  const audit = (address: string | undefined, matchedAddress: string | null) =>
+    auditVenueSourceDiscovery(
+      { venues: [{ ...venueLead, matchedAddress }] },
+      [{ ...publicVenue, address }],
+      [{ url: venueLead.officialUrl }],
+    );
+  expect(audit("1 Example Street", "2 Example Street").candidateIssues).toEqual(
+    ["identity_address_change_requires_review:venue-a"],
+  );
+  expect(audit("1 Example Street", null).candidateIssues).toEqual([
+    "supplied_address_not_supported:venue-a",
+  ]);
+  expect(
+    audit("1 Example Street", "  1 EXAMPLE   STREET ").candidateIssues,
+  ).toEqual([]);
+  expect(audit(undefined, "1 Example Street").leads[0]?.addressComparison).toBe(
+    "not_supplied",
+  );
+  expect(
+    audit("1 Example Street, Unit 2", "1 Example Street, Unit 3")
+      .candidateIssues,
+  ).toHaveLength(1);
+  expect(
+    audit("1 Example St", "1 Example Street").leads[0]?.addressComparison,
+  ).toBe("different_text");
+});
