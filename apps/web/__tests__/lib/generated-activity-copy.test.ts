@@ -67,3 +67,61 @@ it("retains an obstacle flagged only in generated labels", () => {
   });
   expect(result.description).toContain(GENERATED_ACCESS_CONCERN_NOTE);
 });
+
+it("removes the saved Melbourne operating-hours claim while retaining experience text", () => {
+  const original = {
+    ...candidate,
+    name: "State Library Victoria",
+    description:
+      "Visit the oldest public library in Australia, featuring the heritage La Trobe Reading Room. While the library typically closes at 21:00, visitors can explore the soaring domed ceiling and Victorian architectural grandeur during the evening hours.",
+    vibeMatch: ["heritage"],
+  };
+  const result = screenGeneratedActivityCopy(original);
+  expect(result.description).toBe(
+    "Visit the oldest public library in Australia, featuring the heritage La Trobe Reading Room.",
+  );
+  expect(result.location).toEqual(original.location);
+  expect(result.duration).toBe(original.duration);
+  expect(screenGeneratedActivityCopy(result)).toEqual(result);
+});
+it.each([
+  "The museum opens at 9am.",
+  "It is open until midnight.",
+  "Last admission is at 8pm.",
+  "Opening hours are 9–5.",
+  "The gallery is closed on Mondays.",
+  "The park is open daily.",
+  "The hall closes at ２１:００.",
+])(
+  "does not present generated operating schedules as evidence: %s",
+  (description) => {
+    const result = screenGeneratedActivityCopy({
+      ...candidate,
+      name: "Museum",
+      vibeMatch: [],
+      description,
+    });
+    expect(result.description).toBe("Explore this suggested stop.");
+    expect(screenGeneratedActivityCopy(result)).toEqual(result);
+  },
+);
+it("preserves experience descriptions, duration estimates and access concerns", () => {
+  const description =
+    "Explore the open-air sculpture garden. Allow 90 minutes for your visit. Watch the sunset from the terrace.";
+  expect(
+    screenGeneratedActivityCopy({
+      ...candidate,
+      name: "Garden",
+      vibeMatch: [],
+      description,
+    }).description,
+  ).toBe(description);
+  const result = screenGeneratedActivityCopy({
+    ...candidate,
+    name: "Museum",
+    vibeMatch: [],
+    description: "The museum closes at 9pm and requires steep stairs.",
+  });
+  expect(result.description).toContain(GENERATED_ACCESS_CONCERN_NOTE);
+  expect(screenGeneratedActivityCopy(result)).toEqual(result);
+});

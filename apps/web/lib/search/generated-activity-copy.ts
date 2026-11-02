@@ -20,7 +20,7 @@ export const GENERATED_ACCESS_REVIEW_NOTE =
 export const GENERATED_ACCESS_CONCERN_NOTE =
   "The generated description reports an access obstacle. This suggestion needs access review before use; confirm the obstacle and any alternative route directly with the venue.";
 
-export function screenGeneratedActivityCopy<
+function screenGeneratedAccessCopy<
   T extends { name: string; description: string; vibeMatch: string[] },
 >(candidate: T): T {
   const priorConcern = candidate.description.endsWith(
@@ -68,5 +68,27 @@ export function screenGeneratedActivityCopy<
     vibeMatch: candidate.vibeMatch.filter(
       (label) => !accessTopic.test(normalize(label)) && !hasObstacle(label),
     ),
+  };
+}
+
+// Bounded English operating-hours screen, not semantic verification. The agent
+// has no source for operating times. Keep visit-duration estimates and ordinary
+// experience prose; never convert a generated closing time into scheduling data.
+const operatingHours =
+  /\b(?:opening|closing|operating|business)\s+(?:hours|times?)\b|\blast\s+(?:entry|admission)\b|\b(?:opens?|closes?|closed|closing)\s+(?:(?:typically|usually|normally|daily|every day)\s+)?(?:at|by|from|until|on|for|during|after|before|\d)\b|\bopen\s+(?:until|till|from|daily|nightly|late|24|all day|around the clock|every|on weekdays|on weekends)\b/i;
+
+export function screenGeneratedActivityCopy<
+  T extends { name: string; description: string; vibeMatch: string[] },
+>(candidate: T): T {
+  // Access concerns are retained before removing any mixed hours/access prose.
+  const screened = screenGeneratedAccessCopy(candidate);
+  const original = [...sentences.segment(screened.description)].map(
+    ({ segment }) => segment.trim(),
+  );
+  const kept = original.filter((text) => !operatingHours.test(normalize(text)));
+  if (kept.length === original.length) return screened;
+  return {
+    ...screened,
+    description: kept.join(" ") || "Explore this suggested stop.",
   };
 }
