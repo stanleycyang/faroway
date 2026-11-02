@@ -71,11 +71,21 @@ if (replay && JSON.stringify(replay.brief) !== JSON.stringify(brief))
   throw Error("Replay brief must match the original public request");
 if (replay && policy !== "baseline")
   throw Error("Replay uses its own fixed extraction policy");
+if (process.argv.includes("--thinking-level") && !arg("--thinking-level"))
+  throw Error("--thinking-level requires a value");
 const thinkingLevel = arg("--thinking-level") ?? "low";
 if (!["low", "medium", "high"].includes(thinkingLevel))
   throw Error("Thinking level must be low, medium or high");
 if (thinkingLevel !== "low" && !replay)
   throw Error("Thinking comparison requires frozen retrieval");
+if (process.argv.includes("--max-output-tokens") && !arg("--max-output-tokens"))
+  throw Error("--max-output-tokens requires a value");
+const maxOutputTokens = Number(arg("--max-output-tokens") ?? "2500");
+if (
+  ![2500, 6000].includes(maxOutputTokens) ||
+  (maxOutputTokens !== 2500 && !replay)
+)
+  throw Error("Output comparison supports 2500 or replay-only 6000 tokens");
 const compactEvidence = process.argv.includes("--compact-evidence");
 if (compactEvidence && (replay || policy !== "baseline"))
   throw Error("Compact evidence is a baseline live-discovery experiment only");
@@ -114,6 +124,7 @@ const provenance = {
   ...(replayBytes ? { replaySha256: hash(replayBytes) } : {}),
   model: "google/gemini-3-flash",
   thinkingLevel,
+  maxOutputTokens,
   clientRequestsMaximum: 1,
   automaticTripEdits: false,
   searchProvider: replay ? null : "parallel",
@@ -143,7 +154,7 @@ try {
       gateway: { only: ["google"] },
       google: { thinkingConfig: { thinkingLevel } },
     },
-    maxOutputTokens: 2500,
+    maxOutputTokens,
     maxRetries: 0,
     abortSignal: AbortSignal.timeout(60000),
   });
