@@ -4,7 +4,10 @@ const object = (value: unknown): Record<string, unknown> =>
     : {};
 
 /** Provider metadata only. Never parse place IDs from generated prose or web chunks. */
-export function auditMapsIdentityEvidence(metadata: unknown) {
+export function auditMapsIdentityEvidence(
+  metadata: unknown,
+  generatedText?: string,
+) {
   const grounding = object(object(object(metadata).google).groundingMetadata);
   const chunks = grounding.groundingChunks;
   const places = new Map<
@@ -78,8 +81,38 @@ export function auditMapsIdentityEvidence(metadata: unknown) {
   const directPlaceCandidates = candidates.filter((place) =>
     place.sources.some((s) => s.kind === "place"),
   );
+  const backedUrls = new Set(
+    candidates.flatMap((place) => place.sources.map((source) => source.url)),
+  );
+  const modelMapUrls = [
+    ...new Set(
+      (
+        generatedText?.match(
+          /https:\/\/(?:maps\.google\.com|www\.google\.com)\/[^\s<>"`)]*/g,
+        ) ?? []
+      )
+        .map((url) => url.replace(/[.,;!]+$/, ""))
+        .filter((url) => {
+          try {
+            const parsed = new URL(url);
+            return (
+              parsed.hostname === "maps.google.com" ||
+              parsed.pathname.startsWith("/maps")
+            );
+          } catch {
+            return false;
+          }
+        }),
+    ),
+  ];
+  const unbackedModelMapUrls = modelMapUrls.filter(
+    (url) => !backedUrls.has(url),
+  );
   return {
     candidates,
+    citationCoverageChecked: generatedText !== undefined,
+    modelMapCitationCount: modelMapUrls.length,
+    unbackedModelMapUrls,
     uniquePlaceCount: candidates.length,
     directPlaceCount: directPlaceCandidates.length,
     retrievalEvidencePresent:

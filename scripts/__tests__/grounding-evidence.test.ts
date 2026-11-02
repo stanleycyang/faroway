@@ -1036,3 +1036,29 @@ test("Maps evidence rejects spoofed URLs, malformed IDs, conflicting source IDs 
   expect(conflict.conflictingSourceUrls).toEqual([mapPlace.uri]);
   expect(conflict.retrievalEvidencePresent).toBe(false);
 });
+
+test("Maps prose cannot supply a second place citation missing from provider metadata", () => {
+  const metadata = mapMetadata([{ maps: mapPlace }]);
+  const missing = "https://maps.google.com/maps?cid=999999";
+  const audit = auditMapsIdentityEvidence(
+    metadata,
+    `[Museum](${mapPlace.uri}) and another: ${missing}.`,
+  );
+  expect(audit.modelMapCitationCount).toBe(2);
+  expect(audit.unbackedModelMapUrls).toEqual([missing]);
+  expect(audit.candidates).toHaveLength(1);
+  expect(audit.inputIdentityVerified).toBe(false);
+  expect(auditMapsIdentityEvidence(metadata).citationCoverageChecked).toBe(
+    false,
+  );
+  expect(
+    auditMapsIdentityEvidence(metadata, `Source: ${mapPlace.uri}`)
+      .unbackedModelMapUrls,
+  ).toEqual([]);
+  expect(
+    auditMapsIdentityEvidence(
+      metadata,
+      "https://www.google.com/search?q=museum",
+    ).modelMapCitationCount,
+  ).toBe(0);
+});

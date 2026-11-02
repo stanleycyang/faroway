@@ -72,7 +72,10 @@ try {
     maxRetries: 0,
     abortSignal: AbortSignal.timeout(60000),
   });
-  const mapsAudit = auditMapsIdentityEvidence(result.providerMetadata);
+  const mapsAudit = auditMapsIdentityEvidence(
+    result.providerMetadata,
+    result.text,
+  );
   const billingKnown =
     Number.isFinite(result.usage.inputTokens) &&
     Number.isFinite(result.usage.outputTokens);
@@ -99,6 +102,7 @@ try {
   );
   if (!billingKnown) process.exitCode = 3;
   else if (!mapsAudit.retrievalEvidencePresent) process.exitCode = 5;
+  else if (mapsAudit.unbackedModelMapUrls.length) process.exitCode = 6;
   console.log(
     JSON.stringify({
       status: "completed",
