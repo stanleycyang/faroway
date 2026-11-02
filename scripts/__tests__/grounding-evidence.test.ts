@@ -957,3 +957,82 @@ test("source selection supplies URLs from retained records and rejects invented 
   expect(unresolved.extracted?.venues[0]?.officialUrl).toBe(null);
   expect(unresolved.selectedSources).toEqual([]);
 });
+
+import { auditMapsIdentityEvidence } from "../uat/lib/maps-identity-evidence";
+const mapPlace = {
+  placeId: "ChIJabcdefghijk_12345",
+  uri: "https://maps.google.com/maps?cid=123456789",
+  title: "Museum A - Google Maps",
+};
+const mapMetadata = (chunks: unknown[]) => ({
+  google: { groundingMetadata: { groundingChunks: chunks } },
+});
+test("Maps IDs come only from provider Maps chunks and repeated review links do not create venues", () => {
+  const audit = auditMapsIdentityEvidence(
+    mapMetadata([
+      { maps: mapPlace },
+      { maps: { ...mapPlace, placeId: "places/" + mapPlace.placeId } },
+      {
+        maps: {
+          ...mapPlace,
+          uri: "https://www.google.com/maps/reviews/data=example",
+        },
+      },
+      { web: { ...mapPlace } },
+    ]),
+  );
+  expect(audit.uniquePlaceCount).toBe(1);
+  expect(audit.directPlaceCount).toBe(1);
+  expect(audit.candidates[0]?.sources).toHaveLength(2);
+  expect(audit.retrievalEvidencePresent).toBe(true);
+  expect(audit.inputIdentityVerified).toBe(false);
+  expect(audit.addressVerified).toBe(false);
+  expect(audit.qualityAccepted).toBe(false);
+  expect(
+    auditMapsIdentityEvidence({ text: JSON.stringify(mapPlace) })
+      .uniquePlaceCount,
+  ).toBe(0);
+  expect(
+    auditMapsIdentityEvidence(mapMetadata([{ web: mapPlace }]))
+      .uniquePlaceCount,
+  ).toBe(0);
+});
+test("Maps evidence rejects spoofed URLs, malformed IDs, conflicting source IDs and review-only evidence", () => {
+  for (const change of [
+    { placeId: "bad" },
+    { placeId: null },
+    { title: "" },
+    { uri: "http://maps.google.com/maps?cid=1" },
+    { uri: "https://maps.google.com.evil.example/maps?cid=1" },
+    { uri: "https://user:secret@maps.google.com/maps?cid=1" },
+    { uri: "https://www.google.com/search?q=Museum" },
+    { uri: "https://www.google.com/maps/search?q=Museum" },
+  ]) {
+    const audit = auditMapsIdentityEvidence(
+      mapMetadata([{ maps: { ...mapPlace, ...change } }]),
+    );
+    expect(audit.rejectedMapChunks).toBe(1);
+    expect(audit.retrievalEvidencePresent).toBe(false);
+  }
+  const review = auditMapsIdentityEvidence(
+    mapMetadata([
+      {
+        maps: {
+          ...mapPlace,
+          uri: "https://www.google.com/maps/reviews/data=example",
+        },
+      },
+    ]),
+  );
+  expect(review.uniquePlaceCount).toBe(1);
+  expect(review.directPlaceCount).toBe(0);
+  expect(review.retrievalEvidencePresent).toBe(false);
+  const conflict = auditMapsIdentityEvidence(
+    mapMetadata([
+      { maps: mapPlace },
+      { maps: { ...mapPlace, placeId: "ChIJotherplace_98765" } },
+    ]),
+  );
+  expect(conflict.conflictingSourceUrls).toEqual([mapPlace.uri]);
+  expect(conflict.retrievalEvidencePresent).toBe(false);
+});
