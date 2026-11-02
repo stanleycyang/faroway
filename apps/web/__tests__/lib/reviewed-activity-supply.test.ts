@@ -156,3 +156,59 @@ it("records runtime-prepared candidates in the independent eval format", () => {
   expect(result.failures).toEqual([]);
   expect(result.accepted).toEqual(supply.activities);
 });
+
+it("repairs the preserved failed Melbourne inventory without promoting unknown visits to verified", async () => {
+  const { default: observed } =
+    await import("../../../../scripts/fixtures/agentic-melbourne-supply-ranking.json");
+  const input = observed.plan as unknown as SearchPlan;
+  const inventory = observed.activities as unknown as ActivityResult[];
+  const meals =
+    observed.dining as unknown as import("@/lib/search/types").DiningResult[];
+  const dates = ["2027-01-11", "2027-01-12", "2027-01-13"];
+  const prepared = addReviewedActivitySupply(
+    input,
+    inventory.filter((a) => a.id !== records[0].id),
+    dates,
+    records,
+    "2026-11-02",
+  );
+  const excluded = reviewedHoursExclusions(
+    input,
+    prepared.activities,
+    dates,
+    hours as ReviewedVenueHours[],
+    "2026-11-02",
+  );
+  const ngv = inventory.find(
+    (a) => a.name === "NGV International Evening Exploration",
+  )!;
+  expect(
+    excluded
+      .filter((e) => e.activityId === ngv.id)
+      .every((e) => e.reason === "venue_identity_requires_review"),
+  ).toBe(true);
+  expect(excluded.filter((e) => e.activityId === ngv.id)).toHaveLength(3);
+  const result = compileSchedule(
+    input,
+    prepared.activities,
+    meals,
+    [...excluded, ...prepared.exclusions],
+    { reviewedActivityIds: prepared.admitted.map((r) => r.id) },
+  );
+  const selected = result.days.flatMap((d) => d.evening.activities);
+  expect(result.days.every((d) => d.evening.activities.length > 0)).toBe(true);
+  expect(selected.map((a) => a.name)).toEqual([
+    "Flinders Street Station Architectural View",
+    "Federation Square Cultural Precinct Walk",
+    "Melbourne Skydeck",
+  ]);
+  expect(selected.filter((a) => a.id === records[0].id)).toHaveLength(1);
+  expect(
+    result.days.every(
+      (d) =>
+        !d.morning.activities.length &&
+        !d.afternoon.activities.length &&
+        !d.afternoon.meal,
+    ),
+  ).toBe(true);
+});

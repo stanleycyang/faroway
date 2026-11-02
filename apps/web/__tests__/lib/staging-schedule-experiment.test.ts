@@ -388,7 +388,7 @@ it("retains a dated organizer lead after deferring an unidentified performance",
   }
 });
 
-it("keeps an ordinary-hours conflict out of the staging schedule and exposes its source", async () => {
+it("withholds a closed venue and a renamed walk at its address with distinct explanations", async () => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(new Date("2026-11-01T12:00:00Z"));
   try {
@@ -435,9 +435,13 @@ it("keeps an ordinary-hours conflict out of the staging schedule and exposes its
       [ngv, alternative],
       [],
     );
-    expect(result.days[0].evening.activities.map((a) => a.id)).toEqual([
-      alternative.id,
-    ]);
+    expect(result.days[0].evening.activities).toEqual([]);
+    expect(result.days[0].tips.join(" ")).toContain(
+      "Venue identity review: Unverified alternative walk",
+    );
+    expect(result.days[0].tips.join(" ")).toContain(
+      "this does not establish that it is closed",
+    );
     expect(result.days[0].tips.join(" ")).toContain(
       "https://www.ngv.vic.gov.au/plan-your-visit/",
     );

@@ -116,6 +116,7 @@ export async function runStagingCompiledSchedule(
     activities,
     reviewedDining,
     exclusions,
+    { reviewedActivityIds: supply.admitted.map((record) => record.id) },
   );
   appendActivitySourceNotes(compiled.days, supply.admitted);
   for (const day of compiled.days) {
@@ -138,6 +139,12 @@ export async function runStagingCompiledSchedule(
       );
       if (!records.length) continue;
       const record = records[0];
+      if (record.reason === "venue_identity_requires_review") {
+        day.tips.push(
+          `Venue identity review: ${activity.name} was left unscheduled because its name does not match the reviewed venue at this address. Confirm the exact place and visit type; this does not establish that it is closed. Source reviewed ${record.observedAt}: ${record.sourceUrl}`,
+        );
+        continue;
+      }
       day.tips.push(
         `Hours review: ${activity.name} is excluded from ${records.some((e) => !e.slot) ? "this date" : records.map((e) => e.slot).join(", ")} in this draft. The supplied visit duration does not fit the reviewed ordinary hours, or the source needs review. Confirm any exceptional opening before adding it. Source reviewed ${record.observedAt}: ${record.sourceUrl}`,
       );

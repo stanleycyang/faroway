@@ -987,3 +987,64 @@ it("does not fill an evening-only brief with the library after its published clo
   ).toEqual([]);
   expect(corrected.unselectedActivityIds).toContain("library");
 });
+
+it("prefers admitted source evidence over generated scores while preserving requested highlights", () => {
+  const input: SearchPlan = {
+    ...extended,
+    dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 },
+    mobilityNeeds: "only evening visits",
+    requirements: undefined,
+    activityCriteria: { ...extended.activityCriteria, mustSee: [] },
+  };
+  const reviewed = {
+    ...visit("Reviewed observation deck", 180, "evening"),
+    vibeScore: 60,
+  };
+  const generated = {
+    ...visit("Generated museum", 180, "evening"),
+    vibeScore: 100,
+  };
+  const ids = (result: ReturnType<typeof compileSchedule>) =>
+    result.days.flatMap((d) => d.evening.activities.map((a) => a.id));
+  expect(ids(compileSchedule(input, [generated, reviewed], []))).toEqual([
+    generated.id,
+  ]);
+  expect(
+    ids(
+      compileSchedule(input, [generated, reviewed], [], [], {
+        reviewedActivityIds: [reviewed.id],
+      }),
+    ),
+  ).toEqual([reviewed.id]);
+  const required = {
+    ...input,
+    activityCriteria: { ...input.activityCriteria, mustSee: [generated.name] },
+  };
+  expect(
+    ids(
+      compileSchedule(required, [generated, reviewed], [], [], {
+        reviewedActivityIds: [reviewed.id],
+      }),
+    ),
+  ).toEqual([generated.id]);
+  // Evidence ranking cannot bypass explicit exclusions.
+  expect(
+    ids(
+      compileSchedule(
+        input,
+        [generated, reviewed],
+        [],
+        [
+          {
+            activityId: reviewed.id,
+            date: "2027-01-11",
+            reason: "closed",
+            sourceUrl: "https://example.com",
+            observedAt: "2026-11-02",
+          },
+        ],
+        { reviewedActivityIds: [reviewed.id] },
+      ),
+    ),
+  ).toEqual([generated.id]);
+});

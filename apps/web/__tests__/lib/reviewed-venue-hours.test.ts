@@ -51,7 +51,9 @@ it("matches bounded title and reviewed-country address conventions without fuzzy
     "Museum (ABC International) Friday Night Concert",
     "Museum (XYZ International)",
   ])
-    expect(check({ ...candidate, name })).toEqual([]);
+    expect(check({ ...candidate, name })).toEqual([
+      expect.objectContaining({ reason: "venue_identity_requires_review" }),
+    ]);
   for (const address of [
     "37 Av. Docteur Ménard, 06000 Nice",
     "36 Av. Docteur Ménard, 06001 Nice",
@@ -101,8 +103,18 @@ it("does not sum time across a published midday closure or shorten a visit", () 
   expect(results).toHaveLength(3);
 });
 it("does not transfer hours across cities, names or addresses", () => {
+  expect(
+    reviewedHoursExclusions(
+      plan,
+      [{ ...activity, name: "Other museum" }],
+      ["2027-01-11"],
+      [fact],
+      "2026-11-01",
+    ),
+  ).toEqual([
+    expect.objectContaining({ reason: "venue_identity_requires_review" }),
+  ]);
   for (const candidate of [
-    { ...activity, name: "Other museum" },
     {
       ...activity,
       location: { ...activity.location, address: "2 Museum Street" },
@@ -218,5 +230,37 @@ it("excludes the observed library evening visit using the reviewed official reco
         records as ReviewedVenueHours[],
         "2026-11-02",
       ),
-    ).toEqual([]);
+    ).toEqual([
+      expect.objectContaining({ reason: "venue_identity_requires_review" }),
+    ]);
+});
+
+it("withholds renamed visits and co-located tenants for identity review without claiming their hours", () => {
+  for (const name of [
+    "Museum Night View",
+    "Gallery Evening Exploration",
+    "Museum Cafe",
+    "Museum Exterior Walk",
+    "Museum Night Concert",
+  ]) {
+    const results = reviewedHoursExclusions(
+      plan,
+      [{ ...activity, name }],
+      ["2027-01-11"],
+      [fact],
+      "2026-11-01",
+    );
+    expect(results).toHaveLength(1);
+    expect(results[0].reason).toBe("venue_identity_requires_review");
+    expect(results[0].slot).toBeUndefined();
+  }
+  expect(
+    reviewedHoursExclusions(
+      plan,
+      [{ ...activity, name: "Museum Night View" }],
+      ["2027-01-11"],
+      [{ ...fact, reviewAfter: "2026-10-31" }],
+      "2026-11-01",
+    ),
+  ).toEqual([]);
 });

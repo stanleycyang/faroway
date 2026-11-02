@@ -81,7 +81,10 @@ export function compileSchedule(
   inventory: ActivityResult[],
   diningInventory: DiningResult[],
   exclusions: readonly ScheduleExclusion[] = [],
+  options: { reviewedActivityIds?: readonly string[] } = {},
 ): CompiledSchedule {
+  // Caller supplies IDs admitted from reviewed source inputs, never model scores.
+  const reviewedIds = new Set(options.reviewedActivityIds ?? []);
   const dining = diningInventory.filter((meal) => !meal.planningIdea);
   const start = Date.parse(`${plan.dates.start}T00:00:00Z`);
   const end = Date.parse(`${plan.dates.end}T00:00:00Z`);
@@ -334,7 +337,12 @@ export function compileSchedule(
       }
       return true;
     })
-    .sort((a, b) => preference(b) - preference(a) || a.id.localeCompare(b.id));
+    .sort(
+      (a, b) =>
+        Number(reviewedIds.has(b.id)) - Number(reviewedIds.has(a.id)) ||
+        preference(b) - preference(a) ||
+        a.id.localeCompare(b.id),
+    );
   if (candidates.length > INVENTORY_LIMIT)
     issues.push("inventory_search_limit");
   const activities = candidates.slice(0, INVENTORY_LIMIT);
@@ -395,6 +403,20 @@ export function compileSchedule(
       availability.windows.some(Boolean) ||
       visitAvailability.restricted) &&
     canCoverDays(0, new Set());
+  const coverage = (state: State) =>
+    new Set(state.selected.map((s) => s.day)).size;
+  const highlightCoverage = (state: State) =>
+    new Set(state.selected.flatMap((s) => matches.get(s.activity.id) ?? []))
+      .size;
+  const reviewedCount = (state: State) =>
+    state.selected.filter((s) => reviewedIds.has(s.activity.id)).length;
+  const rankStates = (a: State, b: State) =>
+    reviewedIds.size
+      ? coverage(b) - coverage(a) ||
+        highlightCoverage(b) - highlightCoverage(a) ||
+        reviewedCount(b) - reviewedCount(a) ||
+        b.score - a.score
+      : b.score - a.score;
   let beam: State[] = [{ selected: [], used: new Set(), score: 0 }];
   for (let day = 0; day < daysCount; day++) {
     for (let slot = 0; slot < SLOTS.length; slot++) {
@@ -494,7 +516,7 @@ export function compileSchedule(
         }
       }
       // Stable tie ordering makes replays reproducible on identical inventory.
-      const ranked = expanded.sort((a, b) => b.score - a.score);
+      const ranked = expanded.sort(rankStates);
       if (slot === SLOTS.length - 1) beam = ranked.slice(0, BEAM_WIDTH);
       else {
         // Preserve partially empty days until later slots are considered. Otherwise

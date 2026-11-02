@@ -97,3 +97,21 @@ export function resolveReviewedVenue<T extends ReviewedVenueIdentity>(
     matches,
   };
 }
+
+/** Address collision only: this never establishes venue or visit identity. */
+export function reviewedVenueAddressMatches<T extends ReviewedVenueIdentity>(
+  candidate: Pick<VenueIdentityCandidate, "destination" | "address">,
+  sources: readonly T[],
+): T[] {
+  if (!normalize(candidate.destination) || !normalize(candidate.address))
+    return [];
+  return sources.filter(
+    (source) =>
+      normalize(source.destination) === normalize(candidate.destination) &&
+      source.addresses.some(
+        (anchor) =>
+          address(anchor, source.country) ===
+          address(candidate.address, source.country),
+      ),
+  );
+}
