@@ -367,6 +367,40 @@ test("venue discovery rejects missing input before a paid request", () => {
   }
 });
 
+test("parallel discovery refuses unscoped requests before a paid request", () => {
+  const directory = mkdtempSync(join(tmpdir(), "hotel-discovery-preflight-"));
+  try {
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--no-env-file",
+        "apps/web/scripts/grounding-pilot-live.ts",
+        "--live",
+        "--parallel-search",
+        "--out",
+        join(directory, "receipt.json"),
+      ],
+      {
+        cwd: root,
+        encoding: "utf8",
+        timeout: 10000,
+        env: {
+          PATH: process.env.PATH,
+          HOME: process.env.HOME,
+          FAROWAY_STAGING_SUPABASE_PROJECT_REF: "omovikloadpvzijoaqus",
+          FAROWAY_STAGING_AI_GATEWAY_KEY: "invalid-preflight-only-key",
+        },
+      },
+    );
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain(
+      "--parallel-search requires exactly one public venue candidate",
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("hotel fact extraction refuses implicit paid calls and production targets", () => {
   for (const [args, message] of [
     [[], "Explicit --live required"],

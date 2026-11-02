@@ -441,6 +441,7 @@ import {
   validateVenueDiscoveryRequests,
   auditVenueSourceDiscovery,
   venueDiscoveryPrompt,
+  parallelVenueSources,
 } from "../uat/lib/venue-source-discovery";
 const publicVenue = {
   id: "venue-a",
@@ -558,4 +559,51 @@ test("venue discovery requires URL retrieval evidence independently of valid out
   expect(audit.retrievalEvidencePresent).toBe(true);
   expect(audit.leads[0]?.returnedUrlInSources).toBe(false);
   expect(audit.identityVerified).toBe(false);
+});
+
+test("parallel discovery uses only provider-executed search results with excerpts", () => {
+  const result = {
+    toolName: "parallel_search",
+    toolCallId: "call-1",
+    providerExecuted: true,
+    output: {
+      searchId: "search-1",
+      results: [
+        {
+          url: "https://museum.example/",
+          title: "Museum",
+          excerpt: "Museum A at 1 Example Street.",
+        },
+      ],
+    },
+  };
+  const sources = parallelVenueSources([result]);
+  expect(sources).toHaveLength(1);
+  expect(sources[0]?.retrievalToolCallId).toBe("call-1");
+  for (const change of [
+    { providerExecuted: false },
+    { providerExecuted: undefined },
+    { toolName: "other" },
+    { toolCallId: "" },
+    { output: { error: "timeout" } },
+    {
+      output: {
+        searchId: "search-1",
+        results: [{ url: "https://museum.example/", title: "Museum" }],
+      },
+    },
+  ]) {
+    expect(parallelVenueSources([{ ...result, ...change }])).toEqual([]);
+  }
+  expect(
+    parallelVenueSources([
+      {
+        ...result,
+        output: {
+          ...result.output,
+          results: [{ ...result.output.results[0], url: "http://127.0.0.1" }],
+        },
+      },
+    ]),
+  ).toEqual([]);
 });

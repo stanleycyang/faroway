@@ -167,3 +167,40 @@ export function auditVenueSourceDiscovery(
     qualityAccepted: false as const,
   };
 }
+
+/** Read provider-executed retrieval results, never model-authored claims/tool inputs. */
+export function parallelVenueSources(toolResults: readonly unknown[]) {
+  return toolResults.flatMap((raw) => {
+    const result = record(raw);
+    const output = record(result.output);
+    if (
+      result.toolName !== "parallel_search" ||
+      result.providerExecuted !== true ||
+      !bounded(result.toolCallId, 200) ||
+      !bounded(output.searchId, 200) ||
+      !Array.isArray(output.results) ||
+      output.error !== undefined
+    )
+      return [];
+    return output.results.flatMap((rawSource, index) => {
+      const source = record(rawSource);
+      if (
+        !sourceUrl(source.url) ||
+        !bounded(source.title, 2000) ||
+        !bounded(source.excerpt, 20000)
+      )
+        return [];
+      return [
+        {
+          type: "source",
+          sourceType: "url",
+          id: `parallel:${output.searchId}:${index}`,
+          url: source.url,
+          title: source.title,
+          excerpt: source.excerpt,
+          retrievalToolCallId: result.toolCallId,
+        },
+      ];
+    });
+  });
+}
