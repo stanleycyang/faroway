@@ -52,6 +52,17 @@ const aiGateway = process.env.AI_GATEWAY_API_KEY
 const MODEL = PLANNING_MODEL;
 
 const ActivitySchema = z.object({
+  proposedVisitType: z
+    .enum([
+      "ordinary_entry",
+      "exterior_walk",
+      "guided_tour",
+      "event",
+      "unknown",
+    ])
+    .describe(
+      "The proposed experience, not evidence that access or a booking is available.",
+    ),
   name: z.string(),
   description: z.string(),
   category: z.string(),
@@ -107,6 +118,7 @@ For each activity, provide:
 4. Duration in whole MINUTES, never hours (30-minute stop = 30; 2-hour museum visit = 120; 2.5-hour tour = 150)
 5. Best time of day to visit
 6. How well it matches the traveler's vibes
+7. proposedVisitType: ordinary_entry for general admission/interior visits, exterior_walk for an outdoor walk without interior access, guided_tour for an organized guided visit, event for a specific performance or event, unknown when unclear. This describes intent only; never change an interior visit to an exterior walk merely to fit evening availability. A guided tour's availability cannot be inferred from building opening hours.
 
 Generate diverse options across categories like:
 - Sightseeing & landmarks

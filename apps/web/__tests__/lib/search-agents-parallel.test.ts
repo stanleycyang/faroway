@@ -65,6 +65,7 @@ const plan = {
 };
 
 const aiActivity = {
+  proposedVisitType: "ordinary_entry",
   name: "AI Food Walk",
   description: "A fast local food walk",
   category: "food",
@@ -418,6 +419,26 @@ describe("search agents internal parallelism", () => {
         .success,
     ).toBe(true);
     expect(result[0].duration).toBe(150);
+    expect(result[0].proposedVisitType).toBe("ordinary_entry");
+    for (const proposedVisitType of [
+      "exterior_walk",
+      "guided_tour",
+      "event",
+      "unknown",
+    ]) {
+      expect(
+        args.schema.safeParse({
+          activities: [{ ...aiActivity, proposedVisitType }],
+        }).success,
+      ).toBe(true);
+    }
+    for (const proposedVisitType of [undefined, "verified_open"]) {
+      expect(
+        args.schema.safeParse({
+          activities: [{ ...aiActivity, proposedVisitType }],
+        }).success,
+      ).toBe(false);
+    }
   });
 });
 

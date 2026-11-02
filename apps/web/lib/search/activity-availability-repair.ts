@@ -18,8 +18,14 @@ export interface ActivityAvailabilityAssessment {
   evidenceSha256?: string;
   sourceUrls: string[];
 }
-const keyFor = (id: string, date: string, slot: string, duration: number) =>
-  JSON.stringify([id, date, slot, duration]);
+const keyFor = (activity: ActivityResult, date: string, slot: string) =>
+  JSON.stringify([
+    activity.id,
+    date,
+    slot,
+    activity.duration,
+    activity.proposedVisitType ?? "unknown",
+  ]);
 const validUrl = (value: string) => {
   try {
     const url = new URL(value);
@@ -84,7 +90,7 @@ export async function repairActivityAvailability(
     schedule.days.flatMap((day) =>
       slots.flatMap((slot) =>
         day[slot].activities.map((activity) => ({
-          key: keyFor(activity.id, day.date, slot, activity.duration),
+          key: keyFor(activity, day.date, slot),
           destination: plan.destination,
           date: day.date,
           slot,
@@ -96,9 +102,7 @@ export async function repairActivityAvailability(
     dates.flatMap((date) =>
       slots.flatMap((slot) =>
         activities.flatMap((activity): ScheduleExclusion[] => {
-          const assessment = assessments.get(
-            keyFor(activity.id, date, slot, activity.duration),
-          );
+          const assessment = assessments.get(keyFor(activity, date, slot));
           if (
             assessment?.status === "ordinary_hours_compatible" ||
             (!assessment && !final)

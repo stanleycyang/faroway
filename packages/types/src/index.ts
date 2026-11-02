@@ -515,6 +515,13 @@ export interface HotelResult {
 }
 
 export interface ActivityResult {
+  /** Proposed experience only, not verified access, opening hours or a booking. */
+  proposedVisitType?:
+    | "ordinary_entry"
+    | "exterior_walk"
+    | "guided_tour"
+    | "event"
+    | "unknown";
   /** An inspiration/search lead, not a schedulable venue or experience. */
   planningIdea?: true;
   priceStatus?: "unknown" | "estimate";

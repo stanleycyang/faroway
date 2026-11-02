@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import type { ActivityResult } from "@faroway/types";
 
 export interface AvailabilityVisit {
   key: string;
@@ -6,6 +7,7 @@ export interface AvailabilityVisit {
   date: string;
   slot: "morning" | "afternoon" | "evening";
   activity: {
+    proposedVisitType?: ActivityResult["proposedVisitType"];
     id: string;
     name: string;
     duration: number;
@@ -40,6 +42,7 @@ export const availabilityCandidateSha256 = (visit: AvailabilityVisit) =>
       id: visit.activity.id,
       name: visit.activity.name,
       address: visit.activity.location.address,
+      proposedVisitType: visit.activity.proposedVisitType ?? "unknown",
     }),
   );
 const validDate = (value: string) =>
@@ -130,6 +133,8 @@ export function assessOrdinaryHoursEvidence(
     reason,
     sourceUrls: [] as string[],
   });
+  if (visit.activity.proposedVisitType !== "ordinary_entry")
+    return unknown("visit_intent_requires_separate_scope_review");
   if (
     !validDate(asOf) ||
     !validDate(visit.date) ||

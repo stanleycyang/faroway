@@ -19,6 +19,7 @@ const visit: AvailabilityVisit = {
   slot: "evening",
   activity: {
     id: "gallery",
+    proposedVisitType: "ordinary_entry" as const,
     name: "Test Gallery",
     duration: 60,
     location: { address: "1 Test Street" },
@@ -162,6 +163,7 @@ it("drives a repair from retained evidence, without model-authored interval valu
     {
       ...base,
       id: "gallery",
+      proposedVisitType: "ordinary_entry" as const,
       name: "Test Gallery",
       duration: 180,
       vibeScore: 100,
@@ -170,6 +172,7 @@ it("drives a repair from retained evidence, without model-authored interval valu
     {
       ...base,
       id: "deck",
+      proposedVisitType: "ordinary_entry" as const,
       name: "Test Deck",
       duration: 180,
       vibeScore: 60,
@@ -240,3 +243,32 @@ it("extracts original daily-hours spans without joining snippets or accepting ex
   expect(found[0].hours).toEqual({ opens: 600, closes: 1020, lastEntry: null });
   expect(extractOrdinaryDailyHoursStatements("x".repeat(20001))).toEqual([]);
 });
+
+// Identical venue identity does not make different experiences interchangeable.
+it.each([
+  undefined,
+  "unknown",
+  "exterior_walk",
+  "guided_tour",
+  "event",
+] as const)(
+  "does not apply ordinary-entry hours to visit intent %s",
+  (proposedVisitType) => {
+    const candidate: AvailabilityVisit = {
+      ...visit,
+      activity: { ...visit.activity, proposedVisitType },
+    };
+    for (const hours of [
+      "Open daily 10am–5pm",
+      "Open daily 12pm–10pm, last entry 9:30pm",
+    ]) {
+      expect(assess([receipt(hours, candidate)], candidate)).toMatchObject({
+        status: "unknown",
+        reason: "visit_intent_requires_separate_scope_review",
+      });
+    }
+    expect(availabilityCandidateSha256(candidate)).not.toBe(
+      availabilityCandidateSha256(visit),
+    );
+  },
+);
