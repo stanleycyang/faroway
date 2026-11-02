@@ -183,7 +183,7 @@ it("excludes the observed library evening visit using the reviewed official reco
   const library = {
     ...activity,
     id: "saved-library",
-    name: "State Library Victoria",
+    name: "State Library Victoria Night Visit",
     duration: 60,
     location: {
       ...activity.location,

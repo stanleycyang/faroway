@@ -25,7 +25,7 @@ function title(value: string, ordinaryVisit: boolean) {
   );
   if (ordinaryVisit)
     result = result.replace(
-      /\s+(?:(?:morning|afternoon|evening)\s+)?visit$/,
+      /\s+(?:(?:morning|afternoon|evening|night)\s+)?visit$/,
       "",
     );
   return result.trim();
