@@ -57,11 +57,13 @@ const replay = replayBytes
       JSON.parse(replayBytes.toString()),
       process.argv.includes("--screen-sources"),
       process.argv.includes("--indexed-meal-evidence"),
+      process.argv.includes("--screen-area"),
     )
   : undefined;
 if (
   (process.argv.includes("--screen-sources") ||
-    process.argv.includes("--indexed-meal-evidence")) &&
+    process.argv.includes("--indexed-meal-evidence") ||
+    process.argv.includes("--screen-area")) &&
   !replay
 )
   throw Error("Source screening requires frozen retrieval");
@@ -103,6 +105,7 @@ const provenance = {
   mode: replay ? "frozen-source-selection" : "live-discovery",
   screenSources: replay?.screenSources ?? false,
   indexedMealEvidence: replay?.indexedMealEvidence ?? false,
+  screenArea: replay?.screenArea ?? false,
   ...(replayBytes ? { replaySha256: hash(replayBytes) } : {}),
   model: "google/gemini-3-flash",
   clientRequestsMaximum: 1,

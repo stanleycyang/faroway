@@ -11,9 +11,10 @@ export function prepareDiningReplay(
   value: unknown,
   screenSources = false,
   indexedMealEvidence = false,
+  screenArea = false,
 ) {
-  if (indexedMealEvidence && !screenSources)
-    throw Error("Indexed meal evidence requires source screening");
+  if ((indexedMealEvidence || screenArea) && !screenSources)
+    throw Error("Indexed evidence and area checks require source screening");
   const receipt = object(value);
   const brief = validatePublicDiningBrief(receipt.brief);
   if (
@@ -44,12 +45,29 @@ Return JSON {"screening":[{"sourceId":"source-0","publisherKind":"operator_page"
 Copy name verbatim from the title or one excerpt and address verbatim from one excerpt of the SAME source, preserving accents, punctuation, capitalization and line breaks. Do not return URLs or duplicate identity quotes.
 Select meal evidence by zero-based excerpt and inclusive line indices from that source. Code will copy these whole contiguous lines verbatim; never generate a mealQuote. Choose the shortest sufficient range, at most 1000 characters including line breaks. The selected range ITSELF must explicitly establish ordinary service for the requested meal at the named branch. Read surrounding lines before selecting: retain relevant weekday, seasonal, event, suspension or branch qualifications in the range. A meal word in a business-event offer, last-order times without a meal heading, dish names or generic menus is insufficient. Omit the venue when adequate qualified evidence is unavailable. Do not interpret copied service evidence as availability for any particular date or permission to schedule.
 Sources: ${JSON.stringify(sources.map((source) => ({ sourceId: source.sourceId, url: source.url, title: source.title, excerpts: source.excerptSegments.map((segment, excerpt) => ({ excerpt, lines: segment.split("\n").map((text, line) => ({ line, text })) })) })))}`;
+  if (screenArea)
+    prompt = prompt
+      .replaceAll(
+        '"mealSupport":"explicit"}',
+        '"mealSupport":"explicit","areaFit":"supported","areaQuote":"exact excerpt supporting the branch location"}',
+      )
+      .replaceAll(
+        '"mealSupport":"explicit|contradicted|not_established"}',
+        '"mealSupport":"explicit|contradicted|not_established","areaFit":"supported|outside|uncertain","areaQuote":null}',
+      )
+      .replace(
+        "\nSources:",
+        `
+For EVERY screening entry assess destination AND requested-area fit of this specific branch: supported means source excerpts explicitly place it in the requested area and destination; outside means they place it elsewhere; uncertain means insufficient or conflicting evidence. Venue names, branding, cuisine, search rank and nearby attractions alone are not location evidence. A brand named after a district can operate elsewhere. Do not use unsourced geographic memory to fill gaps, equate nearby with inside, or combine locations from different branches. Retain the source's actual address. Include areaQuote as one exact contiguous excerpt span (maximum 1000 characters) supporting a supported/outside assessment; use null for uncertain. Only select venues with areaFit supported. This does not verify coordinates, walking distance or administrative boundaries.
+Sources:`,
+      );
   return {
     brief,
     sources,
     prompt,
     screenSources,
     indexedMealEvidence,
+    screenArea,
     retrievalResults: receipt.retrievalResults,
   };
 }
@@ -81,14 +99,34 @@ export function bindDiningReplay(
         (s) =>
           !replay.sources.some((r) => r.sourceId === s.sourceId) ||
           Object.keys(s).some(
-            (k) => !["sourceId", "publisherKind", "mealSupport"].includes(k),
+            (k) =>
+              ![
+                "sourceId",
+                "publisherKind",
+                "mealSupport",
+                ...(replay.screenArea ? ["areaFit", "areaQuote"] : []),
+              ].includes(k),
           ) ||
           !["operator_page", "third_party", "uncertain"].includes(
             String(s.publisherKind),
           ) ||
           !["explicit", "contradicted", "not_established"].includes(
             String(s.mealSupport),
-          ),
+          ) ||
+          (replay.screenArea &&
+            (!["supported", "outside", "uncertain"].includes(
+              String(s.areaFit),
+            ) ||
+              (s.areaFit === "uncertain"
+                ? s.areaQuote !== null
+                : typeof s.areaQuote !== "string" ||
+                  !s.areaQuote.trim() ||
+                  s.areaQuote.length > 1000 ||
+                  !replay.sources
+                    .find((r) => r.sourceId === s.sourceId)
+                    ?.excerptSegments.some((segment) =>
+                      segment.includes(s.areaQuote as string),
+                    )))),
       ))
   )
     return null;
@@ -122,6 +160,7 @@ export function bindDiningReplay(
         mealQuote = quote;
       }
       if (
+        (replay.screenArea && assessment?.areaFit !== "supported") ||
         (replay.screenSources &&
           (assessment?.publisherKind !== "operator_page" ||
             assessment?.mealSupport !== "explicit" ||

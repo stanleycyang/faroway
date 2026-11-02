@@ -34,6 +34,7 @@ const rows = paths.map((file) => {
             receipt,
             receipt.provenance.screenSources === true,
             receipt.provenance.indexedMealEvidence === true,
+            receipt.provenance.screenArea === true,
           ),
         )
       : receipt.provenance?.compactEvidence === true

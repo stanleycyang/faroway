@@ -1562,3 +1562,71 @@ test("indexed meal evidence copies one source range and rejects invalid selector
   ).toHaveLength(0);
   expect(() => prepareDiningReplay(input, false, true)).toThrow();
 });
+
+test("area screening requires a grounded assessment and excludes uncertain or outside branches", () => {
+  const brief = {
+    destination: "Example City",
+    area: "Old Town",
+    meal: "dinner",
+    maxCandidates: 3,
+  };
+  const excerpt =
+    "Our Bistro A at 12 Main Street, Old Town, Example City serves dinner.";
+  const tool = {
+    toolName: "parallel_search",
+    providerExecuted: true,
+    toolCallId: "area",
+    output: {
+      search_id: "area",
+      results: [
+        {
+          url: "https://bistro.example/",
+          title: "Bistro A",
+          excerpts: [excerpt],
+        },
+      ],
+    },
+  };
+  const input = { status: "completed", brief, retrievalResults: [tool] };
+  const replay = prepareDiningReplay(input, true, false, true);
+  const assessment = {
+    sourceId: "source-0",
+    publisherKind: "operator_page",
+    mealSupport: "explicit",
+    areaFit: "supported",
+    areaQuote: "12 Main Street, Old Town, Example City",
+  };
+  const venues = [
+    {
+      sourceId: "source-0",
+      name: "Bistro A",
+      address: "12 Main Street",
+      mealQuote: "serves dinner",
+    },
+  ];
+  const select = (a: unknown) =>
+    bindDiningReplay({ screening: [a], venues }, replay);
+  expect(
+    auditDiningDiscovery(select(assessment), [tool], replay.brief).options,
+  ).toHaveLength(1);
+  for (const change of [
+    { areaFit: "outside" },
+    { areaFit: "uncertain", areaQuote: null },
+  ])
+    expect(
+      auditDiningDiscovery(
+        select({ ...assessment, ...change }),
+        [tool],
+        replay.brief,
+      ).options,
+    ).toHaveLength(0);
+  for (const change of [
+    { areaFit: "unknown" },
+    { areaQuote: null },
+    { areaQuote: "Title-only location" },
+    { areaQuote: "Invented Old Town address" },
+    { areaFit: "uncertain" },
+  ])
+    expect(select({ ...assessment, ...change })).toBe(null);
+  expect(() => prepareDiningReplay(input, false, false, true)).toThrow();
+});
