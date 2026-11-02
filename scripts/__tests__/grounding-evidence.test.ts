@@ -693,7 +693,24 @@ import { auditVenueIdentityExcerpts } from "../uat/lib/venue-identity-excerpts";
 import {
   auditDiningDiscovery,
   validatePublicDiningBrief,
+  parseDiningDiscovery,
 } from "../uat/lib/dining-discovery";
+
+test("dining JSON permits a complete code fence without recovering arbitrary prose", () => {
+  for (const text of [
+    '{"venues":[]}',
+    '```json\n{"venues":[]}\n```',
+    '```\n{"venues":[]}\n```',
+  ])
+    expect(parseDiningDiscovery(text)).toEqual({ venues: [] });
+  for (const text of [
+    'Here is {"venues":[]}',
+    '```json\n{"venues":[]}\n```\nextra',
+    '{"venues":[]} {"venues":[]}',
+    '```json\n{"venues":[]}',
+  ])
+    expect(parseDiningDiscovery(text)).toBe(null);
+});
 
 test("source-first dining keeps missing service and location facts unknown", () => {
   const brief = validatePublicDiningBrief({

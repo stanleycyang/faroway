@@ -8,6 +8,7 @@ import {
   validatePublicDiningBrief,
   diningDiscoveryPrompt,
   auditDiningDiscovery,
+  parseDiningDiscovery,
 } from "../../../scripts/uat/lib/dining-discovery";
 const arg = (name: string) => {
   const i = process.argv.indexOf(name);
@@ -87,12 +88,7 @@ try {
     abortSignal: AbortSignal.timeout(60000),
   });
   const retrievalResults = result.steps.flatMap((step) => step.toolResults);
-  let extracted: unknown;
-  try {
-    extracted = JSON.parse(result.text);
-  } catch {
-    extracted = null;
-  }
+  const extracted = parseDiningDiscovery(result.text);
   const audit = auditDiningDiscovery(extracted, retrievalResults, brief);
   const billingKnown =
     Number.isFinite(result.usage.inputTokens) &&

@@ -15,6 +15,17 @@ const object = (v: unknown): Record<string, unknown> =>
 const text = (v: unknown, max: number): v is string =>
   typeof v === "string" && !!v.trim() && v.length <= max;
 
+/** Permit one complete JSON code fence, never salvage fragments from prose. */
+export function parseDiningDiscovery(text: string): unknown {
+  const trimmed = text.trim();
+  const fenced = /^```(?:json)?\s*\n([\s\S]*?)\n```$/u.exec(trimmed);
+  try {
+    return JSON.parse(fenced ? fenced[1]! : trimmed);
+  } catch {
+    return null;
+  }
+}
+
 export function validatePublicDiningBrief(value: unknown): PublicDiningBrief {
   const row = object(value);
   if (
