@@ -2328,3 +2328,20 @@ Staging continues to withhold these unresolved visits and now displays the exist
 Regression coverage includes five nonordinary/missing intent states with exact Met identity and an ordinary-entry positive control, plus three actual staging-flow cases verifying that the candidate is withheld and the note does not assert closure. The first root test invocation accidentally forwarded web test filenames to the Bun script-test stage; all workspace suites passed, but Bun then attempted to execute Vitest files. The corrected full-root invocation omits those arguments. No paid calls or enabled deployments; cumulative spend remains **$5.33/$20**.
 
 Final validation: the unfiltered root test command passes, including **1,627 web tests**, **707 mobile tests**, shared-package suites and **221 script tests / 1,464 assertions**. Workspace checks pass with nine existing lint warnings. GitHub CI `41399170891` is still live on `b72033f`; this change is committed locally while that run finishes to avoid cancelling remote verification with another push.
+
+
+## Connect reviewed source evidence to bounded repair replay (2026-11-02 UTC)
+
+Added `repairWithReviewedHours`, an offline adapter between the existing candidate-bound hours checker and bounded availability-repair loop. Each request receives only receipts matching its destination, activity ID/name/address and proposed intent hash; the existing checker validates source bytes, review freshness, date applicability, ordinary-entry scope, complete-slot coverage and last entry. This is not a retrieval or automatic-adjudication adapter: search leads and model claims cannot supply the required source review. No provider calls or product writes occur.
+
+The executable entry point is:
+
+```sh
+bun --no-env-file scripts/uat/repair-reviewed-availability.ts TRACE_RECEIPT REVIEWED_EVIDENCE YYYY-MM-DD NEW_OUTPUT
+```
+
+It requires a completed structurally intact trace, recompiles its raw specialist inventory, and writes a new private receipt with input hashes, original trace provenance, replay commit/dirty status and explicit limitations. It refuses existing output paths and uses exclusive creation. Exit 2 means repair is incomplete or days remain unresolved; exit 0 describes checked ordinary-hours coverage only, never full traveler-quality acceptance. Staging enrichment, locks, original narration and hotel selection are deliberately outside this CLI's input contract, so its output is not a full deployed-workflow replay.
+
+Integration tests show a synthetic source-bound conflict causing a second round and selection of a checked alternative. Stale, wrong-candidate, tampered and partial-window receipts do not authorize replacements. CLI tests preserve inconclusive results and verify overwrite refusal. A no-evidence replay of the retained New York six-candidate trace uses two rounds / twelve checks, selects zero visits and reports three unresolved days (`limit_reached`, exit 2). This is a negative control demonstrating the missing evidence boundary, not an itinerary improvement; the saved app itinerary is untouched. Private receipt: `artifacts/uat/reviewed-repair-bridge-20261102/new-york-no-evidence.json`.
+
+Validation: **225 script tests / 1,489 assertions** and workspace checks pass with nine existing lint warnings. No additional AI spend or enabled deployments; cumulative spend remains **$5.33/$20**. Source collection/adjudication, exact-time handling for partial opening windows and a useful live repair acceptance case remain necessary before this adapter can support product integration.
