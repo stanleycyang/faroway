@@ -44,6 +44,7 @@ export interface PublishedVenueAddress {
   scriptIndex: number;
   issues: string[];
   branchIdentityVerified: false;
+  publishedCoordinates?: { lat: number; lng: number; sourcePointer: string };
   coordinatesVerified: false;
 }
 
@@ -78,6 +79,7 @@ export function extractPublishedVenueAddresses(input: {
   const issues: string[] = [];
   const seen = new Set<string>();
   const byId = new Map<string, PublishedVenueAddress[]>();
+  const byAddress = new Map<string, PublishedVenueAddress[]>();
   const start = /<script\b/gi;
   const close = /<\/script\s*>/gi;
   let scripts = 0;
@@ -148,7 +150,39 @@ export function extractPublishedVenueAddresses(input: {
       if (!address.addressCountry)
         recordIssues.push("country_not_reported_as_text");
       const entityId = text(node["@id"]);
-      const identity = JSON.stringify([entityId, name, address]);
+      let publishedCoordinates: PublishedVenueAddress["publishedCoordinates"];
+      if (node.geo !== undefined) {
+        const geo = object(node.geo);
+        const number = (value: unknown) =>
+          typeof value === "number"
+            ? value
+            : typeof value === "string" &&
+                value.length <= 50 &&
+                /^[-+]?\d+(?:\.\d+)?$/.test(value.trim())
+              ? Number(value)
+              : NaN;
+        const lat = number(geo.latitude),
+          lng = number(geo.longitude);
+        if (
+          types(geo).includes("GeoCoordinates") &&
+          Number.isFinite(lat) &&
+          Math.abs(lat) <= 90 &&
+          Number.isFinite(lng) &&
+          Math.abs(lng) <= 180 &&
+          !(lat === 0 && lng === 0)
+        )
+          publishedCoordinates = { lat, lng, sourcePointer: `${pointer}/geo` };
+        else recordIssues.push("unsupported_or_invalid_published_coordinates");
+      }
+      // Conflicting coordinate claims must survive address deduplication.
+      const identity = JSON.stringify([
+        entityId,
+        name,
+        address,
+        publishedCoordinates
+          ? [publishedCoordinates.lat, publishedCoordinates.lng]
+          : null,
+      ]);
       if (seen.has(identity)) {
         issues.push("duplicate_venue_address");
         continue;
@@ -165,9 +199,12 @@ export function extractPublishedVenueAddresses(input: {
         scriptIndex: scripts - 1,
         issues: recordIssues,
         branchIdentityVerified: false,
+        publishedCoordinates,
         coordinatesVerified: false,
       };
       addresses.push(record);
+      const addressKey = JSON.stringify([name, address]);
+      byAddress.set(addressKey, [...(byAddress.get(addressKey) ?? []), record]);
       if (entityId) byId.set(entityId, [...(byId.get(entityId) ?? []), record]);
     }
   }
@@ -175,6 +212,23 @@ export function extractPublishedVenueAddresses(input: {
     if (records.length > 1)
       for (const record of records)
         record.issues.push("conflicting_records_for_entity_id");
+  for (const records of byAddress.values()) {
+    const points = new Set(
+      records.flatMap((record) =>
+        record.publishedCoordinates
+          ? [
+              JSON.stringify([
+                record.publishedCoordinates.lat,
+                record.publishedCoordinates.lng,
+              ]),
+            ]
+          : [],
+      ),
+    );
+    if (points.size > 1)
+      for (const record of records)
+        record.issues.push("conflicting_coordinates_for_published_address");
+  }
   if (!scripts) issues.push("no_json_ld_scripts");
   if (!addresses.length) issues.push("no_extractable_venue_addresses");
   return {

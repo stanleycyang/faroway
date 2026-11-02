@@ -154,3 +154,62 @@ test("CLI binds source hashes and preserves prior output; mismatched receipts fa
     rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test("retains only bounded inline publisher coordinates with exact provenance", () => {
+  const geo = {
+    "@type": "GeoCoordinates",
+    latitude: "42.362",
+    longitude: -71.084,
+  };
+  const report = extractPublishedVenueAddresses(
+    input({ "@graph": [{ ...venue, geo }] }),
+  );
+  expect(report.addresses[0].publishedCoordinates).toEqual({
+    lat: 42.362,
+    lng: -71.084,
+    sourcePointer: "/@graph/0/geo",
+  });
+  expect(report.addresses[0].coordinatesVerified).toBe(false);
+  for (const invalid of [
+    { ...geo, latitude: 91 },
+    { ...geo, longitude: -181 },
+    { ...geo, latitude: "42.3 north" },
+    { ...geo, latitude: null },
+    { ...geo, latitude: "0x2a" },
+    { ...geo, latitude: Infinity },
+    { ...geo, latitude: 0, longitude: 0 },
+    { "@id": "https://external.example/point" },
+    { ...geo, "@type": "GeoShape" },
+  ]) {
+    const row = extractPublishedVenueAddresses(
+      input({ ...venue, geo: invalid }),
+    ).addresses[0];
+    expect(row.publishedCoordinates).toBeUndefined();
+    expect(row.issues).toContain(
+      "unsupported_or_invalid_published_coordinates",
+    );
+    expect(row.address.streetAddress).toBe("314 Main Street");
+  }
+  const sibling = extractPublishedVenueAddresses(
+    input({ "@graph": [venue, geo] }),
+  );
+  expect(sibling.addresses[0].publishedCoordinates).toBeUndefined();
+});
+
+test("preserves conflicting points for the same published address instead of choosing one", () => {
+  const first = {
+    ...venue,
+    "@id": undefined,
+    geo: { "@type": "GeoCoordinates", latitude: 42, longitude: -71 },
+  };
+  const second = { ...first, geo: { ...first.geo, latitude: 41 } };
+  const report = extractPublishedVenueAddresses(input([first, second, first]));
+  expect(report.addresses).toHaveLength(2);
+  expect(report.issues).toContain("duplicate_venue_address");
+  expect(
+    report.addresses.every((r) =>
+      r.issues.includes("conflicting_coordinates_for_published_address"),
+    ),
+  ).toBe(true);
+  expect(report.addresses.every((r) => !r.coordinatesVerified)).toBe(true);
+});
