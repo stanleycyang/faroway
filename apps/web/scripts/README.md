@@ -182,3 +182,9 @@ const anon = createClient(url, anonKey);
 `grounding-pilot-live.ts --venue-candidates FILE --parallel-search --venue-hours-search` searches for operator visitor-hours pages while returning identity leads only. It requires the existing explicit `--live`, staging target, dedicated capped gateway key, and a new `--out` receipt. The candidate file permits only public ID/name/destination/address fields; do not include traveler dates or requirements. Pulled `[SENSITIVE]` values are placeholders and are rejected before dispatch.
 
 The mode retains raw search excerpts; it does not approve venue identity, extract a date-specific schedule, modify trips, or enable any product feature. Use `extractOrdinaryDailyHoursStatements` on individual retained excerpt segments for exact quote-span candidates. Those spans still need identity, date-scope and exception review before entering the adjudicated-hours checker.
+
+### Activity candidate-budget experiment
+
+The model-comparison CLI accepts `--activity-count 6..24` only with `--compiled-narrated --configs flash-low`. It changes the activity-agent request in that CLI run, records `FAROWAY_EVAL_ACTIVITY_COUNT` in the trace, and gives the comparison a distinct configuration ID. Dry-run selection uses the same validation. Omit the flag for the existing 15-candidate default. This does not change either app workflow or enable a deployed feature.
+
+Use separate empty trace directories for repeated trials, the existing capped staging key and a bounded `--cap-usd`. Compare output tokens and latency alongside coverage, variety, factual review and total pipeline cost; a smaller candidate list is not automatically a better itinerary.

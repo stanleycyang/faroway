@@ -2198,3 +2198,23 @@ Offline replay over the immutable Edinburgh inventory changes four descriptions:
 The screen remains intentionally bounded English detection, not semantic or multilingual verification. Rephrased claims and exact venue/subarea suitability still need source-backed review. Added regression coverage for the observed mixed statements, surface reassurance, unrelated wording, negation and idempotence. No additional paid calls or enabled deployments; cumulative spend remains $5.05/$20. Broader usefulness, exact admission scope, live prompt behavior and native acceptance remain outstanding.
 
 Validation: **30 focused copy-screen tests**, **1,594 web tests across 179 files**, and workspace type/lint/format checks pass with nine existing warnings. The new prompt has not yet been compared in a repeated live sample; PR 55 remains draft.
+
+## Repeated single-day candidate-budget diagnostic (2026-11-02 UTC)
+
+Added CLI-only `--activity-count` for compiled model comparisons, requiring an integer 6–24. Preflight and live selection share validation; explicit counts receive distinct configuration IDs and a retained trace setting. Both production workflow entry points and the agent's default remain at 15. Validation before paid dispatch: **218 script tests / 1,323 assertions** and workspace checks passed with nine existing warnings.
+
+At `3ef7b98`, ran six complete Rome single-day development trials in order **6, 15, 15, 6, 6, 15**. Each trial had a $0.10 stop threshold and the batch a $0.60 threshold beneath the existing dedicated $20 cap. A local Python syntax error was corrected before any dispatch marker or provider request was made. All 30 agent steps then completed without fallback; all six strengthened structural evaluations passed with no warnings. The live protocol independently regenerates upstream plans, so it is a whole-pipeline diagnostic, not a frozen-input causal comparison. No holdouts, enabled deployments or source-search experiment were used.
+
+| Median measure (three trials per arm) | Six candidates | Fifteen candidates |
+| --- | ---: | ---: |
+| Activity output tokens | 1,893 | 2,881 |
+| Activity-step latency | 10.585s | 12.896s |
+| Total estimated pipeline cost | $0.0256315 | $0.0267095 |
+| Selected visits | 3 | 4 |
+| Selected visit-intent types | 2 | 1 |
+
+The six-candidate arm used **34.3% fewer median activity output tokens**, with **17.9% lower median activity latency**, but only **4.0% lower median total pipeline cost**. All candidate runs retained at least three visits and three meals; selected visit-type diversity met the predeclared median floor. Counts and generated intent do not prove venue feasibility, geographic coherence or traveler usefulness. Some generated candidates combine multiple attractions, so a visit count alone also understates scope differences. There is no statistical superiority claim from three samples per arm.
+
+Decision: keep the knob experimental and do not change production defaults. The small total-cost improvement does not yet justify a reduced option pool across cities and requirements. Private dispatch receipts, original traces, comparison reports, `criteria.json`, independent Python audit and final batch receipt are in `artifacts/uat/activity-count-20261102/`. Estimated total batch cost was **$0.1597825**. The next comparison must include different trip lengths and constrained coverage, with independently reviewed usefulness rather than using structural passes as the quality target.
+
+Gateway reconciliation after all six trials reports cumulative dedicated-key spend **$5.20/$20**. The rounded gateway display and token estimates differ slightly; the gateway total remains the cumulative budget authority. PR 55 remains draft, and broad source-backed quality and native acceptance are still unproven.
