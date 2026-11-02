@@ -1,4 +1,9 @@
 import {
+  evaluateRecordedSupply,
+  reviewedSupplySelectionFailures,
+  type RecordedReviewedSupply,
+} from "./reviewed-supply-eval";
+import {
   evaluateDayAvailability,
   validateDayAvailability,
 } from "./day-availability";
@@ -30,6 +35,7 @@ export interface AgenticTrace {
     usage: unknown;
     fallbacks: Array<{ reason: string; outcome: string }>;
   }>;
+  reviewedSupply?: RecordedReviewedSupply;
   mappedItinerary?: unknown;
 }
 
@@ -168,10 +174,24 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
       trace.enrichment.latencyMs < 0)
   )
     fail("invalid_workflow_enrichment");
-  const activities = [
+  const originalActivities = [
     ...array(output("activities")),
     ...array(trace.enrichment?.activities),
   ];
+  const supplyEnabled =
+    trace.settings.FAROWAY_SCHEDULE_EXPERIMENT === "compiled-narrated-v1";
+  if (trace.reviewedSupply !== undefined && !supplyEnabled)
+    fail("reviewed_supply_outside_experiment");
+  const supplied = evaluateRecordedSupply(
+    supplyEnabled ? trace.reviewedSupply : undefined,
+    originalActivities,
+    brief.destination,
+    brief.interests,
+    trace.startedAt,
+  );
+  supplied.failures.forEach(fail);
+  const suppliedIds = new Set(supplied.accepted.map((a) => a.id));
+  const activities = [...originalActivities, ...supplied.accepted];
   const dining = [
     ...array(output("dining")),
     ...array(trace.enrichment?.dining),
@@ -251,6 +271,13 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
       for (const raw of items) {
         const a = object(raw);
         if (!activityIds.has(a.id)) fail(`unknown_activity:${String(a.id)}`);
+        if (typeof a.id === "string" && suppliedIds.has(a.id))
+          reviewedSupplySelectionFailures(
+            a,
+            String(day.date),
+            slotName,
+          ).forEach(fail);
+
         if (a.planningIdea === true || planningIdeaIds.has(a.id))
           fail(`scheduled_planning_idea:${String(a.id)}`);
         if (usedActivities.has(a.id))

@@ -1,3 +1,7 @@
+import {
+  evaluateRecordedSupply,
+  reviewedSupplyCatalogSha256,
+} from "../../../../scripts/uat/lib/reviewed-supply-eval";
 import { expect, it } from "vitest";
 import records from "../../../../scripts/fixtures/reviewed-activity-supply.json";
 import hours from "../../../../scripts/fixtures/reviewed-venue-hours.json";
@@ -134,4 +138,21 @@ it("respects last-entry when the candidate duration is shorter than the remainin
     "2026-11-02",
   );
   expect(result.exclusions.some((e) => e.slot === "evening")).toBe(true);
+});
+
+it("records runtime-prepared candidates in the independent eval format", () => {
+  const supply = run();
+  const result = evaluateRecordedSupply(
+    {
+      catalogSha256: reviewedSupplyCatalogSha256,
+      capturedAt: "2026-11-02T00:00:01Z",
+      candidates: supply.activities,
+    },
+    [],
+    plan.destination,
+    plan.activityCriteria.interests,
+    "2026-11-02T00:00:00Z",
+  );
+  expect(result.failures).toEqual([]);
+  expect(result.accepted).toEqual(supply.activities);
 });

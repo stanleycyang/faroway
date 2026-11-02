@@ -1,3 +1,5 @@
+import supplyCatalog from "../fixtures/reviewed-activity-supply.json";
+import { reviewedSupplyCatalogSha256 } from "../uat/lib/reviewed-supply-eval";
 import hotelFacts from "../fixtures/agentic-hotel-constraints.json";
 import { evaluateHotelConstraints as evaluateHotelConstraintsAt } from "../uat/lib/hotel-constraints";
 const evaluateHotelConstraints: typeof evaluateHotelConstraintsAt = (
@@ -1181,4 +1183,140 @@ test("rejects weekday events even on a matching day and distinguishes explicit w
   (trace.steps[2].output as Array<{ name: string }>)[0].name =
     "Friday Harbor Museum";
   expect(evaluateAgenticTrace(trace).contractPass).toBe(true);
+});
+
+describe("reviewed supply provenance", () => {
+  function suppliedTrace() {
+    const trace = fixture();
+    const record = supplyCatalog[0];
+    const candidate = {
+      id: record.id,
+      name: record.name,
+      description: record.description,
+      category: record.category,
+      duration: record.durationMinutes,
+      price: 0,
+      currency: "",
+      priceStatus: "unknown",
+      rating: 0,
+      reviewCount: 0,
+      location: { name: record.name, address: record.address, lat: 0, lng: 0 },
+      images: [],
+      bestTimeOfDay: "any",
+      vibeScore: 60,
+      vibeMatch: [],
+      bookingRequired: true,
+    };
+    trace.startedAt = "2026-11-02T00:00:00Z";
+    trace.settings.FAROWAY_SCHEDULE_EXPERIMENT = "compiled-narrated-v1";
+    trace.brief.destination = "Melbourne, Australia";
+    trace.steps[2].output = [];
+    trace.reviewedSupply = {
+      catalogSha256: reviewedSupplyCatalogSha256,
+      capturedAt: "2026-11-02T00:00:01Z",
+      candidates: [candidate],
+    };
+    const output = trace.steps[4].output as {
+      days: Array<{
+        morning: { activities: unknown[] };
+        evening: { activities: unknown[] };
+      }>;
+    };
+    output.days[0].morning.activities = [];
+    output.days[0].evening.activities = [candidate];
+    const mapped = trace.mappedItinerary as {
+      days: Array<{
+        morning: { activities: unknown[] };
+        evening: { activities: unknown[] };
+      }>;
+    };
+    mapped.days[0].morning.activities = [];
+    mapped.days[0].evening.activities = [candidate];
+    return trace;
+  }
+  test("recognizes recorded catalog input while retaining independent-evidence unknowns", () => {
+    const result = evaluateAgenticTrace(suppliedTrace());
+    expect(result.contractPass).toBe(true);
+    expect(result.unknowns.join(" ")).toContain("independent evidence");
+  });
+  test("never accepts an aggregator-declared inventory without recorded inputs", () => {
+    const trace = suppliedTrace();
+    const declared = trace.reviewedSupply!.candidates;
+    delete trace.reviewedSupply;
+    Object.assign(trace.steps[4].output as object, {
+      activityInventory: declared,
+    });
+    expect(evaluateAgenticTrace(trace).failures).toContain(
+      `unknown_activity:${supplyCatalog[0].id}`,
+    );
+  });
+  test("rejects altered provenance, invented facts, stale reviews and duplicate declarations", () => {
+    for (const change of [
+      (t: AgenticTrace) => {
+        delete t.settings.FAROWAY_SCHEDULE_EXPERIMENT;
+      },
+      (t: AgenticTrace) => {
+        t.reviewedSupply!.catalogSha256 = "a".repeat(64);
+      },
+      (t: AgenticTrace) => {
+        t.reviewedSupply!.capturedAt = "2026-10-01T00:00:00Z";
+      },
+      (t: AgenticTrace) => {
+        t.reviewedSupply!.capturedAt = "2026-12-03T00:00:00Z";
+      },
+      (t: AgenticTrace) => {
+        t.reviewedSupply!.candidates.push(t.reviewedSupply!.candidates[0]);
+      },
+      (t: AgenticTrace) => {
+        (t.reviewedSupply!.candidates[0] as { price: number }).price = 33;
+      },
+      (t: AgenticTrace) => {
+        t.brief.destination = "Melbourne, USA";
+      },
+    ]) {
+      const trace = suppliedTrace();
+      change(trace);
+      const result = evaluateAgenticTrace(trace);
+      expect(result.contractPass).toBe(false);
+      expect(result.failures).toContain(
+        `unknown_activity:${supplyCatalog[0].id}`,
+      );
+    }
+  });
+  test("rejects a valid source candidate scheduled on an exception or outside its hours", () => {
+    const trace = suppliedTrace();
+    const days = (
+      trace.steps[4].output as {
+        days: Array<{
+          date: string;
+          morning: { activities: unknown[] };
+          evening: { activities: unknown[] };
+        }>;
+      }
+    ).days;
+    days[0].date = "2026-12-31";
+    expect(evaluateAgenticTrace(trace).failures).toContain(
+      "reviewed_supply_date_not_supported",
+    );
+    days[0].date = "2026-12-07";
+    days[0].morning.activities = days[0].evening.activities;
+    days[0].evening.activities = [];
+    expect(evaluateAgenticTrace(trace).failures).toContain(
+      "reviewed_supply_hours_not_supported",
+    );
+  });
+  test("rejects changed selection fields even when its recorded input is authentic", () => {
+    const trace = suppliedTrace();
+    const days = (
+      trace.steps[4].output as {
+        days: Array<{ evening: { activities: unknown[] } }>;
+      }
+    ).days;
+    days[0].evening.activities = [
+      { ...(trace.reviewedSupply!.candidates[0] as object), duration: 10 },
+    ];
+    expect(evaluateAgenticTrace(trace).failures).toContain(
+      "reviewed_supply_selection_changed",
+    );
+  });
 });

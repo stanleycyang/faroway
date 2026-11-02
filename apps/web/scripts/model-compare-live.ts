@@ -1,3 +1,6 @@
+import reviewedSupplyCatalog from "../../../scripts/fixtures/reviewed-activity-supply.json";
+import { reviewedSupplyCatalogSha256 } from "../../../scripts/uat/lib/reviewed-supply-eval";
+import { addReviewedActivitySupply } from "../lib/search/reviewed-activity-supply";
 import { comparisonSelection } from "../../../scripts/uat/lib/comparison-selection";
 import {
   attachComparisonContracts,
@@ -142,6 +145,9 @@ async function main() {
     "scripts/uat/lib/comparison-contracts.ts",
     "scripts/uat/lib/comparison-selection.ts",
     "apps/web/lib/search/staging-schedule-experiment.ts",
+    "apps/web/lib/search/reviewed-activity-supply.ts",
+    "scripts/fixtures/reviewed-activity-supply.json",
+    "scripts/uat/lib/reviewed-supply-eval.ts",
     "apps/web/lib/search/reviewed-venue-hours.ts",
     "apps/web/lib/search/venue-identity.ts",
     "scripts/fixtures/reviewed-venue-hours.json",
@@ -314,6 +320,38 @@ async function main() {
             ...enrichment.activities,
           ];
           const combinedDining = [...diningResults, ...enrichment.dining];
+          if (compiledNarrated) {
+            const capturedAt = new Date().toISOString();
+            const firstDate = Date.parse(plan.dates.start);
+            const dates = Array.from(
+              {
+                length:
+                  Math.round(
+                    (Date.parse(plan.dates.end) -
+                      Date.parse(plan.dates.start)) /
+                      86400000,
+                  ) + 1,
+              },
+              (_, i) =>
+                new Date(firstDate + i * 86400000).toISOString().slice(0, 10),
+            );
+            const prepared = addReviewedActivitySupply(
+              plan,
+              combinedActivities,
+              dates,
+              reviewedSupplyCatalog,
+              capturedAt.slice(0, 10),
+            );
+            const ids = new Set(prepared.admitted.map((r) => r.id));
+            trace.reviewedSupply = {
+              catalogSha256: reviewedSupplyCatalogSha256,
+              capturedAt,
+              candidates: prepared.activities.filter((a) => ids.has(a.id)),
+            };
+            // Persist inputs before calling the aggregator; never derive this
+            // declaration from its returned activityInventory or selected days.
+            saveTrace();
+          }
           const aggregated = await aggregator.runAggregatorAgent(
             plan,
             hotelResults,
