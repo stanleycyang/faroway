@@ -400,3 +400,24 @@ test("CLI dry run honors suite, case and compiled configuration filters", () => 
   expect(result.stdout).toContain("compiled-minimal");
   expect(result.stdout).not.toContain("lisbon-city-break");
 });
+
+test("isolates bounded activity-count trials from default comparison identities", () => {
+  const base = ["--compiled-narrated", "--configs", "flash-low"];
+  expect(comparisonSelection(base).activityCount).toBeUndefined();
+  for (const count of [6, 12, 15, 24]) {
+    const result = comparisonSelection([
+      ...base,
+      "--activity-count",
+      String(count),
+    ]);
+    expect(result.activityCount).toBe(count);
+    expect(result.configs[0].id).toBe(`compiled-minimal-activities-${count}`);
+  }
+  for (const count of ["0", "5", "25", "6.5", "NaN", "Infinity"]) {
+    expect(() =>
+      comparisonSelection([...base, "--activity-count", count]),
+    ).toThrow();
+  }
+  expect(() => comparisonSelection(["--activity-count", "6"])).toThrow();
+  expect(() => comparisonSelection([...base, "--activity-count"])).toThrow();
+});

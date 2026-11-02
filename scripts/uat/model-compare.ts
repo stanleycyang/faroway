@@ -47,6 +47,7 @@ Use --suite development|holdout|uat (default uat) to select a case set. Holdouts
 Use --compiled-narrated with --configs flash-low for the isolated staging candidate (minimal narration).
 Use --upstream-thinking low|minimal only with --compiled-narrated to compare upstream reasoning; default low.
 Use --hotel-thinking minimal with compiled narration and low upstream thinking to isolate the hotel change.
+Use --activity-count 6..24 with compiled narration for a CLI-only candidate-budget trial; production defaults remain unchanged.
 Use --configs and --briefs with comma-separated IDs to bound a live batch; --cap-usd can lower its stop threshold. --trace-dir stores replayable agent outputs and deterministic evaluations (0600).
 Live exit codes: 3 for billing/spend abort, 4 for failed or missing structural contracts. Contract success is not traveler-quality acceptance.
 The key is never accepted as a command argument.
@@ -92,6 +93,7 @@ An API URL, when set, must match the pinned staging readiness alias. Production 
       ...[
         "--upstream-thinking",
         "--hotel-thinking",
+        "--activity-count",
         "--configs",
         "--briefs",
         "--cap-usd",

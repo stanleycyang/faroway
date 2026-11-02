@@ -22,6 +22,18 @@ export function comparisonSelection(argv: readonly string[]) {
     return ids.map((id) => items.find((item) => item.id === id)!);
   };
   const compiledNarrated = argv.includes("--compiled-narrated");
+  const countArg = arg("--activity-count");
+  const activityCount = countArg === undefined ? undefined : Number(countArg);
+  if (
+    activityCount !== undefined &&
+    (!compiledNarrated ||
+      !Number.isInteger(activityCount) ||
+      activityCount < 6 ||
+      activityCount > 24)
+  )
+    throw new Error(
+      "--activity-count requires compiled narration and an integer from 6 to 24",
+    );
   const upstreamThinking = arg("--upstream-thinking") ?? "low";
   if (
     !["low", "minimal"].includes(upstreamThinking) ||
@@ -81,5 +93,18 @@ export function comparisonSelection(argv: readonly string[]) {
   const capUsd = Number(arg("--cap-usd") ?? "20");
   if (!Number.isFinite(capUsd) || capUsd <= 0 || capUsd > 20)
     throw new Error("--cap-usd must be greater than zero and at most 20");
-  return { configs, briefs, capUsd, compiledNarrated };
+  return {
+    configs:
+      activityCount === undefined
+        ? configs
+        : configs.map((config) => ({
+            ...config,
+            id: `${config.id}-activities-${activityCount}`,
+            label: `${config.label}; ${activityCount} activity candidates`,
+          })),
+    briefs,
+    capUsd,
+    compiledNarrated,
+    activityCount,
+  };
 }

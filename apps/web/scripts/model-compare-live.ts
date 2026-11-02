@@ -114,9 +114,8 @@ async function main() {
       import("../lib/search/agents/aggregator"),
     ]);
 
-  const { configs, briefs, capUsd, compiledNarrated } = comparisonSelection(
-    process.argv,
-  );
+  const { configs, briefs, capUsd, compiledNarrated, activityCount } =
+    comparisonSelection(process.argv);
   if (compiledNarrated) {
     process.env.FAROWAY_SCHEDULE_EXPERIMENT = "compiled-narrated-v1";
     const { compiledScheduleExperimentEnabled } =
@@ -263,6 +262,9 @@ async function main() {
           settings: {
             ...config.env,
             FAROWAY_EVAL_ENRICHMENT: "deterministic",
+            ...(activityCount === undefined
+              ? {}
+              : { FAROWAY_EVAL_ACTIVITY_COUNT: String(activityCount) }),
             ...(compiledNarrated
               ? { FAROWAY_SCHEDULE_EXPERIMENT: "compiled-narrated-v1" }
               : {}),
@@ -298,7 +300,10 @@ async function main() {
             priced.length ? "hotel prices present" : "hotel prices omitted",
           );
         } else if (step === "activities") {
-          activityResults = await activities.runActivitiesAgent(plan);
+          activityResults = await activities.runActivitiesAgent(
+            plan,
+            activityCount,
+          );
           output = activityResults;
         } else if (step === "dining") {
           diningResults = await dining.runDiningAgent(plan);
