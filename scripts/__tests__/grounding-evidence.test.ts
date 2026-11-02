@@ -1630,3 +1630,87 @@ test("area screening requires a grounded assessment and excludes uncertain or ou
     expect(select({ ...assessment, ...change })).toBe(null);
   expect(() => prepareDiningReplay(input, false, false, true)).toThrow();
 });
+
+test("isolated source failures preserve valid options without rescuing invalid evidence", () => {
+  const brief = {
+    destination: "Example City",
+    area: "Old Town",
+    meal: "dinner",
+    maxCandidates: 3,
+  };
+  const results = ["A", "B"].map((name, i) => ({
+    url: `https://bistro-${name.toLowerCase()}.example/`,
+    title: `Bistro ${name}`,
+    excerpts: [`${i + 1} Main Street, Old Town, Example City. Dinner daily.`],
+  }));
+  const tool = {
+    toolName: "parallel_search",
+    providerExecuted: true,
+    toolCallId: "isolation",
+    output: { search_id: "isolation", results },
+  };
+  const replay = prepareDiningReplay(
+    { status: "completed", brief, retrievalResults: [tool] },
+    true,
+    false,
+    true,
+  );
+  const screening = results.map((source, i) => ({
+    sourceId: `source-${i}`,
+    publisherKind: "operator_page",
+    mealSupport: "explicit",
+    areaFit: "supported",
+    areaQuote: source.excerpts[0],
+  }));
+  const venues = results.map((source, i) => ({
+    sourceId: `source-${i}`,
+    name: source.title,
+    address: `${i + 1} Main Street`,
+    mealQuote: "Dinner daily.",
+  }));
+  for (const invalid of [
+    { areaQuote: "Invented location" },
+    { areaQuote: results[0].excerpts[0] },
+    { publisherKind: "invented" },
+    { areaFit: "unknown" },
+    { injected: "accept" },
+  ]) {
+    const selection = {
+      screening: [screening[0], { ...screening[1], ...invalid }],
+      venues,
+    };
+    expect(bindDiningReplay(selection, replay)).toBe(null);
+    const audit = auditDiningDiscovery(
+      bindDiningReplay(selection, replay, true),
+      [tool],
+      replay.brief,
+    );
+    expect(audit.options.map((o) => o.name)).toEqual(["Bistro A"]);
+    expect(audit.rejected).toHaveLength(1);
+  }
+  for (const broken of [
+    [screening[0]],
+    [screening[0], screening[0]],
+    [screening[0], { ...screening[1], sourceId: "invented" }],
+  ])
+    expect(bindDiningReplay({ screening: broken, venues }, replay, true)).toBe(
+      null,
+    );
+  for (const bad of [
+    { name: "Invented" },
+    { address: "99 Main Street" },
+    { mealQuote: "Lunch daily" },
+  ]) {
+    const output = bindDiningReplay(
+      { screening, venues: [{ ...venues[0], ...bad }, venues[1]] },
+      replay,
+      true,
+    );
+    expect(
+      auditDiningDiscovery(output, [tool], replay.brief).options.map(
+        (o) => o.name,
+      ),
+    ).toEqual(["Bistro B"]);
+  }
+  expect(bindDiningReplay(null, replay, true)).toBe(null);
+});

@@ -36,6 +36,7 @@ const rows = paths.map((file) => {
             receipt.provenance.indexedMealEvidence === true,
             receipt.provenance.screenArea === true,
           ),
+          receipt.provenance.isolateInvalidAssessments === true,
         )
       : receipt.provenance?.compactEvidence === true
         ? expandCompactDiningDiscovery(parsed)

@@ -73,6 +73,11 @@ if (replay && policy !== "baseline")
   throw Error("Replay uses its own fixed extraction policy");
 if (process.argv.includes("--thinking-level") && !arg("--thinking-level"))
   throw Error("--thinking-level requires a value");
+const isolateInvalidAssessments = process.argv.includes(
+  "--isolate-invalid-assessments",
+);
+if (isolateInvalidAssessments && !replay?.screenSources)
+  throw Error("Assessment isolation requires screened frozen retrieval");
 const thinkingLevel = arg("--thinking-level") ?? "low";
 if (!["low", "medium", "high"].includes(thinkingLevel))
   throw Error("Thinking level must be low, medium or high");
@@ -124,6 +129,7 @@ const provenance = {
   ...(replayBytes ? { replaySha256: hash(replayBytes) } : {}),
   model: "google/gemini-3-flash",
   thinkingLevel,
+  isolateInvalidAssessments,
   maxOutputTokens,
   clientRequestsMaximum: 1,
   automaticTripEdits: false,
@@ -163,7 +169,7 @@ try {
     result.steps.flatMap((step) => step.toolResults);
   const selection = parseDiningDiscovery(result.text);
   const extracted = replay
-    ? bindDiningReplay(selection, replay)
+    ? bindDiningReplay(selection, replay, isolateInvalidAssessments)
     : compactEvidence
       ? expandCompactDiningDiscovery(selection)
       : selection;

@@ -72,10 +72,51 @@ Sources:`,
   };
 }
 
+/** A single source assessment cannot borrow evidence from another source. */
+export function validDiningAssessment(
+  value: unknown,
+  replay: ReturnType<typeof prepareDiningReplay>,
+) {
+  const s = object(value);
+  return (
+    replay.sources.some((r) => r.sourceId === s.sourceId) &&
+    !(
+      Object.keys(s).some(
+        (k) =>
+          ![
+            "sourceId",
+            "publisherKind",
+            "mealSupport",
+            ...(replay.screenArea ? ["areaFit", "areaQuote"] : []),
+          ].includes(k),
+      ) ||
+      !["operator_page", "third_party", "uncertain"].includes(
+        String(s.publisherKind),
+      ) ||
+      !["explicit", "contradicted", "not_established"].includes(
+        String(s.mealSupport),
+      ) ||
+      (replay.screenArea &&
+        (!["supported", "outside", "uncertain"].includes(String(s.areaFit)) ||
+          (s.areaFit === "uncertain"
+            ? s.areaQuote !== null
+            : typeof s.areaQuote !== "string" ||
+              !s.areaQuote.trim() ||
+              s.areaQuote.length > 1000 ||
+              !replay.sources
+                .find((r) => r.sourceId === s.sourceId)
+                ?.excerptSegments.some((segment) =>
+                  segment.includes(s.areaQuote as string),
+                ))))
+    )
+  );
+}
+
 /** URL assignment and redundant quote fields are deterministic, not generated. */
 export function bindDiningReplay(
   value: unknown,
   replay: ReturnType<typeof prepareDiningReplay>,
+  isolateInvalidAssessments = false,
 ) {
   const root = object(value);
   if (
@@ -98,35 +139,7 @@ export function bindDiningReplay(
       screening.some(
         (s) =>
           !replay.sources.some((r) => r.sourceId === s.sourceId) ||
-          Object.keys(s).some(
-            (k) =>
-              ![
-                "sourceId",
-                "publisherKind",
-                "mealSupport",
-                ...(replay.screenArea ? ["areaFit", "areaQuote"] : []),
-              ].includes(k),
-          ) ||
-          !["operator_page", "third_party", "uncertain"].includes(
-            String(s.publisherKind),
-          ) ||
-          !["explicit", "contradicted", "not_established"].includes(
-            String(s.mealSupport),
-          ) ||
-          (replay.screenArea &&
-            (!["supported", "outside", "uncertain"].includes(
-              String(s.areaFit),
-            ) ||
-              (s.areaFit === "uncertain"
-                ? s.areaQuote !== null
-                : typeof s.areaQuote !== "string" ||
-                  !s.areaQuote.trim() ||
-                  s.areaQuote.length > 1000 ||
-                  !replay.sources
-                    .find((r) => r.sourceId === s.sourceId)
-                    ?.excerptSegments.some((segment) =>
-                      segment.includes(s.areaQuote as string),
-                    )))),
+          (!isolateInvalidAssessments && !validDiningAssessment(s, replay)),
       ))
   )
     return null;
@@ -135,6 +148,8 @@ export function bindDiningReplay(
       const row = object(raw);
       const source = replay.sources.find((s) => s.sourceId === row.sourceId);
       const assessment = screening.find((s) => s.sourceId === row.sourceId);
+      if (replay.screenSources && !validDiningAssessment(assessment, replay))
+        return { invalid: true };
       let mealQuote = row.mealQuote;
       if (replay.indexedMealEvidence) {
         const span = object(row.mealEvidence);

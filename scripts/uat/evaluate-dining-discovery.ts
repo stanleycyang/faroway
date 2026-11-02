@@ -1,7 +1,11 @@
 /** Offline receipt replay. No provider imports, network access or trip writes. */
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { bindDiningReplay, prepareDiningReplay } from "./lib/dining-replay";
+import {
+  bindDiningReplay,
+  prepareDiningReplay,
+  validDiningAssessment,
+} from "./lib/dining-replay";
 import {
   auditDiningDiscovery,
   parseDiningDiscovery,
@@ -9,7 +13,12 @@ import {
   expandCompactDiningDiscovery,
 } from "./lib/dining-discovery";
 
-const files = process.argv.slice(2);
+const isolateInvalidAssessments = process.argv.includes(
+  "--isolate-invalid-assessments",
+);
+const files = process.argv
+  .slice(2)
+  .filter((arg) => arg !== "--isolate-invalid-assessments");
 if (!files.length) throw Error("Pass one or more live discovery receipt files");
 const rows = files.map((file) => {
   const bytes = readFileSync(file);
@@ -21,17 +30,21 @@ const rows = files.map((file) => {
   )
     throw Error(`${file}: incomplete receipt cannot count as a completed run`);
   const selection = parseDiningDiscovery(receipt.text);
-  const audit = auditDiningDiscovery(
+  const replay =
     receipt.provenance?.mode === "frozen-source-selection"
-      ? bindDiningReplay(
-          selection,
-          prepareDiningReplay(
-            receipt,
-            receipt.provenance.screenSources === true,
-            receipt.provenance.indexedMealEvidence === true,
-            receipt.provenance.screenArea === true,
-          ),
+      ? prepareDiningReplay(
+          receipt,
+          receipt.provenance.screenSources === true,
+          receipt.provenance.indexedMealEvidence === true,
+          receipt.provenance.screenArea === true,
         )
+      : undefined;
+  const isolate =
+    isolateInvalidAssessments ||
+    receipt.provenance?.isolateInvalidAssessments === true;
+  const audit = auditDiningDiscovery(
+    replay
+      ? bindDiningReplay(selection, replay, isolate)
       : receipt.provenance?.compactEvidence === true
         ? expandCompactDiningDiscovery(selection)
         : selection,
@@ -43,6 +56,18 @@ const rows = files.map((file) => {
     typeof cost === "string" || typeof cost === "number" ? Number(cost) : NaN;
   return {
     file,
+    isolateInvalidAssessments: isolate,
+    invalidAssessmentSources:
+      replay &&
+      replay.screenSources &&
+      selection &&
+      typeof selection === "object" &&
+      "screening" in selection &&
+      Array.isArray(selection.screening)
+        ? selection.screening
+            .filter((s) => !validDiningAssessment(s, replay))
+            .map((s) => s?.sourceId ?? null)
+        : [],
     receiptSha256: createHash("sha256").update(bytes).digest("hex"),
     brief,
     requested: brief.maxCandidates,
@@ -67,6 +92,7 @@ console.log(
   JSON.stringify(
     {
       mode: "offline-dining-discovery-replay",
+      isolateInvalidAssessments,
       runs: rows.length,
       totalRequested,
       totalRetained,
