@@ -109,7 +109,7 @@ try {
     result.text,
   );
   const seeds = brief
-    ? retrievedVenueSeeds(brief, result.providerMetadata)
+    ? retrievedVenueSeeds(brief, result.providerMetadata, result.text)
     : undefined;
   const billingKnown =
     Number.isFinite(result.usage.inputTokens) &&

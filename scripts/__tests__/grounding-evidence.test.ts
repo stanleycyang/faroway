@@ -1108,6 +1108,7 @@ test("retrieval-first seeds preserve provider branches and never fill unknown pl
         },
       },
     ]),
+    `${mapPlace.uri} ${second.uri}`,
   );
   expect(seeds.candidates).toHaveLength(2);
   expect(seeds.candidates[0]?.name).toBe("Museum A");
@@ -1127,6 +1128,7 @@ test("retrieval-first seeds preserve provider branches and never fill unknown pl
   const limited = retrievedVenueSeeds(
     { ...publicBrief, maxCandidates: 1 },
     mapMetadata([{ maps: mapPlace }, { maps: second }]),
+    `${mapPlace.uri} ${second.uri}`,
   );
   expect(limited.candidates).toHaveLength(1);
   expect(limited.omittedByLimit).toBe(1);
@@ -1142,6 +1144,7 @@ test("retrieval-first seeds preserve provider branches and never fill unknown pl
           },
         },
       ]),
+      mapPlace.uri,
     ).candidates,
   ).toEqual([]);
 });
@@ -1150,13 +1153,38 @@ test("retrieved seed IDs remain bounded and conflicting provider records cannot 
   const longId = retrievedVenueSeeds(
     publicBrief,
     mapMetadata([{ maps: { ...mapPlace, placeId: "x".repeat(255) } }]),
+    mapPlace.uri,
   ).candidates[0]!;
-  expect(longId.id.length).toBeLessThanOrEqual(100);
+  expect(longId.id.length <= 100).toBe(true);
   expect(longId.providerPlaceId).toHaveLength(255);
   const conflicting = mapMetadata([
     { maps: mapPlace },
     { maps: { ...mapPlace, placeId: "ChIJotherbranch123" } },
     { maps: { ...mapPlace, uri: "https://maps.google.com/maps?cid=456789" } },
   ]);
-  expect(retrievedVenueSeeds(publicBrief, conflicting).candidates).toEqual([]);
+  expect(
+    retrievedVenueSeeds(publicBrief, conflicting, mapPlace.uri).candidates,
+  ).toEqual([]);
+});
+
+test("retrieved pool excludes uncited context records and model-only names", () => {
+  const context = {
+    ...mapPlace,
+    placeId: "ChIJcontextoffice123",
+    uri: "https://maps.google.com/maps?cid=987654",
+    title: "Example Administration - Google Maps",
+  };
+  const metadata = mapMetadata([{ maps: context }, { maps: mapPlace }]);
+  const result = retrievedVenueSeeds(
+    publicBrief,
+    metadata,
+    `Invented Museum at ${mapPlace.uri}; another unbacked name at https://maps.google.com/maps?cid=00000`,
+  );
+  expect(result.retrievedPlaceCount).toBe(2);
+  expect(result.candidates).toHaveLength(1);
+  expect(result.candidates[0]?.name).toBe("Museum A");
+  expect(
+    retrievedVenueSeeds(publicBrief, metadata, "No source citations")
+      .candidates,
+  ).toEqual([]);
 });

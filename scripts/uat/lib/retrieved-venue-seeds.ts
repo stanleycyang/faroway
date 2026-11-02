@@ -42,8 +42,9 @@ export function publicVenueDiscoveryPrompt(brief: PublicVenueBrief) {
 export function retrievedVenueSeeds(
   brief: PublicVenueBrief,
   metadata: unknown,
+  generatedText: string,
 ) {
-  const audit = auditMapsIdentityEvidence(metadata);
+  const audit = auditMapsIdentityEvidence(metadata, generatedText);
   const candidates = audit.candidates.flatMap((place) => {
     if (
       place.sources.some((source) =>
@@ -52,7 +53,10 @@ export function retrievedVenueSeeds(
     )
       return [];
     const source = place.sources.find(
-      (s) => s.kind === "place" && !audit.conflictingSourceUrls.includes(s.url),
+      (s) =>
+        s.kind === "place" &&
+        audit.backedModelMapUrls.includes(s.url) &&
+        !audit.conflictingSourceUrls.includes(s.url),
     );
     if (!source) return [];
     const name = source.title.replace(/\s+- Google Maps$/, "").trim();

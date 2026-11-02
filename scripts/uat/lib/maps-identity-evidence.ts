@@ -113,6 +113,7 @@ export function auditMapsIdentityEvidence(
     citationCoverageChecked: generatedText !== undefined,
     modelMapCitationCount: modelMapUrls.length,
     unbackedModelMapUrls,
+    backedModelMapUrls: modelMapUrls.filter((url) => backedUrls.has(url)),
     uniquePlaceCount: candidates.length,
     directPlaceCount: directPlaceCandidates.length,
     retrievalEvidencePresent:
