@@ -1,5 +1,6 @@
 import type { DiningResult, SearchPlan } from "./types";
-import { compiledScheduleExperimentEnabled } from "./schedule-experiment-gate";
+import { diningSourceReviewEnabled } from "./dining-source-review-gate";
+export { diningSourceReviewEnabled } from "./dining-source-review-gate";
 import {
   auditDiningDiscovery,
   diningDiscoveryPrompt,
@@ -7,17 +8,6 @@ import {
   parseDiningDiscovery,
   validatePublicDiningBrief,
 } from "../../../../scripts/uat/lib/dining-discovery";
-
-/** Explicit synthetic-UAT experiment. No production or ambient provider fallback. */
-export function diningSourceReviewEnabled(
-  env: Record<string, string | undefined> = process.env,
-) {
-  return (
-    env.FAROWAY_DINING_SOURCE_EXPERIMENT === "public-review-v1" &&
-    compiledScheduleExperimentEnabled(env) &&
-    Boolean(env.AI_GATEWAY_API_KEY)
-  );
-}
 
 export async function discoverDiningReviewOptions(
   plan: SearchPlan,
