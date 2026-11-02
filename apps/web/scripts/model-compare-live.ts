@@ -326,7 +326,7 @@ async function main() {
             {
               searchId: runId,
               hotels: hotelResults,
-              activities: combinedActivities,
+              activities: aggregated.activityInventory ?? combinedActivities,
               dining: combinedDining,
               transport: [],
               itinerary: aggregated.days,

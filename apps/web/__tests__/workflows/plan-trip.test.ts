@@ -376,6 +376,58 @@ describe("planTripWorkflow", () => {
     ]);
   });
 
+  it("persists new source-backed aggregator inventory with its scheduled references", async () => {
+    const added = {
+      ...activity,
+      id: "reviewed-supply",
+      name: "Reviewed visit",
+      location: { ...activity.location, lat: 0, lng: 0 },
+      priceStatus: "unknown" as const,
+    };
+    const sourceNote = "Operator source: https://example.com/visit";
+    mocks.runAggregatorAgent.mockResolvedValue({
+      activityInventory: [activity, added],
+      topHotel: hotel,
+      days: Array.from({ length: 5 }, (_, index) => ({
+        dayNumber: index + 1,
+        date: `2026-06-0${index + 1}`,
+        title: "Draft",
+        summary: "Draft",
+        morning: { activities: [] },
+        afternoon: { activities: [] },
+        evening: { activities: index === 0 ? [added] : [] },
+        estimatedCost: 0,
+        currency: "",
+        tips: [sourceNote],
+      })),
+    });
+    const bridge = await vi.importActual<typeof import("@/lib/search/bridge")>(
+      "@/lib/search/bridge",
+    );
+    mocks.mapSearchResultsToItinerary.mockImplementation(
+      bridge.mapSearchResultsToItinerary,
+    );
+    const result = await planTripWorkflow(workflowInput);
+    expect(result.status).toBe("completed");
+    expect(
+      result.result?.activities.some((a) => a.id === "reviewed-supply"),
+    ).toBe(true);
+    expect(
+      result.result?.days[0].evening.activities[0].location.coordinates,
+    ).toBeUndefined();
+    expect(persistedDays[0].evening_activities).toHaveLength(1);
+    const stored = persistedResults.find(
+      (row) =>
+        row.data !== null &&
+        typeof row.data === "object" &&
+        "id" in row.data &&
+        row.data.id === "reviewed-supply",
+    );
+    expect(stored).toBeDefined();
+    expect(persistedDays[0].evening_activities).toEqual([stored!.id]);
+    expect(result.result?.days[0].tips).toContain(sourceNote);
+  });
+
   it("rejects an incomplete or misdated itinerary before saving it", async () => {
     mocks.runAggregatorAgent.mockResolvedValue({
       days: [{ dayNumber: 1, date: "2026-06-02" }],

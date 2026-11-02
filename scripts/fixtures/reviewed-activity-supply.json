@@ -1,0 +1,23 @@
+[
+  {
+    "id": "reviewed-melbourne-skydeck",
+    "destination": "Melbourne, Australia",
+    "name": "Melbourne Skydeck",
+    "address": "Riverside Quay, Southbank, Melbourne 3006, Australia",
+    "description": "See Melbourne from the observation deck. This suggested visit covers general admission; additional experiences are separate.",
+    "interests": ["culture", "cultural", "sightseeing", "architecture"],
+    "category": "sightseeing",
+    "durationMinutes": 60,
+    "sourceUrl": "https://www.melbourneskydeck.com.au/about-us/",
+    "sourceSha256": "fce6e5b208e18354bb9f2ff00d785d268ea1583add529995822cbf3a9f2a1b6c",
+    "observedAt": "2026-11-02",
+    "reviewAfter": "2026-12-02",
+    "validFrom": "2026-11-02",
+    "validThrough": "2027-04-04",
+    "excludedDates": ["2026-12-31"],
+    "opens": 720,
+    "closes": 1320,
+    "lastEntry": 1290,
+    "reviewNotes": "Operator identifies the observation deck at Riverside Quay, Southbank, Melbourne 3006. Current ordinary hours apply through 4 April 2027. New Year\u2019s Eve has shorter hours and is excluded from this supply record. The 60-minute visit is a planning estimate, not an operator duration. No ticket quote, reservation, coordinates, accessibility suitability or transfer has been verified."
+  }
+]

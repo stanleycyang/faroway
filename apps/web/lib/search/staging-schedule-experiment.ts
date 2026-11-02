@@ -1,3 +1,8 @@
+import {
+  addReviewedActivitySupply,
+  appendActivitySourceNotes,
+} from "./reviewed-activity-supply";
+import reviewedSupply from "../../../../scripts/fixtures/reviewed-activity-supply.json";
 import { reviewedHoursExclusions } from "./reviewed-venue-hours";
 import reviewedHours from "../../../../scripts/fixtures/reviewed-venue-hours.json";
 import {
@@ -59,8 +64,16 @@ export async function runStagingCompiledSchedule(
   const count = (end - start) / 86400000 + 1;
   if (!Number.isInteger(count) || count < 1 || count > 7)
     throw new Error("Staging schedule experiment requires 1–7 days");
-  const activities = inventory.filter(canProcessViatorContent);
-  const exclusions: ScheduleExclusion[] = [];
+  const supply = addReviewedActivitySupply(
+    plan,
+    inventory.filter(canProcessViatorContent),
+    Array.from({ length: count }, (_, i) =>
+      new Date(start + i * 86400000).toISOString().slice(0, 10),
+    ),
+    reviewedSupply,
+  );
+  const activities = supply.activities;
+  const exclusions: ScheduleExclusion[] = [...supply.exclusions];
   for (let i = 0; i < count; i++) {
     const date = new Date(start + i * 86400000).toISOString().slice(0, 10);
     for (const activity of activities)
@@ -104,6 +117,7 @@ export async function runStagingCompiledSchedule(
     reviewedDining,
     exclusions,
   );
+  appendActivitySourceNotes(compiled.days, supply.admitted);
   for (const day of compiled.days) {
     const names = [
       ...new Set(
@@ -191,11 +205,12 @@ export async function runStagingCompiledSchedule(
       version: "compiled-narrated-v1",
       days: days.length,
       excludedCandidateDates: exclusions.length,
+      reviewedActivityCandidates: supply.admitted.length,
       issueCount: compiled.issues.length,
       verified: false,
     }),
   );
-  const draft = () => ({ days, topHotel });
+  const draft = () => ({ days, topHotel, activityInventory: activities });
   if (compiled.issues.some((issue) => issue.endsWith(":activity_supply_gap"))) {
     logPlanningFallback(
       "aggregator",
@@ -235,6 +250,7 @@ export async function runStagingCompiledSchedule(
     );
     return {
       days: applyScheduleNarration(days, result.object.days, plan),
+      activityInventory: activities,
       topHotel,
     };
   } catch (error) {

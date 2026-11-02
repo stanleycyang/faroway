@@ -232,7 +232,7 @@ export async function executeTravelSearch(
       message: "Optimizing activities by location...",
     });
     const aggregatorStart = Date.now();
-    const { days, topHotel } = await runAggregatorAgent(
+    const { days, topHotel, activityInventory } = await runAggregatorAgent(
       searchPlan,
       hotels,
       activities,
@@ -251,7 +251,7 @@ export async function executeTravelSearch(
     const results: SearchResults = {
       searchId,
       hotels,
-      activities,
+      activities: activityInventory ?? activities,
       dining,
       transport,
       itinerary: days,

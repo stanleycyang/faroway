@@ -187,7 +187,11 @@ export async function runAggregatorAgent(
   dining: DiningResult[],
   transport: TransportResult[] = [],
   options: { structuredSchedule?: boolean; explicitDailyBudget?: boolean } = {},
-): Promise<{ days: SuggestedDay[]; topHotel: HotelResult | null }> {
+): Promise<{
+  days: SuggestedDay[];
+  topHotel: HotelResult | null;
+  activityInventory?: ActivityResult[];
+}> {
   const { destination, dates } = plan;
   activities = activities.filter(canProcessViatorContent);
 

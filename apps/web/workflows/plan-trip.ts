@@ -553,7 +553,7 @@ async function aggregateItineraryStep(params: {
 }): Promise<MappedItinerary> {
   "use step";
   const startedAt = Date.now();
-  const { days, topHotel } = await runAggregatorAgent(
+  const { days, topHotel, activityInventory } = await runAggregatorAgent(
     params.plan,
     params.hotels,
     params.activities,
@@ -583,7 +583,7 @@ async function aggregateItineraryStep(params: {
   const searchResults: SearchResults = {
     searchId: params.searchId,
     hotels: params.hotels,
-    activities: params.activities,
+    activities: activityInventory ?? params.activities,
     dining: params.dining,
     transport: params.transport,
     itinerary: days,
