@@ -1189,3 +1189,54 @@ it("does not schedule a taxi scenic tour when public transport is explicitly req
     flexible.reviewRequiredActivities.some((item) => item.id === taxi.id),
   ).toBe(false);
 });
+
+it("holds differently named boat journeys for boarding review, while preserving waterfront walks", () => {
+  const request = {
+    ...extended,
+    mobilityNeeds: "step-free entrances and routes",
+  };
+  const boats = [
+    visit("Canal Tour from Nyhavn", 60),
+    visit("Boat Trip from Ved Stranden", 60),
+  ];
+  const walk = visit("Nyhavn Waterfront Walk", 45);
+  const result = compileSchedule(request, [...boats, walk], []);
+  expect(
+    result.reviewRequiredActivities
+      .filter((item) => item.reason === "boarding_access_requires_review")
+      .map((item) => item.id),
+  ).toEqual(boats.map((item) => item.id));
+  expect(
+    result.reviewRequiredActivities.some((item) => item.id === walk.id),
+  ).toBe(false);
+  expect(
+    compileSchedule({ ...request, mobilityNeeds: undefined }, boats, [])
+      .reviewRequiredActivities,
+  ).toEqual([]);
+});
+
+it("screens newly observed Copenhagen closures without treating winter events as ordinary entry", () => {
+  for (const [name, date] of [
+    ["Designmuseum Danmark", "2027-01-11"],
+    ["Reffen - Copenhagen Street Food", "2027-01-12"],
+  ]) {
+    expect(
+      venueConstraintsForDate(
+        "Copenhagen, Denmark",
+        name,
+        date,
+        venueFacts,
+        "ordinary_entry",
+      ).some((item) => item.finding === "scheduled_on_reported_closed_date"),
+    ).toBe(true);
+    expect(
+      venueConstraintsForDate(
+        "Copenhagen, Denmark",
+        name,
+        date,
+        venueFacts,
+        "event",
+      ).every((item) => item.finding === "venue_visit_scope_requires_review"),
+    ).toBe(true);
+  }
+});

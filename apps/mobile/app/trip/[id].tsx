@@ -3,6 +3,7 @@ import { transformItineraryDays } from '../../lib/itineraryNormalization';
 import { ProposedTiming } from '../../components/ProposedTiming';
 import { VenueSourceNotice } from '../../components/VenueSourceNotice';
 import { VenuePhotoCredit } from '../../components/VenuePhotoCredit';
+import { venuePhotoSource } from '../../lib/venuePhotoAssets';
 import { DiningReviewOptions } from '../../components/DiningReviewOptions';
 import { flightQuoteIsCurrent } from '@faroway/constants';
 import { formatKnownPrice, summarizeTripCosts } from '../../lib/tripCost';
@@ -134,7 +135,7 @@ function ActivityCard({ activity }: ActivityCardProps) {
         {/* Activity Image */}
         {activity.image && activity.image !== failedImage && (
           <Image
-            source={{ uri: activity.image }}
+            source={venuePhotoSource(activity.image)}
             style={styles.activityImage}
             accessible={false}
             onError={() => setFailedImage(activity.image)}

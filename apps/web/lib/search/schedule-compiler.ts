@@ -361,6 +361,7 @@ export function compileSchedule(
       const mobilityReview = activityMobilityReviewReason(
         plan,
         activity.description,
+        activity.name,
       );
       if (mobilityReview) {
         reviewRequiredActivities.push({
@@ -685,6 +686,16 @@ export function compileSchedule(
       }
     }
     if (day === 0) {
+      for (const review of reviewRequiredActivities.filter(
+        (item) => item.reason === "boarding_access_requires_review",
+      )) {
+        const name = inventory.find(
+          (activity) => activity.id === review.id,
+        )?.name;
+        tips.push(
+          `Not scheduled: ${name}. Step-free boarding, the specific vessel and any transfer assistance have not been verified. Confirm these with the operator before adding the journey.`,
+        );
+      }
       for (const review of reviewRequiredActivities.filter(
         (item) => item.reason === "private_transport_conflicts_with_request",
       )) {

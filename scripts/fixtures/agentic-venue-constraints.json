@@ -142,5 +142,32 @@
     "closedFrom": "2027-01-04",
     "closedThrough": "2027-03-18",
     "sourceNote": "Published Christmas season ends January 3; next published season starts March 19, 2027. Gap inferred from operator season calendar; special events and separately operated restaurants are outside this ordinary Gardens-admission evidence."
+  },
+  {
+    "id": "designmuseum-january-monday-2027",
+    "destination": "Copenhagen",
+    "aliases": ["Designmuseum Danmark"],
+    "exactName": true,
+    "ordinaryEntryOnly": true,
+    "sourceUrl": "https://designmuseum.dk/en/besog-os/opening-hours-admission-2/",
+    "observedAt": "2026-11-03",
+    "closedDates": ["2027-01-04", "2027-01-11", "2027-01-18", "2027-01-25"],
+    "sourceNote": "Operator recurring Tue–Sun hours; the explicit holiday Monday opening is December 28, not January. January dates bounded to avoid transferring this to other seasons or special visits."
+  },
+  {
+    "id": "reffen-winter-street-food-2027",
+    "destination": "Copenhagen",
+    "aliases": [
+      "Reffen - Copenhagen Street Food",
+      "Reffen",
+      "Reffen Street Food"
+    ],
+    "exactName": true,
+    "ordinaryEntryOnly": true,
+    "sourceUrl": "https://reffen.dk/aabningstider-og-saesoner/",
+    "observedAt": "2026-11-03",
+    "closedFrom": "2026-11-03",
+    "closedThrough": "2027-02-28",
+    "sourceNote": "Operator reports winter closure and return in March 2027. This covers the street-food venue, not a distinct winter event or neighboring establishment."
   }
 ]

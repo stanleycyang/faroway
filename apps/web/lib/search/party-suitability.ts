@@ -54,8 +54,9 @@ export function activityMobilityReviewReason(
     mobilityNeeds?: string;
     requirements?: { accessibility?: readonly string[] };
   },
-  description: string,
-): "supplied_access_conflict" | null {
+  description = "",
+  title = "",
+): "supplied_access_conflict" | "boarding_access_requires_review" | null {
   const request = (needs.mobilityNeeds ?? "").normalize("NFKC").toLowerCase();
   const explicitRequest =
     /^(?:stroller access|wheelchair access|step[- ]free)\b/.test(
@@ -66,6 +67,14 @@ export function activityMobilityReviewReason(
     !explicitRequest
   )
     return null;
+  // A generated boat title cannot establish accessible boarding. This applies
+  // across departure-name variants; a waterfront walk is not a boat journey.
+  if (
+    /\b(?:canal\s+(?:tour|cruise)|boat\s+(?:tour|trip|cruise)|ferry\s+(?:ride|trip))\b/i.test(
+      title,
+    )
+  )
+    return "boarding_access_requires_review";
   if (description.includes(GENERATED_ACCESS_CONCERN_NOTE))
     return "supplied_access_conflict";
   const text = description.normalize("NFKC").toLowerCase();
