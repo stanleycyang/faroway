@@ -247,9 +247,10 @@ function FeaturedHotelCard({
         </View>
         {hotel.amenities && hotel.amenities.length > 0 && (
           <View style={styles.hotelCardAmenities}>
+            <Text style={styles.hotelCardAmenityNotice}>Amenities to confirm with the hotel</Text>
             {hotel.amenities.slice(0, 3).map((amenity, index) => (
               <View key={index} style={styles.hotelCardAmenityChip}>
-                <Text style={styles.hotelCardAmenityText}>{amenity}</Text>
+                <Text style={styles.hotelCardAmenityText}>{amenity.replace(/_/g, ' ')}</Text>
               </View>
             ))}
           </View>
@@ -1504,6 +1505,12 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 6,
     marginBottom: 12,
+  },
+  hotelCardAmenityNotice: {
+    width: '100%',
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#475569',
   },
   hotelCardAmenityChip: {
     backgroundColor: '#f1f5f9',
