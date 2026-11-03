@@ -15,6 +15,7 @@ describe("orchestrator fallback search plan", () => {
       dietaryRestrictions: ["peanut allergy"],
       mobilityNeeds: "step-free access",
     });
+    expect(plan.dietaryRestrictions).toEqual(["peanut allergy"]);
     expect(plan.diningCriteria.dietaryNeeds).toEqual(["peanut allergy"]);
     expect(plan.mobilityNeeds).toBe("step-free access");
     expect(plan.activityCriteria.interests).toContain("art");

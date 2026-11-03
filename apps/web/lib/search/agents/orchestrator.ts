@@ -87,6 +87,11 @@ Consider:
 
 Output a comprehensive search plan with specific criteria for hotels, activities, dining, and optionally transport.
 
+For diningCriteria:
+- mealPriorities ranks meal preferences; it is not an exclusive list of allowed meals. Include breakfast, lunch, and dinner unless the traveler explicitly excludes a meal.
+- Keep sightseeing availability separate from dining. "Only evening visits" restricts visits, not breakfast or lunch. Working hours alone do not mean the traveler wants to skip meals.
+- Preserve explicit meal exclusions and meals already arranged by the traveler; do not override them to fill a generic meal mix.
+
 For transportCriteria:
 - Only include if the user provided an origin city/airport, or the trip clearly requires a flight (international or long-distance)
 - Use IATA airport codes when possible (e.g., JFK, LHR, NRT)
@@ -263,6 +268,7 @@ Create a detailed search plan with:
     plan.childAges = input.childAges;
     plan.flightProvider = input.flightProvider;
     plan.requirements = input.requirements;
+    plan.dietaryRestrictions = [...(input.dietaryRestrictions ?? [])];
     plan.activityCriteria.interests = [
       ...new Set([
         ...(input.interests ?? []),
@@ -334,6 +340,7 @@ export function buildFallbackSearchPlan(input: SearchInput): SearchPlan {
     childAges: input.childAges,
     flightProvider: input.flightProvider,
     requirements: input.requirements,
+    dietaryRestrictions: [...(input.dietaryRestrictions ?? [])],
     country: "",
     dates: {
       start: input.startDate,

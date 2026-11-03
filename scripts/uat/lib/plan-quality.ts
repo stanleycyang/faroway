@@ -68,9 +68,18 @@ export function evaluateSavedPlan(
     const record = asRecord(day);
     const title = typeof record?.title === "string" ? record.title : "";
     const summary = typeof record?.summary === "string" ? record.summary : "";
+    const tips = Array.isArray(record?.tips) ? record.tips : [];
     if (
-      /^Day \d+ in /.test(title) &&
-      /^Explore .+ with a mix of activities and dining\.$/.test(summary)
+      (/^Day \d+ in /.test(title) &&
+        (/^Explore .+ with a mix of activities and dining\.$/.test(summary) ||
+          /^Suggested visits: .+ Keep the remaining time flexible\.$/.test(
+            summary,
+          ))) ||
+      tips.some(
+        (tip) =>
+          typeof tip === "string" &&
+          tip.startsWith("The day descriptions could not be generated."),
+      )
     ) {
       fallbackDays += 1;
     }
@@ -92,8 +101,10 @@ export function evaluateSavedPlan(
       failures.push("transport is present after day 1");
     }
   }
-  if (days.length > 0 && fallbackDays === days.length) {
-    failures.push("saved plan matches the aggregator fallback template");
+  if (fallbackDays > 0) {
+    failures.push(
+      `${fallbackDays} day(s) use an aggregator fallback template or unavailable narration`,
+    );
   }
   const reservationUrls: string[] = [];
   collectReservationUrls(itinerary, reservationUrls);

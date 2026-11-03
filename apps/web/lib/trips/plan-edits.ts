@@ -92,6 +92,7 @@ export function editPlan(
     result[index].summary =
       "Schedule updated. Check travel times and opening hours.";
     result[index].tips = [];
+    delete result[index].timingProposal;
     delete result[index].totalEstimatedCost;
   }
   return { days: result, locked };

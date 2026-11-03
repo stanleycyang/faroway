@@ -53,7 +53,8 @@
     "uat:native": "python3 scripts/uat/native-adb.py",
     "uat:native:maestro": "node scripts/uat/native.mjs",
     "uat:smoke": "bun scripts/uat/smoke.ts",
-    "uat:model-compare": "bun scripts/uat/model-compare.ts"
+    "uat:model-compare": "bun scripts/uat/model-compare.ts",
+    "uat:eval": "bun scripts/uat/evaluate-traces.ts"
   },
   "overrides": {
     "@nestjs/common": "11.1.28",

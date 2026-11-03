@@ -110,6 +110,8 @@ export function SharedTripView({
                 afternoon={day.afternoon}
                 evening={day.evening}
                 tips={day.tips}
+                diningOptions={day.diningOptions}
+                timingProposal={day.timingProposal}
                 transport={day.transport}
                 defaultExpanded={true}
               />

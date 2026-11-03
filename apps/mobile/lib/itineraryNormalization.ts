@@ -1,5 +1,13 @@
+import {
+  readProposedVisitType,
+  readDayTiming,
+  dayTimingTips,
+  readVenueSource,
+  readDiningReviewOptions,
+} from '@faroway/types';
 import { durationLabel } from './durationLabel';
-import type { Activity, Hotel, TripDay } from '../stores/tripStore';
+import { venuePhoto } from './venuePhotos';
+import type { Activity, Hotel, TripDay } from './itineraryTypes';
 import { readTripCost, formatTripCost } from './tripCost';
 
 function formatCostValue(cost: unknown): string | undefined {
@@ -62,8 +70,35 @@ function transformTransport(value: unknown): TripDay['transport'] {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformApiActivity(a: any, timeOfDay: string): Activity {
+  const name = displayText(a.name) || displayText(a.title);
+  const venueAddress = displayText(a.location?.address) || displayText(a.venueAddress);
+  const photo = venuePhoto(name, venueAddress);
+  const suppliedImage = displayText(a.images?.[0]) || displayText(a.image);
+  const image = suppliedImage || photo?.imageUrl;
   return {
+    venueAddress: venueAddress || undefined,
+    imageCredit:
+      photo && image === photo.imageUrl
+        ? {
+            artist: photo.artist,
+            sourceUrl: photo.sourceUrl,
+            license: photo.license,
+            licenseUrl: photo.licenseUrl,
+          }
+        : undefined,
+    proposedVisitType: readProposedVisitType(a.proposedVisitType),
+    source: readVenueSource(a.source),
     id: displayText(a.id) || `activity_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+    scheduleSlot: ['morning', 'afternoon', 'evening'].includes(a.scheduleSlot)
+      ? a.scheduleSlot
+      : undefined,
+    durationMinutes:
+      displayNumber(a.duration) ??
+      (displayNumber(a.durationMinutes) !== undefined &&
+      (typeof a.duration !== 'string' ||
+        durationLabel(a.duration) === durationLabel(`${a.durationMinutes} min`))
+        ? a.durationMinutes
+        : undefined),
     time: displayText(a.timeOfDay) || displayText(a.time) || timeOfDay,
     title: displayText(a.name) || displayText(a.title),
     description: displayText(a.description),
@@ -102,7 +137,7 @@ function transformApiActivity(a: any, timeOfDay: string): Activity {
       undefined,
     affiliatePartner:
       displayText(a.bookingInfo?.affiliateId) || displayText(a.affiliatePartner) || undefined,
-    image: displayText(a.images?.[0]) || displayText(a.image) || undefined,
+    image,
     rating: displayNumber(a.rating) !== undefined && a.rating <= 5 ? a.rating : undefined,
     reviewCount: displayNumber(a.reviewCount),
     topReview: displayText(a.topReview) || undefined,
@@ -117,12 +152,13 @@ function transformApiActivity(a: any, timeOfDay: string): Activity {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformApiRestaurant(r: any): Activity {
   return {
+    source: readVenueSource(r.source),
     id: displayText(r.id) || `restaurant_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
     time: displayText(r.mealType) || 'dining',
     title: displayText(r.name) || displayText(r.title),
     description: displayText(r.description),
     location: displayText(r.location?.name) || displayText(r.location),
-    duration: '1-2 hours',
+    duration: '',
     type: 'restaurant',
     estimatedCost:
       r.estimatedCost?.status === 'unknown' || r.priceStatus === 'unknown'
@@ -174,11 +210,15 @@ export function transformItineraryDays(apiDays: any[]): TripDay[] {
         const block = day[timeOfDay];
         if (!block) continue;
 
-        // Map activities from this time block
+        const blockActivities: Activity[] = [];
+        // Keep visits in their supplied order within the day part.
         if (Array.isArray(block.activities)) {
           for (const a of block.activities) {
             if (hasActivityTitle(a)) {
-              activities.push(transformApiActivity(a, timeOfDay));
+              blockActivities.push({
+                ...transformApiActivity(a, timeOfDay),
+                scheduleSlot: timeOfDay,
+              });
             }
           }
         }
@@ -189,24 +229,67 @@ export function transformItineraryDays(apiDays: any[]): TripDay[] {
           : block.meal && typeof block.meal === 'object'
             ? [block.meal]
             : [];
+        const blockMeals: Activity[] = [];
         for (const m of meals) {
           if (hasActivityTitle(m)) {
-            activities.push(transformApiRestaurant(m));
+            blockMeals.push({ ...transformApiRestaurant(m), scheduleSlot: timeOfDay });
           }
         }
+        // Match the planner's day-part sequence without inventing clock times:
+        // breakfast, morning visits, lunch, afternoon visits, evening visits, dinner.
+        activities.push(
+          ...(timeOfDay === 'evening'
+            ? [...blockActivities, ...blockMeals]
+            : [...blockMeals, ...blockActivities])
+        );
       }
 
       const transport = transformTransport(day.transport);
+      // Cached mobile days are flat. Reconstruct only the identity/duration basis,
+      // using preserved slot metadata; older caches without it cannot certify times.
+      const timingDay =
+        Array.isArray(day.activities) && !day.morning && !day.afternoon && !day.evening
+          ? {
+              ...day,
+              ...Object.fromEntries(
+                ['morning', 'afternoon', 'evening'].map((slot) => [
+                  slot,
+                  {
+                    activities: activities
+                      .filter((a) => a.scheduleSlot === slot && a.type !== 'restaurant')
+                      .map((a) => ({ id: a.id, name: a.title, duration: a.durationMinutes })),
+                    meals: activities
+                      .filter((a) => a.scheduleSlot === slot && a.type === 'restaurant')
+                      .map((a) => ({ id: a.id, name: a.title })),
+                  },
+                ])
+              ),
+            }
+          : day;
+
+      const timingProposal = readDayTiming(timingDay);
+      // Meal durations are planning assumptions, not restaurant facts. Rebuild
+      // labels on every normalization so an invalidated cache cannot retain them.
+      const mealDurations = new Map(
+        timingProposal?.events
+          .filter((event) => event.kind === 'meal')
+          .map((event) => [event.id, event.durationMinutes]) ?? []
+      );
+      for (const activity of activities) {
+        if (activity.type !== 'restaurant') continue;
+        const minutes = mealDurations.get(`meal:${activity.scheduleSlot}:${activity.id}`);
+        activity.duration =
+          minutes === undefined ? '' : `${durationLabel(`${minutes} min`)} planned`;
+        delete activity.durationMinutes;
+      }
 
       return {
         date: displayText(day.date),
         dayNumber: Number.isInteger(day.dayNumber) && day.dayNumber > 0 ? day.dayNumber : 1,
         theme: displayText(day.title) || displayText(day.theme) || 'Your day',
-        tips: Array.isArray(day.tips)
-          ? day.tips.filter(
-              (tip: unknown): tip is string => typeof tip === 'string' && !!tip.trim()
-            )
-          : [],
+        timingProposal,
+        tips: dayTimingTips(timingDay),
+        diningOptions: readDiningReviewOptions(day.diningOptions),
         activities,
         transport,
       };

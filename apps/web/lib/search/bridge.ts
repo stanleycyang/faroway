@@ -1,3 +1,9 @@
+import {
+  readDayTiming,
+  dayTimingTips,
+  readVenueSource,
+  readDiningReviewOptions,
+} from "@faroway/types";
 import { suppliedCoordinates } from "../location-coordinates";
 import { readPrice } from "@faroway/constants";
 import { viatorContentMetadata } from "@/lib/affiliates/viator-policy";
@@ -45,10 +51,12 @@ function mapActivity(
     a.priceStatus === "unknown" ? undefined : readPrice(a.price, a.currency);
   return {
     ...viatorContentMetadata(a),
+    source: readVenueSource(a.source),
     id: a.id,
     name: a.name,
     description: a.description,
     duration: a.duration, // already in minutes from activities agent
+    proposedVisitType: a.proposedVisitType,
     estimatedCost: {
       amount: price?.amount ?? 0,
       status: price ? a.priceStatus : "unknown",
@@ -89,10 +97,11 @@ function mapDining(
   mealType: "breakfast" | "lunch" | "dinner",
 ): Restaurant {
   return {
+    source: readVenueSource(d.source),
     id: d.id,
     name: d.name,
     cuisineType: d.cuisineTypes || [],
-    priceLevel: d.priceLevel as 1 | 2 | 3 | 4,
+    priceLevel: d.priceStatus === "unknown" ? undefined : d.priceLevel,
     description: d.description,
     estimatedCost: {
       amount: 0,
@@ -183,7 +192,8 @@ function mapDay(day: SuggestedDay): MappedItinerary["days"][number] {
       readPrice(day.estimatedCost, day.currency)
         ? readPrice(day.estimatedCost, day.currency)
         : undefined,
-    tips: day.tips || [],
+    timingProposal: readDayTiming(day),
+    tips: dayTimingTips(day),
   };
 }
 
@@ -208,6 +218,24 @@ export function mapSearchResultsToItinerary(
   topHotel: HotelResult | null,
 ): MappedItinerary {
   const days = (results.itinerary || []).map(mapDay);
+  const scheduledIds = new Set(
+    days.flatMap((day) =>
+      [day.morning, day.afternoon, day.evening].flatMap((slot) =>
+        slot.meals.map((meal) => meal.id),
+      ),
+    ),
+  );
+  const reviewOptions = readDiningReviewOptions(
+    (results.dining ?? [])
+      .filter((meal) => meal.planningIdea && !scheduledIds.has(meal.id))
+      .map((meal) => ({
+        id: meal.id,
+        name: meal.name,
+        address: meal.location?.address,
+        source: meal.source,
+      })),
+  );
+  if (days[0] && reviewOptions.length) days[0].diningOptions = reviewOptions;
 
   // The aggregator's daily estimate can include transport, and provider prices
   // can use different currencies/quantities. Do not invent a complete total by

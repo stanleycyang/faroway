@@ -1,0 +1,339 @@
+import {
+  addReviewedActivitySupply,
+  appendActivitySourceNotes,
+} from "./reviewed-activity-supply";
+import reviewedSupply from "../../../../scripts/fixtures/reviewed-activity-supply.json";
+import { reviewedHoursExclusions } from "./reviewed-venue-hours";
+import reviewedHours from "../../../../scripts/fixtures/reviewed-venue-hours.json";
+import {
+  reviewedIdentityExclusions,
+  type ReviewedIdentityEvidence,
+} from "./reviewed-venue-identities";
+import reviewedIdentities from "../../../../scripts/fixtures/reviewed-venue-identities.json";
+import {
+  appendReviewedEventOptions,
+  type ReviewedEventOption,
+} from "./reviewed-event-options";
+import reviewedEventOptions from "../../../../scripts/fixtures/reviewed-event-options.json";
+import { appendReviewedDiningOptions } from "./reviewed-dining-options";
+import reviewedDiningOptions from "../../../../scripts/fixtures/reviewed-dining-options.json";
+import { z } from "zod";
+import { gateway, createGateway } from "../ai/sdk";
+import {
+  generatePlanningObject,
+  logPlanningFallback,
+  planningModel,
+} from "../ai/planning-step";
+import { PLANNING_PROVIDER_OPTIONS } from "../ai/planning-disclosure";
+import { compileSchedule, type ScheduleExclusion } from "./schedule-compiler";
+import {
+  applyScheduleNarration,
+  type DayNarration,
+} from "./schedule-narration";
+import { scheduleNarrationPrompt } from "./narration-prompt";
+import { canProcessViatorContent } from "../affiliates/viator-policy";
+import { withAbortTimeout, isOperationTimeoutError } from "./runtime";
+import type {
+  SearchPlan,
+  ActivityResult,
+  DiningResult,
+  HotelResult,
+} from "./types";
+import { venueConstraintsForDate } from "../../../../scripts/uat/lib/venue-constraints";
+import reviewedFacts from "../../../../scripts/fixtures/agentic-venue-constraints.json";
+import reviewedHotelFacts from "../../../../scripts/fixtures/agentic-hotel-constraints.json";
+import { screenHotelCandidates } from "./hotel-policy-screen";
+import {
+  reconcileGeneratedDiningAddresses,
+  appendReviewedAddressNotes,
+} from "./reviewed-dining-addresses";
+import reviewedAddresses from "../../../../scripts/fixtures/reviewed-dining-addresses.json";
+import { screenReportedDiningClosures } from "./reviewed-dining-closures";
+import reviewedClosures from "../../../../scripts/fixtures/reviewed-dining-closures.json";
+import reviewedDiningDays from "../../../../scripts/fixtures/reviewed-dining-days.json";
+import { reviewedDiningDayExclusions } from "./reviewed-dining-days";
+import {
+  activityDecisionSchema,
+  applyReviewedActivityDecisions,
+} from "./reviewed-activity-decisions";
+import activityDecisionRecords from "../../../../scripts/fixtures/reviewed-activity-decisions.json";
+import { withReviewedActivitySources } from "./reviewed-activity-sources";
+
+import { compiledScheduleExperimentEnabled } from "./schedule-experiment-gate";
+export { compiledScheduleExperimentEnabled } from "./schedule-experiment-gate";
+
+export async function runStagingCompiledSchedule(
+  plan: SearchPlan,
+  hotels: HotelResult[],
+  inventory: ActivityResult[],
+  dining: DiningResult[],
+) {
+  if (!compiledScheduleExperimentEnabled())
+    throw new Error(
+      "Compiled schedule experiment is not enabled for this staging environment",
+    );
+  const start = Date.parse(`${plan.dates.start}T00:00:00Z`),
+    end = Date.parse(`${plan.dates.end}T00:00:00Z`);
+  const count = (end - start) / 86400000 + 1;
+  if (!Number.isInteger(count) || count < 1 || count > 7)
+    throw new Error("Staging schedule experiment requires 1–7 days");
+  const supply = addReviewedActivitySupply(
+    plan,
+    inventory.filter(canProcessViatorContent),
+    Array.from({ length: count }, (_, i) =>
+      new Date(start + i * 86400000).toISOString().slice(0, 10),
+    ),
+    reviewedSupply,
+  );
+  const decisionReview = applyReviewedActivityDecisions(
+    plan,
+    supply.activities,
+    Array.from({ length: count }, (_, i) =>
+      new Date(start + i * 86400000).toISOString().slice(0, 10),
+    ),
+    activityDecisionSchema.array().parse(activityDecisionRecords),
+  );
+  const activities = withReviewedActivitySources(
+    plan.destination,
+    decisionReview.activities,
+    reviewedHours as import("./reviewed-venue-hours").ReviewedVenueHours[],
+    supply.admitted,
+  );
+  const exclusions: ScheduleExclusion[] = [
+    ...supply.exclusions,
+    ...decisionReview.exclusions,
+  ];
+  for (let i = 0; i < count; i++) {
+    const date = new Date(start + i * 86400000).toISOString().slice(0, 10);
+    for (const activity of activities)
+      for (const finding of venueConstraintsForDate(
+        plan.destination,
+        activity.name,
+        date,
+        reviewedFacts,
+        activity.proposedVisitType,
+      ))
+        exclusions.push({
+          activityId: activity.id,
+          date,
+          reason: finding.finding,
+          sourceUrl: finding.sourceUrl,
+          observedAt: finding.observedAt,
+        });
+  }
+  const hourExclusions = reviewedHoursExclusions(
+    plan,
+    activities,
+    Array.from({ length: count }, (_, i) =>
+      new Date(start + i * 86400000).toISOString().slice(0, 10),
+    ),
+    reviewedHours as import("./reviewed-venue-hours").ReviewedVenueHours[],
+  );
+  hourExclusions.push(
+    ...reviewedIdentityExclusions(
+      plan,
+      activities,
+      Array.from({ length: count }, (_, i) =>
+        new Date(start + i * 86400000).toISOString().slice(0, 10),
+      ),
+      reviewedIdentities as ReviewedIdentityEvidence[],
+    ),
+  );
+  exclusions.push(...hourExclusions);
+  const displayExclusions = [
+    ...hourExclusions,
+    ...exclusions.filter(
+      (e) =>
+        e.reason === "venue_visit_scope_requires_review" &&
+        !hourExclusions.includes(e),
+    ),
+  ];
+  const addressReview = reconcileGeneratedDiningAddresses(
+    plan,
+    dining,
+    reviewedAddresses,
+  );
+  const diningClosures = screenReportedDiningClosures(
+    plan,
+    addressReview.candidates,
+    reviewedClosures,
+  );
+  const reviewedDining = diningClosures.candidates;
+  const compiled = compileSchedule(
+    plan,
+    activities,
+    reviewedDining,
+    exclusions,
+    {
+      maxUnverifiedTransferKm: 6,
+      maxUnverifiedMealDistanceKm: 3,
+      reviewedActivityIds: supply.admitted.map((record) => record.id),
+      diningExclusions: reviewedDiningDayExclusions(
+        plan,
+        reviewedDining,
+        reviewedDiningDays,
+      ),
+    },
+  );
+  appendActivitySourceNotes(compiled.days, supply.admitted, plan);
+  compiled.days[0].tips.push(...decisionReview.notes);
+  for (const day of compiled.days) {
+    const names = [
+      ...new Set(
+        displayExclusions
+          .filter((e) => e.date === day.date)
+          .map((e) => e.activityId),
+      ),
+    ];
+    for (const id of names) {
+      const activity = activities.find((a) => a.id === id)!;
+      const records = displayExclusions.filter(
+        (e) =>
+          e.date === day.date &&
+          e.activityId === id &&
+          (!e.slot ||
+            activity.bestTimeOfDay === "any" ||
+            e.slot === activity.bestTimeOfDay),
+      );
+      if (!records.length) continue;
+      const record = records[0];
+      if (record.reason === "venue_visit_scope_requires_review") {
+        day.tips.push(
+          `Visit review: ${activity.name} was left unscheduled because the reviewed hours cover ordinary entry, while this visit's scope is different or unclear. Confirm access for the intended experience; this does not establish that it is closed. Source reviewed ${record.observedAt}: ${record.sourceUrl}`,
+        );
+        continue;
+      }
+      if (record.reason === "venue_identity_requires_review") {
+        day.tips.push(
+          `Venue identity review: ${activity.name} was left unscheduled because its exact venue and visit type could not be resolved against reviewed information for this address. Confirm the exact place and visit type; this does not establish that it is closed. Source reviewed ${record.observedAt}: ${record.sourceUrl}`,
+        );
+        continue;
+      }
+      day.tips.push(
+        `Hours review: ${activity.name} is excluded from ${records.some((e) => !e.slot) ? "this date" : records.map((e) => e.slot).join(", ")} in this draft. The supplied visit duration does not fit the reviewed ordinary hours, or the source needs review. Confirm any exceptional opening before adding it. Source reviewed ${record.observedAt}: ${record.sourceUrl}`,
+      );
+    }
+  }
+  const score = (hotel: HotelResult) =>
+    Number.isFinite(hotel.vibeScore) ? hotel.vibeScore : 0;
+  const hotelReview = screenHotelCandidates(plan, hotels, reviewedHotelFacts);
+  const topHotel =
+    [...hotelReview.selectionCandidates].sort(
+      (a, b) => score(b) - score(a),
+    )[0] ?? null;
+  const diningDays = appendReviewedDiningOptions(
+    plan,
+    appendReviewedAddressNotes(plan, compiled.days, reviewedAddresses),
+    reviewedDining,
+    reviewedDiningOptions,
+  );
+  const eventDeferredIds = new Set(
+    compiled.reviewRequiredActivities
+      .filter((item) =>
+        ["generic_event_title", "speculative_event_title"].includes(
+          item.reason,
+        ),
+      )
+      .map((item) => item.id),
+  );
+  const days = appendReviewedEventOptions(
+    plan,
+    diningDays,
+    activities.filter((activity) => eventDeferredIds.has(activity.id)),
+    reviewedEventOptions as ReviewedEventOption[],
+  ).map((day) => ({
+    ...day,
+    hotel: topHotel ?? undefined,
+  }));
+  for (const item of hotelReview.withheld) {
+    const sources = [
+      ...new Set(
+        item.findings.map(
+          (finding) => `${finding.sourceUrl} (reviewed ${finding.observedAt})`,
+        ),
+      ),
+    ];
+    days[0].tips.push(
+      `Hotel review: ${item.hotelName} was left out because published information conflicts with the party or generated amenities. ${sources.join("; ")}. Other hotel ideas still need suitability and availability checks.`,
+    );
+  }
+  for (const item of hotelReview.reviewRequired) {
+    const action =
+      item.reason === "age_policy_requires_room_or_check_in_review"
+        ? "Check the age rules for the exact room and check-in arrangement before choosing this hotel."
+        : "Previously reviewed policy information needs checking again before choosing this hotel.";
+    days[0].tips.push(
+      `Hotel review: ${item.hotelName}. ${action} Source: ${item.sourceUrl} (recorded review ${item.observedAt}). Suitability and availability remain unverified.`,
+    );
+  }
+  if (!topHotel)
+    days[0].tips.push(
+      "No hotel has been selected. Check suitable accommodation and room availability before arranging this trip.",
+    );
+  console.info(
+    JSON.stringify({
+      event: "planning.schedule.experiment",
+      version: "compiled-narrated-v1",
+      days: days.length,
+      excludedCandidateDates: exclusions.length,
+      reviewedActivityCandidates: supply.admitted.length,
+      issueCount: compiled.issues.length,
+      verified: false,
+    }),
+  );
+  const draft = () => ({ days, topHotel, activityInventory: activities });
+  if (compiled.issues.some((issue) => issue.endsWith(":activity_supply_gap"))) {
+    logPlanningFallback(
+      "aggregator",
+      "activity_supply_gap",
+      "compiled_schedule",
+    );
+    return draft();
+  }
+  try {
+    const modelGateway = process.env.AI_GATEWAY_API_KEY
+      ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
+      : gateway;
+    const result = await withAbortTimeout(
+      (signal) =>
+        generatePlanningObject<{ days: DayNarration[] }>("aggregator", {
+          model: modelGateway(planningModel("aggregator")),
+          providerOptions: PLANNING_PROVIDER_OPTIONS,
+          schema: z.object({
+            days: z
+              .array(
+                z.object({
+                  date: z.string(),
+                  title: z.string().min(1).max(100),
+                  summary: z.string().min(1).max(600),
+                  activityIds: z.array(z.string()),
+                }),
+              )
+              .length(days.length),
+          }),
+          prompt: scheduleNarrationPrompt(plan, days),
+          maxOutputTokens: 2000,
+          maxRetries: 0,
+          abortSignal: signal,
+        }),
+      30000,
+      "schedule narration",
+    );
+    return {
+      days: applyScheduleNarration(days, result.object.days, plan),
+      activityInventory: activities,
+      topHotel,
+    };
+  } catch (error) {
+    logPlanningFallback(
+      "aggregator",
+      isOperationTimeoutError(error) ? "timeout" : "error",
+      "compiled_schedule",
+      error instanceof Error ? error.message : "Narration unavailable",
+    );
+    days[0].tips.push(
+      "The day descriptions could not be generated. This draft keeps the selected visits and planning cautions for your review.",
+    );
+    return draft();
+  }
+}

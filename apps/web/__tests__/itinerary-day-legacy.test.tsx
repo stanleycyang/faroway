@@ -49,5 +49,5 @@ test.each([
   expect(html).not.toContain("broken");
   if (Array.isArray(tips))
     expect(html).toContain("Keep your museum reservation");
-  else expect(html).not.toContain("Insider Tips");
+  else expect(html).not.toContain("Before you go");
 });

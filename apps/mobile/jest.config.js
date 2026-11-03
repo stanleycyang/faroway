@@ -11,6 +11,7 @@ module.exports = {
   },
   setupFiles: ['<rootDir>/jest.setup.js'],
   moduleNameMapper: {
+    '\\.(?:png|jpe?g|webp)$': '<rootDir>/jest.asset-stub.js',
     '^@faroway/types$': '<rootDir>/../../packages/types/src/index.ts',
     '^@faroway/constants$': '<rootDir>/../../packages/constants/src/index.ts',
   },

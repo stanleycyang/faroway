@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const generateObject = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/ai/sdk", () => ({
@@ -30,6 +30,10 @@ const plan = {
 };
 
 describe("dining agent reservation links", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.useRealTimers();
+  });
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -40,8 +44,9 @@ describe("dining agent reservation links", () => {
         restaurants: [
           {
             name: "Invented Bistro",
-            description: "A model guess",
-            cuisineTypes: ["local"],
+            description:
+              "A model guess. They are experienced in managing severe allergies.",
+            cuisineTypes: ["local", "gluten-free"],
             priceLevel: 2,
             rating: 4.8,
             reviewCount: 90,
@@ -51,7 +56,7 @@ describe("dining agent reservation links", () => {
             affiliatePartner: "opentable",
             mealTypes: ["dinner"],
             vibeScore: 80,
-            vibeMatch: ["foodie"],
+            vibeMatch: ["foodie", "Allergy-safe"],
             dietaryOptions: ["vegan"],
           },
         ],
@@ -63,11 +68,24 @@ describe("dining agent reservation links", () => {
     expect(restaurant.reservationUrl).toBeUndefined();
     expect(restaurant.affiliatePartner).toBeUndefined();
     expect(restaurant.rating).toBe(0);
+    expect(restaurant.description).not.toContain("experienced in managing");
+    expect(restaurant.description).toContain(
+      "allergy handling has not been verified",
+    );
+    expect(restaurant.cuisineTypes).toEqual(["local"]);
+    expect(restaurant.vibeMatch).toEqual(["foodie"]);
+    expect(restaurant.dietaryOptions).toEqual([]);
     const prompt = String(generateObject.mock.calls[0][0].system);
     expect(prompt).not.toContain("https://opentable.com/r/");
     expect(prompt).toContain("Do not invent reservation URLs");
+    expect(prompt).not.toContain("realistic-sounding names");
+    expect(prompt).toContain("Never invent a name");
+    expect(prompt).toContain("Leave dietaryOptions empty");
     expect(info.mock.calls.map((call) => String(call[0])).join("\n")).toContain(
       "planning.step.reservation_url_omitted",
+    );
+    expect(info.mock.calls.map((call) => String(call[0])).join("\n")).toContain(
+      '"event":"planning.step.generated_dining_copy_reviewed","step":"dining","candidates":1',
     );
     info.mockRestore();
   });
@@ -85,5 +103,54 @@ describe("dining agent reservation links", () => {
     );
     warn.mockRestore();
     error.mockRestore();
+  });
+  it("uses the reviewed address only in the explicitly enabled staging experiment", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-11-01T12:00:00Z"));
+    vi.stubEnv("FAROWAY_SCHEDULE_EXPERIMENT", "compiled-narrated-v1");
+    vi.stubEnv(
+      "NEXT_PUBLIC_SUPABASE_URL",
+      "https://omovikloadpvzijoaqus.supabase.co",
+    );
+    vi.stubEnv("PLANNING_THINKING_AGGREGATOR", "low");
+    vi.stubEnv("PLANNING_MODEL_AGGREGATOR", "");
+    vi.stubEnv("PLANNING_MAX_OUTPUT_TOKENS_AGGREGATOR", "");
+    const restaurant = {
+      name: "Row 34",
+      description: "Seafood dining.",
+      cuisineTypes: ["Seafood"],
+      priceLevel: 3,
+      rating: 0,
+      reviewCount: 0,
+      location: {
+        name: "Cambridge",
+        address: "383 Binney St, Cambridge, MA 02139",
+        lat: 42.36,
+        lng: -71.09,
+      },
+      images: [],
+      mealTypes: ["dinner"],
+      vibeScore: 90,
+      vibeMatch: ["Foodie"],
+      dietaryOptions: [],
+    };
+    for (const environment of ["preview", "production"]) {
+      vi.stubEnv("VERCEL_ENV", environment);
+      generateObject.mockResolvedValueOnce({
+        object: { restaurants: [restaurant] },
+        usage: { inputTokens: 10, outputTokens: 20 },
+      });
+      const [result] = await runDiningAgent({
+        ...plan,
+        destination: "Cambridge, Massachusetts, USA",
+      } as never);
+      if (environment === "preview") {
+        expect(result.location.address).toBe(
+          "314 Main Street, Cambridge, MA 02142",
+        );
+        expect(result.location.lat).toBeUndefined();
+        expect(result.location.lng).toBeUndefined();
+      } else expect(result.location).toEqual(restaurant.location);
+    }
   });
 });

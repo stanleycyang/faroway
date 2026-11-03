@@ -117,25 +117,32 @@ export async function POST(request: NextRequest, { params }: Params) {
         { status: 409 },
       );
 
-    // Rate limit: 5 per hour per user.
-    const hourlyLimit = await checkRateLimitAsync(`generate:hour:${userId}`, {
-      maxRequests: 5,
-      windowMs: 60 * 60 * 1000,
-      failClosed: true,
-    });
-    if (!hourlyLimit.allowed) {
-      return NextResponse.json(
-        {
-          error:
-            "Too many generation requests. Please wait before generating another trip.",
-        },
-        {
-          status: 429,
-          headers: {
-            "Retry-After": String(Math.ceil(hourlyLimit.resetIn / 1000)),
+    // Local development can repeat acceptance cases without consuming the
+    // shared hourly bucket. Hosted preview and production retain the limit.
+    const localDevelopment =
+      process.env.NODE_ENV === "development" &&
+      !process.env.VERCEL &&
+      !process.env.VERCEL_ENV;
+    if (!localDevelopment) {
+      const hourlyLimit = await checkRateLimitAsync(`generate:hour:${userId}`, {
+        maxRequests: 5,
+        windowMs: 60 * 60 * 1000,
+        failClosed: true,
+      });
+      if (!hourlyLimit.allowed) {
+        return NextResponse.json(
+          {
+            error:
+              "Too many generation requests. Please wait before generating another trip.",
           },
-        },
-      );
+          {
+            status: 429,
+            headers: {
+              "Retry-After": String(Math.ceil(hourlyLimit.resetIn / 1000)),
+            },
+          },
+        );
+      }
     }
 
     // Parse optional preferences from request body

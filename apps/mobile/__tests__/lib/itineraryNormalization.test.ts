@@ -1,4 +1,37 @@
 import { transformApiHotel, transformItineraryDays } from '../../lib/itineraryNormalization';
+test('unscheduled options persist through cache normalization without becoming activities', () => {
+  const option = {
+    id: 'review-1',
+    name: 'Cafe',
+    address: '12 Main Street',
+    source: { url: 'https://restaurant.example/', retrievedOn: '2026-11-02' },
+  };
+  const first = transformItineraryDays([
+    { dayNumber: 1, diningOptions: [option, option], morning: { activities: [], meals: [] } },
+  ]);
+  expect(first[0].diningOptions).toEqual([option]);
+  expect(first[0].activities).toEqual([]);
+  const cached = transformItineraryDays(JSON.parse(JSON.stringify(first)));
+  expect(cached[0].diningOptions).toEqual([option]);
+  expect(cached[0].activities).toEqual([]);
+});
+test('retrieved venue sources survive both API meal and cached activity normalization', () => {
+  const source = { url: 'https://restaurant.example/visit', retrievedOn: '2026-11-02' };
+  const days = transformItineraryDays([
+    { dayNumber: 1, morning: { meals: [{ id: 'meal', name: 'Cafe', source }] } },
+  ]);
+  expect(days[0].activities[0].source).toEqual(source);
+  expect(transformItineraryDays(JSON.parse(JSON.stringify(days)))[0].activities[0].source).toEqual(
+    source
+  );
+  const invalid = transformItineraryDays([
+    {
+      dayNumber: 1,
+      morning: { meals: [{ name: 'Cafe', source: { ...source, url: 'javascript:alert(1)' } }] },
+    },
+  ]);
+  expect(invalid[0].activities[0].source).toBeUndefined();
+});
 test('hotel keeps usable provider facts and excludes malformed display arrays or invented stay totals', () => {
   const hotel = transformApiHotel({
     name: 'A real hotel',
@@ -70,13 +103,13 @@ test('shared conversion preserves streamed booking links and valid cached person
       },
     },
   ]);
-  expect(days[0].activities[0]).toMatchObject({
+  expect(days[0].activities.find((a) => a.title === 'A stop')).toMatchObject({
     bookingUrl: 'https://partner.example/stop',
     isSaved: true,
     topReview: 'Worth a visit',
   });
-  expect(days[0].activities[0].freeCancellation).toBeUndefined();
-  expect(days[0].activities[1]).toMatchObject({
+  expect(days[0].activities.find((a) => a.title === 'A stop')?.freeCancellation).toBeUndefined();
+  expect(days[0].activities.find((a) => a.title === 'Dinner')).toMatchObject({
     bookingUrl: 'https://partner.example/table',
     image: 'https://partner.example/photo',
   });
@@ -151,4 +184,241 @@ test('saved trips remain readable when their supplier is no longer integrated', 
     arrival: { airport: 'JFK' },
   });
   expect(days[0].activities[0].title).toBe('Museum');
+});
+
+import { dayTimingBasis } from '@faroway/types';
+test('proposed timing survives native flattening and cache normalization, then expires after edits', () => {
+  const day = {
+    date: '2027-01-11',
+    dayNumber: 1,
+    title: 'Test',
+    tips: ['Proposed local timing: breakfast, walk, rest'],
+    morning: {
+      activities: [{ id: 'walk', name: 'Walk', duration: 60 }],
+      meals: [{ id: 'cafe', name: 'Cafe', mealType: 'breakfast' }],
+    },
+    afternoon: { activities: [], meals: [] },
+    evening: { activities: [], meals: [] },
+  };
+  const timingProposal = {
+    policy: 'midday-rest-v1',
+    basis: dayTimingBasis(day),
+    fitsPolicy: true,
+    verified: false,
+    conflict: null,
+    events: [
+      {
+        id: 'meal:morning:cafe',
+        kind: 'meal',
+        durationMinutes: 45,
+        startMinute: 480,
+        endMinute: 525,
+        bufferBeforeMinutes: 0,
+      },
+      {
+        id: 'activity:walk',
+        kind: 'activity',
+        durationMinutes: 60,
+        startMinute: 555,
+        endMinute: 615,
+        bufferBeforeMinutes: 30,
+      },
+      {
+        id: 'rest:midday',
+        kind: 'rest',
+        durationMinutes: 60,
+        startMinute: 780,
+        endMinute: 840,
+        bufferBeforeMinutes: 0,
+      },
+    ],
+  };
+  const normalized = transformItineraryDays([{ ...day, timingProposal }]);
+  expect(normalized[0].timingProposal).toEqual(timingProposal);
+  expect(normalized[0].activities.find((a) => a.id === 'cafe')?.duration).toBe('45 min planned');
+  const cached = transformItineraryDays(JSON.parse(JSON.stringify(normalized)));
+  expect(cached[0].timingProposal).toEqual(timingProposal);
+  expect(cached[0].activities.find((a) => a.id === 'cafe')?.duration).toBe('45 min planned');
+  const changedDuration = JSON.parse(JSON.stringify(cached));
+  changedDuration[0].activities.find((a: { id: string }) => a.id === 'walk').duration = '2 hr';
+  expect(transformItineraryDays(changedDuration)[0].timingProposal).toBeUndefined();
+  cached[0].date = '2027-01-12';
+  const changed = transformItineraryDays(cached)[0];
+  expect(changed.timingProposal).toBeUndefined();
+  expect(changed.activities.find((a) => a.id === 'cafe')?.duration).toBe('');
+  expect(changed.tips).toEqual(['Proposed times need a fresh review.']);
+  const untimed = transformItineraryDays([day])[0];
+  expect(untimed.activities.find((a) => a.id === 'cafe')?.duration).toBe('');
+  for (const proposal of [
+    undefined,
+    { ...timingProposal, basis: 'outdated' },
+    {
+      ...timingProposal,
+      fitsPolicy: false,
+      events: [],
+      conflict: { eventId: 'activity:walk', overrunMinutes: 30 },
+    },
+  ]) {
+    const reloaded = transformItineraryDays([{ ...normalized[0], timingProposal: proposal }])[0];
+    expect(reloaded.activities.find((a) => a.id === 'cafe')?.duration).toBe('');
+  }
+});
+
+test('partially supported dining keeps unknown ratings and prices through a cache reload', () => {
+  const days = transformItineraryDays([
+    {
+      date: '2027-01-11',
+      dayNumber: 1,
+      title: 'Breakfast review',
+      morning: {
+        activities: [],
+        meals: [
+          {
+            id: 'reviewed-bloomhouse-ginger-garden',
+            name: 'The Bloomhouse by Little Farms',
+            description: 'Confirm service times, availability and stroller access.',
+            mealType: 'breakfast',
+            location: { name: 'Ginger Garden, Singapore Botanic Gardens' },
+            estimatedCost: { amount: 0, status: 'unknown', currency: '', perPerson: true },
+          },
+        ],
+      },
+      afternoon: { activities: [], meals: [] },
+      evening: { activities: [], meals: [] },
+    },
+  ]);
+  const cached = transformItineraryDays(JSON.parse(JSON.stringify(days)));
+  for (const day of [days[0], cached[0]]) {
+    expect(day.activities[0].title).toBe('The Bloomhouse by Little Farms');
+    expect(day.activities[0].description).toContain('Confirm service times');
+    expect(day.activities[0].rating).toBeUndefined();
+    expect(day.activities[0].reviewCount).toBeUndefined();
+    expect(day.activities[0].price).toBeUndefined();
+    expect(day.activities[0].estimatedCost).toBeUndefined();
+  }
+});
+
+test('arrival-day empty periods and availability note survive native normalization and cache reload', () => {
+  const note =
+    'Your local-time availability: 18:00–24:00. Confirm exact visit times and airport transfers.';
+  const [day] = transformItineraryDays([
+    {
+      date: '2027-01-11',
+      dayNumber: 1,
+      title: 'Arrival evening',
+      summary: 'An evening after arrival',
+      morning: { activities: [], meals: [] },
+      afternoon: { activities: [], meals: [] },
+      evening: {
+        activities: [{ id: 'walk', name: 'Evening walk', duration: 60 }],
+        meals: [{ id: 'dinner', name: 'Dinner' }],
+      },
+      tips: [note],
+    },
+  ]);
+  const [cached] = transformItineraryDays(JSON.parse(JSON.stringify([day])));
+  expect(cached.activities.map((a) => [a.id, a.scheduleSlot])).toEqual([
+    ['walk', 'evening'],
+    ['dinner', 'evening'],
+  ]);
+  expect(cached.tips).toEqual([note]);
+});
+
+test.each(['ordinary_entry', 'exterior_walk', 'guided_tour', 'event', 'unknown'])(
+  'preserves proposed visit intent %s across API and cached data',
+  (proposedVisitType) => {
+    const first = transformItineraryDays([
+      { morning: { activities: [{ id: 'visit', name: 'Visit', proposedVisitType }] } },
+    ]);
+    const cached = transformItineraryDays(JSON.parse(JSON.stringify(first)));
+    expect(cached[0].activities[0].proposedVisitType).toBe(proposedVisitType);
+  }
+);
+test.each([undefined, null, 'confirmed', 'constructor', '__proto__', {}])(
+  'does not invent visit intent from %s',
+  (proposedVisitType) => {
+    const result = transformItineraryDays([
+      { activities: [{ id: 'visit', name: 'Visit', proposedVisitType }] },
+    ]);
+    expect(result[0].activities[0].proposedVisitType).toBeUndefined();
+  }
+);
+
+test('day-part timeline puts breakfast and lunch before visits and preserves order on cache reload', () => {
+  const [day] = transformItineraryDays([
+    {
+      date: '2027-01-12',
+      dayNumber: 2,
+      morning: {
+        activities: [{ id: 'museum', name: 'Museum', duration: 120 }],
+        meals: [{ id: 'breakfast', name: 'Breakfast', mealType: 'breakfast' }],
+      },
+      afternoon: {
+        activities: [{ id: 'gallery', name: 'Gallery', duration: 90 }],
+        meals: [{ id: 'lunch', name: 'Lunch', mealType: 'lunch' }],
+      },
+      evening: {
+        activities: [{ id: 'walk', name: 'Walk', duration: 45 }],
+        meals: [{ id: 'dinner', name: 'Dinner', mealType: 'dinner' }],
+      },
+    },
+  ]);
+  const expected = ['breakfast', 'museum', 'lunch', 'gallery', 'walk', 'dinner'];
+  expect(day.activities.map((a) => a.id)).toEqual(expected);
+  expect(
+    day.activities.filter((a) => a.type === 'restaurant').every((a) => a.duration === '')
+  ).toBe(true);
+  const [cached] = transformItineraryDays(JSON.parse(JSON.stringify([day])));
+  expect(cached.activities.map((a) => a.id)).toEqual(expected);
+  expect(
+    cached.activities
+      .filter((a) => a.type === 'restaurant')
+      .every((a) => a.durationMinutes === undefined)
+  ).toBe(true);
+});
+
+test('reviewed venue photos retain credits through cache reload without matching another branch or replacing provider images', () => {
+  const activity = {
+    id: 'museum-photo',
+    name: 'National Museum of Scotland',
+    duration: 120,
+    location: { name: 'Museum', address: 'Chambers St, Edinburgh EH1 1JF, UK' },
+  };
+  // Use a retained exact address from the reviewed acceptance inventory.
+  const photos = require('../../lib/venue-photos.json');
+  activity.location.address = photos.find(
+    (p: { id: string }) => p.id === 'scotland-museum'
+  ).addresses[0];
+  const [day] = transformItineraryDays([{ morning: { activities: [activity] } }]);
+  expect(day.activities[0].image).toContain('wikimedia.org');
+  expect(day.activities[0].imageCredit?.license).toBe('CC BY-SA 4.0');
+  const [cached] = transformItineraryDays(JSON.parse(JSON.stringify([day])));
+  expect(cached.activities[0].imageCredit).toEqual(day.activities[0].imageCredit);
+  expect(
+    transformItineraryDays([
+      {
+        morning: {
+          activities: [
+            { ...activity, location: { ...activity.location, address: 'Another branch' } },
+          ],
+        },
+      },
+    ])[0].activities[0].image
+  ).toBeUndefined();
+  const provider = transformItineraryDays([
+    { morning: { activities: [{ ...activity, images: ['https://provider.example/photo.jpg'] }] } },
+  ])[0].activities[0];
+  expect(provider.image).toBe('https://provider.example/photo.jpg');
+  expect(provider.imageCredit).toBeUndefined();
+});
+
+test('reviewed photo address formatting accepts Street and the known country but retains branch and country isolation', () => {
+  const image = (address: string) =>
+    transformItineraryDays([
+      { morning: { activities: [{ name: 'National Museum of Scotland', location: { address } }] } },
+    ])[0].activities[0].image;
+  expect(image('Chambers Street, Edinburgh EH1 1JF')).toContain('wikimedia.org');
+  expect(image('Chambers St., Edinburgh EH1 1JF, United Kingdom')).toContain('wikimedia.org');
+  expect(image('Chambers Street, Edinburgh EH1 1JF, France')).toBeUndefined();
+  expect(image('Chambers Street, Edinburgh EH1 1JF, Unit 2')).toBeUndefined();
 });

@@ -4,6 +4,12 @@ import { canDisplayViatorContent } from "@/lib/affiliates/viator-policy";
 import { useViatorContentEnabled } from "./ViatorContentPolicy";
 
 import React from "react";
+import {
+  readVenueSource,
+  proposedVisitNote,
+  type ActivityResult,
+  type VenueSource,
+} from "@faroway/types";
 import { readPrice } from "@faroway/constants";
 import Image from "next/image";
 import { useTripCheckout } from "./TripCheckout";
@@ -21,6 +27,8 @@ import {
 } from "lucide-react";
 
 export interface Activity {
+  source?: VenueSource;
+  proposedVisitType?: ActivityResult["proposedVisitType"];
   id: string;
   name: string;
   description: string;
@@ -64,10 +72,11 @@ export interface Activity {
 }
 
 export interface Restaurant {
+  source?: VenueSource;
   id: string;
   name: string;
   cuisineType: string[];
-  priceLevel: 1 | 2 | 3 | 4;
+  priceLevel?: 1 | 2 | 3 | 4;
   description: string;
   estimatedCost: {
     amount: number;
@@ -209,6 +218,29 @@ function getBadge(
   return null;
 }
 
+function VenueSourceNote({ value }: { value: unknown }) {
+  const source = readVenueSource(value);
+  if (!source) return null;
+  return (
+    <div className="mt-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
+      <a
+        href={source.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex min-h-8 items-center gap-1 font-medium text-slate-900 underline underline-offset-2"
+      >
+        View source · {new URL(source.url).hostname}
+        <ExternalLink className="h-3 w-3" aria-hidden="true" />
+        <span className="sr-only"> (opens in a new tab)</span>
+      </a>
+      <p>
+        Retrieved {source.retrievedOn}. Confirm opening hours and availability
+        for your dates.
+      </p>
+    </div>
+  );
+}
+
 export function ActivityCard({ activity, date }: ActivityCardProps) {
   const checkout = useTripCheckout();
   const viatorContentEnabled = useViatorContentEnabled();
@@ -216,6 +248,7 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
   // Guard against receiving a non-object (e.g. a plain string from inconsistent AI output)
   if (!activity || typeof activity !== "object" || !activity.name) return null;
 
+  const visitNote = proposedVisitNote(activity.proposedVisitType);
   const config =
     categoryConfig[activity.category] || categoryConfig.sightseeing;
   const rating = activity.rating;
@@ -340,6 +373,14 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
           {activity.description}
         </p>
 
+        {visitNote && (
+          <p className="mt-2 text-xs leading-relaxed text-slate-600">
+            {visitNote}
+          </p>
+        )}
+
+        <VenueSourceNote value={activity.source} />
+
         {/* Metadata chips */}
         <div className="flex flex-wrap items-center gap-2.5 mt-3 text-xs text-gray-500">
           {activity.duration != null && (
@@ -447,11 +488,12 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
         )}
 
         {/* Reservation recommended (no URL) */}
-        {activity.bookingInfo?.requiresReservation &&
+        {!visitNote &&
+          activity.bookingInfo?.requiresReservation &&
           !activity.bookingInfo.bookingUrl && (
             <div className="mt-3 px-3 py-2 bg-amber-50 rounded-lg border border-amber-100">
               <span className="text-xs text-amber-700 font-semibold">
-                ⚡ Reservation recommended — book early to secure your spot
+                Check reservation requirements with the venue.
               </span>
             </div>
           )}
@@ -614,6 +656,8 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
                   )}
                 </div>
               )}
+
+            <VenueSourceNote value={restaurant.source} />
 
             {/* Reserve CTA */}
             {hasReservation && (

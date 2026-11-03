@@ -1,6 +1,7 @@
 import {
   HotelCardSchema,
   ActivityCardSchema,
+  RestaurantCardSchema,
   BookingButtonSchema,
   PriceTagSchema,
 } from '../../lib/json-render/catalog';
@@ -35,4 +36,37 @@ describe('streamed price contracts', () => {
     expect(formatPrice(0, 'USD')).toBe('USD 0.00');
     expect(formatPrice(undefined, 'USD')).toBeUndefined();
   });
+});
+
+describe('streamed visit scope', () => {
+  const card = { name: 'Visit', description: 'Explore', duration: '1 hour', time: '09:00' };
+  it.each(['ordinary_entry', 'exterior_walk', 'guided_tour', 'event', 'unknown'])(
+    'retains %s rather than stripping it at the schema boundary',
+    (proposedVisitType) => {
+      expect(ActivityCardSchema.parse({ ...card, proposedVisitType }).proposedVisitType).toBe(
+        proposedVisitType
+      );
+    }
+  );
+  it('keeps older cards readable and rejects a claimed confirmation as intent', () => {
+    expect(ActivityCardSchema.parse(card).proposedVisitType).toBeUndefined();
+    expect(ActivityCardSchema.safeParse({ ...card, proposedVisitType: 'confirmed' }).success).toBe(
+      false
+    );
+  });
+});
+
+it('retains supplied identities on streamed activity and meal cards', () => {
+  expect(
+    ActivityCardSchema.parse({
+      id: 'visit-1',
+      name: 'Visit',
+      description: '',
+      duration: '1 hour',
+      time: 'Morning',
+    }).id
+  ).toBe('visit-1');
+  expect(RestaurantCardSchema.parse({ id: 'meal-1', name: 'Cafe', cuisine: 'French' }).id).toBe(
+    'meal-1'
+  );
 });

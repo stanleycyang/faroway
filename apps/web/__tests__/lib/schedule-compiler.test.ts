@@ -1,0 +1,1276 @@
+import { venueConstraintsForDate } from "../../../../scripts/uat/lib/venue-constraints";
+import venueFacts from "../../../../scripts/fixtures/agentic-venue-constraints.json";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import rome from "../../../../scripts/fixtures/agentic-rome-overload.json";
+import { compileSchedule } from "@/lib/search/schedule-compiler";
+import { enrichNonAffiliateCandidates } from "@/lib/search/enrichment";
+import type {
+  ActivityResult,
+  DiningResult,
+  SearchPlan,
+} from "@/lib/search/types";
+
+const plan = rome.trace.steps[0].output as unknown as SearchPlan;
+const activities = rome.trace.steps[2].output as unknown as ActivityResult[];
+const dining = rome.trace.steps[3].output as unknown as DiningResult[];
+const slots = ["morning", "afternoon", "evening"] as const;
+afterEach(() => vi.unstubAllEnvs());
+const extended = {
+  ...plan,
+  dates: { start: "2027-01-11", end: "2027-01-13", nights: 0 },
+};
+function visit(
+  id: string,
+  duration: number,
+  time: ActivityResult["bestTimeOfDay"] = "any",
+): ActivityResult {
+  return {
+    ...activities[0],
+    id,
+    name: id,
+    duration,
+    bestTimeOfDay: time,
+    vibeScore: 80,
+  };
+}
+
+describe("experimental schedule compiler", () => {
+  it("keeps visits in evening slots and leaves blocked meal windows unscheduled", async () => {
+    vi.stubEnv("TAVILY_API_KEY", "");
+    const restricted = {
+      ...extended,
+      mobilityNeeds:
+        "Working 09:00–17:00 on each trip day; only evening visits",
+    };
+    const enrichment = await enrichNonAffiliateCandidates(restricted);
+    const meals = ["breakfast", "lunch", "dinner"].map((type) => ({
+      ...dining[0],
+      id: type,
+      mealTypes: [type],
+    })) as DiningResult[];
+    const result = compileSchedule(
+      restricted,
+      [
+        ...enrichment.activities,
+        visit("museum-evening", 60, "evening"),
+        visit("gallery-evening", 60, "evening"),
+        visit("landmark-evening", 60, "evening"),
+        visit("morning-only", 60, "morning"),
+      ],
+      meals,
+    );
+    for (const day of result.days) {
+      expect(day.morning.activities).toEqual([]);
+      expect(day.afternoon.activities).toEqual([]);
+      expect(day.evening.activities.length).toBeGreaterThan(0);
+      expect(day.morning.meal?.id).toBe("breakfast");
+      expect(day.afternoon.meal).toBeUndefined();
+      expect(day.tips.join(" ")).toContain("No lunch is scheduled");
+      expect(day.tips.join(" ")).toContain("Meals are planned separately");
+    }
+    expect(result.unselectedActivityIds).toContain("morning-only");
+    expect(
+      result.days
+        .flatMap((day) => day.evening.activities)
+        .every((a) => !a.planningIdea),
+    ).toBe(true);
+  });
+  it("exposes missing supply instead of scheduling generic enrichment or unresolved web leads", async () => {
+    vi.stubEnv("TAVILY_API_KEY", "");
+    const enrichment = await enrichNonAffiliateCandidates(extended);
+    const result = compileSchedule(
+      extended,
+      enrichment.activities,
+      enrichment.dining,
+    );
+    for (const day of result.days) {
+      for (const slot of slots) {
+        expect(day[slot].activities).toEqual([]);
+        expect(day[slot].meal).toBeUndefined();
+      }
+    }
+    expect(result.reviewRequiredActivities).toHaveLength(
+      enrichment.activities.length,
+    );
+    expect(
+      result.issues.filter((i) => i.endsWith("meal_supply_gap")),
+    ).toHaveLength(9);
+  });
+  it("defers alcohol-focused stops for a party with children and exposes the missing highlight", () => {
+    const input = {
+      ...plan,
+      children: 1,
+      activityCriteria: {
+        ...plan.activityCriteria,
+        mustSee: ["Mulled Wine Experience"],
+      },
+    };
+    const supply = [
+      {
+        ...visit("wine", 60),
+        name: "Hviids Vinstue Mulled Wine Experience",
+        vibeScore: 100,
+      },
+      visit("market", 60),
+    ];
+    const result = compileSchedule(input, supply, []);
+    expect(
+      slots.flatMap((slot) => result.days[0][slot].activities).map((a) => a.id),
+    ).toEqual(["market"]);
+    expect(result.reviewRequiredActivities).toEqual([
+      { id: "wine", reason: "alcohol_focused_title" },
+    ]);
+    expect(result.unfulfilledHighlights).toContain("Mulled Wine Experience");
+    expect(result.verified).toBe(false);
+    expect(
+      compileSchedule({ ...input, children: 0 }, supply, [])
+        .reviewRequiredActivities,
+    ).toEqual([]);
+  });
+  it("keeps room for a long evening highlight rather than filling the day with short visits", () => {
+    const input = {
+      ...plan,
+      activityCriteria: {
+        ...plan.activityCriteria,
+        pacePreference: "relaxed" as const,
+        mustSee: ["Evening highlight"],
+      },
+    };
+    const supply = [
+      ...Array.from({ length: 10 }, (_, i) =>
+        visit(`walk-${i}`, 60, "morning"),
+      ),
+      {
+        ...visit("highlight", 240, "evening"),
+        name: "Evening highlight experience",
+      },
+    ];
+    const result = compileSchedule(input, supply, []);
+    expect(result.days[0].evening.activities.map((a) => a.id)).toEqual([
+      "highlight",
+    ]);
+    expect(
+      slots.flatMap((slot) => result.days[0][slot].activities),
+    ).toHaveLength(1);
+  });
+  it("reserves the only available final-day visit instead of greedily using it earlier", () => {
+    const supply = Array.from({ length: 10 }, (_, i) => ({
+      ...visit(`v${i}`, 60),
+      vibeScore: i === 0 ? 100 : 80,
+    }));
+    const exclusions = supply.slice(1).map((activity) => ({
+      activityId: activity.id,
+      date: extended.dates.end,
+      reason: "closed on final day",
+      sourceUrl: "https://official.example/hours",
+      observedAt: "2026-10-31",
+    }));
+    const result = compileSchedule(extended, supply, [], exclusions);
+    expect(
+      slots.flatMap((slot) => result.days[2][slot].activities).map((a) => a.id),
+    ).toContain("v0");
+    expect(
+      result.issues.filter((issue) => issue.endsWith("activity_supply_gap")),
+    ).toHaveLength(0);
+  });
+  it("respects a dated exclusion without interpreting other dates as verified open", () => {
+    const supply = [
+      visit("museum", 60),
+      visit("walk", 60),
+      visit("gallery", 60),
+    ];
+    const result = compileSchedule(
+      extended,
+      supply,
+      [],
+      [
+        {
+          activityId: "museum",
+          date: extended.dates.start,
+          reason: "reported closed weekday",
+          sourceUrl: "https://official.example/hours",
+          observedAt: "2026-10-31",
+        },
+      ],
+    );
+    expect(
+      slots.flatMap((slot) => result.days[0][slot].activities).map((a) => a.id),
+    ).not.toContain("museum");
+    expect(
+      result.days
+        .flatMap((day) => slots.flatMap((slot) => day[slot].activities))
+        .map((a) => a.id),
+    ).toContain("museum");
+    for (const day of result.days)
+      expect(slots.flatMap((slot) => day[slot].activities)).toHaveLength(1);
+    expect(result.verified).toBe(false);
+  });
+  it("allocates the observed 525-minute Rome inventory without shortening or inventing visits", () => {
+    const before = JSON.stringify(activities);
+    const result = compileSchedule(plan, activities, dining);
+    const selected = slots.flatMap((slot) => result.days[0][slot].activities);
+    expect(selected.length).toBeGreaterThan(0);
+    expect(
+      selected.reduce((sum, a) => sum + a.duration, 0),
+    ).toBeLessThanOrEqual(420);
+    for (const activity of selected) expect(activities).toContain(activity);
+    expect(result.unselectedActivityIds.length).toBeGreaterThan(0);
+    expect(JSON.stringify(activities)).toBe(before);
+    expect(result.verified).toBe(false);
+  });
+
+  it("reserves supply for later days even when every visit is evening-only", () => {
+    const result = compileSchedule(
+      extended,
+      [1, 2, 3, 4].map((i) => visit(`v${i}`, 60, "evening")),
+      [],
+    );
+    expect(result.days.map((day) => day.date)).toEqual([
+      "2027-01-11",
+      "2027-01-12",
+      "2027-01-13",
+    ]);
+    for (const day of result.days) {
+      expect(day.evening.activities.length).toBeGreaterThan(0);
+      expect(day.morning.activities).toHaveLength(0);
+      expect(day.afternoon.activities).toHaveLength(0);
+    }
+  });
+
+  it("exposes sparse and invalid inventory instead of fabricating coverage", () => {
+    const result = compileSchedule(
+      extended,
+      [visit("hours", 2.5), visit("zero", 0), visit("valid", 60)],
+      [],
+    );
+    expect(
+      result.days.flatMap((day) =>
+        slots.flatMap((slot) => day[slot].activities),
+      ),
+    ).toHaveLength(1);
+    expect(
+      result.issues.filter((issue) => issue.endsWith("activity_supply_gap")),
+    ).toHaveLength(2);
+    expect(
+      result.issues.filter((issue) => issue.endsWith("meal_supply_gap")),
+    ).toHaveLength(9);
+    expect(result.issues).toContain(
+      "excluded_invalid_or_infeasible_activity:hours",
+    );
+  });
+
+  it("keeps a nearby repeated restaurant ahead of a distant unused one and discloses allergy uncertainty", () => {
+    const point = { ...activities[0].location, lat: 40, lng: -74 };
+    const options = [
+      {
+        ...dining[0],
+        id: "near",
+        location: point,
+        mealTypes: ["breakfast", "lunch", "dinner"],
+      },
+      {
+        ...dining[0],
+        id: "far",
+        location: { ...point, lat: 40.04 },
+        mealTypes: ["breakfast", "lunch", "dinner"],
+      },
+    ] as DiningResult[];
+    const result = compileSchedule(
+      {
+        ...plan,
+        requirements: {
+          allergies: ["peanuts"],
+          dietaryPreferences: [],
+          accessibility: [],
+          mobilityNotes: "",
+        },
+      },
+      [{ ...visit("nearby", 60), location: point }],
+      options,
+    );
+    for (const slot of slots)
+      expect(result.days[0][slot].meal?.id).toBe("near");
+    expect(result.days[0].tips.join(" ")).toContain(
+      "No venue's allergy handling has been verified",
+    );
+  });
+
+  it("chooses a different nearby restaurant for each meal when local supply permits", () => {
+    const point = { ...activities[0].location, lat: 40, lng: -74 };
+    const options = [0, 1, 2].map((i) => ({
+      ...dining[0],
+      id: `local-${i}`,
+      location: { ...point, lat: 40 + i * 0.01 },
+      mealTypes: ["breakfast", "lunch", "dinner"],
+    })) as DiningResult[];
+    const result = compileSchedule(
+      plan,
+      [{ ...visit("nearby", 60), location: point }],
+      options,
+    );
+    expect(slots.map((slot) => result.days[0][slot].meal?.id)).toEqual([
+      "local-0",
+      "local-1",
+      "local-2",
+    ]);
+  });
+
+  it("enforces independent pace, duration, identity and slot constraints across varied inventories", () => {
+    for (const pace of ["relaxed", "moderate", "packed"] as const) {
+      const supply = Array.from({ length: 12 }, (_, i) =>
+        visit(
+          `v${i}`,
+          [45, 120, 180, 240][i % 4],
+          [...slots, "any" as const][i % 4],
+        ),
+      );
+      const input = {
+        ...extended,
+        activityCriteria: { ...plan.activityCriteria, pacePreference: pace },
+      };
+      const result = compileSchedule(input, supply, []);
+      const used = new Set<string>();
+      for (const day of result.days) {
+        const all = slots.flatMap((slot) => day[slot].activities);
+        expect(all.length).toBeGreaterThan(0);
+        expect(all.length).toBeLessThanOrEqual(
+          pace === "relaxed" ? 2 : pace === "packed" ? 5 : 4,
+        );
+        expect(all.reduce((sum, a) => sum + a.duration, 0)).toBeLessThanOrEqual(
+          pace === "relaxed" ? 240 : pace === "packed" ? 600 : 420,
+        );
+        for (const slot of slots)
+          for (const a of day[slot].activities) {
+            expect(a.bestTimeOfDay === "any" || a.bestTimeOfDay === slot).toBe(
+              true,
+            );
+            expect(used.has(a.id)).toBe(false);
+            used.add(a.id);
+            expect(supply).toContain(a);
+          }
+      }
+      expect(compileSchedule(input, supply, [])).toEqual(result);
+    }
+  });
+
+  it("rejects malformed or unbounded dates before searching", () => {
+    for (const dates of [
+      { start: "2027-02-30", end: "2027-03-03", nights: 1 },
+      { start: "2027-01-01", end: "2027-03-01", nights: 1 },
+      { start: "invalid", end: "2027-03-01", nights: 1 },
+    ])
+      expect(() =>
+        compileSchedule({ ...plan, dates }, activities, dining),
+      ).toThrow(/valid dates/);
+  });
+});
+
+it("uses reviewed opening-day evidence before allocating Paris museum visits", () => {
+  const input = { ...extended, destination: "Paris, France" };
+  const supply = [
+    {
+      ...visit("louvre", 120),
+      name: "Private VIP Louvre Museum Tour with Art Historian",
+    },
+    { ...visit("orsay", 120), name: "Musée d'Orsay Private Guided Tour" },
+    visit("walk", 60),
+  ];
+  const exclusions = ["2027-01-11", "2027-01-12", "2027-01-13"].flatMap(
+    (date) =>
+      supply.flatMap((activity) =>
+        venueConstraintsForDate(
+          input.destination,
+          activity.name,
+          date,
+          venueFacts,
+        ).map((finding) => ({
+          activityId: activity.id,
+          date,
+          reason: finding.finding,
+          sourceUrl: finding.sourceUrl,
+          observedAt: finding.observedAt,
+        })),
+      ),
+  );
+  const result = compileSchedule(input, supply, [], exclusions);
+  expect(
+    result.days.flatMap((d) => slots.flatMap((slot) => d[slot].activities)),
+  ).toHaveLength(3);
+  for (const day of result.days) {
+    const ids = slots.flatMap((slot) => day[slot].activities.map((a) => a.id));
+    if (day.date === "2027-01-11") expect(ids).not.toContain("orsay");
+    if (day.date === "2027-01-12") expect(ids).not.toContain("louvre");
+  }
+  expect(result.verified).toBe(false);
+});
+
+it("explains an omitted long highlight without silently relaxing the pace", () => {
+  const input = {
+    ...plan,
+    activityCriteria: {
+      ...plan.activityCriteria,
+      pacePreference: "moderate" as const,
+      mustSee: ["Golden Circle"],
+    },
+  };
+  const result = compileSchedule(
+    input,
+    [
+      { ...visit("long", 600), name: "Golden Circle and Glacier Tour" },
+      visit("short", 60),
+    ],
+    [],
+  );
+  expect(result.deferredLongVisits).toEqual([
+    {
+      id: "long",
+      name: "Golden Circle and Glacier Tour",
+      durationMinutes: 600,
+      dailyBudgetMinutes: 420,
+      matchedHighlights: ["Golden Circle"],
+    },
+  ]);
+  expect(result.days[0].tips.join(" ")).toContain("10h");
+  expect(result.days[0].tips.join(" ")).toContain("7h daily activity limit");
+  expect(
+    result.days
+      .flatMap((d) => slots.flatMap((slot) => d[slot].activities))
+      .map((a) => a.id),
+  ).not.toContain("long");
+});
+it("does not offer a long alcohol-focused visit as a family pace adjustment", () => {
+  const input = {
+    ...plan,
+    children: 1,
+    activityCriteria: { ...plan.activityCriteria, mustSee: ["Wine Tasting"] },
+  };
+  const result = compileSchedule(
+    input,
+    [
+      { ...visit("wine", 600), name: "Wine Tasting Experience" },
+      visit("short", 60),
+    ],
+    [],
+  );
+  expect(result.deferredLongVisits).toEqual([]);
+  expect(result.days[0].tips.join(" ")).not.toContain("review the pace");
+});
+it("leaves descriptive aliases unresolved without verified identity evidence", () => {
+  const input = {
+    ...plan,
+    activityCriteria: { ...plan.activityCriteria, mustSee: ["Perlan Museum"] },
+  };
+  const result = compileSchedule(
+    input,
+    [
+      {
+        ...visit("perlan", 150),
+        name: "Perlan - Wonders of Iceland Nature Museum",
+      },
+    ],
+    [],
+  );
+  expect(result.unfulfilledHighlights).toEqual(["Perlan Museum"]);
+  expect(result.days[0].tips.join(" ")).toContain("not matched by name");
+  expect(result.verified).toBe(false);
+});
+
+it("does not schedule a supplied stair conflict over a stroller-access request", () => {
+  const input = {
+    ...plan,
+    mobilityNeeds: "Stroller access, short walks",
+    activityCriteria: { ...plan.activityCriteria, mustSee: [] },
+  };
+  const supply = [
+    {
+      ...visit("bunker", 90),
+      description:
+        "While it has some stairs, this is a great historical visit.",
+      vibeScore: 100,
+    },
+    { ...visit("garden", 60), description: "A botanical collection." },
+  ];
+  const original = JSON.stringify(supply);
+  const result = compileSchedule(input, supply, []);
+  expect(
+    result.days
+      .flatMap((day) => slots.flatMap((slot) => day[slot].activities))
+      .map((a) => a.id),
+  ).not.toContain("bunker");
+  expect(result.reviewRequiredActivities).toContainEqual({
+    id: "bunker",
+    reason: "supplied_access_conflict",
+  });
+  expect(result.days[0].tips?.join(" ")).toContain(
+    "Confirm an accessible route",
+  );
+  expect(result.verified).toBe(false);
+  expect(JSON.stringify(supply)).toBe(original);
+});
+
+it("explains an unavoidable meal transition without inventing a route", () => {
+  const supply = [
+    {
+      ...visit("near", 60, "morning"),
+      location: { name: "near", address: "", lat: 41.9, lng: 12.5 },
+    },
+    {
+      ...visit("far", 60, "afternoon"),
+      location: { name: "far", address: "", lat: 42, lng: 12.5 },
+    },
+  ];
+  const result = compileSchedule(
+    { ...plan, activityCriteria: { ...plan.activityCriteria, mustSee: [] } },
+    supply,
+    [],
+  );
+  expect(result.issues).toContain("day_1:lunch:separated_visit_anchors");
+  expect(
+    result.days[0].tips?.some((tip) =>
+      tip.includes("choose which area to eat in"),
+    ),
+  ).toBe(true);
+  expect(result.verified).toBe(false);
+});
+
+it("adds a proposed daily rest timetable without changing selected visits", () => {
+  const supply = [
+    visit("garden", 90, "morning"),
+    visit("museum", 90, "afternoon"),
+  ];
+  const baseline = compileSchedule(plan, supply, []);
+  const result = compileSchedule(
+    { ...plan, mobilityNeeds: "Short walks and a midday rest every day" },
+    supply,
+    [],
+  );
+  expect(result.days[0].morning.activities).toEqual(
+    baseline.days[0].morning.activities,
+  );
+  expect(result.days[0].afternoon.activities).toEqual(
+    baseline.days[0].afternoon.activities,
+  );
+  expect(result.timingProposals).toHaveLength(result.days.length);
+  expect(result.timingProposals[0].fitsPolicy).toBe(true);
+  expect(result.days[0].tips[0]).toContain("Proposed local timing");
+  expect(baseline.timingProposals).toEqual([]);
+});
+
+const restPlan: SearchPlan = {
+  ...plan,
+  dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 },
+  mobilityNeeds: "Short walks and a midday rest every day",
+  activityCriteria: {
+    ...plan.activityCriteria,
+    pacePreference: "moderate",
+    mustSee: ["museum"],
+  },
+};
+const restMeals: DiningResult[] = (
+  ["breakfast", "lunch", "dinner"] as const
+).map((type) => ({
+  ...dining[0],
+  id: type,
+  mealTypes: [type],
+}));
+it("screens the live 210-minute morning conflict before selecting visits", () => {
+  const input = [
+    visit("museum", 150, "morning"),
+    visit("walk", 60, "morning"),
+    visit("gallery", 180, "afternoon"),
+  ];
+  const original = structuredClone(input);
+  const result = compileSchedule(restPlan, input, restMeals);
+  expect(result.timingProposals.every((proposal) => proposal.fitsPolicy)).toBe(
+    true,
+  );
+  expect(result.days[0].morning.activities.map((a) => a.id)).toEqual([
+    "museum",
+  ]);
+  expect(result.unselectedActivityIds).toContain("walk");
+  expect(input).toEqual(original);
+  for (const item of slots.flatMap((slot) => result.days[0][slot].activities))
+    expect(item).toEqual(input.find((a) => a.id === item.id));
+  expect(result.days[0].tips.join(" ")).toContain("Review any omitted visits");
+});
+it("does not reserve coverage for visits that cannot fit any permitted rest window", () => {
+  const result = compileSchedule(
+    {
+      ...restPlan,
+      dates: { start: "2027-01-11", end: "2027-01-12", nights: 1 },
+    },
+    [
+      visit("too-long", 300, "morning"),
+      visit("short-a", 60),
+      visit("short-b", 60),
+    ],
+    restMeals,
+  );
+  expect(
+    result.days.every(
+      (day) => slots.flatMap((slot) => day[slot].activities).length > 0,
+    ),
+  ).toBe(true);
+  expect(result.timingProposals.every((proposal) => proposal.fitsPolicy)).toBe(
+    true,
+  );
+  expect(result.reviewRequiredActivities).toContainEqual({
+    id: "too-long",
+    reason: "does_not_fit_proposed_rest_windows",
+  });
+  expect(result.days[0].tips.join(" ")).toContain(
+    "visit has not been shortened",
+  );
+});
+it("reports insufficient supply when all supplied visits conflict with the rest policy", () => {
+  const result = compileSchedule(
+    restPlan,
+    [visit("too-long", 300, "morning")],
+    restMeals,
+  );
+  expect(slots.flatMap((slot) => result.days[0][slot].activities)).toEqual([]);
+  expect(result.issues).toContain("day_1:activity_supply_gap");
+  expect(result.unselectedActivityIds).toEqual(["too-long"]);
+});
+it("keeps the non-rest selection unchanged for a negated request", () => {
+  const input = [
+    visit("museum", 150, "morning"),
+    visit("walk", 60, "morning"),
+    visit("gallery", 180, "afternoon"),
+  ];
+  const negated = compileSchedule(
+    { ...restPlan, mobilityNeeds: "No midday rest every day" },
+    input,
+    restMeals,
+  );
+  const baseline = compileSchedule(
+    { ...restPlan, mobilityNeeds: undefined },
+    input,
+    restMeals,
+  );
+  for (const day of negated.days)
+    day.tips = day.tips.filter((tip) => !tip.startsWith("Your requirements:"));
+  expect(negated).toEqual(baseline);
+});
+
+it("keeps explicitly speculative events as review leads rather than dated visits", () => {
+  const event = {
+    ...visit("event", 90),
+    name: "Carpentry Exhibition (Check Local Schedules)",
+    vibeScore: 100,
+  };
+  const result = compileSchedule(plan, [event, visit("museum", 90)], dining);
+  expect(
+    result.days
+      .flatMap((day) => slots.flatMap((slot) => day[slot].activities))
+      .map((a) => a.id),
+  ).not.toContain("event");
+  expect(result.reviewRequiredActivities).toContainEqual({
+    id: "event",
+    reason: "speculative_event_title",
+  });
+  expect(result.days[0].tips.join(" ")).toContain(
+    "Confirm the event's dates and venue",
+  );
+  expect(result.unselectedActivityIds).toContain("event");
+});
+
+it("leaves pre-arrival visits and meals unscheduled without losing later-day coverage", () => {
+  const result = compileSchedule(
+    { ...extended, mobilityNeeds: "Arrive on the first day at 18:00" },
+    [
+      visit("morning-a", 90, "morning"),
+      visit("morning-b", 90, "morning"),
+      visit("afternoon-a", 90, "afternoon"),
+      visit("evening-only", 60, "evening"),
+    ],
+    restMeals,
+  );
+  expect(result.days[0].morning.activities).toEqual([]);
+  expect(result.days[0].morning.meal).toBeUndefined();
+  expect(result.days[0].afternoon.activities).toEqual([]);
+  expect(result.days[0].afternoon.meal).toBeUndefined();
+  expect(result.days[0].evening.activities.map((a) => a.id)).toEqual([
+    "evening-only",
+  ]);
+  expect(
+    result.days
+      .slice(1)
+      .every((day) => slots.flatMap((slot) => day[slot].activities).length > 0),
+  ).toBe(true);
+  expect(result.days[0].tips.join(" ")).toContain("18:00–24:00");
+});
+it("keeps visits within a shortened day-part budget including a meal and buffer", () => {
+  const result = compileSchedule(
+    { ...plan, mobilityNeeds: "No starts before 11am" },
+    [visit("morning", 60, "morning"), visit("afternoon", 60, "afternoon")],
+    restMeals,
+  );
+  expect(result.days[0].morning.activities).toEqual([]);
+  expect(result.days[0].morning.meal).toBeDefined();
+  expect(result.unselectedActivityIds).toContain("morning");
+});
+it("leaves conflicting availability empty and exposes the conflict", () => {
+  const result = compileSchedule(
+    {
+      ...plan,
+      mobilityNeeds:
+        "Arrive on the first day at 18:00; depart on the final day at 09:00",
+    },
+    [visit("walk", 30)],
+    restMeals,
+  );
+  expect(slots.flatMap((slot) => result.days[0][slot].activities)).toEqual([]);
+  expect(slots.every((slot) => !result.days[0][slot].meal)).toBe(true);
+  expect(result.issues).toContain("day_1:conflicting_traveler_availability");
+  expect(result.issues).toContain("day_1:activity_supply_gap");
+});
+
+it("leaves an early departure day free of visits without reporting missing supply", () => {
+  const result = compileSchedule(
+    { ...extended, mobilityNeeds: "Depart on the final day at 09:00" },
+    [visit("museum", 90), visit("gallery", 90), visit("walk", 60)],
+    restMeals,
+  );
+  const last = result.days[2];
+  expect(slots.flatMap((slot) => last[slot].activities)).toEqual([]);
+  expect(last.morning.meal).toBeDefined();
+  expect(last.afternoon.meal).toBeUndefined();
+  expect(last.evening.meal).toBeUndefined();
+  expect(result.issues).not.toContain("day_3:activity_supply_gap");
+  expect(last.tips.join(" ")).toContain("confirm transfer time");
+  expect(
+    result.days
+      .slice(0, 2)
+      .every((day) => slots.flatMap((slot) => day[slot].activities).length > 0),
+  ).toBe(true);
+});
+
+it("still reports missing supply when a restricted day has room for visits", () => {
+  const result = compileSchedule(
+    { ...plan, mobilityNeeds: "Depart on the final day at 12:00" },
+    [],
+    restMeals,
+  );
+  expect(result.issues).toContain("day_1:activity_supply_gap");
+});
+
+it("does not show a midday rest before a declared evening arrival", () => {
+  const result = compileSchedule(
+    {
+      ...restPlan,
+      mobilityNeeds:
+        "Arrive on the first day at 18:00; a midday rest every day",
+    },
+    [visit("evening", 60, "evening")],
+    restMeals,
+  );
+  expect(result.timingProposals[0].fitsPolicy).toBe(false);
+  expect(result.days[0].timingProposal?.events).toEqual([]);
+  expect(result.issues).toContain("day_1:midday_rest_timing_conflict");
+});
+
+it("keeps explicit dietary, access and mobility requirements visible on every day without certifying venues", () => {
+  const input: SearchPlan = {
+    ...extended,
+    mobilityNeeds: "Wheelchair access and step-free routes",
+    requirements: {
+      allergies: [],
+      dietaryPreferences: ["gluten-free"],
+      accessibility: ["step_free_entrance"],
+      mobilityNotes:
+        "Celiac disease; direct kitchen cross-contact confirmation required",
+    },
+  };
+  const supplied = activities.map((activity) => ({
+    ...activity,
+    description: activity.description ?? "Museum visit.",
+  }));
+  const baseline = compileSchedule(
+    { ...input, requirements: undefined },
+    supplied,
+    dining,
+  );
+  const result = compileSchedule(input, supplied, dining);
+  for (const day of result.days) {
+    const note = day.tips.find((tip) => tip.startsWith("Your requirements:"));
+    expect(note).toContain(input.requirements!.mobilityNotes);
+    expect(note).toContain("gluten-free");
+    expect(note).toContain("step free entrance");
+    expect(note).toContain("not verified venue features");
+  }
+  expect(result.days.map((d) => slots.map((s) => d[s].meal?.id))).toEqual(
+    baseline.days.map((d) => slots.map((s) => d[s].meal?.id)),
+  );
+});
+
+it("honors the explicit duration ceiling without shortening visits or claiming the requested count fits", () => {
+  const input = {
+    ...extended,
+    mobilityNeeds:
+      "At least eight museums each day, no more than two hours of activities daily, and a midday rest every day",
+  };
+  const supply = Array.from({ length: 12 }, (_, i) => visit(`museum-${i}`, 90));
+  const original = structuredClone(supply);
+  const result = compileSchedule(input, supply, dining);
+  for (const day of result.days) {
+    const visits = slots.flatMap((slot) => day[slot].activities);
+    expect(visits.reduce((sum, a) => sum + a.duration, 0)).toBeLessThanOrEqual(
+      120,
+    );
+    expect(visits.length).toBeGreaterThan(0);
+    expect(day.tips.join(" ")).toContain(
+      "does not meet your request for at least 8 museums",
+    );
+  }
+  expect(supply).toEqual(original);
+});
+
+it("shows original legacy dietary restrictions without presenting model-added dining criteria as traveler requests", () => {
+  const input: SearchPlan = {
+    ...plan,
+    dietaryRestrictions: ["vegan"],
+    requirements: undefined,
+    diningCriteria: {
+      ...plan.diningCriteria,
+      dietaryNeeds: ["vegan", "model-added preference"],
+    },
+  };
+  const result = compileSchedule(input, activities, dining);
+  for (const day of result.days) {
+    const note = day.tips.find((tip) => tip.startsWith("Your requirements:"));
+    expect(note).toContain("Dietary restrictions: vegan");
+    expect(note).not.toContain("model-added preference");
+  }
+});
+
+it("respects a slot-specific exclusion without excluding compatible times on that date", () => {
+  const candidate = visit("museum-hours", 60, "any");
+  const result = compileSchedule(
+    plan,
+    [candidate],
+    [],
+    [
+      {
+        activityId: candidate.id,
+        date: plan.dates.start,
+        slot: "morning",
+        reason: "hours",
+        sourceUrl: "https://example.com",
+        observedAt: "2026-11-01",
+      },
+    ],
+  );
+  expect(result.days[0].morning.activities).toEqual([]);
+  expect(
+    [
+      ...result.days[0].afternoon.activities,
+      ...result.days[0].evening.activities,
+    ].map((a) => a.id),
+  ).toContain(candidate.id);
+});
+
+it("retains special-opening ideas for review without scheduling unsupported admission", () => {
+  const opening = {
+    ...visit("late-view", 90, "evening"),
+    name: "Gallery Late View",
+    vibeScore: 100,
+  };
+  const result = compileSchedule(plan, [opening, visit("walk", 60)], dining);
+  expect(
+    result.days
+      .flatMap((d) => slots.flatMap((s) => d[s].activities))
+      .map((a) => a.id),
+  ).toEqual(["walk"]);
+  expect(result.reviewRequiredActivities).toContainEqual({
+    id: "late-view",
+    reason: "special_opening_requires_date_review",
+  });
+  expect(result.days[0].tips.join(" ")).toContain(
+    "Special opening to review, not scheduled: Gallery Late View",
+  );
+  expect(result.unselectedActivityIds).toContain("late-view");
+});
+
+it.each(["2027-01-13", "2027-01-15"])(
+  "does not schedule a weekday-named event on %s without dated evidence",
+  (date) => {
+    const result = compileSchedule(
+      { ...plan, dates: { start: date, end: date, nights: 0 } },
+      [
+        {
+          ...visit("friday-event", 120, "evening"),
+          name: "NGV Friday Nights",
+          vibeScore: 100,
+        },
+        visit("ordinary", 60),
+      ],
+      dining,
+    );
+    expect(
+      result.days
+        .flatMap((d) => slots.flatMap((s) => d[s].activities))
+        .map((a) => a.id),
+    ).toEqual(["ordinary"]);
+    expect(result.reviewRequiredActivities).toContainEqual({
+      id: "friday-event",
+      reason: "weekday_event_requires_date_review",
+    });
+    expect(result.days[0].tips.join(" ")).toContain(
+      "A weekday in the name does not confirm that it runs during your trip",
+    );
+  },
+);
+
+it("honors explicit work blocks in compiled visit capacity and disclosed free intervals", () => {
+  const result = compileSchedule(
+    { ...extended, mobilityNeeds: "Working 09:00–17:00 on each trip day" },
+    [
+      visit("long-morning", 120, "morning"),
+      visit("long-afternoon", 120, "afternoon"),
+      visit("after-work", 60, "evening"),
+    ],
+    [],
+  );
+  expect(result.issues).not.toContain(
+    "traveler_availability_interpretation_required",
+  );
+  expect(result.unselectedActivityIds).toContain("long-morning");
+  expect(result.unselectedActivityIds).toContain("long-afternoon");
+  expect(
+    result.days
+      .flatMap((d) => d.evening.activities)
+      .some((a) => a.id === "after-work"),
+  ).toBe(true);
+  for (const day of result.days) {
+    expect(day.tips.join(" ")).toContain("00:00–09:00; 17:00–24:00");
+    expect(day.morning.activities).toEqual([]);
+    expect(day.afternoon.activities).toEqual([]);
+  }
+});
+
+it("does not fill an evening-only brief with the library after its published closing time", async () => {
+  const { reviewedHoursExclusions } =
+    await import("@/lib/search/reviewed-venue-hours");
+  const { default: records } =
+    await import("../../../../scripts/fixtures/reviewed-venue-hours.json");
+  const input: SearchPlan = {
+    ...extended,
+    destination: "Melbourne, Australia",
+    dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 },
+    mobilityNeeds: "Working 09:00–17:00 on each trip day; only evening visits",
+  };
+  const library = {
+    ...visit("library", 60, "evening"),
+    name: "State Library Victoria",
+    location: {
+      ...activities[0].location,
+      address: "328 Swanston St, Melbourne VIC 3000, Australia",
+    },
+  };
+  const baseline = compileSchedule(input, [library], []);
+  expect(baseline.days[0].evening.activities.map((a) => a.id)).toContain(
+    "library",
+  );
+  const exclusions = reviewedHoursExclusions(
+    input,
+    [library],
+    ["2027-01-11"],
+    records as import("@/lib/search/reviewed-venue-hours").ReviewedVenueHours[],
+    "2026-11-02",
+  );
+  const corrected = compileSchedule(input, [library], [], exclusions);
+  expect(
+    corrected.days.flatMap((day) =>
+      slots.flatMap((slot) => day[slot].activities),
+    ),
+  ).toEqual([]);
+  expect(corrected.unselectedActivityIds).toContain("library");
+});
+
+it("prefers admitted source evidence over generated scores while preserving requested highlights", () => {
+  const input: SearchPlan = {
+    ...extended,
+    dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 },
+    mobilityNeeds: "only evening visits",
+    requirements: undefined,
+    activityCriteria: { ...extended.activityCriteria, mustSee: [] },
+  };
+  const reviewed = {
+    ...visit("Reviewed observation deck", 180, "evening"),
+    vibeScore: 60,
+  };
+  const generated = {
+    ...visit("Generated museum", 180, "evening"),
+    vibeScore: 100,
+  };
+  const ids = (result: ReturnType<typeof compileSchedule>) =>
+    result.days.flatMap((d) => d.evening.activities.map((a) => a.id));
+  expect(ids(compileSchedule(input, [generated, reviewed], []))).toEqual([
+    generated.id,
+  ]);
+  expect(
+    ids(
+      compileSchedule(input, [generated, reviewed], [], [], {
+        reviewedActivityIds: [reviewed.id],
+      }),
+    ),
+  ).toEqual([reviewed.id]);
+  const required = {
+    ...input,
+    activityCriteria: { ...input.activityCriteria, mustSee: [generated.name] },
+  };
+  expect(
+    ids(
+      compileSchedule(required, [generated, reviewed], [], [], {
+        reviewedActivityIds: [reviewed.id],
+      }),
+    ),
+  ).toEqual([generated.id]);
+  // Evidence ranking cannot bypass explicit exclusions.
+  expect(
+    ids(
+      compileSchedule(
+        input,
+        [generated, reviewed],
+        [],
+        [
+          {
+            activityId: reviewed.id,
+            date: "2027-01-11",
+            reason: "closed",
+            sourceUrl: "https://example.com",
+            observedAt: "2026-11-02",
+          },
+        ],
+        { reviewedActivityIds: [reviewed.id] },
+      ),
+    ),
+  ).toEqual([generated.id]);
+});
+
+it("retains a requested highlight before the bounded inventory search with reviewed alternatives", () => {
+  const input: SearchPlan = {
+    ...extended,
+    dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 },
+    mobilityNeeds: "only evening visits",
+    requirements: undefined,
+    activityCriteria: {
+      ...extended.activityCriteria,
+      mustSee: ["Requested museum"],
+    },
+  };
+  const requested = {
+    ...visit("Requested museum", 180, "evening"),
+    vibeScore: 1,
+  };
+  const alternatives = Array.from({ length: 24 }, (_, index) =>
+    visit(`Reviewed alternative ${index}`, 180, "evening"),
+  );
+  const result = compileSchedule(input, [...alternatives, requested], [], [], {
+    reviewedActivityIds: alternatives.map((activity) => activity.id),
+  });
+  expect(result.issues).toContain("inventory_search_limit");
+  expect(
+    result.days[0].evening.activities.map((activity) => activity.id),
+  ).toEqual([requested.id]);
+});
+
+it("does not schedule the observed bakery tasting and the same bakery meal on the same day", () => {
+  const bakery = {
+    ...visit("tasting", 60, "morning"),
+    name: "Pastéis de Belém Tasting",
+    location: {
+      name: "Bakery",
+      address: "R. de Belém 84 92, 1300-085 Lisboa, Portugal",
+      lat: 38.6975,
+      lng: -9.2032,
+    },
+  };
+  const meal = {
+    ...dining[0],
+    id: "bakery-meal",
+    name: "Pastéis de Belém",
+    mealTypes: ["breakfast" as const],
+    location: {
+      name: "Bakery",
+      address: "R. de Belém 84 92, 1300-085 Lisboa",
+      lat: 38.6975,
+      lng: -9.2032,
+    },
+  };
+  const alternative = {
+    ...meal,
+    id: "other-breakfast",
+    name: "Another cafe",
+    location: { ...meal.location, address: "Different address" },
+  };
+  const result = compileSchedule(
+    {
+      ...plan,
+      destination: "Lisbon, Portugal",
+      dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 },
+    },
+    [bakery],
+    [meal, alternative],
+  );
+  expect(result.days[0].morning.activities.map((a) => a.id)).toContain(
+    "tasting",
+  );
+  expect(result.days[0].morning.meal?.id).toBe("other-breakfast");
+});
+
+it("keeps obviously distant visits apart and chooses a nearby meal when transfer evidence is absent", () => {
+  const local = {
+    ...visit("local", 60),
+    location: {
+      name: "Local",
+      address: "Local street",
+      lat: 38.71,
+      lng: -9.14,
+    },
+  };
+  const distant = {
+    ...visit("distant", 60),
+    location: { name: "Distant", address: "Other town", lat: 39.2, lng: -9.14 },
+  };
+  const farMeal = {
+    ...dining[0],
+    id: "far-meal",
+    mealTypes: ["lunch" as const],
+    location: distant.location,
+  };
+  const nearMeal = { ...farMeal, id: "near-meal", location: local.location };
+  const result = compileSchedule(
+    { ...plan, dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 } },
+    [local, distant],
+    [farMeal, nearMeal],
+    [],
+    { maxUnverifiedTransferKm: 6, maxUnverifiedMealDistanceKm: 3 },
+  );
+  const visits = slots.flatMap((slot) => result.days[0][slot].activities);
+  expect(visits).toHaveLength(1);
+  expect(result.days[0].afternoon.meal?.id).toBe(
+    visits[0].id === "local" ? "near-meal" : "far-meal",
+  );
+  expect(result.verified).toBe(false);
+});
+
+it("does not schedule a taxi scenic tour when public transport is explicitly requested", () => {
+  const request = {
+    ...extended,
+    mobilityNeeds:
+      "Winter trip. Use public transport. Beginner activities only.",
+  };
+  const taxi = visit("Bödeli Taxi Scenic Tour", 90);
+  const result = compileSchedule(
+    request,
+    [taxi, visit("Local museum", 90)],
+    [],
+  );
+  expect(
+    result.days
+      .flatMap((day) => slots.flatMap((slot) => day[slot].activities))
+      .some((activity) => activity.id === taxi.id),
+  ).toBe(false);
+  expect(result.reviewRequiredActivities).toContainEqual({
+    id: taxi.id,
+    reason: "private_transport_conflicts_with_request",
+  });
+  const flexible = compileSchedule(
+    {
+      ...request,
+      mobilityNeeds: "Do not use public transport. Taxi preferred.",
+    },
+    [taxi],
+    [],
+  );
+  expect(
+    flexible.reviewRequiredActivities.some((item) => item.id === taxi.id),
+  ).toBe(false);
+});
+
+it("holds differently named boat journeys for boarding review, while preserving waterfront walks", () => {
+  const request = {
+    ...extended,
+    mobilityNeeds: "step-free entrances and routes",
+  };
+  const boats = [
+    visit("Canal Tour from Nyhavn", 60),
+    visit("Boat Trip from Ved Stranden", 60),
+  ];
+  const walk = visit("Nyhavn Waterfront Walk", 45);
+  const result = compileSchedule(request, [...boats, walk], []);
+  expect(
+    result.reviewRequiredActivities
+      .filter((item) => item.reason === "boarding_access_requires_review")
+      .map((item) => item.id),
+  ).toEqual(boats.map((item) => item.id));
+  expect(
+    result.reviewRequiredActivities.some((item) => item.id === walk.id),
+  ).toBe(false);
+  expect(
+    compileSchedule({ ...request, mobilityNeeds: undefined }, boats, [])
+      .reviewRequiredActivities,
+  ).toEqual([]);
+});
+
+it("screens newly observed Copenhagen closures without treating winter events as ordinary entry", () => {
+  for (const [name, date] of [
+    ["Designmuseum Danmark", "2027-01-11"],
+    ["Reffen - Copenhagen Street Food", "2027-01-12"],
+  ]) {
+    expect(
+      venueConstraintsForDate(
+        "Copenhagen, Denmark",
+        name,
+        date,
+        venueFacts,
+        "ordinary_entry",
+      ).some((item) => item.finding === "scheduled_on_reported_closed_date"),
+    ).toBe(true);
+    expect(
+      venueConstraintsForDate(
+        "Copenhagen, Denmark",
+        name,
+        date,
+        venueFacts,
+        "event",
+      ).every((item) => item.finding === "venue_visit_scope_requires_review"),
+    ).toBe(true);
+  }
+});
+
+it("requires dated organizer evidence for event scope and seasonal markets", () => {
+  const event = {
+    ...visit("Named performance", 60),
+    proposedVisitType: "event" as const,
+  };
+  const market = visit("Kgs. Nytorv Winter Market", 60);
+  const result = compileSchedule(extended, [event, market], []);
+  expect(result.reviewRequiredActivities).toEqual(
+    [event, market].map((item) => ({
+      id: item.id,
+      reason: "dated_event_evidence_required",
+    })),
+  );
+  expect(
+    compileSchedule(extended, [event], [], [], {
+      reviewedActivityIds: [event.id],
+    }).reviewRequiredActivities,
+  ).toEqual([]);
+});
+
+it.each([
+  "Lunch at SimpleRAW",
+  "Late Night Dining at Movida",
+  "Swiss Fondue Dinner in a Traditional Chalet",
+])("does not count %s as another sightseeing activity", (name) => {
+  const lunch = visit(name, 90);
+  expect(
+    compileSchedule(extended, [lunch], []).reviewRequiredActivities,
+  ).toContainEqual({
+    id: lunch.id,
+    reason: "meal_title_requires_dining_review",
+  });
+});

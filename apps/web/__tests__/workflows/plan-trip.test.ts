@@ -376,6 +376,58 @@ describe("planTripWorkflow", () => {
     ]);
   });
 
+  it("persists new source-backed aggregator inventory with its scheduled references", async () => {
+    const added = {
+      ...activity,
+      id: "reviewed-supply",
+      name: "Reviewed visit",
+      location: { ...activity.location, lat: 0, lng: 0 },
+      priceStatus: "unknown" as const,
+    };
+    const sourceNote = "Operator source: https://example.com/visit";
+    mocks.runAggregatorAgent.mockResolvedValue({
+      activityInventory: [activity, added],
+      topHotel: hotel,
+      days: Array.from({ length: 5 }, (_, index) => ({
+        dayNumber: index + 1,
+        date: `2026-06-0${index + 1}`,
+        title: "Draft",
+        summary: "Draft",
+        morning: { activities: [] },
+        afternoon: { activities: [] },
+        evening: { activities: index === 0 ? [added] : [] },
+        estimatedCost: 0,
+        currency: "",
+        tips: [sourceNote],
+      })),
+    });
+    const bridge = await vi.importActual<typeof import("@/lib/search/bridge")>(
+      "@/lib/search/bridge",
+    );
+    mocks.mapSearchResultsToItinerary.mockImplementation(
+      bridge.mapSearchResultsToItinerary,
+    );
+    const result = await planTripWorkflow(workflowInput);
+    expect(result.status).toBe("completed");
+    expect(
+      result.result?.activities.some((a) => a.id === "reviewed-supply"),
+    ).toBe(true);
+    expect(
+      result.result?.days[0].evening.activities[0].location.coordinates,
+    ).toBeUndefined();
+    expect(persistedDays[0].evening_activities).toHaveLength(1);
+    const stored = persistedResults.find(
+      (row) =>
+        row.data !== null &&
+        typeof row.data === "object" &&
+        "id" in row.data &&
+        row.data.id === "reviewed-supply",
+    );
+    expect(stored).toBeDefined();
+    expect(persistedDays[0].evening_activities).toEqual([stored!.id]);
+    expect(result.result?.days[0].tips).toContain(sourceNote);
+  });
+
   it("rejects an incomplete or misdated itinerary before saving it", async () => {
     mocks.runAggregatorAgent.mockResolvedValue({
       days: [{ dayNumber: 1, date: "2026-06-02" }],
@@ -388,7 +440,7 @@ describe("planTripWorkflow", () => {
     expect(mocks.dispatchItineraryReady).not.toHaveBeenCalled();
   });
 
-  it("retains verification reminders in the saved itinerary", async () => {
+  it("retains verification reminders in saved and preview itineraries", async () => {
     mocks.runOrchestratorAgent.mockResolvedValue({
       ...searchPlan,
       mobilityNeeds: "step-free",
@@ -401,6 +453,7 @@ describe("planTripWorkflow", () => {
           {
             dayNumber: 1,
             date: "2026-06-01",
+            title: "Arrival",
             morning: slot,
             afternoon: slot,
             evening: slot,
@@ -418,6 +471,9 @@ describe("planTripWorkflow", () => {
           "Accessibility for your mobility needs is unverified",
         ),
       ]),
+    );
+    expect(mocks.buildJsonRenderSpec.mock.lastCall?.[0].days[0].tips).toEqual(
+      result.result?.days[0].tips,
     );
   });
 
@@ -497,6 +553,7 @@ describe("planTripWorkflow", () => {
     const days = [hotel, other, undefined].map((assigned, index) => ({
       dayNumber: index + 1,
       date: `2026-06-0${index + 1}`,
+      title: `Day ${index + 1}`,
       hotel: assigned,
       morning: slot,
       afternoon: slot,
@@ -863,6 +920,14 @@ describe("planTripWorkflow", () => {
   });
 
   it("preserves day hotel and transport through the real bridge and saved payload", async () => {
+    const review = {
+      ...dining,
+      id: "source-review",
+      planningIdea: true,
+      location: { ...dining.location, address: "12 Example Street" },
+      source: { url: "https://restaurant.example/", retrievedOn: "2026-11-02" },
+    };
+    mocks.runDiningAgent.mockResolvedValue([dining, review]);
     const { mapSearchResultsToItinerary } = await vi.importActual<
       typeof import("@/lib/search/bridge")
     >("@/lib/search/bridge");
@@ -914,6 +979,14 @@ describe("planTripWorkflow", () => {
         p_payload: expect.objectContaining({
           days: [
             expect.objectContaining({
+              diningOptions: [
+                {
+                  id: review.id,
+                  name: review.name,
+                  address: review.location.address,
+                  source: review.source,
+                },
+              ],
               hotel,
               transport: expect.objectContaining({
                 type: transport.type,
@@ -973,6 +1046,7 @@ describe("planTripWorkflow", () => {
           mocks.runHotelsAgent.mockResolvedValue([]);
           const nightActivity = {
             ...activity,
+            proposedVisitType: "ordinary_entry" as const,
             id: "local-night",
             affiliatePartner: undefined,
             bestTimeOfDay: "evening",
@@ -1042,6 +1116,13 @@ describe("planTripWorkflow", () => {
           expect(saved.days[0].evening.activities.map((a) => a.id)).toEqual([
             nightActivity.id,
           ]);
+          expect(saved.days[0].evening.activities[0].proposedVisitType).toBe(
+            "ordinary_entry",
+          );
+          expect(
+            mocks.buildJsonRenderSpec.mock.lastCall![0].days[0].evening
+              .activities[0].proposedVisitType,
+          ).toBe("ordinary_entry");
           expect(
             saved.days.every(
               (day) => !Object.hasOwn(day, "totalEstimatedCost"),

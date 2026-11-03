@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { PLANNING_DISCLOSURE } from "@/lib/ai/planning-disclosure";
+import { currentPlanningDisclosure } from "@/lib/ai/planning-disclosure";
 
 export async function GET() {
-  return NextResponse.json(PLANNING_DISCLOSURE, {
+  return NextResponse.json(currentPlanningDisclosure(), {
     headers: { "Cache-Control": "no-store" },
   });
 }

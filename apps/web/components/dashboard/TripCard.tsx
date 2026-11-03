@@ -1,7 +1,7 @@
 import { differenceInCalendarDays } from "date-fns";
 import { parseTripDate } from "@/lib/trips/date-duration";
 import Link from "next/link";
-import { Compass, Users, ArrowUpRight } from "lucide-react";
+import { Users, ArrowUpRight } from "lucide-react";
 import { TripCoverImage } from "../trips/TripCoverImage";
 import { destinationImage } from "@/lib/trips/destination-image";
 
@@ -157,13 +157,11 @@ export function TripCard({ trip }: TripCardProps) {
     >
       {/* Thumbnail */}
       <div className="relative h-40 sm:h-48 overflow-hidden bg-gray-100">
-        <Compass
-          className="absolute left-1/2 top-1/2 h-10 w-10 -translate-x-1/2 -translate-y-1/2 text-slate-300"
-          aria-hidden="true"
+        <TripCoverImage
+          src={thumbnailUrl}
+          className="object-cover"
+          journeyFallback
         />
-        {thumbnailUrl && (
-          <TripCoverImage src={thumbnailUrl} className="object-cover" />
-        )}
 
         {/* Status Badge */}
         <div

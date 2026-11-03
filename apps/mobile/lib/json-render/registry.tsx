@@ -1,3 +1,5 @@
+import { proposedVisitNote } from '@faroway/types';
+import { VenueSourceNotice } from '../../components/VenueSourceNotice';
 import { durationLabel } from '../durationLabel';
 import React from 'react';
 import { formatTripDate } from '../tripDate';
@@ -247,6 +249,7 @@ export const ItineraryDay: React.FC<ItineraryDayProps> = ({ dayNumber, date, tit
 type ActivityCardProps = z.infer<typeof ActivityCardSchema>;
 
 export const ActivityCard: React.FC<ActivityCardProps> = ({
+  proposedVisitType,
   name,
   description,
   duration,
@@ -260,6 +263,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
   time,
   location,
 }) => {
+  const visitNote = proposedVisitNote(proposedVisitType);
   return (
     <View style={[styles.card, styles.activityCard]}>
       <View style={styles.activityCardTime}>
@@ -280,6 +284,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
           )}
 
           <RNText style={styles.activityCardDescription}>{description}</RNText>
+          {visitNote && <RNText style={styles.activityCardDescription}>{visitNote}</RNText>}
 
           <View style={styles.activityCardMeta}>
             <View style={styles.activityCardMetaItem}>
@@ -325,6 +330,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
 type RestaurantCardProps = z.infer<typeof RestaurantCardSchema>;
 
 export const RestaurantCard: React.FC<RestaurantCardProps> = ({
+  source,
   name,
   cuisine,
   priceLevel,
@@ -359,6 +365,7 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
           </View>
 
           {description && <RNText style={styles.restaurantCardDescription}>{description}</RNText>}
+          <VenueSourceNotice source={source} />
 
           {typeof rating === 'number' && rating > 0 && (
             <View style={styles.restaurantCardRating}>
@@ -999,7 +1006,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   timelineTime: {
-    width: 60,
+    width: 80,
     paddingTop: spacing.xs,
   },
   timelineTimeText: {

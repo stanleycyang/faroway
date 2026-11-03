@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "purpose": "Public restaurant discovery coverage, not certified venue quality. Keep holdout cases unused during prompt development.",
+  "development": [
+    {
+      "id": "melbourne-breakfast",
+      "destination": "Melbourne, Australia",
+      "area": "Central Business District",
+      "meal": "breakfast",
+      "maxCandidates": 3
+    },
+    {
+      "id": "tokyo-dinner",
+      "destination": "Tokyo, Japan",
+      "area": "Asakusa",
+      "meal": "dinner",
+      "maxCandidates": 3
+    },
+    {
+      "id": "lisbon-lunch",
+      "destination": "Lisbon, Portugal",
+      "area": "Baixa",
+      "meal": "lunch",
+      "maxCandidates": 3
+    },
+    {
+      "id": "copenhagen-dinner",
+      "destination": "Copenhagen, Denmark",
+      "area": "Indre By",
+      "meal": "dinner",
+      "maxCandidates": 3
+    },
+    {
+      "id": "mexico-breakfast",
+      "destination": "Mexico City, Mexico",
+      "area": "Roma Norte",
+      "meal": "breakfast",
+      "maxCandidates": 3
+    },
+    {
+      "id": "kyoto-lunch",
+      "destination": "Kyoto, Japan",
+      "area": "Higashiyama",
+      "meal": "lunch",
+      "maxCandidates": 3
+    }
+  ],
+  "holdout": [
+    {
+      "id": "seoul-dinner",
+      "destination": "Seoul, South Korea",
+      "area": "Jongno",
+      "meal": "dinner",
+      "maxCandidates": 3
+    },
+    {
+      "id": "porto-breakfast",
+      "destination": "Porto, Portugal",
+      "area": "Cedofeita",
+      "meal": "breakfast",
+      "maxCandidates": 3
+    },
+    {
+      "id": "taipei-lunch",
+      "destination": "Taipei, Taiwan",
+      "area": "Da'an",
+      "meal": "lunch",
+      "maxCandidates": 3
+    }
+  ]
+}

@@ -30,6 +30,7 @@ function buildFallbackActivities(plan: SearchPlan): ActivityResult[] {
   ];
   return base.map((name, index) => ({
     id: normalizeId("enriched_activity", name, index),
+    planningIdea: true,
     name: `${name} in ${plan.destination}`,
     description:
       "Planning idea; confirm opening times, availability and any admission price.",
@@ -57,6 +58,7 @@ function buildFallbackDining(plan: SearchPlan): DiningResult[] {
     : ["local"];
   return cuisines.slice(0, 3).map((cuisine, index) => ({
     id: normalizeId("enriched_dining", cuisine, index),
+    planningIdea: true,
     name: `${cuisine} neighborhood spot`,
     description:
       "Dining idea; choose a venue and confirm menu prices before booking.",
@@ -116,6 +118,8 @@ export async function enrichNonAffiliateCandidates(
     );
     tavilyActivities = tavily.map((item, index) => ({
       id: normalizeId("tavily_activity", item.title || "local", index),
+      // Search-page snippets have not been resolved to a specific venue/visit.
+      planningIdea: true,
       name: item.title || `Local experience ${index + 1}`,
       description:
         item.content?.slice(0, 220) ||

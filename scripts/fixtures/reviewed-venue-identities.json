@@ -1,0 +1,17 @@
+[
+  {
+    "id": "melbourne-skydeck-address",
+    "destination": "Melbourne, Australia",
+    "aliases": ["Melbourne Skydeck"],
+    "addresses": [
+      "7 Riverside Quay, Southbank 3006, Australia",
+      "7 Riverside Quay, Southbank VIC 3006, Australia"
+    ],
+    "country": "Australia",
+    "sourceUrl": "https://whatson.melbourne.vic.gov.au/things-to-do/melbourne-skydeck",
+    "sourceSha256": "dc30047f5fa83ea06bd70dd188217b86aff102ff2a533c2d925075ade9db74b0",
+    "observedAt": "2026-11-02",
+    "reviewAfter": "2026-12-02",
+    "reviewNotes": "City of Melbourne identifies Melbourne Skydeck at 7 Riverside Quay, Southbank 3006. The VIC/Australia rendering is an explicitly reviewed address variant. Operator education PDF independently confirms the street number and suburb: https://www.melbourneskydeck.com.au/wp-content/uploads/2024/10/Melbourne-Skydeck-Education-2024-1.pdf (SHA-256 1f3c91447fd061b251161d5229367fc0d1851f504c5adba025003035756445c0). Identity/address review only: do not import this city listing's hours, prices or accessibility claims. Generated experience titles are not approved aliases; co-located dining, events and exterior visits require their own review."
+  }
+]

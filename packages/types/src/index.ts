@@ -1,7 +1,11 @@
+import type { DayTimingProposal } from "./day-timing";
+import type { VenueSource, DiningReviewOption } from "./venue-source";
+export { readVenueSource, readDiningReviewOptions } from "./venue-source";
+export type { VenueSource, DiningReviewOption } from "./venue-source";
 /**
  * @faroway/types
- * Shared type definitions for Faroway web and mobile apps.
- * Pure TypeScript interfaces — zero runtime dependencies.
+ * Shared types and validation helpers for Faroway web and mobile apps.
+ * Zero external runtime dependencies.
  */
 
 // =============================================================================
@@ -202,6 +206,9 @@ export interface Coordinates {
 // =============================================================================
 
 export interface ItineraryActivity {
+  source?: VenueSource;
+  /** Proposed visit scope retained from planning; not verified access. */
+  proposedVisitType?: ActivityResult["proposedVisitType"];
   id: string;
   name: string;
   description: string;
@@ -242,10 +249,11 @@ export interface ItineraryActivity {
 }
 
 export interface Restaurant {
+  source?: VenueSource;
   id: string;
   name: string;
   cuisineType: string[];
-  priceLevel: 1 | 2 | 3 | 4;
+  priceLevel?: 1 | 2 | 3 | 4;
   description: string;
   estimatedCost: {
     amount: number;
@@ -290,6 +298,8 @@ export interface TripDayTransport {
 }
 
 export interface TripDay {
+  diningOptions?: DiningReviewOption[];
+  timingProposal?: DayTimingProposal;
   dayNumber: number;
   date: string;
   title: string;
@@ -425,6 +435,8 @@ export interface SearchRecord {
 }
 
 export interface SearchPlan {
+  /** Original traveler restrictions, separate from model-added dining criteria. */
+  dietaryRestrictions?: string[];
   travelerType?: TravelerType;
   travelers?: number;
   adults?: number;
@@ -506,6 +518,16 @@ export interface HotelResult {
 }
 
 export interface ActivityResult {
+  source?: VenueSource;
+  /** Proposed experience only, not verified access, opening hours or a booking. */
+  proposedVisitType?:
+    | "ordinary_entry"
+    | "exterior_walk"
+    | "guided_tour"
+    | "event"
+    | "unknown";
+  /** An inspiration/search lead, not a schedulable venue or experience. */
+  planningIdea?: true;
   priceStatus?: "unknown" | "estimate";
   id: string;
   name: string;
@@ -530,15 +552,19 @@ export interface ActivityResult {
 }
 
 export interface DiningResult {
+  source?: VenueSource;
+  /** A cuisine/area idea that still needs a named restaurant. */
+  planningIdea?: true;
   priceStatus?: "unknown" | "estimate";
   id: string;
   name: string;
   description: string;
   cuisineTypes: string[];
-  priceLevel: 1 | 2 | 3 | 4;
-  rating: number;
-  reviewCount: number;
-  location: LocationInfo;
+  priceLevel?: 1 | 2 | 3 | 4;
+  rating?: number;
+  reviewCount?: number;
+  location: Omit<LocationInfo, "lat" | "lng"> &
+    Partial<Pick<LocationInfo, "lat" | "lng">>;
   images: string[];
   reservationUrl?: string;
   affiliatePartner?: string;
@@ -605,6 +631,7 @@ export interface SearchResults {
 }
 
 export interface SuggestedDay {
+  timingProposal?: DayTimingProposal;
   dayNumber: number;
   date: string;
   title: string;
@@ -750,3 +777,14 @@ export interface HotelQuoteResult {
     }>;
   }>;
 }
+
+export {
+  dayTimingBasis,
+  readDayTiming,
+  dayTimingTips,
+  isTimingNote,
+  timingPresentation,
+} from "./day-timing";
+export type { DayTimingProposal } from "./day-timing";
+
+export { readProposedVisitType, proposedVisitNote } from "./visit-intent";

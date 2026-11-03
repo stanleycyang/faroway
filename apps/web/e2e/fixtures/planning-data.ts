@@ -57,3 +57,105 @@ export const sampleHotel: HotelResult = {
   vibeScore: 90,
   vibeMatch: ["cultural"],
 };
+
+export function timingFixtureDay(conflict = false): TripDay {
+  const day: TripDay = {
+    ...sampleDays[0],
+    date: "2027-01-11",
+    title: "Gardens, a pause, and an afternoon of discovery",
+    morning: {
+      activities: [
+        {
+          ...activity,
+          id: "garden",
+          name: "Singapore Botanic Gardens & National Orchid Garden",
+        },
+      ],
+      meals: [],
+    },
+    afternoon: {
+      activities: [
+        {
+          ...activity,
+          id: "museum",
+          name: "ArtScience Museum",
+          timeOfDay: "afternoon",
+        },
+      ],
+      meals: [],
+    },
+    tips: [
+      "Proposed local timing: duplicated legacy text",
+      "Bring water for the garden walk.",
+    ],
+  };
+  day.timingProposal = {
+    policy: "midday-rest-v1",
+    basis: JSON.stringify({
+      date: day.date,
+      slots: [day.morning, day.afternoon, day.evening].map((slot) => ({
+        activities: slot.activities.map((a) => [a.id, a.name, a.duration]),
+        meals: slot.meals.map((m) => [m.id, m.name]),
+      })),
+    }),
+    fitsPolicy: !conflict,
+    verified: false,
+    conflict: conflict
+      ? { eventId: "activity:museum", overrunMinutes: 30 }
+      : null,
+    events: conflict
+      ? []
+      : [
+          {
+            id: "activity:garden",
+            kind: "activity",
+            durationMinutes: 90,
+            startMinute: 540,
+            endMinute: 630,
+            bufferBeforeMinutes: 0,
+          },
+          {
+            id: "rest:midday",
+            kind: "rest",
+            durationMinutes: 60,
+            startMinute: 780,
+            endMinute: 840,
+            bufferBeforeMinutes: 0,
+          },
+          {
+            id: "activity:museum",
+            kind: "activity",
+            durationMinutes: 90,
+            startMinute: 870,
+            endMinute: 960,
+            bufferBeforeMinutes: 30,
+          },
+        ],
+  };
+  return day;
+}
+
+/** Synthetic display fixture; private replay data can replace it in local tests. */
+export const arrivalFixtureDay: TripDay = {
+  ...sampleDays[0],
+  date: "2027-01-11",
+  title: "An evening in Madrid",
+  summary:
+    "A walking tour and dinner after arrival, with exact timing still to review.",
+  morning: { activities: [], meals: [] },
+  afternoon: { activities: [], meals: [] },
+  evening: {
+    activities: [
+      {
+        ...activity,
+        id: "arrival-walk",
+        name: "Plaza Mayor Walking Tour",
+        timeOfDay: "evening",
+      },
+    ],
+    meals: [],
+  },
+  tips: [
+    "Your local-time availability: 18:00–24:00. This draft leaves other periods free and reserves provisional meal and buffer time within each day part. Confirm exact visit times and airport or station transfers before booking.",
+  ],
+};

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "pasteis-belem",
+    "destination": "Lisbon, Portugal",
+    "aliases": ["Pastéis de Belém"],
+    "sourceUrl": "https://pasteisdebelem.pt/en/contact/",
+    "observedAt": "2026-10-31",
+    "sourceAddress": "Rua de Belém nº 84 a 92, 1300 – 085 Lisboa, Portugal",
+    "supportedAddresses": ["R. de Belém 84 92, 1300-085 Lisboa, Portugal"],
+    "contradictedAddresses": []
+  },
+  {
+    "id": "afuri-roppongi-hills",
+    "destination": "Tokyo, Japan",
+    "aliases": ["Afuri Roppongi Hills"],
+    "sourceUrl": "https://www.afuri.com/findus/",
+    "observedAt": "2026-10-31",
+    "sourceAddress": "B2F Roppongi Hills METRO HAT/HOLLYWOOD PLAZA, 6-4-1 Roppongi, Minato-ku, Tokyo",
+    "supportedAddresses": [],
+    "contradictedAddresses": ["6-2-31 Roppongi, Minato City, Tokyo 106-0032"]
+  },
+  {
+    "id": "sakuratei-harajuku",
+    "destination": "Tokyo, Japan",
+    "aliases": ["Sakura-tei"],
+    "sourceUrl": "https://www.sakuratei.co.jp/access",
+    "observedAt": "2026-10-31",
+    "sourceAddress": "東京都渋谷区神宮前3-20-1",
+    "supportedAddresses": ["3-20-1 Jingumae, Shibuya City, Tokyo 150-0001"],
+    "contradictedAddresses": []
+  },
+  {
+    "id": "monmouth-sendagaya",
+    "destination": "Tokyo, Japan",
+    "aliases": ["Monmouth Tea"],
+    "sourceUrl": "https://monmouth.jp/",
+    "observedAt": "2026-10-31",
+    "sourceAddress": "151-0051 東京都渋谷区千駄ヶ谷1-21-2",
+    "supportedAddresses": [],
+    "contradictedAddresses": ["2-33-8 Sendagaya, Shibuya City, Tokyo 151-0051"]
+  },
+  {
+    "id": "bloomhouse-ginger-garden",
+    "destination": "Singapore",
+    "aliases": ["The Bloomhouse by Little Farms"],
+    "sourceUrl": "https://littlefarmscafe.com/pages/the-bloomhouse-by-little-farms",
+    "observedAt": "2026-10-31",
+    "sourceAddress": "Blk 2, 1 Cluny Rd, Ginger Garden Singapore Botanic Gardens, 259569",
+    "supportedAddresses": [
+      "Blk 2, 1 Cluny Rd, Ginger Garden Singapore Botanic Gardens, 259569"
+    ],
+    "contradictedAddresses": []
+  },
+  {
+    "id": "row34-cambridge",
+    "destination": "Cambridge, Massachusetts, USA",
+    "aliases": ["Row 34"],
+    "sourceUrl": "https://www.row34.com/location/row34-cambridge/",
+    "observedAt": "2026-11-01",
+    "sourceAddress": "314 Main Street, Cambridge, MA 02142",
+    "supportedAddresses": ["314 Main Street, Cambridge, MA 02142"],
+    "contradictedAddresses": ["383 Binney St, Cambridge, MA 02139"]
+  },
+  {
+    "id": "friendly-toast-cambridge",
+    "destination": "Cambridge, Massachusetts, USA",
+    "aliases": ["The Friendly Toast"],
+    "sourceUrl": "https://thefriendlytoast.com/cambridge-ma",
+    "observedAt": "2026-11-01",
+    "sourceAddress": "1230 Massachusetts Ave, Cambridge, MA 02138",
+    "supportedAddresses": ["1230 Massachusetts Ave, Cambridge, MA 02138"],
+    "contradictedAddresses": ["1 Kendall Square, Cambridge, MA 02139"]
+  }
+]

@@ -92,3 +92,16 @@ describe("revision-bound plan commands", () => {
     ).toBe(false);
   });
 });
+
+it("invalidates structured timing on swaps but preserves it on a lock", () => {
+  const days = stampPlanItems(trip, initial);
+  days[0].timingProposal = { policy: "midday-rest-v1", basis: "frozen" };
+  days[0].tips = ["Proposed local timing: old positions"];
+  expect(
+    editPlan(days, [], { ...command(), action: "lock" }).days[0].timingProposal,
+  ).toEqual(days[0].timingProposal);
+  const changed = editPlan(days, [], command());
+  expect(changed.days[0]).not.toHaveProperty("timingProposal");
+  expect(changed.days[0].tips).toEqual([]);
+  expect(days[0]).toHaveProperty("timingProposal");
+});
