@@ -128,6 +128,7 @@ Party: ${plan.adults ?? "unspecified"} adults, ${plan.children ?? 0} children. S
   const prompt = `Generate ${count} restaurant recommendations for ${destination}.${coveragePrompt}
 
 **Dining Preferences:**
+- Travel dates (inclusive, destination local calendar): ${dates.start} to ${dates.end}
 - ${dates.nights + 1} days of dining
 - Price range: ${priceRange} (levels ${priceLevels.join("-")})
 - Cuisine interests: ${cuisineTypes.join(", ") || "local cuisine"}

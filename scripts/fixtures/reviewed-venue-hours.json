@@ -995,5 +995,91 @@
         "intervals": [[600, 1020]]
       }
     ]
+  },
+  {
+    "id": "smk-ordinary-hours-20261103",
+    "destination": "Copenhagen, Denmark",
+    "country": "Denmark",
+    "aliases": ["Statens Museum for Kunst (SMK)"],
+    "addresses": ["Sølvgade 48-50, 1307 København K"],
+    "sourceUrl": "https://www.smk.dk/en/section/visit-smk/",
+    "sourceSha256": "c60f3d3bd9aa8f01b2f15e14efa48079a72838f5679298b7eb30883564155cf1",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Exact generated museum branch matched to operator ordinary museum hours. SMK begins gallery closure 15 minutes before building close. New York Historical hours are the operator indexed museum-and-store section, not the separate store-only page; direct HTTP returned 403. Future special dates and tickets remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1065]]
+      },
+      {
+        "weekday": 1,
+        "intervals": []
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 1065]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1185]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1065]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1065]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1065]]
+      }
+    ]
+  },
+  {
+    "id": "nyhistory-ordinary-hours-20261103",
+    "destination": "New York, USA",
+    "country": "USA",
+    "aliases": ["New-York Historical Society"],
+    "addresses": ["170 Central Park West, New York, NY 10024"],
+    "sourceUrl": "https://www.nyhistory.org/exhibitions/the-collection-new-conversations",
+    "sourceSha256": "88fa76611bb503bab0dde3335697c062627009cd3fd020950f3d9eaef2e56f6f",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Exact generated museum branch matched to operator ordinary museum hours. SMK begins gallery closure 15 minutes before building close. New York Historical hours are the operator indexed museum-and-store section, not the separate store-only page; direct HTTP returned 403. Future special dates and tickets remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[660, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": []
+      },
+      {
+        "weekday": 2,
+        "intervals": [[660, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[660, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[660, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[660, 1200]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[660, 1020]]
+      }
+    ]
   }
 ]

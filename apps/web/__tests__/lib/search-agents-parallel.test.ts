@@ -140,6 +140,9 @@ describe("search agents internal parallelism", () => {
       },
     });
     const results = await runActivitiesAgent(plan as never);
+    expect(mocks.generateObject.mock.calls[0][0].prompt).toContain(
+      "2026-06-01 to 2026-06-05",
+    );
     expect(results[0].name).toBe("Food Walk");
     expect(results[0].description).toContain("Access has not been verified");
     expect(results[0].description).not.toContain("fully wheelchair accessible");

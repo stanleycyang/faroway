@@ -45,7 +45,7 @@ from a menu or a generic dietary tag.
 
 ## Budget and measurement
 
-Last recorded billed total: **$7.55509135 of $20**, remaining **$12.44490865**.
+Last recorded billed total: **$7.79254585 of $20**, remaining **$12.20745415**.
 Do source review and offline replay before more live generation. Allocate up to
 $4 to targeted repair runs and $4 to the final twelve-run round; retain the
 remaining ~$6.08 for retries and reconciliation. These are spend ceilings, not
@@ -233,3 +233,25 @@ search, complete arrival/departure and meal timing, wheelchair route evidence,
 restaurant confirmation and physical Android remain unresolved. Keep PR #55
 draft. Rerun the affected Copenhagen, Edinburgh, New York and Interlaken briefs
 twice on the next fixed commit, retaining this failed round unchanged.
+
+## Generation context repair — 2026-11-03
+
+The eight affected cases on `e4c769c` completed with clean receipt integrity, but
+quality remains rejected. Report: `artifacts/uat/six-scenario-novel-source-repair-20261103/report.md`.
+Recorded spend reached $7.79254585. Android offline/reconnect/reopen and duplicate
+generation retry were exercised on these receipts; all 44 day captures from the
+previous full round also completed. CI checks/tests pass; release builds remain
+skipped for the draft PR.
+
+Activity and dining generation previously received trip length without the
+actual start/end dates. Both prompts now include the destination-local dates.
+The staging activity generator also receives fresh reviewed operator hours and
+applicable unresolved venue restrictions before proposing candidates. Expired
+reviews and unrelated destinations are excluded; dated restrictions stay scoped
+to the trip. This reuses the compiler's evidence rather than asking generation
+to unknowingly propose candidates that downstream checks will reject.
+
+New source records address SMK Monday closure and New York Historical morning
+duration. This is bounded reviewed context, not universal live source retrieval.
+The next fixed twelve-run comparison must measure its quality, cost and latency;
+the unresolved D1/D3/D4 gates are not declared complete.

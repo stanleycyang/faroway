@@ -9,6 +9,8 @@ import {
  */
 
 import { screenGeneratedActivityCopy } from "../generated-activity-copy";
+import { activitySourceContext } from "../activity-source-context";
+import { compiledScheduleExperimentEnabled } from "../schedule-experiment-gate";
 import { gateway as defaultGateway, createGateway } from "@/lib/ai/sdk";
 import {
   generatePlanningObject,
@@ -165,6 +167,7 @@ export async function runActivitiesAgent(
   const prompt = `Generate ${count} bookable activities and attractions for ${destination}.
 
 **Trip Details:**
+- Travel dates (inclusive, destination local calendar): ${dates.start} to ${dates.end}
 - Duration: ${dates.nights} nights
 - Pace: ${activityCriteria.pacePreference}
 - Must-see: ${activityCriteria.mustSee.join(", ") || "popular attractions"}
@@ -178,6 +181,7 @@ export async function runActivitiesAgent(
 **Avoid:** ${vibeInterpretation.avoidKeywords.join(", ") || "nothing specific"}
 
 Generate a diverse mix across categories.
+${compiledScheduleExperimentEnabled() ? activitySourceContext(plan) : ""}
 Score each activity 0-100 on how well it matches the traveler's vibes.`;
 
   const aiPromise = withAbortTimeout(
