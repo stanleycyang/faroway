@@ -16,6 +16,9 @@ export function isGenericEventTitle(title: string): boolean {
   const text = title.normalize("NFKC").toLowerCase().trim();
   return (
     /^(?:a )?broadway show$/.test(text) ||
+    /^(?:traditional )?fado (?:performance|show|experience)(?: in (?:alfama|lisbon))?$/.test(
+      text,
+    ) ||
     /^(?:classical (?:music )?)?(?:performance|concert|show) at (?!.*\b(?:with|featuring)\b)[^:;()]+$/.test(
       text,
     )

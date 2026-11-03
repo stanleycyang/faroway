@@ -142,7 +142,7 @@ function transformApiRestaurant(r: any): Activity {
     title: displayText(r.name) || displayText(r.title),
     description: displayText(r.description),
     location: displayText(r.location?.name) || displayText(r.location),
-    duration: 'Duration not set',
+    duration: '',
     type: 'restaurant',
     estimatedCost:
       r.estimatedCost?.status === 'unknown' || r.priceStatus === 'unknown'
@@ -194,11 +194,15 @@ export function transformItineraryDays(apiDays: any[]): TripDay[] {
         const block = day[timeOfDay];
         if (!block) continue;
 
-        // Map activities from this time block
+        const blockActivities: Activity[] = [];
+        // Keep visits in their supplied order within the day part.
         if (Array.isArray(block.activities)) {
           for (const a of block.activities) {
             if (hasActivityTitle(a)) {
-              activities.push({ ...transformApiActivity(a, timeOfDay), scheduleSlot: timeOfDay });
+              blockActivities.push({
+                ...transformApiActivity(a, timeOfDay),
+                scheduleSlot: timeOfDay,
+              });
             }
           }
         }
@@ -209,11 +213,19 @@ export function transformItineraryDays(apiDays: any[]): TripDay[] {
           : block.meal && typeof block.meal === 'object'
             ? [block.meal]
             : [];
+        const blockMeals: Activity[] = [];
         for (const m of meals) {
           if (hasActivityTitle(m)) {
-            activities.push({ ...transformApiRestaurant(m), scheduleSlot: timeOfDay });
+            blockMeals.push({ ...transformApiRestaurant(m), scheduleSlot: timeOfDay });
           }
         }
+        // Match the planner's day-part sequence without inventing clock times:
+        // breakfast, morning visits, lunch, afternoon visits, evening visits, dinner.
+        activities.push(
+          ...(timeOfDay === 'evening'
+            ? [...blockActivities, ...blockMeals]
+            : [...blockMeals, ...blockActivities])
+        );
       }
 
       const transport = transformTransport(day.transport);
@@ -251,7 +263,7 @@ export function transformItineraryDays(apiDays: any[]): TripDay[] {
         if (activity.type !== 'restaurant') continue;
         const minutes = mealDurations.get(`meal:${activity.scheduleSlot}:${activity.id}`);
         activity.duration =
-          minutes === undefined ? 'Duration not set' : `${durationLabel(`${minutes} min`)} planned`;
+          minutes === undefined ? '' : `${durationLabel(`${minutes} min`)} planned`;
         delete activity.durationMinutes;
       }
 

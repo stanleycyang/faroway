@@ -103,13 +103,13 @@ test('shared conversion preserves streamed booking links and valid cached person
       },
     },
   ]);
-  expect(days[0].activities[0]).toMatchObject({
+  expect(days[0].activities.find((a) => a.title === 'A stop')).toMatchObject({
     bookingUrl: 'https://partner.example/stop',
     isSaved: true,
     topReview: 'Worth a visit',
   });
-  expect(days[0].activities[0].freeCancellation).toBeUndefined();
-  expect(days[0].activities[1]).toMatchObject({
+  expect(days[0].activities.find((a) => a.title === 'A stop')?.freeCancellation).toBeUndefined();
+  expect(days[0].activities.find((a) => a.title === 'Dinner')).toMatchObject({
     bookingUrl: 'https://partner.example/table',
     image: 'https://partner.example/photo',
   });
@@ -245,10 +245,10 @@ test('proposed timing survives native flattening and cache normalization, then e
   cached[0].date = '2027-01-12';
   const changed = transformItineraryDays(cached)[0];
   expect(changed.timingProposal).toBeUndefined();
-  expect(changed.activities.find((a) => a.id === 'cafe')?.duration).toBe('Duration not set');
+  expect(changed.activities.find((a) => a.id === 'cafe')?.duration).toBe('');
   expect(changed.tips).toEqual(['Proposed times need a fresh review.']);
   const untimed = transformItineraryDays([day])[0];
-  expect(untimed.activities.find((a) => a.id === 'cafe')?.duration).toBe('Duration not set');
+  expect(untimed.activities.find((a) => a.id === 'cafe')?.duration).toBe('');
   for (const proposal of [
     undefined,
     { ...timingProposal, basis: 'outdated' },
@@ -260,7 +260,7 @@ test('proposed timing survives native flattening and cache normalization, then e
     },
   ]) {
     const reloaded = transformItineraryDays([{ ...normalized[0], timingProposal: proposal }])[0];
-    expect(reloaded.activities.find((a) => a.id === 'cafe')?.duration).toBe('Duration not set');
+    expect(reloaded.activities.find((a) => a.id === 'cafe')?.duration).toBe('');
   }
 });
 
@@ -343,3 +343,36 @@ test.each([undefined, null, 'confirmed', 'constructor', '__proto__', {}])(
     expect(result[0].activities[0].proposedVisitType).toBeUndefined();
   }
 );
+
+test('day-part timeline puts breakfast and lunch before visits and preserves order on cache reload', () => {
+  const [day] = transformItineraryDays([
+    {
+      date: '2027-01-12',
+      dayNumber: 2,
+      morning: {
+        activities: [{ id: 'museum', name: 'Museum', duration: 120 }],
+        meals: [{ id: 'breakfast', name: 'Breakfast', mealType: 'breakfast' }],
+      },
+      afternoon: {
+        activities: [{ id: 'gallery', name: 'Gallery', duration: 90 }],
+        meals: [{ id: 'lunch', name: 'Lunch', mealType: 'lunch' }],
+      },
+      evening: {
+        activities: [{ id: 'walk', name: 'Walk', duration: 45 }],
+        meals: [{ id: 'dinner', name: 'Dinner', mealType: 'dinner' }],
+      },
+    },
+  ]);
+  const expected = ['breakfast', 'museum', 'lunch', 'gallery', 'walk', 'dinner'];
+  expect(day.activities.map((a) => a.id)).toEqual(expected);
+  expect(
+    day.activities.filter((a) => a.type === 'restaurant').every((a) => a.duration === '')
+  ).toBe(true);
+  const [cached] = transformItineraryDays(JSON.parse(JSON.stringify([day])));
+  expect(cached.activities.map((a) => a.id)).toEqual(expected);
+  expect(
+    cached.activities
+      .filter((a) => a.type === 'restaurant')
+      .every((a) => a.durationMinutes === undefined)
+  ).toBe(true);
+});

@@ -26,11 +26,15 @@ it.each([
   "Classical Music Performance at Carnegie Hall",
   "Concert at Carnegie Hall",
   "Broadway Show",
+  "Fado Performance in Alfama",
+  "Traditional Fado Performance",
 ])("defers the unidentified event %s", (title) =>
   expect(isGenericEventTitle(title)).toBe(true),
 );
 it.each([
   "Tour of Carnegie Hall",
+  "Fado Museum",
+  "Fado performance at a named venue featuring an artist",
   "On the Town in Concert",
   "Concert at Carnegie Hall featuring a named artist",
   "Museum of the Performing Arts",

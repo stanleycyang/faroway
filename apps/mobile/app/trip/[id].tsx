@@ -148,7 +148,9 @@ function ActivityCard({ activity }: ActivityCardProps) {
           </View>
           <View style={styles.activityInfo}>
             <Text style={styles.activityTitle}>{activity.title}</Text>
-            <Text style={styles.activityDuration}>{activity.duration}</Text>
+            {activity.duration ? (
+              <Text style={styles.activityDuration}>{activity.duration}</Text>
+            ) : null}
           </View>
           {activity.price && <Text style={styles.activityPrice}>{activity.price}</Text>}
         </View>
