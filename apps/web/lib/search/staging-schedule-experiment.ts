@@ -50,6 +50,8 @@ import {
 import reviewedAddresses from "../../../../scripts/fixtures/reviewed-dining-addresses.json";
 import { screenReportedDiningClosures } from "./reviewed-dining-closures";
 import reviewedClosures from "../../../../scripts/fixtures/reviewed-dining-closures.json";
+import reviewedDiningDays from "../../../../scripts/fixtures/reviewed-dining-days.json";
+import { reviewedDiningDayExclusions } from "./reviewed-dining-days";
 
 import { compiledScheduleExperimentEnabled } from "./schedule-experiment-gate";
 export { compiledScheduleExperimentEnabled } from "./schedule-experiment-gate";
@@ -140,7 +142,14 @@ export async function runStagingCompiledSchedule(
     activities,
     reviewedDining,
     exclusions,
-    { reviewedActivityIds: supply.admitted.map((record) => record.id) },
+    {
+      reviewedActivityIds: supply.admitted.map((record) => record.id),
+      diningExclusions: reviewedDiningDayExclusions(
+        plan,
+        reviewedDining,
+        reviewedDiningDays,
+      ),
+    },
   );
   appendActivitySourceNotes(compiled.days, supply.admitted);
   for (const day of compiled.days) {

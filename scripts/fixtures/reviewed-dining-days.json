@@ -1,0 +1,16 @@
+[
+  {
+    "destination": "Edinburgh, United Kingdom",
+    "names": ["Cafe St Honoré", "Café St Honoré", "Cafe St Honore"],
+    "addresses": [
+      "34 Thistle St N Ln, Edinburgh EH2 1EA",
+      "34 North West Thistle Street Lane, Edinburgh EH2 1EA"
+    ],
+    "closedWeekdays": [2, 3],
+    "sourceUrl": "https://www.cafesthonore.com/contact-us",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "sourceSha256": "e27d8f5b344fda28820bdca5d5d15fdb33ac8df2167fe857b33e1b218e93243e",
+    "sourceNote": "Operator contact page reviewed: recurring Tuesday and Wednesday closure. Exact generated branch aliases only; no claim of January exceptional availability."
+  }
+]

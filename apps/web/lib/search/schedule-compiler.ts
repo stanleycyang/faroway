@@ -81,7 +81,15 @@ export function compileSchedule(
   inventory: ActivityResult[],
   diningInventory: DiningResult[],
   exclusions: readonly ScheduleExclusion[] = [],
-  options: { reviewedActivityIds?: readonly string[] } = {},
+  options: {
+    reviewedActivityIds?: readonly string[];
+    diningExclusions?: readonly {
+      diningId: string;
+      date: string;
+      sourceUrl: string;
+      observedAt: string;
+    }[];
+  } = {},
 ): CompiledSchedule {
   // Caller supplies IDs admitted from reviewed source inputs, never model scores.
   const reviewedIds = new Set(options.reviewedActivityIds ?? []);
@@ -579,6 +587,7 @@ export function compileSchedule(
     }));
   const usedMeals = new Set<string>();
   const days: SuggestedDay[] = Array.from({ length: daysCount }, (_, day) => {
+    const date = new Date(start + day * 86400000).toISOString().slice(0, 10);
     const mealsToday = new Set<string>();
     const selected = best.selected.filter((s) => s.day === day);
     const tips = [
@@ -785,9 +794,17 @@ export function compileSchedule(
           );
         }
       }
-      const choices = dining.filter((meal) =>
-        meal.mealTypes.includes(MEALS[slot]),
-      );
+      const choices = dining.filter((meal) => {
+        if (!meal.mealTypes.includes(MEALS[slot])) return false;
+        const closure = options.diningExclusions?.find(
+          (item) => item.diningId === meal.id && item.date === date,
+        );
+        if (!closure) return true;
+        const note = `Hours review: ${meal.name} was not scheduled on ${date} because its published recurring hours report a closed day. Confirm exceptional openings directly. Source reviewed ${closure.observedAt}: ${closure.sourceUrl}`;
+        if (!tips.includes(note)) tips.push(note);
+        issues.push(`day_${day + 1}:${meal.id}:reported_dining_closure`);
+        return false;
+      });
       const ranked = choices
         .map((meal) => {
           const distances = anchors.map((a) =>
@@ -854,7 +871,7 @@ export function compileSchedule(
     });
     return {
       dayNumber: day + 1,
-      date: new Date(start + day * 86400000).toISOString().slice(0, 10),
+      date,
       title: `Day ${day + 1} in ${plan.destination}`,
       summary: selected.length
         ? `Suggested visits: ${selected.map((s) => s.activity.name).join("; ")}. Keep the remaining time flexible.`
