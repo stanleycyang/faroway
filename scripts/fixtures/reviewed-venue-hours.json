@@ -730,5 +730,270 @@
         "intervals": [[600, 1080]]
       }
     ]
+  },
+  {
+    "id": "jewish-ny-ordinary-hours-20261103",
+    "destination": "New York, USA",
+    "country": "USA",
+    "aliases": ["The Jewish Museum"],
+    "addresses": ["1109 5th Ave, New York, NY 10128"],
+    "sourceUrl": "https://thejewishmuseum.org/visit/",
+    "sourceSha256": "eb8c19d94b1f8748e5681224eb2343cb6fbdf5ba95e67fa6536c4a44392ae3b2",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator visitor page reviewed against the exact generated name/address and ordinary museum entry. January ordinary weekly hours only; dated exceptions, reservations and travel remain unverified. For blocked HTTP retrieval, hash identifies the retained web-tool source extract, not HTML.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[660, 1080]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[660, 1080]]
+      },
+      {
+        "weekday": 2,
+        "intervals": []
+      },
+      {
+        "weekday": 3,
+        "intervals": []
+      },
+      {
+        "weekday": 4,
+        "intervals": [[660, 1200]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[660, 1080]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[660, 1080]]
+      }
+    ]
+  },
+  {
+    "id": "whitney-ordinary-hours-20261103",
+    "destination": "New York, USA",
+    "country": "USA",
+    "aliases": ["Whitney Museum of American Art"],
+    "addresses": ["99 Gansevoort St, New York, NY 10014"],
+    "sourceUrl": "https://whitney.org/visit",
+    "sourceSha256": "4cd19118b9dbe9ad739745e1d844609eb595575b61c611d54dcb11d3dd33fb44",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator visitor page reviewed against the exact generated name/address and ordinary museum entry. January ordinary weekly hours only; dated exceptions, reservations and travel remain unverified. For blocked HTTP retrieval, hash identifies the retained web-tool source extract, not HTML.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[630, 1080]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[630, 1080]]
+      },
+      {
+        "weekday": 2,
+        "intervals": []
+      },
+      {
+        "weekday": 3,
+        "intervals": [[630, 1080]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[630, 1080]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[630, 1320]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[630, 1080]]
+      }
+    ]
+  },
+  {
+    "id": "met-cloisters-ordinary-hours-20261103",
+    "destination": "New York, USA",
+    "country": "USA",
+    "aliases": ["The Met Cloisters"],
+    "addresses": ["99 Margaret Corbin Dr, New York, NY 10040"],
+    "sourceUrl": "https://www.metmuseum.org/plan-your-visit/met-cloisters",
+    "sourceSha256": "eb8c19d94b1f8748e5681224eb2343cb6fbdf5ba95e67fa6536c4a44392ae3b2",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator visitor page reviewed against the exact generated name/address and ordinary museum entry. January ordinary weekly hours only; dated exceptions, reservations and travel remain unverified. For blocked HTTP retrieval, hash identifies the retained web-tool source extract, not HTML.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 990]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 990]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 990]]
+      },
+      {
+        "weekday": 3,
+        "intervals": []
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 990]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 990]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 990]]
+      }
+    ]
+  },
+  {
+    "id": "nms-ordinary-hours-20261103",
+    "destination": "Edinburgh, United Kingdom",
+    "country": "United Kingdom",
+    "aliases": ["National Museum of Scotland"],
+    "addresses": ["Chambers Street, Edinburgh EH1 1JF"],
+    "sourceUrl": "https://www.nms.ac.uk/scotland",
+    "sourceSha256": "546648b613eb505d79c32869ab350fd099641e463f038dc76320c1092aacb413",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator ordinary hours reviewed against the generated venue/address. January scope only; holiday exceptions, reservations, future conditions and full route compatibility remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "britannia-ordinary-hours-20261103",
+    "destination": "Edinburgh, United Kingdom",
+    "country": "United Kingdom",
+    "aliases": ["Royal Yacht Britannia"],
+    "addresses": ["Ocean Drive, Leith, Edinburgh EH6 6JJ"],
+    "sourceUrl": "https://www.royalyachtbritannia.co.uk/visit/opening-hours/",
+    "sourceSha256": "819020ecf07083f5efcb7c7d3605fd5c82decc902732bef3f3a280b423a22fa2",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator ordinary hours reviewed against the generated venue/address. January scope only; holiday exceptions, reservations, future conditions and full route compatibility remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1020]],
+        "lastEntryMinute": 900
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 1020]],
+        "lastEntryMinute": 900
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 1020]],
+        "lastEntryMinute": 900
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1020]],
+        "lastEntryMinute": 900
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1020]],
+        "lastEntryMinute": 900
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1020]],
+        "lastEntryMinute": 900
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1020]],
+        "lastEntryMinute": 900
+      }
+    ]
+  },
+  {
+    "id": "glyptoteket-ordinary-hours-20261103",
+    "destination": "Copenhagen, Denmark",
+    "country": "Denmark",
+    "aliases": ["Glyptoteket"],
+    "addresses": ["Dantes Plads 7, 1556 København V"],
+    "sourceUrl": "https://glyptoteket.com/visit/opening-hours",
+    "sourceSha256": "7939769d8f5163992bfc7c878fdbfc616064334c9bae9a6371edb9e6893189a0",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator ordinary hours reviewed against the generated venue/address. January scope only; holiday exceptions, reservations, future conditions and full route compatibility remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": []
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1260]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1020]]
+      }
+    ]
   }
 ]

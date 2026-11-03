@@ -35,6 +35,79 @@ const visit = (
 });
 
 it.each([
+  ["The Jewish Museum", "1109 5th Ave, New York, NY 10128", "2027-01-12"],
+  [
+    "The Met Cloisters",
+    "99 Margaret Corbin Dr, New York, NY 10040",
+    "2027-01-13",
+  ],
+] as const)(
+  "rejects the observed closed-day visit to %s",
+  (name, address, date) => {
+    const result = reviewedHoursExclusions(
+      { destination: "New York, USA" },
+      [visit(name, address, 120)],
+      [date],
+      hours as ReviewedVenueHours[],
+      "2026-11-03",
+    );
+    expect(result.map((item) => item.slot)).toEqual([
+      "morning",
+      "afternoon",
+      "evening",
+    ]);
+  },
+);
+
+it("moves a long Whitney visit out of its short morning opening window", () => {
+  const result = reviewedHoursExclusions(
+    { destination: "New York, USA" },
+    [
+      visit(
+        "Whitney Museum of American Art",
+        "99 Gansevoort St, New York, NY 10014",
+        150,
+      ),
+    ],
+    ["2027-01-13"],
+    hours as ReviewedVenueHours[],
+    "2026-11-03",
+  );
+  expect(result.map((item) => item.slot)).toEqual(["morning", "evening"]);
+});
+
+it.each([
+  [
+    "Copenhagen, Denmark",
+    "Bartholin Instituttet Botanical Garden",
+    "Gothersgade 128, 1123 København K",
+  ],
+  [
+    "Edinburgh, United Kingdom",
+    "The Queen's Gallery, Palace of Holyroodhouse",
+    "Palace of Holyroodhouse, Edinburgh EH8 8AS",
+  ],
+  [
+    "Edinburgh, United Kingdom",
+    "Edinburgh Press Club",
+    "20-30 Cockburn St, Edinburgh EH1 1NY",
+  ],
+] as const)(
+  "holds unresolved identity or admission for %s / %s",
+  (destination, name, address) => {
+    const result = applyReviewedActivityDecisions(
+      { destination },
+      [visit(name, address, 60)],
+      ["2027-01-11"],
+      activityDecisionSchema.array().parse(decisions),
+      "2026-11-03",
+    );
+    expect(result.exclusions).toHaveLength(1);
+    expect(result.activities[0].name).toBe(name);
+  },
+);
+
+it.each([
   [
     "Copenhagen, Denmark",
     "Amalienborg Palace Museum",

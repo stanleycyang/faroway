@@ -169,7 +169,12 @@
   {
     "id": "kings-gallery-acceptance-review",
     "destination": "Edinburgh, United Kingdom",
-    "names": ["The Queen's Gallery", "The King's Gallery"],
+    "names": [
+      "The Queen's Gallery",
+      "The King's Gallery",
+      "The Queen's Gallery, Palace of Holyroodhouse",
+      "The King's Gallery, Palace of Holyroodhouse"
+    ],
     "addresses": [
       "Palace of Holyroodhouse, 22 Horse Wynd, Edinburgh EH8 8AS, UK",
       "Palace of Holyroodhouse, Canongate, Edinburgh EH8 8DX, UK"
@@ -183,7 +188,11 @@
     "validThrough": "2027-01-17",
     "requiresStepFree": false,
     "action": "defer",
-    "explanation": "The institution is now named The King’s Gallery. The reviewed Edinburgh exhibition listing ends December 6, 2026 and does not establish a January 2027 exhibition. Obtain dated opening information; the London gallery is a different venue."
+    "explanation": "The institution is now named The King’s Gallery. The reviewed Edinburgh exhibition listing ends December 6, 2026 and does not establish a January 2027 exhibition. Obtain dated opening information; the London gallery is a different venue.",
+    "deferNameFragments": [
+      ["queen", "gallery"],
+      ["king", "gallery"]
+    ]
   },
   {
     "id": "palm-access-consolidated-review",
@@ -298,7 +307,8 @@
     "validFrom": "2027-01-11",
     "validThrough": "2027-01-17",
     "action": "defer",
-    "explanation": "The operator locates this museum in Kilchberg near Zurich, not Interlaken. A separate excursion must account for outbound and return public transport, museum admission, meals and local approach; a visit-only morning block does not establish feasibility. Resolve that full-day plan before adding this distant option."
+    "explanation": "The operator locates this museum in Kilchberg near Zurich, not Interlaken. A separate excursion must account for outbound and return public transport, museum admission, meals and local approach; a visit-only morning block does not establish feasibility. Resolve that full-day plan before adding this distant option.",
+    "deferNameFragments": [["lindt", "chocolate"]]
   },
   {
     "id": "writers-museum-access-review",
@@ -355,5 +365,88 @@
     "validThrough": "2027-01-17",
     "action": "defer",
     "explanation": "This spa is in Rigi Kaltbad, not Interlaken. The operator ends swimming at 19:30, so a three-hour visit starting in the evening does not fit. A separate daytime excursion needs dated outbound and return mountain transport, admission and meals before it can be scheduled."
+  },
+  {
+    "id": "bartholin-garden-identity-20261103",
+    "destination": "Copenhagen, Denmark",
+    "names": ["Bartholin Instituttet Botanical Garden"],
+    "addresses": ["Gothersgade 128, 1123 København K"],
+    "visitTypes": ["ordinary_entry", "guided_tour", "event", "unknown"],
+    "sourceUrl": "https://www.rigshospitalet.dk/afdelinger-og-klinikker/diagnostisk/patologi/sider/bartholin-instituttet.aspx",
+    "sourceSha256": "eb8c19d94b1f8748e5681224eb2343cb6fbdf5ba95e67fa6536c4a44392ae3b2",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-01",
+    "validThrough": "2027-01-31",
+    "action": "defer",
+    "explanation": "The named institute is a pathology research institute at Copenhagen Biocenter. This suggestion combines its name with the separate Botanical Garden address; resolve the identity and visit scope rather than silently relabeling it."
+  },
+  {
+    "id": "press-club-visit-scope-20261103",
+    "destination": "Edinburgh, United Kingdom",
+    "names": ["Edinburgh Press Club"],
+    "addresses": ["20-30 Cockburn St, Edinburgh EH1 1NY"],
+    "visitTypes": ["ordinary_entry", "guided_tour", "event", "unknown"],
+    "sourceUrl": "https://www.placehotels.co.uk/the-inn/press-club",
+    "sourceSha256": "69468b91fa37430a48ecf117b61b65d9f01ebe2bfbe75cbf958414f1bbe36503",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-01",
+    "validThrough": "2027-01-31",
+    "action": "defer",
+    "explanation": "The operator identifies this as a coffee shop, not a museum admission or January cultural event. Review it as a dining stop with the relevant dietary and access checks; do not count an unsupported cultural visit."
+  },
+  {
+    "id": "schynige-winter-review",
+    "destination": "Interlaken, Switzerland",
+    "names": ["Schynige Platte Winter Walk"],
+    "deferNameFragments": [["schynige", "platte"]],
+    "addresses": ["Hauptstrasse 21, 3812 Wilderswil, Switzerland"],
+    "visitTypes": ["ordinary_entry", "exterior_walk", "guided_tour", "unknown"],
+    "sourceUrl": "https://www.jungfrau.ch/en-gb/schynige-platte/",
+    "sourceSha256": "ca8911471a8362c0587eedd30f590cc0f6e25319e76555b3e414701213f4fdaf",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-01",
+    "validThrough": "2027-01-31",
+    "action": "defer",
+    "explanation": "The operator page describes mountain paths and access by the historic railway, but does not establish January operation or a prepared beginner winter loop. Resolve dated transport and the specific winter route; summer path descriptions are not winter suitability evidence."
+  },
+  {
+    "id": "first-sledding-review",
+    "destination": "Interlaken, Switzerland",
+    "names": [
+      "First to Bort Beginner Sledding",
+      "Grindelwald First Sledding Run"
+    ],
+    "deferNameFragments": [
+      ["first", "sledding"],
+      ["first", "sledging"]
+    ],
+    "addresses": ["Dorfstrasse 187, 3818 Grindelwald, Switzerland"],
+    "visitTypes": ["ordinary_entry", "exterior_walk", "guided_tour", "unknown"],
+    "sourceUrl": "https://www.jungfrau.ch/en-gb/sledging/first-schreckfeld-bort/",
+    "sourceSha256": "ca8911471a8362c0587eedd30f590cc0f6e25319e76555b3e414701213f4fdaf",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-01",
+    "validThrough": "2027-01-31",
+    "action": "defer",
+    "explanation": "The operator describes a ski-slope crossing and rapid descent to Bort, with difficulty dependent on conditions. The generated generic beginner run and its alternate Big Pintenfritz route are not established beginner products. Obtain a specific suitable route, operating status and instruction before scheduling."
+  },
+  {
+    "id": "asia-society-admission-review",
+    "destination": "New York, USA",
+    "names": ["Asia Society Museum"],
+    "addresses": ["725 Park Ave, New York, NY 10021"],
+    "visitTypes": ["ordinary_entry", "guided_tour", "unknown"],
+    "sourceUrl": "https://asiaweekny.com/museums-institutions/asia-society/",
+    "sourceSha256": "38b7043cd39f6feeb53585e86f279754f67b2a9e597ede63b385085c4610b991",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-01",
+    "validThrough": "2027-01-31",
+    "action": "defer",
+    "explanation": "The participating-institution listing publishes Wednesday–Sunday museum admission, conflicting with the generated Monday visit. The museum visitor page could not be retrieved for direct confirmation. Resolve dated admission with the operator; the directory is a review lead, not a future ticket guarantee."
   }
 ]

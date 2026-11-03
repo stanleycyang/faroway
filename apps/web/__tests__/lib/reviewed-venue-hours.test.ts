@@ -28,6 +28,26 @@ const fact: ReviewedVenueHours = {
     { weekday: 2, intervals: [] },
   ],
 };
+it("does not confuse last admission with closing, including the entry boundary", () => {
+  const check = (lastEntryMinute: number) =>
+    reviewedHoursExclusions(
+      plan,
+      [activity],
+      ["2027-01-11"],
+      [
+        {
+          ...fact,
+          week: [{ weekday: 1, intervals: [[600, 1020]], lastEntryMinute }],
+        },
+      ],
+      "2026-11-01",
+    );
+  expect(check(660).map((r) => r.slot)).toEqual(["afternoon", "evening"]);
+  expect(check(720).map((r) => r.slot)).toEqual(["evening"]);
+  expect(check(1020)).toEqual([
+    expect.objectContaining({ reason: "venue_hours_source_review_required" }),
+  ]);
+});
 it("matches bounded title and reviewed-country address conventions without fuzzy branch matching", () => {
   const reviewed: ReviewedVenueHours = {
     ...fact,

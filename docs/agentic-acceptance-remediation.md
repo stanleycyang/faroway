@@ -45,7 +45,7 @@ from a menu or a generic dietary tag.
 
 ## Budget and measurement
 
-Last billed total: **$5.91607985 of $20**, remaining **$14.08392015**.
+Last recorded billed total: **$7.55509135 of $20**, remaining **$12.44490865**.
 Do source review and offline replay before more live generation. Allocate up to
 $4 to targeted repair runs and $4 to the final twelve-run round; retain the
 remaining ~$6.08 for retries and reconciliation. These are spend ceilings, not
@@ -65,9 +65,12 @@ recovery runs as separately labeled observations.
 
 - Existing repairs: Melbourne meeting parser and Café Sabarsky Tuesday closure;
   two live repeats each completed. Broader suitability remains unresolved.
-- D1–D4: pending implementation and authoritative verification.
-- D5: chronological normalization and absent-duration cleanup in progress.
-- D6: pending final candidate; do not reuse baseline successes as final evidence.
+- D1–D4: scoped source repairs are implemented; universal claim coverage,
+  continuous accessible routes and full meal/transit timelines remain unresolved.
+- D5: chronological normalization, absent-duration cleanup and seven licensed
+  venue images are implemented. Physical-device and full image coverage remain open.
+- D6: multiple twelve-run candidates completed, all still rejected on quality.
+  Do not reuse baseline successes as final evidence.
 
 No calendar completion date is asserted before the evidence/provider gaps are
 resolved. Progress is reported at each artifact milestone, with failed gates and
@@ -201,3 +204,32 @@ meal/travel/admission timeline, generic winter trail identity and beginner
 suitability, and physical Android validation. These are not fixed by adding
 warnings. Keep PR #55 draft and do not merge for production. The next live
 fixed-build rerun must be reported separately from these failed receipts.
+
+## Completed museum-repair round and novel-source fixes — 2026-11-03
+
+All twelve requests on `58079de` completed with matching saved/streamed days and
+no receipt integrity failures. Warm median terminal latency was 27.348 seconds;
+the cold first case took 40.072 seconds. Recorded round spend was $0.33894000,
+bringing cumulative key spend to $7.55509135. Evidence and individual rejected
+verdicts: `artifacts/uat/six-scenario-museum-repair-20261103/report.md`.
+GitHub CI quality checks and tests passed; release-build jobs were skipped for
+the draft PR, so this is not release verification.
+
+New repairs cover the conflated Bartholin institute/garden identity, Edinburgh
+gallery title variants, Press Club café scope, Jewish Museum and Cloisters
+closures, Whitney/NMS/Britannia morning visit windows, and renamed Lindt day
+trips. First-to-Bort sledging and Schynige Platte winter suggestions now require
+specific route/season review. Asia Society admission requires review after a
+participating-institution listing contradicted Monday admission; direct operator
+retrieval failed, so no authoritative future opening guarantee is asserted.
+
+The hours gate now distinguishes last admission from closing. Britannia's January
+last admission is 15:00 while closing is 17:00; a later free window cannot justify
+entry simply because the building is still open. This remains a compatibility
+screen, not a complete arrival-time solver.
+
+These changes do not complete D1–D6. New candidate grounding and replacement
+search, complete arrival/departure and meal timing, wheelchair route evidence,
+restaurant confirmation and physical Android remain unresolved. Keep PR #55
+draft. Rerun the affected Copenhagen, Edinburgh, New York and Interlaken briefs
+twice on the next fixed commit, retaining this failed round unchanged.

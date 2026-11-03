@@ -18,7 +18,12 @@ export interface ReviewedVenueHours extends ReviewedVenueIdentity {
   branchReview: string;
   months: number[];
   /** UTC weekday numbers represent local calendar weekdays, not UTC opening times. */
-  week: Array<{ weekday: number; intervals: Array<[number, number]> }>;
+  week: Array<{
+    weekday: number;
+    intervals: Array<[number, number]>;
+    /** Last ordinary admission, distinct from closing time. */
+    lastEntryMinute?: number;
+  }>;
 }
 const validDate = (s: string) =>
   /^\d{4}-\d{2}-\d{2}$/.test(s) &&
@@ -50,6 +55,12 @@ function valid(fact: ReviewedVenueHours, asOf: string) {
           Number.isInteger(d.weekday) &&
           d.weekday >= 0 &&
           d.weekday <= 6 &&
+          (d.lastEntryMinute === undefined ||
+            (Number.isInteger(d.lastEntryMinute) &&
+              d.intervals.some(
+                ([start, end]) =>
+                  start <= d.lastEntryMinute! && d.lastEntryMinute! < end,
+              ))) &&
           d.intervals.every(
             ([start, end]) =>
               Number.isInteger(start) &&
@@ -149,7 +160,11 @@ export function reviewedHoursExclusions(
             windows[dayIndex],
             Math.max(start, opens),
             Math.min(end, closes),
-          ).some(([a, b]) => b - a >= activity.duration),
+          ).some(
+            ([a, b]) =>
+              b - a >= activity.duration &&
+              (day.lastEntryMinute === undefined || a <= day.lastEntryMinute),
+          ),
         );
         if (!fits)
           exclusions.push({
