@@ -23,6 +23,7 @@ import { suppliedDistanceKm } from "./supplied-distance";
 import {
   familyActivityReviewReason,
   activityMobilityReviewReason,
+  activityTransportReviewReason,
 } from "./party-suitability";
 import type {
   ActivityResult,
@@ -343,6 +344,18 @@ export function compileSchedule(
           reason: familyReview,
         });
         issues.push(`family_suitability_review_required:${activity.id}`);
+        return false;
+      }
+      const transportReview = activityTransportReviewReason(
+        plan,
+        activity.name,
+      );
+      if (transportReview) {
+        reviewRequiredActivities.push({
+          id: activity.id,
+          reason: transportReview,
+        });
+        issues.push(`transport_preference_conflict:${activity.id}`);
         return false;
       }
       const mobilityReview = activityMobilityReviewReason(
@@ -672,6 +685,16 @@ export function compileSchedule(
       }
     }
     if (day === 0) {
+      for (const review of reviewRequiredActivities.filter(
+        (item) => item.reason === "private_transport_conflicts_with_request",
+      )) {
+        const name = inventory.find(
+          (activity) => activity.id === review.id,
+        )?.name;
+        tips.push(
+          `Not scheduled: ${name}. Its private transport conflicts with your request to use public transport. An alternative route still needs timetable review.`,
+        );
+      }
       if (availability.needsReview)
         tips.push(
           "Some arrival, departure or working-time instructions need review. This draft may not honor them; confirm your available hours before using the schedule.",

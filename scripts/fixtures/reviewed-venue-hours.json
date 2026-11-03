@@ -48,8 +48,8 @@
     "id": "matisse-ordinary-hours-20261101",
     "destination": "Nice, France",
     "country": "France",
-    "aliases": ["Mus\u00e9e Matisse"],
-    "addresses": ["164 Avenue des Ar\u00e8nes de Cimiez, 06000 Nice, France"],
+    "aliases": ["Musée Matisse"],
+    "addresses": ["164 Avenue des Arènes de Cimiez, 06000 Nice, France"],
     "sourceUrl": "https://www.musee-matisse-nice.org/en/practical-information/",
     "sourceSha256": "d905be94029bca2d70af3f589f067faec10bda19576888c6d599978d86a72131",
     "observedAt": "2026-11-01",
@@ -91,8 +91,8 @@
     "id": "chagall-ordinary-hours-20261101",
     "destination": "Nice, France",
     "country": "France",
-    "aliases": ["Mus\u00e9e National Marc Chagall"],
-    "addresses": ["36 Avenue Dr M\u00e9nard, 06000 Nice, France"],
+    "aliases": ["Musée National Marc Chagall"],
+    "addresses": ["36 Avenue Dr Ménard, 06000 Nice, France"],
     "sourceUrl": "https://musees-nationaux-alpesmaritimes.fr/chagall/en/opening-times",
     "sourceSha256": "5a4318cdd72dec54e7788e21bc98b2cceaa10fd63a63a64cda4ba8cb56722bf4",
     "observedAt": "2026-11-01",
@@ -216,6 +216,97 @@
       {
         "weekday": 6,
         "intervals": [[600, 1080]]
+      }
+    ]
+  },
+  {
+    "id": "national-denmark-hours-20261103",
+    "destination": "Copenhagen, Denmark",
+    "aliases": [
+      "National Museum of Denmark",
+      "National Museum of Denmark (Nationalmuseet)",
+      "Nationalmuseet"
+    ],
+    "addresses": [
+      "Ny Vestergade 10, 1471 København K",
+      "Ny Vestergade 10, 1471 København K, Denmark"
+    ],
+    "sourceUrl": "https://nationalmuseet.dk/en/page/opening-hours",
+    "sourceSha256": "b58e0a6d477b78cadc14c5b4cfa63c22a7c91d18ad3d46e9d82a00d289224137",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Exact institution and street address reviewed against the operator page. Recurring public opening hours only; exceptional openings, tickets and future availability remain unverified. National Museum seasonal evidence excludes February school-break and Easter exceptions.",
+    "months": [1, 11, 12],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": []
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "mound-hours-20261103",
+    "destination": "Edinburgh, United Kingdom",
+    "aliases": ["Museum on the Mound"],
+    "addresses": ["The Mound, Edinburgh EH1 1YZ, UK"],
+    "sourceUrl": "https://museumonthemound.com/visit-us/",
+    "sourceSha256": "c4d2425cc952fded3df01dbd0de162f7665b68cff98cd072c8177defd9f117ca",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Exact institution and street address reviewed against the operator page. Recurring public opening hours only; exceptional openings, tickets and future availability remain unverified. National Museum seasonal evidence excludes February school-break and Easter exceptions.",
+    "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": []
+      },
+      {
+        "weekday": 1,
+        "intervals": []
+      },
+      {
+        "weekday": 2,
+        "intervals": [[780, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[780, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[780, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[780, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[780, 1020]]
       }
     ]
   }

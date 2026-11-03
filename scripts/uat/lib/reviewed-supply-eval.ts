@@ -114,10 +114,11 @@ export function reviewedSupplySelectionFailures(
   const failures: string[] = [];
   if (canonical(candidate) !== canonical(expected(record)))
     failures.push("reviewed_supply_selection_changed");
+  const excludedDates: readonly string[] = record.excludedDates;
   if (
     date < record.validFrom ||
     date > record.validThrough ||
-    record.excludedDates.includes(date)
+    excludedDates.includes(date)
   )
     failures.push("reviewed_supply_date_not_supported");
   const window: Record<string, [number, number]> = {

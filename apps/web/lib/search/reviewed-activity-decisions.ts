@@ -77,15 +77,11 @@ export function applyReviewedActivityDecisions(
   const exclusions: ScheduleExclusion[] = [];
   const notes: string[] = [];
   const activities = inventory.map((activity) => {
-    const matched = records.filter(
+    const named = records.filter(
       (record) =>
         normalize(record.destination) === normalize(plan.destination) &&
         record.names.some(
           (name) => normalize(name) === normalize(activity.name),
-        ) &&
-        record.addresses.some(
-          (address) =>
-            normalize(address) === normalize(activity.location.address),
         ) &&
         record.visitTypes.includes(activity.proposedVisitType ?? "unknown") &&
         (!record.requiresStepFree || stepFree) &&
@@ -93,6 +89,33 @@ export function applyReviewedActivityDecisions(
           (day) => day >= record.validFrom && day <= record.validThrough,
         ),
     );
+    const matched = named.filter((record) =>
+      record.addresses.some(
+        (address) =>
+          normalize(address) === normalize(activity.location.address),
+      ),
+    );
+    // A known name at a new address is an unresolved identity, not evidence
+    // that the reviewed closure or access restriction no longer applies.
+    // Do not transfer that venue's factual verdict to the unreviewed address.
+    if (named.length && !matched.length) {
+      for (const day of dates.filter((day) =>
+        named.some(
+          (record) => day >= record.validFrom && day <= record.validThrough,
+        ),
+      ))
+        exclusions.push({
+          activityId: activity.id,
+          date: day,
+          reason: "venue_identity_requires_review",
+          sourceUrl: named[0].sourceUrl,
+          observedAt: named[0].observedAt,
+        });
+      notes.push(
+        `${activity.name} was not scheduled: its proposed address does not match the reviewed venue. Resolve the identity before applying any opening or access evidence. Review reference: ${named[0].sourceUrl}`,
+      );
+      return activity;
+    }
     if (!matched.length) return activity;
     // Do not erase/rewrite affiliate content or attribute our review to a vendor.
     const generated = !activity.affiliatePartner && !activity.affiliateUrl;

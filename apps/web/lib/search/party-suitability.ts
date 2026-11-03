@@ -1,4 +1,26 @@
 import { GENERATED_ACCESS_CONCERN_NOTE } from "./generated-activity-copy";
+
+/** Explicit public-transport instruction versus a private motor-tour title.
+ * Does not certify any timetable or infer a route from a transport preference.
+ */
+export function activityTransportReviewReason(
+  needs: { mobilityNeeds?: string; requirements?: { mobilityNotes?: string } },
+  title: string,
+): "private_transport_conflicts_with_request" | null {
+  const request = [needs.mobilityNeeds, needs.requirements?.mobilityNotes]
+    .filter(Boolean)
+    .join(". ")
+    .normalize("NFKC")
+    .toLowerCase();
+  const publicOnly =
+    /(?:^|[.;!?]\s*)(?:(?:use|only use|travel by)\s+public transport(?:ation)?\b|public transport only\b)/.test(
+      request,
+    );
+  return publicOnly &&
+    /\b(?:taxi|chauffeur|private car|private driver)\b/i.test(title)
+    ? "private_transport_conflicts_with_request"
+    : null;
+}
 /**
  * Conservative title screening for shared itineraries that include children.
  * These are reasons to seek suitability evidence, not legal age restrictions.

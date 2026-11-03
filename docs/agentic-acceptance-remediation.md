@@ -107,3 +107,43 @@ Checkpoint validation: all 710 mobile tests pass; 86 focused backend tests pass;
 mobile and web TypeScript checks pass. Existing React test-renderer deprecation
 messages remain. No paid AI calls were made for this checkpoint. New APK and live
 affected-case reruns remain pending; none of D1–D6 is declared fully complete.
+
+## Second fixed-build round — 2026-11-03
+
+Candidate `6cd6810150064b587945617a8a09c8db66f2368a` completed all twelve
+fresh runs. Android QA v14 SHA-256:
+`824a4f7a0456885ea1d4abbbc48a33e6f45fece8e09e4dc517c520e96fd370bf`.
+Evidence lives in `artifacts/uat/six-scenario-remediation-20261103/`.
+All twelve saved requests/date coverage and final stream-versus-save checks
+passed. All twelve cold launches and day-2 selections succeeded on the emulator.
+The first round's billed total was $6.27649835 (subject to final ingestion).
+
+Acceptance remains rejected. New failures include winter Monday admission at
+Denmark's National Museum, Museum on the Mound on Monday, unresolved canal
+boarding, Gemyse's unresolved current identity, Holyroodhouse and the Edinburgh
+King's Gallery without dated admission evidence, and renamed/address-varied
+Harder Kulm and Lake Brienz recommendations. Interlaken also offered a taxi tour
+against the explicit public-transport instruction. These are retained failed
+receipts, not silently repaired history.
+
+Follow-up repairs include scoped operator-hours records, deferral of unresolved
+identities/admission, and an identity-review path when a reviewed venue name
+appears at an unreviewed address. This path does not transfer closure/access
+facts to that address. Explicit public-transport requests now exclude named
+private motor tours. Reviewed Fruitmarket, Museum of Copenhagen and St. Beatus
+museum records supply alternatives; conservative day-part admission may still
+leave an alternative unscheduled. A source-backed museum weather alternative is
+shown separately rather than counted as another completed activity.
+
+Android v14 visually confirms the Edinburgh skyline and breakfast order. The
+allergy warning is now above meals; its full repeated brief was too verbose,
+so the follow-up build keeps the warning visible with expandable details.
+Newly observed Nyhavn/Federation Square title variants are tied to the same
+reviewed address/photo. Full scroll capture and follow-up APK validation remain
+in progress. Only the emulator is attached; physical-device evidence is pending.
+
+D1 is a bounded negative-evidence/identity gate, not yet the full claim ledger.
+D3 still lacks complete entrance-to-exit and inter-venue route evidence for the
+65 cm wheelchair. D4 still lacks verified dated transit times; distance screens
+are not route verification. These unresolved gates must remain explicit in the
+final packet. No production approval or merge is supported by this checkpoint.

@@ -40,7 +40,7 @@
   },
   {
     "id": "nyhavn",
-    "names": ["Nyhavn Canal Walk", "Nyhavn Waterfront Walk"],
+    "names": ["Nyhavn Canal Walk", "Nyhavn Waterfront Walk", "Nyhavn Waterfront"],
     "addresses": ["Nyhavn, 1051 København K", "Nyhavn, 1051 København K, Denmark"],
     "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/84/2018_-_Nyhavn_on_sunset.jpg/960px-2018_-_Nyhavn_on_sunset.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
     "artist": "Moahim",
@@ -76,7 +76,12 @@
   },
   {
     "id": "fed-square",
-    "names": ["Federation Square", "Federation Square Heritage Architecture"],
+    "names": [
+      "Federation Square",
+      "Federation Square Heritage Architecture",
+      "Federation Square Evening Walk",
+      "Federation Square Architecture Walk"
+    ],
     "addresses": [
       "Swanston St & Flinders St, Melbourne VIC 3000",
       "Swanston St & Flinders St, Melbourne VIC 3000, Australia"

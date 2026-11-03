@@ -32,7 +32,8 @@
       "Harder Kulm",
       "Harder Kulm Funicular",
       "Harder Kulm Funicular Ride",
-      "Harder Kulm Funicular and Panorama"
+      "Harder Kulm Funicular and Panorama",
+      "Harder Kulm Funicular and Viewpoint"
     ],
     "addresses": [
       "Harder Kulm, 3800 Interlaken, Switzerland",
@@ -55,7 +56,8 @@
       "Lake Brienz Boat Cruise",
       "Lake Brienz Boat Tour",
       "Lake Brienz Boat Trip",
-      "Lake Brienz Cruise"
+      "Lake Brienz Cruise",
+      "Lake Brienz Winter Cruise"
     ],
     "addresses": [
       "Lanzenen 1, 3800 Interlaken, Switzerland",
@@ -101,5 +103,81 @@
     "action": "replace_description",
     "explanation": "The Stone of Destiny is at Perth Museum, not a current Edinburgh Castle highlight. Access and ticket availability still need separate review.",
     "description": "Explore Edinburgh Castle. The Stone of Destiny is now at Perth Museum and is not part of this suggested visit. Confirm the exact accessible route and admission arrangements before visiting."
+  },
+  {
+    "id": "stromma-access-acceptance-review",
+    "destination": "Copenhagen, Denmark",
+    "names": [
+      "Copenhagen Canal Tour from Ved Stranden",
+      "Canal Tour from Ved Stranden"
+    ],
+    "addresses": [
+      "Ved Stranden 10, 1061 København K, Denmark",
+      "Ved Stranden 10, 1061 København K"
+    ],
+    "visitTypes": ["ordinary_entry", "guided_tour"],
+    "sourceUrl": "https://www.stromma.com/en-dk/kobenhavn/kundeservice/faq/",
+    "sourceSha256": "e9663fb436e5d42bbb7bd26cea7b8137e95b2d5b6932a7cd2ff5d8f368f0cee3",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-11",
+    "validThrough": "2027-01-17",
+    "requiresStepFree": true,
+    "action": "defer",
+    "explanation": "The proposed boarding address and step-free boarding are unverified. The reviewed Stromma service departs from Ved Stranden 26 and requires independent boarding and transfer to a regular seat; it does not establish the requested step-free journey."
+  },
+  {
+    "id": "gemyse-acceptance-review",
+    "destination": "Copenhagen, Denmark",
+    "names": ["Gemyse at Tivoli", "Gemyse"],
+    "addresses": [
+      "Vesterbrogade 3, 1630 København V",
+      "Vesterbrogade 3, 1630 København V, Denmark"
+    ],
+    "visitTypes": ["ordinary_entry"],
+    "sourceUrl": "https://www.nimb.dk/en/gemyse",
+    "sourceSha256": "8ee4e486ed323d783f1d8b10fac59e4fdf6eb0b9bf9b95befe095ffe34935f53",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-11",
+    "validThrough": "2027-01-17",
+    "requiresStepFree": false,
+    "action": "defer",
+    "explanation": "The former operator link redirects to a current dining directory without establishing this named restaurant or January service. Resolve the restaurant identity and operation before scheduling."
+  },
+  {
+    "id": "holyrood-acceptance-review",
+    "destination": "Edinburgh, United Kingdom",
+    "names": ["Palace of Holyroodhouse"],
+    "addresses": ["Canongate, Edinburgh EH8 8DX, UK"],
+    "visitTypes": ["ordinary_entry"],
+    "sourceUrl": "https://www.rct.uk/visit/palace-of-holyroodhouse",
+    "sourceSha256": "d9ae18314bd954501295e987d7db28158a328eaafac85f40ee2e61fc8cc2389b",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-11",
+    "validThrough": "2027-01-17",
+    "requiresStepFree": false,
+    "action": "defer",
+    "explanation": "The reviewed public-admission page does not establish January 2027 admission for this visit. Published ordinary visiting days exclude Tuesday and Wednesday outside summer; special guided tours are distinct products. Resolve dated admission and the exact accessible route first."
+  },
+  {
+    "id": "kings-gallery-acceptance-review",
+    "destination": "Edinburgh, United Kingdom",
+    "names": ["The Queen's Gallery", "The King's Gallery"],
+    "addresses": [
+      "Palace of Holyroodhouse, 22 Horse Wynd, Edinburgh EH8 8AS, UK",
+      "Palace of Holyroodhouse, Canongate, Edinburgh EH8 8DX, UK"
+    ],
+    "visitTypes": ["ordinary_entry"],
+    "sourceUrl": "https://www.rct.uk/visit/the-kings-gallery-palace-of-holyroodhouse",
+    "sourceSha256": "31ce0f85c49243d79e097baa57945ba0e27d6c54a11991836e48545579c154bc",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-11",
+    "validThrough": "2027-01-17",
+    "requiresStepFree": false,
+    "action": "defer",
+    "explanation": "The institution is now named The King’s Gallery. The reviewed Edinburgh exhibition listing ends December 6, 2026 and does not establish a January 2027 exhibition. Obtain dated opening information; the London gallery is a different venue."
   }
 ]

@@ -1155,3 +1155,37 @@ it("keeps obviously distant visits apart and chooses a nearby meal when transfer
   );
   expect(result.verified).toBe(false);
 });
+
+it("does not schedule a taxi scenic tour when public transport is explicitly requested", () => {
+  const request = {
+    ...extended,
+    mobilityNeeds:
+      "Winter trip. Use public transport. Beginner activities only.",
+  };
+  const taxi = visit("Bödeli Taxi Scenic Tour", 90);
+  const result = compileSchedule(
+    request,
+    [taxi, visit("Local museum", 90)],
+    [],
+  );
+  expect(
+    result.days
+      .flatMap((day) => slots.flatMap((slot) => day[slot].activities))
+      .some((activity) => activity.id === taxi.id),
+  ).toBe(false);
+  expect(result.reviewRequiredActivities).toContainEqual({
+    id: taxi.id,
+    reason: "private_transport_conflicts_with_request",
+  });
+  const flexible = compileSchedule(
+    {
+      ...request,
+      mobilityNeeds: "Do not use public transport. Taxi preferred.",
+    },
+    [taxi],
+    [],
+  );
+  expect(
+    flexible.reviewRequiredActivities.some((item) => item.id === taxi.id),
+  ).toBe(false);
+});

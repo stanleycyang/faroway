@@ -169,7 +169,7 @@ export async function runStagingCompiledSchedule(
       ),
     },
   );
-  appendActivitySourceNotes(compiled.days, supply.admitted);
+  appendActivitySourceNotes(compiled.days, supply.admitted, plan);
   compiled.days[0].tips.push(...decisionReview.notes);
   for (const day of compiled.days) {
     const names = [

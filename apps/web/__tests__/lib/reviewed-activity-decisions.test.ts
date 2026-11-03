@@ -122,7 +122,14 @@ it("does not transfer evidence to another city, branch, scope or date; stale rev
       facts,
       "2026-11-03",
     ).exclusions,
-  ).toEqual([]);
+  ).toEqual(
+    dates.map((date) =>
+      expect.objectContaining({
+        date,
+        reason: "venue_identity_requires_review",
+      }),
+    ),
+  );
   expect(
     applyReviewedActivityDecisions(
       request,
@@ -142,3 +149,23 @@ it("does not transfer evidence to another city, branch, scope or date; stale rev
   expect(stale.exclusions).toHaveLength(3);
   expect(stale.notes[0]).toContain("needs refreshing");
 });
+
+it.each([5, 6, 7, 8])(
+  "defers fresh acceptance failure %i and preserves its source",
+  (index) => {
+    const request = {
+      ...plan,
+      destination: facts[index].destination,
+      mobilityNeeds: "step-free",
+    };
+    const result = applyReviewedActivityDecisions(
+      request,
+      [visit(index)],
+      dates,
+      facts,
+      "2026-11-03",
+    );
+    expect(result.exclusions.map((item) => item.date)).toEqual(dates);
+    expect(result.notes[0]).toContain(facts[index].sourceUrl);
+  },
+);

@@ -513,6 +513,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   const { tripGenerationCount, shouldShowRatingPrompt } = usePromptStore();
   const reduceMotion = useReduceMotion();
   const [selectedDay, setSelectedDay] = useState(0);
+  const [showDiningRequirements, setShowDiningRequirements] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showAuthGate, setShowAuthGate] = useState(false);
   const [showRatingPrompt, setShowRatingPrompt] = useState(false);
@@ -1002,11 +1003,28 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                     >
                       Confirm allergy requirements before dining
                     </Text>
-                    {diningCautions.map((tip) => (
-                      <Text key={tip} style={styles.dayTip}>
-                        {tip}
+                    <Text style={styles.dayTip}>
+                      Confirm ingredients and cross-contact precautions directly with each
+                      restaurant. No venue’s allergy handling has been verified.
+                    </Text>
+                    <TouchableOpacity
+                      accessibilityRole="button"
+                      accessibilityState={{ expanded: showDiningRequirements }}
+                      onPress={() => setShowDiningRequirements((shown) => !shown)}
+                      style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 24 }}
+                    >
+                      <Text style={{ color: '#713F12', fontWeight: '600' }}>
+                        {showDiningRequirements
+                          ? 'Hide dietary requirements'
+                          : 'View dietary requirements'}
                       </Text>
-                    ))}
+                    </TouchableOpacity>
+                    {showDiningRequirements &&
+                      diningCautions.map((tip) => (
+                        <Text key={tip} style={styles.dayTip}>
+                          {tip}
+                        </Text>
+                      ))}
                   </View>
                 )}
                 {/* Activities */}

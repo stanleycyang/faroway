@@ -293,3 +293,44 @@ it.each([
     );
   },
 );
+
+it("rejects the observed winter Monday museum failures without inventing closure on Tuesday", async () => {
+  const records = (
+    await import("../../../../scripts/fixtures/reviewed-venue-hours.json")
+  ).default as ReviewedVenueHours[];
+  for (const id of [
+    "national-denmark-hours-20261103",
+    "mound-hours-20261103",
+  ]) {
+    const record = records.find((item) => item.id === id)!;
+    const candidate = {
+      ...activity,
+      name: record.aliases[0],
+      duration: 90,
+      location: { ...activity.location, address: record.addresses[0] },
+    };
+    const result = reviewedHoursExclusions(
+      { destination: record.destination },
+      [candidate],
+      ["2027-01-11", "2027-01-12"],
+      records,
+      "2026-11-03",
+    );
+    expect(
+      result
+        .filter((item) => item.date === "2027-01-11")
+        .map((item) => item.slot),
+    ).toEqual(["morning", "afternoon", "evening"]);
+    expect(
+      result.some(
+        (item) => item.date === "2027-01-12" && item.slot === "afternoon",
+      ),
+    ).toBe(false);
+    if (id.startsWith("mound"))
+      expect(
+        result.some(
+          (item) => item.date === "2027-01-12" && item.slot === "morning",
+        ),
+      ).toBe(true);
+  }
+});

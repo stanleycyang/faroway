@@ -27,6 +27,7 @@ export interface ReviewedActivitySupply {
   closes: number;
   lastEntry?: number;
   reviewNotes: string;
+  weatherAlternative?: boolean;
 }
 const normalize = (value: string) =>
   value.normalize("NFKC").trim().toLowerCase();
@@ -222,9 +223,28 @@ export function addReviewedActivitySupply(
 export function appendActivitySourceNotes(
   days: SuggestedDay[],
   records: readonly ReviewedActivitySupply[],
+  plan?: Pick<SearchPlan, "mobilityNeeds" | "requirements">,
 ) {
+  const request = [plan?.mobilityNeeds, plan?.requirements?.mobilityNotes]
+    .filter(Boolean)
+    .join(" ");
   for (const day of days)
     for (const record of records) {
+      if (
+        record.weatherAlternative === true &&
+        /weather|indoor fallback/i.test(request) &&
+        day.date >= record.validFrom &&
+        day.date <= record.validThrough &&
+        !record.excludedDates.includes(day.date)
+      ) {
+        const clock = (minute: number) =>
+          `${Math.floor(minute / 60)
+            .toString()
+            .padStart(2, "0")}:${(minute % 60).toString().padStart(2, "0")}`;
+        day.tips.push(
+          `Weather alternative to review: replace the outdoor excursion with ${record.name}, whose published window is ${clock(record.opens)}–${clock(record.closes)}. Allow ${record.durationMinutes} minutes for the visit plus travel. Check current opening, public transport and the outdoor approach before switching; do not make the journey if disruption prevents it. This is an alternative, not an additional scheduled visit. Source: ${record.sourceUrl}`,
+        );
+      }
       if (
         ![
           ...day.morning.activities,
