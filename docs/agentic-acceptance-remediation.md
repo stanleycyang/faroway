@@ -255,3 +255,32 @@ New source records address SMK Monday closure and New York Historical morning
 duration. This is bounded reviewed context, not universal live source retrieval.
 The next fixed twelve-run comparison must measure its quality, cost and latency;
 the unresolved D1/D3/D4 gates are not declared complete.
+
+
+## Completed date/source-context round — 2026-11-03
+
+All twelve cases on `86b178f` completed with matching saved/streamed days and no
+receipt-integrity issues. Warm median terminal latency was 27.735 seconds; cold
+first case 44.401 seconds. Recorded spend reached $8.14161835 of the unchanged
+$20 cap (round delta $0.34738750). Detailed per-case evidence and explicit
+rejected verdicts: `artifacts/uat/six-scenario-source-context-20261103/report.md`.
+The runner's per-case build label was stale; the fixed worktree and root manifest
+identify the actual candidate. Subsequent runner reads that manifest directly.
+
+A retrospective ledger CLI now audits actual saved receipts against the reviewed
+catalog, retaining its hash and distinguishing contradictions, compatibility and
+unknowns. It does not mark missing evidence as a pass or certify meals, routes,
+accessibility or tickets. It is partial acceptance evidence, not completion of D1.
+
+The next patch defers January Tivoli garden admission/strolls outside published
+seasons, while leaving separately scoped theatre/restaurant events distinct.
+Reviewed activity source URL/date now pass through saved results and the web
+card; the existing native v17 card already supports this metadata. Attribution
+requires a fresh joint identity match and does not manufacture booking links or
+claim suitability. Local validation: 1,696 web tests; all 11 workspace check tasks
+and script type-check passed, with nine existing lint warnings.
+
+Copenhagen needs two affected-case reruns on the next fixed commit. Universal
+source coverage, continuous wheelchair routing, complete transit/meal timing,
+image coverage and physical-device verification remain unresolved. Keep PR #55
+draft. Do not describe this repair as all issues fixed or production-ready.

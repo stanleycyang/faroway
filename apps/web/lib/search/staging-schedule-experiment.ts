@@ -57,6 +57,7 @@ import {
   applyReviewedActivityDecisions,
 } from "./reviewed-activity-decisions";
 import activityDecisionRecords from "../../../../scripts/fixtures/reviewed-activity-decisions.json";
+import { withReviewedActivitySources } from "./reviewed-activity-sources";
 
 import { compiledScheduleExperimentEnabled } from "./schedule-experiment-gate";
 export { compiledScheduleExperimentEnabled } from "./schedule-experiment-gate";
@@ -92,7 +93,12 @@ export async function runStagingCompiledSchedule(
     ),
     activityDecisionSchema.array().parse(activityDecisionRecords),
   );
-  const activities = decisionReview.activities;
+  const activities = withReviewedActivitySources(
+    plan.destination,
+    decisionReview.activities,
+    reviewedHours as import("./reviewed-venue-hours").ReviewedVenueHours[],
+    supply.admitted,
+  );
   const exclusions: ScheduleExclusion[] = [
     ...supply.exclusions,
     ...decisionReview.exclusions,

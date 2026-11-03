@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 
 export interface Activity {
+  source?: VenueSource;
   proposedVisitType?: ActivityResult["proposedVisitType"];
   id: string;
   name: string;
@@ -217,6 +218,29 @@ function getBadge(
   return null;
 }
 
+function VenueSourceNote({ value }: { value: unknown }) {
+  const source = readVenueSource(value);
+  if (!source) return null;
+  return (
+    <div className="mt-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
+      <a
+        href={source.url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="inline-flex min-h-8 items-center gap-1 font-medium text-slate-900 underline underline-offset-2"
+      >
+        View source · {new URL(source.url).hostname}
+        <ExternalLink className="h-3 w-3" aria-hidden="true" />
+        <span className="sr-only"> (opens in a new tab)</span>
+      </a>
+      <p>
+        Retrieved {source.retrievedOn}. Confirm opening hours and availability
+        for your dates.
+      </p>
+    </div>
+  );
+}
+
 export function ActivityCard({ activity, date }: ActivityCardProps) {
   const checkout = useTripCheckout();
   const viatorContentEnabled = useViatorContentEnabled();
@@ -355,6 +379,8 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
           </p>
         )}
 
+        <VenueSourceNote value={activity.source} />
+
         {/* Metadata chips */}
         <div className="flex flex-wrap items-center gap-2.5 mt-3 text-xs text-gray-500">
           {activity.duration != null && (
@@ -491,7 +517,6 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
     mealTypeConfig[restaurant.mealType] || mealTypeConfig.dinner;
   const badge = getBadge(rating, reviewCount);
   const hasReservation = !!restaurant.reservationInfo?.url;
-  const source = readVenueSource(restaurant.source);
 
   const formatCost = (amount: number, currency: string) => {
     return new Intl.NumberFormat("en-US", {
@@ -632,24 +657,7 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
                 </div>
               )}
 
-            {source && (
-              <div className="mt-3 rounded-lg bg-slate-50 p-3 text-xs text-slate-600">
-                <a
-                  href={source.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex min-h-8 items-center gap-1 font-medium text-slate-900 underline underline-offset-2"
-                >
-                  View source · {new URL(source.url).hostname}
-                  <ExternalLink className="h-3 w-3" aria-hidden="true" />
-                  <span className="sr-only"> (opens in a new tab)</span>
-                </a>
-                <p>
-                  Retrieved {source.retrievedOn}. Confirm opening hours and
-                  availability for your dates.
-                </p>
-              </div>
-            )}
+            <VenueSourceNote value={restaurant.source} />
 
             {/* Reserve CTA */}
             {hasReservation && (

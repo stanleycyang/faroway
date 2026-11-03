@@ -206,6 +206,7 @@ export interface Coordinates {
 // =============================================================================
 
 export interface ItineraryActivity {
+  source?: VenueSource;
   /** Proposed visit scope retained from planning; not verified access. */
   proposedVisitType?: ActivityResult["proposedVisitType"];
   id: string;
@@ -517,6 +518,7 @@ export interface HotelResult {
 }
 
 export interface ActivityResult {
+  source?: VenueSource;
   /** Proposed experience only, not verified access, opening hours or a booking. */
   proposedVisitType?:
     | "ordinary_entry"

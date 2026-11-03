@@ -448,5 +448,21 @@
     "validThrough": "2027-01-31",
     "action": "defer",
     "explanation": "The participating-institution listing publishes Wednesday–Sunday museum admission, conflicting with the generated Monday visit. The museum visitor page could not be retrieved for direct confirmation. Resolve dated admission with the operator; the directory is a review lead, not a future ticket guarantee."
+  },
+  {
+    "id": "tivoli-january-garden-admission-review",
+    "destination": "Copenhagen, Denmark",
+    "names": ["Tivoli Gardens", "Tivoli Gardens Stroll"],
+    "deferNameFragments": [["tivoli", "garden"]],
+    "addresses": ["Vesterbrogade 3, 1630 København V"],
+    "visitTypes": ["ordinary_entry", "exterior_walk", "unknown"],
+    "sourceUrl": "https://www.tivoli.dk/en/opening-hours-and-seasons",
+    "sourceSha256": "6c7e6842f1eedd98e9576eb0101ec3714cec59c1154de3da8c558338475c7097",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-04",
+    "validThrough": "2027-03-18",
+    "action": "defer",
+    "explanation": "The operator lists the Christmas garden season ending January 3 and the next garden season beginning March 19, 2027. A January stroll inside the park needs dated admission evidence; calling it an exterior walk does not establish access to the grounds. Separate theatre events, restaurants or walks outside the park require their own scope and entry evidence."
   }
 ]

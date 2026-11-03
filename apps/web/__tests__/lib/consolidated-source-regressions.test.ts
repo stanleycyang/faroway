@@ -107,6 +107,22 @@ it.each([
   },
 );
 
+it("does not turn a January Tivoli garden visit into public access by labeling it an exterior walk", () => {
+  const activity = {
+    ...visit("Tivoli Gardens Stroll", "Vesterbrogade 3, 1630 København V", 120),
+    proposedVisitType: "exterior_walk" as const,
+  };
+  const result = applyReviewedActivityDecisions(
+    { destination: "Copenhagen, Denmark" },
+    [activity],
+    ["2027-01-11"],
+    activityDecisionSchema.array().parse(decisions),
+    "2026-11-03",
+  );
+  expect(result.exclusions).toHaveLength(1);
+  expect(result.activities[0].proposedVisitType).toBe("exterior_walk");
+});
+
 it.each([
   [
     "Copenhagen, Denmark",

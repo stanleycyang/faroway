@@ -51,6 +51,7 @@ function mapActivity(
     a.priceStatus === "unknown" ? undefined : readPrice(a.price, a.currency);
   return {
     ...viatorContentMetadata(a),
+    source: readVenueSource(a.source),
     id: a.id,
     name: a.name,
     description: a.description,
