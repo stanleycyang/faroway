@@ -5,6 +5,8 @@ export interface ReviewedDiningDays {
   names: string[];
   addresses: string[];
   closedWeekdays: number[];
+  closedFrom?: string;
+  closedThrough?: string;
   sourceUrl: string;
   observedAt: string;
   reviewAfter: string;
@@ -41,6 +43,12 @@ export function reviewedDiningDayExclusions(
         url.protocol === "https:" &&
         !url.username &&
         !url.password &&
+        ((!record.closedFrom && !record.closedThrough) ||
+          (!!record.closedFrom &&
+            !!record.closedThrough &&
+            validDate(record.closedFrom) &&
+            validDate(record.closedThrough) &&
+            record.closedFrom <= record.closedThrough)) &&
         record.closedWeekdays.every(
           (day) => Number.isInteger(day) && day >= 0 && day <= 6,
         )
@@ -64,7 +72,14 @@ export function reviewedDiningDayExclusions(
         { length: count },
         (_, index) => new Date(start + index * 86400000),
       )
-        .filter((date) => record.closedWeekdays.includes(date.getUTCDay()))
+        .filter(
+          (date) =>
+            record.closedWeekdays.includes(date.getUTCDay()) ||
+            (!!record.closedFrom &&
+              !!record.closedThrough &&
+              date.toISOString().slice(0, 10) >= record.closedFrom &&
+              date.toISOString().slice(0, 10) <= record.closedThrough),
+        )
         .map((date) => ({
           diningId: meal.id,
           date: date.toISOString().slice(0, 10),

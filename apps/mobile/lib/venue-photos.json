@@ -12,7 +12,8 @@
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
     "reviewedAt": "2026-11-03",
-    "description": "National Museum of Scotland - interior"
+    "description": "National Museum of Scotland - interior",
+    "countrySuffixes": ["UK", "United Kingdom"]
   },
   {
     "id": "jeronimos",
@@ -24,7 +25,8 @@
     "license": "CC BY 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
     "reviewedAt": "2026-11-03",
-    "description": "Jerónimos Monastery in Belém, Lisbon"
+    "description": "Jerónimos Monastery in Belém, Lisbon",
+    "countrySuffixes": ["Portugal"]
   },
   {
     "id": "belem",
@@ -36,7 +38,8 @@
     "license": "CC BY-SA 2.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
     "reviewedAt": "2026-11-03",
-    "description": "Belém Tower"
+    "description": "Belém Tower",
+    "countrySuffixes": ["Portugal"]
   },
   {
     "id": "nyhavn",
@@ -48,7 +51,8 @@
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
     "reviewedAt": "2026-11-03",
-    "description": "in the Heritage Agency of Denmark database for Listed Buildings."
+    "description": "in the Heritage Agency of Denmark database for Listed Buildings.",
+    "countrySuffixes": ["Denmark"]
   },
   {
     "id": "met",
@@ -60,7 +64,8 @@
     "license": "CC BY-SA 2.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
     "reviewedAt": "2026-11-03",
-    "description": "The Metropolitan Museum of Art (The Met) entrance façade in Upper East Side, Manhattan, New York City"
+    "description": "The Metropolitan Museum of Art (The Met) entrance façade in Upper East Side, Manhattan, New York City",
+    "countrySuffixes": ["USA", "United States"]
   },
   {
     "id": "moma",
@@ -72,7 +77,8 @@
     "license": "CC BY-SA 3.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
     "reviewedAt": "2026-11-03",
-    "description": "Museum of Modern Art, New York City"
+    "description": "Museum of Modern Art, New York City",
+    "countrySuffixes": ["USA", "United States"]
   },
   {
     "id": "fed-square",
@@ -92,6 +98,7 @@
     "license": "CC BY-SA 4.0",
     "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
     "reviewedAt": "2026-11-03",
-    "description": "A north view of Fed Square, Melbourne"
+    "description": "A north view of Fed Square, Melbourne",
+    "countrySuffixes": ["Australia"]
   }
 ]

@@ -283,6 +283,14 @@ export function compileSchedule(
     );
   const candidates = inventory
     .filter((activity) => {
+      if (/^(?:breakfast|lunch|dinner)\s+at\s+/i.test(activity.name.trim())) {
+        reviewRequiredActivities.push({
+          id: activity.id,
+          reason: "meal_title_requires_dining_review",
+        });
+        issues.push(`meal_candidate_not_sightseeing:${activity.id}`);
+        return false;
+      }
       if (activity.planningIdea) {
         reviewRequiredActivities.push({
           id: activity.id,
@@ -315,6 +323,20 @@ export function compileSchedule(
         return false;
       }
       if (venueKey) venueKeys.add(venueKey);
+      if (
+        !reviewedIds.has(activity.id) &&
+        (activity.proposedVisitType === "event" ||
+          /\b(?:winter|christmas|holiday|summer|festive)\s+(?:markets?|festivals?|fairs?)\b/i.test(
+            activity.name,
+          ))
+      ) {
+        reviewRequiredActivities.push({
+          id: activity.id,
+          reason: "dated_event_evidence_required",
+        });
+        issues.push(`event_evidence_review_required:${activity.id}`);
+        return false;
+      }
       if (
         isSpeculativeEventTitle(activity.name) ||
         isGenericEventTitle(activity.name) ||
@@ -686,6 +708,26 @@ export function compileSchedule(
       }
     }
     if (day === 0) {
+      for (const review of reviewRequiredActivities.filter(
+        (item) => item.reason === "meal_title_requires_dining_review",
+      )) {
+        const name = inventory.find(
+          (activity) => activity.id === review.id,
+        )?.name;
+        tips.push(
+          `Dining idea to review, not a sightseeing stop: ${name}. A separate scheduled meal may already cover this time; confirm the restaurant before replacing it.`,
+        );
+      }
+      for (const review of reviewRequiredActivities.filter(
+        (item) => item.reason === "dated_event_evidence_required",
+      )) {
+        const name = inventory.find(
+          (activity) => activity.id === review.id,
+        )?.name;
+        tips.push(
+          `Event option to review, not scheduled: ${name}. No reviewed organizer evidence establishes this event on your trip dates. Confirm its dates, venue and admission before adding it.`,
+        );
+      }
       for (const review of reviewRequiredActivities.filter(
         (item) => item.reason === "boarding_access_requires_review",
       )) {

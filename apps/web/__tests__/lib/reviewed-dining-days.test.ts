@@ -102,3 +102,31 @@ it("excludes the reviewed Sabarsky branch on Tuesday without claiming allergy su
     "https://www.neuegalerie.org/cafesabarsky",
   );
 });
+
+it("applies the bounded Reffen winter closure to meals without extending it into March", () => {
+  const candidate = {
+    ...meal,
+    name: "Reffen - Copenhagen Street Food",
+    location: {
+      ...meal.location,
+      address: "Refshalevej 167A, 1432 København K",
+    },
+  };
+  const request = { ...plan, destination: "Copenhagen, Denmark" };
+  expect(
+    reviewedDiningDayExclusions(request, [candidate], facts, "2026-11-03").map(
+      (item) => item.date,
+    ),
+  ).toEqual(["2027-01-11", "2027-01-12", "2027-01-13"]);
+  expect(
+    reviewedDiningDayExclusions(
+      {
+        ...request,
+        dates: { start: "2027-03-01", end: "2027-03-03", nights: 2 },
+      },
+      [candidate],
+      facts,
+      "2026-11-03",
+    ),
+  ).toEqual([]);
+});

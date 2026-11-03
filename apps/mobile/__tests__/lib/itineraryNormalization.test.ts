@@ -411,3 +411,14 @@ test('reviewed venue photos retain credits through cache reload without matching
   expect(provider.image).toBe('https://provider.example/photo.jpg');
   expect(provider.imageCredit).toBeUndefined();
 });
+
+test('reviewed photo address formatting accepts Street and the known country but retains branch and country isolation', () => {
+  const image = (address: string) =>
+    transformItineraryDays([
+      { morning: { activities: [{ name: 'National Museum of Scotland', location: { address } }] } },
+    ])[0].activities[0].image;
+  expect(image('Chambers Street, Edinburgh EH1 1JF')).toContain('wikimedia.org');
+  expect(image('Chambers St., Edinburgh EH1 1JF, United Kingdom')).toContain('wikimedia.org');
+  expect(image('Chambers Street, Edinburgh EH1 1JF, France')).toBeUndefined();
+  expect(image('Chambers Street, Edinburgh EH1 1JF, Unit 2')).toBeUndefined();
+});

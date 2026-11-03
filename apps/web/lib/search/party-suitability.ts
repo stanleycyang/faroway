@@ -70,7 +70,7 @@ export function activityMobilityReviewReason(
   // A generated boat title cannot establish accessible boarding. This applies
   // across departure-name variants; a waterfront walk is not a boat journey.
   if (
-    /\b(?:canal\s+(?:tour|cruise)|boat\s+(?:tour|trip|cruise)|ferry\s+(?:ride|trip))\b/i.test(
+    /\b(?:canal\s+(?:tours?|cruises?)|boat\s+(?:tours?|trips?|cruises?)|ferry\s+(?:rides?|trips?))\b/i.test(
       title,
     )
   )

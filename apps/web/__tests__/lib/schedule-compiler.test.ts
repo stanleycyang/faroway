@@ -1240,3 +1240,33 @@ it("screens newly observed Copenhagen closures without treating winter events as
     ).toBe(true);
   }
 });
+
+it("requires dated organizer evidence for event scope and seasonal markets", () => {
+  const event = {
+    ...visit("Named performance", 60),
+    proposedVisitType: "event" as const,
+  };
+  const market = visit("Kgs. Nytorv Winter Market", 60);
+  const result = compileSchedule(extended, [event, market], []);
+  expect(result.reviewRequiredActivities).toEqual(
+    [event, market].map((item) => ({
+      id: item.id,
+      reason: "dated_event_evidence_required",
+    })),
+  );
+  expect(
+    compileSchedule(extended, [event], [], [], {
+      reviewedActivityIds: [event.id],
+    }).reviewRequiredActivities,
+  ).toEqual([]);
+});
+
+it("does not count a separately generated lunch as another sightseeing activity", () => {
+  const lunch = visit("Lunch at SimpleRAW", 90);
+  expect(
+    compileSchedule(extended, [lunch], []).reviewRequiredActivities,
+  ).toContainEqual({
+    id: lunch.id,
+    reason: "meal_title_requires_dining_review",
+  });
+});

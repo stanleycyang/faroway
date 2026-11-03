@@ -26,5 +26,25 @@
     "reviewAfter": "2026-12-03",
     "sourceSha256": "8b2cb12c16e72fccc1d9a2ddeda1d82035ef3838636659cc9c149fd8484864b6",
     "sourceNote": "Operator regular hours: closed Tuesday. Exact reviewed address aliases only; no assertion of opening on other days or allergy suitability."
+  },
+  {
+    "destination": "Copenhagen, Denmark",
+    "names": [
+      "Reffen - Copenhagen Street Food",
+      "Reffen",
+      "Reffen Street Food"
+    ],
+    "addresses": [
+      "Refshalevej 167A, 1432 København K",
+      "Refshalevej 167A, 1432 København K, Denmark"
+    ],
+    "closedWeekdays": [],
+    "closedFrom": "2026-11-03",
+    "closedThrough": "2027-02-28",
+    "sourceUrl": "https://reffen.dk/aabningstider-og-saesoner/",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "sourceSha256": "49d71e8e01fe3b642911067e630ac65785557543f74936d6c647621aa4a90cc0",
+    "sourceNote": "Operator explicitly reports winter closure, returning March 2027. Ordinary street-food service only, not a separately reviewed winter event."
   }
 ]
