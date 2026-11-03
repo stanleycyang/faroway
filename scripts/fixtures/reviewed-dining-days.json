@@ -1,16 +1,42 @@
 [
   {
     "destination": "Edinburgh, United Kingdom",
-    "names": ["Cafe St Honoré", "Café St Honoré", "Cafe St Honore"],
+    "names": [
+      "Cafe St Honoré",
+      "Café St Honoré",
+      "Cafe St Honore"
+    ],
     "addresses": [
       "34 Thistle St N Ln, Edinburgh EH2 1EA",
       "34 North West Thistle Street Lane, Edinburgh EH2 1EA"
     ],
-    "closedWeekdays": [2, 3],
+    "closedWeekdays": [
+      2,
+      3
+    ],
     "sourceUrl": "https://www.cafesthonore.com/contact-us",
     "observedAt": "2026-11-03",
     "reviewAfter": "2026-12-03",
     "sourceSha256": "e27d8f5b344fda28820bdca5d5d15fdb33ac8df2167fe857b33e1b218e93243e",
     "sourceNote": "Operator contact page reviewed: recurring Tuesday and Wednesday closure. Exact generated branch aliases only; no claim of January exceptional availability."
+  },
+  {
+    "destination": "New York, USA",
+    "names": [
+      "Café Sabarsky",
+      "Cafe Sabarsky"
+    ],
+    "addresses": [
+      "1048 5th Ave, New York, NY 10028",
+      "1048 Fifth Avenue, New York, NY 10028"
+    ],
+    "closedWeekdays": [
+      2
+    ],
+    "sourceUrl": "https://www.neuegalerie.org/cafesabarsky",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "sourceSha256": "8b2cb12c16e72fccc1d9a2ddeda1d82035ef3838636659cc9c149fd8484864b6",
+    "sourceNote": "Operator regular hours: closed Tuesday. Exact reviewed address aliases only; no assertion of opening on other days or allergy suitability."
   }
 ]
