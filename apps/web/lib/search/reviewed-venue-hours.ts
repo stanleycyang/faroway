@@ -1,6 +1,7 @@
 import {
   resolveReviewedVenue,
   reviewedVenueAddressMatches,
+  reviewedVenueNameMatches,
   type ReviewedVenueIdentity,
 } from "./venue-identity";
 import {
@@ -92,10 +93,16 @@ export function reviewedHoursExclusions(
       // A renamed visit at a reviewed address is not unknown supply. Its identity
       // needs adjudication; do not apply the occupant's hours to another tenant,
       // event or exterior experience, and do not silently ignore the collision.
-      const collisions = reviewedVenueAddressMatches(
-        { destination: plan.destination, address: activity.location.address },
-        facts,
-      ).filter((fact) => valid(fact, asOf));
+      const collisions = [
+        ...reviewedVenueAddressMatches(
+          { destination: plan.destination, address: activity.location.address },
+          facts,
+        ),
+        ...reviewedVenueNameMatches(
+          { destination: plan.destination, name: activity.name },
+          facts,
+        ),
+      ].filter((fact) => valid(fact, asOf));
       if (collisions.length)
         for (const date of dates)
           exclusions.push({

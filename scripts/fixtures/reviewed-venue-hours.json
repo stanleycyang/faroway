@@ -309,5 +309,141 @@
         "intervals": [[780, 1020]]
       }
     ]
+  },
+  {
+    "id": "amalienborg-hours-20261103",
+    "destination": "Copenhagen, Denmark",
+    "aliases": ["Amalienborg Palace Museum", "Amalienborg Museum"],
+    "addresses": [
+      "Amalienborg Slotsplads 5, 1257 København K, Denmark",
+      "Amalienborg Slotsplads 5, 1257 København K"
+    ],
+    "sourceUrl": "https://denkongeligesamling.dk/en/amalienborg-museum/plan-your-visit/opening-hours/",
+    "sourceSha256": "10392ac6335c4cc140de9cad183df5efd4ea55f5c9faa85c85189b6d85b45dbb",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Official visitor page reviewed for this named venue and address. Ordinary January hours only; exceptional openings, dated tickets and route accessibility remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 960]]
+      },
+      {
+        "weekday": 1,
+        "intervals": []
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 960]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 960]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 960]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 960]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 960]]
+      }
+    ]
+  },
+  {
+    "id": "morgan-hours-20261103",
+    "destination": "New York, USA",
+    "aliases": ["Morgan Library & Museum", "The Morgan Library & Museum"],
+    "addresses": [
+      "225 Madison Ave, New York, NY 10016",
+      "225 Madison Avenue, New York, NY 10016"
+    ],
+    "sourceUrl": "https://www.themorgan.org/visit",
+    "sourceSha256": "a287ba1cc55e07e8d9d01d6af86f986719d050d15dec3c604f5eb28d1a279ea5",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Official visitor page reviewed for this named venue and address. Ordinary January hours only; exceptional openings, dated tickets and route accessibility remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[630, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": []
+      },
+      {
+        "weekday": 2,
+        "intervals": [[630, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[630, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[630, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[630, 1200]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[630, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "block-arcade-hours-20261103",
+    "destination": "Melbourne, Australia",
+    "aliases": ["The Block Arcade", "Block Arcade"],
+    "addresses": [
+      "282 Collins St, Melbourne VIC 3000",
+      "282 Collins Street, Melbourne VIC 3000",
+      "282 Collins St, Melbourne VIC 3000, Australia"
+    ],
+    "sourceUrl": "https://theblock.com.au/contact/",
+    "sourceSha256": "ed69c480788f3d376dae7f3ea0321b0819a1f5d2027127ad5b6253ea982711f6",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Official visitor page reviewed for this named venue and address. Ordinary January hours only; exceptional openings, dated tickets and route accessibility remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[540, 1080]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[480, 1080]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[480, 1080]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[480, 1080]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[480, 1080]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[480, 1200]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[480, 1080]]
+      }
+    ]
   }
 ]

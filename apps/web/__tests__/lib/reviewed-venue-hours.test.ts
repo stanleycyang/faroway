@@ -46,7 +46,9 @@ it("matches bounded title and reviewed-country address conventions without fuzzy
   const check = (a: ActivityResult, f = reviewed) =>
     reviewedHoursExclusions(plan, [a], ["2027-01-11"], [f], "2026-11-01");
   expect(check(candidate).map((r) => r.slot)).toEqual(["evening"]);
-  expect(check(candidate, { ...reviewed, country: undefined })).toEqual([]);
+  expect(check(candidate, { ...reviewed, country: undefined })).toEqual([
+    expect.objectContaining({ reason: "venue_identity_requires_review" }),
+  ]);
   for (const name of [
     "Museum (ABC International) Exterior Walk",
     "Museum (ABC International) Friday Night Concert",
@@ -63,7 +65,9 @@ it("matches bounded title and reviewed-country address conventions without fuzzy
   ])
     expect(
       check({ ...candidate, location: { ...candidate.location, address } }),
-    ).toEqual([]);
+    ).toEqual([
+      expect.objectContaining({ reason: "venue_identity_requires_review" }),
+    ]);
 });
 it("excludes incompatible slots and explicit closures without treating missing days or months as closed", () => {
   const results = reviewedHoursExclusions(
@@ -129,7 +133,9 @@ it("does not transfer hours across cities, names or addresses", () => {
         [fact],
         "2026-11-01",
       ),
-    ).toEqual([]);
+    ).toEqual([
+      expect.objectContaining({ reason: "venue_identity_requires_review" }),
+    ]);
   expect(
     reviewedHoursExclusions(
       { destination: "Other City" },

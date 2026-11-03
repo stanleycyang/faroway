@@ -179,5 +179,105 @@
     "requiresStepFree": false,
     "action": "defer",
     "explanation": "The institution is now named The King’s Gallery. The reviewed Edinburgh exhibition listing ends December 6, 2026 and does not establish a January 2027 exhibition. Obtain dated opening information; the London gallery is a different venue."
+  },
+  {
+    "id": "palm-access-consolidated-review",
+    "destination": "Copenhagen, Denmark",
+    "names": [
+      "Botanical Garden Glasshouse",
+      "Palm House",
+      "Botanical Garden Palm House"
+    ],
+    "addresses": [
+      "Gothersgade 128, 1123 København K, Denmark",
+      "Gothersgade 128, 1123 København K"
+    ],
+    "visitTypes": ["ordinary_entry"],
+    "sourceUrl": "https://snm.dk/en/accessibility",
+    "sourceSha256": "3bed199ef9aa22e632d00a8bb5aee1163d2c8ac7ea48adaf1ffb57d6524f8720",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-11",
+    "validThrough": "2027-01-17",
+    "action": "defer",
+    "explanation": "The operator describes narrow passages and lower greenhouses that are inaccessible to wheelchairs. The proposed full glasshouse visit does not establish the requested step-free route. Outdoor garden access is a separate visit.",
+    "requiresStepFree": true
+  },
+  {
+    "id": "princes-gardens-consolidated-review",
+    "destination": "Edinburgh, United Kingdom",
+    "names": ["Princes Street Gardens"],
+    "addresses": [
+      "Princes St, Edinburgh EH2 2HG, UK",
+      "Princes Street, Edinburgh EH2 2HG, UK"
+    ],
+    "visitTypes": ["exterior_walk", "ordinary_entry"],
+    "sourceUrl": "https://www.edinburghoutdoors.org.uk/directory-record/112/princes-street-gardens?recordID=112",
+    "sourceSha256": "50fea9fbd1ad4cc57d7c450255dced5ac9a1a87eae9b4aaad369c47c48ed268d",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-11",
+    "validThrough": "2027-01-17",
+    "action": "defer",
+    "explanation": "The council listing gives winter closing at 18:00 with gates closing earlier. It does not establish the exact entrance-to-exit route, toilet access and clearances needed for this wheelchair visit. Resolve those details and a daytime slot before scheduling.",
+    "requiresStepFree": true
+  },
+  {
+    "id": "bruenig-consolidated-review",
+    "destination": "Interlaken, Switzerland",
+    "names": ["Thermal Baths at Brünig Park", "Brünig Park Thermal Baths"],
+    "addresses": [
+      "Walchi 2, 6078 Lungern",
+      "Walchi 2, 6078 Lungern, Switzerland"
+    ],
+    "visitTypes": ["ordinary_entry"],
+    "sourceUrl": "https://www.bruenigpark.ch/",
+    "sourceSha256": "758a217212bbfc6a1e143a44699626c42a9b59fabe039111b0bdfc832bdfe514",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-11",
+    "validThrough": "2027-01-17",
+    "action": "defer",
+    "explanation": "The reviewed Brünig Park operator link identifies the Cantina Caverna restaurant, not the proposed thermal baths. The spa identity and service are unresolved; do not treat it as an established weather fallback.",
+    "requiresStepFree": false
+  },
+  {
+    "id": "pintenfritz-consolidated-review",
+    "destination": "Interlaken, Switzerland",
+    "names": [
+      "Big Pintenfritz Sledging Run (Lower Section)",
+      "Big Pintenfritz Sledging Run",
+      "Big Pintenfritz"
+    ],
+    "addresses": ["Bussalp, 3818 Grindelwald, Switzerland"],
+    "visitTypes": ["ordinary_entry"],
+    "sourceUrl": "https://www.jungfrau.ch/en-gb/sledging/big-pintenfritz/",
+    "sourceSha256": "fcfd06a2c66c5236e54ad5647aa6f8184ebaf133c6473b0aa5686a566eedf690",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-11",
+    "validThrough": "2027-01-17",
+    "action": "defer",
+    "explanation": "The operator describes a 2.5-hour ascent on foot for the full run and condition-dependent difficulty. The proposed beginner-friendly lower-section route, entry point and transfer have not been established. Resolve the exact route before scheduling.",
+    "requiresStepFree": false
+  },
+  {
+    "id": "city-train-winter-review",
+    "destination": "Interlaken, Switzerland",
+    "names": [
+      "Bödeli-Bahn Sightseeing Train",
+      "City Train Interlaken",
+      "Bödelibahn"
+    ],
+    "addresses": ["Höheweg, 3800 Interlaken, Switzerland"],
+    "visitTypes": ["ordinary_entry", "guided_tour"],
+    "sourceUrl": "https://www.interlaken.swiss/en/experiences/poi/city-train-interlaken",
+    "sourceSha256": "f95a594fdf39185df867504beba916894a9232602a16db76edc4204e04014a1d",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-11",
+    "validThrough": "2027-01-17",
+    "action": "defer",
+    "explanation": "The regional tourism listing describes operation from Good Friday to early November. January service has not been established; obtain an operator timetable before scheduling. This tourist road train is distinct from the public railway."
   }
 ]

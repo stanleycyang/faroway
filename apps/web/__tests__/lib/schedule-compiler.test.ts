@@ -1261,12 +1261,15 @@ it("requires dated organizer evidence for event scope and seasonal markets", () 
   ).toEqual([]);
 });
 
-it("does not count a separately generated lunch as another sightseeing activity", () => {
-  const lunch = visit("Lunch at SimpleRAW", 90);
-  expect(
-    compileSchedule(extended, [lunch], []).reviewRequiredActivities,
-  ).toContainEqual({
-    id: lunch.id,
-    reason: "meal_title_requires_dining_review",
-  });
-});
+it.each(["Lunch at SimpleRAW", "Late Night Dining at Movida"])(
+  "does not count %s as another sightseeing activity",
+  (name) => {
+    const lunch = visit(name, 90);
+    expect(
+      compileSchedule(extended, [lunch], []).reviewRequiredActivities,
+    ).toContainEqual({
+      id: lunch.id,
+      reason: "meal_title_requires_dining_review",
+    });
+  },
+);

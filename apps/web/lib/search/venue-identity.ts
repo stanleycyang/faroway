@@ -15,6 +15,22 @@ export interface VenueIdentityCandidate {
   address: string;
 }
 
+/** A name anchor flags unresolved branches; it never transfers venue facts. */
+export function reviewedVenueNameMatches<T extends ReviewedVenueIdentity>(
+  candidate: Pick<VenueIdentityCandidate, "destination" | "name">,
+  sources: readonly T[],
+): T[] {
+  if (!normalize(candidate.destination) || !normalize(candidate.name))
+    return [];
+  return sources.filter(
+    (source) =>
+      normalize(source.destination) === normalize(candidate.destination) &&
+      source.aliases.some(
+        (alias) => title(alias, true) === title(candidate.name, true),
+      ),
+  );
+}
+
 const normalize = (value: string) =>
   value.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
 

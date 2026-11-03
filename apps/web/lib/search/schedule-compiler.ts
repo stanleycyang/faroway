@@ -283,7 +283,11 @@ export function compileSchedule(
     );
   const candidates = inventory
     .filter((activity) => {
-      if (/^(?:breakfast|lunch|dinner)\s+at\s+/i.test(activity.name.trim())) {
+      if (
+        /^(?:(?:late[ -]night|evening)\s+)?(?:breakfast|lunch|dinner|dining)\s+at\s+/i.test(
+          activity.name.trim(),
+        )
+      ) {
         reviewRequiredActivities.push({
           id: activity.id,
           reason: "meal_title_requires_dining_review",

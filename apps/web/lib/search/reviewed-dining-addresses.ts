@@ -9,6 +9,8 @@ export interface ReviewedDiningAddress {
   publishedAddress: string;
   /** A different published address is not proof that a branch relocated. */
   action?: string;
+  /** Withhold unreviewed addresses for this chain; never silently relocate them. */
+  requireReviewedAddress?: boolean;
   sourceUrl: string;
   sourceSha256: string;
   observedAt: string;
@@ -66,6 +68,24 @@ export function reconcileGeneratedDiningAddresses(
   }> = [];
   const withheld: Array<{ id: string; name: string; reason: string }> = [];
   for (const meal of input) {
+    const requiredBindings = evidence.filter(
+      (fact) => matchesBranch(plan, meal, fact) && fact.requireReviewedAddress,
+    );
+    if (
+      requiredBindings.length &&
+      !requiredBindings.some(
+        (fact) =>
+          reviewed(fact, asOf) &&
+          normalize(fact.publishedAddress) === normalize(meal.location.address),
+      )
+    ) {
+      withheld.push({
+        id: meal.id,
+        name: meal.name,
+        reason: "branch_identity_unresolved",
+      });
+      continue;
+    }
     const matches = evidence.filter(
       (fact) =>
         matchesBranch(plan, meal, fact) &&

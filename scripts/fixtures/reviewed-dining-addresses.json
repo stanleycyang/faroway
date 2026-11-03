@@ -39,13 +39,17 @@
     "id": "padaria-rua-ouro-identity-review",
     "destination": "Lisbon, Portugal",
     "aliases": ["A Padaria Portuguesa"],
-    "previousAddresses": ["Rua do Ouro 171, 1100-061 Lisboa"],
+    "previousAddresses": [
+      "Rua do Ouro 171, 1100-061 Lisboa",
+      "Rua Áurea 175, 1100-062 Lisbon"
+    ],
     "publishedAddress": "Rua Áurea 94, 1100-063 Lisboa",
     "action": "withhold",
     "sourceUrl": "https://apadariaportuguesa.pt/en/stores-list/",
     "sourceSha256": "aef291a8bf8c4ccaadfcabd3bb75641d322d75ba7cce854011a6873f488ce8cc",
     "observedAt": "2026-11-03",
     "reviewAfter": "2026-12-03",
-    "branchReview": "Operator directory lists Rua Áurea 94. Generated Rua do Ouro 171 is not established as that branch; withhold it instead of silently relocating the restaurant or carrying over its coordinates. This review does not certify a move, closure, opening hours or the suitability of another branch."
+    "branchReview": "Operator directory lists Rua Áurea 94. Generated Rua do Ouro 171 is not established as that branch; withhold it instead of silently relocating the restaurant or carrying over its coordinates. This review does not certify a move, closure, opening hours or the suitability of another branch. The later generated Rua Áurea 175 branch is likewise not established by this directory; it is not silently replaced with number 94.",
+    "requireReviewedAddress": true
   }
 ]

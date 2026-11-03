@@ -127,14 +127,18 @@ it("preserves a source note only for a matching selected address without claimin
   ).toEqual([]);
 });
 
-it("withholds an unresolved chain branch instead of moving it to another published address", () => {
+it.each([
+  "Rua do Ouro 171, 1100-061 Lisboa",
+  "Rua Áurea 175, 1100-062 Lisbon",
+  "Rua Áurea 999, Lisbon",
+])("withholds unresolved chain branch %s instead of moving it", (address) => {
   const fact = facts.find(
     (record) => record.id === "padaria-rua-ouro-identity-review",
   )!;
   const input = {
     ...meal,
     name: "A Padaria Portuguesa",
-    location: { ...meal.location, address: fact.previousAddresses[0] },
+    location: { ...meal.location, address },
   };
   const review = reconcileGeneratedDiningAddresses(
     { destination: fact.destination },
