@@ -1,19 +1,12 @@
 [
   {
     "destination": "Edinburgh, United Kingdom",
-    "names": [
-      "Cafe St Honoré",
-      "Café St Honoré",
-      "Cafe St Honore"
-    ],
+    "names": ["Cafe St Honoré", "Café St Honoré", "Cafe St Honore"],
     "addresses": [
       "34 Thistle St N Ln, Edinburgh EH2 1EA",
       "34 North West Thistle Street Lane, Edinburgh EH2 1EA"
     ],
-    "closedWeekdays": [
-      2,
-      3
-    ],
+    "closedWeekdays": [2, 3],
     "sourceUrl": "https://www.cafesthonore.com/contact-us",
     "observedAt": "2026-11-03",
     "reviewAfter": "2026-12-03",
@@ -22,17 +15,12 @@
   },
   {
     "destination": "New York, USA",
-    "names": [
-      "Café Sabarsky",
-      "Cafe Sabarsky"
-    ],
+    "names": ["Café Sabarsky", "Cafe Sabarsky"],
     "addresses": [
       "1048 5th Ave, New York, NY 10028",
       "1048 Fifth Avenue, New York, NY 10028"
     ],
-    "closedWeekdays": [
-      2
-    ],
+    "closedWeekdays": [2],
     "sourceUrl": "https://www.neuegalerie.org/cafesabarsky",
     "observedAt": "2026-11-03",
     "reviewAfter": "2026-12-03",

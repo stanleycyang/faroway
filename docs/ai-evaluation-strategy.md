@@ -2386,3 +2386,66 @@ Prepared corrective changes recognize “scheduled activities” in explicit dai
 The dedicated emulator developed repeated guest-shell stalls despite a responsive emulator console. ADB reconnect only temporarily restored responses; a graceful cold boot without snapshots or data wiping restored reliable automation. All five completed cases subsequently passed process force-stop/reopen and day-2 navigation without a manual refresh, with reviewed screenshots retained in each case directory. A completed-trip POST retry returned the same completed Copenhagen search; the subsequent billed snapshot remained $5.46616235 (the initial-five total settled to $0.141064 above baseline). The hourly-paced runner remains active; other cases are not yet accepted.
 
 Native review exposed raw hotel amenity keys such as `accessible_restroom`. The repaired screen presents readable labels and explicitly marks hotel amenities as needing confirmation. Mobile type-check and formatting pass; repaired-APK visual verification is pending, and initial-round APK version 12 remains unchanged. This presentation repair does not establish actual hotel accessibility or supplier availability.
+
+## 2026-11-03 — completed fixed-build local round, acceptance rejected
+
+The twelve requested runs (two each: Lisbon, Copenhagen, Edinburgh, New York,
+Melbourne, Interlaken) completed at `b691926`. All retained request fields and
+matched final streamed days to durable saved days. All twelve Android v13 cold
+opens and Day 2 navigations passed without manual refresh; their Day 2 viewports
+were visually reviewed. Generation used local Next development/Workflow runtime;
+Android read saved results through hosted QA against the same staging database.
+These are not production latency measurements or physical-phone evidence.
+
+Median dispatch-to-observed-terminal was 27.459 seconds, range 21.591–42.377.
+Sixty model usage events recorded 184,887 tokens (81,422 input, 103,465 output).
+Fixed-round settled billed spend increased from $5.46616235 to $5.81143835
+($0.34527600). Exact per-case cost allocation is unavailable because billing
+arrived late. The $20 cumulative cap has not been reset.
+
+**Acceptance remains rejected.** Material findings:
+
+- Lisbon: unnamed Fado product, stale branch address, duplicated bakery visit,
+  and unverified cross-river meal routing.
+- Copenhagen: Round Tower's full route has stairs and no lift; canal boarding
+  remains unverified for step-free travel. Excluding Tivoli alone is insufficient.
+- Edinburgh: complete wheelchair route clearance is unverified; a Castle
+  description incorrectly places the Stone of Destiny there rather than Perth.
+- New York: allergy/cross-contact suitability remains unverified. Original repeat
+  two placed Café Sabarsky on Tuesday despite the operator's recurring closure.
+- Melbourne: both originals placed lunch during 09:00–17:00 meetings.
+- Interlaken: unsupported January Harder Kulm operation, winter Lake Brienz
+  navigation, obsolete Ice Magic identity/location, and unbudgeted long transfers.
+  St Beatus caves ARE open in winter and must not be excluded indiscriminately.
+
+`a488927` repairs parsing of the actual daily-meetings brief and after-18:00
+sightseeing. Two new Melbourne runs completed, with no afternoon meals/visits
+and evening-only sightseeing. `ad92366` adds exact-branch Tuesday exclusions for
+Café Sabarsky from its operator's source. Two new New York runs completed without
+that Tuesday booking; the candidate was absent, so the exact exclusion branch
+is exercised by the regression test, not proven by live absence. Other factual
+and allergy constraints remain unverified. The fixes passed 82 traveler/schedule
+checks, four reviewed-dining checks and TypeScript checking for the parser change.
+
+Recovery: corrected in-flight SSE-disconnect test returned HTTP 409 for an active
+retry with the same search ID; completed retry returned 200 with the same search
+ID. Android retained a completed itinerary offline, displayed its offline banner,
+and reopened it after network restoration and process restart. No server-restart
+or in-flight native-generation recovery claim is made.
+
+Detailed case inventory, sources, timings, screenshots and receipts are local,
+ignored artifacts: `artifacts/uat/six-scenario-local-20261103/report.md`; repairs
+are in sibling `six-scenario-repair-20261103` and
+`six-scenario-ny-repair-20261103` directories. These contain private authentication
+receipts; never publish the directories wholesale. The original five hosted runs
+remain a separate incomplete baseline; its queued hourly-limit runner was stopped
+without dispatching additional paid work.
+
+Remaining work is general source-backed suitability and routing, comprehensive
+venue/date verification, winter alternatives, and mobile imagery/timeline polish.
+Do not interpret the twelve execution passes or four repaired runs as complete
+acceptance. Keep PR #55 draft; no production promotion is justified by this round.
+
+After four repair runs, latest cumulative billed spend is $5.91607985, with
+$14.08392015 remaining. All four repaired Android cold-open/Day 2 checks passed;
+captured Day 2 viewports were visually reviewed. No additional paid run is queued.

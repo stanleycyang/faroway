@@ -84,10 +84,21 @@ it("excludes the reviewed Sabarsky branch on Tuesday without claiming allergy su
   const record = facts.find((fact) => fact.names.includes("Café Sabarsky"))!;
   const exclusions = reviewedDiningDayExclusions(
     { ...plan, destination: record.destination },
-    [{ ...meal, name: "Café Sabarsky", location: { name: "Café Sabarsky", address: "1048 5th Ave, New York, NY 10028" } }],
+    [
+      {
+        ...meal,
+        name: "Café Sabarsky",
+        location: {
+          name: "Café Sabarsky",
+          address: "1048 5th Ave, New York, NY 10028",
+        },
+      },
+    ],
     facts,
     "2026-11-03",
   );
   expect(exclusions.map((entry) => entry.date)).toEqual(["2027-01-12"]);
-  expect(exclusions[0].sourceUrl).toBe("https://www.neuegalerie.org/cafesabarsky");
+  expect(exclusions[0].sourceUrl).toBe(
+    "https://www.neuegalerie.org/cafesabarsky",
+  );
 });
