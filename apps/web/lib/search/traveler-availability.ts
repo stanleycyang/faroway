@@ -229,7 +229,7 @@ export function travelerActivityBudget(
   let needsReview = false;
   for (const clause of clauses) {
     const ceiling =
-      /^(?:no more than|at most|maximum of) ([a-z]+|\d+(?:\.\d+)?) (hours?|minutes?) of (?:activities|visits|sightseeing) (?:daily|each day|every day|per day)$/.exec(
+      /^(?:no more than|at most|maximum of) ([a-z]+|\d+(?:\.\d+)?) (hours?|minutes?) of (?:scheduled )?(?:activities|visits|sightseeing) (?:daily|each day|every day|per day)$/.exec(
         clause,
       );
     const request =

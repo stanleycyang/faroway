@@ -15,6 +15,8 @@ export interface VenueConstraint {
   closedDates?: string[];
   /** Closure of the matched venue/location, not necessarily the institution. */
   closedFrom?: string;
+  /** Inclusive end of a reported closure; absence retains indefinite closure semantics. */
+  closedThrough?: string;
   temporarilyClosed?: boolean;
   /** Published seasonal service window; presence within it does not establish availability. */
   reportedOperatingMonths?: number[];
@@ -67,7 +69,9 @@ export function venueConstraintsForDate(
         : finding;
     if (
       fact.closedDates?.includes(date) ||
-      (fact.closedFrom && date >= fact.closedFrom)
+      (fact.closedFrom &&
+        date >= fact.closedFrom &&
+        (!fact.closedThrough || date <= fact.closedThrough))
     )
       matches.push({
         venueId: fact.id,

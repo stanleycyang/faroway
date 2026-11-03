@@ -22,5 +22,17 @@
     "observedAt": "2026-11-01",
     "reviewAfter": "2026-12-01",
     "branchReview": "The official Friendly Toast Cambridge branch page explicitly identifies its return to Cambridge in Harvard Square and publishes 1230 Massachusetts Ave. This binds only the exact generated restaurant and former Kendall Square address in Cambridge Massachusetts. Coordinates, current menu claims, opening hours and future availability are not transferred."
+  },
+  {
+    "id": "sr-fado-alfama-address-20261103",
+    "destination": "Lisbon, Portugal",
+    "aliases": ["Sr. Fado de Alfama"],
+    "previousAddresses": ["Rua dos Remédios 176, 1100-452 Lisboa"],
+    "publishedAddress": "R. dos Remédios 168, 1100-445 Lisboa",
+    "sourceUrl": "https://www.sr-fado.com/",
+    "sourceSha256": "bb36d19ee27213c418170bed89c1149c256a6e643cd53094b26f300970807ca1",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator homepage names Sr. Fado de Alfama and publishes R. dos Remédios 168, 1100-445 Lisboa. Applies only to the exact restaurant and generated old address in Lisbon; no hours, event availability, cooking roles, coordinates or meal suitability are verified."
   }
 ]

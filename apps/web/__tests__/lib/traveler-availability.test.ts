@@ -110,6 +110,7 @@ it.each([
   ["No more than two hours of activities daily", 120],
   ["At most 90 minutes of visits each day", 90],
   ["Maximum of 1.5 hours of sightseeing per day", 90],
+  ["No more than 5 hours of scheduled activities per day", 300],
 ])("reads an explicit daily visit ceiling: %s", (text, expected) => {
   expect(travelerActivityBudget({ mobilityNeeds: text }).maxMinutes).toBe(
     expected,
@@ -134,6 +135,8 @@ it.each([
   "At most two hours of activities on the first day",
   "At most zero minutes of visits daily",
   "At most 25 hours of visits daily",
+  "No more than 5 hours of scheduled activities on the first day",
+  "Do not impose at most 5 hours of scheduled activities daily",
 ])(
   "does not silently interpret a negated, partial-day or invalid ceiling: %s",
   (text) => {

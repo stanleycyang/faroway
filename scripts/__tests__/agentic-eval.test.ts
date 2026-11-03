@@ -1407,3 +1407,46 @@ test("ordinary venue closure facts preserve unresolved visit scope", () => {
     )[0].finding,
   ).toBe("scheduled_on_reported_closed_weekday");
 });
+
+test("acceptance closure evidence excludes ordinary visits without extending the winter gap", () => {
+  expect(
+    venueConstraintsForDate(
+      "Lisbon, Portugal",
+      "Fado Museum (Museu do Fado)",
+      "2027-01-11",
+      seasonalFacts,
+      "ordinary_entry",
+    )[0]?.finding,
+  ).toBe("scheduled_on_reported_closed_weekday");
+  for (const date of ["2027-01-04", "2027-01-11", "2027-03-18"]) {
+    expect(
+      venueConstraintsForDate(
+        "Copenhagen, Denmark",
+        "Tivoli Gardens",
+        date,
+        seasonalFacts,
+        "ordinary_entry",
+      )[0]?.finding,
+    ).toBe("scheduled_on_reported_closed_date");
+  }
+  for (const date of ["2027-01-03", "2027-03-19"]) {
+    expect(
+      venueConstraintsForDate(
+        "Copenhagen, Denmark",
+        "Tivoli Gardens",
+        date,
+        seasonalFacts,
+        "ordinary_entry",
+      ),
+    ).toEqual([]);
+  }
+  expect(
+    venueConstraintsForDate(
+      "Copenhagen, Denmark",
+      "Tivoli Gardens",
+      "2027-01-11",
+      seasonalFacts,
+      "event",
+    )[0]?.finding,
+  ).toBe("venue_visit_scope_requires_review");
+});

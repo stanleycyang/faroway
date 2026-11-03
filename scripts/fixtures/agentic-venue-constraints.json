@@ -119,5 +119,28 @@
     "closedWeekdays": [1, 2],
     "sourceNote": "Routine public self-guided and noon guided house visits are published Wednesday–Sunday. Separately arranged group tours can operate Monday/Tuesday with reservations and a minimum party; this rule does not apply to explicitly identified private/group tours or establish availability on other days.",
     "ordinaryEntryOnly": true
+  },
+  {
+    "id": "fado-museum-ordinary-weekly-closure",
+    "destination": "Lisbon",
+    "aliases": ["Fado Museum", "Fado Museum (Museu do Fado)", "Museu do Fado"],
+    "exactName": true,
+    "ordinaryEntryOnly": true,
+    "sourceUrl": "https://www.museudofado.pt/en/visit",
+    "observedAt": "2026-11-03",
+    "closedWeekdays": [1],
+    "sourceNote": "Operator museum admission Tue–Sun; document centre and school appointments are different visit types. Reviewed during acceptance after Monday ordinary admission failed."
+  },
+  {
+    "id": "tivoli-winter-season-gap-2027",
+    "destination": "Copenhagen",
+    "aliases": ["Tivoli Gardens"],
+    "exactName": true,
+    "ordinaryEntryOnly": true,
+    "sourceUrl": "https://www.tivoli.dk/en/opening-hours-and-seasons",
+    "observedAt": "2026-11-03",
+    "closedFrom": "2027-01-04",
+    "closedThrough": "2027-03-18",
+    "sourceNote": "Published Christmas season ends January 3; next published season starts March 19, 2027. Gap inferred from operator season calendar; special events and separately operated restaurants are outside this ordinary Gardens-admission evidence."
   }
 ]
