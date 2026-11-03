@@ -137,6 +137,7 @@ vi.mock("@/lib/supabase/server", () => ({
 }));
 
 import { POST } from "@/app/api/trips/[id]/generate/route";
+import { checkRateLimitAsync } from "@/lib/security/rate-limit";
 
 function makeReq(body: Record<string, unknown> = {}) {
   return new NextRequest("http://localhost:3000/api/trips/trip-1/generate", {
@@ -153,6 +154,11 @@ describe("POST /api/trips/[id]/generate", () => {
   beforeEach(() => {
     vi.unstubAllEnvs();
     vi.clearAllMocks();
+    vi.mocked(checkRateLimitAsync).mockReset().mockResolvedValue({
+      allowed: true,
+      remaining: 4,
+      resetIn: 3600000,
+    });
     activeSearch = null;
     searchCount = 0;
     claimFails = false;
@@ -164,6 +170,54 @@ describe("POST /api/trips/[id]/generate", () => {
     flightSearchDetails = undefined;
     startMock.mockResolvedValue({ runId: "run-1" });
   });
+
+  it("skips the hourly generation bucket only in local development", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("VERCEL", "");
+    vi.stubEnv("VERCEL_ENV", "");
+    vi.mocked(checkRateLimitAsync).mockResolvedValue({
+      allowed: false,
+      remaining: 0,
+      resetIn: 3600000,
+    });
+    const response = await POST(makeReq(), {
+      params: Promise.resolve({ id: "trip-1" }),
+    });
+    expect(response.status).toBe(200);
+    expect(checkRateLimitAsync).not.toHaveBeenCalled();
+    expect(startMock).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    ["production", "", ""],
+    ["test", "", ""],
+    ["development", "1", ""],
+    ["development", "", "preview"],
+  ])(
+    "retains throttling for %s / VERCEL=%s / VERCEL_ENV=%s",
+    async (nodeEnv, vercel, vercelEnv) => {
+      vi.stubEnv("NODE_ENV", nodeEnv);
+      vi.stubEnv("VERCEL", vercel);
+      vi.stubEnv("VERCEL_ENV", vercelEnv);
+      vi.mocked(checkRateLimitAsync).mockResolvedValue({
+        allowed: false,
+        remaining: 0,
+        resetIn: 3600000,
+      });
+      const response = await POST(makeReq(), {
+        params: Promise.resolve({ id: "trip-1" }),
+      });
+      expect(response.status).toBe(429);
+      expect(response.headers.get("Retry-After")).toBe("3600");
+      expect(checkRateLimitAsync).toHaveBeenCalledWith("generate:hour:user-1", {
+        maxRequests: 5,
+        windowMs: 3600000,
+        failClosed: true,
+      });
+      expect(startMock).not.toHaveBeenCalled();
+      expect(searchCount).toBe(0);
+    },
+  );
 
   it("derives children from saved room occupancy when separate counts are absent", async () => {
     roomHasChild = true;
