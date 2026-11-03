@@ -14,6 +14,8 @@ export interface ReviewedActivitySupply {
   interests: string[];
   category: string;
   durationMinutes: number;
+  /** Untrusted JSON input, narrowed by valid() before admission. */
+  proposedVisitType?: string;
   sourceUrl: string;
   sourceSha256: string;
   observedAt: string;
@@ -23,7 +25,7 @@ export interface ReviewedActivitySupply {
   excludedDates: string[];
   opens: number;
   closes: number;
-  lastEntry: number;
+  lastEntry?: number;
   reviewNotes: string;
 }
 const normalize = (value: string) =>
@@ -35,6 +37,7 @@ const dateValid = (value: string) =>
 function valid(record: ReviewedActivitySupply, asOf: string) {
   try {
     const url = new URL(record.sourceUrl);
+    const lastEntry = record.lastEntry ?? record.closes;
     return (
       url.protocol === "https:" &&
       !url.username &&
@@ -57,15 +60,14 @@ function valid(record: ReviewedActivitySupply, asOf: string) {
       record.observedAt <= asOf &&
       asOf <= record.reviewAfter &&
       record.validFrom <= record.validThrough &&
-      [
-        record.opens,
-        record.closes,
-        record.lastEntry,
-        record.durationMinutes,
-      ].every(Number.isInteger) &&
+      [record.opens, record.closes, lastEntry, record.durationMinutes].every(
+        Number.isInteger,
+      ) &&
       record.opens >= 0 &&
-      record.opens <= record.lastEntry &&
-      record.lastEntry < record.closes &&
+      record.opens <= lastEntry &&
+      lastEntry <= record.closes &&
+      (!record.proposedVisitType ||
+        ["ordinary_entry", "event"].includes(record.proposedVisitType)) &&
       record.closes <= 1440 &&
       record.durationMinutes > 0 &&
       record.durationMinutes <= record.closes - record.opens
@@ -129,7 +131,8 @@ export function addReviewedActivitySupply(
       description: record.description,
       category: record.category,
       duration: record.durationMinutes,
-      proposedVisitType: "ordinary_entry",
+      proposedVisitType:
+        record.proposedVisitType === "event" ? "event" : "ordinary_entry",
       price: 0,
       currency: "",
       priceStatus: "unknown",
@@ -160,14 +163,20 @@ export function addReviewedActivitySupply(
         intervals: [
           [
             record.opens,
-            Math.min(record.closes, record.lastEntry + record.durationMinutes),
+            Math.min(
+              record.closes,
+              (record.lastEntry ?? record.closes) + record.durationMinutes,
+            ),
           ],
         ],
       })),
     };
-    exclusions.push(
-      ...reviewedHoursExclusions(plan, [candidate], dates, [fact], asOf),
-    );
+    // Dated event records carry their own scope and hours below; ordinary
+    // admission hours must never be used to infer event admission.
+    if (candidate.proposedVisitType === "ordinary_entry")
+      exclusions.push(
+        ...reviewedHoursExclusions(plan, [candidate], dates, [fact], asOf),
+      );
     // The compiler chooses day parts, not source-bound start times. Admit only
     // day parts whose entire possible visit-start range respects these hours.
     // This prevents another selected visit/dinner from pushing this one past
@@ -181,7 +190,7 @@ export function addReviewedActivitySupply(
         if (
           record.opens > start ||
           record.closes < end ||
-          record.lastEntry < end - record.durationMinutes
+          (record.lastEntry ?? record.closes) < end - record.durationMinutes
         )
           exclusions.push({
             activityId: record.id,

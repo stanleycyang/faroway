@@ -18,6 +18,42 @@
     "opens": 720,
     "closes": 1320,
     "lastEntry": 1290,
-    "reviewNotes": "Operator identifies the observation deck at Riverside Quay, Southbank, Melbourne 3006. Current ordinary hours apply through 4 April 2027. New Year\u2019s Eve has shorter hours and is excluded from this supply record. The 60-minute visit is a planning estimate, not an operator duration. No ticket quote, reservation, coordinates, accessibility suitability or transfer has been verified."
+    "reviewNotes": "Operator identifies the observation deck at Riverside Quay, Southbank, Melbourne 3006. Current ordinary hours apply through 4 April 2027. New Year’s Eve has shorter hours and is excluded from this supply record. The 60-minute visit is a planning estimate, not an operator duration. No ticket quote, reservation, coordinates, accessibility suitability or transfer has been verified."
+  },
+  {
+    "id": "reviewed-interlaken-magic-park-2027",
+    "destination": "Interlaken, Switzerland",
+    "name": "Top of Europe Magic Park — Kursaalgarten",
+    "address": "Kursaalgarten, Interlaken, Switzerland",
+    "description": "Visit the winter event in Kursaalgarten, with an ice rink, ice hockey minigolf and a winter lounge. Choose activities for your experience level; skating conditions and rental availability need checking on the day.",
+    "interests": [
+      "winter activities",
+      "beginner-friendly winter activities",
+      "adventure",
+      "nature",
+      "relaxed",
+      "culture",
+      "sightseeing"
+    ],
+    "category": "entertainment",
+    "durationMinutes": 90,
+    "proposedVisitType": "event",
+    "sourceUrl": "https://magicpark-interlaken.ch/",
+    "sourceSha256": "6205dfffa0eefb2b8da49ee0c53590f525328e73906325be31850302b3334b04",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2026-12-18",
+    "validThrough": "2027-02-28",
+    "excludedDates": [
+      "2026-12-24",
+      "2026-12-25",
+      "2026-12-26",
+      "2026-12-31",
+      "2027-01-01",
+      "2027-01-02"
+    ],
+    "opens": 900,
+    "closes": 1320,
+    "reviewNotes": "Organizer identifies Magic Park at Kursaalgarten as successor to Ice Magic. Published season December 18, 2026 through February 28, 2027. Monday–Friday 15:00–22:00, weekends 11:00–22:00; this conservative shared window uses 15:00–22:00 every day. Holiday exceptions excluded. The 90 minutes is a planning estimate; last-entry cutoff, prices, booking, equipment, weather and individual suitability are not verified. No old Ice Magic coordinates or images are reused."
   }
 ]

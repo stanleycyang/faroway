@@ -31,7 +31,8 @@ function expected(record: (typeof catalog)[number]) {
     description: record.description,
     category: record.category,
     duration: record.durationMinutes,
-    proposedVisitType: "ordinary_entry",
+    proposedVisitType:
+      record.proposedVisitType === "event" ? "event" : "ordinary_entry",
     price: 0,
     currency: "",
     priceStatus: "unknown",
@@ -129,7 +130,7 @@ export function reviewedSupplySelectionFailures(
     !interval ||
     record.opens > interval[0] ||
     record.closes < interval[1] ||
-    record.lastEntry < interval[1] - record.durationMinutes
+    (record.lastEntry ?? record.closes) < interval[1] - record.durationMinutes
   )
     failures.push("reviewed_supply_hours_not_supported");
   return failures;

@@ -18,3 +18,10 @@ describe('trip destination photography', () => {
 it('uses reviewed Melbourne photography on mobile', () => {
   expect(destinationImage('Melbourne, Australia')).toContain('photo-1634172770871-28ab3ddb6a56');
 });
+
+it('uses the reviewed Edinburgh skyline rather than generic travel art', () => {
+  expect(destinationImage('Edinburgh, United Kingdom')).toContain(
+    'photo-1762729881707-8ebfe323578a'
+  );
+  expect(destinationImage('Edinburgh, USA')).toContain('/blog/');
+});

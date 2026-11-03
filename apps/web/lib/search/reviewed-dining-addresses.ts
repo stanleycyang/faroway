@@ -7,6 +7,8 @@ export interface ReviewedDiningAddress {
   aliases: string[];
   previousAddresses: string[];
   publishedAddress: string;
+  /** A different published address is not proof that a branch relocated. */
+  action?: string;
   sourceUrl: string;
   sourceSha256: string;
   observedAt: string;
@@ -87,6 +89,22 @@ export function reconcileGeneratedDiningAddresses(
       continue;
     }
     const fact = matches[0];
+    if (fact.action === "withhold") {
+      withheld.push({
+        id: meal.id,
+        name: meal.name,
+        reason: "branch_identity_unresolved",
+      });
+      continue;
+    }
+    if (fact.action && fact.action !== "reconcile") {
+      withheld.push({
+        id: meal.id,
+        name: meal.name,
+        reason: "invalid_address_review_action",
+      });
+      continue;
+    }
     const note = `Address source: ${fact.sourceUrl} (reviewed ${fact.observedAt}). Coordinates and routes need confirmation.`;
     candidates.push({
       ...structuredClone(meal),

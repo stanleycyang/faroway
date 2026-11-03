@@ -7,6 +7,7 @@ import records from "../../../../scripts/fixtures/reviewed-activity-supply.json"
 import hours from "../../../../scripts/fixtures/reviewed-venue-hours.json";
 import rome from "../../../../scripts/fixtures/agentic-rome-overload.json";
 import {
+  type ReviewedActivitySupply,
   addReviewedActivitySupply,
   appendActivitySourceNotes,
 } from "@/lib/search/reviewed-activity-supply";
@@ -26,8 +27,11 @@ const plan: SearchPlan = {
   },
   mobilityNeeds: "Working 09:00–17:00 on each trip day; only evening visits",
 };
-const run = (rows = records, dates = ["2027-01-11"], input = plan) =>
-  addReviewedActivitySupply(input, [], dates, rows, "2026-11-02");
+const run = (
+  rows: ReviewedActivitySupply[] = records,
+  dates = ["2027-01-11"],
+  input = plan,
+) => addReviewedActivitySupply(input, [], dates, rows, "2026-11-02");
 it("replaces a closed evening selection with a source-backed candidate without inventing coordinates or quotes", () => {
   const supply = run();
   expect(supply.activities).toHaveLength(1);
@@ -211,4 +215,42 @@ it("repairs the preserved failed Melbourne inventory without promoting unknown v
         !d.afternoon.meal,
     ),
   ).toBe(true);
+});
+
+it("admits the dated Magic Park event at its new location only in the reviewed evening window", () => {
+  const event = records.find(
+    (record) => record.id === "reviewed-interlaken-magic-park-2027",
+  )!;
+  const eventPlan = {
+    ...plan,
+    destination: event.destination,
+    activityCriteria: {
+      ...plan.activityCriteria,
+      interests: ["winter activities"],
+    },
+  };
+  const result = addReviewedActivitySupply(
+    eventPlan,
+    [],
+    ["2027-01-11", "2027-03-01"],
+    [event],
+    "2026-11-03",
+  );
+  expect(result.activities[0].proposedVisitType).toBe("event");
+  expect(result.activities[0].location.address).toContain("Kursaalgarten");
+  expect(result.activities[0].location.lat).toBe(0);
+  expect(
+    result.exclusions.some(
+      (e) => e.date === "2027-01-11" && e.slot === "evening",
+    ),
+  ).toBe(false);
+  expect(
+    result.exclusions.some(
+      (e) => e.date === "2027-01-11" && e.slot === "morning",
+    ),
+  ).toBe(true);
+  expect(
+    result.exclusions.some((e) => e.date === "2027-03-01" && !e.slot),
+  ).toBe(true);
+  expect(event.lastEntry).toBeUndefined();
 });

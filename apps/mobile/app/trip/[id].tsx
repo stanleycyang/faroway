@@ -2,6 +2,7 @@ import { isTimingNote, proposedVisitNote } from '@faroway/types';
 import { transformItineraryDays } from '../../lib/itineraryNormalization';
 import { ProposedTiming } from '../../components/ProposedTiming';
 import { VenueSourceNotice } from '../../components/VenueSourceNotice';
+import { VenuePhotoCredit } from '../../components/VenuePhotoCredit';
 import { DiningReviewOptions } from '../../components/DiningReviewOptions';
 import { flightQuoteIsCurrent } from '@faroway/constants';
 import { formatKnownPrice, summarizeTripCosts } from '../../lib/tripCost';
@@ -80,6 +81,7 @@ interface ActivityCardProps {
 }
 
 function ActivityCard({ activity }: ActivityCardProps) {
+  const [failedImage, setFailedImage] = useState<string>();
   const visitNote = proposedVisitNote(activity.proposedVisitType);
   const reviewBooking = useBookingReview();
   const getTypeIcon = (type: string) => {
@@ -130,8 +132,16 @@ function ActivityCard({ activity }: ActivityCardProps) {
       </View>
       <View style={styles.activityContent}>
         {/* Activity Image */}
-        {activity.image && (
-          <Image source={{ uri: activity.image }} style={styles.activityImage} accessible={false} />
+        {activity.image && activity.image !== failedImage && (
+          <Image
+            source={{ uri: activity.image }}
+            style={styles.activityImage}
+            accessible={false}
+            onError={() => setFailedImage(activity.image)}
+          />
+        )}
+        {activity.image && activity.image !== failedImage && activity.imageCredit && (
+          <VenuePhotoCredit credit={activity.imageCredit} />
         )}
         <View style={styles.activityHeader}>
           <View
@@ -756,6 +766,8 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   const visibleTips = (timingDay?.tips ?? []).filter(
     (tip) => !timingDay?.timingProposal || !isTimingNote(tip)
   );
+  const diningCautions = visibleTips.filter((tip) => /allerg|cross[- ]contact/i.test(tip));
+  const otherTips = visibleTips.filter((tip) => !diningCautions.includes(tip));
   const timingNames: Record<string, string> = {};
   for (const activity of timingDay?.activities ?? []) {
     const eventId =
@@ -976,6 +988,27 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                 {timingDay?.timingProposal && (
                   <ProposedTiming proposal={timingDay.timingProposal} names={timingNames} />
                 )}
+                {diningCautions.length > 0 && (
+                  <View
+                    style={{ paddingVertical: 16, backgroundColor: '#FFF5EB', marginBottom: 16 }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight: '700',
+                        color: '#713F12',
+                        marginHorizontal: 24,
+                      }}
+                    >
+                      Confirm allergy requirements before dining
+                    </Text>
+                    {diningCautions.map((tip) => (
+                      <Text key={tip} style={styles.dayTip}>
+                        {tip}
+                      </Text>
+                    ))}
+                  </View>
+                )}
                 {/* Activities */}
                 <View style={styles.activitiesContainer}>
                   {timingDay?.activities.map((activity) => (
@@ -983,7 +1016,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                   ))}
                 </View>
                 <DiningReviewOptions options={timingDay?.diningOptions} />
-                {visibleTips.length > 0 && (
+                {otherTips.length > 0 && (
                   <View style={{ paddingVertical: 20, backgroundColor: '#EFF5F3', marginTop: 8 }}>
                     <Text
                       style={{
@@ -996,7 +1029,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                     >
                       Before you go
                     </Text>
-                    {visibleTips.map((tip, index) => (
+                    {otherTips.map((tip, index) => (
                       <Text key={`${index}:${tip}`} style={styles.dayTip}>
                         {tip}
                       </Text>

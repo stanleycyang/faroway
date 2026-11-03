@@ -376,3 +376,38 @@ test('day-part timeline puts breakfast and lunch before visits and preserves ord
       .every((a) => a.durationMinutes === undefined)
   ).toBe(true);
 });
+
+test('reviewed venue photos retain credits through cache reload without matching another branch or replacing provider images', () => {
+  const activity = {
+    id: 'museum-photo',
+    name: 'National Museum of Scotland',
+    duration: 120,
+    location: { name: 'Museum', address: 'Chambers St, Edinburgh EH1 1JF, UK' },
+  };
+  // Use a retained exact address from the reviewed acceptance inventory.
+  const photos = require('../../lib/venue-photos.json');
+  activity.location.address = photos.find(
+    (p: { id: string }) => p.id === 'scotland-museum'
+  ).addresses[0];
+  const [day] = transformItineraryDays([{ morning: { activities: [activity] } }]);
+  expect(day.activities[0].image).toContain('wikimedia.org');
+  expect(day.activities[0].imageCredit?.license).toBe('CC BY-SA 4.0');
+  const [cached] = transformItineraryDays(JSON.parse(JSON.stringify([day])));
+  expect(cached.activities[0].imageCredit).toEqual(day.activities[0].imageCredit);
+  expect(
+    transformItineraryDays([
+      {
+        morning: {
+          activities: [
+            { ...activity, location: { ...activity.location, address: 'Another branch' } },
+          ],
+        },
+      },
+    ])[0].activities[0].image
+  ).toBeUndefined();
+  const provider = transformItineraryDays([
+    { morning: { activities: [{ ...activity, images: ['https://provider.example/photo.jpg'] }] } },
+  ])[0].activities[0];
+  expect(provider.image).toBe('https://provider.example/photo.jpg');
+  expect(provider.imageCredit).toBeUndefined();
+});

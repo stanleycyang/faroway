@@ -1,0 +1,92 @@
+[
+  {
+    "id": "scotland-museum",
+    "names": ["National Museum of Scotland"],
+    "addresses": [
+      "Chambers St, Edinburgh EH1 1JF, UK",
+      "Chambers St, Edinburgh EH1 1JF, United Kingdom"
+    ],
+    "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/8a/National_Museum_of_Scotland_-_interior_-_2025-04-19.jpg/960px-National_Museum_of_Scotland_-_interior_-_2025-04-19.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "artist": "瑞丽江的河水",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:National_Museum_of_Scotland_-_interior_-_2025-04-19.jpg",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "reviewedAt": "2026-11-03",
+    "description": "National Museum of Scotland - interior"
+  },
+  {
+    "id": "jeronimos",
+    "names": ["Jerónimos Monastery"],
+    "addresses": ["Praça do Império 1400-206 Lisboa", "Praça do Império 1400-206 Lisboa, Portugal"],
+    "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/82/Jer%C3%B3nimos_Monastery_in_Bel%C3%A9m%2C_Lisbon%2C_20250604_1340_9252.jpg/960px-Jer%C3%B3nimos_Monastery_in_Bel%C3%A9m%2C_Lisbon%2C_20250604_1340_9252.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "artist": "Jakub Hałun",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Jer%C3%B3nimos_Monastery_in_Bel%C3%A9m,_Lisbon,_20250604_1340_9252.jpg",
+    "license": "CC BY 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by/4.0",
+    "reviewedAt": "2026-11-03",
+    "description": "Jerónimos Monastery in Belém, Lisbon"
+  },
+  {
+    "id": "belem",
+    "names": ["Belém Tower"],
+    "addresses": ["Av. Brasília, 1400-038 Lisboa", "Av. Brasília, 1400-038 Lisboa, Portugal"],
+    "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/7/76/Bel%C3%A9m_Tower_%2834595749210%29.jpg/960px-Bel%C3%A9m_Tower_%2834595749210%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "artist": "Susanne Nilsson",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Bel%C3%A9m_Tower_(34595749210).jpg",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+    "reviewedAt": "2026-11-03",
+    "description": "Belém Tower"
+  },
+  {
+    "id": "nyhavn",
+    "names": ["Nyhavn Canal Walk", "Nyhavn Waterfront Walk"],
+    "addresses": ["Nyhavn, 1051 København K", "Nyhavn, 1051 København K, Denmark"],
+    "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/8/84/2018_-_Nyhavn_on_sunset.jpg/960px-2018_-_Nyhavn_on_sunset.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "artist": "Moahim",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:2018_-_Nyhavn_on_sunset.jpg",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "reviewedAt": "2026-11-03",
+    "description": "in the Heritage Agency of Denmark database for Listed Buildings."
+  },
+  {
+    "id": "met",
+    "names": ["The Metropolitan Museum of Art"],
+    "addresses": ["1000 5th Ave, New York, NY 10028"],
+    "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/3/30/Metropolitan_Museum_of_Art_%28The_Met%29_-_Central_Park%2C_NYC.jpg/960px-Metropolitan_Museum_of_Art_%28The_Met%29_-_Central_Park%2C_NYC.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "artist": "Hugo Schneider",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Metropolitan_Museum_of_Art_(The_Met)_-_Central_Park,_NYC.jpg",
+    "license": "CC BY-SA 2.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/2.0",
+    "reviewedAt": "2026-11-03",
+    "description": "The Metropolitan Museum of Art (The Met) entrance façade in Upper East Side, Manhattan, New York City"
+  },
+  {
+    "id": "moma",
+    "names": ["Museum of Modern Art (MoMA)"],
+    "addresses": ["11 W 53rd St, New York, NY 10019"],
+    "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/fb/Museum_of_Modern_Art%2C_New_York_City_-_panoramio.jpg/960px-Museum_of_Modern_Art%2C_New_York_City_-_panoramio.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "artist": "Colin W",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Museum_of_Modern_Art,_New_York_City_-_panoramio.jpg",
+    "license": "CC BY-SA 3.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0",
+    "reviewedAt": "2026-11-03",
+    "description": "Museum of Modern Art, New York City"
+  },
+  {
+    "id": "fed-square",
+    "names": ["Federation Square", "Federation Square Heritage Architecture"],
+    "addresses": [
+      "Swanston St & Flinders St, Melbourne VIC 3000",
+      "Swanston St & Flinders St, Melbourne VIC 3000, Australia"
+    ],
+    "imageUrl": "https://thumb.wikimedia.org/wikipedia/commons/thumb/0/04/Fed_Square%2C_Melbourne%2C_north_view_20230219_1.jpg/960px-Fed_Square%2C_Melbourne%2C_north_view_20230219_1.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=thumbnail",
+    "artist": "DXR",
+    "sourceUrl": "https://commons.wikimedia.org/wiki/File:Fed_Square,_Melbourne,_north_view_20230219_1.jpg",
+    "license": "CC BY-SA 4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0",
+    "reviewedAt": "2026-11-03",
+    "description": "A north view of Fed Square, Melbourne"
+  }
+]

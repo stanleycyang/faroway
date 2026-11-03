@@ -89,6 +89,18 @@ export function destinationImage(destination: string): string | undefined {
 /** Curated city photography, never used as evidence or imagery for a venue. */
 export const supplementalDestinationPhotos = [
   {
+    city: "Edinburgh",
+    country: "United Kingdom",
+    url: "https://images.unsplash.com/photo-1762729881707-8ebfe323578a?auto=format&fit=crop&fm=jpg&q=80&w=1600",
+    photographer: "Mafalda Moura",
+    source:
+      "https://unsplash.com/photos/edinburgh-skyline-with-dugald-stewart-monument-in-foreground-JZ7CmknQ1lU",
+    license: "https://unsplash.com/license",
+    reviewedAt: "2026-11-03",
+    description:
+      "Edinburgh skyline with the Dugald Stewart Monument in the foreground",
+  },
+  {
     city: "Melbourne",
     country: "Australia",
     url: "https://images.unsplash.com/photo-1634172770871-28ab3ddb6a56?auto=format&fit=crop&fm=jpg&q=80&w=1600",

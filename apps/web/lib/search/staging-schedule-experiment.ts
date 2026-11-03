@@ -52,6 +52,11 @@ import { screenReportedDiningClosures } from "./reviewed-dining-closures";
 import reviewedClosures from "../../../../scripts/fixtures/reviewed-dining-closures.json";
 import reviewedDiningDays from "../../../../scripts/fixtures/reviewed-dining-days.json";
 import { reviewedDiningDayExclusions } from "./reviewed-dining-days";
+import {
+  activityDecisionSchema,
+  applyReviewedActivityDecisions,
+} from "./reviewed-activity-decisions";
+import activityDecisionRecords from "../../../../scripts/fixtures/reviewed-activity-decisions.json";
 
 import { compiledScheduleExperimentEnabled } from "./schedule-experiment-gate";
 export { compiledScheduleExperimentEnabled } from "./schedule-experiment-gate";
@@ -79,8 +84,19 @@ export async function runStagingCompiledSchedule(
     ),
     reviewedSupply,
   );
-  const activities = supply.activities;
-  const exclusions: ScheduleExclusion[] = [...supply.exclusions];
+  const decisionReview = applyReviewedActivityDecisions(
+    plan,
+    supply.activities,
+    Array.from({ length: count }, (_, i) =>
+      new Date(start + i * 86400000).toISOString().slice(0, 10),
+    ),
+    activityDecisionSchema.array().parse(activityDecisionRecords),
+  );
+  const activities = decisionReview.activities;
+  const exclusions: ScheduleExclusion[] = [
+    ...supply.exclusions,
+    ...decisionReview.exclusions,
+  ];
   for (let i = 0; i < count; i++) {
     const date = new Date(start + i * 86400000).toISOString().slice(0, 10);
     for (const activity of activities)
@@ -143,6 +159,8 @@ export async function runStagingCompiledSchedule(
     reviewedDining,
     exclusions,
     {
+      maxUnverifiedTransferKm: 6,
+      maxUnverifiedMealDistanceKm: 3,
       reviewedActivityIds: supply.admitted.map((record) => record.id),
       diningExclusions: reviewedDiningDayExclusions(
         plan,
@@ -152,6 +170,7 @@ export async function runStagingCompiledSchedule(
     },
   );
   appendActivitySourceNotes(compiled.days, supply.admitted);
+  compiled.days[0].tips.push(...decisionReview.notes);
   for (const day of compiled.days) {
     const names = [
       ...new Set(

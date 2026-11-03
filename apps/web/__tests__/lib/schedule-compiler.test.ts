@@ -1075,3 +1075,83 @@ it("retains a requested highlight before the bounded inventory search with revie
     result.days[0].evening.activities.map((activity) => activity.id),
   ).toEqual([requested.id]);
 });
+
+it("does not schedule the observed bakery tasting and the same bakery meal on the same day", () => {
+  const bakery = {
+    ...visit("tasting", 60, "morning"),
+    name: "Pastéis de Belém Tasting",
+    location: {
+      name: "Bakery",
+      address: "R. de Belém 84 92, 1300-085 Lisboa, Portugal",
+      lat: 38.6975,
+      lng: -9.2032,
+    },
+  };
+  const meal = {
+    ...dining[0],
+    id: "bakery-meal",
+    name: "Pastéis de Belém",
+    mealTypes: ["breakfast" as const],
+    location: {
+      name: "Bakery",
+      address: "R. de Belém 84 92, 1300-085 Lisboa",
+      lat: 38.6975,
+      lng: -9.2032,
+    },
+  };
+  const alternative = {
+    ...meal,
+    id: "other-breakfast",
+    name: "Another cafe",
+    location: { ...meal.location, address: "Different address" },
+  };
+  const result = compileSchedule(
+    {
+      ...plan,
+      destination: "Lisbon, Portugal",
+      dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 },
+    },
+    [bakery],
+    [meal, alternative],
+  );
+  expect(result.days[0].morning.activities.map((a) => a.id)).toContain(
+    "tasting",
+  );
+  expect(result.days[0].morning.meal?.id).toBe("other-breakfast");
+});
+
+it("keeps obviously distant visits apart and chooses a nearby meal when transfer evidence is absent", () => {
+  const local = {
+    ...visit("local", 60),
+    location: {
+      name: "Local",
+      address: "Local street",
+      lat: 38.71,
+      lng: -9.14,
+    },
+  };
+  const distant = {
+    ...visit("distant", 60),
+    location: { name: "Distant", address: "Other town", lat: 39.2, lng: -9.14 },
+  };
+  const farMeal = {
+    ...dining[0],
+    id: "far-meal",
+    mealTypes: ["lunch" as const],
+    location: distant.location,
+  };
+  const nearMeal = { ...farMeal, id: "near-meal", location: local.location };
+  const result = compileSchedule(
+    { ...plan, dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 } },
+    [local, distant],
+    [farMeal, nearMeal],
+    [],
+    { maxUnverifiedTransferKm: 6, maxUnverifiedMealDistanceKm: 3 },
+  );
+  const visits = slots.flatMap((slot) => result.days[0][slot].activities);
+  expect(visits).toHaveLength(1);
+  expect(result.days[0].afternoon.meal?.id).toBe(
+    visits[0].id === "local" ? "near-meal" : "far-meal",
+  );
+  expect(result.verified).toBe(false);
+});

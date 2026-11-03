@@ -126,3 +126,23 @@ it("preserves a source note only for a matching selected address without claimin
     appendReviewedAddressNotes(plan, days, facts, "2026-12-02")[0].tips,
   ).toEqual([]);
 });
+
+it("withholds an unresolved chain branch instead of moving it to another published address", () => {
+  const fact = facts.find(
+    (record) => record.id === "padaria-rua-ouro-identity-review",
+  )!;
+  const input = {
+    ...meal,
+    name: "A Padaria Portuguesa",
+    location: { ...meal.location, address: fact.previousAddresses[0] },
+  };
+  const review = reconcileGeneratedDiningAddresses(
+    { destination: fact.destination },
+    [input],
+    facts,
+    "2026-11-03",
+  );
+  expect(review.candidates).toEqual([]);
+  expect(review.applied).toEqual([]);
+  expect(review.withheld[0].reason).toBe("branch_identity_unresolved");
+});

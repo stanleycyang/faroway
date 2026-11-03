@@ -1,0 +1,105 @@
+[
+  {
+    "id": "round-tower",
+    "destination": "Copenhagen, Denmark",
+    "names": [
+      "Round Tower",
+      "Rundetaarn",
+      "Rundetårn",
+      "The Round Tower",
+      "The Round Tower (Rundetaarn)",
+      "The Round Tower (Rundetårn)"
+    ],
+    "addresses": [
+      "Købmagergade 52A, 1150 København K",
+      "Købmagergade 52A, 1150 København K, Denmark"
+    ],
+    "visitTypes": ["ordinary_entry"],
+    "sourceUrl": "https://www.rundetaarn.dk/en/visit-us/",
+    "sourceSha256": "eeaf5531c59e5401c7b5b31a764eee81fb6d2ced76791769331d01f587edfbd4",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-11",
+    "validThrough": "2027-01-17",
+    "action": "defer",
+    "explanation": "Full ascent requires stairs and has no lift. It cannot meet the requested step-free route.",
+    "requiresStepFree": true
+  },
+  {
+    "id": "harder-kulm",
+    "destination": "Interlaken, Switzerland",
+    "names": [
+      "Harder Kulm",
+      "Harder Kulm Funicular",
+      "Harder Kulm Funicular Ride",
+      "Harder Kulm Funicular and Panorama"
+    ],
+    "addresses": [
+      "Harder Kulm, 3800 Interlaken, Switzerland",
+      "Harderstrasse 14, 3800 Interlaken, Switzerland"
+    ],
+    "visitTypes": ["ordinary_entry"],
+    "sourceUrl": "https://www.jungfrau.ch/en-gb/harder-kulm/",
+    "sourceSha256": "4488829a114652503ba1dad51ab87d11d8fbd536d7ebec2d672ca7d5caebbddd",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-11",
+    "validThrough": "2027-01-17",
+    "action": "defer",
+    "explanation": "The reviewed page does not establish January 2027 railway operation. Obtain a dated operating timetable before scheduling this journey."
+  },
+  {
+    "id": "brienz-winter",
+    "destination": "Interlaken, Switzerland",
+    "names": [
+      "Lake Brienz Boat Cruise",
+      "Lake Brienz Boat Tour",
+      "Lake Brienz Boat Trip",
+      "Lake Brienz Cruise"
+    ],
+    "addresses": [
+      "Lanzenen 1, 3800 Interlaken, Switzerland",
+      "Lanzenen, 3800 Interlaken, Switzerland"
+    ],
+    "visitTypes": ["ordinary_entry"],
+    "sourceUrl": "https://www.brienzersee.ch/en/experiences/poi/winter-cruises-on-lake-thun",
+    "sourceSha256": "acef376aec80ffcd6d5ab071592077f95780fbcf5333cb61d48fb4a0b814ef18",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-11",
+    "validThrough": "2027-01-17",
+    "action": "defer",
+    "explanation": "The regional tourism source reports that regular Lake Brienz navigation is suspended in winter; a Lake Thun service is a different journey."
+  },
+  {
+    "id": "magic-park",
+    "destination": "Interlaken, Switzerland",
+    "names": ["ICE MAGIC Interlaken", "Ice Magic Interlaken"],
+    "addresses": ["Höheweg, 3800 Interlaken, Switzerland"],
+    "visitTypes": ["ordinary_entry"],
+    "sourceUrl": "https://magicpark-interlaken.ch/",
+    "sourceSha256": "6205dfffa0eefb2b8da49ee0c53590f525328e73906325be31850302b3334b04",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-11",
+    "validThrough": "2027-01-17",
+    "action": "defer",
+    "explanation": "The organizer identifies a successor event, Magic Park, at Kursaalgarten. The old Ice Magic identity/location cannot be scheduled as that new event."
+  },
+  {
+    "id": "stone-destiny",
+    "destination": "Edinburgh, United Kingdom",
+    "names": ["Edinburgh Castle"],
+    "addresses": ["Castlehill, Edinburgh EH1 2NG, UK"],
+    "visitTypes": ["ordinary_entry"],
+    "sourceUrl": "https://perthmuseum.co.uk/the-stone-of-destiny/",
+    "sourceSha256": "7e814ae9361e528ffc4282709bd171d0fbd2e6d3f93c88c4a9c856228a95833b",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-11",
+    "validThrough": "2027-01-17",
+    "action": "replace_description",
+    "explanation": "The Stone of Destiny is at Perth Museum, not a current Edinburgh Castle highlight. Access and ticket availability still need separate review.",
+    "description": "Explore Edinburgh Castle. The Stone of Destiny is now at Perth Museum and is not part of this suggested visit. Confirm the exact accessible route and admission arrangements before visiting."
+  }
+]

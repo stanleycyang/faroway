@@ -13,7 +13,11 @@ import {
   isWeekdayEventTitle,
 } from "./speculative-event";
 import { requestsMiddayRest, proposeRestDayTiming } from "./schedule-timing";
-import { mealBoundaryAnchors, type VisitSlots } from "./meal-boundaries";
+import {
+  mealBoundaryAnchors,
+  sameVisitAndMealVenue,
+  type VisitSlots,
+} from "./meal-boundaries";
 import { matchesSuggestedHighlight } from "./highlight-match";
 import { suppliedDistanceKm } from "./supplied-distance";
 import {
@@ -82,6 +86,9 @@ export function compileSchedule(
   diningInventory: DiningResult[],
   exclusions: readonly ScheduleExclusion[] = [],
   options: {
+    /** Reject clearly distant supplied locations; never certifies a real route. */
+    maxUnverifiedTransferKm?: number;
+    maxUnverifiedMealDistanceKm?: number;
     reviewedActivityIds?: readonly string[];
     diningExclusions?: readonly {
       diningId: string;
@@ -91,6 +98,13 @@ export function compileSchedule(
     }[];
   } = {},
 ): CompiledSchedule {
+  const maxTransferKm = options.maxUnverifiedTransferKm;
+  const maxMealKm = options.maxUnverifiedMealDistanceKm;
+  for (const limit of [maxTransferKm, maxMealKm])
+    if (limit !== undefined && (!Number.isFinite(limit) || limit <= 0))
+      throw new Error(
+        "Transfer screening limits must be positive finite distances",
+      );
   // Caller supplies IDs admitted from reviewed source inputs, never model scores.
   const reviewedIds = new Set(options.reviewedActivityIds ?? []);
   const dining = diningInventory.filter((meal) => !meal.planningIdea);
@@ -258,6 +272,7 @@ export function compileSchedule(
       issues.push(`constraint_activity_not_found:${item.activityId}`);
   }
   const ids = new Set<string>();
+  const venueKeys = new Set<string>();
   const reviewRequiredActivities: CompiledSchedule["reviewRequiredActivities"] =
     [];
   const highlights = [...new Set(plan.activityCriteria.mustSee ?? [])];
@@ -287,6 +302,18 @@ export function compileSchedule(
         return false;
       }
       ids.add(activity.id);
+      const venueKey = activity.location.address?.trim()
+        ? JSON.stringify([
+            activity.name.normalize("NFKC").toLowerCase().trim(),
+            activity.location.address.normalize("NFKC").toLowerCase().trim(),
+            activity.proposedVisitType ?? "unknown",
+          ])
+        : undefined;
+      if (venueKey && venueKeys.has(venueKey)) {
+        issues.push(`duplicate_venue_visit:${activity.id}`);
+        return false;
+      }
+      if (venueKey) venueKeys.add(venueKey);
       if (
         isSpeculativeEventTitle(activity.name) ||
         isGenericEventTitle(activity.name) ||
@@ -471,6 +498,19 @@ export function compileSchedule(
           }
         }
         for (const choice of choices) {
+          const route = [...today.map((item) => item.activity), ...choice];
+          if (
+            maxTransferKm !== undefined &&
+            route.some((stop, index) => {
+              if (!index) return false;
+              const distance = suppliedDistanceKm(
+                route[index - 1].location,
+                stop.location,
+              );
+              return distance !== null && distance > maxTransferKm;
+            })
+          )
+            continue;
           const minutes = choice.reduce((sum, a) => sum + a.duration, 0);
           if (
             today.length + choice.length > countLimit ||
@@ -796,6 +836,26 @@ export function compileSchedule(
       }
       const choices = dining.filter((meal) => {
         if (!meal.mealTypes.includes(MEALS[slot])) return false;
+        if (
+          maxMealKm !== undefined &&
+          anchors.some((anchor) => {
+            const distance = suppliedDistanceKm(anchor.location, meal.location);
+            return distance !== null && distance > maxMealKm;
+          })
+        ) {
+          issues.push(
+            `day_${day + 1}:${meal.id}:meal_transfer_requires_review`,
+          );
+          return false;
+        }
+        if (
+          selected.some((item) =>
+            sameVisitAndMealVenue(item.activity, meal, plan.destination),
+          )
+        ) {
+          issues.push(`day_${day + 1}:${meal.id}:duplicate_visit_meal_venue`);
+          return false;
+        }
         const closure = options.diningExclusions?.find(
           (item) => item.diningId === meal.id && item.date === date,
         );

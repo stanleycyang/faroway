@@ -34,5 +34,18 @@
     "observedAt": "2026-11-03",
     "reviewAfter": "2026-12-03",
     "branchReview": "Operator homepage names Sr. Fado de Alfama and publishes R. dos Remédios 168, 1100-445 Lisboa. Applies only to the exact restaurant and generated old address in Lisbon; no hours, event availability, cooking roles, coordinates or meal suitability are verified."
+  },
+  {
+    "id": "padaria-rua-ouro-identity-review",
+    "destination": "Lisbon, Portugal",
+    "aliases": ["A Padaria Portuguesa"],
+    "previousAddresses": ["Rua do Ouro 171, 1100-061 Lisboa"],
+    "publishedAddress": "Rua Áurea 94, 1100-063 Lisboa",
+    "action": "withhold",
+    "sourceUrl": "https://apadariaportuguesa.pt/en/stores-list/",
+    "sourceSha256": "aef291a8bf8c4ccaadfcabd3bb75641d322d75ba7cce854011a6873f488ce8cc",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator directory lists Rua Áurea 94. Generated Rua do Ouro 171 is not established as that branch; withhold it instead of silently relocating the restaurant or carrying over its coordinates. This review does not certify a move, closure, opening hours or the suitability of another branch."
   }
 ]

@@ -6,7 +6,8 @@ import {
   readDiningReviewOptions,
 } from '@faroway/types';
 import { durationLabel } from './durationLabel';
-import type { Activity, Hotel, TripDay } from '../stores/tripStore';
+import { venuePhoto } from './venuePhotos';
+import type { Activity, Hotel, TripDay } from './itineraryTypes';
 import { readTripCost, formatTripCost } from './tripCost';
 
 function formatCostValue(cost: unknown): string | undefined {
@@ -69,7 +70,22 @@ function transformTransport(value: unknown): TripDay['transport'] {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformApiActivity(a: any, timeOfDay: string): Activity {
+  const name = displayText(a.name) || displayText(a.title);
+  const venueAddress = displayText(a.location?.address) || displayText(a.venueAddress);
+  const photo = venuePhoto(name, venueAddress);
+  const suppliedImage = displayText(a.images?.[0]) || displayText(a.image);
+  const image = suppliedImage || photo?.imageUrl;
   return {
+    venueAddress: venueAddress || undefined,
+    imageCredit:
+      photo && image === photo.imageUrl
+        ? {
+            artist: photo.artist,
+            sourceUrl: photo.sourceUrl,
+            license: photo.license,
+            licenseUrl: photo.licenseUrl,
+          }
+        : undefined,
     proposedVisitType: readProposedVisitType(a.proposedVisitType),
     source: readVenueSource(a.source),
     id: displayText(a.id) || `activity_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
@@ -121,7 +137,7 @@ function transformApiActivity(a: any, timeOfDay: string): Activity {
       undefined,
     affiliatePartner:
       displayText(a.bookingInfo?.affiliateId) || displayText(a.affiliatePartner) || undefined,
-    image: displayText(a.images?.[0]) || displayText(a.image) || undefined,
+    image,
     rating: displayNumber(a.rating) !== undefined && a.rating <= 5 ? a.rating : undefined,
     reviewCount: displayNumber(a.reviewCount),
     topReview: displayText(a.topReview) || undefined,
