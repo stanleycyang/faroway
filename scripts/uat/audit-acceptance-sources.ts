@@ -10,6 +10,7 @@ import decisions from "../fixtures/reviewed-activity-decisions.json";
 import supply from "../fixtures/reviewed-activity-supply.json";
 import {
   reviewedHoursExclusions,
+  reviewedHoursCoverVisitScope,
   type ReviewedVenueHours,
 } from "../../apps/web/lib/search/reviewed-venue-hours";
 import { resolveReviewedVenue } from "../../apps/web/lib/search/venue-identity";
@@ -102,8 +103,11 @@ for (const name of readdirSync(base).sort()) {
         ).exclusions.filter((finding) => finding.date === day.date);
         const calendar = new Date(`${day.date}T12:00:00Z`);
         const covered =
-          activity.proposedVisitType === "ordinary_entry" &&
           identity.matches.length === 1 &&
+          reviewedHoursCoverVisitScope(
+            identity.matches[0],
+            activity.proposedVisitType,
+          ) &&
           identity.matches[0].months.includes(calendar.getUTCMonth() + 1) &&
           identity.matches[0].week.some(
             (entry) => entry.weekday === calendar.getUTCDay(),

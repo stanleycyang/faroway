@@ -1,6 +1,9 @@
 import { readVenueSource, type VenueSource } from "@faroway/types";
 import { resolveReviewedVenue } from "./venue-identity";
-import type { ReviewedVenueHours } from "./reviewed-venue-hours";
+import {
+  reviewedHoursCoverVisitScope,
+  type ReviewedVenueHours,
+} from "./reviewed-venue-hours";
 import type { ReviewedActivitySupply } from "./reviewed-activity-supply";
 import type { ActivityResult } from "./types";
 
@@ -26,7 +29,8 @@ export function withReviewedActivitySources(
         record.address === activity.location.address,
     );
     const matched =
-      activity.proposedVisitType === "ordinary_entry"
+      activity.proposedVisitType === "ordinary_entry" ||
+      activity.proposedVisitType === "exterior_walk"
         ? resolveReviewedVenue(
             {
               destination,
@@ -35,7 +39,9 @@ export function withReviewedActivitySources(
             },
             hours,
             "ordinary_visit",
-          ).matches
+          ).matches.filter((fact) =>
+            reviewedHoursCoverVisitScope(fact, activity.proposedVisitType),
+          )
         : [];
     const records = supplied.length ? supplied : matched;
     if (records.length !== 1) return unattributed;

@@ -259,3 +259,43 @@ it("holds the observed glasshouse, garden, spa and sledging claims without rewri
     expect(result.notes[0]).toContain(fact.sourceUrl);
   }
 });
+
+it("screens reviewed garden access hours without borrowing them for special events", () => {
+  const activity = {
+    ...visit(
+      "King's Garden (Kongens Have)",
+      "Øster Voldgade 4A, 1350 København K",
+      45,
+    ),
+    proposedVisitType: "exterior_walk" as const,
+  };
+  const check = (candidate: ActivityResult) =>
+    reviewedHoursExclusions(
+      { destination: "Copenhagen, Denmark" },
+      [candidate],
+      ["2027-01-12"],
+      hours as ReviewedVenueHours[],
+      "2026-11-03",
+    );
+  expect(check(activity).map((item) => item.slot)).toEqual(["evening"]);
+  expect(check({ ...activity, proposedVisitType: "event" })[0].reason).toBe(
+    "venue_visit_scope_requires_review",
+  );
+});
+
+it("does not fit a three-hour aquarium visit into the two hours after morning opening", () => {
+  const result = reviewedHoursExclusions(
+    { destination: "Copenhagen, Denmark" },
+    [
+      visit(
+        "Den Blå Planet (National Aquarium Denmark)",
+        "Jacob Fortlingsvej 1, 2770 Kastrup",
+        180,
+      ),
+    ],
+    ["2027-01-13"],
+    hours as ReviewedVenueHours[],
+    "2026-11-03",
+  );
+  expect(result.map((item) => item.slot)).toEqual(["morning", "evening"]);
+});

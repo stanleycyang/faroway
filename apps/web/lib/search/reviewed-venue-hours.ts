@@ -11,6 +11,8 @@ import {
 import type { ActivityResult, SearchPlan } from "./types";
 import type { ScheduleExclusion } from "./schedule-compiler";
 export interface ReviewedVenueHours extends ReviewedVenueIdentity {
+  /** Explicit reviewed scope; omitted legacy records cover ordinary entry only. */
+  visitTypes?: Array<"ordinary_entry" | "exterior_walk">;
   sourceUrl: string;
   sourceSha256: string;
   observedAt: string;
@@ -34,6 +36,14 @@ const slots = {
   afternoon: [720, 1080],
   evening: [1080, 1320],
 } as const;
+export function reviewedHoursCoverVisitScope(
+  fact: ReviewedVenueHours,
+  visitType: ActivityResult["proposedVisitType"],
+) {
+  return (fact.visitTypes ?? ["ordinary_entry"]).some(
+    (type) => type === visitType,
+  );
+}
 function valid(fact: ReviewedVenueHours, asOf: string) {
   try {
     const url = new URL(fact.sourceUrl);
@@ -43,6 +53,11 @@ function valid(fact: ReviewedVenueHours, asOf: string) {
       !url.password &&
       /^[a-f0-9]{64}$/.test(fact.sourceSha256) &&
       !!fact.branchReview.trim() &&
+      (fact.visitTypes === undefined ||
+        (fact.visitTypes.length > 0 &&
+          fact.visitTypes.every((type) =>
+            ["ordinary_entry", "exterior_walk"].includes(type),
+          ))) &&
       validDate(fact.observedAt) &&
       validDate(fact.reviewAfter) &&
       fact.observedAt <= asOf &&
@@ -139,7 +154,7 @@ export function reviewedHoursExclusions(
         });
         continue;
       }
-      if (activity.proposedVisitType !== "ordinary_entry") {
+      if (!reviewedHoursCoverVisitScope(fact, activity.proposedVisitType)) {
         exclusions.push({
           activityId: activity.id,
           date,

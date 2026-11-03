@@ -45,10 +45,10 @@ from a menu or a generic dietary tag.
 
 ## Budget and measurement
 
-Last recorded billed total: **$7.79254585 of $20**, remaining **$12.20745415**.
+Last recorded billed total: **$8.19825635 of $20**, remaining **$11.80174365**.
 Do source review and offline replay before more live generation. Allocate up to
 $4 to targeted repair runs and $4 to the final twelve-run round; retain the
-remaining ~$6.08 for retries and reconciliation. These are spend ceilings, not
+remaining balance for retries and reconciliation. These are spend ceilings, not
 promises to spend them. Stop paid dispatches at $18 cumulative, leaving $2 for
 in-flight/billing lag; never reset the key or bypass its $20 cap. Investigate
 unexpected per-run cost before another dispatch. Count source/provider costs if
@@ -284,3 +284,22 @@ Copenhagen needs two affected-case reruns on the next fixed commit. Universal
 source coverage, continuous wheelchair routing, complete transit/meal timing,
 image coverage and physical-device verification remain unresolved. Keep PR #55
 draft. Do not describe this repair as all issues fixed or production-ready.
+
+
+## Source attribution verified; outdoor-hours repair — 2026-11-03
+
+The two Copenhagen reruns on `8422b7a` completed. Tivoli January garden access
+was absent. Reviewed source links and dates survived saved output and were
+visually confirmed on Android for SMK and Amalienborg. All six day captures
+completed; physical device remains absent. CI passed; release jobs skipped.
+Recorded cumulative spend: $8.19825635. Report:
+`artifacts/uat/copenhagen-source-attribution-20261103/report.md`.
+
+This candidate is still rejected. Government operator hours contradict the
+new King's Garden evening visit (January closes 17:00), and the 180-minute
+Wednesday aquarium visit cannot fit after its 10:00 opening before noon.
+The repair introduces explicit reviewed visit scopes for hours: a garden's
+reviewed exterior access can be screened without borrowing museum admission
+hours for unrelated outdoor walks, tours or events. Aquarium ordinary hours
+are added separately. Neither record certifies accessibility or future lift
+availability. Affected Copenhagen reruns remain required on the next commit.
