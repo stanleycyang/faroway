@@ -589,6 +589,10 @@ it.each(["exterior_walk", "guided_tour", undefined] as const)(
           ...activities[0],
           id: "met-scope",
           name: "The Metropolitan Museum of Art",
+          location: {
+            ...activities[0].location,
+            address: "1000 Fifth Avenue, New York, NY 10028",
+          },
           proposedVisitType,
           bestTimeOfDay: "morning",
         },

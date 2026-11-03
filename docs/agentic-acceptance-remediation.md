@@ -147,3 +147,57 @@ D3 still lacks complete entrance-to-exit and inter-venue route evidence for the
 65 cm wheelchair. D4 still lacks verified dated transit times; distance screens
 are not route verification. These unresolved gates must remain explicit in the
 final packet. No production approval or merge is supported by this checkpoint.
+
+
+## Consolidated evidence and source repairs — 2026-11-03
+
+Fixed build `1771de6` completed all twelve cases and preserved requested inputs,
+calendar coverage and stream/save parity. Warm median terminal latency was
+24.211 seconds; the cold first run took 59.455 seconds. Recorded key spend rose
+from $6.52461235 to $6.84859735 ($0.32398500). Billing ingestion can shift costs
+between adjacent runs. All 44 itinerary days were captured on Android QA v17,
+with three scroll samples per day; this is not exhaustive visual/source review.
+Offline content retention and reconnect/process restart were visually verified.
+Only emulator-5554 was attached. Licensed NMS photo rendering and its credit were
+visually confirmed; bundled coverage remains seven venues, not every card.
+The full case report is `artifacts/uat/six-scenario-consolidated-20261103/report.md`.
+
+Acceptance remains rejected. The report retains the observed failures rather
+than treating a successful API completion as a passing itinerary. Repairs in
+`7421a5c` address Amalienborg Monday entry, Morgan Monday entry, Block Arcade
+after closing, unresolved Padaria branch addresses, full Palm House access,
+Princes Street Gardens winter/access uncertainty, unsupported Brünig thermal
+baths, Big Pintenfritz beginner lower-section assumptions, January City Train
+operation, and meals counted as sightseeing. Known venue names at unreviewed
+addresses now trigger identity review instead of bypassing hours checks.
+
+That candidate completed another twelve runs, with recorded cumulative spend
+$7.21370635 of the $20 cap. The additional stream observer was disconnected while
+Interlaken generated; a concurrent duplicate POST returned 409 with the original
+search ID. Completion and a later POST both retained that same ID. This verifies
+client disconnect/idempotent retry, not server-process failure recovery.
+
+The subsequent source audit found MAAT on Tuesday, Writers' Museum stairs for the
+wheelchair brief, museum visits too long for their remaining morning opening
+window, generic Tenement admission without a dated guided tour, a renamed Brienz
+winter boat cruise, a fondue dinner counted as sightseeing and a distant Rigi spa
+in an infeasible evening block. The next candidate screens these cases using
+reviewed operator evidence. Negative name fragments are permitted only for
+review/deferral; they cannot certify facts or rewrite copy. Expired identity
+anchors also require review instead of reopening an unverified address.
+
+Dated Swiss transport responses are retained under
+`artifacts/uat/remediation-20261103/transport/`: Interlaken Ost–Jungfraujoch on
+January 13 takes 97 minutes outbound and 99 minutes on sampled returns;
+Interlaken–Kilchberg Lindt on January 16 takes about 146–149 minutes each way.
+These are aggregator timetable results, not weather or accessible-boarding
+certificates. They expose why visit-only blocks do not establish complete
+excursion timing. Lindt and Rigi need a separately budgeted excursion before
+being inserted into an Interlaken draft.
+
+Still unresolved: complete source-backed claim coverage for every novel venue,
+65 cm wheelchair clearances and continuous inter-venue routes, a complete
+meal/travel/admission timeline, generic winter trail identity and beginner
+suitability, and physical Android validation. These are not fixed by adding
+warnings. Keep PR #55 draft and do not merge for production. The next live
+fixed-build rerun must be reported separately from these failed receipts.

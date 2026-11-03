@@ -23,6 +23,39 @@ const visit = (index: number): ActivityResult => ({
   affiliateUrl: undefined,
 });
 const dates = ["2027-01-11", "2027-01-12", "2027-01-13"];
+it("requires review for reordered winter boat names without applying Brienz evidence to Thun", () => {
+  const candidate = {
+    ...visit(2),
+    name: "Lake Brienz Winter Boat Cruise",
+    proposedVisitType: "guided_tour" as const,
+  };
+  const request = { ...plan, destination: facts[2].destination };
+  expect(
+    applyReviewedActivityDecisions(
+      request,
+      [candidate],
+      dates,
+      facts,
+      "2026-11-03",
+    ).exclusions,
+  ).toHaveLength(3);
+  expect(
+    applyReviewedActivityDecisions(
+      request,
+      [{ ...candidate, name: "Lake Thun Winter Boat Cruise" }],
+      dates,
+      facts,
+      "2026-11-03",
+    ).exclusions,
+  ).toEqual([]);
+  expect(
+    activityDecisionSchema.safeParse({
+      ...facts[2],
+      action: "replace_description",
+      description: "Verified",
+    }).success,
+  ).toBe(false);
+});
 it("withholds the full Round Tower route only for the scoped step-free request", () => {
   const request = {
     ...plan,

@@ -284,7 +284,7 @@ export function compileSchedule(
   const candidates = inventory
     .filter((activity) => {
       if (
-        /^(?:(?:late[ -]night|evening)\s+)?(?:breakfast|lunch|dinner|dining)\s+at\s+/i.test(
+        /^(?:(?:late[ -]night|evening|swiss|traditional|fondue)\s+)*(?:breakfast|lunch|dinner|dining)\s+(?:at|in)\s+/i.test(
           activity.name.trim(),
         )
       ) {

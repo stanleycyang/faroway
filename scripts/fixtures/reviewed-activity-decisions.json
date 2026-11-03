@@ -63,7 +63,7 @@
       "Lanzenen 1, 3800 Interlaken, Switzerland",
       "Lanzenen, 3800 Interlaken, Switzerland"
     ],
-    "visitTypes": ["ordinary_entry"],
+    "visitTypes": ["ordinary_entry", "guided_tour", "unknown"],
     "sourceUrl": "https://www.brienzersee.ch/en/experiences/poi/winter-cruises-on-lake-thun",
     "sourceSha256": "acef376aec80ffcd6d5ab071592077f95780fbcf5333cb61d48fb4a0b814ef18",
     "observedAt": "2026-11-03",
@@ -71,7 +71,12 @@
     "validFrom": "2027-01-11",
     "validThrough": "2027-01-17",
     "action": "defer",
-    "explanation": "The regional tourism source reports that regular Lake Brienz navigation is suspended in winter; a Lake Thun service is a different journey."
+    "explanation": "The regional tourism source reports that regular Lake Brienz navigation is suspended in winter. The proposed winter boat journey needs operator-specific evidence before scheduling; a Lake Thun service or a special charter is a different journey.",
+    "deferNameFragments": [
+      ["brienz", "boat"],
+      ["brienz", "cruise"],
+      ["brienz", "ferry"]
+    ]
   },
   {
     "id": "magic-park",
@@ -279,5 +284,76 @@
     "validThrough": "2027-01-17",
     "action": "defer",
     "explanation": "The regional tourism listing describes operation from Good Friday to early November. January service has not been established; obtain an operator timetable before scheduling. This tourist road train is distinct from the public railway."
+  },
+  {
+    "id": "lindt-interlaken-excursion-review",
+    "destination": "Interlaken, Switzerland",
+    "names": ["Lindt Home of Chocolate"],
+    "addresses": ["Schokoladenplatz 1, 8802 Kilchberg, Switzerland"],
+    "visitTypes": ["ordinary_entry"],
+    "sourceUrl": "https://www.lindt-home-of-chocolate.com/en/directions/",
+    "sourceSha256": "2b8477952eae9a1c823a022ac5fe6584ac6c4520e2ef852cb81fc98f7272d952",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-11",
+    "validThrough": "2027-01-17",
+    "action": "defer",
+    "explanation": "The operator locates this museum in Kilchberg near Zurich, not Interlaken. A separate excursion must account for outbound and return public transport, museum admission, meals and local approach; a visit-only morning block does not establish feasibility. Resolve that full-day plan before adding this distant option."
+  },
+  {
+    "id": "writers-museum-access-review",
+    "destination": "Edinburgh, United Kingdom",
+    "names": ["The Writers' Museum", "Writers' Museum", "The Writers’ Museum"],
+    "addresses": [
+      "Lady Stair's Close, Lawnmarket, Edinburgh EH1 2PA, UK",
+      "Lady Stair’s Close, Lawnmarket, Edinburgh EH1 2PA, UK"
+    ],
+    "visitTypes": ["ordinary_entry"],
+    "sourceUrl": "https://cultureedinburgh.com/our-venues/writers-museum",
+    "sourceSha256": "b2ecc0689d879ee4ae1a9f326a232e79d496effd9019f659b14945665d1248aa",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-11",
+    "validThrough": "2027-01-17",
+    "action": "defer",
+    "requiresStepFree": true,
+    "explanation": "The current operator venue record says the entrance has a step, there is no lift or ramp, and exhibition floors and toilets are reached by stairs. This full museum visit does not meet the requested no-stairs, no-lifting wheelchair route. The exterior courtyard is a different visit."
+  },
+  {
+    "id": "tenement-timed-tour-review",
+    "destination": "New York, USA",
+    "names": ["Tenement Museum", "Lower East Side Tenement Museum"],
+    "addresses": [
+      "103 Orchard St, New York, NY 10002",
+      "103 Orchard Street, New York, NY 10002"
+    ],
+    "visitTypes": ["ordinary_entry", "guided_tour", "unknown"],
+    "sourceUrl": "https://www.tenement.org/plan-a-visit/0/",
+    "sourceSha256": "1d9d6e26a7d406a1e4651d4decbaf3560147be763f792ecc5b6774a8c8843e81",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-11",
+    "validThrough": "2027-01-17",
+    "action": "defer",
+    "explanation": "The operator requires a specific apartment or neighborhood guided tour and advance check-in. Visitor-center and shop hours do not establish admission to a generic museum visit or an evening tour. Select a dated tour, meeting point and duration before scheduling."
+  },
+  {
+    "id": "rigi-interlaken-excursion-review",
+    "destination": "Interlaken, Switzerland",
+    "names": [
+      "Mineralbad & Spa Rigi Kaltbad",
+      "Mineralbad Rigi",
+      "Rigi Kaltbad Mineral Baths"
+    ],
+    "addresses": ["Zentrum 1, 6356 Rigi Kaltbad, Switzerland"],
+    "visitTypes": ["ordinary_entry"],
+    "sourceUrl": "https://www.aquaspa.ch/en/mineralbad-rigi/plan-your-visit/opening-hours/",
+    "sourceSha256": "727c63377a9a5c67ed10bff272e00b28bb6e064e663be82530a7a63010505c11",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "validFrom": "2027-01-11",
+    "validThrough": "2027-01-17",
+    "action": "defer",
+    "explanation": "This spa is in Rigi Kaltbad, not Interlaken. The operator ends swimming at 19:30, so a three-hour visit starting in the evening does not fit. A separate daytime excursion needs dated outbound and return mountain transport, admission and meals before it can be scheduled."
   }
 ]

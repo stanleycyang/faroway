@@ -83,6 +83,70 @@ it("rejects Block Arcade after Tuesday closing but retains Friday evening admiss
   ]);
 });
 
+it.each([
+  [
+    "New York, USA",
+    "The Metropolitan Museum of Art",
+    "1000 5th Ave, New York, NY 10028",
+    240,
+    "2027-01-12",
+  ],
+  [
+    "New York, USA",
+    "Museum of Modern Art (MoMA)",
+    "11 W 53rd St, New York, NY 10019",
+    180,
+    "2027-01-13",
+  ],
+  [
+    "Copenhagen, Denmark",
+    "Experimentarium",
+    "Tuborg Havnevej 7, 2900 Hellerup, Denmark",
+    180,
+    "2027-01-11",
+  ],
+] as const)(
+  "keeps a long visit to %s / %s out of a morning that starts before opening",
+  (destination, name, address, duration, date) => {
+    const result = reviewedHoursExclusions(
+      { destination },
+      [visit(name, address, duration)],
+      [date],
+      hours as ReviewedVenueHours[],
+      "2026-11-03",
+    );
+    expect(result.map((item) => item.slot)).toEqual(["morning", "evening"]);
+  },
+);
+
+it("blocks Tuesday MAAT admission without transferring museum hours to an exterior visit", () => {
+  const activity = visit(
+    "MAAT (Museum of Art, Architecture and Technology)",
+    "Av. Brasília, 1300-598 Lisboa",
+    90,
+  );
+  const result = reviewedHoursExclusions(
+    { destination: "Lisbon, Portugal" },
+    [activity],
+    ["2027-01-12"],
+    hours as ReviewedVenueHours[],
+    "2026-11-03",
+  );
+  expect(result.map((item) => item.slot)).toEqual([
+    "morning",
+    "afternoon",
+    "evening",
+  ]);
+  const exterior = reviewedHoursExclusions(
+    { destination: "Lisbon, Portugal" },
+    [{ ...activity, proposedVisitType: "exterior_walk" }],
+    ["2027-01-12"],
+    hours as ReviewedVenueHours[],
+    "2026-11-03",
+  );
+  expect(exterior[0].reason).toBe("venue_visit_scope_requires_review");
+});
+
 it("holds the observed glasshouse, garden, spa and sledging claims without rewriting them as certified alternatives", () => {
   const facts = activityDecisionSchema
     .array()

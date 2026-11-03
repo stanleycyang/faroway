@@ -102,13 +102,15 @@ export function reviewedHoursExclusions(
           { destination: plan.destination, name: activity.name },
           facts,
         ),
-      ].filter((fact) => valid(fact, asOf));
+      ];
       if (collisions.length)
         for (const date of dates)
           exclusions.push({
             activityId: activity.id,
             date,
-            reason: "venue_identity_requires_review",
+            reason: valid(collisions[0], asOf)
+              ? "venue_identity_requires_review"
+              : "venue_hours_source_review_required",
             sourceUrl: collisions[0].sourceUrl,
             observedAt: collisions[0].observedAt,
           });

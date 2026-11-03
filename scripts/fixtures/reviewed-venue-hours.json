@@ -445,5 +445,290 @@
         "intervals": [[480, 1080]]
       }
     ]
+  },
+  {
+    "id": "maat-hours-20261103",
+    "destination": "Lisbon, Portugal",
+    "aliases": [
+      "MAAT",
+      "MAAT (Museum of Art, Architecture and Technology)",
+      "MAAT - Museum of Art, Architecture and Technology"
+    ],
+    "addresses": [
+      "Av. Brasília, 1300-598 Lisboa",
+      "Av. Brasília, Belém 1300-598 Lisbon"
+    ],
+    "sourceUrl": "https://www.maat.pt/en",
+    "sourceSha256": "a8718fe0afd2de1054be9ab509b7ba4f284319c1b3964afeff864e03489345eb",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator ordinary visit hours and branch reviewed. Scope excludes other sites, events and special openings. Future ticket availability, queuing and onward travel remain unverified. This record screens January visits only.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1140]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 1140]]
+      },
+      {
+        "weekday": 2,
+        "intervals": []
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1140]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1140]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1140]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1140]]
+      }
+    ]
+  },
+  {
+    "id": "met-hours-20261103",
+    "destination": "New York, USA",
+    "aliases": [
+      "The Metropolitan Museum of Art",
+      "Metropolitan Museum of Art",
+      "The Met Fifth Avenue"
+    ],
+    "addresses": [
+      "1000 5th Ave, New York, NY 10028",
+      "1000 Fifth Avenue, New York, NY 10028",
+      "1000 5th Ave, New York, NY 10028, USA"
+    ],
+    "sourceUrl": "https://www.metmuseum.org/plan-your-visit",
+    "sourceSha256": "469f3b8ccc016854713efc0ca21cf352ef081874d2f19c9049e17cc52979dffb",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator ordinary visit hours and branch reviewed. Scope excludes other sites, events and special openings. Future ticket availability, queuing and onward travel remain unverified. This record screens January visits only.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": []
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1260]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1260]]
+      }
+    ]
+  },
+  {
+    "id": "moma-hours-20261103",
+    "destination": "New York, USA",
+    "aliases": [
+      "Museum of Modern Art (MoMA)",
+      "The Museum of Modern Art",
+      "MoMA",
+      "Museum of Modern Art"
+    ],
+    "addresses": [
+      "11 W 53rd St, New York, NY 10019",
+      "11 West 53 Street, New York, NY 10019",
+      "11 W 53rd St, New York, NY 10019, USA"
+    ],
+    "sourceUrl": "https://www.moma.org/visit/",
+    "sourceSha256": "4b2e6793984dedb0ce8bad3d47ec0949d01ceeef1dbdc568f63d407540e105e2",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator ordinary visit hours and branch reviewed. Scope excludes other sites, events and special openings. Future ticket availability, queuing and onward travel remain unverified. This record screens January visits only. Gallery closure is 15 minutes before museum closure; the usable visit interval ends at gallery closure, not shop hours.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[630, 1035]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[630, 1035]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[630, 1035]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[630, 1035]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[630, 1035]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[630, 1215]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[630, 1035]]
+      }
+    ]
+  },
+  {
+    "id": "experimentarium-hours-20261103",
+    "destination": "Copenhagen, Denmark",
+    "aliases": ["Experimentarium"],
+    "addresses": [
+      "Tuborg Havnevej 7, 2900 Hellerup, Denmark",
+      "Tuborg Havnevej 7, 2900 Hellerup"
+    ],
+    "sourceUrl": "https://www.experimentarium.dk/opening-hours-and-prices/",
+    "sourceSha256": "226e9dd01456d2221f51b1a0113246812a2f908f160f7c75ce36618a94336bfb",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator ordinary visit hours and branch reviewed. Scope excludes other sites, events and special openings. Future ticket availability, queuing and onward travel remain unverified. This record screens January visits only.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[570, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[570, 1020]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[570, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[570, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[570, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[570, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[570, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "guggenheim-hours-20261103",
+    "destination": "New York, USA",
+    "aliases": ["Solomon R. Guggenheim Museum", "Guggenheim Museum"],
+    "addresses": [
+      "1071 5th Ave, New York, NY 10128",
+      "1071 Fifth Avenue, New York, NY 10128"
+    ],
+    "sourceUrl": "https://www.guggenheim.org/plan-your-visit",
+    "sourceSha256": "8eb8e4e8e8618143530a4cb3589518cca63d3f7ec0ed3fecaa65a0740e5c1f72",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Reviewed official ordinary museum entry hours and exact New York branch. Member-only and special openings excluded. For Neue Galerie the listed anniversary exhibition ends January 11; ordinary hours do not prove gallery installation status on later dates. Admission, exceptions and route feasibility remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[630, 1050]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[630, 1050]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[630, 1050]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[630, 1050]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[630, 1050]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[630, 1050]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[630, 1050]]
+      }
+    ]
+  },
+  {
+    "id": "neue-hours-20261103",
+    "destination": "New York, USA",
+    "aliases": ["Neue Galerie New York", "Neue Galerie"],
+    "addresses": [
+      "1048 5th Ave, New York, NY 10028",
+      "1048 Fifth Avenue, New York, NY 10028"
+    ],
+    "sourceUrl": "https://www.neuegalerie.org/visit",
+    "sourceSha256": "89e500d8b41a55970e9da44474ea8d6be8b8843566f1b15d1f197bedb8b74202",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Reviewed official ordinary museum entry hours and exact New York branch. Member-only and special openings excluded. For Neue Galerie the listed anniversary exhibition ends January 11; ordinary hours do not prove gallery installation status on later dates. Admission, exceptions and route feasibility remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 2,
+        "intervals": []
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1080]]
+      }
+    ]
   }
 ]

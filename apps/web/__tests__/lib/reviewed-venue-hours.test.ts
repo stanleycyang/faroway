@@ -147,6 +147,22 @@ it("does not transfer hours across cities, names or addresses", () => {
   ).toEqual([]);
 });
 it("withholds a matched venue when source evidence is stale, ambiguous or malformed", () => {
+  expect(
+    reviewedHoursExclusions(
+      plan,
+      [
+        {
+          ...activity,
+          location: { ...activity.location, address: "2 Museum Street" },
+        },
+      ],
+      ["2027-01-11"],
+      [fact],
+      "2026-12-02",
+    ),
+  ).toEqual([
+    expect.objectContaining({ reason: "venue_hours_source_review_required" }),
+  ]);
   for (const facts of [
     [fact, fact],
     [{ ...fact, reviewAfter: "2026-10-31" }],
@@ -269,7 +285,9 @@ it("withholds renamed visits and co-located tenants for identity review without 
       [{ ...fact, reviewAfter: "2026-10-31" }],
       "2026-11-01",
     ),
-  ).toEqual([]);
+  ).toEqual([
+    expect.objectContaining({ reason: "venue_hours_source_review_required" }),
+  ]);
 });
 
 it.each([

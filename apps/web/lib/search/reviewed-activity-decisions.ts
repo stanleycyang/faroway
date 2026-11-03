@@ -15,6 +15,8 @@ export const activityDecisionSchema = z
     id: z.string().min(1),
     destination: z.string().min(1),
     names: z.array(z.string().min(1)).min(1),
+    // Curated fragments can only trigger review, never a positive fact or rewrite.
+    deferNameFragments: z.array(z.array(z.string().min(2)).min(2)).optional(),
     addresses: z.array(z.string().min(1)).min(1),
     visitTypes: z
       .array(
@@ -51,7 +53,8 @@ export const activityDecisionSchema = z
   )
   .refine(
     (record) => record.action !== "replace_description" || !!record.description,
-  );
+  )
+  .refine((record) => !record.deferNameFragments || record.action === "defer");
 export type ReviewedActivityDecision = z.infer<typeof activityDecisionSchema>;
 const normalize = (value: string) =>
   value.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
@@ -80,9 +83,14 @@ export function applyReviewedActivityDecisions(
     const named = records.filter(
       (record) =>
         normalize(record.destination) === normalize(plan.destination) &&
-        record.names.some(
+        (record.names.some(
           (name) => normalize(name) === normalize(activity.name),
-        ) &&
+        ) ||
+          record.deferNameFragments?.some((fragments) =>
+            fragments.every((fragment) =>
+              normalize(activity.name).includes(normalize(fragment)),
+            ),
+          )) &&
         record.visitTypes.includes(activity.proposedVisitType ?? "unknown") &&
         (!record.requiresStepFree || stepFree) &&
         dates.some(
