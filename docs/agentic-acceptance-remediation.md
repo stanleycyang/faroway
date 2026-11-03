@@ -45,7 +45,7 @@ from a menu or a generic dietary tag.
 
 ## Budget and measurement
 
-Last recorded billed total: **$8.19825635 of $20**, remaining **$11.80174365**.
+Last recorded billed total: **$8.26060035 of $20**, remaining **$11.73939965**.
 Do source review and offline replay before more live generation. Allocate up to
 $4 to targeted repair runs and $4 to the final twelve-run round; retain the
 remaining balance for retries and reconciliation. These are spend ceilings, not
@@ -303,3 +303,16 @@ reviewed exterior access can be screened without borrowing museum admission
 hours for unrelated outdoor walks, tours or events. Aquarium ordinary hours
 are added separately. Neither record certifies accessibility or future lift
 availability. Affected Copenhagen reruns remain required on the next commit.
+
+
+Both affected Copenhagen runs on `a45c0d0` completed. Aquarium visits moved to
+afternoon; the garden was placed in morning or absent. Tivoli January garden
+admission was absent. Saved/streamed days match, with no receipt failures.
+Terminal latency 45.210 seconds cold / 23.160 seconds warm; recorded spend reached
+$8.24093635. Runtime source links cover 5/5 activities in the first run and 3/5
+in the second. Local validation: 1,698 web tests, 227 script tests and workspace
+checks passed. Detailed report: `artifacts/uat/copenhagen-outdoor-hours-20261103/report.md`.
+These affected regressions are repaired; the broader D1/D3/D4/D5/D6 gates above
+remain open. See [latest evidence](agentic-acceptance-latest.md) for the case matrix.
+
+Billing reconciliation after both terminal receipts: cumulative spend **$8.26060035**, remaining **$11.73939965**. An additional $0.01966400 arrived after the per-case receipt; individual-case deltas are not treated as final attribution.
