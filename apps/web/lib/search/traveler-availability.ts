@@ -23,13 +23,15 @@ export function travelerVisitSlots(
         /^(morning|afternoon|evening) (?:visits|activities) only(?: (?:daily|each day|every day))?$/.exec(
           clause,
         );
-      if (match) {
-        allowed = allowed.filter((slot) => slot === match[1]);
+      const eveningSightseeing =
+        /^sightseeing only after (?:18:00|6\s*pm)$/.test(clause);
+      if (match || eveningSightseeing) {
+        allowed = allowed.filter((slot) => slot === (match?.[1] ?? "evening"));
         restricted = true;
       } else if (
         /\bonly\b/.test(clause) &&
-        /\b(?:visits|activities)\b/.test(clause) &&
-        /\b(?:morning|afternoon|evening)\b/.test(clause)
+        /\b(?:visits|activities|sightseeing)\b/.test(clause) &&
+        /\b(?:morning|afternoon|evening|after|before)\b/.test(clause)
       ) {
         needsReview = true;
       }
@@ -98,9 +100,13 @@ export function travelerAvailability(
           `^(?:depart|departure) (?:at )?${CLOCK} on (?:the )?(?:final|last) day$`,
         ).exec(clause);
       const lateStart = new RegExp(`^no starts? before ${CLOCK}$`).exec(clause);
-      const working = new RegExp(
-        `^working ${CLOCK}\\s*[-–—]\\s*${CLOCK} (?:daily|(?:on )?(?:each|every)(?: trip)? day)$`,
-      ).exec(clause);
+      const working =
+        new RegExp(
+          `^working ${CLOCK}\\s*[-–—]\\s*${CLOCK} (?:daily|(?:on )?(?:each|every)(?: trip)? day)$`,
+        ).exec(clause) ??
+        new RegExp(
+          `^(?:business )?meetings (?:daily|(?:on )?(?:each|every)(?: trip)? day) from ${CLOCK}\\s*(?:to|[-–—])\\s*${CLOCK}(?: in [a-z]+(?: [a-z]+){0,3} (?:cbd|city cent(?:er|re)))?$`,
+        ).exec(clause);
       if (working) {
         const lower = minute(working[1]),
           upper = minute(working[2]);
@@ -116,7 +122,7 @@ export function travelerAvailability(
         for (let day = 0; day < days; day++)
           set(day, minute(lateStart[1]), 1440);
       else if (
-        /\b(?:arriv(?:e|al)|depart(?:ure)?|starts? before|working)\b/.test(
+        /\b(?:arriv(?:e|al)|depart(?:ure)?|starts? before|working|meetings)\b/.test(
           clause,
         )
       )

@@ -3,6 +3,7 @@ import {
   travelerAvailability,
   availableIntervals,
   availableSlotMinutes,
+  availableMealMinutes,
   travelerVisitSlots,
 } from "@/lib/search/traveler-availability";
 it("interprets visit-only day parts without changing meal availability", () => {
@@ -179,4 +180,45 @@ it("intersects arrival, departure and overlapping work blocks without summing di
     expect(availableSlotMinutes(result.windows[0], 0)).toBe(60);
     expect(result.needsReview).toBe(false);
   }
+});
+
+it("blocks meals during explicit daily business meetings with a CBD location", () => {
+  const result = travelerAvailability(
+    {
+      mobilityNeeds:
+        "Business meetings every trip day from 09:00 to 17:00 in Melbourne CBD.",
+    },
+    3,
+  );
+  expect(result.needsReview).toBe(false);
+  for (const window of result.windows) {
+    expect(window?.unavailable).toEqual([[540, 1020]]);
+    expect(availableMealMinutes(window, 1)).toBe(0);
+    expect(availableMealMinutes(window, 0)).toBe(60);
+  }
+});
+
+it.each([
+  "No business meetings every trip day from 09:00 to 17:00 in Melbourne CBD",
+  "Business meetings on Tuesday from 09:00 to 17:00 in Melbourne CBD",
+  "Business meetings every trip day from 17:00 to 09:00 in Melbourne CBD",
+  "Business meetings every trip day from 09:00 to 17:00 or 10:00 to 16:00",
+])("leaves ambiguous meeting instructions for review: %s", (mobilityNeeds) => {
+  const result = travelerAvailability({ mobilityNeeds }, 3);
+  expect(result.needsReview).toBe(true);
+  expect(result.windows.every((window) => !window?.unavailable?.length)).toBe(
+    true,
+  );
+});
+
+it("keeps sightseeing after 18:00 in the evening without guessing other cutoffs", () => {
+  expect(
+    travelerVisitSlots({ mobilityNeeds: "Sightseeing only after 18:00." }),
+  ).toEqual({ allowed: ["evening"], restricted: true, needsReview: false });
+  for (const mobilityNeeds of [
+    "Sightseeing only after 19:00",
+    "No sightseeing only after 18:00",
+    "Sightseeing only after 18:00 on Monday",
+  ])
+    expect(travelerVisitSlots({ mobilityNeeds }).needsReview).toBe(true);
 });
