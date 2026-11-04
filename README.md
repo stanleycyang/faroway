@@ -228,7 +228,7 @@ profile for a signed physical-device build; `qa-simulator` artifacts cannot be
 installed on an iPhone. A production JavaScript export alone is not an
 installable iOS app.
 
-Apple OAuth secret is auto-rotated monthly via `.github/workflows/rotate-apple-secret.yml`.
+Apple's OAuth client secret is a JWT that expires within six months. `.github/workflows/rotate-apple-secret.yml` regenerates it on the 1st of each month from the `APPLE_P8_PRIVATE_KEY` Actions secret. See [credential setup](docs/CREDENTIAL_SETUP.md).
 
 ## Rollback
 

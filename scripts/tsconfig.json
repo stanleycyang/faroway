@@ -12,6 +12,8 @@
   },
   "include": [
     "bun-test.d.ts",
+    "rotate-apple-secret.ts",
+    "__tests__/rotate-apple-secret.test.ts",
     "uat/**/*.ts",
     "__tests__/uat-staging-guard.test.ts",
     "__tests__/uat-smoke.test.ts",
