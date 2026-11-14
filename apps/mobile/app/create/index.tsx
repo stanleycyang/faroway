@@ -8,7 +8,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   Image,
-  KeyboardAvoidingView,
   Platform,
   Alert,
 } from 'react-native';
@@ -231,10 +230,7 @@ export default function CreateTripScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <View style={{ flex: 1 }}>
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity
@@ -255,6 +251,10 @@ export default function CreateTripScreen() {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
+          // Native inset adjustment also scrolls the focused multiline input
+          // above the iOS keyboard; resizing the outer view alone does not.
+          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+          keyboardDismissMode="on-drag"
         >
           {/* Soft sign-in banner */}
           {showSignInBanner && (
@@ -679,7 +679,7 @@ export default function CreateTripScreen() {
             setAuthGateAction('generate');
           }}
         />
-      </KeyboardAvoidingView>
+      </View>
     </SafeAreaView>
   );
 }

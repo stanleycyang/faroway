@@ -169,6 +169,14 @@ Physical push checks require signed device builds; simulator/Expo Go results are
 insufficient. Finish with a per-platform evidence report separating local,
 fixture-backed, hosted and physical-device results.
 
+For keyboard acceptance, show the simulator's software keyboard explicitly.
+Hardware-keyboard text injection alone can hide it and falsely pass layout
+checks. Focus a lower multiline field, type using an on-screen key, and verify
+that the caret and entered text remain visible. Repeat for allergies, dietary
+preferences and mobility notes, then dismiss the keyboard and check the footer.
+If multiple Simulator windows are open, select the recorded device by name
+before each interaction and avoid concurrent UI drivers on that device.
+
 The prepared Maestro startup flow opens and closes the planner without entering
 credentials, clearing local data, saving a trip or requesting AI. Its XML/debug
 output goes to ignored `artifacts/mobile-qa/maestro`. It is a startup smoke test,
