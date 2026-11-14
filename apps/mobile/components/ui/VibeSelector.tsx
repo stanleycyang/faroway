@@ -1,8 +1,25 @@
 import React from 'react';
+import { Ionicons } from '@expo/vector-icons';
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, Platform } from 'react-native';
 import { colors, borderRadius } from '../../constants/theme';
 import { travelVibes } from '@faroway/constants';
 import { hapticFeedback } from '../../utils/haptics';
+
+// Bundled icons keep these controls independent of the OS emoji font.
+const vibeIcons: Record<string, React.ComponentProps<typeof Ionicons>['name']> = {
+  adventure: 'trail-sign-outline',
+  relaxation: 'sunny-outline',
+  culture: 'library-outline',
+  foodie: 'restaurant-outline',
+  nightlife: 'musical-notes-outline',
+  nature: 'leaf-outline',
+  romantic: 'heart-outline',
+  family: 'people-outline',
+  budget: 'wallet-outline',
+  luxury: 'sparkles-outline',
+  solo: 'bag-outline',
+  wellness: 'fitness-outline',
+};
 
 interface VibeSelectorProps {
   selected: string[];
@@ -53,7 +70,13 @@ export function VibeSelector({
               aria-disabled={disabled || (!isSelected && selected.length >= maxSelections)}
               disabled={disabled || (!isSelected && selected.length >= maxSelections)}
             >
-              <Text style={styles.vibeEmoji}>{vibe.emoji}</Text>
+              <Ionicons
+                name={vibeIcons[vibe.id] ?? 'compass-outline'}
+                size={18}
+                color={isSelected ? colors.primary[600] : colors.surface[600]}
+                style={styles.vibeIcon}
+                accessible={false}
+              />
               <Text style={[styles.vibeLabel, isSelected && styles.vibeLabelSelected]}>
                 {vibe.label}
               </Text>
@@ -80,7 +103,13 @@ export function VibeChips({ vibes }: VibeChipsProps) {
     >
       {selectedVibes.map((vibe) => (
         <View key={vibe.id} style={styles.chip}>
-          <Text style={styles.chipEmoji}>{vibe.emoji}</Text>
+          <Ionicons
+            name={vibeIcons[vibe.id] ?? 'compass-outline'}
+            size={14}
+            color={colors.primary[600]}
+            style={styles.chipIcon}
+            accessible={false}
+          />
           <Text style={styles.chipLabel}>{vibe.label}</Text>
         </View>
       ))}
@@ -133,8 +162,7 @@ const styles = StyleSheet.create({
       },
     }),
   },
-  vibeEmoji: {
-    fontSize: 18,
+  vibeIcon: {
     marginRight: 8,
   },
   vibeLabel: {
@@ -160,8 +188,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.primary[200],
   },
-  chipEmoji: {
-    fontSize: 14,
+  chipIcon: {
     marginRight: 4,
   },
   chipLabel: {

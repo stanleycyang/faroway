@@ -27,12 +27,12 @@ import { USE_NATIVE_DRIVER } from '../../lib/animation';
 const { width } = Dimensions.get('window');
 
 const INSPIRATIONS = [
-  { emoji: '🏖️', text: 'Beach getaway', slug: 'beach-getaway' },
-  { emoji: '🏔️', text: 'Mountain escape', slug: 'mountain-escape' },
-  { emoji: '🍜', text: 'Foodie adventure', slug: 'foodie-adventure' },
-  { emoji: '🎨', text: 'Art & culture', slug: 'art-and-culture' },
-  { emoji: '🎉', text: 'Party weekend', slug: 'party-weekend' },
-  { emoji: '💑', text: 'Romantic trip', slug: 'romantic-trip' },
+  { icon: 'sunny-outline' as const, text: 'Beach getaway', slug: 'beach-getaway' },
+  { icon: 'trail-sign-outline' as const, text: 'Mountain escape', slug: 'mountain-escape' },
+  { icon: 'restaurant-outline' as const, text: 'Foodie adventure', slug: 'foodie-adventure' },
+  { icon: 'color-palette-outline' as const, text: 'Art & culture', slug: 'art-and-culture' },
+  { icon: 'musical-notes-outline' as const, text: 'Party weekend', slug: 'party-weekend' },
+  { icon: 'heart-outline' as const, text: 'Romantic trip', slug: 'romantic-trip' },
 ];
 
 export default function ExploreScreen() {
@@ -209,7 +209,12 @@ export default function ExploreScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={item.text}
               >
-                <Text style={styles.inspirationEmoji}>{item.emoji}</Text>
+                <Ionicons
+                  name={item.icon}
+                  size={20}
+                  color={colors.primary[600]}
+                  accessible={false}
+                />
                 <Text style={styles.inspirationText}>{item.text}</Text>
               </TouchableOpacity>
             ))}
@@ -466,9 +471,6 @@ const styles = StyleSheet.create({
     borderRadius: borderRadius.full,
     borderWidth: 1,
     borderColor: '#e2e8f0',
-  },
-  inspirationEmoji: {
-    fontSize: 20,
   },
   inspirationText: {
     fontSize: 14,
