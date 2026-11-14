@@ -553,7 +553,10 @@ it("adds a proposed daily rest timetable without changing selected visits", () =
   expect(result.timingProposals).toHaveLength(result.days.length);
   expect(result.timingProposals[0].fitsPolicy).toBe(true);
   expect(result.days[0].tips[0]).toContain("Proposed local timing");
-  expect(baseline.timingProposals).toEqual([]);
+  expect(baseline.timingProposals[0].policy).toBe("day-timing-v1");
+  expect(
+    baseline.timingProposals[0].events.some((e) => e.kind === "rest"),
+  ).toBe(false);
 });
 
 const restPlan: SearchPlan = {
@@ -1273,4 +1276,17 @@ it.each([
     id: lunch.id,
     reason: "meal_title_requires_dining_review",
   });
+});
+
+it("reports an ordinary-day dinner conflict through the compiled proposal", () => {
+  const result = compileSchedule(
+    { ...plan, dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 } },
+    [visit("long-evening-visit", 180, "evening")],
+    [{ ...dining[0], id: "dinner", mealTypes: ["dinner"] }],
+  );
+  expect(result.days[0].evening.activities[0].duration).toBe(180);
+  expect(result.days[0].evening.meal?.id).toBe("dinner");
+  expect(result.issues).toContain("day_1:day_timing_conflict");
+  expect(result.days[0].timingProposal?.fitsPolicy).toBe(false);
+  expect(result.days[0].timingProposal?.events).toEqual([]);
 });

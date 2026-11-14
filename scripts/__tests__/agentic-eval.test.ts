@@ -963,6 +963,26 @@ test("trace contracts reject unresolved or lost structured timing", () => {
   expect(evaluateAgenticTrace(trace).failures).toContain(
     "day_1:midday_rest_timing_conflict",
   );
+  const ordinaryConflict = { ...conflict, policy: "day-timing-v1" };
+  day.timingProposal = ordinaryConflict;
+  mapped.timingProposal = structuredClone(ordinaryConflict);
+  expect(evaluateAgenticTrace(trace).failures).toContain(
+    "day_1:day_timing_conflict",
+  );
+  const ordinary = {
+    ...proposal,
+    policy: "day-timing-v1",
+    events: proposal.events.filter((e) => e.kind !== "rest"),
+  };
+  day.timingProposal = ordinary;
+  mapped.timingProposal = structuredClone(ordinary);
+  expect(
+    evaluateAgenticTrace(trace).failures.filter((f) => f.includes("timing")),
+  ).toEqual([]);
+  mapped.timingProposal = { ...ordinary, events: [] };
+  expect(evaluateAgenticTrace(trace).failures).toContain(
+    "day_1:mapped_timing_changed",
+  );
 });
 
 test("surfaces event evidence gaps even for confident generated titles", () => {

@@ -743,15 +743,14 @@ merged changes beyond this two-file fix; a production rollout needs verification
 of that full release delta. The deployment hold was not changed. Experimental
 compiler and grounding work stays in draft PR #55 and is not released.
 
-
 ### Bounded dining resupply experiment (2026-10-31)
 
 Diagnosed compatible-meal inventory gaps against frozen compiled visits: Lisbon had one Belém breakfast gap (nearest supplied candidate 4.87 km); Tokyo had five gaps (nearest candidates roughly 6–9 km). Distances use generated coordinates and are not route evidence. Added an offline coverage analyzer and an explicit-live, staging-only runner that refuses source drift before spending, freezes visit/date/slot assignments, records one-call usage and provenance, preserves hotel selection, and aborts further paid batching when billing is unknown. Unknown coordinates request evidence rather than automatic resupply. Production callers and defaults are unchanged.
 
 | Frozen case | Initial repair: candidates / latency / estimated USD | Focused repair: candidates / latency / estimated USD | Apparent coverage gaps |
-| --- | --- | --- | --- |
-| Lisbon | 11 / 9.127 s / $0.0062135 | 2 / 3.172 s / $0.0021175 | 1 → 0 in both |
-| Tokyo | 12 / 14.825 s / $0.0105525 | 8 / 6.350 s / $0.0045445 | 5 → 0 in both |
+| ----------- | ---------------------------------------------------- | ---------------------------------------------------- | ---------------------- |
+| Lisbon      | 11 / 9.127 s / $0.0062135                            | 2 / 3.172 s / $0.0021175                             | 1 → 0 in both          |
+| Tokyo       | 12 / 14.825 s / $0.0105525                           | 8 / 6.350 s / $0.0045445                             | 5 → 0 in both          |
 
 All four calls recorded usage with no fallback and retained the exact selected visits. Estimates exclude the frozen upstream generation. These are one sample per case per revision, not statistically established savings. Initial repair still requested the generic city-wide meal mix and returned unrelated venues: rejected as a targeting result. Focused revision removes that conflicting paragraph and requests at most two candidates per target area (maximum 12). The model can still supply extra meal labels; no claim that prompt obedience establishes identity, availability, or suitability. Raw receipts are private ignored artifacts under `artifacts/uat/traces/dining-repair[-focused]-20261031/`.
 
@@ -766,17 +765,16 @@ Next gate: build venue identity/address/meal-service evidence checks from offici
 
 Validation: workspace type/lint/format checks pass (9 pre-existing lint warnings); 1,230 web tests and 79 script tests pass. Dedicated nonrenewing Gateway budget reconciled at **$1.18 / $20** after these four calls. No production deployment or default-model change.
 
-
 ### Independent address evidence gate (2026-10-31)
 
 Added `scripts/fixtures/agentic-venue-addresses.json` and an offline selected-meal address audit. Records are manually adjudicated branch/address cases from official pages, not model-produced ground truth. Exact destination, branch alias, and reviewed address variants are required. Unknown spellings, unmatched venues, duplicate/conflicting records, missing source metadata, and evidence outside a 90-day review window remain unresolved. The 90-day window is a conservative evaluation policy, not a guarantee of freshness. Supported addresses do not establish coordinates, routing, menus, dietary suitability, accessibility, or future availability.
 
 The focused repair now grades as:
 
-| Case | Supported address occurrences | Contradicted | Unresolved |
-| --- | --- | --- | --- |
-| Lisbon | 1 | 0 | 8 |
-| Tokyo | 1 | 1 | 7 |
+| Case   | Supported address occurrences | Contradicted | Unresolved |
+| ------ | ----------------------------- | ------------ | ---------- |
+| Lisbon | 1                             | 0            | 8          |
+| Tokyo  | 1                             | 1            | 7          |
 
 In addition to the initial AFURI conflict, focused Tokyo generated **2-33-8 Sendagaya** for Monmouth Tea. The [official site](https://monmouth.jp/), retrieved 2026-10-31, lists **1-21-2 Sendagaya**. The [official Sakura-tei page](https://www.sakuratei.co.jp/access), retrieved the same date, supports the generated **3-20-1 Jingumae** address. The fixture does not assert that unknown venues do not exist. Neither repair passes the broader evidence gate.
 
@@ -787,7 +785,6 @@ bun --no-env-file scripts/uat/evaluate-traces.ts artifacts/uat/traces/dining-rep
 ```
 
 Known address contradictions now make this command exit 1; unresolved counts remain explicit and must not be interpreted as approval. The CLI also refuses envelopes marked `started` or `failed`, preventing failed paid-call receipts from passing on copied upstream output. Legacy receipts without a status remain supported. No new live AI calls or production changes in this iteration; budget remains last reconciled at $1.18/$20.
-
 
 ### Frozen official-page address extraction pilot (2026-10-31)
 
@@ -801,20 +798,19 @@ Private artifacts: `artifacts/uat/address-pages-20261031.json` and `artifacts/ua
 
 Validation: workspace type/lint/format checks pass, and all 89 script tests pass. Dedicated Gateway budget reconciled after the extraction call: **$1.19 / $20**.
 
-
 ### Remaining development cases and evidence-constrained scheduling (2026-10-31)
 
 Ran fresh `flash-low` baselines for the previously unrun development briefs. The first batch completed Interlaken and stopped at Marrakech's 30-second aggregation timeout because usage for that call was unknown. Reconciled Gateway billing before continuing the remaining cases; did not retry the timed-out call. Raw traces: `remaining-development-20261031` and `remaining-development-tail-20261031`. Holdouts remain untouched.
 
 Frozen-supply compiler comparisons (one sample each; costs and latencies below are not full app measurements):
 
-| Case | Baseline visits / meals | Compiler visits / meals | Daily pace violations, before → after | Remote-meal warnings, before → after |
-| --- | --- | --- | --- | --- |
-| Interlaken | 12 / 16 | 11 / 21 | 2 → 0 | 10 → 13 |
-| Marrakech | 14 / 12 (fallback) | 12 / 12 | 0 → 0 | 0 → 0 |
-| Paris | 9 / 7 | 9 / 9 | 1 → 0 | 0 → 0 |
-| Reykjavik | 11 / 11 | 11 / 15 | 3 → 0 | 2 → 5 |
-| Istanbul | 11 / 9 (fallback) | 9 / 9 | 0 → 0 | 1 → 0 |
+| Case       | Baseline visits / meals | Compiler visits / meals | Daily pace violations, before → after | Remote-meal warnings, before → after |
+| ---------- | ----------------------- | ----------------------- | ------------------------------------- | ------------------------------------ |
+| Interlaken | 12 / 16                 | 11 / 21                 | 2 → 0                                 | 10 → 13                              |
+| Marrakech  | 14 / 12 (fallback)      | 12 / 12                 | 0 → 0                                 | 0 → 0                                |
+| Paris      | 9 / 7                   | 9 / 9                   | 1 → 0                                 | 0 → 0                                |
+| Reykjavik  | 11 / 11                 | 11 / 15                 | 3 → 0                                 | 2 → 5                                |
+| Istanbul   | 11 / 9 (fallback)       | 9 / 9                   | 0 → 0                                 | 1 → 0                                |
 
 Baseline serial agent durations: Interlaken 63.076 s, Marrakech 81.796 s including failed aggregation, Paris 78.535 s, Reykjavik 78.550 s. Compiler-only replays take 6–19 ms and exclude all upstream generation. More meals can create more remote-meal warnings; do not treat full slots as verified coverage. Reykjavik drops the Golden Circle because its supplied duration exceeds the current daily limit. Literal highlight matching also falsely reports an omitted Perlan Museum despite selecting Perlan under a longer inventory title; this metric is not semantic identity verification.
 
@@ -832,7 +828,6 @@ A final evidence-enabled replay of all five new traces is in `artifacts/uat/trac
 
 Validation: 1,231 web tests and 91 script tests pass; workspace checks pass with nine pre-existing lint warnings. The previous pushed head's GitHub CI run 41171686299 succeeded. Dedicated Gateway spend reconciled after both batches at **$1.45 / $20**. Known estimates for successful full baselines were Interlaken $0.0478725, Paris $0.058643, Reykjavik $0.0579985; exact failed-call attribution remains unknown despite aggregate billing reconciliation. No production deployment or default scheduler change.
 
-
 ### Explain deferred long visits; reject unsafe name matching (2026-10-31)
 
 The compiler now returns structured `deferredLongVisits` (supplied duration, daily activity limit and lexically matched suggested highlights) and adds a concise first-day explanation when an unmatched highlight only has an over-limit supplied option. Reykjavik now explains that the supplied Golden Circle/glacier excursion is estimated at 10h versus this draft's 7h activity limit, suggesting a search for a shorter alternative or a review of pace. It does not silently raise the limit, claim a shorter product exists, or treat model-interpreted highlights as explicit user requests. Alcohol-focused long visits are not offered as pace adjustments for families. Other unresolved name matches are described as potentially absent or differently titled, avoiding a false claim that a known selected venue is missing.
@@ -843,26 +838,24 @@ The rejected trial is preserved in private `compiled-highlights-explained-202610
 
 Validation: 1,243 web tests and 91 script tests pass; workspace type/lint/format checks pass with the existing nine lint warnings.
 
-
 ### Separate fixed-schedule narration pilot (2026-10-31)
 
 Added `schedule-narration.ts` with a compact selected-stop context and an atomic application guard: one entry per date, exact activity-ID membership without duplicates, bounded title/summary text, and changes limited to those two text fields. The runner requires a passing frozen compiler trace, explicit live/staging credentials, and a new private receipt; it limits the pilot to seven days, one model call, 2,000 output tokens, 30 seconds, and zero retries. Input/prompt/source hashes, usage and latency are recorded. Every original uncertainty tip, visit, meal and hotel is preserved. This structural guard cannot prove the prose's facts or meaning; every receipt remains `semanticReviewRequired: true` and `qualityAccepted: false`.
 
 Two initial calls (Lisbon 2.623 s / ~$0.0018015, Copenhagen 2.556 s / ~$0.0014375) showed that short narration is feasible, but Copenhagen added “coastal atmosphere” and “festive lights” while Lisbon used “castle views” in a title. These embellishments were unnecessary and not explicitly in the supplied stop names. Tightened the instructions to avoid added sensory/geographic claims, formulaic travel language and reciting every restaurant. Preserved the initial receipts rather than counting only the better revision.
 
-| Revised case | Narration latency | Estimated narration USD | Structural preservation |
-| --- | ---: | ---: | --- |
-| Lisbon | 2.509 s | $0.0015545 | All dates, visits, meals and tips unchanged |
-| Copenhagen | 2.582 s | $0.0013495 | All dates, visits, meals and tips unchanged |
-| Paris | 3.677 s | $0.002009 | All dates, visits, meals and tips unchanged |
-| Reykjavik | 3.643 s | $0.002520 | All dates, visits, meals and tips unchanged |
+| Revised case | Narration latency | Estimated narration USD | Structural preservation                     |
+| ------------ | ----------------: | ----------------------: | ------------------------------------------- |
+| Lisbon       |           2.509 s |              $0.0015545 | All dates, visits, meals and tips unchanged |
+| Copenhagen   |           2.582 s |              $0.0013495 | All dates, visits, meals and tips unchanged |
+| Paris        |           3.677 s |               $0.002009 | All dates, visits, meals and tips unchanged |
+| Reykjavik    |           3.643 s |               $0.002520 | All dates, visits, meals and tips unchanged |
 
 Manual review of the four revised outputs found no added selected visits or date/slot contradictions. The titles and summaries now describe the supplied stops more directly. Reykjavik's summary does not reintroduce the omitted Golden Circle excursion, and its original explanation remains in the tips. This is neither independent traveler review nor a guarantee that all prose claims are true: names such as “private VIP tour” and “Michelin-starred” originate in unverified inventory and still need supplier/source evidence. Do not infer bookability from narration.
 
 Receipts: `artifacts/uat/traces/narration-pilot-20261031/` (initial) and `narration-v2-20261031/` (revised). Estimates exclude all upstream generation and compiler work. These one-sample-per-case results support investigating a compiler-plus-narrator pipeline, not a claim about delivered app latency or broad quality acceptance. No production integration or default-model change. Gateway reconciled at **$1.46/$20** after six calls. Holdouts remain unused.
 
 Validation: 1,247 web tests, 92 script tests, and workspace type/lint/format checks pass (the same nine pre-existing lint warnings).
-
 
 ### Integrate the candidate at the app aggregator boundary (2026-10-31)
 
@@ -879,10 +872,10 @@ The integrated path filters unapproved Viator content before compilation and nar
 
 Extracted the exact evaluated narration prompt into a shared helper used by the pilot and app path. Added an explicit `--compiled-narrated` mode to `aggregator-replay-live.ts`, with configuration/source hashes and safeguards against mixing legacy experiments or accidentally inheriting this mode from ambient environment variables.
 
-| Integrated app-aggregator replay | Latency | Estimated stage USD | Result |
-| --- | ---: | ---: | --- |
-| Paris | 5.933 s | $0.004070 | 9 visits / 9 meals, no fallback, no listed closure violations |
-| Marrakech | 3.553 s | $0.002424 | 12 visits / 12 meals, no fallback; prior baseline aggregation timed out |
+| Integrated app-aggregator replay | Latency | Estimated stage USD | Result                                                                  |
+| -------------------------------- | ------: | ------------------: | ----------------------------------------------------------------------- |
+| Paris                            | 5.933 s |           $0.004070 | 9 visits / 9 meals, no fallback, no listed closure violations           |
+| Marrakech                        | 3.553 s |           $0.002424 | 12 visits / 12 meals, no fallback; prior baseline aggregation timed out |
 
 These calls reuse frozen upstream inventory; they do not measure end-to-end API or device latency. Paris consumed 798 reasoning tokens despite the low setting, illustrating variation compared with the standalone narration samples. Both outputs were manually checked against the selected stops; supplier claims, vegan suitability and bookability still need independent evidence. Receipts: `artifacts/uat/traces/integrated-schedule-20261031/`. Gateway reconciled after both calls at **$1.47/$20**.
 
@@ -896,13 +889,13 @@ Ran one consented Lisbon development brief through the actual protected preview 
 
 The API created the trip, accepted generation, returned progress through completion, and returned the saved three-day itinerary after **51.635 seconds** from the first API request (completion observed at 50.410 seconds). Deletion returned 200 at 52.290 seconds. The old smoke grader reported success, **incorrectly for experience quality**: narration failed its exact visit-reference guard (`Narration references a different selection of visits`), and the saved itinerary contained the compiled fallback titles, summaries, and explicit failure tip. The fallback protected the schedule and did not retry the model. The raw rejected narration was not retained, so the precise omitted/altered reference is unknown; do not claim a root cause or a narration fix from this run.
 
-| Step | Model latency | Input tokens | Output tokens | Reasoning tokens (within output) |
-| --- | ---: | ---: | ---: | ---: |
-| Orchestrator | 6.819 s | 1,751 | 1,286 | 651 |
-| Hotels | 18.009 s | 781 | 3,319 | 1,013 |
-| Activities | 13.466 s | 1,056 | 2,630 | 0 |
-| Dining | 21.103 s | 1,152 | 4,659 | 1,575 |
-| Narrator | 2.531 s | 1,031 | 358 | 0 |
+| Step         | Model latency | Input tokens | Output tokens | Reasoning tokens (within output) |
+| ------------ | ------------: | -----------: | ------------: | -------------------------------: |
+| Orchestrator |       6.819 s |        1,751 |         1,286 |                              651 |
+| Hotels       |      18.009 s |          781 |         3,319 |                            1,013 |
+| Activities   |      13.466 s |        1,056 |         2,630 |                                0 |
+| Dining       |      21.103 s |        1,152 |         4,659 |                            1,575 |
+| Narrator     |       2.531 s |        1,031 |           358 |                                0 |
 
 Total reported usage: 5,771 input / 12,252 output tokens, with parallel upstream steps. Gateway reconciled at **$1.51/$20** after the run (previously $1.47; displayed spend is rounded). This is one development case, not a latency distribution or cost estimate for all trips. Saved content also retains uncertain addresses/availability and two separate-journey meal warnings. No browser rendering or native Android check was performed in this iteration.
 
@@ -944,7 +937,6 @@ Validation: 1,261 web tests and workspace checks pass on the experimental branch
 
 PR #57 merged into main as `be5d6470aa3d2689f8f1dd2ced792bed58d0b2d7` after quality checks, CI tests and the isolated Vercel preview build passed. Reviewed final scope: five files, no deployment-config diff, no planner experiments or added dependencies. The merge was brought back into this experiment branch without code conflicts. This merges the cover fix; it does not deploy production or approve PR #55.
 
-
 ### Meal placement at visit boundaries (2026-10-31)
 
 Added an independent offline comparison, `scripts/uat/evaluate-meal-geography.ts BASELINE_DIR CANDIDATE_DIR`. It requires matching nonempty trace sets, passing contracts, identical briefs/dining inventory, and exactly unchanged dated activity slots and activity objects. It measures breakfast before the first visit, lunch between morning and later visits, and dinner after the last visit. Unknown coordinates and missing meals are counted explicitly. These are supplied-coordinate screening conventions, not verified routes; hotel returns, opening hours, reservations and transfers remain unresolved.
@@ -957,13 +949,11 @@ Evidence: `artifacts/uat/meal-boundary-comparison-20261031.json` and `artifacts/
 
 Validation: all 1,263 web tests pass, including ordered-boundary and lunch/dinner placement regressions. Workspace type, lint and format checks pass (nine existing lint warnings). Both 12-trace candidates pass the independent comparison and preserve every scheduled activity object.
 
-
 ### Rejected same-day dining penalty (2026-10-31)
 
 The retained candidate repeats a restaurant within four days (one each in New York and Reykjavik, two in Interlaken). Tested an additional three-point same-day reuse penalty, preserving the existing near/far/unknown location tiers. The 12 offline replays preserve every activity and pass contracts, but only Interlaken changes: two same-day repeats disappear while summed boundary distance rises from 675.2 to 678.1 km. Total distinct restaurants remains 106, and the city repeats remain. This does not establish a better traveler experience, so reverted the compiler change. Retained `sameDayRepeats` in the independent comparison to make this tradeoff visible in later supply and scheduling experiments. Evidence: `artifacts/uat/meal-daily-variety-comparison-20261031.json` and `compiled-meal-daily-variety-20261031` traces.
 
 Added a CLI regression verifying that empty/mismatched trace sets, altered scheduled activities, changed briefs and failed contracts cannot produce a successful comparison. The valid sparse fixture explicitly reports unknown coordinates and missing meals without accepting overall quality. All 24 agentic evaluation tests pass. No live requests or additional AI spend.
-
 
 ### Fresh regional and group candidate runs (2026-10-31)
 
@@ -979,18 +969,17 @@ Athens preserves the six-adult party and yields five visits and nine meals acros
 
 Reviewed first-party sources for the fresh regional failure:
 
-| Source | Supported observation | Still unresolved |
-| --- | --- | --- |
-| [Provisions of Arrowtown](https://www.provisionsofarrowtown.co.nz/) | The business advertises breakfast and lunch; retrieved HTML gives 65 Buckingham Street, Arrowtown. | Independently sourced coordinates, January availability, reservations and suitability. |
-| [Dishery](https://www.dishery.co.nz/) and its [contact page](https://www.dishery.co.nz/contact) | Brunch/lunch service and 4 Buckingham Street in Arrowtown are published. | The contact page contains conflicting closing-hour blocks. Do not select one silently or infer dinner service. |
-| [Gibbston Valley booking catalogue](https://bookings.gibbstonvalley.com/obl2/gvw) | A named organic wine-and-food product describes a two-course lunch; restaurant lunch and other tasting/tour products are listed separately. | The generated “Gibbston Valley Winery Lunch & Tasting” has no matching supplier product ID. Meal inclusion must not transfer from a different product on the same winery site. No dated availability or booking was established. |
+| Source                                                                                          | Supported observation                                                                                                                       | Still unresolved                                                                                                                                                                                                                 |
+| ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Provisions of Arrowtown](https://www.provisionsofarrowtown.co.nz/)                             | The business advertises breakfast and lunch; retrieved HTML gives 65 Buckingham Street, Arrowtown.                                          | Independently sourced coordinates, January availability, reservations and suitability.                                                                                                                                           |
+| [Dishery](https://www.dishery.co.nz/) and its [contact page](https://www.dishery.co.nz/contact) | Brunch/lunch service and 4 Buckingham Street in Arrowtown are published.                                                                    | The contact page contains conflicting closing-hour blocks. Do not select one silently or infer dinner service.                                                                                                                   |
+| [Gibbston Valley booking catalogue](https://bookings.gibbstonvalley.com/obl2/gvw)               | A named organic wine-and-food product describes a two-course lunch; restaurant lunch and other tasting/tour products are listed separately. | The generated “Gibbston Valley Winery Lunch & Tasting” has no matching supplier product ID. Meal inclusion must not transfer from a different product on the same winery site. No dated availability or booking was established. |
 
 These are useful source-backed regional candidates, but not sufficient evidence to inject verified coordinates, opening windows or confirmed inclusions into the schedule. No generated meal was replaced with a guessed location. Three retrieved first-party HTML snapshots and a URL/SHA-256 manifest are retained privately in `artifacts/uat/queenstown-grounding-20261031/`; the booking-catalogue and conflicting contact-page observations above were reviewed with the browser source reader.
 
 The experimental compiler now explains a possible overlap when an activity's name includes the scheduled meal and the slot also contains a restaurant. It retains both options, names the experience and restaurant, and asks the traveler to check the exact meal inclusions before arranging a separate meal. This converts the observed evaluator warning into actionable plan content without asserting an inclusion or silently deleting a meal. It is not a complete detector for meal-inclusive excursions.
 
 The Queenstown frozen replay preserves every date, activity slot and restaurant, passes structural contracts, and carries the explanation through the actual saved-itinerary bridge. Evidence: `artifacts/uat/traces/compiled-meal-overlap-20261031/queenstown-regional.json`. All 17 compiler/boundary tests pass, including the positive overlap and ordinary-tour negative case. The initial test invocation from repository root failed module-alias resolution; rerunning from the web workspace passed. No additional AI calls; cumulative reconciled spend remains $1.66/$20. Production defaults are unchanged.
-
 
 ### Provider identity correction (2026-10-31)
 
@@ -1036,11 +1025,11 @@ PR #59 merged as `d8e066bd02cd9cfebf302fa609c6b9bd5f44b2fb` after CI Quality Che
 
 Added an explicit `--upstream-thinking low|minimal` comparison option, permitted only with compiled narration and the isolated staging configuration. Low remains the default; production settings are unchanged. Invalid or silently ignored configurations fail before model calls. Ran three development pairs, alternating arm order, with the same implementation hash across all six calls. Each arm generates fresh inventories, so this is a small end-to-end screening experiment, not a controlled frozen-inventory comparison or statistically established effect. Six reserved holdouts remain untouched.
 
-| Development case | Low / minimal serial seconds | Low / minimal estimated USD | Low / minimal distant-meal warnings | Low / minimal selected visits |
-| --- | ---: | ---: | ---: | ---: |
-| Singapore family | 48.862 / 38.569 | 0.035492 / 0.025574 | 2 / 3 | 7 / 12 |
-| New York allergy | 52.925 / 35.053 | 0.036305 / 0.023324 | 0 / 1 | 8 / 9 |
-| Queenstown regional | 54.311 / 38.578 | 0.039224 / 0.023180 | 4 / 7 | 9 / 9 |
+| Development case    | Low / minimal serial seconds | Low / minimal estimated USD | Low / minimal distant-meal warnings | Low / minimal selected visits |
+| ------------------- | ---------------------------: | --------------------------: | ----------------------------------: | ----------------------------: |
+| Singapore family    |              48.862 / 38.569 |         0.035492 / 0.025574 |                               2 / 3 |                        7 / 12 |
+| New York allergy    |              52.925 / 35.053 |         0.036305 / 0.023324 |                               0 / 1 |                         8 / 9 |
+| Queenstown regional |              54.311 / 38.578 |         0.039224 / 0.023180 |                               4 / 7 |                         9 / 9 |
 
 All six runs complete with known usage, zero fallbacks and passing structural contracts. Minimal reduces aggregate estimated cost from $0.111021 to $0.072078 (35.1%) and summed serial agent duration from 156.098 to 112.200 seconds (28.1%). These durations are not deployed application latency. Existing warnings use unverified supplied coordinates and do not prove actual travel distances. Nevertheless, every minimal arm has more such warnings; Singapore changes inferred pace from relaxed to moderate despite the same short-walk and daily-midday-rest instruction. **Do not promote all-upstream minimal thinking.** Neither control nor candidate has overall quality acceptance. A future efficiency experiment should preserve orchestrator behavior and isolate specialist changes before considering broader adoption.
 
@@ -1050,18 +1039,17 @@ Manual review also found three published weekly-closure conflicts: low schedules
 
 Offline rescheduling of both frozen NYC inventories reduces the three listed closure findings to zero, passes structural contracts and reports no unfulfilled compiler highlights. It changes several selections and dates: low drops from eight to seven visits, while minimal retains nine with substitutions. The minimal replay still has a distant-lunch compiler warning. This correction only demonstrates handling of the reviewed constraints; it does not validate other opening hours, allergy suitability, routes, meal reservations or timing. The facts remain evaluation fixtures rather than a production availability service. All 47 evaluator/comparison/timing regressions and workspace checks pass. Draft PR #55 remains unaccepted for production.
 
-
 ### Isolated hotel-thinking screen and traveler-context correction (2026-10-31)
 
 Applied the existing explicit one-hour midday-rest timing policy to both Singapore traces from the preceding paired experiment. All four low-thinking days fit; three minimal-thinking days conflict with the policy's visit windows by 15–30 minutes. These are proposed windows and buffers, not sourced opening hours or travel durations. The result strengthens the decision against the all-upstream change without proving real-world infeasibility. No explicit traveler-selected pace field exists in SearchInput; do not silently convert a mobility phrase into an authoritative pace choice.
 
 Added `--hotel-thinking minimal` to the compiled comparison runner. It requires low upstream thinking and compiled narration; mixed, invalid and ignored configurations are rejected before model calls. A separate config ID and recorded settings distinguish the hotel-only experiment. Production model defaults remain unchanged. Three fresh development runs retain low orchestrator/activity/dining thinking and minimal narration, changing only the hotel thinking configuration. All three share an implementation hash and complete without fallback, with ten hotel suggestions each.
 
-| Development case | Serial agent seconds | Estimated USD | Hotel step seconds | Inferred pace | Distant-meal warnings |
-| --- | ---: | ---: | ---: | --- | ---: |
-| Singapore family | 40.109 | 0.024075 | 9.791 | relaxed | 2 |
-| New York allergy | 43.944 | 0.032081 | 9.744 | moderate | 1 |
-| Queenstown regional | 57.565 | 0.038811 | 10.218 | relaxed | 5 |
+| Development case    | Serial agent seconds | Estimated USD | Hotel step seconds | Inferred pace | Distant-meal warnings |
+| ------------------- | -------------------: | ------------: | -----------------: | ------------- | --------------------: |
+| Singapore family    |               40.109 |      0.024075 |              9.791 | relaxed       |                     2 |
+| New York allergy    |               43.944 |      0.032081 |              9.744 | moderate      |                     1 |
+| Queenstown regional |               57.565 |      0.038811 |             10.218 | relaxed       |                     5 |
 
 All three pass structural contracts and the listed closure checks. Singapore has eight visits and all four days fit the explicit rest policy. These are single fresh generations with different inventories from the prior low controls; they do not establish a causal quality or latency improvement. Queenstown's serial duration is slower than the preceding low control and still has five geographic warnings. **Do not promote the hotel-only setting yet.** A subsequent controlled comparison should freeze the orchestrator plan and directly assess hotel outputs, after the context correction below. The six holdouts remain untouched.
 
@@ -1069,13 +1057,11 @@ This batch cost an estimated $0.094967. The latest dedicated Gateway total is **
 
 Review found that the hotel agent discarded saved party size, adults/children, child ages, requested room count, mobility details and structured requirements, receiving only model-inferred amenities instead. Added these saved details explicitly to its prompt, preserving unknown values as unspecified and infant age zero. The system instruction distinguishes these needs from verified capacity/accessibility/dietary suitability; this remains informational hotel generation, not a verified quote or booking. Two regressions failed against the old code and pass with the correction, including omitted inferred amenities and unknown occupancy. All 1,277 web tests and workspace checks pass; the comparison harness's 16 tests also pass. The correction is separately committed for independent production review; draft PR #55 and the optimization goal remain open. No production deployment occurred.
 
-
 ### Hotel-context fix merged independently (2026-10-31)
 
 [PR #60](https://github.com/stanleycyang/faroway/pull/60) isolates the saved traveler-context correction from the experimental planner. Its final main-based diff contains only the hotel agent and regression tests. The initial isolated type check caught a missing test-only SearchPlan import that existed on the experimental branch; added it and reran checks. All 1,210 main-based web tests and workspace checks pass. CI Quality Checks and Tests passed on reviewed head `046daf873f49eff5366fe8fdc27c8a3eb7fe7752`; staging deployment `dpl_A72tXLP4WR2uHt5A6nxNCq25Qbzf` reached READY at the same commit with paused planning, approved staging database settings and a disabled AI key.
 
 Merged as `ac31abf6f60fa597355ebf8cfda5f4ed7e4bfbfb`. Full release acceptance jobs were skipped, not passed; production remains manually held. Synchronizing main into the experimental branch introduced a duplicate test-only type import, which was removed before validation and push. This fix ensures the hotel prompt receives the saved needs; it does not prove generated hotels satisfy them. No new live requests were made; latest reconciled spend remains $1.94/$20. Next efficiency evidence should compare hotel generations against identical frozen plans, including the corrected context, before any model-setting promotion.
-
 
 ### Frozen-plan hotel comparison and eligibility failure (2026-10-31)
 
@@ -1084,9 +1070,9 @@ Added `apps/web/scripts/hotel-replay-live.ts`: exactly one hotel-agent invocatio
 Ran two repetitions per arm for three development plans: Singapore family, Copenhagen family with access requirements, and Athens six-adult group. Arm order alternated. All 12 receipts share one implementation hash, retain the same frozen input within each case and contain ten suggestions, one known-usage event and no fallbacks. `scripts/uat/evaluate-hotel-replays.ts` rejects missing usage, mismatched inputs, incomplete pairs and mixed implementations before emitting a comparison; regressions exercise those refusals. Original receipts and a separately hashed assessment are under `artifacts/uat/frozen-hotel-paired-20261031/`. The six reserved holdouts were not used.
 
 | Setting | Calls | Estimated total USD | Summed hotel-agent seconds | Reported reasoning tokens |
-| --- | ---: | ---: | ---: | ---: |
-| Low | 6 | 0.033499 | 50.629 | 0 |
-| Minimal | 6 | 0.034210 | 48.276 | 0 |
+| ------- | ----: | ------------------: | -------------------------: | ------------------------: |
+| Low     |     6 |            0.033499 |                     50.629 |                         0 |
+| Minimal |     6 |            0.034210 |                     48.276 |                         0 |
 
 Minimal is cheaper in three of six pairs and faster in three. Its aggregate cost is slightly higher. This small repeated sample provides no consistent efficiency advantage and no basis for promoting the hotel-only setting. It also shows why the preceding full-chain cost differences cannot be attributed solely to hotel thinking. The batch cost $0.067709 estimated; dedicated Gateway reconciliation is **$2.01/$20** inclusive of prior work. No retries or unknown-usage failures occurred.
 
@@ -1095,7 +1081,6 @@ Source review found a substantive failure in **all four Singapore trials**: each
 Added a development evidence fixture and `evaluateHotelConstraints`: exact property/city matching, published minimum-age conflicts and explicit positive lift claims contradicted by the source. Tests prevent transferring Chinatown's lift policy to another branch, treating negated amenity labels as positive claims, or treating unreviewed properties as verified. Regrading finds four party conflicts and three lift contradictions among 120 suggestions. Only four suggestions match this reviewed property; the other 116 remain unreviewed. This is an evaluation fixture, not a production eligibility or availability service. Neither arm has quality acceptance.
 
 All 37 evaluator/replay tests and scripts type checking pass; workspace checks also pass for the runner. Saved-context preservation is necessary but insufficient: both settings can still generate unsuitable candidates and unsupported amenities. The next quality change needs source-backed hotel eligibility and amenity handling before ranking, evaluated on broader properties rather than a hard-coded prompt exception for this hotel. Production model settings remain unchanged.
-
 
 ### Source-backed hotel screening in the staging flow (2026-10-31)
 
@@ -1111,7 +1096,6 @@ Five new web regressions exercise source conflicts, nonmutation, lower-scoring r
 
 This implements the negative-evidence decision boundary, not scalable evidence discovery. Production release still requires broader exact-property/source adjudication, freshness handling, additional destinations and complete end-to-end acceptance. One reviewed property is insufficient coverage. Draft PR #55 remains open and unaccepted for production.
 
-
 ### Hotel evidence review deadlines and scoped room guidance (2026-10-31)
 
 Hotel evidence now includes an explicit `reviewAfter` date and is evaluated against a recorded as-of date, separate from the travel dates. The pilot uses an editorial recheck deadline of 2026-11-30 for observations reviewed on 2026-10-31; this is a maintenance choice, not a claim that the property policy remains valid until that date. Missing/invalid date ranges, future observations and due reviews cannot produce current exclusion findings. They produce visible review requirements and count as unchecked evidence. Offline comparison and policy replay accept explicit as-of dates so historical results do not silently change with the clock.
@@ -1123,7 +1107,6 @@ Added a second reviewed property, [Steel House Copenhagen's official room page](
 Two explicit-date offline replays cover all 12 frozen hotel trials. As of 2026-11-01, four conflicting ideas are withheld and 116 remain. At the 2026-11-30 review deadline, those four ideas become visible review items among 120, but all four are pending recheck and none can become the automatically selected hotel. Their source policy was not revalidated by this counterfactual test. Revised mapped artifacts are `reviewed-replay-2026-11-01.json` and `reviewed-replay-2026-11-30.json`; earlier intermediate results are retained separately. This is not a deployed/browser/native acceptance test.
 
 All 1,285 web tests, 39 evaluator/replay tests and workspace checks pass. Tests cover the exact deadline, future/invalid/missing dates, preserved unknown status, nonduplicating notices, unchanged source objects, scoped room guidance in the app draft and the automatic-selection regression at expiration. No new live AI requests; cumulative reconciled spend remains $2.01/$20. The change remains staging-only in draft PR #55. Scalable official-source discovery, property adjudication and refresh execution are still required before claiming broad hotel grounding or production readiness.
-
 
 ### Bounded hotel source refresh review (2026-10-31)
 
@@ -1153,10 +1136,10 @@ Added an eight-question development benchmark over five independently reviewed o
 
 `fetch-grounding-pages.py --hotel-facts` retrieves only the committed benchmark URLs with the existing no-redirect, bounded-body/request behavior. The five frozen page receipts are under `artifacts/uat/hotel-fact-extraction-20261031/pages.json`. `hotel-fact-extraction-live.ts` makes one explicit staging-only, no-retry call against those local pages with no search tools, URL resolution or itinerary writes. It records implementation, benchmark, prompt and source-input hashes, usage and extracted claims. `evaluate-hotel-facts.ts` regrades completed, known-usage receipts against matching source bytes without model calls. It preserves original and current audits and benchmark hashes; unsupported model pricing and mismatched sources are refused.
 
-| Prompt | Reviewed facts passing | Latency | Input / output tokens | Estimated token cost |
-| --- | ---: | ---: | ---: | ---: |
-| Initial | 7/8 | 3.114 s | 15,848 / 508 | $0.009448 |
-| Branch-versus-room clarification | 8/8 | 3.583 s | 15,889 / 635 | $0.0098495 |
+| Prompt                           | Reviewed facts passing | Latency | Input / output tokens | Estimated token cost |
+| -------------------------------- | ---------------------: | ------: | --------------------: | -------------------: |
+| Initial                          |                    7/8 | 3.114 s |          15,848 / 508 |            $0.009448 |
+| Branch-versus-room clarification |                    8/8 | 3.583 s |          15,889 / 635 |           $0.0098495 |
 
 The initial output correctly reported no lift at Heritage Chinatown but classified the hotel branch as a named room. Clarified generally that named rooms are accommodation categories and hotel branches are properties. The refined output corrected the scope and retained null answers for unsupported accessibility claims. Its original automated score was still 7/8 because it selected a different, valid age-policy passage. Independent source review confirmed that passage explicitly names families with children and an age minimum of 18. Added it as a reviewed alternative conjunction of evidence anchors rather than accepting any mention of “18.” Regraded both saved outputs, preserving original results and hashes: initial remains 7/8, refined becomes 8/8. No paid rerun was needed for the grader correction.
 
@@ -1274,12 +1257,12 @@ All 1,333 web tests passed. Final focused tests (29), desktop/mobile Playwright 
 
 Ran four fresh full-chain staging cases at committed source `57370fc`, with low upstream thinking, minimal compiled narration, vendor credentials removed and a $0.50 batch stop threshold. All 20 steps completed with known usage and no fallbacks. Estimated combined token cost was $0.118824; the dedicated Gateway budget reconciles at **$2.31/$20**. These are fresh trials against earlier examples, not a repeated same-source reliability estimate or independent traveler acceptance. No reserved holdouts were used, and no second paid batch was started after the failures were identified.
 
-| Brief | Serial agent time | Estimated token cost | Structural result |
-| --- | ---: | ---: | --- |
-| Singapore infant/two rooms | 38.706 s | $0.0256615 | Fails: midday-rest conflicts on days 1 and 2 |
-| Tokyo solo/budget | 40.333 s | $0.0266045 | Passes contracts; four meal-distance warnings and an unsupported event candidate |
-| New York allergy | 45.576 s | $0.030191 | Passes contracts; one meal-distance warning; allergy suitability still unverified |
-| Queenstown regional | 50.416 s | $0.036367 | Passes contracts; meal-distance and possible duplicate-dinner warnings |
+| Brief                      | Serial agent time | Estimated token cost | Structural result                                                                 |
+| -------------------------- | ----------------: | -------------------: | --------------------------------------------------------------------------------- |
+| Singapore infant/two rooms |          38.706 s |           $0.0256615 | Fails: midday-rest conflicts on days 1 and 2                                      |
+| Tokyo solo/budget          |          40.333 s |           $0.0266045 | Passes contracts; four meal-distance warnings and an unsupported event candidate  |
+| New York allergy           |          45.576 s |            $0.030191 | Passes contracts; one meal-distance warning; allergy suitability still unverified |
+| Queenstown regional        |          50.416 s |            $0.036367 | Passes contracts; meal-distance and possible duplicate-dinner warnings            |
 
 Singapore's orchestrator preserved the daily rest request but chose moderate pace. The compiler scheduled two morning visits totaling 210 minutes on each failing day; breakfast and buffers push each sequence 15 minutes beyond the morning window. Rest feasibility is checked after selection, so the run exposes the need to incorporate the existing timing policy during selection rather than merely flagging the finished draft. The three-day plan has nine visits and nine meals; it is not accepted just because day coverage succeeds.
 
@@ -1289,7 +1272,6 @@ The run also exposed an acceptance-reporting gap: the comparison report's `ok` a
 
 Private original traces/reports are preserved under `artifacts/uat/repeatability-20261031-round1/`. `contract-regraded.json` applies the new reporting logic without paid calls: execution succeeds, combined `ok` is false, three of four contracts pass, and traveler quality remains unaccepted. Source review and file/grader hashes are recorded separately. All 137 script tests, workspace checks and final scripts type checking pass. GitHub CI run 41263470037 succeeded for the pre-change head; full release/build verification was skipped, not passed. Next: make daily-rest timing feasibility constrain the compiler's selection, then re-evaluate this failing frozen inventory and the full development set before another paid repeat.
 
-
 ### Enforce provisional rest feasibility during selection (2026-10-31)
 
 The experimental compiler now checks visit combinations against the existing proposed rest/meal/buffer policy during beam selection. It reserves compatible supplied meals, caches timing checks by ordered slot durations, and removes individually impossible visits from coverage reservations. Deferred visits retain their supplied durations and receive a review explanation; a lack of feasible inventory remains a supply failure. This is provisional scheduling, not verified opening hours, routes or hotel-return feasibility. Production generation defaults remain unchanged.
@@ -1297,7 +1279,6 @@ The experimental compiler now checks visit combinations against the existing pro
 Zero-call replay of the 16 frozen development inventories plus the four fresh inventories passes all 20 structural contracts. The previous 16 selections and three other fresh selections are unchanged. Fresh Singapore removes both rest conflicts and moves from nine to eight visits while retaining nine meals. However, selection also changes: the river cruise moves to day 1, Malay Heritage Centre moves to day 2, and the aquarium enters day 3; the civic walk and Fort Canning leave the plan. Singapore Botanic Gardens remains unfulfilled. Day 3 now has two meal-distance warnings on unverified coordinates, versus none previously. This is a hard-constraint improvement with a geography tradeoff, **not traveler-quality acceptance or production readiness**. Nearby dining and attraction evidence still require work.
 
 Private replay inputs, hashes, per-case before/after selections and warnings are recorded under `artifacts/uat/rest-selection-20261031/`. Four regression tests cover combination feasibility, impossible-visit coverage reservation, insufficient supply and negated requests; all 21 compiler tests and all 1,337 web tests pass. Workspace checks pass with existing lint warnings. No additional paid calls; reconciled spend remains $2.31/$20.
-
 
 ### Keep explicitly speculative events out of dated experimental plans (2026-10-31)
 
@@ -1307,7 +1288,6 @@ The same 20 frozen inventories still pass all structural contracts. Only fresh T
 
 Private comparison receipts are in `artifacts/uat/event-review-20261031/`; `regraded.json` preserves before/after evaluations under the new grader with its source hash. Original artifacts remain untouched. Live and replay source hashes now include the screening module; live runners also include the contract grader. All 1,349 web tests and 138 scripts tests pass, workspace checks pass with existing warnings, and final scripts type checking passes. No paid model calls; spend remains $2.31/$20. Current production acceptance remains incomplete, including event evidence, dining routes, independent usefulness review, repeatability and physical-device acceptance.
 
-
 ### Expand authored case coverage and align preflight selection (2026-10-31)
 
 The catalog now contains 40 development briefs and 20 reserved holdouts. Added 24 development and 14 holdout requests covering leap day, month boundaries, DST and destination-local dates; same-name cities; island/transit constraints; arrival/departure and late-start limits; infant and multi-room parties; celiac and multiple allergies; design/music interests; longer stays; negated rests and conflicting pace demands. The added fixture records explicit review checks and `reviewStatus: unreviewed` for each case. These are synthetic authored requests, not reviewed reference itineraries, verified venue facts or evidence of successful behavior. Holdout model outputs have not been generated or used for tuning. Independent holdout review remains required.
@@ -1316,7 +1296,6 @@ Several new requests deliberately exceed current scheduling capabilities, includ
 
 Found and fixed a preflight discrepancy: `--dry-run` and `--mock` previously ignored suite, brief and configuration selections. Preflight and live now share selection, compiled-candidate naming/thinking settings and cap validation. Unknown/duplicate case IDs, missing values, incompatible compiled configuration and invalid caps fail before comparison. Zero-call preflight enumerates exactly 40 development and 20 holdout planned rows, with no case counted as passed and $0 spend. Reports are private under `artifacts/uat/expanded-suite-20261031/`. Live source hashes include the catalog fixture and shared selector. All 141 script tests, scripts type checking and workspace checks pass (existing lint warnings remain). No additional live calls; reconciled spend remains $2.31/$20.
 
-
 ### Fresh leap-day and arrival trials; reference availability grading (2026-10-31)
 
 Ran two fresh compiled/minimal full-chain development cases at committed source `f53059a` using the dedicated staging key and a $0.25 batch stop threshold. Both completed all five steps without fallback. London preserves February 28, February 29 and March 1, 2028 through the saved itinerary, with eight visits, nine meals and one meal-distance warning. Serial agent time was 47.405 seconds. Madrid takes 53.854 seconds and preserves the arrival instruction but schedules Prado Museum in the morning, Thyssen-Bornemisza in the afternoon, breakfast and lunch on the first day despite arrival at 18:00. Both originally passed structural contracts. These serial durations are not app latency. Combined estimated token cost is $0.0696305; the provider budget display reconciles at $2.38/$20 after initially showing $2.36 while billing caught up. Rounded provider spend is distinct from token estimates.
@@ -1324,7 +1303,6 @@ Ran two fresh compiled/minimal full-chain development cases at committed source 
 Added authored `expectedDayAvailability` reference windows for six arrival/departure/late-start cases. These are evaluation-only expectations and are not injected into the planner as a hidden extra input. The grader validates dates/bounds and rejects visits or meals in day parts wholly outside the reference window (morning before noon, afternoon noon–18:00, evening thereafter). An overlapping day part without valid structured timing produces an explicit clock-time uncertainty warning, not a feasibility claim. Valid provisional timing is checked by event start/end; stale timing cannot satisfy the reference. An empty travel day is allowed only by an explicit case-specific reference, while date coverage and other checks remain required. This is not a general natural-language constraint parser or proof of routes/hours.
 
 Offline regrading preserves the paid receipts, checks the original brief is unchanged apart from the added reference, and records grader/fixture hashes. London still passes; Madrid now fails both out-of-window day parts and keeps evening timing unresolved. Private evidence is under `artifacts/uat/expanded-live-20261031/`, including `availability-regraded.json`. Production scheduling is unchanged and the Madrid bug is not yet fixed. Next: carry explicit traveler availability into the experimental scheduler and replay this saved inventory before any further paid trial. All 147 scripts tests, scripts type checking and workspace checks pass (existing lint warnings remain). Holdout outputs remain unused; traveler quality and production acceptance remain incomplete.
-
 
 ### Constrain experimental scheduling by explicit traveler availability (2026-10-31)
 
@@ -1336,7 +1314,6 @@ The final zero-call replay passes structural and authored availability checks fo
 
 Private receipts, source hashes, before/after selections, review notes and final grading are under `artifacts/uat/arrival-selection-20261031/` (`final-report.json` plus `final/`). Tests cover clock forms, noon, ambiguous/negated wording, contradictions, coverage preservation, meal/buffer capacity and arrival/rest conflicts. All 1,367 web tests and workspace checks pass with existing lint warnings. No paid model calls; reconciled spend remains $2.38/$20. General availability extraction, exact editable schedules, source-backed feasibility, fresh repeatability, independent review and end-to-end product acceptance remain open.
 
-
 ### Render the saved arrival plan and expose its constraint early (2026-10-31)
 
 Rendered the actual final mapped Madrid replay through `ItineraryDay` in the isolated desktop and Pixel 7 browser fixtures. Morning/afternoon visits and meals remain absent, the evening allocation survives, and no overflow or page errors occur. Visual review found the arrival limit buried below the itinerary and a truncated hotel name. Web now moves the existing canonical availability note into a “Your available hours” region above visits, retaining its exact provisional/transfer caveats and removing the duplicate from general tips. This is display ordering of an existing note, not a new validation of clock times. Hotel names wrap; mobile price and amenity lines have separate room.
@@ -1344,7 +1321,6 @@ Rendered the actual final mapped Madrid replay through `ItineraryDay` in the iso
 The local browser harness accepts an optional `FAROWAY_E2E_ARRIVAL_TRACE` path for a private mapped replay without embedding it in the committed bundle. Its ordinary CI case uses a clearly synthetic fixture. Both real-replay viewport checks pass; six synthetic arrival/timing/dining browser regression checks pass. Final screenshots were inspected and retained privately with input/image hashes under `artifacts/uat/arrival-display-20261031/`. Existing web display tests pass (41). Native normalization/cache tests pass (10); the actual mapped Madrid input also round-trips through native normalization and JSON cache with exactly three evening items and the original availability note. That receipt is `artifacts/uat/arrival-selection-20261031/native-display.json`.
 
 This is component/browser and native-data-path verification, not an authenticated save/reload or physical Android acceptance run. Native presentation has not been visually verified here. No new model calls or production generation changes; spend remains $2.38/$20. Broader grounded feasibility, independent quality review and end-to-end acceptance remain outstanding.
-
 
 ### Extract published event facts without a model call (2026-10-31)
 
@@ -1355,7 +1331,6 @@ Built `extract-published-events.ts`, an offline, zero-model-call extractor for a
 Both official pages yield the expected named event, venue and local start. Both also publish an end equal to the start, so the extractor deliberately leaves duration unknown rather than generating a zero-minute event. No supplied itinerary is changed and no source-grounded replacement is claimed. A verified duration or an explicit traveler-reviewed duration assumption is still needed before this event can enter the duration-based scheduler; semantic identity, freshness and ticket checks remain separate. This extraction does not resolve all generic venue or event claims.
 
 Private HTML, manifests, source/extractor hashes, extracted facts and the visible-page comparison are under `artifacts/uat/event-source-extraction-20261031/`. Observation timestamps are actual UTC retrieval times (November 1 UTC, October 31 locally). Eight new tests cover local dates, invalid bounds, cancellation, zero-duration metadata, duplicate identity, malformed/instruction-like content, bounded traversal, source-hash mismatch and receipt preservation. All 155 script tests and scripts type checking pass. No paid AI calls; reconciled spend remains $2.38/$20. Next: use these scoped published fields in a reviewable event candidate path without carrying over fabricated duration or ticket claims.
-
 
 ### Stage dated event review options and correct replacement closure conflicts (2026-10-31)
 
@@ -1369,7 +1344,6 @@ Final frozen replay passes all 22 structural contracts and has no findings again
 
 Private initial/final schedules, source receipts, selections, notes and grading hashes are under `artifacts/uat/event-options-20261031/`. Final availability-filter validation leaves all 22 integrated results unchanged, and both event notes survive bridge/native normalization/cache round-trip. Focused staging tests show preservation through narration without selecting the event. All 1,379 web tests and 156 script tests pass; the final added pre-arrival-option regression and focused integration checks pass separately. Production generation defaults remain unchanged. No paid AI calls; reconciled spend remains $2.38/$20. The last committed head’s CI passed; release verification was skipped and production acceptance remains incomplete.
 
-
 ### Expand live development coverage and distinguish quiet departure days (2026-10-31)
 
 Started six new development cases from clean commit `6779ccc`: Boston single-parent infant, Kyoto late start, Zurich early departure, Cambridge Massachusetts, Cambridge England and Bangkok multiple allergies. The run used the staging project, compiled candidate and a $0.75 estimated-spend stop threshold under the existing nonrenewing $20 key cap. Boston and Kyoto completed with known usage and passed structural contracts. Boston retains proposed rest intervals; Kyoto respects the 10:00 limit but has only four visits and three distant-meal warnings. Neither result establishes traveler usefulness, venue hours or suitability.
@@ -1381,7 +1355,6 @@ The compiler now excludes an explicit, noncontradictory availability window from
 All 25 saved-inventory replays pass structural contracts with unchanged selected visits, durations and meals. Those are 25 inventories covering 21 distinct development briefs, not 25 independent live trials of this fix. Mocked integration verifies one narration call for a quiet departure day, no fallback and retained transfer caveats; genuine missing supply still avoids the call. Live narration on the corrected branch remains unverified. The original live receipts/report are under `artifacts/uat/development-expansion-live-20261031/`; offline results, source hashes and comparisons are under `artifacts/uat/departure-selection-20261031/`. Holdouts remain untouched, and no quality acceptance or production readiness is claimed.
 
 All 1,383 web tests and workspace type, lint and formatting checks pass; nine existing lint warnings remain. The next live check should preserve this aborted batch, test the corrected departure path, and then execute the three untouched development cases with a new receipt directory.
-
 
 ### Verify departure recovery, expand factual review, and reject misleading narration (2026-10-31)
 
@@ -1401,7 +1374,6 @@ The final implementation instead uses deterministic copy for an empty-visit day 
 
 All three paid outputs replay through the final guard to the same correct constrained-day text with unchanged schedule content. These are offline guard replays, not three new live executions of the final branch. Receipts, rejected prompt and final source hashes are under `artifacts/uat/availability-narration-20261031/`. All 1,384 web tests, 157 script tests and workspace checks pass (nine existing lint warnings). The preceding commit's GitHub quality checks passed; release acceptance was skipped. Final provider reconciliation is **$2.60/$20**. Source-backed itinerary feasibility, unsupported inventory claims, independent usefulness review and full web/native acceptance remain open; PR 55 stays a draft.
 
-
 ### Screen unsupported generated restaurant handling claims (2026-10-31)
 
 Traced the Bangkok inventory defect to the dining-agent output boundary: generated dietary badges were already cleared, but descriptions, cuisine labels and vibe labels passed through unchanged. Added a bounded English-language screen at that boundary. It removes whole sentences and labels mentioning allergy handling, cross-contact, celiac suitability, dietary accommodation or selected allergen-free claims, and adds a direct-confirmation note. It preserves unrelated sentences, restaurant identity, location, prices, meal types, scores and selection. Generated restrictive warnings receive an explicit concern note rather than neutral reassurance. Ingredient mentions without suitability wording remain intact. This is lexical containment, not semantic verification, allergy suitability or proof that retained copy is accurate. Independently reviewed source warnings are outside this generated-output path.
@@ -1413,7 +1385,6 @@ Replayed 29 saved inventories covering 24 distinct development briefs, retaining
 The changed Madrid meal survives the bridge, native normalization and JSON cache round-trip with the new note and no restored gluten-free claim. This checks the native data path, not physical-device presentation or authenticated persistence. Guard tests cover the observed claims, labels, Unicode detection, repeated application, nonmutation, ingredient mentions and explicit restrictive warnings. Agent integration verifies the boundary transformation, empty badges and count-only diagnostic event. All 1,388 web tests and workspace checks pass with nine existing lint warnings. No paid model calls were made; last reconciled spend remains $2.60/$20.
 
 Original, initial and final offline receipts are under `artifacts/uat/dining-copy-review-20261031/` (final report and native receipt in `final/`). Raw saved source outputs remain unchanged. No new live generalization result is claimed for the updated prompt. Unsupported statements outside the bounded English patterns, factual addresses/opening hours, dietary suitability, source freshness, independent usefulness review and full end-to-end acceptance remain open. The next major intervention should test a general source-verification path against the Cambridge failures rather than treating additional exact-name fixtures as complete grounding.
-
 
 ### Add a reusable structured-address path and bounded text fallback (2026-10-31)
 
@@ -1603,7 +1574,6 @@ One fresh development run on clean commit `1e2b8df` returned priorities dinner/b
 
 Acceptance remains incomplete: the generated schedule includes an NGV “Late View” on Monday evening without verified event evidence. Event-labelled candidates deliberately do not inherit ordinary-visit fixture identity. The contract evaluator emits an event/date/venue warning, but subsequent inspection shows it refers to “Royal Exhibition Building,” not the NGV late-view claim. It neither detects nor prevents that unsupported special opening. Named restaurant existence, service hours, meal types and work-hour compatibility also remain unverified. The standalone harness omits workflow enrichment, and browser/native acceptance remains outstanding. Private trace, manifest, usage report and explicit review are under `artifacts/uat/meal-priority-20261101/`. No staging planning was enabled or production changes deployed; PR 55 remains draft.
 
-
 ### Withhold explicit special openings and correct the event eval (2026-11-01 UTC)
 
 Inspection of the preceding receipt exposed two evaluation defects: the event keyword screen treats “Exhibition Building” as an exhibition, while missing “Late View.” The independent contract evaluator now rejects explicit late-view/late-opening and after-hours admission/access/visit/viewing/opening/tour claims because the trace carries no dated special-admission evidence. It removes exhibition-building/hall/centre/center phrases before the broader event warning check; “Concert at Royal Exhibition Building” still receives the concert warning. This is a bounded lexical screen, not general event understanding or independent verification of unflagged candidates.
@@ -1700,7 +1670,6 @@ Independent manual source review found published names and addresses on https://
 
 Validation: 178 script tests, script TypeScript and workspace checks pass, with nine existing lint warnings. No product planning behavior or deployment configuration changed; staging stays paused and PR 55 remains draft. Next work is per-candidate retrieved evidence and an explicit reviewed identity-correction boundary, with deterministic retrieval or forced-search alternatives evaluated before integration. Holdouts remain untouched.
 
-
 ## Forced retrieval comparison and identity-change gate (2026-11-02 UTC)
 
 The prior commit's CI run `41272313031` passed Quality Checks and Tests; Build Web and Full Release Verification were skipped. Installed Google adapter inspection shows built-in provider tools return without a function-calling configuration, while current Google documentation describes model-selected search. Rather than assuming `toolChoice` forces native Google grounding, added an isolated `--parallel-search` variant restricted to exactly one public venue candidate. It requests required initial retrieval through Gateway, caps results/excerpt sizes, retains tool inputs/results and provider metadata, and remains outside application planning. One client request can contain multiple Gateway model legs; provenance does not label it a single model call.
@@ -1715,7 +1684,6 @@ The three successful Parallel calls cost $0.023846 total, including search fees.
 
 Validation: 182 script tests, script TypeScript and workspace checks pass with nine existing lint warnings. Staging remains paused; no production behavior or configuration changed. PR 55 remains draft. Next work is exact copied name/address evidence bound to retrieved excerpts, source-authority review and wider candidate coverage before integrating discovery into planning. References: https://ai.google.dev/gemini-api/docs/google-search/ and https://vercel.com/docs/ai-gateway/models-and-providers/web-search .
 
-
 ## Identity text bound to original retrieval spans (2026-11-02 UTC)
 
 Added a name/address copy-evidence audit to the isolated Parallel discovery probe. Candidates must supply a name quote and address quote from the returned official URL. The audit requires exactly one retained source for that URL and checks each quote within an individual excerpt, never across joined snippets. It binds the claimed values to the quotes and hashes the source URL plus original excerpt segments. Missing/unresolved copy evidence produces exit 7 after the existing shape, retrieval and identity-change checks. Source authority, branch identity and overall quality acceptance remain explicitly false.
@@ -1725,7 +1693,6 @@ Three development probes on clean `ebd5182` tested Cumulus, Museo Nacional de An
 Improved copy binding to tolerate only whitespace differences while retaining exact original text. The auditor maps the requested quote back to a single source segment, records original UTF-16 offsets and source text, and copies the original field value from that span. It does not normalize spelling, punctuation, case, numbers, abbreviations or postal codes. Offline replay links all three saved candidates' copied text, while Tipp0 remains flagged for identity review. An independent Python UTF-16 slice check confirms all six recorded name/address spans against the raw retrieval excerpts. No extra model call was used to repair the formatting-only rejection. These are three development candidates, not a broad reliability estimate, verified venue index or completed itinerary acceptance test.
 
 Validation: 186 script tests, script TypeScript and workspace checks pass; nine existing lint warnings remain. Tests cover wrong sources, duplicate sources, changed words/numbers, filled-in postal codes, paraphrases, split snippets, missing references, original offsets after Unicode text and source-content hash changes. Private inputs, original receipts, independent byte-copy checks, source-span replay and independent span checks are under `artifacts/uat/venue-identity-excerpts-20261102/`. Provider spend reconciles to **$3.61/$20**. Staging remains paused, production unchanged and PR 55 draft. The remaining integration boundary is source authority and exact branch identity; copied text alone is not enough to accept a venue, its opening hours or traveler suitability.
-
 
 ## Branch/address challenges and review gate (2026-11-02 UTC)
 
@@ -1737,7 +1704,6 @@ Added `addressComparison` (not supplied, not returned, same text or different te
 
 Validation: 187 script tests, script TypeScript and workspace checks pass (nine existing lint warnings). Tests cover changed street/unit numbers, missing addresses, whitespace-only matches and abbreviation differences. Input manifests, original receipts, expectations, cost evidence and source-hashed replay are private under `artifacts/uat/identity-challenges-20261102/`. Provider spend reconciles to **$3.66/$20**. Production/staging settings remain unchanged; staging is paused and PR 55 remains draft. Next work is constrained selection of returned source records (rather than free-form URL rewriting), followed by source-authority and exact-branch evaluation before integration.
 
-
 ## Constrained retained-source selection (2026-11-02 UTC)
 
 Added `--retrieval-replay RECEIPT` to the isolated discovery probe. It requires one candidate, a completed receipt whose input hash matches that exact candidate file, bounded provider-executed search results and no search mode. Retained records receive local IDs; the output schema enumerates those IDs. Code supplies the selected record's original URL. Unknown/duplicate IDs, extra model-authored URL fields, mismatched candidate IDs and foreign retrieval receipts are rejected. Quotes bind to the chosen record, with no URL canonicalization guesses. Replay performs one inference call with no search or fetch tools; source selection and implementation hashes are retained.
@@ -1747,7 +1713,6 @@ On clean `9902b15`, replayed all six prior challenge cases against their origina
 Each replay took 1.273–1.569 seconds. Six calls cost **$0.0115835**, with no new searches. This is additional extraction cost and latency on top of the original retrieval calls, not a measured total planning-cost reduction. These are single samples with changed prompt/schema and separate inference, using frozen search data; the result does not establish a causal effect of source IDs alone or a broad reliability rate. Unknown identities remain unknown and are not counted as successful venue verification.
 
 Validation: 190 script tests, script TypeScript and workspace checks pass, with nine existing lint warnings. Private exact-input references, original replay outputs, source-hash provenance, independent selection/span checks and assessment are under `artifacts/uat/venue-source-selection-20261102/`. Provider spend reconciles to **$3.67/$20**. Production behavior and staging settings remain unchanged; staging is paused and PR 55 remains draft. Next work is stable venue/place identifiers or independently reviewed authority/branch evidence before connecting discovery to itinerary decisions.
-
 
 ## Provider Maps identifiers and citation coverage (2026-11-02 UTC)
 
@@ -1760,7 +1725,6 @@ On clean `6cdb139`, five further probes compared English/Japanese Asakusa, separ
 Added same-receipt citation coverage checks: generated Maps URLs absent from retained provider Maps sources cause exit 6. Offline replay flags the mixed-branch response without another paid request. Exit 0 still means minimum retrieval/citation evidence, not that the candidate's supplied name/address is correct. Independent raw-metadata comparisons confirm the same/different branch ID findings. Private manifest, original receipts, hashed replay and review: `artifacts/uat/maps-identity-challenges-20261102/`.
 
 Validation: 194 script tests, script TypeScript and workspace checks pass with nine existing lint warnings. Provider spend reconciles to **$3.77/$20**. No production behavior, Places API billing flag, staging setting or persisted trip changed; staging remains paused and PR 55 draft. The next experiment should build new agent suggestions from retrieved venue records instead of repairing invented candidate fields. This is distinct from changing user-selected or locked places, which must retain their explicit identity constraints. Retrieved suggestions still require honest source, opening-time and suitability limits. Documentation consulted: https://ai.google.dev/gemini-api/docs/generate-content/maps-grounding .
-
 
 ## Retrieval-first venue seeds and source follow-through (2026-11-02 UTC)
 
@@ -1778,7 +1742,6 @@ Validation: **199 script tests**, script TypeScript and workspace checks pass wi
 
 Next milestone: turn retrieved suggestions into a useful staged planning flow with explicit source attribution and missing-fact handling, then measure complete trip usefulness and latency. Avoid adding extraction calls automatically: the frozen replay here added cost without improving accepted venue identity. Opening-time/date suitability, geographic fit and full application acceptance remain the integration gates; this small development sample is not a release holdout or a broad reliability score.
 
-
 ## Direct public-page dining discovery (2026-11-02 UTC)
 
 The integration review found that the dining generator still requires model-authored coordinates, while the enrichment path explicitly keeps Places responses out of persisted AI plans. Added an isolated alternative, `apps/web/scripts/dining-discovery-live.ts`: one public destination/area/meal query through Parallel, with no preselected names, generated address or traveler requirements. It uses the existing model and dedicated staging key, one client request, no retries and a 60-second deadline. This is not wired into application planning or a consented production recipient list.
@@ -1793,7 +1756,6 @@ Calls took 5.147 and 4.844 seconds, costing **$0.008990** and **$0.010031**, res
 
 Validation: **201 script tests**, script TypeScript and workspace checks pass with nine pre-existing lint warnings. Evidence is private under `artifacts/uat/public-dining-discovery-20261102/`, including original receipts, implementation provenance, offline replay and independent checks. Production/staging configuration is unchanged. Next: evaluate whether these source-linked options can improve the actual staged dining experience with visible uncertainty and source attribution, rather than accumulating further isolated extraction checks. The full-trip usefulness, native/browser acceptance, repeated cases and reserved holdouts remain outstanding.
 
-
 ## Venue source attribution through app display models (2026-11-02 UTC)
 
 Added optional `VenueSource` attribution (original HTTPS URL and retrieval date) to dining and saved restaurant types. A shared runtime reader rejects malformed dates, non-HTTPS URLs and credentials in URLs. The web bridge and both mobile API-meal/cached-activity normalization preserve validated attribution. Existing items without sources retain their existing display; this does not generate evidence for historical recommendations.
@@ -1805,7 +1767,6 @@ Added an evaluation adapter from audited direct-discovery options to the real `D
 Used all four retained Melbourne/Asakusa options in a local display harness through the real web bridge and RestaurantCard. A 390px browser inspection showed all four source links, unknown prices and no horizontal overflow (document width 390px). The first harness lacked a UTF-8 declaration, visibly corrupting a separator; the harness was corrected and the new capture inspected. Retrieved titles remain verbose and need label refinement. The preview uses static React markup with compiled Tailwind; it is not proof of hydration, database persistence, full workflow behavior or Android rendering. No external link was followed and no trip was saved. Private harness, mapped options, screenshot and implementation hashes: `artifacts/uat/venue-source-display-20261102/`.
 
 Validation: **1,473 web tests**, **201 script tests**, **13 focused mobile tests**, and workspace checks pass; nine existing lint warnings remain. Tests cover source persistence through serialized mapping and mobile cache normalization, unsafe links, invalid dates, unknown values, accessible source copy, tap-only opening and opening failure. Local browser/server were closed. No paid calls were made; last reconciled cumulative spend remains **$3.87/$20**. PR 55 remains draft. The next missing step is an actual source-aware discovery/review flow with a clear distinction between review options and scheduled meals, followed by full-trip and native acceptance.
-
 
 ## Staging discovery integration and unscheduled dining review (2026-11-02 UTC)
 
@@ -1819,13 +1780,11 @@ The real workflow/bridge test confirms the collection reaches the planned RPC pa
 
 Validation: full web run had 1,476 passing tests and one failing fixture; the corrected workflow/source tests then passed all 34 focused tests. All **201 script tests**, **15 focused mobile tests** and workspace checks passed, with nine existing lint warnings. The final view placement is after scheduled activities. New production search is still off. No paid calls were made; last reconciled spend is **$3.87/$20**. Next acceptance must exercise the new staging flag with the dedicated key, reconcile its separate tool fees, verify actual saved JSON and rendered review options, and measure full-trip latency/usefulness. Native physical-device testing and broad holdout/repeated evaluation remain outstanding.
 
-
 ## Recipient disclosure before integrated source acceptance (2026-11-02 UTC)
 
 Pre-dispatch review found that the optional Parallel search still received the Google-only consent version. The disclosure now uses the same pure runtime gate as search dispatch, names Parallel and the narrow public search fields, and requires `planning-google-parallel-v1` when enabled. Both existing clients fetch and return the current server version. Production and disabled experiments retain their original disclosure. Stale consent is rejected before database access or workflow dispatch.
 
 The temporary enabled deployment was deleted before any trip creation or AI dispatch; the branch is paused with source discovery off, and its alias points to the paused 5504995 deployment. No paid calls were made. Last reconciled cumulative spend remains $3.87/$20. Validation: all 1,478 web tests, 23 native consent tests and workspace checks pass (nine existing lint warnings). The real saved-trip/source-rendering acceptance remains outstanding; this fix does not establish full-trip quality or production readiness.
-
 
 ## Saved-trip acceptance of source review (2026-11-02 UTC)
 
@@ -1837,16 +1796,15 @@ Cumulative dedicated-key budget rose from $3.87 to $3.91 (rounded dashboard amou
 
 Acceptance remains partial: one retained option out of three requested is weak; scheduled venues still use the older ungrounded inventory. Explicit evening-only visits are honored, but the separate work-clock phrase is intentionally unresolved by the current narrow availability parser and surfaces a warning. Next improvements should target useful source coverage and verified scheduled venue facts, plus structured availability rather than simply suppressing that warning. GitHub Quality Checks and Tests pass on ff2512a; full release acceptance is still skipped and PR 55 remains draft.
 
-
 ## Six-city dining discovery baseline and rejected prompt hillclimb (2026-11-02 UTC)
 
 Added `scripts/fixtures/dining-discovery-suite.json`: six public development requests across Melbourne, Tokyo, Lisbon, Copenhagen, Mexico City and Kyoto, covering all three meal types. Three separate geographic holdouts remain unused. The offline `scripts/uat/evaluate-dining-discovery.ts <receipt files...>` replays original text and retrieval records with the current auditor rather than trusting saved pass flags. It reports requested/retained coverage, rejected evidence, source counts, linked meal quotes, receipt hashes, reported cost and latency. It explicitly leaves authority, branch identity, meal suitability and traveler usefulness unmeasured. Runtime source logs now include bounded rejection reason codes; the prior integrated run did not retain them, so its two specific failures cannot be reconstructed.
 
-| Development trial | Retained / requested | Full-coverage cases | Reported cost | Median latency |
-| --- | --- | --- | --- | --- |
-| Baseline prompt, b43a4d5 | 10 / 18 | 2 / 6 | $0.056582 | 5.236 s |
-| Operator/literal prompt, 3b330c4 | 17 / 18 | 5 / 6 | $0.0575315 | 5.244 s |
-| Same operator/literal prompt repeated | 7 / 18 | 0 / 6 | $0.059129 | 5.504 s |
+| Development trial                     | Retained / requested | Full-coverage cases | Reported cost | Median latency |
+| ------------------------------------- | -------------------- | ------------------- | ------------- | -------------- |
+| Baseline prompt, b43a4d5              | 10 / 18              | 2 / 6               | $0.056582     | 5.236 s        |
+| Operator/literal prompt, 3b330c4      | 17 / 18              | 5 / 6               | $0.0575315    | 5.244 s        |
+| Same operator/literal prompt repeated | 7 / 18               | 0 / 6               | $0.059129     | 5.504 s        |
 
 The first apparent gain did not survive repetition. Do not call it a validated improvement or average it into a production success claim. The runtime default remains the original baseline prompt. The alternative is retained behind the isolated CLI `--prompt-policy operator-literal` option, with policy and prompt hash recorded in new receipts. Both trials used unchanged validators, model/provider routing, result limits, output budget and retry policy. Prompt-only tuning does not yet produce stable extraction.
 
@@ -1855,7 +1813,6 @@ Baseline accepted pages included three directories/review sites. Independent ins
 Failure inspection distinguishes true unsupported text from presentation differences. Some name failures are capitalization-only and some meal-quote failures are whitespace-only; others include wrong names, absent addresses and unsupported meal quotes. No validator was relaxed to raise the score. A future constrained extraction experiment should use frozen retrieval, preserve literal spans deterministically and compare both coverage and semantic correctness before introducing another live search or normalizing evidence.
 
 Private original receipts and scorecards are in `artifacts/uat/dining-suite-{baseline,literal,literal-repeat}-20261102/`. All 18 requests had reported Gateway costs, totaling $0.1732425. Reconciled cumulative dedicated budget is **$4.09/$20**. No trips or deployments were created for this suite. Script tests and workspace checks remain the validation gates; holdout, full-trip repeatability and physical Android acceptance remain outstanding. PR 55 stays draft.
-
 
 ## Frozen-search extraction experiment (2026-11-02 UTC)
 
@@ -1866,7 +1823,6 @@ All six original baseline search results were replayed on clean b2996f3 and then
 Both replays retained four third-party pages (InTravel, WhereToEatNow, CDMX365 and the Asakusa destination directory), despite the exclusion instruction. At most 11/18 retained options therefore remain possible operator-page candidates, and those have not been independently certified. Some meal quotes are general dish or business-event descriptions, not proof of requested-meal service. This experiment improves copying yield but does not establish trusted, schedulable dining coverage. It remains CLI-only; runtime discovery is unchanged.
 
 Private raw receipts, scorecards and per-option review notes: `artifacts/uat/dining-frozen-extraction{-repeat}-20261102/`. Review notes are bound to exact receipt hashes and mark operator identity, meal suitability and scheduling unverified. Tests reject unknown source IDs, injected URLs, unsupported names/addresses/meal quotes, incomplete receipts and non-provider retrieval; the prompt is checked to exclude prior generated answers. All **201 script tests** (1,159 assertions) and workspace checks pass. Next work must address source authority and semantic meal/branch evidence before adding an extraction call to the live flow. Holdouts remain untouched.
-
 
 ## Publisher-role and meal-evidence screening experiment (2026-11-02 UTC)
 
@@ -1879,7 +1835,6 @@ On six real frozen baseline searches, initial screening retained 8/18 options an
 Semantic inspection still rejects promotion: Uformel's selected quote describes a business-event dinner, and Asakusa Imahan's selected quote only gives last-reservation/order times. Neither selected span directly establishes ordinary requested-meal service under this experiment's rubric. Fournier Rousseau's publisher identity remains unresolved; a direct page fetch timed out, so its apparent operator classification was not independently confirmed. No source is certified or approved for scheduling. Synthetic successes did not predict these contextual weaknesses.
 
 Private receipts and scorecards: `artifacts/uat/dining-screening-synthetic-20261102/`, `dining-screened-extraction-20261102/`, and `dining-screened-schema-20261102/`. All 14 model calls have reported cost, totaling $0.049774. No searches, trips or deployments were created. Reconciled cumulative budget: **$4.17/$20**. All 201 script tests (1,167 assertions), type checks, lint and formatting pass. The CLI experiment is retained for further evaluation; PR 55 remains draft. Next evaluation must judge the selected evidence span, not merely the overall page, and establish publisher identity independently before making source-quality claims.
-
 
 ## Independent source corroboration and exact-response review labels (2026-11-02 UTC)
 
@@ -1903,10 +1858,10 @@ Added CLI-only `--compact-evidence`, which asks for name/address once and uses t
 
 Compared six development cases three times per format: initial baseline and compact batches, then 24 deterministically shuffled, interleaved requests on clean 0deae5f. Each request retrieves live sources, so these are repeated live-system observations, not paired extraction from identical evidence. The first trials were not interleaved. All 36 receipts were independently regraded offline; no malformed response was discarded.
 
-| Format | Retained / requested | Fully covered runs | Zero-option runs | Reported cost | Median latency | Median output tokens |
-| --- | --- | --- | --- | --- | --- | --- |
-| Baseline | 27 / 54 | 4 / 18 | 3 / 18 | $0.1694655 | 5.196 s | 456 |
-| Compact | 30 / 54 | 4 / 18 | 2 / 18 | $0.163716 | 4.784 s | 354.5 |
+| Format   | Retained / requested | Fully covered runs | Zero-option runs | Reported cost | Median latency | Median output tokens |
+| -------- | -------------------- | ------------------ | ---------------- | ------------- | -------------- | -------------------- |
+| Baseline | 27 / 54              | 4 / 18             | 3 / 18           | $0.1694655    | 5.196 s        | 456                  |
+| Compact  | 30 / 54              | 4 / 18             | 2 / 18           | $0.163716     | 4.784 s        | 354.5                |
 
 Both formats had valid JSON shapes in all 18 runs. Baseline retained totals by repeat were 10, 11, 6; compact totals were 11, 10, 9. Compact improved Melbourne (8 versus 4), Mexico City (4 versus 2) and Copenhagen (4 versus 3), tied Lisbon (8 each), and regressed Tokyo (3 versus 6) and Kyoto (3 versus 4). Its 3.4% lower cost and 7.9% lower median latency do not establish a sufficiently reliable quality gain. Seventeen compact option rejections involved meal quotes absent from the retrieved excerpt; mechanical identity copying does not solve meal evidence.
 
@@ -1958,11 +1913,11 @@ Added isolated replay-only comparisons through `--thinking-level medium|high` an
 
 Ran two synthetic geographic fixtures and six original frozen development searches with medium reasoning at 2,500 tokens (f97e906), then a separate eight-call batch at 6,000 tokens (c9f3b25). The original low/2500 trial is the reference; this is one real-source sample per condition, not a statistical reliability estimate. All input sources and prompts remained fixed across conditions; both larger-reasoning trials retained zero retries and the 60-second timeout.
 
-| Real-source condition | Retained / requested | Invalid responses | Length-limited responses | Reported cost | Median added latency |
-| --- | --- | --- | --- | --- | --- |
-| Low / 2500, earlier reference | 5 / 18 | 3 / 6 | Not recorded | $0.0349815 | 2.837 s |
-| Medium / 2500 | 0 / 18 | 6 / 6 | 6 / 6 | $0.0683805 | 9.767 s |
-| Medium / 6000 | 3 / 18 | 4 / 6 | 3 / 6 | $0.1083681 | 20.614 s |
+| Real-source condition         | Retained / requested | Invalid responses | Length-limited responses | Reported cost | Median added latency |
+| ----------------------------- | -------------------- | ----------------- | ------------------------ | ------------- | -------------------- |
+| Low / 2500, earlier reference | 5 / 18               | 3 / 6             | Not recorded             | $0.0349815    | 2.837 s              |
+| Medium / 2500                 | 0 / 18               | 6 / 6             | 6 / 6                    | $0.0683805    | 9.767 s              |
+| Medium / 6000                 | 3 / 18               | 4 / 6             | 3 / 6                    | $0.1083681    | 20.614 s             |
 
 All eight medium/2500 calls hit the output limit, including both synthetic trials. At 6,000 tokens both synthetic trials completed with all nine publisher, meal and area labels correct, but cost $0.029905 together versus the low trials' $0.006262, which had also classified them correctly. Three real cases still exhausted the larger budget, using roughly 5,756–5,760 reasoning tokens and leaving insufficient answer space. Melbourne completed generation but failed evidence validation. Kyoto retained three options; Copenhagen returned a valid empty selection. The new finish-reason field distinguishes truncation from semantic/quote failures rather than folding them into an unexplained extraction error.
 
@@ -2070,7 +2025,6 @@ These failures require a systematic distinction between venue identity and gener
 
 The visual check passed independently: the real Melbourne cover loaded in the generating and ready views, and the 390-pixel layout had no horizontal overflow. Source-review dining retained two of three options, with one rejected address quote, at a reported $0.00901 and 6.052 seconds. Cumulative dedicated spend is **$4.82/$20** (rounded); no redispatch occurred. The enabled deployment was deleted and subsequently returned API 404, the browser closed, and the branch alias points to the paused 17abcbc preview. Private receipts, screenshots, runtime records and replay: `artifacts/uat/reviewed-supply-staging-20261102/`. PR 55 remains draft; no quality acceptance or production merge is warranted.
 
-
 ## Identity-review exclusions and reviewed-supply ranking (2026-11-02 UTC)
 
 Preserved the failed live run's complete synthetic plan, activity inventory and dining inventory in `scripts/fixtures/agentic-melbourne-supply-ranking.json`, with input hashes. Generated claims remain unverified; this is a development regression, not a holdout or reference answer.
@@ -2083,7 +2037,6 @@ The full preserved inventory replay now selects Flinders Street Station Architec
 
 Validation: **1,512 tests across 175 web test files pass**, and workspace checks pass with nine existing warnings. The initial full-suite failure exposed an old expectation that a renamed walk at the NGV address should be scheduled; the regression now asserts the distinct identity-review explanation. No paid calls or enabled deployments were created; cumulative spend remains **$4.82/$20**. Fresh workflow acceptance, broader evidence coverage and physical-device acceptance remain outstanding. PR 55 remains draft and is not ready for production merge.
 
-
 ## Preserve requested highlights at the inventory cap (2026-11-02 UTC)
 
 Review of the evidence-ranking change found a mismatch between candidate pruning and beam ranking: 24 reviewed alternatives could remove a requested highlight before the beam could prioritize it. A failing regression reproduced this with a single evening, 24 reviewed alternatives and a low-score requested museum; the old result selected an alternative.
@@ -2091,7 +2044,6 @@ Review of the evidence-ranking change found a mismatch between candidate pruning
 When reviewed IDs are supplied, candidate pruning now prioritizes requested-highlight name matches before reviewed status and preference score, matching the beam's intended highlight-before-evidence policy. Ordinary calls without reviewed IDs retain their previous ordering. This protects the observed case, not arbitrary distinct-highlight coverage in an over-cap inventory; the existing bounded-search issue remains visible. Matching a requested name does not verify its facts or bypass schedule exclusions.
 
 Validation: **1,513 web tests** and **215 offline script tests (1,296 assertions)** pass; workspace checks pass with nine existing warnings. No paid calls, source-catalog changes or enabled deployments. Spend remains **$4.82/$20**. Reviewed identity evidence for the generated Eureka/Skydeck duplicate and fresh live acceptance remain outstanding; PR 55 stays draft.
-
 
 ## Address-only identity evidence for the Skydeck lookalike (2026-11-02 UTC)
 
@@ -2104,7 +2056,6 @@ At this reviewed address, the saved generated `Eureka Skydeck 88 Cultural View` 
 Tests cover the actual saved candidate, bounded ordinary-visit matching, different cities/buildings, stale/future/invalid source records, co-located experiences, ambiguous identity anchors and invalid dates. Fresh live acceptance and broader multi-destination quality remain outstanding. No paid calls or enabled deployments were created; spend remains **$4.82/$20**. PR 55 remains draft.
 
 A separate two-day regression reproduces the consequence: without identity exclusions, the compiler fills both evenings with the generated lookalike and reviewed Skydeck. With the staging identity policy, it schedules only the reviewed visit and leaves one evening open. This measures prevention of a potentially repetitive visit rather than counting an empty evening as a completed trip. Validation: **1,517 tests across 176 web files** passed before the final two-day regression; the final **15-test staging suite** also passes, including that regression. Workspace checks pass with nine existing warnings.
-
 
 ## Fresh live acceptance: reviewed selection succeeds, unknown hours still fail (2026-11-02 UTC)
 
@@ -2122,7 +2073,6 @@ The temporary enabled deployment `dpl_6kq31V9ChT4EtYoStAFqzQHPfZtd` was deleted 
 
 **Next engineering priority:** introduce a measured, source-backed availability and repair step for selected time-sensitive activities, with explicit identity, source freshness, visit type and date scope. Unknown hours must remain an explicit unresolved constraint rather than silently counting as a good itinerary. Evaluate retrieval failures, contradictory sources, unknown holiday dates, co-located venues and replacement quality across development destinations before spending holdouts. Avoid treating another Melbourne-only exclusion as proof of generalization. The output must preserve useful coverage with feasible alternatives, not merely remove failures or produce more warnings. Reuse the existing consent boundaries and dedicated budget; production defaults stay unchanged until representative end-to-end evidence supports promotion.
 
-
 ## Bounded activity-availability repair mechanism (2026-11-02 UTC)
 
 Added an offline orchestration prototype in `activity-availability-repair.ts`. It compiles a proposal, sends only selected date/slot/activity requests to a supplied checker, retains exact-scope assessments, excludes conflicting or unresolved selections from subsequent proposals, and recompiles from alternative inventory. The caller sets bounded rounds, total checks and a shared checking deadline (defaults: two rounds, 12 checks, 30 seconds). A timeout aborts the checker signal and does not dispatch a retry.
@@ -2133,7 +2083,6 @@ The checker contract requires independent source/identity/freshness/visit-type/d
 
 Ten synthetic orchestration regressions cover successful conflict replacement with retained coverage under three destination labels, check/round exhaustion, unknown outcomes, malformed or unbound batches, stalled checker cancellation, caller-input isolation and cross-date exclusion scope. These exercise a general mechanism, not empirical venue accuracy in those cities. **1,528 web tests across 177 files** pass. Workspace checks pass with nine existing warnings after correcting two test/validation type annotations. No paid calls; spend stays **$4.86/$20**. Next: implement and evaluate the evidence checker against frozen candidate-bound retrieval and independently adjudicated hours before integrating the repair loop or claiming live quality improvement.
 
-
 ## Retained-evidence hours checker for the repair prototype (2026-11-02 UTC)
 
 Added `scripts/uat/lib/activity-hours-evidence.ts`, an offline checker consuming **separately adjudicated** candidate/source/date-scope receipts. It binds retained excerpt bytes and the exact destination, candidate ID, name and address by hash, requires a fresh review and applicable date range, and parses a small anchored English daily-hours grammar. Opening/closing/last-entry minutes come from the retained quote, not model-authored interval values. A receipt hash establishes byte consistency, not authority or factual correctness. Source identity, complete hours-section scope and date applicability are still adjudication responsibilities; search leads cannot directly populate this input contract. This is not automated worldwide source verification.
@@ -2143,7 +2092,6 @@ The checker returns an ordinary conflict when no start can fit the supplied dura
 An integration regression feeds the checker retained synthetic evidence, reproduces a daily 10am–5pm evening conflict, and replaces that visit with a fully covered alternative through the preceding repair loop. No new venue-specific runtime exclusion was added. Eighteen focused tests cover clock boundaries, last entry, negative/instruction-like text, exceptional context, conflicting sources, identity/date/integrity boundaries and repair. These are artificial reviewer records for mechanism validation, not live multi-destination accuracy evidence.
 
 Validation: the **1,545-test full web suite across 178 files** passed before the final context-screen addition; the final **18-test evidence suite** passed afterward. Workspace checks pass with nine existing warnings. No live provider calls or enabled deployments; spend remains **$4.86/$20**. The next missing boundary is retrieval and identity/date-scope adjudication measured against independent references, followed by broader repair coverage. The deployed agent still lacks automatic availability repair; PR 55 remains draft.
-
 
 ## Live retrieval comparison for all six selected activities (2026-11-02 UTC)
 
@@ -2158,7 +2106,6 @@ The focused retrieval reaches Skydeck's operator hours page, including two date 
 The focused batch still has identity-review issues for all six candidates, including a name-copy failure for Skydeck and the Royal Exhibition source-URL mismatch. The constrained source-selection replay already available in the evaluation tooling remains necessary; broadening URL matching or silently accepting rewritten identities is not justified by this trial. A building exterior, a public square, ordinary interior entry and a guided tour also need different availability semantics. More regex coverage alone cannot establish the missing visit scope or date applicability.
 
 Validation: **216 script tests (1,302 assertions)**, **19 focused hours-evidence tests**, and workspace checks pass with nine existing warnings. An initially missing test import was corrected before the successful checks. Private exact inputs, provider receipts, failed initial attempt, code/prompt hashes, span comparison and independent review are under `artifacts/uat/activity-retrieval-20261102/`. Cumulative budget is **$4.96/$20**. No trip generation, product integration, enabled deployment or holdout use occurred. PR 55 remains draft. Next work is constrained, date-scoped extraction and visit-intent assessment over these frozen sources, measured against independently reviewed references before automated repair is connected.
-
 
 ## Dated hours-section extraction over frozen retrieval (2026-11-02 UTC)
 
@@ -2219,12 +2166,12 @@ Added CLI-only `--activity-count` for compiled model comparisons, requiring an i
 At `3ef7b98`, ran six complete Rome single-day development trials in order **6, 15, 15, 6, 6, 15**. Each trial had a $0.10 stop threshold and the batch a $0.60 threshold beneath the existing dedicated $20 cap. A local Python syntax error was corrected before any dispatch marker or provider request was made. All 30 agent steps then completed without fallback; all six strengthened structural evaluations passed with no warnings. The live protocol independently regenerates upstream plans, so it is a whole-pipeline diagnostic, not a frozen-input causal comparison. No holdouts, enabled deployments or source-search experiment were used.
 
 | Median measure (three trials per arm) | Six candidates | Fifteen candidates |
-| --- | ---: | ---: |
-| Activity output tokens | 1,893 | 2,881 |
-| Activity-step latency | 10.585s | 12.896s |
-| Total estimated pipeline cost | $0.0256315 | $0.0267095 |
-| Selected visits | 3 | 4 |
-| Selected visit-intent types | 2 | 1 |
+| ------------------------------------- | -------------: | -----------------: |
+| Activity output tokens                |          1,893 |              2,881 |
+| Activity-step latency                 |        10.585s |            12.896s |
+| Total estimated pipeline cost         |     $0.0256315 |         $0.0267095 |
+| Selected visits                       |              3 |                  4 |
+| Selected visit-intent types           |              2 |                  1 |
 
 The six-candidate arm used **34.3% fewer median activity output tokens**, with **17.9% lower median activity latency**, but only **4.0% lower median total pipeline cost**. All candidate runs retained at least three visits and three meals; selected visit-type diversity met the predeclared median floor. Counts and generated intent do not prove venue feasibility, geographic coherence or traveler usefulness. Some generated candidates combine multiple attractions, so a visit count alone also understates scope differences. There is no statistical superiority claim from three samples per arm.
 
@@ -2280,15 +2227,14 @@ Regression coverage checks the actual SSE note payload, final workflow projectio
 
 Validation: **1,624 web tests across 181 files** pass. The first workspace check identified formatting in two changed tests; targeted formatting was applied, and all 11 final workspace check tasks pass with nine existing lint warnings. No paid calls or enabled deployments; cumulative spend remains **$5.20/$20**. Production readiness still requires source-backed itinerary feasibility, repeated broader quality evaluation and native acceptance.
 
-
 ## Constrained three-day candidate-budget diagnostic (2026-11-02 UTC)
 
 At `d7a047d`, ran four complete development pipelines in order Edinburgh wheelchair 6/15, then New York allergy 15/6. Predeclared criteria required two visits and three meals on every day, unique activity IDs, no fallback and successful structural contracts. Each run had a $0.10 stop threshold and the batch $0.60, within the existing dedicated $20 budget. The gateway total before dispatch was $5.21, correcting the previously observed rounded $5.20. No holdouts, production configuration changes or enabled deployments were used.
 
-| Brief | Activity tokens, 6 / 15 | Estimated total USD, 6 / 15 | Daily visits, 6 / 15 |
-| --- | --- | --- | --- |
-| Edinburgh wheelchair | 1,179 / 5,905 | 0.029114 / 0.0328415 | 2,2,2 / 2,2,2 |
-| New York allergy | 1,916 / 5,194 | 0.0243325 / 0.033035 | 3,1,2 / 3,3,3 |
+| Brief                | Activity tokens, 6 / 15 | Estimated total USD, 6 / 15 | Daily visits, 6 / 15 |
+| -------------------- | ----------------------- | --------------------------- | -------------------- |
+| Edinburgh wheelchair | 1,179 / 5,905           | 0.029114 / 0.0328415        | 2,2,2 / 2,2,2        |
+| New York allergy     | 1,916 / 5,194           | 0.0243325 / 0.033035        | 3,1,2 / 3,3,3        |
 
 All four runs completed without fallback and passed structural checks; all retained nine meals. Six candidates reduced activity output tokens by 80.0% and 63.1%, and estimated total cost by 11.3% and 26.3%, respectively. **Reject a blanket six-candidate default:** the New York candidate fails the predeclared daily coverage floor despite a structural pass. This is one sample per city/arm with independently regenerated upstream plans, not a controlled causal comparison or statistical superiority claim. Keep the production default at fifteen. A future candidate-budget experiment should account for trip length and constraint-driven exclusions, while keeping this failed case as regression evidence.
 
@@ -2300,7 +2246,6 @@ During the batch, GitHub CI run `41398436898` passed quality checks but failed o
 
 Final local validation: **1,624 web tests across 181 files** and all 11 workspace check tasks pass (nine existing lint warnings). Gateway reconciliation after the completed batch reports **$5.33/$20** cumulative spend. The CI fix still needs confirmation on the next remote run. PR 55 remains draft.
 
-
 ## Correct count-only coverage interpretation (2026-11-02 UTC)
 
 Inspection of the retained New York six-candidate trace contradicts the preceding interpretation of an underfilled day: January 12 contains a **240-minute Metropolitan Museum visit**, compared with 255 and 210 activity minutes on the adjacent days. Its one-visit day is not evidence of a scheduling shortage. The original two-visits-per-day criterion and failed receipt remain unchanged, but that criterion is insufficient to conclude that six candidates caused a poor allocation. The preceding blanket-reduction rejection should be read as **do not promote without stronger evidence**, not proof that the shorter plan is worse. No scheduler change was made to optimize against this weak count metric.
@@ -2310,16 +2255,15 @@ The independent agentic evaluator now reports per-day activity count, meal count
 Frozen replay of all four original traces:
 
 | Brief and candidate pool | Daily activity minutes | Daily visit counts |
-| --- | --- | --- |
-| Edinburgh, 6 | 225 / 240 / 240 | 2 / 2 / 2 |
-| Edinburgh, 15 | 180 / 240 / 240 | 2 / 2 / 2 |
-| New York, 6 | 255 / 240 / 210 | 3 / 1 / 2 |
-| New York, 15 | 390 / 420 / 375 | 3 / 3 / 3 |
+| ------------------------ | ---------------------- | ------------------ |
+| Edinburgh, 6             | 225 / 240 / 240        | 2 / 2 / 2          |
+| Edinburgh, 15            | 180 / 240 / 240        | 2 / 2 / 2          |
+| New York, 6              | 255 / 240 / 210        | 3 / 1 / 2          |
+| New York, 15             | 390 / 420 / 375        | 3 / 3 / 3          |
 
 The larger New York pool produces substantially more planned activity time, before meals and transfers; more visits do not alone prove greater usefulness. Both arms still need source-backed feasibility and traveler-appropriate pace assessment. The activity-count default remains fifteen pending a stronger repeated experiment, not because a count-only threshold settled the tradeoff. Original traces and failed predeclared criterion are preserved; new hash-bound results are in `artifacts/uat/activity-count-constrained-20261102/duration-replay.ts` and `.json`.
 
 Validation: **219 script tests / 1,328 assertions** and workspace checks pass with nine existing lint warnings. No paid calls or enabled deployments; cumulative reconciled spend remains **$5.33/$20**. Remote CI for the prior timeout-test fix is still running. PR 55 stays draft.
-
 
 ## Scope-aware independent hours evaluation (2026-11-02 UTC)
 
@@ -2331,7 +2275,6 @@ Added 24 combinations covering six unresolved/nonordinary intent values, matchin
 
 Validation: **220 script tests / 1,448 assertions** pass, and workspace checks pass with nine existing lint warnings. Remote CI for `5a53666` has passed quality checks and queued tests; complete remote verification remains pending. PR 55 remains draft.
 
-
 ## Preserve visit scope in legacy New York closure rules (2026-11-02 UTC)
 
 The staging planner also consumes older venue-closure fixtures through `venueConstraintsForDate`. Four exact-name New York rules (Morgan Library, Frick Fifth Avenue, Met Fifth Avenue and Merchant's House) describe ordinary public admission. Matching an exact venue name previously returned a closure finding even when the proposed experience was an exterior walk or separately arranged tour. These four records now explicitly carry `ordinaryEntryOnly`; callers pass the proposed visit type. On a matching closure date, nonordinary or unresolved intent yields `venue_visit_scope_requires_review` rather than a closure claim. Ordinary entry still produces the original closure finding. No matching finding still does not establish availability.
@@ -2341,7 +2284,6 @@ Staging continues to withhold these unresolved visits and now displays the exist
 Regression coverage includes five nonordinary/missing intent states with exact Met identity and an ordinary-entry positive control, plus three actual staging-flow cases verifying that the candidate is withheld and the note does not assert closure. The first root test invocation accidentally forwarded web test filenames to the Bun script-test stage; all workspace suites passed, but Bun then attempted to execute Vitest files. The corrected full-root invocation omits those arguments. No paid calls or enabled deployments; cumulative spend remains **$5.33/$20**.
 
 Final validation: the unfiltered root test command passes, including **1,627 web tests**, **707 mobile tests**, shared-package suites and **221 script tests / 1,464 assertions**. Workspace checks pass with nine existing lint warnings. GitHub CI `41399170891` is still live on `b72033f`; this change is committed locally while that run finishes to avoid cancelling remote verification with another push.
-
 
 ## Connect reviewed source evidence to bounded repair replay (2026-11-02 UTC)
 
@@ -2359,7 +2301,6 @@ Integration tests show a synthetic source-bound conflict causing a second round 
 
 Validation: **225 script tests / 1,489 assertions** and workspace checks pass with nine existing lint warnings. No additional AI spend or enabled deployments; cumulative spend remains **$5.33/$20**. Source collection/adjudication, exact-time handling for partial opening windows and a useful live repair acceptance case remain necessary before this adapter can support product integration.
 
-
 ## Date-bound exception adjudication and retained-source repair pilot (2026-11-02 UTC)
 
 The retained Skydeck operator page includes ordinary hours with an asterisk, a full special-date table and a public-holiday footnote. The offline checker correctly left it unresolved, so blindly dropping that context to make a replay pass would be invalid. Added an optional separately adjudicated exception review bound to **one visit date and the exact retained excerpt hash**, with an explanatory rationale and HTTPS supporting-source hashes. This is trusted review input, not a model extraction schema or automatic proof that the rationale is correct. Wrong-date, wrong-context, empty or malformed reviews remain unknown. Only after this review may the checker resolve the ordinary-hours quote's asterisk; the original quote and full excerpt remain retained and hashed. Supporting source URLs now accompany the assessment, with the existing six-source bound enforced across the combined evidence.
@@ -2371,7 +2312,6 @@ A source-reviewed component replay builds the existing curated general-admission
 No paid AI calls or enabled deployments; cumulative spend remains **$5.33/$20**. CI on the preceding `4eef098` revision passed. Exact-time support for partial windows, wider source coverage and a useful end-to-end repaired itinerary remain outstanding.
 
 Final validation: **226 script tests / 1,508 assertions** and all workspace checks pass (nine existing lint warnings). PR 55 remains draft.
-
 
 ## Dining source attribution in streamed meal cards (2026-11-02 UTC)
 
@@ -2392,7 +2332,6 @@ Source review found Monday ordinary admission at Fado Museum, Tivoli visits outs
 Edinburgh’s second dispatch received HTTP 429 before generation: five generations per user per hour. The paced runner retains that rejected receipt and draft and waits the retry window. No rate limit was lowered. Seven initial successful runs, remaining source/schedule/device reviews and affected-case reruns remain outstanding. The temporary enabled backend must be cleaned up after evidence collection; branch planning remains paused for future deployments. The prior mobile alias target is recorded in the private manifest.
 
 Prepared corrective changes recognize “scheduled activities” in explicit daily duration ceilings, add ordinary-entry Fado Monday and bounded Tivoli winter-gap evidence, and reconcile the exact observed Sr. Fado address from its retained operator page without retaining generated coordinates. They are not deployed to the initial-round build. Focused checks, 1,630 web tests and workspace checks pass (nine existing lint warnings). No claim of production readiness or completed acceptance is made.
-
 
 ### Android recovery follow-up
 
@@ -2462,3 +2401,18 @@ acceptance. Keep PR #55 draft; no production promotion is justified by this roun
 After four repair runs, latest cumulative billed spend is $5.91607985, with
 $14.08392015 remaining. All four repaired Android cold-open/Day 2 checks passed;
 captured Day 2 viewports were visually reviewed. No additional paid run is queued.
+
+### Ordinary-day timing contracts
+
+The experimental schedule compiler emits `day-timing-v1` proposals for days
+with visits or meals, alongside `midday-rest-v1` for explicit rest requests.
+Both preserve supplied visit durations, reserve meals and planning buffers,
+and report conflicts without publishing a partial timetable. Availability
+windows and work blocks constrain proposals. Shared mapping validation rejects
+stale or malformed proposals, including dropped meals, on web and mobile.
+The contract evaluator fails ordinary-day conflicts as `day_timing_conflict`.
+
+A policy fit establishes only a feasible sequence under the stated assumptions.
+Thirty-minute buffers are not transit evidence; opening hours, admission,
+reservations and actual routes still need independent verification. An empty
+day receives no timing proposal. These checks do not replace device acceptance.

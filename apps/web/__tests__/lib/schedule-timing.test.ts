@@ -1,5 +1,11 @@
+import {
+  readDayTiming,
+  dayTimingTips,
+  timingPresentation,
+} from "@faroway/types";
 import { expect, it } from "vitest";
 import {
+  proposeDayTiming,
   requestsMiddayRest,
   proposeRestDayTiming,
 } from "@/lib/search/schedule-timing";
@@ -90,4 +96,84 @@ it("does not present a midday rest overlapping an explicit work block as feasibl
   expect(result.fitsPolicy).toBe(false);
   expect(result.events).toEqual([]);
   expect(result.conflict?.eventId).toBe("rest:midday");
+});
+
+const dinner = {
+  ...(
+    rome.trace.steps[3]
+      .output as unknown as import("@/lib/search/types").DiningResult[]
+  )[0],
+  id: "dinner",
+};
+it.each([120, 180, 240])(
+  "detects dinner conflicts after a %i-minute evening visit without shortening it",
+  (duration) => {
+    const input: SuggestedDay = {
+      ...day,
+      morning: { activities: [] },
+      afternoon: { activities: [] },
+      evening: {
+        activities: [{ ...activity, id: "evening", duration }],
+        meal: dinner,
+      },
+    };
+    const before = JSON.stringify(input);
+    const result = proposeDayTiming(input);
+    expect(result.policy).toBe("day-timing-v1");
+    expect(result.fitsPolicy).toBe(duration === 120);
+    expect(result.verified).toBe(false);
+    expect(JSON.stringify(input)).toBe(before);
+    expect(readDayTiming({ ...input, timingProposal: result })).toBeDefined();
+    if (duration > 120) {
+      expect(result.events).toEqual([]);
+      expect(result.conflict?.eventId).toBe("meal:evening:dinner");
+      expect(timingPresentation(result, {}).description).not.toContain(
+        "midday-rest",
+      );
+    } else {
+      expect(result.events.map((e) => [e.startMinute, e.endMinute])).toEqual([
+        [1080, 1200],
+        [1230, 1290],
+      ]);
+    }
+  },
+);
+it("keeps ordinary timing inside work and departure constraints and invalidates it after edits", () => {
+  const input: SuggestedDay = {
+    ...day,
+    morning: { activities: [] },
+    afternoon: { activities: [] },
+    evening: {
+      activities: [{ ...activity, id: "evening", duration: 60 }],
+      meal: dinner,
+    },
+  };
+  const result = proposeDayTiming(input, {
+    earliestMinute: 0,
+    latestMinute: 1320,
+    unavailable: [[540, 1140]],
+  });
+  expect(result.fitsPolicy).toBe(true);
+  expect(result.events.map((e) => e.startMinute)).toEqual([1140, 1230]);
+  expect(result.events.some((e) => e.kind === "rest")).toBe(false);
+  expect(timingPresentation(result, {}).assumptions).not.toContain(
+    "One-hour rest",
+  );
+  expect(
+    proposeDayTiming(input, {
+      earliestMinute: 0,
+      latestMinute: 1260,
+      unavailable: [[540, 1140]],
+    }).fitsPolicy,
+  ).toBe(false);
+  const edited = {
+    ...input,
+    date: "2027-01-12",
+    timingProposal: result,
+    tips: result.tips,
+  };
+  expect(readDayTiming(edited)).toBeUndefined();
+  expect(dayTimingTips(edited)).toEqual([
+    "Proposed times need a fresh review.",
+  ]);
 });

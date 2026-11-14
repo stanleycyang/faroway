@@ -267,7 +267,9 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
       const timing = readDayTiming(day);
       if (!timing) fail(`day_${index + 1}:invalid_timing_proposal`);
       else if (!timing.fitsPolicy)
-        fail(`day_${index + 1}:midday_rest_timing_conflict`);
+        fail(
+          `day_${index + 1}:${timing.policy === "midday-rest-v1" ? "midday_rest_timing_conflict" : "day_timing_conflict"}`,
+        );
       if (
         !readDayTiming(mapped) ||
         JSON.stringify(day.timingProposal) !==

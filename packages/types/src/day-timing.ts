@@ -1,6 +1,6 @@
 /** A proposed local-clock schedule, never a verified route or reservation. */
 export interface DayTimingProposal {
-  policy: "midday-rest-v1";
+  policy: "midday-rest-v1" | "day-timing-v1";
   basis: string;
   fitsPolicy: boolean;
   verified: false;
@@ -51,7 +51,7 @@ export function readDayTiming(value: unknown): DayTimingProposal | undefined {
   const day = record(value),
     timing = record(day.timingProposal);
   if (
-    timing.policy !== "midday-rest-v1" ||
+    (timing.policy !== "midday-rest-v1" && timing.policy !== "day-timing-v1") ||
     timing.verified !== false ||
     typeof timing.fitsPolicy !== "boolean" ||
     timing.basis !== dayTimingBasis(day) ||
@@ -108,13 +108,14 @@ export function readDayTiming(value: unknown): DayTimingProposal | undefined {
   meal("morning", 45);
   visits("morning");
   meal("afternoon", 60);
-  expected.push({
-    id: "rest:midday",
-    kind: "rest",
-    duration: 60,
-    start: 780,
-    end: 900,
-  });
+  if (timing.policy === "midday-rest-v1")
+    expected.push({
+      id: "rest:midday",
+      kind: "rest",
+      duration: 60,
+      start: 780,
+      end: 900,
+    });
   visits("afternoon");
   visits("evening");
   meal("evening", 60);
@@ -167,7 +168,7 @@ export function dayTimingTips(value: unknown): string[] {
     "Proposed times need a fresh review.",
     ...tips.filter(
       (tip) =>
-        !/^(Proposed local timing:|This draft reserves a suggested one-hour midday rest\.|The selected visits do not fit the proposed meal, buffer and one-hour midday-rest windows\.)/.test(
+        !/^(Proposed local timing:|This draft reserves suggested meal lengths|The selected visits do not fit the proposed meal and buffer windows|This draft reserves a suggested one-hour midday rest\.|The selected visits do not fit the proposed meal, buffer and one-hour midday-rest windows\.)/.test(
           tip,
         ),
     ),
@@ -175,7 +176,7 @@ export function dayTimingTips(value: unknown): string[] {
 }
 
 export function isTimingNote(tip: string): boolean {
-  return /^(Proposed local timing:|This draft reserves a suggested one-hour midday rest\.|The selected visits do not fit the proposed meal, buffer and one-hour midday-rest windows\.)/.test(
+  return /^(Proposed local timing:|This draft reserves suggested meal lengths|The selected visits do not fit the proposed meal and buffer windows|This draft reserves a suggested one-hour midday rest\.|The selected visits do not fit the proposed meal, buffer and one-hour midday-rest windows\.)/.test(
     tip,
   );
 }
@@ -192,7 +193,9 @@ export function timingPresentation(
     heading: proposal.fitsPolicy ? "Suggested timing" : "Timing needs review",
     description: proposal.fitsPolicy
       ? "Local times, not confirmed bookings. Check opening hours and routes."
-      : "These visits do not fit the proposed meal, buffer and midday-rest windows. Review the schedule before using it.",
+      : proposal.policy === "midday-rest-v1"
+        ? "These visits do not fit the proposed meal, buffer and midday-rest windows. Review the schedule before using it."
+        : "These visits do not fit the proposed meal and buffer windows. Review the schedule before using it.",
     rows: proposal.fitsPolicy
       ? proposal.events.map((event) => ({
           id: event.id,
@@ -205,6 +208,8 @@ export function timingPresentation(
         }))
       : [],
     assumptions:
-      "One-hour rest near lunch; 45 minutes for breakfast, one hour for other meals, and 30-minute planning buffers. Actual travel and any hotel return need checking.",
+      proposal.policy === "midday-rest-v1"
+        ? "One-hour rest near lunch; 45 minutes for breakfast, one hour for other meals, and 30-minute planning buffers. Actual travel and any hotel return need checking."
+        : "45 minutes for breakfast, one hour for other meals, and 30-minute planning buffers. Actual travel, admission and availability need checking.",
   };
 }

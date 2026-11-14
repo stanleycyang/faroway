@@ -66,3 +66,30 @@ it('renders a review message without any partial timetable for a conflict', () =
   expect(html).toContain('Review the schedule before using it');
   expect(html).not.toContain('09:00');
 });
+it('shows ordinary-day assumptions without inventing a requested rest', () => {
+  const ordinary: DayTimingProposal = {
+    ...proposal,
+    policy: 'day-timing-v1',
+    events: proposal.events.filter((event) => event.kind !== 'rest'),
+  };
+  const html = renderToStaticMarkup(<ProposedTiming proposal={ordinary} names={{}} />);
+  expect(html).toContain('Suggested timing');
+  expect(html).toContain('09:00–10:30');
+  expect(html).toContain('Actual travel, admission and availability need checking');
+  expect(html).not.toContain('Midday rest');
+  expect(html).not.toContain('One-hour rest');
+  const conflict = renderToStaticMarkup(
+    <ProposedTiming
+      proposal={{
+        ...ordinary,
+        fitsPolicy: false,
+        events: [],
+        conflict: { eventId: 'meal:evening:dinner', overrunMinutes: 30 },
+      }}
+      names={{}}
+    />
+  );
+  expect(conflict).toContain('Timing needs review');
+  expect(conflict).not.toContain('midday-rest');
+  expect(conflict).not.toContain('09:00');
+});

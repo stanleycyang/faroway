@@ -12,7 +12,11 @@ import {
   isSpecialOpeningTitle,
   isWeekdayEventTitle,
 } from "./speculative-event";
-import { requestsMiddayRest, proposeRestDayTiming } from "./schedule-timing";
+import {
+  requestsMiddayRest,
+  proposeRestDayTiming,
+  proposeDayTiming,
+} from "./schedule-timing";
 import {
   mealBoundaryAnchors,
   sameVisitAndMealVenue,
@@ -1022,11 +1026,12 @@ export function compileSchedule(
       tips,
     };
   });
-  const timingProposals = needsRest
-    ? days.map((day, index) =>
-        proposeRestDayTiming(day, availability.windows[index]),
-      )
-    : [];
+  const timingProposals = days.flatMap((day, index) =>
+    needsRest ||
+    SLOTS.some((slot) => day[slot].activities.length || day[slot].meal)
+      ? [proposeDayTiming(day, availability.windows[index], needsRest)]
+      : [],
+  );
   for (const proposal of timingProposals) {
     const day = days.find((item) => item.date === proposal.date)!;
     day.timingProposal = {
@@ -1039,7 +1044,9 @@ export function compileSchedule(
     };
     day.tips.unshift(...proposal.tips);
     if (!proposal.fitsPolicy)
-      issues.push(`day_${day.dayNumber}:midday_rest_timing_conflict`);
+      issues.push(
+        `day_${day.dayNumber}:${needsRest ? "midday_rest_timing_conflict" : "day_timing_conflict"}`,
+      );
   }
   return {
     days,

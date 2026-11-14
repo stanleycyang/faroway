@@ -26,9 +26,10 @@ export function requestsMiddayRest(
 }
 
 /** Proposed local windows only. Never infers opening hours or route durations. */
-export function proposeRestDayTiming(
+export function proposeDayTiming(
   day: SuggestedDay,
   availability?: TravelerDayWindow,
+  includeMiddayRest = false,
 ) {
   const events: TimingEvent[] = [];
   const labels = new Map<string, string>();
@@ -85,7 +86,8 @@ export function proposeRestDayTiming(
   meal("morning", "Breakfast", 45, 480, 600);
   visits("morning", 540, 780);
   meal("afternoon", "Lunch", 60, 720, 840);
-  add("rest:midday", "Midday rest", "rest", 60, 780, 900);
+  if (includeMiddayRest)
+    add("rest:midday", "Midday rest", "rest", 60, 780, 900);
   visits("afternoon", 840, 1080);
   visits("evening", 1080, 1320);
   meal("evening", "Dinner", 60, 1080, 1320);
@@ -108,7 +110,14 @@ export function proposeRestDayTiming(
             impossible.latestEnd,
         },
       }
-    : proposeTiming(events, availability?.unavailable);
+    : events.length
+      ? proposeTiming(events, availability?.unavailable)
+      : {
+          fitsPolicy: true as const,
+          verified: false as const,
+          events: [],
+          conflict: null,
+        };
   const clock = (minute: number) =>
     `${Math.floor(minute / 60)
       .toString()
@@ -116,16 +125,30 @@ export function proposeRestDayTiming(
   const tips = result.fitsPolicy
     ? [
         `Proposed local timing: ${result.events.map((event) => `${clock(event.startMinute)}–${clock(event.endMinute)} ${labels.get(event.id)}`).join("; ")}.`,
-        "This draft reserves a suggested one-hour midday rest. Meal lengths and 30-minute buffers are planning assumptions, not opening hours or travel estimates. Rest is assumed near lunch; a hotel return needs separate travel time. Confirm these details before using the times.",
+        includeMiddayRest
+          ? "This draft reserves a suggested one-hour midday rest. Meal lengths and 30-minute buffers are planning assumptions, not opening hours or travel estimates. Rest is assumed near lunch; a hotel return needs separate travel time. Confirm these details before using the times."
+          : "This draft reserves suggested meal lengths and 30-minute buffers. These are planning assumptions, not opening hours or travel estimates. Confirm routes, admission and availability before using the times.",
       ]
     : [
-        "The selected visits do not fit the proposed meal, buffer and one-hour midday-rest windows within your available hours. Review the visits and timing before using this day; your rest request remains unresolved. No visits have been shortened or removed.",
+        includeMiddayRest
+          ? "The selected visits do not fit the proposed meal, buffer and one-hour midday-rest windows within your available hours. Review the visits and timing before using this day; your rest request remains unresolved. No visits have been shortened or removed."
+          : "The selected visits do not fit the proposed meal and buffer windows within your available hours. Review this day before using its times. No visits have been shortened or removed.",
       ];
   return {
-    policy: "midday-rest-v1" as const,
+    policy: includeMiddayRest
+      ? ("midday-rest-v1" as const)
+      : ("day-timing-v1" as const),
     basis: dayTimingBasis(day),
     date: day.date,
     ...result,
     tips,
   };
+}
+
+/** Backward-compatible entry point for the explicit rest policy. */
+export function proposeRestDayTiming(
+  day: SuggestedDay,
+  availability?: TravelerDayWindow,
+) {
+  return proposeDayTiming(day, availability, true);
 }
