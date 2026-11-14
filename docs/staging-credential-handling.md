@@ -32,9 +32,20 @@ Exclude local environment files, account files, private receipts and ignored
 artifacts. Verify the preview's exact source revision and staging target before
 any authenticated write or model call; an alias may still point at an older
 deployment. Keep Deployment Protection enabled and use authenticated access.
+Set and verify the preview's public base URL as well: an omitted
+`NEXT_PUBLIC_BASE_URL` can make sharing return a production link. Do not follow
+such a link during staging acceptance. `--skip-domain` is a production-only CLI
+option and cannot be used to submit a preview.
 
 Restoring environment settings does not revoke credentials captured by an older
 deployment. After collecting evidence, delete the temporary live preview and
 verify removal. Preserve failed receipts privately. Provisioned, confirmed test
 accounts prove password authentication only; they do not establish email delivery
 or confirmation/recovery acceptance.
+
+A polling transport error does not establish that the remote workflow stopped.
+Retain the trip when terminal status is unknown, stop the batch, record its ID,
+and inspect remote status and billing before cleanup or retry. Once terminal
+state is confirmed, delete only the synthetic test trip and verify the deletion.
+Do not grade a run as successful without its saved result, even if upstream
+model calls completed. Preserve failed evidence when repairing the harness.

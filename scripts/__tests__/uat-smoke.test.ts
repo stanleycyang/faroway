@@ -114,87 +114,104 @@ describe("UAT smoke suite", () => {
     ).toBe(true);
   });
 
-  test("tier 0 uses the injected fetch and only the staging host", async () => {
-    const urls: string[] = [];
-    let patches = 0;
-    let shared = true;
-    const owner = "Bearer a@faroway-test.invalid";
-    const fetchImpl = async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      const headers = new Headers(init?.headers);
-      urls.push(url);
-      expect(url).not.toContain(PRODUCTION_PROJECT_REF);
-      if (url.endsWith("/api/health")) return response(200, { status: "ok" });
-      if (url.includes("/api/destinations/popular"))
-        return response(200, { destinations: [{ name: "Lisbon" }] });
-      if (
-        url.endsWith("/api/trips") &&
-        (!init?.method || init.method === "GET")
-      )
-        return response(401, { error: "unauthorized" });
-      if (url.endsWith("/api/cron/cleanup")) return response(401, {});
-      if (url.includes("/api/places/venues"))
-        return response(501, {
-          error: "Live place references are not available yet.",
-        });
-      if (url.includes("/api/weather"))
-        return response(200, { status: "disabled" });
-      if (url.includes("/storage/v1/object/public/images/"))
-        return response(200, null, "image/jpeg");
-      if (url.includes("tile.openstreetmap.org"))
-        return response(200, null, "image/png");
-      if (url.includes("/auth/v1/token")) {
-        const body = JSON.parse(String(init?.body)) as { email: string };
-        return response(200, { access_token: body.email });
-      }
-      if (url.includes("/generate"))
-        return response(409, { code: "ai_consent_required" });
-      if (url.endsWith("/api/trips") && init?.method === "POST")
-        return response(201, { trip: { id: "trip-1", updated_at: "t0" } });
-      if (url.includes("/rest/v1/trips")) return response(200, []);
-      if (url.endsWith("/share") && init?.method === "POST")
-        return response(200, { shareUrl: `${apiUrl}/share/token` });
-      if (url.endsWith("/share") && init?.method === "DELETE") {
-        shared = false;
-        return response(200, {});
-      }
-      if (url.endsWith("/share/token")) return response(shared ? 200 : 404, {});
-      if (url.includes("/api/trips/trip-1")) {
-        if (headers.get("authorization") !== owner) return response(404, {});
-        if (init?.method === "PATCH") {
-          patches += 1;
-          return response(patches === 1 ? 200 : 409, {
-            trip: { updated_at: "t1" },
+  test.each([false, true])(
+    "tier 0 isolates requests and reports cleanup once (foreign share: %s)",
+    async (foreignShare) => {
+      const urls: string[] = [];
+      let patches = 0;
+      let shared = true;
+      const owner = "Bearer a@faroway-test.invalid";
+      const fetchImpl = async (
+        input: RequestInfo | URL,
+        init?: RequestInit,
+      ) => {
+        const url = String(input);
+        const headers = new Headers(init?.headers);
+        urls.push(url);
+        expect(url).not.toContain(PRODUCTION_PROJECT_REF);
+        if (url.endsWith("/api/health")) return response(200, { status: "ok" });
+        if (url.includes("/api/destinations/popular"))
+          return response(200, { destinations: [{ name: "Lisbon" }] });
+        if (
+          url.endsWith("/api/trips") &&
+          (!init?.method || init.method === "GET")
+        )
+          return response(401, { error: "unauthorized" });
+        if (url.endsWith("/api/cron/cleanup")) return response(401, {});
+        if (url.includes("/api/places/venues"))
+          return response(501, {
+            error: "Live place references are not available yet.",
           });
+        if (url.includes("/api/weather"))
+          return response(200, { status: "disabled" });
+        if (url.includes("/storage/v1/object/public/images/"))
+          return response(200, null, "image/jpeg");
+        if (url.includes("tile.openstreetmap.org"))
+          return response(200, null, "image/png");
+        if (url.includes("/auth/v1/token")) {
+          const body = JSON.parse(String(init?.body)) as { email: string };
+          return response(200, { access_token: body.email });
         }
-        if (init?.method === "DELETE") return response(200, {});
-        return response(200, { trip: { id: "trip-1", updated_at: "t0" } });
-      }
-      return response(404, {});
-    };
-    const report = await runSmoke({
-      tiers: [0],
-      target: {
-        supabaseUrl: stagingUrl,
-        apiUrl,
-        anonKey: anon(STAGING_PROJECT_REF),
-      },
-      accounts: [
-        { email: "a@faroway-test.invalid", password: "secret-a" },
-        { email: "b@faroway-test.invalid", password: "secret-b" },
-      ],
-      fetchImpl: fetchImpl as typeof fetch,
-      imagePaths: ["destinations/lisbon.jpg"],
-      expectedImageCount: 1,
-      repoRoot: root,
-    });
-    const failed = report.checks.filter(
-      (item) => item.status === "failed" || item.status === "blocked",
-    );
-    expect(failed).toEqual([]);
-    expect(report.ok).toBe(true);
-    expect(urls.some((url) => url.includes(STAGING_PROJECT_REF))).toBe(true);
-  });
+        if (url.includes("/generate"))
+          return response(409, { code: "ai_consent_required" });
+        if (url.endsWith("/api/trips") && init?.method === "POST")
+          return response(201, { trip: { id: "trip-1", updated_at: "t0" } });
+        if (url.includes("/rest/v1/trips")) return response(200, []);
+        if (url.endsWith("/share") && init?.method === "POST")
+          return response(200, {
+            shareUrl: `${foreignShare ? "https://www.faroway.ai" : apiUrl}/share/token`,
+          });
+        if (url.endsWith("/share") && init?.method === "DELETE") {
+          shared = false;
+          return response(200, {});
+        }
+        if (url.endsWith("/share/token"))
+          return response(shared ? 200 : 404, {});
+        if (url.includes("/api/trips/trip-1")) {
+          if (headers.get("authorization") !== owner) return response(404, {});
+          if (init?.method === "PATCH") {
+            patches += 1;
+            return response(patches === 1 ? 200 : 409, {
+              trip: { updated_at: "t1" },
+            });
+          }
+          if (init?.method === "DELETE") return response(200, {});
+          return response(200, { trip: { id: "trip-1", updated_at: "t0" } });
+        }
+        return response(404, {});
+      };
+      const report = await runSmoke({
+        tiers: [0],
+        target: {
+          supabaseUrl: stagingUrl,
+          apiUrl,
+          anonKey: anon(STAGING_PROJECT_REF),
+        },
+        accounts: [
+          { email: "a@faroway-test.invalid", password: "secret-a" },
+          { email: "b@faroway-test.invalid", password: "secret-b" },
+        ],
+        fetchImpl: fetchImpl as typeof fetch,
+        imagePaths: ["destinations/lisbon.jpg"],
+        expectedImageCount: 1,
+        repoRoot: root,
+      });
+      const failed = report.checks.filter(
+        (item) => item.status === "failed" || item.status === "blocked",
+      );
+      expect(failed.map((item) => item.name)).toEqual(
+        foreignShare ? ["share-revoke"] : [],
+      );
+      expect(report.ok).toBe(!foreignShare);
+      expect(report.checks.filter((item) => item.name === "cleanup")).toEqual([
+        expect.objectContaining({ name: "cleanup", status: "passed" }),
+      ]);
+      expect(urls.some((url) => url.startsWith("https://www.faroway.ai"))).toBe(
+        false,
+      );
+      expect(urls.some((url) => url.includes(STAGING_PROJECT_REF))).toBe(true);
+    },
+  );
 
   test("tier 1 blocks sandbox checks without sandbox credentials", async () => {
     const report = await runSmoke({
@@ -364,7 +381,7 @@ describe("UAT smoke suite", () => {
   });
 
   test("live batches stop after a failed workflow or saved fallback until spend is reconciled", async () => {
-    for (const failure of ["workflow", "fallback"] as const) {
+    for (const failure of ["workflow", "fallback", "transport"] as const) {
       let created = 0;
       let dispatched = 0;
       let removed = 0;
@@ -383,10 +400,13 @@ describe("UAT smoke suite", () => {
           dispatched += 1;
           return response(200, {});
         }
-        if (url.endsWith("/generate"))
+        if (url.endsWith("/generate")) {
+          if (failure === "transport")
+            throw new Error("Polling connection lost");
           return response(200, {
             status: failure === "workflow" ? "failed" : "completed",
           });
+        }
         if (init?.method === "DELETE") {
           removed += 1;
           return response(200, {});
@@ -421,7 +441,7 @@ describe("UAT smoke suite", () => {
       expect({ created, dispatched, removed }).toEqual({
         created: 1,
         dispatched: 1,
-        removed: 1,
+        removed: failure === "transport" ? 0 : 1,
       });
     }
   });

@@ -672,6 +672,8 @@ async function accountFlow(
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     for (const name of names) {
+      // The finally block records the actual deletion result for a created trip.
+      if (name === "cleanup" && created && apiUrl && owner) continue;
       if (!checks.some((item) => item.name === name)) {
         checks.push(check(0, name, "failed", detail));
       }
@@ -1083,13 +1085,23 @@ async function runTier2(
     options.accounts[0],
   );
   for (const brief of briefs) {
-    const result = await liveBrief(
-      fetchImpl,
-      apiUrl,
-      token,
-      brief,
-      options.pollIntervalMs ?? 5_000,
-    );
+    let result: CheckResult;
+    try {
+      result = await liveBrief(
+        fetchImpl,
+        apiUrl,
+        token,
+        brief,
+        options.pollIntervalMs ?? 5_000,
+      );
+    } catch {
+      result = check(
+        2,
+        `live-plan:${brief.id}`,
+        "failed",
+        "transport or cleanup failed; inspect retained receipts and reconcile spend before retrying",
+      );
+    }
     checks.push(result);
     if (result.status !== "passed") {
       for (const remaining of briefs.slice(checks.length)) {
@@ -1154,6 +1166,7 @@ async function liveBrief(
     );
   }
   const route = `${apiUrl}/api/trips/${tripId}`;
+  let terminalObserved = false;
   try {
     const dispatch = await http(fetchImpl, `${route}/generate`, {
       method: "POST",
@@ -1188,8 +1201,12 @@ async function liveBrief(
       );
       if (progressDown) return progressDown;
       const status = record(progress.data)?.status;
-      if (status === "completed") finished = true;
+      if (status === "completed") {
+        finished = true;
+        terminalObserved = true;
+      }
       if (status === "failed" || status === "error") {
+        terminalObserved = true;
         return check(
           2,
           `live-plan:${brief.id}`,
@@ -1223,7 +1240,22 @@ async function liveBrief(
     return quality.failures.length
       ? check(2, `live-plan:${brief.id}`, "failed", quality.failures.join("; "))
       : check(2, `live-plan:${brief.id}`, "passed", quality.notes.join("; "));
+  } catch {
+    return check(
+      2,
+      `live-plan:${brief.id}`,
+      "failed",
+      `transport failed; inspect trip ${tripId} and reconcile spend before retrying`,
+    );
   } finally {
-    await http(fetchImpl, route, { method: "DELETE", headers });
+    // A polling failure does not mean the remote workflow stopped. Preserve its
+    // trip until terminal state and billing can be reconciled by the operator.
+    if (terminalObserved) {
+      const removed = await http(fetchImpl, route, {
+        method: "DELETE",
+        headers,
+      });
+      if (removed.status !== 200) throw new Error("Test trip cleanup failed");
+    }
   }
 }
