@@ -195,3 +195,52 @@ export function reviewedHoursExclusions(
   }
   return exclusions;
 }
+
+/** Only fresh, uniquely matched reviewed hours constrain the proposed clock times.
+ * Last admission bounds the start; published closing still bounds the entire visit.
+ */
+export function reviewedVisitWindows(
+  destination: string,
+  activities: readonly ActivityResult[],
+  dates: readonly string[],
+  facts: readonly ReviewedVenueHours[],
+  asOf = new Date().toISOString().slice(0, 10),
+): Record<string, Record<string, Array<[number, number]>>> {
+  if (!validDate(asOf) || dates.some((date) => !validDate(date)))
+    throw Error("Valid review and visit dates required");
+  const result: Record<string, Record<string, Array<[number, number]>>> = {};
+  for (const activity of activities) {
+    const { matches } = resolveReviewedVenue(
+      { destination, name: activity.name, address: activity.location.address },
+      facts,
+      "ordinary_visit",
+    );
+    if (
+      matches.length !== 1 ||
+      !valid(matches[0], asOf) ||
+      !reviewedHoursCoverVisitScope(matches[0], activity.proposedVisitType)
+    )
+      continue;
+    const fact = matches[0];
+    for (const date of dates) {
+      const calendar = new Date(`${date}T12:00:00Z`);
+      if (!fact.months.includes(calendar.getUTCMonth() + 1)) continue;
+      const day = fact.week.find(
+        (item) => item.weekday === calendar.getUTCDay(),
+      );
+      if (!day) continue;
+      (result[date] ??= {})[activity.id] = day.intervals
+        .map(([start, end]): [number, number] => [
+          start,
+          Math.min(
+            end,
+            day.lastEntryMinute === undefined
+              ? end
+              : day.lastEntryMinute + activity.duration,
+          ),
+        ])
+        .filter(([start, end]) => start < end);
+    }
+  }
+  return result;
+}

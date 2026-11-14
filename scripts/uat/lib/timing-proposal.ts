@@ -7,6 +7,8 @@ export interface TimingEvent {
   latestEnd: number;
   /** Reserved buffer, not a route-duration claim. */
   bufferBeforeMinutes: number;
+  /** Optional independently supplied operating windows; never inferred from model prose. */
+  allowedIntervals?: ReadonlyArray<readonly [number, number]>;
 }
 export interface ProposedTiming extends TimingEvent {
   startMinute: number;
@@ -54,21 +56,53 @@ export function proposeTiming(
     )
       throw new Error("Invalid day timing constraint");
   }
+  for (const event of events) {
+    if (
+      event.allowedIntervals?.some(
+        ([a, b]) =>
+          !Number.isInteger(a) ||
+          !Number.isInteger(b) ||
+          a < 0 ||
+          b > 1440 ||
+          a >= b,
+      )
+    )
+      throw new Error("Invalid event operating interval");
+  }
   const proposed: ProposedTiming[] = [];
   let cursor = 0;
   for (const event of events) {
+    const windows =
+      event.allowedIntervals === undefined
+        ? [[event.earliestStart, event.latestEnd] as const]
+        : [...event.allowedIntervals].sort((a, b) => a[0] - b[0]);
     let startMinute = Math.max(
       event.earliestStart,
       cursor + event.bufferBeforeMinutes,
     );
-    for (const [start, end] of blocked)
-      if (
-        startMinute - event.bufferBeforeMinutes < end &&
-        startMinute + event.durationMinutes > start
-      )
-        startMinute = end + event.bufferBeforeMinutes;
+    // An explicitly empty operating calendar leaves no schedulable interval.
+    let latestEnd = windows.length ? event.latestEnd : startMinute;
+    let fits = false;
+    for (const [opens, closes] of windows) {
+      startMinute = Math.max(
+        event.earliestStart,
+        opens,
+        cursor + event.bufferBeforeMinutes,
+      );
+      latestEnd = Math.min(event.latestEnd, closes);
+      for (const [start, end] of blocked)
+        if (
+          startMinute - event.bufferBeforeMinutes < end &&
+          startMinute + event.durationMinutes > start
+        )
+          startMinute = end + event.bufferBeforeMinutes;
+      if (startMinute + event.durationMinutes <= latestEnd) {
+        fits = true;
+        break;
+      }
+    }
     const endMinute = startMinute + event.durationMinutes;
-    if (endMinute > event.latestEnd)
+    if (!fits)
       return {
         fitsPolicy: false as const,
         verified: false as const,
@@ -77,8 +111,8 @@ export function proposeTiming(
           eventId: event.id,
           earliestPossibleStart: startMinute,
           requiredEnd: endMinute,
-          latestEnd: event.latestEnd,
-          overrunMinutes: endMinute - event.latestEnd,
+          latestEnd,
+          overrunMinutes: endMinute - latestEnd,
         },
       };
     proposed.push({ ...event, startMinute, endMinute });

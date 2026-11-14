@@ -30,6 +30,7 @@ export function proposeDayTiming(
   day: SuggestedDay,
   availability?: TravelerDayWindow,
   includeMiddayRest = false,
+  visitWindows: Record<string, Array<[number, number]>> = {},
 ) {
   const events: TimingEvent[] = [];
   const labels = new Map<string, string>();
@@ -49,6 +50,10 @@ export function proposeDayTiming(
       earliestStart: Math.max(earliestStart, availability?.earliestMinute ?? 0),
       latestEnd: Math.min(latestEnd, availability?.latestMinute ?? 1440),
       bufferBeforeMinutes: events.length && kind !== "rest" ? 30 : 0,
+      ...(kind === "activity" &&
+      visitWindows[id.slice("activity:".length)] !== undefined
+        ? { allowedIntervals: visitWindows[id.slice("activity:".length)] }
+        : {}),
     });
   };
   const meal = (

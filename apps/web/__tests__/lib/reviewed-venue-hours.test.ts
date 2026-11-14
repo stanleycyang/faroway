@@ -1,6 +1,7 @@
 import { expect, it } from "vitest";
 import {
   reviewedHoursExclusions,
+  reviewedVisitWindows,
   type ReviewedVenueHours,
 } from "@/lib/search/reviewed-venue-hours";
 import type { ActivityResult } from "@/lib/search/types";
@@ -377,4 +378,37 @@ it("rejects the observed winter Monday museum failures without inventing closure
         ),
       ).toBe(true);
   }
+});
+
+it("carries only fresh, correctly scoped operating and last-admission windows into timing", () => {
+  const dates = ["2027-01-11", "2027-01-12", "2027-02-01"];
+  const lastEntry = {
+    ...fact,
+    week: [
+      {
+        weekday: 1,
+        intervals: [[600, 1020]] as Array<[number, number]>,
+        lastEntryMinute: 660,
+      },
+      { weekday: 2, intervals: [] },
+    ],
+  };
+  expect(
+    reviewedVisitWindows("City", [activity], dates, [lastEntry], "2026-11-01"),
+  ).toEqual({
+    "2027-01-11": { venue: [[600, 780]] },
+    "2027-01-12": { venue: [] },
+  });
+  expect(
+    reviewedVisitWindows("City", [activity], dates, [fact], "2026-12-02"),
+  ).toEqual({});
+  expect(
+    reviewedVisitWindows(
+      "City",
+      [{ ...activity, proposedVisitType: "guided_tour" }],
+      dates,
+      [fact],
+      "2026-11-01",
+    ),
+  ).toEqual({});
 });

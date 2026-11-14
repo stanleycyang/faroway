@@ -1290,3 +1290,22 @@ it("reports an ordinary-day dinner conflict through the compiled proposal", () =
   expect(result.days[0].timingProposal?.fitsPolicy).toBe(false);
   expect(result.days[0].timingProposal?.events).toEqual([]);
 });
+
+it("does not propose a visit before a reviewed opening or after last admission", () => {
+  const input = {
+    ...plan,
+    dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 },
+  };
+  const compile = (windows: Array<[number, number]>) =>
+    compileSchedule(input, [visit("museum", 120, "morning")], [], [], {
+      visitWindows: { "2027-01-11": { museum: windows } },
+    });
+  const result = compile([[600, 720]]);
+  expect(result.timingProposals[0].fitsPolicy).toBe(true);
+  expect(
+    result.timingProposals[0].events.map((e) => [e.startMinute, e.endMinute]),
+  ).toEqual([[600, 720]]);
+  const conflict = compile([[660, 720]]);
+  expect(conflict.timingProposals[0].fitsPolicy).toBe(false);
+  expect(conflict.issues).toContain("day_1:day_timing_conflict");
+});

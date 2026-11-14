@@ -95,6 +95,7 @@ export function compileSchedule(
     maxUnverifiedTransferKm?: number;
     maxUnverifiedMealDistanceKm?: number;
     reviewedActivityIds?: readonly string[];
+    visitWindows?: Record<string, Record<string, Array<[number, number]>>>;
     diningExclusions?: readonly {
       diningId: string;
       date: string;
@@ -1029,7 +1030,14 @@ export function compileSchedule(
   const timingProposals = days.flatMap((day, index) =>
     needsRest ||
     SLOTS.some((slot) => day[slot].activities.length || day[slot].meal)
-      ? [proposeDayTiming(day, availability.windows[index], needsRest)]
+      ? [
+          proposeDayTiming(
+            day,
+            availability.windows[index],
+            needsRest,
+            options.visitWindows?.[day.date],
+          ),
+        ]
       : [],
   );
   for (const proposal of timingProposals) {

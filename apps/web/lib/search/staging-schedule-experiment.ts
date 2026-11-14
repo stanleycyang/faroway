@@ -3,7 +3,10 @@ import {
   appendActivitySourceNotes,
 } from "./reviewed-activity-supply";
 import reviewedSupply from "../../../../scripts/fixtures/reviewed-activity-supply.json";
-import { reviewedHoursExclusions } from "./reviewed-venue-hours";
+import {
+  reviewedHoursExclusions,
+  reviewedVisitWindows,
+} from "./reviewed-venue-hours";
 import reviewedHours from "../../../../scripts/fixtures/reviewed-venue-hours.json";
 import {
   reviewedIdentityExclusions,
@@ -165,6 +168,14 @@ export async function runStagingCompiledSchedule(
     reviewedDining,
     exclusions,
     {
+      visitWindows: reviewedVisitWindows(
+        plan.destination,
+        activities,
+        Array.from({ length: count }, (_, i) =>
+          new Date(start + i * 86400000).toISOString().slice(0, 10),
+        ),
+        reviewedHours as import("./reviewed-venue-hours").ReviewedVenueHours[],
+      ),
       maxUnverifiedTransferKm: 6,
       maxUnverifiedMealDistanceKm: 3,
       reviewedActivityIds: supply.admitted.map((record) => record.id),

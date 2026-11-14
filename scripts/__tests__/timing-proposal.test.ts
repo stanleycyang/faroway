@@ -105,3 +105,45 @@ test("keeps events and their reserved buffers outside work blocks", () => {
       proposeTiming([event("test")], [invalid as [number, number]]),
     ).toThrow();
 });
+
+test("respects separate operating windows without spanning closures or shortening visits", () => {
+  const input = event("museum", {
+    durationMinutes: 120,
+    allowedIntervals: [
+      [600, 660],
+      [780, 1020],
+    ],
+  });
+  const result = proposeTiming([input]);
+  expect(result.events.map((e) => [e.startMinute, e.endMinute])).toEqual([
+    [780, 900],
+  ]);
+  expect(result.verified).toBe(false);
+  expect(proposeTiming([{ ...input, latestEnd: 840 }]).fitsPolicy).toBe(false);
+  expect(proposeTiming([{ ...input, allowedIntervals: [] }]).fitsPolicy).toBe(
+    false,
+  );
+  expect(() =>
+    proposeTiming([{ ...input, allowedIntervals: [[1020, 600]] }]),
+  ).toThrow("Invalid event operating interval");
+});
+test("combines operating windows with work blocks and preceding travel buffers", () => {
+  const result = proposeTiming(
+    [
+      event("breakfast", { durationMinutes: 60 }),
+      event("museum", {
+        durationMinutes: 60,
+        bufferBeforeMinutes: 30,
+        allowedIntervals: [
+          [600, 660],
+          [780, 900],
+        ],
+      }),
+    ],
+    [[780, 810]],
+  );
+  expect(result.events.map((e) => [e.startMinute, e.endMinute])).toEqual([
+    [540, 600],
+    [840, 900],
+  ]);
+});

@@ -2408,7 +2408,10 @@ The experimental schedule compiler emits `day-timing-v1` proposals for days
 with visits or meals, alongside `midday-rest-v1` for explicit rest requests.
 Both preserve supplied visit durations, reserve meals and planning buffers,
 and report conflicts without publishing a partial timetable. Availability
-windows and work blocks constrain proposals. Shared mapping validation rejects
+windows and work blocks constrain proposals. Fresh, uniquely identity-matched
+reviewed opening intervals also constrain visit start/end times, including split
+openings and last admission. A day-part compatibility screen alone must not be
+used to invent an earlier clock-time entry. Shared mapping validation rejects
 stale or malformed proposals, including dropped meals, on web and mobile.
 The contract evaluator fails ordinary-day conflicts as `day_timing_conflict`.
 
