@@ -65,6 +65,7 @@
     "ajv": "6.15.0",
     "d3-color": "3.1.0",
     "defu": "6.1.7",
+    "devalue": "5.9.3",
     "esbuild": "0.28.1",
     "expo-constants": "18.0.14",
     "fast-uri": "3.1.4",
