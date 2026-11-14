@@ -55,44 +55,12 @@ const GENERATION_STEPS = [
   { key: 'aggregator', text: 'Itinerary', emoji: '📝', color: '#3B82F6' },
 ];
 
-const DESTINATION_FACTS: Record<string, string[]> = {
-  Paris: [
-    "The Eiffel Tower was meant to be temporary, built for the 1889 World's Fair.",
-    'Paris has 470+ parks and gardens covering 3,000+ acres.',
-    'The Louvre would take 100 days to see every artwork for 30 seconds each.',
-    'There are more dogs than children in Paris.',
-  ],
-  Tokyo: [
-    'Tokyo has more Michelin-starred restaurants than any other city.',
-    'The Shibuya Crossing sees 3,000 people cross at once during rush hour.',
-    'Tokyo was called Edo until 1868 when it became the capital.',
-    'Vending machines in Tokyo sell everything from eggs to umbrellas.',
-  ],
-  Rome: [
-    'Rome has more fountains than any other city in the world.',
-    "The Pantheon has the world's largest unreinforced concrete dome.",
-    'Trevi Fountain collects €1.5 million in coins annually.',
-    'Cats have legal protection at Roman archaeological sites.',
-  ],
-  London: [
-    'Big Ben is actually the name of the bell, not the tower.',
-    'London has 170 museums, many of which are free.',
-    "The Underground is the world's oldest metro system.",
-    'There are over 300 languages spoken in London.',
-  ],
-  'New York': [
-    'The NYC subway runs 24/7, 365 days a year.',
-    'Central Park is larger than Monaco.',
-    'Times Square was originally called Longacre Square.',
-    'The Statue of Liberty was a gift from France in 1886.',
-  ],
-  default: [
-    'Your personalized itinerary includes local hidden gems.',
-    'Our AI considers weather, crowds, and local events.',
-    'We match activities to your unique travel style.',
-    'Every recommendation is curated for your preferences.',
-  ],
-};
+const PLANNING_TIPS = [
+  'Check opening hours and ticket availability before you book.',
+  'Leave time between stops for travel, meals, and rest.',
+  'Confirm dietary and accessibility needs directly with each venue.',
+  'Review the plan’s source notes and any unfilled parts before you travel.',
+];
 
 function convertStreamingDataToTrip(
   tripId: string,
@@ -434,11 +402,11 @@ function StepIndicator({
   );
 }
 
-// Cycling fun facts
-function FunFactCard({ destination }: { destination: string }) {
+// Cycling planning guidance
+function PlanningTipCard() {
   const [factIndex, setFactIndex] = useState(0);
   const fadeAnim = useRef(new Animated.Value(1)).current;
-  const facts = DESTINATION_FACTS[destination] || DESTINATION_FACTS.default;
+  const facts = PLANNING_TIPS;
   const reduceMotion = useReduceMotion();
 
   useEffect(() => {
@@ -473,7 +441,7 @@ function FunFactCard({ destination }: { destination: string }) {
 
   return (
     <View style={styles.funFact}>
-      <Text style={styles.funFactLabel}>💡 Did you know?</Text>
+      <Text style={styles.funFactLabel}>Planning tip</Text>
       <Animated.Text style={[styles.funFactText, { opacity: fadeAnim }]}>
         {facts[factIndex]}
       </Animated.Text>
@@ -847,8 +815,8 @@ function GenerationSession() {
               {/* Hotel preview */}
               {streaming.topHotel && <HotelPreviewCard hotel={streaming.topHotel} />}
 
-              {/* Fun facts */}
-              <FunFactCard destination={draftInput?.destination || 'default'} />
+              {/* Planning guidance */}
+              <PlanningTipCard />
             </View>
           )}
 
@@ -925,29 +893,31 @@ function GenerationSession() {
             !streaming.error &&
             !showProgressiveBlocks &&
             streaming.progress > 60 && <SkeletonLoader />}
-
-          {/* View trip button */}
-          {streaming.isComplete && streaming.tripId && !showCelebration && (
-            <TouchableOpacity
-              style={styles.viewButton}
-              onPress={handleViewTrip}
-              activeOpacity={0.9}
-              accessibilityRole="button"
-              accessibilityLabel="View your generated trip"
-            >
-              <LinearGradient
-                colors={[colors.primary[500], colors.primary[700]]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.viewButtonGradient}
-              >
-                <Text style={styles.viewButtonText}>View Your Trip</Text>
-                <Text style={styles.viewButtonArrow}>→</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          )}
         </SafeAreaView>
       </ScrollView>
+
+      {/* Keep the completion action reachable regardless of itinerary length. */}
+      {streaming.isComplete && streaming.tripId && !showCelebration && (
+        <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.completionFooter}>
+          <TouchableOpacity
+            style={styles.viewButton}
+            onPress={handleViewTrip}
+            activeOpacity={0.9}
+            accessibilityRole="button"
+            accessibilityLabel="View your generated trip"
+          >
+            <LinearGradient
+              colors={[colors.primary[500], colors.primary[700]]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.viewButtonGradient}
+            >
+              <Text style={styles.viewButtonText}>View Your Trip</Text>
+              <Text style={styles.viewButtonArrow}>→</Text>
+            </LinearGradient>
+          </TouchableOpacity>
+        </SafeAreaView>
+      )}
 
       {/* Celebration overlay */}
       {showCelebration && (
@@ -989,7 +959,8 @@ const styles = StyleSheet.create({
   overlay: { position: 'absolute', width, height },
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
-  safeArea: { flex: 1, paddingHorizontal: 24, paddingVertical: 16 },
+  safeArea: { flexGrow: 1, paddingHorizontal: 24, paddingVertical: 16 },
+  completionFooter: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 12 },
 
   // Header
   header: { alignItems: 'center', marginBottom: 24 },
@@ -1225,7 +1196,7 @@ const styles = StyleSheet.create({
   errorButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
 
   // View button
-  viewButton: { marginTop: 24, borderRadius: 16, overflow: 'hidden' },
+  viewButton: { borderRadius: 16, overflow: 'hidden' },
   viewButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',

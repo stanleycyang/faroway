@@ -2,7 +2,10 @@ import { afterAll, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
-import { assertQaNativeIdentity } from "../mobile-qa-native.mjs";
+import {
+  assertQaNativeIdentity,
+  assertQaAndroidCredentials,
+} from "../mobile-qa-native.mjs";
 const {
   removeOtherEnvironmentLinks,
 } = require("../../apps/mobile/plugins/withIsolatedAppLinks.js");
@@ -97,4 +100,30 @@ test("iOS: mixed debug/release identities are rejected", () => {
       "ios",
     ),
   ).toThrow();
+});
+
+test("Android cloud signing rejects absent, malformed and missing-key configs without exposing values", () => {
+  const dir = mkdtempSync(join(temporary, "signing-"));
+  expect(() => assertQaAndroidCredentials(dir)).toThrow(
+    "signing is unavailable",
+  );
+  writeFileSync(join(dir, "credentials.json"), "private-value-invalid-json");
+  expect(() => assertQaAndroidCredentials(dir)).toThrow(
+    "signing is unavailable",
+  );
+  const keystore = {
+    keystorePath: "qa.jks",
+    keystorePassword: "fixture",
+    keyAlias: "qa",
+    keyPassword: "fixture",
+  };
+  writeFileSync(
+    join(dir, "credentials.json"),
+    JSON.stringify({ android: { keystore } }),
+  );
+  expect(() => assertQaAndroidCredentials(dir)).toThrow(
+    "signing is unavailable",
+  );
+  writeFileSync(join(dir, "qa.jks"), "fixture");
+  expect(() => assertQaAndroidCredentials(dir)).not.toThrow();
 });

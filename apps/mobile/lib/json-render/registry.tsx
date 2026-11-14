@@ -1001,14 +1001,14 @@ const styles = StyleSheet.create({
   // DayTimeline
   dayTimeline: {
     marginVertical: spacing.md,
-    paddingHorizontal: spacing.md,
   },
   timelineItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
   timelineTime: {
-    width: 80,
+    minWidth: 48,
+    flexShrink: 0,
     paddingTop: spacing.xs,
   },
   timelineTimeText: {
@@ -1033,6 +1033,7 @@ const styles = StyleSheet.create({
   },
   timelineContent: {
     flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -1041,6 +1042,7 @@ const styles = StyleSheet.create({
   timelineIcon: {
     width: 32,
     height: 32,
+    flexShrink: 0,
     borderRadius: borderRadius.sm,
     justifyContent: 'center',
     alignItems: 'center',

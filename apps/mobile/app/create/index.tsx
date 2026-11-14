@@ -546,6 +546,7 @@ export default function CreateTripScreen() {
 
           <View style={styles.section}>
             <TravelerRequirementsEditor
+              collapsible
               value={draftInput?.requirements}
               onChange={(update) =>
                 setDraftInput({

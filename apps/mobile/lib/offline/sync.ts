@@ -1,3 +1,4 @@
+import { transformApiHotel, transformItineraryDays } from '../itineraryNormalization';
 import { readTravelerRequirements } from '../travelerRequirements';
 import { destinationImage } from '../destinationImage';
 import { readOwnedTripPages } from '../tripListPages';
@@ -514,9 +515,10 @@ class SyncService {
           mutation.ownerId
         );
         if (mutation.tripId.startsWith('local_')) {
-          // Replace local trip with server trip
-          await offlineStorage.deleteTrip(mutation.tripId, mutation.ownerId);
+          // Persist the confirmed copy before removing the draft. If storage
+          // fails, keep both the saved draft and the queued retry identity.
           await offlineStorage.saveTrip(this.transformApiTrip(trip), mutation.ownerId);
+          await offlineStorage.deleteTrip(mutation.tripId, mutation.ownerId);
         }
         break;
       }
@@ -663,7 +665,12 @@ class SyncService {
       vibes: apiTrip.vibes || [],
       budget: apiTrip.budget_tier || apiTrip.budget || undefined,
       planNeedsRefresh: apiTrip.preferences?.planNeedsRefresh === true,
-      days: apiTrip.preferences?.planNeedsRefresh ? [] : apiTrip.itinerary?.days || [],
+      days: apiTrip.preferences?.planNeedsRefresh
+        ? []
+        : transformItineraryDays(apiTrip.itinerary?.days || []),
+      hotel: apiTrip.preferences?.planNeedsRefresh
+        ? undefined
+        : transformApiHotel(apiTrip.itinerary?.topHotel),
       coverImage: apiTrip.cover_image || destinationImage(apiTrip.destination),
       createdAt: apiTrip.created_at,
       updatedAt: apiTrip.updated_at,

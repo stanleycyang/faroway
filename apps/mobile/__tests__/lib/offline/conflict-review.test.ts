@@ -158,7 +158,13 @@ it('keeps the offline creation identity after a lost response and reuses it on s
     json: async () =>
       options.method === 'POST'
         ? {
-            trip: { id: queued.data?.requestId, ...queued.data, user_id: 'owner', status: 'draft' },
+            trip: {
+              id: queued.data?.requestId,
+              ...queued.data,
+              user_id: 'owner',
+              status: 'draft',
+              created_at: trip.createdAt,
+            },
           }
         : { trips: [] },
   }));
@@ -705,3 +711,54 @@ it.each(['cached read', 'session recheck'])(
     }
   }
 );
+
+it('keeps the local draft and retry identity if saving the confirmed server copy fails', async () => {
+  const trip: Trip = {
+    id: 'local_storage_failure',
+    destination: 'Paris',
+    country: 'France',
+    startDate: '2099-06-01',
+    endDate: '2099-06-03',
+    travelers: 2,
+    travelerType: 'couple',
+    vibes: [],
+    days: [],
+    coverImage: '',
+    createdAt: '2026-10-10T00:00:00Z',
+    status: 'draft',
+  };
+  await offlineStorage.saveTrip(trip);
+  await syncService.queueCreate(trip);
+  const queued = (await offlineStorage.getPendingMutations())[0];
+  fetchMock.mockImplementation(async (_url: string, options: RequestInit) => ({
+    ok: true,
+    status: 200,
+    json: async () =>
+      options.method === 'POST'
+        ? {
+            trip: {
+              ...queued.data,
+              id: queued.data?.requestId,
+              user_id: 'owner',
+              status: 'draft',
+              created_at: trip.createdAt,
+            },
+          }
+        : { trips: [] },
+  }));
+  const save = jest
+    .spyOn(Object.getPrototypeOf(offlineStorage), 'saveTrip')
+    .mockRejectedValueOnce(new Error('Storage full'));
+  try {
+    expect((await syncService.sync(true)).success).toBe(false);
+    expect(save).toHaveBeenCalled();
+    expect((await offlineStorage.loadSavedTrips()).some((saved) => saved.id === trip.id)).toBe(
+      true
+    );
+    expect((await offlineStorage.getPendingMutations())[0].data?.requestId).toBe(
+      queued.data?.requestId
+    );
+  } finally {
+    save.mockRestore();
+  }
+});

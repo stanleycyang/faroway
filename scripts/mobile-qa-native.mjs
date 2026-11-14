@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { resolve } from "node:path";
 
 // Expo config does not rewrite an already generated native project on run:ios.
@@ -46,5 +46,29 @@ export function assertQaNativeIdentity(mobile, platform) {
       fail();
   } else {
     throw new Error("Unsupported native QA platform");
+  }
+}
+
+// Validate local signing before EAS increments versions or starts an upload.
+export function assertQaAndroidCredentials(mobile) {
+  try {
+    const config = JSON.parse(
+      readFileSync(resolve(mobile, "credentials.json"), "utf8"),
+    );
+    const key = config.android?.keystore;
+    if (
+      !key ||
+      !["keystorePath", "keystorePassword", "keyAlias", "keyPassword"].every(
+        (name) => typeof key[name] === "string" && key[name].trim(),
+      )
+    )
+      throw new Error();
+    if (!statSync(resolve(mobile, key.keystorePath)).isFile())
+      throw new Error();
+  } catch {
+    // Never echo parsing errors, file contents, or credential values.
+    throw new Error(
+      "Android QA signing is unavailable. Restore the private credentials.json and its existing keystore before submitting a build; do not substitute production or debug signing.",
+    );
   }
 }

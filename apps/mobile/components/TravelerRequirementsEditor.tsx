@@ -66,13 +66,23 @@ function RequirementList({
 export function TravelerRequirementsEditor({
   value,
   onChange,
+  collapsible = false,
 }: {
   value?: TravelerRequirements | null;
+  collapsible?: boolean;
   onChange: (
     update: (current: TravelerRequirements | null | undefined) => TravelerRequirements
   ) => void;
 }) {
   const requirements = value ?? empty;
+  const hasNeeds =
+    requirements.allergies.length > 0 ||
+    requirements.dietaryPreferences.length > 0 ||
+    requirements.accessibility.length > 0 ||
+    requirements.mobilityNotes.trim().length > 0;
+  const [expanded, setExpanded] = useState(false);
+  // Never hide saved needs or invalid input behind an optional disclosure.
+  const showFields = !collapsible || expanded || hasNeeds;
   const patch = (change: Partial<TravelerRequirements>) =>
     onChange((current) => ({ ...(current ?? empty), ...change }));
   return (
@@ -84,67 +94,89 @@ export function TravelerRequirementsEditor({
         Optional. These guide your plan; confirm allergy handling and accessibility directly with
         venues.
       </Text>
-      <RequirementList
-        label="Food allergies"
-        values={requirements.allergies}
-        onChange={(allergies) => patch({ allergies })}
-      />
-      <RequirementList
-        label="Dietary preferences"
-        values={requirements.dietaryPreferences}
-        onChange={(dietaryPreferences) => patch({ dietaryPreferences })}
-      />
-      <Text style={styles.label}>Access needs</Text>
-      {accessOptions.map(([key, label]) => {
-        const checked = requirements.accessibility.includes(key);
-        return (
-          <TouchableOpacity
-            key={key}
-            accessibilityRole="checkbox"
-            accessibilityLabel={label}
-            accessibilityState={{ checked }}
-            style={styles.option}
-            onPress={() =>
-              onChange((current) => {
-                const latest = current ?? empty;
-                return {
-                  ...latest,
-                  accessibility: latest.accessibility.includes(key)
-                    ? latest.accessibility.filter((item) => item !== key)
-                    : [...latest.accessibility, key],
-                };
-              })
-            }
-          >
-            <Ionicons
-              name={checked ? 'checkbox' : 'square-outline'}
-              size={24}
-              color={checked ? colors.action.primary : colors.surface[600]}
-            />
-            <Text style={styles.optionLabel}>{label}</Text>
-          </TouchableOpacity>
-        );
-      })}
-      <View style={styles.field}>
-        <Text style={styles.label}>Mobility and rest needs</Text>
-        <Text style={styles.hint}>
-          Include walking limits, wheelchair dimensions or rest breaks. Up to 500 characters.
-        </Text>
-        <TextInput
-          accessibilityLabel="Mobility and rest needs"
-          accessibilityHint="Up to 500 characters"
-          multiline
-          textAlignVertical="top"
-          style={styles.input}
-          value={requirements.mobilityNotes}
-          onChangeText={(mobilityNotes) => patch({ mobilityNotes })}
-        />
-        {requirements.mobilityNotes.trim().length > 500 ? (
-          <Text accessibilityRole="alert" style={styles.error}>
-            Shorten mobility and rest needs to 500 characters.
+      {collapsible && !hasNeeds && (
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityState={{ expanded: showFields }}
+          onPress={() => setExpanded((current) => !current)}
+          style={styles.option}
+        >
+          <Text style={styles.optionLabel}>
+            {showFields ? 'Hide optional needs' : 'Add dietary or access needs'}
           </Text>
-        ) : null}
-      </View>
+          <Ionicons
+            name={showFields ? 'chevron-up' : 'chevron-down'}
+            size={20}
+            color={colors.surface[600]}
+            accessible={false}
+          />
+        </TouchableOpacity>
+      )}
+      {showFields && (
+        <>
+          <RequirementList
+            label="Food allergies"
+            values={requirements.allergies}
+            onChange={(allergies) => patch({ allergies })}
+          />
+          <RequirementList
+            label="Dietary preferences"
+            values={requirements.dietaryPreferences}
+            onChange={(dietaryPreferences) => patch({ dietaryPreferences })}
+          />
+          <Text style={styles.label}>Access needs</Text>
+          {accessOptions.map(([key, label]) => {
+            const checked = requirements.accessibility.includes(key);
+            return (
+              <TouchableOpacity
+                key={key}
+                accessibilityRole="checkbox"
+                accessibilityLabel={label}
+                accessibilityState={{ checked }}
+                style={styles.option}
+                onPress={() =>
+                  onChange((current) => {
+                    const latest = current ?? empty;
+                    return {
+                      ...latest,
+                      accessibility: latest.accessibility.includes(key)
+                        ? latest.accessibility.filter((item) => item !== key)
+                        : [...latest.accessibility, key],
+                    };
+                  })
+                }
+              >
+                <Ionicons
+                  name={checked ? 'checkbox' : 'square-outline'}
+                  size={24}
+                  color={checked ? colors.action.primary : colors.surface[600]}
+                />
+                <Text style={styles.optionLabel}>{label}</Text>
+              </TouchableOpacity>
+            );
+          })}
+          <View style={styles.field}>
+            <Text style={styles.label}>Mobility and rest needs</Text>
+            <Text style={styles.hint}>
+              Include walking limits, wheelchair dimensions or rest breaks. Up to 500 characters.
+            </Text>
+            <TextInput
+              accessibilityLabel="Mobility and rest needs"
+              accessibilityHint="Up to 500 characters"
+              multiline
+              textAlignVertical="top"
+              style={styles.input}
+              value={requirements.mobilityNotes}
+              onChangeText={(mobilityNotes) => patch({ mobilityNotes })}
+            />
+            {requirements.mobilityNotes.trim().length > 500 ? (
+              <Text accessibilityRole="alert" style={styles.error}>
+                Shorten mobility and rest needs to 500 characters.
+              </Text>
+            ) : null}
+          </View>
+        </>
+      )}
     </View>
   );
 }

@@ -177,7 +177,13 @@ export function useTrips() {
       if (!account.ownerId || err instanceof TripAccessError) return [];
       try {
         const cachedTrips = await offlineStorage.loadTrips();
-        return isCurrent() ? cachedTrips : [];
+        if (!isCurrent()) return [];
+        // A cold screen still needs the fallback published. Keep a populated
+        // in-memory list, which may contain newer edits than the disk cache.
+        if (useTripStore.getState().trips.length === 0) {
+          useTripStore.setState({ trips: cachedTrips });
+        }
+        return cachedTrips;
       } catch {
         if (isCurrent())
           setError('Couldn’t read your saved trips. Check your connection and try again.');

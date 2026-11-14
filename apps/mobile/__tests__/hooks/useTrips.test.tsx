@@ -793,3 +793,42 @@ it('retains saved requirements when loading a trip from the API', async () => {
   const trip = await hooks.getTripById('requirements-trip');
   expect(trip?.requirements).toEqual(requirements);
 });
+
+it('shows cached trips after an online request fails on an empty screen', async () => {
+  const cached = [makeTrip('cached-after-failure', 'Lisbon')];
+  mockFetch.mockRejectedValueOnce(new TypeError('Network request failed'));
+  offlineStorage.loadTrips.mockResolvedValueOnce(cached);
+  expect(await renderUseTrips().fetchTrips()).toEqual(cached);
+  expect(useTripStore.getState().trips).toEqual(cached);
+  expect(offlineStorage.saveTrips).not.toHaveBeenCalled();
+});
+
+it('keeps newer visible trips when a failed request falls back to an older cache', async () => {
+  const visible = [makeTrip('visible', 'Paris')];
+  useTripStore.getState().setTrips(visible);
+  mockFetch.mockRejectedValueOnce(new TypeError('Network request failed'));
+  offlineStorage.loadTrips.mockResolvedValueOnce([makeTrip('older-cache', 'Lisbon')]);
+  await renderUseTrips().fetchTrips();
+  expect(useTripStore.getState().trips).toEqual(visible);
+});
+
+it('does not publish a failed-request cache read after an account switch', async () => {
+  const cached = deferred<Trip[]>();
+  mockFetch.mockRejectedValueOnce(new TypeError('Network request failed'));
+  offlineStorage.loadTrips.mockReturnValueOnce(cached.promise);
+  const reading = renderUseTrips().fetchTrips();
+  for (let step = 0; step < 20 && offlineStorage.loadTrips.mock.calls.length === 0; step++)
+    await Promise.resolve();
+  expect(offlineStorage.loadTrips).toHaveBeenCalled();
+  useUserStore
+    .getState()
+    .setUser({
+      id: 'other-owner',
+      name: 'Other',
+      email: 'other@example.invalid',
+      preferences: { vibes: [] },
+    });
+  cached.resolve([makeTrip('private-old', 'Lisbon')]);
+  expect(await reading).toEqual([]);
+  expect(useTripStore.getState().trips).toEqual([]);
+});

@@ -73,6 +73,11 @@ remain available while staging access is being resolved. The pinned preview
 origin is a candidate, not evidence of device readiness; do not bypass Vercel
 protection by embedding credentials in the mobile app.
 
+Android cloud submissions validate the private local signing configuration and
+keystore before EAS can increment the build version or upload. Restore the
+existing QA key when missing; do not substitute debug or production signing.
+This file check does not validate the keystore password or certificate.
+
 Cloud commands use existing credentials, prevent credential mutation, and never
 submit to stores. Check `eas account:usage testimonio --non-interactive` before
 queueing builds. A physical iOS build needs an Apple distribution certificate
@@ -89,6 +94,82 @@ automatic content decoding (for example Node `fetch().text()`), rather than
 assuming UTF-8 or gzip. Keep signed URLs and environment values out of reports.
 
 ## Local prerequisites
+
+### Physical Android visibility
+
+Before starting a test, check `adb devices -l` and select the exact device
+serial. An empty list means the phone is not available to the test runner;
+`unauthorized` requires accepting the phone's USB-debugging authorization.
+Check the Mac's USB inventory separately when the list is empty. If the phone
+is absent there too, unlock it and test a direct USB data cable connection,
+select File transfer if offered, and verify USB debugging in Developer options.
+Repeatedly restarting ADB does not establish a missing physical USB connection.
+Preserve pairing records and other connected-device sessions while diagnosing.
+
+### First physical iPhone signing setup
+
+USB pairing and Developer Mode do not register the phone for an EAS ad hoc
+build. From `apps/mobile`, run `eas device:create` interactively and register
+the connected iPhone with the Apple Developer team that owns this app. If the
+account offers multiple teams, select the intended app owner consistently for
+device registration and signing. Complete Apple login and two-factor prompts
+locally; never paste passwords or verification codes into agent chat.
+
+The Expo project owner and Apple Developer login are separate identities. Keep
+the existing `testimonio` Expo project; explicitly choose the intended Apple
+Developer account rather than assuming the CLI's suggested email owns the
+signing team. After identifying the team, use
+`eas device:list --apple-team-id <TEAM_ID> --json --non-interactive` to verify
+the registered UDID without an interactive team-selection prompt.
+
+Configure credentials with the staging environment loaded before Expo evaluates
+the QA config:
+
+```bash
+cd /Users/stanleyyang/workspace/faroway/apps/mobile
+eas env:exec preview 'EXPO_NO_DOTENV=1 EXPO_PUBLIC_MOBILE_QA=1 EXPO_PUBLIC_SUPABASE_URL=https://omovikloadpvzijoaqus.supabase.co EXPO_PUBLIC_API_URL=https://faroway-git-verify-staging-readiness-20261018-testimonio.vercel.app eas credentials -p ios'
+```
+
+Select `qa`, sign in to Apple, and use **Build Credentials** to configure the
+distribution certificate and ad hoc provisioning profile for
+`ai.faroway.app.qa`, including the registered iPhone. Reuse an appropriate valid
+certificate when offered; do not revoke shared certificates. This command
+configures signing but does not submit a cloud build. After setup, rerun
+preflight and the allowance check above before a separately authorized
+`cloud-ios` submission. Keep credentials in EAS; no local credential export is
+needed.
+
+### Physical iPhone UI automation
+
+Ad hoc app signing enables installation; it does not configure automated UI
+control. The existing Maestro flows cover Android and iOS simulators. For
+physical iPhone automation with Appium/XCUITest, configure a separately signed
+WebDriverAgent runner using an Apple Development identity and a distinct runner
+bundle identifier on the intended team. EAS's remotely managed distribution
+certificate does not establish a local development signing identity.
+
+Check the XCUITest driver's `peerDependencies` against the Appium server version
+before installation; the newest driver can require a beta server even when
+the newest stable server is installed. Keep device tooling outside the app's
+dependencies and bind the automation server to loopback.
+
+Sign in locally through Xcode Settings > Apple Accounts and verify Developer
+Mode, pairing, and the exact device UDID before starting the runner. On the
+iPhone, also enable Settings > Developer > Enable UI Automation and complete
+device-side authentication. Developer Mode alone does not authorize UI tests;
+`Authentication canceled` during runner initialization requires checking this
+separate authorization before retrying. Respect
+the workstation's disk admission limits before tool installation or local
+native builds; do not remove current-device support files to make room. Verify
+launch, UI inspection, tap, and text entry on the physical QA app before
+claiming that agent-driven device QA is available.
+
+For a WebDriverAgent `xcodebuild` exit 65, inspect the `.xcresult` build issues
+as well as the test summary. A missing runner can produce a secondary
+CoreDevice sandbox/bookmark error; check signing errors before changing
+filesystem permissions or security settings. Recheck local signing identities
+after Xcode's first provisioning attempt, which can create the development
+certificate even if that attempt fails.
 
 Every EAS build profile explicitly pins `bun` to the root `packageManager`
 version. Keep these synchronized when updating the package manager: an older
@@ -196,3 +277,18 @@ When adding a migration, register its hash in the follow-up inventory rather
 than modifying the frozen approved bootstrap. Rehearse both deterministic
 bootstrap rendering and the new follow-up's behavior/privileges on disposable
 PostgreSQL. Never replay a fresh-install bundle on populated hosted staging.
+
+## Offline display and storage regressions
+
+Exercise nested API itineraries through background sync as well as direct detail
+loading. Both paths must use the shared day/hotel normalization, retain supplied
+photos and traveler needs, and clear stale plans. Test a failed confirmed-copy
+write before deleting a local draft; verify the saved draft and pending request
+identity independently, since the merged UI can reconstruct a missing saved
+copy from a queued mutation.
+
+For storage-failure tests, seed the saved-trip cache explicitly: queueCreate
+stores a pending snapshot rather than a saved copy. Supply complete API receipt
+fixtures, including created_at, so a subsequent cache read tests valid data.
+The account-scoped storage facade wraps methods; spy on the underlying prototype
+when injecting a one-shot failure, and always restore the spy.

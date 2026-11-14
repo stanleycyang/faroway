@@ -130,3 +130,38 @@ it('retains multiple edits delivered before React renders again', async () => {
     });
   }
 });
+
+it('keeps empty optional fields collapsed but exposes restored needs automatically', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  let screen!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      screen = create(<TravelerRequirementsEditor collapsible onChange={() => {}} />);
+    });
+    expect(screen.root.findAllByProps({ accessibilityLabel: 'Food allergies' })).toHaveLength(0);
+    const disclosure = screen.root.findByProps({ accessibilityRole: 'button' });
+    expect(disclosure.props.accessibilityState.expanded).toBe(false);
+    await act(async () => disclosure.props.onPress());
+    expect(screen.root.findAllByProps({ accessibilityLabel: 'Food allergies' })).toHaveLength(1);
+    await act(async () => screen.root.findByProps({ accessibilityRole: 'button' }).props.onPress());
+    await act(async () => {
+      screen.update(
+        <TravelerRequirementsEditor
+          collapsible
+          value={{
+            allergies: ['Peanuts'],
+            dietaryPreferences: [],
+            accessibility: [],
+            mobilityNotes: '',
+          }}
+          onChange={() => {}}
+        />
+      );
+    });
+    expect(screen.root.findByProps({ accessibilityLabel: 'Food allergies' }).props.value).toBe(
+      'Peanuts'
+    );
+  } finally {
+    await act(async () => screen?.unmount());
+  }
+});

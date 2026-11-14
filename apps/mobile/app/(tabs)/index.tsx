@@ -224,8 +224,11 @@ export default function ExploreScreen() {
         {/* Places to fall in love with */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Places to fall in love with</Text>
+            <Text style={[styles.sectionTitle, styles.sectionHeaderTitle]}>
+              Places to fall in love with
+            </Text>
             <TouchableOpacity
+              style={styles.sectionHeaderAction}
               onPress={handleCreateTrip}
               accessibilityRole="button"
               accessibilityLabel="Search all destinations"
@@ -440,6 +443,8 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: 16,
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
@@ -451,6 +456,18 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     paddingHorizontal: 24,
     marginBottom: 16,
+  },
+  sectionHeaderTitle: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 200,
+    paddingHorizontal: 0,
+    marginBottom: 0,
+  },
+  sectionHeaderAction: {
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: 'center',
   },
   seeAllButton: {
     fontSize: 14,

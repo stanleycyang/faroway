@@ -24,3 +24,24 @@ export const travelerRequirementsSchema: z.ZodType<TravelerRequirements> = z
 export function readTravelerRequirements(value: unknown) {
   return travelerRequirementsSchema.nullish().parse(value);
 }
+
+/** Display saved traveler input without implying that venues satisfy it. */
+export function travelerRequirementLines(value?: TravelerRequirements | null): string[] {
+  if (!value) return [];
+  const accessLabels = {
+    step_free_entrance: 'Step-free entrance',
+    accessible_restroom: 'Accessible restroom',
+    accessible_seating: 'Accessible seating',
+    accessible_parking: 'Accessible parking',
+  };
+  return [
+    ...(value.allergies.length ? [`Food allergies: ${value.allergies.join(', ')}`] : []),
+    ...(value.dietaryPreferences.length
+      ? [`Dietary preferences: ${value.dietaryPreferences.join(', ')}`]
+      : []),
+    ...(value.accessibility.length
+      ? [`Access needs: ${value.accessibility.map((key) => accessLabels[key]).join(', ')}`]
+      : []),
+    ...(value.mobilityNotes.trim() ? [`Mobility and rest: ${value.mobilityNotes}`] : []),
+  ];
+}

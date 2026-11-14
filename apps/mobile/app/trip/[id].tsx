@@ -1,4 +1,6 @@
 import { isTimingNote, proposedVisitNote } from '@faroway/types';
+import { TravelImage } from '../../components/ui/TravelImage';
+import { travelerRequirementLines } from '../../lib/travelerRequirements';
 import { transformItineraryDays } from '../../lib/itineraryNormalization';
 import { ProposedTiming } from '../../components/ProposedTiming';
 import { VenueSourceNotice } from '../../components/VenueSourceNotice';
@@ -564,7 +566,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
       detailController.current = controller;
       refreshLock.current = false;
       setRefreshing(false);
-      setIsLoadingTrip(!cachedTrip);
+      setIsLoadingTrip(!cachedTrip || cachedTrip.days.length === 0);
       setLoadError(null);
 
       getTripById(id, controller.signal)
@@ -615,6 +617,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
       return;
     refreshLock.current = true;
     setRefreshing(true);
+    setLoadError(null);
     hapticFeedback.light();
     try {
       // Use getTripById which properly transforms itinerary data with booking URLs
@@ -761,6 +764,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
     );
   }
 
+  const requirementLines = travelerRequirementLines(trip.requirements);
   const isLocalTrip = trip.id.startsWith('local_');
   const timingDay = trip.days[selectedDay]
     ? transformItineraryDays([trip.days[selectedDay]])[0]
@@ -823,14 +827,14 @@ function TripDetailSession({ id }: { id: string | undefined }) {
               reduceMotion ? undefined : { transform: [{ translateY: headerTranslate }] },
             ]}
           >
-            <Animated.Image
-              source={{ uri: trip.coverImage }}
+            <Animated.View
               style={[
                 styles.heroImage,
                 reduceMotion ? undefined : { transform: [{ scale: imageScale }] },
               ]}
-              accessibilityLabel={`${trip.destination}, ${trip.country}`}
-            />
+            >
+              <TravelImage source={{ uri: trip.coverImage }} style={StyleSheet.absoluteFill} />
+            </Animated.View>
             <LinearGradient
               colors={['rgba(0,0,0,0.3)', 'transparent', 'rgba(0,0,0,0.8)']}
               style={styles.heroGradient}
@@ -909,7 +913,35 @@ function TripDetailSession({ id }: { id: string | undefined }) {
             {/* Featured Hotel */}
             {trip.hotel && <FeaturedHotelCard hotel={trip.hotel} />}
 
-            {trip.days.length === 0 ? (
+            {requirementLines.length > 0 && (
+              <View style={{ paddingHorizontal: 24, paddingVertical: 16 }}>
+                <Text
+                  accessibilityRole="header"
+                  style={{ fontSize: 18, fontWeight: '700', color: '#182B31', marginBottom: 8 }}
+                >
+                  Your dietary and access needs
+                </Text>
+                {requirementLines.map((line) => (
+                  <Text
+                    key={line}
+                    style={{ fontSize: 15, lineHeight: 22, color: '#475569', marginBottom: 4 }}
+                  >
+                    {line}
+                  </Text>
+                ))}
+                <Text style={{ fontSize: 14, lineHeight: 21, color: '#475569' }}>
+                  Saved with your trip. Venue suitability is unverified; confirm directly before
+                  booking or dining.
+                </Text>
+              </View>
+            )}
+
+            {trip.days.length === 0 && (isLoadingTrip || refreshing) ? (
+              <View style={styles.emptyItinerary} accessibilityLiveRegion="polite">
+                <ActivityIndicator size="large" color={colors.primary[500]} />
+                <Text style={styles.emptyItineraryTitle}>Loading your itinerary…</Text>
+              </View>
+            ) : trip.days.length === 0 ? (
               <View style={styles.emptyItinerary}>
                 <View style={styles.emptyItineraryIcon} accessible={false}>
                   <Ionicons name="time-outline" size={32} color={colors.primary[500]} />
@@ -920,7 +952,8 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                 <Text style={styles.emptyItineraryText}>
                   {isLocalTrip
                     ? 'This trip is saved on this device, but no itinerary is available yet. Reconnect, then check My Trips for the latest saved version.'
-                    : 'Your trip is saved. Refresh to load its latest day-by-day plan.'}
+                    : loadError ||
+                      'Your trip is saved. Refresh to load its latest day-by-day plan.'}
                 </Text>
                 <Button
                   title={isLocalTrip ? 'Go to My Trips' : 'Refresh itinerary'}
@@ -1015,9 +1048,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                       style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 24 }}
                     >
                       <Text style={{ color: '#713F12', fontWeight: '600' }}>
-                        {showDiningRequirements
-                          ? 'Hide dietary requirements'
-                          : 'View dietary requirements'}
+                        {showDiningRequirements ? 'Hide dining guidance' : 'View dining guidance'}
                       </Text>
                     </TouchableOpacity>
                     {showDiningRequirements &&

@@ -111,7 +111,7 @@ jest.mock('../../lib/tripSharing', () => ({
   shareOwnedTrip: (...args: unknown[]) => mockCreateLink(...args),
   revokeOwnedTripShare: (...args: unknown[]) => mockRevoke(...args),
 }));
-import { Alert } from 'react-native';
+import { Alert, Text } from 'react-native';
 import TripDetailScreen from '../../app/trip/[id]';
 
 beforeEach(() => {
@@ -125,6 +125,33 @@ beforeEach(() => {
   mockOwner = 'account-a';
   mockRevision = 0;
   mockGetTrip.mockReset().mockResolvedValue(trip);
+});
+
+it('shows loading for a cached trip summary until the detail request settles', async () => {
+  let finish!: (value: typeof trip) => void;
+  mockGetTrip.mockReturnValue(
+    new Promise((resolve) => {
+      finish = resolve;
+    })
+  );
+  let screen!: ReturnType<typeof create>;
+  await act(async () => {
+    screen = create(<TripDetailScreen />);
+  });
+  const hasText = (text: string) =>
+    screen.root.findAll((node) => node.type === Text && node.props.children === text).length > 0;
+  try {
+    expect(hasText('Loading your itinerary…')).toBe(true);
+    expect(hasText('Your itinerary isn’t loaded')).toBe(false);
+    await act(async () => {
+      finish(trip);
+    });
+    expect(hasText('Your itinerary isn’t loaded')).toBe(true);
+  } finally {
+    await act(async () => {
+      screen.unmount();
+    });
+  }
 });
 
 it.each(['confirmed', 'after exit', 'account change'])(
@@ -609,5 +636,65 @@ it.each(['blur', 'unmount'])('cancels automatic and manual reads on %s', async (
     }
   } finally {
     await act(async () => renderer?.unmount());
+  }
+});
+
+it('explains a failed detail fetch for a cached summary and clears it on successful refresh', async () => {
+  mockGetTrip.mockRejectedValueOnce(new Error('Network request failed'));
+  let screen!: ReturnType<typeof create>;
+  const message = 'We couldn’t reach Faroway. Check your connection and try again.';
+  try {
+    await act(async () => {
+      screen = create(<TripDetailScreen />);
+    });
+    const texts = () => screen.root.findAllByType(Text).map((node) => node.props.children);
+    expect(texts()).toContain(message);
+    expect(texts()).not.toContain('Loading your itinerary…');
+    mockGetTrip.mockResolvedValueOnce(trip);
+    await act(async () => {
+      await screen.root
+        .findByType('AnimatedScrollView' as React.ElementType)
+        .props.refreshControl.props.onRefresh();
+    });
+    expect(texts()).not.toContain(message);
+    expect(texts()).toContain('Your trip is saved. Refresh to load its latest day-by-day plan.');
+  } finally {
+    await act(async () => screen?.unmount());
+  }
+});
+
+it('shows saved traveler needs independently of general dining guidance', async () => {
+  mockCurrentTrip = {
+    ...trip,
+    requirements: {
+      allergies: ['Peanuts'],
+      dietaryPreferences: ['Vegan'],
+      accessibility: ['step_free_entrance'],
+      mobilityNotes: 'Frequent rest breaks',
+    },
+  } as typeof trip;
+  mockGetTrip.mockResolvedValueOnce(mockCurrentTrip);
+  let screen!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      screen = create(<TripDetailScreen />);
+    });
+    const texts = screen.root.findAllByType(Text).map((node) => node.props.children);
+    expect(texts).toEqual(
+      expect.arrayContaining([
+        'Your dietary and access needs',
+        'Food allergies: Peanuts',
+        'Dietary preferences: Vegan',
+        'Access needs: Step-free entrance',
+        'Mobility and rest: Frequent rest breaks',
+      ])
+    );
+    expect(
+      texts.some(
+        (value) => typeof value === 'string' && value.includes('Venue suitability is unverified')
+      )
+    ).toBe(true);
+  } finally {
+    await act(async () => screen?.unmount());
   }
 });

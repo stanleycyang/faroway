@@ -114,7 +114,9 @@ export function PlacesAutocomplete({ onSelect }: PlacesAutocompleteProps) {
             </DropdownScroll>
           ) : (
             <View style={styles.emptyContainer}>
-              <Text style={styles.emptyText}>No cities found</Text>
+              <Text style={styles.emptyText}>
+                Not in our suggestions — you can still plan here.
+              </Text>
               <TouchableOpacity
                 style={styles.fallbackButton}
                 onPress={handleUseAsDestination}
