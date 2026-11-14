@@ -1,3 +1,5 @@
+import { repairDiningInventory } from "./repair-dining-inventory";
+import { runDiningAgent } from "./agents/dining";
 import {
   addReviewedActivitySupply,
   appendActivitySourceNotes,
@@ -70,6 +72,7 @@ export async function runStagingCompiledSchedule(
   hotels: HotelResult[],
   inventory: ActivityResult[],
   dining: DiningResult[],
+  repairDining = false,
 ) {
   if (!compiledScheduleExperimentEnabled())
     throw new Error(
@@ -161,13 +164,8 @@ export async function runStagingCompiledSchedule(
     addressReview.candidates,
     reviewedClosures,
   );
-  const reviewedDining = diningClosures.candidates;
-  const compiled = compileSchedule(
-    plan,
-    activities,
-    reviewedDining,
-    exclusions,
-    {
+  const compileDining = (candidateDining: DiningResult[]) =>
+    compileSchedule(plan, activities, candidateDining, exclusions, {
       visitWindows: reviewedVisitWindows(
         plan.destination,
         activities,
@@ -181,11 +179,21 @@ export async function runStagingCompiledSchedule(
       reviewedActivityIds: supply.admitted.map((record) => record.id),
       diningExclusions: reviewedDiningDayExclusions(
         plan,
-        reviewedDining,
+        candidateDining,
         reviewedDiningDays,
       ),
-    },
-  );
+    });
+  const { compiled, dining: reviewedDining } = repairDining
+    ? await repairDiningInventory(
+        diningClosures.candidates,
+        compileDining,
+        (coverageTargets, existingNames) =>
+          runDiningAgent(plan, 12, { coverageTargets, existingNames }),
+      )
+    : {
+        compiled: compileDining(diningClosures.candidates),
+        dining: diningClosures.candidates,
+      };
   appendActivitySourceNotes(compiled.days, supply.admitted, plan);
   compiled.days[0].tips.push(...decisionReview.notes);
   for (const day of compiled.days) {
@@ -292,7 +300,12 @@ export async function runStagingCompiledSchedule(
       verified: false,
     }),
   );
-  const draft = () => ({ days, topHotel, activityInventory: activities });
+  const draft = () => ({
+    days,
+    topHotel,
+    activityInventory: activities,
+    diningInventory: reviewedDining,
+  });
   if (compiled.issues.some((issue) => issue.endsWith(":activity_supply_gap"))) {
     logPlanningFallback(
       "aggregator",
@@ -333,6 +346,7 @@ export async function runStagingCompiledSchedule(
     return {
       days: applyScheduleNarration(days, result.object.days, plan),
       activityInventory: activities,
+      diningInventory: reviewedDining,
       topHotel,
     };
   } catch (error) {

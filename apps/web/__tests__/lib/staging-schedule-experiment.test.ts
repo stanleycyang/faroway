@@ -1,3 +1,7 @@
+import { runDiningAgent } from "@/lib/search/agents/dining";
+vi.mock("@/lib/search/agents/dining", () => ({
+  runDiningAgent: vi.fn().mockResolvedValue([]),
+}));
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import rome from "../../../../scripts/fixtures/agentic-rome-overload.json";
 const mocks = vi.hoisted(() => ({ generateObject: vi.fn() }));
@@ -611,3 +615,18 @@ it.each(["exterior_walk", "guided_tour", undefined] as const)(
     );
   },
 );
+
+it("keeps frozen replays free of dining calls unless the app opts in", async () => {
+  await runStagingCompiledSchedule(plan, [], activities, []);
+  expect(runDiningAgent).not.toHaveBeenCalled();
+  await runStagingCompiledSchedule(plan, [], activities, [], true);
+  expect(runDiningAgent).toHaveBeenCalledTimes(1);
+  expect(runDiningAgent).toHaveBeenCalledWith(
+    plan,
+    12,
+    expect.objectContaining({
+      coverageTargets: expect.any(Array),
+      existingNames: [],
+    }),
+  );
+});

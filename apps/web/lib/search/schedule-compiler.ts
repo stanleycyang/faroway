@@ -273,6 +273,43 @@ export function compileSchedule(
     restFitCache.set(key, fits);
     return fits;
   };
+  // Screen the whole day during allocation, not only after choosing visits.
+  // Independent slot capacities miss lunch/dinner boundaries and inter-event buffers.
+  const dayFitCache = new Map<string, boolean>();
+  const fitsDayWindows = (day: number, visits: ActivityResult[][]): boolean => {
+    const key = JSON.stringify([
+      day,
+      visits.map((slot) => slot.map((a) => a.id)),
+    ]);
+    const cached = dayFitCache.get(key);
+    if (cached !== undefined) return cached;
+    const date = new Date(start + day * 86400000).toISOString().slice(0, 10);
+    const window = availability.windows[day];
+    const blocks = visits.map((activities, slot) => ({
+      activities,
+      meal:
+        availableMealMinutes(window, slot) >= mealMinutes[slot]
+          ? timingMeals[slot]
+          : undefined,
+    }));
+    const fits = proposeDayTiming(
+      {
+        dayNumber: day + 1,
+        date,
+        title: "Timing screen",
+        summary: "",
+        tips: [],
+        morning: blocks[0],
+        afternoon: blocks[1],
+        evening: blocks[2],
+      },
+      window,
+      needsRest,
+      options.visitWindows?.[date],
+    ).fitsPolicy;
+    dayFitCache.set(key, fits);
+    return fits;
+  };
   for (const item of exclusions) {
     if (!inventory.some((activity) => activity.id === item.activityId))
       issues.push(`constraint_activity_not_found:${item.activityId}`);
@@ -570,8 +607,8 @@ export function compileSchedule(
           )
             continue;
           if (
-            needsRest &&
-            !fitsRestWindows(
+            !fitsDayWindows(
+              day,
               SLOTS.map((_, index) => [
                 ...today.filter((s) => s.slot === index).map((s) => s.activity),
                 ...(index === slot ? choice : []),

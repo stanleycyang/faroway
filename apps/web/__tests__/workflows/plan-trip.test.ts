@@ -486,6 +486,48 @@ describe("planTripWorkflow", () => {
     expect(result.result?.days[0].tips).toContain(sourceNote);
   });
 
+  it("persists repaired dining inventory with its saved meal references", async () => {
+    const added = {
+      ...dining,
+      id: "repaired-dining",
+      name: "Nearby test meal",
+    };
+    mocks.runAggregatorAgent.mockResolvedValue({
+      diningInventory: [dining, added],
+      topHotel: hotel,
+      days: Array.from({ length: 5 }, (_, index) => ({
+        dayNumber: index + 1,
+        date: `2026-06-0${index + 1}`,
+        title: "Draft",
+        summary: "Draft",
+        morning: { activities: [], meal: added },
+        afternoon: { activities: [] },
+        evening: { activities: [] },
+        tips: [],
+      })),
+    });
+    const bridge = await vi.importActual<typeof import("@/lib/search/bridge")>(
+      "@/lib/search/bridge",
+    );
+    mocks.mapSearchResultsToItinerary.mockImplementation(
+      bridge.mapSearchResultsToItinerary,
+    );
+    const result = await planTripWorkflow(workflowInput);
+    expect(result.status).toBe("completed");
+    expect(result.result?.dining.some((meal) => meal.id === added.id)).toBe(
+      true,
+    );
+    const stored = persistedResults.find(
+      (row) =>
+        row.data &&
+        typeof row.data === "object" &&
+        "id" in row.data &&
+        row.data.id === added.id,
+    );
+    expect(stored).toBeDefined();
+    expect(persistedDays[0].meals).toContain(stored!.id);
+  });
+
   it("rejects an incomplete or misdated itinerary before saving it", async () => {
     mocks.runAggregatorAgent.mockResolvedValue({
       days: [{ dayNumber: 1, date: "2026-06-02" }],
@@ -955,6 +997,7 @@ describe("planTripWorkflow", () => {
       [],
       [dining],
       [transport],
+      { repairDining: true },
     );
   });
 

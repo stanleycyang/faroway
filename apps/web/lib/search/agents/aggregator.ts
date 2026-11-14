@@ -186,11 +186,16 @@ export async function runAggregatorAgent(
   activities: ActivityResult[],
   dining: DiningResult[],
   transport: TransportResult[] = [],
-  options: { structuredSchedule?: boolean; explicitDailyBudget?: boolean } = {},
+  options: {
+    structuredSchedule?: boolean;
+    explicitDailyBudget?: boolean;
+    repairDining?: boolean;
+  } = {},
 ): Promise<{
   days: SuggestedDay[];
   topHotel: HotelResult | null;
   activityInventory?: ActivityResult[];
+  diningInventory?: DiningResult[];
 }> {
   const { destination, dates } = plan;
   activities = activities.filter(canProcessViatorContent);
@@ -211,7 +216,13 @@ export async function runAggregatorAgent(
     !options.structuredSchedule &&
     !options.explicitDailyBudget
   ) {
-    return runStagingCompiledSchedule(plan, hotels, activities, dining);
+    return runStagingCompiledSchedule(
+      plan,
+      hotels,
+      activities,
+      dining,
+      options.repairDining === true,
+    );
   }
 
   // Format data for the AI

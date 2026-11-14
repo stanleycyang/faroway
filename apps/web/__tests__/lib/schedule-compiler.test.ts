@@ -35,6 +35,39 @@ function visit(
 }
 
 describe("experimental schedule compiler", () => {
+  it("reserves meal windows and buffers before selecting visits without a rest request", () => {
+    const input = {
+      ...plan,
+      dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 },
+      mobilityNeeds: undefined,
+      requirements: undefined,
+      activityCriteria: {
+        ...plan.activityCriteria,
+        pacePreference: "packed" as const,
+      },
+    };
+    const meals = ["breakfast", "lunch", "dinner"].map((type) => ({
+      ...dining[0],
+      id: type,
+      mealTypes: [type],
+    })) as DiningResult[];
+    const result = compileSchedule(
+      input,
+      [
+        visit("long-evening", 240, "evening"),
+        visit("short-evening", 90, "evening"),
+        visit("morning", 90, "morning"),
+      ],
+      meals,
+    );
+    expect(result.days[0].evening.activities.map((a) => a.id)).toEqual([
+      "short-evening",
+    ]);
+    expect(result.days[0].evening.meal).toBeDefined();
+    expect(result.timingProposals[0].fitsPolicy).toBe(true);
+    expect(result.unselectedActivityIds).toContain("long-evening");
+  });
+
   it("keeps visits in evening slots and leaves blocked meal windows unscheduled", async () => {
     vi.stubEnv("TAVILY_API_KEY", "");
     const restricted = {
@@ -1278,17 +1311,18 @@ it.each([
   });
 });
 
-it("reports an ordinary-day dinner conflict through the compiled proposal", () => {
+it("leaves an infeasible evening visit unscheduled and preserves dinner", () => {
   const result = compileSchedule(
     { ...plan, dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 } },
     [visit("long-evening-visit", 180, "evening")],
     [{ ...dining[0], id: "dinner", mealTypes: ["dinner"] }],
   );
-  expect(result.days[0].evening.activities[0].duration).toBe(180);
+  expect(result.days[0].evening.activities).toEqual([]);
+  expect(result.unselectedActivityIds).toContain("long-evening-visit");
   expect(result.days[0].evening.meal?.id).toBe("dinner");
-  expect(result.issues).toContain("day_1:day_timing_conflict");
-  expect(result.days[0].timingProposal?.fitsPolicy).toBe(false);
-  expect(result.days[0].timingProposal?.events).toEqual([]);
+  expect(result.issues).not.toContain("day_1:day_timing_conflict");
+  expect(result.issues).toContain("day_1:activity_supply_gap");
+  expect(result.days[0].timingProposal?.fitsPolicy).toBe(true);
 });
 
 it("does not propose a visit before a reviewed opening or after last admission", () => {
@@ -1306,6 +1340,7 @@ it("does not propose a visit before a reviewed opening or after last admission",
     result.timingProposals[0].events.map((e) => [e.startMinute, e.endMinute]),
   ).toEqual([[600, 720]]);
   const conflict = compile([[660, 720]]);
-  expect(conflict.timingProposals[0].fitsPolicy).toBe(false);
-  expect(conflict.issues).toContain("day_1:day_timing_conflict");
+  expect(conflict.days[0].morning.activities).toEqual([]);
+  expect(conflict.unselectedActivityIds).toContain("museum");
+  expect(conflict.issues).toContain("day_1:activity_supply_gap");
 });
