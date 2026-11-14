@@ -26,6 +26,12 @@ The local check reads the `production.env` values from `eas.json`, validates the
 release-shaped EAS profile, and runs Expo Doctor. Verify any remote-only EAS
 secrets in EAS before submitting.
 
+Keep parent-scoped dependency overrides in npm's nested object form, even though
+Bun also accepts `parent>dependency` keys. Expo Doctor runs `npm explain`; the
+arrow form makes those checks fail before inspecting dependencies. After an
+override edit, use the pinned Bun version with `install --frozen-lockfile` to
+confirm equivalent syntax preserves the locked graph, then rerun Expo Doctor.
+
 From the repo root, the equivalent command is:
 
 ```bash

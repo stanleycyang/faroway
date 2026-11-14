@@ -88,9 +88,15 @@
     "vite": "7.3.7",
     "yaml": "2.9.0",
     "yauzl": "3.4.0",
-    "@expo/cli>undici": ">=6.29.1 <7",
-    "@workflow/world-local>undici": ">=7.30.1 <8",
-    "@workflow/world-vercel>undici": ">=7.30.1 <8"
+    "@expo/cli": {
+      "undici": ">=6.29.1 <7"
+    },
+    "@workflow/world-local": {
+      "undici": ">=7.30.1 <8"
+    },
+    "@workflow/world-vercel": {
+      "undici": ">=7.30.1 <8"
+    }
   },
   "resolutions": {
     "expo-constants": "18.0.14",
