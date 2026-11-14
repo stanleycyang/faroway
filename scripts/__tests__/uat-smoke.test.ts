@@ -426,6 +426,34 @@ describe("UAT smoke suite", () => {
     }
   });
 
+  test("saved-plan quality rejects later outbound transport even with a reused day-one label", () => {
+    const dates = { startDate: "2026-12-07", endDate: "2026-12-08" };
+    const days = [dates.startDate, dates.endDate].map((date) => ({
+      date,
+      dayNumber: 1,
+      title: "Museum and market",
+      summary: "Explore the museum and nearby market.",
+      morning: { activities: [{ name: "Museum" }], meal: { name: "Cafe" } },
+    }));
+    const evaluate = (transportIndex: number) =>
+      evaluateSavedPlan(
+        {
+          trip: { status: "planned" },
+          itinerary: {
+            days: days.map((day, index) => ({
+              ...day,
+              ...(index === transportIndex
+                ? { transport: { type: "flight" } }
+                : {}),
+            })),
+          },
+        },
+        dates,
+      );
+    expect(evaluate(0).ok).toBe(true);
+    expect(evaluate(1).failures).toContain("transport is present after day 1");
+  });
+
   test("saved-plan quality rejects the aggregator fallback template and invented links", () => {
     const good = evaluateSavedPlan(
       {

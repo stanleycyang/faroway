@@ -65,7 +65,7 @@ export function evaluateSavedPlan(
     );
   }
   let fallbackDays = 0;
-  for (const day of days) {
+  for (const [dayIndex, day] of days.entries()) {
     const record = asRecord(day);
     const title = typeof record?.title === "string" ? record.title : "";
     const summary = typeof record?.summary === "string" ? record.summary : "";
@@ -103,11 +103,7 @@ export function evaluateSavedPlan(
       slotCount(record?.evening, "meals");
     if (activities < 1) failures.push(`${title || "day"} has no activities`);
     if (meals < 1) failures.push(`${title || "day"} has no meals`);
-    if (
-      record?.transport &&
-      record?.dayNumber !== 1 &&
-      record?.date !== expected[0]
-    ) {
+    if (record?.transport && dayIndex !== 0) {
       failures.push("transport is present after day 1");
     }
   }
