@@ -380,6 +380,21 @@ describe("UAT smoke suite", () => {
     expect(evaluateSavedPlan(mixed, dates).ok).toBe(false);
   });
 
+  test("rejects saved timing notes when persistence dropped the structured proposal", () => {
+    const body = structuredClone(deployedNarrationFallback.body);
+    body.itinerary.days[0].tips = [
+      "The selected visits do not fit the proposed meal and buffer windows. No times are published.",
+    ];
+    expect(
+      evaluateSavedPlan(body, {
+        startDate: "2026-12-07",
+        endDate: "2026-12-09",
+      }).failures,
+    ).toContain(
+      `${body.itinerary.days[0].title} has timing notes without a timing proposal`,
+    );
+  });
+
   test("live batches stop after a failed workflow or saved fallback until spend is reconciled", async () => {
     for (const failure of ["workflow", "fallback", "transport"] as const) {
       let created = 0;

@@ -1,3 +1,4 @@
+import { dayTimingBasis, readDayTiming } from "@faroway/types";
 import { NextRequest } from "next/server";
 import { GET as readSearch } from "@/app/api/search/[searchId]/route";
 import type {
@@ -375,6 +376,63 @@ describe("planTripWorkflow", () => {
       { type: "TripSummary", props: { destination: "Tokyo" } },
     ]);
   });
+
+  it.each([true, false])(
+    "preserves timing policy and conflicts in the saved trip (fits: %s)",
+    async (fitsPolicy) => {
+      const day = {
+        dayNumber: 1,
+        date: "2026-06-01",
+        title: "A timed day",
+        summary: "A visit",
+        morning: {
+          activities: [{ ...activity, affiliatePartner: undefined }],
+          meals: [],
+        },
+        afternoon: { activities: [], meals: [] },
+        evening: { activities: [], meals: [] },
+        tips: [],
+      };
+      const proposal = {
+        policy: "day-timing-v1" as const,
+        basis: dayTimingBasis(day),
+        fitsPolicy,
+        verified: false as const,
+        events: fitsPolicy
+          ? [
+              {
+                id: "activity:activity-1",
+                kind: "activity" as const,
+                durationMinutes: 120,
+                startMinute: 540,
+                endMinute: 660,
+                bufferBeforeMinutes: 0,
+              },
+            ]
+          : [],
+        conflict: fitsPolicy
+          ? null
+          : { eventId: "activity:activity-1", overrunMinutes: 30 },
+      };
+      mocks.mapSearchResultsToItinerary.mockReturnValue(
+        mappedItinerary({ days: [{ ...day, timingProposal: proposal }] }),
+      );
+      expect((await planTripWorkflow(workflowInput)).status).toBe("completed");
+      const rpcCalls = supabaseMock.rpc.mock.calls as unknown as Array<
+        [string, { p_state: string; p_payload: unknown }]
+      >;
+      const call = rpcCalls.find(
+        ([fn, args]) =>
+          fn === "apply_trip_generation_update" && args.p_state === "planned",
+      )!;
+      const saved = JSON.parse(JSON.stringify(call[1].p_payload));
+      expect(readDayTiming(saved.days[0])).toEqual(proposal);
+      const { loadTripForUserUncached } = await import("@/lib/trips/load-trip");
+      mocks.tripRead = { id: "trip-1", user_id: "user-1", itineraries: saved };
+      const loaded = await loadTripForUserUncached("trip-1", "user-1");
+      expect(readDayTiming(loaded?.itinerary?.days[0])).toEqual(proposal);
+    },
+  );
 
   it("persists new source-backed aggregator inventory with its scheduled references", async () => {
     const added = {

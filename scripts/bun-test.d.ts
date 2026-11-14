@@ -19,6 +19,14 @@ declare module "bun:test" {
     rejects: Matchers;
   }
   export function expect(value: unknown): Expectation;
+  export namespace expect {
+    function objectContaining(value: Record<string, unknown>): unknown;
+  }
   export function describe(name: string, fn: () => void): void;
   export function test(name: string, fn: () => void | Promise<void>): void;
+  export namespace test {
+    function each<T>(
+      cases: readonly T[],
+    ): (name: string, fn: (value: T) => void | Promise<void>) => void;
+  }
 }

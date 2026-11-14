@@ -49,3 +49,9 @@ and inspect remote status and billing before cleanup or retry. Once terminal
 state is confirmed, delete only the synthetic test trip and verify the deletion.
 Do not grade a run as successful without its saved result, even if upstream
 model calls completed. Preserve failed evidence when repairing the harness.
+
+Test timing metadata across the persistence boundary, not just the compiler.
+An explicit day projection can silently omit new fields. Validate both fitting
+and conflicting schedules after JSON serialization and the normal trip loader.
+Saved timing notes without their structured proposal must fail acceptance;
+otherwise persistence loss can hide schedule conflicts from the evaluator.

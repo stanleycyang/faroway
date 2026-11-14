@@ -871,6 +871,7 @@ async function bridgeToItineraries(
     transport: day.transport,
     hotel: day.hotel,
     totalEstimatedCost: day.totalEstimatedCost,
+    timingProposal: day.timingProposal,
     tips: day.tips || [],
     diningOptions: day.diningOptions,
   }));
