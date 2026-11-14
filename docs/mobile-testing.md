@@ -1,5 +1,42 @@
 # Local mobile integration testing
 
+## Traveler requirements regression coverage
+
+Native planner requirements must survive the complete path: text/checkbox input,
+guest restoration, consent snapshot, pending-create restoration, saved API read,
+offline cache and queued edits. Use the structured `requirements` object from the
+saved-brief API; dietary preferences, allergies and access needs are distinct.
+Validate without silently dropping invalid constraints. Canonicalize requirements
+before persisting a creation receipt so restoration cannot change its serialized
+body and prevent an idempotent retry after a lost response.
+
+Focused regression suites are `TravelerRequirementsEditor`, `planningConsent`,
+`guestTripBrief`, `tripCreationRecovery`, `offlineSyncPayload`, `useTrips` and
+`generation-completion` under `apps/mobile/__tests__`. Component mocks establish
+data/control behavior, not native accessibility or layout acceptance. On both
+iOS and Android, enter multiple allergies, select access needs, add rest notes,
+restore the brief after interruption, and compare the actual saved requirements.
+Also check multiline keyboard access, large text, VoiceOver/TalkBack and error
+correction before treating this feature as device-accepted.
+
+Exercise multiple requirements edits within one render batch, including repeated
+checkbox taps: each event must update the latest draft rather than overwrite
+other fields from an older render. The web suite's
+`mobile-requirements-contract.test.ts` checks native payloads against the actual
+create/edit API schemas, including invalid constraints and explicit removal.
+Cross-platform contract tests must import framework-independent data types from
+`lib/tripTypes.ts`, not the native store or storage implementations. Even a
+type-only store import makes TypeScript traverse native dependencies and can
+introduce React Native global declarations into the web compiler. Keep payload
+serializers independent of the store/storage runtime and run workspace
+typechecks as well as the contract test after changing this boundary.
+
+Run that contract with the Node-based Vitest runner from `apps/web`:
+
+```sh
+node ../../node_modules/vitest/vitest.mjs run __tests__/lib/mobile-requirements-contract.test.ts
+```
+
 Use the same Faroway app with real local Supabase sessions and a deterministic
 itinerary fixture. This is not a fake authenticated user or an API auth bypass.
 No Apple/Google setup or model/supplier keys are needed.

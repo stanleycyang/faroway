@@ -6,6 +6,7 @@ import {
   recoverUnstartedTrip,
 } from '../services/planningService';
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import type { TravelerRequirements } from '@faroway/types';
 import { API_BASE_URL } from '../constants/api';
 import { getAuthHeaders } from '../lib/supabase';
 
@@ -66,6 +67,7 @@ export interface UseStreamingItineraryOptions {
     travelerType: string;
     originCity?: string;
     originAirport?: string;
+    requirements?: TravelerRequirements;
     vibes: string[];
     budget?: string;
   };

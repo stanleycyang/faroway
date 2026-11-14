@@ -72,6 +72,19 @@ before calling any model. Store failures as regression cases after review.
 
 ## Grade hard facts in code
 
+The `agentic-contracts-v2` rubric additionally compares activity duration and
+venue-source attribution between aggregator output and saved-day mapping. Missing
+or changed minutes fail even without a clock-time proposal; dropped, replaced,
+invented or malformed mapped source links fail for activities and meals. Source
+URL/date preservation does not establish identity, suitability or factual truth.
+
+Keep original reports and raw traces when regrading. Older projected fixtures
+may contain only mapped IDs: v2 cannot establish duration preservation from that
+evidence. Such a failure means missing projection evidence, not proof that the
+original app changed the duration. Do not fill missing saved fields from the
+generator just to make old fixtures pass, and do not compare v1 and v2 pass rates
+as if the grading rules were identical.
+
 Use deterministic checks for exact date/party propagation, day coverage, valid
 time intervals, nonnegative finite costs and transfers, unique source IDs,
 referenced-ID membership, locked choices and unchanged requirements after retries.

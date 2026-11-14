@@ -1,3 +1,4 @@
+import { travelerRequirementsSchema } from './travelerRequirements';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { z } from 'zod';
 import { parseTripDate } from './tripDate';
@@ -23,6 +24,7 @@ const brief = z
     travelerType: z.enum(['solo', 'couple', 'family', 'friends', 'business']),
     originCity: z.string().max(200).optional(),
     originAirport: z.string().max(10).optional(),
+    requirements: travelerRequirementsSchema.nullish(),
     vibes: z.array(z.string().min(1).max(100)).max(5),
     budget: z.string().max(100).optional(),
   })

@@ -113,7 +113,17 @@ describe("production-shape agentic evaluation", () => {
   test("flags the observed Rome plan despite successful generation and intact IDs", () => {
     const trace = romeOverload.trace as unknown as AgenticTrace;
     const result = evaluateAgenticTrace(trace);
-    expect(result.contractPass).toBe(true);
+    // This historical projection kept mapped IDs only. V2 cannot establish
+    // duration preservation from it; retain the fixture rather than inventing
+    // saved durations that were not included in the archived projection.
+    expect(result.rubric).toBe("agentic-contracts-v2");
+    expect(result.contractPass).toBe(false);
+    expect(result.failures).toHaveLength(4);
+    expect(
+      result.failures.every((failure) =>
+        failure.startsWith("mapped_duration_changed:"),
+      ),
+    ).toBe(true);
     expect(result.metrics.fallbackSteps).toBe(0);
     expect(result.warnings).toEqual(romeOverload.expected.paceWarnings);
     const inventory = trace.steps[2].output as Array<{ duration: number }>;
@@ -1449,4 +1459,69 @@ test("acceptance closure evidence excludes ordinary visits without extending the
       "event",
     )[0]?.finding,
   ).toBe("venue_visit_scope_requires_review");
+});
+
+test("rejects changed or missing saved visit durations even without proposed clock times", () => {
+  for (const duration of [undefined, 1, 120]) {
+    const trace = fixture();
+    trace.mappedItinerary = structuredClone(trace.mappedItinerary);
+    const mapped = trace.mappedItinerary as {
+      days: Array<{ morning: { activities: Array<{ duration?: number }> } }>;
+    };
+    mapped.days[0].morning.activities[0].duration = duration;
+    expect(evaluateAgenticTrace(trace).failures).toContain(
+      "mapped_duration_changed:walk",
+    );
+  }
+});
+
+test("preserves source attribution for saved activities and meals without certifying its claims", () => {
+  const source = {
+    url: "https://example.org/venue",
+    retrievedOn: "2026-10-31",
+  };
+  for (const kind of ["activity", "meal"] as const) {
+    const trace = fixture();
+    const day = (
+      trace.steps[4].output as {
+        days: Array<{ morning: { activities: object[]; meal: object } }>;
+      }
+    ).days[0];
+    const original =
+      kind === "activity" ? day.morning.activities[0] : day.morning.meal;
+    Object.assign(original, { source });
+    trace.mappedItinerary = structuredClone(trace.mappedItinerary);
+    const mapped = (
+      trace.mappedItinerary as {
+        days: Array<{
+          morning: {
+            activities: Array<Record<string, unknown>>;
+            meals: Array<Record<string, unknown>>;
+          };
+        }>;
+      }
+    ).days[0];
+    const saved =
+      kind === "activity"
+        ? mapped.morning.activities[0]
+        : mapped.morning.meals[0];
+    const id = kind === "activity" ? "walk" : "cafe";
+    for (const changed of [
+      undefined,
+      { ...source, url: "https://example.org/other-branch" },
+      { ...source, retrievedOn: "2026-10-30" },
+      { ...source, url: "javascript:alert(1)" },
+    ]) {
+      saved.source = changed;
+      expect(evaluateAgenticTrace(trace).failures).toContain(
+        `mapped_source_changed:${id}`,
+      );
+    }
+    saved.source = { retrievedOn: source.retrievedOn, url: source.url };
+    expect(evaluateAgenticTrace(trace).contractPass).toBe(true);
+    Object.assign(original, { source: undefined });
+    expect(evaluateAgenticTrace(trace).failures).toContain(
+      `mapped_source_changed:${id}`,
+    );
+  }
 });

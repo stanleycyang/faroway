@@ -328,3 +328,62 @@ it.each(['wrong identity', 'wrong owner', 'missing owner', 'missing trip'])(
     );
   }
 );
+
+const requirements = {
+  allergies: ['severe peanut allergy'],
+  dietaryPreferences: ['vegan'],
+  accessibility: ['step_free_entrance' as const, 'accessible_restroom' as const],
+  mobilityNotes: 'Wheelchair width 65 cm; no lifting; rest every 30 minutes.',
+};
+
+it('freezes dietary and mobility requirements before the consent dialog', async () => {
+  const submitted = {
+    ...input,
+    requirements: { ...requirements, allergies: [...requirements.allergies] },
+  };
+  mockAlert.mockImplementation((_title, _message, buttons) => {
+    submitted.requirements.allergies.length = 0;
+    submitted.requirements.mobilityNotes = 'Changed after submission';
+    buttons[1].onPress();
+  });
+  await createAndStartTrip(submitted, jest.fn());
+  const body = JSON.parse(posts()[0][1].body);
+  expect(body.preferences.requirements).toEqual(requirements);
+});
+
+it('restored whitespace-normalized requirements retry the same creation after a lost response', async () => {
+  const { savedTripCreationDraft } = await import('../../lib/tripCreationRecovery');
+  let failCreate = true;
+  fetchMock.mockImplementation(async (url: string) => {
+    if (url.endsWith('/api/trips') && failCreate) throw new Error('lost response');
+    return {
+      ok: true,
+      json: async () =>
+        url.endsWith('/disclosure')
+          ? disclosure
+          : url.endsWith('/api/trips')
+            ? { trip: { id, user_id: 'account-a' } }
+            : { status: 'started' },
+    };
+  });
+  await expect(
+    createAndStartTrip(
+      {
+        ...input,
+        travelerType: 'couple',
+        requirements: { ...requirements, mobilityNotes: '  Rest every 30 minutes  ' },
+      },
+      jest.fn()
+    )
+  ).rejects.toThrow('lost response');
+  const restored = await savedTripCreationDraft('account-a');
+  expect(restored?.requirements?.mobilityNotes).toBe('Rest every 30 minutes');
+  failCreate = false;
+  await createAndStartTrip(
+    { ...restored!, requirements: restored?.requirements ?? undefined },
+    jest.fn()
+  );
+  const creates = posts().filter(([url]) => url.endsWith('/api/trips'));
+  expect(creates).toHaveLength(2);
+  expect(creates[0][1].body).toBe(creates[1][1].body);
+});

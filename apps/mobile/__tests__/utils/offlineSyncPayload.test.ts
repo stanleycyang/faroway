@@ -81,3 +81,20 @@ describe('offline sync payloads', () => {
     });
   });
 });
+
+const requirements = {
+  allergies: ['severe peanut allergy'],
+  dietaryPreferences: ['vegan'],
+  accessibility: ['step_free_entrance' as const, 'accessible_restroom' as const],
+  mobilityNotes: 'Wheelchair width 65 cm; no lifting; rest every 30 minutes.',
+};
+
+it('sends requirements with offline creates and updates, including deliberate removal', () => {
+  const trip = { id: 'local-test', requirements } as Trip;
+  expect(buildTripCreatePayload(trip).preferences).toMatchObject({ requirements });
+  expect(buildTripUpdatePayload({ requirements })).toEqual({ preferences: { requirements } });
+  expect(buildTripUpdatePayload({ requirements: null })).toEqual({
+    preferences: { requirements: null },
+  });
+  expect(buildTripUpdatePayload({ destination: 'Paris' })).not.toHaveProperty('preferences');
+});

@@ -18,6 +18,18 @@ afterEach(async () => {
   if (directory) await rm(directory, { recursive: true, force: true });
   directory = undefined;
 });
+// Surface sandbox/socket errors immediately instead of timing out with an
+// unhandled server error that obscures the actual test prerequisite.
+function listenOnLoopback(fixture: Server): Promise<void> {
+  return new Promise((resolve, reject) => {
+    fixture.once("error", reject);
+    fixture.listen(0, "127.0.0.1", () => {
+      fixture.off("error", reject);
+      resolve();
+    });
+  });
+}
+
 function environment() {
   return {
     NODE_ENV: "test" as const,
@@ -67,7 +79,7 @@ test("the CLI measures authenticated creation, disclosed planning, and a read-on
       response.end();
     }
   });
-  await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+  await listenOnLoopback(server);
   const address = server.address();
   if (!address || typeof address === "string")
     throw new Error("Missing fixture address");
@@ -143,7 +155,7 @@ test("a rejected planning dispatch is a failed sample and never opens the stream
       );
     }
   });
-  await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+  await listenOnLoopback(server);
   const address = server.address();
   if (!address || typeof address === "string")
     throw new Error("Missing fixture address");
@@ -183,7 +195,7 @@ test.each([
     response.statusCode = 500;
     response.end();
   });
-  await new Promise<void>((resolve) => server!.listen(0, "127.0.0.1", resolve));
+  await listenOnLoopback(server);
   const address = server.address();
   if (!address || typeof address === "string")
     throw new Error("Missing fixture address");

@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "fs";
 import { resolve } from "path";
 import { execFileSync } from "node:child_process";
 import { pathToFileURL } from "node:url";
+import { easBunVersionFailures } from "./eas-bun-version.mjs";
 
 const ROOT = resolve(import.meta.dirname, "..");
 const MOBILE = resolve(ROOT, "apps/mobile");
@@ -15,6 +16,7 @@ interface EasConfig {
   };
   build?: {
     production?: {
+      bun?: string;
       distribution?: string;
       ios?: {
         image?: string;
@@ -130,6 +132,10 @@ const contentReportsMigrationPath = resolve(
 );
 
 const eas = readJson<EasConfig>(easPath);
+const packageManager = readJson<{ packageManager?: string }>(
+  resolve(ROOT, "package.json"),
+)?.packageManager;
+failures.push(...easBunVersionFailures(packageManager, eas?.build));
 const production = eas?.build?.production;
 const productionEnv = production?.env ?? {};
 

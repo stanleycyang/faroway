@@ -1,3 +1,4 @@
+import { readTravelerRequirements } from '../lib/travelerRequirements';
 import type { SearchInput } from '@faroway/types';
 import { API_BASE_URL } from '../constants/api';
 import { withPlanningConsent } from '../lib/planningConsent';
@@ -39,6 +40,7 @@ export async function createAndStartTrip(
       originCity: input.originCity,
       originAirport: input.originAirport,
       vibes: input.vibes,
+      requirements: readTravelerRequirements(input.requirements),
     },
   });
   return withPlanningConsent(async (authorization) => {

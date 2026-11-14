@@ -362,6 +362,69 @@ describe("UAT smoke suite", () => {
     expect(evaluateSavedPlan(mixed, dates).ok).toBe(false);
   });
 
+  test("live batches stop after a failed workflow or saved fallback until spend is reconciled", async () => {
+    for (const failure of ["workflow", "fallback"] as const) {
+      let created = 0;
+      let dispatched = 0;
+      let removed = 0;
+      const fetchImpl = async (
+        input: RequestInfo | URL,
+        init?: RequestInit,
+      ) => {
+        const url = String(input);
+        if (url.includes("/auth/v1/token"))
+          return response(200, { access_token: "synthetic-test-token" });
+        if (url.endsWith("/api/trips") && init?.method === "POST") {
+          created += 1;
+          return response(201, { trip: { id: "synthetic-trip" } });
+        }
+        if (url.endsWith("/generate") && init?.method === "POST") {
+          dispatched += 1;
+          return response(200, {});
+        }
+        if (url.endsWith("/generate"))
+          return response(200, {
+            status: failure === "workflow" ? "failed" : "completed",
+          });
+        if (init?.method === "DELETE") {
+          removed += 1;
+          return response(200, {});
+        }
+        if (url.endsWith("/api/trips/synthetic-trip"))
+          return response(200, deployedNarrationFallback.body);
+        throw new Error(`Unexpected mocked request: ${url}`);
+      };
+      const report = await runSmoke({
+        tiers: [2],
+        liveAi: true,
+        briefIds: ["lisbon-city-break", "copenhagen-family"],
+        target: {
+          supabaseUrl: stagingUrl,
+          apiUrl,
+          anonKey: anon(STAGING_PROJECT_REF),
+        },
+        accounts: [{ email: "qa@example.invalid", password: "synthetic" }],
+        pollIntervalMs: 0,
+        fetchImpl: fetchImpl as typeof fetch,
+      });
+      expect(report.ok).toBe(false);
+      expect(report.checks[0]).toMatchObject({
+        name: "live-plan:lisbon-city-break",
+        status: "failed",
+      });
+      expect(report.checks[1]).toMatchObject({
+        name: "live-plan:copenhagen-family",
+        status: "blocked",
+      });
+      expect(report.checks[1]?.detail).toContain("reconcile");
+      expect({ created, dispatched, removed }).toEqual({
+        created: 1,
+        dispatched: 1,
+        removed: 1,
+      });
+    }
+  });
+
   test("saved-plan quality rejects the aggregator fallback template and invented links", () => {
     const good = evaluateSavedPlan(
       {

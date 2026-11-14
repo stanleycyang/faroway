@@ -1083,15 +1083,27 @@ async function runTier2(
     options.accounts[0],
   );
   for (const brief of briefs) {
-    checks.push(
-      await liveBrief(
-        fetchImpl,
-        apiUrl,
-        token,
-        brief,
-        options.pollIntervalMs ?? 5_000,
-      ),
+    const result = await liveBrief(
+      fetchImpl,
+      apiUrl,
+      token,
+      brief,
+      options.pollIntervalMs ?? 5_000,
     );
+    checks.push(result);
+    if (result.status !== "passed") {
+      for (const remaining of briefs.slice(checks.length)) {
+        checks.push(
+          check(
+            2,
+            `live-plan:${remaining.id}`,
+            "blocked",
+            "batch stopped after failure; review evidence and reconcile Gateway spend before more paid calls",
+          ),
+        );
+      }
+      break;
+    }
   }
   return checks;
 }

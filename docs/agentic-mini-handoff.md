@@ -89,10 +89,21 @@ Important evidence directories under `artifacts/uat/`:
 
 Install locked dependencies with Bun; use Node 22 for Vercel CLI where required. Typical checks: `bun run check`, `bun run test:web`, `bunx bun@1.4.4 --no-env-file test scripts/__tests__`.
 
+Before live work on a receiving machine, verify the selected Node executable with
+`node --version`, the CLI capability with `vercel ai-gateway budgets list --help`,
+and authentication with `vercel whoami`. An installed executable can still fail
+because a shared library is missing; older Vercel CLIs may lack `ai-gateway`.
+Resolve runtime/CLI compatibility before diagnosing account access, then require
+successful budget reconciliation for `testimonio`. Do not reset the budget or
+substitute ambient AI credentials to bypass a failed preflight. Dependency setup
+should use `bunx bun@1.4.4 --no-env-file install --frozen-lockfile` when the local
+Bun version differs from the repository's pinned version.
+
 - Frozen trace grader: `scripts/uat/evaluate-traces.ts`.
 - Live narration replay: `apps/web/scripts/narration-live.ts --live --thinking minimal --input <frozen-compiler-trace> --out <NEW-private-receipt>`.
 - Integrated aggregator replay: `apps/web/scripts/aggregator-replay-live.ts --compiled-narrated`; inspect its arguments and staging gates before use.
 - Real API UAT: `scripts/uat/smoke.ts --tier 2 --live --brief lisbon-city-break --supabase-url https://omovikloadpvzijoaqus.supabase.co --api-url <approved-preview>`; needs QA credentials and preview access. Capture persisted output before the harness deletes its test trip.
+- Live smoke batches stop at the first failed brief, including saved narration fallback, and mark undispatched briefs blocked. Review the retained failure and reconcile Gateway spend before starting another live run; this guard does not itself query billing or authorize a retry.
 - `scripts/uat/lib/plan-quality.ts` now rejects narration fallback, including partial failure. A pass still does not prove factual/semantic quality.
 
 Create/resume the goal in the Mini's own thread using the objective above. Do not assume this machine's thread-scoped goal or ignored evidence automatically transfers. Coordinate with the user to pause the original thread before concurrent work modifies the same branch or spends the same budget.

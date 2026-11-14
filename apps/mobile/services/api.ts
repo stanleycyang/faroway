@@ -7,6 +7,7 @@ import { API_BASE_URL } from '../constants/api';
 import { requestWithTimeout, RequestTimeoutError } from './request';
 import { useUserStore } from '../stores/userStore';
 import type {
+  TravelerRequirements,
   ApiResponse,
   Trip,
   UserProfile,
@@ -296,6 +297,7 @@ export async function createTrip(trip: {
     vibes?: string[];
     originCity?: string;
     originAirport?: string;
+    requirements?: TravelerRequirements | null;
   };
 }): Promise<ApiResponse<{ trip: Trip }>> {
   return apiFetch<{ trip: Trip }>('/api/trips', {

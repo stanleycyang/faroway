@@ -19,20 +19,23 @@
         "buildType": "apk",
         "credentialsSource": "local",
         "autoIncrement": true
-      }
+      },
+      "bun": "1.4.4"
     },
     "qa-simulator": {
       "extends": "qa",
       "ios": {
         "simulator": true
-      }
+      },
+      "bun": "1.4.4"
     },
     "development": {
       "developmentClient": true,
       "distribution": "internal",
       "ios": {
         "simulator": true
-      }
+      },
+      "bun": "1.4.4"
     },
     "preview": {
       "distribution": "internal",
@@ -41,7 +44,8 @@
       },
       "android": {
         "buildType": "apk"
-      }
+      },
+      "bun": "1.4.4"
     },
     "production": {
       "distribution": "store",
@@ -56,7 +60,8 @@
       },
       "env": {
         "EXPO_PUBLIC_API_URL": "https://faroway.ai"
-      }
+      },
+      "bun": "1.4.4"
     }
   },
   "submit": {

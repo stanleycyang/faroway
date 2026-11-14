@@ -2,6 +2,16 @@
 
 Overall status: **not accepted for production**. PR 55 remains draft.
 
+## Platform evidence scope
+
+The rounds below establish only the explicitly recorded backend and Android
+emulator observations. They do not establish iOS acceptance. Current-candidate
+iOS simulator, physical iPhone, physical Android, screen-reader/large-text and
+complete recovery-flow evidence must be supplied separately. See the
+[cross-platform acceptance contract](agentic-acceptance-remediation.md#cross-platform-acceptance-contract).
+Do not infer a platform pass from shared React Native implementation or from a
+different platform's screenshots.
+
 ## Full fixed-build round
 
 Twelve runs (six synthetic briefs, twice each) on `86b178f708a2dcb3a4857f126a7d980dbc533f34`.
@@ -64,7 +74,8 @@ Evidence: `artifacts/uat/copenhagen-source-attribution-20261103/report.md`.
 - Continuous accessible routes, entrances, toilets and relevant clearances; direct restaurant allergy confirmation.
 - Complete admission/visit/meal/transit timeline and duplicate-venue intent review.
 - Full truthful photo coverage and reduced repetitive caution text.
-- Physical Android evidence and one final accepted twelve-run build, followed by complete release verification.
+- iOS simulator and physical iPhone evidence, physical Android evidence, and the full cross-platform navigation/accessibility/recovery matrix.
+- One final accepted twelve-run build plus independently reviewed reserved holdouts, followed by complete release verification.
 
 Detailed deliverables and acceptance criteria are in [agentic-acceptance-remediation.md](agentic-acceptance-remediation.md).
 

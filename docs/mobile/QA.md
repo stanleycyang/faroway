@@ -79,7 +79,31 @@ queueing builds. A physical iOS build needs an Apple distribution certificate
 and an ad hoc provisioning profile containing the test device UDIDs; a simulator
 build does not establish physical-device signing readiness.
 
+Inspect an existing cloud build from `apps/mobile` with
+`eas build:view <build-id> --json`. Even with an explicit build ID, running this
+at the monorepo root can report that the EAS project is not configured; use the
+existing mobile project context rather than running `eas init` again. Preserve
+the build ID and inspect that same build until it reaches a terminal status.
+Build log URLs can return Brotli-compressed responses; use an HTTP client with
+automatic content decoding (for example Node `fetch().text()`), rather than
+assuming UTF-8 or gzip. Keep signed URLs and environment values out of reports.
+
 ## Local prerequisites
+
+Every EAS build profile explicitly pins `bun` to the root `packageManager`
+version. Keep these synchronized when updating the package manager: an older
+image default can reject the committed lockfile before native compilation.
+`bun scripts/check-eas-release.ts` checks this alignment. Do not regenerate or
+unfreeze the lockfile to work around a mismatched build runtime.
+
+Local native builds validate the generated project ID and deep-link scheme as
+well as Expo configuration. Existing `ios/` and `android/` folders can retain a
+production identity from an earlier prebuild; `run:ios` does not reliably refresh
+them. Run `bun run qa:mobile prebuild` before retrying an identity-guard failure.
+Do not bypass the guard or install a production-identified build for QA.
+The Android app-link plugin removes opposite-environment Faroway schemes during
+incremental prebuild, which otherwise retains old schemes. OAuth and HTTPS
+schemes are preserved. Validate generated output before installing either app.
 
 The runner selects Homebrew Java 17 and the Android command-line SDK without
 changing the user's shell configuration. Android needs platform 36, build tools

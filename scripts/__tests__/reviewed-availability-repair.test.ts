@@ -193,14 +193,50 @@ test("CLI retains inconclusive results and refuses to overwrite an existing rece
       "2026-11-02",
       output,
     ];
-    const run = spawnSync("bun", args, { encoding: "utf8" });
+    // The historical Rome projection retained mapped IDs only. It must fail
+    // the v2 duration-preservation preflight rather than count as intact data.
+    expect(spawnSync(process.execPath, args, { encoding: "utf8" }).status).toBe(
+      1,
+    );
+    expect(() => readFileSync(output)).toThrow();
+
+    // Separate synthetic input for testing the CLI's receipt/no-overwrite
+    // behavior. This is not a reconstruction of the historical saved plan.
+    const synthetic = structuredClone(rome);
+    synthetic.trace.runId = "synthetic-cli-receipt-contract";
+    const days = (
+      synthetic.trace.steps.find((step) => step.step === "aggregator")!
+        .output as {
+        days: Array<
+          Record<
+            "morning" | "afternoon" | "evening",
+            { activities: Array<{ id: string; duration: number }> }
+          >
+        >;
+      }
+    ).days;
+    for (const [index, day] of synthetic.trace.mappedItinerary.days.entries()) {
+      for (const slot of ["morning", "afternoon", "evening"] as const) {
+        for (const activity of day[slot].activities) {
+          Object.assign(activity, {
+            duration: days[index][slot].activities.find(
+              (item) => item.id === activity.id,
+            )!.duration,
+          });
+        }
+      }
+    }
+    writeFileSync(trace, JSON.stringify(synthetic));
+    const run = spawnSync(process.execPath, args, { encoding: "utf8" });
     expect(run.status).toBe(2);
     const bytes = readFileSync(output, "utf8");
     const report = JSON.parse(bytes);
     expect(report.result.selectedVisits).toBe(0);
     expect(report.result.qualityAccepted).toBe(false);
     expect(report.traceSha256).toMatch(/^[a-f0-9]{64}$/);
-    expect(spawnSync("bun", args, { encoding: "utf8" }).status).toBe(1);
+    expect(spawnSync(process.execPath, args, { encoding: "utf8" }).status).toBe(
+      1,
+    );
     expect(readFileSync(output, "utf8")).toBe(bytes);
   } finally {
     rmSync(folder, { recursive: true, force: true });

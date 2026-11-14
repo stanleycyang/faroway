@@ -1,3 +1,4 @@
+import { readTravelerRequirements } from '../travelerRequirements';
 import { destinationImage } from '../destinationImage';
 import { readOwnedTripPages } from '../tripListPages';
 import { retainTripDetail } from '../tripSummary';
@@ -655,7 +656,10 @@ class SyncService {
       startDate: apiTrip.start_date,
       endDate: apiTrip.end_date,
       travelers: apiTrip.travelers,
-      travelerType: apiTrip.traveler_type || 'solo',
+      travelerType: apiTrip.traveler_type || apiTrip.preferences?.travelerType || 'solo',
+      originCity: apiTrip.preferences?.originCity,
+      originAirport: apiTrip.preferences?.originAirport,
+      requirements: readTravelerRequirements(apiTrip.preferences?.requirements),
       vibes: apiTrip.vibes || [],
       budget: apiTrip.budget_tier || apiTrip.budget || undefined,
       planNeedsRefresh: apiTrip.preferences?.planNeedsRefresh === true,

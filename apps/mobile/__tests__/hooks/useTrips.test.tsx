@@ -774,3 +774,22 @@ it('keeps existing offline and visible trips if a later page fails', async () =>
   expect(useTripStore.getState().trips).toEqual([kept]);
   expect(offlineStorage.saveTrips).not.toHaveBeenCalled();
 });
+
+const requirements = {
+  allergies: ['severe peanut allergy'],
+  dietaryPreferences: ['vegan'],
+  accessibility: ['step_free_entrance' as const, 'accessible_restroom' as const],
+  mobilityNotes: 'Wheelchair width 65 cm; no lifting; rest every 30 minutes.',
+};
+
+it('retains saved requirements when loading a trip from the API', async () => {
+  mockFetch.mockResolvedValue({
+    ok: true,
+    json: async () => ({
+      trip: { ...makeApiTrip('requirements-trip', 'Edinburgh'), preferences: { requirements } },
+    }),
+  });
+  const hooks = renderUseTrips();
+  const trip = await hooks.getTripById('requirements-trip');
+  expect(trip?.requirements).toEqual(requirements);
+});

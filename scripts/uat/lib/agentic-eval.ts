@@ -8,6 +8,7 @@ import {
   validateDayAvailability,
 } from "./day-availability";
 import { readDayTiming } from "../../../packages/types/src/day-timing";
+import { readVenueSource } from "../../../packages/types/src/venue-source";
 import { suppliedDistanceKm } from "./route-eval";
 import { inclusiveDays, assertValidBriefParty, type UatBrief } from "./briefs";
 
@@ -40,7 +41,7 @@ export interface AgenticTrace {
 }
 
 export interface AgenticEvaluation {
-  rubric: "agentic-contracts-v1";
+  rubric: "agentic-contracts-v2";
   contractPass: boolean;
   failures: string[];
   warnings: string[];
@@ -95,6 +96,21 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
   const warnings: string[] = [];
   const fail = (message: string) => {
     failures.push(message);
+  };
+  const checkMappedSource = (
+    original: Record<string, unknown>,
+    mapped: Record<string, unknown>,
+  ) => {
+    const before = readVenueSource(original.source);
+    const after = readVenueSource(mapped.source);
+    // A valid attribution is not proof of the venue claim. This checks only
+    // that mapping neither loses it nor invents another source or review date.
+    if (
+      before?.url !== after?.url ||
+      before?.retrievedOn !== after?.retrievedOn ||
+      (mapped.source != null && !after)
+    )
+      fail(`mapped_source_changed:${String(original.id)}`);
   };
   const output = (step: string) =>
     trace.steps.find((s) => s.step === step)?.output;
@@ -285,6 +301,9 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
         );
         if (a.proposedVisitType !== mappedActivity.proposedVisitType)
           fail(`mapped_visit_intent_changed:${String(a.id)}`);
+        if (a.duration !== mappedActivity.duration)
+          fail(`mapped_duration_changed:${String(a.id)}`);
+        checkMappedSource(a, mappedActivity);
         if (!activityIds.has(a.id)) fail(`unknown_activity:${String(a.id)}`);
         if (typeof a.id === "string" && suppliedIds.has(a.id))
           reviewedSupplySelectionFailures(
@@ -380,6 +399,7 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
           fail(`scheduled_planning_idea:${String(meal.id)}`);
         if (mappedMeals.length !== 1 || object(mappedMeals[0]).id !== meal.id)
           fail(`day_${index + 1}:${slotName}:mapped_meal_identity`);
+        checkMappedSource(meal, object(mappedMeals[0]));
         const expectedMeal = {
           morning: "breakfast",
           afternoon: "lunch",
@@ -450,7 +470,7 @@ export function evaluateAgenticTrace(trace: AgenticTrace): AgenticEvaluation {
   if (mealCount > 3 && restaurants.size < Math.ceil(mealCount / 2))
     warnings.push("low_restaurant_variety");
   return {
-    rubric: "agentic-contracts-v1",
+    rubric: "agentic-contracts-v2",
     contractPass: failures.length === 0,
     failures,
     warnings,

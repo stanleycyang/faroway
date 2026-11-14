@@ -1,3 +1,7 @@
+import {
+  travelerRequirementsSchema,
+  readTravelerRequirements,
+} from '../../lib/travelerRequirements';
 import { destinationImage } from '../../lib/destinationImage';
 import { getMissingTripRequirements } from '../../lib/tripRequirements';
 import { formatTripDate } from '../../lib/tripDate';
@@ -106,6 +110,9 @@ function convertStreamingDataToTrip(
     endDate: input.endDate,
     travelers: input.travelers || 2,
     travelerType: input.travelerType,
+    originCity: input.originCity,
+    originAirport: input.originAirport,
+    requirements: readTravelerRequirements(input.requirements),
     vibes: input.vibes || [],
     budget: input.budget,
     days: transformItineraryDays(itineraryDays),
@@ -603,7 +610,9 @@ function GenerationSession() {
 
   const destinationInfo = popularDestinations.find((d) => d.name === draftInput?.destination);
   const seededOutline = useMemo(() => buildSeededItineraryOutline(draftInput), [draftInput]);
-  const isDraftComplete = getMissingTripRequirements(draftInput).length === 0;
+  const isDraftComplete =
+    getMissingTripRequirements(draftInput).length === 0 &&
+    travelerRequirementsSchema.nullish().safeParse(draftInput?.requirements).success;
   const canGenerate = initialized && isAuthenticated && isDraftComplete;
 
   useEffect(() => {
@@ -647,6 +656,7 @@ function GenerationSession() {
             travelerType: draftInput.travelerType || 'couple',
             originCity: draftInput.originCity,
             originAirport: draftInput.originAirport,
+            requirements: readTravelerRequirements(draftInput.requirements) ?? undefined,
             vibes: draftInput.vibes || [],
             budget: draftInput.budget,
           }

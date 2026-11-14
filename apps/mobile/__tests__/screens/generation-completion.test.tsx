@@ -16,6 +16,12 @@ const validDraft = {
   startDate: '2026-11-01',
   endDate: '2026-11-04',
   travelers: 2,
+  requirements: {
+    allergies: ['Peanuts'],
+    dietaryPreferences: ['Vegan'],
+    accessibility: ['step_free_entrance' as const],
+    mobilityNotes: 'Rest every 30 minutes',
+  },
 };
 let mockState = { draftInput: validDraft, finishGeneration: jest.fn() };
 jest.mock('../../stores/tripStore', () => ({
@@ -110,6 +116,9 @@ it('opening a completed itinerary does not redirect to setup after draft clearin
       open();
     });
     expect(mockReplace.mock.calls).toEqual([['/trip/trip-a']]);
+    expect(mockState.finishGeneration).toHaveBeenCalledWith(
+      expect.objectContaining({ requirements: validDraft.requirements })
+    );
   } finally {
     await act(async () => {
       renderer?.unmount();

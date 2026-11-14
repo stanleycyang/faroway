@@ -63,3 +63,31 @@ test('deliberate discard refuses a changed actor and clears only the reviewed co
   expect(await discardReviewedGuestBrief('{bad', () => true)).toBe(true);
   expect(await readGuestTripBrief(2000)).toBeNull();
 });
+
+const requirements = {
+  allergies: ['severe peanut allergy'],
+  dietaryPreferences: ['vegan'],
+  accessibility: ['step_free_entrance' as const, 'accessible_restroom' as const],
+  mobilityNotes: 'Wheelchair width 65 cm; no lifting; rest every 30 minutes.',
+};
+
+test('guest restoration preserves requirements and snapshots nested edits', async () => {
+  const submitted = {
+    ...draft,
+    requirements: { ...requirements, allergies: [...requirements.allergies] },
+  };
+  const save = saveGuestTripBrief(submitted, () => true, 1000);
+  submitted.requirements.allergies.length = 0;
+  await save;
+  expect((await readGuestTripBrief(2000))?.requirements).toEqual(requirements);
+});
+
+test('malformed requirements are rejected instead of saved as an unconstrained brief', async () => {
+  await expect(
+    saveGuestTripBrief(
+      { ...draft, requirements: { ...requirements, mobilityNotes: 'x'.repeat(501) } },
+      () => true
+    )
+  ).rejects.toThrow();
+  expect(await readGuestTripBrief()).toBeNull();
+});

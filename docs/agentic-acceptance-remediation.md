@@ -7,12 +7,61 @@ rejected. Evidence: `artifacts/uat/six-scenario-local-20261103/report.md`.
 ## Delivery contract
 
 Deliver a usable itinerary that respects the brief, with traceable venue facts,
-feasible scheduling, readable Android presentation, and measured cost/recovery.
+feasible scheduling, usable iOS, Android and web presentation, and measured cost/recovery.
 A warning does not satisfy a hard mobility, allergy, availability or timing
 constraint. An explicit unresolved option is acceptable only as an unresolved
 option; it does not count toward a completed usable itinerary. Do not make an
 empty plan pass by filtering every stop. Do not label restaurant food allergy-safe
 from a menu or a generic dietary tag.
+
+iOS and Android are equal release targets. Shared React Native code or passing
+Android screenshots do not establish iOS acceptance. The historical Android
+checkpoints below retain their original scope; they are not evidence for iOS.
+
+## Cross-platform acceptance contract
+
+Record each gate separately for iOS, Android and web as `passed`, `failed`,
+`blocked` or `not run`, with the exact candidate revision, build identifier/hash,
+OS, device, viewport/text size, case IDs and evidence paths. Missing evidence is
+`not run`; unavailable hardware or credentials are `blocked`. Neither counts as
+a pass. Bind API receipts and rendered captures to the same saved trip and build.
+Keep private accounts, tokens and raw traveler data out of tracked reports.
+
+| Gate | Required exercise | Evidence required for acceptance |
+|---|---|---|
+| Entry and navigation | Fresh launch, signed-out access, sign-in, sign-out, session restoration, deep link, back navigation and modal dismissal. On iOS include swipe-back; on Android include system back. | Complete journeys on each platform, with no auth loop, lost draft, inaccessible action or cross-account trip exposure. Signed-build OAuth is separate from synthetic test login. |
+| Create and revise | Enter dates, party, pace, dietary and mobility requirements; use keyboard/date controls; revise a saved brief. | Values survive navigation and reach the generated/saved plan. Keyboard does not obscure focused fields or primary actions; stale booking actions cannot use the old brief. |
+| Generation and recovery | Streaming, background/foreground, interrupted connection, terminal failure, timeout and retry. | Same final itinerary in stream, API, saved view and reopened view. No duplicate generation on resume/retry; pending work and actionable errors remain visible. Fixture recovery and live workflow recovery are reported separately. |
+| Every itinerary day | Scroll every card on narrow and regular phone layouts; open sources and review booking actions. | Chronological meals/visits, intact durations, warnings, quote provenance and source attribution. No clipped controls, safe-area overlap, false venue imagery or misleading unknown price. Three viewport samples alone do not prove full-day review. |
+| Accessibility | Large system text, screen reader focus/order/labels, contrast, touch targets and reduced motion. Use VoiceOver on iOS and TalkBack on Android. | Critical text and actions remain readable and reachable. Warnings and loading/error state changes are perceivable; focus does not become trapped. Record manual findings in addition to automation. |
+| Offline and assets | Reopen saved trips offline; restore connectivity; load absent/broken images and long content. | Saved content and source metadata remain intact; honest image fallbacks, no indefinite loading, and no duplicate mutations after reconnection. |
+| Device coverage | Compact and regular iPhone simulators, narrow and regular Android emulators, plus at least one physical iPhone and Android device. Web at narrow and desktop widths. | Separate results per environment, including OS and build identity. Simulator/emulator results never substitute for physical-device evidence. Hardware gaps remain explicit release gates. |
+
+For itinerary quality, retain the six existing stress scenarios and their failed
+receipts, but do not treat them as representative coverage by themselves. Use the
+case slices in `ai-evaluation-strategy.md` to cover dates, family composition,
+pace/rest, geography, requirements, budget, supply faults and adversarial input.
+Track slice coverage and reasons for any missing cases. Independently review
+reserved holdout briefs before evaluation; freeze code, prompts, source catalog
+and grading rules before running them. Do not tune against holdouts and then
+report them as unseen. After a holdout-driven fix, retain that failure as a
+regression and reserve fresh cases for the next acceptance decision.
+
+Acceptance requires zero critical constraint violations, useful nonempty plans,
+and explicit evidence for the hard claims each brief depends on. Apply the
+traveler-usefulness rubric with two independent reviewers; report disagreements
+and slice-level findings instead of masking failures with an aggregate score.
+Unknown suitability, hours or route feasibility is not a quality pass. Report
+end-to-end latency and cost for all attempts, including fallbacks and failures;
+separate local/hosted and cold/warm observations. Final acceptance includes the
+twelve-run fixed-build round, reserved holdouts and the platform gates above.
+
+Before interpreting a handoff or local test result as current branch evidence,
+fetch and compare local HEAD with the remote PR head. Preserve uncommitted work
+before updating; do not combine old-checkout tests with new-head CI into a single
+acceptance claim. Below 10 GiB free, defer builds, dependency installation and
+simulator workloads until disk headroom is restored; never auto-delete evidence
+or caches. Lightweight source review and focused checks can continue.
 
 ## Ordered deliverables
 
@@ -22,8 +71,8 @@ from a menu or a generic dietary tag.
 | D2 | Repair identified venue/season defects: Lisbon generic Fado and branch identity; Edinburgh Stone of Destiny description; Interlaken Harder Kulm, Brienz boats and Magic Park identity/date/location. Add source-backed alternatives, including actual winter-open choices. | Operator evidence attached to each correction; two affected runs per destination. Verify St Beatus remains available where supported. New candidates are audited too, not only the original defects. | D1 |
 | D3 | Mobility and dietary suitability: exact entrance/internal-route/boarding evidence for Copenhagen and Edinburgh; separate unresolved restaurant confirmation for severe peanut allergy. | No full Round Tower or unverified boat boarding presented as meeting step-free needs. No inferred 65 cm clearance or allergy guarantee. Enough reviewed alternatives for a useful day; unresolved gaps visible. | D1 |
 | D4 | Feasible schedule and route audit: one chronological sequence including meals, travel and requested rest; detect duplicate venues and distant excursions. Use source-backed transit routes/times where available, conservative planning estimates clearly labeled otherwise. | No meal during Melbourne meetings; no duplicated bakery experience without distinct intent; no unbudgeted Almada/Kilchberg/Rigi transfer; totals include meals/travel and fit opening windows. Unknown route feasibility cannot pass. | D1–D3 |
-| D5 | Android presentation: breakfast before morning visits, lunch before afternoon visits, retain evening order; omit absent meal-duration metadata without fabricating it. Trace missing images through provider → saved output → native card; use licensed venue imagery with attribution and truthful destination fallbacks. Shorten repeated cautions while keeping critical warnings visible. | New QA APK; screenshots of every day in the six scenarios, including narrow screen, missing/broken-image fallback, offline and reopened states. Compare to baseline. No unrelated stock image labeled as the venue. | Start in parallel with source work; no extra agents required |
-| D6 | Reproducible acceptance runner and final report: fixed candidate commit/APK, fresh request IDs, two runs per scenario, source audit, stream/save checks, actual cost/latency, Android/recovery evidence. Retain failed receipts and separate repair builds. | Twelve runs on one final build; all critical quality gates pass. Affected cases rerun twice after any subsequent fix. Report pending physical-device evidence separately. | D1–D5 |
+| D5 | iOS and Android presentation: breakfast before morning visits, lunch before afternoon visits, retain evening order; omit absent meal-duration metadata without fabricating it. Trace missing images through provider → saved output → native card; use licensed venue imagery with attribution and truthful destination fallbacks. Shorten repeated cautions while keeping critical warnings visible. | Versioned QA iOS and Android builds; screenshots of every day in the six scenarios, including narrow screen, missing/broken-image fallback, offline and reopened states. Compare to baseline. No unrelated stock image labeled as the venue. | Start in parallel with source work; no extra agents required |
+| D6 | Reproducible acceptance runner and final report: fixed candidate commit and mobile build hashes, fresh request IDs, two runs per scenario, source audit, stream/save checks, actual cost/latency, iOS/Android/web recovery evidence. Retain failed receipts and separate repair builds. | Twelve runs on one final build; all critical quality gates pass. Affected cases rerun twice after any subsequent fix. Report pending physical-device evidence separately. | D1–D5 |
 
 ## Milestones and concrete artifacts
 
@@ -35,13 +84,13 @@ from a menu or a generic dietary tag.
 2. **Backend repair candidate:** code + representative failed-case replay tests;
    reviewed alternatives; output distinguishes scheduled, unresolved and excluded.
    Review all changed paths and run relevant suites/type checks.
-3. **Android repair candidate:** versioned APK, image coverage diagnostics,
+3. **Mobile repair candidates:** versioned iOS and Android builds, image coverage diagnostics,
    before/after screen evidence and correct chronological display. Existing
    consent, sources and booking-review behavior must remain intact.
 4. **Final acceptance packet:** commit/APK hashes, all twelve briefs and receipts,
    venue ledger, schedule audit, screenshots, failure recovery, cost ledger,
    timing summary and explicit pass/fail per case. Keep PR #55 draft until this
-   packet supports release. Physical Android is a separate pending gate if absent.
+   packet supports release. Physical iOS and Android are separate pending gates if absent.
 
 ## Budget and measurement
 
@@ -54,7 +103,7 @@ in-flight/billing lag; never reset the key or bypass its $20 cap. Investigate
 unexpected per-run cost before another dispatch. Count source/provider costs if
 any are introduced. No new paid service is assumed.
 
-Measure first useful streamed content, durable completion, Android rendering,
+Measure first useful streamed content, durable completion, iOS/Android/web rendering,
 input/output tokens and billed aggregate deltas. Compare warm local runs with
 warm local runs; measure hosted performance separately. Initial performance guard:
 median warm completion <=35 seconds and no unexplained >60-second run. Quality

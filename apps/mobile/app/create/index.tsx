@@ -1,3 +1,5 @@
+import { TravelerRequirementsEditor } from '../../components/TravelerRequirementsEditor';
+import { travelerRequirementsSchema } from '../../lib/travelerRequirements';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
@@ -192,7 +194,10 @@ export default function CreateTripScreen() {
   };
 
   const missingRequirements = getMissingTripRequirements(draftInput);
-  const canProceed = missingRequirements.length === 0;
+  const requirementsValid = travelerRequirementsSchema
+    .nullish()
+    .safeParse(draftInput?.requirements).success;
+  const canProceed = missingRequirements.length === 0 && requirementsValid;
 
   const handleContinue = () => {
     if (!canProceed) {
@@ -537,6 +542,22 @@ export default function CreateTripScreen() {
               onSelect={handleVibesSelect}
               maxSelections={5}
             />
+          </View>
+
+          <View style={styles.section}>
+            <TravelerRequirementsEditor
+              value={draftInput?.requirements}
+              onChange={(update) =>
+                setDraftInput({
+                  requirements: update(useTripStore.getState().draftInput?.requirements),
+                })
+              }
+            />
+            {!requirementsValid ? (
+              <Text accessibilityRole="alert" style={{ color: colors.primary[800] }}>
+                Review dietary and access needs before generating.
+              </Text>
+            ) : null}
           </View>
 
           {/* Spacer for button */}
