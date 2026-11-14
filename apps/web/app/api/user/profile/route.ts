@@ -41,7 +41,7 @@ const UpdateProfileSchema = z.object({
         .optional(),
     })
     .optional(),
-  notification_settings: z.record(z.boolean()).optional(),
+  notification_settings: z.record(z.string(), z.boolean()).optional(),
   notification_consent_version: z.string().optional(),
 });
 

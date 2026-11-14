@@ -1,0 +1,53 @@
+--- a/index.js
++++ b/index.js
+@@ -4,16 +4,23 @@
+ const POOL_SIZE_MULTIPLIER = 128
+ let pool, poolOffset
+ function fillPool(bytes) {
+-  if (!pool || pool.length < bytes) {
+-    pool = Buffer.allocUnsafe(bytes * POOL_SIZE_MULTIPLIER)
+-    crypto.getRandomValues(pool)
+-    poolOffset = 0
+-  } else if (poolOffset + bytes > pool.length) {
+-    crypto.getRandomValues(pool)
+-    poolOffset = 0
++  if (bytes < 0) throw new RangeError('Wrong ID size')
++  try {
++    if (!pool || pool.length < bytes) {
++      pool = Buffer.allocUnsafe(bytes * POOL_SIZE_MULTIPLIER)
++      crypto.getRandomValues(pool)
++      poolOffset = 0
++    } else if (poolOffset + bytes > pool.length) {
++      crypto.getRandomValues(pool)
++      poolOffset = 0
++    }
++  } catch (e) {
++    pool = undefined
++    throw e
+   }
+   poolOffset += bytes
+ }
++
+ export function random(bytes) {
+   fillPool((bytes |= 0))
+   return pool.subarray(poolOffset - bytes, poolOffset)
+--- a/non-secure/index.js
++++ b/non-secure/index.js
+@@ -5,7 +5,7 @@
+   return (size = defaultSize) => {
+     let id = ''
+     let i = size | 0
+-    while (i--) {
++    while (i-- > 0) {
+       id += alphabet[(Math.random() * alphabet.length) | 0]
+     }
+     return id
+@@ -14,7 +14,7 @@
+ export let nanoid = (size = 21) => {
+   let id = ''
+   let i = size | 0
+-  while (i--) {
++  while (i-- > 0) {
+     id += urlAlphabet[(Math.random() * 64) | 0]
+   }
+   return id
