@@ -80,3 +80,22 @@ it('does not render malformed source metadata as a clickable attribution', () =>
   expect(tree!.root.findAllByProps({ accessibilityRole: 'link' })).toHaveLength(0);
   act(() => tree!.unmount());
 });
+
+it('keeps activity source attribution through schema parsing and rendering', () => {
+  const source = { url: 'https://example.org/museum', retrievedOn: '2026-11-02' };
+  const props = ActivityCardSchema.parse({
+    name: 'Museum',
+    description: 'Visit',
+    duration: '2 hours',
+    time: 'Morning',
+    source,
+  });
+  expect(props.source).toEqual(source);
+  let tree: ReactTestRenderer | undefined;
+  act(() => {
+    tree = create(<ActivityCard {...props} />);
+  });
+  expect(JSON.stringify(tree!.toJSON())).toContain('View source');
+  expect(JSON.stringify(tree!.toJSON())).toContain(source.retrievedOn);
+  act(() => tree!.unmount());
+});

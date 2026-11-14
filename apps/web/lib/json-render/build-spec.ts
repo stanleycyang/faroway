@@ -42,6 +42,7 @@ export interface HotelInput {
 }
 
 export interface ActivityInput {
+  source?: VenueSource;
   proposedVisitType?: ActivityResult["proposedVisitType"];
   priceStatus?: "unknown" | "estimate";
   id?: string;
@@ -352,6 +353,7 @@ export function buildItineraryBlocks(
         type: "ActivityCard",
         props: {
           id: activity.id,
+          source: readVenueSource(activity.source),
           name: activity.name,
           proposedVisitType: readProposedVisitType(activity.proposedVisitType),
           description:

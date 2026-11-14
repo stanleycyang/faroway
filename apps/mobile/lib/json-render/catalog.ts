@@ -124,6 +124,7 @@ export const ItineraryDay = {
 // =============================================================================
 
 export const ActivityCardSchema = z.object({
+  source: z.object({ url: z.string().url(), retrievedOn: z.string() }).optional(),
   id: z.string().optional(),
   proposedVisitType: z
     .enum(['ordinary_entry', 'exterior_walk', 'guided_tour', 'event', 'unknown'])

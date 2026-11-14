@@ -1,3 +1,6 @@
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { StreamedSpecPreview } from "@/components/trips/StreamedSpecPreview";
 import { describe, expect, it } from "vitest";
 import {
   buildHotelBlocks,
@@ -113,6 +116,50 @@ it.each([undefined, 0, -1, NaN, Infinity])(
     ]);
     expect(blocks.find((b) => b.type === "ActivityCard")?.props.duration).toBe(
       "Duration not set",
+    );
+  },
+);
+
+it.each(["ActivityCard", "HotelCard", "PriceTag"])(
+  "renders %s using supplied currency and preserves unknown prices",
+  (type) => {
+    const render = (props: Record<string, unknown>) =>
+      renderToStaticMarkup(
+        React.createElement(StreamedSpecPreview, { blocks: [{ type, props }] }),
+      );
+    const price = {
+      price: 25.5,
+      pricePerNight: 25.5,
+      amount: 25.5,
+      currency: "EUR",
+    };
+    expect(render(price)).toContain("EUR 25.50");
+    expect(render(price)).not.toContain("$25");
+    expect(render({ ...price, currency: undefined })).toContain(
+      "Price unknown",
+    );
+    expect(render({ ...price, priceStatus: "unknown" })).toContain(
+      "Price unknown",
+    );
+  },
+);
+it.each(["ActivityCard", "RestaurantCard"])(
+  "keeps validated source attribution in the web %s preview",
+  (type) => {
+    const source = {
+      url: "https://example.org/source",
+      retrievedOn: "2026-11-02",
+    };
+    const render = (value: unknown) =>
+      renderToStaticMarkup(
+        React.createElement(StreamedSpecPreview, {
+          blocks: [{ type, props: { name: "Visit", source: value } }],
+        }),
+      );
+    expect(render(source)).toContain('href="https://example.org/source"');
+    expect(render(source)).toContain("Confirm opening hours and availability");
+    expect(render({ ...source, url: "javascript:alert(1)" })).not.toContain(
+      "href=",
     );
   },
 );

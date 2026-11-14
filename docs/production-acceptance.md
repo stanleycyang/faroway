@@ -22,8 +22,8 @@ bash scripts/verify-release-local.sh
 ```
 
 Docker must be running. The script checks quality, unit/script tests, the offline
-planning rubric, six disposable PostgreSQL suites, synthetic desktop/mobile
-browser journeys and the standalone production web build. The build uses local
+planning rubric, seven disposable PostgreSQL suites, synthetic desktop/mobile
+planning, checkout and recovery browser journeys and the standalone production web build. The build uses local
 dummy Supabase inputs, an empty read-only local catalog, and normal production
 font downloads; it does not validate hosted credentials or production content.
 Its output is verification-only and must never be deployed. The synthetic
@@ -44,7 +44,10 @@ not a skipped job or an older revision.
 ## Hosted staging journeys
 
 First verify the immutable deployment uses `faroway-staging`
-(`omovikloadpvzijoaqus`) for both client and server access. Use disposable accounts
+(`omovikloadpvzijoaqus`) for both client and server access. Resolve its deployment
+ID and Git SHA before testing: a branch alias can still point to an older build
+after a successful preview build. Record the immutable deployment identity;
+never count a healthy alias as evidence for a different candidate. Use disposable accounts
 A and B. Keep optional providers and push delivery disabled unless included in
 the accepted launch scope. Use synthetic private data and avoid live bookings.
 
@@ -73,6 +76,9 @@ geographic grouping and travel time, daily pacing, explicit constraints, currenc
 unknown prices and estimates. Verify a sample of venue facts against permitted
 sources. Generic fallback output must be disclosed and recoverable. Include
 provider timeout, partial output and retry, and verify no duplicate paid dispatch.
+Saved-plan smoke must reject malformed, stale or explicitly conflicting timing
+proposals even when titles, dates and meal counts are valid. A valid proposed
+timetable still does not verify actual travel or venue hours.
 Do not treat fixture calibration or an HTTP 200 as a quality pass. Restore the
 staging planning pause after the exercise.
 

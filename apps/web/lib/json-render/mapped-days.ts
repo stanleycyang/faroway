@@ -44,6 +44,7 @@ export function mappedDaysToSpec(
       {
         ...viatorContentMetadata(a),
         id: text(a.id),
+        source: readVenueSource(a.source),
         name,
         description: text(a.description),
         proposedVisitType: readProposedVisitType(a.proposedVisitType),

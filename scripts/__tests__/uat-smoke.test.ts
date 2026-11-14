@@ -1,3 +1,4 @@
+import { dayTimingBasis } from "../../packages/types/src/day-timing";
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { resolve } from "node:path";
@@ -572,5 +573,72 @@ test("live reservation probes refuse lookalike hosts and redirects", async () =>
     });
     expect(report.ok).toBe(false);
     expect(requested.some((url) => url.includes("evil.example"))).toBe(false);
+  }
+});
+
+test("saved-plan smoke fails timing conflicts and stale or truncated proposals", () => {
+  const day = {
+    dayNumber: 1,
+    date: "2027-01-11",
+    title: "Evening museum",
+    summary: "A museum and dinner",
+    morning: { activities: [] },
+    afternoon: { activities: [] },
+    evening: {
+      activities: [{ id: "museum", name: "Museum", duration: 120 }],
+      meals: [{ id: "dinner", name: "Dinner" }],
+    },
+  };
+  const proposal = {
+    policy: "day-timing-v1",
+    basis: dayTimingBasis(day),
+    fitsPolicy: true,
+    verified: false,
+    conflict: null,
+    events: [
+      {
+        id: "activity:museum",
+        kind: "activity",
+        durationMinutes: 120,
+        startMinute: 1080,
+        endMinute: 1200,
+        bufferBeforeMinutes: 0,
+      },
+      {
+        id: "meal:evening:dinner",
+        kind: "meal",
+        durationMinutes: 60,
+        startMinute: 1230,
+        endMinute: 1290,
+        bufferBeforeMinutes: 30,
+      },
+    ],
+  };
+  const evaluate = (timingProposal: unknown) =>
+    evaluateSavedPlan(
+      {
+        trip: { status: "planned" },
+        itinerary: { days: [{ ...day, timingProposal }] },
+      },
+      { startDate: day.date, endDate: day.date },
+    );
+  expect(evaluate(proposal).ok).toBe(true);
+  expect(
+    evaluate({
+      ...proposal,
+      fitsPolicy: false,
+      events: [],
+      conflict: { eventId: "meal:evening:dinner", overrunMinutes: 30 },
+    }).failures,
+  ).toContain("Evening museum has an unresolved timing conflict");
+  for (const invalid of [
+    null,
+    {},
+    { ...proposal, basis: "old" },
+    { ...proposal, events: proposal.events.slice(0, 1) },
+  ]) {
+    expect(evaluate(invalid).failures).toContain(
+      "Evening museum has an invalid or stale timing proposal",
+    );
   }
 });

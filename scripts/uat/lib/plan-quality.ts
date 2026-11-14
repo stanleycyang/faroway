@@ -1,3 +1,4 @@
+import { readDayTiming } from "../../../packages/types/src/day-timing";
 import { inclusiveDays } from "./briefs";
 
 export interface PlanQuality {
@@ -69,6 +70,15 @@ export function evaluateSavedPlan(
     const title = typeof record?.title === "string" ? record.title : "";
     const summary = typeof record?.summary === "string" ? record.summary : "";
     const tips = Array.isArray(record?.tips) ? record.tips : [];
+    if (record?.timingProposal !== undefined) {
+      const timing = readDayTiming(record);
+      if (!timing)
+        failures.push(
+          `${title || "day"} has an invalid or stale timing proposal`,
+        );
+      else if (!timing.fitsPolicy)
+        failures.push(`${title || "day"} has an unresolved timing conflict`);
+    }
     if (
       (/^Day \d+ in /.test(title) &&
         (/^Explore .+ with a mix of activities and dining\.$/.test(summary) ||

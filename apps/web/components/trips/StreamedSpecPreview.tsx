@@ -1,3 +1,5 @@
+import { formatPrice } from "@faroway/constants";
+import { VenueSourceNote } from "./VenueSourceNote";
 import {
   Calendar,
   Clock,
@@ -132,7 +134,7 @@ function HotelCard({ props }: { props: SpecProps }) {
           <MetaLine
             items={[
               ratingLabel(props),
-              moneyLabel(numberProp(props, "pricePerNight"), "night"),
+              moneyLabel(props, "pricePerNight", "night"),
             ]}
           />
           {textProp(props, "description") && (
@@ -216,13 +218,14 @@ function DayTimeline({ props }: { props: SpecProps }) {
 function ActivityCard({ props }: { props: SpecProps }) {
   return (
     <SmallCard
+      source={props.source}
       accent="primary"
       description={textProp(props, "description")}
       icon={<MapPin className="h-5 w-5 text-primary-600" />}
       meta={[
         textProp(props, "time"),
         textProp(props, "duration"),
-        moneyLabel(numberProp(props, "price")),
+        moneyLabel(props, "price"),
       ]}
       title={textProp(props, "name", "Activity")}
       url={textProp(props, "bookingUrl")}
@@ -233,6 +236,7 @@ function ActivityCard({ props }: { props: SpecProps }) {
 function RestaurantCard({ props }: { props: SpecProps }) {
   return (
     <SmallCard
+      source={props.source}
       accent="orange"
       description={textProp(props, "description")}
       icon={<Utensils className="h-5 w-5 text-orange-600" />}
@@ -249,7 +253,10 @@ function RestaurantCard({ props }: { props: SpecProps }) {
 
 function PriceTag({ props }: { props: SpecProps }) {
   const amount = numberProp(props, "amount");
-  const currency = textProp(props, "currency", "USD");
+  const price =
+    props.priceStatus === "unknown"
+      ? undefined
+      : formatPrice(amount, props.currency);
 
   return (
     <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
@@ -257,7 +264,7 @@ function PriceTag({ props }: { props: SpecProps }) {
         {textProp(props, "period", "Cost")}
       </span>
       <span className="font-bold text-gray-900">
-        {amount == null ? "" : `${currency} ${amount.toLocaleString()}`}
+        {price ? `Est. ${price}` : "Price unknown"}
       </span>
     </div>
   );
@@ -272,6 +279,7 @@ function TextBlock({ props }: { props: SpecProps }) {
 }
 
 function SmallCard({
+  source,
   accent,
   description,
   icon,
@@ -279,6 +287,7 @@ function SmallCard({
   title,
   url,
 }: {
+  source?: unknown;
   accent: "primary" | "orange";
   description?: string;
   icon: ReactNode;
@@ -304,6 +313,7 @@ function SmallCard({
               {description}
             </p>
           )}
+          <VenueSourceNote value={source} />
           {url && (
             <span className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-primary-700 hover:text-primary-800">
               <Ticket className="h-4 w-4" />
@@ -375,7 +385,11 @@ function ratingLabel(props: SpecProps): string | undefined {
   return `${rating}/5`;
 }
 
-function moneyLabel(amount?: number, period?: string): string | undefined {
-  if (amount == null) return undefined;
-  return period ? `$${amount}/${period}` : `$${amount}`;
+function moneyLabel(props: SpecProps, key: string, period?: string): string {
+  const price =
+    props.priceStatus === "unknown"
+      ? undefined
+      : formatPrice(props[key], props.currency);
+  if (!price) return "Price unknown";
+  return `Est. ${price}${period ? `/${period}` : ""}`;
 }

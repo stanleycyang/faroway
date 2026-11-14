@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 import { mappedDaysToSpec } from "@/lib/json-render/mapped-days";
 import { buildItineraryBlocks } from "@/lib/json-render/build-spec";
 const visit = {
+  source: { url: "https://example.org/museum", retrievedOn: "2026-11-02" },
   id: "visit",
   name: "Museum",
   duration: 150,
@@ -71,6 +72,9 @@ it("projects all saved meals and canonical activity fields without changing the 
     "second",
   ]);
   const blocks = buildItineraryBlocks(result);
+  expect(blocks.find((b) => b.type === "ActivityCard")?.props.source).toEqual(
+    visit.source,
+  );
   expect(blocks.find((b) => b.type === "RestaurantCard")?.props.source).toEqual(
     meal.source,
   );

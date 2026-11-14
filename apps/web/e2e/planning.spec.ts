@@ -407,7 +407,16 @@ test("reconnecting observes the same job and keeps chapter state without a new p
   await chapter.click();
   await expect(chapter).toHaveAttribute("aria-expanded", "false");
   await request.get(`${fixtureUrl}/fixture/stage?value=error`);
-  await page.getByRole("button", { name: "Reconnect live updates" }).click();
+  // Preserved progress can already match before the reconnect effect runs.
+  // Wait for the new observation stream before asserting or sending completion.
+  await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/trips/fixture/stream" &&
+        response.status() === 200,
+    ),
+    page.getByRole("button", { name: "Reconnect live updates" }).click(),
+  ]);
   await expect(
     page.getByRole("heading", { name: "Discovering your destination" }),
   ).toBeVisible();
@@ -447,7 +456,16 @@ test("a socket disconnect preserves chapters and reconnects the same trip withou
     page.getByRole("heading", { name: "Live updates paused" }),
   ).toBeVisible();
   await expect(chapter).toHaveAttribute("aria-expanded", "false");
-  await page.getByRole("button", { name: "Reconnect live updates" }).click();
+  // Preserved progress can already match before the reconnect effect runs.
+  // Wait for the new observation stream before asserting or sending completion.
+  await Promise.all([
+    page.waitForResponse(
+      (response) =>
+        new URL(response.url()).pathname === "/api/trips/fixture/stream" &&
+        response.status() === 200,
+    ),
+    page.getByRole("button", { name: "Reconnect live updates" }).click(),
+  ]);
   await expect(page.getByRole("progressbar")).toHaveAttribute(
     "aria-valuenow",
     "42",

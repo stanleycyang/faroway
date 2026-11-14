@@ -249,6 +249,7 @@ export const ItineraryDay: React.FC<ItineraryDayProps> = ({ dayNumber, date, tit
 type ActivityCardProps = z.infer<typeof ActivityCardSchema>;
 
 export const ActivityCard: React.FC<ActivityCardProps> = ({
+  source,
   proposedVisitType,
   name,
   description,
@@ -285,6 +286,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
 
           <RNText style={styles.activityCardDescription}>{description}</RNText>
           {visitNote && <RNText style={styles.activityCardDescription}>{visitNote}</RNText>}
+          <VenueSourceNotice source={source} />
 
           <View style={styles.activityCardMeta}>
             <View style={styles.activityCardMetaItem}>

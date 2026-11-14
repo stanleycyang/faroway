@@ -354,6 +354,14 @@ cpSync(path.join(repoRoot, "packages"), path.join(fixtureRoot, "packages"), {
   recursive: true,
   filter: copyFilter,
 });
+// Runtime scheduling imports reviewed catalogs and pure evaluation helpers.
+// Include those source dependencies in the isolated build, never private UAT artifacts.
+for (const directory of ["scripts/fixtures", "scripts/uat/lib"]) {
+  cpSync(path.join(repoRoot, directory), path.join(fixtureRoot, directory), {
+    recursive: true,
+    filter: copyFilter,
+  });
+}
 cpSync(
   path.join(repoRoot, "package.json"),
   path.join(fixtureRoot, "package.json"),
