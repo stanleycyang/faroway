@@ -37,3 +37,17 @@ attempted. Installation and process launch do not establish UI acceptance.
 
 APK checksum and build receipt are retained with the source manifest under
 `artifacts/mobile-qa/android-current/`. No live generation was initiated.
+
+## Replacement installation
+
+[EAS build 3aada6d2](https://expo.dev/accounts/testimonio/projects/faroway/builds/3aada6d2-f74d-4e81-9502-517ccdcf7e08)
+finished successfully from commit `26e6d002a3c666020d64ee735c469b25666cecce`.
+The explicitly approved replacement uses the same QA-only signing key.
+`adb install -r` returned Success; package inspection confirms version 1.0.0,
+version code 14. No app-data clearing was performed. The APK checksum and source
+receipt are retained in ignored `artifacts/mobile-qa/android-3aada6d2/`.
+
+The Seeker remains connected, with keyguard showing=true and screen off. UI
+checks remain pending; installation is not UI acceptance. Build 14 includes the
+latest cache recovery, reconnect image recovery, offline normalization and
+storage-order fixes. No live generation was initiated.
