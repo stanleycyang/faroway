@@ -5,7 +5,7 @@ import { probeViatorSandbox } from "@/lib/affiliates/viator";
 import { isValidDateOnly } from "@/lib/api/date-range";
 import { z } from "zod";
 
-export const maxDuration = 40;
+export const maxDuration = 70;
 const date = z.string().refine(isValidDateOnly);
 const input = z
   .object({

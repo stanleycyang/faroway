@@ -24,9 +24,10 @@ import { isViatorContentEnabled } from "./viator-policy";
 const VIATOR_API_KEY = process.env.VIATOR_API_KEY;
 const VIATOR_PARTNER_ID = process.env.VIATOR_PARTNER_ID;
 // Supplier search runs alongside model generation. The generic two-second
-// vendor deadline timed out supplier searches in deployed QA. Keep a finite
-// provider-specific deadline, including response-body reads, without retries.
-const VIATOR_TIMEOUT_MS = getEnvNumber("ITINERARY_VIATOR_TIMEOUT_MS", 10000, {
+// vendor deadline timed out supplier searches in deployed QA. A measured
+// duration-filtered sandbox search took 21.7s. Keep both attempts inside the
+// existing 60s parallel-specialist budget, including response-body reads.
+const VIATOR_TIMEOUT_MS = getEnvNumber("ITINERARY_VIATOR_TIMEOUT_MS", 30000, {
   min: 1000,
   max: 30000,
 });
@@ -332,7 +333,7 @@ export async function searchViatorProducts(
               endDate: undefined,
               limit: Math.min(params.limit || 15, 3),
             },
-            5000,
+            25000,
           )
         ).map((product) => ({ ...product, catalogOnly: true }));
       }

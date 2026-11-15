@@ -89,7 +89,7 @@ it("reports dated provider timeouts as failures rather than empty inventory", as
     endDate: "2026-12-09",
     maxDurationMinutes: 240,
   });
-  await vi.advanceTimersByTimeAsync(15000);
+  await vi.advanceTimersByTimeAsync(55000);
   expect(await pending).toMatchObject({ status: "failed", reason: "timeout" });
   expect(fetch).toHaveBeenCalledTimes(2);
 });
@@ -136,7 +136,7 @@ it("recovers a dated timeout with one small catalog search and retains uncertain
     limit: 15,
     maxDurationMinutes: 240,
   });
-  await vi.advanceTimersByTimeAsync(10000);
+  await vi.advanceTimersByTimeAsync(30000);
   expect(await pending).toEqual([
     expect.objectContaining({ productCode: "123P1", catalogOnly: true }),
   ]);
@@ -177,16 +177,16 @@ it("bounds the catalog fallback too, with at most two supplier requests", async 
     destination: "Tokyo",
     startDate: "2026-12-07",
   });
-  await vi.advanceTimersByTimeAsync(15000);
+  await vi.advanceTimersByTimeAsync(55000);
   expect(await pending).toEqual([]);
   expect(fetch).toHaveBeenCalledTimes(2);
 });
 
-it("retains supplier results that arrive after the generic two-second deadline", async () => {
+it("retains supplier results that arrive after the observed 21.7-second filtered-search latency", async () => {
   vi.stubGlobal(
     "fetch",
     vi.fn(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      await new Promise((resolve) => setTimeout(resolve, 21723));
       return Response.json({
         products: [{ productCode: "123P1", title: "Tokyo food tour" }],
       });
@@ -194,7 +194,7 @@ it("retains supplier results that arrive after the generic two-second deadline",
   );
   const { searchViatorProducts } = await import("@/lib/affiliates/viator");
   const pending = searchViatorProducts({ destination: "Tokyo" });
-  await vi.advanceTimersByTimeAsync(3000);
+  await vi.advanceTimersByTimeAsync(21723);
   expect(await pending).toEqual([
     expect.objectContaining({ productCode: "123P1" }),
   ]);
@@ -212,7 +212,7 @@ it("still aborts a stalled supplier without retrying or inventing inventory", as
   );
   const { searchViatorProducts } = await import("@/lib/affiliates/viator");
   const pending = searchViatorProducts({ destination: "Tokyo" });
-  await vi.advanceTimersByTimeAsync(10000);
+  await vi.advanceTimersByTimeAsync(30000);
   expect(await pending).toEqual([]);
   expect(signal?.aborted).toBe(true);
   expect(fetch).toHaveBeenCalledTimes(1);
@@ -225,6 +225,6 @@ it("keeps the deadline active when supplier headers arrive but the body stalls",
   );
   const { searchViatorProducts } = await import("@/lib/affiliates/viator");
   const pending = searchViatorProducts({ destination: "Tokyo" });
-  await vi.advanceTimersByTimeAsync(10000);
+  await vi.advanceTimersByTimeAsync(30000);
   expect(await pending).toEqual([]);
 });

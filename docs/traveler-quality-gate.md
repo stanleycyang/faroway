@@ -51,10 +51,13 @@ more tests that assert the current implementation.
 ## Runtime failures that must stay visible
 
 Supplier requests can outlive a generic short HTTP timeout while still fitting
-inside parallel specialist generation. Viator uses a ten-second deadline
+inside parallel specialist generation. Viator uses a thirty-second deadline
 (`ITINERARY_VIATOR_TIMEOUT_MS`, bounded to 1–30 seconds), including body reads,
-without repeating the same request. After a dated-query timeout only, one smaller
-catalog search (at most three products, five-second deadline) is permitted.
+without repeating the same request. A measured duration-filtered sandbox search
+took 21.7 seconds, exceeding both previous deadlines. Primary plus catalog
+recovery is bounded to 55 seconds inside the existing 60-second parallel
+specialist budget. After a dated-query timeout only, one smaller
+catalog search (at most three products, twenty-five-second deadline) is permitted.
 Mark its products as catalog-only and retain availability uncertainty in saved
 day tips. Never substitute catalog results after a successful empty dated search
 or an HTTP authentication, rate-limit or server error. Verify delayed success,
