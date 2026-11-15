@@ -292,3 +292,18 @@ stores a pending snapshot rather than a saved copy. Supply complete API receipt
 fixtures, including created_at, so a subsequent cache read tests valid data.
 The account-scoped storage facade wraps methods; spy on the underlying prototype
 when injecting a one-shot failure, and always restore the spy.
+
+## Android system prompts and text size
+
+An optional password-manager save sheet can cover the app after successful QA
+sign-in. Decline saving disposable credentials; do not count a covered-control
+timeout as a login failure. The native runner narrowly recognizes the observed
+1Password save sheet and chooses its enabled “No thanks” action only. Unknown
+prompts still require inspection. Verify the chosen staging account has a saved
+itinerary before running saved-trip assertions; an empty account is a test-data
+precondition, not permission to generate a paid trip.
+
+For Android text-size checks, record the original font scale and restore it in
+a finally block. Capture both the configuration transition and a cold launch
+at the requested scale: activity recreation can briefly show stale measurements.
+Report transition clipping separately from persistent layout failures.

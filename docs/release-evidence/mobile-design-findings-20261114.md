@@ -145,3 +145,22 @@ Source inspection confirms generic neighborhood activities and meals originate
 from deterministic enrichment with planningIdea=true and unknown prices.
 No planner quality claim is made from these placeholders. Current-backend live
 acceptance remains required; no paid generation or deployment was started.
+
+## Physical Android follow-up, build 14
+
+Guest and authenticated walkthroughs verified M03 heading layout (including a
+cold launch at 1.5x text), M05 custom-destination copy, M06 explicit missing-photo
+state, M08 optional-needs disclosure/draft retention, M12 saved allergy/access
+visibility, and M13 all budget icons. Multiword synthetic allergy input retained
+order on Android (M07). The saved trip hero loaded (M11); the original
+generation-to-detail transition still needs a new generation test.
+
+M01 remains open: old Lisbon days 2 and 3 still contain generic meal ideas.
+M02/M04 generation preview require a current-backend run. M10/M14 loading-error
+races and M15/M17–M19 offline failure/reconnect paths retain automated coverage
+but have not been reproduced under physical device failure conditions.
+
+New observation: changing Android font scale while the app is running caused
+activity recreation and clipped text until cold restart. Cold-launch Explore at
+1.5x rendered correctly. Track the configuration-transition behavior separately;
+do not claim all large-text/accessibility checks passed.
