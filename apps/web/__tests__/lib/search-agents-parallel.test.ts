@@ -207,7 +207,7 @@ describe("search agents internal parallelism", () => {
     expect(results[0].name).toBe("AI Food Walk");
   });
 
-  it("does not let AI self-scoring displace a better-matched supplier experience", async () => {
+  it("keeps a relevant supplier experience despite generated self-scoring and synonym stuffing", async () => {
     mocks.searchViatorProducts.mockResolvedValue([
       {
         productCode: "TOKYO1",
@@ -229,9 +229,10 @@ describe("search agents internal parallelism", () => {
         activities: [
           {
             ...aiActivity,
-            name: "Observation deck",
-            description: "See the skyline",
-            category: "sightseeing",
+            name: "Food district walk",
+            description:
+              "Culinary restaurant tasting market michelin local cuisine cooking class",
+            category: "food",
             vibeScore: 100,
           },
         ],

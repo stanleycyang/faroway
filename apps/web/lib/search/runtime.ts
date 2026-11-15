@@ -25,7 +25,7 @@ export const AI_AGENT_TIMEOUT_MS = getEnvNumber(
 
 export const AGGREGATOR_TIMEOUT_MS = getEnvNumber(
   "ITINERARY_AGGREGATOR_TIMEOUT_MS",
-  30000,
+  60000,
   { min: 1000, max: 60000 },
 );
 

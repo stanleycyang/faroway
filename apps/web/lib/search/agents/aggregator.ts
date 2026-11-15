@@ -191,6 +191,8 @@ export async function runAggregatorAgent(
     structuredSchedule?: boolean;
     explicitDailyBudget?: boolean;
     repairDining?: boolean;
+    /** Interactive generation must not publish a backup draft as a finished plan. */
+    requireGeneratedPlan?: boolean;
   } = {},
 ): Promise<{
   days: SuggestedDay[];
@@ -418,14 +420,21 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
     }
 
     console.error(
-      "[Aggregator Agent] Recovery failed, using fallback itinerary",
+      options.requireGeneratedPlan
+        ? "[Aggregator Agent] Recovery failed; generation must be retried"
+        : "[Aggregator Agent] Recovery failed, using fallback itinerary",
     );
     logPlanningFallback(
       "aggregator",
       timedOut ? "timeout" : "error",
-      "fallback_itinerary",
+      options.requireGeneratedPlan ? "generation_failed" : "fallback_itinerary",
       detail,
     );
+    if (options.requireGeneratedPlan) {
+      throw new Error(
+        "We couldn't finish organizing your itinerary. Your trip details are saved. Please try again shortly.",
+      );
+    }
     return createFallbackItinerary(plan, hotels, activities, dining, transport);
   }
 }

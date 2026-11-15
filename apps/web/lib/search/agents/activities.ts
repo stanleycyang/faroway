@@ -442,22 +442,34 @@ export function calculateVibeScore(
   const text =
     `${activity.name} ${activity.description} ${activity.category}`.toLowerCase();
   const matchedVibes: string[] = [];
-  let score = 0;
+  const requestedVibes = [...new Set(vibes.map((vibe) => vibe.toLowerCase()))];
 
-  for (const vibe of vibes) {
-    const keywords = VIBE_KEYWORDS[vibe.toLowerCase()] || [];
-    const matches = keywords.filter((keyword) =>
-      text.includes(keyword.toLowerCase()),
-    );
+  for (const vibe of requestedVibes) {
+    const keywords = VIBE_KEYWORDS[vibe] || [];
+    const matches = keywords.some((keyword) => {
+      const escaped = keyword
+        .toLowerCase()
+        .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      // "art" in "party" is not a cultural match. Supplier and generated
+      // descriptions use the same evidence-independent relevance screen.
+      return new RegExp(
+        `(?<![\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`,
+        "u",
+      ).test(text);
+    });
 
-    if (matches.length > 0) {
+    if (matches) {
       matchedVibes.push(vibe);
-      score += matches.length * 15; // 15 points per keyword match
     }
   }
 
   return {
-    score: Math.min(100, score),
+    // Measure coverage of requested interests, not keyword density. A verbose
+    // generated description must not outrank concise supplier copy merely by
+    // listing more synonyms for the same interest.
+    score: requestedVibes.length
+      ? Math.round((matchedVibes.length / requestedVibes.length) * 100)
+      : 0,
     matchedVibes,
   };
 }

@@ -558,6 +558,15 @@ it("constrains total daily visits in the experimental structured schedule and pr
 });
 
 describe("search itinerary fallback", () => {
+  it("does not publish a backup draft when interactive generation requires a generated plan", async () => {
+    mocks.generateObject.mockClear();
+    await expect(
+      runAggregatorAgent(plan, [hotel], [activity("walk")], [], [], {
+        requireGeneratedPlan: true,
+      }),
+    ).rejects.toThrow("Your trip details are saved");
+    expect(mocks.generateObject).toHaveBeenCalledTimes(1);
+  });
   it("prefers nearby meals and discloses distant-only supply", async () => {
     const near: DiningResult = {
       ...activity("near-cafe"),

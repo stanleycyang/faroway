@@ -12,13 +12,20 @@
  */
 
 import { providerAmount, currencyCode, formatPrice } from "@faroway/constants";
-import { fetchWithTimeout } from "@/lib/search/runtime";
+import { fetchWithTimeout, getEnvNumber } from "@/lib/search/runtime";
 import { buildViatorHandoffUrl } from "./viator-link";
 import { isViatorContentEnabled } from "./viator-policy";
 
 // Environment variables
 const VIATOR_API_KEY = process.env.VIATOR_API_KEY;
 const VIATOR_PARTNER_ID = process.env.VIATOR_PARTNER_ID;
+// Supplier search runs alongside model generation. The generic two-second
+// vendor deadline timed out supplier searches in deployed QA. Keep a finite
+// provider-specific deadline, including response-body reads, without retries.
+const VIATOR_TIMEOUT_MS = getEnvNumber("ITINERARY_VIATOR_TIMEOUT_MS", 10000, {
+  min: 1000,
+  max: 30000,
+});
 // VIATOR_SANDBOX=true in .env to use sandbox endpoint (for testing keys)
 const VIATOR_API_BASE =
   process.env.VIATOR_SANDBOX === "true"
@@ -348,6 +355,7 @@ async function searchByDestinationId(
       headers: getV2WriteHeaders(),
       body: JSON.stringify(body),
     },
+    VIATOR_TIMEOUT_MS,
   );
 
   if (!response.ok) {
@@ -380,6 +388,7 @@ export async function getViatorProduct(
       {
         headers: getV2ReadHeaders(),
       },
+      VIATOR_TIMEOUT_MS,
     );
 
     if (!response.ok) {
@@ -421,6 +430,7 @@ export async function checkViatorAvailability(
           currency: "USD",
         }),
       },
+      VIATOR_TIMEOUT_MS,
     );
 
     if (!response.ok) {

@@ -7,6 +7,7 @@ import { runSmoke } from "../uat/lib/smoke-runner";
 import { evaluateSavedPlan } from "../uat/lib/plan-quality";
 import deployedNarrationFallback from "../fixtures/agentic-deployed-narration-fallback.json";
 import liveLisbonMealGaps from "../fixtures/live-lisbon-meal-gaps.json";
+import liveTokyoBackup from "../fixtures/live-tokyo-backup-draft.json";
 import { buildLiteApiFlightRequest } from "../../apps/web/lib/affiliates/liteapi-flight-request";
 import {
   PRODUCTION_PROJECT_REF,
@@ -17,6 +18,48 @@ import {
 const root = resolve(import.meta.dirname, "../..");
 const stagingUrl = `https://${STAGING_PROJECT_REF}.supabase.co`;
 const apiUrl = STAGING_PREVIEW_API_URL;
+
+test("rejects the retained Tokyo backup draft despite complete dates and meal slots", () => {
+  const result = evaluateSavedPlan(liveTokyoBackup.body, {
+    startDate: "2026-12-07",
+    endDate: "2026-12-09",
+    requireFullDayMeals: true,
+  });
+  expect(result.ok).toBe(false);
+  expect(result.failures).toContain(
+    "3 day(s) use an aggregator fallback template or unavailable narration",
+  );
+});
+
+test("a structural pass cannot certify an invented itinerary as traveler quality", () => {
+  const date = "2027-01-11";
+  const result = evaluateSavedPlan(
+    {
+      trip: { status: "planned" },
+      itinerary: {
+        days: [
+          {
+            date,
+            title: "A wonderful day",
+            morning: {
+              activities: [{ name: "Invented Museum on Mars" }],
+              meal: { name: "Imaginary Restaurant" },
+            },
+            afternoon: { meal: { name: "Imaginary Restaurant" } },
+            evening: { meal: { name: "Imaginary Restaurant" } },
+          },
+        ],
+      },
+    },
+    { startDate: date, endDate: date, requireFullDayMeals: true },
+  );
+  // Names cannot prove existence. Keep this limitation visible rather than
+  // teaching the grader to reject only this particular fictional venue name.
+  expect(result.ok).toBe(true);
+  expect(result.scope).toBe("saved-plan-contracts");
+  expect(result.travelerQuality).toBe("not_evaluated");
+  expect(result.notes.join(" ")).toContain("traveler usefulness");
+});
 
 function anon(ref: string): string {
   const payload = Buffer.from(JSON.stringify({ ref, role: "anon" })).toString(

@@ -1070,7 +1070,7 @@ describe("planTripWorkflow", () => {
       [],
       [dining],
       [transport],
-      { repairDining: true },
+      { repairDining: true, requireGeneratedPlan: true },
     );
   });
 
@@ -1202,7 +1202,7 @@ describe("planTripWorkflow", () => {
     "%s normalized itinerary",
     (responsePath) => {
       it.each([0, 4])(
-        "preserves outbound transport and unavailable costs through aggregation, bridge, persistence and read for %s nights",
+        "preserves generated transport/costs or rejects a backup draft for %s nights",
         async (nights) => {
           const { runAggregatorAgent } = await vi.importActual<
             typeof import("@/lib/search/agents/aggregator")
@@ -1261,13 +1261,34 @@ describe("planTripWorkflow", () => {
               ),
             );
 
-          expect(
-            (await planTripWorkflow({ ...workflowInput, endDate: end })).status,
-          ).toBe("completed");
+          const result = await planTripWorkflow({
+            ...workflowInput,
+            endDate: end,
+          });
           const rpcCalls = supabaseMock.rpc.mock.calls as unknown as [
             string,
             Record<string, unknown>,
           ][];
+          if (responsePath === "fallback") {
+            expect(result.status).toBe("error");
+            expect(
+              rpcCalls.some(
+                ([fn, args]) =>
+                  fn === "apply_trip_generation_update" &&
+                  args.p_state === "planned",
+              ),
+            ).toBe(false);
+            expect(
+              rpcCalls.some(
+                ([fn, args]) =>
+                  fn === "apply_trip_generation_update" &&
+                  args.p_state === "failed",
+              ),
+            ).toBe(true);
+            expect(mocks.dispatchItineraryReady).not.toHaveBeenCalled();
+            return;
+          }
+          expect(result.status).toBe("completed");
           const payload = rpcCalls.find(
             ([fn, args]) =>
               fn === "apply_trip_generation_update" &&

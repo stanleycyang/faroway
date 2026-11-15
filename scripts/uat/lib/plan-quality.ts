@@ -9,6 +9,9 @@ import {
 import { inclusiveDays } from "./briefs";
 
 export interface PlanQuality {
+  /** This evaluator checks saved-plan structure, not independently sourced facts. */
+  scope: "saved-plan-contracts";
+  travelerQuality: "not_evaluated";
   ok: boolean;
   failures: string[];
   notes: string[];
@@ -70,7 +73,9 @@ export function evaluateSavedPlan(
   },
 ): PlanQuality {
   const failures: string[] = [];
-  const notes: string[] = [];
+  const notes: string[] = [
+    "saved-plan contracts only; traveler usefulness, venue facts, route feasibility and requirement suitability are not evaluated",
+  ];
   const root = asRecord(body);
   const trip = asRecord(root?.trip);
   const itinerary = asRecord(root?.itinerary) ?? asRecord(trip?.itinerary);
@@ -120,6 +125,7 @@ export function evaluateSavedPlan(
         failures.push(`${title || "day"} has an unresolved timing conflict`);
     }
     if (
+      summary.startsWith("Backup draft:") ||
       (/^Day \d+ in /.test(title) &&
         (/^Explore .+ with a mix of activities and dining\.$/.test(summary) ||
           /^Suggested visits: .+ Keep the remaining time flexible\.$/.test(
@@ -170,5 +176,12 @@ export function evaluateSavedPlan(
     );
   } else notes.push("no OpenTable reservation URLs");
   notes.push(`${days.length} days`);
-  return { ok: failures.length === 0, failures, notes, reservationUrls };
+  return {
+    scope: "saved-plan-contracts",
+    travelerQuality: "not_evaluated",
+    ok: failures.length === 0,
+    failures,
+    notes,
+    reservationUrls,
+  };
 }

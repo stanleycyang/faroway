@@ -562,7 +562,7 @@ async function aggregateItineraryStep(params: {
       params.activities,
       params.dining,
       params.transport,
-      { repairDining: true },
+      { repairDining: true, requireGeneratedPlan: true },
     );
 
   const start = Date.parse(`${params.startDate}T00:00:00Z`);

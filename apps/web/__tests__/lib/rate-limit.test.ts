@@ -329,9 +329,7 @@ describe("calculateVibeScore", () => {
   });
 
   it("caps the score at 100 even with many keyword matches", () => {
-    // The mock has 4 adventure keywords: hiking, trekking, outdoor, extreme
-    // and 4 cultural keywords: museum, temple, history, art
-    // 8 total matches * 15 = 120, which should be capped at 100
+    // Matching every requested vibe reaches 100 regardless of synonym count.
     const activity = {
       name: "Hiking trekking outdoor extreme museum temple history art",
       description: "",
@@ -343,5 +341,34 @@ describe("calculateVibeScore", () => {
     expect(result.score).toBe(100);
     expect(result.matchedVibes).toContain("adventure");
     expect(result.matchedVibes).toContain("cultural");
+  });
+
+  it("does not reward synonym stuffing over broader traveler fit", () => {
+    const narrow = calculateVibeScore(
+      {
+        name: "Hiking trekking outdoor extreme",
+        description: "",
+        category: "",
+      },
+      ["adventure", "cultural"],
+    );
+    const broad = calculateVibeScore(
+      { name: "Hiking and museum", description: "", category: "" },
+      ["adventure", "cultural"],
+    );
+    expect(narrow.score).toBe(50);
+    expect(broad.score).toBe(100);
+  });
+
+  it("does not match art inside party or inflate repeated requested vibes", () => {
+    expect(
+      calculateVibeScore({ name: "Party bus", description: "", category: "" }, [
+        "cultural",
+      ]).score,
+    ).toBe(0);
+    const activity = { name: "Museum", description: "", category: "" };
+    expect(
+      calculateVibeScore(activity, ["cultural", "Cultural", "adventure"]).score,
+    ).toBe(50);
   });
 });
