@@ -1224,6 +1224,8 @@ const styles = StyleSheet.create({
     bottom: 0,
     justifyContent: 'flex-end',
     padding: 16,
+    // The paper section overlaps the hero by 24; keep the last metadata line clear.
+    paddingBottom: 40,
   },
   heroHeader: {
     flexDirection: 'row',
