@@ -199,3 +199,15 @@ hotel / streamed card photos bypassed reconnect handling. These now use the shar
 loader, with actual saved and streamed card error/reconnect tests and preserved
 photo accessibility labels. This does not close M11's generation transition or
 missing upstream photo coverage.
+
+M26 (P1): Android build 15 cold guest launch displays the bundled welcome hero
+behind the headline and description, substantially reducing contrast. Evidence:
+`artifacts/mobile-qa/android-13020ec2/guest-welcome.png`. Source now explicitly
+sizes the image to its hero, clips the hero, and paints an opaque reading panel.
+First-run navigation tests and TypeScript pass; replacement native acceptance is
+required. The earlier React Native Web preview did not expose this native defect.
+
+Additional build 15 observations: Android onboarding photos render with readable
+copy; scrolling reveals New York, its credit and the final exploration action.
+Choosing Lisbon opens the planner with Lisbon, Portugal and unset travel dates.
+These checks do not establish large-text, screen-reader or offline acceptance.

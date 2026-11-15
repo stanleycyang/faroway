@@ -32,7 +32,7 @@ export default function WelcomeScreen() {
         <View style={[styles.hero, { height: Math.min(380, Math.max(250, height * 0.42)) }]}>
           <Image
             source={destination.source}
-            style={StyleSheet.absoluteFill}
+            style={styles.heroPhoto}
             resizeMode="cover"
             accessible={false}
           />
@@ -76,7 +76,9 @@ export default function WelcomeScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#FAF8F3' },
   scroll: { flexGrow: 1 },
-  hero: { backgroundColor: '#143D46' },
+  hero: { backgroundColor: '#143D46', overflow: 'hidden' },
+  // Bundled native images retain intrinsic dimensions unless explicitly sized.
+  heroPhoto: { ...StyleSheet.absoluteFillObject, width: '100%', height: '100%' },
   wordmark: {
     position: 'absolute',
     left: 24,
@@ -94,7 +96,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
-  paper: { padding: 24, paddingTop: 28, flexGrow: 1 },
+  paper: { padding: 24, paddingTop: 28, flexGrow: 1, backgroundColor: '#FAF8F3' },
   title: { color: '#143D46', fontSize: 36, lineHeight: 42, fontWeight: '800', letterSpacing: -1 },
   description: { color: '#475D61', fontSize: 17, lineHeight: 25, marginTop: 16, marginBottom: 24 },
   actions: { gap: 12 },

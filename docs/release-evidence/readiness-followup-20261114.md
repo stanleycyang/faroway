@@ -54,3 +54,19 @@ open. The older protected preview failed missing-meal/timing acceptance and was
 deleted. New credential-bearing preview approval is bounded separately. Physical
 failure/accessibility coverage, external provider flows, operational checks and
 final CI/deep review remain release gates. The branch is not production-ready.
+
+## Full CI and further Android findings
+
+Full verification run `43667970362` passed Quality Checks and Tests. Build Web
+compiled and typechecked, then failed collecting blog pages because both GitHub
+Actions secrets `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are
+absent (confirmed by secret names only). A preflight now fails early with the
+missing names, without values. This improves diagnosis; it does not resolve the
+missing configuration or waive the production blog-data gate. No credentials
+were uploaded to GitHub. Full Release Verification is still pending at this entry.
+
+Android build 15 reproduced the empty profile summary; opening the editor showed
+the saved Culture/Foodie selection. Cold guest welcome exposed native hero bleed
+behind body text (M26). Source sizing, clipping and opaque paper fix that boundary;
+physical acceptance requires a new build. The existing nine first-run tests,
+mobile TypeScript and changed-screen formatting pass after the correction.

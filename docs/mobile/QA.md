@@ -324,6 +324,12 @@ custom destination entry, returning users, attribution, and scrolling/wrapping a
 small widths and larger native text. Source-rendered web previews are useful layout
 evidence but do not replace installed-device acceptance.
 
+For bundled hero images, inspect the native boundary between the photo and the
+text panel. Intrinsic image dimensions can extend beyond an absolutely positioned
+container even when a web preview looks correct. Explicitly size the image, clip
+its container, and give the reading surface an opaque background; confirm the
+actual installed result before closing the finding.
+
 ### Verification command context
 
 Run repository-root file edits against root-relative paths (or absolute paths).
