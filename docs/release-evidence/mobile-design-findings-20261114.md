@@ -211,3 +211,14 @@ Additional build 15 observations: Android onboarding photos render with readable
 copy; scrolling reveals New York, its credit and the final exploration action.
 Choosing Lisbon opens the planner with Lisbon, Portugal and unset travel dates.
 These checks do not establish large-text, screen-reader or offline acceptance.
+
+## Approved build acceptance follow-up
+
+See [candidate verification](approved-readiness-60ccd4b.md). M26 now passes on
+both physical phones with source 60ccd4b: the hero is contained and the reading
+panel is opaque. M24 remains open: the retained iPhone session and preference
+editor report load failure, while the staging API returns the saved preferences;
+a fresh phone session must be checked before attributing this to a source defect.
+M01 remains open: current live Lisbon had four missing meal suggestions despite
+passing the old structural smoke. The evaluator and absent-neighborhood repair
+path are corrected in source; no new live acceptance is claimed.

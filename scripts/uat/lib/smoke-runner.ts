@@ -1220,7 +1220,10 @@ async function liveBrief(
     const saved = await http(fetchImpl, route, { headers });
     const savedDown = serverFailure(2, `live-plan:${brief.id}`, saved.status);
     if (savedDown) return savedDown;
-    const quality = evaluateSavedPlan(saved.data, brief);
+    const quality = evaluateSavedPlan(saved.data, {
+      ...brief,
+      requireFullDayMeals: true,
+    });
     for (const url of quality.reservationUrls) {
       if (!isOpenTableReservationUrl(url)) {
         quality.failures.push(

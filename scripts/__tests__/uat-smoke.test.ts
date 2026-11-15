@@ -6,6 +6,7 @@ import { IMAGE_PATHS } from "../../packages/constants/src/images";
 import { runSmoke } from "../uat/lib/smoke-runner";
 import { evaluateSavedPlan } from "../uat/lib/plan-quality";
 import deployedNarrationFallback from "../fixtures/agentic-deployed-narration-fallback.json";
+import liveLisbonMealGaps from "../fixtures/live-lisbon-meal-gaps.json";
 import { buildLiteApiFlightRequest } from "../../apps/web/lib/affiliates/liteapi-flight-request";
 import {
   PRODUCTION_PROJECT_REF,
@@ -704,4 +705,88 @@ test("saved-plan smoke fails timing conflicts and stale or truncated proposals",
       "Evening museum has an invalid or stale timing proposal",
     );
   }
+});
+
+test("saved-plan smoke does not count ideas or malformed placeholders as usable supply", () => {
+  const evaluate = (morning: unknown) =>
+    evaluateSavedPlan(
+      {
+        trip: { status: "planned" },
+        itinerary: {
+          days: [{ date: "2026-12-07", title: "Lisbon", morning }],
+        },
+      },
+      { startDate: "2026-12-07", endDate: "2026-12-07" },
+    );
+  for (const placeholder of [
+    null,
+    {},
+    { name: " " },
+    { name: "Local spot", planningIdea: true },
+  ]) {
+    const result = evaluate({
+      activities: [placeholder],
+      meals: [placeholder],
+    });
+    expect(result.failures).toContain("Lisbon has no activities");
+    expect(result.failures).toContain("Lisbon has no meals");
+  }
+  expect(
+    evaluate({
+      activities: [{ name: "Museum" }],
+      meal: { name: "Local spot", planningIdea: true },
+    }).failures,
+  ).toContain("Lisbon has no meals");
+  expect(
+    evaluate({
+      activities: [{ name: "Museum" }],
+      meals: [{ name: "Cafe" }, { name: "Idea", planningIdea: true }],
+    }).ok,
+  ).toBe(true);
+});
+
+test("full-day live acceptance rejects a dinner-only day even with valid activities", () => {
+  const body = {
+    trip: { status: "planned" },
+    itinerary: {
+      days: [
+        {
+          date: "2026-12-07",
+          title: "Lisbon",
+          morning: { activities: [{ name: "Museum" }], meals: [] },
+          afternoon: { meals: [] },
+          evening: { meals: [{ name: "Restaurant" }] },
+        },
+      ],
+    },
+  };
+  const dates = {
+    startDate: "2026-12-07",
+    endDate: "2026-12-07",
+    requireFullDayMeals: true,
+  };
+  expect(evaluateSavedPlan(body, dates).failures).toEqual([
+    "Lisbon has no usable breakfast suggestion",
+    "Lisbon has no usable lunch suggestion",
+  ]);
+  const day = body.itinerary.days[0];
+  Object.assign(day.morning, { meals: [{ name: "Cafe" }] });
+  Object.assign(day.afternoon, { meals: [{ name: "Market lunch" }] });
+  expect(evaluateSavedPlan(body, dates).ok).toBe(true);
+});
+
+test("rejects the retained live Lisbon meal gaps that previously passed structural smoke", () => {
+  const result = evaluateSavedPlan(liveLisbonMealGaps.body, {
+    startDate: "2026-12-07",
+    endDate: "2026-12-09",
+    requireFullDayMeals: true,
+  });
+  expect(result.ok).toBe(false);
+  expect(result.failures).toHaveLength(4);
+  expect(
+    result.failures.filter((failure) => failure.includes("breakfast")),
+  ).toHaveLength(2);
+  expect(
+    result.failures.filter((failure) => failure.includes("lunch")),
+  ).toHaveLength(2);
 });

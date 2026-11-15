@@ -58,6 +58,33 @@ it("does not retry when existing inventory covers the day", async () => {
   await repairDiningInventory(nearby, compile, discover);
   expect(discover).not.toHaveBeenCalled();
 });
+it("repairs named and addressed inventory even when neighborhood metadata is absent", async () => {
+  const withoutNeighborhood = {
+    ...visit,
+    location: { ...location, neighborhood: undefined },
+  };
+  const discover = vi.fn().mockResolvedValue(nearby);
+  const result = await repairDiningInventory(
+    [],
+    (inventory) =>
+      compileSchedule(plan, [withoutNeighborhood], inventory, [], {
+        maxUnverifiedMealDistanceKm: 3,
+      }),
+    discover,
+  );
+  expect(discover).toHaveBeenCalledExactlyOnceWith(
+    [
+      {
+        area: "Test district, Test street",
+        mealTypes: ["breakfast", "lunch", "dinner"],
+      },
+    ],
+    [],
+  );
+  expect(result.compiled.days[0].morning.meal?.id).toBe("breakfast");
+  expect(result.compiled.days[0].afternoon.meal?.id).toBe("lunch");
+  expect(result.compiled.days[0].evening.meal?.id).toBe("dinner");
+});
 it("retains gaps when the retry supplies only distant or excluded restaurants", async () => {
   const distant = nearby.map((meal) => ({
     ...meal,

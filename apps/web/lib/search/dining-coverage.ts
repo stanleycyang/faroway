@@ -63,7 +63,15 @@ export function findDiningCoverageGaps(
         areas: [
           ...new Set(
             stops
-              .map((stop) => stop.location?.neighborhood?.trim())
+              .map((stop) => {
+                const location = stop.location;
+                return (
+                  location?.neighborhood?.trim() ||
+                  [location?.name?.trim(), location?.address?.trim()]
+                    .filter(Boolean)
+                    .join(", ")
+                );
+              })
               .filter((area): area is string => Boolean(area)),
           ),
         ],

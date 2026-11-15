@@ -38,14 +38,31 @@ function collectReservationUrls(value: unknown, found: string[]): void {
 function slotCount(slot: unknown, key: "activities" | "meals"): number {
   const record = asRecord(slot);
   const value = record?.[key];
-  if (Array.isArray(value)) return value.length;
-  if (key === "meals" && record?.meal) return 1;
-  return 0;
+  const items = Array.isArray(value)
+    ? value
+    : key === "meals" && record?.meal
+      ? [record.meal]
+      : [];
+  // Ideas and malformed placeholders must not satisfy a usable day's supply.
+  // A named candidate still requires separate provenance/venue review.
+  return items.filter((item) => {
+    const candidate = asRecord(item);
+    return (
+      candidate?.planningIdea !== true &&
+      typeof candidate?.name === "string" &&
+      candidate.name.trim().length > 0
+    );
+  }).length;
 }
 
 export function evaluateSavedPlan(
   body: unknown,
-  dates: { startDate: string; endDate: string },
+  dates: {
+    startDate: string;
+    endDate: string;
+    /** Frozen live briefs currently describe full days, without arrival limits. */
+    requireFullDayMeals?: boolean;
+  },
 ): PlanQuality {
   const failures: string[] = [];
   const notes: string[] = [];
@@ -114,6 +131,16 @@ export function evaluateSavedPlan(
       slotCount(record?.evening, "meals");
     if (activities < 1) failures.push(`${title || "day"} has no activities`);
     if (meals < 1) failures.push(`${title || "day"} has no meals`);
+    if (dates.requireFullDayMeals) {
+      for (const [period, meal] of [
+        ["morning", "breakfast"],
+        ["afternoon", "lunch"],
+        ["evening", "dinner"],
+      ] as const) {
+        if (slotCount(record?.[period], "meals") === 0)
+          failures.push(`${title || "day"} has no usable ${meal} suggestion`);
+      }
+    }
     if (record?.transport && dayIndex !== 0) {
       failures.push("transport is present after day 1");
     }
