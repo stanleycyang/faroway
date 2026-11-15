@@ -58,4 +58,6 @@ acceptance. Native replacement builds remain a separate gate.
 - `git diff --check` passed.
 - Actual screen source rendered through React Native Web at 390×844 and 320×700. Local hero and all three destination images decoded; no document horizontal overflow at 320px. Initial narrow row crowding led to stacked destination layout. These are browser layout checks, not native Dynamic Type acceptance.
 - Local screenshots: `artifacts/mobile-qa/first-run-source-preview/` (ignored). Preview mocked router, user store, icon glyphs, status bar, haptics and external credit-link opening. It did not exercise real authentication or generation.
-- Native build/upload approval requested; no new build submitted by this batch.
+- Both replacement builds were subsequently approved, completed and installed. See
+  [physical build receipt](physical-builds-b7133b7-20261114.md) for exact artifacts,
+  limited iPhone observations and remaining Android visual acceptance.

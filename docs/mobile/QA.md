@@ -91,7 +91,10 @@ existing mobile project context rather than running `eas init` again. Preserve
 the build ID and inspect that same build until it reaches a terminal status.
 Build log URLs can return Brotli-compressed responses; use an HTTP client with
 automatic content decoding (for example Node `fetch().text()`), rather than
-assuming UTF-8 or gzip. Keep signed URLs and environment values out of reports.
+assuming UTF-8 or gzip. Artifact hosts can also reject Python urllib while Node
+`fetch` succeeds; use the installed Node HTTP client for approved downloads, check
+status before writing, and record a SHA-256. Keep signed URLs and environment
+values out of reports.
 
 ## Local prerequisites
 
