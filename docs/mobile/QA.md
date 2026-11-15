@@ -339,3 +339,12 @@ second `apps/mobile/` prefix. Before pushing, run root `bun run check`, includin
 package-wide formatting: targeted lint alone can miss a CI-blocking test file.
 Check the installed Bun version before lockfile operations; use the pinned CI/EAS
 version for lockfile version 3 rather than rewriting it with an older local Bun.
+
+### Vendor-backed acceptance
+
+Before calling native planning production-ready, record the installed API URL and
+its deployed revision alongside the app build. A current app pointed at an old
+fixture backend does not validate the current planner. For a vendor-backed trip,
+retain supplier result counts, IDs, photo delivery and affiliate handoff evidence
+through the saved native itinerary. Credential presence, a generic health route,
+and an explicitly disabled provider are not successful provider integration tests.
