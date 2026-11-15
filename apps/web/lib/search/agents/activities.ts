@@ -111,6 +111,8 @@ interface ActivityListResult {
 
 const SYSTEM_PROMPT = `You are a travel activities expert. Suggest real activities and attractions for the destination. Suggestions are not verified bookings; never invent an attraction, tour or event to fill the requested count.
 
+Your role is to suggest independently visitable places and self-guided stops. Supplier APIs provide organized tours, workshops and ticketed events separately. No supplier inventory is supplied in this prompt: do not invent named food tours, bar crawls, classes, performances or other organized experiences. Prefer ordinary_entry or exterior_walk; return fewer suggestions rather than manufacture a bookable product.
+
 Prefer ordinary, enduring places and experiences. Without supplied date-specific organizer evidence, omit recurring weekday events, temporary exhibitions, performances and special late openings. Do not turn an ordinary daytime venue into an evening event to satisfy the traveler's schedule. Return fewer options if necessary.
 
 For each activity, provide:
@@ -165,7 +167,7 @@ export async function runActivitiesAgent(
       })
     : Promise.resolve([]);
 
-  const prompt = `Generate ${count} bookable activities and attractions for ${destination}.
+  const prompt = `Suggest up to ${count} independently visitable places and self-guided stops for ${destination}. Organized bookable experiences come from supplier inventory separately.
 
 **Trip Details:**
 - Travel dates (inclusive, destination local calendar): ${dates.start} to ${dates.end}
@@ -201,23 +203,29 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
     "activities AI",
   )
     .then(({ object: result }) =>
-      result.activities.map((activity, index) => ({
-        ...screenGeneratedActivityCopy(activity),
-        // Compare suggestions and supplier inventory on the same scale. A model's
-        // self-assigned score must not crowd real products out of the shortlist.
-        vibeScore: calculateVibeScore(
-          screenGeneratedActivityCopy(activity),
-          vibes,
-        ).score,
-        id: `activity_${Date.now()}_${index}`,
-        price: 0,
-        currency: "",
-        priceStatus: "unknown" as const,
-        affiliateUrl: undefined,
-        affiliatePartner: undefined,
-        rating: 0,
-        reviewCount: 0,
-      })),
+      result.activities
+        .filter(
+          (activity) =>
+            activity.proposedVisitType !== "guided_tour" &&
+            activity.proposedVisitType !== "event",
+        )
+        .map((activity, index) => ({
+          ...screenGeneratedActivityCopy(activity),
+          // Compare suggestions and supplier inventory on the same scale. A model's
+          // self-assigned score must not crowd real products out of the shortlist.
+          vibeScore: calculateVibeScore(
+            screenGeneratedActivityCopy(activity),
+            vibes,
+          ).score,
+          id: `activity_${Date.now()}_${index}`,
+          price: 0,
+          currency: "",
+          priceStatus: "unknown" as const,
+          affiliateUrl: undefined,
+          affiliatePartner: undefined,
+          rating: 0,
+          reviewCount: 0,
+        })),
     )
     .catch((error: unknown) => {
       const timedOut = isOperationTimeoutError(error);

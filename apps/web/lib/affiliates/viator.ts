@@ -326,6 +326,7 @@ export async function searchViatorProducts(
 async function searchByDestinationId(
   destId: number,
   params: ViatorSearchParams,
+  timeoutMs = VIATOR_TIMEOUT_MS,
 ): Promise<ViatorProduct[]> {
   const body: Record<string, unknown> = {
     filtering: {
@@ -355,13 +356,14 @@ async function searchByDestinationId(
       headers: getV2WriteHeaders(),
       body: JSON.stringify(body),
     },
-    VIATOR_TIMEOUT_MS,
+    timeoutMs,
   );
 
   if (!response.ok) {
-    const error = await response.text();
-    console.error("[Viator] products/search error:", response.status, error);
-    return [];
+    // Consume the finite body within its deadline, but never log a provider
+    // error body: it can contain request details or credentials.
+    await response.text();
+    throw new Error(`Viator search HTTP ${response.status}`);
   }
 
   const data = await response.json();
@@ -369,6 +371,46 @@ async function searchByDestinationId(
     `[Viator] products/search returned ${data.products?.length || 0} results for destId=${destId}`,
   );
   return (data.products || []).map(normalizeViatorProduct);
+}
+
+/** Fixed, sandbox-only connectivity probe. No model calls or traveler data. */
+export async function probeViatorSandbox() {
+  if (process.env.VIATOR_SANDBOX !== "true" || !isViatorConfigured()) {
+    return { status: "unconfigured" as const };
+  }
+  const started = Date.now();
+  try {
+    const products = await searchByDestinationId(
+      334,
+      { destination: "Tokyo", limit: 3 },
+      30000,
+    );
+    return {
+      status: products.length ? ("available" as const) : ("empty" as const),
+      elapsedMs: Date.now() - started,
+      products: products.length,
+      withPhotos: products.filter((p) => p.images.length > 0).length,
+      // Validate against the configured account on the server; never export it
+      // or derive the expected partner from a returned URL.
+      attributedProducts: products.filter((p) =>
+        generateViatorAffiliateUrl(p.productCode, "qa-probe", {
+          productUrl: p.productUrl,
+        }),
+      ).length,
+    };
+  } catch (error) {
+    return {
+      status: "failed" as const,
+      elapsedMs: Date.now() - started,
+      reason:
+        error instanceof Error && error.name === "AbortError"
+          ? "timeout"
+          : error instanceof Error &&
+              /^Viator search HTTP \d{3}$/.test(error.message)
+            ? error.message
+            : "provider_response_error",
+    };
+  }
 }
 
 /**

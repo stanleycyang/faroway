@@ -71,3 +71,16 @@ Retained backup drafts must fail acceptance even when their dates and meal
 slots are complete. Preserve observed failure formats as regression fixtures;
 renaming fallback prose must not make quality reports green. Relevance scoring
 is a selection heuristic, not evidence of venue existence or suitability.
+
+Before repeating paid generation to diagnose supplier failures, use authenticated
+`POST /api/qa/suppliers` on the isolated staging preview. It makes one fixed Tokyo
+Viator sandbox search (three products, no traveler data, 30-second deadline),
+returns counts and server-validated attribution counts, and never returns keys,
+partner IDs or provider error bodies. It is disabled outside the staging preview
+and limited to three probes per user per hour. A successful catalog probe does
+not establish date availability, image decoding or scheduled-trip quality.
+
+Generated activity suggestions must not fill supplier gaps with organized tours
+or events. Those explicit generated visit types are excluded from the shortlist;
+supplier products remain eligible. Independently visitable suggestions still need
+venue/date verification and are not automatically grounded by this screen.

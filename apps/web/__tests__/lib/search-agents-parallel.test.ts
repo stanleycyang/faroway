@@ -207,6 +207,34 @@ describe("search agents internal parallelism", () => {
     expect(results[0].name).toBe("AI Food Walk");
   });
 
+  it("does not schedule generated organized tours or events without supplier inventory", async () => {
+    mocks.generateObject.mockResolvedValue({
+      object: {
+        activities: [
+          {
+            ...aiActivity,
+            name: "Invented evening performance",
+            proposedVisitType: "event",
+          },
+          {
+            ...aiActivity,
+            name: "Invented branded food tour",
+            proposedVisitType: "guided_tour",
+          },
+          {
+            ...aiActivity,
+            name: "Independent museum visit",
+            proposedVisitType: "ordinary_entry",
+          },
+        ],
+      },
+    });
+    const results = await runActivitiesAgent(plan as never);
+    expect(results.map((item) => item.name)).toEqual([
+      "Independent museum visit",
+    ]);
+  });
+
   it("keeps a relevant supplier experience despite generated self-scoring and synonym stuffing", async () => {
     mocks.searchViatorProducts.mockResolvedValue([
       {
