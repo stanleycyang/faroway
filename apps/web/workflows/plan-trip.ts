@@ -1,3 +1,4 @@
+import { hasUsableScheduledSupply } from "@/lib/search/plan-supply";
 import { mappedDaysToSpec } from "@/lib/json-render/mapped-days";
 import { readPrice } from "@faroway/constants";
 import { matchesTransportProjection } from "@/lib/search/transport-reference";
@@ -580,6 +581,12 @@ async function aggregateItineraryStep(params: {
   ) {
     throw new Error(
       "The generated itinerary does not cover the saved trip dates. Please retry planning.",
+    );
+  }
+
+  if (!hasUsableScheduledSupply(days)) {
+    throw new Error(
+      "We couldn't generate a usable itinerary. Your trip details are saved. Please try again shortly.",
     );
   }
 

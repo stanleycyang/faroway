@@ -361,6 +361,7 @@ describe("planTripWorkflow", () => {
       days: Array.from({ length: 5 }, (_, index) => ({
         dayNumber: index + 1,
         date: `2026-06-0${index + 1}`,
+        morning: { activities: [activity] },
       })),
       topHotel: hotel,
     });
@@ -985,6 +986,42 @@ describe("planTripWorkflow", () => {
     expect(mocks.runAggregatorAgent).toHaveBeenCalledTimes(1);
   });
 
+  it.each(["empty", "ideas"])(
+    "rejects %s output without saving success or sending ready notification",
+    async (kind) => {
+      mocks.runAggregatorAgent.mockResolvedValue({
+        days: Array.from({ length: 5 }, (_, index) => ({
+          dayNumber: index + 1,
+          date: `2026-06-0${index + 1}`,
+          morning: {
+            activities:
+              kind === "ideas" ? [{ ...activity, planningIdea: true }] : [],
+          },
+          afternoon: {
+            activities: [],
+            meal:
+              kind === "ideas" ? { ...dining, planningIdea: true } : undefined,
+          },
+          evening: { activities: [] },
+        })),
+        topHotel: hotel,
+      });
+      const result = await planTripWorkflow(workflowInput);
+      expect(result.status).toBe("error");
+      expect(result.error).toContain("couldn't generate a usable itinerary");
+      expect(mocks.dispatchItineraryReady).not.toHaveBeenCalled();
+      expect(mocks.mapSearchResultsToItinerary).not.toHaveBeenCalled();
+      expect(supabaseMock.rpc).toHaveBeenCalledWith(
+        "apply_trip_generation_update",
+        expect.objectContaining({ p_state: "failed" }),
+      );
+      expect(supabaseMock.rpc).not.toHaveBeenCalledWith(
+        "apply_trip_generation_update",
+        expect.objectContaining({ p_state: "planned" }),
+      );
+    },
+  );
+
   it("continues to aggregation when a provider fails", async () => {
     mocks.runActivitiesAgent.mockRejectedValue(new Error("activities failed"));
 
@@ -1042,7 +1079,7 @@ describe("planTripWorkflow", () => {
       summary: "Arrive in Tokyo",
       hotel,
       transport,
-      morning: { activities: [] },
+      morning: { activities: [activity] },
       afternoon: { activities: [] },
       evening: { activities: [] },
       estimatedCost: 0,

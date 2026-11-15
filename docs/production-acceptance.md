@@ -82,6 +82,18 @@ timetable still does not verify actual travel or venue hours.
 Do not treat fixture calibration or an HTTP 200 as a quality pass. Restore the
 staging planning pause after the exercise.
 
+### AI authentication and false-success gate
+
+A healthy API and a `planned` trip status do not establish that model calls work.
+Before handing a QA backend to device testers, verify one authorized bounded
+request against the exact deployment, inspect its workflow logs for Gateway
+unauthenticated errors, and inspect saved activity/dining counts and provenance.
+If model stages fail and only deterministic enrichment remains, fail acceptance
+regardless of the completed workflow/status. Repair AI authentication independently
+of optional supplier credentials; missing vendor configuration must not obscure
+an unauthenticated core planning pipeline. Existing fallback trips are evidence
+of the failure, not a reason to regenerate automatically or spend another budget.
+
 ### Supplier-backed experience acceptance
 
 Supplier acceptance is opt-in with `--brief tokyo-vendor-experiences` on the
