@@ -7,6 +7,8 @@ import type {
 import type { VenuePhotoCredit } from './venuePhotos';
 
 export interface Activity {
+  /** Explicit supplier-search fallback, not a researched venue. */
+  planningIdea?: true;
   venueAddress?: string;
   imageCredit?: VenuePhotoCredit;
   proposedVisitType?: ActivityResult['proposedVisitType'];

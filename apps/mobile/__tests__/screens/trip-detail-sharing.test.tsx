@@ -792,3 +792,44 @@ it('returns from the itinerary to saved trips without depending on back history'
     });
   }
 });
+
+it.each([true, false])(
+  'discloses incomplete research only for explicit planning ideas (%s)',
+  async (planningIdea) => {
+    const populated = {
+      ...trip,
+      days: [
+        {
+          dayNumber: 1,
+          date: trip.startDate,
+          theme: 'Explore',
+          activities: [
+            {
+              id: 'visit',
+              title: 'Neighborhood walk',
+              type: 'attraction',
+              description: 'Explore',
+              time: 'Morning',
+              ...(planningIdea ? { planningIdea: true } : {}),
+            },
+          ],
+        },
+      ],
+    };
+    mockCurrentTrip = populated as unknown as typeof trip;
+    mockGetTrip.mockResolvedValue(populated);
+    let screen!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        screen = create(<TripDetailScreen />);
+      });
+      expect(
+        screen.root
+          .findAllByType(Text)
+          .some((node) => node.props.children === 'This plan needs more research')
+      ).toBe(planningIdea);
+    } finally {
+      await act(async () => screen?.unmount());
+    }
+  }
+);

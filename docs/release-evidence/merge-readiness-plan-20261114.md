@@ -1,5 +1,43 @@
 # Audited merge-readiness plan
 
+## Latest reconciliation
+
+The table below records earlier implementation milestones; this reconciliation
+supersedes its binary/provider status. Both phones now have e89332b. Saved-trip
+Trips/Share navigation passed on both; see
+[native receipt](native-planning-e89332b-20261114.md). Later hero-spacing and
+planning-idea disclosure changes still require new binaries and physical checks.
+
+Remaining gates, in dependency order:
+
+1. **QA provider configuration:** Viator API key/partner ID and Google Places key
+   remain production-only; LiteAPI remains on `codex/release-candidate`, not
+   `eval/agentic-quality-20261031`. No supplier request or successful affiliation
+   is inferred from these dashboard entries. Configure the intended QA branch,
+   then finish the already-approved backend deployment and validate its binding.
+2. **Real itinerary quality and affiliate journey:** rerun the Lisbon meal repair,
+   opt-in Tokyo vendor case, remaining representative/holdout cases within the
+   original reconciled budget, and stop on failure. Verify actual supplied photo
+   delivery, relevant scheduled products, checkout handoff and partner reporting.
+   LiteAPI currently supports sandbox hotel quotes, not live hotel inventory in
+   the itinerary generator; Google Places is a separate reference path, not a
+   native photo source. These product gaps require implementation/acceptance,
+   not just new keys.
+3. **Native acceptance:** rebuild the later mobile fixes, then exercise loading,
+   generation-to-detail images, offline/reconnect, direct-entry navigation,
+   first-run and authenticated parity. Mirroring currently reports iPhone in Use;
+   reconnect requires the phone locked and idle. The Android runtime font-scale
+   clipping finding remains open; an upstream proposed fix is not our acceptance.
+4. **Release assurance:** native screen-reader/large-text coverage, external auth,
+   sharing/revoke, recovery/operational gates, final CI and deep candidate review
+   remain required. No production merge or store submission is justified yet.
+
+Source follow-up preserves explicit planning-idea provenance through mobile
+normalization and cache, and shows incomplete-research disclosure on detail.
+The new vendor acceptance checks reject missing/duplicate inventory and missing
+photo/attribution metadata. These prevent false acceptance; they do not repair
+supplier availability or turn legacy generic trips into researched itineraries.
+
 ## Audit findings
 
 The earlier plan was too permissive in four places:
@@ -61,3 +99,17 @@ acceptance. Native acceptance remains a separate gate; the approved replacement 
 - Both replacement builds were subsequently approved, completed and installed. See
   [physical build receipt](physical-builds-b7133b7-20261114.md) for exact artifacts,
   limited iPhone observations and remaining Android visual acceptance.
+
+### Follow-up verification
+
+- `bun --no-env-file test scripts/__tests__`: 266 tests pass, including opt-in
+  supplier selection, missing-partner preflight, duplicate inventory, photo and
+  attribution rejection.
+- From `apps/mobile`, `bun run test -- --runInBand --coverage=false`: 76 suites,
+  769 tests pass, including normalization/cache preservation and disclosure
+  present/absent behavior.
+- `bun run check`: 11 workspace tasks pass plus script TypeScript check; nine
+  existing web lint warnings remain. `git diff --check` passes.
+- No live generation, new native build, credential change or production deploy
+  was performed in this follow-up. Supplier metadata contracts are automated
+  evidence only; the physical and live gates above remain open.

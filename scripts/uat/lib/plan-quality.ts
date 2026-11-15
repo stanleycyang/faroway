@@ -1,4 +1,8 @@
 import {
+  evaluateVendorExperiences,
+  type VendorExpectation,
+} from "./vendor-quality";
+import {
   isTimingNote,
   readDayTiming,
 } from "../../../packages/types/src/day-timing";
@@ -62,6 +66,7 @@ export function evaluateSavedPlan(
     endDate: string;
     /** Frozen live briefs currently describe full days, without arrival limits. */
     requireFullDayMeals?: boolean;
+    vendorExpectation?: VendorExpectation;
   },
 ): PlanQuality {
   const failures: string[] = [];
@@ -82,6 +87,13 @@ export function evaluateSavedPlan(
   if (actualDates.join() !== expected.join()) {
     failures.push(
       `dates ${actualDates.join(",") || "(none)"} != ${expected.join(",")}`,
+    );
+  }
+  if (dates.vendorExpectation) {
+    const vendors = evaluateVendorExperiences(days, dates.vendorExpectation);
+    failures.push(...vendors.failures);
+    notes.push(
+      `${vendors.count} distinct vendor experiences with photo/link metadata`,
     );
   }
   let fallbackDays = 0;

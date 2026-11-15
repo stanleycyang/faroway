@@ -422,3 +422,24 @@ test('reviewed photo address formatting accepts Street and the known country but
   expect(image('Chambers Street, Edinburgh EH1 1JF, France')).toBeUndefined();
   expect(image('Chambers Street, Edinburgh EH1 1JF, Unit 2')).toBeUndefined();
 });
+
+test('fallback provenance survives saved and cached activity/meal normalization', () => {
+  const first = transformItineraryDays([
+    {
+      date: '2026-12-07',
+      dayNumber: 1,
+      morning: {
+        activities: [{ id: 'idea', name: 'Neighborhood walk', planningIdea: true }],
+        meals: [{ id: 'meal', name: 'Local spot', planningIdea: true }],
+      },
+      afternoon: { activities: [{ id: 'venue', name: 'Named museum' }] },
+    },
+  ]);
+  for (const days of [first, transformItineraryDays(JSON.parse(JSON.stringify(first)))]) {
+    expect(days[0].activities.filter((item) => item.planningIdea).map((item) => item.id)).toEqual([
+      'meal',
+      'idea',
+    ]);
+    expect(days[0].activities.find((item) => item.id === 'venue')?.planningIdea).toBeUndefined();
+  }
+});

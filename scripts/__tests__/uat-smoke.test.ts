@@ -790,3 +790,102 @@ test("rejects the retained live Lisbon meal gaps that previously passed structur
     result.failures.filter((failure) => failure.includes("lunch")),
   ).toHaveLength(2);
 });
+
+test("Tokyo vendor acceptance rejects fallback-only, missing photos, attribution and repeated products", () => {
+  const product = {
+    id: "activity_v_123P1",
+    name: "Tokyo food tour",
+    affiliatePartner: "viator",
+    affiliateUrl:
+      "https://www.viator.com/tours/Tokyo/Food/d334-123P1?pid=P123&mcid=42383&medium=api",
+    images: [
+      "https://media.tacdn.com/media/attractions-splice-spp-674x446/tokyo.jpg",
+    ],
+  };
+  const evaluate = (activities: unknown[]) =>
+    evaluateSavedPlan(
+      {
+        trip: { status: "planned" },
+        itinerary: {
+          days: [
+            {
+              date: "2026-12-07",
+              title: "Tokyo",
+              morning: { activities, meals: [{ name: "Cafe" }] },
+            },
+          ],
+        },
+      },
+      {
+        startDate: "2026-12-07",
+        endDate: "2026-12-07",
+        vendorExpectation: {
+          partner: "viator",
+          minimumExperiences: 2,
+          partnerId: "P123",
+        },
+      },
+    );
+  const second = {
+    ...product,
+    id: "activity_v_456P2",
+    affiliateUrl: product.affiliateUrl.replace("123P1", "456P2"),
+  };
+  expect(evaluate([product, second]).ok).toBe(true);
+  for (const invalid of [
+    { ...second, affiliateUrl: product.affiliateUrl + "&campaign=other" },
+    { ...second, planningIdea: true },
+    { ...second, images: [] },
+    { ...second, affiliateUrl: "https://www.viator.com/tours/Tokyo/Food" },
+    {
+      ...second,
+      affiliateUrl: product.affiliateUrl.replace("pid=P123", "pid=P999"),
+    },
+    {
+      ...second,
+      affiliateUrl: product.affiliateUrl.replace(
+        "viator.com",
+        "viator.com.evil.test",
+      ),
+    },
+    { ...second, id: "generated" },
+    product,
+  ])
+    expect(evaluate([product, invalid]).ok).toBe(false);
+});
+
+test("vendor brief is opt-in and missing configured attribution blocks before requests", async () => {
+  const base = {
+    tiers: [2] as Array<2>,
+    target: {
+      supabaseUrl: stagingUrl,
+      apiUrl,
+      anonKey: anon(STAGING_PROJECT_REF),
+    },
+    accounts: [{ email: "qa@example.test", password: "fixture" }],
+    env: {},
+    fetchImpl: (() => {
+      throw new Error("unexpected network request");
+    }) as typeof fetch,
+  };
+  const defaultRun = await runSmoke({ ...base, dryRun: true, liveAi: true });
+  expect(defaultRun.checks.some((c) => c.name.includes("tokyo-vendor"))).toBe(
+    false,
+  );
+  const explicit = await runSmoke({
+    ...base,
+    dryRun: true,
+    liveAi: true,
+    briefIds: ["tokyo-vendor-experiences"],
+  });
+  expect(explicit.checks.map((c) => c.name)).toEqual([
+    "live-plan:tokyo-vendor-experiences",
+  ]);
+  const blocked = await runSmoke({
+    ...base,
+    liveAi: true,
+    briefIds: ["tokyo-vendor-experiences"],
+  });
+  expect(blocked.checks[0].status).toBe("blocked");
+  expect(blocked.checks[0].name).toBe("vendor-attribution");
+});

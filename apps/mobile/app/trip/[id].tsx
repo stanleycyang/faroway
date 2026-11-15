@@ -766,6 +766,9 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   }
 
   const requirementLines = travelerRequirementLines(trip.requirements);
+  const hasPlanningIdeas = trip.days.some((day) =>
+    day.activities.some((activity) => activity.planningIdea === true)
+  );
   const isLocalTrip = trip.id.startsWith('local_');
   const timingDay = trip.days[selectedDay]
     ? transformItineraryDays([trip.days[selectedDay]])[0]
@@ -903,6 +906,18 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                     Review trip on Faroway website
                   </Text>
                 </TouchableOpacity>
+              </View>
+            )}
+
+            {hasPlanningIdeas && (
+              <View style={styles.planRefreshNotice}>
+                <Text accessibilityRole="header" style={styles.incompletePlanTitle}>
+                  This plan needs more research
+                </Text>
+                <Text style={styles.incompletePlanText}>
+                  Some stops are planning ideas, not researched venues. Choose specific places and
+                  confirm their details before booking or relying on this itinerary.
+                </Text>
               </View>
             )}
 
@@ -1278,6 +1293,8 @@ const styles = StyleSheet.create({
     marginTop: -24,
     paddingTop: 24,
   },
+  incompletePlanTitle: { fontSize: 17, fontWeight: '700', color: '#65251e', marginBottom: 8 },
+  incompletePlanText: { fontSize: 15, lineHeight: 22, color: '#65251e' },
   planRefreshNotice: {
     marginHorizontal: 16,
     marginBottom: 24,

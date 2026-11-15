@@ -88,6 +88,7 @@ function transformApiActivity(a: any, timeOfDay: string): Activity {
         : undefined,
     proposedVisitType: readProposedVisitType(a.proposedVisitType),
     source: readVenueSource(a.source),
+    planningIdea: a.planningIdea === true ? true : undefined,
     id: displayText(a.id) || `activity_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
     scheduleSlot: ['morning', 'afternoon', 'evening'].includes(a.scheduleSlot)
       ? a.scheduleSlot
@@ -153,6 +154,7 @@ function transformApiActivity(a: any, timeOfDay: string): Activity {
 function transformApiRestaurant(r: any): Activity {
   return {
     source: readVenueSource(r.source),
+    planningIdea: r.planningIdea === true ? true : undefined,
     id: displayText(r.id) || `restaurant_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
     time: displayText(r.mealType) || 'dining',
     title: displayText(r.name) || displayText(r.title),

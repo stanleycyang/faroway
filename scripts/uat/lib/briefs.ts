@@ -1,5 +1,7 @@
+import type { VendorExpectation } from "./vendor-quality";
 import type { DayAvailability } from "./day-availability";
 export interface UatBrief {
+  vendorExpectation?: VendorExpectation;
   id: string;
   destination: string;
   startDate: string;
@@ -95,6 +97,24 @@ export const UAT_BRIEFS: UatBrief[] = [
     budget: "moderate",
     vibes: ["adventure"],
     travelerType: "couple",
+  },
+];
+
+/** Opt-in supplier acceptance; never expands the default paid comparison batch. */
+export const VENDOR_UAT_BRIEFS: UatBrief[] = [
+  {
+    id: "tokyo-vendor-experiences",
+    destination: "Tokyo, Japan",
+    startDate: "2026-12-07",
+    endDate: "2026-12-09",
+    travelers: 2,
+    adults: 2,
+    children: 0,
+    interests: ["culture", "food"],
+    budget: "moderate",
+    vibes: ["cultural", "foodie"],
+    travelerType: "couple",
+    vendorExpectation: { partner: "viator", minimumExperiences: 2 },
   },
 ];
 

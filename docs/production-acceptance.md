@@ -82,6 +82,25 @@ timetable still does not verify actual travel or venue hours.
 Do not treat fixture calibration or an HTTP 200 as a quality pass. Restore the
 staging planning pause after the exercise.
 
+### Supplier-backed experience acceptance
+
+Supplier acceptance is opt-in with `--brief tokyo-vendor-experiences` on the
+staging smoke runner. Keep provider-specific briefs out of the default model
+comparison batch: adding one must not silently expand paid dispatches. The live
+vendor brief requires the independently configured `VIATOR_PARTNER_ID` before
+any authentication or generation request; never derive the expected account
+from the returned booking URL.
+
+A saved plan must contain at least two distinct Viator experiences, with supplier
+IDs, HTTPS photo URLs and valid attributed handoffs to that configured partner.
+Repeated IDs or product paths, missing photos, generic planning ideas and links
+to another account fail this contract. Photo URL presence is not successful image
+delivery: separately download/decode and visually inspect the supplied photos on
+both devices. Verify the vendor request, provider availability, browser handoff
+and partner reporting separately; metadata checks do not prove commission credit.
+Do not infer working inventory from the existence of a dashboard API key. Verify
+its deployment environment and branch scope before spending a live test budget.
+
 ## Signed-device acceptance
 
 Use signed iOS and Android staging builds bound to the same isolated backend.

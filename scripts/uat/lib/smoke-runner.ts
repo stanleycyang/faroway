@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { buildLiteApiFlightRequest } from "../../../apps/web/lib/affiliates/liteapi-flight-request";
 import { buildViatorHandoffUrl } from "../../../apps/web/lib/affiliates/viator-link";
-import { UAT_BRIEFS, type UatBrief } from "./briefs";
+import { UAT_BRIEFS, VENDOR_UAT_BRIEFS, type UatBrief } from "./briefs";
 import { evaluateSavedPlan } from "./plan-quality";
 import { isOpenTableReservationUrl } from "../../../apps/web/lib/search/reservation-url";
 import {
@@ -262,10 +262,11 @@ function finish(projectRef: string, checks: CheckResult[]): SmokeReport {
 
 function selectedBriefs(ids?: string[]): UatBrief[] {
   if (!ids?.length) return UAT_BRIEFS;
-  const briefs = UAT_BRIEFS.filter((brief) => ids.includes(brief.id));
+  const available = [...UAT_BRIEFS, ...VENDOR_UAT_BRIEFS];
+  const briefs = available.filter((brief) => ids.includes(brief.id));
   if (briefs.length !== ids.length) {
     throw new Error(
-      `Unknown brief. Known briefs: ${UAT_BRIEFS.map((b) => b.id).join(", ")}`,
+      `Unknown brief. Known briefs: ${available.map((b) => b.id).join(", ")}`,
     );
   }
   return briefs;
@@ -1077,6 +1078,20 @@ async function runTier2(
       ),
     );
   }
+  const partnerId = (options.env ?? process.env).VIATOR_PARTNER_ID?.trim();
+  if (
+    briefs.some((brief) => brief.vendorExpectation) &&
+    !/^P\d+$/.test(partnerId ?? "")
+  ) {
+    return [
+      check(
+        2,
+        "vendor-attribution",
+        "blocked",
+        "vendor acceptance requires the configured VIATOR_PARTNER_ID before any paid dispatch",
+      ),
+    ];
+  }
   const checks: CheckResult[] = [];
   const token = await signIn(
     fetchImpl,
@@ -1091,7 +1106,12 @@ async function runTier2(
         fetchImpl,
         apiUrl,
         token,
-        brief,
+        brief.vendorExpectation
+          ? {
+              ...brief,
+              vendorExpectation: { ...brief.vendorExpectation, partnerId },
+            }
+          : brief,
         options.pollIntervalMs ?? 5_000,
       );
     } catch {
