@@ -8,6 +8,7 @@ import {
  * Uses real activity vendors + AI for matching and ranking
  */
 
+import { supplierDurationCeilingMinutes } from "../supplier-duration";
 import { screenGeneratedActivityCopy } from "../generated-activity-copy";
 import { activitySourceContext } from "../activity-source-context";
 import { compiledScheduleExperimentEnabled } from "../schedule-experiment-gate";
@@ -141,24 +142,10 @@ export async function runActivitiesAgent(
 ): Promise<ActivityResult[]> {
   const { destination, dates, activityCriteria, vibeInterpretation } = plan;
   const vibes = vibeInterpretation.vibes;
-  const dayTripRequested =
-    vibes.some((vibe) => ["nature", "adventure"].includes(vibe)) ||
-    [...activityCriteria.interests, ...activityCriteria.mustSee].some(
-      (interest) =>
-        /\b(nature|outdoors?|hiking|day trip|day tour|full.day|mountain|fuji|hakone)\b/i.test(
-          interest,
-        ),
-    );
   // Broad "popular in Tokyo" inventory can consist entirely of 10-hour regional
   // excursions. Request manageable city experiences unless a day trip fits the
   // brief; the planner still decides whether any returned product is suitable.
-  const maxDurationMinutes = dayTripRequested
-    ? undefined
-    : activityCriteria.pacePreference === "relaxed"
-      ? 180
-      : activityCriteria.pacePreference === "packed"
-        ? 360
-        : 240;
+  const maxDurationMinutes = supplierDurationCeilingMinutes(plan);
 
   const viatorPromise =
     isViatorContentEnabled() && isViatorConfigured()

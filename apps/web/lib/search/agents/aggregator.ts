@@ -446,7 +446,7 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
  * Map a validated aggregator result (days + topHotelId) to SuggestedDay[] + topHotel.
  * Shared between the happy path and the recovery path.
  */
-function mapAggregatorResult(
+export function mapAggregatorResult(
   result: ItineraryResult,
   startDate: string,
   hotels: HotelResult[],
@@ -481,6 +481,18 @@ function mapAggregatorResult(
     });
 
   const days: SuggestedDay[] = result.days.map((day, index) => {
+    const start = Date.parse(`${startDate}T00:00:00Z`);
+    const expectedDate = Number.isFinite(start)
+      ? new Date(start + index * 86400000).toISOString().slice(0, 10)
+      : day.date;
+    const dayNumber = index + 1;
+    const claimedDay = /^Day (\d+)\b/.exec(day.title);
+    const title =
+      claimedDay && Number(claimedDay[1]) !== dayNumber
+        ? day.title.replace(/^Day \d+\b/, `Day ${dayNumber}`)
+        : day.title;
+    const labelCorrected =
+      day.date !== expectedDate || day.dayNumber !== dayNumber;
     const morningActivities = mapActivities(day.morning.activityIds, "morning");
     const afternoonActivities = mapActivities(
       day.afternoon.activityIds,
@@ -526,9 +538,9 @@ function mapAggregatorResult(
       undefined;
 
     return {
-      dayNumber: day.dayNumber,
-      date: day.date,
-      title: day.title,
+      dayNumber,
+      date: expectedDate,
+      title,
       summary: day.summary,
       hotel: dayHotel,
       morning: {
@@ -547,7 +559,12 @@ function mapAggregatorResult(
       // A model-generated total is not a verified sum of priced items.
       estimatedCost: undefined,
       currency: undefined,
-      tips: day.tips,
+      tips: labelCorrected
+        ? [
+            `Day label corrected to Day ${dayNumber} on ${expectedDate}. The supplied day number or date did not match this position in the trip.`,
+            ...day.tips,
+          ]
+        : day.tips,
     };
   });
 

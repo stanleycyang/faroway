@@ -69,6 +69,133 @@ describe("experimental schedule compiler", () => {
     expect(result.unselectedActivityIds).toContain("long-evening");
   });
 
+  it("leaves breakfast unscheduled when a late start closes the breakfast window", () => {
+    const input = {
+      ...plan,
+      dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 },
+      mobilityNeeds: "no starts before 11:00",
+      requirements: undefined,
+    };
+    const meals = ["breakfast", "lunch", "dinner"].map((type) => ({
+      ...dining[0],
+      id: type,
+      mealTypes: [type],
+    })) as DiningResult[];
+    const result = compileSchedule(
+      input,
+      [visit("walk", 60, "morning")],
+      meals,
+    );
+    expect(result.days[0].morning.meal).toBeUndefined();
+    expect(result.days[0].afternoon.meal?.id).toBe("lunch");
+    expect(result.days[0].morning.activities.map((item) => item.id)).toEqual([
+      "walk",
+    ]);
+    expect(result.timingProposals[0].fitsPolicy).toBe(true);
+  });
+
+  it("rejects an unsourced guided tour, discloses catalog-only supply, and drops unverified dietary claims", () => {
+    const input = {
+      ...plan,
+      dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 },
+      mobilityNeeds: undefined,
+      requirements: undefined,
+    };
+    const named = {
+      ...visit("named-tour", 60, "morning"),
+      name: "Private VIP Louvre Museum Tour",
+    };
+    const invented = {
+      ...visit("invented-tour", 60, "afternoon"),
+      name: "Small group food tour",
+      proposedVisitType: "guided_tour" as const,
+    };
+    const catalog = {
+      ...visit("catalog-walk", 60, "evening"),
+      name: "Recorded catalog walk",
+      supplierCatalogOnly: true as const,
+      affiliatePartner: "viator",
+      affiliateUrl: "https://www.viator.com/tours/recorded",
+    };
+    const meals = ["breakfast", "lunch", "dinner"].map((type) => ({
+      ...dining[0],
+      id: type,
+      name: type,
+      mealTypes: [type],
+      description: type === "breakfast" ? "gluten-free certified kitchen." : "",
+      dietaryOptions: type === "breakfast" ? ["gluten-free"] : [],
+    })) as DiningResult[];
+    const result = compileSchedule(input, [named, invented, catalog], meals);
+    const ids = slots.flatMap((slot) =>
+      result.days[0][slot].activities.map((item) => item.id),
+    );
+    expect(ids).toEqual(["named-tour", "catalog-walk"]);
+    expect(result.issues.join(" ")).toContain(
+      "unsourced_bookable_tour:invented-tour",
+    );
+    expect(result.days[0].tips.join(" ")).toContain("catalog suggestion only");
+    expect(result.days[0].morning.meal?.dietaryOptions).toEqual([]);
+    expect(result.days[0].morning.meal?.description ?? "").not.toMatch(
+      /gluten-free/i,
+    );
+    expect(result.days[0].tips.join(" ")).toContain(
+      "Suitability for dietary restrictions has not been verified",
+    );
+  });
+
+  it("discloses a supplied hop beyond the planning buffer without rejecting the day", () => {
+    const input = {
+      ...plan,
+      dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 },
+      mobilityNeeds: undefined,
+      requirements: undefined,
+    };
+    const south = {
+      ...visit("south", 60, "morning"),
+      location: {
+        ...activities[0].location,
+        name: "south recorded",
+        address: "south recorded",
+        lat: 35,
+        lng: 139,
+      },
+    };
+    const north = {
+      ...visit("north", 60, "morning"),
+      location: {
+        ...activities[0].location,
+        name: "north recorded",
+        address: "north recorded",
+        lat: 35.022,
+        lng: 139,
+      },
+    };
+    const meals = ["breakfast", "lunch", "dinner"].map((type) => ({
+      ...dining[0],
+      id: type,
+      mealTypes: [type],
+      location: {
+        ...dining[0].location,
+        name: "mid recorded",
+        address: "mid recorded",
+        lat: 35.011,
+        lng: 139,
+      },
+    })) as DiningResult[];
+    const result = compileSchedule(input, [south, north], meals, [], {
+      maxUnverifiedTransferKm: 6,
+      maxUnverifiedMealDistanceKm: 3,
+    });
+    expect(
+      result.days[0].morning.activities.map((item) => item.id).sort(),
+    ).toEqual(["north", "south"]);
+    expect(result.days[0].tips.join("\n")).toMatch(/2\.\d km/);
+    expect(result.days[0].tips.join("\n")).toContain(
+      "30-minute planning buffer",
+    );
+    expect(result.timingProposals[0].fitsPolicy).toBe(true);
+  });
+
   it("keeps visits in evening slots and leaves blocked meal windows unscheduled", async () => {
     vi.stubEnv("TAVILY_API_KEY", "");
     const restricted = {
@@ -737,15 +864,21 @@ it("leaves pre-arrival visits and meals unscheduled without losing later-day cov
   ).toBe(true);
   expect(result.days[0].tips.join(" ")).toContain("18:00–24:00");
 });
-it("keeps visits within a shortened day-part budget including a meal and buffer", () => {
+it("does not schedule breakfast in a morning that cannot start before 11:00", () => {
   const result = compileSchedule(
     { ...plan, mobilityNeeds: "No starts before 11am" },
     [visit("morning", 60, "morning"), visit("afternoon", 60, "afternoon")],
     restMeals,
   );
-  expect(result.days[0].morning.activities).toEqual([]);
-  expect(result.days[0].morning.meal).toBeDefined();
-  expect(result.unselectedActivityIds).toContain("morning");
+  expect(result.days[0].morning.meal).toBeUndefined();
+  expect(result.days[0].morning.activities.map((item) => item.id)).toEqual([
+    "morning",
+  ]);
+  expect(result.days[0].afternoon.meal).toBeDefined();
+  expect(result.days[0].afternoon.activities.map((item) => item.id)).toEqual([
+    "afternoon",
+  ]);
+  expect(result.timingProposals[0].fitsPolicy).toBe(true);
 });
 it("leaves conflicting availability empty and exposes the conflict", () => {
   const result = compileSchedule(

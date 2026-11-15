@@ -106,3 +106,11 @@ Generated activity suggestions must not fill supplier gaps with organized tours
 or events. Those explicit generated visit types are excluded from the shortlist;
 supplier products remain eligible. Independently visitable suggestions still need
 venue/date verification and are not automatically grounded by this screen.
+
+`scripts/uat/traveler-holdout-eval.ts` is the credential-free holdout for the
+compiler, dining repair, aggregator labels, and recorded supplier decisions.
+It is not a live-model or booking acceptance. A fallback day, an unsourced
+guided tour, an undisclosed catalog product, an unverified dietary or access
+claim, and a transfer beyond the 30-minute planning buffer must stay visible.
+The 15 November run is recorded in
+`docs/release-evidence/traveler-holdout-20261115.md`.

@@ -25,6 +25,14 @@ import {
 import { matchesSuggestedHighlight } from "./highlight-match";
 import { suppliedDistanceKm } from "./supplied-distance";
 import {
+  ACCESS_UNVERIFIED_NOTE,
+  accessRequested,
+  corroborateAccessClaim,
+  corroborateDiningClaim,
+  DIETARY_UNVERIFIED_NOTE,
+} from "./requirement-corroboration";
+import { reviewSuppliedTransfers, transferReviewTip } from "./transfer-review";
+import {
   familyActivityReviewReason,
   activityMobilityReviewReason,
   activityTransportReviewReason,
@@ -174,6 +182,7 @@ export function compileSchedule(
     ? `Your requirements: ${requestedDetails.join("; ")}. These are your requests, not verified venue features. Confirm them directly with each venue before relying on this plan.`
     : undefined;
   const needsRest = requestsMiddayRest(plan);
+  const requestedAccess = accessRequested(plan);
   const availability = travelerAvailability(plan, daysCount);
   if (availability.needsReview)
     issues.push("traveler_availability_interpretation_required");
@@ -370,6 +379,18 @@ export function compileSchedule(
         return false;
       }
       if (venueKey) venueKeys.add(venueKey);
+      if (
+        activity.proposedVisitType === "guided_tour" &&
+        !reviewedIds.has(activity.id) &&
+        !activity.affiliatePartner
+      ) {
+        reviewRequiredActivities.push({
+          id: activity.id,
+          reason: "unsourced_guided_tour",
+        });
+        issues.push(`unsourced_bookable_tour:${activity.id}`);
+        return false;
+      }
       if (
         !reviewedIds.has(activity.id) &&
         (activity.proposedVisitType === "event" ||
@@ -988,12 +1009,18 @@ export function compileSchedule(
         },
       ]),
     ) as VisitSlots;
+    let strippedDiet = false;
+    let strippedAccess = false;
     const slots = SLOTS.map((name, slot) => {
-      const stops = visitSlots[name].activities;
+      const stops = visitSlots[name].activities.map((activity) => {
+        const reviewed = corroborateAccessClaim(activity, requestedAccess);
+        strippedAccess ||= reviewed.stripped;
+        return reviewed.activity;
+      });
       if (availableMealMinutes(window, slot) < mealMinutes[slot]) {
-        if (window?.unavailable?.length)
+        if (window)
           tips.push(
-            `No ${MEALS[slot]} is scheduled: it does not fit the proposed meal window outside your blocked periods. Arrange a break before adding it.`,
+            `No ${MEALS[slot]} is scheduled: it does not fit the proposed meal window within your available hours. Arrange a break before adding it.`,
           );
         if (window)
           issues.push(
@@ -1096,19 +1123,49 @@ export function compileSchedule(
           `No ${MEALS[slot]} suggestion is available; find a suitable local option.`,
         );
       } else {
-        usedMeals.add(chosen.meal.id);
-        mealsToday.add(chosen.meal.id);
+        const placed = corroborateDiningClaim(chosen.meal);
+        strippedDiet ||= placed.stripped;
+        usedMeals.add(placed.meal.id);
+        mealsToday.add(placed.meal.id);
         if (chosen.distance == null)
           issues.push(`day_${day + 1}:${MEALS[slot]}:route_unknown`);
         else if (chosen.distance > 3) {
           issues.push(`day_${day + 1}:${MEALS[slot]}:distant_meal`);
           tips.push(
-            `${chosen.meal.name} may need a separate journey. Check the route or choose a closer option; supplied locations are unverified.`,
+            `${placed.meal.name} may need a separate journey. Check the route or choose a closer option; supplied locations are unverified.`,
           );
         }
+        return { activities: stops, meal: placed.meal };
       }
-      return { activities: stops, meal: chosen?.meal };
+      return { activities: stops };
     });
+    if (strippedDiet && !tips.includes(DIETARY_UNVERIFIED_NOTE))
+      tips.push(DIETARY_UNVERIFIED_NOTE);
+    if (strippedAccess && !tips.includes(ACCESS_UNVERIFIED_NOTE))
+      tips.push(ACCESS_UNVERIFIED_NOTE);
+    if (selected.some((item) => item.activity.supplierCatalogOnly))
+      tips.push(
+        "A supplier experience on this day is a catalog suggestion only. Availability on these dates was not checked.",
+      );
+    for (const finding of reviewSuppliedTransfers(
+      SLOTS.flatMap((_, index) => [
+        ...slots[index].activities.map((item) => ({
+          name: item.name,
+          location: item.location,
+        })),
+        ...(slots[index].meal
+          ? [
+              {
+                name: slots[index].meal!.name,
+                location: slots[index].meal!.location,
+              },
+            ]
+          : []),
+      ]),
+    )) {
+      issues.push(`day_${day + 1}:transfer_exceeds_planning_buffer`);
+      tips.push(transferReviewTip(finding));
+    }
     return {
       dayNumber: day + 1,
       date,
