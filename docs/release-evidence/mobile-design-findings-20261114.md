@@ -222,3 +222,8 @@ a fresh phone session must be checked before attributing this to a source defect
 M01 remains open: current live Lisbon had four missing meal suggestions despite
 passing the old structural smoke. The evaluator and absent-neighborhood repair
 path are corrected in source; no new live acceptance is claimed.
+
+M27 (P2): build 16 reproduces clipped Explore labels and tab text after changing
+Android font scale in a running process. Cold onboarding at 150% renders its
+stacked layout correctly. Original scale restored to 1.0. This is a distinct
+runtime configuration defect; do not close it from cold-launch screenshots.

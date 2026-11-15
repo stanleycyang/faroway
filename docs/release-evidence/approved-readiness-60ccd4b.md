@@ -89,3 +89,16 @@ offline banner; both original connectivity settings were restored in `finally`.
 This does not simulate storage failure or prove uncached photo recovery. Native
 harness evidence is retained privately under the QA account's native evidence
 directory; `android-ff6ab031/offline-saved-trip.png` is ignored local evidence.
+
+Large-text follow-up: cold onboarding at 150% uses the stacked destination layout
+and keeps the primary action, description and visible credit readable. Changing
+font scale while the process is running reproduces widespread clipped Explore and
+tab text; this remains unresolved and is not a cold-launch layout pass. Original
+scale 1.0 was restored. Screenshots: `android-ff6ab031/font-transition.png` and
+`android-ff6ab031/onboarding-150.png`. React Native's
+[reported Android Fabric issue](https://github.com/react/react-native/issues/52895)
+describes similar runtime clipping, but similarity does not prove identical cause.
+The installed 0.81.5 includes font-scale relayout code gated by a disabled internal
+feature flag. Do not enable a whole experimental release level or reset navigation
+as an unverified workaround; a native compatibility fix and rebuilt transition test
+are still required.
