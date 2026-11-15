@@ -102,13 +102,17 @@ it("recovers a dated timeout with one small catalog search and retains uncertain
     startDate: "2026-12-07",
     endDate: "2026-12-09",
     limit: 15,
+    maxDurationMinutes: 240,
   });
   await vi.advanceTimersByTimeAsync(10000);
   expect(await pending).toEqual([
     expect.objectContaining({ productCode: "123P1", catalogOnly: true }),
   ]);
   expect(calls).toHaveLength(2);
-  expect(calls[1].filtering).toEqual({ destination: "334" });
+  expect(calls[1].filtering).toEqual({
+    destination: "334",
+    durationInMinutes: { to: 240 },
+  });
   expect(calls[1].pagination.count).toBe(3);
 });
 

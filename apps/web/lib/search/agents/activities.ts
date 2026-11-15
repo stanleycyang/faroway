@@ -141,6 +141,24 @@ export async function runActivitiesAgent(
 ): Promise<ActivityResult[]> {
   const { destination, dates, activityCriteria, vibeInterpretation } = plan;
   const vibes = vibeInterpretation.vibes;
+  const dayTripRequested =
+    vibes.some((vibe) => ["nature", "adventure"].includes(vibe)) ||
+    [...activityCriteria.interests, ...activityCriteria.mustSee].some(
+      (interest) =>
+        /\b(nature|outdoors?|hiking|day trip|day tour|full.day|mountain|fuji|hakone)\b/i.test(
+          interest,
+        ),
+    );
+  // Broad "popular in Tokyo" inventory can consist entirely of 10-hour regional
+  // excursions. Request manageable city experiences unless a day trip fits the
+  // brief; the planner still decides whether any returned product is suitable.
+  const maxDurationMinutes = dayTripRequested
+    ? undefined
+    : activityCriteria.pacePreference === "relaxed"
+      ? 180
+      : activityCriteria.pacePreference === "packed"
+        ? 360
+        : 240;
 
   const viatorPromise =
     isViatorContentEnabled() && isViatorConfigured()
@@ -149,6 +167,7 @@ export async function runActivitiesAgent(
           startDate: dates.start,
           endDate: dates.end,
           limit: 15,
+          maxDurationMinutes,
         }).catch((error) => {
           console.error("[Activities Agent] Viator search error:", error);
           return [];

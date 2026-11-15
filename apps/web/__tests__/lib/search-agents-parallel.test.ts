@@ -124,6 +124,31 @@ describe("search agents internal parallelism", () => {
 
   afterEach(() => vi.unstubAllEnvs());
 
+  it.each([
+    ["balanced", ["foodie"], ["markets"], 240],
+    ["relaxed", ["cultural"], ["museums"], 180],
+    ["packed", ["foodie"], ["markets"], 360],
+    ["balanced", ["nature"], ["markets"], undefined],
+    ["balanced", ["foodie"], ["Mount Fuji day trip"], undefined],
+  ])(
+    "retrieves experiences that fit %s city or excursion briefs",
+    async (pace, vibes, mustSee, duration) => {
+      mocks.generateObject.mockResolvedValue({ object: { activities: [] } });
+      await runActivitiesAgent({
+        ...plan,
+        activityCriteria: {
+          ...plan.activityCriteria,
+          pacePreference: pace,
+          mustSee,
+        },
+        vibeInterpretation: { ...plan.vibeInterpretation, vibes },
+      } as unknown as SearchPlan);
+      expect(mocks.searchViatorProducts).toHaveBeenCalledWith(
+        expect.objectContaining({ maxDurationMinutes: duration }),
+      );
+    },
+  );
+
   it("screens generated access promises before returning activity inventory", async () => {
     vi.stubEnv("VIATOR_CONTENT_ENABLED", "false");
     mocks.generateObject.mockResolvedValue({

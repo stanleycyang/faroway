@@ -67,9 +67,18 @@ it.each([
   { startDate: "2026-12-09", endDate: "2026-12-07" },
   { startDate: "2026-02-30", endDate: "2026-03-01" },
   { apiKey: "not-allowed" },
+  { maxDurationMinutes: 0 },
+  { maxDurationMinutes: 721 },
+  { maxDurationMinutes: 60.5 },
+  { endDate: "2026-12-09" },
 ])("rejects invalid probe input before supplier calls", async (body) => {
   expect((await POST(request(body))).status).toBe(400);
   expect(probe).not.toHaveBeenCalled();
+});
+it("can inspect a duration-filtered catalog without model calls", async () => {
+  const body = { maxDurationMinutes: 240 };
+  expect((await POST(request(body))).status).toBe(200);
+  expect(probe).toHaveBeenCalledWith(body);
 });
 it("can probe the actual dated search without a paid model call", async () => {
   const dates = { startDate: "2026-12-07", endDate: "2026-12-09" };

@@ -87,6 +87,14 @@ not establish date availability, image decoding or scheduled-trip quality.
 An optional `{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }` body probes
 the actual dated search and its bounded catalog fallback; `catalogOnlyProducts`
 reports how many results lack the requested date check. Neither mode uses AI.
+The optional `maxDurationMinutes` filter (30–720) also works without dates;
+diagnostics include public product titles and durations so relevance can be
+reviewed before paying for generation. City briefs constrain supplier experiences
+to three hours for relaxed pace, four for balanced, and six for packed. Nature,
+adventure and explicit day-trip briefs allow longer excursions. Preserve this
+filter through catalog recovery: broad city popularity alone can return only
+full-day regional trips. Never force unsuitable products into the itinerary to
+meet an affiliate quota.
 
 Generated activity suggestions must not fill supplier gaps with organized tours
 or events. Those explicit generated visit types are excluded from the shortlist;

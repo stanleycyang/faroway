@@ -213,6 +213,7 @@ function getViatorDestinationId(name: string): number | null {
 // ── Types ───────────────────────────────────────────────────────────────────
 
 export interface ViatorSearchParams {
+  maxDurationMinutes?: number;
   destination: string;
   startDate?: string;
   endDate?: string;
@@ -362,6 +363,9 @@ async function searchByDestinationId(
   const body: Record<string, unknown> = {
     filtering: {
       destination: String(destId),
+      ...(params.maxDurationMinutes && {
+        durationInMinutes: { to: params.maxDurationMinutes },
+      }),
       ...(params.startDate && { startDate: params.startDate }),
       ...(params.endDate && { endDate: params.endDate }),
       ...(params.rating && { rating: { from: params.rating } }),
@@ -406,15 +410,16 @@ async function searchByDestinationId(
 
 /** Fixed, sandbox-only connectivity probe. No model calls or traveler data. */
 export async function probeViatorSandbox(dates?: {
-  startDate: string;
-  endDate: string;
+  startDate?: string;
+  endDate?: string;
+  maxDurationMinutes?: number;
 }) {
   if (process.env.VIATOR_SANDBOX !== "true" || !isViatorConfigured()) {
     return { status: "unconfigured" as const };
   }
   const started = Date.now();
   try {
-    const products = dates
+    const products = dates?.startDate
       ? await searchViatorProducts({
           destination: "Tokyo",
           limit: 15,
@@ -422,7 +427,11 @@ export async function probeViatorSandbox(dates?: {
         })
       : await searchByDestinationId(
           334,
-          { destination: "Tokyo", limit: 3 },
+          {
+            destination: "Tokyo",
+            limit: 3,
+            maxDurationMinutes: dates?.maxDurationMinutes,
+          },
           30000,
         );
     return {
@@ -430,6 +439,14 @@ export async function probeViatorSandbox(dates?: {
       elapsedMs: Date.now() - started,
       products: products.length,
       catalogOnlyProducts: products.filter((p) => p.catalogOnly).length,
+      sample: products.map((p) => ({
+        productCode: p.productCode,
+        title: p.title,
+        durationMinutes:
+          p.duration.fixedDurationInMinutes ??
+          p.duration.variableDurationFromMinutes ??
+          null,
+      })),
       withPhotos: products.filter((p) => p.images.length > 0).length,
       // Validate against the configured account on the server; never export it
       // or derive the expected partner from a returned URL.
