@@ -1,3 +1,4 @@
+import { completeMissingMeals } from "../complete-meals";
 import {
   compiledScheduleExperimentEnabled,
   runStagingCompiledSchedule,
@@ -225,6 +226,14 @@ export async function runAggregatorAgent(
     );
   }
 
+  const completeMeals = (result: {
+    days: SuggestedDay[];
+    topHotel: HotelResult | null;
+  }) =>
+    options.repairDining
+      ? { ...result, days: completeMissingMeals(plan, result.days, dining) }
+      : result;
+
   // Format data for the AI
   const hotelSummary = hotels.slice(0, 5).map((h) => ({
     id: h.id,
@@ -359,13 +368,15 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
           ).parse(result),
         )
       : result;
-    return mapAggregatorResult(
-      mappedResult,
-      dates.start,
-      hotels,
-      activities,
-      dining,
-      transport,
+    return completeMeals(
+      mapAggregatorResult(
+        mappedResult,
+        dates.start,
+        hotels,
+        activities,
+        dining,
+        transport,
+      ),
     );
   } catch (error) {
     const timedOut = isOperationTimeoutError(error);
@@ -402,7 +413,7 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
           "recovered_itinerary",
           detail,
         );
-        return recovered;
+        return completeMeals(recovered);
       }
     }
 

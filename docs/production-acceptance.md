@@ -94,6 +94,13 @@ of optional supplier credentials; missing vendor configuration must not obscure
 an unauthenticated core planning pipeline. Existing fallback trips are evidence
 of the failure, not a reason to regenerate automatically or spend another budget.
 
+For launch-path acceptance, disable `FAROWAY_SCHEDULE_EXPERIMENT` and clear
+staging-only `PLANNING_MODEL_AGGREGATOR`, `PLANNING_THINKING_AGGREGATOR` and
+`PLANNING_MAX_OUTPUT_TOKENS_AGGREGATOR` overrides. Record the exact immutable
+deployment and effective profile with each receipt. An experimental compiler
+pass or a capped-token experiment is not a pass for the default production path.
+Do not dispatch a paid check while its target deployment/profile is ambiguous.
+
 ### Supplier-backed experience acceptance
 
 Supplier acceptance is opt-in with `--brief tokyo-vendor-experiences` on the
