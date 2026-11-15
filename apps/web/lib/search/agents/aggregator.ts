@@ -257,6 +257,9 @@ export async function runAggregatorAgent(
     bestTime: a.bestTimeOfDay,
     vibeScore: a.vibeScore,
     bookingRequired: a.bookingRequired,
+    availability: a.supplierCatalogOnly
+      ? "catalog_only_dates_unverified"
+      : "not_confirmed",
   }));
 
   const diningSummary = dining.slice(0, 15).map((d) => ({

@@ -12,7 +12,11 @@
  */
 
 import { providerAmount, currencyCode, formatPrice } from "@faroway/constants";
-import { fetchWithTimeout, getEnvNumber } from "@/lib/search/runtime";
+import {
+  fetchWithTimeout,
+  getEnvNumber,
+  isAbortError,
+} from "@/lib/search/runtime";
 import { buildViatorHandoffUrl } from "./viator-link";
 import { isViatorContentEnabled } from "./viator-policy";
 
@@ -219,6 +223,8 @@ export interface ViatorSearchParams {
 }
 
 export interface ViatorProduct {
+  /** Date-filtered search timed out; this product came from the catalog only. */
+  catalogOnly?: true;
   productCode: string;
   title: string;
   description: string;
@@ -302,7 +308,32 @@ export async function searchViatorProducts(
       console.log(
         `[Viator] Found destination ID ${destId} for "${params.destination}" (${VIATOR_API_BASE})`,
       );
-      const products = await searchByDestinationId(destId, params);
+      let products: ViatorProduct[];
+      try {
+        products = await searchByDestinationId(destId, params);
+      } catch (error) {
+        if (!isAbortError(error) || (!params.startDate && !params.endDate))
+          throw error;
+        // A dated-query timeout is not evidence of sold-out inventory. One
+        // smaller catalog lookup can still provide real products, but must not
+        // be mistaken for date availability. Never relax a successful empty
+        // result or retry auth/rate-limit/provider errors.
+        console.warn(
+          "[Viator] Date-filtered search timed out; checking a small catalog shortlist with unverified availability",
+        );
+        products = (
+          await searchByDestinationId(
+            destId,
+            {
+              ...params,
+              startDate: undefined,
+              endDate: undefined,
+              limit: Math.min(params.limit || 15, 3),
+            },
+            5000,
+          )
+        ).map((product) => ({ ...product, catalogOnly: true }));
+      }
       if (products.length > 0) return products;
       console.log(
         `[Viator] No products found for destId=${destId}, search returned empty`,
@@ -374,21 +405,31 @@ async function searchByDestinationId(
 }
 
 /** Fixed, sandbox-only connectivity probe. No model calls or traveler data. */
-export async function probeViatorSandbox() {
+export async function probeViatorSandbox(dates?: {
+  startDate: string;
+  endDate: string;
+}) {
   if (process.env.VIATOR_SANDBOX !== "true" || !isViatorConfigured()) {
     return { status: "unconfigured" as const };
   }
   const started = Date.now();
   try {
-    const products = await searchByDestinationId(
-      334,
-      { destination: "Tokyo", limit: 3 },
-      30000,
-    );
+    const products = dates
+      ? await searchViatorProducts({
+          destination: "Tokyo",
+          limit: 15,
+          ...dates,
+        })
+      : await searchByDestinationId(
+          334,
+          { destination: "Tokyo", limit: 3 },
+          30000,
+        );
     return {
       status: products.length ? ("available" as const) : ("empty" as const),
       elapsedMs: Date.now() - started,
       products: products.length,
+      catalogOnlyProducts: products.filter((p) => p.catalogOnly).length,
       withPhotos: products.filter((p) => p.images.length > 0).length,
       // Validate against the configured account on the server; never export it
       // or derive the expected partner from a returned URL.

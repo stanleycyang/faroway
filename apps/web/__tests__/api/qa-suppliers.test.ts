@@ -9,8 +9,11 @@ vi.mock("@/lib/auth/middleware", () => ({ requireUserIdFromRequest: auth }));
 vi.mock("@/lib/security/rate-limit", () => ({ checkRateLimitAsync: limit }));
 vi.mock("@/lib/affiliates/viator", () => ({ probeViatorSandbox: probe }));
 import { POST } from "@/app/api/qa/suppliers/route";
-const request = () =>
-  new NextRequest("https://qa.test/api/qa/suppliers", { method: "POST" });
+const request = (body: unknown = {}) =>
+  new NextRequest("https://qa.test/api/qa/suppliers", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 beforeEach(() => {
   vi.clearAllMocks();
   vi.stubEnv("VERCEL_ENV", "preview");
@@ -57,4 +60,19 @@ it("returns uncached diagnostics", async () => {
   expect(await response.json()).toEqual({
     viator: { status: "available", products: 3 },
   });
+});
+
+it.each([
+  { startDate: "2026-12-07" },
+  { startDate: "2026-12-09", endDate: "2026-12-07" },
+  { startDate: "2026-02-30", endDate: "2026-03-01" },
+  { apiKey: "not-allowed" },
+])("rejects invalid probe input before supplier calls", async (body) => {
+  expect((await POST(request(body))).status).toBe(400);
+  expect(probe).not.toHaveBeenCalled();
+});
+it("can probe the actual dated search without a paid model call", async () => {
+  const dates = { startDate: "2026-12-07", endDate: "2026-12-09" };
+  expect((await POST(request(dates))).status).toBe(200);
+  expect(probe).toHaveBeenCalledWith(dates);
 });

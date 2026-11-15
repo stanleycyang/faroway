@@ -77,6 +77,75 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+it("recovers a dated timeout with one small catalog search and retains uncertainty", async () => {
+  const calls: Array<{
+    filtering: Record<string, unknown>;
+    pagination: { count: number };
+  }> = [];
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((_url, init) => {
+      calls.push(JSON.parse(init.body));
+      return calls.length === 1
+        ? new Promise(() => {})
+        : Promise.resolve(
+            Response.json({
+              products: [{ productCode: "123P1", title: "Real tour" }],
+            }),
+          );
+    }),
+  );
+  const { searchViatorProducts } = await import("@/lib/affiliates/viator");
+  const pending = searchViatorProducts({
+    destination: "Tokyo",
+    startDate: "2026-12-07",
+    endDate: "2026-12-09",
+    limit: 15,
+  });
+  await vi.advanceTimersByTimeAsync(10000);
+  expect(await pending).toEqual([
+    expect.objectContaining({ productCode: "123P1", catalogOnly: true }),
+  ]);
+  expect(calls).toHaveLength(2);
+  expect(calls[1].filtering).toEqual({ destination: "334" });
+  expect(calls[1].pagination.count).toBe(3);
+});
+
+it.each([200, 401, 429, 503])(
+  "does not replace an empty or failed HTTP %s dated search with catalog results",
+  async (status) => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => Response.json({ products: [] }, { status })),
+    );
+    const { searchViatorProducts } = await import("@/lib/affiliates/viator");
+    expect(
+      await searchViatorProducts({
+        destination: "Tokyo",
+        startDate: "2026-12-07",
+      }),
+    ).toEqual([]);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  },
+);
+
+it("bounds the catalog fallback too, with at most two supplier requests", async () => {
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => new Promise(() => {})),
+  );
+  const { searchViatorProducts } = await import("@/lib/affiliates/viator");
+  const pending = searchViatorProducts({
+    destination: "Tokyo",
+    startDate: "2026-12-07",
+  });
+  await vi.advanceTimersByTimeAsync(15000);
+  expect(await pending).toEqual([]);
+  expect(fetch).toHaveBeenCalledTimes(2);
+});
+
 it("retains supplier results that arrive after the generic two-second deadline", async () => {
   vi.stubGlobal(
     "fetch",

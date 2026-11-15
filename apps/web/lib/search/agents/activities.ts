@@ -274,6 +274,7 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
 
     return {
       id: `activity_v_${product.productCode}`,
+      supplierCatalogOnly: product.catalogOnly,
       name: product.title,
       description: product.description,
       viatorContentVersion: 1,

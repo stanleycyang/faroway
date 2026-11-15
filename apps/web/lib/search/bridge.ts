@@ -195,7 +195,18 @@ function mapDay(day: SuggestedDay): MappedItinerary["days"][number] {
         ? readPrice(day.estimatedCost, day.currency)
         : undefined,
     timingProposal: readDayTiming(day),
-    tips: dayTimingTips(day),
+    tips: [
+      ...new Set([
+        ...dayTimingTips(day),
+        ...([day.morning, day.afternoon, day.evening].some((slot) =>
+          slot.activities.some((activity) => activity.supplierCatalogOnly),
+        )
+          ? [
+              "Supplier experiences are catalog suggestions. Confirm dates, times and availability before booking.",
+            ]
+          : []),
+      ]),
+    ],
   };
 }
 

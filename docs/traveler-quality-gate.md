@@ -53,7 +53,12 @@ more tests that assert the current implementation.
 Supplier requests can outlive a generic short HTTP timeout while still fitting
 inside parallel specialist generation. Viator uses a ten-second deadline
 (`ITINERARY_VIATOR_TIMEOUT_MS`, bounded to 1–30 seconds), including body reads,
-with no automatic retry. Verify both delayed success and stalled bodies; do not
+without repeating the same request. After a dated-query timeout only, one smaller
+catalog search (at most three products, five-second deadline) is permitted.
+Mark its products as catalog-only and retain availability uncertainty in saved
+day tips. Never substitute catalog results after a successful empty dated search
+or an HTTP authentication, rate-limit or server error. Verify delayed success,
+stalled bodies and the bounded catalog fallback; do not
 infer invalid credentials from a client-side timeout.
 
 The default composer deadline is sixty seconds. The sequential orchestration,
@@ -79,6 +84,9 @@ returns counts and server-validated attribution counts, and never returns keys,
 partner IDs or provider error bodies. It is disabled outside the staging preview
 and limited to three probes per user per hour. A successful catalog probe does
 not establish date availability, image decoding or scheduled-trip quality.
+An optional `{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }` body probes
+the actual dated search and its bounded catalog fallback; `catalogOnlyProducts`
+reports how many results lack the requested date check. Neither mode uses AI.
 
 Generated activity suggestions must not fill supplier gaps with organized tours
 or events. Those explicit generated visit types are excluded from the shortlist;

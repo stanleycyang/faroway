@@ -522,6 +522,8 @@ export interface HotelResult {
 }
 
 export interface ActivityResult {
+  /** Supplier catalog fallback; availability for the requested dates was not checked. */
+  supplierCatalogOnly?: true;
   source?: VenueSource;
   /** Proposed experience only, not verified access, opening hours or a booking. */
   proposedVisitType?:

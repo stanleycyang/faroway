@@ -558,6 +558,31 @@ it("constrains total daily visits in the experimental structured schedule and pr
 });
 
 describe("search itinerary fallback", () => {
+  it("preserves catalog-only availability uncertainty through saved-day mapping", async () => {
+    const candidate = {
+      ...activity("supplier-tour"),
+      supplierCatalogOnly: true as const,
+    };
+    const result = await runAggregatorAgent(plan, [], [candidate], []);
+    const mapped = mapSearchResultsToItinerary(
+      {
+        searchId: "fixture",
+        hotels: [],
+        activities: [candidate],
+        dining: [],
+        transport: [],
+        itinerary: result.days,
+      },
+      null,
+    );
+    const saved = JSON.parse(JSON.stringify(mapped));
+    expect(saved.days[0].tips).toContain(
+      "Supplier experiences are catalog suggestions. Confirm dates, times and availability before booking.",
+    );
+    expect(saved.days[1].tips).not.toContain(
+      "Supplier experiences are catalog suggestions. Confirm dates, times and availability before booking.",
+    );
+  });
   it("does not publish a backup draft when interactive generation requires a generated plan", async () => {
     mocks.generateObject.mockClear();
     await expect(
