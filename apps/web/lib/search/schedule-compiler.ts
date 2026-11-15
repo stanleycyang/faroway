@@ -31,7 +31,11 @@ import {
   corroborateDiningClaim,
   DIETARY_UNVERIFIED_NOTE,
 } from "./requirement-corroboration";
-import { reviewSuppliedTransfers, transferReviewTip } from "./transfer-review";
+import {
+  chronologicalStops,
+  reviewSuppliedTransfers,
+  transferReviewTip,
+} from "./transfer-review";
 import {
   familyActivityReviewReason,
   activityMobilityReviewReason,
@@ -1148,20 +1152,11 @@ export function compileSchedule(
         "A supplier experience on this day is a catalog suggestion only. Availability on these dates was not checked.",
       );
     for (const finding of reviewSuppliedTransfers(
-      SLOTS.flatMap((_, index) => [
-        ...slots[index].activities.map((item) => ({
-          name: item.name,
-          location: item.location,
-        })),
-        ...(slots[index].meal
-          ? [
-              {
-                name: slots[index].meal!.name,
-                location: slots[index].meal!.location,
-              },
-            ]
-          : []),
-      ]),
+      chronologicalStops({
+        morning: slots[0],
+        afternoon: slots[1],
+        evening: slots[2],
+      }),
     )) {
       issues.push(`day_${day + 1}:transfer_exceeds_planning_buffer`);
       tips.push(transferReviewTip(finding));

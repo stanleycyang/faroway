@@ -14,6 +14,26 @@ export interface TransferEndpoint {
   location: unknown;
 }
 
+/** Breakfast, morning visits, lunch, afternoon visits, evening visits, dinner.
+ * That is the order the timing model proposes, not the slot's stored layout. */
+export function chronologicalStops(day: {
+  morning: { activities: readonly TransferEndpoint[]; meal?: TransferEndpoint };
+  afternoon: {
+    activities: readonly TransferEndpoint[];
+    meal?: TransferEndpoint;
+  };
+  evening: { activities: readonly TransferEndpoint[]; meal?: TransferEndpoint };
+}): TransferEndpoint[] {
+  return [
+    ...(day.morning.meal ? [day.morning.meal] : []),
+    ...day.morning.activities,
+    ...(day.afternoon.meal ? [day.afternoon.meal] : []),
+    ...day.afternoon.activities,
+    ...day.evening.activities,
+    ...(day.evening.meal ? [day.evening.meal] : []),
+  ].map((item) => ({ name: item.name, location: item.location }));
+}
+
 export function reviewSuppliedTransfers(stops: readonly TransferEndpoint[]) {
   const findings: Array<{ from: string; to: string; distanceKm: number }> = [];
   for (let index = 1; index < stops.length; index++) {

@@ -1,7 +1,7 @@
 import type { ActivityResult, DiningResult, SearchPlan } from "./types";
 
 const dietClaim =
-  /\b(?:allerg\w*|anaphyla\w*|c(?:o)?eliac\w*|cross[ -]?(?:contact|contaminat\w*)|(?:gluten|nuts?|peanuts?|shellfish|dairy)[ -]?free|allergy[ -]safe)\b/i;
+  /\b(?:allerg\w*|anaphyla\w*|c(?:o)?eliac\w*|cross[ -]?(?:contact|contaminat\w*)|(?:gluten|nuts?|peanuts?|shellfish|dairy)[ -]?free|allergy[ -]safe|vegan|vegetarian|halal|kosher)\b/i;
 const accessPromise =
   /\b(?:wheelchair[ -](?:accessible|friendly)|step[ -]free|stair[ -]free|fully accessible)\b/i;
 
@@ -29,6 +29,15 @@ function withoutClaims(text: string, claim: RegExp) {
     .join(" ");
 }
 
+function withoutClaimPhrase(text: string, claim: RegExp) {
+  return text
+    .replace(new RegExp(claim.source, "gi"), " ")
+    .replace(/\s{2,}/g, " ")
+    .replace(/\s+([,.;:])/g, "$1")
+    .trim()
+    .replace(/^[\s,.;:-]+|[\s,.;:-]+$/g, "");
+}
+
 /** Drop unsupported suitability labels from a scheduled meal. The venue can
  * stay; the claim cannot be read as confirmed. */
 export function corroborateDiningClaim(meal: DiningResult): {
@@ -37,12 +46,23 @@ export function corroborateDiningClaim(meal: DiningResult): {
 } {
   const options = (meal.dietaryOptions ?? []).filter((item) => item.trim());
   const descriptionClaims = dietClaim.test(meal.description ?? "");
-  if (!options.length && !descriptionClaims) return { meal, stripped: false };
+  const nameClaims = dietClaim.test(meal.name ?? "");
+  const cuisineClaims = (meal.cuisineTypes ?? []).some((item) =>
+    dietClaim.test(item),
+  );
+  if (!options.length && !descriptionClaims && !nameClaims && !cuisineClaims)
+    return { meal, stripped: false };
   return {
     stripped: true,
     meal: {
       ...meal,
+      name: nameClaims
+        ? withoutClaimPhrase(meal.name, dietClaim) || "Restaurant"
+        : meal.name,
       dietaryOptions: [],
+      cuisineTypes: (meal.cuisineTypes ?? []).filter(
+        (item) => !dietClaim.test(item),
+      ),
       description: [
         withoutClaims(meal.description ?? "", dietClaim),
         DIETARY_UNVERIFIED_NOTE,
@@ -60,21 +80,26 @@ export function corroborateAccessClaim(
 ): { activity: ActivityResult; stripped: boolean } {
   if (!requested) return { activity, stripped: false };
   const descriptionClaims = accessPromise.test(activity.description ?? "");
+  const nameClaims = accessPromise.test(activity.name ?? "");
   const vibeClaims = (activity.vibeMatch ?? []).some((label) =>
     accessPromise.test(label),
   );
-  if (!descriptionClaims && !vibeClaims) return { activity, stripped: false };
+  if (!descriptionClaims && !nameClaims && !vibeClaims)
+    return { activity, stripped: false };
   return {
     stripped: true,
     activity: {
       ...activity,
+      name: nameClaims
+        ? withoutClaimPhrase(activity.name, accessPromise) || "Visit"
+        : activity.name,
       description: [
         withoutClaims(activity.description ?? "", accessPromise),
         ACCESS_UNVERIFIED_NOTE,
       ]
         .filter(Boolean)
         .join(" "),
-      vibeMatch: activity.vibeMatch.filter(
+      vibeMatch: (activity.vibeMatch ?? []).filter(
         (label) => !accessPromise.test(label),
       ),
     },

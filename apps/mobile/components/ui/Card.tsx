@@ -1,10 +1,8 @@
 import { TravelImage } from './TravelImage';
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { colors, borderRadius, shadows } from '../../constants/theme';
-
-const { width } = Dimensions.get('window');
 
 interface DestinationCardProps {
   image: string;
@@ -25,6 +23,7 @@ export function DestinationCard({
   onPress,
   size = 'medium',
 }: DestinationCardProps) {
+  const { width } = useWindowDimensions();
   const cardSizes = {
     small: { width: 160, height: 200 },
     medium: { width: width * 0.7, height: 280 },

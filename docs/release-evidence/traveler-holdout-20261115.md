@@ -16,13 +16,14 @@ Measured on `70c24cf` before the planner changes, then again after them.
 |                             | Before | After |
 | --------------------------- | -----: | ----: |
 | Planner cases accepted      |  3 / 9 | 9 / 9 |
-| Negative controls detected  |  3 / 3 | 3 / 3 |
+| Negative controls detected  |  3 / 3 | 4 / 4 |
 | Recorded supplier decisions |  1 / 1 | 1 / 1 |
 | Suite accepted              |     no |   yes |
 
 Cases that already passed: Mexico City family screening, Singapore evening
 arrival, and the Lisbon breakfast repair. Controls for a fallback day, a
-timing conflict, and a mislabeled day were detected both times.
+timing conflict, and a mislabeled day were detected both times. The current
+suite also rejects an itinerary that drops a trailing trip day.
 
 Failures before the fixes:
 

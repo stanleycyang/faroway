@@ -196,6 +196,59 @@ describe("experimental schedule compiler", () => {
     expect(result.timingProposals[0].fitsPolicy).toBe(true);
   });
 
+  it("discloses the visit hop that remains after breakfast, not the shorter meal legs", () => {
+    const input = {
+      ...plan,
+      dates: { start: "2027-01-11", end: "2027-01-11", nights: 0 },
+      mobilityNeeds: undefined,
+      requirements: undefined,
+    };
+    const at = (name: string, lat: number) => ({
+      ...activities[0].location,
+      name,
+      address: name,
+      lat,
+      lng: 139,
+    });
+    const morningVisit = {
+      ...visit("north-visit", 60, "morning"),
+      name: "North visit",
+      location: at("North visit", 35),
+    };
+    const afternoonVisit = {
+      ...visit("south-visit", 60, "afternoon"),
+      name: "South visit",
+      location: at("South visit", 35.027),
+    };
+    const meals = ["breakfast", "lunch", "dinner"].map((type) => ({
+      ...dining[0],
+      id: type,
+      name: type,
+      mealTypes: [type],
+      location: at(
+        type,
+        type === "breakfast" ? 35.0135 : type === "lunch" ? 35.0405 : 35.027,
+      ),
+    })) as DiningResult[];
+    const result = compileSchedule(
+      input,
+      [morningVisit, afternoonVisit],
+      meals,
+      [],
+      { maxUnverifiedTransferKm: 6 },
+    );
+    const tips = result.days[0].tips.join("\n");
+    expect(result.days[0].morning.activities.map((item) => item.id)).toEqual([
+      "north-visit",
+    ]);
+    expect(result.days[0].afternoon.activities.map((item) => item.id)).toEqual([
+      "south-visit",
+    ]);
+    expect(tips).toContain("North visit and lunch are about 4.5 km apart");
+    expect(tips).toContain("30-minute planning buffer");
+    expect(tips).not.toContain("1.5 km");
+  });
+
   it("keeps visits in evening slots and leaves blocked meal windows unscheduled", async () => {
     vi.stubEnv("TAVILY_API_KEY", "");
     const restricted = {

@@ -14,7 +14,10 @@ import {
 import { recoverSupplierSearch } from "../../../apps/web/lib/affiliates/supplier-search-recovery";
 import { supplierDurationCeilingMinutes } from "../../../apps/web/lib/search/supplier-duration";
 import { suppliedDistanceKm } from "../../../apps/web/lib/search/supplied-distance";
-import { transferExceedsPlanningBuffer } from "../../../apps/web/lib/search/transfer-review";
+import {
+  chronologicalStops,
+  transferExceedsPlanningBuffer,
+} from "../../../apps/web/lib/search/transfer-review";
 import type {
   ActivityResult,
   DiningResult,
@@ -25,7 +28,7 @@ import type {
 
 const SLOTS = ["morning", "afternoon", "evening"] as const;
 const DIET_CLAIM =
-  /\b(?:allerg\w*|anaphyla\w*|c(?:o)?eliac\w*|cross[ -]?(?:contact|contaminat\w*)|(?:gluten|nuts?|peanuts?|shellfish|dairy)[ -]?free|allergy[ -]safe)\b/i;
+  /\b(?:allerg\w*|anaphyla\w*|c(?:o)?eliac\w*|cross[ -]?(?:contact|contaminat\w*)|(?:gluten|nuts?|peanuts?|shellfish|dairy)[ -]?free|allergy[ -]safe|vegan|vegetarian|halal|kosher)\b/i;
 const ACCESS_PROMISE =
   /\b(?:wheelchair[ -](?:accessible|friendly)|step[ -]free|stair[ -]free|fully accessible)\b/i;
 const PACE = {
@@ -165,15 +168,7 @@ function mealsOf(day: SuggestedDay) {
   return SLOTS.flatMap((slot) => (day[slot].meal ? [day[slot].meal!] : []));
 }
 function sequence(day: SuggestedDay) {
-  return SLOTS.flatMap((slot) => [
-    ...day[slot].activities.map((item) => ({
-      name: item.name,
-      location: item.location,
-    })),
-    ...(day[slot].meal
-      ? [{ name: day[slot].meal!.name, location: day[slot].meal!.location }]
-      : []),
-  ]);
+  return chronologicalStops(day);
 }
 
 function scoreDays(
@@ -189,7 +184,15 @@ function scoreDays(
   },
 ): HoldoutResult {
   const failures: string[] = [];
-  const expected = calendar(plan.dates.start, days.length);
+  const start = Date.parse(`${plan.dates.start}T00:00:00Z`);
+  const end = Date.parse(`${plan.dates.end}T00:00:00Z`);
+  const tripDays =
+    Number.isFinite(start) && Number.isFinite(end) && end >= start
+      ? Math.round((end - start) / 86400000) + 1
+      : 0;
+  const expected = calendar(plan.dates.start, tripDays);
+  if (days.length !== expected.length)
+    failures.push(`${id}:day_count:${days.length}/${expected.length}`);
   const limit = PACE[plan.activityCriteria.pacePreference];
   const scheduled = days.flatMap(visitsOf);
   for (const [index, day] of days.entries()) {
@@ -225,7 +228,11 @@ function scoreDays(
     for (const meal of meals) {
       if (meal.dietaryOptions?.length)
         failures.push(`${id}:dietary_claim:${meal.id}`);
-      if (DIET_CLAIM.test(meal.description ?? ""))
+      if (
+        DIET_CLAIM.test(meal.description ?? "") ||
+        DIET_CLAIM.test(meal.name ?? "") ||
+        (meal.cuisineTypes ?? []).some((item) => DIET_CLAIM.test(item))
+      )
         failures.push(`${id}:dietary_prose:${meal.id}`);
     }
     for (const visit of visits) {
@@ -249,6 +256,7 @@ function scoreDays(
         failures.push(`${id}:price_presented_as_free:${visit.id}`);
       if (
         ACCESS_PROMISE.test(visit.description ?? "") ||
+        ACCESS_PROMISE.test(visit.name ?? "") ||
         (visit.vibeMatch ?? []).some((label) => ACCESS_PROMISE.test(label))
       )
         failures.push(`${id}:access_claim:${visit.id}`);
@@ -284,8 +292,6 @@ function scoreDays(
   for (const phrase of rules.phrases ?? [])
     if (!tips.includes(phrase))
       failures.push(`${id}:requirement_dropped:${phrase}`);
-  if (days.length !== calendar(plan.dates.start, expected.length).length)
-    failures.push(`${id}:day_count`);
   return { id, kind: "planner", accepted: failures.length === 0, failures };
 }
 
@@ -1046,7 +1052,22 @@ function negativeControls(): HoldoutResult[] {
     (failure) =>
       failure.includes("day_title") || failure.includes("fallback_day"),
   );
-  return [fallbackScore, conflictScore, labelScore];
+  const truncated = scoreDays(
+    "control-truncated",
+    searchPlan({
+      destination: "Lisbon",
+      country: "Portugal",
+      dates: { start: "2027-05-10", end: "2027-05-12", nights: 2 },
+      pace: "relaxed",
+    }),
+    fallback.days,
+    { fullMealDays: [], allowEmptyVisitDays: [0] },
+  );
+  truncated.kind = "control";
+  truncated.accepted = truncated.failures.some((failure) =>
+    failure.includes("day_count"),
+  );
+  return [fallbackScore, conflictScore, labelScore, truncated];
 }
 
 export async function runTravelerHoldout() {
