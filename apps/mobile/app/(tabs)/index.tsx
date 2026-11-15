@@ -1,3 +1,4 @@
+import { usableDestinationImages } from '../../lib/destinationCatalog';
 import { TravelImage } from '../../components/ui/TravelImage';
 import { useState, useEffect, useRef } from 'react';
 import {
@@ -43,6 +44,7 @@ export default function ExploreScreen() {
   const [greeting, setGreeting] = useState('');
   const [apiPopular, setApiPopular] = useState<DestinationInfo[] | null>(null);
   const [apiTrending, setApiTrending] = useState<DestinationInfo[] | null>(null);
+  const [showCollectionNotice, setShowCollectionNotice] = useState(false);
 
   // Animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -81,14 +83,21 @@ export default function ExploreScreen() {
   useEffect(() => {
     getPopularDestinations({ limit: 5 })
       .then((res) => {
-        if (res.data?.destinations?.length) setApiPopular(res.data.destinations);
+        if (res.data?.destinations) {
+          const destinations = usableDestinationImages(res.data.destinations, popularDestinations);
+          setApiPopular(destinations.length ? destinations : null);
+          setShowCollectionNotice(destinations.length === 0);
+        }
       })
       .catch(() => {
         // Network failure — hardcoded popularDestinations remain visible
       });
     getTrendingDestinations({ limit: 4 })
       .then((res) => {
-        if (res.data?.destinations?.length) setApiTrending(res.data.destinations);
+        if (res.data?.destinations) {
+          const destinations = usableDestinationImages(res.data.destinations, popularDestinations);
+          setApiTrending(destinations.length ? destinations : null);
+        }
       })
       .catch(() => {
         // Network failure — section simply stays hidden (no trending fallback data)
@@ -221,6 +230,19 @@ export default function ExploreScreen() {
           </ScrollView>
         </View>
 
+        {showCollectionNotice && (
+          <Text
+            style={{
+              paddingHorizontal: 24,
+              color: '#475D61',
+              fontSize: 14,
+              lineHeight: 20,
+              marginBottom: 12,
+            }}
+          >
+            Showing our destination collection.
+          </Text>
+        )}
         {/* Places to fall in love with */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>

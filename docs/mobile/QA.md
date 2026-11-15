@@ -307,3 +307,16 @@ For Android text-size checks, record the original font scale and restore it in
 a finally block. Capture both the configuration transition and a cold launch
 at the requested scale: activity recreation can briefly show stale measurements.
 Report transition clipping separately from persistent layout failures.
+
+### Image and first-run acceptance
+
+A successful storage HEAD response is not image acceptance. Check the actual API
+payload used by the screen, normalize/cache round-trip, full image delivery and
+decoding, and visible content at the expected place. Record absent sources separately
+from network failures or incorrect images. A fallback placeholder is graceful failure,
+not a passing photograph. Never attach an unrelated venue's photo to fill a gap.
+
+First-run QA must include offline first paint, guest exploration, destination handoff,
+custom destination entry, returning users, attribution, and scrolling/wrapping at
+small widths and larger native text. Source-rendered web previews are useful layout
+evidence but do not replace installed-device acceptance.

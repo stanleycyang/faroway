@@ -22,3 +22,25 @@ it('keeps valid facts and deduplicates allowed vibes within the five-choice limi
     })
   ).toEqual({ destination: 'Tokyo', travelers: 3, vibes: ids.slice(0, 5) });
 });
+
+it('clears an old destination identity when a suggestion has no provider place ID', () => {
+  const previous = {
+    destination: 'Paris',
+    country: 'France',
+    placeId: 'paris-provider-id',
+    travelers: 3,
+  };
+  const next = {
+    ...previous,
+    ...tripInputFromLink({ destination: 'Lisbon', country: 'Portugal' }),
+  };
+  expect(next).toStrictEqual({
+    destination: 'Lisbon',
+    country: 'Portugal',
+    placeId: undefined,
+    travelers: 3,
+  });
+  expect(
+    { ...previous, ...tripInputFromLink({ destination: 'Custom place' }) }.country
+  ).toBeUndefined();
+});

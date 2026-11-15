@@ -164,3 +164,15 @@ New observation: changing Android font scale while the app is running caused
 activity recreation and clipped text until cold restart. Cold-launch Explore at
 1.5x rendered correctly. Track the configuration-transition behavior separately;
 do not claim all large-text/accessibility checks passed.
+
+## Follow-up: image and first-run audit
+
+See [audited closure plan](merge-readiness-plan-20261114.md) for authoritative
+remaining gates and the distinction between source fixes and physical acceptance.
+
+| ID | Severity | Finding | Status |
+| --- | --- | --- | --- |
+| M20 | P2 | First welcome relies on remote photography and passive intro slides do not advance the traveler's brief. | Source changed to bundled attributed hero, clear planning action and optional destination selection. Navigation/asset regressions pass; installed-device acceptance pending. |
+| M21 | P2 | Incoming synthetic image-less destination records replace the populated discovery collection; storage HEAD checks did not catch this. | Source now uses exact city/country image fallback and retains the collection when no API records have usable sources. No fixture data was changed. Native render and current backend catalog acceptance pending. |
+| M22 | P2 | Long button labels and narrow destination rows can crowd at larger text sizes. | Button text can shrink/wrap within available width; onboarding suggestions stack at narrow widths or native fontScale above 1.25. Source-rendered preview checked; native accessibility acceptance pending. |
+| M23 | P2 | A destination link without a provider ID merges into a previous draft without clearing that city's provider ID/country. | Source now explicitly clears absent destination identity fields; regression preserves unrelated traveler count. Native end-to-end acceptance pending. |

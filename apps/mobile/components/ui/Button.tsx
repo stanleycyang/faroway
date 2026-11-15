@@ -125,6 +125,8 @@ export function Button({
 
     return {
       fontWeight: '700',
+      flexShrink: 1,
+      textAlign: 'center',
       letterSpacing: 0,
       ...textSizeStyles[size],
       ...variantStyles[variant],
