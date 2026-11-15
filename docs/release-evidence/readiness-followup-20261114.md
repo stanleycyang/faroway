@@ -63,10 +63,17 @@ Actions secrets `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` a
 absent (confirmed by secret names only). A preflight now fails early with the
 missing names, without values. This improves diagnosis; it does not resolve the
 missing configuration or waive the production blog-data gate. No credentials
-were uploaded to GitHub. Full Release Verification is still pending at this entry.
+were uploaded to GitHub. Full Release Verification subsequently passed: offline
+rubric calibration, disposable PostgreSQL lifecycle/privilege tests, bootstrap and
+helper-path rehearsals, account/push checks, desktop/mobile checkout, and full-app
+trip recovery/public-sharing browser tests. These use isolated fixtures and do not
+replace live provider or production configuration acceptance.
 
 Android build 15 reproduced the empty profile summary; opening the editor showed
 the saved Culture/Foodie selection. Cold guest welcome exposed native hero bleed
 behind body text (M26). Source sizing, clipping and opaque paper fix that boundary;
 physical acceptance requires a new build. The existing nine first-run tests,
 mobile TypeScript and changed-screen formatting pass after the correction.
+The complete workspace check also passes all 11 tasks after this correction.
+The CI preflight was exercised with missing and synthetic configured values: it
+fails and passes respectively without printing values.
