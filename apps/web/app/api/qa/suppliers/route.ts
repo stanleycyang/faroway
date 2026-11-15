@@ -12,8 +12,10 @@ const input = z
     startDate: date.optional(),
     endDate: date.optional(),
     maxDurationMinutes: z.number().int().min(30).max(720).optional(),
+    transport: z.enum(["fetch", "https"]).optional(),
   })
   .strict()
+  .refine((value) => !value.transport || !value.startDate)
   .refine(
     (value) =>
       (!value.startDate && !value.endDate) ||

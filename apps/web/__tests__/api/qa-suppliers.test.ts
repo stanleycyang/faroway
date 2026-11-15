@@ -71,6 +71,8 @@ it.each([
   { maxDurationMinutes: 721 },
   { maxDurationMinutes: 60.5 },
   { endDate: "2026-12-09" },
+  { transport: "other" },
+  { startDate: "2026-12-07", endDate: "2026-12-09", transport: "https" },
 ])("rejects invalid probe input before supplier calls", async (body) => {
   expect((await POST(request(body))).status).toBe(400);
   expect(probe).not.toHaveBeenCalled();

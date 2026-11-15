@@ -19,6 +19,7 @@ import {
 } from "@/lib/search/runtime";
 import { buildViatorHandoffUrl } from "./viator-link";
 import { isViatorContentEnabled } from "./viator-policy";
+import { request as httpsRequest } from "node:https";
 
 // Environment variables
 const VIATOR_API_KEY = process.env.VIATOR_API_KEY;
@@ -362,6 +363,7 @@ async function searchByDestinationId(
   destId: number,
   params: ViatorSearchParams,
   timeoutMs = VIATOR_TIMEOUT_MS,
+  transport: "fetch" | "https" = "fetch",
 ): Promise<ViatorProduct[]> {
   const body: Record<string, unknown> = {
     filtering: {
@@ -387,7 +389,10 @@ async function searchByDestinationId(
     currency: "USD",
   };
 
-  const response = await fetchWithTimeout(
+  const started = Date.now();
+  const response = await (
+    transport === "https" ? fetchViatorHttps : fetchWithTimeout
+  )(
     `${VIATOR_API_BASE}/products/search`,
     {
       method: "POST",
@@ -396,6 +401,11 @@ async function searchByDestinationId(
     },
     timeoutMs,
   );
+  console.info("[Viator] Search headers", {
+    transport,
+    elapsedMs: Date.now() - started,
+    status: response.status,
+  });
 
   if (!response.ok) {
     // Consume the finite body within its deadline, but never log a provider
@@ -416,6 +426,7 @@ export async function probeViatorSandbox(dates?: {
   startDate?: string;
   endDate?: string;
   maxDurationMinutes?: number;
+  transport?: "fetch" | "https";
 }) {
   if (process.env.VIATOR_SANDBOX !== "true" || !isViatorConfigured()) {
     return { status: "unconfigured" as const };
@@ -439,6 +450,7 @@ export async function probeViatorSandbox(dates?: {
             maxDurationMinutes: dates?.maxDurationMinutes,
           },
           30000,
+          dates?.transport,
         );
     return {
       status: products.length ? ("available" as const) : ("empty" as const),
@@ -475,6 +487,48 @@ export async function probeViatorSandbox(dates?: {
             : "provider_response_error",
     };
   }
+}
+
+/** Isolated diagnostic transport: fixed supplier host, bounded body and deadline. */
+async function fetchViatorHttps(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  timeoutMs = 30000,
+): Promise<Response> {
+  const url = new URL(String(input));
+  if (url.origin !== new URL(VIATOR_API_BASE).origin)
+    throw new Error("Unexpected supplier origin");
+  return new Promise((resolve, reject) => {
+    const request = httpsRequest(
+      url,
+      {
+        method: "POST",
+        headers: Object.fromEntries(new Headers(init.headers)),
+        agent: false,
+        signal: AbortSignal.timeout(timeoutMs),
+      },
+      (incoming) => {
+        const chunks: Buffer[] = [];
+        let size = 0;
+        incoming.on("data", (chunk: Buffer) => {
+          size += chunk.length;
+          if (size > 2 * 1024 * 1024)
+            request.destroy(new Error("Supplier response too large"));
+          else chunks.push(chunk);
+        });
+        incoming.on("error", reject);
+        incoming.on("end", () =>
+          resolve(
+            new Response(Buffer.concat(chunks), {
+              status: incoming.statusCode || 502,
+            }),
+          ),
+        );
+      },
+    );
+    request.on("error", reject);
+    request.end(String(init.body ?? ""));
+  });
 }
 
 /**
