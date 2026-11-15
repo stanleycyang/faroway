@@ -296,6 +296,7 @@ export function isViatorConfigured(): boolean {
  */
 export async function searchViatorProducts(
   params: ViatorSearchParams,
+  options: { throwOnFailure?: boolean } = {},
 ): Promise<ViatorProduct[]> {
   if (!isViatorConfigured()) {
     console.warn("[Viator] API not configured, returning empty results");
@@ -347,6 +348,7 @@ export async function searchViatorProducts(
 
     return [];
   } catch (error) {
+    if (options.throwOnFailure) throw error;
     console.error("[Viator] Search error:", error);
     return [];
   }
@@ -420,11 +422,14 @@ export async function probeViatorSandbox(dates?: {
   const started = Date.now();
   try {
     const products = dates?.startDate
-      ? await searchViatorProducts({
-          destination: "Tokyo",
-          limit: 15,
-          ...dates,
-        })
+      ? await searchViatorProducts(
+          {
+            destination: "Tokyo",
+            limit: 15,
+            ...dates,
+          },
+          { throwOnFailure: true },
+        )
       : await searchByDestinationId(
           334,
           {

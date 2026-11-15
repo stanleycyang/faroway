@@ -87,6 +87,9 @@ not establish date availability, image decoding or scheduled-trip quality.
 An optional `{ "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD" }` body probes
 the actual dated search and its bounded catalog fallback; `catalogOnlyProducts`
 reports how many results lack the requested date check. Neither mode uses AI.
+The probe must propagate search failures into `failed`, including exhaustion of
+both timed requests. An empty successful response is a different result: do not
+interpret the application's resilient empty-array fallback as supplier evidence.
 The optional `maxDurationMinutes` filter (30–720) also works without dates;
 diagnostics include public product titles and durations so relevance can be
 reviewed before paying for generation. City briefs constrain supplier experiences

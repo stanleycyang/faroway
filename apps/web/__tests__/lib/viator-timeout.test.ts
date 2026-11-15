@@ -77,6 +77,38 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+it("reports dated provider timeouts as failures rather than empty inventory", async () => {
+  vi.spyOn(console, "warn").mockImplementation(() => {});
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(() => new Promise(() => {})),
+  );
+  const { probeViatorSandbox } = await import("@/lib/affiliates/viator");
+  const pending = probeViatorSandbox({
+    startDate: "2026-12-07",
+    endDate: "2026-12-09",
+    maxDurationMinutes: 240,
+  });
+  await vi.advanceTimersByTimeAsync(15000);
+  expect(await pending).toMatchObject({ status: "failed", reason: "timeout" });
+  expect(fetch).toHaveBeenCalledTimes(2);
+});
+
+it("reports a successful empty dated response separately from provider failure", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async () => Response.json({ products: [] })),
+  );
+  const { probeViatorSandbox } = await import("@/lib/affiliates/viator");
+  expect(
+    await probeViatorSandbox({
+      startDate: "2026-12-07",
+      endDate: "2026-12-09",
+    }),
+  ).toMatchObject({ status: "empty", products: 0 });
+  expect(fetch).toHaveBeenCalledTimes(1);
+});
+
 it("recovers a dated timeout with one small catalog search and retains uncertainty", async () => {
   const calls: Array<{
     filtering: Record<string, unknown>;
