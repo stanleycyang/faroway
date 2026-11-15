@@ -63,6 +63,9 @@ to finish a real plan. Interactive generation requires generated composition:
 an unrecoverable composer failure must mark generation failed, preserve the
 brief and allow retry, without sending an itinerary-ready notification.
 Explicit offline fallback callers may still construct a backup draft.
+The composition step sets Workflow `maxRetries = 0`; AI SDK `maxRetries = 0`
+alone does not prevent Workflow from repeating a paid call. Review both layers
+whenever changing error handling, and verify the deployed step configuration.
 
 Retained backup drafts must fail acceptance even when their dates and meal
 slots are complete. Preserve observed failure formats as regression fixtures;

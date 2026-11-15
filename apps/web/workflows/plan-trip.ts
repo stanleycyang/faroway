@@ -676,6 +676,10 @@ async function aggregateItineraryStep(params: {
   );
   return mapped;
 }
+// This step includes a paid model call. Workflow's default three retries would
+// repeat generation after a timeout, validation failure or persistence error.
+// Preserve the failed brief and let the traveler explicitly retry instead.
+aggregateItineraryStep.maxRetries = 0;
 
 // ─── Step 3: Mark Itinerary Composed ────────────────────────────────────────
 
