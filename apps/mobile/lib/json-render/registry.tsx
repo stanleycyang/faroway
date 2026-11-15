@@ -1,10 +1,11 @@
+import { TravelImage } from '../../components/ui/TravelImage';
 import { proposedVisitNote } from '@faroway/types';
 import { VenueSourceNotice } from '../../components/VenueSourceNotice';
 import { durationLabel } from '../durationLabel';
 import React from 'react';
 import { formatTripDate } from '../tripDate';
 import { formatPrice } from '@faroway/constants';
-import { View, Text as RNText, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text as RNText, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { reviewSavedTripBooking } from '../savedTripBooking';
@@ -89,7 +90,7 @@ type HeroImageProps = z.infer<typeof HeroImageSchema>;
 export const HeroImage: React.FC<HeroImageProps> = ({ url, alt, overlay = true }) => {
   return (
     <View style={styles.heroImage}>
-      <Image source={{ uri: url }} style={styles.heroImageImg} accessibilityLabel={alt} />
+      <TravelImage source={{ uri: url }} style={styles.heroImageImg} accessibilityLabel={alt} />
       {overlay && (
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.3)']}
@@ -152,7 +153,7 @@ export const HotelCard: React.FC<HotelCardProps> = ({
 }) => {
   return (
     <View style={[styles.card, styles.hotelCard]}>
-      {image && <Image source={{ uri: image }} style={styles.hotelCardImage} />}
+      {image && <TravelImage source={{ uri: image }} style={styles.hotelCardImage} />}
       <View style={styles.hotelCardContent}>
         <View style={styles.hotelCardHeader}>
           <RNText style={styles.hotelCardName}>{name}</RNText>
@@ -273,7 +274,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
       </View>
 
       <View style={styles.activityCardBody}>
-        {image && <Image source={{ uri: image }} style={styles.activityCardImage} />}
+        {image && <TravelImage source={{ uri: image }} style={styles.activityCardImage} />}
         <View style={styles.activityCardContent}>
           <RNText style={styles.activityCardName}>{name}</RNText>
 
@@ -357,7 +358,7 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
       )}
 
       <View style={styles.restaurantCardBody}>
-        {image && <Image source={{ uri: image }} style={styles.restaurantCardImage} />}
+        {image && <TravelImage source={{ uri: image }} style={styles.restaurantCardImage} />}
         <View style={styles.restaurantCardContent}>
           <RNText style={styles.restaurantCardName}>{name}</RNText>
 

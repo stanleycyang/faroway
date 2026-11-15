@@ -24,7 +24,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Image,
   Animated,
   RefreshControl,
   ActivityIndicator,
@@ -84,7 +83,6 @@ interface ActivityCardProps {
 }
 
 function ActivityCard({ activity }: ActivityCardProps) {
-  const [failedImage, setFailedImage] = useState<string>();
   const visitNote = proposedVisitNote(activity.proposedVisitType);
   const reviewBooking = useBookingReview();
   const getTypeIcon = (type: string) => {
@@ -135,15 +133,14 @@ function ActivityCard({ activity }: ActivityCardProps) {
       </View>
       <View style={styles.activityContent}>
         {/* Activity Image */}
-        {activity.image && activity.image !== failedImage && (
-          <Image
+        {activity.image && (
+          <TravelImage
             source={venuePhotoSource(activity.image)}
             style={styles.activityImage}
             accessible={false}
-            onError={() => setFailedImage(activity.image)}
           />
         )}
-        {activity.image && activity.image !== failedImage && activity.imageCredit && (
+        {activity.image && activity.imageCredit && (
           <VenuePhotoCredit credit={activity.imageCredit} />
         )}
         <View style={styles.activityHeader}>
@@ -233,7 +230,11 @@ function FeaturedHotelCard({
   return (
     <View style={styles.hotelCard}>
       {hotel.images && hotel.images.length > 0 && (
-        <Image source={{ uri: hotel.images[0] }} style={styles.hotelCardImage} accessible={false} />
+        <TravelImage
+          source={{ uri: hotel.images[0] }}
+          style={styles.hotelCardImage}
+          accessible={false}
+        />
       )}
       <View style={styles.hotelCardContent}>
         <View style={styles.hotelCardHeader}>

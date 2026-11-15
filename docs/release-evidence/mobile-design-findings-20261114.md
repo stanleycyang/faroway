@@ -176,3 +176,26 @@ remaining gates and the distinction between source fixes and physical acceptance
 | M21 | P2 | Incoming synthetic image-less destination records replace the populated discovery collection; storage HEAD checks did not catch this. | Source now uses exact city/country image fallback and retains the collection when no API records have usable sources. No fixture data was changed. Native render and current backend catalog acceptance pending. |
 | M22 | P2 | Long button labels and narrow destination rows can crowd at larger text sizes. | Button text can shrink/wrap within available width; onboarding suggestions stack at narrow widths or native fontScale above 1.25. Source-rendered preview checked; native accessibility acceptance pending. |
 | M23 | P2 | A destination link without a provider ID merges into a previous draft without clearing that city's provider ID/country. | Source now explicitly clears absent destination identity fields; regression preserves unrelated traveler count. Native end-to-end acceptance pending. |
+
+## Current evidence reconciliation
+
+Both b7133b7 builds are installed; see the physical build receipt. Older statements
+that replacement-build approval or installation is pending are historical. Full
+Android visual acceptance and remaining iPhone acceptance are still open.
+
+| ID | Severity | Observation | Next action |
+| --- | --- | --- | --- |
+| M24 | P2 candidate | After the iPhone upgrade, Phone QA profile displayed travel preferences as “Not set.” Earlier Android evidence for the same QA account recorded Culture/Foodie. This does not yet establish a persistence defect. | Compare server, account and device-local preference state; verify save, cold restart and cross-device behavior before assigning a root cause. |
+
+## Readiness follow-up fixes
+
+M24: read-only staging account verification found Culture/Foodie in both the
+database and profile API with matching account identity. New source refreshes the
+profile on focus/foreground and distinguishes load failure from empty preferences;
+seven race/recovery regressions pass. New native verification remains required.
+
+M25 (P2): saved activity photos were permanently hidden after one error, and saved
+hotel / streamed card photos bypassed reconnect handling. These now use the shared
+loader, with actual saved and streamed card error/reconnect tests and preserved
+photo accessibility labels. This does not close M11's generation transition or
+missing upstream photo coverage.

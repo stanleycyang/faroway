@@ -111,7 +111,8 @@ jest.mock('../../lib/tripSharing', () => ({
   shareOwnedTrip: (...args: unknown[]) => mockCreateLink(...args),
   revokeOwnedTripShare: (...args: unknown[]) => mockRevoke(...args),
 }));
-import { Alert, Text } from 'react-native';
+import { Alert, Text, Image } from 'react-native';
+import { networkMonitor, type NetworkState } from '../../lib/offline/network';
 import TripDetailScreen from '../../app/trip/[id]';
 
 beforeEach(() => {
@@ -696,5 +697,73 @@ it('shows saved traveler needs independently of general dining guidance', async 
     ).toBe(true);
   } finally {
     await act(async () => screen?.unmount());
+  }
+});
+
+it('recovers saved activity and hotel images after reconnect without reopening the trip', async () => {
+  const listeners = new Set<(state: NetworkState) => void>();
+  const network = (status: NetworkState['status']): NetworkState => ({
+    status,
+    isConnected: status === 'online',
+    isInternetReachable: status === 'online',
+    type: 'wifi',
+    details: null,
+  });
+  const subscription = jest.spyOn(networkMonitor, 'subscribe').mockImplementation((listener) => {
+    listeners.add(listener);
+    listener(network('offline'));
+    return () => {
+      listeners.delete(listener);
+    };
+  });
+  const populated = {
+    ...trip,
+    days: [
+      {
+        dayNumber: 1,
+        date: trip.startDate,
+        theme: 'Art',
+        activities: [
+          {
+            id: 'visit',
+            title: 'Museum',
+            type: 'attraction',
+            description: 'Visit',
+            time: 'Morning',
+            image: 'https://images.example.test/activity.jpg',
+          },
+        ],
+      },
+    ],
+    hotel: {
+      id: 'hotel',
+      name: 'Hotel',
+      images: ['https://images.example.test/hotel.jpg'],
+      amenities: [],
+    },
+  };
+  mockCurrentTrip = populated as unknown as typeof trip;
+  mockGetTrip.mockResolvedValue(populated);
+  let screen!: ReturnType<typeof create>;
+  const photos = () =>
+    screen.root
+      .findAllByType(Image)
+      .filter((node) => node.props.source?.uri?.startsWith('https://images.example.test/'));
+  try {
+    await act(async () => {
+      screen = create(<TripDetailScreen />);
+    });
+    expect(photos()).toHaveLength(2);
+    await act(async () => {
+      for (const photo of photos()) photo.props.onError({ nativeEvent: { error: 'offline' } });
+    });
+    expect(photos()).toHaveLength(0);
+    await act(async () => {
+      for (const listener of [...listeners]) listener(network('online'));
+    });
+    expect(photos()).toHaveLength(2);
+  } finally {
+    await act(async () => screen?.unmount());
+    subscription.mockRestore();
   }
 });

@@ -82,3 +82,27 @@ it('retries a failed image once connectivity returns, without looping on online 
     await act(async () => screen?.unmount());
   }
 });
+
+it('preserves an explicit photo label and announces when that photo is unavailable', async () => {
+  Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  let screen!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      screen = create(
+        <TravelImage
+          source={{ uri: 'https://example.test/hero.jpg' }}
+          accessibilityLabel="Lisbon riverfront"
+        />
+      );
+    });
+    expect(screen.root.findByProps({ accessibilityRole: 'image' }).props.accessible).toBe(true);
+    await act(async () =>
+      screen.root.findByType(Image).props.onError({ nativeEvent: { error: 'offline' } })
+    );
+    expect(screen.root.findByProps({ accessibilityRole: 'image' }).props.accessibilityLabel).toBe(
+      'Lisbon riverfront. Photo unavailable'
+    );
+  } finally {
+    await act(async () => screen?.unmount());
+  }
+});

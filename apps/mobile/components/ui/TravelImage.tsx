@@ -25,7 +25,16 @@ export function TravelImage({ source, style, ...props }: ImageProps) {
     });
   }, [failed, hasSource]);
   return (
-    <View style={[styles.frame, style]} accessible={false}>
+    <View
+      style={[styles.frame, style]}
+      accessible={props.accessible ?? Boolean(props.accessibilityLabel)}
+      accessibilityRole="image"
+      accessibilityLabel={
+        props.accessibilityLabel && (failed || !hasSource)
+          ? `${props.accessibilityLabel}. Photo unavailable`
+          : props.accessibilityLabel
+      }
+    >
       <View style={styles.placeholder}>
         <Ionicons name="image-outline" size={28} color={travel.muted} />
         {(failed || !hasSource) && <Text style={styles.label}>Photo unavailable</Text>}

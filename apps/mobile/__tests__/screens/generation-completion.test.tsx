@@ -1,3 +1,4 @@
+jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Icon' }));
 import React from 'react';
 import { act, create } from 'react-test-renderer';
 let mockOwner = 'account-a';

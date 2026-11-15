@@ -820,14 +820,12 @@ it('does not publish a failed-request cache read after an account switch', async
   for (let step = 0; step < 20 && offlineStorage.loadTrips.mock.calls.length === 0; step++)
     await Promise.resolve();
   expect(offlineStorage.loadTrips).toHaveBeenCalled();
-  useUserStore
-    .getState()
-    .setUser({
-      id: 'other-owner',
-      name: 'Other',
-      email: 'other@example.invalid',
-      preferences: { vibes: [] },
-    });
+  useUserStore.getState().setUser({
+    id: 'other-owner',
+    name: 'Other',
+    email: 'other@example.invalid',
+    preferences: { vibes: [] },
+  });
   cached.resolve([makeTrip('private-old', 'Lisbon')]);
   expect(await reading).toEqual([]);
   expect(useTripStore.getState().trips).toEqual([]);

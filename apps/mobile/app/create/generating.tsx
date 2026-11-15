@@ -1,3 +1,4 @@
+import { TravelImage } from '../../components/ui/TravelImage';
 import {
   travelerRequirementsSchema,
   readTravelerRequirements,
@@ -13,7 +14,6 @@ import {
   Text,
   StyleSheet,
   Dimensions,
-  Image,
   Animated,
   Easing,
   ScrollView,
@@ -733,7 +733,7 @@ function GenerationSession() {
     <View style={styles.container}>
       <StatusBar style="light" />
       {destinationInfo && (
-        <Image
+        <TravelImage
           source={{ uri: destinationInfo.image }}
           style={styles.bgImage}
           blurRadius={8}

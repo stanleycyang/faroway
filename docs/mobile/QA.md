@@ -323,3 +323,13 @@ First-run QA must include offline first paint, guest exploration, destination ha
 custom destination entry, returning users, attribution, and scrolling/wrapping at
 small widths and larger native text. Source-rendered web previews are useful layout
 evidence but do not replace installed-device acceptance.
+
+### Verification command context
+
+Run repository-root file edits against root-relative paths (or absolute paths).
+Run package commands with an explicit `apps/mobile` working directory and paths
+relative to that directory; do not combine a package working directory with a
+second `apps/mobile/` prefix. Before pushing, run root `bun run check`, including
+package-wide formatting: targeted lint alone can miss a CI-blocking test file.
+Check the installed Bun version before lockfile operations; use the pinned CI/EAS
+version for lockfile version 3 rather than rewriting it with an older local Bun.

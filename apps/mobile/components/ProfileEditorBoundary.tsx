@@ -2,24 +2,10 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Text, TouchableOpacity, View, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
-import { z } from 'zod';
+import { savedProfile, type EditorProfile } from '../lib/profileSnapshot';
+export type { EditorProfile } from '../lib/profileSnapshot';
 import { useUserStore } from '../stores/userStore';
 import { getVerifiedUserProfile } from '../services/api';
-
-const savedProfile = z.object({
-  id: z.string(),
-  email: z.string(),
-  name: z.string().nullish(),
-  avatar: z.string().nullish(),
-  preferences: z
-    .object({
-      vibes: z.array(z.string()).optional(),
-      budget: z.string().optional(),
-      travelerType: z.string().optional(),
-    })
-    .nullish(),
-});
-export type EditorProfile = z.infer<typeof savedProfile>;
 
 /** A new editor mounts only after its current account's stored fields are readable. */
 export function ProfileEditorBoundary({
