@@ -52,6 +52,7 @@ function mapActivity(
   return {
     ...viatorContentMetadata(a),
     source: readVenueSource(a.source),
+    planningIdea: a.planningIdea,
     id: a.id,
     name: a.name,
     description: a.description,
@@ -98,6 +99,7 @@ function mapDining(
 ): Restaurant {
   return {
     source: readVenueSource(d.source),
+    planningIdea: d.planningIdea,
     id: d.id,
     name: d.name,
     cuisineType: d.cuisineTypes || [],

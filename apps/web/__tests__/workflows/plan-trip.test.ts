@@ -1022,6 +1022,42 @@ describe("planTripWorkflow", () => {
     },
   );
 
+  it("preserves fallback provenance in the saved-plan bridge alongside usable visits", async () => {
+    const { mapSearchResultsToItinerary } = await vi.importActual<
+      typeof import("@/lib/search/bridge")
+    >("@/lib/search/bridge");
+    const idea = { ...activity, id: "idea", planningIdea: true as const };
+    const meal = { ...dining, planningIdea: true as const };
+    const result = mapSearchResultsToItinerary(
+      {
+        searchId: "search-1",
+        hotels: [],
+        activities: [activity, idea],
+        dining: [meal],
+        transport: [],
+        itinerary: [
+          {
+            dayNumber: 1,
+            date: "2026-06-01",
+            title: "Tokyo",
+            summary: "Explore",
+            morning: { activities: [activity, idea], meal },
+            afternoon: { activities: [] },
+            evening: { activities: [] },
+            estimatedCost: 0,
+            currency: "",
+            tips: [],
+          },
+        ],
+      },
+      null,
+    );
+    const saved = JSON.parse(JSON.stringify(result.days[0]));
+    expect(saved.morning.activities[0].planningIdea).toBeUndefined();
+    expect(saved.morning.activities[1].planningIdea).toBe(true);
+    expect(saved.morning.meals[0].planningIdea).toBe(true);
+  });
+
   it("continues to aggregation when a provider fails", async () => {
     mocks.runActivitiesAgent.mockRejectedValue(new Error("activities failed"));
 

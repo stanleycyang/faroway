@@ -206,6 +206,8 @@ export interface Coordinates {
 // =============================================================================
 
 export interface ItineraryActivity {
+  /** Generic fallback idea, not researched venue supply. */
+  planningIdea?: true;
   source?: VenueSource;
   /** Proposed visit scope retained from planning; not verified access. */
   proposedVisitType?: ActivityResult["proposedVisitType"];
@@ -249,6 +251,8 @@ export interface ItineraryActivity {
 }
 
 export interface Restaurant {
+  /** Generic fallback idea, not researched venue supply. */
+  planningIdea?: true;
   source?: VenueSource;
   id: string;
   name: string;

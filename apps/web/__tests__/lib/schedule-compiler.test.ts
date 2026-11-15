@@ -1,3 +1,4 @@
+import liveLisbon from "../../../../scripts/fixtures/live-lisbon-meal-routing.json";
 import { venueConstraintsForDate } from "../../../../scripts/uat/lib/venue-constraints";
 import venueFacts from "../../../../scripts/fixtures/agentic-venue-constraints.json";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -1343,4 +1344,29 @@ it("does not propose a visit before a reviewed opening or after last admission",
   expect(conflict.days[0].morning.activities).toEqual([]);
   expect(conflict.unselectedActivityIds).toContain("museum");
   expect(conflict.issues).toContain("day_1:activity_supply_gap");
+});
+
+it("keeps meal coverage ahead of optional highlights in the retained Lisbon supply failure", () => {
+  const result = compileSchedule(
+    liveLisbon.plan as unknown as SearchPlan,
+    liveLisbon.activities as unknown as ActivityResult[],
+    liveLisbon.dining as unknown as DiningResult[],
+    [],
+    { maxUnverifiedTransferKm: 6, maxUnverifiedMealDistanceKm: 3 },
+  );
+  expect(result.days).toHaveLength(3);
+  for (const day of result.days) {
+    expect(
+      slots.flatMap((slot) => day[slot].activities).length,
+    ).toBeGreaterThan(0);
+    for (const slot of slots) {
+      expect(day[slot].meal?.name).toBeTruthy();
+      expect(day[slot].meal?.planningIdea).not.toBe(true);
+    }
+  }
+  expect(
+    result.issues.filter((issue) => issue.endsWith(":meal_supply_gap")),
+  ).toEqual([]);
+  // Unavailable optional highlights remain disclosed rather than inserted with missing meals.
+  expect(result.unfulfilledHighlights.length).toBeGreaterThan(0);
 });

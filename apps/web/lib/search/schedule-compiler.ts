@@ -50,6 +50,7 @@ interface State {
   selected: Selection[];
   used: Set<string>;
   score: number;
+  missingMeals: number;
 }
 
 /** Caller-supplied evidence to avoid a visit; it never certifies other dates as open. */
@@ -536,13 +537,18 @@ export function compileSchedule(
   const reviewedCount = (state: State) =>
     state.selected.filter((s) => reviewedIds.has(s.activity.id)).length;
   const rankStates = (a: State, b: State) =>
-    reviewedIds.size
+    (maxMealKm !== undefined
+      ? coverage(b) - coverage(a) || a.missingMeals - b.missingMeals
+      : 0) ||
+    (reviewedIds.size
       ? coverage(b) - coverage(a) ||
         highlightCoverage(b) - highlightCoverage(a) ||
         reviewedCount(b) - reviewedCount(a) ||
         b.score - a.score
-      : b.score - a.score;
-  let beam: State[] = [{ selected: [], used: new Set(), score: 0 }];
+      : b.score - a.score);
+  let beam: State[] = [
+    { selected: [], used: new Set(), score: 0, missingMeals: 0 },
+  ];
   for (let day = 0; day < daysCount; day++) {
     for (let slot = 0; slot < SLOTS.length; slot++) {
       const expanded: State[] = [];
@@ -650,7 +656,59 @@ export function compileSchedule(
             ],
             used,
             score,
+            missingMeals: state.missingMeals,
           });
+        }
+      }
+      // Score the day's actual meal eligibility before pruning the beam. Visit-only
+      // ranking can otherwise discard a coherent neighborhood day in favor of
+      // highlights whose boundary locations have no usable restaurant supply.
+      // Apply once per day, with the same distance/closure/duplicate screens below.
+      if (slot === SLOTS.length - 1 && maxMealKm !== undefined) {
+        const date = new Date(start + day * 86400000)
+          .toISOString()
+          .slice(0, 10);
+        for (const state of expanded) {
+          const selected = state.selected.filter((item) => item.day === day);
+          const visitSlots = Object.fromEntries(
+            SLOTS.map((name, index) => [
+              name,
+              {
+                activities: selected
+                  .filter((item) => item.slot === index)
+                  .map((item) => item.activity),
+              },
+            ]),
+          ) as VisitSlots;
+          let missing = 0;
+          for (const [index, name] of SLOTS.entries()) {
+            if (
+              availableMealMinutes(availability.windows[day], index) <
+              mealMinutes[index]
+            )
+              continue;
+            const anchors = mealBoundaryAnchors(visitSlots, name);
+            const covered = dining.some(
+              (meal) =>
+                meal.mealTypes.includes(MEALS[index]) &&
+                !options.diningExclusions?.some(
+                  (exclusion) =>
+                    exclusion.diningId === meal.id && exclusion.date === date,
+                ) &&
+                !selected.some((item) =>
+                  sameVisitAndMealVenue(item.activity, meal, plan.destination),
+                ) &&
+                !anchors.some((anchor) => {
+                  const distance = suppliedDistanceKm(
+                    anchor.location,
+                    meal.location,
+                  );
+                  return distance !== null && distance > maxMealKm;
+                }),
+            );
+            if (!covered) missing++;
+          }
+          state.missingMeals += missing;
         }
       }
       // Stable tie ordering makes replays reproducible on identical inventory.
