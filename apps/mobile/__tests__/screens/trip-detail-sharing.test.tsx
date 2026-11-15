@@ -8,6 +8,7 @@ let mockFocused = true;
 let mockTripId = 'trip-a';
 const mockGetTrip = jest.fn();
 const mockReplace = jest.fn();
+const mockDismissTo = jest.fn();
 const mockRefreshSuccess = jest.fn();
 const mockRefreshError = jest.fn();
 const mockCreateLink = jest.fn();
@@ -76,7 +77,7 @@ jest.mock('react-native', () => ({
 }));
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: 'SafeAreaView' }));
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ replace: mockReplace, back: jest.fn() }),
+  useRouter: () => ({ replace: mockReplace, dismissTo: mockDismissTo, back: jest.fn() }),
   useLocalSearchParams: () => ({ id: mockTripId }),
   useFocusEffect: (effect: () => void | (() => void)) => {
     const focused = mockFocused;
@@ -765,5 +766,29 @@ it('recovers saved activity and hotel images after reconnect without reopening t
   } finally {
     await act(async () => screen?.unmount());
     subscription.mockRestore();
+  }
+});
+
+// Works after generation replaces the route and when a trip is opened directly.
+it('returns from the itinerary to saved trips without depending on back history', async () => {
+  let screen!: ReturnType<typeof create>;
+  await act(async () => {
+    screen = create(<TripDetailScreen />);
+  });
+  try {
+    await act(async () => {
+      const back = screen.root.findByProps({ accessibilityLabel: 'Back to trips' });
+      let parent = back.parent;
+      while (parent) {
+        expect(parent.type).not.toBe('AnimatedScrollView');
+        parent = parent.parent;
+      }
+      back.props.onPress();
+    });
+    expect(mockDismissTo).toHaveBeenCalledWith('/(tabs)/trips');
+  } finally {
+    await act(async () => {
+      screen.unmount();
+    });
   }
 });

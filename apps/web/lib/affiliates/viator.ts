@@ -2,7 +2,7 @@
  * Viator Partner API Client
  *
  * Viator (TripAdvisor Experiences) provides tours, activities, and attractions.
- * Commission: 15-20% per booking
+ * Commission eligibility and rates depend on the active partner agreement.
  *
  * Uses the Partner API endpoints:
  * - POST /products/search  (v2 — requires Accept: application/json;version=2.0)

@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { TravelImage } from '../../components/ui/TravelImage';
 import {
   travelerRequirementsSchema,
@@ -29,7 +30,6 @@ import { useTripStore, Trip, TripInput } from '../../stores/tripStore';
 import { useUserStore } from '../../stores/userStore';
 import { usePromptStore } from '../../stores/promptStore';
 import { useAuthContext } from '../../components/AuthProvider';
-import { RatingPrompt } from '../../components/RatingPrompt';
 import { popularDestinations } from '@faroway/constants';
 import { colors } from '../../constants/theme';
 import { useStreamingItinerary, StreamingBlock } from '../../hooks/useStreamingItinerary';
@@ -45,15 +45,15 @@ import { USE_NATIVE_DRIVER } from '../../lib/animation';
 const { width, height } = Dimensions.get('window');
 
 const GENERATION_STEPS = [
-  { key: 'orchestrator', text: 'Analyzing', emoji: '🔍', color: '#8B5CF6' },
-  { key: 'hotels', text: 'Hotels', emoji: '🏨', color: '#F59E0B' },
-  { key: 'activities', text: 'Activities', emoji: '✨', color: '#10B981' },
-  { key: 'dining', text: 'Dining', emoji: '🍽️', color: '#EF4444' },
-  { key: 'transport', text: 'Transport', emoji: '✈️', color: '#06B6D4' },
-  { key: 'budget', text: 'Budget', emoji: '💳', color: '#14B8A6' },
-  { key: 'enrichment', text: 'Local tips', emoji: '💡', color: '#84CC16' },
-  { key: 'aggregator', text: 'Itinerary', emoji: '📝', color: '#3B82F6' },
-];
+  { key: 'orchestrator', text: 'Your preferences', icon: 'options-outline' },
+  { key: 'hotels', text: 'Places to stay', icon: 'bed-outline' },
+  { key: 'activities', text: 'Things to do', icon: 'compass-outline' },
+  { key: 'dining', text: 'Places to eat', icon: 'restaurant-outline' },
+  { key: 'transport', text: 'Getting around', icon: 'train-outline' },
+  { key: 'budget', text: 'Your budget', icon: 'wallet-outline' },
+  { key: 'enrichment', text: 'Useful details', icon: 'information-circle-outline' },
+  { key: 'aggregator', text: 'Your day-by-day plan', icon: 'map-outline' },
+] as const;
 
 const PLANNING_TIPS = [
   'Check opening hours and ticket availability before you book.',
@@ -91,13 +91,7 @@ function convertStreamingDataToTrip(
   };
 }
 
-function JsonRenderRenderer({
-  blocks,
-  onNewContent,
-}: {
-  blocks: StreamingBlock[];
-  onNewContent?: () => void;
-}) {
+function JsonRenderRenderer({ blocks }: { blocks: StreamingBlock[] }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const reduceMotion = useReduceMotion();
   const prevLengthRef = useRef(0);
@@ -111,10 +105,9 @@ function JsonRenderRenderer({
       });
       animation.start();
       prevLengthRef.current = blocks.length;
-      onNewContent?.();
       return () => animation.stop();
     }
-  }, [blocks.length, fadeAnim, onNewContent, reduceMotion]);
+  }, [blocks.length, fadeAnim, reduceMotion]);
 
   if (blocks.length === 0) return null;
 
@@ -158,50 +151,6 @@ function PulsingDot() {
   }, [pulseAnim, reduceMotion]);
 
   return <Animated.View style={[styles.streamingDot, { opacity: pulseAnim }]} />;
-}
-
-// Animated circular progress ring
-function ProgressRing({ progress, size = 180 }: { progress: number; size?: number }) {
-  const strokeWidth = 8;
-
-  return (
-    <View style={{ width: size, height: size }}>
-      <Animated.View
-        style={[
-          StyleSheet.absoluteFill,
-          {
-            transform: [{ rotate: '-90deg' }],
-          },
-        ]}
-      >
-        {/* Background circle */}
-        <View
-          style={{
-            width: size,
-            height: size,
-            borderRadius: size / 2,
-            borderWidth: strokeWidth,
-            borderColor: 'rgba(255,255,255,0.15)',
-          }}
-        />
-      </Animated.View>
-      {/* Animated progress circle using View */}
-      <View style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center' }]}>
-        <LinearGradient
-          colors={[colors.primary[400], colors.primary[600]]}
-          style={{
-            width: size - strokeWidth * 4,
-            height: size - strokeWidth * 4,
-            borderRadius: (size - strokeWidth * 4) / 2,
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Text style={styles.progressPercent}>{Math.round(progress)}%</Text>
-        </LinearGradient>
-      </View>
-    </View>
-  );
 }
 
 // Skeleton loader for content
@@ -305,100 +254,38 @@ function HotelPreviewCard({ hotel }: { hotel: Record<string, unknown> }) {
   );
 }
 
-// Step indicator with animation
+// These states come from the server, never an elapsed-time estimate.
 function StepIndicator({
   step,
   status,
   count,
   microMessage,
 }: {
-  step: (typeof GENERATION_STEPS)[0];
+  step: (typeof GENERATION_STEPS)[number];
   status: 'pending' | 'searching' | 'done';
   count?: number;
   microMessage?: string;
 }) {
-  const scaleAnim = useRef(new Animated.Value(status === 'pending' ? 0.95 : 1)).current;
-  const pulseAnim = useRef(new Animated.Value(1)).current;
-  const prevStatusRef = useRef(status);
-  const reduceMotion = useReduceMotion();
-
-  useEffect(() => {
-    if (status !== prevStatusRef.current) {
-      if (status === 'done') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      }
-      prevStatusRef.current = status;
-    }
-
-    if (status === 'searching' && !reduceMotion) {
-      const animation = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.05,
-            duration: 600,
-            useNativeDriver: USE_NATIVE_DRIVER,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 600,
-            useNativeDriver: USE_NATIVE_DRIVER,
-          }),
-        ])
-      );
-      animation.start();
-      return () => animation.stop();
-    } else {
-      pulseAnim.stopAnimation();
-      if (reduceMotion) {
-        pulseAnim.setValue(1);
-        scaleAnim.setValue(1);
-      } else {
-        const animation = Animated.spring(scaleAnim, {
-          toValue: 1,
-          useNativeDriver: USE_NATIVE_DRIVER,
-        });
-        animation.start();
-        return () => animation.stop();
-      }
-    }
-  }, [status, scaleAnim, pulseAnim, reduceMotion]);
-
-  const opacity = status === 'pending' ? 0.5 : 1;
-
   return (
-    <Animated.View
-      style={[
-        styles.stepRow,
-        {
-          opacity,
-          transform: [{ scale: status === 'searching' ? pulseAnim : scaleAnim }],
-        },
-      ]}
-    >
-      <View
-        style={[
-          styles.stepIcon,
-          status === 'done' && { backgroundColor: step.color },
-          status === 'searching' && styles.stepIconActive,
-        ]}
-      >
-        <Text style={styles.stepEmoji}>{status === 'done' ? '✓' : step.emoji}</Text>
-      </View>
+    <View style={styles.stepRow}>
+      <Ionicons name={step.icon} size={22} color="#fff" />
       <View style={styles.stepContent}>
-        <Text style={[styles.stepText, status === 'done' && styles.stepTextDone]}>{step.text}</Text>
-        {microMessage && status === 'searching' && (
+        <Text style={styles.stepText}>{step.text}</Text>
+        {status === 'searching' && microMessage ? (
           <Text style={styles.stepMicro}>{microMessage}</Text>
-        )}
-        {count !== undefined && count > 0 && status === 'done' && (
-          <Text style={[styles.stepCount, { color: step.color }]}>{count} found</Text>
+        ) : null}
+        {status === 'done' && count !== undefined && (
+          <Text style={styles.stepMicro}>
+            {count > 0 ? `${count} options to review` : 'No options found'}
+          </Text>
         )}
       </View>
-      {status === 'done' && (
-        <View style={[styles.stepCheckBadge, { backgroundColor: step.color }]}>
-          <Text style={styles.stepCheckText}>✓</Text>
-        </View>
+      {status === 'searching' ? (
+        <ActivityIndicator color="#fff" accessibilityLabel={`${step.text}: in progress`} />
+      ) : (
+        <Text style={styles.stepMicro}>{status === 'done' ? 'Checked' : 'Next'}</Text>
       )}
-    </Animated.View>
+    </View>
   );
 }
 
@@ -446,52 +333,6 @@ function PlanningTipCard() {
         {facts[factIndex]}
       </Animated.Text>
     </View>
-  );
-}
-
-// Celebration animation when complete
-function CelebrationOverlay({ onComplete }: { onComplete: () => void }) {
-  const scaleAnim = useRef(new Animated.Value(0)).current;
-  const opacityAnim = useRef(new Animated.Value(0)).current;
-  const reduceMotion = useReduceMotion();
-
-  useEffect(() => {
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    if (reduceMotion) scaleAnim.setValue(1);
-    const animation = reduceMotion
-      ? Animated.timing(opacityAnim, {
-          toValue: 1,
-          duration: 150,
-          useNativeDriver: USE_NATIVE_DRIVER,
-        })
-      : Animated.parallel([
-          Animated.spring(scaleAnim, {
-            toValue: 1,
-            useNativeDriver: USE_NATIVE_DRIVER,
-            friction: 5,
-          }),
-          Animated.timing(opacityAnim, {
-            toValue: 1,
-            duration: 300,
-            useNativeDriver: USE_NATIVE_DRIVER,
-          }),
-        ]);
-    animation.start();
-    const timer = setTimeout(onComplete, 2000);
-    return () => {
-      clearTimeout(timer);
-      animation.stop();
-    };
-  }, [scaleAnim, opacityAnim, onComplete, reduceMotion]);
-
-  return (
-    <Animated.View style={[styles.celebrationOverlay, { opacity: opacityAnim }]}>
-      <Animated.View style={[styles.celebrationContent, { transform: [{ scale: scaleAnim }] }]}>
-        <Text style={styles.celebrationEmoji}>🎉</Text>
-        <Text style={styles.celebrationTitle}>Your trip is ready</Text>
-        <Text style={styles.celebrationSubtitle}>Take a look at your day-by-day plan</Text>
-      </Animated.View>
-    </Animated.View>
   );
 }
 
@@ -546,7 +387,7 @@ function GenerationSession() {
   const router = useRouter();
   const { draftInput, finishGeneration } = useTripStore();
   const { initialized, isAuthenticated } = useAuthContext();
-  const { tripGenerationCount, incrementTripGeneration, shouldShowRatingPrompt } = usePromptStore();
+  const { incrementTripGeneration } = usePromptStore();
   const openingTrip = useRef(false);
   const mounted = useRef(false);
   const [account] = useState(() => {
@@ -567,14 +408,10 @@ function GenerationSession() {
       mounted.current = false;
     };
   }, []);
-  const [showCelebration, setShowCelebration] = useState(false);
-  const [showRatingPrompt, setShowRatingPrompt] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
   const [retryTripId, setRetryTripId] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
   const [restartUnstarted, setRestartUnstarted] = useState(false);
-  const scrollViewRef = useRef<ScrollView>(null);
-  const scrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const reduceMotion = useReduceMotion();
 
   const destinationInfo = popularDestinations.find((d) => d.name === draftInput?.destination);
   const seededOutline = useMemo(() => buildSeededItineraryOutline(draftInput), [draftInput]);
@@ -589,18 +426,11 @@ function GenerationSession() {
     }
   }, [canGenerate, initialized, router]);
 
-  useEffect(
-    () => () => {
-      if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
-    },
-    []
-  );
-
   const handleComplete = useCallback(
     (_document: StreamingBlock[]) => {
       if (!isActive()) return;
       incrementTripGeneration();
-      setShowCelebration(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     },
     [incrementTripGeneration, isActive]
   );
@@ -690,15 +520,6 @@ function GenerationSession() {
   const preview = useMemo(() => validatePreviewBlocks(streaming.blocks), [streaming.blocks]);
   const showProgressiveBlocks = preview.blocks.length > 0;
 
-  // Auto-scroll when new content arrives
-  const handleNewContent = useCallback(() => {
-    if (!isActive()) return;
-    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current);
-    scrollTimerRef.current = setTimeout(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: !reduceMotion });
-    }, 100);
-  }, [reduceMotion, isActive]);
-
   // Get micro-message for each step
   const getMicroMessage = (step: string) => {
     if (streaming.microProgress?.stage === step) {
@@ -743,7 +564,6 @@ function GenerationSession() {
       <LinearGradient colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.95)']} style={styles.overlay} />
 
       <ScrollView
-        ref={scrollViewRef}
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
@@ -751,9 +571,10 @@ function GenerationSession() {
         <SafeAreaView style={styles.safeArea}>
           {/* Header */}
           <View style={styles.header}>
-            <Text style={styles.headerLabel}>Creating your trip to</Text>
             <Text style={styles.headerDestination} accessibilityRole="header">
-              {draftInput?.destination}
+              {streaming.isComplete
+                ? draftInput?.destination
+                : `Planning ${draftInput?.destination}`}
             </Text>
             <View style={styles.headerMeta}>
               <Text style={styles.headerMetaText}>
@@ -775,19 +596,22 @@ function GenerationSession() {
           </View>
 
           {/* Main progress area */}
-          {!streaming.isComplete && !showProgressiveBlocks && (
+          {!streaming.isComplete && !streaming.error && !showProgressiveBlocks && (
             <View style={styles.progressArea}>
-              <ProgressRing progress={streaming.progress} />
+              <ActivityIndicator size="large" color="#fff" />
 
               <Text style={styles.currentMessage} accessibilityLiveRegion="polite">
-                {streaming.message}
+                {streaming.message || 'Finding options for your trip…'}
               </Text>
-
-              {seededOutline && <SeededOutlineCard outline={seededOutline} />}
+              <Text style={styles.waitingNote}>
+                We’ll build your days as results arrive. You can review everything before booking.
+              </Text>
 
               {/* Step indicators */}
               <View style={styles.stepsContainer}>
-                {GENERATION_STEPS.map((step) => {
+                {GENERATION_STEPS.filter(
+                  (step) => showDetails || searchProgress[step.key] === 'searching'
+                ).map((step) => {
                   const status =
                     (searchProgress[step.key] as 'pending' | 'searching' | 'done') || 'pending';
                   const count =
@@ -811,6 +635,18 @@ function GenerationSession() {
                   );
                 })}
               </View>
+
+              <TouchableOpacity
+                style={styles.detailsButton}
+                onPress={() => setShowDetails((value) => !value)}
+                accessibilityRole="button"
+                accessibilityState={{ expanded: showDetails }}
+              >
+                <Text style={styles.detailsButtonText}>
+                  {showDetails ? 'Hide planning details' : 'Show planning details'}
+                </Text>
+              </TouchableOpacity>
+              {showDetails && seededOutline && <SeededOutlineCard outline={seededOutline} />}
 
               {/* Hotel preview */}
               {streaming.topHotel && <HotelPreviewCard hotel={streaming.topHotel} />}
@@ -850,7 +686,7 @@ function GenerationSession() {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={styles.errorButton}
-                  onPress={() => router.back()}
+                  onPress={() => router.dismissTo('/create')}
                   accessibilityRole="button"
                   accessibilityLabel="Go back to trip setup"
                 >
@@ -884,7 +720,7 @@ function GenerationSession() {
                   <Text style={styles.streamingText}>{streaming.message}</Text>
                 </View>
               )}
-              <JsonRenderRenderer blocks={preview.blocks} onNewContent={handleNewContent} />
+              <JsonRenderRenderer blocks={preview.blocks} />
             </View>
           )}
 
@@ -897,7 +733,7 @@ function GenerationSession() {
       </ScrollView>
 
       {/* Keep the completion action reachable regardless of itinerary length. */}
-      {streaming.isComplete && streaming.tripId && !showCelebration && (
+      {streaming.isComplete && streaming.tripId && (
         <SafeAreaView edges={['bottom', 'left', 'right']} style={styles.completionFooter}>
           <TouchableOpacity
             style={styles.viewButton}
@@ -918,26 +754,6 @@ function GenerationSession() {
           </TouchableOpacity>
         </SafeAreaView>
       )}
-
-      {/* Celebration overlay */}
-      {showCelebration && (
-        <CelebrationOverlay
-          onComplete={() => {
-            if (!isActive()) return;
-            setShowCelebration(false);
-            if (tripGenerationCount >= 3 && shouldShowRatingPrompt()) {
-              setShowRatingPrompt(true);
-            }
-          }}
-        />
-      )}
-
-      {/* Rating prompt for authenticated users */}
-      <RatingPrompt
-        visible={showRatingPrompt}
-        tripCount={tripGenerationCount}
-        onClose={() => setShowRatingPrompt(false)}
-      />
     </View>
   );
 }
@@ -960,11 +776,17 @@ const styles = StyleSheet.create({
   scroll: { flex: 1 },
   scrollContent: { flexGrow: 1 },
   safeArea: { flexGrow: 1, paddingHorizontal: 24, paddingVertical: 16 },
+  detailsButton: {
+    minHeight: 48,
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  detailsButtonText: { fontSize: 15, color: '#fff', textDecorationLine: 'underline' },
   completionFooter: { paddingHorizontal: 24, paddingTop: 12, paddingBottom: 12 },
 
   // Header
   header: { alignItems: 'center', marginBottom: 24 },
-  headerLabel: { fontSize: 14, color: 'rgba(255,255,255,0.6)', marginBottom: 4 },
   headerDestination: { fontSize: 32, fontWeight: '800', color: '#fff', textAlign: 'center' },
   headerMeta: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
   headerMetaText: { fontSize: 14, color: 'rgba(255,255,255,0.7)' },
@@ -972,7 +794,13 @@ const styles = StyleSheet.create({
 
   // Progress area
   progressArea: { alignItems: 'center' },
-  progressPercent: { fontSize: 36, fontWeight: '800', color: '#fff' },
+  waitingNote: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
   currentMessage: {
     fontSize: 16,
     color: 'rgba(255,255,255,0.9)',
@@ -987,36 +815,14 @@ const styles = StyleSheet.create({
   stepRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.08)',
-    borderRadius: 16,
-    padding: 14,
-    marginBottom: 8,
+    gap: 14,
+    paddingVertical: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: 'rgba(255,255,255,0.2)',
   },
-  stepIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
-  },
-  stepIconActive: { backgroundColor: 'rgba(255,255,255,0.25)' },
-  stepEmoji: { fontSize: 20 },
   stepContent: { flex: 1 },
   stepText: { fontSize: 16, color: 'rgba(255,255,255,0.8)', fontWeight: '600' },
-  stepTextDone: { color: '#fff' },
   stepMicro: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
-  stepCount: { fontSize: 13, fontWeight: '700', marginTop: 2 },
-  stepCheckBadge: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  stepCheckText: { color: '#fff', fontSize: 14, fontWeight: '700' },
-
   // Hotel preview
   hotelPreview: {
     width: '100%',
@@ -1205,16 +1011,4 @@ const styles = StyleSheet.create({
   },
   viewButtonText: { color: '#fff', fontSize: 18, fontWeight: '700' },
   viewButtonArrow: { color: '#fff', fontSize: 20, marginLeft: 8 },
-
-  // Celebration
-  celebrationOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  celebrationContent: { alignItems: 'center' },
-  celebrationEmoji: { fontSize: 80, marginBottom: 16 },
-  celebrationTitle: { fontSize: 28, fontWeight: '800', color: '#fff', marginBottom: 8 },
-  celebrationSubtitle: { fontSize: 16, color: 'rgba(255,255,255,0.7)' },
 });

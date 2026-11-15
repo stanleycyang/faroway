@@ -348,3 +348,15 @@ fixture backend does not validate the current planner. For a vendor-backed trip,
 retain supplier result counts, IDs, photo delivery and affiliate handoff evidence
 through the saved native itinerary. Credential presence, a generic health route,
 and an explicitly disabled provider are not successful provider integration tests.
+
+### Planning navigation and progress acceptance
+
+Open an itinerary from the library, after generation, and directly without prior
+navigation history. Scroll to the last day: Trips and Share must remain visible,
+and Trips must return to the library without reopening generation or trip setup.
+During generation, verify the initial wait, expanded details, streamed content,
+connection error/reconnect and completion. New content must not move the reader's
+scroll position; completion must expose the review action immediately. Assert
+visible text rather than serialized layout styles when checking progress labels.
+Supplier and generated suggestions must use comparable relevance scores: an AI
+self-rating is not evidence that it should outrank a real supplier product.

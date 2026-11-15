@@ -145,6 +145,7 @@ export async function runActivitiesAgent(
       ? searchViatorProducts({
           destination,
           startDate: dates.start,
+          endDate: dates.end,
           limit: 15,
         }).catch((error) => {
           console.error("[Activities Agent] Viator search error:", error);
@@ -202,6 +203,12 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
     .then(({ object: result }) =>
       result.activities.map((activity, index) => ({
         ...screenGeneratedActivityCopy(activity),
+        // Compare suggestions and supplier inventory on the same scale. A model's
+        // self-assigned score must not crowd real products out of the shortlist.
+        vibeScore: calculateVibeScore(
+          screenGeneratedActivityCopy(activity),
+          vibes,
+        ).score,
         id: `activity_${Date.now()}_${index}`,
         price: 0,
         currency: "",

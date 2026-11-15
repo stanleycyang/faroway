@@ -207,6 +207,51 @@ describe("search agents internal parallelism", () => {
     expect(results[0].name).toBe("AI Food Walk");
   });
 
+  it("does not let AI self-scoring displace a better-matched supplier experience", async () => {
+    mocks.searchViatorProducts.mockResolvedValue([
+      {
+        productCode: "TOKYO1",
+        title: "Tokyo food tour",
+        description: "Explore local food and cuisine with a guide",
+        duration: { fixedDurationInMinutes: 120 },
+        categories: ["food"],
+        price: { amount: 30, currencyCode: "USD" },
+        rating: 4.5,
+        reviewCount: 20,
+        location: { city: "Tokyo" },
+        images: [{ url: "https://images.example.test/tokyo.jpg" }],
+        productUrl: "https://www.viator.com/tours/Tokyo/Tokyo-food/d334-TOKYO1",
+      },
+    ]);
+    mocks.searchGYGActivities.mockResolvedValue([]);
+    mocks.generateObject.mockResolvedValue({
+      object: {
+        activities: [
+          {
+            ...aiActivity,
+            name: "Observation deck",
+            description: "See the skyline",
+            category: "sightseeing",
+            vibeScore: 100,
+          },
+        ],
+      },
+    });
+    const result = await runActivitiesAgent(plan as never, 1);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({
+      id: "activity_v_TOKYO1",
+      affiliatePartner: "viator",
+      images: ["https://images.example.test/tokyo.jpg"],
+    });
+    expect(mocks.searchViatorProducts).toHaveBeenCalledWith(
+      expect.objectContaining({
+        startDate: plan.dates.start,
+        endDate: plan.dates.end,
+      }),
+    );
+  });
+
   it("keeps the complete provider description without rewriting it", async () => {
     const description = "Provider-owned wording. ".repeat(30);
     mocks.searchViatorProducts.mockResolvedValue([

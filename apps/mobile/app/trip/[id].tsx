@@ -746,7 +746,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
         />
         <TouchableOpacity
           style={styles.errorStateBack}
-          onPress={() => router.back()}
+          onPress={() => router.dismissTo('/(tabs)/trips')}
           accessibilityRole="button"
         >
           <Text style={styles.errorStateBackText}>Go back</Text>
@@ -807,7 +807,29 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   return (
     <BookingTripContext.Provider value={trip.id}>
       <View style={styles.container}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
+        <SafeAreaView edges={['top', 'left', 'right']} style={styles.navigationBar}>
+          <View style={styles.heroHeader}>
+            <TouchableOpacity
+              style={styles.navigationButton}
+              onPress={() => router.dismissTo('/(tabs)/trips')}
+              accessibilityRole="button"
+              accessibilityLabel="Back to trips"
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.neutral[800]} />
+              <Text style={styles.navigationLabel}>Trips</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.navigationButton}
+              onPress={handleShare}
+              accessibilityRole="button"
+              accessibilityLabel="Share trip"
+            >
+              <Ionicons name="share-outline" size={22} color={colors.neutral[800]} />
+              <Text style={styles.navigationLabel}>Share</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
         <Animated.ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
@@ -840,27 +862,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
               colors={['rgba(0,0,0,0.3)', 'transparent', 'rgba(0,0,0,0.8)']}
               style={styles.heroGradient}
             />
-            <SafeAreaView edges={['top']} style={styles.heroContent}>
-              <View style={styles.heroHeader}>
-                <TouchableOpacity
-                  style={styles.backButton}
-                  onPress={() => router.back()}
-                  accessibilityRole="button"
-                  accessibilityLabel="Go back"
-                >
-                  <Ionicons name="arrow-back" size={24} color="#fff" />
-                </TouchableOpacity>
-                <View style={styles.heroActions}>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={handleShare}
-                    accessibilityRole="button"
-                    accessibilityLabel="Share trip"
-                  >
-                    <Ionicons name="share-outline" size={22} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-              </View>
+            <View style={styles.heroContent}>
               <View style={styles.heroInfo}>
                 <Text style={styles.heroCountry}>{trip.country}</Text>
                 <Text style={styles.heroTitle} accessibilityRole="header">
@@ -879,7 +881,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                   </View>
                 </View>
               </View>
-            </SafeAreaView>
+            </View>
           </Animated.View>
 
           {/* Content */}
@@ -1220,7 +1222,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     padding: 16,
   },
   heroHeader: {
@@ -1228,26 +1230,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heroActions: {
+  navigationBar: { backgroundColor: '#fff', paddingHorizontal: 16 },
+  navigationButton: {
+    minHeight: 48,
+    paddingHorizontal: 8,
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
-  actionButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  navigationLabel: { fontSize: 16, fontWeight: '600', color: colors.neutral[800] },
   heroInfo: {
     marginBottom: 8,
   },
