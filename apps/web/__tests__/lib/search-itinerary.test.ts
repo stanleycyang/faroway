@@ -687,7 +687,7 @@ describe("search itinerary fallback", () => {
   it("spreads real stops across days when planning prompts inflate the pool", async () => {
     const ideas = Array.from({ length: 8 }, (_, index) => ({
       ...activity(`idea-${index}`),
-      planningIdea: true,
+      planningIdea: true as const,
     }));
     const { days } = await runAggregatorAgent(
       plan,
