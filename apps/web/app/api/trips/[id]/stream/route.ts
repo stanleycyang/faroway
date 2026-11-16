@@ -412,11 +412,16 @@ async function pollAndStream(
     if (pj !== lastProgressJson) {
       lastProgressJson = pj;
       const stage = getCurrentStage(sp);
+      const unfinished = STAGES.filter(
+        (name) => sp[name] === "error" || sp[name] === "failed",
+      );
       send("progress", {
         step: stage,
         status: sp[stage] || "pending",
         progress: calcPercent(sp),
-        message: STEP_MESSAGES[stage]?.[sp[stage]] || "Processing...",
+        message: unfinished.length
+          ? `${unfinished.join(", ")} did not finish. Nothing was retried automatically.`
+          : STEP_MESSAGES[stage]?.[sp[stage]] || "Processing...",
         searchProgress: sp,
       });
     }
@@ -491,10 +496,16 @@ async function pollAndStream(
     }
 
     if (search.status === "completed") {
+      const unfinished = STAGES.filter(
+        (stage) => sp[stage] === "error" || sp[stage] === "failed",
+      );
       send("progress", {
         step: "complete",
         progress: 100,
-        message: "Your itinerary is ready!",
+        message: unfinished.length
+          ? "Your itinerary is ready, with gaps where a search did not finish. Review those stops before you rely on them."
+          : "Your itinerary is ready!",
+        searchProgress: sp,
       });
       send("complete", { tripId });
       controller.close();

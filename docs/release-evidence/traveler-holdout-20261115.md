@@ -56,10 +56,41 @@ dietary or access claim left on the scheduled stop, a hop over 2 km that is
 not disclosed with the distance and the 30-minute planning buffer, and a
 required stop or meal that was dropped.
 
+## Follow-up on this branch
+
+The same offline command was run again after the holdout was widened. It
+accepted 11 of 11 planner cases, detected 9 of 9 negative controls, and kept
+the recorded supplier decision. `live_model_quality_measured` stays false.
+
+Added planner cases:
+
+- Porto: a museum with a reviewed 10:00–12:00 window is scheduled inside that
+  window. A tower whose only window is 10:00–10:30 is left off the day, and
+  the draft says it was not scheduled.
+- Nara: an about-20 km hop is not presented as a fitting day. The compiler
+  marks the day unusable and says it is not a usable plan. The nearer stop
+  stays on the day, and the result is not a backup draft.
+
+Added controls, all detected:
+
+- A backup day whose summary no longer starts with "Backup draft:" still fails
+  because `provenance` is `backup_draft`.
+- A positive price without an affiliate partner fails as an invented price.
+- A dinner placed in the morning fails the meal slot.
+- A hop over 12 km whose timetable still says it fits fails even when the
+  distance is disclosed.
+- A timed visit that falls outside its reviewed window fails.
+
+Hops between 2 km and 12 km still have to be disclosed with the distance and
+the 30-minute planning buffer. The suite does not treat that disclosure as a
+measured route. Edinburgh remains the disclosed short-hop case.
+
 ## Still not closed
 
 This run does not measure a live model, supplier photos, handoff, commission,
 latency, or cost. It does not use Viator, GetYourGuide, Places, or LiteAPI
 credentials. Staging and production booking stay out of this change. Physical
 device confirmation of the Android font-scale fix is separate from the unit
-test.
+test. Paid specialist steps now set workflow `maxRetries` to 0, and the
+activity and dining calls overlap under a concurrency cap, but that latency
+is measured with mocks, not live suppliers.

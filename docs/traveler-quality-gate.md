@@ -112,5 +112,8 @@ compiler, dining repair, aggregator labels, and recorded supplier decisions.
 It is not a live-model or booking acceptance. A fallback day, an unsourced
 guided tour, an undisclosed catalog product, an unverified dietary or access
 claim, and a transfer beyond the 30-minute planning buffer must stay visible.
-The 15 November run is recorded in
+A hop longer than 12 km is not a successful day: the compiler marks that day
+unusable instead of disclosing the distance and leaving the timetable looking
+fit. A backup draft keeps `provenance: "backup_draft"`, so renaming its summary
+does not make the holdout pass. The 15 November run is recorded in
 `docs/release-evidence/traveler-holdout-20261115.md`.

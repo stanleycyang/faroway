@@ -195,6 +195,7 @@ function mapDay(day: SuggestedDay): MappedItinerary["days"][number] {
         ? readPrice(day.estimatedCost, day.currency)
         : undefined,
     timingProposal: readDayTiming(day),
+    ...(day.provenance ? { provenance: day.provenance } : {}),
     tips: [
       ...new Set([
         ...dayTimingTips(day),

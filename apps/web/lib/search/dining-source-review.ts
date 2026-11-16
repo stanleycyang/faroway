@@ -11,8 +11,9 @@ import {
 
 export async function discoverDiningReviewOptions(
   plan: SearchPlan,
+  signal?: AbortSignal,
 ): Promise<DiningResult[]> {
-  if (!diningSourceReviewEnabled()) return [];
+  if (signal?.aborted || !diningSourceReviewEnabled()) return [];
   const started = Date.now();
   try {
     const brief = validatePublicDiningBrief({
@@ -45,7 +46,9 @@ export async function discoverDiningReviewOptions(
       },
       maxOutputTokens: 2500,
       maxRetries: 0,
-      abortSignal: AbortSignal.timeout(60000),
+      abortSignal: signal
+        ? AbortSignal.any([signal, AbortSignal.timeout(60000)])
+        : AbortSignal.timeout(60000),
     });
     const billingKnown =
       Number.isFinite(result.usage.inputTokens) &&

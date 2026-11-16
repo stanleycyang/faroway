@@ -304,6 +304,8 @@ export interface TripDayTransport {
 export interface TripDay {
   diningOptions?: DiningReviewOption[];
   timingProposal?: DayTimingProposal;
+  /** Set only by the backup draft builder. A renamed summary does not clear it. */
+  provenance?: "backup_draft";
   dayNumber: number;
   date: string;
   title: string;
@@ -638,6 +640,7 @@ export interface SearchResults {
 
 export interface SuggestedDay {
   timingProposal?: DayTimingProposal;
+  provenance?: "backup_draft";
   dayNumber: number;
   date: string;
   title: string;

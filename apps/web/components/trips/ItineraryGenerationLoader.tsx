@@ -264,7 +264,7 @@ export function ItineraryGenerationLoader({
                       className="flex items-center gap-2.5 text-xs leading-5 text-slate-600"
                     >
                       <span
-                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${state === "done" ? "bg-teal-50 text-teal-800" : state === "active" ? "bg-primary-50 text-primary-800" : "bg-slate-100 text-slate-400"}`}
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${state === "done" ? "bg-teal-50 text-teal-800" : state === "active" ? "bg-primary-50 text-primary-800" : state === "interrupted" ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-400"}`}
                       >
                         {state === "done" ? (
                           <Check className="h-3.5 w-3.5" />
@@ -273,6 +273,9 @@ export function ItineraryGenerationLoader({
                         )}
                       </span>
                       {step.label}
+                      {state === "interrupted" ? (
+                        <span className="text-amber-800">Did not finish</span>
+                      ) : null}
                       <span className="sr-only">
                         :{" "}
                         {state === "done"

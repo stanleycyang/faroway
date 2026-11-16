@@ -4,6 +4,8 @@ import { suppliedDistanceKm } from "./supplied-distance";
  * route. At 4 km/h it covers 2 km; anything farther needs an explicit review. */
 export const PLANNING_BUFFER_MINUTES = 30;
 export const PLANNING_BUFFER_KM = (PLANNING_BUFFER_MINUTES / 60) * 4;
+/** A hop this long is not a usable walking connection inside one planned day. */
+export const UNWALKABLE_TRANSFER_KM = 12;
 
 export function transferExceedsPlanningBuffer(distanceKm: number) {
   return Number.isFinite(distanceKm) && distanceKm > PLANNING_BUFFER_KM;

@@ -125,6 +125,7 @@ export function evaluateSavedPlan(
         failures.push(`${title || "day"} has an unresolved timing conflict`);
     }
     if (
+      record?.provenance === "backup_draft" ||
       summary.startsWith("Backup draft:") ||
       (/^Day \d+ in /.test(title) &&
         (/^Explore .+ with a mix of activities and dining\.$/.test(summary) ||

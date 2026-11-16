@@ -9,7 +9,12 @@
  */
 
 import { providerAmount, currencyCode, formatPrice } from "@faroway/constants";
-import { fetchWithTimeout } from "@/lib/search/runtime";
+import { fetchWithTimeout, getEnvNumber } from "@/lib/search/runtime";
+
+const GYG_TIMEOUT_MS = getEnvNumber("ITINERARY_GYG_TIMEOUT_MS", 15000, {
+  min: 1000,
+  max: 30000,
+});
 
 // Environment variables
 const GYG_API_KEY = process.env.GETYOURGUIDE_API_KEY;
@@ -26,6 +31,7 @@ export interface GYGSearchParams {
   rating?: number;
   limit?: number;
   coordinates?: { lat: number; lng: number };
+  signal?: AbortSignal;
 }
 
 export interface GYGActivity {
@@ -145,7 +151,9 @@ export async function searchGYGActivities(
           Accept: "application/json",
           "X-ACCESS-TOKEN": GYG_API_KEY!,
         },
+        signal: params.signal,
       },
+      GYG_TIMEOUT_MS,
     );
 
     if (!response.ok) {

@@ -224,6 +224,8 @@ export interface ViatorSearchParams {
   priceRange?: { min: number; max: number };
   rating?: number;
   limit?: number;
+  /** Cancels the in-flight search. A parent abort is not a dated-query timeout. */
+  signal?: AbortSignal;
 }
 
 export interface ViatorProduct {
@@ -317,6 +319,7 @@ export async function searchViatorProducts(
       try {
         products = await searchByDestinationId(destId, params);
       } catch (error) {
+        if (params.signal?.aborted) throw error;
         if (!isAbortError(error) || (!params.startDate && !params.endDate))
           throw error;
         // A dated-query timeout is not evidence of sold-out inventory. One
@@ -401,6 +404,7 @@ async function searchByDestinationId(
       method: "POST",
       headers: getV2WriteHeaders(),
       body: JSON.stringify(body),
+      signal: params.signal,
     },
     timeoutMs,
   );

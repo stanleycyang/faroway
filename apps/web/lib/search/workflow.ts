@@ -32,7 +32,10 @@ export interface TravelSearchWorkflowOutput {
 }
 
 export interface WorkflowCallbacks {
-  onProgress?: (stage: string, status: "searching" | "done") => Promise<void>;
+  onProgress?: (
+    stage: string,
+    status: "searching" | "done" | "error",
+  ) => Promise<void>;
   onAgentResult?: (stage: string, data: unknown) => Promise<void>;
   /** Called for micro-progress updates (e.g., "Analyzing your travel style...") */
   onMicroProgress?: (data: {
@@ -217,6 +220,7 @@ export async function executeTravelSearch(
     ] as const) {
       if (result.status === "rejected") {
         console.error(`[Workflow] ${name} agent failed:`, result.reason);
+        if (onProgress) await onProgress(name, "error");
       }
     }
 

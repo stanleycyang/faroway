@@ -33,8 +33,10 @@ import {
 } from "./requirement-corroboration";
 import {
   chronologicalStops,
+  PLANNING_BUFFER_MINUTES,
   reviewSuppliedTransfers,
   transferReviewTip,
+  UNWALKABLE_TRANSFER_KM,
 } from "./transfer-review";
 import {
   familyActivityReviewReason,
@@ -791,6 +793,10 @@ export function compileSchedule(
       ),
     }));
   const usedMeals = new Set<string>();
+  const unwalkableByDate = new Map<
+    string,
+    { from: string; to: string; distanceKm: number }
+  >();
   const days: SuggestedDay[] = Array.from({ length: daysCount }, (_, day) => {
     const date = new Date(start + day * 86400000).toISOString().slice(0, 10);
     const mealsToday = new Set<string>();
@@ -1160,6 +1166,11 @@ export function compileSchedule(
     )) {
       issues.push(`day_${day + 1}:transfer_exceeds_planning_buffer`);
       tips.push(transferReviewTip(finding));
+      if (
+        finding.distanceKm > UNWALKABLE_TRANSFER_KM &&
+        !unwalkableByDate.has(date)
+      )
+        unwalkableByDate.set(date, finding);
     }
     return {
       dayNumber: day + 1,
@@ -1198,10 +1209,55 @@ export function compileSchedule(
       conflict: proposal.conflict,
     };
     day.tips.unshift(...proposal.tips);
-    if (!proposal.fitsPolicy)
+    const hop = unwalkableByDate.get(day.date);
+    if (hop && day.timingProposal?.fitsPolicy) {
+      const overrunMinutes = Math.max(
+        1,
+        Math.ceil((hop.distanceKm / 4) * 60 - PLANNING_BUFFER_MINUTES),
+      );
+      const conflict = {
+        eventId: `transfer:${hop.from}:${hop.to}`,
+        earliestPossibleStart: 0,
+        requiredEnd: overrunMinutes,
+        latestEnd: 0,
+        overrunMinutes,
+      };
+      const notice = `${hop.from} to ${hop.to} is about ${hop.distanceKm.toFixed(1)} km on the supplied coordinates. That hop cannot fit inside this day, so the day is not a usable plan until the stops change. No visit was shortened to hide the gap.`;
+      const overridden = {
+        ...proposal,
+        fitsPolicy: false as const,
+        events: [],
+        conflict,
+        tips: [notice, ...proposal.tips],
+      };
+      const proposalIndex = timingProposals.indexOf(proposal);
+      if (proposalIndex >= 0) timingProposals[proposalIndex] = overridden;
+      day.timingProposal = {
+        policy: overridden.policy,
+        basis: overridden.basis,
+        fitsPolicy: false,
+        verified: false,
+        events: [],
+        conflict,
+      };
+      day.tips.unshift(notice);
+      issues.push(`day_${day.dayNumber}:unwalkable_transfer`);
+    }
+    if (!day.timingProposal?.fitsPolicy && day.timingProposal)
       issues.push(
         `day_${day.dayNumber}:${needsRest ? "midday_rest_timing_conflict" : "day_timing_conflict"}`,
       );
+  }
+  if (options.visitWindows && days[0]) {
+    const windowed = new Set<string>();
+    for (const byActivity of Object.values(options.visitWindows))
+      for (const id of Object.keys(byActivity)) windowed.add(id);
+    for (const activity of inventory) {
+      if (!windowed.has(activity.id) || best.used.has(activity.id)) continue;
+      const tip = `${activity.name} was not scheduled. A reviewed visit window was supplied, and this draft does not claim the visit happened inside those hours.`;
+      if (!days[0].tips.includes(tip)) days[0].tips.push(tip);
+      issues.push(`unscheduled_visit_window:${activity.id}`);
+    }
   }
   return {
     days,

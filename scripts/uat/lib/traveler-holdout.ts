@@ -17,6 +17,7 @@ import { suppliedDistanceKm } from "../../../apps/web/lib/search/supplied-distan
 import {
   chronologicalStops,
   transferExceedsPlanningBuffer,
+  UNWALKABLE_TRANSFER_KM,
 } from "../../../apps/web/lib/search/transfer-review";
 import type {
   ActivityResult,
@@ -181,6 +182,7 @@ function scoreDays(
     requireIds?: string[];
     phrases?: string[];
     allowEmptyVisitDays?: number[];
+    visitWindows?: Record<string, Array<[number, number]>>;
   },
 ): HoldoutResult {
   const failures: string[] = [];
@@ -201,7 +203,10 @@ function scoreDays(
     const claimed = /^Day (\d+)\b/.exec(day.title);
     if (!claimed || Number(claimed[1]) !== day.dayNumber)
       failures.push(`${id}:day_title:${day.title}`);
-    if (day.summary.startsWith("Backup draft:"))
+    if (
+      day.provenance === "backup_draft" ||
+      day.summary.startsWith("Backup draft:")
+    )
       failures.push(`${id}:fallback_day:${day.date}`);
     if (index > 0 && day.transport)
       failures.push(`${id}:transport_after_day_one:${day.date}`);
@@ -218,12 +223,31 @@ function scoreDays(
     if (visits.length > limit.count)
       failures.push(`${id}:pace_count:${day.date}`);
     const minutes = visits.reduce((sum, visit) => sum + visit.duration, 0);
-    if (minutes > limit.minutes)
+    const stops = sequence(day);
+    let travelMinutes = 0;
+    for (let cursor = 1; cursor < stops.length; cursor++) {
+      const distance = suppliedDistanceKm(
+        stops[cursor - 1].location,
+        stops[cursor].location,
+      );
+      if (distance != null) travelMinutes += (distance / 4) * 60;
+    }
+    if (minutes + travelMinutes > limit.minutes)
       failures.push(`${id}:pace_minutes:${day.date}`);
+    const slotMeal = {
+      morning: "breakfast",
+      afternoon: "lunch",
+      evening: "dinner",
+    } as const;
     if (rules.fullMealDays.includes(index)) {
       for (const slot of SLOTS)
         if (!day[slot].meal || day[slot].meal.planningIdea)
           failures.push(`${id}:meal_gap:${day.date}:${slot}`);
+    }
+    for (const slot of SLOTS) {
+      const placed = day[slot].meal;
+      if (placed && !placed.mealTypes.includes(slotMeal[slot]))
+        failures.push(`${id}:meal_type:${day.date}:${slot}`);
     }
     for (const meal of meals) {
       if (meal.dietaryOptions?.length)
@@ -254,6 +278,8 @@ function scoreDays(
         visit.priceStatus !== "estimate"
       )
         failures.push(`${id}:price_presented_as_free:${visit.id}`);
+      if ((visit.price ?? 0) > 0 && !visit.affiliatePartner)
+        failures.push(`${id}:invented_price:${visit.id}`);
       if (
         ACCESS_PROMISE.test(visit.description ?? "") ||
         ACCESS_PROMISE.test(visit.name ?? "") ||
@@ -278,6 +304,26 @@ function scoreDays(
         failures.push(
           `${id}:transfer:${prior.name}:${next.name}:${distance.toFixed(1)}`,
         );
+      if (
+        distance > UNWALKABLE_TRANSFER_KM &&
+        day.timingProposal?.fitsPolicy !== false
+      )
+        failures.push(
+          `${id}:unwalkable_presented_as_fit:${prior.name}:${next.name}`,
+        );
+    }
+    const windows = rules.visitWindows ?? {};
+    for (const event of day.timingProposal?.events ?? []) {
+      if (!event.id.startsWith("activity:")) continue;
+      const activityId = event.id.slice("activity:".length);
+      const allowed = windows[activityId];
+      if (!allowed?.length) continue;
+      const inside = allowed.some(
+        ([opens, closes]) =>
+          event.startMinute >= opens && event.endMinute <= closes,
+      );
+      if (!inside)
+        failures.push(`${id}:visit_window:${day.date}:${activityId}`);
     }
     if (day.timingProposal && day.timingProposal.fitsPolicy === false)
       failures.push(`${id}:timing_conflict:${day.date}`);
@@ -981,6 +1027,91 @@ function supplierCases(): HoldoutResult[] {
   ];
 }
 
+function portoHours(): HoldoutResult {
+  const plan = searchPlan({
+    destination: "Porto",
+    country: "Portugal",
+    dates: { start: "2027-10-04", end: "2027-10-04", nights: 0 },
+    pace: "moderate",
+  });
+  const lat = 41.1579;
+  const lng = -8.6291;
+  const activities = [
+    activity("porto-museum", "Porto museum", lat, lng, {
+      duration: 90,
+      bestTimeOfDay: "morning",
+    }),
+    activity("porto-closed", "Porto closed tower", lat + 0.002, lng, {
+      duration: 120,
+      bestTimeOfDay: "any",
+    }),
+  ];
+  const dining = (["breakfast", "lunch", "dinner"] as const).map((type) =>
+    meal(`porto-${type}`, `Ribeira ${type}`, lat, lng, [type]),
+  );
+  const compiled = compileSchedule(plan, activities, dining, [], {
+    visitWindows: {
+      "2027-10-04": {
+        "porto-museum": [[600, 720]],
+        "porto-closed": [[600, 630]],
+      },
+    },
+  });
+  return scoreDays("porto-visit-window", plan, compiled.days, {
+    fullMealDays: [0],
+    requireIds: ["porto-museum"],
+    forbidIds: ["porto-closed"],
+    phrases: [
+      "Porto closed tower was not scheduled. A reviewed visit window was supplied",
+    ],
+    visitWindows: { "porto-museum": [[600, 720]] },
+  });
+}
+
+function naraHop(): HoldoutResult {
+  const plan = searchPlan({
+    destination: "Nara",
+    country: "Japan",
+    dates: { start: "2027-11-02", end: "2027-11-02", nights: 0 },
+    pace: "moderate",
+  });
+  const activities = [
+    activity("nara-park", "Nara park", 34.6851, 135.843, {
+      duration: 60,
+      bestTimeOfDay: "morning",
+    }),
+    activity("nara-horyuji", "Horyuji temple", 34.5, 135.843, {
+      duration: 60,
+      bestTimeOfDay: "afternoon",
+    }),
+  ];
+  const dining = (["breakfast", "lunch", "dinner"] as const).map((type) =>
+    meal(`nara-${type}`, `Nara ${type}`, 34.6851, 135.843, [type]),
+  );
+  const compiled = compileSchedule(plan, activities, dining);
+  const day = compiled.days[0];
+  const failures: string[] = [];
+  const markedUnusable =
+    day.timingProposal?.fitsPolicy === false &&
+    day.tips.some((tip) => tip.includes("not a usable plan"));
+  const omitted = !visitsOf(day).some((visit) => visit.id === "nara-horyuji");
+  if (!markedUnusable && !omitted)
+    failures.push("nara-unwalkable:presented_as_fit");
+  if (
+    day.provenance === "backup_draft" ||
+    day.summary.startsWith("Backup draft:")
+  )
+    failures.push("nara-unwalkable:fallback");
+  if (!visitsOf(day).some((visit) => visit.id === "nara-park"))
+    failures.push("nara-unwalkable:dropped_near_stop");
+  return {
+    id: "nara-unwalkable",
+    kind: "planner",
+    accepted: failures.length === 0,
+    failures,
+  };
+}
+
 function negativeControls(): HoldoutResult[] {
   const plan = searchPlan({
     destination: "Lisbon",
@@ -1067,7 +1198,148 @@ function negativeControls(): HoldoutResult[] {
   truncated.accepted = truncated.failures.some((failure) =>
     failure.includes("day_count"),
   );
-  return [fallbackScore, conflictScore, labelScore, truncated];
+
+  const renamed = structuredClone(fallback.days);
+  renamed[0].summary = "A finished day in Lisbon.";
+  renamed[0].title = "Day 1 · 2027-05-10 in Lisbon";
+  renamed[0].provenance = "backup_draft";
+  for (const slot of SLOTS) {
+    for (const visit of renamed[0][slot].activities) delete visit.planningIdea;
+    if (renamed[0][slot].meal) delete renamed[0][slot].meal.planningIdea;
+  }
+  const renamedScore = scoreDays("control-renamed-backup", plan, renamed, {
+    fullMealDays: [],
+    allowEmptyVisitDays: [0],
+  });
+  renamedScore.kind = "control";
+  renamedScore.accepted = renamedScore.failures.some((failure) =>
+    failure.includes("fallback_day"),
+  );
+  if (!renamedScore.accepted)
+    renamedScore.failures.push(
+      "control-renamed-backup:rubric_missed_provenance",
+    );
+
+  const priced = structuredClone(fallback.days);
+  priced[0].summary =
+    "Suggested visits: a museum. Keep the remaining time flexible.";
+  priced[0].title = "Day 1 · 2027-05-10 in Lisbon";
+  delete priced[0].provenance;
+  const pricedVisit = activity(
+    "priced-visit",
+    "Invented ticketed entry",
+    38.71,
+    -9.14,
+    {
+      price: 48,
+      currency: "EUR",
+      priceStatus: undefined,
+    },
+  );
+  priced[0].morning.activities = [pricedVisit];
+  priced[0].timingProposal = {
+    policy: "day-timing-v1",
+    basis: "control",
+    fitsPolicy: true,
+    verified: false,
+    events: [],
+    conflict: null,
+  };
+  const pricedScore = scoreDays("control-invented-price", plan, priced, {
+    fullMealDays: [],
+  });
+  pricedScore.kind = "control";
+  pricedScore.accepted = pricedScore.failures.some((failure) =>
+    failure.includes("invented_price"),
+  );
+
+  const wrongMeal = structuredClone(priced);
+  wrongMeal[0].morning.activities = [];
+  wrongMeal[0].morning.meal = meal(
+    "dinner-as-breakfast",
+    "Late dinner counter",
+    38.71,
+    -9.14,
+    ["dinner"],
+  );
+  const mealScore = scoreDays("control-meal-slot", plan, wrongMeal, {
+    fullMealDays: [],
+    allowEmptyVisitDays: [0],
+  });
+  mealScore.kind = "control";
+  mealScore.accepted = mealScore.failures.some((failure) =>
+    failure.includes("meal_type"),
+  );
+
+  const far = structuredClone(priced);
+  far[0].morning.activities = [
+    activity("far-a", "Near stop", 35.0, 135.0, { duration: 60 }),
+    activity("far-b", "Far stop", 35.2, 135.0, { duration: 60 }),
+  ];
+  const farDistance = suppliedDistanceKm(
+    far[0].morning.activities[0].location,
+    far[0].morning.activities[1].location,
+  )!;
+  far[0].tips = [
+    `Near stop and Far stop are about ${farDistance.toFixed(1)} km apart on the supplied coordinates. The 30-minute planning buffer does not show that this transfer fits. Confirm the route; this is not a measured journey.`,
+  ];
+  far[0].timingProposal = {
+    policy: "day-timing-v1",
+    basis: "control",
+    fitsPolicy: true,
+    verified: false,
+    events: [],
+    conflict: null,
+  };
+  const farScore = scoreDays("control-unwalkable-fit", plan, far, {
+    fullMealDays: [],
+  });
+  farScore.kind = "control";
+  farScore.accepted = farScore.failures.some((failure) =>
+    failure.includes("unwalkable_presented_as_fit"),
+  );
+
+  const outside = structuredClone(priced);
+  outside[0].morning.activities = [
+    activity("window-visit", "Timed museum", 38.71, -9.14, { duration: 90 }),
+  ];
+  outside[0].timingProposal = {
+    policy: "day-timing-v1",
+    basis: "control",
+    fitsPolicy: true,
+    verified: false,
+    events: [
+      {
+        id: "activity:window-visit",
+        kind: "activity",
+        durationMinutes: 90,
+        startMinute: 900,
+        endMinute: 990,
+        bufferBeforeMinutes: 0,
+      },
+    ],
+    conflict: null,
+  };
+  const windowScore = scoreDays("control-visit-window", plan, outside, {
+    fullMealDays: [],
+    visitWindows: { "window-visit": [[600, 720]] },
+  });
+  windowScore.kind = "control";
+  windowScore.accepted = windowScore.failures.some((failure) =>
+    failure.includes("visit_window"),
+  );
+
+  return [
+    fallbackScore,
+    conflictScore,
+    labelScore,
+    truncated,
+    renamedScore,
+    pricedScore,
+    mealScore,
+    farScore,
+    windowScore,
+  ];
 }
 
 export async function runTravelerHoldout() {
@@ -1080,6 +1352,8 @@ export async function runTravelerHoldout() {
     singapore(),
     await lisbonRepair(),
     kyotoAdmission(),
+    portoHours(),
+    naraHop(),
     aggregatorLabels(),
   ];
   const supplier = supplierCases();
