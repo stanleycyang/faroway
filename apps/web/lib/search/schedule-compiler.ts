@@ -22,6 +22,10 @@ import {
   sameVisitAndMealVenue,
   type VisitSlots,
 } from "./meal-boundaries";
+import {
+  BOOKABLE_FIT_BONUS,
+  isFittingBookableActivity,
+} from "./candidate-rank";
 import { matchesSuggestedHighlight } from "./highlight-match";
 import { suppliedDistanceKm } from "./supplied-distance";
 import {
@@ -495,6 +499,8 @@ export function compileSchedule(
           : 0) ||
         Number(reviewedIds.has(b.id)) - Number(reviewedIds.has(a.id)) ||
         preference(b) - preference(a) ||
+        Number(isFittingBookableActivity(b)) -
+          Number(isFittingBookableActivity(a)) ||
         a.id.localeCompare(b.id),
     );
   if (candidates.length > INVENTORY_LIMIT)
@@ -666,7 +672,8 @@ export function compileSchedule(
             const count = today.length + index;
             score +=
               (count === 0 ? 1000 : count < limits.target ? 30 : -10) +
-              preference(activity) / 10;
+              preference(activity) / 10 +
+              (isFittingBookableActivity(activity) ? BOOKABLE_FIT_BONUS : 0);
             if (previous) {
               const distance = suppliedDistanceKm(
                 previous.location,

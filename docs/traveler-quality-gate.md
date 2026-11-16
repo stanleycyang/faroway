@@ -107,6 +107,11 @@ or events. Those explicit generated visit types are excluded from the shortlist;
 supplier products remain eligible. Independently visitable suggestions still need
 venue/date verification and are not automatically grounded by this screen.
 
+`scripts/uat/generation-quality-eval.ts` scores itinerary copy and a compiled
+day for grounding, preference fit, feasibility, specificity, diversity, and
+safety claims, plus affiliate placement. It is offline. See
+`docs/generation-quality-eval.md`.
+
 `scripts/uat/traveler-holdout-eval.ts` is the credential-free holdout for the
 compiler, dining repair, aggregator labels, and recorded supplier decisions.
 It is not a live-model or booking acceptance. A fallback day, an unsourced

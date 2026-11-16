@@ -79,6 +79,11 @@ jobs:
       - name: Run tests
         run: bun run test
 
+      - name: Offline itinerary quality and affiliate evals
+        run: |
+          bun --no-env-file scripts/uat/traveler-holdout-eval.ts
+          bun --no-env-file scripts/uat/generation-quality-eval.ts
+
   full-verification:
     name: Full Release Verification
     if: github.event_name == 'workflow_dispatch' && inputs.full_verification
@@ -97,6 +102,7 @@ jobs:
         run: |
           python3 scripts/planning-quality-eval.py
           bun --no-env-file scripts/uat/traveler-holdout-eval.ts
+          bun --no-env-file scripts/uat/generation-quality-eval.ts
 
       - name: Test trip lifecycle races in disposable PostgreSQL
         run: python3 scripts/test-trip-attempt-fence.py

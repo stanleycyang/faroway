@@ -42,6 +42,7 @@ export function createFallbackItinerary(
     let slotMinutes = 0;
     for (const activity of candidates) {
       if (
+        activity.planningIdea ||
         usedActivityIds.has(activity.id) ||
         !Number.isInteger(activity.duration) ||
         activity.duration <= 0
@@ -93,8 +94,14 @@ export function createFallbackItinerary(
     dayIndex: number,
     tips: string[],
   ) => {
-    if (!candidates.length) return undefined;
-    const ranked = candidates
+    const usable = candidates.filter((meal) => !meal.planningIdea);
+    if (!usable.length) {
+      const gap =
+        "No checked restaurant is available for this meal. This draft does not invent one.";
+      if (!tips.includes(gap)) tips.push(gap);
+      return undefined;
+    }
+    const ranked = usable
       .map((meal) => {
         const distances = stops.map((stop) =>
           suppliedDistanceKm(stop.location, meal.location),
@@ -121,7 +128,7 @@ export function createFallbackItinerary(
       tips.push(
         `${meal.name} may require a separate journey from these activities. Check the route or find a closer local option; supplied locations are unverified.`,
       );
-    } else meal = candidates[dayIndex % candidates.length];
+    } else meal = usable[dayIndex % usable.length];
     usedRestaurants.add(meal.id);
     return meal;
   };

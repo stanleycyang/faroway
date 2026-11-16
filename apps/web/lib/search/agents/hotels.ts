@@ -62,8 +62,8 @@ const SYSTEM_PROMPT = `You are a hotel booking expert. Generate realistic hotel 
 
 For each hotel, provide:
 1. Real hotel names that exist at the destination (use actual hotel names)
-2. A brief description of why the hotel may fit the traveler's preferences
-3. Location in a popular neighborhood
+2. A brief description of the neighborhood and why the hotel may fit the traveler's preferences. Name the area. Do not use filler such as "hidden gem" or claim the stay is booked.
+3. Location in a specific neighborhood the traveler asked for when one was supplied
 4. How well it matches the traveler's preferences
 
 Do not generate booking or affiliate URLs. Only live provider results may have

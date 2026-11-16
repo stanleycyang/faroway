@@ -16,6 +16,7 @@ describe("streamed price currency contracts", () => {
         pricePerNight: 101.25,
         currency: "EUR",
         affiliateUrl: "https://example.invalid",
+        affiliatePartner: "recorded",
       },
     });
     expect(

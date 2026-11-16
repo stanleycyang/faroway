@@ -94,6 +94,8 @@ Price levels:
 
 Leave dietaryOptions empty. Do not assert allergy safety, cross-contact controls, suitability for celiac disease, staff expertise with allergies, or ability to accommodate dietary restrictions in descriptions, cuisine types or vibe labels. The traveler's requirements are not evidence that a venue can meet them. Describe food and atmosphere without inventing suitability; direct confirmation remains necessary.
 
+Name a specific restaurant and its neighborhood, and say which meal it is for. Never title a place "neighborhood spot" or describe it as a "Dining idea", "hidden gem", or "local favorite" without a real name. If you cannot name a specific restaurant, return fewer.
+
 Do not invent reservation URLs or OpenTable links. Leave reservationUrl empty. A reservation link is added only from verified provider data.
 
 IMPORTANT: For the "images" field, return an EMPTY array []. Do NOT generate or guess image URLs.`;
@@ -149,7 +151,7 @@ ${
 - 3-4 breakfast/brunch spots
 - 4-5 lunch options
 - 4-5 dinner restaurants
-- Include both local favorites and hidden gems
+- Include specific local restaurants and a range of cuisines. Do not use the label "hidden gem"
 - Mix of price levels within the range
 - Cover the major sightseeing neighborhoods and the requested hotel areas: ${plan.hotelCriteria?.neighborhoods?.join(", ") || "central visitor areas"}. Include breakfast and lunch options outside the central nightlife district. Do not invent a venue to fill geographic gaps.`
 }

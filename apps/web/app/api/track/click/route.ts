@@ -3,6 +3,7 @@
  * POST /api/track/click - Track when user clicks an affiliate link
  */
 
+import { affiliateClickInsert } from "@/lib/affiliates/click-record";
 import { readPrice } from "@faroway/constants";
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase/server";
@@ -121,25 +122,26 @@ export async function POST(request: NextRequest) {
 
     // Store only a complete price/currency pair.
     const price = readPrice(data.price, data.currency);
+    const clickedAt = new Date().toISOString();
     const { error } = await getSupabase()
       .from("affiliate_clicks")
-      .insert({
-        id: clickId,
-        user_id: user?.id || null,
-        item_type: data.itemType,
-        item_id: data.itemId,
-        item_name: data.itemName,
-        affiliate_partner: data.affiliatePartner,
-        affiliate_url: data.affiliateUrl,
-        search_id: data.searchId || null,
-        trip_id: data.tripId || null,
-        price: price?.amount ?? null,
-        currency: price?.currency ?? null,
-        source: data.source || "search_results",
-        clicked_at: new Date().toISOString(),
-        converted: false,
-        conversion_value: null,
-      });
+      .insert(
+        affiliateClickInsert({
+          clickId,
+          userId: user?.id || null,
+          itemType: data.itemType,
+          itemId: data.itemId,
+          itemName: data.itemName,
+          affiliatePartner: data.affiliatePartner,
+          affiliateUrl: data.affiliateUrl,
+          searchId: data.searchId || null,
+          tripId: data.tripId || null,
+          price: price?.amount ?? null,
+          currency: price?.currency ?? null,
+          source: data.source || "search_results",
+          clickedAt,
+        }),
+      );
 
     if (error) {
       console.error("[Click Tracking] Database error:", error);
