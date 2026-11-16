@@ -176,6 +176,7 @@ export function createFallbackItinerary(
         "Keep the unscheduled time for seated breaks and a flexible pace; confirm step-free access where needed.",
       );
     days.push({
+      provenance: "backup_draft",
       dayNumber: i + 1,
       date: date.toISOString().split("T")[0],
       title: `Day ${i + 1} in ${plan.destination}`,

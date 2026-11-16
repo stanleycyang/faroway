@@ -547,13 +547,22 @@ export async function GET(request: NextRequest, { params }: Params) {
       }
     }
 
+    const unfinished = stages.filter(
+      (stage) =>
+        searchProgress[stage] === "error" || searchProgress[stage] === "failed",
+    );
     if (search.status === "completed") {
       progressPercent = 100;
       currentStep = "complete";
-      message = "Your itinerary is ready!";
+      message = unfinished.length
+        ? "Your itinerary is ready, with gaps where a search did not finish. Review those stops before you rely on them."
+        : "Your itinerary is ready!";
     } else if (search.status === "error") {
       currentStep = "error";
       message = search.error_message || "Something went wrong";
+    } else if (unfinished.length) {
+      currentStep = unfinished[0];
+      message = `${unfinished.join(", ")} did not finish. Nothing was retried automatically.`;
     }
 
     return NextResponse.json({

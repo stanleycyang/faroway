@@ -188,7 +188,9 @@ export function availableMealMinutes(
   window: TravelerDayWindow | undefined,
   slot: number,
 ) {
-  if (!window?.unavailable?.length) return availableSlotMinutes(window, slot);
+  if (!window) return Infinity;
+  // Meal clocks are narrower than the visit slot. A late arrival can leave
+  // morning visit time after breakfast's window has already closed.
   const [start, end] = [
     [480, 600],
     [720, 840],

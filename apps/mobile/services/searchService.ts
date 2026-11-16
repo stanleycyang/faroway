@@ -181,6 +181,12 @@ export function calculateProgressPercent(progress: SearchProgress): number {
  * Get human-readable status message
  */
 export function getStatusMessage(progress: SearchProgress): string {
+  const unfinished = (
+    ['hotels', 'activities', 'dining', 'transport', 'enrichment'] as const
+  ).filter((stage) => progress[stage] === 'error');
+  if (unfinished.length) {
+    return `${unfinished.join(', ')} did not finish. The plan only includes searches that completed.`;
+  }
   if (progress.aggregator === 'searching' || progress.aggregator === 'done') {
     return 'Creating your perfect itinerary...';
   }

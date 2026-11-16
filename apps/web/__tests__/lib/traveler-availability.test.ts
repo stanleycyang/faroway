@@ -182,6 +182,16 @@ it("intersects arrival, departure and overlapping work blocks without summing di
   }
 });
 
+it("does not treat leftover morning visit time as breakfast after a late start", () => {
+  const result = travelerAvailability(
+    { mobilityNeeds: "no starts before 11:00" },
+    1,
+  );
+  expect(availableMealMinutes(result.windows[0], 0)).toBe(0);
+  expect(availableMealMinutes(result.windows[0], 1)).toBeGreaterThanOrEqual(60);
+  expect(availableSlotMinutes(result.windows[0], 0)).toBe(60);
+});
+
 it("blocks meals during explicit daily business meetings with a CBD location", () => {
   const result = travelerAvailability(
     {

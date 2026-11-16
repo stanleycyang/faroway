@@ -133,6 +133,7 @@ function executeInsert(state: ChainState) {
   return { data: null, error: null };
 }
 let insertFailure: string | null = null;
+const searchUpdates: unknown[] = [];
 function createChain(table: string) {
   const state: ChainState = { table };
   const chain = {
@@ -145,6 +146,7 @@ function createChain(table: string) {
     }),
     update: vi.fn((value: unknown) => {
       state.update = value;
+      if (state.table === "searches") searchUpdates.push(value);
       return chain;
     }),
     upsert: vi.fn(() => chain),
@@ -178,7 +180,11 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
-import { planTripWorkflow, saveSearchResults } from "@/workflows/plan-trip";
+import {
+  paidPlanningStepRetries,
+  planTripWorkflow,
+  saveSearchResults,
+} from "@/workflows/plan-trip";
 
 const searchPlan = {
   destination: "Tokyo",
@@ -341,6 +347,7 @@ describe("planTripWorkflow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     insertedResults = null;
+    searchUpdates.length = 0;
     persistedResults = [];
     persistedDays = [];
     readSearchRecord = null;
@@ -1058,12 +1065,38 @@ describe("planTripWorkflow", () => {
     expect(saved.morning.meals[0].planningIdea).toBe(true);
   });
 
-  it("continues to aggregation when a provider fails", async () => {
+  it("does not retry paid planning steps", () => {
+    expect(paidPlanningStepRetries).toEqual({
+      buildSearchPlan: 0,
+      hotels: 0,
+      activities: 0,
+      dining: 0,
+      transport: 0,
+      enrichment: 0,
+      aggregator: 0,
+    });
+  });
+
+  it("continues to aggregation when a provider fails and keeps that failure visible", async () => {
     mocks.runActivitiesAgent.mockRejectedValue(new Error("activities failed"));
 
     const result = await planTripWorkflow(workflowInput);
 
     expect(result.status).toBe("completed");
+    const progress = searchUpdates
+      .map((update) =>
+        update && typeof update === "object" && "progress" in update
+          ? (update as { progress?: Record<string, string> }).progress
+          : undefined,
+      )
+      .filter((item) => item?.aggregator === "done")
+      .at(-1);
+    expect(progress).toMatchObject({
+      activities: "error",
+      dining: "done",
+      aggregator: "done",
+    });
+    expect(mocks.runActivitiesAgent).toHaveBeenCalledTimes(1);
     expect(mocks.runAggregatorAgent).toHaveBeenCalledWith(
       searchPlan,
       [hotel],
@@ -1072,6 +1105,21 @@ describe("planTripWorkflow", () => {
       [transport],
       { repairDining: true, requireGeneratedPlan: true },
     );
+  });
+
+  it("fails honestly when activities and restaurants both do not finish", async () => {
+    mocks.runActivitiesAgent.mockRejectedValue(new Error("activities failed"));
+    mocks.runDiningAgent.mockRejectedValue(new Error("dining failed"));
+
+    const result = await planTripWorkflow(workflowInput);
+
+    expect(result.status).toBe("error");
+    expect(result.error).toMatch(
+      /Activity and restaurant searches did not finish/,
+    );
+    expect(mocks.runAggregatorAgent).not.toHaveBeenCalled();
+    expect(mocks.runActivitiesAgent).toHaveBeenCalledTimes(1);
+    expect(mocks.runDiningAgent).toHaveBeenCalledTimes(1);
   });
 
   it("dispatches only after the completed itinerary is durably saved", async () => {

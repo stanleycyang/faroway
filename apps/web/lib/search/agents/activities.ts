@@ -8,6 +8,7 @@ import {
  * Uses real activity vendors + AI for matching and ranking
  */
 
+import { supplierDurationCeilingMinutes } from "../supplier-duration";
 import { screenGeneratedActivityCopy } from "../generated-activity-copy";
 import { activitySourceContext } from "../activity-source-context";
 import { compiledScheduleExperimentEnabled } from "../schedule-experiment-gate";
@@ -43,8 +44,8 @@ import {
 } from "@/lib/affiliates/tripadvisor";
 import {
   AI_AGENT_TIMEOUT_MS,
+  allBounded,
   isOperationTimeoutError,
-  withAbortTimeout,
 } from "@/lib/search/runtime";
 
 const aiGateway = process.env.AI_GATEWAY_API_KEY
@@ -141,50 +142,10 @@ export async function runActivitiesAgent(
 ): Promise<ActivityResult[]> {
   const { destination, dates, activityCriteria, vibeInterpretation } = plan;
   const vibes = vibeInterpretation.vibes;
-  const dayTripRequested =
-    vibes.some((vibe) => ["nature", "adventure"].includes(vibe)) ||
-    [...activityCriteria.interests, ...activityCriteria.mustSee].some(
-      (interest) =>
-        /\b(nature|outdoors?|hiking|day trip|day tour|full.day|mountain|fuji|hakone)\b/i.test(
-          interest,
-        ),
-    );
   // Broad "popular in Tokyo" inventory can consist entirely of 10-hour regional
   // excursions. Request manageable city experiences unless a day trip fits the
   // brief; the planner still decides whether any returned product is suitable.
-  const maxDurationMinutes = dayTripRequested
-    ? undefined
-    : activityCriteria.pacePreference === "relaxed"
-      ? 180
-      : activityCriteria.pacePreference === "packed"
-        ? 360
-        : 240;
-
-  const viatorPromise =
-    isViatorContentEnabled() && isViatorConfigured()
-      ? searchViatorProducts({
-          destination,
-          startDate: dates.start,
-          endDate: dates.end,
-          limit: 15,
-          maxDurationMinutes,
-        }).catch((error) => {
-          console.error("[Activities Agent] Viator search error:", error);
-          return [];
-        })
-      : Promise.resolve([]);
-
-  const gygPromise = isGYGConfigured()
-    ? searchGYGActivities({
-        destination,
-        startDate: dates.start,
-        endDate: dates.end,
-        limit: 15,
-      }).catch((error) => {
-        console.error("[Activities Agent] GetYourGuide search error:", error);
-        return [];
-      })
-    : Promise.resolve([]);
+  const maxDurationMinutes = supplierDurationCeilingMinutes(plan);
 
   const prompt = `Suggest up to ${count} independently visitable places and self-guided stops for ${destination}. Organized bookable experiences come from supplier inventory separately.
 
@@ -206,22 +167,17 @@ Generate a diverse mix across categories.
 ${compiledScheduleExperimentEnabled() ? activitySourceContext(plan) : ""}
 Score each activity 0-100 on how well it matches the traveler's vibes.`;
 
-  const aiPromise = withAbortTimeout(
-    (abortSignal) =>
-      generatePlanningObject<ActivityListResult>("activities", {
-        model: aiGateway(planningModel("activities", MODEL)),
-        providerOptions: PLANNING_PROVIDER_OPTIONS,
-        system: SYSTEM_PROMPT,
-        prompt,
-        schema: ActivityListSchema,
-        timeout: AI_AGENT_TIMEOUT_MS,
-        abortSignal,
-        maxRetries: 0,
-      }),
-    AI_AGENT_TIMEOUT_MS,
-    "activities AI",
-  )
-    .then(({ object: result }) =>
+  const aiPromise = (abortSignal: AbortSignal) =>
+    generatePlanningObject<ActivityListResult>("activities", {
+      model: aiGateway(planningModel("activities", MODEL)),
+      providerOptions: PLANNING_PROVIDER_OPTIONS,
+      system: SYSTEM_PROMPT,
+      prompt,
+      schema: ActivityListSchema,
+      timeout: AI_AGENT_TIMEOUT_MS,
+      abortSignal,
+      maxRetries: 0,
+    }).then(({ object: result }) =>
       result.activities
         .filter(
           (activity) =>
@@ -245,32 +201,89 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
           rating: 0,
           reviewCount: 0,
         })),
-    )
-    .catch((error: unknown) => {
-      const timedOut = isOperationTimeoutError(error);
-      const detail = error instanceof Error ? error.message : String(error);
-      if (timedOut) {
-        console.warn(
-          "[Activities Agent] AI timed out, using vendor/fallback results:",
-          detail,
-        );
-      } else {
-        console.error("[Activities Agent] AI generation error:", error);
-      }
-      logPlanningFallback(
-        "activities",
-        timedOut ? "timeout" : "error",
-        "empty",
+    );
+
+  const [viatorSettled, gygSettled, aiSettled] = await allBounded(
+    [
+      {
+        label: "Viator",
+        timeoutMs: 60000,
+        run: async (signal) => {
+          if (!isViatorContentEnabled() || !isViatorConfigured()) return [];
+          try {
+            return await searchViatorProducts({
+              destination,
+              startDate: dates.start,
+              endDate: dates.end,
+              limit: 15,
+              maxDurationMinutes,
+              signal,
+            });
+          } catch (error) {
+            console.error("[Activities Agent] Viator search error:", error);
+            return [];
+          }
+        },
+      },
+      {
+        label: "GetYourGuide",
+        timeoutMs: 30000,
+        run: async (signal) => {
+          if (!isGYGConfigured()) return [];
+          try {
+            return await searchGYGActivities({
+              destination,
+              startDate: dates.start,
+              endDate: dates.end,
+              limit: 15,
+              signal,
+            });
+          } catch (error) {
+            console.error(
+              "[Activities Agent] GetYourGuide search error:",
+              error,
+            );
+            return [];
+          }
+        },
+      },
+      {
+        label: "activities AI",
+        timeoutMs: AI_AGENT_TIMEOUT_MS,
+        run: (signal) => aiPromise(signal),
+      },
+    ],
+    { concurrency: 3 },
+  );
+  const viatorProducts =
+    viatorSettled.status === "fulfilled" ? viatorSettled.value : [];
+  const gygActivities =
+    gygSettled.status === "fulfilled" ? gygSettled.value : [];
+  const aiActivities = aiSettled.status === "fulfilled" ? aiSettled.value : [];
+  if (aiSettled.status === "rejected") {
+    const timedOut = isOperationTimeoutError(aiSettled.reason);
+    const detail =
+      aiSettled.reason instanceof Error
+        ? aiSettled.reason.message
+        : String(aiSettled.reason);
+    if (timedOut) {
+      console.warn(
+        "[Activities Agent] AI timed out, using vendor/fallback results:",
         detail,
       );
-      return [] as ActivityResult[];
-    });
-
-  const [viatorProducts, gygActivities, aiActivities] = await Promise.all([
-    viatorPromise,
-    gygPromise,
-    aiPromise,
-  ]);
+    } else {
+      console.error(
+        "[Activities Agent] AI generation error:",
+        aiSettled.reason,
+      );
+    }
+    logPlanningFallback(
+      "activities",
+      timedOut ? "timeout" : "error",
+      "empty",
+      detail,
+    );
+  }
 
   const trackingId = `tg_${Date.now()}`;
   const viatorActivities: ActivityResult[] = viatorProducts.map((product) => {

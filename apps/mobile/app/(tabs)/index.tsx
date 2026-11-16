@@ -7,8 +7,8 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
   Animated,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -24,8 +24,7 @@ import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { USE_NATIVE_DRIVER } from '../../lib/animation';
-
-const { width } = Dimensions.get('window');
+import { useFontScaleEpoch } from '../../lib/fontScaleEpoch';
 
 const INSPIRATIONS = [
   { icon: 'sunny-outline' as const, text: 'Beach getaway', slug: 'beach-getaway' },
@@ -41,6 +40,8 @@ export default function ExploreScreen() {
   const { trips } = useTripStore();
   const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   const reduceMotion = useReduceMotion();
+  const { width } = useWindowDimensions();
+  const fontScaleEpoch = useFontScaleEpoch();
   const [greeting, setGreeting] = useState('');
   const [apiPopular, setApiPopular] = useState<DestinationInfo[] | null>(null);
   const [apiTrending, setApiTrending] = useState<DestinationInfo[] | null>(null);
@@ -127,6 +128,7 @@ export default function ExploreScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <Animated.ScrollView
+        key={fontScaleEpoch}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
@@ -266,7 +268,7 @@ export default function ExploreScreen() {
             snapToInterval={width * 0.7 + 16}
           >
             {(apiPopular ?? popularDestinations.slice(0, 5)).map((destination) => (
-              <View key={destination.id} style={styles.destinationCard}>
+              <View key={destination.id} style={{ width: width * 0.7 }}>
                 <DestinationCard
                   name={destination.name}
                   country={destination.country}
@@ -287,7 +289,7 @@ export default function ExploreScreen() {
             {(apiTrending ?? popularDestinations.slice(5, 9)).map((destination) => (
               <TouchableOpacity
                 key={destination.id}
-                style={styles.trendingCard}
+                style={[styles.trendingCard, { width: (width - 60) / 2 }]}
                 onPress={() => handleDestinationPress(destination.name, destination.country)}
                 activeOpacity={0.9}
                 accessibilityRole="button"
@@ -520,9 +522,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     gap: 16,
   },
-  destinationCard: {
-    width: width * 0.7,
-  },
   trendingGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -530,7 +529,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   trendingCard: {
-    width: (width - 60) / 2,
     height: 140,
     borderRadius: borderRadius.lg,
     overflow: 'hidden',

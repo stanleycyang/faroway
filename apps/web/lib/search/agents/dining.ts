@@ -32,8 +32,8 @@ import {
 } from "@/lib/affiliates/tripadvisor";
 import {
   AI_AGENT_TIMEOUT_MS,
+  allBounded,
   isOperationTimeoutError,
-  withAbortTimeout,
 } from "@/lib/search/runtime";
 
 const aiGateway = process.env.AI_GATEWAY_API_KEY
@@ -163,22 +163,58 @@ For vibes like:
 
 Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
 
+  const parent = new AbortController();
+  const reviewRequested = !options.coverageTargets?.length;
   try {
-    const { object: result } = await withAbortTimeout(
-      (abortSignal) =>
-        generatePlanningObject<DiningListResult>("dining", {
-          model: aiGateway(planningModel("dining", MODEL)),
-          providerOptions: PLANNING_PROVIDER_OPTIONS,
-          system: SYSTEM_PROMPT,
-          prompt,
-          schema: DiningListSchema,
-          timeout: AI_AGENT_TIMEOUT_MS,
-          abortSignal,
-          maxRetries: 0,
-        }),
-      AI_AGENT_TIMEOUT_MS,
-      "dining AI",
+    const generatedCall = allBounded(
+      [
+        {
+          label: "dining AI",
+          timeoutMs: AI_AGENT_TIMEOUT_MS,
+          run: async (signal) => {
+            try {
+              return await generatePlanningObject<DiningListResult>("dining", {
+                model: aiGateway(planningModel("dining", MODEL)),
+                providerOptions: PLANNING_PROVIDER_OPTIONS,
+                system: SYSTEM_PROMPT,
+                prompt,
+                schema: DiningListSchema,
+                timeout: AI_AGENT_TIMEOUT_MS,
+                abortSignal: signal,
+                maxRetries: 0,
+              });
+            } catch (error) {
+              parent.abort();
+              throw error;
+            }
+          },
+        },
+      ],
+      { concurrency: 1, signal: parent.signal },
     );
+    const reviewCall = reviewRequested
+      ? allBounded(
+          [
+            {
+              label: "dining source review",
+              timeoutMs: 60000,
+              run: (signal: AbortSignal) =>
+                discoverDiningReviewOptions(plan, signal),
+            },
+          ],
+          { concurrency: 1, signal: parent.signal },
+        )
+      : Promise.resolve(
+          [] as PromiseSettledResult<
+            Awaited<ReturnType<typeof discoverDiningReviewOptions>>
+          >[],
+        );
+    const [generated] = await generatedCall;
+    const [reviewed] = await reviewCall;
+    if (generated.status === "rejected") throw generated.reason;
+    const result = generated.value.object;
+    const reviewOptions =
+      reviewed?.status === "fulfilled" ? reviewed.value : [];
 
     let omittedReservationUrls = 0;
     let reviewedCopyCount = 0;
@@ -268,12 +304,7 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
     }
 
     // Review options stay separate from scheduled candidates and provider enrichment.
-    return [
-      ...restaurants,
-      ...(options.coverageTargets?.length
-        ? []
-        : await discoverDiningReviewOptions(plan)),
-    ];
+    return [...restaurants, ...reviewOptions];
   } catch (error) {
     const timedOut = isOperationTimeoutError(error);
     const detail = error instanceof Error ? error.message : String(error);

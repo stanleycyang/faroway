@@ -9,7 +9,11 @@
     "noImplicitReturns": true,
     "types": ["node"],
     "lib": ["ES2022", "DOM"],
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": "..",
+    "paths": {
+      "@/*": ["apps/web/*"]
+    }
   },
   "include": [
     "bun-test.d.ts",
@@ -28,6 +32,9 @@
     "__tests__/published-venue-addresses.test.ts",
     "__tests__/reviewed-hours-eval.test.ts",
     "__tests__/reviewed-availability-repair.test.ts",
-    "__tests__/dining-evidence-review.test.ts"
+    "__tests__/dining-evidence-review.test.ts",
+    "__tests__/traveler-holdout.test.ts",
+    "uat/lib/traveler-holdout.ts",
+    "uat/traveler-holdout-eval.ts"
   ]
 }

@@ -42,6 +42,10 @@ export async function fetchWithTimeout(
   timeoutMs = VENDOR_TIMEOUT_MS,
 ): Promise<Response> {
   const controller = new AbortController();
+  const parent = init.signal;
+  const onParentAbort = () => controller.abort(parent?.reason);
+  if (parent?.aborted) onParentAbort();
+  else parent?.addEventListener("abort", onParentAbort, { once: true });
   let timeout!: ReturnType<typeof setTimeout>;
   const deadline = new Promise<never>((_, reject) => {
     timeout = setTimeout(() => {
@@ -94,7 +98,103 @@ export async function fetchWithTimeout(
   } catch (error) {
     clearTimeout(timeout);
     throw error;
+  } finally {
+    parent?.removeEventListener("abort", onParentAbort);
   }
+}
+
+export interface BoundedCall<T> {
+  label: string;
+  timeoutMs: number;
+  run: (signal: AbortSignal) => Promise<T>;
+}
+
+/**
+ * Run independent calls with a concurrency cap, a deadline per call, and one
+ * parent cancellation signal. A call is invoked once. A timeout or abort does
+ * not start it again.
+ */
+export async function allBounded<A, B, C>(
+  tasks: readonly [BoundedCall<A>, BoundedCall<B>, BoundedCall<C>],
+  options: { concurrency: number; signal?: AbortSignal },
+): Promise<
+  [PromiseSettledResult<A>, PromiseSettledResult<B>, PromiseSettledResult<C>]
+>;
+export async function allBounded<A, B>(
+  tasks: readonly [BoundedCall<A>, BoundedCall<B>],
+  options: { concurrency: number; signal?: AbortSignal },
+): Promise<[PromiseSettledResult<A>, PromiseSettledResult<B>]>;
+export async function allBounded<T>(
+  tasks: readonly BoundedCall<T>[],
+  options: { concurrency: number; signal?: AbortSignal },
+): Promise<PromiseSettledResult<T>[]>;
+export async function allBounded(
+  tasks: readonly BoundedCall<unknown>[],
+  options: { concurrency: number; signal?: AbortSignal },
+): Promise<PromiseSettledResult<unknown>[]> {
+  const concurrency = Math.max(1, Math.floor(options.concurrency));
+  const results: PromiseSettledResult<unknown>[] = new Array(tasks.length);
+  let cursor = 0;
+  const runSlot = async () => {
+    while (cursor < tasks.length) {
+      const index = cursor;
+      cursor += 1;
+      const task = tasks[index];
+      if (options.signal?.aborted) {
+        results[index] = {
+          status: "rejected",
+          reason: new DOMException("The operation was aborted.", "AbortError"),
+        };
+        continue;
+      }
+      const controller = new AbortController();
+      let settled = false;
+      try {
+        const value = await new Promise<unknown>((resolve, reject) => {
+          const finish = (settle: () => void) => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            options.signal?.removeEventListener("abort", onParent);
+            settle();
+          };
+          const timer = setTimeout(() => {
+            controller.abort();
+            finish(() =>
+              reject(
+                new Error(`${task.label} timed out after ${task.timeoutMs}ms`),
+              ),
+            );
+          }, task.timeoutMs);
+          timer.unref?.();
+          const onParent = () => {
+            controller.abort();
+            finish(() =>
+              reject(
+                new DOMException("The operation was aborted.", "AbortError"),
+              ),
+            );
+          };
+          if (options.signal?.aborted) onParent();
+          else
+            options.signal?.addEventListener("abort", onParent, { once: true });
+          task.run(controller.signal).then(
+            (result) => finish(() => resolve(result)),
+            (error) => finish(() => reject(error)),
+          );
+        });
+        results[index] = { status: "fulfilled", value };
+      } catch (reason) {
+        results[index] = { status: "rejected", reason };
+      }
+    }
+  };
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, tasks.length) }, () =>
+      runSlot(),
+    ),
+  );
+  return results;
 }
 
 export async function withTimeout<T>(

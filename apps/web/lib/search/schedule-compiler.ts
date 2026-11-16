@@ -25,6 +25,20 @@ import {
 import { matchesSuggestedHighlight } from "./highlight-match";
 import { suppliedDistanceKm } from "./supplied-distance";
 import {
+  ACCESS_UNVERIFIED_NOTE,
+  accessRequested,
+  corroborateAccessClaim,
+  corroborateDiningClaim,
+  DIETARY_UNVERIFIED_NOTE,
+} from "./requirement-corroboration";
+import {
+  chronologicalStops,
+  PLANNING_BUFFER_MINUTES,
+  reviewSuppliedTransfers,
+  transferReviewTip,
+  UNWALKABLE_TRANSFER_KM,
+} from "./transfer-review";
+import {
   familyActivityReviewReason,
   activityMobilityReviewReason,
   activityTransportReviewReason,
@@ -174,6 +188,7 @@ export function compileSchedule(
     ? `Your requirements: ${requestedDetails.join("; ")}. These are your requests, not verified venue features. Confirm them directly with each venue before relying on this plan.`
     : undefined;
   const needsRest = requestsMiddayRest(plan);
+  const requestedAccess = accessRequested(plan);
   const availability = travelerAvailability(plan, daysCount);
   if (availability.needsReview)
     issues.push("traveler_availability_interpretation_required");
@@ -370,6 +385,18 @@ export function compileSchedule(
         return false;
       }
       if (venueKey) venueKeys.add(venueKey);
+      if (
+        activity.proposedVisitType === "guided_tour" &&
+        !reviewedIds.has(activity.id) &&
+        !activity.affiliatePartner
+      ) {
+        reviewRequiredActivities.push({
+          id: activity.id,
+          reason: "unsourced_guided_tour",
+        });
+        issues.push(`unsourced_bookable_tour:${activity.id}`);
+        return false;
+      }
       if (
         !reviewedIds.has(activity.id) &&
         (activity.proposedVisitType === "event" ||
@@ -766,6 +793,10 @@ export function compileSchedule(
       ),
     }));
   const usedMeals = new Set<string>();
+  const unwalkableByDate = new Map<
+    string,
+    { from: string; to: string; distanceKm: number }
+  >();
   const days: SuggestedDay[] = Array.from({ length: daysCount }, (_, day) => {
     const date = new Date(start + day * 86400000).toISOString().slice(0, 10);
     const mealsToday = new Set<string>();
@@ -988,12 +1019,18 @@ export function compileSchedule(
         },
       ]),
     ) as VisitSlots;
+    let strippedDiet = false;
+    let strippedAccess = false;
     const slots = SLOTS.map((name, slot) => {
-      const stops = visitSlots[name].activities;
+      const stops = visitSlots[name].activities.map((activity) => {
+        const reviewed = corroborateAccessClaim(activity, requestedAccess);
+        strippedAccess ||= reviewed.stripped;
+        return reviewed.activity;
+      });
       if (availableMealMinutes(window, slot) < mealMinutes[slot]) {
-        if (window?.unavailable?.length)
+        if (window)
           tips.push(
-            `No ${MEALS[slot]} is scheduled: it does not fit the proposed meal window outside your blocked periods. Arrange a break before adding it.`,
+            `No ${MEALS[slot]} is scheduled: it does not fit the proposed meal window within your available hours. Arrange a break before adding it.`,
           );
         if (window)
           issues.push(
@@ -1096,19 +1133,45 @@ export function compileSchedule(
           `No ${MEALS[slot]} suggestion is available; find a suitable local option.`,
         );
       } else {
-        usedMeals.add(chosen.meal.id);
-        mealsToday.add(chosen.meal.id);
+        const placed = corroborateDiningClaim(chosen.meal);
+        strippedDiet ||= placed.stripped;
+        usedMeals.add(placed.meal.id);
+        mealsToday.add(placed.meal.id);
         if (chosen.distance == null)
           issues.push(`day_${day + 1}:${MEALS[slot]}:route_unknown`);
         else if (chosen.distance > 3) {
           issues.push(`day_${day + 1}:${MEALS[slot]}:distant_meal`);
           tips.push(
-            `${chosen.meal.name} may need a separate journey. Check the route or choose a closer option; supplied locations are unverified.`,
+            `${placed.meal.name} may need a separate journey. Check the route or choose a closer option; supplied locations are unverified.`,
           );
         }
+        return { activities: stops, meal: placed.meal };
       }
-      return { activities: stops, meal: chosen?.meal };
+      return { activities: stops };
     });
+    if (strippedDiet && !tips.includes(DIETARY_UNVERIFIED_NOTE))
+      tips.push(DIETARY_UNVERIFIED_NOTE);
+    if (strippedAccess && !tips.includes(ACCESS_UNVERIFIED_NOTE))
+      tips.push(ACCESS_UNVERIFIED_NOTE);
+    if (selected.some((item) => item.activity.supplierCatalogOnly))
+      tips.push(
+        "A supplier experience on this day is a catalog suggestion only. Availability on these dates was not checked.",
+      );
+    for (const finding of reviewSuppliedTransfers(
+      chronologicalStops({
+        morning: slots[0],
+        afternoon: slots[1],
+        evening: slots[2],
+      }),
+    )) {
+      issues.push(`day_${day + 1}:transfer_exceeds_planning_buffer`);
+      tips.push(transferReviewTip(finding));
+      if (
+        finding.distanceKm > UNWALKABLE_TRANSFER_KM &&
+        !unwalkableByDate.has(date)
+      )
+        unwalkableByDate.set(date, finding);
+    }
     return {
       dayNumber: day + 1,
       date,
@@ -1146,10 +1209,55 @@ export function compileSchedule(
       conflict: proposal.conflict,
     };
     day.tips.unshift(...proposal.tips);
-    if (!proposal.fitsPolicy)
+    const hop = unwalkableByDate.get(day.date);
+    if (hop && day.timingProposal?.fitsPolicy) {
+      const overrunMinutes = Math.max(
+        1,
+        Math.ceil((hop.distanceKm / 4) * 60 - PLANNING_BUFFER_MINUTES),
+      );
+      const conflict = {
+        eventId: `transfer:${hop.from}:${hop.to}`,
+        earliestPossibleStart: 0,
+        requiredEnd: overrunMinutes,
+        latestEnd: 0,
+        overrunMinutes,
+      };
+      const notice = `${hop.from} to ${hop.to} is about ${hop.distanceKm.toFixed(1)} km on the supplied coordinates. That hop cannot fit inside this day, so the day is not a usable plan until the stops change. No visit was shortened to hide the gap.`;
+      const overridden = {
+        ...proposal,
+        fitsPolicy: false as const,
+        events: [],
+        conflict,
+        tips: [notice, ...proposal.tips],
+      };
+      const proposalIndex = timingProposals.indexOf(proposal);
+      if (proposalIndex >= 0) timingProposals[proposalIndex] = overridden;
+      day.timingProposal = {
+        policy: overridden.policy,
+        basis: overridden.basis,
+        fitsPolicy: false,
+        verified: false,
+        events: [],
+        conflict,
+      };
+      day.tips.unshift(notice);
+      issues.push(`day_${day.dayNumber}:unwalkable_transfer`);
+    }
+    if (!day.timingProposal?.fitsPolicy && day.timingProposal)
       issues.push(
         `day_${day.dayNumber}:${needsRest ? "midday_rest_timing_conflict" : "day_timing_conflict"}`,
       );
+  }
+  if (options.visitWindows && days[0]) {
+    const windowed = new Set<string>();
+    for (const byActivity of Object.values(options.visitWindows))
+      for (const id of Object.keys(byActivity)) windowed.add(id);
+    for (const activity of inventory) {
+      if (!windowed.has(activity.id) || best.used.has(activity.id)) continue;
+      const tip = `${activity.name} was not scheduled. A reviewed visit window was supplied, and this draft does not claim the visit happened inside those hours.`;
+      if (!days[0].tips.includes(tip)) days[0].tips.push(tip);
+      issues.push(`unscheduled_visit_window:${activity.id}`);
+    }
   }
   return {
     days,

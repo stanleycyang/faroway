@@ -432,6 +432,20 @@ describe('getStatusMessage', () => {
     ).toBe('Understanding your preferences...');
   });
 
+  it('says which search failed instead of calling the itinerary perfect', () => {
+    expect(
+      getStatusMessage({
+        orchestrator: 'done',
+        hotels: 'done',
+        activities: 'error',
+        dining: 'done',
+        transport: 'done',
+        enrichment: 'done',
+        aggregator: 'done',
+      })
+    ).toBe('activities did not finish. The plan only includes searches that completed.');
+  });
+
   it('returns default message when all pending', () => {
     expect(
       getStatusMessage({

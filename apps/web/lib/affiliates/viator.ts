@@ -17,6 +17,7 @@ import {
   getEnvNumber,
   isAbortError,
 } from "@/lib/search/runtime";
+import { recoverSupplierSearch } from "./supplier-search-recovery";
 import { buildViatorHandoffUrl } from "./viator-link";
 import { isViatorContentEnabled } from "./viator-policy";
 import { request as httpsRequest } from "node:https";
@@ -223,6 +224,8 @@ export interface ViatorSearchParams {
   priceRange?: { min: number; max: number };
   rating?: number;
   limit?: number;
+  /** Cancels the in-flight search. A parent abort is not a dated-query timeout. */
+  signal?: AbortSignal;
 }
 
 export interface ViatorProduct {
@@ -316,6 +319,7 @@ export async function searchViatorProducts(
       try {
         products = await searchByDestinationId(destId, params);
       } catch (error) {
+        if (params.signal?.aborted) throw error;
         if (!isAbortError(error) || (!params.startDate && !params.endDate))
           throw error;
         // A dated-query timeout is not evidence of sold-out inventory. One
@@ -325,18 +329,20 @@ export async function searchViatorProducts(
         console.warn(
           "[Viator] Date-filtered search timed out; checking a small catalog shortlist with unverified availability",
         );
-        products = (
-          await searchByDestinationId(
-            destId,
-            {
-              ...params,
-              startDate: undefined,
-              endDate: undefined,
-              limit: Math.min(params.limit || 15, 3),
-            },
-            25000,
-          )
-        ).map((product) => ({ ...product, catalogOnly: true }));
+        const catalog = await searchByDestinationId(
+          destId,
+          {
+            ...params,
+            startDate: undefined,
+            endDate: undefined,
+            limit: Math.min(params.limit || 15, 3),
+          },
+          25000,
+        );
+        products = recoverSupplierSearch(
+          { status: "timeout", dated: true },
+          { status: "products", products: catalog },
+        ).products;
       }
       if (products.length > 0) return products;
       console.log(
@@ -398,6 +404,7 @@ async function searchByDestinationId(
       method: "POST",
       headers: getV2WriteHeaders(),
       body: JSON.stringify(body),
+      signal: params.signal,
     },
     timeoutMs,
   );
