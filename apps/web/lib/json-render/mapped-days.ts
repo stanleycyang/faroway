@@ -56,6 +56,7 @@ export function mappedDaysToSpec(
         reviewCount: number(a.reviewCount),
         category: text(a.category),
         affiliateUrl: text(booking.bookingUrl),
+        affiliatePartner: text(booking.affiliateId),
         images: strings(a.images),
         location: { name: text(record(a.location).name) },
       },

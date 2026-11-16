@@ -262,7 +262,7 @@ function StepIndicator({
   microMessage,
 }: {
   step: (typeof GENERATION_STEPS)[number];
-  status: 'pending' | 'searching' | 'done';
+  status: 'pending' | 'searching' | 'done' | 'failed';
   count?: number;
   microMessage?: string;
 }) {
@@ -279,11 +279,16 @@ function StepIndicator({
             {count > 0 ? `${count} options to review` : 'No options found'}
           </Text>
         )}
+        {status === 'failed' ? (
+          <Text style={styles.stepMicro}>Did not finish. Nothing from this search is ready.</Text>
+        ) : null}
       </View>
       {status === 'searching' ? (
         <ActivityIndicator color="#fff" accessibilityLabel={`${step.text}: in progress`} />
       ) : (
-        <Text style={styles.stepMicro}>{status === 'done' ? 'Checked' : 'Next'}</Text>
+        <Text style={styles.stepMicro}>
+          {status === 'done' ? 'Checked' : status === 'failed' ? 'Not ready' : 'Next'}
+        </Text>
       )}
     </View>
   );
@@ -612,8 +617,13 @@ function GenerationSession() {
                 {GENERATION_STEPS.filter(
                   (step) => showDetails || searchProgress[step.key] === 'searching'
                 ).map((step) => {
+                  const reported = searchProgress[step.key];
                   const status =
-                    (searchProgress[step.key] as 'pending' | 'searching' | 'done') || 'pending';
+                    reported === 'failed' || reported === 'error'
+                      ? 'failed'
+                      : reported === 'done' || reported === 'searching'
+                        ? reported
+                        : 'pending';
                   const count =
                     step.key === 'hotels'
                       ? counts.hotels
@@ -714,21 +724,36 @@ function GenerationSession() {
           {/* Progressive blocks */}
           {showProgressiveBlocks && (
             <View style={styles.blocksContainer}>
-              {!streaming.isComplete && streaming.isStreaming && (
+              {!streaming.isComplete && (
                 <View style={styles.streamingBanner} accessibilityLiveRegion="polite">
-                  <PulsingDot />
-                  <Text style={styles.streamingText}>{streaming.message}</Text>
+                  {streaming.error ? null : <PulsingDot />}
+                  <Text style={styles.streamingText}>
+                    {streaming.error || streaming.message || 'Still collecting results'}
+                  </Text>
                 </View>
               )}
+              <View accessibilityLabel="Planning stages">
+                {GENERATION_STEPS.map((step) => {
+                  const reported = searchProgress[step.key];
+                  const status =
+                    reported === 'failed' || reported === 'error'
+                      ? 'failed'
+                      : reported === 'done' || reported === 'searching'
+                        ? reported
+                        : 'pending';
+                  return <StepIndicator key={step.key} step={step} status={status} />;
+                })}
+              </View>
               <JsonRenderRenderer blocks={preview.blocks} />
             </View>
           )}
 
           {/* Skeleton when no content yet */}
-          {!streaming.isComplete &&
-            !streaming.error &&
-            !showProgressiveBlocks &&
-            streaming.progress > 60 && <SkeletonLoader />}
+          {!streaming.isComplete && !streaming.error && !showProgressiveBlocks && (
+            <View accessibilityLabel="Days still loading" style={{ marginTop: 16, gap: 12 }}>
+              <SkeletonLoader />
+            </View>
+          )}
         </SafeAreaView>
       </ScrollView>
 
@@ -787,8 +812,21 @@ const styles = StyleSheet.create({
 
   // Header
   header: { alignItems: 'center', marginBottom: 24 },
-  headerDestination: { fontSize: 32, fontWeight: '800', color: '#fff', textAlign: 'center' },
-  headerMeta: { flexDirection: 'row', alignItems: 'center', marginTop: 8 },
+  headerDestination: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#fff',
+    textAlign: 'center',
+    width: '100%',
+  },
+  headerMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: 8,
+    gap: 6,
+  },
   headerMetaText: { fontSize: 14, color: 'rgba(255,255,255,0.7)' },
   headerMetaDot: { fontSize: 14, color: 'rgba(255,255,255,0.4)', marginHorizontal: 8 },
 

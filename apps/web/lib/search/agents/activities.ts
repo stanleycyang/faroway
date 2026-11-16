@@ -9,6 +9,7 @@ import {
  */
 
 import { supplierDurationCeilingMinutes } from "../supplier-duration";
+import { rankActivityInventory } from "../candidate-rank";
 import { screenGeneratedActivityCopy } from "../generated-activity-copy";
 import { activitySourceContext } from "../activity-source-context";
 import { compiledScheduleExperimentEnabled } from "../schedule-experiment-gate";
@@ -114,6 +115,8 @@ const SYSTEM_PROMPT = `You are a travel activities expert. Suggest real activiti
 
 Your role is to suggest independently visitable places and self-guided stops. Supplier APIs provide organized tours, workshops and ticketed events separately. No supplier inventory is supplied in this prompt: do not invent named food tours, bar crawls, classes, performances or other organized experiences. Prefer ordinary_entry or exterior_walk; return fewer suggestions rather than manufacture a bookable product.
 
+Each description must say what the traveler does and name the area, in one or two concrete sentences. Do not use filler such as "Dining idea", "neighborhood spot", "hidden gem", "must-see" or "unforgettable". If you cannot name a real place, omit it.
+
 Prefer ordinary, enduring places and experiences. Without supplied date-specific organizer evidence, omit recurring weekday events, temporary exhibitions, performances and special late openings. Do not turn an ordinary daytime venue into an evening event to satisfy the traveler's schedule. Return fewer options if necessary.
 
 For each activity, provide:
@@ -163,9 +166,9 @@ export async function runActivitiesAgent(
 **Keywords to incorporate:** ${vibeInterpretation.searchKeywords.slice(0, 10).join(", ")}
 **Avoid:** ${vibeInterpretation.avoidKeywords.join(", ") || "nothing specific"}
 
-Generate a diverse mix across categories.
+Generate a diverse mix across categories. Spread suggestions across neighborhoods instead of repeating one area. Keep durations realistic for the pace: a relaxed day should not be a chain of long tours.
 ${compiledScheduleExperimentEnabled() ? activitySourceContext(plan) : ""}
-Score each activity 0-100 on how well it matches the traveler's vibes.`;
+Score each activity 0-100 on how well it matches the traveler's vibes. Do not raise the score to fill the list.`;
 
   const aiPromise = (abortSignal: AbortSignal) =>
     generatePlanningObject<ActivityListResult>("activities", {
@@ -363,6 +366,11 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
         },
         vibes,
       );
+      const affiliateUrl = generateGYGAffiliateUrl(
+        activity.activityId,
+        trackingId,
+        { date: dates.start },
+      );
 
       return {
         id: `activity_gyg_${activity.activityId}`,
@@ -391,29 +399,28 @@ Score each activity 0-100 on how well it matches the traveler's vibes.`;
           .slice(0, 3)
           .map((img: { url: string; caption?: string }) => img.url)
           .filter((url): url is string => Boolean(url)),
-        affiliateUrl: generateGYGAffiliateUrl(activity.activityId, trackingId, {
-          date: dates.start,
-        }),
-        affiliatePartner: "getyourguide",
+        affiliateUrl: affiliateUrl || undefined,
+        affiliatePartner: affiliateUrl ? "getyourguide" : undefined,
         bestTimeOfDay: "any",
         vibeScore: score || matchedVibes.length * 25,
         vibeMatch:
           matchedVibes.length > 0
             ? matchedVibes
             : categoryVibes.filter((v) => vibes.includes(v)),
-        bookingRequired: true,
+        bookingRequired: Boolean(affiliateUrl),
       };
     },
   );
 
   const realActivities = [...viatorActivities, ...getYourGuideActivities];
 
-  let allActivities = deduplicateActivities(
-    [...realActivities, ...aiActivities],
-    new Set(realActivities.map((activity) => activity.id)),
-  )
-    .sort((a, b) => b.vibeScore - a.vibeScore)
-    .slice(0, count);
+  let allActivities = rankActivityInventory(
+    deduplicateActivities(
+      [...realActivities, ...aiActivities],
+      new Set(realActivities.map((activity) => activity.id)),
+    ),
+    count,
+  );
 
   // Enrich with TripAdvisor ratings and reviews
   if (isTripAdvisorConfigured() && allActivities.length > 0) {

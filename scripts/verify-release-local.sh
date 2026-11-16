@@ -18,6 +18,7 @@ bun run check
 bun run test
 python3 scripts/planning-quality-eval.py
 bun --no-env-file scripts/uat/traveler-holdout-eval.ts
+bun --no-env-file scripts/uat/generation-quality-eval.ts
 python3 scripts/test-trip-attempt-fence.py
 python3 scripts/test-database-access-boundaries.py
 python3 scripts/test-staging-bootstrap.py

@@ -50,10 +50,31 @@ describe("enrichNonAffiliateCandidates", () => {
     expect(result.activities.every((a) => !a.affiliatePartner)).toBe(true);
     expect(result.dining.every((d) => !d.affiliatePartner)).toBe(true);
     expect(result.notes[0]).toContain("not configured");
+    const prose = [...result.activities, ...result.dining]
+      .map((item) => `${item.name} ${item.description}`)
+      .join(" ");
+    expect(prose).not.toMatch(/dining idea|neighborhood spot|hidden gem/i);
+    expect(prose).toContain("Shibuya");
+    expect(prose).toContain("ramen");
+    expect(result.dining.every((item) => item.vibeScore <= 32)).toBe(true);
+    expect(result.activities.every((item) => item.vibeScore <= 32)).toBe(true);
     expect(
       [...result.activities, ...result.dining].every(
         (item) => item.planningIdea,
       ),
+    ).toBe(true);
+  });
+
+  it("stays on deterministic prompts when live search is closed", async () => {
+    process.env.TAVILY_API_KEY = "test-key";
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const result = await enrichNonAffiliateCandidates(basePlan, {
+      liveSearch: false,
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(result.notes[0]).toContain("Live search closed");
+    expect(
+      result.activities.every((item) => item.id.startsWith("enriched_")),
     ).toBe(true);
   });
 

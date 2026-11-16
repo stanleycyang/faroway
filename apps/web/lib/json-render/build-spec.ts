@@ -26,6 +26,10 @@ import {
  *   - buildBudgetBlocks()     — called alongside itinerary
  */
 
+function httpsUrl(url?: string): string | undefined {
+  return url?.startsWith("https://") ? url : undefined;
+}
+
 export interface HotelInput {
   id?: string;
   name: string;
@@ -55,6 +59,7 @@ export interface ActivityInput {
   reviewCount?: number;
   category?: string;
   affiliateUrl?: string;
+  affiliatePartner?: string;
   images?: string[];
   location?: { neighborhood?: string; city?: string; name?: string };
 }
@@ -191,7 +196,7 @@ export function buildHotelBlocks(
         pricePerNight: topHotel.pricePerNight,
         currency: topHotel.currency,
         image: topHotel.images?.[0],
-        bookingUrl: topHotel.affiliateUrl,
+        bookingUrl: httpsUrl(topHotel.affiliateUrl),
         amenities: topHotel.amenities || [],
         description: topHotel.description,
         reviewCount: topHotel.reviewCount,
@@ -199,12 +204,12 @@ export function buildHotelBlocks(
       },
     });
 
-    if (topHotel.affiliateUrl) {
+    if (httpsUrl(topHotel.affiliateUrl) && topHotel.affiliatePartner) {
       components.push({
         type: "BookingButton",
         props: {
           label: `Book ${topHotel.name}`,
-          url: topHotel.affiliateUrl,
+          url: httpsUrl(topHotel.affiliateUrl),
           provider: topHotel.affiliatePartner || "Hotel provider",
           price: topHotel.pricePerNight,
           currency: topHotel.currency,
@@ -230,19 +235,19 @@ export function buildHotelBlocks(
           pricePerNight: hotel.pricePerNight,
           currency: hotel.currency,
           image: hotel.images?.[0],
-          bookingUrl: hotel.affiliateUrl,
+          bookingUrl: httpsUrl(hotel.affiliateUrl),
           amenities: hotel.amenities || [],
           description: hotel.description,
           reviewCount: hotel.reviewCount,
         },
       });
 
-      if (hotel.affiliateUrl) {
+      if (httpsUrl(hotel.affiliateUrl) && hotel.affiliatePartner) {
         components.push({
           type: "BookingButton",
           props: {
             label: `Book ${hotel.name}`,
-            url: hotel.affiliateUrl,
+            url: httpsUrl(hotel.affiliateUrl),
             provider: hotel.affiliatePartner || "Hotel provider",
             price: hotel.pricePerNight,
             currency: hotel.currency,
@@ -371,7 +376,10 @@ export function buildItineraryBlocks(
           rating: activity.rating,
           reviewCount: activity.reviewCount,
           image: activity.images?.[0],
-          bookingUrl: activity.affiliateUrl,
+          bookingUrl:
+            activity.affiliatePartner && httpsUrl(activity.affiliateUrl)
+              ? activity.affiliateUrl
+              : undefined,
           time,
           location:
             activity.location?.name ||

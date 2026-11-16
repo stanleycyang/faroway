@@ -1,3 +1,7 @@
+import {
+  isFittingBookableActivity,
+  rankActivityInventory,
+} from "../candidate-rank";
 import { completeMissingMeals } from "../complete-meals";
 import {
   compiledScheduleExperimentEnabled,
@@ -178,6 +182,8 @@ Consider:
 5. Vibe scores - prioritize higher-scoring options
 6. Practical logistics - museum hours, booking requirements
 7. Transport - candidates are outbound alternatives. Choose at most one using transportId on Day 1 only. Return legs are not available; offer prices may cover a round trip.
+8. Do not schedule a planning prompt or a generic filler name. Leave that slot empty instead of inventing a place.
+9. When two activities fit the same slot, pace, and neighborhood, prefer bookable: true. Never add a bookable product that ignores interests, pace, or geography, and never claim a booking is confirmed.
 
 Output should reference items by their IDs and organize them into a sensible flow.`;
 
@@ -246,7 +252,7 @@ export async function runAggregatorAgent(
     neighborhood: h.location.neighborhood || h.location.name,
   }));
 
-  const activitySummary = activities.slice(0, 20).map((a) => ({
+  const activitySummary = rankActivityInventory(activities, 20).map((a) => ({
     id: a.id,
     name: a.name,
     category: a.category,
@@ -257,21 +263,25 @@ export async function runAggregatorAgent(
     bestTime: a.bestTimeOfDay,
     vibeScore: a.vibeScore,
     bookingRequired: a.bookingRequired,
+    bookable: isFittingBookableActivity(a),
     availability: a.supplierCatalogOnly
       ? "catalog_only_dates_unverified"
       : "not_confirmed",
   }));
 
-  const diningSummary = dining.slice(0, 15).map((d) => ({
-    id: d.id,
-    name: d.name,
-    cuisine: d.cuisineTypes.join(", "),
-    neighborhood: d.location?.neighborhood || d.location?.name,
-    description: d.description,
-    priceLevel: d.priceStatus === "unknown" ? null : d.priceLevel,
-    mealTypes: d.mealTypes,
-    vibeScore: d.vibeScore,
-  }));
+  const diningSummary = dining
+    .filter((meal) => meal.planningIdea !== true)
+    .slice(0, 15)
+    .map((d) => ({
+      id: d.id,
+      name: d.name,
+      cuisine: d.cuisineTypes.join(", "),
+      neighborhood: d.location?.neighborhood || d.location?.name,
+      description: d.description,
+      priceLevel: d.priceStatus === "unknown" ? null : d.priceLevel,
+      mealTypes: d.mealTypes,
+      vibeScore: d.vibeScore,
+    }));
 
   const transportSummary = transport.slice(0, 5).map((t) => ({
     id: t.id,
@@ -472,6 +482,7 @@ export function mapAggregatorResult(
       const activity = activities.find((candidate) => candidate.id === id);
       if (
         !activity ||
+        activity.planningIdea ||
         usedActivityIds.has(activity.id) ||
         (activity.bestTimeOfDay !== "any" && activity.bestTimeOfDay !== time)
       )
@@ -500,26 +511,22 @@ export function mapAggregatorResult(
     );
     const eveningActivities = mapActivities(day.evening.activityIds, "evening");
 
-    const morningMeal =
-      day.morning.mealId === null
-        ? undefined
-        : day.morning.mealId
-          ? dining.find((d) => d.id === day.morning.mealId)
-          : dining.find((d) => d.mealTypes.includes("breakfast"));
-
-    const afternoonMeal =
-      day.afternoon.mealId === null
-        ? undefined
-        : day.afternoon.mealId
-          ? dining.find((d) => d.id === day.afternoon.mealId)
-          : dining.find((d) => d.mealTypes.includes("lunch"));
-
-    const eveningMeal =
-      day.evening.mealId === null
-        ? undefined
-        : day.evening.mealId
-          ? dining.find((d) => d.id === day.evening.mealId)
-          : dining.find((d) => d.mealTypes.includes("dinner"));
+    const resolveMeal = (
+      mealId: string | null | undefined,
+      mealType: "breakfast" | "lunch" | "dinner",
+    ) => {
+      if (mealId === null) return undefined;
+      const meal = mealId
+        ? dining.find((d) => d.id === mealId)
+        : dining.find(
+            (d) => d.planningIdea !== true && d.mealTypes.includes(mealType),
+          );
+      if (meal?.planningIdea) return undefined;
+      return meal;
+    };
+    const morningMeal = resolveMeal(day.morning.mealId, "breakfast");
+    const afternoonMeal = resolveMeal(day.afternoon.mealId, "lunch");
+    const eveningMeal = resolveMeal(day.evening.mealId, "dinner");
 
     // Current provider results contain alternative outbound offers, never a
     // separate return leg. A repeated/misdated Day 1 must not assign one again.
