@@ -17,6 +17,26 @@ test("offline generation quality clears thresholds and catches negative controls
   expect(report.planner_case.distant_bookable_rejected).toBe(true);
 });
 
+test("offline generation quality does not call Tavily when a key is set", async () => {
+  const previous = process.env.TAVILY_API_KEY;
+  process.env.TAVILY_API_KEY = "present";
+  const calls: string[] = [];
+  const original = globalThis.fetch;
+  globalThis.fetch = (async (input: RequestInfo | URL) => {
+    calls.push(String(input));
+    throw new Error("offline eval must not fetch");
+  }) as typeof fetch;
+  try {
+    const report = await runGenerationQualityEval();
+    expect(report.accepted).toBe(true);
+    expect(calls).toEqual([]);
+  } finally {
+    globalThis.fetch = original;
+    if (previous === undefined) delete process.env.TAVILY_API_KEY;
+    else process.env.TAVILY_API_KEY = previous;
+  }
+});
+
 test("live quality mode stays closed without a flag, budget, and recorded trace", () => {
   expect(liveQualityGate({}).allowed).toBe(false);
   expect(

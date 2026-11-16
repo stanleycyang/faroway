@@ -208,9 +208,11 @@ export function productLinkMatches(
       );
     }
     if (partner === "getyourguide") {
+      const activityPath = parsed.pathname.replace(/\/+$/, "");
       return (
-        parsed.hostname.endsWith("getyourguide.com") &&
-        parsed.pathname.includes(`activity-t${productId}`) &&
+        (parsed.hostname === "getyourguide.com" ||
+          parsed.hostname.endsWith(".getyourguide.com")) &&
+        activityPath === `/activity-t${productId}` &&
         parsed.searchParams.get("partner_id") !== null
       );
     }
@@ -387,6 +389,22 @@ function controlFailures(): Array<{ id: string; failed: boolean }> {
         productLinkMatches("getyourguide", gyg, "98765"),
     },
     {
+      id: "lookalike-getyourguide-host",
+      failed: !productLinkMatches(
+        "getyourguide",
+        "https://evilgetyourguide.com/activity-t98765/?partner_id=partner-1",
+        "98765",
+      ),
+    },
+    {
+      id: "longer-getyourguide-activity-id",
+      failed: !productLinkMatches(
+        "getyourguide",
+        "https://www.getyourguide.com/activity-t987650/?partner_id=partner-1",
+        "98765",
+      ),
+    },
+    {
       id: "planning-prompt-not-bookable",
       failed: buildItineraryBlocks([
         {
@@ -464,7 +482,9 @@ export async function runGenerationQualityEval(): Promise<{
   thresholds: { dimension_min: number };
   accepted: boolean;
 }> {
-  const enriched = await enrichNonAffiliateCandidates(plan);
+  const enriched = await enrichNonAffiliateCandidates(plan, {
+    liveSearch: false,
+  });
   const currentTexts = [...enriched.activities, ...enriched.dining].map(
     (item) => `${item.name}. ${item.description}`,
   );

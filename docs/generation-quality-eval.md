@@ -1,7 +1,9 @@
 # Itinerary quality and affiliate evals
 
 Offline only. The command does not call a model, Viator, GetYourGuide, LiteAPI,
-or any other paid API.
+Tavily, or any other paid API. It asks enrichment for the deterministic prompts
+even when `TAVILY_API_KEY` is already set. `--no-env-file` does not clear
+inherited keys, so the eval does not rely on that flag to stay offline.
 
 ```bash
 bun --no-env-file scripts/uat/traveler-holdout-eval.ts
@@ -35,7 +37,7 @@ Where a recorded supplier product is a fit, the day includes it. The activity ca
 
 ## Negative controls
 
-The suite fails if any of these is accepted: generic filler, a dietary or access claim, a reserved-table claim, an http affiliate URL, a Viator link for a different product, the same product link copied onto several cards, a legacy click row, an invented GetYourGuide partner, or a booking URL on a planning prompt that has no partner.
+The suite fails if any of these is accepted: generic filler, a dietary or access claim, a reserved-table claim, an http affiliate URL, a Viator link for a different product, the same product link copied onto several cards, a legacy click row, an invented GetYourGuide partner, a lookalike GetYourGuide host, a longer activity id sharing the expected id as a prefix, or a booking URL on a planning prompt that has no partner. A GetYourGuide deep link must use `getyourguide.com` or a subdomain, and the path must be exactly `/activity-t{id}`.
 
 ## Optional live mode
 
@@ -64,7 +66,7 @@ Measured by `generation-quality-eval.ts` on this change. Baseline is the previou
 | Safety claims        |                                           5 |                                                       5 |
 | Affiliate dimensions |                                  not scored |                                            5 on all six |
 | Planner case         | filler could outrank a nearby bookable stop | nearby bookable selected, far bookable left off the day |
-| Negative controls    |                            not in this gate |                                        10 / 10 detected |
+| Negative controls    |                            not in this gate |                                        12 / 12 detected |
 
 Traveler holdout on the same tree: 11 / 11 planner cases, 9 / 9 negative controls, recorded supplier decision kept.
 

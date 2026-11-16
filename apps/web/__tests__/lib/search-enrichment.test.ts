@@ -65,6 +65,19 @@ describe("enrichNonAffiliateCandidates", () => {
     ).toBe(true);
   });
 
+  it("stays on deterministic prompts when live search is closed", async () => {
+    process.env.TAVILY_API_KEY = "test-key";
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const result = await enrichNonAffiliateCandidates(basePlan, {
+      liveSearch: false,
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(result.notes[0]).toContain("Live search closed");
+    expect(
+      result.activities.every((item) => item.id.startsWith("enriched_")),
+    ).toBe(true);
+  });
+
   it("adds tavily-backed activities when configured", async () => {
     process.env.TAVILY_API_KEY = "test-key";
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(

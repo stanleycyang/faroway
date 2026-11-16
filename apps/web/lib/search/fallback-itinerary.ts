@@ -148,6 +148,7 @@ export function createFallbackItinerary(
       activities
         .filter(
           (a) =>
+            !a.planningIdea &&
             !usedActivityIds.has(a.id) &&
             Number.isInteger(a.duration) &&
             a.duration > 0 &&

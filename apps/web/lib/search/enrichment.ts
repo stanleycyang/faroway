@@ -146,11 +146,15 @@ async function fetchTavilyResults(
 
 export async function enrichNonAffiliateCandidates(
   plan: SearchPlan,
+  options: { liveSearch?: boolean } = {},
 ): Promise<EnrichmentOutput> {
   const notes: string[] = [];
   let tavilyActivities: ActivityResult[] = [];
+  const liveSearch = options.liveSearch !== false && hasTavilyConfig();
 
-  if (hasTavilyConfig()) {
+  if (options.liveSearch === false) {
+    notes.push("Live search closed; using deterministic local enrichment.");
+  } else if (liveSearch) {
     const tavily = await fetchTavilyResults(
       `best local experiences and hidden gems in ${plan.destination}`,
       3,

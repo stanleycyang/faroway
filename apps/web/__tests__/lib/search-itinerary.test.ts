@@ -684,6 +684,27 @@ describe("search itinerary fallback", () => {
       expect(days.every((day) => day.estimatedCost === undefined)).toBe(true);
     },
   );
+  it("spreads real stops across days when planning prompts inflate the pool", async () => {
+    const ideas = Array.from({ length: 8 }, (_, index) => ({
+      ...activity(`idea-${index}`),
+      planningIdea: true,
+    }));
+    const { days } = await runAggregatorAgent(
+      plan,
+      [],
+      [...ideas, activity("first-stop"), activity("second-stop")],
+      [],
+    );
+    expect(scheduledIds(days)).toEqual(["first-stop", "second-stop"]);
+    expect(scheduledIds([days[0]])).toEqual(["first-stop"]);
+    expect(scheduledIds([days[1]])).toEqual(["second-stop"]);
+    expect(
+      days.every(
+        (day) => !scheduledIds([day]).some((id) => id.startsWith("idea-")),
+      ),
+    ).toBe(true);
+  });
+
   it("schedules flexible activities once across all slots and days", async () => {
     const activities = Array.from({ length: 8 }, (_, i) =>
       activity(`walk-${i}`),
