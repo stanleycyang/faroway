@@ -209,6 +209,8 @@ export async function runAggregatorAgent(
     activityBudget?: number;
     /** Grade a real model assembly even when the compiled schedule experiment is on. */
     forceModel?: boolean;
+    /** Caps one live grading call. Production leaves this unset. */
+    maxOutputTokens?: number;
   } = {},
 ): Promise<{
   days: SuggestedDay[];
@@ -391,6 +393,9 @@ If a day cannot be filled from these results, leave the slots empty and say the 
           timeout: AGGREGATOR_TIMEOUT_MS,
           abortSignal,
           maxRetries: 0,
+          ...(options.maxOutputTokens
+            ? { maxOutputTokens: options.maxOutputTokens }
+            : {}),
         }),
       AGGREGATOR_TIMEOUT_MS,
       "aggregator AI",

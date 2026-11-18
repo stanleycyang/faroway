@@ -110,8 +110,11 @@ export async function runLiveGeneratedSample(
         forceModel: true,
         requireGeneratedPlan: true,
         activityBudget: catalog.budget,
+        maxOutputTokens: 8000,
       },
     );
+    const spent = costOf(usage);
+    const overBudget = spent > budgetUsd;
     const grade = gradeDays(
       catalog.plan,
       result.days,
@@ -120,21 +123,26 @@ export async function runLiveGeneratedSample(
       catalog.budget,
     );
     const accepted =
+      !overBudget &&
       Object.values(grade.scores).every((score) => score >= 4) &&
       Object.values(grade.affiliate).every((score) => score >= 4);
     return {
       live_model_quality_measured: true,
       brief_id: brief.id,
       model,
-      estimated_usd: costOf(usage),
+      estimated_usd: spent,
       budget_usd: budgetUsd,
       scores: grade.scores,
       affiliate: grade.affiliate,
-      failures: grade.failures,
+      failures: overBudget
+        ? [...grade.failures, "live:over_budget"]
+        : grade.failures,
       accepted,
-      reason: accepted
-        ? "The live aggregator output was graded with the release rubric."
-        : "The live aggregator output was graded and did not clear the release rubric.",
+      reason: overBudget
+        ? `The call cost about $${spent.toFixed(4)}, above FAROWAY_LIVE_EVAL_BUDGET_USD. The grade was not accepted.`
+        : accepted
+          ? "The live aggregator output was graded with the release rubric."
+          : "The live aggregator output was graded and did not clear the release rubric.",
     };
   } catch (error) {
     return {

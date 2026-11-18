@@ -85,7 +85,9 @@ export function calendarDates(start: string, end: string): string[] {
   const last = Date.parse(`${end}T00:00:00Z`);
   if (!Number.isFinite(cursor) || !Number.isFinite(last) || last < cursor)
     return [];
-  while (cursor <= last && dates.length < 22) {
+  const span = Math.floor((last - cursor) / 86400000) + 1;
+  if (span > 3660) return [];
+  while (cursor <= last) {
     dates.push(new Date(cursor).toISOString().slice(0, 10));
     cursor += 86400000;
   }
@@ -114,6 +116,39 @@ export function seasonMonths(
   return undefined;
 }
 
+const HAZARD_MODIFIERS = new Set([
+  "allergy",
+  "allergies",
+  "allergic",
+  "free",
+  "diet",
+  "dietary",
+  "safe",
+  "with",
+  "severe",
+  "mild",
+  "the",
+  "and",
+  "for",
+  "from",
+  "your",
+  "people",
+  "who",
+  "have",
+  "has",
+  "avoid",
+  "avoiding",
+  "without",
+  "restriction",
+  "restrictions",
+  "need",
+  "needs",
+  "please",
+  "very",
+  "food",
+  "foods",
+]);
+
 export function hazardTokens(plan: SearchPlan): string[] {
   const raw = [
     ...(plan.dietaryRestrictions ?? []),
@@ -122,9 +157,23 @@ export function hazardTokens(plan: SearchPlan): string[] {
   ];
   const tokens = new Set<string>();
   for (const item of raw) {
-    const word = item.toLowerCase().match(/[a-z]{3,}/)?.[0];
-    if (word && !["allergy", "free", "diet", "safe", "with"].includes(word))
+    const text = item.toLowerCase();
+    if (/\btree\s+nuts?\b/.test(text)) tokens.add("nut");
+    for (const word of text.match(/[a-z]{3,}/g) ?? []) {
+      if (HAZARD_MODIFIERS.has(word)) continue;
+      if (word === "tree" && /\btree\s+nuts?\b/.test(text)) continue;
       tokens.add(word);
+      if (word === "nuts") tokens.add("nut");
+      if (word === "eggs") tokens.add("egg");
+      if (
+        word.endsWith("s") &&
+        word.length > 4 &&
+        !word.endsWith("ss") &&
+        !word.endsWith("us") &&
+        !word.endsWith("is")
+      )
+        tokens.add(word.slice(0, -1));
+    }
   }
   return [...tokens];
 }
@@ -132,7 +181,10 @@ export function hazardTokens(plan: SearchPlan): string[] {
 export function scheduledStopPrice(item: {
   price?: number;
   priceLevel?: number;
+  currency?: string;
 }): number {
+  const currency = item.currency?.trim().toUpperCase();
+  if (currency && currency !== "USD") return 0;
   if (
     typeof item.price === "number" &&
     Number.isFinite(item.price) &&
@@ -478,6 +530,45 @@ function dayStops(day: SuggestedDay): Kept[] {
   return stops;
 }
 
+function localEnough(stops: Kept[]): boolean {
+  for (let index = 1; index < stops.length; index += 1) {
+    const previous = stops[index - 1];
+    const current = stops[index];
+    if (!previous || !current) continue;
+    const distance = suppliedDistanceKm(
+      point(previous.item),
+      point(current.item),
+    );
+    if (distance != null && distance > SAME_DAY_HOP_KM) return false;
+  }
+  return true;
+}
+
+function scrubTravelerCopy(day: SuggestedDay): SuggestedDay {
+  const clean = (text: string) =>
+    text
+      .split(/(?<=[.!?])\s+/)
+      .map((sentence) => sentence.trim())
+      .filter(
+        (sentence) =>
+          sentence && !(claimsIn(sentence) && !HEDGE.test(sentence)),
+      )
+      .join(" ");
+  const title = clean(day.title);
+  const summary = clean(day.summary);
+  const tips = day.tips.map(clean).filter((tip) => tip.length > 0);
+  const sameTips =
+    tips.length === day.tips.length &&
+    tips.every((tip, index) => tip === day.tips[index]);
+  if (title === day.title && summary === day.summary && sameTips) return day;
+  return {
+    ...day,
+    title: title || `Day ${day.dayNumber}`,
+    summary,
+    tips,
+  };
+}
+
 function writeStops(day: SuggestedDay, stops: Kept[]): SuggestedDay {
   const morning = {
     activities: [] as ActivityResult[],
@@ -783,36 +874,41 @@ export function enforceReleaseItinerary(
   let diversityGuard = 0;
   while (diversityGuard < 12) {
     diversityGuard += 1;
-    const seen = new Map<string, number>();
     let changed = false;
-    scheduled.forEach((entry, index) => {
-      const key = signature(entry.stops);
-      if (!key) return;
-      const prior = seen.get(key);
-      if (prior === undefined) {
-        seen.set(key, index);
-        return;
-      }
-      const duplicateAt = entry.stops.findIndex((stop, stopIndex) => {
-        const names = new Set(
-          scheduled[prior].stops.map((other) => norm(other.item.name)),
-        );
-        if (!names.has(norm(stop.item.name))) return false;
+    const seenNames = new Set<string>();
+    for (const entry of scheduled) {
+      const next: Kept[] = [];
+      entry.stops.forEach((stop, stopIndex) => {
+        const name = norm(stop.item.name);
+        if (!seenNames.has(name)) {
+          seenNames.add(name);
+          next.push(stop);
+          return;
+        }
         const interests = preferences.filter((preference) =>
           covers(stop.item, preference),
         );
-        const coveredOnPrior = interests.every((preference) =>
-          preferenceCovered(scheduled[prior].stops, preference),
+        const coveredElsewhere = interests.every(
+          (preference) =>
+            next.some((kept) => covers(kept.item, preference)) ||
+            scheduled.some(
+              (other) =>
+                other !== entry && preferenceCovered(other.stops, preference),
+            ),
         );
-        return (
-          coveredOnPrior || !soleCover(entry.stops, stopIndex, preferences)
-        );
+        if (
+          interests.length === 0 ||
+          coveredElsewhere ||
+          !soleCover(entry.stops, stopIndex, preferences)
+        ) {
+          note(`drop:diversity:${stop.item.id}`);
+          changed = true;
+          return;
+        }
+        next.push(stop);
       });
-      if (duplicateAt < 0) return;
-      note(`drop:diversity:${entry.stops[duplicateAt].item.id}`);
-      entry.stops.splice(duplicateAt, 1);
-      changed = true;
-    });
+      entry.stops = next;
+    }
     if (!changed) break;
   }
 
@@ -938,9 +1034,22 @@ export function enforceReleaseItinerary(
       const priorNames = new Set(
         dayStops(distinct[prior]).map((stop) => norm(stop.item.name)),
       );
-      const dropAt = stops.findIndex(
-        (stop) => priorNames.has(norm(stop.item.name)) && stop.kind === "meal",
-      );
+      const dropAt = stops.findIndex((stop, stopIndex) => {
+        if (!priorNames.has(norm(stop.item.name))) return false;
+        const interests = preferences.filter((preference) =>
+          covers(stop.item, preference),
+        );
+        const coveredEarlier = interests.every((preference) =>
+          distinct
+            .slice(0, index)
+            .some((day) => preferenceCovered(dayStops(day), preference)),
+        );
+        return (
+          interests.length === 0 ||
+          coveredEarlier ||
+          !soleCover(stops, stopIndex, preferences)
+        );
+      });
       if (dropAt < 0) continue;
       note(`drop:diversity:${stops[dropAt].item.id}`);
       const next = writeStops(
@@ -999,6 +1108,7 @@ export function enforceReleaseItinerary(
       if (
         aligned.length > MAX_STOPS ||
         minutes > PACE_MINUTES ||
+        !localEnough(aligned) ||
         (budget !== undefined &&
           spend + scheduledStopPrice(extra.item) > budget)
       )
@@ -1026,5 +1136,5 @@ export function enforceReleaseItinerary(
     }
   }
 
-  return { days: distinct, repairs };
+  return { days: distinct.map(scrubTravelerCopy), repairs };
 }

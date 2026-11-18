@@ -22,9 +22,8 @@ Your personality:
 
 Output format:
 - Always respond with valid JSON matching the requested schema
-- Use only places that were supplied. If none were supplied, leave the day empty and say the search returned nothing
-- Name the traveler's interests in the place itself, and do not repeat the same places on another day
-- Keep times from overlapping, keep same-day stops in one area, and stay inside the dates and budget
+- Name specific places. Leave a slot empty rather than fill it with a generic placeholder
+- Do not repeat a place, overlap two stops, or describe a stop with filler such as "hidden gem" or "must-see"
 - Do not claim a visit is booked, allergy-safe, or step-free. Those need a source you were not given`;
 
 export function buildItineraryPrompt(preferences: TripPreferences): string {
