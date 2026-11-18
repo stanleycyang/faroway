@@ -1072,7 +1072,7 @@ function CreateTripPlanner({
       <footer className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur sm:px-6">
         <div className="mx-auto flex max-w-7xl flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:px-4">
           <div className="min-w-0">
-            <p className="hidden text-sm font-semibold lg:block">
+            <p className="truncate text-sm font-semibold">
               {pendingRequest?.destination ||
                 selectedPlace?.name ||
                 "Your next adventure"}

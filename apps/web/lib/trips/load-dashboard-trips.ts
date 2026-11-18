@@ -17,7 +17,9 @@ export async function loadDashboardTrips(
     for (;;) {
       let query = db
         .from("trips")
-        .select("*")
+        .select(
+          "id, destination, start_date, end_date, travelers, status, thumbnail_url, created_at",
+        )
         .eq("user_id", ownerId)
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })

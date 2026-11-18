@@ -16,7 +16,6 @@ import {
   StyleSheet,
   Dimensions,
   Animated,
-  Easing,
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
@@ -151,67 +150,6 @@ function PulsingDot() {
   }, [pulseAnim, reduceMotion]);
 
   return <Animated.View style={[styles.streamingDot, { opacity: pulseAnim }]} />;
-}
-
-// Skeleton loader for content
-function SkeletonLoader() {
-  const shimmerAnim = useRef(new Animated.Value(0)).current;
-  const reduceMotion = useReduceMotion();
-
-  useEffect(() => {
-    if (reduceMotion) return;
-    const animation = Animated.loop(
-      Animated.timing(shimmerAnim, {
-        toValue: 1,
-        duration: 1500,
-        easing: Easing.linear,
-        useNativeDriver: USE_NATIVE_DRIVER,
-      })
-    );
-    animation.start();
-    return () => animation.stop();
-  }, [shimmerAnim, reduceMotion]);
-
-  const translateX = shimmerAnim.interpolate({
-    inputRange: [0, 1],
-    outputRange: [-width, width],
-  });
-
-  const SkeletonBox = ({ w, h, style }: { w: number | string; h: number; style?: object }) => (
-    <View
-      style={[
-        {
-          width: w,
-          height: h,
-          backgroundColor: 'rgba(255,255,255,0.1)',
-          borderRadius: 8,
-          overflow: 'hidden',
-        },
-        style,
-      ]}
-    >
-      <Animated.View
-        style={{
-          ...StyleSheet.absoluteFillObject,
-          backgroundColor: 'rgba(255,255,255,0.05)',
-          transform: [{ translateX }],
-        }}
-      />
-    </View>
-  );
-
-  return (
-    <View style={styles.skeletonContainer}>
-      <SkeletonBox w="100%" h={200} style={{ marginBottom: 16, borderRadius: 16 }} />
-      <SkeletonBox w="70%" h={24} style={{ marginBottom: 12 }} />
-      <SkeletonBox w="50%" h={16} style={{ marginBottom: 24 }} />
-      <View style={{ flexDirection: 'row', gap: 12 }}>
-        <SkeletonBox w={100} h={80} style={{ borderRadius: 12 }} />
-        <SkeletonBox w={100} h={80} style={{ borderRadius: 12 }} />
-        <SkeletonBox w={100} h={80} style={{ borderRadius: 12 }} />
-      </View>
-    </View>
-  );
 }
 
 // Hotel preview card shown when hotel data arrives
@@ -419,6 +357,7 @@ function GenerationSession() {
   const [restartUnstarted, setRestartUnstarted] = useState(false);
 
   const destinationInfo = popularDestinations.find((d) => d.name === draftInput?.destination);
+  const reduceMotion = useReduceMotion();
   const seededOutline = useMemo(() => buildSeededItineraryOutline(draftInput), [draftInput]);
   const isDraftComplete =
     getMissingTripRequirements(draftInput).length === 0 &&
@@ -558,14 +497,15 @@ function GenerationSession() {
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
-      {destinationInfo && (
+      {destinationInfo && !reduceMotion ? (
         <TravelImage
-          source={{ uri: destinationInfo.image }}
+          source={{
+            uri: destinationInfo.image.replace(/([?&])w=\d+/, '$1w=640'),
+          }}
           style={styles.bgImage}
-          blurRadius={8}
           accessible={false}
         />
-      )}
+      ) : null}
       <LinearGradient colors={['rgba(0,0,0,0.6)', 'rgba(0,0,0,0.95)']} style={styles.overlay} />
 
       <ScrollView
@@ -745,13 +685,6 @@ function GenerationSession() {
                 })}
               </View>
               <JsonRenderRenderer blocks={preview.blocks} />
-            </View>
-          )}
-
-          {/* Skeleton when no content yet */}
-          {!streaming.isComplete && !streaming.error && !showProgressiveBlocks && (
-            <View accessibilityLabel="Days still loading" style={{ marginTop: 16, gap: 12 }}>
-              <SkeletonLoader />
             </View>
           )}
         </SafeAreaView>

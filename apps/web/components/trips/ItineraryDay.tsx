@@ -23,7 +23,6 @@ import {
   Lightbulb,
   DollarSign,
   Hotel,
-  ExternalLink,
 } from "lucide-react";
 import {
   ActivityCard,
@@ -287,14 +286,10 @@ export function ItineraryDay({
                   </div>
                 </div>
                 {hotel.affiliateUrl && (
-                  <button
-                    disabled
-                    title="This provider checkout is not available on Faroway yet."
-                    className="flex-shrink-0 inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold hover:bg-blue-700 transition-all shadow-sm hover:shadow-md active:scale-[0.98]"
-                  >
-                    Hotel booking unavailable
-                    <ExternalLink className="w-3 h-3" />
-                  </button>
+                  <p className="max-w-xs flex-shrink-0 rounded-xl bg-slate-50 px-3 py-2 text-xs font-medium leading-5 text-slate-700">
+                    Hotel booking unavailable. Confirm the room and rate on the
+                    hotel’s site.
+                  </p>
                 )}
               </div>
             </div>
@@ -309,14 +304,11 @@ export function ItineraryDay({
                 availability with the provider.
               </p>
               {transport.affiliateUrl && (
-                <button
-                  disabled
-                  className="mt-3 min-h-11 w-full rounded-xl bg-white px-5 py-3 text-sm font-bold text-blue-700"
-                >
+                <p className="mt-3 rounded-xl bg-white px-4 py-3 text-sm font-medium text-blue-900">
                   {transport.type === "flight"
-                    ? "Flight booking unavailable"
-                    : "Transport booking unavailable"}
-                </button>
+                    ? "Flight booking unavailable. Confirm the fare with the airline or a flight seller."
+                    : "Transport booking unavailable. Confirm the ticket with the operator."}
+                </p>
               )}
             </div>
           )}

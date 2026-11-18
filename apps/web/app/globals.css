@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@import "leaflet/dist/leaflet.css";
 @config "../tailwind.config.ts";
 @plugin "@tailwindcss/typography";
 
@@ -98,6 +97,13 @@
 @media (prefers-reduced-motion: no-preference) {
   .scroll-reveal {
     animation: scroll-reveal 350ms ease-out;
+  }
+  @supports (animation-timeline: view()) {
+    .scroll-reveal-on-view {
+      animation: scroll-reveal 350ms ease-out both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 35%;
+    }
   }
 }
 

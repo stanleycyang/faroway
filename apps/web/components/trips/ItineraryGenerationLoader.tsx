@@ -108,6 +108,10 @@ export function ItineraryGenerationLoader({
   const percentage = Number.isFinite(progress)
     ? Math.round(Math.max(0, Math.min(100, progress)))
     : 0;
+  const stillWorking =
+    phase !== "complete" &&
+    phase !== "error" &&
+    /still generating in background|reconnect for updates/i.test(message);
   const chapters = draftChapters(days, specBlocks);
   const discoveryCount =
     Math.max(0, activitiesCount) + Math.max(0, diningCount);
@@ -141,6 +145,7 @@ export function ItineraryGenerationLoader({
             src={heroImageUrl}
             className="object-cover"
             journeyFallback
+            priority
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/20 to-slate-950/95" />
           <div className="relative flex min-h-[380px] flex-col justify-between p-6 sm:min-h-[440px] sm:p-10 lg:h-full lg:p-12 xl:p-16">
@@ -205,25 +210,27 @@ export function ItineraryGenerationLoader({
                     : "Your concierge is at work"}
               </p>
               <span className="text-xs font-medium tabular-nums text-slate-600">
-                {percentage}%
+                {stillWorking ? "Still working" : `${percentage}%`}
               </span>
             </div>
             <div
               role="progressbar"
               aria-label="Itinerary generation progress"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={percentage}
+              aria-valuemin={stillWorking ? undefined : 0}
+              aria-valuemax={stillWorking ? undefined : 100}
+              aria-valuenow={stillWorking ? undefined : percentage}
               aria-valuetext={
-                phase === "error"
-                  ? `Last received progress: ${percentage}%`
-                  : undefined
+                stillWorking
+                  ? "Still working. This page will keep checking."
+                  : phase === "error"
+                    ? `Last received progress: ${percentage}%`
+                    : `${percentage} percent`
               }
               className="mt-4 h-0.5 overflow-hidden rounded-full bg-slate-200"
             >
               <div
-                className="h-full bg-primary-700 motion-safe:transition-[width] duration-700"
-                style={{ width: `${percentage}%` }}
+                className={`h-full bg-primary-700 motion-safe:transition-[width] duration-700 ${stillWorking ? "w-2/5 motion-safe:animate-pulse" : ""}`}
+                style={stillWorking ? undefined : { width: `${percentage}%` }}
               />
             </div>
             <h2 className="mt-8 font-editorial text-balance text-3xl leading-tight tracking-tight sm:text-4xl">
@@ -577,8 +584,8 @@ function Chapter({ chapter }: { chapter: DraftChapter }) {
                 )}
                 <p className="mt-3 text-sm leading-6 text-slate-600">
                   {stop.supplierLink
-                    ? "A supplier link arrived with this stop. Review it in the saved plan before you book."
-                    : "No supplier link has arrived for this stop."}
+                    ? "Booking options will be in your saved plan. Check them before you book."
+                    : "No booking link yet for this stop."}
                 </p>
                 {stop.pickedForYou && (
                   <details className="mt-3 rounded-xl bg-teal-50/60 px-3 py-2">

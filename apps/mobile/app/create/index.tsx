@@ -10,6 +10,7 @@ import {
   Image,
   Platform,
   Alert,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -43,7 +44,7 @@ function getStaticMapUrl(destination: string, country: string): string | null {
   const center = encodeURIComponent(`${destination}${country ? `, ${country}` : ''}`);
   return (
     `https://maps.googleapis.com/maps/api/staticmap?center=${center}` +
-    `&zoom=11&size=600x300&scale=2&maptype=roadmap` +
+    `&zoom=11&size=400x200&scale=1&maptype=roadmap` +
     `&markers=color:0x6366f1|${center}` +
     `&style=feature:all|element:geometry|color:0x242f3e` +
     `&style=feature:all|element:labels.text.stroke|color:0x242f3e` +
@@ -130,6 +131,7 @@ export default function CreateTripScreen() {
   const { tripGenerationCount, hasDismissedCreateBanner, dismissCreateBanner } = usePromptStore();
 
   const [showSearch, setShowSearch] = useState(!params.destination && !draftInput?.destination);
+  const [showAllDestinations, setShowAllDestinations] = useState(false);
   const [mapLoadFailed, setMapLoadFailed] = useState(false);
   const [showAuthGate, setShowAuthGate] = useState(false);
   const [authGateAction, setAuthGateAction] = useState<'banner' | 'generate'>('generate');
@@ -230,457 +232,483 @@ export default function CreateTripScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
-      <View style={{ flex: 1 }}>
-        {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.closeButton}
-            onPress={() => router.back()}
-            accessibilityRole="button"
-            accessibilityLabel="Close trip planner"
-          >
-            <Ionicons name="close" size={24} color={colors.neutral[700]} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle} accessibilityRole="header">
-            Plan your trip
-          </Text>
-          <View style={{ width: 44 }} />
-        </View>
-
-        <ScrollView
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          // Native inset adjustment also scrolls the focused multiline input
-          // above the iOS keyboard; resizing the outer view alone does not.
-          automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
-          keyboardDismissMode="on-drag"
-        >
-          {/* Soft sign-in banner */}
-          {showSignInBanner && (
-            <View style={styles.signInBanner}>
-              <TouchableOpacity
-                style={styles.signInBannerContent}
-                onPress={() => {
-                  setAuthGateAction('banner');
-                  setShowAuthGate(true);
-                }}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel="Sign in to sync your trips across devices"
-              >
-                <Ionicons name="cloud-upload-outline" size={18} color={colors.primary[600]} />
-                <Text style={styles.signInBannerText}>
-                  Sign in to sync your trips across devices
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.signInBannerClose}
-                onPress={() => dismissCreateBanner()}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                accessibilityRole="button"
-                accessibilityLabel="Dismiss sign-in reminder"
-              >
-                <Ionicons name="close" size={18} color={colors.primary[400]} />
-              </TouchableOpacity>
-            </View>
-          )}
-
-          {guestBrief.message && (
-            <Text
-              accessibilityLiveRegion="polite"
-              style={{
-                color: '#475569',
-                fontSize: 14,
-                lineHeight: 20,
-                marginHorizontal: 24,
-                marginBottom: 16,
-                padding: 12,
-                borderRadius: 12,
-                backgroundColor: '#f8fafc',
-              }}
-            >
-              {guestBrief.message}
-            </Text>
-          )}
-
-          {guestBrief.discardUnreadable && (
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'android' ? 'padding' : undefined}
+      >
+        <View style={{ flex: 1 }}>
+          {/* Header */}
+          <View style={styles.header}>
             <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => router.back()}
               accessibilityRole="button"
-              accessibilityLabel="Discard unreadable saved choices"
-              style={{
-                minHeight: 44,
-                marginHorizontal: 24,
-                marginBottom: 16,
-                justifyContent: 'center',
-              }}
-              onPress={() =>
-                Alert.alert(
-                  'Discard unreadable saved choices?',
-                  'This removes only the unfinished guest brief on this device. Your current edits and saved trips remain available.',
-                  [
-                    { text: 'Keep saved choices', style: 'cancel' },
-                    {
-                      text: 'Discard unreadable choices',
-                      style: 'destructive',
-                      onPress: () => {
-                        void guestBrief.discardUnreadable?.();
-                      },
-                    },
-                  ]
-                )
-              }
+              accessibilityLabel="Close trip planner"
             >
-              <Text style={{ color: '#475569', textDecorationLine: 'underline' }}>
-                Discard unreadable saved choices
-              </Text>
+              <Ionicons name="close" size={24} color={colors.neutral[700]} />
             </TouchableOpacity>
-          )}
-
-          <View style={styles.section}>
-            <Text style={{ fontSize: 16, lineHeight: 24, color: '#53676C' }}>
-              Choose a place and your dates. We’ll bring the days together.
+            <Text style={styles.headerTitle} accessibilityRole="header">
+              Plan your trip
             </Text>
+            <View style={{ width: 44 }} />
           </View>
 
-          {/* Destination Selection */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Where do you want to go?</Text>
-
-            {!showSearch && draftInput?.destination ? (
-              <TouchableOpacity
-                style={styles.selectedDestination}
-                onPress={() => setShowSearch(true)}
-                activeOpacity={0.9}
-                accessibilityRole="button"
-                accessibilityLabel={`Change destination from ${draftInput.destination}${draftInput.country ? `, ${draftInput.country}` : ''}`}
-              >
-                <LinearGradient
-                  colors={['#284D57', '#142D3B']}
-                  style={StyleSheet.absoluteFill}
-                  accessible={false}
-                />
-                {mapUrl && !mapLoadFailed ? (
-                  <Image
-                    source={{ uri: mapUrl }}
-                    style={styles.selectedDestinationImage}
-                    resizeMode="cover"
-                    onError={() => setMapLoadFailed(true)}
-                    accessible={false}
-                  />
-                ) : selectedDestination ? (
-                  <Image
-                    source={{ uri: selectedDestination.image }}
-                    style={styles.selectedDestinationImage}
-                    accessible={false}
-                  />
-                ) : (
-                  <LinearGradient
-                    colors={[colors.primary[800], colors.primary[600]]}
-                    style={styles.selectedDestinationImage}
-                  />
-                )}
-                <LinearGradient
-                  colors={['transparent', 'rgba(0,0,0,0.7)']}
-                  style={styles.selectedDestinationGradient}
-                />
-                {(!mapUrl || mapLoadFailed) && !selectedDestination && (
-                  <Ionicons
-                    name="location"
-                    size={40}
-                    color="rgba(255,255,255,0.25)"
-                    style={styles.selectedDestinationIcon}
-                  />
-                )}
-                <View style={styles.selectedDestinationContent}>
-                  <Text style={styles.selectedDestinationCountry}>{draftInput.country}</Text>
-                  <Text style={styles.selectedDestinationName}>{draftInput.destination}</Text>
-                </View>
-                <View style={styles.changeButton}>
-                  <Text style={styles.changeButtonText}>Change</Text>
-                </View>
-              </TouchableOpacity>
-            ) : (
-              <>
-                <PlacesAutocomplete onSelect={handleSelectDestination} />
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.destinationList}
-                  contentContainerStyle={styles.destinationListContent}
+          <ScrollView
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            // Native inset adjustment also scrolls the focused multiline input
+            // above the iOS keyboard; resizing the outer view alone does not.
+            automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
+            keyboardDismissMode="on-drag"
+          >
+            {/* Soft sign-in banner */}
+            {showSignInBanner && (
+              <View style={styles.signInBanner}>
+                <TouchableOpacity
+                  style={styles.signInBannerContent}
+                  onPress={() => {
+                    setAuthGateAction('banner');
+                    setShowAuthGate(true);
+                  }}
+                  activeOpacity={0.7}
+                  accessibilityRole="button"
+                  accessibilityLabel="Sign in to sync your trips across devices"
                 >
-                  {popularDestinations.map((dest) => (
-                    <TouchableOpacity
-                      key={dest.id}
-                      style={styles.destinationOption}
-                      onPress={() => handleSelectDestination(dest.name, dest.country)}
-                      accessibilityRole="button"
-                      accessibilityLabel={`Choose ${dest.name}, ${dest.country}`}
-                    >
-                      <LinearGradient
-                        colors={['#284D57', '#142D3B']}
-                        style={StyleSheet.absoluteFill}
-                        accessible={false}
-                      />
-                      <Image
-                        source={{ uri: dest.image }}
-                        style={styles.destinationOptionImage}
-                        accessible={false}
-                      />
-                      <LinearGradient
-                        colors={['transparent', 'rgba(0,0,0,0.6)']}
-                        style={styles.destinationOptionGradient}
-                      />
-                      <View style={styles.destinationOptionContent}>
-                        <Text style={styles.destinationOptionName}>{dest.name}</Text>
-                        <Text style={styles.destinationOptionCountry}>{dest.country}</Text>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </>
+                  <Ionicons name="cloud-upload-outline" size={18} color={colors.primary[600]} />
+                  <Text style={styles.signInBannerText}>
+                    Sign in to sync your trips across devices
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.signInBannerClose}
+                  onPress={() => dismissCreateBanner()}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  accessibilityRole="button"
+                  accessibilityLabel="Dismiss sign-in reminder"
+                >
+                  <Ionicons name="close" size={18} color={colors.primary[400]} />
+                </TouchableOpacity>
+              </View>
             )}
-          </View>
 
-          {/* Date Selection */}
-          <View style={styles.section}>
-            <DateRangePicker
-              startDate={draftInput?.startDate || ''}
-              endDate={draftInput?.endDate || ''}
-              onStartDateChange={(date) => setDraftInput({ startDate: date })}
-              onEndDateChange={(date) => setDraftInput({ endDate: date })}
-            />
-          </View>
+            {guestBrief.message && (
+              <Text
+                accessibilityLiveRegion="polite"
+                style={{
+                  color: '#475569',
+                  fontSize: 14,
+                  lineHeight: 20,
+                  marginHorizontal: 24,
+                  marginBottom: 16,
+                  padding: 12,
+                  borderRadius: 12,
+                  backgroundColor: '#f8fafc',
+                }}
+              >
+                {guestBrief.message}
+              </Text>
+            )}
 
-          {/* Travelers */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Who's traveling?</Text>
-
-            <View style={styles.travelerCounter}>
-              <Text style={styles.travelerCounterLabel}>Number of travelers</Text>
-              <View style={styles.counterControls}>
-                <TouchableOpacity
-                  style={styles.counterButton}
-                  onPress={() => handleTravelersChange(-1)}
-                  disabled={(draftInput?.travelers || 2) <= 1}
-                  accessibilityRole="button"
-                  accessibilityLabel="Remove one traveler"
-                  accessibilityState={{ disabled: (draftInput?.travelers || 2) <= 1 }}
-                >
-                  <Ionicons
-                    name="remove"
-                    size={20}
-                    color={
-                      (draftInput?.travelers || 2) <= 1 ? colors.neutral[300] : colors.neutral[700]
-                    }
-                  />
-                </TouchableOpacity>
-                <Text
-                  style={styles.counterValue}
-                  accessibilityLabel={`${draftInput?.travelers || 2} ${(draftInput?.travelers || 2) === 1 ? 'traveler' : 'travelers'}`}
-                >
-                  {draftInput?.travelers || 2}
+            {guestBrief.discardUnreadable && (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Discard unreadable saved choices"
+                style={{
+                  minHeight: 44,
+                  marginHorizontal: 24,
+                  marginBottom: 16,
+                  justifyContent: 'center',
+                }}
+                onPress={() =>
+                  Alert.alert(
+                    'Discard unreadable saved choices?',
+                    'This removes only the unfinished guest brief on this device. Your current edits and saved trips remain available.',
+                    [
+                      { text: 'Keep saved choices', style: 'cancel' },
+                      {
+                        text: 'Discard unreadable choices',
+                        style: 'destructive',
+                        onPress: () => {
+                          void guestBrief.discardUnreadable?.();
+                        },
+                      },
+                    ]
+                  )
+                }
+              >
+                <Text style={{ color: '#475569', textDecorationLine: 'underline' }}>
+                  Discard unreadable saved choices
                 </Text>
+              </TouchableOpacity>
+            )}
+
+            <View style={styles.section}>
+              <Text style={{ fontSize: 16, lineHeight: 24, color: '#53676C' }}>
+                Choose a place and your dates. We’ll bring the days together.
+              </Text>
+            </View>
+
+            {/* Destination Selection */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Where do you want to go?</Text>
+
+              {!showSearch && draftInput?.destination ? (
                 <TouchableOpacity
-                  style={styles.counterButton}
-                  onPress={() => handleTravelersChange(1)}
-                  disabled={(draftInput?.travelers || 2) >= 10}
+                  style={styles.selectedDestination}
+                  onPress={() => setShowSearch(true)}
+                  activeOpacity={0.9}
                   accessibilityRole="button"
-                  accessibilityLabel="Add one traveler"
-                  accessibilityState={{ disabled: (draftInput?.travelers || 2) >= 10 }}
+                  accessibilityLabel={`Change destination from ${draftInput.destination}${draftInput.country ? `, ${draftInput.country}` : ''}`}
                 >
-                  <Ionicons
-                    name="add"
-                    size={20}
-                    color={
-                      (draftInput?.travelers || 2) >= 10 ? colors.neutral[300] : colors.neutral[700]
-                    }
+                  <LinearGradient
+                    colors={['#284D57', '#142D3B']}
+                    style={StyleSheet.absoluteFill}
+                    accessible={false}
                   />
+                  {mapUrl && !mapLoadFailed ? (
+                    <Image
+                      source={{ uri: mapUrl }}
+                      style={styles.selectedDestinationImage}
+                      resizeMode="cover"
+                      onError={() => setMapLoadFailed(true)}
+                      accessible={false}
+                    />
+                  ) : selectedDestination ? (
+                    <Image
+                      source={{ uri: selectedDestination.image }}
+                      style={styles.selectedDestinationImage}
+                      accessible={false}
+                    />
+                  ) : (
+                    <LinearGradient
+                      colors={[colors.primary[800], colors.primary[600]]}
+                      style={styles.selectedDestinationImage}
+                    />
+                  )}
+                  <LinearGradient
+                    colors={['transparent', 'rgba(0,0,0,0.7)']}
+                    style={styles.selectedDestinationGradient}
+                  />
+                  {(!mapUrl || mapLoadFailed) && !selectedDestination && (
+                    <Ionicons
+                      name="location"
+                      size={40}
+                      color="rgba(255,255,255,0.25)"
+                      style={styles.selectedDestinationIcon}
+                    />
+                  )}
+                  <View style={styles.selectedDestinationContent}>
+                    <Text style={styles.selectedDestinationCountry}>{draftInput.country}</Text>
+                    <Text style={styles.selectedDestinationName}>{draftInput.destination}</Text>
+                  </View>
+                  <View style={styles.changeButton}>
+                    <Text style={styles.changeButtonText}>Change</Text>
+                  </View>
                 </TouchableOpacity>
+              ) : (
+                <>
+                  <PlacesAutocomplete onSelect={handleSelectDestination} />
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    style={styles.destinationList}
+                    contentContainerStyle={styles.destinationListContent}
+                  >
+                    {(showAllDestinations
+                      ? popularDestinations
+                      : popularDestinations.slice(0, 6)
+                    ).map((dest) => (
+                      <TouchableOpacity
+                        key={dest.id}
+                        style={styles.destinationOption}
+                        onPress={() => handleSelectDestination(dest.name, dest.country)}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Choose ${dest.name}, ${dest.country}`}
+                      >
+                        <LinearGradient
+                          colors={['#284D57', '#142D3B']}
+                          style={StyleSheet.absoluteFill}
+                          accessible={false}
+                        />
+                        <Image
+                          source={{ uri: dest.image }}
+                          style={styles.destinationOptionImage}
+                          accessible={false}
+                        />
+                        <LinearGradient
+                          colors={['transparent', 'rgba(0,0,0,0.6)']}
+                          style={styles.destinationOptionGradient}
+                        />
+                        <View style={styles.destinationOptionContent}>
+                          <Text style={styles.destinationOptionName}>{dest.name}</Text>
+                          <Text style={styles.destinationOptionCountry}>{dest.country}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                  {!showAllDestinations && popularDestinations.length > 6 ? (
+                    <TouchableOpacity
+                      onPress={() => setShowAllDestinations(true)}
+                      accessibilityRole="button"
+                      accessibilityLabel="See all places"
+                      style={{ minHeight: 44, justifyContent: 'center', marginTop: 8 }}
+                    >
+                      <Text style={{ color: colors.primary[700], fontWeight: '600' }}>
+                        See all places
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </>
+              )}
+            </View>
+
+            {/* Date Selection */}
+            <View style={styles.section}>
+              <DateRangePicker
+                startDate={draftInput?.startDate || ''}
+                endDate={draftInput?.endDate || ''}
+                onStartDateChange={(date) => setDraftInput({ startDate: date })}
+                onEndDateChange={(date) => setDraftInput({ endDate: date })}
+              />
+            </View>
+
+            {/* Travelers */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Who's traveling?</Text>
+
+              <View style={styles.travelerCounter}>
+                <Text style={styles.travelerCounterLabel}>Number of travelers</Text>
+                <View style={styles.counterControls}>
+                  <TouchableOpacity
+                    style={styles.counterButton}
+                    onPress={() => handleTravelersChange(-1)}
+                    disabled={(draftInput?.travelers || 2) <= 1}
+                    accessibilityRole="button"
+                    accessibilityLabel="Remove one traveler"
+                    accessibilityState={{ disabled: (draftInput?.travelers || 2) <= 1 }}
+                  >
+                    <Ionicons
+                      name="remove"
+                      size={20}
+                      color={
+                        (draftInput?.travelers || 2) <= 1
+                          ? colors.neutral[300]
+                          : colors.neutral[700]
+                      }
+                    />
+                  </TouchableOpacity>
+                  <Text
+                    style={styles.counterValue}
+                    accessibilityLabel={`${draftInput?.travelers || 2} ${(draftInput?.travelers || 2) === 1 ? 'traveler' : 'travelers'}`}
+                  >
+                    {draftInput?.travelers || 2}
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.counterButton}
+                    onPress={() => handleTravelersChange(1)}
+                    disabled={(draftInput?.travelers || 2) >= 10}
+                    accessibilityRole="button"
+                    accessibilityLabel="Add one traveler"
+                    accessibilityState={{ disabled: (draftInput?.travelers || 2) >= 10 }}
+                  >
+                    <Ionicons
+                      name="add"
+                      size={20}
+                      color={
+                        (draftInput?.travelers || 2) >= 10
+                          ? colors.neutral[300]
+                          : colors.neutral[700]
+                      }
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={styles.travelerTypes}>
+                {travelerTypes.map((type) => (
+                  <TouchableOpacity
+                    key={type.id}
+                    style={[
+                      styles.travelerTypeButton,
+                      draftInput?.travelerType === type.id && styles.travelerTypeButtonSelected,
+                    ]}
+                    onPress={() => handleTravelerTypeSelect(type.id)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${type.label} travelers`}
+                    accessibilityState={{ selected: draftInput?.travelerType === type.id }}
+                  >
+                    <Ionicons
+                      name={type.icon as React.ComponentProps<typeof Ionicons>['name']}
+                      size={20}
+                      color={
+                        draftInput?.travelerType === type.id
+                          ? colors.primary[600]
+                          : colors.neutral[500]
+                      }
+                    />
+                    <Text
+                      style={[
+                        styles.travelerTypeLabel,
+                        draftInput?.travelerType === type.id && styles.travelerTypeLabelSelected,
+                      ]}
+                    >
+                      {type.label}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             </View>
 
-            <View style={styles.travelerTypes}>
-              {travelerTypes.map((type) => (
-                <TouchableOpacity
-                  key={type.id}
-                  style={[
-                    styles.travelerTypeButton,
-                    draftInput?.travelerType === type.id && styles.travelerTypeButtonSelected,
-                  ]}
-                  onPress={() => handleTravelerTypeSelect(type.id)}
-                  accessibilityRole="button"
-                  accessibilityLabel={`${type.label} travelers`}
-                  accessibilityState={{ selected: draftInput?.travelerType === type.id }}
-                >
-                  <Ionicons
-                    name={type.icon as React.ComponentProps<typeof Ionicons>['name']}
-                    size={20}
-                    color={
-                      draftInput?.travelerType === type.id
-                        ? colors.primary[600]
-                        : colors.neutral[500]
-                    }
-                  />
-                  <Text
-                    style={[
-                      styles.travelerTypeLabel,
-                      draftInput?.travelerType === type.id && styles.travelerTypeLabelSelected,
-                    ]}
-                  >
-                    {type.label}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+            {/* Vibes */}
+            <View style={styles.section}>
+              <VibeSelector
+                selected={draftInput?.vibes || []}
+                onSelect={handleVibesSelect}
+                maxSelections={5}
+              />
             </View>
-          </View>
 
-          {/* Vibes */}
-          <View style={styles.section}>
-            <VibeSelector
-              selected={draftInput?.vibes || []}
-              onSelect={handleVibesSelect}
-              maxSelections={5}
-            />
-          </View>
+            <View style={styles.section}>
+              <TravelerRequirementsEditor
+                collapsible
+                value={draftInput?.requirements}
+                onChange={(update) =>
+                  setDraftInput({
+                    requirements: update(useTripStore.getState().draftInput?.requirements),
+                  })
+                }
+              />
+              {!requirementsValid ? (
+                <Text accessibilityRole="alert" style={{ color: colors.primary[800] }}>
+                  Review dietary and access needs before generating.
+                </Text>
+              ) : null}
+            </View>
 
-          <View style={styles.section}>
-            <TravelerRequirementsEditor
-              collapsible
-              value={draftInput?.requirements}
-              onChange={(update) =>
-                setDraftInput({
-                  requirements: update(useTripStore.getState().draftInput?.requirements),
-                })
-              }
-            />
-            {!requirementsValid ? (
-              <Text accessibilityRole="alert" style={{ color: colors.primary[800] }}>
-                Review dietary and access needs before generating.
+            {/* Spacer for button */}
+            <View style={{ height: 16 }} />
+          </ScrollView>
+
+          {/* Continue Button */}
+          <View style={styles.bottomBar}>
+            {!canProceed ? (
+              <Text
+                accessibilityLiveRegion="polite"
+                style={{ textAlign: 'center', color: colors.surface[600], marginBottom: 8 }}
+              >
+                {formatMissingTripRequirements(missingRequirements)}
               </Text>
             ) : null}
+            <Button
+              title="Generate itinerary"
+              onPress={handleContinue}
+              disabled={!canProceed}
+              size="lg"
+              fullWidth
+              accessibilityHint={
+                canProceed ? undefined : formatMissingTripRequirements(missingRequirements)
+              }
+            />
           </View>
 
-          {/* Spacer for button */}
-          <View style={{ height: 16 }} />
-        </ScrollView>
+          {recoveryError && (
+            <Text
+              accessibilityRole="alert"
+              style={{ color: colors.surface[600], textAlign: 'center' }}
+            >
+              {recoveryError}
+            </Text>
+          )}
+          {savedCreation && (
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Restore unfinished trip"
+              style={{ minHeight: 48, alignItems: 'center', justifyContent: 'center' }}
+              onPress={() => {
+                if (!isRecoveryCurrent()) return;
+                setDraftInput(savedCreation);
+                setShowSearch(false);
+                setMapLoadFailed(false);
+              }}
+            >
+              <Text>Restore unfinished trip to {savedCreation.destination}</Text>
+            </TouchableOpacity>
+          )}
+          {user && (
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel="Start a new trip"
+              style={{ minHeight: 48, alignItems: 'center', justifyContent: 'center' }}
+              onPress={async () => {
+                if (!isRecoveryCurrent() || discardLock.current) return;
+                discardLock.current = true;
+                let reviewedReceipt: string | null;
+                try {
+                  reviewedReceipt = await readTripCreationReceipt(user.id);
+                  if (!isRecoveryCurrent()) return;
+                } catch {
+                  if (isRecoveryCurrent())
+                    setRecoveryError(
+                      'Your pending request couldn’t be checked. Check My Trips and try again.'
+                    );
+                  return;
+                } finally {
+                  discardLock.current = false;
+                }
+                Alert.alert(
+                  'Start a new trip?',
+                  'Check My Trips first if an earlier request was interrupted. This clears the pending retry; any saved trip stays in My Trips.',
+                  [
+                    { text: 'Keep pending trip', style: 'cancel' },
+                    {
+                      text: 'Start a new trip',
+                      onPress: () => {
+                        if (!isRecoveryCurrent() || discardLock.current) return;
+                        discardLock.current = true;
+                        void discardReviewedTripCreation(user.id, reviewedReceipt)
+                          .then(() => {
+                            if (!isRecoveryCurrent()) return;
+                            setSavedCreation(null);
+                            setRecoveryError(null);
+                            useTripStore.getState().clearDraft();
+                            setShowSearch(true);
+                            setMapLoadFailed(false);
+                          })
+                          .catch((reason: unknown) => {
+                            if (!isRecoveryCurrent()) return;
+                            Alert.alert(
+                              'Could not clear pending trip',
+                              reason instanceof Error
+                                ? reason.message
+                                : 'Your saved request is kept. Please try again.'
+                            );
+                          })
+                          .finally(() => {
+                            discardLock.current = false;
+                          });
+                      },
+                    },
+                  ]
+                );
+              }}
+            >
+              <Text style={{ color: colors.surface[600] }}>Start a new trip</Text>
+            </TouchableOpacity>
+          )}
 
-        {/* Continue Button */}
-        <View style={styles.bottomBar}>
-          <Button
-            title="Generate itinerary"
-            onPress={handleContinue}
-            disabled={!canProceed}
-            size="lg"
-            fullWidth
+          {/* Auth gate from banner */}
+          <AuthGate
+            visible={showAuthGate}
+            trigger={authGateAction === 'generate' && !isAuthenticated ? 'generate' : 'general'}
+            onAuthenticated={handleAuthenticated}
+            onClose={() => {
+              setShowAuthGate(false);
+              setAuthGateAction('generate');
+            }}
           />
         </View>
-
-        {!canProceed && (
-          <Text
-            accessibilityLiveRegion="polite"
-            style={{ textAlign: 'center', color: colors.surface[600], marginBottom: 12 }}
-          >
-            {formatMissingTripRequirements(missingRequirements)}
-          </Text>
-        )}
-
-        {recoveryError && (
-          <Text
-            accessibilityRole="alert"
-            style={{ color: colors.surface[600], textAlign: 'center' }}
-          >
-            {recoveryError}
-          </Text>
-        )}
-        {savedCreation && (
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="Restore unfinished trip"
-            style={{ minHeight: 48, alignItems: 'center', justifyContent: 'center' }}
-            onPress={() => {
-              if (!isRecoveryCurrent()) return;
-              setDraftInput(savedCreation);
-              setShowSearch(false);
-              setMapLoadFailed(false);
-            }}
-          >
-            <Text>Restore unfinished trip to {savedCreation.destination}</Text>
-          </TouchableOpacity>
-        )}
-        {user && (
-          <TouchableOpacity
-            accessibilityRole="button"
-            accessibilityLabel="Start a new trip"
-            style={{ minHeight: 48, alignItems: 'center', justifyContent: 'center' }}
-            onPress={async () => {
-              if (!isRecoveryCurrent() || discardLock.current) return;
-              discardLock.current = true;
-              let reviewedReceipt: string | null;
-              try {
-                reviewedReceipt = await readTripCreationReceipt(user.id);
-                if (!isRecoveryCurrent()) return;
-              } catch {
-                if (isRecoveryCurrent())
-                  setRecoveryError(
-                    'Your pending request couldn’t be checked. Check My Trips and try again.'
-                  );
-                return;
-              } finally {
-                discardLock.current = false;
-              }
-              Alert.alert(
-                'Start a new trip?',
-                'Check My Trips first if an earlier request was interrupted. This clears the pending retry; any saved trip stays in My Trips.',
-                [
-                  { text: 'Keep pending trip', style: 'cancel' },
-                  {
-                    text: 'Start a new trip',
-                    onPress: () => {
-                      if (!isRecoveryCurrent() || discardLock.current) return;
-                      discardLock.current = true;
-                      void discardReviewedTripCreation(user.id, reviewedReceipt)
-                        .then(() => {
-                          if (!isRecoveryCurrent()) return;
-                          setSavedCreation(null);
-                          setRecoveryError(null);
-                          useTripStore.getState().clearDraft();
-                          setShowSearch(true);
-                          setMapLoadFailed(false);
-                        })
-                        .catch((reason: unknown) => {
-                          if (!isRecoveryCurrent()) return;
-                          Alert.alert(
-                            'Could not clear pending trip',
-                            reason instanceof Error
-                              ? reason.message
-                              : 'Your saved request is kept. Please try again.'
-                          );
-                        })
-                        .finally(() => {
-                          discardLock.current = false;
-                        });
-                    },
-                  },
-                ]
-              );
-            }}
-          >
-            <Text style={{ color: colors.surface[600] }}>Start a new trip</Text>
-          </TouchableOpacity>
-        )}
-
-        {/* Auth gate from banner */}
-        <AuthGate
-          visible={showAuthGate}
-          trigger={authGateAction === 'generate' && !isAuthenticated ? 'generate' : 'general'}
-          onAuthenticated={handleAuthenticated}
-          onClose={() => {
-            setShowAuthGate(false);
-            setAuthGateAction('generate');
-          }}
-        />
-      </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -735,8 +763,11 @@ const styles = StyleSheet.create({
     color: colors.primary[600],
   },
   signInBannerClose: {
-    padding: 4,
-    marginLeft: 8,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
   },
   scrollContent: {
     paddingVertical: 24,

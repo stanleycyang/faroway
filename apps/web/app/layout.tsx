@@ -34,6 +34,9 @@ const playfair = localFont({
   ],
   variable: "--font-playfair",
   display: "swap",
+  // Editorial headings are not the LCP text. Skip preloading both variable
+  // files on every route so Plus Jakarta can paint first.
+  preload: false,
   adjustFontFallback: "Times New Roman",
   fallback: ["Georgia", "serif"],
 });

@@ -69,6 +69,8 @@ export function TripHeader({
         src={heroImageUrl}
         className="object-cover"
         journeyFallback
+        priority
+        sizes="100vw"
       />
       <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/20 to-black/80" />
       <div className="relative mx-auto max-w-4xl px-5 sm:px-6">

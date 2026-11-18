@@ -26,9 +26,9 @@ export function ShareConsentDialog({
         Make this trip public?
       </h2>
       <p className="my-4 text-sm text-gray-600">
-        Anyone with the link can view your destination, travel dates and
-        itinerary. The link stays active even if you cancel the share sheet. You
-        can turn off public access from this trip.
+        Anyone with the link can view your destination, travel dates, and
+        itinerary. Closing the share menu does not undo the link. You can turn
+        off public access from this trip.
       </p>
       <div className="flex flex-wrap justify-end gap-3">
         <button
