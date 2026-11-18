@@ -18,7 +18,6 @@ import {
   MapPin,
   Clock,
   DollarSign,
-  ExternalLink,
   Utensils,
   Star,
   Shield,
@@ -445,20 +444,22 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
         {/* Booking CTA — Primary conversion element */}
         {hasBooking && (
           <div className="mt-4 space-y-2">
-            <button
-              onClick={handleBookingClick}
-              disabled={!viatorCheckout || !checkout?.enabled}
-              className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-slate-900 text-white rounded-full text-sm font-semibold hover:bg-slate-800 transition-colors"
-            >
-              <Shield className="w-4 h-4" />
-              {viatorCheckout
-                ? checkout?.enabled
-                  ? "Review on Viator"
-                  : "Viator checkout unavailable"
-                : "Booking unavailable"}
-              <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-            </button>
-            <p className="text-center text-xs text-gray-500">
+            {viatorCheckout && checkout?.enabled ? (
+              <button
+                onClick={handleBookingClick}
+                className="w-full inline-flex min-h-11 items-center justify-center gap-2 px-5 py-3 bg-slate-900 text-white rounded-full text-sm font-semibold hover:bg-slate-800 transition-colors"
+              >
+                <Shield className="w-4 h-4" />
+                Review on Viator
+              </button>
+            ) : (
+              <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950">
+                {viatorCheckout
+                  ? "Viator checkout unavailable. Refresh this trip and try again. Your plan stays saved."
+                  : "Booking isn’t available in Faroway for this stop. Check the provider for price and availability."}
+              </p>
+            )}
+            <p className="text-center text-xs text-slate-600">
               Final price, availability and cancellation terms are confirmed by
               the provider.
             </p>
@@ -639,17 +640,11 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
 
             {/* Reserve CTA */}
             {hasReservation && (
-              <div className="mt-4 space-y-2">
-                <button
-                  disabled
-                  title="Restaurant reservations are not available on Faroway yet."
-                  className="w-full inline-flex items-center justify-center gap-2 px-5 py-3 bg-slate-900 text-white rounded-full text-sm font-semibold hover:bg-slate-800 transition-colors"
-                >
-                  <Utensils className="w-4 h-4" />
-                  Restaurant booking unavailable
-                  <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-                </button>
-                <p className="text-center text-xs text-gray-500">
+              <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3">
+                <p className="text-sm font-medium text-slate-800">
+                  Reservations aren’t made in Faroway
+                </p>
+                <p className="mt-1 text-xs leading-5 text-slate-600">
                   No reservation has been made. Confirm availability and
                   cancellation terms with the restaurant.
                 </p>

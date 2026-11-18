@@ -1352,7 +1352,8 @@ test("public-access controls stay disabled until their client handlers are ready
     const revoke = html.match(
       /<button[^>]*>Turn off public access<\/button>/,
     )?.[0];
-    expect(revoke).toContain('disabled=""');
+    if (initialShareUrl) expect(revoke).toContain('disabled=""');
+    else expect(revoke).toBeUndefined();
     if (!initialShareUrl)
       expect(
         html.match(/<button[^>]*>Create public share link<\/button>/)?.[0],

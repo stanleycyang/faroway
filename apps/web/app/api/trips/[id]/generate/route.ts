@@ -270,16 +270,20 @@ export async function POST(request: NextRequest, { params }: Params) {
       travelers: trip.travelers || 2,
       vibes,
     });
-    await adminClient.rpc("merge_intermediate_results", {
-      p_search_id: searchId,
-      p_key: "days",
-      p_value: previewDays,
-    });
-    await adminClient.rpc("merge_intermediate_results", {
-      p_search_id: searchId,
-      p_key: "previewReady",
-      p_value: true,
-    });
+    // Both writes target one row. Postgres re-reads the locked row, so the
+    // jsonb merges do not clobber each other, and the two round trips overlap.
+    await Promise.all([
+      adminClient.rpc("merge_intermediate_results", {
+        p_search_id: searchId,
+        p_key: "days",
+        p_value: previewDays,
+      }),
+      adminClient.rpc("merge_intermediate_results", {
+        p_search_id: searchId,
+        p_key: "previewReady",
+        p_value: true,
+      }),
+    ]);
 
     if (scenario) {
       await completeLocalGeneration(

@@ -9,7 +9,7 @@ import React, {
   useMemo,
   useState,
 } from "react";
-import { ExternalLink, ShieldCheck, X, Calendar, Users } from "lucide-react";
+import { ShieldCheck, X, Calendar, Users, ArrowRight } from "lucide-react";
 import { z } from "zod";
 import { useModalFocusTrap } from "@/hooks/useModalFocusTrap";
 import { isValidDateOnly } from "@/lib/api/date-range";
@@ -335,13 +335,17 @@ function CheckoutSession({ tripId, travelers, children }: TripCheckoutProps) {
                 {error} Your plan is still saved.
               </p>
             )}
+            <p className="mt-3 text-xs leading-5 text-slate-600">
+              You’ll leave Faroway in this tab to finish on Viator. Payment and
+              booking support stay with Viator.
+            </p>
             <button
               onClick={() => void continueToProvider()}
               disabled={busy || !enabled}
               className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
             >
               {busy ? "Preparing your booking step…" : "Continue to Viator"}
-              <ExternalLink className="h-4 w-4" />
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </button>
             <button
               onClick={close}
