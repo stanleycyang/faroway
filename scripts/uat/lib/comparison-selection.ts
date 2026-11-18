@@ -1,6 +1,14 @@
+import { createRequire } from "node:module";
 import { MODEL_COMPARE_CONFIGS } from "./model-compare";
-import { DEVELOPMENT_BRIEFS, HOLDOUT_BRIEFS } from "./eval-briefs";
-import { UAT_BRIEFS } from "./briefs";
+import { DEVELOPMENT_BRIEFS } from "./eval-briefs";
+import { UAT_BRIEFS, type UatBrief } from "./briefs";
+
+const require = createRequire(import.meta.url);
+
+function loadHoldoutBriefs(): UatBrief[] {
+  return (require("./holdout-briefs.ts") as { HOLDOUT_BRIEFS: UatBrief[] })
+    .HOLDOUT_BRIEFS;
+}
 
 /** Shared preflight/live selection; this function makes no provider calls. */
 export function comparisonSelection(argv: readonly string[]) {
@@ -86,7 +94,7 @@ export function comparisonSelection(argv: readonly string[]) {
     suite === "development"
       ? DEVELOPMENT_BRIEFS
       : suite === "holdout"
-        ? HOLDOUT_BRIEFS
+        ? loadHoldoutBriefs()
         : UAT_BRIEFS,
     "--briefs",
   );
