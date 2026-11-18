@@ -41,16 +41,16 @@ The suite fails if any of these is accepted: generic filler, a dietary or access
 
 ## Optional live mode
 
-Live mode does not run in CI and does not start a paid call.
+Live mode does not run in CI. It generates one development brief (`rome-single-day`) through the aggregator and grades that output with the release rubric. It does not read the holdout briefs.
 
 ```bash
 FAROWAY_LIVE_QUALITY_EVAL=1 \
 FAROWAY_LIVE_EVAL_BUDGET_USD=2 \
-FAROWAY_LIVE_EVAL_TRACE=path/to/recorded-trace.json \
+FAROWAY_STAGING_AI_GATEWAY_KEY=... \
 bun --no-env-file scripts/uat/generation-quality-eval.ts --live
 ```
 
-The budget must be greater than 0 and at most 5. Without the flag, the budget, and a local trace path, the command exits 2. Even when the gate is open, this harness only records that a trace may be graded. It does not call a model or a supplier.
+`AI_GATEWAY_API_KEY` is accepted in place of `FAROWAY_STAGING_AI_GATEWAY_KEY`. The budget must be greater than 0 and at most 5. Without the flag, a budget in that range, and one of those keys, the command exits 2 and does not call a model. `live_model_quality_measured` stays false until that call returns a grade.
 
 ## Before and after
 

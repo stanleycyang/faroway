@@ -44,7 +44,7 @@ test("offline generation quality does not call Tavily when a key is set", async 
   }
 });
 
-test("live quality mode stays closed without a flag, budget, and recorded trace", () => {
+test("live quality mode stays closed without a flag, budget, and model key", () => {
   expect(liveQualityGate({}).allowed).toBe(false);
   expect(
     liveQualityGate({
@@ -57,6 +57,26 @@ test("live quality mode stays closed without a flag, budget, and recorded trace"
       FAROWAY_LIVE_QUALITY_EVAL: "1",
       FAROWAY_LIVE_EVAL_BUDGET_USD: "2",
       FAROWAY_LIVE_EVAL_TRACE: "scripts/fixtures/planning-quality.json",
+    }).allowed,
+  ).toBe(false);
+  const closed = liveQualityGate({
+    FAROWAY_LIVE_QUALITY_EVAL: "1",
+    FAROWAY_LIVE_EVAL_BUDGET_USD: "2",
+  });
+  expect(closed.allowed).toBe(false);
+  expect(closed.reason).toContain("FAROWAY_STAGING_AI_GATEWAY_KEY");
+  expect(closed.reason).toContain("AI_GATEWAY_API_KEY");
+  const open = liveQualityGate({
+    FAROWAY_LIVE_QUALITY_EVAL: "1",
+    FAROWAY_LIVE_EVAL_BUDGET_USD: "2",
+    AI_GATEWAY_API_KEY: "test-key",
+  });
+  expect(open.allowed).toBe(true);
+  expect(
+    liveQualityGate({
+      FAROWAY_LIVE_QUALITY_EVAL: "1",
+      FAROWAY_LIVE_EVAL_BUDGET_USD: "2",
+      FAROWAY_STAGING_AI_GATEWAY_KEY: "staging-key",
     }).allowed,
   ).toBe(true);
 });

@@ -168,6 +168,7 @@ describe("executeTravelSearch", () => {
       [],
       [{ id: "d1", name: "Diner" }],
       [{ id: "t1", provider: "Duffel" }],
+      { activityBudget: 1000 },
     );
   });
 
@@ -201,6 +202,7 @@ describe("executeTravelSearch", () => {
         expect.objectContaining({ id: "ed1" }),
       ]),
       [],
+      { activityBudget: 1000 },
     );
   });
 });

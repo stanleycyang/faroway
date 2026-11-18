@@ -23,6 +23,7 @@ import { runActivitiesAgent } from "@/lib/search/agents/activities";
 import { runDiningAgent } from "@/lib/search/agents/dining";
 import { runTransportAgent } from "@/lib/search/agents/transport";
 import { runAggregatorAgent } from "@/lib/search/agents/aggregator";
+import { tripActivityBudget } from "@/lib/search/release-itinerary";
 import { runSearchEnrichment } from "@/lib/search/enrichment";
 import {
   mapSearchResultsToItinerary,
@@ -227,6 +228,7 @@ export async function planTripWorkflow(
       tripId,
       startDate,
       endDate,
+      budget,
       plan: searchPlan,
       hotels,
       activities: [...activities, ...enrichment.activities],
@@ -587,6 +589,7 @@ async function aggregateItineraryStep(params: {
   tripId?: string;
   startDate: string;
   endDate: string;
+  budget?: string;
   plan: SearchPlan;
   hotels: HotelResult[];
   activities: ActivityResult[];
@@ -604,7 +607,15 @@ async function aggregateItineraryStep(params: {
       params.activities,
       params.dining,
       params.transport,
-      { repairDining: true, requireGeneratedPlan: true },
+      {
+        repairDining: true,
+        requireGeneratedPlan: true,
+        activityBudget: tripActivityBudget(
+          params.budget,
+          params.startDate,
+          params.endDate,
+        ),
+      },
     );
 
   const start = Date.parse(`${params.startDate}T00:00:00Z`);

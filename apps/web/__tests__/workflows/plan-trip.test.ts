@@ -1103,7 +1103,11 @@ describe("planTripWorkflow", () => {
       [],
       [dining],
       [transport],
-      { repairDining: true, requireGeneratedPlan: true },
+      {
+        activityBudget: 1000,
+        repairDining: true,
+        requireGeneratedPlan: true,
+      },
     );
   });
 

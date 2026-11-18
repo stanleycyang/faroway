@@ -8,6 +8,7 @@ import {
   runStagingCompiledSchedule,
 } from "../staging-schedule-experiment";
 import { createFallbackItinerary } from "../fallback-itinerary";
+import { enforceReleaseItinerary } from "../release-itinerary";
 import {
   PLANNING_MODEL,
   PLANNING_PROVIDER_OPTIONS,
@@ -39,9 +40,10 @@ import {
   withAbortTimeout,
 } from "@/lib/search/runtime";
 
-const aiGateway = process.env.AI_GATEWAY_API_KEY
-  ? createGateway({ apiKey: process.env.AI_GATEWAY_API_KEY })
-  : defaultGateway;
+function planningGateway(model: string) {
+  const key = process.env.AI_GATEWAY_API_KEY?.trim();
+  return (key ? createGateway({ apiKey: key }) : defaultGateway)(model);
+}
 
 const MODEL = PLANNING_MODEL;
 
@@ -184,6 +186,10 @@ Consider:
 7. Transport - candidates are outbound alternatives. Choose at most one using transportId on Day 1 only. Return legs are not available; offer prices may cover a round trip.
 8. Do not schedule a planning prompt or a generic filler name. Leave that slot empty instead of inventing a place.
 9. When two activities fit the same slot, pace, and neighborhood, prefer bookable: true. Never add a bookable product that ignores interests, pace, or geography, and never claim a booking is confirmed.
+10. Use only IDs from the lists in the prompt. If a search returned nothing that fits, leave that day empty.
+11. Do not say a visit is booked, allergy-safe, step-free, or safe for children. You were not given a source that can support those claims.
+12. Keep each place on one day. The chosen place's name or category should reflect the traveler's interests, and it should not be something they asked to avoid.
+13. Keep same-day stops in one local area, inside the trip dates, and inside the stated budget. Drop a stop rather than overlap its time with another stop.
 
 Output should reference items by their IDs and organize them into a sensible flow.`;
 
@@ -199,6 +205,10 @@ export async function runAggregatorAgent(
     repairDining?: boolean;
     /** Interactive generation must not publish a backup draft as a finished plan. */
     requireGeneratedPlan?: boolean;
+    /** Trip ceiling for activity and meal prices. Unset when the traveler did not give one. */
+    activityBudget?: number;
+    /** Grade a real model assembly even when the compiled schedule experiment is on. */
+    forceModel?: boolean;
   } = {},
 ): Promise<{
   days: SuggestedDay[];
@@ -217,20 +227,30 @@ export async function runAggregatorAgent(
       (endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24),
     ) + 1;
 
+  const publish = <T extends { days: SuggestedDay[] }>(result: T): T => ({
+    ...result,
+    days: enforceReleaseItinerary(plan, result.days, activities, dining, {
+      activityBudget: options.activityBudget,
+    }).days,
+  });
+
   if (
     compiledScheduleExperimentEnabled() &&
     numDays >= 1 &&
     numDays <= 7 &&
     transport.length === 0 &&
     !options.structuredSchedule &&
-    !options.explicitDailyBudget
+    !options.explicitDailyBudget &&
+    !options.forceModel
   ) {
-    return runStagingCompiledSchedule(
-      plan,
-      hotels,
-      activities,
-      dining,
-      options.repairDining === true,
+    return publish(
+      await runStagingCompiledSchedule(
+        plan,
+        hotels,
+        activities,
+        dining,
+        options.repairDining === true,
+      ),
     );
   }
 
@@ -336,7 +356,8 @@ Create an itinerary that:
 6. Gives each day a specific title and summary reflecting its actual stops
 7. Includes helpful tips${transportSummary.length > 0 ? "\n8. Selects one outbound alternative for Day 1 via transportId and omits transportId on all other days" : ""}
 
-Reference items by their IDs. Morning activities should be morning/any time, afternoon activities in afternoon, etc.`;
+Reference items by their IDs. Morning activities should be morning/any time, afternoon activities in afternoon, etc.
+If a day cannot be filled from these results, leave the slots empty and say the search returned nothing. Do not repeat one day's places on the next day. Do not add a safety, allergy, access, or booking promise.`;
 
   const pace = plan.activityCriteria.pacePreference;
   const dailyBudget =
@@ -353,7 +374,7 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
     const { object: result } = await withAbortTimeout(
       (abortSignal) =>
         generatePlanningObject<ItineraryResult>("aggregator", {
-          model: aiGateway(planningModel("aggregator", MODEL)),
+          model: planningGateway(planningModel("aggregator", MODEL)),
           providerOptions: PLANNING_PROVIDER_OPTIONS,
           system: SYSTEM_PROMPT,
           prompt: options.structuredSchedule
@@ -383,14 +404,16 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
           ).parse(result),
         )
       : result;
-    return completeMeals(
-      mapAggregatorResult(
-        mappedResult,
-        dates.start,
-        hotels,
-        activities,
-        dining,
-        transport,
+    return publish(
+      completeMeals(
+        mapAggregatorResult(
+          mappedResult,
+          dates.start,
+          hotels,
+          activities,
+          dining,
+          transport,
+        ),
       ),
     );
   } catch (error) {
@@ -428,7 +451,7 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
           "recovered_itinerary",
           detail,
         );
-        return completeMeals(recovered);
+        return publish(completeMeals(recovered));
       }
     }
 
@@ -448,7 +471,9 @@ Reference items by their IDs. Morning activities should be morning/any time, aft
         "We couldn't finish organizing your itinerary. Your trip details are saved. Please try again shortly.",
       );
     }
-    return createFallbackItinerary(plan, hotels, activities, dining, transport);
+    return publish(
+      createFallbackItinerary(plan, hotels, activities, dining, transport),
+    );
   }
 }
 

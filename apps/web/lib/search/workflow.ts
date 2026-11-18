@@ -17,6 +17,7 @@ import {
   runAggregatorAgent,
 } from "./agents";
 import { runSearchEnrichment } from "./enrichment";
+import { tripActivityBudget } from "./release-itinerary";
 
 export interface TravelSearchWorkflowInput {
   searchId: string;
@@ -242,6 +243,13 @@ export async function executeTravelSearch(
       activities,
       dining,
       transport,
+      {
+        activityBudget: tripActivityBudget(
+          input.budget,
+          input.startDate,
+          input.endDate,
+        ),
+      },
     );
     logStageTiming("aggregator", aggregatorStart);
 

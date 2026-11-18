@@ -414,6 +414,15 @@ function controlFailures(): Array<{ id: string; failed: boolean }> {
   ];
 }
 
+export function liveModelCredential(
+  env: Record<string, string | undefined> = process.env,
+): { name: "FAROWAY_STAGING_AI_GATEWAY_KEY" | "AI_GATEWAY_API_KEY" } | null {
+  if (env.FAROWAY_STAGING_AI_GATEWAY_KEY?.trim())
+    return { name: "FAROWAY_STAGING_AI_GATEWAY_KEY" };
+  if (env.AI_GATEWAY_API_KEY?.trim()) return { name: "AI_GATEWAY_API_KEY" };
+  return null;
+}
+
 export function liveQualityGate(
   env: Record<string, string | undefined> = process.env,
 ): { allowed: boolean; reason: string; budgetUsd: number } {
@@ -421,7 +430,7 @@ export function liveQualityGate(
     return {
       allowed: false,
       reason:
-        "Set FAROWAY_LIVE_QUALITY_EVAL=1 to grade a recorded trace. No model or supplier is called.",
+        "Set FAROWAY_LIVE_QUALITY_EVAL=1 to generate and grade one development brief. No model is called without that flag.",
       budgetUsd: 0,
     };
   }
@@ -434,18 +443,18 @@ export function liveQualityGate(
       budgetUsd: 0,
     };
   }
-  if (!env.FAROWAY_LIVE_EVAL_TRACE) {
+  if (!liveModelCredential(env)) {
     return {
       allowed: false,
       reason:
-        "Live mode grades only a local recorded trace in FAROWAY_LIVE_EVAL_TRACE. It does not start a paid call.",
+        "Set FAROWAY_STAGING_AI_GATEWAY_KEY or AI_GATEWAY_API_KEY. Live mode does not call a model when neither is set.",
       budgetUsd: budget,
     };
   }
   return {
     allowed: true,
     reason:
-      "Recorded trace may be graded. This harness still makes no network call.",
+      "One development brief will be generated with the staging model and graded. The spend ceiling is FAROWAY_LIVE_EVAL_BUDGET_USD.",
     budgetUsd: budget,
   };
 }
