@@ -47,10 +47,13 @@ describe("saved trip outbound booking boundary", () => {
       createElement(ActivityCard, { activity }),
       createElement(RestaurantCard, { restaurant }),
     ];
-    for (const card of cards) {
-      const html = renderToStaticMarkup(card);
-      expect(html).toMatch(/<button[^>]*disabled=""/);
-      expect(html).toContain("unavailable");
+    const [activityHtml, restaurantHtml] = cards.map((card) =>
+      renderToStaticMarkup(card),
+    );
+    expect(activityHtml).toContain("Booking isn’t available in Faroway");
+    expect(restaurantHtml).toContain("Reservations aren’t made in Faroway");
+    for (const html of [activityHtml, restaurantHtml]) {
+      expect(html).not.toMatch(/<(a|button)\b/);
       expect(html).not.toContain(unsafe);
       expect(html).not.toContain("Confirmed instantly");
       expect(html).not.toContain("Free to cancel");
@@ -103,7 +106,8 @@ describe("saved trip outbound booking boundary", () => {
     expect(html).toContain("Hotel booking unavailable");
     expect(html).toContain("Flight booking unavailable");
     expect(html).not.toContain(unsafe);
-    expect(html.match(/<button[^>]*disabled=""/g)).toHaveLength(2);
+    expect(html).not.toMatch(/<a\b/);
+    expect(html.match(/<button\b/g)).toHaveLength(1);
   });
 
   it("renders streamed booking URLs as inert previews", () => {

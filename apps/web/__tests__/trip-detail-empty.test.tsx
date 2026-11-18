@@ -71,7 +71,10 @@ vi.mock("@/components/trips/ShareConsentDialog", () => ({
     </button>
   ),
 }));
-vi.mock("@/components/trips/TripBudget", () => ({ TripBudget: () => null }));
+vi.mock("@/components/trips/TripBudget", () => ({
+  TripBudget: () => null,
+  LiveTripBudget: () => null,
+}));
 vi.mock("@/components/trips/TripDayNavigation", () => ({
   TripDayNavigation: () => null,
 }));

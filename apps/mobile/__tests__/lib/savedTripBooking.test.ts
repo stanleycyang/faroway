@@ -1,7 +1,11 @@
 const mockAlert = jest.fn();
 jest.mock('react-native', () => ({ Alert: { alert: mockAlert } }));
 jest.mock('../../constants/api', () => ({ API_BASE_URL: 'https://staging.faroway.ai' }));
-import { reviewSavedTripBooking, resetSavedTripBookingDisclosure, savedTripReviewUrl } from '../../lib/savedTripBooking';
+import {
+  reviewSavedTripBooking,
+  resetSavedTripBookingDisclosure,
+  savedTripReviewUrl,
+} from '../../lib/savedTripBooking';
 
 const id = '11111111-1111-4111-8111-111111111111';
 beforeEach(() => {
