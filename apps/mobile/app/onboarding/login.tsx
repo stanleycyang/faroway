@@ -141,6 +141,7 @@ export default function LoginScreen() {
             style={styles.skipButton}
             onPress={handleSkipLogin}
             accessibilityRole="button"
+            accessibilityLabel="Skip for now"
           >
             <Text style={styles.skipText}>Skip for now</Text>
           </TouchableOpacity>

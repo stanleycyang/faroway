@@ -1757,9 +1757,9 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   sheetClose: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',

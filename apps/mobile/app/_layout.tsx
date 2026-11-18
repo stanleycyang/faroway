@@ -38,6 +38,7 @@ function RootLayoutNav() {
   if (!initialized) {
     return (
       <View
+        accessibilityLabel="Loading account"
         style={{
           flex: 1,
           justifyContent: 'center',

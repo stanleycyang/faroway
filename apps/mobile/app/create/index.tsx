@@ -10,6 +10,7 @@ import {
   Image,
   Platform,
   Alert,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
@@ -43,7 +44,7 @@ function getStaticMapUrl(destination: string, country: string): string | null {
   const center = encodeURIComponent(`${destination}${country ? `, ${country}` : ''}`);
   return (
     `https://maps.googleapis.com/maps/api/staticmap?center=${center}` +
-    `&zoom=11&size=600x300&scale=2&maptype=roadmap` +
+    `&zoom=11&size=400x200&scale=1&maptype=roadmap` +
     `&markers=color:0x6366f1|${center}` +
     `&style=feature:all|element:geometry|color:0x242f3e` +
     `&style=feature:all|element:labels.text.stroke|color:0x242f3e` +
@@ -130,6 +131,7 @@ export default function CreateTripScreen() {
   const { tripGenerationCount, hasDismissedCreateBanner, dismissCreateBanner } = usePromptStore();
 
   const [showSearch, setShowSearch] = useState(!params.destination && !draftInput?.destination);
+  const [showAllDestinations, setShowAllDestinations] = useState(false);
   const [mapLoadFailed, setMapLoadFailed] = useState(false);
   const [showAuthGate, setShowAuthGate] = useState(false);
   const [authGateAction, setAuthGateAction] = useState<'banner' | 'generate'>('generate');
@@ -230,6 +232,10 @@ export default function CreateTripScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'android' ? 'padding' : undefined}
+      >
       <View style={{ flex: 1 }}>
         {/* Header */}
         <View style={styles.header}>
@@ -409,7 +415,10 @@ export default function CreateTripScreen() {
                   style={styles.destinationList}
                   contentContainerStyle={styles.destinationListContent}
                 >
-                  {popularDestinations.map((dest) => (
+                  {(showAllDestinations
+                    ? popularDestinations
+                    : popularDestinations.slice(0, 6)
+                  ).map((dest) => (
                     <TouchableOpacity
                       key={dest.id}
                       style={styles.destinationOption}
@@ -438,6 +447,18 @@ export default function CreateTripScreen() {
                     </TouchableOpacity>
                   ))}
                 </ScrollView>
+                {!showAllDestinations && popularDestinations.length > 6 ? (
+                  <TouchableOpacity
+                    onPress={() => setShowAllDestinations(true)}
+                    accessibilityRole="button"
+                    accessibilityLabel="See all places"
+                    style={{ minHeight: 44, justifyContent: 'center', marginTop: 8 }}
+                  >
+                    <Text style={{ color: colors.primary[700], fontWeight: '600' }}>
+                      See all places
+                    </Text>
+                  </TouchableOpacity>
+                ) : null}
               </>
             )}
           </View>
@@ -567,23 +588,25 @@ export default function CreateTripScreen() {
 
         {/* Continue Button */}
         <View style={styles.bottomBar}>
+          {!canProceed ? (
+            <Text
+              accessibilityLiveRegion="polite"
+              style={{ textAlign: 'center', color: colors.surface[600], marginBottom: 8 }}
+            >
+              {formatMissingTripRequirements(missingRequirements)}
+            </Text>
+          ) : null}
           <Button
             title="Generate itinerary"
             onPress={handleContinue}
             disabled={!canProceed}
             size="lg"
             fullWidth
+            accessibilityHint={
+              canProceed ? undefined : formatMissingTripRequirements(missingRequirements)
+            }
           />
         </View>
-
-        {!canProceed && (
-          <Text
-            accessibilityLiveRegion="polite"
-            style={{ textAlign: 'center', color: colors.surface[600], marginBottom: 12 }}
-          >
-            {formatMissingTripRequirements(missingRequirements)}
-          </Text>
-        )}
 
         {recoveryError && (
           <Text
@@ -681,6 +704,7 @@ export default function CreateTripScreen() {
           }}
         />
       </View>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }
@@ -735,8 +759,11 @@ const styles = StyleSheet.create({
     color: colors.primary[600],
   },
   signInBannerClose: {
-    padding: 4,
-    marginLeft: 8,
+    minWidth: 44,
+    minHeight: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
   },
   scrollContent: {
     paddingVertical: 24,

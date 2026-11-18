@@ -204,7 +204,9 @@ const styles = StyleSheet.create({
   fallbackButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
+    minHeight: 44,
     paddingHorizontal: 14,
     paddingVertical: 8,
     backgroundColor: '#FFF5F4',

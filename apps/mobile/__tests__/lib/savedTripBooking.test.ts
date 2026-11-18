@@ -1,10 +1,13 @@
 const mockAlert = jest.fn();
 jest.mock('react-native', () => ({ Alert: { alert: mockAlert } }));
 jest.mock('../../constants/api', () => ({ API_BASE_URL: 'https://staging.faroway.ai' }));
-import { reviewSavedTripBooking, savedTripReviewUrl } from '../../lib/savedTripBooking';
+import { reviewSavedTripBooking, resetSavedTripBookingDisclosure, savedTripReviewUrl } from '../../lib/savedTripBooking';
 
 const id = '11111111-1111-4111-8111-111111111111';
-beforeEach(() => jest.clearAllMocks());
+beforeEach(() => {
+  jest.clearAllMocks();
+  resetSavedTripBookingDisclosure();
+});
 
 it('builds only the configured saved trip URL and rejects missing or injected identities', () => {
   expect(savedTripReviewUrl(id)).toBe(`https://staging.faroway.ai/trips/${id}`);
@@ -39,6 +42,16 @@ it('keeps failed navigation recoverable without falling back to a provider', asy
     'Couldn’t open your trip',
     expect.stringContaining('still saved')
   );
+});
+
+it('asks for booking review once per session after the traveler agrees', () => {
+  const open = jest.fn().mockResolvedValue(undefined);
+  reviewSavedTripBooking(id, open);
+  mockAlert.mock.calls[0][2][1].onPress();
+  reviewSavedTripBooking(id, open);
+  expect(mockAlert).toHaveBeenCalledTimes(1);
+  expect(open).toHaveBeenCalledTimes(2);
+  expect(open.mock.calls[1][0]).toBe(`https://staging.faroway.ai/trips/${id}`);
 });
 
 it('declining a booking review leaves navigation inert and never appends credentials', () => {

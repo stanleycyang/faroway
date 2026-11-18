@@ -37,7 +37,7 @@ const INSPIRATIONS = [
 
 export default function ExploreScreen() {
   const router = useRouter();
-  const { trips } = useTripStore();
+  const hasTrips = useTripStore((state) => state.trips.length > 0);
   const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   const reduceMotion = useReduceMotion();
   const { width } = useWindowDimensions();
@@ -122,8 +122,6 @@ export default function ExploreScreen() {
     hapticFeedback.light();
     router.push(`/inspiration/${slug}`);
   };
-
-  const hasTrips = trips.length > 0;
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -255,7 +253,8 @@ export default function ExploreScreen() {
               style={styles.sectionHeaderAction}
               onPress={handleCreateTrip}
               accessibilityRole="button"
-              accessibilityLabel="Search all destinations"
+              accessibilityLabel="Find a place"
+              accessibilityHint="Opens the trip planner"
             >
               <Text style={styles.seeAllButton}>Find a place</Text>
             </TouchableOpacity>
