@@ -28,6 +28,15 @@ export function Header() {
   }, []);
 
   useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = (event: MediaQueryListEvent) => {
+      if (event.matches) setMobileMenuOpen(false);
+    };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, []);
+
+  useEffect(() => {
     if (!mobileMenuOpen) return;
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -37,7 +46,7 @@ export function Header() {
       toggleRef.current?.focus();
     };
     document.addEventListener("keydown", onKey);
-    menuRef.current?.querySelector<HTMLElement>("a")?.focus();
+    menuRef.current?.querySelector?.("a")?.focus();
     return () => {
       document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", onKey);
