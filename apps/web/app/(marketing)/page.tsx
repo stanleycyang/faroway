@@ -129,7 +129,7 @@ export default function LandingPage() {
       <Header />
       <main id="home-main-content" tabIndex={-1}>
         {/* ─── Hero Section — Bright, clean, conversion-optimized ──────────── */}
-        <section className="relative min-h-screen flex items-center overflow-hidden">
+        <section className="relative min-h-screen flex items-start overflow-hidden lg:items-center">
           {/* Light gradient background */}
           <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-white to-amber-50/50" />
           {/* Subtle decorative blobs */}
@@ -137,7 +137,7 @@ export default function LandingPage() {
           <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-amber-200/20 rounded-full blur-3xl" />
           <div className="absolute top-1/2 left-1/3 w-[300px] h-[300px] bg-accent/5 rounded-full blur-3xl" />
 
-          <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 lg:pt-36 lg:pb-24">
+          <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-28 lg:pt-36 lg:pb-24">
             <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
               {/* Left — text */}
               <div>
