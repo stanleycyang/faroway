@@ -94,15 +94,25 @@ keys, API tokens, or passwords in `eas.json`.
 3. Keep Apple private key material in Supabase or the credential manager, not in this repo.
 4. Verify Apple sign-in on an iOS simulator where supported and on a physical device before store submission.
 
-The monthly GitHub Actions rotation requires these repository settings:
+The monthly GitHub Actions rotation requires these repository settings
+(Settings → Secrets and variables → Actions):
 
 - Actions variables: `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_CLIENT_ID`
 - Actions secrets: `APPLE_P8_PRIVATE_KEY`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`
 
-The workflow runs `scripts/rotate-apple-secret.ts`. It generates the ES256
-client secret without logging it and updates Supabase through the Management
-API. Trigger the workflow manually after changing any Apple credential and
-confirm the run succeeds.
+`APPLE_P8_PRIVATE_KEY` is the downloaded `AuthKey_<KEY_ID>.p8` file, including
+the `-----BEGIN PRIVATE KEY-----` and `-----END PRIVATE KEY-----` lines. Paste
+it as a multiline secret, as one line with literal `\n` escapes, or as the
+base64 encoding of that file. It is the signing key, not the Apple client-secret
+JWT. Apple allows that generated JWT to live at most six months (`exp` no more
+than 15777000 seconds after `iat`). This workflow signs a 180-day JWT.
+
+The workflow runs `scripts/rotate-apple-secret.ts`. It fails before calling
+Supabase when any required value is missing, and it never logs the private key
+or the JWT. A manual run can set **Dry run** to build the JWT without updating
+Supabase. `bun scripts/rotate-apple-secret.ts --dry-run` does the same locally.
+After changing an Apple credential, run once with Dry run enabled, then run
+again with Dry run off and confirm the run succeeds.
 
 ## Push Notifications
 
