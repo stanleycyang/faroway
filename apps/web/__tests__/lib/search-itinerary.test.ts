@@ -860,3 +860,185 @@ it.each([
     );
   },
 );
+
+function parseFailure(text: string, extra: Record<string, unknown> = {}) {
+  return Object.assign(
+    new Error("No object generated: could not parse the response."),
+    { text, ...extra },
+  );
+}
+
+describe("aggregator output cap", () => {
+  const capped = { maxOutputTokens: 8000, requireGeneratedPlan: true as const };
+  beforeEach(() => {
+    mocks.generateObject.mockClear();
+  });
+
+  it("repairs a response cut off at the token cap when every day is already present", async () => {
+    const payload = {
+      days: [generatedDay(1), generatedDay(2)],
+      topHotelId: hotel.id,
+    };
+    payload.days[0].title = "Closed from partial JSON";
+    const raw = JSON.stringify(payload);
+    mocks.generateObject.mockRejectedValueOnce(
+      parseFailure(raw.slice(0, -1), {
+        finishReason: "length",
+        usage: { inputTokens: 2294, outputTokens: 8000 },
+      }),
+    );
+    const result = await runAggregatorAgent(
+      plan,
+      [hotel],
+      [activity("walk")],
+      [],
+      [],
+      capped,
+    );
+    expect(mocks.generateObject).toHaveBeenCalledTimes(1);
+    expect(result.days[0].title).toBe("Closed from partial JSON");
+    expect(result.days).toHaveLength(2);
+    expect(result.topHotel?.id).toBe(hotel.id);
+  });
+
+  it("retries once when capped output cannot be parsed into the full trip", async () => {
+    const retryDay = {
+      ...generatedDay(1),
+      title: "Retry day",
+    };
+    mocks.generateObject
+      .mockRejectedValueOnce(
+        parseFailure(
+          '{"days":[{"dayNumber":1,"title":"Partial","summary":"Cut","morning":{"activityIds":[]}',
+          {
+            finishReason: "length",
+            usage: { inputTokens: 2294, outputTokens: 8000 },
+          },
+        ),
+      )
+      .mockResolvedValueOnce({
+        object: {
+          days: [retryDay, generatedDay(2)],
+          topHotelId: hotel.id,
+        },
+      });
+    const result = await runAggregatorAgent(
+      plan,
+      [hotel],
+      [activity("walk")],
+      [],
+      [],
+      capped,
+    );
+    expect(mocks.generateObject).toHaveBeenCalledTimes(2);
+    const retry = mocks.generateObject.mock.calls[1]?.[0];
+    expect(retry.maxOutputTokens).toBe(16000);
+    expect(retry.maxRetries).toBe(0);
+    expect(retry.providerOptions.google.thinkingConfig.thinkingLevel).toBe(
+      "low",
+    );
+    expect(retry.providerOptions.vertex.thinkingConfig.thinkingLevel).toBe(
+      "low",
+    );
+    expect(retry.providerOptions.gateway.only).toEqual(["google", "vertex"]);
+    expect(retry.prompt).toContain("was cut off or was not valid JSON");
+    expect(result.days[0].title).toBe("Retry day");
+    expect(mocks.generateObject.mock.calls[0]?.[0].maxOutputTokens).toBe(8000);
+    expect(
+      mocks.generateObject.mock.calls[0]?.[0].providerOptions.google,
+    ).toBeUndefined();
+  });
+
+  it("does not retry a timeout or a non-parse failure", async () => {
+    mocks.generateObject.mockRejectedValueOnce(
+      new Error("aggregator AI timed out after 60000ms"),
+    );
+    await expect(
+      runAggregatorAgent(plan, [hotel], [activity("walk")], [], [], capped),
+    ).rejects.toThrow("Your trip details are saved");
+    expect(mocks.generateObject).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops after one retry when the second response is also unparsed", async () => {
+    const error = parseFailure('{"days":[', {
+      finishReason: "length",
+      usage: { outputTokens: 8000 },
+    });
+    mocks.generateObject.mockRejectedValue(error);
+    await expect(
+      runAggregatorAgent(plan, [hotel], [activity("walk")], [], [], capped),
+    ).rejects.toThrow("Your trip details are saved");
+    expect(mocks.generateObject).toHaveBeenCalledTimes(2);
+  });
+
+  it("normalizes a schema-shaped activities list without a second call", async () => {
+    const text = JSON.stringify({
+      days: [
+        {
+          dayNumber: 1,
+          date: "2026-06-01",
+          title: "From slots",
+          summary: "Morning walk",
+          activities: [{ id: "walk", slot: "morning" }],
+          breakfastId: null,
+          lunchId: null,
+          dinnerId: null,
+          tips: ["Bring a card"],
+        },
+        {
+          dayNumber: 2,
+          date: "2026-06-02",
+          title: "Next",
+          summary: "Open",
+          activities: [],
+          breakfastId: null,
+          lunchId: null,
+          dinnerId: null,
+          tips: [],
+        },
+      ],
+      topHotelId: hotel.id,
+    });
+    mocks.generateObject.mockRejectedValueOnce(
+      Object.assign(
+        new Error("No object generated: response did not match schema."),
+        { text, finishReason: "stop" },
+      ),
+    );
+    const result = await runAggregatorAgent(
+      plan,
+      [hotel],
+      [activity("walk")],
+      [],
+      [],
+      capped,
+    );
+    expect(mocks.generateObject).toHaveBeenCalledTimes(1);
+    expect(result.days[0].morning.activities.map((item) => item.id)).toEqual([
+      "walk",
+    ]);
+    expect(result.days[0].tips).toContain("Bring a card");
+  });
+
+  it("passes a repair that turns the capped response into schema JSON", async () => {
+    mocks.generateObject.mockResolvedValueOnce({
+      object: {
+        days: [generatedDay(1), generatedDay(2)],
+        topHotelId: hotel.id,
+      },
+    });
+    await runAggregatorAgent(plan, [hotel], [], []);
+    const repair =
+      mocks.generateObject.mock.calls[0]?.[0].experimental_repairText;
+    const payload = {
+      days: [generatedDay(1), generatedDay(2)],
+      topHotelId: hotel.id,
+    };
+    const raw = JSON.stringify(payload);
+    const repaired = await repair({ text: "```json\n" + raw.slice(0, -1) });
+    const parsed = JSON.parse(repaired);
+    expect(parsed.days).toHaveLength(2);
+    expect(parsed.topHotelId).toBe(hotel.id);
+    expect(await repair({ text: '{"days":[' })).toBeNull();
+  });
+});

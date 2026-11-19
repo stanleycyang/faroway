@@ -1,0 +1,120 @@
+{
+  "live_model_quality_measured": true,
+  "holdout_used": false,
+  "model": "google/gemini-3-flash",
+  "thinking": "repo default (unset; Gemini 3 Flash default high)",
+  "max_output_tokens": 8000,
+  "budget_usd": 0.25,
+  "hard_stop_usd": 5,
+  "total_spend_usd": 0.067737,
+  "briefs": [
+    {
+      "brief_id": "vancouver-no-car",
+      "accepted": true,
+      "estimated_usd": 0.023773,
+      "calls": 1,
+      "latency_ms": 41272,
+      "input_tokens": 2396,
+      "output_tokens": 7525,
+      "reasoning_tokens": 6933,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": []
+    },
+    {
+      "brief_id": "marrakech-vegan",
+      "accepted": true,
+      "estimated_usd": 0.015588,
+      "calls": 1,
+      "latency_ms": 20374,
+      "input_tokens": 2478,
+      "output_tokens": 4783,
+      "reasoning_tokens": 3804,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": []
+    },
+    {
+      "brief_id": "honolulu-no-interisland",
+      "accepted": true,
+      "estimated_usd": 0.0188055,
+      "calls": 1,
+      "latency_ms": 31905,
+      "input_tokens": 2427,
+      "output_tokens": 5864,
+      "reasoning_tokens": 4894,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": []
+    },
+    {
+      "brief_id": "paris-luxury",
+      "accepted": true,
+      "estimated_usd": 0.0095705,
+      "calls": 1,
+      "latency_ms": 15895,
+      "input_tokens": 2437,
+      "output_tokens": 2784,
+      "reasoning_tokens": 1997,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": []
+    }
+  ]
+}
