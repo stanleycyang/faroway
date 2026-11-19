@@ -50,7 +50,7 @@ FAROWAY_STAGING_AI_GATEWAY_KEY=... \
 bun --no-env-file scripts/uat/generation-quality-eval.ts --live
 ```
 
-`AI_GATEWAY_API_KEY` is accepted in place of `FAROWAY_STAGING_AI_GATEWAY_KEY`. The budget must be greater than 0 and at most 5. Without the flag, a budget in that range, and one of those keys, the command exits 2 and does not call a model. The call is also refused when the list-price ceiling for 20,000 input tokens and 8,000 output tokens is above the budget, and the aggregator output for that call is limited to 8,000 tokens. If the recorded spend still exceeds the budget, the grade is not accepted. `live_model_quality_measured` stays false until that call returns a grade.
+`AI_GATEWAY_API_KEY` is accepted in place of `FAROWAY_STAGING_AI_GATEWAY_KEY`. The budget must be greater than 0 and at most 5. Without the flag, a budget in that range, and one of those keys, the command exits 2 and does not call a model. The call is also refused when the list-price ceiling for 20,000 input tokens and 8,000 output tokens is above the budget, and the aggregator output for that call is limited to 8,000 tokens. If the recorded spend still exceeds the budget, the grade is not accepted. `live_model_quality_measured` stays false until a live call's grade is recorded in `scripts/fixtures/live-generation-grade.json`. The offline command reads that file and still does not call a model.
 
 ## Before and after
 

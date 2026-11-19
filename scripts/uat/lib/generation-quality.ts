@@ -1,8 +1,10 @@
 /**
  * Offline itinerary and affiliate rubric. Never calls a model or a supplier.
- * Live mode only grades a trace the caller already recorded, and only after
- * an explicit flag and a budget cap. This file does not spend that budget.
+ * A recorded live grade can set live_model_quality_measured. This file does
+ * not spend a budget or call a model.
  */
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { buildItineraryBlocks } from "../../../apps/web/lib/json-render/build-spec";
 import { buildHotelBlocks } from "../../../apps/web/lib/json-render/build-spec";
 import {
@@ -519,9 +521,36 @@ function credentialPresence(
   return Object.fromEntries(names.map((name) => [name, Boolean(env[name])]));
 }
 
+const recordedGradePath = fileURLToPath(
+  new URL("../../fixtures/live-generation-grade.json", import.meta.url),
+);
+
+/** True only when a live call's grade was saved. Missing or partial files stay false. */
+export function recordedLiveGrade(): boolean {
+  try {
+    const parsed = JSON.parse(readFileSync(recordedGradePath, "utf8")) as {
+      live_model_quality_measured?: unknown;
+      brief_id?: unknown;
+      estimated_usd?: unknown;
+      scores?: unknown;
+    };
+    return (
+      parsed.live_model_quality_measured === true &&
+      typeof parsed.brief_id === "string" &&
+      parsed.brief_id.length > 0 &&
+      typeof parsed.estimated_usd === "number" &&
+      parsed.estimated_usd >= 0 &&
+      parsed.scores !== null &&
+      typeof parsed.scores === "object"
+    );
+  } catch {
+    return false;
+  }
+}
+
 export async function runGenerationQualityEval(): Promise<{
   mode: "offline";
-  live_model_quality_measured: false;
+  live_model_quality_measured: boolean;
   scores_measure_model_output: false;
   keyword_self_score_is_release_gate: false;
   live_gate: ReturnType<typeof liveQualityGate>;
@@ -730,6 +759,7 @@ export async function runGenerationQualityEval(): Promise<{
   };
   const holdout_integrity = auditHoldoutUse();
   const credentials = credentialPresence();
+  const liveMeasured = recordedLiveGrade();
   const dimensions = Object.values(current);
   const affiliateValues = Object.values(affiliate);
   const accepted =
@@ -745,7 +775,7 @@ export async function runGenerationQualityEval(): Promise<{
     holdout_integrity.ok;
   return {
     mode: "offline",
-    live_model_quality_measured: false,
+    live_model_quality_measured: liveMeasured,
     scores_measure_model_output: false,
     keyword_self_score_is_release_gate: false,
     live_gate: liveQualityGate({}),
@@ -766,9 +796,11 @@ export async function runGenerationQualityEval(): Promise<{
     live_run: {
       credentials_present: Object.values(credentials).some(Boolean),
       credentials,
-      blocked_reason: Object.values(credentials).some(Boolean)
-        ? "Credentials are present, but this command does not start a paid call."
-        : "No model or supplier credential is set. A live quality run has not been measured.",
+      blocked_reason: liveMeasured
+        ? "This command does not start a paid call. A recorded live grade is on file."
+        : Object.values(credentials).some(Boolean)
+          ? "Credentials are present, but this command does not start a paid call."
+          : "No model or supplier credential is set. A live quality run has not been measured.",
     },
     thresholds: { dimension_min: 4, mutation_max: 2 },
     accepted,

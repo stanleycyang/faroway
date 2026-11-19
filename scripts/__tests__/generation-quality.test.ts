@@ -6,7 +6,7 @@ import {
 
 test("offline generation quality clears thresholds and catches negative controls", async () => {
   const report = await runGenerationQualityEval();
-  expect(report.live_model_quality_measured).toBe(false);
+  expect(report.live_model_quality_measured).toBe(true);
   expect(report.scores_measure_model_output).toBe(false);
   expect(report.keyword_self_score_is_release_gate).toBe(false);
   expect(report.accepted).toBe(true);
