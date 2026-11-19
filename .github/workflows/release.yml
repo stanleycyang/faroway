@@ -21,7 +21,8 @@ jobs:
       startsWith(github.head_ref, 'release/') ||
       github.base_ref == 'eval/agentic-quality-20261031' ||
       contains(github.event.pull_request.labels.*.name, 'release-verification')
-    runs-on: ubuntu-latest
+    # ubuntu-latest is 26.04. Playwright 1.60 cannot install Chromium there.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
