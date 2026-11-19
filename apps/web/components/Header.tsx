@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Sparkles, Menu, X } from "lucide-react";
 import { Logo } from "./Logo";
@@ -17,6 +17,8 @@ const NAV_ITEMS = [
 export function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -25,8 +27,37 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    const closeOnDesktop = (event: MediaQueryListEvent) => {
+      if (event.matches) setMobileMenuOpen(false);
+    };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, []);
+
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setMobileMenuOpen(false);
+      toggleRef.current?.focus();
+    };
+    document.addEventListener("keydown", onKey);
+    menuRef.current?.querySelector?.("a")?.focus();
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [mobileMenuOpen]);
+
+  const closeMenu = () => setMobileMenuOpen(false);
+
   return (
     <nav
+      aria-label="Main"
       className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
         isScrolled
           ? "bg-white/90 backdrop-blur-2xl border-b border-slate-200/60 shadow-sm"
@@ -37,7 +68,6 @@ export function Header() {
         <div className="flex items-center justify-between h-16 lg:h-20">
           <Logo size="md" variant="dark" />
 
-          {/* Desktop nav */}
           <div className="hidden lg:flex items-center gap-1">
             {NAV_ITEMS.map((item) => (
               <Link
@@ -50,49 +80,82 @@ export function Header() {
             ))}
           </div>
 
-          {/* Right side */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
+            <Link
+              href="/auth/login"
+              className="hidden md:inline-flex min-h-11 items-center rounded-full px-4 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/dashboard"
+              className="hidden xl:inline-flex min-h-11 items-center rounded-full px-3 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+            >
+              My trips
+            </Link>
             <Link
               href="/create"
-              className="hidden sm:inline-flex items-center gap-2 bg-gradient-to-r from-primary to-amber-500 hover:from-primary-600 hover:to-amber-600 text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5"
+              className="inline-flex min-h-11 items-center gap-2 bg-gradient-to-r from-primary to-amber-500 hover:from-primary-600 hover:to-amber-600 text-white px-3.5 sm:px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-all hover:-translate-y-0.5"
             >
-              <Sparkles className="w-4 h-4" />
-              Plan My Trip
+              <Sparkles className="w-4 h-4" aria-hidden="true" />
+              <span className="sm:hidden">Plan</span>
+              <span className="hidden sm:inline">Plan My Trip</span>
             </Link>
             <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 rounded-lg text-slate-700 hover:bg-slate-100 transition-colors"
-              aria-label="Toggle menu"
+              ref={toggleRef}
+              type="button"
+              onClick={() => setMobileMenuOpen((open) => !open)}
+              className="lg:hidden inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg text-slate-700 hover:bg-slate-100 transition-colors"
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-nav"
             >
               {mobileMenuOpen ? (
-                <X className="w-6 h-6" />
+                <X className="w-6 h-6" aria-hidden="true" />
               ) : (
-                <Menu className="w-6 h-6" />
+                <Menu className="w-6 h-6" aria-hidden="true" />
               )}
             </button>
           </div>
         </div>
 
-        {/* Mobile menu */}
         {mobileMenuOpen && (
-          <div className="lg:hidden pb-4 border-t border-slate-200">
+          <div
+            id="mobile-nav"
+            ref={menuRef}
+            className="lg:hidden pb-4 border-t border-slate-200"
+          >
             <div className="flex flex-col gap-1 pt-2">
               {NAV_ITEMS.map((item) => (
                 <Link
                   key={item.label}
                   href={item.href}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="px-4 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  onClick={closeMenu}
+                  className="flex min-h-11 items-center px-4 rounded-lg text-sm font-medium text-slate-700 hover:bg-slate-100 hover:text-slate-900"
                 >
                   {item.label}
                 </Link>
               ))}
               <Link
-                href="/create"
-                onClick={() => setMobileMenuOpen(false)}
-                className="mx-4 mt-2 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-primary to-amber-500 text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-primary/25"
+                href="/auth/login"
+                onClick={closeMenu}
+                className="flex min-h-11 items-center px-4 rounded-lg text-sm font-semibold text-slate-800 hover:bg-slate-100"
               >
-                <Sparkles className="w-4 h-4" />
+                Sign in
+              </Link>
+              <Link
+                href="/dashboard"
+                onClick={closeMenu}
+                className="flex min-h-11 items-center px-4 rounded-lg text-sm font-semibold text-slate-800 hover:bg-slate-100"
+              >
+                My trips
+              </Link>
+              <Link
+                href="/create"
+                onClick={closeMenu}
+                className="mx-4 mt-2 inline-flex min-h-11 items-center justify-center gap-2 bg-gradient-to-r from-primary to-amber-500 text-white px-5 py-2.5 rounded-full text-sm font-semibold shadow-lg shadow-primary/25"
+              >
+                <Sparkles className="w-4 h-4" aria-hidden="true" />
                 Plan My Trip
               </Link>
             </div>

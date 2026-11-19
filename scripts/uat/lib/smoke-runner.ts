@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { buildLiteApiFlightRequest } from "../../../apps/web/lib/affiliates/liteapi-flight-request";
 import { buildViatorHandoffUrl } from "../../../apps/web/lib/affiliates/viator-link";
-import { UAT_BRIEFS, type UatBrief } from "./briefs";
+import { UAT_BRIEFS, VENDOR_UAT_BRIEFS, type UatBrief } from "./briefs";
 import { evaluateSavedPlan } from "./plan-quality";
 import { isOpenTableReservationUrl } from "../../../apps/web/lib/search/reservation-url";
 import {
@@ -262,10 +262,11 @@ function finish(projectRef: string, checks: CheckResult[]): SmokeReport {
 
 function selectedBriefs(ids?: string[]): UatBrief[] {
   if (!ids?.length) return UAT_BRIEFS;
-  const briefs = UAT_BRIEFS.filter((brief) => ids.includes(brief.id));
+  const available = [...UAT_BRIEFS, ...VENDOR_UAT_BRIEFS];
+  const briefs = available.filter((brief) => ids.includes(brief.id));
   if (briefs.length !== ids.length) {
     throw new Error(
-      `Unknown brief. Known briefs: ${UAT_BRIEFS.map((b) => b.id).join(", ")}`,
+      `Unknown brief. Known briefs: ${available.map((b) => b.id).join(", ")}`,
     );
   }
   return briefs;
@@ -672,6 +673,8 @@ async function accountFlow(
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error);
     for (const name of names) {
+      // The finally block records the actual deletion result for a created trip.
+      if (name === "cleanup" && created && apiUrl && owner) continue;
       if (!checks.some((item) => item.name === name)) {
         checks.push(check(0, name, "failed", detail));
       }
@@ -1075,6 +1078,20 @@ async function runTier2(
       ),
     );
   }
+  const partnerId = (options.env ?? process.env).VIATOR_PARTNER_ID?.trim();
+  if (
+    briefs.some((brief) => brief.vendorExpectation) &&
+    !/^P\d+$/.test(partnerId ?? "")
+  ) {
+    return [
+      check(
+        2,
+        "vendor-attribution",
+        "blocked",
+        "vendor acceptance requires the configured VIATOR_PARTNER_ID before any paid dispatch",
+      ),
+    ];
+  }
   const checks: CheckResult[] = [];
   const token = await signIn(
     fetchImpl,
@@ -1083,15 +1100,42 @@ async function runTier2(
     options.accounts[0],
   );
   for (const brief of briefs) {
-    checks.push(
-      await liveBrief(
+    let result: CheckResult;
+    try {
+      result = await liveBrief(
         fetchImpl,
         apiUrl,
         token,
-        brief,
+        brief.vendorExpectation
+          ? {
+              ...brief,
+              vendorExpectation: { ...brief.vendorExpectation, partnerId },
+            }
+          : brief,
         options.pollIntervalMs ?? 5_000,
-      ),
-    );
+      );
+    } catch {
+      result = check(
+        2,
+        `live-plan:${brief.id}`,
+        "failed",
+        "transport or cleanup failed; inspect retained receipts and reconcile spend before retrying",
+      );
+    }
+    checks.push(result);
+    if (result.status !== "passed") {
+      for (const remaining of briefs.slice(checks.length)) {
+        checks.push(
+          check(
+            2,
+            `live-plan:${remaining.id}`,
+            "blocked",
+            "batch stopped after failure; review evidence and reconcile Gateway spend before more paid calls",
+          ),
+        );
+      }
+      break;
+    }
   }
   return checks;
 }
@@ -1142,6 +1186,7 @@ async function liveBrief(
     );
   }
   const route = `${apiUrl}/api/trips/${tripId}`;
+  let terminalObserved = false;
   try {
     const dispatch = await http(fetchImpl, `${route}/generate`, {
       method: "POST",
@@ -1176,8 +1221,12 @@ async function liveBrief(
       );
       if (progressDown) return progressDown;
       const status = record(progress.data)?.status;
-      if (status === "completed") finished = true;
+      if (status === "completed") {
+        finished = true;
+        terminalObserved = true;
+      }
       if (status === "failed" || status === "error") {
+        terminalObserved = true;
         return check(
           2,
           `live-plan:${brief.id}`,
@@ -1191,7 +1240,10 @@ async function liveBrief(
     const saved = await http(fetchImpl, route, { headers });
     const savedDown = serverFailure(2, `live-plan:${brief.id}`, saved.status);
     if (savedDown) return savedDown;
-    const quality = evaluateSavedPlan(saved.data, brief);
+    const quality = evaluateSavedPlan(saved.data, {
+      ...brief,
+      requireFullDayMeals: true,
+    });
     for (const url of quality.reservationUrls) {
       if (!isOpenTableReservationUrl(url)) {
         quality.failures.push(
@@ -1211,7 +1263,22 @@ async function liveBrief(
     return quality.failures.length
       ? check(2, `live-plan:${brief.id}`, "failed", quality.failures.join("; "))
       : check(2, `live-plan:${brief.id}`, "passed", quality.notes.join("; "));
+  } catch {
+    return check(
+      2,
+      `live-plan:${brief.id}`,
+      "failed",
+      `transport failed; inspect trip ${tripId} and reconcile spend before retrying`,
+    );
   } finally {
-    await http(fetchImpl, route, { method: "DELETE", headers });
+    // A polling failure does not mean the remote workflow stopped. Preserve its
+    // trip until terminal state and billing can be reconciled by the operator.
+    if (terminalObserved) {
+      const removed = await http(fetchImpl, route, {
+        method: "DELETE",
+        headers,
+      });
+      if (removed.status !== 200) throw new Error("Test trip cleanup failed");
+    }
   }
 }

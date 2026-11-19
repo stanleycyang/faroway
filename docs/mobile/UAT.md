@@ -63,6 +63,13 @@ The October 28 setup uses a dedicated AI Gateway key named
 When its budget or lifetime ends, live planning needs a newly authorized key.
 Do not replace it with the inherited production/shared key.
 
+Reconcile both budget usage and key availability before a live run. A retained
+budget record does not prove its key still exists or is unexpired. Check key
+metadata without printing credential values; if the dedicated key is missing,
+stop live calls and obtain authorization before provisioning a replacement.
+Any replacement must preserve the original cumulative cap by subtracting all
+prior spend, including failed trials. Never reset usage to recover allowance.
+
 ```sh
 bunx vercel ai-gateway budgets list --scope testimonio
 ```

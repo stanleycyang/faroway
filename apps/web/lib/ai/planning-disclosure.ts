@@ -1,3 +1,5 @@
+import { diningSourceReviewEnabled } from "../search/dining-source-review-gate";
+
 // Shared by the active planning agents and the native disclosure endpoint.
 // Changing recipients, routing or data categories requires a new version.
 export const PLANNING_MODEL = "google/gemini-3-flash";
@@ -12,7 +14,21 @@ export const PLANNING_DISCLOSURE = {
   model: PLANNING_MODEL,
 };
 
+export function currentPlanningDisclosure(
+  env: Record<string, string | undefined> = process.env,
+) {
+  if (!diningSourceReviewEnabled(env)) return PLANNING_DISCLOSURE;
+  return {
+    ...PLANNING_DISCLOSURE,
+    version: "planning-google-parallel-v1",
+    message: PLANNING_DISCLOSURE.message.replace(
+      "\n\nChoose Share and plan",
+      "\n\nThis staging version also sends your destination, a general area and a meal type to Parallel through Vercel AI Gateway to look up public restaurant pages. Retrieved pages are processed by Google to suggest dining options. These options still need checking.\n\nChoose Share and plan",
+    ),
+  };
+}
+
 export function isStalePlanningDisclosure(headers: Headers): boolean {
   const version = headers.get("x-faroway-ai-disclosure");
-  return version !== PLANNING_DISCLOSURE.version;
+  return version !== currentPlanningDisclosure().version;
 }

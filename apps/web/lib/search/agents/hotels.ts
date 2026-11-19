@@ -17,6 +17,9 @@ import {
 import { z } from "zod";
 import { SearchPlan, HotelResult } from "../types";
 import { VIBE_KEYWORDS } from "@faroway/constants";
+import { compiledScheduleExperimentEnabled } from "../staging-schedule-experiment";
+import { screenHotelCandidates } from "../hotel-policy-screen";
+import reviewedHotelFacts from "../../../../../scripts/fixtures/agentic-hotel-constraints.json";
 import {
   AI_AGENT_TIMEOUT_MS,
   isOperationTimeoutError,
@@ -59,8 +62,8 @@ const SYSTEM_PROMPT = `You are a hotel booking expert. Generate realistic hotel 
 
 For each hotel, provide:
 1. Real hotel names that exist at the destination (use actual hotel names)
-2. A brief description of why the hotel may fit the traveler's preferences
-3. Location in a popular neighborhood
+2. A brief description of the neighborhood and why the hotel may fit the traveler's preferences. Name the area. Do not use filler such as "hidden gem" or claim the stay is booked.
+3. Location in a specific neighborhood the traveler asked for when one was supplied
 4. How well it matches the traveler's preferences
 
 Do not generate booking or affiliate URLs. Only live provider results may have
@@ -123,7 +126,24 @@ export async function runHotelsAgent(
   });
 
   // Live quotes are requested separately through the consented LiteAPI flow.
-  const hotels = deduplicateHotels(await aiFallbackPromise);
+  let hotels = deduplicateHotels(await aiFallbackPromise);
+  if (compiledScheduleExperimentEnabled()) {
+    const review = screenHotelCandidates(plan, hotels, reviewedHotelFacts);
+    hotels = review.candidates;
+    if (review.withheld.length || review.reviewRequired.length) {
+      console.info(
+        JSON.stringify({
+          event: "planning.hotel.policy_screen",
+          withheldCount: review.withheld.length,
+          reviewRequiredCount: review.reviewRequired.length,
+          remainingCount: hotels.length,
+          suitabilityVerified: false,
+        }),
+      );
+      if (!hotels.length && review.withheld.length)
+        logPlanningFallback("hotels", "published_policy_conflict", "empty");
+    }
+  }
   return hotels.sort((a, b) => b.vibeScore - a.vibeScore).slice(0, count);
 }
 

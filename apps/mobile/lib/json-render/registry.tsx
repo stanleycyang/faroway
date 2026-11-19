@@ -1,8 +1,11 @@
+import { TravelImage } from '../../components/ui/TravelImage';
+import { proposedVisitNote } from '@faroway/types';
+import { VenueSourceNotice } from '../../components/VenueSourceNotice';
 import { durationLabel } from '../durationLabel';
 import React from 'react';
 import { formatTripDate } from '../tripDate';
 import { formatPrice } from '@faroway/constants';
-import { View, Text as RNText, Image, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text as RNText, StyleSheet, TouchableOpacity } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { reviewSavedTripBooking } from '../savedTripBooking';
@@ -87,7 +90,7 @@ type HeroImageProps = z.infer<typeof HeroImageSchema>;
 export const HeroImage: React.FC<HeroImageProps> = ({ url, alt, overlay = true }) => {
   return (
     <View style={styles.heroImage}>
-      <Image source={{ uri: url }} style={styles.heroImageImg} accessibilityLabel={alt} />
+      <TravelImage source={{ uri: url }} style={styles.heroImageImg} accessibilityLabel={alt} />
       {overlay && (
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.3)']}
@@ -150,7 +153,7 @@ export const HotelCard: React.FC<HotelCardProps> = ({
 }) => {
   return (
     <View style={[styles.card, styles.hotelCard]}>
-      {image && <Image source={{ uri: image }} style={styles.hotelCardImage} />}
+      {image && <TravelImage source={{ uri: image }} style={styles.hotelCardImage} />}
       <View style={styles.hotelCardContent}>
         <View style={styles.hotelCardHeader}>
           <RNText style={styles.hotelCardName}>{name}</RNText>
@@ -247,6 +250,8 @@ export const ItineraryDay: React.FC<ItineraryDayProps> = ({ dayNumber, date, tit
 type ActivityCardProps = z.infer<typeof ActivityCardSchema>;
 
 export const ActivityCard: React.FC<ActivityCardProps> = ({
+  source,
+  proposedVisitType,
   name,
   description,
   duration,
@@ -260,6 +265,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
   time,
   location,
 }) => {
+  const visitNote = proposedVisitNote(proposedVisitType);
   return (
     <View style={[styles.card, styles.activityCard]}>
       <View style={styles.activityCardTime}>
@@ -268,7 +274,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
       </View>
 
       <View style={styles.activityCardBody}>
-        {image && <Image source={{ uri: image }} style={styles.activityCardImage} />}
+        {image && <TravelImage source={{ uri: image }} style={styles.activityCardImage} />}
         <View style={styles.activityCardContent}>
           <RNText style={styles.activityCardName}>{name}</RNText>
 
@@ -280,6 +286,8 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
           )}
 
           <RNText style={styles.activityCardDescription}>{description}</RNText>
+          {visitNote && <RNText style={styles.activityCardDescription}>{visitNote}</RNText>}
+          <VenueSourceNotice source={source} />
 
           <View style={styles.activityCardMeta}>
             <View style={styles.activityCardMetaItem}>
@@ -325,6 +333,7 @@ export const ActivityCard: React.FC<ActivityCardProps> = ({
 type RestaurantCardProps = z.infer<typeof RestaurantCardSchema>;
 
 export const RestaurantCard: React.FC<RestaurantCardProps> = ({
+  source,
   name,
   cuisine,
   priceLevel,
@@ -349,7 +358,7 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
       )}
 
       <View style={styles.restaurantCardBody}>
-        {image && <Image source={{ uri: image }} style={styles.restaurantCardImage} />}
+        {image && <TravelImage source={{ uri: image }} style={styles.restaurantCardImage} />}
         <View style={styles.restaurantCardContent}>
           <RNText style={styles.restaurantCardName}>{name}</RNText>
 
@@ -359,6 +368,7 @@ export const RestaurantCard: React.FC<RestaurantCardProps> = ({
           </View>
 
           {description && <RNText style={styles.restaurantCardDescription}>{description}</RNText>}
+          <VenueSourceNotice source={source} />
 
           {typeof rating === 'number' && rating > 0 && (
             <View style={styles.restaurantCardRating}>
@@ -992,14 +1002,14 @@ const styles = StyleSheet.create({
   // DayTimeline
   dayTimeline: {
     marginVertical: spacing.md,
-    paddingHorizontal: spacing.md,
   },
   timelineItem: {
     flexDirection: 'row',
     alignItems: 'flex-start',
   },
   timelineTime: {
-    width: 60,
+    minWidth: 48,
+    flexShrink: 0,
     paddingTop: spacing.xs,
   },
   timelineTimeText: {
@@ -1024,6 +1034,7 @@ const styles = StyleSheet.create({
   },
   timelineContent: {
     flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
@@ -1032,6 +1043,7 @@ const styles = StyleSheet.create({
   timelineIcon: {
     width: 32,
     height: 32,
+    flexShrink: 0,
     borderRadius: borderRadius.sm,
     justifyContent: 'center',
     alignItems: 'center',

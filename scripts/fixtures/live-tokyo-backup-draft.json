@@ -1,0 +1,758 @@
+{
+  "body": {
+    "trip": {
+      "status": "planned"
+    },
+    "itinerary": {
+      "days": [
+        {
+          "date": "2026-12-07",
+          "title": "Day 1 in Tokyo, Japan",
+          "summary": "Backup draft: Historical Yanaka Walking Tour; Nezu Museum; Happo-en Traditional Tea Ceremony. Leave the remaining time flexible.",
+          "tips": [
+            "Backup draft: opening hours, travel times, availability and suitability still need checking.",
+            "Leave time between visits for meals, travel and rest.",
+            "Sushi no Midori Ginza may require a separate journey from these activities. Check the route or find a closer local option; supplied locations are unverified."
+          ],
+          "morning": {
+            "meals": [
+              {
+                "id": "dining_1794716990981_2",
+                "name": "Kayaba Coffee",
+                "rating": 0,
+                "location": {
+                  "name": "Kayaba Coffee",
+                  "address": "6-1-29 Yanaka, Taito City, Tokyo 110-0001",
+                  "coordinates": {
+                    "lat": 35.7226,
+                    "lng": 139.7711
+                  }
+                },
+                "mealType": "breakfast",
+                "vibeMatch": {
+                  "reasoning": "Matches your cultural preferences",
+                  "matchedVibes": ["cultural"]
+                },
+                "priceLevel": 2,
+                "cuisineType": ["Japanese", "Cafe"],
+                "description": "A historic Yanaka landmark established in 1938, serving signature egg sandwiches and specialty coffee in a restored Machiya building.",
+                "reviewCount": 0,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": "",
+                  "perPerson": true
+                },
+                "dietaryOptions": [],
+                "reservationInfo": {
+                  "recommended": false
+                }
+              }
+            ],
+            "activities": [
+              {
+                "id": "activity_1794716986700_7",
+                "name": "Historical Yanaka Walking Tour",
+                "images": [],
+                "rating": 0,
+                "category": "sightseeing",
+                "duration": 180,
+                "location": {
+                  "name": "Yanaka Ginza",
+                  "address": "3-13-1 Yanaka, Taito City, Tokyo 110-0001",
+                  "coordinates": {
+                    "lat": 35.7275,
+                    "lng": 139.7681
+                  }
+                },
+                "timeOfDay": "morning",
+                "vibeMatch": {
+                  "reasoning": "Matches your history, local, traditional, cultural style",
+                  "matchedVibes": [
+                    "history",
+                    "local",
+                    "traditional",
+                    "cultural"
+                  ]
+                },
+                "bookingInfo": {
+                  "requiresReservation": true
+                },
+                "description": "Explore the 'Old Town' of Tokyo, known as Yanaka. This area survived wartime bombing and retains a traditional atmosphere with numerous small temples, artisan workshops, and a nostalgic shopping street called Yanaka Ginza.",
+                "reviewCount": 0,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": ""
+                },
+                "proposedVisitType": "guided_tour"
+              }
+            ]
+          },
+          "afternoon": {
+            "meals": [
+              {
+                "id": "dining_1794716990982_7",
+                "name": "Sushi no Midori Ginza",
+                "rating": 0,
+                "location": {
+                  "name": "Sushi no Midori Ginza",
+                  "address": "7-2 Ginza, Chuo City, Tokyo 104-0061",
+                  "coordinates": {
+                    "lat": 35.6698,
+                    "lng": 139.7595
+                  }
+                },
+                "mealType": "lunch",
+                "vibeMatch": {
+                  "reasoning": "Matches your foodie preferences",
+                  "matchedVibes": ["foodie"]
+                },
+                "priceLevel": 2,
+                "cuisineType": ["Sushi"],
+                "description": "A high-quality but accessible sushi experience popular for its fresh cuts and vibrant atmosphere in the heart of Ginza.",
+                "reviewCount": 0,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": "",
+                  "perPerson": true
+                },
+                "dietaryOptions": [],
+                "reservationInfo": {
+                  "recommended": false
+                }
+              }
+            ],
+            "activities": [
+              {
+                "id": "activity_1794716986699_3",
+                "name": "Nezu Museum",
+                "images": [],
+                "rating": 0,
+                "category": "sightseeing",
+                "duration": 120,
+                "location": {
+                  "name": "Nezu Museum",
+                  "address": "6-5-1 Minamiaoyama, Minato City, Tokyo 107-0062",
+                  "coordinates": {
+                    "lat": 35.662222,
+                    "lng": 139.716389
+                  }
+                },
+                "timeOfDay": "afternoon",
+                "vibeMatch": {
+                  "reasoning": "Matches your art, museum, architecture, cultural style",
+                  "matchedVibes": ["art", "museum", "architecture", "cultural"]
+                },
+                "bookingInfo": {
+                  "requiresReservation": false
+                },
+                "description": "A museum housing a significant collection of pre-modern Japanese and East Asian art, including calligraphy, ceramics, and textiles. The building features modern architecture that integrates with a large, traditional Japanese stroll garden.",
+                "reviewCount": 0,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": ""
+                },
+                "proposedVisitType": "ordinary_entry"
+              },
+              {
+                "id": "activity_1794716986699_6",
+                "name": "Happo-en Traditional Tea Ceremony",
+                "images": [],
+                "rating": 0,
+                "category": "sightseeing",
+                "duration": 60,
+                "location": {
+                  "name": "Happo-en",
+                  "address": "1-1-1 Shirokanedai, Minato City, Tokyo 108-8631",
+                  "coordinates": {
+                    "lat": 35.6375,
+                    "lng": 139.7288
+                  }
+                },
+                "timeOfDay": "afternoon",
+                "vibeMatch": {
+                  "reasoning": "Matches your Tea ceremony, cultural, traditional, heritage style",
+                  "matchedVibes": [
+                    "Tea ceremony",
+                    "cultural",
+                    "traditional",
+                    "heritage"
+                  ]
+                },
+                "bookingInfo": {
+                  "requiresReservation": true
+                },
+                "description": "Participate in a formal tea ceremony (chanoyu) led by a tea master at the Muan tea house within the Happo-en gardens. The experience includes the preparation of matcha and the serving of traditional sweets.",
+                "reviewCount": 0,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": ""
+                },
+                "proposedVisitType": "ordinary_entry"
+              }
+            ]
+          },
+          "evening": {
+            "meals": [
+              {
+                "id": "dining_1794716990982_5",
+                "name": "Kagurazaka Ishikawa",
+                "rating": 0,
+                "location": {
+                  "name": "Kagurazaka Ishikawa",
+                  "address": "5-37 Kagurazaka, Shinjuku City, Tokyo 162-0825",
+                  "coordinates": {
+                    "lat": 35.7013,
+                    "lng": 139.7405
+                  }
+                },
+                "mealType": "dinner",
+                "vibeMatch": {
+                  "reasoning": "Matches your foodie, cultural preferences",
+                  "matchedVibes": ["foodie", "cultural"]
+                },
+                "priceLevel": 4,
+                "cuisineType": ["Kaiseki"],
+                "description": "While highly exclusive, this venue exemplifies the refined Kaiseki tradition of the Kagurazaka district, emphasizing seasonal purity.",
+                "reviewCount": 0,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": "",
+                  "perPerson": true
+                },
+                "dietaryOptions": [],
+                "reservationInfo": {
+                  "recommended": false
+                }
+              }
+            ],
+            "activities": []
+          }
+        },
+        {
+          "date": "2026-12-08",
+          "title": "Day 2 in Tokyo, Japan",
+          "summary": "Backup draft: Traditional Craft Workshop at Ozu Washi; Tsukiji Outer Market; Edo-Tokyo Museum; Kiyosumi Teien Garden. Leave the remaining time flexible.",
+          "tips": [
+            "Backup draft: opening hours, travel times, availability and suitability still need checking.",
+            "Leave time between visits for meals, travel and rest."
+          ],
+          "morning": {
+            "meals": [
+              {
+                "id": "dining_1794716990981_1",
+                "name": "Tsumugi",
+                "rating": 0,
+                "location": {
+                  "name": "Tsukiji Hongwanji Tsumugi",
+                  "address": "3-15-1 Tsukiji, Chuo City, Tokyo 104-0045",
+                  "coordinates": {
+                    "lat": 35.6664,
+                    "lng": 139.7719
+                  }
+                },
+                "mealType": "breakfast",
+                "vibeMatch": {
+                  "reasoning": "Matches your cultural, foodie preferences",
+                  "matchedVibes": ["cultural", "foodie"]
+                },
+                "priceLevel": 2,
+                "cuisineType": ["Japanese", "Cafe"],
+                "description": "Located within the Tsukiji Hongwanji Temple premises, this cafe offers a famous 18-dish breakfast set inspired by Buddhist traditions.",
+                "reviewCount": 0,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": "",
+                  "perPerson": true
+                },
+                "dietaryOptions": [],
+                "reservationInfo": {
+                  "recommended": false
+                }
+              }
+            ],
+            "activities": [
+              {
+                "id": "activity_1794716986700_11",
+                "name": "Traditional Craft Workshop at Ozu Washi",
+                "images": [],
+                "rating": 0,
+                "category": "sightseeing",
+                "duration": 60,
+                "location": {
+                  "name": "Ozu Washi",
+                  "address": "3-6-2 Nihonbashihoncho, Chuo City, Tokyo 103-0023",
+                  "coordinates": {
+                    "lat": 35.6888,
+                    "lng": 139.7766
+                  }
+                },
+                "timeOfDay": "morning",
+                "vibeMatch": {
+                  "reasoning": "Matches your Traditional crafts, cultural, history, local style",
+                  "matchedVibes": [
+                    "Traditional crafts",
+                    "cultural",
+                    "history",
+                    "local"
+                  ]
+                },
+                "bookingInfo": {
+                  "requiresReservation": true
+                },
+                "description": "Participate in a hands-on workshop making traditional Japanese paper (washi) at a shop that has been in business since 1653. Learn about the history of paper making and the different materials used.",
+                "reviewCount": 0,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": ""
+                },
+                "proposedVisitType": "guided_tour"
+              },
+              {
+                "id": "activity_1794716986699_1",
+                "name": "Tsukiji Outer Market",
+                "images": [],
+                "rating": 0,
+                "category": "sightseeing",
+                "duration": 120,
+                "location": {
+                  "name": "Tsukiji Outer Market",
+                  "address": "4-16-2 Tsukiji, Chuo City, Tokyo 104-0045",
+                  "coordinates": {
+                    "lat": 35.6655,
+                    "lng": 139.7707
+                  }
+                },
+                "timeOfDay": "morning",
+                "vibeMatch": {
+                  "reasoning": "Matches your foodie, culinary, local style",
+                  "matchedVibes": ["foodie", "culinary", "local"]
+                },
+                "bookingInfo": {
+                  "requiresReservation": false
+                },
+                "description": "Explore the narrow lanes of the outer market area, where numerous vendors sell fresh seafood, Japanese kitchen tools, and specialty ingredients. Experience the vibrant culinary atmosphere and sample local street food.",
+                "reviewCount": 0,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": ""
+                },
+                "proposedVisitType": "exterior_walk"
+              }
+            ]
+          },
+          "afternoon": {
+            "meals": [
+              {
+                "id": "dining_1794716990982_3",
+                "name": "Tempura Nakayama",
+                "rating": 0,
+                "location": {
+                  "name": "Tempura Nakayama",
+                  "address": "1-10-8 Nihonbashi Ningyocho, Chuo City, Tokyo 103-0013",
+                  "coordinates": {
+                    "lat": 35.6858,
+                    "lng": 139.7825
+                  }
+                },
+                "mealType": "lunch",
+                "vibeMatch": {
+                  "reasoning": "Matches your foodie, cultural preferences",
+                  "matchedVibes": ["foodie", "cultural"]
+                },
+                "priceLevel": 2,
+                "cuisineType": ["Tempura"],
+                "description": "A humble, historic spot in Ningyocho famous for its 'Kuro Tendon' (black tempura bowl), featuring a deep, savory dark sauce.",
+                "reviewCount": 0,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": "",
+                  "perPerson": true
+                },
+                "dietaryOptions": [],
+                "reservationInfo": {
+                  "recommended": false
+                }
+              }
+            ],
+            "activities": [
+              {
+                "id": "activity_1794716986699_5",
+                "name": "Edo-Tokyo Museum",
+                "images": [],
+                "rating": 0,
+                "category": "sightseeing",
+                "duration": 150,
+                "location": {
+                  "name": "Edo-Tokyo Museum",
+                  "address": "1-4-1 Yokoami, Sumida City, Tokyo 130-0015",
+                  "coordinates": {
+                    "lat": 35.6963,
+                    "lng": 139.7961
+                  }
+                },
+                "timeOfDay": "afternoon",
+                "vibeMatch": {
+                  "reasoning": "Matches your history, cultural, architecture, traditional style",
+                  "matchedVibes": [
+                    "history",
+                    "cultural",
+                    "architecture",
+                    "traditional"
+                  ]
+                },
+                "bookingInfo": {
+                  "requiresReservation": false
+                },
+                "description": "Focuses on the history and culture of Tokyo during the Edo period. The museum features large-scale models, including a life-size replica of the Nihonbashi Bridge, and exhibits on daily life, urban development, and traditional arts.",
+                "reviewCount": 0,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": ""
+                },
+                "proposedVisitType": "ordinary_entry"
+              },
+              {
+                "id": "activity_1794716986700_12",
+                "name": "Kiyosumi Teien Garden",
+                "images": [],
+                "rating": 0,
+                "category": "sightseeing",
+                "duration": 60,
+                "location": {
+                  "name": "Kiyosumi Teien",
+                  "address": "3-3-9 Kiyosumi, Koto City, Tokyo 135-0024",
+                  "coordinates": {
+                    "lat": 35.6792,
+                    "lng": 139.7978
+                  }
+                },
+                "timeOfDay": "afternoon",
+                "vibeMatch": {
+                  "reasoning": "Matches your cultural, traditional, architecture style",
+                  "matchedVibes": ["cultural", "traditional", "architecture"]
+                },
+                "bookingInfo": {
+                  "requiresReservation": false
+                },
+                "description": "A traditional Japanese stroll garden featuring a large pond, diverse stone specimens collected from across Japan, and a landscape designed to highlight seasonal changes. The garden is representative of Meiji-era landscaping.",
+                "reviewCount": 0,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": ""
+                },
+                "proposedVisitType": "ordinary_entry"
+              }
+            ]
+          },
+          "evening": {
+            "meals": [
+              {
+                "id": "dining_1794716990982_9",
+                "name": "Ginza Hachigou",
+                "rating": 0,
+                "location": {
+                  "name": "Ginza Hachigou",
+                  "address": "3-14-2 Ginza, Chuo City, Tokyo 104-0061",
+                  "coordinates": {
+                    "lat": 35.6699,
+                    "lng": 139.7692
+                  }
+                },
+                "mealType": "dinner",
+                "vibeMatch": {
+                  "reasoning": "Matches your foodie preferences",
+                  "matchedVibes": ["foodie"]
+                },
+                "priceLevel": 2,
+                "cuisineType": ["Ramen"],
+                "description": "A unique ramen destination known for its French-influenced consomm\u00e9-style broth, earning significant acclaim in the foodie community.",
+                "reviewCount": 0,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": "",
+                  "perPerson": true
+                },
+                "dietaryOptions": [],
+                "reservationInfo": {
+                  "recommended": false
+                }
+              }
+            ],
+            "activities": []
+          }
+        },
+        {
+          "date": "2026-12-09",
+          "title": "Day 3 in Tokyo, Japan",
+          "summary": "Backup draft: Nihonbashi Culinary History Tour; Suntory Museum of Art; Yamatane Museum of Art; Self-guided neighborhood walk in Tokyo, Japan. Leave the remaining time flexible.",
+          "tips": [
+            "Backup draft: opening hours, travel times, availability and suitability still need checking.",
+            "Leave time between visits for meals, travel and rest."
+          ],
+          "morning": {
+            "meals": [
+              {
+                "id": "dining_1794716990981_1",
+                "name": "Tsumugi",
+                "rating": 0,
+                "location": {
+                  "name": "Tsukiji Hongwanji Tsumugi",
+                  "address": "3-15-1 Tsukiji, Chuo City, Tokyo 104-0045",
+                  "coordinates": {
+                    "lat": 35.6664,
+                    "lng": 139.7719
+                  }
+                },
+                "mealType": "breakfast",
+                "vibeMatch": {
+                  "reasoning": "Matches your cultural, foodie preferences",
+                  "matchedVibes": ["cultural", "foodie"]
+                },
+                "priceLevel": 2,
+                "cuisineType": ["Japanese", "Cafe"],
+                "description": "Located within the Tsukiji Hongwanji Temple premises, this cafe offers a famous 18-dish breakfast set inspired by Buddhist traditions.",
+                "reviewCount": 0,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": "",
+                  "perPerson": true
+                },
+                "dietaryOptions": [],
+                "reservationInfo": {
+                  "recommended": false
+                }
+              }
+            ],
+            "activities": [
+              {
+                "id": "activity_1794716986700_13",
+                "name": "Nihonbashi Culinary History Tour",
+                "images": [],
+                "rating": 0,
+                "category": "sightseeing",
+                "duration": 150,
+                "location": {
+                  "name": "Nihonbashi Mitsukoshi Main Store",
+                  "address": "1-4-1 Nihonbashimuromachi, Chuo City, Tokyo 103-8001",
+                  "coordinates": {
+                    "lat": 35.6853,
+                    "lng": 139.7731
+                  }
+                },
+                "timeOfDay": "morning",
+                "vibeMatch": {
+                  "reasoning": "Matches your foodie, culinary, history, local, food tour style",
+                  "matchedVibes": [
+                    "foodie",
+                    "culinary",
+                    "history",
+                    "local",
+                    "food tour"
+                  ]
+                },
+                "bookingInfo": {
+                  "requiresReservation": true
+                },
+                "description": "A walking tour through the Nihonbashi district, the historic center of Edo-era commerce. Visit long-established food shops specializing in dashi (soup stock), seaweed, and traditional sweets while learning about Tokyo's culinary evolution.",
+                "reviewCount": 0,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": ""
+                },
+                "proposedVisitType": "guided_tour"
+              }
+            ]
+          },
+          "afternoon": {
+            "meals": [
+              {
+                "id": "dining_1794716990982_11",
+                "name": "Toraya Ginza",
+                "rating": 0,
+                "location": {
+                  "name": "Toraya Ginza",
+                  "address": "7-8-6 Ginza, Chuo City, Tokyo 104-0061",
+                  "coordinates": {
+                    "lat": 35.6695,
+                    "lng": 139.7621
+                  }
+                },
+                "mealType": "lunch",
+                "vibeMatch": {
+                  "reasoning": "Matches your cultural, foodie preferences",
+                  "matchedVibes": ["cultural", "foodie"]
+                },
+                "priceLevel": 2,
+                "cuisineType": ["Wagashi", "Cafe"],
+                "description": "A legendary wagashi maker. The tea room offers seasonal Japanese sweets and matcha in a minimalist, elegant space.",
+                "reviewCount": 0,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": "",
+                  "perPerson": true
+                },
+                "dietaryOptions": [],
+                "reservationInfo": {
+                  "recommended": false
+                }
+              }
+            ],
+            "activities": [
+              {
+                "id": "activity_1794716986700_10",
+                "name": "Suntory Museum of Art",
+                "images": [],
+                "rating": 0,
+                "category": "sightseeing",
+                "duration": 90,
+                "location": {
+                  "name": "Suntory Museum of Art",
+                  "address": "9-7-4 Akasaka, Minato City, Tokyo 107-6203",
+                  "coordinates": {
+                    "lat": 35.6661,
+                    "lng": 139.7303
+                  }
+                },
+                "timeOfDay": "afternoon",
+                "vibeMatch": {
+                  "reasoning": "Matches your art, museum, cultural, Traditional crafts style",
+                  "matchedVibes": [
+                    "art",
+                    "museum",
+                    "cultural",
+                    "Traditional crafts"
+                  ]
+                },
+                "bookingInfo": {
+                  "requiresReservation": false
+                },
+                "description": "Located in Tokyo Midtown, this museum focuses on 'Art in Life.' The collection includes Japanese ceramics, lacquerware, textiles, and glass, emphasizing the beauty of everyday objects from different historical periods.",
+                "reviewCount": 0,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": ""
+                },
+                "proposedVisitType": "ordinary_entry"
+              },
+              {
+                "id": "activity_1794716986700_14",
+                "name": "Yamatane Museum of Art",
+                "images": [],
+                "rating": 0,
+                "category": "sightseeing",
+                "duration": 90,
+                "location": {
+                  "name": "Yamatane Museum of Art",
+                  "address": "3-12-3 Hiroo, Shibuya City, Tokyo 150-0012",
+                  "coordinates": {
+                    "lat": 35.6517,
+                    "lng": 139.7139
+                  }
+                },
+                "timeOfDay": "afternoon",
+                "vibeMatch": {
+                  "reasoning": "Matches your art, museum, cultural, traditional style",
+                  "matchedVibes": ["art", "museum", "cultural", "traditional"]
+                },
+                "bookingInfo": {
+                  "requiresReservation": false
+                },
+                "description": "Specializes in Nihonga (modern Japanese-style painting). The museum offers a rotating selection of works that utilize traditional materials such as mineral pigments, ink, and gold leaf, often focusing on nature and seasonal themes.",
+                "reviewCount": 0,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": ""
+                },
+                "proposedVisitType": "ordinary_entry"
+              }
+            ]
+          },
+          "evening": {
+            "meals": [
+              {
+                "id": "dining_1794716990982_4",
+                "name": "Inshotei",
+                "rating": 0,
+                "location": {
+                  "name": "Inshotei",
+                  "address": "4-18 Uenokoen, Taito City, Tokyo 110-0007",
+                  "coordinates": {
+                    "lat": 35.7144,
+                    "lng": 139.7728
+                  }
+                },
+                "mealType": "dinner",
+                "vibeMatch": {
+                  "reasoning": "Matches your cultural, foodie preferences",
+                  "matchedVibes": ["cultural", "foodie"]
+                },
+                "priceLevel": 3,
+                "cuisineType": ["Kaiseki", "Japanese"],
+                "description": "Housed in a traditional wooden building in Ueno Park since 1875, offering refined Kaiseki-style bento boxes with a view of the greenery.",
+                "reviewCount": 0,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": "",
+                  "perPerson": true
+                },
+                "dietaryOptions": [],
+                "reservationInfo": {
+                  "recommended": false
+                }
+              }
+            ],
+            "activities": [
+              {
+                "id": "enriched_activity_self_guided_neighborhood_walk_0",
+                "name": "Self-guided neighborhood walk in Tokyo, Japan",
+                "images": [],
+                "rating": 0,
+                "category": "sightseeing",
+                "duration": 90,
+                "location": {
+                  "name": "Tokyo, Japan",
+                  "address": ""
+                },
+                "timeOfDay": "evening",
+                "vibeMatch": {
+                  "reasoning": "Matches your cultural, foodie style",
+                  "matchedVibes": ["cultural", "foodie"]
+                },
+                "bookingInfo": {
+                  "requiresReservation": false
+                },
+                "description": "Planning idea; confirm opening times, availability and any admission price.",
+                "reviewCount": 0,
+                "planningIdea": true,
+                "estimatedCost": {
+                  "amount": 0,
+                  "status": "unknown",
+                  "currency": ""
+                }
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

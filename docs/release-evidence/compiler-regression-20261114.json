@@ -1,0 +1,113 @@
+{
+  "scope": "Frozen development inventory, pure compiler only; no source/hour/identity review or live generation. Not traveler acceptance.",
+  "results": [
+    {
+      "case": "copenhagen-family.json",
+      "days": 3,
+      "scheduledVisits": 6,
+      "timingConflicts": 0,
+      "mealGaps": 0,
+      "activityGaps": 0,
+      "verified": false
+    },
+    {
+      "case": "edinburgh-wheelchair.json",
+      "days": 3,
+      "scheduledVisits": 6,
+      "timingConflicts": 0,
+      "mealGaps": 1,
+      "activityGaps": 0,
+      "verified": false
+    },
+    {
+      "case": "interlaken-sparse.json",
+      "days": 7,
+      "scheduledVisits": 9,
+      "timingConflicts": 0,
+      "mealGaps": 12,
+      "activityGaps": 1,
+      "verified": false
+    },
+    {
+      "case": "istanbul-year-boundary.json",
+      "days": 3,
+      "scheduledVisits": 9,
+      "timingConflicts": 0,
+      "mealGaps": 0,
+      "activityGaps": 0,
+      "verified": false
+    },
+    {
+      "case": "lisbon-city-break.json",
+      "days": 3,
+      "scheduledVisits": 9,
+      "timingConflicts": 0,
+      "mealGaps": 5,
+      "activityGaps": 0,
+      "verified": false
+    },
+    {
+      "case": "marrakech-vegan.json",
+      "days": 4,
+      "scheduledVisits": 12,
+      "timingConflicts": 0,
+      "mealGaps": 0,
+      "activityGaps": 0,
+      "verified": false
+    },
+    {
+      "case": "new-york-allergy.json",
+      "days": 3,
+      "scheduledVisits": 9,
+      "timingConflicts": 0,
+      "mealGaps": 0,
+      "activityGaps": 0,
+      "verified": false
+    },
+    {
+      "case": "paris-luxury.json",
+      "days": 3,
+      "scheduledVisits": 9,
+      "timingConflicts": 0,
+      "mealGaps": 0,
+      "activityGaps": 0,
+      "verified": false
+    },
+    {
+      "case": "reykjavik-winter.json",
+      "days": 5,
+      "scheduledVisits": 9,
+      "timingConflicts": 0,
+      "mealGaps": 6,
+      "activityGaps": 0,
+      "verified": false
+    },
+    {
+      "case": "rome-single-day.json",
+      "days": 1,
+      "scheduledVisits": 3,
+      "timingConflicts": 0,
+      "mealGaps": 0,
+      "activityGaps": 0,
+      "verified": false
+    },
+    {
+      "case": "singapore-family.json",
+      "days": 4,
+      "scheduledVisits": 8,
+      "timingConflicts": 0,
+      "mealGaps": 3,
+      "activityGaps": 0,
+      "verified": false
+    },
+    {
+      "case": "tokyo-solo-budget.json",
+      "days": 3,
+      "scheduledVisits": 8,
+      "timingConflicts": 0,
+      "mealGaps": 3,
+      "activityGaps": 0,
+      "verified": false
+    }
+  ]
+}

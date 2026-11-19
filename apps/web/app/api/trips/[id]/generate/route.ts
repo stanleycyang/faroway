@@ -117,25 +117,32 @@ export async function POST(request: NextRequest, { params }: Params) {
         { status: 409 },
       );
 
-    // Rate limit: 5 per hour per user.
-    const hourlyLimit = await checkRateLimitAsync(`generate:hour:${userId}`, {
-      maxRequests: 5,
-      windowMs: 60 * 60 * 1000,
-      failClosed: true,
-    });
-    if (!hourlyLimit.allowed) {
-      return NextResponse.json(
-        {
-          error:
-            "Too many generation requests. Please wait before generating another trip.",
-        },
-        {
-          status: 429,
-          headers: {
-            "Retry-After": String(Math.ceil(hourlyLimit.resetIn / 1000)),
+    // Local development can repeat acceptance cases without consuming the
+    // shared hourly bucket. Hosted preview and production retain the limit.
+    const localDevelopment =
+      process.env.NODE_ENV === "development" &&
+      !process.env.VERCEL &&
+      !process.env.VERCEL_ENV;
+    if (!localDevelopment) {
+      const hourlyLimit = await checkRateLimitAsync(`generate:hour:${userId}`, {
+        maxRequests: 5,
+        windowMs: 60 * 60 * 1000,
+        failClosed: true,
+      });
+      if (!hourlyLimit.allowed) {
+        return NextResponse.json(
+          {
+            error:
+              "Too many generation requests. Please wait before generating another trip.",
           },
-        },
-      );
+          {
+            status: 429,
+            headers: {
+              "Retry-After": String(Math.ceil(hourlyLimit.resetIn / 1000)),
+            },
+          },
+        );
+      }
     }
 
     // Parse optional preferences from request body
@@ -263,16 +270,20 @@ export async function POST(request: NextRequest, { params }: Params) {
       travelers: trip.travelers || 2,
       vibes,
     });
-    await adminClient.rpc("merge_intermediate_results", {
-      p_search_id: searchId,
-      p_key: "days",
-      p_value: previewDays,
-    });
-    await adminClient.rpc("merge_intermediate_results", {
-      p_search_id: searchId,
-      p_key: "previewReady",
-      p_value: true,
-    });
+    // Both writes target one row. Postgres re-reads the locked row, so the
+    // jsonb merges do not clobber each other, and the two round trips overlap.
+    await Promise.all([
+      adminClient.rpc("merge_intermediate_results", {
+        p_search_id: searchId,
+        p_key: "days",
+        p_value: previewDays,
+      }),
+      adminClient.rpc("merge_intermediate_results", {
+        p_search_id: searchId,
+        p_key: "previewReady",
+        p_value: true,
+      }),
+    ]);
 
     if (scenario) {
       await completeLocalGeneration(
@@ -540,13 +551,22 @@ export async function GET(request: NextRequest, { params }: Params) {
       }
     }
 
+    const unfinished = stages.filter(
+      (stage) =>
+        searchProgress[stage] === "error" || searchProgress[stage] === "failed",
+    );
     if (search.status === "completed") {
       progressPercent = 100;
       currentStep = "complete";
-      message = "Your itinerary is ready!";
+      message = unfinished.length
+        ? "Your itinerary is ready, with gaps where a search did not finish. Review those stops before you rely on them."
+        : "Your itinerary is ready!";
     } else if (search.status === "error") {
       currentStep = "error";
       message = search.error_message || "Something went wrong";
+    } else if (unfinished.length) {
+      currentStep = unfinished[0];
+      message = `${unfinished.join(", ")} did not finish. Nothing was retried automatically.`;
     }
 
     return NextResponse.json({

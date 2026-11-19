@@ -1,3 +1,12 @@
+import { isTimingNote, proposedVisitNote } from '@faroway/types';
+import { TravelImage } from '../../components/ui/TravelImage';
+import { travelerRequirementLines } from '../../lib/travelerRequirements';
+import { transformItineraryDays } from '../../lib/itineraryNormalization';
+import { ProposedTiming } from '../../components/ProposedTiming';
+import { VenueSourceNotice } from '../../components/VenueSourceNotice';
+import { VenuePhotoCredit } from '../../components/VenuePhotoCredit';
+import { venuePhotoSource } from '../../lib/venuePhotoAssets';
+import { DiningReviewOptions } from '../../components/DiningReviewOptions';
 import { flightQuoteIsCurrent } from '@faroway/constants';
 import { formatKnownPrice, summarizeTripCosts } from '../../lib/tripCost';
 import React, {
@@ -15,7 +24,6 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Image,
   Animated,
   RefreshControl,
   ActivityIndicator,
@@ -75,6 +83,7 @@ interface ActivityCardProps {
 }
 
 function ActivityCard({ activity }: ActivityCardProps) {
+  const visitNote = proposedVisitNote(activity.proposedVisitType);
   const reviewBooking = useBookingReview();
   const getTypeIcon = (type: string) => {
     switch (type) {
@@ -125,7 +134,14 @@ function ActivityCard({ activity }: ActivityCardProps) {
       <View style={styles.activityContent}>
         {/* Activity Image */}
         {activity.image && (
-          <Image source={{ uri: activity.image }} style={styles.activityImage} accessible={false} />
+          <TravelImage
+            source={venuePhotoSource(activity.image)}
+            style={styles.activityImage}
+            accessible={false}
+          />
+        )}
+        {activity.image && activity.imageCredit && (
+          <VenuePhotoCredit credit={activity.imageCredit} />
         )}
         <View style={styles.activityHeader}>
           <View
@@ -142,11 +158,15 @@ function ActivityCard({ activity }: ActivityCardProps) {
           </View>
           <View style={styles.activityInfo}>
             <Text style={styles.activityTitle}>{activity.title}</Text>
-            <Text style={styles.activityDuration}>{activity.duration}</Text>
+            {activity.duration ? (
+              <Text style={styles.activityDuration}>{activity.duration}</Text>
+            ) : null}
           </View>
           {activity.price && <Text style={styles.activityPrice}>{activity.price}</Text>}
         </View>
         <Text style={styles.activityDescription}>{activity.description}</Text>
+        {visitNote && <Text style={styles.activityDescription}>{visitNote}</Text>}
+        <VenueSourceNotice source={activity.source} />
         {activity.rating && (
           <View style={styles.activityRating}>
             <Ionicons name="star" size={14} color="#fbbf24" />
@@ -210,7 +230,11 @@ function FeaturedHotelCard({
   return (
     <View style={styles.hotelCard}>
       {hotel.images && hotel.images.length > 0 && (
-        <Image source={{ uri: hotel.images[0] }} style={styles.hotelCardImage} accessible={false} />
+        <TravelImage
+          source={{ uri: hotel.images[0] }}
+          style={styles.hotelCardImage}
+          accessible={false}
+        />
       )}
       <View style={styles.hotelCardContent}>
         <View style={styles.hotelCardHeader}>
@@ -239,9 +263,10 @@ function FeaturedHotelCard({
         </View>
         {hotel.amenities && hotel.amenities.length > 0 && (
           <View style={styles.hotelCardAmenities}>
+            <Text style={styles.hotelCardAmenityNotice}>Amenities to confirm with the hotel</Text>
             {hotel.amenities.slice(0, 3).map((amenity, index) => (
               <View key={index} style={styles.hotelCardAmenityChip}>
-                <Text style={styles.hotelCardAmenityText}>{amenity}</Text>
+                <Text style={styles.hotelCardAmenityText}>{amenity.replace(/_/g, ' ')}</Text>
               </View>
             ))}
           </View>
@@ -492,6 +517,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   const { tripGenerationCount, shouldShowRatingPrompt } = usePromptStore();
   const reduceMotion = useReduceMotion();
   const [selectedDay, setSelectedDay] = useState(0);
+  const [showDiningRequirements, setShowDiningRequirements] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [showAuthGate, setShowAuthGate] = useState(false);
   const [showRatingPrompt, setShowRatingPrompt] = useState(false);
@@ -541,7 +567,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
       detailController.current = controller;
       refreshLock.current = false;
       setRefreshing(false);
-      setIsLoadingTrip(!cachedTrip);
+      setIsLoadingTrip(!cachedTrip || cachedTrip.days.length === 0);
       setLoadError(null);
 
       getTripById(id, controller.signal)
@@ -592,6 +618,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
       return;
     refreshLock.current = true;
     setRefreshing(true);
+    setLoadError(null);
     hapticFeedback.light();
     try {
       // Use getTripById which properly transforms itinerary data with booking URLs
@@ -719,7 +746,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
         />
         <TouchableOpacity
           style={styles.errorStateBack}
-          onPress={() => router.back()}
+          onPress={() => router.dismissTo('/(tabs)/trips')}
           accessibilityRole="button"
         >
           <Text style={styles.errorStateBackText}>Go back</Text>
@@ -738,7 +765,27 @@ function TripDetailSession({ id }: { id: string | undefined }) {
     );
   }
 
+  const requirementLines = travelerRequirementLines(trip.requirements);
+  const hasPlanningIdeas = trip.days.some((day) =>
+    day.activities.some((activity) => activity.planningIdea === true)
+  );
   const isLocalTrip = trip.id.startsWith('local_');
+  const timingDay = trip.days[selectedDay]
+    ? transformItineraryDays([trip.days[selectedDay]])[0]
+    : undefined;
+  const visibleTips = (timingDay?.tips ?? []).filter(
+    (tip) => !timingDay?.timingProposal || !isTimingNote(tip)
+  );
+  const diningCautions = visibleTips.filter((tip) => /allerg|cross[- ]contact/i.test(tip));
+  const otherTips = visibleTips.filter((tip) => !diningCautions.includes(tip));
+  const timingNames: Record<string, string> = {};
+  for (const activity of timingDay?.activities ?? []) {
+    const eventId =
+      activity.type === 'restaurant'
+        ? `meal:${activity.scheduleSlot}:${activity.id}`
+        : `activity:${activity.id}`;
+    timingNames[eventId] = activity.title;
+  }
 
   const formatDateRange = () => {
     const start = formatTripDate(trip.startDate, { month: 'short', day: 'numeric' });
@@ -763,7 +810,29 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   return (
     <BookingTripContext.Provider value={trip.id}>
       <View style={styles.container}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
+        <SafeAreaView edges={['top', 'left', 'right']} style={styles.navigationBar}>
+          <View style={styles.heroHeader}>
+            <TouchableOpacity
+              style={styles.navigationButton}
+              onPress={() => router.dismissTo('/(tabs)/trips')}
+              accessibilityRole="button"
+              accessibilityLabel="Back to trips"
+            >
+              <Ionicons name="arrow-back" size={24} color={colors.neutral[800]} />
+              <Text style={styles.navigationLabel}>Trips</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.navigationButton}
+              onPress={handleShare}
+              accessibilityRole="button"
+              accessibilityLabel="Share trip"
+            >
+              <Ionicons name="share-outline" size={22} color={colors.neutral[800]} />
+              <Text style={styles.navigationLabel}>Share</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
         <Animated.ScrollView
           showsVerticalScrollIndicator={false}
           contentContainerStyle={styles.scrollContent}
@@ -784,39 +853,19 @@ function TripDetailSession({ id }: { id: string | undefined }) {
               reduceMotion ? undefined : { transform: [{ translateY: headerTranslate }] },
             ]}
           >
-            <Animated.Image
-              source={{ uri: trip.coverImage }}
+            <Animated.View
               style={[
                 styles.heroImage,
                 reduceMotion ? undefined : { transform: [{ scale: imageScale }] },
               ]}
-              accessibilityLabel={`${trip.destination}, ${trip.country}`}
-            />
+            >
+              <TravelImage source={{ uri: trip.coverImage }} style={StyleSheet.absoluteFill} />
+            </Animated.View>
             <LinearGradient
               colors={['rgba(0,0,0,0.3)', 'transparent', 'rgba(0,0,0,0.8)']}
               style={styles.heroGradient}
             />
-            <SafeAreaView edges={['top']} style={styles.heroContent}>
-              <View style={styles.heroHeader}>
-                <TouchableOpacity
-                  style={styles.backButton}
-                  onPress={() => router.back()}
-                  accessibilityRole="button"
-                  accessibilityLabel="Go back"
-                >
-                  <Ionicons name="arrow-back" size={24} color="#fff" />
-                </TouchableOpacity>
-                <View style={styles.heroActions}>
-                  <TouchableOpacity
-                    style={styles.actionButton}
-                    onPress={handleShare}
-                    accessibilityRole="button"
-                    accessibilityLabel="Share trip"
-                  >
-                    <Ionicons name="share-outline" size={22} color="#fff" />
-                  </TouchableOpacity>
-                </View>
-              </View>
+            <View style={styles.heroContent}>
               <View style={styles.heroInfo}>
                 <Text style={styles.heroCountry}>{trip.country}</Text>
                 <Text style={styles.heroTitle} accessibilityRole="header">
@@ -835,7 +884,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                   </View>
                 </View>
               </View>
-            </SafeAreaView>
+            </View>
           </Animated.View>
 
           {/* Content */}
@@ -860,6 +909,18 @@ function TripDetailSession({ id }: { id: string | undefined }) {
               </View>
             )}
 
+            {hasPlanningIdeas && (
+              <View style={styles.planRefreshNotice}>
+                <Text accessibilityRole="header" style={styles.incompletePlanTitle}>
+                  This plan needs more research
+                </Text>
+                <Text style={styles.incompletePlanText}>
+                  Some stops are planning ideas, not researched venues. Choose specific places and
+                  confirm their details before booking or relying on this itinerary.
+                </Text>
+              </View>
+            )}
+
             {/* Vibes */}
             {trip.vibes && trip.vibes.length > 0 && (
               <View style={styles.vibesSection}>
@@ -870,7 +931,35 @@ function TripDetailSession({ id }: { id: string | undefined }) {
             {/* Featured Hotel */}
             {trip.hotel && <FeaturedHotelCard hotel={trip.hotel} />}
 
-            {trip.days.length === 0 ? (
+            {requirementLines.length > 0 && (
+              <View style={{ paddingHorizontal: 24, paddingVertical: 16 }}>
+                <Text
+                  accessibilityRole="header"
+                  style={{ fontSize: 18, fontWeight: '700', color: '#182B31', marginBottom: 8 }}
+                >
+                  Your dietary and access needs
+                </Text>
+                {requirementLines.map((line) => (
+                  <Text
+                    key={line}
+                    style={{ fontSize: 15, lineHeight: 22, color: '#475569', marginBottom: 4 }}
+                  >
+                    {line}
+                  </Text>
+                ))}
+                <Text style={{ fontSize: 14, lineHeight: 21, color: '#475569' }}>
+                  Saved with your trip. Venue suitability is unverified; confirm directly before
+                  booking or dining.
+                </Text>
+              </View>
+            )}
+
+            {trip.days.length === 0 && (isLoadingTrip || refreshing) ? (
+              <View style={styles.emptyItinerary} accessibilityLiveRegion="polite">
+                <ActivityIndicator size="large" color={colors.primary[500]} />
+                <Text style={styles.emptyItineraryTitle}>Loading your itinerary…</Text>
+              </View>
+            ) : trip.days.length === 0 ? (
               <View style={styles.emptyItinerary}>
                 <View style={styles.emptyItineraryIcon} accessible={false}>
                   <Ionicons name="time-outline" size={32} color={colors.primary[500]} />
@@ -881,7 +970,8 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                 <Text style={styles.emptyItineraryText}>
                   {isLocalTrip
                     ? 'This trip is saved on this device, but no itinerary is available yet. Reconnect, then check My Trips for the latest saved version.'
-                    : 'Your trip is saved. Refresh to load its latest day-by-day plan.'}
+                    : loadError ||
+                      'Your trip is saved. Refresh to load its latest day-by-day plan.'}
                 </Text>
                 <Button
                   title={isLocalTrip ? 'Go to My Trips' : 'Refresh itinerary'}
@@ -948,13 +1038,53 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                   </View>
                 )}
 
+                {timingDay?.timingProposal && (
+                  <ProposedTiming proposal={timingDay.timingProposal} names={timingNames} />
+                )}
+                {diningCautions.length > 0 && (
+                  <View
+                    style={{ paddingVertical: 16, backgroundColor: '#FFF5EB', marginBottom: 16 }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight: '700',
+                        color: '#713F12',
+                        marginHorizontal: 24,
+                      }}
+                    >
+                      Confirm allergy requirements before dining
+                    </Text>
+                    <Text style={styles.dayTip}>
+                      Confirm ingredients and cross-contact precautions directly with each
+                      restaurant. No venue’s allergy handling has been verified.
+                    </Text>
+                    <TouchableOpacity
+                      accessibilityRole="button"
+                      accessibilityState={{ expanded: showDiningRequirements }}
+                      onPress={() => setShowDiningRequirements((shown) => !shown)}
+                      style={{ minHeight: 44, justifyContent: 'center', paddingHorizontal: 24 }}
+                    >
+                      <Text style={{ color: '#713F12', fontWeight: '600' }}>
+                        {showDiningRequirements ? 'Hide dining guidance' : 'View dining guidance'}
+                      </Text>
+                    </TouchableOpacity>
+                    {showDiningRequirements &&
+                      diningCautions.map((tip) => (
+                        <Text key={tip} style={styles.dayTip}>
+                          {tip}
+                        </Text>
+                      ))}
+                  </View>
+                )}
                 {/* Activities */}
                 <View style={styles.activitiesContainer}>
-                  {trip.days[selectedDay]?.activities.map((activity) => (
+                  {timingDay?.activities.map((activity) => (
                     <ActivityCard key={activity.id} activity={activity} />
                   ))}
                 </View>
-                {!!trip.days[selectedDay]?.tips?.length && (
+                <DiningReviewOptions options={timingDay?.diningOptions} />
+                {otherTips.length > 0 && (
                   <View style={{ paddingVertical: 20, backgroundColor: '#EFF5F3', marginTop: 8 }}>
                     <Text
                       style={{
@@ -967,7 +1097,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                     >
                       Before you go
                     </Text>
-                    {trip.days[selectedDay]?.tips?.map((tip, index) => (
+                    {otherTips.map((tip, index) => (
                       <Text key={`${index}:${tip}`} style={styles.dayTip}>
                         {tip}
                       </Text>
@@ -1107,34 +1237,25 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     padding: 16,
+    // The paper section overlaps the hero by 24; keep the last metadata line clear.
+    paddingBottom: 40,
   },
   heroHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  heroActions: {
+  navigationBar: { backgroundColor: '#fff', paddingHorizontal: 16 },
+  navigationButton: {
+    minHeight: 48,
+    paddingHorizontal: 8,
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
-  actionButton: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+  navigationLabel: { fontSize: 16, fontWeight: '600', color: colors.neutral[800] },
   heroInfo: {
     marginBottom: 8,
   },
@@ -1172,6 +1293,8 @@ const styles = StyleSheet.create({
     marginTop: -24,
     paddingTop: 24,
   },
+  incompletePlanTitle: { fontSize: 17, fontWeight: '700', color: '#65251e', marginBottom: 8 },
+  incompletePlanText: { fontSize: 15, lineHeight: 22, color: '#65251e' },
   planRefreshNotice: {
     marginHorizontal: 16,
     marginBottom: 24,
@@ -1479,6 +1602,12 @@ const styles = StyleSheet.create({
     gap: 6,
     marginBottom: 12,
   },
+  hotelCardAmenityNotice: {
+    width: '100%',
+    fontSize: 12,
+    lineHeight: 18,
+    color: '#475569',
+  },
   hotelCardAmenityChip: {
     backgroundColor: '#f1f5f9',
     paddingHorizontal: 10,
@@ -1628,9 +1757,9 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   sheetClose: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: '#f1f5f9',
     justifyContent: 'center',
     alignItems: 'center',

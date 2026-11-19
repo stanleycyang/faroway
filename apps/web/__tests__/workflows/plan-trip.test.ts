@@ -1,3 +1,4 @@
+import { dayTimingBasis, readDayTiming } from "@faroway/types";
 import { NextRequest } from "next/server";
 import { GET as readSearch } from "@/app/api/search/[searchId]/route";
 import type {
@@ -132,6 +133,7 @@ function executeInsert(state: ChainState) {
   return { data: null, error: null };
 }
 let insertFailure: string | null = null;
+const searchUpdates: unknown[] = [];
 function createChain(table: string) {
   const state: ChainState = { table };
   const chain = {
@@ -144,6 +146,7 @@ function createChain(table: string) {
     }),
     update: vi.fn((value: unknown) => {
       state.update = value;
+      if (state.table === "searches") searchUpdates.push(value);
       return chain;
     }),
     upsert: vi.fn(() => chain),
@@ -177,7 +180,11 @@ vi.mock("@/lib/supabase/server", () => ({
   }),
 }));
 
-import { planTripWorkflow, saveSearchResults } from "@/workflows/plan-trip";
+import {
+  paidPlanningStepRetries,
+  planTripWorkflow,
+  saveSearchResults,
+} from "@/workflows/plan-trip";
 
 const searchPlan = {
   destination: "Tokyo",
@@ -340,6 +347,7 @@ describe("planTripWorkflow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     insertedResults = null;
+    searchUpdates.length = 0;
     persistedResults = [];
     persistedDays = [];
     readSearchRecord = null;
@@ -360,6 +368,7 @@ describe("planTripWorkflow", () => {
       days: Array.from({ length: 5 }, (_, index) => ({
         dayNumber: index + 1,
         date: `2026-06-0${index + 1}`,
+        morning: { activities: [activity] },
       })),
       topHotel: hotel,
     });
@@ -376,6 +385,157 @@ describe("planTripWorkflow", () => {
     ]);
   });
 
+  it.each([true, false])(
+    "preserves timing policy and conflicts in the saved trip (fits: %s)",
+    async (fitsPolicy) => {
+      const day = {
+        dayNumber: 1,
+        date: "2026-06-01",
+        title: "A timed day",
+        summary: "A visit",
+        morning: {
+          activities: [{ ...activity, affiliatePartner: undefined }],
+          meals: [],
+        },
+        afternoon: { activities: [], meals: [] },
+        evening: { activities: [], meals: [] },
+        tips: [],
+      };
+      const proposal = {
+        policy: "day-timing-v1" as const,
+        basis: dayTimingBasis(day),
+        fitsPolicy,
+        verified: false as const,
+        events: fitsPolicy
+          ? [
+              {
+                id: "activity:activity-1",
+                kind: "activity" as const,
+                durationMinutes: 120,
+                startMinute: 540,
+                endMinute: 660,
+                bufferBeforeMinutes: 0,
+              },
+            ]
+          : [],
+        conflict: fitsPolicy
+          ? null
+          : { eventId: "activity:activity-1", overrunMinutes: 30 },
+      };
+      mocks.mapSearchResultsToItinerary.mockReturnValue(
+        mappedItinerary({ days: [{ ...day, timingProposal: proposal }] }),
+      );
+      expect((await planTripWorkflow(workflowInput)).status).toBe("completed");
+      const rpcCalls = supabaseMock.rpc.mock.calls as unknown as Array<
+        [string, { p_state: string; p_payload: unknown }]
+      >;
+      const call = rpcCalls.find(
+        ([fn, args]) =>
+          fn === "apply_trip_generation_update" && args.p_state === "planned",
+      )!;
+      const saved = JSON.parse(JSON.stringify(call[1].p_payload));
+      expect(readDayTiming(saved.days[0])).toEqual(proposal);
+      const { loadTripForUserUncached } = await import("@/lib/trips/load-trip");
+      mocks.tripRead = { id: "trip-1", user_id: "user-1", itineraries: saved };
+      const loaded = await loadTripForUserUncached("trip-1", "user-1");
+      expect(readDayTiming(loaded?.itinerary?.days[0])).toEqual(proposal);
+    },
+  );
+
+  it("persists new source-backed aggregator inventory with its scheduled references", async () => {
+    const added = {
+      ...activity,
+      id: "reviewed-supply",
+      name: "Reviewed visit",
+      location: { ...activity.location, lat: 0, lng: 0 },
+      priceStatus: "unknown" as const,
+    };
+    const sourceNote = "Operator source: https://example.com/visit";
+    mocks.runAggregatorAgent.mockResolvedValue({
+      activityInventory: [activity, added],
+      topHotel: hotel,
+      days: Array.from({ length: 5 }, (_, index) => ({
+        dayNumber: index + 1,
+        date: `2026-06-0${index + 1}`,
+        title: "Draft",
+        summary: "Draft",
+        morning: { activities: [] },
+        afternoon: { activities: [] },
+        evening: { activities: index === 0 ? [added] : [] },
+        estimatedCost: 0,
+        currency: "",
+        tips: [sourceNote],
+      })),
+    });
+    const bridge = await vi.importActual<typeof import("@/lib/search/bridge")>(
+      "@/lib/search/bridge",
+    );
+    mocks.mapSearchResultsToItinerary.mockImplementation(
+      bridge.mapSearchResultsToItinerary,
+    );
+    const result = await planTripWorkflow(workflowInput);
+    expect(result.status).toBe("completed");
+    expect(
+      result.result?.activities.some((a) => a.id === "reviewed-supply"),
+    ).toBe(true);
+    expect(
+      result.result?.days[0].evening.activities[0].location.coordinates,
+    ).toBeUndefined();
+    expect(persistedDays[0].evening_activities).toHaveLength(1);
+    const stored = persistedResults.find(
+      (row) =>
+        row.data !== null &&
+        typeof row.data === "object" &&
+        "id" in row.data &&
+        row.data.id === "reviewed-supply",
+    );
+    expect(stored).toBeDefined();
+    expect(persistedDays[0].evening_activities).toEqual([stored!.id]);
+    expect(result.result?.days[0].tips).toContain(sourceNote);
+  });
+
+  it("persists repaired dining inventory with its saved meal references", async () => {
+    const added = {
+      ...dining,
+      id: "repaired-dining",
+      name: "Nearby test meal",
+    };
+    mocks.runAggregatorAgent.mockResolvedValue({
+      diningInventory: [dining, added],
+      topHotel: hotel,
+      days: Array.from({ length: 5 }, (_, index) => ({
+        dayNumber: index + 1,
+        date: `2026-06-0${index + 1}`,
+        title: "Draft",
+        summary: "Draft",
+        morning: { activities: [], meal: added },
+        afternoon: { activities: [] },
+        evening: { activities: [] },
+        tips: [],
+      })),
+    });
+    const bridge = await vi.importActual<typeof import("@/lib/search/bridge")>(
+      "@/lib/search/bridge",
+    );
+    mocks.mapSearchResultsToItinerary.mockImplementation(
+      bridge.mapSearchResultsToItinerary,
+    );
+    const result = await planTripWorkflow(workflowInput);
+    expect(result.status).toBe("completed");
+    expect(result.result?.dining.some((meal) => meal.id === added.id)).toBe(
+      true,
+    );
+    const stored = persistedResults.find(
+      (row) =>
+        row.data &&
+        typeof row.data === "object" &&
+        "id" in row.data &&
+        row.data.id === added.id,
+    );
+    expect(stored).toBeDefined();
+    expect(persistedDays[0].meals).toContain(stored!.id);
+  });
+
   it("rejects an incomplete or misdated itinerary before saving it", async () => {
     mocks.runAggregatorAgent.mockResolvedValue({
       days: [{ dayNumber: 1, date: "2026-06-02" }],
@@ -388,7 +548,7 @@ describe("planTripWorkflow", () => {
     expect(mocks.dispatchItineraryReady).not.toHaveBeenCalled();
   });
 
-  it("retains verification reminders in the saved itinerary", async () => {
+  it("retains verification reminders in saved and preview itineraries", async () => {
     mocks.runOrchestratorAgent.mockResolvedValue({
       ...searchPlan,
       mobilityNeeds: "step-free",
@@ -401,6 +561,7 @@ describe("planTripWorkflow", () => {
           {
             dayNumber: 1,
             date: "2026-06-01",
+            title: "Arrival",
             morning: slot,
             afternoon: slot,
             evening: slot,
@@ -418,6 +579,9 @@ describe("planTripWorkflow", () => {
           "Accessibility for your mobility needs is unverified",
         ),
       ]),
+    );
+    expect(mocks.buildJsonRenderSpec.mock.lastCall?.[0].days[0].tips).toEqual(
+      result.result?.days[0].tips,
     );
   });
 
@@ -497,6 +661,7 @@ describe("planTripWorkflow", () => {
     const days = [hotel, other, undefined].map((assigned, index) => ({
       dayNumber: index + 1,
       date: `2026-06-0${index + 1}`,
+      title: `Day ${index + 1}`,
       hotel: assigned,
       morning: slot,
       afternoon: slot,
@@ -828,19 +993,137 @@ describe("planTripWorkflow", () => {
     expect(mocks.runAggregatorAgent).toHaveBeenCalledTimes(1);
   });
 
-  it("continues to aggregation when a provider fails", async () => {
+  it.each(["empty", "ideas"])(
+    "rejects %s output without saving success or sending ready notification",
+    async (kind) => {
+      mocks.runAggregatorAgent.mockResolvedValue({
+        days: Array.from({ length: 5 }, (_, index) => ({
+          dayNumber: index + 1,
+          date: `2026-06-0${index + 1}`,
+          morning: {
+            activities:
+              kind === "ideas" ? [{ ...activity, planningIdea: true }] : [],
+          },
+          afternoon: {
+            activities: [],
+            meal:
+              kind === "ideas" ? { ...dining, planningIdea: true } : undefined,
+          },
+          evening: { activities: [] },
+        })),
+        topHotel: hotel,
+      });
+      const result = await planTripWorkflow(workflowInput);
+      expect(result.status).toBe("error");
+      expect(result.error).toContain("couldn't generate a usable itinerary");
+      expect(mocks.dispatchItineraryReady).not.toHaveBeenCalled();
+      expect(mocks.mapSearchResultsToItinerary).not.toHaveBeenCalled();
+      expect(supabaseMock.rpc).toHaveBeenCalledWith(
+        "apply_trip_generation_update",
+        expect.objectContaining({ p_state: "failed" }),
+      );
+      expect(supabaseMock.rpc).not.toHaveBeenCalledWith(
+        "apply_trip_generation_update",
+        expect.objectContaining({ p_state: "planned" }),
+      );
+    },
+  );
+
+  it("preserves fallback provenance in the saved-plan bridge alongside usable visits", async () => {
+    const { mapSearchResultsToItinerary } = await vi.importActual<
+      typeof import("@/lib/search/bridge")
+    >("@/lib/search/bridge");
+    const idea = { ...activity, id: "idea", planningIdea: true as const };
+    const meal = { ...dining, planningIdea: true as const };
+    const result = mapSearchResultsToItinerary(
+      {
+        searchId: "search-1",
+        hotels: [],
+        activities: [activity, idea],
+        dining: [meal],
+        transport: [],
+        itinerary: [
+          {
+            dayNumber: 1,
+            date: "2026-06-01",
+            title: "Tokyo",
+            summary: "Explore",
+            morning: { activities: [activity, idea], meal },
+            afternoon: { activities: [] },
+            evening: { activities: [] },
+            estimatedCost: 0,
+            currency: "",
+            tips: [],
+          },
+        ],
+      },
+      null,
+    );
+    const saved = JSON.parse(JSON.stringify(result.days[0]));
+    expect(saved.morning.activities[0].planningIdea).toBeUndefined();
+    expect(saved.morning.activities[1].planningIdea).toBe(true);
+    expect(saved.morning.meals[0].planningIdea).toBe(true);
+  });
+
+  it("does not retry paid planning steps", () => {
+    expect(paidPlanningStepRetries).toEqual({
+      buildSearchPlan: 0,
+      hotels: 0,
+      activities: 0,
+      dining: 0,
+      transport: 0,
+      enrichment: 0,
+      aggregator: 0,
+    });
+  });
+
+  it("continues to aggregation when a provider fails and keeps that failure visible", async () => {
     mocks.runActivitiesAgent.mockRejectedValue(new Error("activities failed"));
 
     const result = await planTripWorkflow(workflowInput);
 
     expect(result.status).toBe("completed");
+    const progress = searchUpdates
+      .map((update) =>
+        update && typeof update === "object" && "progress" in update
+          ? (update as { progress?: Record<string, string> }).progress
+          : undefined,
+      )
+      .filter((item) => item?.aggregator === "done")
+      .at(-1);
+    expect(progress).toMatchObject({
+      activities: "error",
+      dining: "done",
+      aggregator: "done",
+    });
+    expect(mocks.runActivitiesAgent).toHaveBeenCalledTimes(1);
     expect(mocks.runAggregatorAgent).toHaveBeenCalledWith(
       searchPlan,
       [hotel],
       [],
       [dining],
       [transport],
+      {
+        activityBudget: 1000,
+        repairDining: true,
+        requireGeneratedPlan: true,
+      },
     );
+  });
+
+  it("fails honestly when activities and restaurants both do not finish", async () => {
+    mocks.runActivitiesAgent.mockRejectedValue(new Error("activities failed"));
+    mocks.runDiningAgent.mockRejectedValue(new Error("dining failed"));
+
+    const result = await planTripWorkflow(workflowInput);
+
+    expect(result.status).toBe("error");
+    expect(result.error).toMatch(
+      /Activity and restaurant searches did not finish/,
+    );
+    expect(mocks.runAggregatorAgent).not.toHaveBeenCalled();
+    expect(mocks.runActivitiesAgent).toHaveBeenCalledTimes(1);
+    expect(mocks.runDiningAgent).toHaveBeenCalledTimes(1);
   });
 
   it("dispatches only after the completed itinerary is durably saved", async () => {
@@ -863,6 +1146,14 @@ describe("planTripWorkflow", () => {
   });
 
   it("preserves day hotel and transport through the real bridge and saved payload", async () => {
+    const review = {
+      ...dining,
+      id: "source-review",
+      planningIdea: true,
+      location: { ...dining.location, address: "12 Example Street" },
+      source: { url: "https://restaurant.example/", retrievedOn: "2026-11-02" },
+    };
+    mocks.runDiningAgent.mockResolvedValue([dining, review]);
     const { mapSearchResultsToItinerary } = await vi.importActual<
       typeof import("@/lib/search/bridge")
     >("@/lib/search/bridge");
@@ -876,7 +1167,7 @@ describe("planTripWorkflow", () => {
       summary: "Arrive in Tokyo",
       hotel,
       transport,
-      morning: { activities: [] },
+      morning: { activities: [activity] },
       afternoon: { activities: [] },
       evening: { activities: [] },
       estimatedCost: 0,
@@ -914,6 +1205,14 @@ describe("planTripWorkflow", () => {
         p_payload: expect.objectContaining({
           days: [
             expect.objectContaining({
+              diningOptions: [
+                {
+                  id: review.id,
+                  name: review.name,
+                  address: review.location.address,
+                  source: review.source,
+                },
+              ],
               hotel,
               transport: expect.objectContaining({
                 type: transport.type,
@@ -955,7 +1254,7 @@ describe("planTripWorkflow", () => {
     "%s normalized itinerary",
     (responsePath) => {
       it.each([0, 4])(
-        "preserves outbound transport and unavailable costs through aggregation, bridge, persistence and read for %s nights",
+        "preserves generated transport/costs or rejects a backup draft for %s nights",
         async (nights) => {
           const { runAggregatorAgent } = await vi.importActual<
             typeof import("@/lib/search/agents/aggregator")
@@ -973,6 +1272,7 @@ describe("planTripWorkflow", () => {
           mocks.runHotelsAgent.mockResolvedValue([]);
           const nightActivity = {
             ...activity,
+            proposedVisitType: "ordinary_entry" as const,
             id: "local-night",
             affiliatePartner: undefined,
             bestTimeOfDay: "evening",
@@ -1013,13 +1313,34 @@ describe("planTripWorkflow", () => {
               ),
             );
 
-          expect(
-            (await planTripWorkflow({ ...workflowInput, endDate: end })).status,
-          ).toBe("completed");
+          const result = await planTripWorkflow({
+            ...workflowInput,
+            endDate: end,
+          });
           const rpcCalls = supabaseMock.rpc.mock.calls as unknown as [
             string,
             Record<string, unknown>,
           ][];
+          if (responsePath === "fallback") {
+            expect(result.status).toBe("error");
+            expect(
+              rpcCalls.some(
+                ([fn, args]) =>
+                  fn === "apply_trip_generation_update" &&
+                  args.p_state === "planned",
+              ),
+            ).toBe(false);
+            expect(
+              rpcCalls.some(
+                ([fn, args]) =>
+                  fn === "apply_trip_generation_update" &&
+                  args.p_state === "failed",
+              ),
+            ).toBe(true);
+            expect(mocks.dispatchItineraryReady).not.toHaveBeenCalled();
+            return;
+          }
+          expect(result.status).toBe("completed");
           const payload = rpcCalls.find(
             ([fn, args]) =>
               fn === "apply_trip_generation_update" &&
@@ -1042,6 +1363,13 @@ describe("planTripWorkflow", () => {
           expect(saved.days[0].evening.activities.map((a) => a.id)).toEqual([
             nightActivity.id,
           ]);
+          expect(saved.days[0].evening.activities[0].proposedVisitType).toBe(
+            "ordinary_entry",
+          );
+          expect(
+            mocks.buildJsonRenderSpec.mock.lastCall![0].days[0].evening
+              .activities[0].proposedVisitType,
+          ).toBe("ordinary_entry");
           expect(
             saved.days.every(
               (day) => !Object.hasOwn(day, "totalEstimatedCost"),

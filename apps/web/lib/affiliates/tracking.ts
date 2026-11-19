@@ -5,6 +5,7 @@
  * Stores data in Supabase for analytics and revenue tracking.
  */
 
+import { affiliateClickInsert } from "@/lib/affiliates/click-record";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { nanoid } from "nanoid";
 
@@ -46,6 +47,7 @@ export interface TrackClickInput {
   productId: string;
   productName: string;
   referrerUrl?: string;
+  clickUrl: string;
   ipAddress?: string;
   userAgent?: string;
 }
@@ -122,7 +124,7 @@ export async function trackClick(
     productId: input.productId,
     productName: input.productName,
     trackingId,
-    clickUrl: "", // Will be set by the caller
+    clickUrl: input.clickUrl,
     referrerUrl: input.referrerUrl,
     clickedAt: new Date().toISOString(),
     converted: false,
@@ -131,24 +133,25 @@ export async function trackClick(
     deviceType: detectDeviceType(input.userAgent),
   };
 
+  if (!click.clickUrl.startsWith("https://")) {
+    throw new Error("Affiliate click requires an https product URL");
+  }
   const { data, error } = await supabase
     .from("affiliate_clicks")
-    .insert({
-      user_id: click.userId,
-      trip_id: click.tripId,
-      activity_id: click.activityId,
-      partner: click.partner,
-      product_id: click.productId,
-      product_name: click.productName,
-      tracking_id: click.trackingId,
-      click_url: click.clickUrl,
-      referrer_url: click.referrerUrl,
-      clicked_at: click.clickedAt,
-      converted: click.converted,
-      ip_address: click.ipAddress,
-      user_agent: click.userAgent,
-      device_type: click.deviceType,
-    })
+    .insert(
+      affiliateClickInsert({
+        clickId: trackingId,
+        userId: click.userId ?? null,
+        itemType: "activity",
+        itemId: click.productId,
+        itemName: click.productName,
+        affiliatePartner: click.partner,
+        affiliateUrl: click.clickUrl,
+        tripId: click.tripId ?? null,
+        source: "search_results",
+        clickedAt: click.clickedAt,
+      }),
+    )
     .select("id")
     .single();
 
@@ -175,11 +178,9 @@ export async function recordConversion(
     .from("affiliate_clicks")
     .update({
       converted: true,
-      converted_at: new Date().toISOString(),
-      commission_amount: input.commissionAmount,
-      commission_currency: input.currency || null,
+      conversion_value: input.commissionAmount,
     })
-    .eq("tracking_id", input.trackingId);
+    .eq("id", input.trackingId);
 
   if (error) {
     console.error("[Tracking] Failed to record conversion:", error);
@@ -200,7 +201,7 @@ export async function getClickByTrackingId(
   const { data, error } = await supabase
     .from("affiliate_clicks")
     .select("*")
-    .eq("tracking_id", trackingId)
+    .eq("id", trackingId)
     .single();
 
   if (error || !data) {
@@ -270,12 +271,12 @@ export async function getAffiliateAnalytics(
 
   let query = supabase
     .from("affiliate_clicks")
-    .select("partner, converted, commission_amount")
+    .select("affiliate_partner, converted, conversion_value")
     .gte("clicked_at", startDate)
     .lte("clicked_at", endDate);
 
   if (options?.partner) {
-    query = query.eq("partner", options.partner);
+    query = query.eq("affiliate_partner", options.partner);
   }
   if (options?.userId) {
     query = query.eq("user_id", options.userId);
@@ -302,20 +303,21 @@ export async function getAffiliateAnalytics(
   > = {};
 
   for (const click of data) {
-    if (!byPartner[click.partner]) {
-      byPartner[click.partner] = { clicks: 0, conversions: 0, commission: 0 };
+    const partner = click.affiliate_partner as string;
+    if (!byPartner[partner]) {
+      byPartner[partner] = { clicks: 0, conversions: 0, commission: 0 };
     }
-    byPartner[click.partner].clicks++;
+    byPartner[partner].clicks++;
     if (click.converted) {
-      byPartner[click.partner].conversions++;
-      byPartner[click.partner].commission += click.commission_amount || 0;
+      byPartner[partner].conversions++;
+      byPartner[partner].commission += click.conversion_value || 0;
     }
   }
 
   const totalClicks = data.length;
   const totalConversions = data.filter((c) => c.converted).length;
   const totalCommission = data.reduce(
-    (sum, c) => sum + (c.commission_amount || 0),
+    (sum, c) => sum + (c.conversion_value || 0),
     0,
   );
 
@@ -342,16 +344,16 @@ function normalizeClick(row: any): AffiliateClick {
     userId: row.user_id,
     tripId: row.trip_id,
     activityId: row.activity_id,
-    partner: row.partner,
-    productId: row.product_id,
-    productName: row.product_name,
-    trackingId: row.tracking_id,
-    clickUrl: row.click_url,
+    partner: row.affiliate_partner,
+    productId: row.item_id,
+    productName: row.item_name,
+    trackingId: row.id,
+    clickUrl: row.affiliate_url,
     referrerUrl: row.referrer_url,
     clickedAt: row.clicked_at,
     converted: row.converted,
     convertedAt: row.converted_at,
-    commissionAmount: row.commission_amount,
+    commissionAmount: row.conversion_value,
     commissionCurrency: row.commission_currency,
     ipAddress: row.ip_address,
     userAgent: row.user_agent,

@@ -248,3 +248,19 @@ verify the public contact. The adapter deliberately fails closed otherwise.
 - [MET data license](https://docs.api.met.no/doc/License)
 
 Ticketmaster remains deferred pending an applicable commercial/affiliate agreement.
+
+## Provider capability acceptance
+
+Credentials and provider dashboards do not establish an end-to-end integration.
+Record these capabilities separately when reporting readiness:
+
+| Provider | Current implementation boundary | Required live evidence |
+| --- | --- | --- |
+| Viator | Experience search plus gated web handoff; native booking actions open saved-plan web review | Real products and photos survive planning/save/reload; provider URL retains the correct partner attribution; handoff works from the phone |
+| LiteAPI | Preview-only sandbox hotel quotes through a separate consented flow; not live hotel supply in generated mobile itineraries | Production adapter, real quotes, complete price/occupancy/terms handling and supported booking handoff must be implemented and verified before claiming live hotel monetization |
+| Google Places | Transient web reference search/details; not saved AI activity inventory or native itinerary photo enrichment | Configured runtime requests, attributed presentation and intended user flow; this is a place-data capability, not affiliate revenue evidence |
+
+A supplier product, outbound click and confirmed commission are three different
+outcomes. Provider-side attribution/reporting must be reconciled before claiming
+revenue. Do not infer that a generic conversion webhook is accepted by a partner
+without validating that partner's actual reporting or postback contract.

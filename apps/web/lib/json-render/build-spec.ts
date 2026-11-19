@@ -1,5 +1,11 @@
 import { formatPrice, readPrice } from "@faroway/constants";
 import {
+  readProposedVisitType,
+  readVenueSource,
+  type ActivityResult,
+  type VenueSource,
+} from "@faroway/types";
+import {
   containsViatorContent,
   filterViatorDisplay,
   isViatorContent,
@@ -20,6 +26,10 @@ import {
  *   - buildBudgetBlocks()     — called alongside itinerary
  */
 
+function httpsUrl(url?: string): string | undefined {
+  return url?.startsWith("https://") ? url : undefined;
+}
+
 export interface HotelInput {
   id?: string;
   name: string;
@@ -36,22 +46,26 @@ export interface HotelInput {
 }
 
 export interface ActivityInput {
+  source?: VenueSource;
+  proposedVisitType?: ActivityResult["proposedVisitType"];
   priceStatus?: "unknown" | "estimate";
   id?: string;
   name: string;
   description?: string;
-  duration?: number; // hours
+  duration?: number; // hours; saved minutes must pass through mappedDaysToSpec
   price?: number;
   currency?: string;
   rating?: number;
   reviewCount?: number;
   category?: string;
   affiliateUrl?: string;
+  affiliatePartner?: string;
   images?: string[];
   location?: { neighborhood?: string; city?: string; name?: string };
 }
 
 export interface RestaurantInput {
+  source?: VenueSource;
   priceStatus?: "unknown" | "estimate";
   id?: string;
   name: string;
@@ -65,20 +79,24 @@ export interface RestaurantInput {
 }
 
 export interface ItineraryDayInput {
+  tips?: string[];
   dayNumber: number;
   date: string;
   title: string;
   morning?: {
     activities?: ActivityInput[];
     meal?: RestaurantInput;
+    meals?: RestaurantInput[];
   };
   afternoon?: {
     activities?: ActivityInput[];
     meal?: RestaurantInput;
+    meals?: RestaurantInput[];
   };
   evening?: {
     activities?: ActivityInput[];
     meal?: RestaurantInput;
+    meals?: RestaurantInput[];
   };
   estimatedCost?: number;
   currency?: string;
@@ -178,7 +196,7 @@ export function buildHotelBlocks(
         pricePerNight: topHotel.pricePerNight,
         currency: topHotel.currency,
         image: topHotel.images?.[0],
-        bookingUrl: topHotel.affiliateUrl,
+        bookingUrl: httpsUrl(topHotel.affiliateUrl),
         amenities: topHotel.amenities || [],
         description: topHotel.description,
         reviewCount: topHotel.reviewCount,
@@ -186,12 +204,12 @@ export function buildHotelBlocks(
       },
     });
 
-    if (topHotel.affiliateUrl) {
+    if (httpsUrl(topHotel.affiliateUrl) && topHotel.affiliatePartner) {
       components.push({
         type: "BookingButton",
         props: {
           label: `Book ${topHotel.name}`,
-          url: topHotel.affiliateUrl,
+          url: httpsUrl(topHotel.affiliateUrl),
           provider: topHotel.affiliatePartner || "Hotel provider",
           price: topHotel.pricePerNight,
           currency: topHotel.currency,
@@ -217,19 +235,19 @@ export function buildHotelBlocks(
           pricePerNight: hotel.pricePerNight,
           currency: hotel.currency,
           image: hotel.images?.[0],
-          bookingUrl: hotel.affiliateUrl,
+          bookingUrl: httpsUrl(hotel.affiliateUrl),
           amenities: hotel.amenities || [],
           description: hotel.description,
           reviewCount: hotel.reviewCount,
         },
       });
 
-      if (hotel.affiliateUrl) {
+      if (httpsUrl(hotel.affiliateUrl) && hotel.affiliatePartner) {
         components.push({
           type: "BookingButton",
           props: {
             label: `Book ${hotel.name}`,
-            url: hotel.affiliateUrl,
+            url: httpsUrl(hotel.affiliateUrl),
             provider: hotel.affiliatePartner || "Hotel provider",
             price: hotel.pricePerNight,
             currency: hotel.currency,
@@ -260,6 +278,8 @@ export function buildItineraryBlocks(
     props: { title: "Your Itinerary" },
   });
 
+  const mealsFor = (slot: ItineraryDayInput["morning"]) =>
+    slot?.meals ?? (slot?.meal ? [slot.meal] : []);
   for (const day of days) {
     components.push({
       type: "ItineraryDay",
@@ -273,47 +293,55 @@ export function buildItineraryBlocks(
     const timelineItems: Array<{ time: string; title: string; type: string }> =
       [];
 
-    if (day.morning?.meal) {
+    for (const tip of day.tips ?? []) {
+      if (tip.trim())
+        components.push({
+          type: "Text",
+          props: { content: tip, variant: "body" },
+        });
+    }
+
+    for (const meal of mealsFor(day.morning)) {
       timelineItems.push({
-        time: "08:00",
-        title: day.morning.meal.name,
+        time: "Morning",
+        title: meal.name,
         type: "restaurant",
       });
     }
-    day.morning?.activities?.forEach((a, i) => {
+    day.morning?.activities?.forEach((a) => {
       timelineItems.push({
-        time: `${9 + i}:00`,
+        time: "Morning",
         title: a.name,
         type: "activity",
       });
     });
 
-    if (day.afternoon?.meal) {
+    for (const meal of mealsFor(day.afternoon)) {
       timelineItems.push({
-        time: "12:30",
-        title: day.afternoon.meal.name,
+        time: "Afternoon",
+        title: meal.name,
         type: "restaurant",
       });
     }
-    day.afternoon?.activities?.forEach((a, i) => {
+    day.afternoon?.activities?.forEach((a) => {
       timelineItems.push({
-        time: `${14 + i}:00`,
+        time: "Afternoon",
         title: a.name,
         type: "activity",
       });
     });
 
-    day.evening?.activities?.forEach((a, i) => {
+    day.evening?.activities?.forEach((a) => {
       timelineItems.push({
-        time: `${18 + i}:00`,
+        time: "Evening",
         title: a.name,
         type: "activity",
       });
     });
-    if (day.evening?.meal) {
+    for (const meal of mealsFor(day.evening)) {
       timelineItems.push({
-        time: "19:30",
-        title: day.evening.meal.name,
+        time: "Evening",
+        title: meal.name,
         type: "restaurant",
       });
     }
@@ -329,20 +357,29 @@ export function buildItineraryBlocks(
       components.push({
         type: "ActivityCard",
         props: {
+          id: activity.id,
+          source: readVenueSource(activity.source),
           name: activity.name,
+          proposedVisitType: readProposedVisitType(activity.proposedVisitType),
           description:
             activity.description ||
             (isViatorContent(activity) ? "" : `Enjoy ${activity.name}`),
-          duration: activity.duration
-            ? `${activity.duration} hours`
-            : "2 hours",
+          duration:
+            typeof activity.duration === "number" &&
+            Number.isFinite(activity.duration) &&
+            activity.duration > 0
+              ? `${activity.duration} hours`
+              : "Duration not set",
           price: activity.price,
           currency: activity.currency,
           priceStatus: activity.priceStatus,
           rating: activity.rating,
           reviewCount: activity.reviewCount,
           image: activity.images?.[0],
-          bookingUrl: activity.affiliateUrl,
+          bookingUrl:
+            activity.affiliatePartner && httpsUrl(activity.affiliateUrl)
+              ? activity.affiliateUrl
+              : undefined,
           time,
           location:
             activity.location?.name ||
@@ -362,6 +399,8 @@ export function buildItineraryBlocks(
       components.push({
         type: "RestaurantCard",
         props: {
+          id: restaurant.id,
+          source: readVenueSource(restaurant.source),
           name: restaurant.name,
           cuisine: restaurant.cuisine || "Local",
           priceLevel:
@@ -379,20 +418,17 @@ export function buildItineraryBlocks(
       });
     };
 
-    if (day.morning?.meal) addRestaurantCard(day.morning.meal, "08:00");
-    day.morning?.activities?.forEach((a, i) =>
-      addActivityCard(a, `${9 + i}:00`),
-    );
+    for (const meal of mealsFor(day.morning))
+      addRestaurantCard(meal, "Morning");
+    day.morning?.activities?.forEach((a) => addActivityCard(a, "Morning"));
 
-    if (day.afternoon?.meal) addRestaurantCard(day.afternoon.meal, "12:30");
-    day.afternoon?.activities?.forEach((a, i) =>
-      addActivityCard(a, `${14 + i}:00`),
-    );
+    for (const meal of mealsFor(day.afternoon))
+      addRestaurantCard(meal, "Afternoon");
+    day.afternoon?.activities?.forEach((a) => addActivityCard(a, "Afternoon"));
 
-    day.evening?.activities?.forEach((a, i) =>
-      addActivityCard(a, `${18 + i}:00`),
-    );
-    if (day.evening?.meal) addRestaurantCard(day.evening.meal, "19:30");
+    day.evening?.activities?.forEach((a) => addActivityCard(a, "Evening"));
+    for (const meal of mealsFor(day.evening))
+      addRestaurantCard(meal, "Evening");
   }
 
   return components;

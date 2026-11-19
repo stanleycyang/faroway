@@ -1,0 +1,920 @@
+{
+  "description": "Synthetic development case from the failed 17abcbc staging run. Generated venue claims are unverified; preserve failures, not reference answers. Offline compiler replay only.",
+  "sourceSha256": {
+    "search-plan.json": "6a6b34ec9b475e0bf4046fb2df5cb5fac957a42553d6630f771d682a73212ed1",
+    "activity-inventory.json": "ab16c72737e366d4aabf1ebf4d8a013e817622a15b7cd6b5dbc7957f2a06fd58",
+    "dining-inventory.json": "9af9e1c89cfc07656d05de0af9bce75fe805955c0b8be1e33f91ca4ddd8cdccc"
+  },
+  "plan": {
+    "dates": {
+      "end": "2027-01-13",
+      "start": "2027-01-11",
+      "nights": 2
+    },
+    "adults": 1,
+    "country": "Australia",
+    "children": 0,
+    "travelers": 1,
+    "destination": "Melbourne, Australia",
+    "requirements": {
+      "allergies": [],
+      "accessibility": [],
+      "mobilityNotes": "Working 09:00\u201317:00 on each trip day; only evening visits",
+      "dietaryPreferences": []
+    },
+    "travelerType": "business",
+    "hotelCriteria": {
+      "amenities": [
+        "High-speed WiFi",
+        "Business center",
+        "Central location",
+        "Fitness center",
+        "Late check-out options"
+      ],
+      "priceRange": {
+        "max": 250,
+        "min": 100
+      },
+      "starRating": [4, 5],
+      "neighborhoods": [
+        "Melbourne CBD",
+        "Southbank",
+        "East Melbourne",
+        "Fitzroy"
+      ]
+    },
+    "mobilityNeeds": "Working 09:00\u201317:00 on each trip day; only evening visits",
+    "diningCriteria": {
+      "priceRange": "moderate",
+      "cuisineTypes": [
+        "Australian Contemporary",
+        "Italian",
+        "Asian Fusion",
+        "Modern European"
+      ],
+      "dietaryNeeds": [],
+      "mealPriorities": ["dinner", "breakfast", "lunch"]
+    },
+    "activityCriteria": {
+      "mustSee": [
+        "National Gallery of Victoria (NGV)",
+        "Federation Square",
+        "Melbourne Museum",
+        "State Library Victoria",
+        "Flinders Street Station"
+      ],
+      "interests": [
+        "culture",
+        "Art galleries",
+        "Historical landmarks",
+        "City walks",
+        "Heritage sites"
+      ],
+      "categories": ["Culture", "Arts", "History", "Architecture"],
+      "pacePreference": "relaxed"
+    },
+    "searchPriorities": ["hotels", "activities", "dining"],
+    "vibeInterpretation": {
+      "vibes": ["cultural"],
+      "avoidKeywords": [
+        "nightclubs",
+        "adventure sports",
+        "theme parks",
+        "hostels",
+        "backpacker"
+      ],
+      "searchKeywords": [
+        "museum",
+        "history",
+        "art",
+        "heritage",
+        "traditional",
+        "local",
+        "architecture",
+        "historical",
+        "night tours",
+        "evening exhibitions"
+      ]
+    },
+    "dietaryRestrictions": []
+  },
+  "activities": [
+    {
+      "id": "activity_1793596281014_0",
+      "name": "State Library Victoria Night Visit",
+      "price": 0,
+      "images": [],
+      "rating": 0,
+      "category": "Historical landmarks",
+      "currency": "",
+      "duration": 60,
+      "location": {
+        "lat": -37.8105,
+        "lng": 144.9649,
+        "name": "State Library Victoria",
+        "address": "328 Swanston St, Melbourne VIC 3000, Australia",
+        "neighborhood": "CBD"
+      },
+      "vibeMatch": ["cultural", "historical", "architecture", "heritage"],
+      "vibeScore": 100,
+      "description": "Experience the majestic architecture of the La Trobe Reading Room under evening lights. Explore the historical galleries and heritage collections housed within this 19th-century landmark, witnessing the intersection of traditional scholarship and modern cultural preservation.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "bestTimeOfDay": "evening",
+      "bookingRequired": false
+    },
+    {
+      "id": "activity_1793596281015_1",
+      "name": "NGV International Evening Exploration",
+      "price": 0,
+      "images": [],
+      "rating": 0,
+      "category": "Art galleries",
+      "currency": "",
+      "duration": 120,
+      "location": {
+        "lat": -37.8226,
+        "lng": 144.9689,
+        "name": "National Gallery of Victoria",
+        "address": "180 St Kilda Rd, Melbourne VIC 3006, Australia",
+        "neighborhood": "Southbank"
+      },
+      "vibeMatch": ["art", "culture", "museum", "evening exhibitions"],
+      "vibeScore": 100,
+      "description": "Visit Australia's oldest public art museum to view international collections and the iconic water wall. The evening atmosphere allows for a relaxed viewing of classical and contemporary art within a landmark piece of brutalist architecture.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "bestTimeOfDay": "evening",
+      "bookingRequired": false
+    },
+    {
+      "id": "activity_1793596281015_12",
+      "name": "Ian Potter Centre NGV Australia Night View",
+      "price": 0,
+      "images": [],
+      "rating": 0,
+      "category": "Art galleries",
+      "currency": "",
+      "duration": 90,
+      "location": {
+        "lat": -37.8174,
+        "lng": 144.9698,
+        "name": "The Ian Potter Centre: NGV Australia",
+        "address": "Federation Square, Melbourne VIC 3000, Australia",
+        "neighborhood": "CBD"
+      },
+      "vibeMatch": ["art", "culture", "heritage", "local"],
+      "vibeScore": 98,
+      "description": "Dedicated to Australian art from the colonial period to the present, located in the Ian Potter Centre at Federation Square. An essential visit for understanding local heritage through an artistic lens.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "bestTimeOfDay": "evening",
+      "bookingRequired": false
+    },
+    {
+      "id": "activity_1793596281015_3",
+      "name": "Flinders Street Station Architectural View",
+      "price": 0,
+      "images": [],
+      "rating": 0,
+      "category": "Historical landmarks",
+      "currency": "",
+      "duration": 20,
+      "location": {
+        "lat": -37.8183,
+        "lng": 144.9669,
+        "name": "Flinders Street Station",
+        "address": "Flinders St, Melbourne VIC 3000, Australia",
+        "neighborhood": "CBD"
+      },
+      "vibeMatch": ["history", "heritage", "architecture"],
+      "vibeScore": 95,
+      "description": "Observe the heritage-listed facade and iconic clocks of Australia's oldest metropolitan railway station. The yellow facade and copper dome are prominent features of Melbourne's historical urban identity, especially when illuminated at night.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "bestTimeOfDay": "evening",
+      "bookingRequired": false
+    },
+    {
+      "id": "activity_1793596281015_14",
+      "name": "Old Treasury Building Facade",
+      "price": 0,
+      "images": [],
+      "rating": 0,
+      "category": "Historical landmarks",
+      "currency": "",
+      "duration": 20,
+      "location": {
+        "lat": -37.8132,
+        "lng": 144.9741,
+        "name": "Old Treasury Building",
+        "address": "20 Spring St, Melbourne VIC 3000, Australia",
+        "neighborhood": "East Melbourne"
+      },
+      "vibeMatch": ["history", "architecture", "heritage"],
+      "vibeScore": 94,
+      "description": "Examine the exterior of what is considered one of the finest 19th-century buildings in Australia. Designed by JJ Clark when he was only 19, the building is a masterpiece of Renaissance Revival architecture.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "bestTimeOfDay": "evening",
+      "bookingRequired": false
+    },
+    {
+      "id": "activity_1793596281015_7",
+      "name": "Melbourne Town Hall Exterior Observation",
+      "price": 0,
+      "images": [],
+      "rating": 0,
+      "category": "Historical landmarks",
+      "currency": "",
+      "duration": 15,
+      "location": {
+        "lat": -37.8148,
+        "lng": 144.9665,
+        "name": "Melbourne Town Hall",
+        "address": "90-130 Swanston St, Melbourne VIC 3000, Australia",
+        "neighborhood": "CBD"
+      },
+      "vibeMatch": ["history", "architecture", "heritage"],
+      "vibeScore": 92,
+      "description": "View the grand Second Empire style architecture of the Town Hall, constructed from local bluestone and sandstone. The building stands as a symbol of the city's 19th-century wealth and administrative history.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "bestTimeOfDay": "evening",
+      "bookingRequired": false
+    },
+    {
+      "id": "activity_1793596281015_2",
+      "name": "Federation Square Cultural Precinct Walk",
+      "price": 0,
+      "images": [],
+      "rating": 0,
+      "category": "City walks",
+      "currency": "",
+      "duration": 45,
+      "location": {
+        "lat": -37.8179,
+        "lng": 144.9686,
+        "name": "Federation Square",
+        "address": "Swanston St & Flinders St, Melbourne VIC 3000, Australia",
+        "neighborhood": "CBD"
+      },
+      "vibeMatch": ["local", "culture", "architecture"],
+      "vibeScore": 90,
+      "description": "Walk through Melbourne's primary cultural hub, known for its distinct deconstructivist architecture. In the evening, the precinct serves as a gathering place for local events and provides views of the city's heritage and modern skylines.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "bestTimeOfDay": "evening",
+      "bookingRequired": false
+    },
+    {
+      "id": "activity_1793596281015_8",
+      "name": "Parliament House Facade Viewing",
+      "price": 0,
+      "images": [],
+      "rating": 0,
+      "category": "Historical landmarks",
+      "currency": "",
+      "duration": 20,
+      "location": {
+        "lat": -37.811,
+        "lng": 144.973,
+        "name": "Parliament House",
+        "address": "Spring St, East Melbourne VIC 3002, Australia",
+        "neighborhood": "East Melbourne"
+      },
+      "vibeMatch": ["history", "architecture", "heritage"],
+      "vibeScore": 90,
+      "description": "Witness the neoclassical grandeur of the Parliament of Victoria building. Though evening tours are limited, the exterior view highlights one of the finest examples of 19th-century public architecture in Australia.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "bestTimeOfDay": "evening",
+      "bookingRequired": false
+    },
+    {
+      "id": "activity_1793596281015_6",
+      "name": "Bourke Street Mall Heritage Walk",
+      "price": 0,
+      "images": [],
+      "rating": 0,
+      "category": "City walks",
+      "currency": "",
+      "duration": 40,
+      "location": {
+        "lat": -37.8136,
+        "lng": 144.964,
+        "name": "Bourke Street Mall",
+        "address": "Bourke St, Melbourne VIC 3000, Australia",
+        "neighborhood": "CBD"
+      },
+      "vibeMatch": ["history", "heritage", "architecture"],
+      "vibeScore": 88,
+      "description": "A relaxed evening stroll along a historical thoroughfare, passing the Royal Arcade and the GPO building. These sites showcase Victorian-era architecture and the traditional commercial heart of the city.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "bestTimeOfDay": "evening",
+      "bookingRequired": false
+    },
+    {
+      "id": "activity_1793596281015_10",
+      "name": "ACMI Screen Worlds Exploration",
+      "price": 0,
+      "images": [],
+      "rating": 0,
+      "category": "Museums & cultural sites",
+      "currency": "",
+      "duration": 90,
+      "location": {
+        "lat": -37.8176,
+        "lng": 144.9691,
+        "name": "Australian Centre for the Moving Image",
+        "address": "Federation Square, Melbourne VIC 3000, Australia",
+        "neighborhood": "CBD"
+      },
+      "vibeMatch": ["museum", "culture", "art"],
+      "vibeScore": 88,
+      "description": "Located in Federation Square, this museum explores the history of the moving image. Evening visits allow for a deep dive into film, television, and digital culture in a contemporary setting.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "bestTimeOfDay": "evening",
+      "bookingRequired": false
+    },
+    {
+      "id": "activity_1793596281015_4",
+      "name": "Melbourne Ghost Tour",
+      "price": 0,
+      "images": [],
+      "rating": 0,
+      "category": "Tours",
+      "currency": "",
+      "duration": 90,
+      "location": {
+        "lat": -37.8077,
+        "lng": 144.9655,
+        "name": "Old Melbourne Gaol",
+        "address": "377 Russell St, Melbourne VIC 3000, Australia",
+        "neighborhood": "CBD"
+      },
+      "vibeMatch": ["history", "night tours", "heritage"],
+      "vibeScore": 85,
+      "description": "Join a night tour through the city's dark alleys and historical sites. A storyteller shares legends and documented history of Old Melbourne, focusing on the heritage buildings and the spooky side of the city's past.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "bestTimeOfDay": "evening",
+      "bookingRequired": true
+    },
+    {
+      "id": "activity_1793596281015_9",
+      "name": "Southbank Promenade Cultural Stroll",
+      "price": 0,
+      "images": [],
+      "rating": 0,
+      "category": "City walks",
+      "currency": "",
+      "duration": 50,
+      "location": {
+        "lat": -37.8202,
+        "lng": 144.965,
+        "name": "Southbank Promenade",
+        "address": "Southbank, VIC 3006, Australia",
+        "neighborhood": "Southbank"
+      },
+      "vibeMatch": ["culture", "art", "local"],
+      "vibeScore": 85,
+      "description": "Walk along the Yarra River bank, passing by the Arts Centre Melbourne with its famous spire. This route connects several major cultural institutions and offers a relaxed pace to observe the city's modern art installations.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "bestTimeOfDay": "evening",
+      "bookingRequired": false
+    },
+    {
+      "id": "activity_1793596281015_13",
+      "name": "Hosier Lane Street Art Observation",
+      "price": 0,
+      "images": [],
+      "rating": 0,
+      "category": "Art galleries",
+      "currency": "",
+      "duration": 30,
+      "location": {
+        "lat": -37.8163,
+        "lng": 144.9691,
+        "name": "Hosier Lane",
+        "address": "Hosier Ln, Melbourne VIC 3000, Australia",
+        "neighborhood": "CBD"
+      },
+      "vibeMatch": ["art", "local", "culture"],
+      "vibeScore": 85,
+      "description": "Explore Melbourne's most famous bluestone cobbled laneway. Even in the evening, the ever-changing murals and stencils provide a raw look at the city's contemporary art scene and urban culture.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "bestTimeOfDay": "evening",
+      "bookingRequired": false
+    },
+    {
+      "id": "activity_1793596281015_11",
+      "name": "Princes Bridge Heritage Crossing",
+      "price": 0,
+      "images": [],
+      "rating": 0,
+      "category": "Historical landmarks",
+      "currency": "",
+      "duration": 15,
+      "location": {
+        "lat": -37.8193,
+        "lng": 144.9678,
+        "name": "Princes Bridge",
+        "address": "St Kilda Rd, Melbourne VIC 3000, Australia",
+        "neighborhood": "CBD"
+      },
+      "vibeMatch": ["history", "heritage", "architecture"],
+      "vibeScore": 82,
+      "description": "Walk across the historical bridge connecting the CBD to the cultural precinct. It offers a prime vantage point for the skyline and the Yarra River, highlighting the city's architectural evolution.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "bestTimeOfDay": "evening",
+      "bookingRequired": false
+    },
+    {
+      "id": "activity_1793596281015_5",
+      "name": "Eureka Skydeck 88 Cultural View",
+      "price": 0,
+      "images": [],
+      "rating": 0,
+      "category": "Sightseeing & landmarks",
+      "currency": "",
+      "duration": 60,
+      "location": {
+        "lat": -37.8213,
+        "lng": 144.9641,
+        "name": "Eureka Tower",
+        "address": "7 Riverside Quay, Southbank VIC 3006, Australia",
+        "neighborhood": "Southbank"
+      },
+      "vibeMatch": ["local", "architecture"],
+      "vibeScore": 80,
+      "description": "Observe the city layout and historical landmarks from the Southern Hemisphere's highest public observation deck. The evening view provides context for Melbourne's geography and urban development over its history.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "bestTimeOfDay": "evening",
+      "bookingRequired": false
+    },
+    {
+      "id": "enriched_activity_self_guided_neighborhood_walk_0",
+      "name": "Self-guided neighborhood walk in Melbourne, Australia",
+      "price": 0,
+      "images": [],
+      "rating": 0,
+      "category": "sightseeing",
+      "currency": "",
+      "duration": 90,
+      "location": {
+        "lat": 0,
+        "lng": 0,
+        "name": "Melbourne, Australia",
+        "address": ""
+      },
+      "vibeMatch": ["cultural"],
+      "vibeScore": 78,
+      "description": "Planning idea; confirm opening times, availability and any admission price.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "planningIdea": true,
+      "bestTimeOfDay": "any",
+      "bookingRequired": false
+    },
+    {
+      "id": "enriched_activity_local_market_exploration_1",
+      "name": "Local market exploration in Melbourne, Australia",
+      "price": 0,
+      "images": [],
+      "rating": 0,
+      "category": "sightseeing",
+      "currency": "",
+      "duration": 90,
+      "location": {
+        "lat": 0,
+        "lng": 0,
+        "name": "Melbourne, Australia",
+        "address": ""
+      },
+      "vibeMatch": ["cultural"],
+      "vibeScore": 74,
+      "description": "Planning idea; confirm opening times, availability and any admission price.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "planningIdea": true,
+      "bestTimeOfDay": "any",
+      "bookingRequired": false
+    },
+    {
+      "id": "enriched_activity_sunset_viewpoint_2",
+      "name": "Sunset viewpoint in Melbourne, Australia",
+      "price": 0,
+      "images": [],
+      "rating": 0,
+      "category": "sightseeing",
+      "currency": "",
+      "duration": 90,
+      "location": {
+        "lat": 0,
+        "lng": 0,
+        "name": "Melbourne, Australia",
+        "address": ""
+      },
+      "vibeMatch": ["cultural"],
+      "vibeScore": 70,
+      "description": "Planning idea; confirm opening times, availability and any admission price.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "planningIdea": true,
+      "bestTimeOfDay": "any",
+      "bookingRequired": false
+    },
+    {
+      "id": "reviewed-melbourne-skydeck",
+      "name": "Melbourne Skydeck",
+      "price": 0,
+      "images": [],
+      "rating": 0,
+      "category": "sightseeing",
+      "currency": "",
+      "duration": 60,
+      "location": {
+        "lat": 0,
+        "lng": 0,
+        "name": "Melbourne Skydeck",
+        "address": "Riverside Quay, Southbank, Melbourne 3006, Australia"
+      },
+      "vibeMatch": [],
+      "vibeScore": 60,
+      "description": "See Melbourne from the observation deck. This suggested visit covers general admission; additional experiences are separate.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "bestTimeOfDay": "any",
+      "bookingRequired": true
+    }
+  ],
+  "dining": [
+    {
+      "id": "web:78535140728e5cb5126865ebee37c50890bcabf36d3bc6ec0a126187e8ffd348",
+      "name": "Bistrot Bisou",
+      "images": [],
+      "source": {
+        "url": "https://bistrotbisou.com.au/",
+        "retrievedOn": "2026-11-02"
+      },
+      "location": {
+        "name": "Bistrot Bisou",
+        "address": "575 Flinders Lane, Melbourne, VIC 3000, Australia"
+      },
+      "mealTypes": [],
+      "vibeMatch": [],
+      "vibeScore": 0,
+      "description": "Dining option to review. Confirm the venue, meal service and availability for your dates before choosing it.",
+      "priceStatus": "unknown",
+      "cuisineTypes": [],
+      "planningIdea": true,
+      "dietaryOptions": []
+    },
+    {
+      "id": "dining_1793596269424_11",
+      "name": "Pellegrini's Espresso Bar",
+      "images": [],
+      "rating": 0,
+      "location": {
+        "lat": -37.8124,
+        "lng": 144.9711,
+        "name": "Pellegrini's Espresso Bar",
+        "address": "66 Bourke St, Melbourne VIC 3000",
+        "neighborhood": "Melbourne CBD"
+      },
+      "mealTypes": ["breakfast", "lunch"],
+      "vibeMatch": ["cultural", "historic", "traditional"],
+      "vibeScore": 100,
+      "priceLevel": 1,
+      "description": "A Melbourne icon that has remained virtually unchanged for decades, offering a truly authentic glimpse into the city's Italian heritage.",
+      "reviewCount": 0,
+      "cuisineTypes": ["Italian"],
+      "dietaryOptions": []
+    },
+    {
+      "id": "dining_1793596269424_1",
+      "name": "Florentino",
+      "images": [],
+      "rating": 0,
+      "location": {
+        "lat": -37.8122,
+        "lng": 144.9708,
+        "name": "Florentino",
+        "address": "80 Bourke St, Melbourne VIC 3000",
+        "neighborhood": "Melbourne CBD"
+      },
+      "mealTypes": ["dinner"],
+      "vibeMatch": ["cultural", "historic", "traditional"],
+      "vibeScore": 98,
+      "priceLevel": 3,
+      "description": "An iconic institution since 1928, this venue captures the historic essence of Melbourne's Italian dining scene with timber-paneled walls and classic service.",
+      "reviewCount": 0,
+      "cuisineTypes": ["Italian"],
+      "dietaryOptions": []
+    },
+    {
+      "id": "dining_1793596269424_5",
+      "name": "Cumulus Inc.",
+      "images": [],
+      "rating": 0,
+      "location": {
+        "lat": -37.8151,
+        "lng": 144.9723,
+        "name": "Cumulus Inc.",
+        "address": "45 Flinders Ln, Melbourne VIC 3000",
+        "neighborhood": "Melbourne CBD"
+      },
+      "mealTypes": ["breakfast", "lunch", "dinner"],
+      "vibeMatch": ["cultural", "foodie", "local favorite"],
+      "vibeScore": 94,
+      "priceLevel": 2,
+      "description": "An eating house and bar that represents the quintessential Melbourne laneway dining experience, focusing on seasonal local produce.",
+      "reviewCount": 0,
+      "cuisineTypes": ["Australian Contemporary"],
+      "dietaryOptions": []
+    },
+    {
+      "id": "dining_1793596269423_0",
+      "name": "Higher Ground",
+      "images": [],
+      "rating": 0,
+      "location": {
+        "lat": -37.8155,
+        "lng": 144.9531,
+        "name": "Higher Ground",
+        "address": "650 Little Bourke St, Melbourne VIC 3000",
+        "neighborhood": "Melbourne CBD"
+      },
+      "mealTypes": ["breakfast", "lunch"],
+      "vibeMatch": ["cultural", "industrial", "foodie"],
+      "vibeScore": 92,
+      "priceLevel": 2,
+      "description": "Located in a former power station, this architectural gem offers sophisticated Australian dishes in a high-ceilinged, industrial-chic space that reflects Melbourne's heritage and modern design.",
+      "reviewCount": 0,
+      "cuisineTypes": ["Australian Contemporary"],
+      "dietaryOptions": []
+    },
+    {
+      "id": "dining_1793596269424_8",
+      "name": "Tipo 00",
+      "images": [],
+      "rating": 0,
+      "location": {
+        "lat": -37.8136,
+        "lng": 144.9622,
+        "name": "Tipo 00",
+        "address": "361 Little Bourke St, Melbourne VIC 3000",
+        "neighborhood": "Melbourne CBD"
+      },
+      "mealTypes": ["lunch", "dinner"],
+      "vibeMatch": ["cultural", "foodie", "intimate"],
+      "vibeScore": 91,
+      "priceLevel": 3,
+      "description": "Named after the flour used for pasta, this intimate venue is celebrated for its authentic and refined approach to Italian cuisine.",
+      "reviewCount": 0,
+      "cuisineTypes": ["Italian"],
+      "dietaryOptions": []
+    },
+    {
+      "id": "dining_1793596269424_3",
+      "name": "Marion",
+      "images": [],
+      "rating": 0,
+      "location": {
+        "lat": -37.8055,
+        "lng": 144.9754,
+        "name": "Marion",
+        "address": "53 Gertrude St, Fitzroy VIC 3065",
+        "neighborhood": "Fitzroy"
+      },
+      "mealTypes": ["dinner"],
+      "vibeMatch": ["cultural", "local favorite", "artistic"],
+      "vibeScore": 90,
+      "priceLevel": 2,
+      "description": "A sophisticated yet casual wine bar and bistro in the heart of Fitzroy, reflecting the neighborhood's artistic and culinary evolution.",
+      "reviewCount": 0,
+      "cuisineTypes": ["Modern European"],
+      "dietaryOptions": []
+    },
+    {
+      "id": "dining_1793596269424_7",
+      "name": "Hardware Soci\u00e9t\u00e9",
+      "images": [],
+      "rating": 0,
+      "location": {
+        "lat": -37.8202,
+        "lng": 144.9561,
+        "name": "Hardware Soci\u00e9t\u00e9",
+        "address": "10 Katherine Pl, Melbourne VIC 3000",
+        "neighborhood": "Melbourne CBD"
+      },
+      "mealTypes": ["breakfast"],
+      "vibeMatch": ["cultural", "foodie", "local favorite"],
+      "vibeScore": 89,
+      "priceLevel": 2,
+      "description": "A pioneer of Melbourne's breakfast culture, known for its creative approach to morning meals in a stylish, bustling environment.",
+      "reviewCount": 0,
+      "cuisineTypes": ["Australian Contemporary", "Modern European"],
+      "dietaryOptions": []
+    },
+    {
+      "id": "dining_1793596269424_2",
+      "name": "Chin Chin",
+      "images": [],
+      "rating": 0,
+      "location": {
+        "lat": -37.8164,
+        "lng": 144.9701,
+        "name": "Chin Chin",
+        "address": "125 Flinders Ln, Melbourne VIC 3000",
+        "neighborhood": "Melbourne CBD"
+      },
+      "mealTypes": ["lunch", "dinner"],
+      "vibeMatch": ["cultural", "foodie", "energetic"],
+      "vibeScore": 88,
+      "priceLevel": 3,
+      "description": "A high-energy venue that defined the Flinders Lane dining scene, serving bold Southeast Asian flavors with a distinctive Melbourne edge.",
+      "reviewCount": 0,
+      "cuisineTypes": ["Asian Fusion"],
+      "dietaryOptions": []
+    },
+    {
+      "id": "dining_1793596269424_9",
+      "name": "Etta",
+      "images": [],
+      "rating": 0,
+      "location": {
+        "lat": -37.7766,
+        "lng": 144.9709,
+        "name": "Etta",
+        "address": "60 Lygon St, Brunswick East VIC 3057",
+        "neighborhood": "East Melbourne"
+      },
+      "mealTypes": ["dinner"],
+      "vibeMatch": ["cultural", "hidden gem", "local favorite"],
+      "vibeScore": 87,
+      "priceLevel": 3,
+      "description": "A neighborhood bistro in nearby Brunswick East that feels like a local home, serving nuanced dishes influenced by diverse cultural backgrounds.",
+      "reviewCount": 0,
+      "cuisineTypes": ["Australian Contemporary"],
+      "dietaryOptions": []
+    },
+    {
+      "id": "dining_1793596269424_4",
+      "name": "Supernormal",
+      "images": [],
+      "rating": 0,
+      "location": {
+        "lat": -37.8159,
+        "lng": 144.9691,
+        "name": "Supernormal",
+        "address": "180 Flinders Ln, Melbourne VIC 3000",
+        "neighborhood": "Melbourne CBD"
+      },
+      "mealTypes": ["lunch", "dinner"],
+      "vibeMatch": ["cultural", "foodie", "contemporary"],
+      "vibeScore": 85,
+      "priceLevel": 3,
+      "description": "An interpretation of the bustling food culture of Tokyo, Shanghai, and Hong Kong, presented in a sleek, light-filled Melbourne space.",
+      "reviewCount": 0,
+      "cuisineTypes": ["Asian Fusion"],
+      "dietaryOptions": []
+    },
+    {
+      "id": "dining_1793596269424_6",
+      "name": "Garden State Hotel",
+      "images": [],
+      "rating": 0,
+      "location": {
+        "lat": -37.8157,
+        "lng": 144.9712,
+        "name": "Garden State Hotel",
+        "address": "101 Flinders Ln, Melbourne VIC 3000",
+        "neighborhood": "Melbourne CBD"
+      },
+      "mealTypes": ["lunch", "dinner"],
+      "vibeMatch": ["cultural", "social", "historic"],
+      "vibeScore": 82,
+      "priceLevel": 2,
+      "description": "A sprawling multi-level venue featuring a lush internal courtyard, built within an old Victorian-era warehouse.",
+      "reviewCount": 0,
+      "cuisineTypes": ["Australian Contemporary"],
+      "dietaryOptions": []
+    },
+    {
+      "id": "dining_1793596269424_10",
+      "name": "Mamasita",
+      "images": [],
+      "rating": 0,
+      "location": {
+        "lat": -37.8138,
+        "lng": 144.9731,
+        "name": "Mamasita",
+        "address": "11 Collins St, Melbourne VIC 3000",
+        "neighborhood": "Melbourne CBD"
+      },
+      "mealTypes": ["lunch", "dinner"],
+      "vibeMatch": ["cultural", "energetic", "foodie"],
+      "vibeScore": 80,
+      "priceLevel": 2,
+      "description": "One of the early catalysts of Melbourne's modern dining boom, providing a vibrant atmosphere and elevated Mexican flavors.",
+      "reviewCount": 0,
+      "cuisineTypes": ["Asian Fusion"],
+      "dietaryOptions": []
+    },
+    {
+      "id": "web:6db288aa07fe7eca462f16f61c41071841599df82a41bcbce0a6e0ef8d176842",
+      "name": "Park Bong Sook Melbourne CBD",
+      "images": [],
+      "source": {
+        "url": "https://parkbongsook.com.au/branches/melbourne-cbd/",
+        "retrievedOn": "2026-11-02"
+      },
+      "location": {
+        "name": "Park Bong Sook Melbourne CBD",
+        "address": "552 Lonsdale St, Melbourne VIC 3000"
+      },
+      "mealTypes": [],
+      "vibeMatch": [],
+      "vibeScore": 0,
+      "description": "Dining option to review. Confirm the venue, meal service and availability for your dates before choosing it.",
+      "priceStatus": "unknown",
+      "cuisineTypes": [],
+      "planningIdea": true,
+      "dietaryOptions": []
+    },
+    {
+      "id": "enriched_dining_australian_contemporary_0",
+      "name": "Australian Contemporary neighborhood spot",
+      "images": [],
+      "rating": 0,
+      "location": {
+        "lat": 0,
+        "lng": 0,
+        "name": "Melbourne, Australia",
+        "address": ""
+      },
+      "mealTypes": ["lunch", "dinner"],
+      "vibeMatch": ["cultural"],
+      "vibeScore": 74,
+      "priceLevel": 2,
+      "description": "Dining idea; choose a venue and confirm menu prices before booking.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "cuisineTypes": ["Australian Contemporary"],
+      "planningIdea": true,
+      "dietaryOptions": []
+    },
+    {
+      "id": "enriched_dining_italian_1",
+      "name": "Italian neighborhood spot",
+      "images": [],
+      "rating": 0,
+      "location": {
+        "lat": 0,
+        "lng": 0,
+        "name": "Melbourne, Australia",
+        "address": ""
+      },
+      "mealTypes": ["lunch", "dinner"],
+      "vibeMatch": ["cultural"],
+      "vibeScore": 71,
+      "priceLevel": 2,
+      "description": "Dining idea; choose a venue and confirm menu prices before booking.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "cuisineTypes": ["Italian"],
+      "planningIdea": true,
+      "dietaryOptions": []
+    },
+    {
+      "id": "enriched_dining_asian_fusion_2",
+      "name": "Asian Fusion neighborhood spot",
+      "images": [],
+      "rating": 0,
+      "location": {
+        "lat": 0,
+        "lng": 0,
+        "name": "Melbourne, Australia",
+        "address": ""
+      },
+      "mealTypes": ["lunch", "dinner"],
+      "vibeMatch": ["cultural"],
+      "vibeScore": 68,
+      "priceLevel": 2,
+      "description": "Dining idea; choose a venue and confirm menu prices before booking.",
+      "priceStatus": "unknown",
+      "reviewCount": 0,
+      "cuisineTypes": ["Asian Fusion"],
+      "planningIdea": true,
+      "dietaryOptions": []
+    }
+  ]
+}

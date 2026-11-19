@@ -73,13 +73,121 @@ remain available while staging access is being resolved. The pinned preview
 origin is a candidate, not evidence of device readiness; do not bypass Vercel
 protection by embedding credentials in the mobile app.
 
+Android cloud submissions validate the private local signing configuration and
+keystore before EAS can increment the build version or upload. Restore the
+existing QA key when missing; do not substitute debug or production signing.
+This file check does not validate the keystore password or certificate.
+
 Cloud commands use existing credentials, prevent credential mutation, and never
 submit to stores. Check `eas account:usage testimonio --non-interactive` before
 queueing builds. A physical iOS build needs an Apple distribution certificate
 and an ad hoc provisioning profile containing the test device UDIDs; a simulator
 build does not establish physical-device signing readiness.
 
+Inspect an existing cloud build from `apps/mobile` with
+`eas build:view <build-id> --json`. Even with an explicit build ID, running this
+at the monorepo root can report that the EAS project is not configured; use the
+existing mobile project context rather than running `eas init` again. Preserve
+the build ID and inspect that same build until it reaches a terminal status.
+Build log URLs can return Brotli-compressed responses; use an HTTP client with
+automatic content decoding (for example Node `fetch().text()`), rather than
+assuming UTF-8 or gzip. Artifact hosts can also reject Python urllib while Node
+`fetch` succeeds; use the installed Node HTTP client for approved downloads, check
+status before writing, and record a SHA-256. Keep signed URLs and environment
+values out of reports.
+
 ## Local prerequisites
+
+### Physical Android visibility
+
+Before starting a test, check `adb devices -l` and select the exact device
+serial. An empty list means the phone is not available to the test runner;
+`unauthorized` requires accepting the phone's USB-debugging authorization.
+Check the Mac's USB inventory separately when the list is empty. If the phone
+is absent there too, unlock it and test a direct USB data cable connection,
+select File transfer if offered, and verify USB debugging in Developer options.
+Repeatedly restarting ADB does not establish a missing physical USB connection.
+Preserve pairing records and other connected-device sessions while diagnosing.
+
+### First physical iPhone signing setup
+
+USB pairing and Developer Mode do not register the phone for an EAS ad hoc
+build. From `apps/mobile`, run `eas device:create` interactively and register
+the connected iPhone with the Apple Developer team that owns this app. If the
+account offers multiple teams, select the intended app owner consistently for
+device registration and signing. Complete Apple login and two-factor prompts
+locally; never paste passwords or verification codes into agent chat.
+
+The Expo project owner and Apple Developer login are separate identities. Keep
+the existing `testimonio` Expo project; explicitly choose the intended Apple
+Developer account rather than assuming the CLI's suggested email owns the
+signing team. After identifying the team, use
+`eas device:list --apple-team-id <TEAM_ID> --json --non-interactive` to verify
+the registered UDID without an interactive team-selection prompt.
+
+Configure credentials with the staging environment loaded before Expo evaluates
+the QA config:
+
+```bash
+cd /Users/stanleyyang/workspace/faroway/apps/mobile
+eas env:exec preview 'EXPO_NO_DOTENV=1 EXPO_PUBLIC_MOBILE_QA=1 EXPO_PUBLIC_SUPABASE_URL=https://omovikloadpvzijoaqus.supabase.co EXPO_PUBLIC_API_URL=https://faroway-git-verify-staging-readiness-20261018-testimonio.vercel.app eas credentials -p ios'
+```
+
+Select `qa`, sign in to Apple, and use **Build Credentials** to configure the
+distribution certificate and ad hoc provisioning profile for
+`ai.faroway.app.qa`, including the registered iPhone. Reuse an appropriate valid
+certificate when offered; do not revoke shared certificates. This command
+configures signing but does not submit a cloud build. After setup, rerun
+preflight and the allowance check above before a separately authorized
+`cloud-ios` submission. Keep credentials in EAS; no local credential export is
+needed.
+
+### Physical iPhone UI automation
+
+Ad hoc app signing enables installation; it does not configure automated UI
+control. The existing Maestro flows cover Android and iOS simulators. For
+physical iPhone automation with Appium/XCUITest, configure a separately signed
+WebDriverAgent runner using an Apple Development identity and a distinct runner
+bundle identifier on the intended team. EAS's remotely managed distribution
+certificate does not establish a local development signing identity.
+
+Check the XCUITest driver's `peerDependencies` against the Appium server version
+before installation; the newest driver can require a beta server even when
+the newest stable server is installed. Keep device tooling outside the app's
+dependencies and bind the automation server to loopback.
+
+Sign in locally through Xcode Settings > Apple Accounts and verify Developer
+Mode, pairing, and the exact device UDID before starting the runner. On the
+iPhone, also enable Settings > Developer > Enable UI Automation and complete
+device-side authentication. Developer Mode alone does not authorize UI tests;
+`Authentication canceled` during runner initialization requires checking this
+separate authorization before retrying. Respect
+the workstation's disk admission limits before tool installation or local
+native builds; do not remove current-device support files to make room. Verify
+launch, UI inspection, tap, and text entry on the physical QA app before
+claiming that agent-driven device QA is available.
+
+For a WebDriverAgent `xcodebuild` exit 65, inspect the `.xcresult` build issues
+as well as the test summary. A missing runner can produce a secondary
+CoreDevice sandbox/bookmark error; check signing errors before changing
+filesystem permissions or security settings. Recheck local signing identities
+after Xcode's first provisioning attempt, which can create the development
+certificate even if that attempt fails.
+
+Every EAS build profile explicitly pins `bun` to the root `packageManager`
+version. Keep these synchronized when updating the package manager: an older
+image default can reject the committed lockfile before native compilation.
+`bun scripts/check-eas-release.ts` checks this alignment. Do not regenerate or
+unfreeze the lockfile to work around a mismatched build runtime.
+
+Local native builds validate the generated project ID and deep-link scheme as
+well as Expo configuration. Existing `ios/` and `android/` folders can retain a
+production identity from an earlier prebuild; `run:ios` does not reliably refresh
+them. Run `bun run qa:mobile prebuild` before retrying an identity-guard failure.
+Do not bypass the guard or install a production-identified build for QA.
+The Android app-link plugin removes opposite-environment Faroway schemes during
+incremental prebuild, which otherwise retains old schemes. OAuth and HTTPS
+schemes are preserved. Validate generated output before installing either app.
 
 The runner selects Homebrew Java 17 and the Android command-line SDK without
 changing the user's shell configuration. Android needs platform 36, build tools
@@ -145,6 +253,14 @@ Physical push checks require signed device builds; simulator/Expo Go results are
 insufficient. Finish with a per-platform evidence report separating local,
 fixture-backed, hosted and physical-device results.
 
+For keyboard acceptance, show the simulator's software keyboard explicitly.
+Hardware-keyboard text injection alone can hide it and falsely pass layout
+checks. Focus a lower multiline field, type using an on-screen key, and verify
+that the caret and entered text remain visible. Repeat for allergies, dietary
+preferences and mobility notes, then dismiss the keyboard and check the footer.
+If multiple Simulator windows are open, select the recorded device by name
+before each interaction and avoid concurrent UI drivers on that device.
+
 The prepared Maestro startup flow opens and closes the planner without entering
 credentials, clearing local data, saving a trip or requesting AI. Its XML/debug
 output goes to ignored `artifacts/mobile-qa/maestro`. It is a startup smoke test,
@@ -164,3 +280,83 @@ When adding a migration, register its hash in the follow-up inventory rather
 than modifying the frozen approved bootstrap. Rehearse both deterministic
 bootstrap rendering and the new follow-up's behavior/privileges on disposable
 PostgreSQL. Never replay a fresh-install bundle on populated hosted staging.
+
+## Offline display and storage regressions
+
+Exercise nested API itineraries through background sync as well as direct detail
+loading. Both paths must use the shared day/hotel normalization, retain supplied
+photos and traveler needs, and clear stale plans. Test a failed confirmed-copy
+write before deleting a local draft; verify the saved draft and pending request
+identity independently, since the merged UI can reconstruct a missing saved
+copy from a queued mutation.
+
+For storage-failure tests, seed the saved-trip cache explicitly: queueCreate
+stores a pending snapshot rather than a saved copy. Supply complete API receipt
+fixtures, including created_at, so a subsequent cache read tests valid data.
+The account-scoped storage facade wraps methods; spy on the underlying prototype
+when injecting a one-shot failure, and always restore the spy.
+
+## Android system prompts and text size
+
+An optional password-manager save sheet can cover the app after successful QA
+sign-in. Decline saving disposable credentials; do not count a covered-control
+timeout as a login failure. The native runner narrowly recognizes the observed
+1Password save sheet and chooses its enabled “No thanks” action only. Unknown
+prompts still require inspection. Verify the chosen staging account has a saved
+itinerary before running saved-trip assertions; an empty account is a test-data
+precondition, not permission to generate a paid trip.
+
+For Android text-size checks, record the original font scale and restore it in
+a finally block. Capture both the configuration transition and a cold launch
+at the requested scale: activity recreation can briefly show stale measurements.
+Report transition clipping separately from persistent layout failures.
+
+### Image and first-run acceptance
+
+A successful storage HEAD response is not image acceptance. Check the actual API
+payload used by the screen, normalize/cache round-trip, full image delivery and
+decoding, and visible content at the expected place. Record absent sources separately
+from network failures or incorrect images. A fallback placeholder is graceful failure,
+not a passing photograph. Never attach an unrelated venue's photo to fill a gap.
+
+First-run QA must include offline first paint, guest exploration, destination handoff,
+custom destination entry, returning users, attribution, and scrolling/wrapping at
+small widths and larger native text. Source-rendered web previews are useful layout
+evidence but do not replace installed-device acceptance.
+
+For bundled hero images, inspect the native boundary between the photo and the
+text panel. Intrinsic image dimensions can extend beyond an absolutely positioned
+container even when a web preview looks correct. Explicitly size the image, clip
+its container, and give the reading surface an opaque background; confirm the
+actual installed result before closing the finding.
+
+### Verification command context
+
+Run repository-root file edits against root-relative paths (or absolute paths).
+Run package commands with an explicit `apps/mobile` working directory and paths
+relative to that directory; do not combine a package working directory with a
+second `apps/mobile/` prefix. Before pushing, run root `bun run check`, including
+package-wide formatting: targeted lint alone can miss a CI-blocking test file.
+Check the installed Bun version before lockfile operations; use the pinned CI/EAS
+version for lockfile version 3 rather than rewriting it with an older local Bun.
+
+### Vendor-backed acceptance
+
+Before calling native planning production-ready, record the installed API URL and
+its deployed revision alongside the app build. A current app pointed at an old
+fixture backend does not validate the current planner. For a vendor-backed trip,
+retain supplier result counts, IDs, photo delivery and affiliate handoff evidence
+through the saved native itinerary. Credential presence, a generic health route,
+and an explicitly disabled provider are not successful provider integration tests.
+
+### Planning navigation and progress acceptance
+
+Open an itinerary from the library, after generation, and directly without prior
+navigation history. Scroll to the last day: Trips and Share must remain visible,
+and Trips must return to the library without reopening generation or trip setup.
+During generation, verify the initial wait, expanded details, streamed content,
+connection error/reconnect and completion. New content must not move the reader's
+scroll position; completion must expose the review action immediately. Assert
+visible text rather than serialized layout styles when checking progress labels.
+Supplier and generated suggestions must use comparable relevance scores: an AI
+self-rating is not evidence that it should outrank a real supplier product.

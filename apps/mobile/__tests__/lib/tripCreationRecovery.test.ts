@@ -111,3 +111,23 @@ it('reviewed discard removes only the matching receipt and accepts unchanged emp
   expect(await readTripCreationReceipt('a')).toBeNull();
   await expect(discardReviewedTripCreation('a', null)).resolves.toBeUndefined();
 });
+
+const requirements = {
+  allergies: ['severe peanut allergy'],
+  dietaryPreferences: ['vegan'],
+  accessibility: ['step_free_entrance' as const, 'accessible_restroom' as const],
+  mobilityNotes: 'Wheelchair width 65 cm; no lifting; rest every 30 minutes.',
+};
+
+it('restores the exact dietary and mobility requirements of a pending request', async () => {
+  const body = JSON.stringify({
+    destination: 'Edinburgh',
+    start_date: '2099-06-01',
+    end_date: '2099-06-04',
+    travelers: 2,
+    preferences: { requirements },
+  });
+  const receipt = await pendingTripCreation('a', body);
+  expect((await savedTripCreationDraft('a'))?.requirements).toEqual(requirements);
+  expect(await pendingTripCreation('a', body)).toEqual(receipt);
+});

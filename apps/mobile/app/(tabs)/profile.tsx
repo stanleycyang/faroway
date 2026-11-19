@@ -1,3 +1,4 @@
+import { useProfileRefresh } from '../../hooks/useProfileRefresh';
 import { useLocalCalendarDate } from '../../hooks/useLocalCalendarDate';
 import { tripDatePhase } from '@faroway/constants';
 import { useState } from 'react';
@@ -179,6 +180,7 @@ export default function ProfileScreen() {
   const { user } = useUserStore();
   const { trips } = useTripStore();
 
+  const profileStatus = useProfileRefresh();
   const today = useLocalCalendarDate();
   const pastTrips = trips.filter(
     (t) => tripDatePhase(t.startDate, t.endDate, today) === 'past'
@@ -282,7 +284,11 @@ export default function ProfileScreen() {
               value={
                 user?.preferences?.vibes?.length
                   ? `${user.preferences.vibes.length} vibes selected`
-                  : 'Not set'
+                  : profileStatus === 'ready'
+                    ? 'Not set'
+                    : profileStatus === 'error'
+                      ? 'Couldn’t load — open to retry'
+                      : 'Loading saved preferences…'
               }
               onPress={() => router.push('/profile/preferences')}
             />

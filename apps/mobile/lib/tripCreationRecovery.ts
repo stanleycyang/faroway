@@ -1,3 +1,4 @@
+import { travelerRequirementsSchema } from './travelerRequirements';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
 import { z } from 'zod';
@@ -94,6 +95,7 @@ export function savedTripCreationDraft(userId: string) {
           travelerType: z.enum(['solo', 'couple', 'family', 'friends', 'business']).optional(),
           originCity: z.string().max(200).optional(),
           originAirport: z.string().max(10).optional(),
+          requirements: travelerRequirementsSchema.nullish(),
           vibes: z.array(z.string().max(50)).max(10).optional(),
         }),
       })
@@ -111,6 +113,7 @@ export function savedTripCreationDraft(userId: string) {
       travelerType: body.preferences.travelerType || 'couple',
       originCity: body.preferences.originCity,
       originAirport: body.preferences.originAirport,
+      requirements: body.preferences.requirements,
       vibes: body.preferences.vibes || [],
     };
   });

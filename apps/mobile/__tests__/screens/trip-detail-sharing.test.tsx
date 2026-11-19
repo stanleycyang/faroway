@@ -8,6 +8,7 @@ let mockFocused = true;
 let mockTripId = 'trip-a';
 const mockGetTrip = jest.fn();
 const mockReplace = jest.fn();
+const mockDismissTo = jest.fn();
 const mockRefreshSuccess = jest.fn();
 const mockRefreshError = jest.fn();
 const mockCreateLink = jest.fn();
@@ -76,7 +77,7 @@ jest.mock('react-native', () => ({
 }));
 jest.mock('react-native-safe-area-context', () => ({ SafeAreaView: 'SafeAreaView' }));
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ replace: mockReplace, back: jest.fn() }),
+  useRouter: () => ({ replace: mockReplace, dismissTo: mockDismissTo, back: jest.fn() }),
   useLocalSearchParams: () => ({ id: mockTripId }),
   useFocusEffect: (effect: () => void | (() => void)) => {
     const focused = mockFocused;
@@ -111,7 +112,8 @@ jest.mock('../../lib/tripSharing', () => ({
   shareOwnedTrip: (...args: unknown[]) => mockCreateLink(...args),
   revokeOwnedTripShare: (...args: unknown[]) => mockRevoke(...args),
 }));
-import { Alert } from 'react-native';
+import { Alert, Text, Image } from 'react-native';
+import { networkMonitor, type NetworkState } from '../../lib/offline/network';
 import TripDetailScreen from '../../app/trip/[id]';
 
 beforeEach(() => {
@@ -125,6 +127,33 @@ beforeEach(() => {
   mockOwner = 'account-a';
   mockRevision = 0;
   mockGetTrip.mockReset().mockResolvedValue(trip);
+});
+
+it('shows loading for a cached trip summary until the detail request settles', async () => {
+  let finish!: (value: typeof trip) => void;
+  mockGetTrip.mockReturnValue(
+    new Promise((resolve) => {
+      finish = resolve;
+    })
+  );
+  let screen!: ReturnType<typeof create>;
+  await act(async () => {
+    screen = create(<TripDetailScreen />);
+  });
+  const hasText = (text: string) =>
+    screen.root.findAll((node) => node.type === Text && node.props.children === text).length > 0;
+  try {
+    expect(hasText('Loading your itinerary…')).toBe(true);
+    expect(hasText('Your itinerary isn’t loaded')).toBe(false);
+    await act(async () => {
+      finish(trip);
+    });
+    expect(hasText('Your itinerary isn’t loaded')).toBe(true);
+  } finally {
+    await act(async () => {
+      screen.unmount();
+    });
+  }
 });
 
 it.each(['confirmed', 'after exit', 'account change'])(
@@ -611,3 +640,196 @@ it.each(['blur', 'unmount'])('cancels automatic and manual reads on %s', async (
     await act(async () => renderer?.unmount());
   }
 });
+
+it('explains a failed detail fetch for a cached summary and clears it on successful refresh', async () => {
+  mockGetTrip.mockRejectedValueOnce(new Error('Network request failed'));
+  let screen!: ReturnType<typeof create>;
+  const message = 'We couldn’t reach Faroway. Check your connection and try again.';
+  try {
+    await act(async () => {
+      screen = create(<TripDetailScreen />);
+    });
+    const texts = () => screen.root.findAllByType(Text).map((node) => node.props.children);
+    expect(texts()).toContain(message);
+    expect(texts()).not.toContain('Loading your itinerary…');
+    mockGetTrip.mockResolvedValueOnce(trip);
+    await act(async () => {
+      await screen.root
+        .findByType('AnimatedScrollView' as React.ElementType)
+        .props.refreshControl.props.onRefresh();
+    });
+    expect(texts()).not.toContain(message);
+    expect(texts()).toContain('Your trip is saved. Refresh to load its latest day-by-day plan.');
+  } finally {
+    await act(async () => screen?.unmount());
+  }
+});
+
+it('shows saved traveler needs independently of general dining guidance', async () => {
+  mockCurrentTrip = {
+    ...trip,
+    requirements: {
+      allergies: ['Peanuts'],
+      dietaryPreferences: ['Vegan'],
+      accessibility: ['step_free_entrance'],
+      mobilityNotes: 'Frequent rest breaks',
+    },
+  } as typeof trip;
+  mockGetTrip.mockResolvedValueOnce(mockCurrentTrip);
+  let screen!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      screen = create(<TripDetailScreen />);
+    });
+    const texts = screen.root.findAllByType(Text).map((node) => node.props.children);
+    expect(texts).toEqual(
+      expect.arrayContaining([
+        'Your dietary and access needs',
+        'Food allergies: Peanuts',
+        'Dietary preferences: Vegan',
+        'Access needs: Step-free entrance',
+        'Mobility and rest: Frequent rest breaks',
+      ])
+    );
+    expect(
+      texts.some(
+        (value) => typeof value === 'string' && value.includes('Venue suitability is unverified')
+      )
+    ).toBe(true);
+  } finally {
+    await act(async () => screen?.unmount());
+  }
+});
+
+it('recovers saved activity and hotel images after reconnect without reopening the trip', async () => {
+  const listeners = new Set<(state: NetworkState) => void>();
+  const network = (status: NetworkState['status']): NetworkState => ({
+    status,
+    isConnected: status === 'online',
+    isInternetReachable: status === 'online',
+    type: 'wifi',
+    details: null,
+  });
+  const subscription = jest.spyOn(networkMonitor, 'subscribe').mockImplementation((listener) => {
+    listeners.add(listener);
+    listener(network('offline'));
+    return () => {
+      listeners.delete(listener);
+    };
+  });
+  const populated = {
+    ...trip,
+    days: [
+      {
+        dayNumber: 1,
+        date: trip.startDate,
+        theme: 'Art',
+        activities: [
+          {
+            id: 'visit',
+            title: 'Museum',
+            type: 'attraction',
+            description: 'Visit',
+            time: 'Morning',
+            image: 'https://images.example.test/activity.jpg',
+          },
+        ],
+      },
+    ],
+    hotel: {
+      id: 'hotel',
+      name: 'Hotel',
+      images: ['https://images.example.test/hotel.jpg'],
+      amenities: [],
+    },
+  };
+  mockCurrentTrip = populated as unknown as typeof trip;
+  mockGetTrip.mockResolvedValue(populated);
+  let screen!: ReturnType<typeof create>;
+  const photos = () =>
+    screen.root
+      .findAllByType(Image)
+      .filter((node) => node.props.source?.uri?.startsWith('https://images.example.test/'));
+  try {
+    await act(async () => {
+      screen = create(<TripDetailScreen />);
+    });
+    expect(photos()).toHaveLength(2);
+    await act(async () => {
+      for (const photo of photos()) photo.props.onError({ nativeEvent: { error: 'offline' } });
+    });
+    expect(photos()).toHaveLength(0);
+    await act(async () => {
+      for (const listener of [...listeners]) listener(network('online'));
+    });
+    expect(photos()).toHaveLength(2);
+  } finally {
+    await act(async () => screen?.unmount());
+    subscription.mockRestore();
+  }
+});
+
+// Works after generation replaces the route and when a trip is opened directly.
+it('returns from the itinerary to saved trips without depending on back history', async () => {
+  let screen!: ReturnType<typeof create>;
+  await act(async () => {
+    screen = create(<TripDetailScreen />);
+  });
+  try {
+    await act(async () => {
+      const back = screen.root.findByProps({ accessibilityLabel: 'Back to trips' });
+      let parent = back.parent;
+      while (parent) {
+        expect(parent.type).not.toBe('AnimatedScrollView');
+        parent = parent.parent;
+      }
+      back.props.onPress();
+    });
+    expect(mockDismissTo).toHaveBeenCalledWith('/(tabs)/trips');
+  } finally {
+    await act(async () => {
+      screen.unmount();
+    });
+  }
+});
+
+it.each([true, false])(
+  'discloses incomplete research only for explicit planning ideas (%s)',
+  async (planningIdea) => {
+    const populated = {
+      ...trip,
+      days: [
+        {
+          dayNumber: 1,
+          date: trip.startDate,
+          theme: 'Explore',
+          activities: [
+            {
+              id: 'visit',
+              title: 'Neighborhood walk',
+              type: 'attraction',
+              description: 'Explore',
+              time: 'Morning',
+              ...(planningIdea ? { planningIdea: true } : {}),
+            },
+          ],
+        },
+      ],
+    };
+    mockCurrentTrip = populated as unknown as typeof trip;
+    mockGetTrip.mockResolvedValue(populated);
+    let screen!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        screen = create(<TripDetailScreen />);
+      });
+      expect(
+        screen.root
+          .findAllByType(Text)
+          .some((node) => node.props.children === 'This plan needs more research')
+      ).toBe(planningIdea);
+    } finally {
+      await act(async () => screen?.unmount());
+    }
+  }
+);

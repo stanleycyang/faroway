@@ -1,5 +1,6 @@
 "use client";
 
+import "leaflet/dist/leaflet.css";
 import { suppliedCoordinates } from "@/lib/location-coordinates";
 import { useEffect, useRef, useMemo } from "react";
 import L from "leaflet";

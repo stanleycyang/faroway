@@ -154,3 +154,74 @@ it.each(['changed revision', 'stale plan', 'explicit empty itinerary'])(
     );
   }
 );
+
+it.each([false, true])(
+  'normalizes synced itinerary and hotel while respecting stale plans (%s)',
+  async (stale) => {
+    const { offlineStorage } = require('../../../lib/offline/storage');
+    offlineStorage.getPendingMutations.mockResolvedValueOnce([]);
+    offlineStorage.loadSavedTrips.mockResolvedValueOnce([]);
+    global.fetch = jest.fn(async () => ({
+      ok: true,
+      json: async () => ({
+        trips: [
+          {
+            id: 'nested-trip',
+            user_id: 'owner',
+            destination: 'Paris',
+            start_date: '2099-06-01',
+            end_date: '2099-06-02',
+            travelers: 2,
+            created_at: '2026-01-01',
+            updated_at: '2026-01-02',
+            status: 'planned',
+            preferences: { planNeedsRefresh: stale },
+            itinerary: {
+              topHotel: {
+                id: 'hotel-1',
+                name: 'Saved hotel',
+                images: ['https://example.test/hotel.jpg'],
+              },
+              days: [
+                {
+                  dayNumber: 1,
+                  date: '2099-06-01',
+                  title: 'Arrival',
+                  morning: {
+                    activities: [
+                      {
+                        id: 'visit-1',
+                        name: 'Saved visit',
+                        duration: 90,
+                        images: ['https://example.test/visit.jpg'],
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    })) as unknown as typeof fetch;
+    await syncService.sync(true);
+    const saved = offlineStorage.saveTrips.mock.calls.at(-1)[0][0];
+    if (stale) {
+      expect(saved.days).toEqual([]);
+      expect(saved.hotel).toBeUndefined();
+    } else {
+      expect(saved.days[0].activities).toEqual([
+        expect.objectContaining({
+          id: 'visit-1',
+          title: 'Saved visit',
+          image: 'https://example.test/visit.jpg',
+        }),
+      ]);
+      expect(saved.hotel).toMatchObject({
+        id: 'hotel-1',
+        name: 'Saved hotel',
+        images: ['https://example.test/hotel.jpg'],
+      });
+    }
+  }
+);

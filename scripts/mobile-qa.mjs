@@ -10,6 +10,10 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 import { assertQaApiReachable } from "./mobile-qa-health.mjs";
+import {
+  assertQaNativeIdentity,
+  assertQaAndroidCredentials,
+} from "./mobile-qa-native.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const mobile = resolve(root, "apps/mobile");
@@ -69,6 +73,9 @@ if (
   await assertQaApiReachable(process.env.EXPO_PUBLIC_API_URL);
   console.log("Staging API: directly reachable, healthy JSON response.");
   run("bun", [resolve(root, "scripts/uat/images.ts")], root);
+}
+if (action === "android" || action === "ios-simulator") {
+  assertQaNativeIdentity(mobile, action === "android" ? "android" : "ios");
 }
 const disk = statfsSync(root);
 const freeGiB = (Number(disk.bavail) * Number(disk.bsize)) / 1024 ** 3;
@@ -174,6 +181,7 @@ switch (action) {
   case "cloud-ios-simulator":
     // EAS evaluates config once before fetching its remote environment. The
     // outer env:exec supplies the QA public key for that initial evaluation.
+    if (action === "cloud-android") assertQaAndroidCredentials(mobile);
     run("eas", [
       "build",
       "--platform",

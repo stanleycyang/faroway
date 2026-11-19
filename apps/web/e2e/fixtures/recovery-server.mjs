@@ -354,6 +354,20 @@ cpSync(path.join(repoRoot, "packages"), path.join(fixtureRoot, "packages"), {
   recursive: true,
   filter: copyFilter,
 });
+// Runtime scheduling imports reviewed catalogs and pure evaluation helpers.
+// Include those source dependencies in the isolated build, never private UAT artifacts.
+// Web's cross-platform contract tests also type-check the native payload/schema
+// libraries. Include their source, without native builds, credentials or caches.
+for (const directory of [
+  "scripts/fixtures",
+  "scripts/uat/lib",
+  "apps/mobile/lib",
+]) {
+  cpSync(path.join(repoRoot, directory), path.join(fixtureRoot, directory), {
+    recursive: true,
+    filter: copyFilter,
+  });
+}
 cpSync(
   path.join(repoRoot, "package.json"),
   path.join(fixtureRoot, "package.json"),
@@ -373,9 +387,9 @@ for (const entry of readdirSync(dependencies)) {
 mkdirSync(path.join(fixtureModules, "@faroway"));
 for (const entry of readdirSync(path.join(dependencies, "@faroway"))) {
   const installed = realpathSync(path.join(dependencies, "@faroway", entry));
-  const isWeb = entry === "web";
-  const snapshot = isWeb
-    ? path.join(fixtureRoot, "apps/web")
+  const isApp = entry === "web" || entry === "mobile";
+  const snapshot = isApp
+    ? path.join(fixtureRoot, "apps", entry)
     : path.join(fixtureRoot, "packages", entry);
   symlinkSync(
     existsSync(snapshot) ? snapshot : installed,

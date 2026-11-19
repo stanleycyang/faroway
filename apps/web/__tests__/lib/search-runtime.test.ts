@@ -6,12 +6,12 @@ describe("itinerary runtime budgets", () => {
     vi.unstubAllEnvs();
   });
 
-  it("allows structured AI responses within a bounded two-minute envelope", async () => {
+  it("allows structured AI responses within a bounded two-and-a-half-minute envelope", async () => {
     const runtime = await import("@/lib/search/runtime");
 
     expect(runtime.ORCHESTRATOR_TIMEOUT_MS).toBe(30000);
     expect(runtime.AI_AGENT_TIMEOUT_MS).toBe(60000);
-    expect(runtime.AGGREGATOR_TIMEOUT_MS).toBe(30000);
+    expect(runtime.AGGREGATOR_TIMEOUT_MS).toBe(60000);
     expect(runtime.VENDOR_TIMEOUT_MS).toBe(2000);
 
     // AI/provider agents run concurrently between orchestration and aggregation.
@@ -19,7 +19,7 @@ describe("itinerary runtime budgets", () => {
       runtime.ORCHESTRATOR_TIMEOUT_MS +
         Math.max(runtime.AI_AGENT_TIMEOUT_MS, runtime.VENDOR_TIMEOUT_MS) +
         runtime.AGGREGATOR_TIMEOUT_MS,
-    ).toBeLessThanOrEqual(120000);
+    ).toBeLessThanOrEqual(150000);
   });
 
   it("allows explicit vendor-check overrides without weakening app defaults", async () => {

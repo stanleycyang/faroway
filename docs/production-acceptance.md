@@ -22,8 +22,8 @@ bash scripts/verify-release-local.sh
 ```
 
 Docker must be running. The script checks quality, unit/script tests, the offline
-planning rubric, six disposable PostgreSQL suites, synthetic desktop/mobile
-browser journeys and the standalone production web build. The build uses local
+planning rubric, seven disposable PostgreSQL suites, synthetic desktop/mobile
+planning, checkout and recovery browser journeys and the standalone production web build. The build uses local
 dummy Supabase inputs, an empty read-only local catalog, and normal production
 font downloads; it does not validate hosted credentials or production content.
 Its output is verification-only and must never be deployed. The synthetic
@@ -44,7 +44,10 @@ not a skipped job or an older revision.
 ## Hosted staging journeys
 
 First verify the immutable deployment uses `faroway-staging`
-(`omovikloadpvzijoaqus`) for both client and server access. Use disposable accounts
+(`omovikloadpvzijoaqus`) for both client and server access. Resolve its deployment
+ID and Git SHA before testing: a branch alias can still point to an older build
+after a successful preview build. Record the immutable deployment identity;
+never count a healthy alias as evidence for a different candidate. Use disposable accounts
 A and B. Keep optional providers and push delivery disabled unless included in
 the accepted launch scope. Use synthetic private data and avoid live bookings.
 
@@ -73,8 +76,49 @@ geographic grouping and travel time, daily pacing, explicit constraints, currenc
 unknown prices and estimates. Verify a sample of venue facts against permitted
 sources. Generic fallback output must be disclosed and recoverable. Include
 provider timeout, partial output and retry, and verify no duplicate paid dispatch.
+Saved-plan smoke must reject malformed, stale or explicitly conflicting timing
+proposals even when titles, dates and meal counts are valid. A valid proposed
+timetable still does not verify actual travel or venue hours.
 Do not treat fixture calibration or an HTTP 200 as a quality pass. Restore the
 staging planning pause after the exercise.
+
+### AI authentication and false-success gate
+
+A healthy API and a `planned` trip status do not establish that model calls work.
+Before handing a QA backend to device testers, verify one authorized bounded
+request against the exact deployment, inspect its workflow logs for Gateway
+unauthenticated errors, and inspect saved activity/dining counts and provenance.
+If model stages fail and only deterministic enrichment remains, fail acceptance
+regardless of the completed workflow/status. Repair AI authentication independently
+of optional supplier credentials; missing vendor configuration must not obscure
+an unauthenticated core planning pipeline. Existing fallback trips are evidence
+of the failure, not a reason to regenerate automatically or spend another budget.
+
+For launch-path acceptance, disable `FAROWAY_SCHEDULE_EXPERIMENT` and clear
+staging-only `PLANNING_MODEL_AGGREGATOR`, `PLANNING_THINKING_AGGREGATOR` and
+`PLANNING_MAX_OUTPUT_TOKENS_AGGREGATOR` overrides. Record the exact immutable
+deployment and effective profile with each receipt. An experimental compiler
+pass or a capped-token experiment is not a pass for the default production path.
+Do not dispatch a paid check while its target deployment/profile is ambiguous.
+
+### Supplier-backed experience acceptance
+
+Supplier acceptance is opt-in with `--brief tokyo-vendor-experiences` on the
+staging smoke runner. Keep provider-specific briefs out of the default model
+comparison batch: adding one must not silently expand paid dispatches. The live
+vendor brief requires the independently configured `VIATOR_PARTNER_ID` before
+any authentication or generation request; never derive the expected account
+from the returned booking URL.
+
+A saved plan must contain at least two distinct Viator experiences, with supplier
+IDs, HTTPS photo URLs and valid attributed handoffs to that configured partner.
+Repeated IDs or product paths, missing photos, generic planning ideas and links
+to another account fail this contract. Photo URL presence is not successful image
+delivery: separately download/decode and visually inspect the supplied photos on
+both devices. Verify the vendor request, provider availability, browser handoff
+and partner reporting separately; metadata checks do not prove commission credit.
+Do not infer working inventory from the existence of a dashboard API key. Verify
+its deployment environment and branch scope before spending a live test budget.
 
 ## Signed-device acceptance
 

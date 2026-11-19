@@ -40,3 +40,14 @@ it("does not substitute photography for a different or ambiguous destination", (
   );
   expect(destinationImage("London, UK")).toBe(destinationImage("London"));
 });
+
+it("uses reviewed Melbourne city photography without matching another country", () => {
+  expect(destinationImage("Melbourne, Australia")).toContain(
+    "photo-1634172770871-28ab3ddb6a56",
+  );
+  expect(destinationImage("Melbourne")).toBe(
+    destinationImage("Melbourne, Australia"),
+  );
+  expect(destinationImage("Melbourne, USA")).toBeUndefined();
+  expect(destinationImage("Melbourne, Florida, USA")).toBeUndefined();
+});

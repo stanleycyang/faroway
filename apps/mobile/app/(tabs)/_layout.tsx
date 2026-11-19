@@ -3,6 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Platform } from 'react-native';
 import { colors } from '../../constants/theme';
+import { FontScaleText } from '../../lib/fontScaleEpoch';
 
 export default function TabLayout() {
   const insets = useSafeAreaInsets();
@@ -32,10 +33,18 @@ export default function TabLayout() {
             },
           }),
         },
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
-        },
+        tabBarLabel: ({ color, children }) => (
+          <FontScaleText
+            style={{
+              color,
+              fontSize: 12,
+              fontWeight: '600',
+              textAlign: 'center',
+            }}
+          >
+            {children}
+          </FontScaleText>
+        ),
       }}
     >
       <Tabs.Screen

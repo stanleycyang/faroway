@@ -5,6 +5,14 @@ export const PRODUCTION_PROJECT_REF = "jcnephijkxgtprsutgsf";
 export const STAGING_PREVIEW_API_URL =
   "https://faroway-git-verify-staging-readiness-20261018-testimonio.vercel.app";
 
+// Provisioned for draft PR #55 with isolated staging credentials and planning paused.
+export const AGENTIC_PREVIEW_API_URL =
+  "https://faroway-git-eval-agentic-quality-20261031-testimonio.vercel.app";
+const APPROVED_PREVIEW_ORIGINS = new Set([
+  STAGING_PREVIEW_API_URL,
+  AGENTIC_PREVIEW_API_URL,
+]);
+
 const PROJECT_REF = /^[a-z]{20}$/;
 
 export class StagingGuardError extends Error {
@@ -92,7 +100,7 @@ export function assertStagingApiUrl(value: string): void {
     (url.pathname !== "/" && url.pathname !== "") ||
     url.search ||
     url.hash ||
-    url.origin !== STAGING_PREVIEW_API_URL
+    !APPROVED_PREVIEW_ORIGINS.has(url.origin)
   ) {
     throw new StagingGuardError(
       "unknown",

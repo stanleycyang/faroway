@@ -1,10 +1,49 @@
-import React from "react";
+"use client";
+
+import React, { useEffect, useMemo, useState } from "react";
 import { Hotel, Compass, Utensils, Plane } from "lucide-react";
+import type { TripDay } from "@faroway/types";
 import {
   formatEstimate,
+  summarizeBudget,
   type CurrencyBudget,
-  type summarizeBudget,
 } from "@/lib/trips/budget";
+
+export function LiveTripBudget({
+  days,
+  startDate,
+  endDate,
+  travelers,
+  paused = false,
+}: {
+  days: TripDay[];
+  startDate: string;
+  endDate: string;
+  travelers: number;
+  paused?: boolean;
+}) {
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    const update = () => setNow(Date.now());
+    const initial = setTimeout(update, 0);
+    const timer = setInterval(update, 30_000);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(timer);
+    };
+  }, []);
+  const budget = useMemo(() => {
+    if (paused || days.length === 0) return null;
+    return summarizeBudget(
+      days,
+      { startDate, endDate },
+      travelers,
+      now || Number.POSITIVE_INFINITY,
+    );
+  }, [days, endDate, now, paused, startDate, travelers]);
+  if (!budget) return null;
+  return <TripBudget budget={budget} travelers={travelers} />;
+}
 
 export function TripBudget({
   budget,

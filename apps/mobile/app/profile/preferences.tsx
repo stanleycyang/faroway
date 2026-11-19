@@ -12,9 +12,24 @@ import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 
 const budgetOptions = [
-  { id: 'budget', label: 'Budget', emoji: '💰', description: 'Best value deals' },
-  { id: 'moderate', label: 'Moderate', emoji: '💵', description: 'Balance of comfort & cost' },
-  { id: 'luxury', label: 'Luxury', emoji: '✨', description: 'Premium experiences' },
+  {
+    id: 'budget',
+    label: 'Budget',
+    icon: 'wallet-outline' as const,
+    description: 'Best value deals',
+  },
+  {
+    id: 'moderate',
+    label: 'Moderate',
+    icon: 'cash-outline' as const,
+    description: 'Balance of comfort & cost',
+  },
+  {
+    id: 'luxury',
+    label: 'Luxury',
+    icon: 'sparkles-outline' as const,
+    description: 'Premium experiences',
+  },
 ];
 
 export default function PreferencesScreen() {
@@ -161,7 +176,13 @@ function PreferencesScreenEditor({ profile }: { profile: EditorProfile }) {
                     isSelected ? 'Tap to clear your preferred budget' : 'Sets your preferred budget'
                   }
                 >
-                  <Text style={styles.budgetEmoji}>{option.emoji}</Text>
+                  <Ionicons
+                    name={option.icon}
+                    size={28}
+                    color={isSelected ? colors.primary[500] : colors.neutral[600]}
+                    style={styles.budgetIcon}
+                    accessible={false}
+                  />
                   <View style={styles.budgetContent}>
                     <Text style={[styles.budgetLabel, isSelected && styles.budgetLabelSelected]}>
                       {option.label}
@@ -255,8 +276,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFF5F4',
     borderColor: colors.primary[500],
   },
-  budgetEmoji: {
-    fontSize: 28,
+  budgetIcon: {
     marginRight: 16,
   },
   budgetContent: {

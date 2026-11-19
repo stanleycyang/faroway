@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type {
   ActivityResult,
+  DiningResult,
   HotelResult,
   SearchPlan,
   SuggestedDay,
@@ -139,6 +140,49 @@ function generatedDay(dayNumber: number, hotelId?: string) {
   };
 }
 
+it("preserves an explicit no-extra-meal choice for a dinner experience", async () => {
+  const day = {
+    ...generatedDay(1),
+    evening: { activityIds: ["dinner-experience"], mealId: null },
+  };
+  mocks.generateObject.mockResolvedValue({
+    object: { days: [day], topHotelId: hotel.id },
+  });
+  const dinner: DiningResult = {
+    ...activity("extra-dinner"),
+    cuisineTypes: ["Japanese"],
+    priceLevel: 2,
+    mealTypes: ["dinner"],
+    dietaryOptions: [],
+  };
+  const result = await runAggregatorAgent(
+    plan,
+    [hotel],
+    [activity("dinner-experience", "evening")],
+    [dinner],
+  );
+  expect(result.days[0].evening.meal).toBeUndefined();
+  expect(result.days[0].evening.activities[0].id).toBe("dinner-experience");
+});
+
+it("supplies calendar, neighborhood, and minute context for feasible scheduling", async () => {
+  mocks.generateObject.mockResolvedValue({
+    object: { days: [generatedDay(1)], topHotelId: hotel.id },
+  });
+  const stop = {
+    ...activity("museum"),
+    duration: 150,
+    location: { ...activity("museum").location, neighborhood: "Ueno" },
+  };
+  await runAggregatorAgent(plan, [hotel], [stop], []);
+  const request = mocks.generateObject.mock.calls.at(-1)?.[0];
+  expect(request.prompt).toContain("2026-06-01 Monday");
+  expect(request.prompt).toContain('"durationMinutes":150');
+  expect(request.prompt).toContain('"neighborhood":"Ueno"');
+  expect(request.prompt).toContain("at least 60 minutes");
+  expect(request.prompt).toContain("not verified venue facts");
+});
+
 describe.each(["successful", "recovered"] as const)(
   "%s AI itinerary mapping",
   (responsePath) => {
@@ -275,7 +319,10 @@ describe.each(["successful", "recovered"] as const)(
         last.id,
       ]);
       expect(result.days[0].morning.activities[0]).toBe(first);
-      expect(result.days[0].afternoon.activities[0]).toBe(provider);
+      expect(result.days[0].afternoon.activities[0].id).toBe(provider.id);
+      expect(
+        result.days[0].afternoon.activities[0].affiliateUrl,
+      ).toBeUndefined();
       expect(result.days[1].morning.activities[0]).toBe(last);
       expect(result.days[0].evening.activities).toEqual([]);
       expect(result.days[1].afternoon.activities).toEqual([]);
@@ -334,13 +381,9 @@ describe.each(["successful", "recovered"] as const)(
       expect(result.days.map((day) => day.transport)).toEqual([
         alternative,
         undefined,
-        undefined,
-        undefined,
       ]);
       expect(result.days[0].transport).toBe(alternative);
       expect(result.days.map((day) => day.estimatedCost)).toEqual([
-        undefined,
-        undefined,
         undefined,
         undefined,
       ]);
@@ -413,9 +456,9 @@ describe.each(["successful", "recovered"] as const)(
       expect(result.days[0].afternoon.activities).toEqual([]);
       expect(result.days[0].evening.activities[0]).toBe(night);
       expect(result.days[1].morning.activities[0]).toBe(morning);
-      expect(result.days[2].evening.activities).toEqual([]);
+      expect(result.days[1].evening.activities).toEqual([]);
+      expect(result.days).toHaveLength(2);
       expect(result.days.map((day) => day.estimatedCost)).toEqual([
-        undefined,
         undefined,
         undefined,
       ]);
@@ -431,7 +474,6 @@ describe.each(["successful", "recovered"] as const)(
         null,
       );
       expect(mapped.days.map((day) => day.totalEstimatedCost)).toEqual([
-        undefined,
         undefined,
         undefined,
       ]);
@@ -464,7 +506,162 @@ describe.each(["successful", "recovered"] as const)(
   },
 );
 
+it("constrains total daily visits in the experimental structured schedule and preserves IDs", async () => {
+  const relaxed = {
+    ...plan,
+    dates: { ...plan.dates, end: plan.dates.start, nights: 0 },
+    activityCriteria: {
+      ...plan.activityCriteria,
+      pacePreference: "relaxed" as const,
+    },
+  };
+  const day = {
+    ...generatedDay(1),
+    activities: [
+      { id: "walk", slot: "morning" },
+      { id: "museum", slot: "afternoon" },
+    ],
+    breakfastId: null,
+    lunchId: null,
+    dinnerId: null,
+  };
+  const object = { days: [day], topHotelId: hotel.id };
+  mocks.generateObject.mockResolvedValue({ object });
+  const result = await runAggregatorAgent(
+    relaxed,
+    [hotel],
+    [activity("walk"), activity("museum")],
+    [],
+    [],
+    { structuredSchedule: true },
+  );
+  expect(result.days[0].morning.activities.map((a) => a.id)).toEqual(["walk"]);
+  expect(result.days[0].afternoon.activities.map((a) => a.id)).toEqual([
+    "museum",
+  ]);
+  const schema = mocks.generateObject.mock.calls.at(-1)?.[0].schema;
+  expect(schema.safeParse(object).success).toBe(true);
+  expect(
+    schema.safeParse({
+      ...object,
+      days: [
+        {
+          ...day,
+          activities: [...day.activities, { id: "third", slot: "evening" }],
+        },
+      ],
+    }).success,
+  ).toBe(false);
+  expect(schema.safeParse({ ...object, days: [day, day] }).success).toBe(false);
+});
+
 describe("search itinerary fallback", () => {
+  it("preserves catalog-only availability uncertainty through saved-day mapping", async () => {
+    const candidate = {
+      ...activity("supplier-tour"),
+      supplierCatalogOnly: true as const,
+    };
+    const result = await runAggregatorAgent(plan, [], [candidate], []);
+    const mapped = mapSearchResultsToItinerary(
+      {
+        searchId: "fixture",
+        hotels: [],
+        activities: [candidate],
+        dining: [],
+        transport: [],
+        itinerary: result.days,
+      },
+      null,
+    );
+    const saved = JSON.parse(JSON.stringify(mapped));
+    expect(saved.days[0].tips).toContain(
+      "Supplier experiences are catalog suggestions. Confirm dates, times and availability before booking.",
+    );
+    expect(saved.days[1].tips).not.toContain(
+      "Supplier experiences are catalog suggestions. Confirm dates, times and availability before booking.",
+    );
+  });
+  it("does not publish a backup draft when interactive generation requires a generated plan", async () => {
+    mocks.generateObject.mockClear();
+    await expect(
+      runAggregatorAgent(plan, [hotel], [activity("walk")], [], [], {
+        requireGeneratedPlan: true,
+      }),
+    ).rejects.toThrow("Your trip details are saved");
+    expect(mocks.generateObject).toHaveBeenCalledTimes(1);
+  });
+  it("prefers nearby meals and discloses distant-only supply", async () => {
+    const near: DiningResult = {
+      ...activity("near-cafe"),
+      cuisineTypes: [],
+      priceLevel: 2,
+      mealTypes: ["breakfast"],
+      dietaryOptions: [],
+    };
+    const far = {
+      ...near,
+      id: "far-cafe",
+      name: "Far cafe",
+      location: { ...near.location, lat: 36.6 },
+    };
+    const nearby = await runAggregatorAgent(
+      plan,
+      [],
+      [activity("walk")],
+      [far, near],
+    );
+    expect(nearby.days[0].morning.meal?.id).toBe("near-cafe");
+    const distant = await runAggregatorAgent(
+      plan,
+      [],
+      [activity("walk")],
+      [far],
+    );
+    expect(distant.days[0].morning.meal).toBeUndefined();
+    expect(distant.days[0].tips.join(" ")).toContain(
+      "Far cafe may require a separate journey",
+    );
+  });
+
+  it("keeps relaxed fallback days within two visits and four activity hours", async () => {
+    const slowPlan = {
+      ...plan,
+      activityCriteria: {
+        ...plan.activityCriteria,
+        pacePreference: "relaxed" as const,
+      },
+    };
+    const candidates = Array.from({ length: 10 }, (_, i) => ({
+      ...activity(`museum-${i}`),
+      duration: 120,
+    }));
+    const { days } = await runAggregatorAgent(slowPlan, [], candidates, []);
+    for (const day of days) {
+      const stops = [day.morning, day.afternoon, day.evening].flatMap(
+        (slot) => slot.activities,
+      );
+      expect(stops).toHaveLength(2);
+      expect(stops.reduce((sum, a) => sum + a.duration, 0)).toBeLessThanOrEqual(
+        240,
+      );
+      expect(day.summary).toContain("Backup draft");
+      expect(day.tips.join(" ")).toContain("seated breaks");
+    }
+  });
+  it("does not pack another visit beside a long visit or schedule invalid durations", async () => {
+    const candidates = [
+      { ...activity("long"), duration: 240 },
+      { ...activity("short"), duration: 60 },
+      { ...activity("invalid"), duration: 2.5 },
+      { ...activity("too-long"), duration: 800 },
+    ];
+    const { days } = await runAggregatorAgent(plan, [], candidates, []);
+    expect(days[0].morning.activities.map((a) => a.id)).toEqual(["long"]);
+    expect(days[0].tips.join(" ")).toContain("longer visit");
+    expect(scheduledIds(days).sort()).toEqual(["long", "short"]);
+    expect(days[1].morning.activities.map((a) => a.id)).toEqual(["short"]);
+  });
+
   it.each([0, 1, 3])(
     "uses only one outbound alternative for a %s-night trip and leaves daily costs unavailable",
     async (nights) => {
@@ -485,6 +682,27 @@ describe("search itinerary fallback", () => {
       expect(days.every((day) => day.estimatedCost === undefined)).toBe(true);
     },
   );
+  it("spreads real stops across days when planning prompts inflate the pool", async () => {
+    const ideas = Array.from({ length: 8 }, (_, index) => ({
+      ...activity(`idea-${index}`),
+      planningIdea: true as const,
+    }));
+    const { days } = await runAggregatorAgent(
+      plan,
+      [],
+      [...ideas, activity("first-stop"), activity("second-stop")],
+      [],
+    );
+    expect(scheduledIds(days)).toEqual(["first-stop", "second-stop"]);
+    expect(scheduledIds([days[0]])).toEqual(["first-stop"]);
+    expect(scheduledIds([days[1]])).toEqual(["second-stop"]);
+    expect(
+      days.every(
+        (day) => !scheduledIds([day]).some((id) => id.startsWith("idea-")),
+      ),
+    ).toBe(true);
+  });
+
   it("schedules flexible activities once across all slots and days", async () => {
     const activities = Array.from({ length: 8 }, (_, i) =>
       activity(`walk-${i}`),
@@ -599,5 +817,228 @@ describe("search itinerary bridge", () => {
     expect(result.days[2].hotel).toBeUndefined();
     expect(result.days[0]).not.toHaveProperty("hotel.pricePerNight");
     expect(result.totalEstimatedCost).toBeUndefined();
+  });
+});
+
+it.each([
+  "ordinary_entry",
+  "exterior_walk",
+  "guided_tour",
+  "event",
+  "unknown",
+  undefined,
+] as const)(
+  "retains proposed visit intent %s through persisted itinerary serialization",
+  (proposedVisitType) => {
+    const stop = { ...activity("visit"), proposedVisitType };
+    const day: SuggestedDay = {
+      dayNumber: 1,
+      date: "2027-01-11",
+      title: "Visit",
+      summary: "Draft",
+      morning: { activities: [stop] },
+      afternoon: { activities: [] },
+      evening: { activities: [] },
+      estimatedCost: 0,
+      currency: "",
+      tips: [],
+    };
+    const result = mapSearchResultsToItinerary(
+      {
+        searchId: "test",
+        hotels: [],
+        activities: [stop],
+        dining: [],
+        transport: [],
+        itinerary: [day],
+      },
+      null,
+    );
+    const saved = JSON.parse(JSON.stringify(result));
+    expect(saved.days[0].morning.activities[0].proposedVisitType).toBe(
+      proposedVisitType,
+    );
+  },
+);
+
+function parseFailure(text: string, extra: Record<string, unknown> = {}) {
+  return Object.assign(
+    new Error("No object generated: could not parse the response."),
+    { text, ...extra },
+  );
+}
+
+describe("aggregator output cap", () => {
+  const capped = { maxOutputTokens: 8000, requireGeneratedPlan: true as const };
+  beforeEach(() => {
+    mocks.generateObject.mockClear();
+  });
+
+  it("repairs a response cut off at the token cap when every day is already present", async () => {
+    const payload = {
+      days: [generatedDay(1), generatedDay(2)],
+      topHotelId: hotel.id,
+    };
+    payload.days[0].title = "Closed from partial JSON";
+    const raw = JSON.stringify(payload);
+    mocks.generateObject.mockRejectedValueOnce(
+      parseFailure(raw.slice(0, -1), {
+        finishReason: "length",
+        usage: { inputTokens: 2294, outputTokens: 8000 },
+      }),
+    );
+    const result = await runAggregatorAgent(
+      plan,
+      [hotel],
+      [activity("walk")],
+      [],
+      [],
+      capped,
+    );
+    expect(mocks.generateObject).toHaveBeenCalledTimes(1);
+    expect(result.days[0].title).toBe("Closed from partial JSON");
+    expect(result.days).toHaveLength(2);
+    expect(result.topHotel?.id).toBe(hotel.id);
+  });
+
+  it("retries once when capped output cannot be parsed into the full trip", async () => {
+    const retryDay = {
+      ...generatedDay(1),
+      title: "Retry day",
+    };
+    mocks.generateObject
+      .mockRejectedValueOnce(
+        parseFailure(
+          '{"days":[{"dayNumber":1,"title":"Partial","summary":"Cut","morning":{"activityIds":[]}',
+          {
+            finishReason: "length",
+            usage: { inputTokens: 2294, outputTokens: 8000 },
+          },
+        ),
+      )
+      .mockResolvedValueOnce({
+        object: {
+          days: [retryDay, generatedDay(2)],
+          topHotelId: hotel.id,
+        },
+      });
+    const result = await runAggregatorAgent(
+      plan,
+      [hotel],
+      [activity("walk")],
+      [],
+      [],
+      capped,
+    );
+    expect(mocks.generateObject).toHaveBeenCalledTimes(2);
+    const retry = mocks.generateObject.mock.calls[1]?.[0];
+    expect(retry.maxOutputTokens).toBe(16000);
+    expect(retry.maxRetries).toBe(0);
+    expect(retry.providerOptions.google.thinkingConfig.thinkingLevel).toBe(
+      "low",
+    );
+    expect(retry.providerOptions.vertex.thinkingConfig.thinkingLevel).toBe(
+      "low",
+    );
+    expect(retry.providerOptions.gateway.only).toEqual(["google", "vertex"]);
+    expect(retry.prompt).toContain("was cut off or was not valid JSON");
+    expect(result.days[0].title).toBe("Retry day");
+    expect(mocks.generateObject.mock.calls[0]?.[0].maxOutputTokens).toBe(8000);
+    expect(
+      mocks.generateObject.mock.calls[0]?.[0].providerOptions.google,
+    ).toBeUndefined();
+  });
+
+  it("does not retry a timeout or a non-parse failure", async () => {
+    mocks.generateObject.mockRejectedValueOnce(
+      new Error("aggregator AI timed out after 60000ms"),
+    );
+    await expect(
+      runAggregatorAgent(plan, [hotel], [activity("walk")], [], [], capped),
+    ).rejects.toThrow("Your trip details are saved");
+    expect(mocks.generateObject).toHaveBeenCalledTimes(1);
+  });
+
+  it("stops after one retry when the second response is also unparsed", async () => {
+    const error = parseFailure('{"days":[', {
+      finishReason: "length",
+      usage: { outputTokens: 8000 },
+    });
+    mocks.generateObject.mockRejectedValue(error);
+    await expect(
+      runAggregatorAgent(plan, [hotel], [activity("walk")], [], [], capped),
+    ).rejects.toThrow("Your trip details are saved");
+    expect(mocks.generateObject).toHaveBeenCalledTimes(2);
+  });
+
+  it("normalizes a schema-shaped activities list without a second call", async () => {
+    const text = JSON.stringify({
+      days: [
+        {
+          dayNumber: 1,
+          date: "2026-06-01",
+          title: "From slots",
+          summary: "Morning walk",
+          activities: [{ id: "walk", slot: "morning" }],
+          breakfastId: null,
+          lunchId: null,
+          dinnerId: null,
+          tips: ["Bring a card"],
+        },
+        {
+          dayNumber: 2,
+          date: "2026-06-02",
+          title: "Next",
+          summary: "Open",
+          activities: [],
+          breakfastId: null,
+          lunchId: null,
+          dinnerId: null,
+          tips: [],
+        },
+      ],
+      topHotelId: hotel.id,
+    });
+    mocks.generateObject.mockRejectedValueOnce(
+      Object.assign(
+        new Error("No object generated: response did not match schema."),
+        { text, finishReason: "stop" },
+      ),
+    );
+    const result = await runAggregatorAgent(
+      plan,
+      [hotel],
+      [activity("walk")],
+      [],
+      [],
+      capped,
+    );
+    expect(mocks.generateObject).toHaveBeenCalledTimes(1);
+    expect(result.days[0].morning.activities.map((item) => item.id)).toEqual([
+      "walk",
+    ]);
+    expect(result.days[0].tips).toContain("Bring a card");
+  });
+
+  it("passes a repair that turns the capped response into schema JSON", async () => {
+    mocks.generateObject.mockResolvedValueOnce({
+      object: {
+        days: [generatedDay(1), generatedDay(2)],
+        topHotelId: hotel.id,
+      },
+    });
+    await runAggregatorAgent(plan, [hotel], [], []);
+    const repair =
+      mocks.generateObject.mock.calls[0]?.[0].experimental_repairText;
+    const payload = {
+      days: [generatedDay(1), generatedDay(2)],
+      topHotelId: hotel.id,
+    };
+    const raw = JSON.stringify(payload);
+    const repaired = await repair({ text: "```json\n" + raw.slice(0, -1) });
+    const parsed = JSON.parse(repaired);
+    expect(parsed.days).toHaveLength(2);
+    expect(parsed.topHotelId).toBe(hotel.id);
+    expect(await repair({ text: '{"days":[' })).toBeNull();
   });
 });

@@ -2,7 +2,7 @@ name: Release Verification
 
 on:
   pull_request:
-    branches: [main, codex/release-candidate]
+    branches: [main, codex/release-candidate, eval/agentic-quality-20261031]
     types: [opened, reopened, synchronize, ready_for_review, labeled]
   workflow_dispatch:
 
@@ -19,8 +19,10 @@ jobs:
     if: >-
       github.event_name == 'workflow_dispatch' ||
       startsWith(github.head_ref, 'release/') ||
+      github.base_ref == 'eval/agentic-quality-20261031' ||
       contains(github.event.pull_request.labels.*.name, 'release-verification')
-    runs-on: ubuntu-latest
+    # ubuntu-latest is 26.04. Playwright 1.60 cannot install Chromium there.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4

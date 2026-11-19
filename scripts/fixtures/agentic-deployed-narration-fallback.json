@@ -1,0 +1,155 @@
+{
+  "provenance": {
+    "source": "consented staging API smoke, 2026-10-31",
+    "commit": "2ef8e378f57d39b1eb4164eab59ddca449eeb12c",
+    "observedFallbackReason": "Narration references a different selection of visits",
+    "originalSmokePassed": true,
+    "qualityAccepted": false
+  },
+  "body": {
+    "trip": {
+      "status": "planned"
+    },
+    "itinerary": {
+      "days": [
+        {
+          "date": "2026-12-07",
+          "title": "Day 1 in Lisbon, Portugal",
+          "summary": "Suggested visits: Lisbon Pastel de Nata Baking Class; São Jorge Castle Historic Exploration; Alfama District Fado Walking Tour. Keep the remaining time flexible.",
+          "tips": [
+            "Planning draft: confirm opening hours, availability, travel times and suitability before booking.",
+            "Leave the unscheduled time for meals, travel and rest.",
+            "The day descriptions could not be generated. This draft keeps the selected visits and planning cautions for your review."
+          ],
+          "morning": {
+            "activities": [],
+            "meals": [
+              {
+                "name": "A Padaria Portuguesa"
+              }
+            ]
+          },
+          "afternoon": {
+            "activities": [
+              {
+                "name": "Lisbon Pastel de Nata Baking Class"
+              },
+              {
+                "name": "São Jorge Castle Historic Exploration"
+              }
+            ],
+            "meals": [
+              {
+                "name": "Restaurante Santa Rita"
+              }
+            ]
+          },
+          "evening": {
+            "activities": [
+              {
+                "name": "Alfama District Fado Walking Tour"
+              }
+            ],
+            "meals": [
+              {
+                "name": "O Velho Eurico"
+              }
+            ]
+          }
+        },
+        {
+          "date": "2026-12-08",
+          "title": "Day 2 in Lisbon, Portugal",
+          "summary": "Suggested visits: Jerónimos Monastery & Belém Tower Tour; MAAT Architecture & Art Visit; Time Out Market Gastronomy Experience. Keep the remaining time flexible.",
+          "tips": [
+            "Planning draft: confirm opening hours, availability, travel times and suitability before booking.",
+            "Leave the unscheduled time for meals, travel and rest.",
+            "Dear Breakfast may need a separate journey. Check the route or choose a closer option; supplied locations are unverified.",
+            "Time Out Market (Mercado da Ribeira) may need a separate journey. Check the route or choose a closer option; supplied locations are unverified."
+          ],
+          "morning": {
+            "activities": [
+              {
+                "name": "Jerónimos Monastery & Belém Tower Tour"
+              }
+            ],
+            "meals": [
+              {
+                "name": "Dear Breakfast"
+              }
+            ]
+          },
+          "afternoon": {
+            "activities": [
+              {
+                "name": "MAAT Architecture & Art Visit"
+              }
+            ],
+            "meals": [
+              {
+                "name": "Time Out Market (Mercado da Ribeira)"
+              }
+            ]
+          },
+          "evening": {
+            "activities": [
+              {
+                "name": "Time Out Market Gastronomy Experience"
+              }
+            ],
+            "meals": [
+              {
+                "name": "Taberna da Rua das Flores"
+              }
+            ]
+          }
+        },
+        {
+          "date": "2026-12-09",
+          "title": "Day 3 in Lisbon, Portugal",
+          "summary": "Suggested visits: Tastes & Traditions Food Tour; Carmo Convent Archaeological Museum; Portuguese Wine Tasting in Chiado. Keep the remaining time flexible.",
+          "tips": [
+            "Planning draft: confirm opening hours, availability, travel times and suitability before booking.",
+            "Leave the unscheduled time for meals, travel and rest."
+          ],
+          "morning": {
+            "activities": [
+              {
+                "name": "Tastes & Traditions Food Tour"
+              }
+            ],
+            "meals": [
+              {
+                "name": "Fabrica Coffee Roasters"
+              }
+            ]
+          },
+          "afternoon": {
+            "activities": [
+              {
+                "name": "Carmo Convent Archaeological Museum"
+              }
+            ],
+            "meals": [
+              {
+                "name": "Bairro do Avillez"
+              }
+            ]
+          },
+          "evening": {
+            "activities": [
+              {
+                "name": "Portuguese Wine Tasting in Chiado"
+              }
+            ],
+            "meals": [
+              {
+                "name": "Tapisco"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,3 +1,5 @@
+import { hasUsableScheduledSupply } from "@/lib/search/plan-supply";
+import { mappedDaysToSpec } from "@/lib/json-render/mapped-days";
 import { readPrice } from "@faroway/constants";
 import { matchesTransportProjection } from "@/lib/search/transport-reference";
 import { applyGenerationUpdate } from "@/lib/trips/apply-generation-update";
@@ -21,6 +23,7 @@ import { runActivitiesAgent } from "@/lib/search/agents/activities";
 import { runDiningAgent } from "@/lib/search/agents/dining";
 import { runTransportAgent } from "@/lib/search/agents/transport";
 import { runAggregatorAgent } from "@/lib/search/agents/aggregator";
+import { tripActivityBudget } from "@/lib/search/release-itinerary";
 import { runSearchEnrichment } from "@/lib/search/enrichment";
 import {
   mapSearchResultsToItinerary,
@@ -174,25 +177,50 @@ export async function planTripWorkflow(
       dining: [],
       notes: [],
     });
+    const sourceStatus = {
+      hotels: settledStatus(hotelsRes),
+      activities: settledStatus(activitiesRes),
+      dining: settledStatus(diningRes),
+      transport: settledStatus(transportRes),
+      enrichment: settledStatus(enrichmentRes),
+    } as const;
+    const coreSearchesFailed =
+      sourceStatus.activities === "error" && sourceStatus.dining === "error";
+    const unfinished = (
+      [
+        ["Stays", sourceStatus.hotels],
+        ["Activities", sourceStatus.activities],
+        ["Restaurants", sourceStatus.dining],
+        ["Flights", sourceStatus.transport],
+        ["Local notes", sourceStatus.enrichment],
+      ] as const
+    )
+      .filter(([, status]) => status === "error")
+      .map(([label]) => label);
 
     await setProgressState(
       searchId,
       tripId,
       {
         orchestrator: "done",
-        hotels: hotelsRes.status === "fulfilled" ? "done" : "pending",
-        activities: activitiesRes.status === "fulfilled" ? "done" : "pending",
-        dining: diningRes.status === "fulfilled" ? "done" : "pending",
-        transport: transportRes.status === "fulfilled" ? "done" : "pending",
-        enrichment: enrichmentRes.status === "fulfilled" ? "done" : "pending",
-        aggregator: "searching",
+        ...sourceStatus,
+        aggregator: coreSearchesFailed ? "error" : "searching",
       },
       {
-        step: "aggregator",
-        progress: 80,
-        message: "Composing the final itinerary...",
+        step: coreSearchesFailed ? "error" : "aggregator",
+        progress: coreSearchesFailed ? 80 : 80,
+        message: coreSearchesFailed
+          ? "Activity and restaurant searches did not finish. Your trip details are saved. Please try again."
+          : unfinished.length
+            ? `${unfinished.join(", ")} did not finish. Composing from the searches that completed. Nothing was retried automatically.`
+            : "Composing the final itinerary...",
       },
     );
+    if (coreSearchesFailed) {
+      throw new Error(
+        "Activity and restaurant searches did not finish. Your trip details are saved. Please try again.",
+      );
+    }
 
     // ── Step 4: Aggregate itinerary from combined candidates ────────
     const result = await aggregateItineraryStep({
@@ -200,16 +228,18 @@ export async function planTripWorkflow(
       tripId,
       startDate,
       endDate,
+      budget,
       plan: searchPlan,
       hotels,
       activities: [...activities, ...enrichment.activities],
       dining: [...dining, ...enrichment.dining],
       transport,
       enrichmentNotes: enrichment.notes,
+      sourceStatus,
     });
 
     // ── Step 5: Compose Itinerary (already done by aggregator) ──────
-    await markItineraryComposed(searchId, tripId);
+    await markItineraryComposed(searchId, tripId, sourceStatus);
 
     // ── Step 6: Build spec + save to database ──────────────────────
     await buildAndSaveSpec(searchId, result, {
@@ -219,6 +249,7 @@ export async function planTripWorkflow(
       endDate,
       travelers,
       budget,
+      sourceStatus,
       userId,
     });
 
@@ -317,6 +348,20 @@ async function createSearchPlan(
   }
 
   console.log(`[Workflow] Step 1 complete for search ${searchId}`);
+}
+
+type SpecialistProgress = {
+  hotels: "done" | "error";
+  activities: "done" | "error";
+  dining: "done" | "error";
+  transport: "done" | "error";
+  enrichment: "done" | "error";
+};
+
+function settledStatus(
+  result: PromiseSettledResult<unknown>,
+): "done" | "error" {
+  return result.status === "fulfilled" ? "done" : "error";
 }
 
 function fulfilledOrEmpty<T>(result: PromiseSettledResult<T[]>): T[] {
@@ -544,22 +589,34 @@ async function aggregateItineraryStep(params: {
   tripId?: string;
   startDate: string;
   endDate: string;
+  budget?: string;
   plan: SearchPlan;
   hotels: HotelResult[];
   activities: ActivityResult[];
   dining: DiningResult[];
   transport: TransportResult[];
   enrichmentNotes: string[];
+  sourceStatus?: SpecialistProgress;
 }): Promise<MappedItinerary> {
   "use step";
   const startedAt = Date.now();
-  const { days, topHotel } = await runAggregatorAgent(
-    params.plan,
-    params.hotels,
-    params.activities,
-    params.dining,
-    params.transport,
-  );
+  const { days, topHotel, activityInventory, diningInventory } =
+    await runAggregatorAgent(
+      params.plan,
+      params.hotels,
+      params.activities,
+      params.dining,
+      params.transport,
+      {
+        repairDining: true,
+        requireGeneratedPlan: true,
+        activityBudget: tripActivityBudget(
+          params.budget,
+          params.startDate,
+          params.endDate,
+        ),
+      },
+    );
 
   const start = Date.parse(`${params.startDate}T00:00:00Z`);
   const end = Date.parse(`${params.endDate}T00:00:00Z`);
@@ -580,11 +637,17 @@ async function aggregateItineraryStep(params: {
     );
   }
 
+  if (!hasUsableScheduledSupply(days)) {
+    throw new Error(
+      "We couldn't generate a usable itinerary. Your trip details are saved. Please try again shortly.",
+    );
+  }
+
   const searchResults: SearchResults = {
     searchId: params.searchId,
     hotels: params.hotels,
-    activities: params.activities,
-    dining: params.dining,
+    activities: activityInventory ?? params.activities,
+    dining: diningInventory ?? params.dining,
     transport: params.transport,
     itinerary: days,
   };
@@ -647,17 +710,21 @@ async function aggregateItineraryStep(params: {
       params.tripId,
       {
         orchestrator: "done",
-        hotels: "done",
-        activities: "done",
-        dining: "done",
-        transport: "done",
-        enrichment: "done",
+        hotels: params.sourceStatus?.hotels ?? "done",
+        activities: params.sourceStatus?.activities ?? "done",
+        dining: params.sourceStatus?.dining ?? "done",
+        transport: params.sourceStatus?.transport ?? "done",
+        enrichment: params.sourceStatus?.enrichment ?? "done",
         aggregator: "done",
       },
       {
         step: "aggregator",
         progress: 90,
-        message: "Itinerary composed. Saving now...",
+        message:
+          params.sourceStatus &&
+          Object.values(params.sourceStatus).includes("error")
+            ? "Itinerary composed from the searches that completed. A failed search was not retried."
+            : "Itinerary composed. Saving now...",
       },
     ),
   ]);
@@ -666,12 +733,33 @@ async function aggregateItineraryStep(params: {
   );
   return mapped;
 }
+// These steps include a paid model or supplier call. Workflow's default three
+// retries would repeat that call after a timeout, validation failure or
+// persistence error. Preserve the failed brief and let the traveler retry.
+buildSearchPlanStep.maxRetries = 0;
+runHotelsStep.maxRetries = 0;
+runActivitiesStep.maxRetries = 0;
+runDiningStep.maxRetries = 0;
+runTransportStep.maxRetries = 0;
+runEnrichmentStep.maxRetries = 0;
+aggregateItineraryStep.maxRetries = 0;
+
+export const paidPlanningStepRetries = {
+  buildSearchPlan: buildSearchPlanStep.maxRetries,
+  hotels: runHotelsStep.maxRetries,
+  activities: runActivitiesStep.maxRetries,
+  dining: runDiningStep.maxRetries,
+  transport: runTransportStep.maxRetries,
+  enrichment: runEnrichmentStep.maxRetries,
+  aggregator: aggregateItineraryStep.maxRetries,
+};
 
 // ─── Step 3: Mark Itinerary Composed ────────────────────────────────────────
 
 async function markItineraryComposed(
   searchId: string,
   tripId?: string,
+  sourceStatus?: SpecialistProgress,
 ): Promise<void> {
   "use step";
 
@@ -682,11 +770,11 @@ async function markItineraryComposed(
     .update({
       progress: {
         orchestrator: "done",
-        hotels: "done",
-        activities: "done",
-        dining: "done",
-        transport: "done",
-        enrichment: "done",
+        hotels: sourceStatus?.hotels ?? "done",
+        activities: sourceStatus?.activities ?? "done",
+        dining: sourceStatus?.dining ?? "done",
+        transport: sourceStatus?.transport ?? "done",
+        enrichment: sourceStatus?.enrichment ?? "done",
         aggregator: "done",
       },
     })
@@ -719,6 +807,7 @@ async function buildAndSaveSpec(
     interests?: string[];
     budget?: string;
     userId?: string;
+    sourceStatus?: SpecialistProgress;
   },
 ): Promise<void> {
   "use step";
@@ -746,6 +835,7 @@ async function buildAndSaveSpec(
     id: a.id,
     name: a.name,
     description: a.description,
+    proposedVisitType: a.proposedVisitType,
     duration: a.duration,
     price: a.price,
     priceStatus: a.priceStatus,
@@ -776,95 +866,7 @@ async function buildAndSaveSpec(
     images: d.images,
   }));
 
-  // Map days for build-spec: each slot's meals[0] → meal
-  const dayInputs = result.days.map((day) => ({
-    dayNumber: day.dayNumber,
-    date: day.date,
-    title: day.title,
-    morning: {
-      activities: day.morning.activities.map((a: ItineraryActivity) => ({
-        ...viatorContentMetadata(a),
-        id: a.id,
-        name: a.name,
-        description: a.description,
-        duration: a.duration / 60, // minutes → hours for build-spec
-        price: a.estimatedCost.amount,
-        priceStatus: a.estimatedCost.status,
-        currency: a.estimatedCost.currency,
-        rating: undefined,
-        category: a.category,
-        affiliateUrl: a.bookingInfo?.bookingUrl,
-        location: { name: a.location.name },
-      })),
-      meal: day.morning.meals[0]
-        ? {
-            name: day.morning.meals[0].name,
-            cuisine: day.morning.meals[0].cuisineType.join(", "),
-            priceLevel: day.morning.meals[0].priceLevel,
-            priceStatus: day.morning.meals[0].estimatedCost.status,
-            rating: undefined,
-            description: day.morning.meals[0].description,
-            reservationUrl: day.morning.meals[0].reservationInfo?.url,
-          }
-        : undefined,
-    },
-    afternoon: {
-      activities: day.afternoon.activities.map((a: ItineraryActivity) => ({
-        ...viatorContentMetadata(a),
-        id: a.id,
-        name: a.name,
-        description: a.description,
-        duration: a.duration / 60,
-        price: a.estimatedCost.amount,
-        priceStatus: a.estimatedCost.status,
-        currency: a.estimatedCost.currency,
-        rating: undefined,
-        category: a.category,
-        affiliateUrl: a.bookingInfo?.bookingUrl,
-        location: { name: a.location.name },
-      })),
-      meal: day.afternoon.meals[0]
-        ? {
-            name: day.afternoon.meals[0].name,
-            cuisine: day.afternoon.meals[0].cuisineType.join(", "),
-            priceLevel: day.afternoon.meals[0].priceLevel,
-            priceStatus: day.afternoon.meals[0].estimatedCost.status,
-            rating: undefined,
-            description: day.afternoon.meals[0].description,
-            reservationUrl: day.afternoon.meals[0].reservationInfo?.url,
-          }
-        : undefined,
-    },
-    evening: {
-      activities: day.evening.activities.map((a: ItineraryActivity) => ({
-        ...viatorContentMetadata(a),
-        id: a.id,
-        name: a.name,
-        description: a.description,
-        duration: a.duration / 60,
-        price: a.estimatedCost.amount,
-        priceStatus: a.estimatedCost.status,
-        currency: a.estimatedCost.currency,
-        rating: undefined,
-        category: a.category,
-        affiliateUrl: a.bookingInfo?.bookingUrl,
-        location: { name: a.location.name },
-      })),
-      meal: day.evening.meals[0]
-        ? {
-            name: day.evening.meals[0].name,
-            cuisine: day.evening.meals[0].cuisineType.join(", "),
-            priceLevel: day.evening.meals[0].priceLevel,
-            priceStatus: day.evening.meals[0].estimatedCost.status,
-            rating: undefined,
-            description: day.evening.meals[0].description,
-            reservationUrl: day.evening.meals[0].reservationInfo?.url,
-          }
-        : undefined,
-    },
-    estimatedCost: day.totalEstimatedCost?.amount,
-    currency: day.totalEstimatedCost?.currency,
-  }));
+  const dayInputs = mappedDaysToSpec(result.days);
 
   // Build the json-render spec
   const specInput: BuildSpecInput = {
@@ -913,11 +915,11 @@ async function buildAndSaveSpec(
       json_render_spec: jsonRenderSpec,
       progress: {
         orchestrator: "done",
-        hotels: "done",
-        activities: "done",
-        dining: "done",
-        transport: "done",
-        enrichment: "done",
+        hotels: meta.sourceStatus?.hotels ?? "done",
+        activities: meta.sourceStatus?.activities ?? "done",
+        dining: meta.sourceStatus?.dining ?? "done",
+        transport: meta.sourceStatus?.transport ?? "done",
+        enrichment: meta.sourceStatus?.enrichment ?? "done",
         aggregator: "done",
       },
     })
@@ -957,7 +959,9 @@ async function bridgeToItineraries(
     transport: day.transport,
     hotel: day.hotel,
     totalEstimatedCost: day.totalEstimatedCost,
+    timingProposal: day.timingProposal,
     tips: day.tips || [],
+    diningOptions: day.diningOptions,
   }));
 
   const itineraryPayload = {

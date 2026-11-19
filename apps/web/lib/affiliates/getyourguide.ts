@@ -9,7 +9,12 @@
  */
 
 import { providerAmount, currencyCode, formatPrice } from "@faroway/constants";
-import { fetchWithTimeout } from "@/lib/search/runtime";
+import { fetchWithTimeout, getEnvNumber } from "@/lib/search/runtime";
+
+const GYG_TIMEOUT_MS = getEnvNumber("ITINERARY_GYG_TIMEOUT_MS", 15000, {
+  min: 1000,
+  max: 30000,
+});
 
 // Environment variables
 const GYG_API_KEY = process.env.GETYOURGUIDE_API_KEY;
@@ -26,6 +31,7 @@ export interface GYGSearchParams {
   rating?: number;
   limit?: number;
   coordinates?: { lat: number; lng: number };
+  signal?: AbortSignal;
 }
 
 export interface GYGActivity {
@@ -145,7 +151,9 @@ export async function searchGYGActivities(
           Accept: "application/json",
           "X-ACCESS-TOKEN": GYG_API_KEY!,
         },
+        signal: params.signal,
       },
+      GYG_TIMEOUT_MS,
     );
 
     if (!response.ok) {
@@ -260,6 +268,25 @@ export async function checkGYGAvailability(
 /**
  * Generate affiliate booking URL with tracking
  */
+/** Public deep link. An absent partner id must not invent one. */
+export function buildGYGAffiliateUrl(
+  activityId: string,
+  trackingId: string,
+  partnerId: string | undefined,
+  date?: string,
+): string {
+  if (!partnerId || !/^[A-Za-z0-9_-]{1,40}$/.test(partnerId)) return "";
+  if (!/^\d{1,12}$/.test(activityId)) return "";
+  const campaign = trackingId.replace(/[^a-zA-Z0-9-]/g, "").slice(0, 64);
+  if (!campaign) return "";
+  const params = new URLSearchParams({
+    partner_id: partnerId,
+    cmp: campaign,
+  });
+  if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) params.set("date", date);
+  return `https://www.getyourguide.com/activity-t${activityId}/?${params}`;
+}
+
 export function generateGYGAffiliateUrl(
   activityId: string,
   trackingId: string,
@@ -267,14 +294,12 @@ export function generateGYGAffiliateUrl(
     date?: string;
   },
 ): string {
-  const baseUrl = `https://www.getyourguide.com/activity-t${activityId}`;
-  const params = new URLSearchParams({
-    partner_id: GYG_PARTNER_ID || "faroway",
-    cmp: trackingId,
-    ...(options?.date && { date: options.date }),
-  });
-
-  return `${baseUrl}/?${params}`;
+  return buildGYGAffiliateUrl(
+    activityId,
+    trackingId,
+    GYG_PARTNER_ID,
+    options?.date,
+  );
 }
 
 /**

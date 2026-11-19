@@ -53,17 +53,22 @@
     "uat:native": "python3 scripts/uat/native-adb.py",
     "uat:native:maestro": "node scripts/uat/native.mjs",
     "uat:smoke": "bun scripts/uat/smoke.ts",
-    "uat:model-compare": "bun scripts/uat/model-compare.ts"
+    "uat:model-compare": "bun scripts/uat/model-compare.ts",
+    "uat:eval": "bun scripts/uat/evaluate-traces.ts"
   },
   "overrides": {
+    "zod": "4.6.6",
+    "@ai-sdk/provider-utils": "4.0.33",
+    "postcss-selector-parser": "6.1.5",
     "@nestjs/common": "11.1.28",
     "@nestjs/core": "11.1.28",
     "@opentelemetry/core": "2.10.0",
-    "@xhmikosr/decompress": "10.2.1",
-    "@xmldom/xmldom": "0.8.13",
+    "@xhmikosr/decompress": "10.2.2",
+    "@xmldom/xmldom": "0.8.15",
     "ajv": "6.15.0",
     "d3-color": "3.1.0",
     "defu": "6.1.7",
+    "devalue": "5.9.3",
     "esbuild": "0.28.1",
     "expo-constants": "18.0.14",
     "fast-uri": "3.1.4",
@@ -71,11 +76,11 @@
     "flatted": "3.4.3",
     "handlebars": "^4.7.10",
     "lodash": "4.18.1",
-    "node-forge": "1.4.0",
+    "node-forge": "1.4.3",
     "path-to-regexp": "8.4.2",
     "piscina": "^4.9.4",
     "postcss": "8.5.23",
-    "qs": "6.15.3",
+    "qs": "6.16.1",
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "@types/react": "~19.1.10",
@@ -84,12 +89,49 @@
     "sharp": "^0.35.5",
     "shell-quote": "^1.12.0",
     "tar": "7.5.22",
-    "vite": "7.3.6",
+    "vite": "7.3.7",
     "yaml": "2.9.0",
     "yauzl": "3.4.0",
-    "@expo/cli>undici": ">=6.29.1 <7",
-    "@workflow/world-local>undici": ">=7.30.1 <8",
-    "@workflow/world-vercel>undici": ">=7.30.1 <8"
+    "@expo/cli": {
+      "undici": ">=6.29.1 <7",
+      "glob": "14.0.2",
+      "minimatch": "11.0.1"
+    },
+    "@workflow/world-local": {
+      "undici": ">=7.30.1 <8"
+    },
+    "@workflow/world-vercel": {
+      "undici": ">=7.30.1 <8"
+    },
+    "@expo/config": {
+      "glob": "14.0.2"
+    },
+    "@expo/config-plugins": {
+      "glob": "14.0.2"
+    },
+    "@expo/fingerprint": {
+      "glob": "14.0.2",
+      "minimatch": "11.0.1"
+    },
+    "@expo/metro-config": {
+      "glob": "14.0.2"
+    },
+    "@sentry/bundler-plugins": {
+      "glob": "14.0.2"
+    },
+    "@oclif/core": {
+      "minimatch": "11.0.1"
+    },
+    "@swc/cli": {
+      "minimatch": "11.0.1"
+    },
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "11.0.1"
+    },
+    "@vercel/queue": {
+      "minimatch": "11.0.1"
+    },
+    "uuid": "11.1.1"
   },
   "resolutions": {
     "expo-constants": "18.0.14",
@@ -108,5 +150,11 @@
     "turbo": "2.10.6",
     "typescript": "^5.5.4"
   },
-  "packageManager": "bun@1.4.4"
+  "packageManager": "bun@1.4.4",
+  "patchedDependencies": {
+    "decode-uri-component@0.2.2": "patches/decode-uri-component@0.2.2.patch",
+    "image-size@1.2.1": "patches/image-size@1.2.1.patch",
+    "deepmerge@4.3.1": "patches/deepmerge@4.3.1.patch",
+    "nanoid@5.1.6": "patches/nanoid@5.1.6.patch"
+  }
 }

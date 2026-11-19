@@ -1,0 +1,113 @@
+{
+  "description": "Minimal public venue names and meal slots from approved Lisbon preview; no account, trip, token, or raw private receipt fields.",
+  "body": {
+    "trip": {
+      "status": "planned"
+    },
+    "itinerary": {
+      "days": [
+        {
+          "date": "2026-12-07",
+          "title": "Historical Landmarks and Local Markets",
+          "morning": {
+            "activities": [
+              {
+                "name": "Torre de Belém"
+              }
+            ],
+            "meals": []
+          },
+          "afternoon": {
+            "activities": [
+              {
+                "name": "Mercado de Campo de Ourique"
+              },
+              {
+                "name": "Castelo de São Jorge"
+              }
+            ],
+            "meals": []
+          },
+          "evening": {
+            "activities": [],
+            "meals": [
+              {
+                "name": "Boi-Cavalo"
+              }
+            ]
+          }
+        },
+        {
+          "date": "2026-12-08",
+          "title": "Belém Traditions and Riverside Dining",
+          "morning": {
+            "activities": [
+              {
+                "name": "Mosteiro dos Jerónimos"
+              },
+              {
+                "name": "Pastéis de Belém"
+              }
+            ],
+            "meals": []
+          },
+          "afternoon": {
+            "activities": [
+              {
+                "name": "Time Out Market Lisboa"
+              }
+            ],
+            "meals": []
+          },
+          "evening": {
+            "activities": [],
+            "meals": [
+              {
+                "name": "Time Out Market (Mercado da Ribeira)"
+              }
+            ]
+          }
+        },
+        {
+          "date": "2026-12-09",
+          "title": "Portuguese Crafts and Alfama Heritage",
+          "morning": {
+            "activities": [
+              {
+                "name": "Traditional Azulejo Painting Workshop"
+              },
+              {
+                "name": "Sé de Lisboa (Lisbon Cathedral)"
+              }
+            ],
+            "meals": [
+              {
+                "name": "Manteigaria"
+              }
+            ]
+          },
+          "afternoon": {
+            "activities": [
+              {
+                "name": "Alfama District Exploration"
+              }
+            ],
+            "meals": [
+              {
+                "name": "Solar dos Bicos"
+              }
+            ]
+          },
+          "evening": {
+            "activities": [],
+            "meals": [
+              {
+                "name": "Prado"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

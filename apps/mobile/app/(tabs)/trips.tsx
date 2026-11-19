@@ -87,6 +87,44 @@ function GuestTripsView() {
         </Text>
       </View>
 
+      {localTrips.length > 0 ? (
+        <View style={{ paddingHorizontal: 24, marginBottom: 8 }}>
+          <Text
+            accessibilityRole="header"
+            style={{ fontSize: 18, fontWeight: '700', color: '#0f172a', marginBottom: 12 }}
+          >
+            On this device
+          </Text>
+          {localTrips.map((trip) => {
+            const first = formatTripDate(trip.startDate, { month: 'short', day: 'numeric' });
+            const last = formatTripDate(trip.endDate, {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
+            });
+            const dates =
+              first === 'Date unavailable' || last === 'Date unavailable'
+                ? 'Travel dates unavailable'
+                : `${first} - ${last}`;
+            return (
+              <TripCard
+                key={trip.id}
+                destination={trip.destination}
+                country={trip.country}
+                dates={dates}
+                image={trip.coverImage}
+                status={trip.status}
+                daysCount={tripDurationDays(trip.startDate, trip.endDate)}
+                onPress={() => {
+                  hapticFeedback.light();
+                  router.push(`/trip/${trip.id}`);
+                }}
+              />
+            );
+          })}
+        </View>
+      ) : null}
+
       {/* Sign-in buttons */}
       {isLoading ? (
         <ActivityIndicator

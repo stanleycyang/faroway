@@ -1,0 +1,18 @@
+[
+  {
+    "id": "bloomhouse-garden-breakfast",
+    "destination": "Singapore",
+    "anchorNames": ["Singapore Botanic Gardens & National Orchid Garden"],
+    "mealType": "breakfast",
+    "name": "The Bloomhouse by Little Farms",
+    "address": "Blk 2, 1 Cluny Rd, Ginger Garden Singapore Botanic Gardens, 259569",
+    "supportedSummary": "In the Ginger Garden, with a published breakfast menu until 2pm.",
+    "unresolvedSummary": "Check service time, stroller access and the walk before choosing it. Availability and prices are unverified.",
+    "sources": [
+      "https://littlefarmscafe.com/pages/the-bloomhouse-by-little-farms",
+      "https://littlefarmscafe.com/cdn/shop/files/Bloomhouse_Food_Menu_Oct_26.pdf?v=12145329222025431629"
+    ],
+    "observedAt": "2026-10-31",
+    "reviewAfter": "2026-11-30"
+  }
+]

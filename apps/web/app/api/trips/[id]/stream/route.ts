@@ -1,3 +1,4 @@
+import { mappedDaysToSpec } from "@/lib/json-render/mapped-days";
 import { reconcileGeneration } from "@/lib/trips/reconcile-generation";
 import { filterViatorDisplay } from "@/lib/affiliates/viator-policy";
 /**
@@ -32,7 +33,6 @@ import {
   buildBudgetBlocks,
   type HotelInput,
   type ActivityInput,
-  type ItineraryDayInput,
 } from "@/lib/json-render/build-spec";
 
 export const maxDuration = 300;
@@ -412,11 +412,16 @@ async function pollAndStream(
     if (pj !== lastProgressJson) {
       lastProgressJson = pj;
       const stage = getCurrentStage(sp);
+      const unfinished = STAGES.filter(
+        (name) => sp[name] === "error" || sp[name] === "failed",
+      );
       send("progress", {
         step: stage,
         status: sp[stage] || "pending",
         progress: calcPercent(sp),
-        message: STEP_MESSAGES[stage]?.[sp[stage]] || "Processing...",
+        message: unfinished.length
+          ? `${unfinished.join(", ")} did not finish. Nothing was retried automatically.`
+          : STEP_MESSAGES[stage]?.[sp[stage]] || "Processing...",
         searchProgress: sp,
       });
     }
@@ -459,7 +464,7 @@ async function pollAndStream(
       if (itineraryJson !== lastItineraryJson) {
         lastItineraryJson = itineraryJson;
         send("itinerary", { days, topHotel: ir.topHotel || null });
-        const itineraryBlocks = buildItineraryBlocks(days);
+        const itineraryBlocks = buildItineraryBlocks(mappedDaysToSpec(days));
         if (itineraryBlocks.length > 0) {
           send("spec-block", { chapter: "itinerary", blocks: itineraryBlocks });
         }
@@ -491,10 +496,16 @@ async function pollAndStream(
     }
 
     if (search.status === "completed") {
+      const unfinished = STAGES.filter(
+        (stage) => sp[stage] === "error" || sp[stage] === "failed",
+      );
       send("progress", {
         step: "complete",
         progress: 100,
-        message: "Your itinerary is ready!",
+        message: unfinished.length
+          ? "Your itinerary is ready, with gaps where a search did not finish. Review those stops before you rely on them."
+          : "Your itinerary is ready!",
+        searchProgress: sp,
       });
       send("complete", { tripId });
       controller.close();
@@ -528,16 +539,13 @@ async function pollAndStream(
   }
 }
 
-function normalizeItineraryDays(value: unknown): ItineraryDayInput[] | null {
-  if (Array.isArray(value))
-    return filterViatorDisplay(value) as ItineraryDayInput[];
+function normalizeItineraryDays(value: unknown): unknown[] | null {
+  if (Array.isArray(value)) return filterViatorDisplay(value);
   if (typeof value !== "string") return null;
 
   try {
     const parsed = JSON.parse(value) as unknown;
-    return Array.isArray(parsed)
-      ? (filterViatorDisplay(parsed) as ItineraryDayInput[])
-      : null;
+    return Array.isArray(parsed) ? filterViatorDisplay(parsed) : null;
   } catch {
     return null;
   }

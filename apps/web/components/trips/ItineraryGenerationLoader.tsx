@@ -108,12 +108,21 @@ export function ItineraryGenerationLoader({
   const percentage = Number.isFinite(progress)
     ? Math.round(Math.max(0, Math.min(100, progress)))
     : 0;
+  const stillWorking =
+    phase !== "complete" &&
+    phase !== "error" &&
+    /still generating in background|reconnect for updates/i.test(message);
   const chapters = draftChapters(days, specBlocks);
   const discoveryCount =
     Math.max(0, activitiesCount) + Math.max(0, diningCount);
   const activeSteps = steps.filter(
     (step) => streamStepState(step.key, phase, searchProgress) === "active",
   );
+  const interruptedSteps = steps.filter(
+    (step) =>
+      streamStepState(step.key, phase, searchProgress) === "interrupted",
+  );
+  const expectedDays = Math.max(1, nights + 1);
   const validDates =
     startDate &&
     endDate &&
@@ -132,9 +141,12 @@ export function ItineraryGenerationLoader({
     <div className="concierge-dossier fixed inset-0 z-[100] overflow-y-auto bg-[#f7f8fa] text-slate-900">
       <div className="mx-auto min-h-dvh lg:grid lg:grid-cols-[minmax(340px,0.82fr)_minmax(0,1.18fr)]">
         <aside className="relative min-h-[380px] overflow-hidden bg-slate-900 text-white sm:min-h-[440px] lg:sticky lg:top-0 lg:h-dvh lg:overflow-y-auto">
-          {heroImageUrl && (
-            <TripCoverImage src={heroImageUrl} className="object-cover" />
-          )}
+          <TripCoverImage
+            src={heroImageUrl}
+            className="object-cover"
+            journeyFallback
+            priority
+          />
           <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/20 to-slate-950/95" />
           <div className="relative flex min-h-[380px] flex-col justify-between p-6 sm:min-h-[440px] sm:p-10 lg:h-full lg:p-12 xl:p-16">
             <div className="flex items-center justify-between">
@@ -198,25 +210,27 @@ export function ItineraryGenerationLoader({
                     : "Your concierge is at work"}
               </p>
               <span className="text-xs font-medium tabular-nums text-slate-600">
-                {percentage}%
+                {stillWorking ? "Still working" : `${percentage}%`}
               </span>
             </div>
             <div
               role="progressbar"
               aria-label="Itinerary generation progress"
-              aria-valuemin={0}
-              aria-valuemax={100}
-              aria-valuenow={percentage}
+              aria-valuemin={stillWorking ? undefined : 0}
+              aria-valuemax={stillWorking ? undefined : 100}
+              aria-valuenow={stillWorking ? undefined : percentage}
               aria-valuetext={
-                phase === "error"
-                  ? `Last received progress: ${percentage}%`
-                  : undefined
+                stillWorking
+                  ? "Still working. This page will keep checking."
+                  : phase === "error"
+                    ? `Last received progress: ${percentage}%`
+                    : `${percentage} percent`
               }
               className="mt-4 h-0.5 overflow-hidden rounded-full bg-slate-200"
             >
               <div
-                className="h-full bg-primary-700 motion-safe:transition-[width] duration-700"
-                style={{ width: `${percentage}%` }}
+                className={`h-full bg-primary-700 motion-safe:transition-[width] duration-700 ${stillWorking ? "w-2/5 motion-safe:animate-pulse" : ""}`}
+                style={stillWorking ? undefined : { width: `${percentage}%` }}
               />
             </div>
             <h2 className="mt-8 font-editorial text-balance text-3xl leading-tight tracking-tight sm:text-4xl">
@@ -262,7 +276,7 @@ export function ItineraryGenerationLoader({
                       className="flex items-center gap-2.5 text-xs leading-5 text-slate-600"
                     >
                       <span
-                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${state === "done" ? "bg-teal-50 text-teal-800" : state === "active" ? "bg-primary-50 text-primary-800" : "bg-slate-100 text-slate-400"}`}
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${state === "done" ? "bg-teal-50 text-teal-800" : state === "active" ? "bg-primary-50 text-primary-800" : state === "interrupted" ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-400"}`}
                       >
                         {state === "done" ? (
                           <Check className="h-3.5 w-3.5" />
@@ -271,6 +285,9 @@ export function ItineraryGenerationLoader({
                         )}
                       </span>
                       {step.label}
+                      {state === "interrupted" ? (
+                        <span className="text-amber-800">Did not finish</span>
+                      ) : null}
                       <span className="sr-only">
                         :{" "}
                         {state === "done"
@@ -362,14 +379,20 @@ export function ItineraryGenerationLoader({
                   </span>
                   <div>
                     <h3 className="text-sm font-medium">
-                      {phase === "complete"
-                        ? "No stay suggestion in this plan"
-                        : "Finding a place to settle in"}
+                      {streamStepState("hotels", phase, searchProgress) ===
+                      "interrupted"
+                        ? "Hotel search did not finish"
+                        : phase === "complete"
+                          ? "No stay suggestion in this plan"
+                          : "Finding a place to settle in"}
                     </h3>
-                    <p className="mt-1 text-xs leading-5 text-slate-600">
-                      {phase === "complete"
-                        ? "Review your route before choosing where to stay."
-                        : "Stay suggestions will appear here as they arrive."}
+                    <p className="mt-1 text-sm leading-6 text-slate-600">
+                      {streamStepState("hotels", phase, searchProgress) ===
+                      "interrupted"
+                        ? "No stay is shown because that search did not return."
+                        : phase === "complete"
+                          ? "Review your route before choosing where to stay."
+                          : "A stay card appears here only after a result arrives."}
                     </p>
                   </div>
                 </div>
@@ -397,6 +420,16 @@ export function ItineraryGenerationLoader({
                 Explore as we plan. New chapters arrive here, without
                 interrupting the one you’re reading.
               </p>
+              {interruptedSteps.length > 0 && (
+                <p
+                  role="status"
+                  className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-950"
+                >
+                  {interruptedSteps.map((step) => step.label).join(", ")} did
+                  not finish. Cards below are only the results that arrived.
+                  Nothing from an unfinished search is marked ready.
+                </p>
+              )}
               <div className="mt-6 space-y-4">
                 {chapters.length ? (
                   chapters.map((chapter) => (
@@ -412,12 +445,19 @@ export function ItineraryGenerationLoader({
                       Your first chapter will appear when the itinerary begins
                       to arrive.
                     </p>
-                    <div aria-hidden="true" className="mt-5 space-y-2">
-                      <div className="h-2 w-4/5 rounded-full bg-slate-100" />
-                      <div className="h-2 w-3/5 rounded-full bg-slate-100" />
-                    </div>
                   </div>
                 )}
+                {phase !== "complete" &&
+                  Array.from(
+                    {
+                      length: Math.max(0, expectedDays - chapters.length),
+                    },
+                    (_, index) => chapters.length + index + 1,
+                  )
+                    .slice(0, 4)
+                    .map((number) => (
+                      <DaySkeleton key={`skeleton-${number}`} number={number} />
+                    ))}
               </div>
               {phase !== "complete" && chapters.length > 0 && (
                 <p className="mt-5 flex items-center gap-2 text-xs text-slate-600">
@@ -448,6 +488,21 @@ export function ItineraryGenerationLoader({
         </div>
       )}
     </div>
+  );
+}
+
+function DaySkeleton({ number }: { number: number }) {
+  return (
+    <article className="rounded-2xl border border-dashed border-slate-300 bg-white p-5">
+      <div className="flex items-center gap-4">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-50 text-sm font-semibold tabular-nums text-slate-500">
+          {number}
+        </span>
+        <p className="min-w-0 text-sm leading-6 text-slate-600">
+          Day {number} is waiting for places. Nothing is ready here yet.
+        </p>
+      </div>
+    </article>
   );
 }
 
@@ -508,33 +563,36 @@ function Chapter({ chapter }: { chapter: DraftChapter }) {
           </p>
         )}
         {chapter.stops.length ? (
-          <ol className="space-y-5 border-l border-slate-200 pl-5">
+          <ol className="space-y-3">
             {chapter.stops.map((stop, index) => (
               <li
                 key={`${stop.period}:${stop.name}:${index}`}
-                className="relative"
+                data-testid="generation-stop-card"
+                className="dossier-arrival rounded-2xl border border-slate-200 bg-slate-50 p-4"
               >
-                <span
-                  aria-hidden="true"
-                  className="absolute -left-[25px] top-1.5 h-2 w-2 rounded-full border border-slate-300 bg-white"
-                />
-                {stop.period && (
-                  <p className="text-xs capitalize text-slate-600">
-                    {stop.period}
-                  </p>
-                )}
-                <h4 className="mt-1 text-sm font-semibold">{stop.name}</h4>
+                <p className="text-sm capitalize leading-6 text-slate-600">
+                  {stop.kind === "dining" ? "Dining" : "Activity"}
+                  {stop.period ? ` · ${stop.period}` : ""}
+                </p>
+                <h4 className="mt-1 text-base font-semibold leading-snug">
+                  {stop.name}
+                </h4>
                 {stop.description && (
-                  <p className="mt-1 text-xs leading-6 text-slate-600">
+                  <p className="mt-2 text-sm leading-6 text-slate-600">
                     {stop.description}
                   </p>
                 )}
+                <p className="mt-3 text-sm leading-6 text-slate-600">
+                  {stop.supplierLink
+                    ? "Booking options will be in your saved plan. Check them before you book."
+                    : "No booking link yet for this stop."}
+                </p>
                 {stop.pickedForYou && (
                   <details className="mt-3 rounded-xl bg-teal-50/60 px-3 py-2">
-                    <summary className="min-h-8 cursor-pointer text-xs font-medium text-teal-900">
+                    <summary className="min-h-11 cursor-pointer text-sm font-medium text-teal-900">
                       Why this fits your trip
                     </summary>
-                    <p className="mt-2 text-xs leading-6 text-teal-900/80">
+                    <p className="mt-2 text-sm leading-6 text-teal-900/80">
                       {stop.pickedForYou}
                     </p>
                   </details>
@@ -543,7 +601,7 @@ function Chapter({ chapter }: { chapter: DraftChapter }) {
             ))}
           </ol>
         ) : (
-          <p className="text-xs text-slate-600">
+          <p className="text-sm leading-6 text-slate-600">
             The finer details are still arriving.
           </p>
         )}

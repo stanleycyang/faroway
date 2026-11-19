@@ -28,7 +28,6 @@ import {
   MapPin,
   RefreshCw,
   Sparkles,
-  ExternalLink,
   Shield,
   ChevronUp,
   Ticket,
@@ -71,7 +70,7 @@ class DayErrorBoundary extends React.Component<
 }
 import { FeaturedHotelCard } from "@/components/trips/FeaturedHotelCard";
 import { ShareConsentDialog } from "@/components/trips/ShareConsentDialog";
-import { TripBudget } from "@/components/trips/TripBudget";
+import { LiveTripBudget } from "@/components/trips/TripBudget";
 import { destinationImage } from "@/lib/trips/destination-image";
 import { TripDayNavigation } from "@/components/trips/TripDayNavigation";
 import { TripHeader } from "@/components/trips/TripHeader";
@@ -90,7 +89,7 @@ import {
 import type { GeneratedItinerary } from "@/lib/ai/types";
 import type { Trip, TripResponse } from "@/lib/trips/load-trip";
 import type { TripDay } from "@faroway/types";
-import { summarizeBudget, featuredStayEstimate } from "@/lib/trips/budget";
+import { featuredStayEstimate } from "@/lib/trips/budget";
 
 const ItineraryMap = dynamic(
   () =>
@@ -396,6 +395,10 @@ export function TripDetailClient({
           text: `Check out my trip itinerary to ${trip?.destination}!`,
           url: url!,
         });
+        if (refreshMounted.current)
+          setShareStatus(
+            "Link ready to send. Anyone with it can view this trip.",
+          );
       } else {
         await navigator.clipboard.writeText(url!);
         if (refreshMounted.current)
@@ -496,29 +499,6 @@ export function TripDetailClient({
     }
     return count;
   }, [itinerary]);
-
-  const [quoteClock, setQuoteClock] = useState(0);
-  useEffect(() => {
-    const update = () => setQuoteClock(Date.now());
-    const initial = setTimeout(update, 0);
-    const timer = setInterval(update, 30_000);
-    return () => {
-      clearTimeout(initial);
-      clearInterval(timer);
-    };
-  }, []);
-
-  // Keep currencies separate; itinerary totals do not establish a party quote.
-  const budgetBreakdown = useMemo(() => {
-    if (!itinerary?.days?.length || !trip || trip.preferences?.planNeedsRefresh)
-      return null;
-    return summarizeBudget(
-      itinerary.days,
-      { startDate: trip.start_date, endDate: trip.end_date },
-      trip.travelers,
-      quoteClock || Number.POSITIVE_INFINITY,
-    );
-  }, [itinerary, trip, quoteClock]);
 
   // Trip length (days) from date range — used for nights estimate during generation / hotel card
   const skeletonDayCount = useMemo(() => {
@@ -985,6 +965,8 @@ export function TripDetailClient({
                         afternoon={day.afternoon}
                         evening={day.evening}
                         tips={day.tips}
+                        diningOptions={day.diningOptions}
+                        timingProposal={day.timingProposal}
                         defaultExpanded={true}
                         transport={day.transport}
                         hotel={day.hotel}
@@ -1107,9 +1089,15 @@ export function TripDetailClient({
             </details>
           )}
         </section>
-        {budgetBreakdown && (
-          <TripBudget budget={budgetBreakdown} travelers={trip.travelers} />
-        )}
+        {itinerary?.days?.length ? (
+          <LiveTripBudget
+            days={itinerary.days}
+            startDate={trip.start_date}
+            endDate={trip.end_date}
+            travelers={trip.travelers}
+            paused={!!trip.preferences?.planNeedsRefresh}
+          />
+        ) : null}
 
         {/* General Tips */}
         {itinerary?.generalTips && itinerary.generalTips.length > 0 && (
@@ -1196,14 +1184,16 @@ export function TripDetailClient({
                     : "Create public share link"}
               </button>
             )}
-            <button
-              type="button"
-              onClick={handleRevokeShare}
-              disabled={!hydrated || isShareBusy}
-              className="mt-4 text-sm font-medium text-gray-500 hover:text-red-600 disabled:opacity-50"
-            >
-              Turn off public access
-            </button>
+            {shareUrl ? (
+              <button
+                type="button"
+                onClick={handleRevokeShare}
+                disabled={!hydrated || isShareBusy}
+                className="mt-4 min-h-11 text-sm font-medium text-slate-600 hover:text-red-700 disabled:opacity-50"
+              >
+                Turn off public access
+              </button>
+            ) : null}
             {shareStatus && (
               <p className="mt-3 text-sm text-gray-600" role="status">
                 {shareStatus}
@@ -1328,15 +1318,10 @@ function FeaturedFlights({ days }: { days: TripDay[] | null }) {
         </div>
 
         {outbound.transport?.affiliateUrl && (
-          <button
-            disabled
-            title="Flight checkout is not available on Faroway yet."
-            className="w-full mt-5 inline-flex items-center justify-center gap-2 px-5 py-3 bg-white text-blue-700 rounded-xl text-sm font-bold hover:bg-blue-50 transition-all shadow-md active:scale-[0.98]"
-          >
-            <Shield className="w-4 h-4" />
-            Flight booking unavailable
-            <ExternalLink className="w-3.5 h-3.5 opacity-70" />
-          </button>
+          <p className="mt-5 rounded-xl bg-white/95 px-4 py-3 text-sm font-medium text-blue-900">
+            Flight booking unavailable. Confirm the fare, times, and
+            cancellation terms with the airline or a flight seller.
+          </p>
         )}
       </div>
     </div>

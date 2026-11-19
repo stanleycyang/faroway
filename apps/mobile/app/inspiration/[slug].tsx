@@ -75,9 +75,16 @@ export default function InspirationDetailScreen() {
     new Animated.Value(0),
   ]).current;
 
-  const matchingDestinations = useMemo(() => {
-    if (!inspiration) return [];
-    return popularDestinations.filter((d) => d.tags.some((tag) => inspiration.tags.includes(tag)));
+  const { matchingDestinations, usingFallback } = useMemo(() => {
+    if (!inspiration) return { matchingDestinations: [], usingFallback: false };
+    const tagged = popularDestinations.filter((d) =>
+      d.tags.some((tag) => inspiration.tags.includes(tag))
+    );
+    if (tagged.length > 0) return { matchingDestinations: tagged, usingFallback: false };
+    return {
+      matchingDestinations: popularDestinations.slice(0, 6),
+      usingFallback: popularDestinations.length > 0,
+    };
   }, [inspiration]);
 
   useEffect(() => {
@@ -298,16 +305,28 @@ export default function InspirationDetailScreen() {
       {/* Bottom Sticky CTA */}
       <Animated.View style={[styles.bottomCta, makeSectionStyle(sectionAnims[2])]}>
         <TouchableOpacity
-          style={[styles.surpriseButton, { backgroundColor: colors.action.primary }]}
+          style={[
+            styles.surpriseButton,
+            { backgroundColor: colors.action.primary },
+            matchingDestinations.length === 0 ? { opacity: 0.5 } : null,
+          ]}
           activeOpacity={0.85}
           onPress={handleSurpriseMe}
+          disabled={matchingDestinations.length === 0}
           accessibilityRole="button"
-          accessibilityLabel="Surprise me with a destination"
+          accessibilityState={{ disabled: matchingDestinations.length === 0 }}
+          accessibilityLabel="Find a destination"
         >
           <Ionicons name="sparkles" size={20} color="#fff" />
           <Text style={styles.surpriseButtonText}>Find a destination</Text>
         </TouchableOpacity>
-        <Text style={styles.ctaSubtext}>or pick a destination above</Text>
+        <Text style={styles.ctaSubtext}>
+          {usingFallback
+            ? 'No exact match in this collection. These places are a starting point.'
+            : matchingDestinations.length === 0
+              ? 'No places are available for this idea yet.'
+              : 'or pick a destination above'}
+        </Text>
       </Animated.View>
     </View>
   );

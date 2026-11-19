@@ -58,17 +58,17 @@ inventories were small enough.
 
 ## Quality Gate Status (2026-07-25)
 
-| Check                        | Command                                                        | Result                                           |
-| ---------------------------- | -------------------------------------------------------------- | ------------------------------------------------ |
-| Type-check, lint, format     | `bun run check`                                                | ✅ 11/11 tasks                                   |
-| Unit and integration tests   | `bun run test`                                                 | ✅ 617/617 tests                                 |
-| Production web build         | `bun run build:web`                                            | ✅ Next 16.2.11; 1,412 static pages              |
-| Production-runtime E2E       | `CI=1 E2E_BASE_URL=http://localhost:3000 bunx playwright test` | ✅ 57/57 — Chromium, iPhone 14, Pixel 7          |
-| Blog console/hydration guard | Playwright `pageerror` + console assertion                     | ✅ No production-runtime browser errors          |
-| Mobile release config        | `bun run release:check:mobile`                                 | ✅ 0 failures/warnings; Expo Doctor 18/18        |
-| Database schema lint         | `bunx supabase db lint --linked`                               | ✅ No schema errors                              |
-| Staged secret scan           | Gitleaks 8.30.1 over binary staged diff                        | ✅ 0 leaks in approximately 814 KB               |
-| Dependency audit             | `bun audit`                                                    | ⚠️ 0 critical; 42 upstream transitive advisories |
+| Check                        | Command                                                        | Result                                            |
+| ---------------------------- | -------------------------------------------------------------- | ------------------------------------------------- |
+| Type-check, lint, format     | `bun run check`                                                | ✅ 11/11 tasks                                    |
+| Unit and integration tests   | `bun run test`                                                 | ✅ 617/617 tests                                  |
+| Production web build         | `bun run build:web`                                            | ✅ Next 16.2.11; 1,412 static pages               |
+| Production-runtime E2E       | `CI=1 E2E_BASE_URL=http://localhost:3000 bunx playwright test` | ✅ 57/57 — Chromium, iPhone 14, Pixel 7           |
+| Blog console/hydration guard | Playwright `pageerror` + console assertion                     | ✅ No production-runtime browser errors           |
+| Mobile release config        | `bun run release:check:mobile`                                 | ✅ 0 failures/warnings; Expo Doctor 18/18         |
+| Database schema lint         | `bunx supabase db lint --linked`                               | ✅ No schema errors                               |
+| Staged secret scan           | Gitleaks 8.30.1 over binary staged diff                        | ✅ 0 leaks in approximately 814 KB                |
+| Dependency audit             | `bun audit` (Bun 1.4.4, 2026-11-15)                            | ⚠️ 0 critical; 7 remaining, see the November note |
 
 The five failures seen in one development-server browser run were Next
 Turbopack HMR chunk races after a production build. The same exact production
@@ -379,7 +379,15 @@ A11y fixes deployed in `8ec26bb` (confirmed in production HTML via curl):
 
 ### bun audit
 
-**Current total:** 42 (0 critical, 26 high, 13 moderate, 3 low), down
+**15 November 2026 (Bun 1.4.4, `bun audit` on this revision):** 7 findings
+(5 high, 1 moderate, 1 low) in four already-patched packages. The July total
+below and the 26-finding figure quoted on draft PR #55 are earlier snapshots.
+No compatible version bump clears the current four without breaking a pinned
+consumer. Reachability and the reason each pin stays are recorded in
+`docs/release-evidence/dependency-audit-20261115.md`. This is not a clean
+audit: the version check still flags the maintained backports.
+
+**July 2026 snapshot:** 42 (0 critical, 26 high, 13 moderate, 3 low), down
 from 165 (7 critical, 83 high, 60 moderate, 15 low).
 
 Direct runtime and build dependencies were upgraded or constrained, including

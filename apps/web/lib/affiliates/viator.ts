@@ -2,7 +2,7 @@
  * Viator Partner API Client
  *
  * Viator (TripAdvisor Experiences) provides tours, activities, and attractions.
- * Commission: 15-20% per booking
+ * Commission eligibility and rates depend on the active partner agreement.
  *
  * Uses the Partner API endpoints:
  * - POST /products/search  (v2 — requires Accept: application/json;version=2.0)
@@ -12,13 +12,27 @@
  */
 
 import { providerAmount, currencyCode, formatPrice } from "@faroway/constants";
-import { fetchWithTimeout } from "@/lib/search/runtime";
+import {
+  fetchWithTimeout,
+  getEnvNumber,
+  isAbortError,
+} from "@/lib/search/runtime";
+import { recoverSupplierSearch } from "./supplier-search-recovery";
 import { buildViatorHandoffUrl } from "./viator-link";
 import { isViatorContentEnabled } from "./viator-policy";
+import { request as httpsRequest } from "node:https";
 
 // Environment variables
 const VIATOR_API_KEY = process.env.VIATOR_API_KEY;
 const VIATOR_PARTNER_ID = process.env.VIATOR_PARTNER_ID;
+// Supplier search runs alongside model generation. The generic two-second
+// vendor deadline timed out supplier searches in deployed QA. A measured
+// duration-filtered sandbox search took 21.7s. Keep both attempts inside the
+// existing 60s parallel-specialist budget, including response-body reads.
+const VIATOR_TIMEOUT_MS = getEnvNumber("ITINERARY_VIATOR_TIMEOUT_MS", 30000, {
+  min: 1000,
+  max: 30000,
+});
 // VIATOR_SANDBOX=true in .env to use sandbox endpoint (for testing keys)
 const VIATOR_API_BASE =
   process.env.VIATOR_SANDBOX === "true"
@@ -202,6 +216,7 @@ function getViatorDestinationId(name: string): number | null {
 // ── Types ───────────────────────────────────────────────────────────────────
 
 export interface ViatorSearchParams {
+  maxDurationMinutes?: number;
   destination: string;
   startDate?: string;
   endDate?: string;
@@ -209,9 +224,13 @@ export interface ViatorSearchParams {
   priceRange?: { min: number; max: number };
   rating?: number;
   limit?: number;
+  /** Cancels the in-flight search. A parent abort is not a dated-query timeout. */
+  signal?: AbortSignal;
 }
 
 export interface ViatorProduct {
+  /** Date-filtered search timed out; this product came from the catalog only. */
+  catalogOnly?: true;
   productCode: string;
   title: string;
   description: string;
@@ -282,6 +301,7 @@ export function isViatorConfigured(): boolean {
  */
 export async function searchViatorProducts(
   params: ViatorSearchParams,
+  options: { throwOnFailure?: boolean } = {},
 ): Promise<ViatorProduct[]> {
   if (!isViatorConfigured()) {
     console.warn("[Viator] API not configured, returning empty results");
@@ -295,7 +315,35 @@ export async function searchViatorProducts(
       console.log(
         `[Viator] Found destination ID ${destId} for "${params.destination}" (${VIATOR_API_BASE})`,
       );
-      const products = await searchByDestinationId(destId, params);
+      let products: ViatorProduct[];
+      try {
+        products = await searchByDestinationId(destId, params);
+      } catch (error) {
+        if (params.signal?.aborted) throw error;
+        if (!isAbortError(error) || (!params.startDate && !params.endDate))
+          throw error;
+        // A dated-query timeout is not evidence of sold-out inventory. One
+        // smaller catalog lookup can still provide real products, but must not
+        // be mistaken for date availability. Never relax a successful empty
+        // result or retry auth/rate-limit/provider errors.
+        console.warn(
+          "[Viator] Date-filtered search timed out; checking a small catalog shortlist with unverified availability",
+        );
+        const catalog = await searchByDestinationId(
+          destId,
+          {
+            ...params,
+            startDate: undefined,
+            endDate: undefined,
+            limit: Math.min(params.limit || 15, 3),
+          },
+          25000,
+        );
+        products = recoverSupplierSearch(
+          { status: "timeout", dated: true },
+          { status: "products", products: catalog },
+        ).products;
+      }
       if (products.length > 0) return products;
       console.log(
         `[Viator] No products found for destId=${destId}, search returned empty`,
@@ -308,6 +356,7 @@ export async function searchViatorProducts(
 
     return [];
   } catch (error) {
+    if (options.throwOnFailure) throw error;
     console.error("[Viator] Search error:", error);
     return [];
   }
@@ -319,10 +368,15 @@ export async function searchViatorProducts(
 async function searchByDestinationId(
   destId: number,
   params: ViatorSearchParams,
+  timeoutMs = VIATOR_TIMEOUT_MS,
+  transport: "fetch" | "https" = "fetch",
 ): Promise<ViatorProduct[]> {
   const body: Record<string, unknown> = {
     filtering: {
       destination: String(destId),
+      ...(params.maxDurationMinutes && {
+        durationInMinutes: { to: params.maxDurationMinutes },
+      }),
       ...(params.startDate && { startDate: params.startDate }),
       ...(params.endDate && { endDate: params.endDate }),
       ...(params.rating && { rating: { from: params.rating } }),
@@ -341,19 +395,30 @@ async function searchByDestinationId(
     currency: "USD",
   };
 
-  const response = await fetchWithTimeout(
+  const started = Date.now();
+  const response = await (
+    transport === "https" ? fetchViatorHttps : fetchWithTimeout
+  )(
     `${VIATOR_API_BASE}/products/search`,
     {
       method: "POST",
       headers: getV2WriteHeaders(),
       body: JSON.stringify(body),
+      signal: params.signal,
     },
+    timeoutMs,
   );
+  console.info("[Viator] Search headers", {
+    transport,
+    elapsedMs: Date.now() - started,
+    status: response.status,
+  });
 
   if (!response.ok) {
-    const error = await response.text();
-    console.error("[Viator] products/search error:", response.status, error);
-    return [];
+    // Consume the finite body within its deadline, but never log a provider
+    // error body: it can contain request details or credentials.
+    await response.text();
+    throw new Error(`Viator search HTTP ${response.status}`);
   }
 
   const data = await response.json();
@@ -361,6 +426,116 @@ async function searchByDestinationId(
     `[Viator] products/search returned ${data.products?.length || 0} results for destId=${destId}`,
   );
   return (data.products || []).map(normalizeViatorProduct);
+}
+
+/** Fixed, sandbox-only connectivity probe. No model calls or traveler data. */
+export async function probeViatorSandbox(dates?: {
+  startDate?: string;
+  endDate?: string;
+  maxDurationMinutes?: number;
+  transport?: "fetch" | "https";
+}) {
+  if (process.env.VIATOR_SANDBOX !== "true" || !isViatorConfigured()) {
+    return { status: "unconfigured" as const };
+  }
+  const started = Date.now();
+  try {
+    const products = dates?.startDate
+      ? await searchViatorProducts(
+          {
+            destination: "Tokyo",
+            limit: 15,
+            ...dates,
+          },
+          { throwOnFailure: true },
+        )
+      : await searchByDestinationId(
+          334,
+          {
+            destination: "Tokyo",
+            limit: 3,
+            maxDurationMinutes: dates?.maxDurationMinutes,
+          },
+          30000,
+          dates?.transport,
+        );
+    return {
+      status: products.length ? ("available" as const) : ("empty" as const),
+      elapsedMs: Date.now() - started,
+      products: products.length,
+      catalogOnlyProducts: products.filter((p) => p.catalogOnly).length,
+      sample: products.map((p) => ({
+        productCode: p.productCode,
+        title: p.title,
+        durationMinutes:
+          p.duration.fixedDurationInMinutes ??
+          p.duration.variableDurationFromMinutes ??
+          null,
+      })),
+      withPhotos: products.filter((p) => p.images.length > 0).length,
+      // Validate against the configured account on the server; never export it
+      // or derive the expected partner from a returned URL.
+      attributedProducts: products.filter((p) =>
+        generateViatorAffiliateUrl(p.productCode, "qa-probe", {
+          productUrl: p.productUrl,
+        }),
+      ).length,
+    };
+  } catch (error) {
+    return {
+      status: "failed" as const,
+      elapsedMs: Date.now() - started,
+      reason:
+        error instanceof Error && error.name === "AbortError"
+          ? "timeout"
+          : error instanceof Error &&
+              /^Viator search HTTP \d{3}$/.test(error.message)
+            ? error.message
+            : "provider_response_error",
+    };
+  }
+}
+
+/** Isolated diagnostic transport: fixed supplier host, bounded body and deadline. */
+async function fetchViatorHttps(
+  input: RequestInfo | URL,
+  init: RequestInit = {},
+  timeoutMs = 30000,
+): Promise<Response> {
+  const url = new URL(String(input));
+  if (url.origin !== new URL(VIATOR_API_BASE).origin)
+    throw new Error("Unexpected supplier origin");
+  return new Promise((resolve, reject) => {
+    const request = httpsRequest(
+      url,
+      {
+        method: "POST",
+        headers: Object.fromEntries(new Headers(init.headers)),
+        agent: false,
+        signal: AbortSignal.timeout(timeoutMs),
+      },
+      (incoming) => {
+        const chunks: Buffer[] = [];
+        let size = 0;
+        incoming.on("data", (chunk: Buffer) => {
+          size += chunk.length;
+          if (size > 2 * 1024 * 1024)
+            request.destroy(new Error("Supplier response too large"));
+          else chunks.push(chunk);
+        });
+        incoming.on("error", reject);
+        incoming.on("end", () =>
+          resolve(
+            new Response(Buffer.concat(chunks), {
+              status: incoming.statusCode || 502,
+            }),
+          ),
+        );
+      },
+    );
+    request.on("error", reject);
+    request.end(String(init.body ?? ""));
+  });
 }
 
 /**
@@ -380,6 +555,7 @@ export async function getViatorProduct(
       {
         headers: getV2ReadHeaders(),
       },
+      VIATOR_TIMEOUT_MS,
     );
 
     if (!response.ok) {
@@ -421,6 +597,7 @@ export async function checkViatorAvailability(
           currency: "USD",
         }),
       },
+      VIATOR_TIMEOUT_MS,
     );
 
     if (!response.ok) {

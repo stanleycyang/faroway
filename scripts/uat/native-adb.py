@@ -7,6 +7,7 @@ import subprocess
 import sys
 import time
 import xml.etree.ElementTree as ET
+from native_ui import password_save_decline
 
 if len(sys.argv) != 2 or sys.argv[1].startswith('-'):
     sys.exit('Usage: bun run uat:native DEVICE_SERIAL')
@@ -39,7 +40,12 @@ def nodes():
 def find(predicate, timeout=30):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
-        for node in nodes():
+        current = nodes()
+        decline = password_save_decline([node.attrib for node in current])
+        if decline is not None:
+            tap(decline)
+            continue
+        for node in current:
             if predicate(node.attrib):
                 return node.attrib
         time.sleep(1)
@@ -57,8 +63,11 @@ def by_id(value):
 
 def trips():
     tap(find(lambda n: 'My Trips' in n.get('content-desc', '') or n.get('text') == 'My Trips'))
-    find(lambda n: any(city in n.get('text', '') or city in n.get('content-desc', '')
-                       for city in ['Lisbon', 'Copenhagen']))
+    result = find(lambda n: n.get('text') == 'No trips yet' or any(
+        city in n.get('text', '') or city in n.get('content-desc', '')
+        for city in ['Lisbon', 'Copenhagen']))
+    if result.get('text') == 'No trips yet':
+        raise AssertionError('QA account has no saved itinerary. Use a seeded staging account; do not generate a paid trip implicitly.')
 
 
 assert b'package:' in shell('pm', 'path', PACKAGE), 'Install Faroway QA first'

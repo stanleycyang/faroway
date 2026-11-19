@@ -4,7 +4,7 @@ import {
   estimateUsageUsd,
   type TokenUsage,
 } from "../../../apps/web/lib/ai/model-cost";
-import { UAT_BRIEFS, type UatBrief } from "./briefs";
+import { UAT_BRIEFS, assertValidBriefParty, type UatBrief } from "./briefs";
 import {
   assertStagingTarget,
   type StagingTargetInput,
@@ -158,6 +158,7 @@ export async function runModelComparison(options: {
   }
   const configs = options.configs ?? MODEL_COMPARE_CONFIGS;
   const briefs = options.briefs ?? UAT_BRIEFS;
+  briefs.forEach(assertValidBriefParty);
   const capUsd = options.capUsd ?? MODEL_COMPARE_SPEND_CAP_USD;
   const rows: CompareRow[] = [];
   if (options.mode === "dry-run") {
@@ -200,6 +201,18 @@ export async function runModelComparison(options: {
           break;
         }
         const execution = await execute({ config, brief, step });
+        latencyMs += execution.latencyMs;
+        inputTokens += execution.usage.inputTokens ?? 0;
+        outputTokens += execution.usage.outputTokens ?? 0;
+        reasoningTokens += execution.usage.reasoningTokens ?? 0;
+        if (execution.fallback) {
+          fallbacks += 1;
+          notes.add(
+            `${step} fallback ${execution.fallback.reason}/${execution.fallback.outcome}`,
+          );
+        }
+        for (const note of execution.notes ?? []) notes.add(note);
+        stepsRun += 1;
         if (
           options.mode === "live" &&
           ![execution.usage.inputTokens, execution.usage.outputTokens].every(
@@ -217,18 +230,6 @@ export async function runModelComparison(options: {
         const usd = estimateUsageUsd(execution.model, execution.usage);
         tracker.add(usd);
         estimatedUsd += usd;
-        latencyMs += execution.latencyMs;
-        inputTokens += execution.usage.inputTokens ?? 0;
-        outputTokens += execution.usage.outputTokens ?? 0;
-        reasoningTokens += execution.usage.reasoningTokens ?? 0;
-        if (execution.fallback) {
-          fallbacks += 1;
-          notes.add(
-            `${step} fallback ${execution.fallback.reason}/${execution.fallback.outcome}`,
-          );
-        }
-        for (const note of execution.notes ?? []) notes.add(note);
-        stepsRun += 1;
         if (tracker.capped) {
           aborted = true;
           notes.add(`aborted at $${capUsd} after ${step}`);

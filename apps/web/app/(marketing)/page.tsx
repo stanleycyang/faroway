@@ -129,7 +129,7 @@ export default function LandingPage() {
       <Header />
       <main id="home-main-content" tabIndex={-1}>
         {/* ─── Hero Section — Bright, clean, conversion-optimized ──────────── */}
-        <section className="relative min-h-screen flex items-center overflow-hidden">
+        <section className="relative min-h-screen flex items-start overflow-hidden lg:items-center">
           {/* Light gradient background */}
           <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-white to-amber-50/50" />
           {/* Subtle decorative blobs */}
@@ -137,7 +137,7 @@ export default function LandingPage() {
           <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-amber-200/20 rounded-full blur-3xl" />
           <div className="absolute top-1/2 left-1/3 w-[300px] h-[300px] bg-accent/5 rounded-full blur-3xl" />
 
-          <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-16 lg:pt-36 lg:pb-24">
+          <div className="relative w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-28 pb-28 lg:pt-36 lg:pb-24">
             <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
               {/* Left — text */}
               <div>
@@ -166,7 +166,7 @@ export default function LandingPage() {
                   restaurants, activities, and local secrets included.
                 </p>
 
-                <p className="text-sm text-slate-400 mb-8 max-w-xl">
+                <p className="text-sm text-slate-600 mb-8 max-w-xl">
                   Choose your trip, then sign in to generate and save your plan.
                 </p>
 
@@ -198,7 +198,7 @@ export default function LandingPage() {
                   </div>
                   <div className="flex items-center gap-2 bg-amber-500/10 text-amber-700 px-3 py-1.5 rounded-full font-medium">
                     <Check className="w-4 h-4" />
-                    Ready in 60s
+                    Usually a few minutes
                   </div>
                 </div>
               </div>
@@ -237,7 +237,7 @@ export default function LandingPage() {
                           <h3 className="font-bold text-slate-900 text-sm">
                             Tokyo Adventure
                           </h3>
-                          <p className="text-xs text-slate-400">
+                          <p className="text-xs text-slate-600">
                             7 days · 2 travelers
                           </p>
                         </div>
@@ -271,7 +271,7 @@ export default function LandingPage() {
                             />
                           ))}
                         </div>
-                        <span className="text-[10px] text-slate-400 font-medium">
+                        <span className="text-[10px] text-slate-600 font-medium">
                           AI-generated
                         </span>
                       </div>
@@ -282,7 +282,7 @@ export default function LandingPage() {
                   <div className="absolute -top-3 -right-3 bg-white rounded-full px-4 py-2 shadow-lg shadow-slate-900/10 border border-slate-100 flex items-center gap-2">
                     <span className="text-sm">⚡</span>
                     <span className="text-sm font-semibold text-slate-700">
-                      Built in 47s
+                      Live progress
                     </span>
                   </div>
                 </div>
@@ -292,7 +292,7 @@ export default function LandingPage() {
 
           {/* Scroll indicator */}
           <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2">
-            <span className="text-slate-400 text-xs font-medium tracking-widest uppercase">
+            <span className="text-slate-600 text-xs font-medium tracking-widest uppercase">
               Discover
             </span>
             <ChevronDown className="w-5 h-5 text-slate-300 animate-bounce" />

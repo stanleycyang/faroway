@@ -325,7 +325,29 @@ describe("Itinerary workflow API e2e", () => {
         activitiesCount: 6,
         diningCount: 5,
         transportCount: 2,
-        days: [{ dayNumber: 1, title: "Day 1", date: "2026-05-10" }],
+        days: [
+          {
+            dayNumber: 1,
+            title: "Day 1",
+            date: "2026-05-10",
+            tips: ["Confirm allergen safety directly with the restaurant."],
+            morning: {
+              activities: [{ name: "Museum", duration: 150 }],
+              meals: [
+                {
+                  id: "breakfast",
+                  source: {
+                    url: "https://example.org/cafe",
+                    retrievedOn: "2026-11-02",
+                  },
+                  name: "Cafe",
+                  cuisineType: ["French"],
+                  estimatedCost: { amount: 0, currency: "", status: "unknown" },
+                },
+              ],
+            },
+          },
+        ],
       },
       json_render_spec: [
         { type: "TripSummary", props: { destination: "Tokyo" } },
@@ -347,6 +369,45 @@ describe("Itinerary workflow API e2e", () => {
     const text = await streamRes.text();
     const events = parseSse(text);
     const eventNames = events.map((e) => e.event);
+
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        event: "spec-block",
+        data: expect.objectContaining({
+          chapter: "itinerary",
+          blocks: expect.arrayContaining([
+            {
+              type: "Text",
+              props: {
+                content:
+                  "Confirm allergen safety directly with the restaurant.",
+                variant: "body",
+              },
+            },
+            expect.objectContaining({
+              type: "RestaurantCard",
+              props: expect.objectContaining({
+                name: "Cafe",
+                priceStatus: "unknown",
+                source: {
+                  url: "https://example.org/cafe",
+                  retrievedOn: "2026-11-02",
+                },
+                time: "Morning",
+              }),
+            }),
+            expect.objectContaining({
+              type: "ActivityCard",
+              props: expect.objectContaining({
+                name: "Museum",
+                duration: "2.5 hours",
+                time: "Morning",
+              }),
+            }),
+          ]),
+        }),
+      }),
+    );
 
     expect(eventNames).toContain("spec-block");
     expect(eventNames).toContain("hotels");

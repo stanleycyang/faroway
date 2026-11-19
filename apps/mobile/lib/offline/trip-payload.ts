@@ -1,12 +1,11 @@
-import type { PendingMutationData } from './storage';
-import type { Trip, TripInput } from '../../stores/tripStore';
+import type { Trip, TripInput } from '../tripTypes';
 
 /**
  * Serialize a locally-created Trip into the snake_case body that
  * `POST /api/trips` expects. Used by the offline mutation queue and by
  * the unit tests that document the contract.
  */
-export function buildTripCreatePayload(trip: Trip): PendingMutationData {
+export function buildTripCreatePayload(trip: Trip): Record<string, unknown> {
   return {
     destination: trip.destination,
     start_date: trip.startDate,
@@ -18,6 +17,7 @@ export function buildTripCreatePayload(trip: Trip): PendingMutationData {
       originCity: trip.originCity,
       originAirport: trip.originAirport,
       vibes: trip.vibes,
+      requirements: trip.requirements,
       budget: trip.budget,
     },
   };
@@ -31,8 +31,8 @@ export function buildTripCreatePayload(trip: Trip): PendingMutationData {
 export function buildTripUpdatePayload(
   patch: Partial<TripInput>,
   expectedUpdatedAt?: string
-): PendingMutationData {
-  const body: PendingMutationData = { ...(expectedUpdatedAt ? { expectedUpdatedAt } : {}) };
+): Record<string, unknown> {
+  const body: Record<string, unknown> = { ...(expectedUpdatedAt ? { expectedUpdatedAt } : {}) };
   if (patch.destination !== undefined) body.destination = patch.destination;
   const preferences: Record<string, unknown> = {};
 
@@ -46,6 +46,7 @@ export function buildTripUpdatePayload(
   if (patch.travelerType !== undefined) preferences.travelerType = patch.travelerType;
   if (patch.originCity !== undefined) preferences.originCity = patch.originCity;
   if (patch.originAirport !== undefined) preferences.originAirport = patch.originAirport;
+  if (patch.requirements !== undefined) preferences.requirements = patch.requirements;
 
   if (Object.keys(preferences).length > 0) {
     body.preferences = preferences;

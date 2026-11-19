@@ -9,6 +9,9 @@ export interface DraftStop {
   period: string;
   description?: string;
   pickedForYou?: string;
+  kind: "activity" | "dining" | "stay" | "stop";
+  /** Present only when the stream included an https supplier URL. */
+  supplierLink: boolean;
 }
 export interface DraftChapter {
   number: number;
@@ -67,6 +70,8 @@ export function draftChapters(
             period: text(item.time),
             description: text(item.description),
             pickedForYou: text(record(item.vibeMatch).reasoning),
+            kind: item.type === "restaurant" ? "dining" : "activity",
+            supplierLink: text(item.bookingUrl).startsWith("https://"),
           });
       }
     } else if (
@@ -78,6 +83,10 @@ export function draftChapters(
         name: text(props.name),
         period: text(props.time),
         description: text(props.description),
+        kind: block.type === "RestaurantCard" ? "dining" : "activity",
+        supplierLink:
+          text(props.bookingUrl).startsWith("https://") ||
+          text(props.reservationUrl).startsWith("https://"),
       });
     }
   }
@@ -87,22 +96,31 @@ export function draftChapters(
     const stops: DraftStop[] = [];
     for (const period of ["morning", "afternoon", "evening"] as const) {
       const slot = record(day[period]);
-      const items = [
-        ...(Array.isArray(slot.activities) ? slot.activities : []),
-        ...(Array.isArray(slot.meals)
-          ? slot.meals
-          : slot.meal
-            ? [slot.meal]
-            : []),
+      const meals = Array.isArray(slot.meals)
+        ? slot.meals
+        : slot.meal
+          ? [slot.meal]
+          : [];
+      const items: Array<{ raw: unknown; kind: DraftStop["kind"] }> = [
+        ...(Array.isArray(slot.activities) ? slot.activities : []).map(
+          (raw) => ({ raw, kind: "activity" as const }),
+        ),
+        ...meals.map((raw) => ({ raw, kind: "dining" as const })),
       ];
-      for (const raw of items) {
-        const item = record(raw);
+      for (const entry of items) {
+        const item = record(entry.raw);
         if (text(item.name))
           stops.push({
             name: text(item.name),
             period,
             description: text(item.description),
             pickedForYou: text(record(item.vibeMatch).reasoning),
+            kind: entry.kind,
+            supplierLink: text(
+              record(item.bookingInfo).bookingUrl ||
+                record(item.reservationInfo).url ||
+                item.affiliateUrl,
+            ).startsWith("https://"),
           });
       }
     }

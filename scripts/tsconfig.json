@@ -8,7 +8,12 @@
     "skipLibCheck": true,
     "noImplicitReturns": true,
     "types": ["node"],
-    "lib": ["ES2022", "DOM"]
+    "lib": ["ES2022", "DOM"],
+    "resolveJsonModule": true,
+    "baseUrl": "..",
+    "paths": {
+      "@/*": ["apps/web/*"]
+    }
   },
   "include": [
     "bun-test.d.ts",
@@ -17,6 +22,25 @@
     "uat/**/*.ts",
     "__tests__/uat-staging-guard.test.ts",
     "__tests__/uat-smoke.test.ts",
-    "__tests__/model-compare.test.ts"
+    "__tests__/model-compare.test.ts",
+    "__tests__/agentic-eval.test.ts",
+    "__tests__/aggregator-replay.test.ts",
+    "__tests__/grounding-evidence.test.ts",
+    "__tests__/timing-proposal.test.ts",
+    "__tests__/fixed-visit-refinement.test.ts",
+    "__tests__/comparison-contracts.test.ts",
+    "__tests__/day-availability.test.ts",
+    "__tests__/published-events.test.ts",
+    "__tests__/published-venue-addresses.test.ts",
+    "__tests__/reviewed-hours-eval.test.ts",
+    "__tests__/reviewed-availability-repair.test.ts",
+    "__tests__/dining-evidence-review.test.ts",
+    "__tests__/traveler-holdout.test.ts",
+    "__tests__/generation-quality.test.ts",
+    "uat/lib/traveler-holdout.ts",
+    "uat/lib/generation-quality.ts",
+    "uat/lib/itinerary-rubric.ts",
+    "uat/traveler-holdout-eval.ts",
+    "uat/generation-quality-eval.ts"
   ]
 }

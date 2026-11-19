@@ -1,3 +1,6 @@
+jest.mock('../../components/TravelerRequirementsEditor', () => ({
+  TravelerRequirementsEditor: 'TravelerRequirementsEditor',
+}));
 import React from 'react';
 import { act, create } from 'react-test-renderer';
 import { PlacesAutocomplete } from '../../components/ui';

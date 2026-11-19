@@ -6,7 +6,8 @@ export function tripInputFromLink(params: Record<string, unknown>): Partial<Trip
     typeof params[key] === 'string' ? (params[key] as string) : undefined;
   const destination = text('destination')?.trim();
   if (!destination) return null;
-  const result: Partial<TripInput> = { destination };
+  // A new destination must not inherit the previous city's provider identity.
+  const result: Partial<TripInput> = { destination, country: undefined, placeId: undefined };
   for (const key of ['country', 'placeId', 'startDate', 'endDate'] as const) {
     const value = text(key);
     if (value !== undefined) result[key] = value;

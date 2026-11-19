@@ -17,6 +17,7 @@ import {
   runAggregatorAgent,
 } from "./agents";
 import { runSearchEnrichment } from "./enrichment";
+import { tripActivityBudget } from "./release-itinerary";
 
 export interface TravelSearchWorkflowInput {
   searchId: string;
@@ -32,7 +33,10 @@ export interface TravelSearchWorkflowOutput {
 }
 
 export interface WorkflowCallbacks {
-  onProgress?: (stage: string, status: "searching" | "done") => Promise<void>;
+  onProgress?: (
+    stage: string,
+    status: "searching" | "done" | "error",
+  ) => Promise<void>;
   onAgentResult?: (stage: string, data: unknown) => Promise<void>;
   /** Called for micro-progress updates (e.g., "Analyzing your travel style...") */
   onMicroProgress?: (data: {
@@ -217,6 +221,7 @@ export async function executeTravelSearch(
     ] as const) {
       if (result.status === "rejected") {
         console.error(`[Workflow] ${name} agent failed:`, result.reason);
+        if (onProgress) await onProgress(name, "error");
       }
     }
 
@@ -232,12 +237,19 @@ export async function executeTravelSearch(
       message: "Optimizing activities by location...",
     });
     const aggregatorStart = Date.now();
-    const { days, topHotel } = await runAggregatorAgent(
+    const { days, topHotel, activityInventory } = await runAggregatorAgent(
       searchPlan,
       hotels,
       activities,
       dining,
       transport,
+      {
+        activityBudget: tripActivityBudget(
+          input.budget,
+          input.startDate,
+          input.endDate,
+        ),
+      },
     );
     logStageTiming("aggregator", aggregatorStart);
 
@@ -251,7 +263,7 @@ export async function executeTravelSearch(
     const results: SearchResults = {
       searchId,
       hotels,
-      activities,
+      activities: activityInventory ?? activities,
       dining,
       transport,
       itinerary: days,

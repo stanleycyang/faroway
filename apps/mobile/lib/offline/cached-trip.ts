@@ -1,3 +1,4 @@
+import { travelerRequirementsSchema } from '../travelerRequirements';
 import { z } from 'zod';
 import type { Trip } from '../../stores/tripStore';
 
@@ -91,6 +92,7 @@ const cachedTrip: z.ZodType<Trip> = z
     travelerType: text,
     originCity: optionalText,
     originAirport: optionalText,
+    requirements: travelerRequirementsSchema.nullish(),
     vibes: z.array(text),
     // Older sync summaries stored an absent server budget as null. Preserve the
     // trip and normalize that one legacy representation instead of rejecting it.

@@ -1,3 +1,4 @@
+jest.mock('@expo/vector-icons', () => ({ Ionicons: 'Icon' }));
 import React from 'react';
 import { act, create } from 'react-test-renderer';
 let mockOwner = 'account-a';
@@ -179,6 +180,40 @@ it('a completed active fact fade starts the next fade, while an interrupted fade
   } finally {
     await act(async () => {
       renderer.unmount();
+    });
+  }
+});
+
+it('keeps the initial wait focused and lets the traveler reveal planning details', async () => {
+  let screen!: ReturnType<typeof create>;
+  await act(async () => {
+    screen = create(<GeneratingScreen />);
+  });
+  try {
+    const text = () =>
+      screen.root
+        .findAllByType('Text' as never)
+        .map((node) => node.props.children)
+        .flat()
+        .join(' ');
+    expect(text()).not.toContain('100%');
+    expect(text()).not.toContain('Places to stay');
+    const toggle = screen.root
+      .findAllByType('TouchableOpacity' as never)
+      .find((node) => node.props.accessibilityState?.expanded === false)!;
+    expect(toggle).toBeDefined();
+    await act(async () => {
+      toggle.props.onPress();
+    });
+    expect(text()).toContain('Places to stay');
+    expect(text()).toContain('Hide planning details');
+    await act(async () => {
+      toggle.props.onPress();
+    });
+    expect(text()).not.toContain('Places to stay');
+  } finally {
+    await act(async () => {
+      screen.unmount();
     });
   }
 });

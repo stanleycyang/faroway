@@ -1,0 +1,1180 @@
+[
+  {
+    "id": "ngv-ordinary-hours-20261101",
+    "destination": "Melbourne, Australia",
+    "country": "Australia",
+    "aliases": [
+      "National Gallery of Victoria (NGV) International Evening Visit"
+    ],
+    "addresses": ["180 St Kilda Rd, Melbourne VIC 3006"],
+    "sourceUrl": "https://www.ngv.vic.gov.au/plan-your-visit/",
+    "sourceSha256": "c3e79d3272c8f4395bbd27003eb132bc2489583e47c233cd8102f0f5877fedf1",
+    "observedAt": "2026-11-01",
+    "reviewAfter": "2026-12-01",
+    "branchReview": "Reviewed the official branch visitor page and its named venue/address against this exact generated candidate. These are ordinary published hours only; holidays, exceptional openings, tickets and future availability remain unverified. No coordinates are certified.",
+    "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "matisse-ordinary-hours-20261101",
+    "destination": "Nice, France",
+    "country": "France",
+    "aliases": ["Musée Matisse"],
+    "addresses": ["164 Avenue des Arènes de Cimiez, 06000 Nice, France"],
+    "sourceUrl": "https://www.musee-matisse-nice.org/en/practical-information/",
+    "sourceSha256": "d905be94029bca2d70af3f589f067faec10bda19576888c6d599978d86a72131",
+    "observedAt": "2026-11-01",
+    "reviewAfter": "2026-12-01",
+    "branchReview": "Reviewed the official branch visitor page and its named venue/address against this exact generated candidate. These are ordinary published hours only; holidays, exceptional openings, tickets and future availability remain unverified. No coordinates are certified.",
+    "months": [1, 2, 3, 11, 12],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 2,
+        "intervals": []
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "chagall-ordinary-hours-20261101",
+    "destination": "Nice, France",
+    "country": "France",
+    "aliases": ["Musée National Marc Chagall"],
+    "addresses": ["36 Avenue Dr Ménard, 06000 Nice, France"],
+    "sourceUrl": "https://musees-nationaux-alpesmaritimes.fr/chagall/en/opening-times",
+    "sourceSha256": "5a4318cdd72dec54e7788e21bc98b2cceaa10fd63a63a64cda4ba8cb56722bf4",
+    "observedAt": "2026-11-01",
+    "reviewAfter": "2026-12-01",
+    "branchReview": "The official museum hours page supplies the ordinary schedule. Its legal-notice page independently identifies Musee national Marc Chagall at 36 avenue Docteur Menard: https://musees-nationaux-alpesmaritimes.fr/chagall/mentions-legales-conditions-generales-dutilisation-et-credits . Bound only to the reviewed generated name/address representation. Coordinates and future exceptions remain unverified.",
+    "months": [1, 2, 3, 4, 11, 12],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 2,
+        "intervals": []
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "bill-reid-ordinary-hours-20261101",
+    "destination": "Vancouver, Canada",
+    "country": "Canada",
+    "aliases": ["Bill Reid Gallery of Northwest Coast Art"],
+    "addresses": ["639 Hornby St, Vancouver, BC V6C 2G3, Canada"],
+    "sourceUrl": "https://www.billreidgallery.ca/pages/hours-admissions",
+    "sourceSha256": "d3c1cf4ec02d8332e4517402cce2b06e1b7988d6a3b6e3a9b266e13da326bdd3",
+    "observedAt": "2026-11-01",
+    "reviewAfter": "2026-12-01",
+    "branchReview": "Reviewed the official branch visitor page and its named venue/address against this exact generated candidate. These are ordinary published hours only; holidays, exceptional openings, tickets and future availability remain unverified. No coordinates are certified.",
+    "months": [1, 2, 3, 4, 5, 10, 11, 12],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": []
+      },
+      {
+        "weekday": 1,
+        "intervals": []
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "slv-ordinary-hours-20261102",
+    "destination": "Melbourne, Australia",
+    "country": "Australia",
+    "aliases": ["State Library Victoria"],
+    "addresses": [
+      "328 Swanston Street, Melbourne 3000, Australia",
+      "328 Swanston St, Melbourne VIC 3000, Australia"
+    ],
+    "sourceUrl": "https://www.slv.vic.gov.au/visit/opening-hours",
+    "sourceSha256": "67d7dc8738e41528204e8f3e51ebfa34c517f7db326c9d4bed266e712e39479d",
+    "observedAt": "2026-11-02",
+    "reviewAfter": "2026-12-02",
+    "branchReview": "Official State Library Victoria visitor page identifies 328 Swanston Street, Melbourne 3000, Australia. Reviewed the saved candidate at the same street number, street, city and postcode; St abbreviation and VIC state label are recorded as an explicit reviewed address variant, not a fuzzy match. Ordinary main-library hours only; individual rooms can close earlier, named public holidays are closed, and special events/future availability are not verified. Exterior visits and event names must not inherit this record.",
+    "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1080]]
+      }
+    ]
+  },
+  {
+    "id": "national-denmark-hours-20261103",
+    "destination": "Copenhagen, Denmark",
+    "aliases": [
+      "National Museum of Denmark",
+      "National Museum of Denmark (Nationalmuseet)",
+      "Nationalmuseet"
+    ],
+    "addresses": [
+      "Ny Vestergade 10, 1471 København K",
+      "Ny Vestergade 10, 1471 København K, Denmark"
+    ],
+    "sourceUrl": "https://nationalmuseet.dk/en/page/opening-hours",
+    "sourceSha256": "b58e0a6d477b78cadc14c5b4cfa63c22a7c91d18ad3d46e9d82a00d289224137",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Exact institution and street address reviewed against the operator page. Recurring public opening hours only; exceptional openings, tickets and future availability remain unverified. National Museum seasonal evidence excludes February school-break and Easter exceptions.",
+    "months": [1, 11, 12],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": []
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "mound-hours-20261103",
+    "destination": "Edinburgh, United Kingdom",
+    "aliases": ["Museum on the Mound"],
+    "addresses": ["The Mound, Edinburgh EH1 1YZ, UK"],
+    "sourceUrl": "https://museumonthemound.com/visit-us/",
+    "sourceSha256": "c4d2425cc952fded3df01dbd0de162f7665b68cff98cd072c8177defd9f117ca",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Exact institution and street address reviewed against the operator page. Recurring public opening hours only; exceptional openings, tickets and future availability remain unverified. National Museum seasonal evidence excludes February school-break and Easter exceptions.",
+    "months": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": []
+      },
+      {
+        "weekday": 1,
+        "intervals": []
+      },
+      {
+        "weekday": 2,
+        "intervals": [[780, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[780, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[780, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[780, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[780, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "amalienborg-hours-20261103",
+    "destination": "Copenhagen, Denmark",
+    "aliases": ["Amalienborg Palace Museum", "Amalienborg Museum"],
+    "addresses": [
+      "Amalienborg Slotsplads 5, 1257 København K, Denmark",
+      "Amalienborg Slotsplads 5, 1257 København K"
+    ],
+    "sourceUrl": "https://denkongeligesamling.dk/en/amalienborg-museum/plan-your-visit/opening-hours/",
+    "sourceSha256": "10392ac6335c4cc140de9cad183df5efd4ea55f5c9faa85c85189b6d85b45dbb",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Official visitor page reviewed for this named venue and address. Ordinary January hours only; exceptional openings, dated tickets and route accessibility remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 960]]
+      },
+      {
+        "weekday": 1,
+        "intervals": []
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 960]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 960]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 960]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 960]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 960]]
+      }
+    ]
+  },
+  {
+    "id": "morgan-hours-20261103",
+    "destination": "New York, USA",
+    "aliases": ["Morgan Library & Museum", "The Morgan Library & Museum"],
+    "addresses": [
+      "225 Madison Ave, New York, NY 10016",
+      "225 Madison Avenue, New York, NY 10016"
+    ],
+    "sourceUrl": "https://www.themorgan.org/visit",
+    "sourceSha256": "a287ba1cc55e07e8d9d01d6af86f986719d050d15dec3c604f5eb28d1a279ea5",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Official visitor page reviewed for this named venue and address. Ordinary January hours only; exceptional openings, dated tickets and route accessibility remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[630, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": []
+      },
+      {
+        "weekday": 2,
+        "intervals": [[630, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[630, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[630, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[630, 1200]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[630, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "block-arcade-hours-20261103",
+    "destination": "Melbourne, Australia",
+    "aliases": ["The Block Arcade", "Block Arcade"],
+    "addresses": [
+      "282 Collins St, Melbourne VIC 3000",
+      "282 Collins Street, Melbourne VIC 3000",
+      "282 Collins St, Melbourne VIC 3000, Australia"
+    ],
+    "sourceUrl": "https://theblock.com.au/contact/",
+    "sourceSha256": "ed69c480788f3d376dae7f3ea0321b0819a1f5d2027127ad5b6253ea982711f6",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Official visitor page reviewed for this named venue and address. Ordinary January hours only; exceptional openings, dated tickets and route accessibility remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[540, 1080]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[480, 1080]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[480, 1080]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[480, 1080]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[480, 1080]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[480, 1200]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[480, 1080]]
+      }
+    ]
+  },
+  {
+    "id": "maat-hours-20261103",
+    "destination": "Lisbon, Portugal",
+    "aliases": [
+      "MAAT",
+      "MAAT (Museum of Art, Architecture and Technology)",
+      "MAAT - Museum of Art, Architecture and Technology"
+    ],
+    "addresses": [
+      "Av. Brasília, 1300-598 Lisboa",
+      "Av. Brasília, Belém 1300-598 Lisbon"
+    ],
+    "sourceUrl": "https://www.maat.pt/en",
+    "sourceSha256": "a8718fe0afd2de1054be9ab509b7ba4f284319c1b3964afeff864e03489345eb",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator ordinary visit hours and branch reviewed. Scope excludes other sites, events and special openings. Future ticket availability, queuing and onward travel remain unverified. This record screens January visits only.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1140]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 1140]]
+      },
+      {
+        "weekday": 2,
+        "intervals": []
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1140]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1140]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1140]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1140]]
+      }
+    ]
+  },
+  {
+    "id": "met-hours-20261103",
+    "destination": "New York, USA",
+    "aliases": [
+      "The Metropolitan Museum of Art",
+      "Metropolitan Museum of Art",
+      "The Met Fifth Avenue"
+    ],
+    "addresses": [
+      "1000 5th Ave, New York, NY 10028",
+      "1000 Fifth Avenue, New York, NY 10028",
+      "1000 5th Ave, New York, NY 10028, USA"
+    ],
+    "sourceUrl": "https://www.metmuseum.org/plan-your-visit",
+    "sourceSha256": "469f3b8ccc016854713efc0ca21cf352ef081874d2f19c9049e17cc52979dffb",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator ordinary visit hours and branch reviewed. Scope excludes other sites, events and special openings. Future ticket availability, queuing and onward travel remain unverified. This record screens January visits only.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": []
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1260]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1260]]
+      }
+    ]
+  },
+  {
+    "id": "moma-hours-20261103",
+    "destination": "New York, USA",
+    "aliases": [
+      "Museum of Modern Art (MoMA)",
+      "The Museum of Modern Art",
+      "MoMA",
+      "Museum of Modern Art"
+    ],
+    "addresses": [
+      "11 W 53rd St, New York, NY 10019",
+      "11 West 53 Street, New York, NY 10019",
+      "11 W 53rd St, New York, NY 10019, USA"
+    ],
+    "sourceUrl": "https://www.moma.org/visit/",
+    "sourceSha256": "4b2e6793984dedb0ce8bad3d47ec0949d01ceeef1dbdc568f63d407540e105e2",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator ordinary visit hours and branch reviewed. Scope excludes other sites, events and special openings. Future ticket availability, queuing and onward travel remain unverified. This record screens January visits only. Gallery closure is 15 minutes before museum closure; the usable visit interval ends at gallery closure, not shop hours.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[630, 1035]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[630, 1035]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[630, 1035]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[630, 1035]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[630, 1035]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[630, 1215]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[630, 1035]]
+      }
+    ]
+  },
+  {
+    "id": "experimentarium-hours-20261103",
+    "destination": "Copenhagen, Denmark",
+    "aliases": ["Experimentarium"],
+    "addresses": [
+      "Tuborg Havnevej 7, 2900 Hellerup, Denmark",
+      "Tuborg Havnevej 7, 2900 Hellerup"
+    ],
+    "sourceUrl": "https://www.experimentarium.dk/opening-hours-and-prices/",
+    "sourceSha256": "226e9dd01456d2221f51b1a0113246812a2f908f160f7c75ce36618a94336bfb",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator ordinary visit hours and branch reviewed. Scope excludes other sites, events and special openings. Future ticket availability, queuing and onward travel remain unverified. This record screens January visits only.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[570, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[570, 1020]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[570, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[570, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[570, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[570, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[570, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "guggenheim-hours-20261103",
+    "destination": "New York, USA",
+    "aliases": ["Solomon R. Guggenheim Museum", "Guggenheim Museum"],
+    "addresses": [
+      "1071 5th Ave, New York, NY 10128",
+      "1071 Fifth Avenue, New York, NY 10128"
+    ],
+    "sourceUrl": "https://www.guggenheim.org/plan-your-visit",
+    "sourceSha256": "8eb8e4e8e8618143530a4cb3589518cca63d3f7ec0ed3fecaa65a0740e5c1f72",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Reviewed official ordinary museum entry hours and exact New York branch. Member-only and special openings excluded. For Neue Galerie the listed anniversary exhibition ends January 11; ordinary hours do not prove gallery installation status on later dates. Admission, exceptions and route feasibility remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[630, 1050]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[630, 1050]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[630, 1050]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[630, 1050]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[630, 1050]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[630, 1050]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[630, 1050]]
+      }
+    ]
+  },
+  {
+    "id": "neue-hours-20261103",
+    "destination": "New York, USA",
+    "aliases": ["Neue Galerie New York", "Neue Galerie"],
+    "addresses": [
+      "1048 5th Ave, New York, NY 10028",
+      "1048 Fifth Avenue, New York, NY 10028"
+    ],
+    "sourceUrl": "https://www.neuegalerie.org/visit",
+    "sourceSha256": "89e500d8b41a55970e9da44474ea8d6be8b8843566f1b15d1f197bedb8b74202",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Reviewed official ordinary museum entry hours and exact New York branch. Member-only and special openings excluded. For Neue Galerie the listed anniversary exhibition ends January 11; ordinary hours do not prove gallery installation status on later dates. Admission, exceptions and route feasibility remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 2,
+        "intervals": []
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1080]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1080]]
+      }
+    ]
+  },
+  {
+    "id": "jewish-ny-ordinary-hours-20261103",
+    "destination": "New York, USA",
+    "country": "USA",
+    "aliases": ["The Jewish Museum"],
+    "addresses": ["1109 5th Ave, New York, NY 10128"],
+    "sourceUrl": "https://thejewishmuseum.org/visit/",
+    "sourceSha256": "eb8c19d94b1f8748e5681224eb2343cb6fbdf5ba95e67fa6536c4a44392ae3b2",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator visitor page reviewed against the exact generated name/address and ordinary museum entry. January ordinary weekly hours only; dated exceptions, reservations and travel remain unverified. For blocked HTTP retrieval, hash identifies the retained web-tool source extract, not HTML.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[660, 1080]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[660, 1080]]
+      },
+      {
+        "weekday": 2,
+        "intervals": []
+      },
+      {
+        "weekday": 3,
+        "intervals": []
+      },
+      {
+        "weekday": 4,
+        "intervals": [[660, 1200]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[660, 1080]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[660, 1080]]
+      }
+    ]
+  },
+  {
+    "id": "whitney-ordinary-hours-20261103",
+    "destination": "New York, USA",
+    "country": "USA",
+    "aliases": ["Whitney Museum of American Art"],
+    "addresses": ["99 Gansevoort St, New York, NY 10014"],
+    "sourceUrl": "https://whitney.org/visit",
+    "sourceSha256": "4cd19118b9dbe9ad739745e1d844609eb595575b61c611d54dcb11d3dd33fb44",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator visitor page reviewed against the exact generated name/address and ordinary museum entry. January ordinary weekly hours only; dated exceptions, reservations and travel remain unverified. For blocked HTTP retrieval, hash identifies the retained web-tool source extract, not HTML.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[630, 1080]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[630, 1080]]
+      },
+      {
+        "weekday": 2,
+        "intervals": []
+      },
+      {
+        "weekday": 3,
+        "intervals": [[630, 1080]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[630, 1080]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[630, 1320]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[630, 1080]]
+      }
+    ]
+  },
+  {
+    "id": "met-cloisters-ordinary-hours-20261103",
+    "destination": "New York, USA",
+    "country": "USA",
+    "aliases": ["The Met Cloisters"],
+    "addresses": ["99 Margaret Corbin Dr, New York, NY 10040"],
+    "sourceUrl": "https://www.metmuseum.org/plan-your-visit/met-cloisters",
+    "sourceSha256": "eb8c19d94b1f8748e5681224eb2343cb6fbdf5ba95e67fa6536c4a44392ae3b2",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator visitor page reviewed against the exact generated name/address and ordinary museum entry. January ordinary weekly hours only; dated exceptions, reservations and travel remain unverified. For blocked HTTP retrieval, hash identifies the retained web-tool source extract, not HTML.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 990]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 990]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 990]]
+      },
+      {
+        "weekday": 3,
+        "intervals": []
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 990]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 990]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 990]]
+      }
+    ]
+  },
+  {
+    "id": "nms-ordinary-hours-20261103",
+    "destination": "Edinburgh, United Kingdom",
+    "country": "United Kingdom",
+    "aliases": ["National Museum of Scotland"],
+    "addresses": ["Chambers Street, Edinburgh EH1 1JF"],
+    "sourceUrl": "https://www.nms.ac.uk/scotland",
+    "sourceSha256": "546648b613eb505d79c32869ab350fd099641e463f038dc76320c1092aacb413",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator ordinary hours reviewed against the generated venue/address. January scope only; holiday exceptions, reservations, future conditions and full route compatibility remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "britannia-ordinary-hours-20261103",
+    "destination": "Edinburgh, United Kingdom",
+    "country": "United Kingdom",
+    "aliases": ["Royal Yacht Britannia"],
+    "addresses": ["Ocean Drive, Leith, Edinburgh EH6 6JJ"],
+    "sourceUrl": "https://www.royalyachtbritannia.co.uk/visit/opening-hours/",
+    "sourceSha256": "819020ecf07083f5efcb7c7d3605fd5c82decc902732bef3f3a280b423a22fa2",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator ordinary hours reviewed against the generated venue/address. January scope only; holiday exceptions, reservations, future conditions and full route compatibility remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1020]],
+        "lastEntryMinute": 900
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 1020]],
+        "lastEntryMinute": 900
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 1020]],
+        "lastEntryMinute": 900
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1020]],
+        "lastEntryMinute": 900
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1020]],
+        "lastEntryMinute": 900
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1020]],
+        "lastEntryMinute": 900
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1020]],
+        "lastEntryMinute": 900
+      }
+    ]
+  },
+  {
+    "id": "glyptoteket-ordinary-hours-20261103",
+    "destination": "Copenhagen, Denmark",
+    "country": "Denmark",
+    "aliases": ["Glyptoteket"],
+    "addresses": ["Dantes Plads 7, 1556 København V"],
+    "sourceUrl": "https://glyptoteket.com/visit/opening-hours",
+    "sourceSha256": "7939769d8f5163992bfc7c878fdbfc616064334c9bae9a6371edb9e6893189a0",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator ordinary hours reviewed against the generated venue/address. January scope only; holiday exceptions, reservations, future conditions and full route compatibility remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": []
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1260]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "smk-ordinary-hours-20261103",
+    "destination": "Copenhagen, Denmark",
+    "country": "Denmark",
+    "aliases": ["Statens Museum for Kunst (SMK)"],
+    "addresses": ["Sølvgade 48-50, 1307 København K"],
+    "sourceUrl": "https://www.smk.dk/en/section/visit-smk/",
+    "sourceSha256": "c60f3d3bd9aa8f01b2f15e14efa48079a72838f5679298b7eb30883564155cf1",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Exact generated museum branch matched to operator ordinary museum hours. SMK begins gallery closure 15 minutes before building close. New York Historical hours are the operator indexed museum-and-store section, not the separate store-only page; direct HTTP returned 403. Future special dates and tickets remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1065]]
+      },
+      {
+        "weekday": 1,
+        "intervals": []
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 1065]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1185]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1065]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1065]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1065]]
+      }
+    ]
+  },
+  {
+    "id": "nyhistory-ordinary-hours-20261103",
+    "destination": "New York, USA",
+    "country": "USA",
+    "aliases": ["New-York Historical Society"],
+    "addresses": ["170 Central Park West, New York, NY 10024"],
+    "sourceUrl": "https://www.nyhistory.org/exhibitions/the-collection-new-conversations",
+    "sourceSha256": "88fa76611bb503bab0dde3335697c062627009cd3fd020950f3d9eaef2e56f6f",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Exact generated museum branch matched to operator ordinary museum hours. SMK begins gallery closure 15 minutes before building close. New York Historical hours are the operator indexed museum-and-store section, not the separate store-only page; direct HTTP returned 403. Future special dates and tickets remain unverified.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[660, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": []
+      },
+      {
+        "weekday": 2,
+        "intervals": [[660, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[660, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[660, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[660, 1200]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[660, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "kings-garden-january",
+    "destination": "Copenhagen, Denmark",
+    "aliases": [
+      "King’s Garden",
+      "King's Garden (Kongens Have)",
+      "King's Garden",
+      "Kongens Have"
+    ],
+    "addresses": ["Øster Voldgade 4A, 1350 København K"],
+    "visitTypes": ["exterior_walk", "ordinary_entry"],
+    "sourceUrl": "https://slks.dk/omraader/slotte-og-ejendomme/slotte-og-anlaeg/rosenborg-slot-og-kongens-have",
+    "sourceSha256": "dfd044a1e2f62cb7bf1bd7e9e6b477b0fa41a2d1c497a08462872d83dad72b07",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Government operator lists January 07:00–17:00. This record covers access inside the garden, not Rosenborg Castle, restaurants, special events or walking outside its gates.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[420, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[420, 1020]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[420, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[420, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[420, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[420, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[420, 1020]]
+      }
+    ]
+  },
+  {
+    "id": "den-bla-planet-january",
+    "destination": "Copenhagen, Denmark",
+    "aliases": [
+      "Den Blå Planet (National Aquarium Denmark)",
+      "Den Blå Planet",
+      "National Aquarium Denmark"
+    ],
+    "addresses": ["Jacob Fortlingsvej 1, 2770 Kastrup"],
+    "visitTypes": ["ordinary_entry"],
+    "sourceUrl": "https://denblaaplanet.dk/en/visit-us/prices-and-opening-hours/",
+    "sourceSha256": "4679592de802f25b810430abd54a844b29f742c45e7586907e9fdf5937ce0ad4",
+    "observedAt": "2026-11-03",
+    "reviewAfter": "2026-12-03",
+    "branchReview": "Operator ordinary hours: Monday 10–21, Tuesday–Sunday 10–17. Published 2026 Christmas peak ends January 3, 2027. Timeslot ticket/capacity and future exceptions require confirmation; this does not certify accessible routes or lift operation.",
+    "months": [1],
+    "week": [
+      {
+        "weekday": 0,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 1,
+        "intervals": [[600, 1260]]
+      },
+      {
+        "weekday": 2,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 3,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 4,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 5,
+        "intervals": [[600, 1020]]
+      },
+      {
+        "weekday": 6,
+        "intervals": [[600, 1020]]
+      }
+    ]
+  }
+]

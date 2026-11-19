@@ -1,0 +1,28 @@
+[
+  {
+    "id": "loyal-nine-cambridge-reopening-required",
+    "destination": "Cambridge, Massachusetts, USA",
+    "name": "Loyal Nine",
+    "address": "660 Cambridge St, Cambridge, MA 02141",
+    "reportedClosedFrom": "2021-12-19",
+    "observedAt": "2026-11-01",
+    "sources": [
+      "https://boston.eater.com/venue/12059/loyal-nine",
+      "https://www.boston.com/food/restaurants/2021/12/03/loyal-nine-will-close-dec-18/?amp=1"
+    ],
+    "sourceNote": "Eater identifies this venue/address as permanently closed. Boston.com reports the venue's own announcement that its final service was December 18, 2021. These are secondary published sources; no reviewed reopening evidence is present. Withhold this exact generated venue/address pending a reopening check rather than asserting future availability."
+  },
+  {
+    "id": "forage-vancouver-reopening-required",
+    "destination": "Vancouver, Canada",
+    "name": "Forage",
+    "address": "1300 Robson St, Vancouver, BC V6E 1C5",
+    "reportedClosedFrom": "2026-11-01",
+    "observedAt": "2026-11-01",
+    "sources": [
+      "https://www.linkedin.com/posts/listel-hotels_to-our-esteemed-guests-longstanding-friends-activity-7155612795378561024-pRBv",
+      "https://dailyhive.com/vancouver/forage-closed"
+    ],
+    "sourceNote": "The Listel Hotel Vancouver operator announced the closure of Forage with the hotel in November 2024. Secondary coverage corroborates the closure but final-service dates vary. This review excludes the exact generated Forage/1300 Robson branch only for trips starting on or after the observation date, not a claim about its exact final service date. No reopening evidence was reviewed; withhold pending reopening review, without declaring all future dates closed."
+  }
+]

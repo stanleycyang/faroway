@@ -1,34 +1,24 @@
-"use client";
-
-import { useInView } from "@/hooks/useInView";
-import { useReducedMotion } from "@/hooks/useReducedMotion";
-
 interface FadeInOnScrollProps {
   children: React.ReactNode;
   className?: string;
   delay?: number;
 }
 
+/**
+ * Reveal on scroll with a CSS view timeline so the landing page does not
+ * hydrate an observer per section. Content stays readable when the browser
+ * has no view timeline or the traveler prefers reduced motion.
+ */
 export function FadeInOnScroll({
   children,
   className = "",
   delay = 0,
 }: FadeInOnScrollProps) {
-  const { ref, isInView } = useInView<HTMLDivElement>({
-    threshold: 0.1,
-    triggerOnce: true,
-  });
-  const reduceMotion = useReducedMotion();
-  const animate = isInView && !reduceMotion;
-
+  const stagger = Math.max(0, Math.min(150, delay));
   return (
     <div
-      ref={ref}
-      className={`${className}${animate ? " scroll-reveal" : ""}`}
-      style={{
-        // Server content stays readable before hydration and if scripts fail.
-        animationDelay: `${Math.max(0, Math.min(150, delay))}ms`,
-      }}
+      className={`${className} scroll-reveal-on-view`}
+      style={stagger ? { animationDelay: `${stagger}ms` } : undefined}
     >
       {children}
     </div>

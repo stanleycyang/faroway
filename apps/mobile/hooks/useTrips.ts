@@ -1,3 +1,5 @@
+import { readTravelerRequirements } from '../lib/travelerRequirements';
+import type { TravelerRequirements } from '@faroway/types';
 import { destinationImage } from '../lib/destinationImage';
 import { retainTripDetail } from '../lib/tripSummary';
 import { readOwnedTripPages } from '../lib/tripListPages';
@@ -38,6 +40,7 @@ interface ApiTrip {
     travelerType?: string;
     originCity?: string;
     originAirport?: string;
+    requirements?: TravelerRequirements | null;
   };
   vibes?: string[];
   budget?: string;
@@ -68,6 +71,7 @@ function transformApiTrip(apiTrip: ApiTrip, itinerary?: ApiItinerary): Trip {
     travelerType: apiTrip.traveler_type || apiTrip.preferences?.travelerType || 'solo',
     originCity: apiTrip.preferences?.originCity,
     originAirport: apiTrip.preferences?.originAirport,
+    requirements: readTravelerRequirements(apiTrip.preferences?.requirements),
     vibes: apiTrip.vibes || [],
     budget: apiTrip.budget_tier || apiTrip.budget || undefined,
     planNeedsRefresh: apiTrip.preferences?.planNeedsRefresh === true,
@@ -173,7 +177,13 @@ export function useTrips() {
       if (!account.ownerId || err instanceof TripAccessError) return [];
       try {
         const cachedTrips = await offlineStorage.loadTrips();
-        return isCurrent() ? cachedTrips : [];
+        if (!isCurrent()) return [];
+        // A cold screen still needs the fallback published. Keep a populated
+        // in-memory list, which may contain newer edits than the disk cache.
+        if (useTripStore.getState().trips.length === 0) {
+          useTripStore.setState({ trips: cachedTrips });
+        }
+        return cachedTrips;
       } catch {
         if (isCurrent())
           setError('Couldn’t read your saved trips. Check your connection and try again.');
@@ -187,7 +197,11 @@ export function useTrips() {
   // Create a new trip (with offline support)
   const createTrip = useCallback(
     async (input: TripInput) => {
-      const submittedInput = { ...input, vibes: [...input.vibes] };
+      const submittedInput = {
+        ...input,
+        vibes: [...input.vibes],
+        requirements: readTravelerRequirements(input.requirements),
+      };
       const account = captureTripAccount();
       setLoading(true);
       setError(null);
@@ -209,6 +223,7 @@ export function useTrips() {
             travelerType: submittedInput.travelerType,
             originCity: submittedInput.originCity,
             originAirport: submittedInput.originAirport,
+            requirements: submittedInput.requirements,
             vibes: [...submittedInput.vibes],
             budget: submittedInput.budget,
             days: [],
@@ -238,6 +253,7 @@ export function useTrips() {
               travelerType: submittedInput.travelerType,
               originCity: submittedInput.originCity,
               originAirport: submittedInput.originAirport,
+              requirements: submittedInput.requirements,
               vibes: submittedInput.vibes,
               budget: submittedInput.budget,
             },
@@ -356,6 +372,9 @@ export function useTrips() {
       const submittedUpdates = {
         ...updates,
         ...(updates.vibes ? { vibes: [...updates.vibes] } : {}),
+        ...(updates.requirements !== undefined
+          ? { requirements: readTravelerRequirements(updates.requirements) }
+          : {}),
       };
       const account = captureTripAccount();
       setLoading(true);

@@ -45,6 +45,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     'expo-router',
     'expo-secure-store',
     'expo-apple-authentication',
+    './plugins/withIsolatedAppLinks',
     ...(googleIosUrlScheme
       ? ([
           [

@@ -1,3 +1,4 @@
+import { usableDestinationImages } from '../../lib/destinationCatalog';
 import { TravelImage } from '../../components/ui/TravelImage';
 import { useState, useEffect, useRef } from 'react';
 import {
@@ -6,8 +7,8 @@ import {
   ScrollView,
   StyleSheet,
   TouchableOpacity,
-  Dimensions,
   Animated,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -23,26 +24,28 @@ import { colors, borderRadius, shadows } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { USE_NATIVE_DRIVER } from '../../lib/animation';
-
-const { width } = Dimensions.get('window');
+import { useFontScaleEpoch } from '../../lib/fontScaleEpoch';
 
 const INSPIRATIONS = [
-  { emoji: '🏖️', text: 'Beach getaway', slug: 'beach-getaway' },
-  { emoji: '🏔️', text: 'Mountain escape', slug: 'mountain-escape' },
-  { emoji: '🍜', text: 'Foodie adventure', slug: 'foodie-adventure' },
-  { emoji: '🎨', text: 'Art & culture', slug: 'art-and-culture' },
-  { emoji: '🎉', text: 'Party weekend', slug: 'party-weekend' },
-  { emoji: '💑', text: 'Romantic trip', slug: 'romantic-trip' },
+  { icon: 'sunny-outline' as const, text: 'Beach getaway', slug: 'beach-getaway' },
+  { icon: 'trail-sign-outline' as const, text: 'Mountain escape', slug: 'mountain-escape' },
+  { icon: 'restaurant-outline' as const, text: 'Foodie adventure', slug: 'foodie-adventure' },
+  { icon: 'color-palette-outline' as const, text: 'Art & culture', slug: 'art-and-culture' },
+  { icon: 'musical-notes-outline' as const, text: 'Party weekend', slug: 'party-weekend' },
+  { icon: 'heart-outline' as const, text: 'Romantic trip', slug: 'romantic-trip' },
 ];
 
 export default function ExploreScreen() {
   const router = useRouter();
-  const { trips } = useTripStore();
+  const hasTrips = useTripStore((state) => state.trips.length > 0);
   const isAuthenticated = useUserStore((state) => state.isAuthenticated);
   const reduceMotion = useReduceMotion();
+  const { width } = useWindowDimensions();
+  const fontScaleEpoch = useFontScaleEpoch();
   const [greeting, setGreeting] = useState('');
   const [apiPopular, setApiPopular] = useState<DestinationInfo[] | null>(null);
   const [apiTrending, setApiTrending] = useState<DestinationInfo[] | null>(null);
+  const [showCollectionNotice, setShowCollectionNotice] = useState(false);
 
   // Animation
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -81,14 +84,21 @@ export default function ExploreScreen() {
   useEffect(() => {
     getPopularDestinations({ limit: 5 })
       .then((res) => {
-        if (res.data?.destinations?.length) setApiPopular(res.data.destinations);
+        if (res.data?.destinations) {
+          const destinations = usableDestinationImages(res.data.destinations, popularDestinations);
+          setApiPopular(destinations.length ? destinations : null);
+          setShowCollectionNotice(destinations.length === 0);
+        }
       })
       .catch(() => {
         // Network failure — hardcoded popularDestinations remain visible
       });
     getTrendingDestinations({ limit: 4 })
       .then((res) => {
-        if (res.data?.destinations?.length) setApiTrending(res.data.destinations);
+        if (res.data?.destinations) {
+          const destinations = usableDestinationImages(res.data.destinations, popularDestinations);
+          setApiTrending(destinations.length ? destinations : null);
+        }
       })
       .catch(() => {
         // Network failure — section simply stays hidden (no trending fallback data)
@@ -113,11 +123,10 @@ export default function ExploreScreen() {
     router.push(`/inspiration/${slug}`);
   };
 
-  const hasTrips = trips.length > 0;
-
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <Animated.ScrollView
+        key={fontScaleEpoch}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
         onScroll={Animated.event([{ nativeEvent: { contentOffset: { y: scrollY } } }], {
@@ -209,21 +218,43 @@ export default function ExploreScreen() {
                 accessibilityRole="button"
                 accessibilityLabel={item.text}
               >
-                <Text style={styles.inspirationEmoji}>{item.emoji}</Text>
+                <Ionicons
+                  name={item.icon}
+                  size={20}
+                  color={colors.primary[600]}
+                  accessible={false}
+                />
                 <Text style={styles.inspirationText}>{item.text}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
         </View>
 
+        {showCollectionNotice && (
+          <Text
+            style={{
+              paddingHorizontal: 24,
+              color: '#475D61',
+              fontSize: 14,
+              lineHeight: 20,
+              marginBottom: 12,
+            }}
+          >
+            Showing our destination collection.
+          </Text>
+        )}
         {/* Places to fall in love with */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Places to fall in love with</Text>
+            <Text style={[styles.sectionTitle, styles.sectionHeaderTitle]}>
+              Places to fall in love with
+            </Text>
             <TouchableOpacity
+              style={styles.sectionHeaderAction}
               onPress={handleCreateTrip}
               accessibilityRole="button"
-              accessibilityLabel="Search all destinations"
+              accessibilityLabel="Find a place"
+              accessibilityHint="Opens the trip planner"
             >
               <Text style={styles.seeAllButton}>Find a place</Text>
             </TouchableOpacity>
@@ -236,7 +267,7 @@ export default function ExploreScreen() {
             snapToInterval={width * 0.7 + 16}
           >
             {(apiPopular ?? popularDestinations.slice(0, 5)).map((destination) => (
-              <View key={destination.id} style={styles.destinationCard}>
+              <View key={destination.id} style={{ width: width * 0.7 }}>
                 <DestinationCard
                   name={destination.name}
                   country={destination.country}
@@ -257,7 +288,7 @@ export default function ExploreScreen() {
             {(apiTrending ?? popularDestinations.slice(5, 9)).map((destination) => (
               <TouchableOpacity
                 key={destination.id}
-                style={styles.trendingCard}
+                style={[styles.trendingCard, { width: (width - 60) / 2 }]}
                 onPress={() => handleDestinationPress(destination.name, destination.country)}
                 activeOpacity={0.9}
                 accessibilityRole="button"
@@ -435,6 +466,8 @@ const styles = StyleSheet.create({
   },
   sectionHeader: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: 16,
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
@@ -446,6 +479,18 @@ const styles = StyleSheet.create({
     color: '#0f172a',
     paddingHorizontal: 24,
     marginBottom: 16,
+  },
+  sectionHeaderTitle: {
+    flexGrow: 1,
+    flexShrink: 1,
+    flexBasis: 200,
+    paddingHorizontal: 0,
+    marginBottom: 0,
+  },
+  sectionHeaderAction: {
+    minHeight: 44,
+    minWidth: 44,
+    justifyContent: 'center',
   },
   seeAllButton: {
     fontSize: 14,
@@ -467,9 +512,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e2e8f0',
   },
-  inspirationEmoji: {
-    fontSize: 20,
-  },
   inspirationText: {
     fontSize: 14,
     fontWeight: '600',
@@ -479,9 +521,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     gap: 16,
   },
-  destinationCard: {
-    width: width * 0.7,
-  },
   trendingGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -489,7 +528,6 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   trendingCard: {
-    width: (width - 60) / 2,
     height: 140,
     borderRadius: borderRadius.lg,
     overflow: 'hidden',

@@ -17,6 +17,8 @@ done
 bun run check
 bun run test
 python3 scripts/planning-quality-eval.py
+bun --no-env-file scripts/uat/traveler-holdout-eval.ts
+bun --no-env-file scripts/uat/generation-quality-eval.ts
 python3 scripts/test-trip-attempt-fence.py
 python3 scripts/test-database-access-boundaries.py
 python3 scripts/test-staging-bootstrap.py
@@ -25,6 +27,7 @@ python3 scripts/test-release-account-push.py
 python3 scripts/test-trip-creation-recovery.py
 python3 scripts/test-venue-evidence.py
 cd apps/web
+bunx playwright test -c playwright.planning.config.ts
 bunx playwright test -c playwright.checkout.config.ts
 bunx playwright test -c playwright.recovery.config.ts
 
