@@ -15,6 +15,7 @@ import {
   runStagingCompiledSchedule,
 } from "@/lib/search/staging-schedule-experiment";
 import { runAggregatorAgent } from "@/lib/search/agents/aggregator";
+import { enforceReleaseItinerary } from "@/lib/search/release-itinerary";
 import { narrationContext } from "@/lib/search/schedule-narration";
 import { compileSchedule } from "@/lib/search/schedule-compiler";
 import { onPlanningFallback } from "@/lib/ai/planning-step";
@@ -120,12 +121,13 @@ it("routes the app aggregator through one guarded narration call and preserves t
       ),
     ),
   ).toEqual(
-    compiled().map((day) =>
-      Object.fromEntries(
-        Object.entries(day).filter(
-          ([key]) => !["title", "summary"].includes(key),
+    enforceReleaseItinerary(plan, compiled(), activities, dining).days.map(
+      (day) =>
+        Object.fromEntries(
+          Object.entries(day).filter(
+            ([key]) => !["title", "summary"].includes(key),
+          ),
         ),
-      ),
     ),
   );
 });

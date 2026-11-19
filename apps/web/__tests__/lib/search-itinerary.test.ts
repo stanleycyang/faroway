@@ -319,7 +319,10 @@ describe.each(["successful", "recovered"] as const)(
         last.id,
       ]);
       expect(result.days[0].morning.activities[0]).toBe(first);
-      expect(result.days[0].afternoon.activities[0]).toBe(provider);
+      expect(result.days[0].afternoon.activities[0].id).toBe(provider.id);
+      expect(
+        result.days[0].afternoon.activities[0].affiliateUrl,
+      ).toBeUndefined();
       expect(result.days[1].morning.activities[0]).toBe(last);
       expect(result.days[0].evening.activities).toEqual([]);
       expect(result.days[1].afternoon.activities).toEqual([]);
@@ -378,13 +381,9 @@ describe.each(["successful", "recovered"] as const)(
       expect(result.days.map((day) => day.transport)).toEqual([
         alternative,
         undefined,
-        undefined,
-        undefined,
       ]);
       expect(result.days[0].transport).toBe(alternative);
       expect(result.days.map((day) => day.estimatedCost)).toEqual([
-        undefined,
-        undefined,
         undefined,
         undefined,
       ]);
@@ -457,9 +456,9 @@ describe.each(["successful", "recovered"] as const)(
       expect(result.days[0].afternoon.activities).toEqual([]);
       expect(result.days[0].evening.activities[0]).toBe(night);
       expect(result.days[1].morning.activities[0]).toBe(morning);
-      expect(result.days[2].evening.activities).toEqual([]);
+      expect(result.days[1].evening.activities).toEqual([]);
+      expect(result.days).toHaveLength(2);
       expect(result.days.map((day) => day.estimatedCost)).toEqual([
-        undefined,
         undefined,
         undefined,
       ]);
@@ -475,7 +474,6 @@ describe.each(["successful", "recovered"] as const)(
         null,
       );
       expect(mapped.days.map((day) => day.totalEstimatedCost)).toEqual([
-        undefined,
         undefined,
         undefined,
       ]);
@@ -619,7 +617,7 @@ describe("search itinerary fallback", () => {
       [activity("walk")],
       [far],
     );
-    expect(distant.days[0].morning.meal?.id).toBe("far-cafe");
+    expect(distant.days[0].morning.meal).toBeUndefined();
     expect(distant.days[0].tips.join(" ")).toContain(
       "Far cafe may require a separate journey",
     );

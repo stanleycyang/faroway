@@ -87,7 +87,8 @@ jobs:
   full-verification:
     name: Full Release Verification
     if: github.event_name == 'workflow_dispatch' && inputs.full_verification
-    runs-on: ubuntu-latest
+    # ubuntu-latest is 26.04. Playwright 1.60 cannot install Chromium there.
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     needs: [quality, test]
     steps:

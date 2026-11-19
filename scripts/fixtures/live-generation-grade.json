@@ -1,0 +1,26 @@
+{
+  "live_model_quality_measured": true,
+  "brief_id": "rome-single-day",
+  "model": "google/gemini-3-flash",
+  "estimated_usd": 0.012921,
+  "budget_usd": 1,
+  "scores": {
+    "grounding": 5,
+    "preference_fit": 5,
+    "feasibility": 5,
+    "specificity": 5,
+    "diversity": 5,
+    "safety_claims": 5
+  },
+  "affiliate": {
+    "bookable_when_supported": 5,
+    "link_present": 5,
+    "attribution": 5,
+    "deep_link": 5,
+    "placement": 5,
+    "no_fabrication": 5
+  },
+  "failures": [],
+  "accepted": true,
+  "reason": "The live aggregator output was graded with the release rubric."
+}
