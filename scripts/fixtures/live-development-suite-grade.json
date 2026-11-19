@@ -1,0 +1,1118 @@
+{
+  "live_model_quality_measured": true,
+  "suite": "development",
+  "holdout_used": false,
+  "holdout_briefs_checked": 20,
+  "source_commit": "4a2fd2399b26786f45a20f06c95da9199802e826",
+  "model": "google/gemini-3-flash",
+  "thinking": "repo default (unset; Gemini 3 Flash default high)",
+  "max_output_tokens": 8000,
+  "call_ceiling_usd": 0.034,
+  "budget_usd": 1,
+  "hard_stop_usd": 5,
+  "briefs_planned": 40,
+  "briefs_run": 40,
+  "passed": 39,
+  "failed": 1,
+  "not_run": [],
+  "dimension_averages": {
+    "grounding": 5,
+    "preference_fit": 5,
+    "feasibility": 5,
+    "specificity": 5,
+    "diversity": 5,
+    "safety_claims": 5
+  },
+  "affiliate_averages": {
+    "bookable_when_supported": 5,
+    "link_present": 5,
+    "attribution": 5,
+    "deep_link": 5,
+    "placement": 5,
+    "no_fabrication": 5
+  },
+  "latency_ms": {
+    "measured_briefs": 40,
+    "method": "linear interpolation of per-brief aggregator latencyMs",
+    "p50": 22905.5,
+    "p95": 38948.7
+  },
+  "total_spend_usd": 0.6358965000000001,
+  "stop_reason": "completed all development briefs under the cap",
+  "partial": false,
+  "briefs": [
+    {
+      "brief_id": "lisbon-city-break",
+      "accepted": true,
+      "estimated_usd": 0.0162875,
+      "usage_known": true,
+      "latency_ms": 20178,
+      "wall_ms": 20192,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "copenhagen-family",
+      "accepted": true,
+      "estimated_usd": 0.011947,
+      "usage_known": true,
+      "latency_ms": 20819,
+      "wall_ms": 20822,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "interlaken-sparse",
+      "accepted": true,
+      "estimated_usd": 0.024109,
+      "usage_known": true,
+      "latency_ms": 31182,
+      "wall_ms": 31183,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "london-leap-day",
+      "accepted": true,
+      "estimated_usd": 0.016654,
+      "usage_known": true,
+      "latency_ms": 29653,
+      "wall_ms": 29655,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "chicago-dst",
+      "accepted": true,
+      "estimated_usd": 0.012992,
+      "usage_known": true,
+      "latency_ms": 16086,
+      "wall_ms": 16092,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "sydney-month-boundary",
+      "accepted": true,
+      "estimated_usd": 0.014661,
+      "usage_known": true,
+      "latency_ms": 24853,
+      "wall_ms": 24855,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "apia-local-dates",
+      "accepted": true,
+      "estimated_usd": 0.0195165,
+      "usage_known": true,
+      "latency_ms": 34787,
+      "wall_ms": 34797,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "cambridge-massachusetts",
+      "accepted": true,
+      "estimated_usd": 0.015407,
+      "usage_known": true,
+      "latency_ms": 26013,
+      "wall_ms": 26015,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "cambridge-england",
+      "accepted": true,
+      "estimated_usd": 0.010274,
+      "usage_known": true,
+      "latency_ms": 16944,
+      "wall_ms": 16946,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "honolulu-no-interisland",
+      "accepted": true,
+      "estimated_usd": 0.0083775,
+      "usage_known": true,
+      "latency_ms": 9563,
+      "wall_ms": 9566,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "vancouver-no-car",
+      "accepted": false,
+      "estimated_usd": 0.025147,
+      "usage_known": true,
+      "latency_ms": 42531,
+      "wall_ms": 42532,
+      "failures": [
+        "live:error:No object generated: could not parse the response."
+      ],
+      "failing_dimensions": [
+        {
+          "dimension": "generation",
+          "reason": "No object generated: could not parse the response."
+        }
+      ],
+      "reason": "No object generated: could not parse the response.",
+      "underlying_log": "planning.step.fallback reason=error outcome=generation_failed"
+    },
+    {
+      "brief_id": "venice-step-free",
+      "accepted": true,
+      "estimated_usd": 0.018568,
+      "usage_known": true,
+      "latency_ms": 30474,
+      "wall_ms": 30477,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "kyoto-no-early-start",
+      "accepted": true,
+      "estimated_usd": 0.023304,
+      "usage_known": true,
+      "latency_ms": 26133,
+      "wall_ms": 26136,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "madrid-late-arrival",
+      "accepted": true,
+      "estimated_usd": 0.01283,
+      "usage_known": true,
+      "latency_ms": 21974,
+      "wall_ms": 21977,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "zurich-early-departure",
+      "accepted": true,
+      "estimated_usd": 0.013419,
+      "usage_known": true,
+      "latency_ms": 15783,
+      "wall_ms": 15785,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "boston-single-parent-infant",
+      "accepted": true,
+      "estimated_usd": 0.011507,
+      "usage_known": true,
+      "latency_ms": 15385,
+      "wall_ms": 15386,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "berlin-multigeneration",
+      "accepted": true,
+      "estimated_usd": 0.016593,
+      "usage_known": true,
+      "latency_ms": 29779,
+      "wall_ms": 29780,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "florence-celiac",
+      "accepted": true,
+      "estimated_usd": 0.017337,
+      "usage_known": true,
+      "latency_ms": 21598,
+      "wall_ms": 21600,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "bangkok-multiple-allergies",
+      "accepted": true,
+      "estimated_usd": 0.016243,
+      "usage_known": true,
+      "latency_ms": 20801,
+      "wall_ms": 20803,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "taipei-vegan-budget",
+      "accepted": true,
+      "estimated_usd": 0.0136245,
+      "usage_known": true,
+      "latency_ms": 22103,
+      "wall_ms": 22104,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "oslo-free-preference",
+      "accepted": true,
+      "estimated_usd": 0.011293,
+      "usage_known": true,
+      "latency_ms": 18625,
+      "wall_ms": 18627,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "mexico-city-design",
+      "accepted": true,
+      "estimated_usd": 0.013378,
+      "usage_known": true,
+      "latency_ms": 22374,
+      "wall_ms": 22375,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "melbourne-business",
+      "accepted": true,
+      "estimated_usd": 0.0243955,
+      "usage_known": true,
+      "latency_ms": 34894,
+      "wall_ms": 34896,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "prague-rest-negation",
+      "accepted": true,
+      "estimated_usd": 0.015664,
+      "usage_known": true,
+      "latency_ms": 20717,
+      "wall_ms": 20719,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "nice-week-long",
+      "accepted": true,
+      "estimated_usd": 0.023587,
+      "usage_known": true,
+      "latency_ms": 39437,
+      "wall_ms": 39439,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "new-orleans-live-music",
+      "accepted": true,
+      "estimated_usd": 0.0163255,
+      "usage_known": true,
+      "latency_ms": 26747,
+      "wall_ms": 26749,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "san-francisco-conflicting-pace",
+      "accepted": true,
+      "estimated_usd": 0.0122765,
+      "usage_known": true,
+      "latency_ms": 22071,
+      "wall_ms": 22072,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "queenstown-regional",
+      "accepted": true,
+      "estimated_usd": 0.0157465,
+      "usage_known": true,
+      "latency_ms": 26567,
+      "wall_ms": 26569,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "athens-group",
+      "accepted": true,
+      "estimated_usd": 0.0234,
+      "usage_known": true,
+      "latency_ms": 38923,
+      "wall_ms": 38924,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "tokyo-solo-budget",
+      "accepted": true,
+      "estimated_usd": 0.0181445,
+      "usage_known": true,
+      "latency_ms": 29876,
+      "wall_ms": 29878,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "rome-single-day",
+      "accepted": true,
+      "estimated_usd": 0.013515,
+      "usage_known": true,
+      "latency_ms": 22931,
+      "wall_ms": 22933,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "new-york-allergy",
+      "accepted": true,
+      "estimated_usd": 0.021457,
+      "usage_known": true,
+      "latency_ms": 28718,
+      "wall_ms": 28723,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "edinburgh-wheelchair",
+      "accepted": true,
+      "estimated_usd": 0.0131425,
+      "usage_known": true,
+      "latency_ms": 16531,
+      "wall_ms": 16537,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "marrakech-vegan",
+      "accepted": true,
+      "estimated_usd": 0.007779,
+      "usage_known": true,
+      "latency_ms": 11645,
+      "wall_ms": 11649,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "singapore-family",
+      "accepted": true,
+      "estimated_usd": 0.013975,
+      "usage_known": true,
+      "latency_ms": 22880,
+      "wall_ms": 22882,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "paris-luxury",
+      "accepted": true,
+      "estimated_usd": 0.0109295,
+      "usage_known": true,
+      "latency_ms": 17220,
+      "wall_ms": 17222,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "reykjavik-winter",
+      "accepted": true,
+      "estimated_usd": 0.012382,
+      "usage_known": true,
+      "latency_ms": 20650,
+      "wall_ms": 20652,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "istanbul-year-boundary",
+      "accepted": true,
+      "estimated_usd": 0.020638,
+      "usage_known": true,
+      "latency_ms": 34799,
+      "wall_ms": 34800,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "singapore-infant-two-rooms",
+      "accepted": true,
+      "estimated_usd": 0.014399,
+      "usage_known": true,
+      "latency_ms": 24673,
+      "wall_ms": 24675,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    },
+    {
+      "brief_id": "athens-three-rooms",
+      "accepted": true,
+      "estimated_usd": 0.014671,
+      "usage_known": true,
+      "latency_ms": 25004,
+      "wall_ms": 25005,
+      "scores": {
+        "grounding": 5,
+        "preference_fit": 5,
+        "feasibility": 5,
+        "specificity": 5,
+        "diversity": 5,
+        "safety_claims": 5
+      },
+      "affiliate": {
+        "bookable_when_supported": 5,
+        "link_present": 5,
+        "attribution": 5,
+        "deep_link": 5,
+        "placement": 5,
+        "no_fabrication": 5
+      },
+      "failures": [],
+      "failing_dimensions": [],
+      "reason": "The live aggregator output cleared the release rubric."
+    }
+  ],
+  "notes": "Averages are over the 39 briefs that produced a grade. vancouver-no-car failed before a grade. Holdout briefs were checked for id overlap and were not executed. Spend is list-price token cost for google/gemini-3-flash."
+}
