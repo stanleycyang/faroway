@@ -34,7 +34,11 @@
     "__tests__/reviewed-availability-repair.test.ts",
     "__tests__/dining-evidence-review.test.ts",
     "__tests__/traveler-holdout.test.ts",
+    "__tests__/generation-quality.test.ts",
     "uat/lib/traveler-holdout.ts",
-    "uat/traveler-holdout-eval.ts"
+    "uat/lib/generation-quality.ts",
+    "uat/lib/itinerary-rubric.ts",
+    "uat/traveler-holdout-eval.ts",
+    "uat/generation-quality-eval.ts"
   ]
 }

@@ -13,11 +13,29 @@ import { buildGYGAffiliateUrl } from "../../../apps/web/lib/affiliates/getyourgu
 import { buildViatorHandoffUrl } from "../../../apps/web/lib/affiliates/viator-link";
 import { compileSchedule } from "../../../apps/web/lib/search/schedule-compiler";
 import { enrichNonAffiliateCandidates } from "../../../apps/web/lib/search/enrichment";
+import {
+  draftChapters,
+  streamStepState,
+} from "../../../apps/web/lib/trips/streaming-dossier";
 import type {
   ActivityResult,
   DiningResult,
   SearchPlan,
 } from "../../../packages/types/src/index";
+import {
+  auditHoldoutUse,
+  gradeReleaseFixture,
+  honestEmptySearchPasses,
+  multiCityGoodPasses,
+  productLinkMatches,
+  releaseMutations,
+  type AffiliateScores,
+  type DimensionScores,
+  type MutationHit,
+} from "./itinerary-rubric";
+
+export { productLinkMatches };
+export type { AffiliateScores, DimensionScores, MutationHit };
 
 const FILLER =
   /\b(?:dining idea|neighborhood spot|hidden gem|local favorite|must-see|unforgettable)\b/i;
@@ -27,24 +45,6 @@ const ACCESS_CLAIM =
   /\b(?:wheelchair[ -](?:accessible|friendly)|step[ -]free|stair[ -]free|fully accessible)\b/i;
 const BOOKED_CLAIM =
   /\b(?:already booked|booking confirmed|table is reserved|reserved for you)\b/i;
-
-export interface DimensionScores {
-  grounding: number;
-  preference_fit: number;
-  feasibility: number;
-  specificity: number;
-  diversity: number;
-  safety_claims: number;
-}
-
-export interface AffiliateScores {
-  bookable_when_supported: number;
-  link_present: number;
-  attribution: number;
-  deep_link: number;
-  placement: number;
-  no_fabrication: number;
-}
 
 const plan: SearchPlan = {
   destination: "Tokyo",
@@ -140,6 +140,7 @@ function clamp(score: number): number {
   return Math.max(1, Math.min(5, Math.round(score)));
 }
 
+/** Retired keyword scorer. Kept so the old self-grade stays visible. Not a release gate. */
 export function scoreCopy(
   texts: string[],
   destination: string,
@@ -188,44 +189,6 @@ function viatorProductUrl(productCode: string): string {
       "P123",
     ) || ""
   );
-}
-
-export function productLinkMatches(
-  partner: string,
-  url: string,
-  productId: string,
-): boolean {
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== "https:") return false;
-    if (partner === "viator") {
-      return (
-        (parsed.hostname === "viator.com" ||
-          parsed.hostname.endsWith(".viator.com")) &&
-        parsed.pathname.startsWith("/tours/") &&
-        parsed.pathname.includes(productId) &&
-        parsed.searchParams.get("pid") === "P123"
-      );
-    }
-    if (partner === "getyourguide") {
-      const activityPath = parsed.pathname.replace(/\/+$/, "");
-      return (
-        (parsed.hostname === "getyourguide.com" ||
-          parsed.hostname.endsWith(".getyourguide.com")) &&
-        activityPath === `/activity-t${productId}` &&
-        parsed.searchParams.get("partner_id") !== null
-      );
-    }
-    if (partner === "duffel") {
-      return (
-        parsed.hostname.endsWith("duffel.com") &&
-        parsed.pathname.includes(productId)
-      );
-    }
-    return false;
-  } catch {
-    return false;
-  }
 }
 
 function affiliateFixture() {
@@ -405,6 +368,30 @@ function controlFailures(): Array<{ id: string; failed: boolean }> {
       ),
     },
     {
+      id: "empty-partner-id",
+      failed: !productLinkMatches(
+        "getyourguide",
+        "https://www.getyourguide.com/activity-t98765/?partner_id=",
+        "98765",
+      ),
+    },
+    {
+      id: "whitespace-partner-id",
+      failed: !productLinkMatches(
+        "getyourguide",
+        "https://www.getyourguide.com/activity-t98765/?partner_id=%20",
+        "98765",
+      ),
+    },
+    {
+      id: "missing-partner-id",
+      failed: !productLinkMatches(
+        "getyourguide",
+        "https://www.getyourguide.com/activity-t98765/?cmp=trip-tokyo",
+        "98765",
+      ),
+    },
+    {
       id: "planning-prompt-not-bookable",
       failed: buildItineraryBlocks([
         {
@@ -463,13 +450,77 @@ export function liveQualityGate(
   };
 }
 
+function streamingReleaseChecks(): Array<{ id: string; caught: boolean }> {
+  const empty = draftChapters(null, []);
+  const failed = streamStepState("activities", "searching", {
+    activities: "failed",
+  });
+  const errored = streamStepState("dining", "complete", { dining: "error" });
+  const loading = streamStepState("hotels", "connecting", null);
+  const searching = streamStepState("hotels", "searching", {
+    hotels: "searching",
+  });
+  const httpChapters = draftChapters(null, [
+    { type: "ItineraryDay", props: { dayNumber: 1, title: "Day 1" } },
+    {
+      type: "ActivityCard",
+      props: { name: "Canal walk", bookingUrl: "http://example.com/walk" },
+    },
+  ]);
+  const unqualified = productLinkMatches(
+    "getyourguide",
+    "https://www.getyourguide.com/activity-t98765/?cmp=trip-tokyo",
+    "98765",
+  );
+  return [
+    { id: "stream-empty-invents-nothing", caught: empty.length === 0 },
+    {
+      id: "stream-failed-search-not-done",
+      caught: failed === "interrupted" && errored === "interrupted",
+    },
+    {
+      id: "stream-loading-not-done",
+      caught: loading !== "done" && searching === "active",
+    },
+    {
+      id: "stream-http-not-supplier",
+      caught: httpChapters[0]?.stops[0]?.supplierLink === false,
+    },
+    {
+      id: "stream-missing-partner-not-qualified",
+      caught: unqualified === false,
+    },
+  ];
+}
+
+function credentialPresence(
+  env: Record<string, string | undefined> = process.env,
+): Record<string, boolean> {
+  const names = [
+    "AI_GATEWAY_API_KEY",
+    "OPENAI_API_KEY",
+    "ANTHROPIC_API_KEY",
+    "GOOGLE_GENERATIVE_AI_API_KEY",
+    "VERCEL_OIDC_TOKEN",
+    "GETYOURGUIDE_API_KEY",
+    "GETYOURGUIDE_PARTNER_ID",
+    "VIATOR_API_KEY",
+    "TAVILY_API_KEY",
+  ];
+  return Object.fromEntries(names.map((name) => [name, Boolean(env[name])]));
+}
+
 export async function runGenerationQualityEval(): Promise<{
   mode: "offline";
   live_model_quality_measured: false;
+  scores_measure_model_output: false;
+  keyword_self_score_is_release_gate: false;
   live_gate: ReturnType<typeof liveQualityGate>;
   baseline: DimensionScores;
   current: DimensionScores;
+  keyword_self_score: DimensionScores;
   affiliate: AffiliateScores;
+  affiliate_builder: AffiliateScores;
   planner_case: {
     bookable_selected: boolean;
     distant_bookable_rejected: boolean;
@@ -479,7 +530,29 @@ export async function runGenerationQualityEval(): Promise<{
   negative_controls: number;
   negative_controls_detected: number;
   missed_controls: string[];
-  thresholds: { dimension_min: number };
+  mutations: MutationHit[];
+  mutations_missed: string[];
+  coverage: {
+    multi_city: boolean;
+    multi_city_good: boolean;
+    budget: boolean;
+    dates: boolean;
+    season: boolean;
+    accessibility: boolean;
+    kids: boolean;
+    empty_supplier: boolean;
+    honest_empty_search: boolean;
+    partner_id: boolean;
+    streaming: boolean;
+  };
+  streaming_checks: Array<{ id: string; caught: boolean }>;
+  holdout_integrity: ReturnType<typeof auditHoldoutUse>;
+  live_run: {
+    credentials_present: boolean;
+    credentials: Record<string, boolean>;
+    blocked_reason: string;
+  };
+  thresholds: { dimension_min: number; mutation_max: number };
   accepted: boolean;
 }> {
   const enriched = await enrichNonAffiliateCandidates(plan, {
@@ -488,7 +561,9 @@ export async function runGenerationQualityEval(): Promise<{
   const currentTexts = [...enriched.activities, ...enriched.dining].map(
     (item) => `${item.name}. ${item.description}`,
   );
-  const current = scoreCopy(currentTexts, plan.destination);
+  const keyword_self_score = scoreCopy(currentTexts, plan.destination);
+  const graded = gradeReleaseFixture();
+  const current = graded.scores;
   const baseline = scoreCopy(BASELINE_FILLER, plan.destination);
   const near = { lat: 35.7148, lng: 139.7967 };
   const bookable = activity(
@@ -581,8 +656,6 @@ export async function runGenerationQualityEval(): Promise<{
     fits: selected.timingProposals.every((item) => item.fitsPolicy),
     ideas_unscheduled: !scheduled.includes(idea.id),
   };
-  current.feasibility = planner_case.fits ? 5 : 1;
-  current.grounding = planner_case.ideas_unscheduled ? current.grounding : 1;
   const offer = affiliateFixture();
   const activityUrl = String(offer.activityCards[0]?.props.bookingUrl || "");
   const restaurantHasBooking = offer.blocks.some(
@@ -592,7 +665,7 @@ export async function runGenerationQualityEval(): Promise<{
     (block) =>
       block.props.url === "https://www.tripadvisor.com/Hotel_Review-d99",
   );
-  const affiliate: AffiliateScores = {
+  const affiliate_builder: AffiliateScores = {
     bookable_when_supported: planner_case.bookable_selected ? 5 : 1,
     link_present:
       activityUrl === offer.productUrl && Boolean(hotelButton) ? 5 : 1,
@@ -611,31 +684,84 @@ export async function runGenerationQualityEval(): Promise<{
         ? 5
         : 1,
   };
+  const affiliate = graded.affiliate;
   const controls = controlFailures();
   const missed_controls = controls
     .filter((item) => !item.failed)
     .map((item) => item.id);
+  const mutations = releaseMutations();
+  const mutations_missed = mutations
+    .filter((item) => !item.caught)
+    .map((item) => item.id);
+  const streaming_checks = streamingReleaseChecks();
+  const coverage = {
+    multi_city: mutations.some(
+      (item) => item.id === "multi-city-missing" && item.caught,
+    ),
+    multi_city_good: multiCityGoodPasses(),
+    budget: mutations.some((item) => item.id === "budget-over" && item.caught),
+    dates: mutations.some(
+      (item) => item.id === "dates-outside-trip" && item.caught,
+    ),
+    season: mutations.some(
+      (item) => item.id === "season-mismatch" && item.caught,
+    ),
+    accessibility: mutations.some(
+      (item) => item.id === "accessibility-ignored" && item.caught,
+    ),
+    kids: mutations.some((item) => item.id === "kids-nightlife" && item.caught),
+    empty_supplier: mutations.some(
+      (item) => item.id === "empty-supplier-presented" && item.caught,
+    ),
+    honest_empty_search: honestEmptySearchPasses(),
+    partner_id: ["missing-partner-id", "empty-partner-id"].every((id) =>
+      mutations.some((item) => item.id === id && item.caught),
+    ),
+    streaming: streaming_checks.every((item) => item.caught),
+  };
+  const holdout_integrity = auditHoldoutUse();
+  const credentials = credentialPresence();
   const dimensions = Object.values(current);
   const affiliateValues = Object.values(affiliate);
   const accepted =
     dimensions.every((score) => score >= 4) &&
     affiliateValues.every((score) => score >= 4) &&
+    Object.values(affiliate_builder).every((score) => score >= 4) &&
     Object.values(planner_case).every(Boolean) &&
     baseline.specificity <= 2 &&
     current.specificity > baseline.specificity &&
-    missed_controls.length === 0;
+    missed_controls.length === 0 &&
+    mutations_missed.length === 0 &&
+    Object.values(coverage).every(Boolean) &&
+    holdout_integrity.ok;
   return {
     mode: "offline",
     live_model_quality_measured: false,
+    scores_measure_model_output: false,
+    keyword_self_score_is_release_gate: false,
     live_gate: liveQualityGate({}),
     baseline,
     current,
+    keyword_self_score,
     affiliate,
+    affiliate_builder,
     planner_case,
     negative_controls: controls.length,
     negative_controls_detected: controls.length - missed_controls.length,
     missed_controls,
-    thresholds: { dimension_min: 4 },
+    mutations,
+    mutations_missed,
+    coverage,
+    streaming_checks,
+    holdout_integrity,
+    live_run: {
+      credentials_present: Object.values(credentials).some(Boolean),
+      credentials,
+      blocked_reason: Object.values(credentials).some(Boolean)
+        ? "Credentials are present, but this command does not start a paid call."
+        : "No model or supplier credential is set. A live quality run has not been measured.",
+    },
+    thresholds: { dimension_min: 4, mutation_max: 2 },
     accepted,
   };
 }

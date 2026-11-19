@@ -192,6 +192,13 @@ async function main() {
     "scripts/uat/lib/briefs.ts",
     "scripts/uat/lib/eval-briefs.ts",
     "scripts/fixtures/agentic-expanded-briefs.json",
+    ...(process.argv.indexOf("--suite") >= 0 &&
+    process.argv[process.argv.indexOf("--suite") + 1] === "holdout"
+      ? [
+          "scripts/uat/lib/holdout-briefs.ts",
+          "scripts/fixtures/agentic-holdout-briefs.json",
+        ]
+      : []),
     "bun.lock",
   ];
   const hash = createHash("sha256");

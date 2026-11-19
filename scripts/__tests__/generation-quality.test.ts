@@ -7,12 +7,19 @@ import {
 test("offline generation quality clears thresholds and catches negative controls", async () => {
   const report = await runGenerationQualityEval();
   expect(report.live_model_quality_measured).toBe(false);
+  expect(report.scores_measure_model_output).toBe(false);
+  expect(report.keyword_self_score_is_release_gate).toBe(false);
   expect(report.accepted).toBe(true);
   expect(report.missed_controls).toEqual([]);
+  expect(report.mutations_missed).toEqual([]);
   expect(report.negative_controls_detected).toBe(report.negative_controls);
   expect(report.current.specificity).toBeGreaterThan(
     report.baseline.specificity,
   );
+  expect(Object.values(report.current).every((score) => score >= 4)).toBe(true);
+  expect(Object.values(report.coverage).every(Boolean)).toBe(true);
+  expect(report.holdout_integrity.ok).toBe(true);
+  expect(report.holdout_integrity.default_suite_uses_holdout).toBe(false);
   expect(report.planner_case.bookable_selected).toBe(true);
   expect(report.planner_case.distant_bookable_rejected).toBe(true);
 });

@@ -32,6 +32,13 @@ const DIET_CLAIM =
   /\b(?:allerg\w*|anaphyla\w*|c(?:o)?eliac\w*|cross[ -]?(?:contact|contaminat\w*)|(?:gluten|nuts?|peanuts?|shellfish|dairy)[ -]?free|allergy[ -]safe|vegan|vegetarian|halal|kosher)\b/i;
 const ACCESS_PROMISE =
   /\b(?:wheelchair[ -](?:accessible|friendly)|step[ -]free|stair[ -]free|fully accessible)\b/i;
+const DIET_HAZARD =
+  /\b(?:peanut oil|crushed peanuts|contains peanuts|satay sauce)\b/i;
+const ALCOHOL =
+  /\b(?:wine tasting|cocktail|bar crawl|nightlife|pub crawl|nightclub)\b/i;
+const STAIRS =
+  /\b(?:flights? of stairs|many stairs|steep stairs|has (?:some |several |many )?stairs)\b/i;
+const PARTNER_ID = /^[A-Za-z0-9_-]{1,40}$/;
 const PACE = {
   relaxed: { count: 2, minutes: 240 },
   moderate: { count: 4, minutes: 420 },
@@ -183,6 +190,9 @@ function scoreDays(
     phrases?: string[];
     allowEmptyVisitDays?: number[];
     visitWindows?: Record<string, Array<[number, number]>>;
+    allowedIds?: string[];
+    maxSpend?: number;
+    supplierSearchFailed?: boolean;
   },
 ): HoldoutResult {
   const failures: string[] = [];
@@ -255,6 +265,8 @@ function scoreDays(
       if (
         DIET_CLAIM.test(meal.description ?? "") ||
         DIET_CLAIM.test(meal.name ?? "") ||
+        DIET_HAZARD.test(meal.description ?? "") ||
+        DIET_HAZARD.test(meal.name ?? "") ||
         (meal.cuisineTypes ?? []).some((item) => DIET_CLAIM.test(item))
       )
         failures.push(`${id}:dietary_prose:${meal.id}`);
@@ -288,6 +300,35 @@ function scoreDays(
         failures.push(`${id}:access_claim:${visit.id}`);
       if (visit.affiliateUrl && !visit.affiliateUrl.startsWith("https://"))
         failures.push(`${id}:affiliate_url:${visit.id}`);
+      if (visit.affiliateUrl?.startsWith("https://")) {
+        try {
+          const parsed = new URL(visit.affiliateUrl);
+          const host = parsed.hostname;
+          const partner = host.endsWith("getyourguide.com")
+            ? parsed.searchParams.get("partner_id")
+            : host.endsWith("viator.com")
+              ? parsed.searchParams.get("pid")
+              : undefined;
+          if (partner !== undefined && !PARTNER_ID.test(partner ?? ""))
+            failures.push(`${id}:affiliate_partner:${visit.id}`);
+        } catch {
+          failures.push(`${id}:affiliate_url:${visit.id}`);
+        }
+      }
+      if (
+        (plan.children ?? 0) > 0 &&
+        ALCOHOL.test(`${visit.name} ${visit.description ?? ""}`)
+      )
+        failures.push(`${id}:kids_alcohol:${visit.id}`);
+      const wantsStepFree =
+        /step[ -]?free|wheelchair/i.test(plan.mobilityNeeds ?? "") ||
+        (plan.requirements?.accessibility ?? []).some((item) =>
+          /step/i.test(item),
+        );
+      if (wantsStepFree && STAIRS.test(visit.description ?? ""))
+        failures.push(`${id}:stairs_conflict:${visit.id}`);
+      if (rules.allowedIds && !rules.allowedIds.includes(visit.id))
+        failures.push(`${id}:unknown_place:${visit.id}`);
     }
     for (let cursor = 1; cursor < sequence(day).length; cursor++) {
       const prior = sequence(day)[cursor - 1];
@@ -328,6 +369,28 @@ function scoreDays(
     if (day.timingProposal && day.timingProposal.fitsPolicy === false)
       failures.push(`${id}:timing_conflict:${day.date}`);
   }
+  const signatures = days
+    .map((day) =>
+      visitsOf(day)
+        .map((visit) => visit.name)
+        .sort()
+        .join("|"),
+    )
+    .filter((signature) => signature.length > 0);
+  if (new Set(signatures).size !== signatures.length)
+    failures.push(`${id}:duplicate_day`);
+  if (rules.maxSpend !== undefined) {
+    const spend = scheduled.reduce((sum, visit) => sum + (visit.price ?? 0), 0);
+    if (spend > rules.maxSpend) failures.push(`${id}:budget:${spend}`);
+  }
+  if (
+    rules.supplierSearchFailed &&
+    scheduled.length > 0 &&
+    !days.some((day) =>
+      day.tips.some((tip) => tip.includes("supplier search failed")),
+    )
+  )
+    failures.push(`${id}:empty_search_presented`);
   for (const forbidden of rules.forbidIds ?? [])
     if (scheduled.some((visit) => visit.id === forbidden))
       failures.push(`${id}:scheduled_forbidden:${forbidden}`);
@@ -387,7 +450,7 @@ function tokyo(): HoldoutResult {
       {
         supplierCatalogOnly: true,
         affiliatePartner: "viator",
-        affiliateUrl: "https://www.viator.com/tours/Tokyo/recorded",
+        affiliateUrl: "https://www.viator.com/tours/Tokyo/recorded?pid=P123",
         duration: 90,
         vibeScore: 95,
         price: 40,
@@ -1329,6 +1392,227 @@ function negativeControls(): HoldoutResult[] {
     failure.includes("visit_window"),
   );
 
+  const controlPlan = () =>
+    searchPlan({
+      destination: "Lisbon",
+      country: "Portugal",
+      dates: { start: "2027-05-10", end: "2027-05-10", nights: 0 },
+      pace: "relaxed",
+    });
+  const finishedDay = (
+    dayPlan: SearchPlan,
+    visits: ActivityResult[],
+    extra: Partial<SuggestedDay> = {},
+  ): SuggestedDay => ({
+    dayNumber: 1,
+    date: dayPlan.dates.start,
+    title: `Day 1 · ${dayPlan.dates.start} in ${dayPlan.destination}`,
+    summary: "A finished day in the city.",
+    morning: { activities: visits },
+    afternoon: { activities: [] },
+    evening: { activities: [] },
+    tips: [],
+    timingProposal: {
+      policy: "day-timing-v1",
+      basis: "control",
+      fitsPolicy: true,
+      verified: false,
+      events: [],
+      conflict: null,
+    },
+    ...extra,
+  });
+  const caught = (result: HoldoutResult, needle: string): HoldoutResult => {
+    result.kind = "control";
+    result.accepted = result.failures.some((failure) =>
+      failure.includes(needle),
+    );
+    if (!result.accepted)
+      result.failures.push(`${result.id}:rubric_missed_${needle}`);
+    return result;
+  };
+  const duplicatePlan = searchPlan({
+    destination: "Lisbon",
+    country: "Portugal",
+    dates: { start: "2027-05-10", end: "2027-05-11", nights: 1 },
+    pace: "relaxed",
+  });
+  const duplicateVisit = () =>
+    activity("dup-museum", "Same museum", 38.71, -9.14, { duration: 60 });
+  const duplicateSecond = finishedDay(duplicatePlan, [duplicateVisit()]);
+  duplicateSecond.dayNumber = 2;
+  duplicateSecond.date = "2027-05-11";
+  duplicateSecond.title = "Day 2 · 2027-05-11 in Lisbon";
+  const duplicateScore = caught(
+    scoreDays(
+      "control-duplicate-days",
+      duplicatePlan,
+      [finishedDay(duplicatePlan, [duplicateVisit()]), duplicateSecond],
+      { fullMealDays: [] },
+    ),
+    "duplicate_day",
+  );
+  const partnerPlan = controlPlan();
+  const partnerScore = caught(
+    scoreDays(
+      "control-missing-partner",
+      partnerPlan,
+      [
+        finishedDay(partnerPlan, [
+          activity("gyg-walk", "Recorded food walk", 38.71, -9.14, {
+            duration: 60,
+            affiliatePartner: "getyourguide",
+            affiliateUrl: "https://www.getyourguide.com/activity-t44/?cmp=trip",
+          }),
+        ]),
+      ],
+      { fullMealDays: [] },
+    ),
+    "affiliate_partner",
+  );
+  const kidsPlan = searchPlan({
+    destination: "Lisbon",
+    country: "Portugal",
+    dates: { start: "2027-05-10", end: "2027-05-10", nights: 0 },
+    pace: "relaxed",
+    travelers: 3,
+    adults: 1,
+    children: 2,
+  });
+  const kidsScore = caught(
+    scoreDays(
+      "control-kids-bar",
+      kidsPlan,
+      [
+        finishedDay(kidsPlan, [
+          activity("kids-bar", "Wine tasting experience", 38.71, -9.14, {
+            duration: 60,
+          }),
+        ]),
+      ],
+      { fullMealDays: [] },
+    ),
+    "kids_alcohol",
+  );
+  const stairsPlan = searchPlan({
+    destination: "Lisbon",
+    country: "Portugal",
+    dates: { start: "2027-05-10", end: "2027-05-10", nights: 0 },
+    pace: "relaxed",
+    mobilityNeeds: "step-free",
+    requirements: {
+      allergies: [],
+      dietaryPreferences: [],
+      accessibility: ["step_free_entrance"],
+      mobilityNotes: "",
+    },
+  });
+  const stairsScore = caught(
+    scoreDays(
+      "control-stairs-step-free",
+      stairsPlan,
+      [
+        finishedDay(stairsPlan, [
+          activity("stairs-view", "Castle viewpoint", 38.71, -9.14, {
+            duration: 60,
+            description:
+              "There are several flights of stairs to the viewpoint.",
+          }),
+        ]),
+      ],
+      { fullMealDays: [] },
+    ),
+    "stairs_conflict",
+  );
+  const budgetPlan = controlPlan();
+  const budgetScore = caught(
+    scoreDays(
+      "control-budget",
+      budgetPlan,
+      [
+        finishedDay(budgetPlan, [
+          activity("priced-walk", "Recorded walk", 38.71, -9.14, {
+            duration: 60,
+            price: 80,
+            currency: "EUR",
+            affiliatePartner: "viator",
+            affiliateUrl:
+              "https://www.viator.com/tours/Lisbon/Walk/d334-WALK?pid=P123",
+          }),
+        ]),
+      ],
+      { fullMealDays: [], maxSpend: 50 },
+    ),
+    "budget",
+  );
+  const unknownPlan = controlPlan();
+  const unknownScore = caught(
+    scoreDays(
+      "control-unknown-place",
+      unknownPlan,
+      [
+        finishedDay(unknownPlan, [
+          activity("invented-sky", "Invented sky garden", 38.71, -9.14, {
+            duration: 60,
+          }),
+        ]),
+      ],
+      { fullMealDays: [], allowedIds: ["known-museum"] },
+    ),
+    "unknown_place",
+  );
+  const oilPlan = controlPlan();
+  const oilDay = finishedDay(oilPlan, [
+    activity("oil-view", "River viewpoint", 38.71, -9.14, { duration: 60 }),
+  ]);
+  oilDay.evening.meal = meal(
+    "peanut-oil-dinner",
+    "Market dinner",
+    38.71,
+    -9.14,
+    ["dinner"],
+    { description: "The broth is finished with peanut oil." },
+  );
+  const oilScore = caught(
+    scoreDays("control-peanut-oil", oilPlan, [oilDay], { fullMealDays: [] }),
+    "dietary_prose",
+  );
+  const teleportPlan = controlPlan();
+  const teleportScore = caught(
+    scoreDays(
+      "control-city-teleport",
+      teleportPlan,
+      [
+        finishedDay(teleportPlan, [
+          activity("tokyo-stop", "Asakusa gate", 35.7148, 139.7967, {
+            duration: 60,
+          }),
+          activity("osaka-stop", "Osaka castle", 34.6873, 135.5262, {
+            duration: 60,
+          }),
+        ]),
+      ],
+      { fullMealDays: [] },
+    ),
+    "unwalkable_presented_as_fit",
+  );
+  const emptyPlan = controlPlan();
+  const emptyScore = caught(
+    scoreDays(
+      "control-empty-search",
+      emptyPlan,
+      [
+        finishedDay(emptyPlan, [
+          activity("filled-gap", "Named museum", 38.71, -9.14, {
+            duration: 60,
+          }),
+        ]),
+      ],
+      { fullMealDays: [], supplierSearchFailed: true },
+    ),
+    "empty_search_presented",
+  );
+
   return [
     fallbackScore,
     conflictScore,
@@ -1339,6 +1623,15 @@ function negativeControls(): HoldoutResult[] {
     mealScore,
     farScore,
     windowScore,
+    duplicateScore,
+    partnerScore,
+    kidsScore,
+    stairsScore,
+    budgetScore,
+    unknownScore,
+    oilScore,
+    teleportScore,
+    emptyScore,
   ];
 }
 
