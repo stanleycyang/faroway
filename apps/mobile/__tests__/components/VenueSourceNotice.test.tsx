@@ -35,6 +35,8 @@ it('shows attribution and uncertainty without a booking claim', () => {
   expect(html).toContain('Confirm opening hours and availability');
   expect(html).not.toContain('verified');
   expect(VenueSourceNotice({ source: { ...source, url: 'javascript:alert(1)' } })).toBeNull();
+  expect(VenueSourceNotice({ source: { ...source, url: 'https://127.0.0.1/' } })).toBeNull();
+  expect(VenueSourceNotice({ source: { ...source, url: 'https://169.254.169.254/' } })).toBeNull();
   expect(VenueSourceNotice({ source: { ...source, retrievedOn: '2026-02-30' } })).toBeNull();
 });
 it('opens only on tap and reports an opening failure', async () => {

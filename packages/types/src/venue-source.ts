@@ -54,18 +54,29 @@ export function readVenueSource(value: unknown): VenueSource | undefined {
     date.toISOString().slice(0, 10) !== row.retrievedOn
   )
     return;
+  if (!publicHttpsPage(row.url)) return;
+  return { url: row.url, retrievedOn: row.retrievedOn };
+}
+
+/** Public https page only. Numeric hosts and localhost are not source attribution. */
+function publicHttpsPage(value: string): boolean {
+  if (/\s/.test(value)) return false;
   try {
-    const url = new URL(row.url);
-    if (
-      url.protocol !== "https:" ||
-      url.username ||
-      url.password ||
-      !url.hostname.includes(".") ||
-      /\s/.test(row.url)
-    )
-      return;
-    return { url: row.url, retrievedOn: row.retrievedOn };
+    const url = new URL(value);
+    const host = url.hostname.replace(/\.$/, "").toLowerCase();
+    return (
+      url.protocol === "https:" &&
+      !url.username &&
+      !url.password &&
+      !url.port &&
+      host.includes(".") &&
+      !host.includes(":") &&
+      !host.startsWith("[") &&
+      !/^(?:\d+\.){3}\d+$/.test(host) &&
+      host !== "localhost" &&
+      !host.endsWith(".localhost")
+    );
   } catch {
-    return;
+    return false;
   }
 }
