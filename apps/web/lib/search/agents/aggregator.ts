@@ -23,7 +23,22 @@ import {
   generatePlanningObject,
   logPlanningFallback,
   planningModel,
+  usageFromModelError,
 } from "@/lib/ai/planning-step";
+import {
+  AGGREGATOR_RETRY_NOTE,
+  ItinerarySchema,
+  SuggestedDaySchema,
+  aggregatorErrorText,
+  aggregatorFinishReason,
+  aggregatorResponseTruncated,
+  aggregatorRetryMaxOutputTokens,
+  isAggregatorParseFailure,
+  itineraryFromModelText,
+  lowThinkingProviderOptions,
+  repairAggregatorResponseText,
+  type AggregatorModelItinerary,
+} from "./aggregator-output";
 import { z } from "zod";
 import { canProcessViatorContent } from "@/lib/affiliates/viator-policy";
 import {
@@ -46,35 +61,6 @@ function planningGateway(model: string) {
 }
 
 const MODEL = PLANNING_MODEL;
-
-const SuggestedDaySchema = z.object({
-  dayNumber: z.number(),
-  date: z.string(),
-  title: z.string(),
-  summary: z.string(),
-  hotelId: z.string().optional(),
-  morning: z.object({
-    activityIds: z.array(z.string()),
-    mealId: z.string().nullable().optional(),
-  }),
-  afternoon: z.object({
-    activityIds: z.array(z.string()),
-    mealId: z.string().nullable().optional(),
-  }),
-  evening: z.object({
-    activityIds: z.array(z.string()),
-    mealId: z.string().nullable().optional(),
-  }),
-  transportId: z.string().optional(),
-  estimatedCost: z.number().optional(),
-  currency: z.string().optional(),
-  tips: z.array(z.string()),
-});
-
-const ItinerarySchema = z.object({
-  days: z.array(SuggestedDaySchema),
-  topHotelId: z.string(),
-});
 
 function structuredItinerarySchema(
   days: number,
@@ -372,47 +358,45 @@ If a day cannot be filled from these results, leave the slots empty and say the 
     ? `\nDAILY FEASIBILITY CHECK: Each day must have at least one visit, no more than ${dailyBudget.visits} visits, and no more than ${dailyBudget.minutes} total activity minutes summed across morning, afternoon and evening. Use supplied durationMinutes unchanged; meals, transfers and rest are additional time. Before finalizing each day, add its selected activity durations and remove or move visits until both limits hold. Leave spare time rather than exhausting the inventory. Do not reuse activity IDs or shorten visits to fit. If inventory cannot cover all days, disclose the gap instead of inventing visits.`
     : "";
 
-  try {
-    const { object: result } = await withAbortTimeout(
+  const userPrompt = options.structuredSchedule
+    ? prompt +
+      budgetPrompt +
+      "\nUse the daily activities array with id and slot for each selected visit. The schema limits total visits per day according to pace. Use breakfastId, lunchId and dinnerId for meals, or null when not separately planned. Do not put activity IDs in meal fields."
+    : prompt + budgetPrompt;
+  const schema = options.structuredSchedule
+    ? structuredItinerarySchema(numDays, plan.activityCriteria.pacePreference)
+    : ItinerarySchema;
+  const requestBase = {
+    model: planningGateway(planningModel("aggregator", MODEL)),
+    providerOptions: PLANNING_PROVIDER_OPTIONS,
+    system: SYSTEM_PROMPT,
+    prompt: userPrompt,
+    schema,
+    timeout: AGGREGATOR_TIMEOUT_MS,
+    maxRetries: 0 as const,
+    ...(options.maxOutputTokens
+      ? { maxOutputTokens: options.maxOutputTokens }
+      : {}),
+    experimental_repairText: async ({ text }: { text: string }) =>
+      repairAggregatorResponseText(text, numDays),
+  };
+
+  const callModel = (request: Record<string, unknown>) =>
+    withAbortTimeout(
       (abortSignal) =>
         generatePlanningObject<ItineraryResult>("aggregator", {
-          model: planningGateway(planningModel("aggregator", MODEL)),
-          providerOptions: PLANNING_PROVIDER_OPTIONS,
-          system: SYSTEM_PROMPT,
-          prompt: options.structuredSchedule
-            ? prompt +
-              budgetPrompt +
-              "\nUse the daily activities array with id and slot for each selected visit. The schema limits total visits per day according to pace. Use breakfastId, lunchId and dinnerId for meals, or null when not separately planned. Do not put activity IDs in meal fields."
-            : prompt + budgetPrompt,
-          schema: options.structuredSchedule
-            ? structuredItinerarySchema(
-                numDays,
-                plan.activityCriteria.pacePreference,
-              )
-            : ItinerarySchema,
-          timeout: AGGREGATOR_TIMEOUT_MS,
+          ...request,
           abortSignal,
-          maxRetries: 0,
-          ...(options.maxOutputTokens
-            ? { maxOutputTokens: options.maxOutputTokens }
-            : {}),
         }),
       AGGREGATOR_TIMEOUT_MS,
       "aggregator AI",
     );
 
-    const mappedResult = options.structuredSchedule
-      ? expandStructuredDays(
-          structuredItinerarySchema(
-            numDays,
-            plan.activityCriteria.pacePreference,
-          ).parse(result),
-        )
-      : result;
-    return publish(
+  const publishItinerary = (itinerary: ItineraryResult) =>
+    publish(
       completeMeals(
         mapAggregatorResult(
-          mappedResult,
+          itinerary,
           dates.start,
           hotels,
           activities,
@@ -421,45 +405,39 @@ If a day cannot be filled from these results, leave the slots empty and say the 
         ),
       ),
     );
-  } catch (error) {
+
+  const publishModelObject = (object: ItineraryResult) => {
+    const mapped = options.structuredSchedule
+      ? expandStructuredDays(
+          structuredItinerarySchema(
+            numDays,
+            plan.activityCriteria.pacePreference,
+          ).parse(object),
+        )
+      : object;
+    return publishItinerary(mapped);
+  };
+
+  const publishRecovered = (
+    itinerary: AggregatorModelItinerary,
+    detail: string,
+  ) => {
+    console.log(
+      `[Aggregator Agent] Recovered ${itinerary.days.length} days from raw text`,
+    );
+    console.log("[Aggregator Agent] Recovered from raw text successfully");
+    logPlanningFallback(
+      "aggregator",
+      "schema_recovery",
+      "recovered_itinerary",
+      detail,
+    );
+    return publishItinerary(itinerary);
+  };
+
+  const giveUp = (error: unknown) => {
     const timedOut = isOperationTimeoutError(error);
-    const detail = error instanceof Error ? error.message : String(error);
-    if (timedOut) {
-      console.warn(
-        "[Aggregator Agent] AI timed out, attempting recovery:",
-        detail,
-      );
-    } else {
-      console.error(
-        "[Aggregator Agent] generateObject error, attempting recovery...",
-      );
-    }
-
-    // Try to recover from schema validation errors by parsing the raw response text.
-    // Common failure: model returns `days` as a JSON string instead of an array,
-    // with topHotelId sometimes embedded inside that string.
-    const rawText = (error as { text?: string })?.text;
-    if (rawText && !options.structuredSchedule) {
-      const recovered = recoverFromRawText(
-        rawText,
-        dates.start,
-        hotels,
-        activities,
-        dining,
-        transport,
-      );
-      if (recovered) {
-        console.log("[Aggregator Agent] Recovered from raw text successfully");
-        logPlanningFallback(
-          "aggregator",
-          "schema_recovery",
-          "recovered_itinerary",
-          detail,
-        );
-        return publish(completeMeals(recovered));
-      }
-    }
-
+    const detail = describeAggregatorFailure(error);
     console.error(
       options.requireGeneratedPlan
         ? "[Aggregator Agent] Recovery failed; generation must be retried"
@@ -474,11 +452,71 @@ If a day cannot be filled from these results, leave the slots empty and say the 
     if (options.requireGeneratedPlan) {
       throw new Error(
         "We couldn't finish organizing your itinerary. Your trip details are saved. Please try again shortly.",
+        { cause: error },
       );
     }
     return publish(
       createFallbackItinerary(plan, hotels, activities, dining, transport),
     );
+  };
+
+  try {
+    const { object } = await callModel({ ...requestBase });
+    return publishModelObject(object);
+  } catch (error) {
+    const detail = describeAggregatorFailure(error);
+    if (isOperationTimeoutError(error)) {
+      console.warn(
+        "[Aggregator Agent] AI timed out, attempting recovery:",
+        detail,
+      );
+    } else {
+      console.error(
+        "[Aggregator Agent] generateObject error, attempting recovery:",
+        detail,
+      );
+    }
+    const decision = decideAggregatorRecovery(
+      error,
+      numDays,
+      options.maxOutputTokens,
+    );
+    if (decision.action === "use")
+      return publishRecovered(decision.itinerary, detail);
+    if (decision.action !== "retry") return giveUp(error);
+
+    const retryTokens = decision.truncated
+      ? aggregatorRetryMaxOutputTokens(options.maxOutputTokens, numDays)
+      : options.maxOutputTokens;
+    console.warn(
+      "[Aggregator Agent] Unparsed itinerary; retrying once with a larger answer budget",
+    );
+    logPlanningFallback(
+      "aggregator",
+      decision.truncated ? "truncated_output" : "unparsed_output",
+      "retry",
+      detail,
+    );
+    try {
+      const { object } = await callModel({
+        ...requestBase,
+        prompt: userPrompt + AGGREGATOR_RETRY_NOTE,
+        providerOptions: lowThinkingProviderOptions(PLANNING_PROVIDER_OPTIONS),
+        ...(retryTokens != null ? { maxOutputTokens: retryTokens } : {}),
+      });
+      return publishModelObject(object);
+    } catch (retryError) {
+      const salvaged = itineraryFromModelText(
+        aggregatorErrorText(retryError) ?? "",
+      );
+      if (salvaged && salvaged.days.length > 0) {
+        return publishRecovered(
+          salvaged,
+          describeAggregatorFailure(retryError),
+        );
+      }
+      return giveUp(retryError);
+    }
   }
 }
 
@@ -608,116 +646,38 @@ export function mapAggregatorResult(
   return { days, topHotel };
 }
 
-/**
- * Attempt to recover a usable result from the raw response text when
- * `generateObject` fails schema validation.
- *
- * Common failure modes:
- * 1. `days` comes back as a JSON *string* instead of an array
- * 2. `topHotelId` is embedded inside the `days` string
- * 3. The entire output is a single JSON string containing both
- */
-function recoverFromRawText(
-  rawText: string,
-  startDate: string,
-  hotels: HotelResult[],
-  activities: ActivityResult[],
-  dining: DiningResult[],
-  transport: TransportResult[] = [],
-): { days: SuggestedDay[]; topHotel: HotelResult | null } | null {
-  try {
-    let parsed: Record<string, unknown>;
-    try {
-      parsed = JSON.parse(rawText);
-    } catch {
-      // rawText might not be valid JSON at all
-      return null;
-    }
+function describeAggregatorFailure(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const finish = aggregatorFinishReason(error);
+  const output = usageFromModelError(error)?.outputTokens;
+  return [
+    message,
+    finish ? `finishReason=${finish}` : "",
+    output != null ? `outputTokens=${output}` : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+}
 
-    let daysArray: Record<string, unknown>[] | null = null;
-    let topHotelId: string | undefined = parsed.topHotelId as
-      | string
-      | undefined;
-
-    if (Array.isArray(parsed.days)) {
-      // Days is already an array — shouldn't normally get here, but handle it
-      daysArray = parsed.days;
-    } else if (typeof parsed.days === "string") {
-      const daysStr = parsed.days;
-
-      // Find where the JSON array ends — the last ']' in the string
-      const arrayEndIdx = daysStr.lastIndexOf("]");
-      if (arrayEndIdx === -1) return null;
-
-      const arrayStr = daysStr.substring(0, arrayEndIdx + 1).trim();
-      const remaining = daysStr.substring(arrayEndIdx + 1);
-
-      try {
-        daysArray = JSON.parse(arrayStr);
-      } catch {
-        return null;
-      }
-
-      // Extract topHotelId from the remaining text if not already present
-      if (!topHotelId) {
-        const hotelMatch = remaining.match(/"topHotelId"\s*:\s*"([^"]+)"/);
-        if (hotelMatch) {
-          topHotelId = hotelMatch[1];
-        }
-      }
-    }
-
-    if (!Array.isArray(daysArray) || daysArray.length === 0) return null;
-
-    // Validate each day has the minimum required fields and normalise shape
-    const validDays = daysArray
-      .filter(
-        (d: Record<string, unknown>) =>
-          d &&
-          typeof d.dayNumber === "number" &&
-          d.morning &&
-          d.afternoon &&
-          d.evening,
-      )
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map((d: any) => ({
-        dayNumber: d.dayNumber,
-        date: d.date || "",
-        title: d.title || `Day ${d.dayNumber}`,
-        summary: d.summary || "",
-        hotelId: d.hotelId,
-        morning: {
-          activityIds: d.morning?.activityIds || [],
-          mealId: d.morning?.mealId,
-        },
-        afternoon: {
-          activityIds: d.afternoon?.activityIds || [],
-          mealId: d.afternoon?.mealId,
-        },
-        evening: {
-          activityIds: d.evening?.activityIds || [],
-          mealId: d.evening?.mealId,
-        },
-        transportId: d.transportId,
-        estimatedCost: d.estimatedCost,
-        currency: d.currency,
-        tips: Array.isArray(d.tips) ? d.tips : [],
-      }));
-
-    if (validDays.length === 0) return null;
-
-    console.log(
-      `[Aggregator Agent] Recovered ${validDays.length} days from raw text`,
-    );
-    return mapAggregatorResult(
-      { days: validDays, topHotelId },
-      startDate,
-      hotels,
-      activities,
-      dining,
-      transport,
-    );
-  } catch {
-    return null;
+function decideAggregatorRecovery(
+  error: unknown,
+  dayCount: number,
+  maxOutputTokens?: number,
+):
+  | { action: "use"; itinerary: AggregatorModelItinerary }
+  | { action: "retry"; truncated: boolean }
+  | { action: "fail" } {
+  const itinerary = itineraryFromModelText(aggregatorErrorText(error) ?? "");
+  const parsedDays = itinerary?.days.length ?? 0;
+  if (itinerary && parsedDays >= dayCount) return { action: "use", itinerary };
+  if (itinerary && parsedDays > 0 && !isAggregatorParseFailure(error)) {
+    return { action: "use", itinerary };
   }
+  if (isAggregatorParseFailure(error)) {
+    return {
+      action: "retry",
+      truncated: aggregatorResponseTruncated(error, maxOutputTokens),
+    };
+  }
+  return { action: "fail" };
 }
