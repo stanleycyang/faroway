@@ -227,8 +227,8 @@ export default async function VisaDestinationPage({
               <p className="text-sm text-slate-600 leading-relaxed">
                 Visa requirements can change without notice. Always verify
                 current entry requirements with the official embassy or
-                consulate of {dest.name} before traveling. The information above
-                is for general guidance only.
+                consulate of {dest.country} before traveling. The information
+                above is for general guidance only.
               </p>
               <p className="text-sm text-slate-600 leading-relaxed">
                 Some countries may require additional documents such as proof of

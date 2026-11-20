@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
-import { Stack } from 'expo-router';
+import { Stack, router, type ErrorBoundaryProps } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { View, ActivityIndicator } from 'react-native';
+import { View, ActivityIndicator, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import * as Sentry from '@sentry/react-native';
 import { AuthProvider, useAuthContext } from '../components/AuthProvider';
 import { NotificationProvider } from '../components/NotificationProvider';
@@ -117,6 +117,96 @@ function RootLayoutNav() {
     </>
   );
 }
+
+export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
+  useEffect(() => {
+    Sentry.captureException(error);
+  }, [error]);
+
+  return (
+    <View style={errorStyles.container}>
+      <Text style={errorStyles.title}>Something went wrong</Text>
+      <Text style={errorStyles.subtitle}>
+        Your saved trips are safe. Try reloading this screen or returning home.
+      </Text>
+      <TouchableOpacity
+        accessibilityRole="button"
+        onPress={retry}
+        style={errorStyles.primaryButton}
+      >
+        <Text style={errorStyles.primaryText}>Try again</Text>
+      </TouchableOpacity>
+      <TouchableOpacity
+        accessibilityRole="button"
+        onPress={() => {
+          try {
+            router.replace('/(tabs)');
+          } catch {
+            // Ignore navigation errors if the router is unmounted.
+          } finally {
+            retry();
+          }
+        }}
+        style={errorStyles.secondaryButton}
+      >
+        <Text style={errorStyles.secondaryText}>Go home</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+const errorStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#ffffff',
+    padding: 24,
+  },
+  title: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#0f172a',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 15,
+    color: '#475569',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+    maxWidth: 320,
+  },
+  primaryButton: {
+    minHeight: 48,
+    minWidth: 200,
+    borderRadius: 999,
+    backgroundColor: '#C03A31',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    marginBottom: 12,
+  },
+  primaryText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  secondaryButton: {
+    minHeight: 44,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  secondaryText: {
+    color: '#334155',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+});
 
 export default Sentry.wrap(function RootLayout() {
   return (

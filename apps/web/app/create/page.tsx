@@ -4,6 +4,8 @@ import {
   type PendingCreateTrip,
 } from "@/lib/trips/create-trip-command";
 import { requestPlanningConsent } from "@/lib/ai/planning-consent-client";
+import { setPlanningConsentPrompt } from "@/lib/ai/planning-consent-prompt";
+import { PlanningConsentDialog } from "@/components/trips/PlanningConsentDialog";
 
 import React, { useEffect, useState, useRef } from "react";
 import { ResilientImage as Image } from "@/components/ResilientImage";
@@ -37,6 +39,7 @@ import { format } from "date-fns";
 import { destinations as destinationCatalog } from "@/lib/planner-destination-catalog";
 import {
   IMAGE_PATHS,
+  destinationCoverCatalog,
   getImageUrl,
   validateHotelSearchDetails,
   hotelGuestCounts,
@@ -72,6 +75,45 @@ const destinations = destinationCatalog.map((destination) => ({
     ],
   ),
 }));
+
+const allCatalogCovers = destinationCoverCatalog.map(
+  ([slug, name, country]) => ({
+    slug,
+    name,
+    country,
+    heroImage: getImageUrl(IMAGE_PATHS.destinations[slug]),
+  }),
+);
+
+const allAutocompleteDestinations = [
+  ...destinations.map((d) => ({ name: d.name, country: d.country })),
+  ...allCatalogCovers
+    .filter(
+      (g) =>
+        !destinations.some(
+          (d) => d.name.toLowerCase() === g.name.toLowerCase(),
+        ),
+    )
+    .map((g) => ({ name: g.name, country: g.country })),
+];
+
+const DIETARY_PREFERENCE_OPTIONS = [
+  "Vegetarian",
+  "Vegan",
+  "Halal",
+  "Kosher",
+  "Gluten-free",
+  "Pescatarian",
+] as const;
+
+const ACCESSIBILITY_OPTIONS = [
+  { id: "step_free_entrance", label: "Step-free entrance" },
+  { id: "accessible_restroom", label: "Accessible restroom" },
+  { id: "accessible_seating", label: "Accessible seating" },
+  { id: "accessible_parking", label: "Accessible parking" },
+] as const;
+
+type AccessibilityOptionId = (typeof ACCESSIBILITY_OPTIONS)[number]["id"];
 
 const budgetOptions = [
   { id: "budget", label: "Budget", description: "Thoughtful value" },
@@ -112,8 +154,11 @@ interface StoredCreateDraft {
   showAdvanced: boolean;
   hotelSearch?: HotelSearchDetails | null;
   hotelAgeText?: string[];
-
   budget?: (typeof budgetOptions)[number]["id"];
+  dietaryPreferences?: string[];
+  allergiesText?: string;
+  accessibility?: AccessibilityOptionId[];
+  mobilityNotes?: string;
 }
 
 export default function CreateTripPage() {
@@ -164,6 +209,32 @@ function CreateTripPlanner({
     useState<(typeof budgetOptions)[number]["id"]>("moderate");
   const [travelerType, setTravelerType] = useState("couple");
   const [selectedVibes, setSelectedVibes] = useState<string[]>([]);
+  const [dietaryPreferences, setDietaryPreferences] = useState<string[]>([]);
+  const [allergiesText, setAllergiesText] = useState("");
+  const [accessibility, setAccessibility] = useState<AccessibilityOptionId[]>(
+    [],
+  );
+  const [mobilityNotes, setMobilityNotes] = useState("");
+  const consentResolveRef = useRef<((approved: boolean) => void) | null>(null);
+  const [consentDialog, setConsentDialog] = useState<{
+    message: string;
+  } | null>(null);
+  useEffect(() => {
+    if (typeof setPlanningConsentPrompt !== "function") return;
+    const unregister = setPlanningConsentPrompt(
+      (message) =>
+        new Promise<boolean>((resolve) => {
+          consentResolveRef.current?.(false);
+          consentResolveRef.current = resolve;
+          setConsentDialog({ message });
+        }),
+    );
+    return () => {
+      unregister();
+      consentResolveRef.current?.(false);
+      consentResolveRef.current = null;
+    };
+  }, []);
   const submissionLock = useRef(false);
   const [pendingRequest, setPendingRequest] =
     useState<PendingCreateTrip | null>(null);
@@ -267,6 +338,37 @@ function CreateTripPlanner({
       )
         setBudget(draft.budget);
       setShowAdvanced(draft.showAdvanced === true);
+      if (Array.isArray(draft.dietaryPreferences)) {
+        setDietaryPreferences(
+          [
+            ...new Set(
+              draft.dietaryPreferences.filter(
+                (value): value is string =>
+                  typeof value === "string" &&
+                  DIETARY_PREFERENCE_OPTIONS.some((option) => option === value),
+              ),
+            ),
+          ].slice(0, DIETARY_PREFERENCE_OPTIONS.length),
+        );
+      }
+      if (typeof draft.allergiesText === "string") {
+        setAllergiesText(draft.allergiesText.slice(0, 500));
+      }
+      if (Array.isArray(draft.accessibility)) {
+        setAccessibility(
+          [
+            ...new Set(
+              draft.accessibility.filter(
+                (value): value is AccessibilityOptionId =>
+                  ACCESSIBILITY_OPTIONS.some((option) => option.id === value),
+              ),
+            ),
+          ].slice(0, ACCESSIBILITY_OPTIONS.length),
+        );
+      }
+      if (typeof draft.mobilityNotes === "string") {
+        setMobilityNotes(draft.mobilityNotes.slice(0, 500));
+      }
       if (hotelSearchEnabled()) {
         const restoredHotelSearch = restoreHotelSearchDraft(draft.hotelSearch);
         setHotelSearch(restoredHotelSearch);
@@ -280,34 +382,81 @@ function CreateTripPlanner({
     }
 
     const requestedDestination = params.get("destination");
-    if (!requestedDestination) return;
-    const normalized = requestedDestination.trim().toLowerCase();
-    const recommended = destinations.find(
-      (destination) =>
-        destination.id === normalized ||
-        destination.name.toLowerCase() === normalized,
-    );
-    setSelectedPlace(
-      recommended
-        ? {
-            name: recommended.name,
-            lat: recommended.lat,
-            lng: recommended.lng,
-            placeId: recommended.id,
-            isRecommended: true,
-            source: "catalog",
-          }
-        : {
-            name: requestedDestination
-              .replace(/-/g, " ")
-              .replace(/\b\w/g, (letter) => letter.toUpperCase()),
-            lat: 0,
-            lng: 0,
-            placeId: "",
-            isRecommended: false,
-            source: "user",
-          },
-    );
+    if (requestedDestination) {
+      const normalized = requestedDestination.trim().toLowerCase();
+      const recommended = destinations.find(
+        (destination) =>
+          destination.id === normalized ||
+          destination.name.toLowerCase() === normalized,
+      );
+      const guideMatch = !recommended
+        ? allCatalogCovers.find(
+            (guide) =>
+              guide.slug.toLowerCase() === normalized ||
+              guide.name.toLowerCase() === normalized,
+          )
+        : undefined;
+      setSelectedPlace(
+        recommended
+          ? {
+              name: recommended.name,
+              lat: recommended.lat,
+              lng: recommended.lng,
+              placeId: recommended.id,
+              isRecommended: true,
+              source: "catalog",
+            }
+          : guideMatch
+            ? {
+                name: guideMatch.name,
+                lat: 0,
+                lng: 0,
+                placeId: guideMatch.slug,
+                isRecommended: true,
+                source: "catalog",
+              }
+            : {
+                name: requestedDestination
+                  .replace(/-/g, " ")
+                  .replace(/\b\w/g, (letter) => letter.toUpperCase()),
+                lat: 0,
+                lng: 0,
+                placeId: "",
+                isRecommended: false,
+                source: "user",
+              },
+      );
+    }
+
+    const requestedBudget = params.get("budget")?.toLowerCase();
+    if (
+      requestedBudget === "budget" ||
+      requestedBudget === "moderate" ||
+      requestedBudget === "luxury"
+    ) {
+      setBudget(requestedBudget);
+    }
+    const requestedTravelers = Number(params.get("travelers"));
+    if (
+      Number.isInteger(requestedTravelers) &&
+      requestedTravelers >= 1 &&
+      requestedTravelers <= 50
+    ) {
+      setTravelers(requestedTravelers);
+      if (requestedTravelers === 1) setTravelerType("solo");
+    }
+    const requestedVibes = params.get("vibes");
+    if (requestedVibes) {
+      const parsedVibes = [
+        ...new Set(
+          requestedVibes
+            .split(",")
+            .map((v) => v.trim().toLowerCase())
+            .filter((id) => vibes.some((v) => v.id === id)),
+        ),
+      ].slice(0, 5);
+      if (parsedVibes.length > 0) setSelectedVibes(parsedVibes);
+    }
   }, []);
 
   useEffect(() => {
@@ -324,6 +473,10 @@ function CreateTripPlanner({
         hotelSearch,
         hotelAgeText,
         budget,
+        dietaryPreferences,
+        allergiesText,
+        accessibility,
+        mobilityNotes,
       } satisfies StoredCreateDraft);
     } catch {
       /* Autosave is optional; creating a trip still works. */
@@ -340,10 +493,31 @@ function CreateTripPlanner({
     hotelSearch,
     hotelAgeText,
     budget,
+    dietaryPreferences,
+    allergiesText,
+    accessibility,
+    mobilityNotes,
   ]);
 
-  const selectedRecommendedDest = selectedPlace?.isRecommended
-    ? destinations.find((d) => d.name === selectedPlace.name)
+  const selectedRecommendedDest = selectedPlace
+    ? (destinations.find(
+        (d) => d.name.toLowerCase() === selectedPlace.name.toLowerCase(),
+      ) ??
+      (() => {
+        const guide = allCatalogCovers.find(
+          (g) => g.name.toLowerCase() === selectedPlace.name.toLowerCase(),
+        );
+        return guide
+          ? {
+              id: guide.slug,
+              name: guide.name,
+              country: guide.country,
+              lat: 0,
+              lng: 0,
+              image: guide.heroImage,
+            }
+          : null;
+      })())
     : null;
 
   const toggleVibe = (vibeId: string) => {
@@ -410,6 +584,10 @@ function CreateTripPlanner({
         hotelSearch,
         hotelAgeText,
         budget,
+        dietaryPreferences,
+        allergiesText,
+        accessibility,
+        mobilityNotes,
       };
       try {
         const draftId = saveCreateDraft(localStorage, draft);
@@ -429,6 +607,16 @@ function CreateTripPlanner({
     let createdTripId: string | null = null;
     const storageKey = `faroway:pending-create:${session.user.id}`;
     try {
+      const parsedAllergies = allergiesText
+        .split(",")
+        .map((item) => item.trim().slice(0, 100))
+        .filter(Boolean)
+        .slice(0, 20);
+      const hasRequirements =
+        dietaryPreferences.length > 0 ||
+        parsedAllergies.length > 0 ||
+        accessibility.length > 0 ||
+        mobilityNotes.trim().length > 0;
       const candidate = pendingRequest ?? {
         requestId: crypto.randomUUID(),
         destination: selectedPlace!.name,
@@ -439,6 +627,16 @@ function CreateTripPlanner({
         preferences: {
           travelerType,
           vibes: selectedVibes,
+          ...(hasRequirements
+            ? {
+                requirements: {
+                  allergies: parsedAllergies,
+                  dietaryPreferences,
+                  accessibility,
+                  mobilityNotes: mobilityNotes.trim(),
+                },
+              }
+            : {}),
           ...(hotelSearch
             ? {
                 hotelSearch,
@@ -535,6 +733,11 @@ function CreateTripPlanner({
         router.push(`/trips/${createdTripId}`);
         return;
       }
+      if (err instanceof Error && err.name === "PlanningConsentDeclinedError") {
+        setIsGenerating(false);
+        setProgressMessage("");
+        return;
+      }
       setGenerateError(
         err instanceof Error
           ? err.message
@@ -602,10 +805,7 @@ function CreateTripPlanner({
         )}
         <PlacesAutocompleteInput
           onSelect={handleSelectFromAutocomplete}
-          localDestinations={destinations.map((d) => ({
-            name: d.name,
-            country: d.country,
-          }))}
+          localDestinations={allAutocompleteDestinations}
         />
 
         <div className="flex gap-3 overflow-x-auto snap-x snap-proximity pb-3 mt-4">
@@ -661,7 +861,13 @@ function CreateTripPlanner({
       <header className="sticky top-0 z-40 border-b border-gray-100 bg-white/95 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-5 lg:h-20 lg:px-10">
           <button
-            onClick={() => router.back()}
+            onClick={() => {
+              if (typeof window !== "undefined" && window.history.length > 1) {
+                router.back();
+              } else {
+                router.push("/");
+              }
+            }}
             aria-label="Close trip planner"
             className="flex h-11 w-11 items-center justify-center rounded-full hover:bg-gray-100 lg:hidden"
           >
@@ -750,12 +956,18 @@ function CreateTripPlanner({
                   <span className="text-gray-700 font-medium">Travelers</span>
                   <div className="flex items-center gap-4">
                     <button
+                      type="button"
                       aria-label="Decrease travelers"
-                      onClick={() =>
-                        setTravelers((current) => Math.max(1, current - 1))
-                      }
+                      onClick={() => {
+                        setTravelers((current) => Math.max(1, current - 1));
+                        setTravelerType((currentType) =>
+                          travelers - 1 <= 1 && currentType === "couple"
+                            ? "solo"
+                            : currentType,
+                        );
+                      }}
                       disabled={travelers <= 1 || hotelSearch !== null}
-                      className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="w-11 h-11 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <Minus className="w-4 h-4" />
                     </button>
@@ -766,17 +978,31 @@ function CreateTripPlanner({
                       {travelers}
                     </span>
                     <button
+                      type="button"
                       aria-label="Increase travelers"
-                      onClick={() =>
-                        setTravelers((current) => Math.min(50, current + 1))
-                      }
+                      onClick={() => {
+                        setTravelers((current) => Math.min(50, current + 1));
+                        setTravelerType((currentType) =>
+                          currentType === "solo"
+                            ? travelers + 1 === 2
+                              ? "couple"
+                              : "friends"
+                            : currentType,
+                        );
+                      }}
                       disabled={travelers >= 50 || hotelSearch !== null}
-                      className="w-10 h-10 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="w-11 h-11 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-600 hover:border-primary hover:text-primary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <Plus className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
+                {hotelSearch !== null && (
+                  <p className="mt-2 text-xs text-gray-500">
+                    Traveler count is currently managed by your hotel room
+                    details below.
+                  </p>
+                )}
               </div>
 
               <div className="mb-6">
@@ -786,8 +1012,16 @@ function CreateTripPlanner({
                 <div className="flex flex-wrap gap-2.5">
                   {travelerTypes.map((type) => (
                     <button
+                      type="button"
                       key={type.id}
-                      onClick={() => setTravelerType(type.id)}
+                      onClick={() => {
+                        setTravelerType(type.id);
+                        if (hotelSearch === null) {
+                          if (type.id === "solo") setTravelers(1);
+                          else if (type.id === "couple" && travelers === 1)
+                            setTravelers(2);
+                        }
+                      }}
                       aria-pressed={travelerType === type.id}
                       className={`flex items-center gap-2 px-4 py-2.5 rounded-full border-2 transition-all ${
                         travelerType === type.id
@@ -919,12 +1153,137 @@ function CreateTripPlanner({
                 />
               </section>
             )}
+            <section
+              id="planner-requirements"
+              aria-label="Dietary and accessibility needs"
+              className="scroll-mt-24 border-t border-gray-100 pt-8"
+            >
+              <button
+                type="button"
+                aria-expanded={showAdvanced}
+                onClick={() => setShowAdvanced((open) => !open)}
+                className="flex w-full items-center justify-between text-left"
+              >
+                <div>
+                  <h2 className="text-lg font-bold text-slate-900 sm:text-xl">
+                    Dietary, allergies &amp; accessibility
+                  </h2>
+                  <p className="mt-1 text-sm text-gray-500">
+                    Optional — add dietary preferences, allergies, or mobility
+                    notes before we plan.
+                  </p>
+                </div>
+                <span className="ml-4 shrink-0 rounded-full border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-700">
+                  {showAdvanced ? "Hide" : "Add details"}
+                </span>
+              </button>
+              {showAdvanced && (
+                <div className="mt-5 space-y-5 rounded-2xl border border-gray-200 bg-gray-50/70 p-5">
+                  <div>
+                    <p className="mb-2.5 text-sm font-medium text-gray-700">
+                      Dietary preferences
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {DIETARY_PREFERENCE_OPTIONS.map((option) => {
+                        const active = dietaryPreferences.includes(option);
+                        return (
+                          <button
+                            key={option}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() =>
+                              setDietaryPreferences((prev) =>
+                                prev.includes(option)
+                                  ? prev.filter((item) => item !== option)
+                                  : [...prev, option],
+                              )
+                            }
+                            className={`rounded-full border px-3.5 py-2 text-xs font-medium transition-colors ${
+                              active
+                                ? "border-primary bg-primary-50 text-primary-700"
+                                : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                            }`}
+                          >
+                            {option}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="create-allergies"
+                      className="mb-1.5 block text-sm font-medium text-gray-700"
+                    >
+                      Food allergies (comma-separated)
+                    </label>
+                    <input
+                      id="create-allergies"
+                      type="text"
+                      maxLength={500}
+                      value={allergiesText}
+                      onChange={(e) => setAllergiesText(e.target.value)}
+                      placeholder="e.g. peanuts, shellfish, sesame"
+                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                  <div>
+                    <p className="mb-2.5 text-sm font-medium text-gray-700">
+                      Accessibility needs
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {ACCESSIBILITY_OPTIONS.map((option) => {
+                        const active = accessibility.includes(option.id);
+                        return (
+                          <button
+                            key={option.id}
+                            type="button"
+                            aria-pressed={active}
+                            onClick={() =>
+                              setAccessibility((prev) =>
+                                prev.includes(option.id)
+                                  ? prev.filter((item) => item !== option.id)
+                                  : [...prev, option.id],
+                              )
+                            }
+                            className={`rounded-full border px-3.5 py-2 text-xs font-medium transition-colors ${
+                              active
+                                ? "border-primary bg-primary-50 text-primary-700"
+                                : "border-gray-200 bg-white text-gray-700 hover:border-gray-300"
+                            }`}
+                          >
+                            {option.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="create-mobility-notes"
+                      className="mb-1.5 block text-sm font-medium text-gray-700"
+                    >
+                      Mobility or pacing notes
+                    </label>
+                    <textarea
+                      id="create-mobility-notes"
+                      rows={2}
+                      maxLength={500}
+                      value={mobilityNotes}
+                      onChange={(e) => setMobilityNotes(e.target.value)}
+                      placeholder="e.g. Stroller-friendly routes, midday rest every day, arrive on day 1 at 14:00"
+                      className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                    />
+                  </div>
+                </div>
+              )}
+            </section>
             <div id="planner-notices" className="scroll-mt-24">
               {pendingRequest && (
                 <p role="status" className="mt-3 text-sm text-gray-700">
                   Unfinished request: {pendingRequest.destination},{" "}
                   {pendingRequest.start_date} to {pendingRequest.end_date}. Use
-                  Resume saved trip above to resume this same trip; your changed
+                  Resume saved trip below to resume this same trip; your changed
                   form choices will not replace it.{" "}
                   <button
                     type="button"
@@ -1077,7 +1436,7 @@ function CreateTripPlanner({
                 selectedPlace?.name ||
                 "Your next adventure"}
               {datesReady && !pendingRequest
-                ? ` · ${format(startDate!, "MMM d")} – ${format(endDate!, "MMM d")} · ${travelers} travelers`
+                ? ` · ${format(startDate!, "MMM d")} – ${format(endDate!, "MMM d")} · ${travelers} ${travelers === 1 ? "traveler" : "travelers"}`
                 : ""}
             </p>
             <button
@@ -1131,6 +1490,22 @@ function CreateTripPlanner({
           </button>
         </div>
       </footer>
+      <PlanningConsentDialog
+        open={consentDialog !== null}
+        message={consentDialog?.message ?? ""}
+        onConfirm={() => {
+          const resolve = consentResolveRef.current;
+          consentResolveRef.current = null;
+          setConsentDialog(null);
+          resolve?.(true);
+        }}
+        onCancel={() => {
+          const resolve = consentResolveRef.current;
+          consentResolveRef.current = null;
+          setConsentDialog(null);
+          resolve?.(false);
+        }}
+      />
     </div>
   );
 }

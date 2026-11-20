@@ -8,7 +8,7 @@ import { EmptyState } from "./EmptyState";
 import { useHydrated } from "@/hooks/useHydrated";
 import { TripCard, type Trip } from "./TripCard";
 
-function TripCardPages({ trips }: { trips: Trip[] }) {
+function TripCardPages({ trips, today }: { trips: Trip[]; today: string }) {
   const [limit, setLimit] = useState(12);
   const gridId = useId();
   const hydrated = useHydrated();
@@ -20,7 +20,7 @@ function TripCardPages({ trips }: { trips: Trip[] }) {
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
       >
         {trips.slice(0, shown).map((trip) => (
-          <TripCard key={trip.id} trip={trip} />
+          <TripCard key={trip.id} trip={trip} today={today} />
         ))}
       </div>
       {trips.length > 12 && (
@@ -63,6 +63,7 @@ export function DashboardTripList({
     tripDatePhase(trip.start_date, trip.end_date, today),
   );
   const upcoming = phases.filter((phase) => phase === "upcoming").length;
+  const inProgress = phases.filter((phase) => phase === "in-progress").length;
   const past = phases.filter((phase) => phase === "past").length;
   const visible = trips.filter(
     (_card, index) => filter === "all" || phases[index] === filter,
@@ -74,9 +75,7 @@ export function DashboardTripList({
           totalTrips={trips.length}
           upcomingTrips={upcoming}
           pastTrips={past}
-          inProgressTrips={
-            phases.filter((phase) => phase === "in-progress").length
-          }
+          inProgressTrips={inProgress}
         />
       </section>
       <section>
@@ -88,7 +87,7 @@ export function DashboardTripList({
             <TripFilters
               currentFilter={filter}
               currentSort={sort}
-              tripCounts={{ all: trips.length, upcoming, past }}
+              tripCounts={{ all: trips.length, upcoming, inProgress, past }}
             />
           )}
         </div>
@@ -96,16 +95,22 @@ export function DashboardTripList({
           <EmptyState />
         ) : visible.length === 0 ? (
           <EmptyState
-            title={`No ${filter} trips`}
+            title={`No ${filter === "in-progress" ? "in-progress" : filter} trips`}
             description={
               filter === "upcoming"
                 ? "You don't have any upcoming trips planned yet."
-                : "You don't have any past trips yet."
+                : filter === "in-progress"
+                  ? "You don't have any trips currently in progress."
+                  : "You don't have any past trips yet."
             }
             showCTA={filter === "upcoming"}
           />
         ) : (
-          <TripCardPages key={`${filter}:${sort}:${today}`} trips={visible} />
+          <TripCardPages
+            key={`${filter}:${sort}:${today}`}
+            trips={visible}
+            today={today}
+          />
         )}
       </section>
     </>

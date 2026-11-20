@@ -19,7 +19,9 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
+import Constants from 'expo-constants';
 import { useAuthContext } from '../../components/AuthProvider';
+import { isRequestCanceled } from '../../lib/authProviders';
 import { useUserStore } from '../../stores/userStore';
 import { useTripStore } from '../../stores/tripStore';
 import { colors, borderRadius } from '../../constants/theme';
@@ -80,8 +82,10 @@ function GuestProfileCard() {
       await signInWithGoogle();
       hapticFeedback.success();
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : 'Please try again';
-      Alert.alert('Sign In Failed', msg);
+      if (!isRequestCanceled(error)) {
+        const msg = error instanceof Error ? error.message : 'Please try again';
+        Alert.alert('Sign In Failed', msg);
+      }
     } finally {
       setAuthLoading(false);
     }
@@ -310,7 +314,19 @@ export default function ProfileScreen() {
           <MenuItem
             icon="chatbubble-outline"
             label="Contact Us"
-            onPress={() => Linking.openURL('mailto:support@faroway.ai')}
+            onPress={async () => {
+              try {
+                await Linking.openURL('mailto:support@faroway.ai');
+              } catch {
+                Alert.alert('Contact Us', 'Email us at support@faroway.ai', [
+                  {
+                    text: 'Open Help Center',
+                    onPress: () => void WebBrowser.openBrowserAsync('https://faroway.ai/support'),
+                  },
+                  { text: 'OK' },
+                ]);
+              }
+            }}
           />
           {Platform.OS !== 'web' && hasRealStoreListing() && (
             <MenuItem
@@ -360,7 +376,10 @@ export default function ProfileScreen() {
         )}
 
         {/* App Version */}
-        <Text style={styles.versionText}>Faroway v1.0.0</Text>
+        <Text style={styles.versionText}>
+          Faroway v{Constants.expoConfig?.version ?? '1.0.0'}
+          {Constants.nativeBuildVersion ? ` (${Constants.nativeBuildVersion})` : ''}
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );

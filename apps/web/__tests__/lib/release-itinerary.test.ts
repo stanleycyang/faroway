@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import type { ActivityResult, SearchPlan, SuggestedDay } from "@faroway/types";
+import {
+  readDayTiming,
+  type ActivityResult,
+  type SearchPlan,
+  type SuggestedDay,
+} from "@faroway/types";
 import {
   calendarDates,
   enforceReleaseItinerary,
@@ -93,14 +98,65 @@ describe("release itinerary", () => {
     );
   });
 
-  it("reads the allergen out of a free-form requirement", () => {
+  it("reads allergens out of free-form requirements without treating positive diet styles as hazards", () => {
     expect(hazardTokens(plan)).toContain("peanut");
     expect(hazardTokens(plan)).not.toContain("severe");
+    const veganHalalPlan: SearchPlan = {
+      ...plan,
+      dietaryRestrictions: ["vegan", "halal", "vegetarian"],
+      requirements: {
+        allergies: ["shellfish allergy"],
+        dietaryPreferences: ["vegan", "halal"],
+        accessibility: [],
+        mobilityNotes: "",
+      },
+      diningCriteria: {
+        ...plan.diningCriteria,
+        dietaryNeeds: ["vegan", "kosher", "pescatarian"],
+      },
+    };
+    const tokens = hazardTokens(veganHalalPlan);
+    expect(tokens).toContain("shellfish");
+    expect(tokens).not.toContain("vegan");
+    expect(tokens).not.toContain("halal");
+    expect(tokens).not.toContain("vegetarian");
+    expect(tokens).not.toContain("kosher");
+    expect(tokens).not.toContain("pescatarian");
   });
 
-  it("does not treat a foreign-currency amount as dollars", () => {
-    expect(scheduledStopPrice({ price: 5000, currency: "JPY" })).toBe(0);
+  it("converts major foreign currencies to USD instead of treating them as raw dollars or free", () => {
+    const jpyUsd = scheduledStopPrice({ price: 5000, currency: "JPY" });
+    expect(jpyUsd).toBeGreaterThan(20);
+    expect(jpyUsd).toBeLessThan(60);
     expect(scheduledStopPrice({ price: 40, currency: "USD" })).toBe(40);
+    expect(scheduledStopPrice({ price: 5000, currency: "XYZ" })).toBe(0);
+  });
+
+  it("preserves a 5-hour morning excursion when the afternoon has no conflicting activities", () => {
+    const longTour = activity("fuji-tour", {
+      name: "Mount Fuji Half-Day Scenic Excursion",
+      duration: 300,
+      bestTimeOfDay: "morning",
+    });
+    const result = enforceReleaseItinerary(
+      { ...plan, requirements: undefined },
+      [
+        {
+          ...day("Mount Fuji"),
+          morning: { activities: [longTour] },
+          afternoon: { activities: [] },
+          evening: { activities: [] },
+        },
+      ],
+      [longTour],
+      [],
+    );
+    expect(result.days[0].morning.activities.map((a) => a.id)).toEqual([
+      "fuji-tour",
+    ]);
+    expect(result.days[0].timingProposal?.fitsPolicy).toBe(true);
+    // Persistence & display boundary (readDayTiming) must accept the multi-slot timing proposal
+    expect(readDayTiming(result.days[0])?.fitsPolicy).toBe(true);
   });
 
   it("removes unsourced claims from the day title and tips", () => {

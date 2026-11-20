@@ -10,9 +10,18 @@ import { Logo } from "@/components/Logo";
 import { AuthRequestTimeoutError } from "@/lib/auth/request-deadline";
 import { requestPasswordReset } from "@/lib/auth/password-reset";
 
+const FORGOT_PASSWORD_ERRORS: Record<string, string> = {
+  reset_link_expired:
+    "Your password reset link has expired or was already used. Enter your email below to request a new one.",
+};
+
 function ForgotPasswordContent() {
   const searchParams = useSearchParams() ?? new URLSearchParams();
   const redirectTo = validateRedirectUrl(searchParams.get("redirectTo"));
+  const urlErrorCode = searchParams.get("error");
+  const initialUrlError = urlErrorCode
+    ? (FORGOT_PASSWORD_ERRORS[urlErrorCode] ?? "")
+    : "";
   const returnQuery =
     redirectTo === "/dashboard"
       ? ""
@@ -21,7 +30,7 @@ function ForgotPasswordContent() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
-  const [error, setError] = useState("");
+  const [error, setError] = useState(initialUrlError);
   const [submittedEmail, setSubmittedEmail] = useState("");
   const submittingRef = useRef(false);
   const successHeadingRef = useRef<HTMLHeadingElement>(null);

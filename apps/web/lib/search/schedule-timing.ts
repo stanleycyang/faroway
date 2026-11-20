@@ -88,12 +88,24 @@ export function proposeDayTiming(
         end,
       );
   };
+  const hasLongMorning = day.morning.activities.some((a) => a.duration > 240);
+  const hasLongAfternoon = day.afternoon.activities.some(
+    (a) => a.duration > 240,
+  );
+  const extendMorning =
+    !includeMiddayRest &&
+    hasLongMorning &&
+    day.afternoon.activities.length === 0;
+  const morningEnd = extendMorning ? 1080 : 780;
+  const afternoonEnd =
+    hasLongAfternoon && day.evening.activities.length === 0 ? 1200 : 1080;
+
   meal("morning", "Breakfast", 45, 480, 600);
-  visits("morning", 540, 780);
-  meal("afternoon", "Lunch", 60, 720, 840);
+  visits("morning", 540, morningEnd);
+  meal("afternoon", "Lunch", 60, 720, extendMorning ? 1080 : 840);
   if (includeMiddayRest)
     add("rest:midday", "Midday rest", "rest", 60, 780, 900);
-  visits("afternoon", 840, 1080);
+  visits("afternoon", 840, afternoonEnd);
   visits("evening", 1080, 1320);
   meal("evening", "Dinner", 60, 1080, 1320);
   const impossible = events.find(

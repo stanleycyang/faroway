@@ -260,7 +260,10 @@ export async function runAggregatorAgent(
     neighborhood: h.location.neighborhood || h.location.name,
   }));
 
-  const activitySummary = rankActivityInventory(activities, 20).map((a) => ({
+  const activitySummary = rankActivityInventory(
+    activities,
+    Math.min(45, Math.max(20, numDays * 4)),
+  ).map((a) => ({
     id: a.id,
     name: a.name,
     category: a.category,
@@ -279,7 +282,7 @@ export async function runAggregatorAgent(
 
   const diningSummary = dining
     .filter((meal) => meal.planningIdea !== true)
-    .slice(0, 15)
+    .slice(0, Math.min(45, Math.max(15, numDays * 3 + 3)))
     .map((d) => ({
       id: d.id,
       name: d.name,
@@ -298,6 +301,8 @@ export async function runAggregatorAgent(
     from: `${t.departure.city} (${t.departure.airport})`,
     to: `${t.arrival.city} (${t.arrival.airport})`,
     departure: t.departure.dateTime,
+    arrival: t.arrival.dateTime,
+    durationMinutes: t.duration,
     price: t.price,
     stops: t.stops,
   }));
@@ -340,11 +345,12 @@ Create an itinerary that:
 2. Spreads activities across days according to pace: relaxed usually 1-2, moderate 2-3, packed 3-4. A long visit can be the main activity of a day; do not fill every slot just to use inventory.
 3. Assigns breakfast to morning, lunch to afternoon, and dinner to evening, using each restaurant's mealTypes. Keep meals near that slot's activities. Avoid a separate dinner reservation when the selected experience already describes dinner; set mealId to null for that slot and explain any meal-inclusion uncertainty in tips.
 4. Adds durationMinutes before scheduling: allow at least 60 minutes for the slot's meal and time for transfers and breaks. Target at most 180 activity minutes per slot for relaxed pace, 210 for moderate, and 240 for packed; a single longer visit should have its own slot with an explicit timing caveat. Respect mobility needs and rest breaks.
-5. Uses neighborhoods to minimize backtracking; do not invent precise transfer times. Check the calendar weekday against known closure risks, and clearly flag opening/reopening confirmation where needed.
-6. Gives each day a specific title and summary reflecting its actual stops
-7. Includes helpful tips${transportSummary.length > 0 ? "\n8. Selects one outbound alternative for Day 1 via transportId and omits transportId on all other days" : ""}
+5. Uses neighborhoods to minimize backtracking; cluster each day's sights and meals within 1–2 adjacent neighborhoods and do not invent precise transfer times. Check the calendar weekday against known closure risks, and clearly flag opening/reopening confirmation where needed.
+6. Respects arrival and departure realism on multi-day trips: keep Day 1 lighter near the hotel neighborhood (especially when an outbound flight arrives in the afternoon/evening) and keep the final day lighter for hotel check-out and departure logistics.
+7. Gives each day a specific title and summary reflecting its actual stops and neighborhood focus
+8. Includes practical local tips${transportSummary.length > 0 ? "\n9. Selects one outbound alternative for Day 1 via transportId and omits transportId on all other days" : ""}
 
-Reference items by their IDs. Morning activities should be morning/any time, afternoon activities in afternoon, etc.
+Reference items by their IDs. Morning activities should be morning/any time, afternoon activities in afternoon, etc. Never reuse the same restaurant ID or activity ID across different days.
 If a day cannot be filled from these results, leave the slots empty and say the search returned nothing. Do not repeat one day's places on the next day. Do not add a safety, allergy, access, or booking promise.`;
 
   const pace = plan.activityCriteria.pacePreference;
@@ -542,6 +548,7 @@ export function mapAggregatorResult(
   // Consume an ID only in a compatible slot, so an invalid earlier reference
   // cannot suppress its later valid occurrence. Keep provider objects intact.
   const usedActivityIds = new Set<string>();
+  const usedMealIds = new Set<string>();
   const mapActivities = (
     ids: string[],
     time: "morning" | "afternoon" | "evening",
@@ -584,12 +591,27 @@ export function mapAggregatorResult(
       mealType: "breakfast" | "lunch" | "dinner",
     ) => {
       if (mealId === null) return undefined;
-      const meal = mealId
+      const pickUnused = () =>
+        dining.find(
+          (d) =>
+            d.planningIdea !== true &&
+            d.mealTypes.includes(mealType) &&
+            !usedMealIds.has(d.id),
+        );
+      let meal = mealId
         ? dining.find((d) => d.id === mealId)
-        : dining.find(
+        : (pickUnused() ??
+          dining.find(
             (d) => d.planningIdea !== true && d.mealTypes.includes(mealType),
-          );
+          ));
+      // If the model repeated an already-used restaurant ID, substitute an unused
+      // compatible restaurant so multi-day itineraries stay diverse and meal-complete.
+      if (meal && usedMealIds.has(meal.id)) {
+        const alternative = pickUnused();
+        if (alternative) meal = alternative;
+      }
       if (meal?.planningIdea) return undefined;
+      if (meal) usedMealIds.add(meal.id);
       return meal;
     };
     const morningMeal = resolveMeal(day.morning.mealId, "breakfast");

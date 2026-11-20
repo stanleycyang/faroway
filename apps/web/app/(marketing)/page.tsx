@@ -109,16 +109,14 @@ const whyReasons = [
 const travelVibes = [
   { label: "Adventure", emoji: "🏔️" },
   { label: "Relaxation", emoji: "🌴" },
-  { label: "Culture", emoji: "🏛️" },
+  { label: "Cultural", emoji: "🏛️" },
   { label: "Foodie", emoji: "🍜" },
   { label: "Nightlife", emoji: "🎉" },
-  { label: "Nature", emoji: "🌿" },
   { label: "Romantic", emoji: "💕" },
-  { label: "Family", emoji: "👨‍👩‍👧‍👦" },
-  { label: "Budget", emoji: "💰" },
-  { label: "Luxury", emoji: "✨" },
-  { label: "Solo", emoji: "🎒" },
+  { label: "Nature", emoji: "🌿" },
+  { label: "Shopping", emoji: "🛍️" },
   { label: "Wellness", emoji: "🧘" },
+  { label: "Photography", emoji: "📷" },
 ];
 
 // ─── Landing Page ────────────────────────────────────────────────────────────
@@ -306,7 +304,7 @@ export default function LandingPage() {
               {scenicImages.map((img, i) => (
                 <Link
                   key={img.label}
-                  href="/create"
+                  href={`/create?destination=${encodeURIComponent(img.label)}`}
                   className={`relative overflow-hidden rounded-2xl group cursor-pointer block ${"aspect-[4/3]"}`}
                 >
                   <Image
@@ -350,7 +348,7 @@ export default function LandingPage() {
               },
               {
                 icon: <WifiOff className="w-4 h-4 text-primary-300" />,
-                label: "Saved trips offline",
+                label: "Saved trips offline on mobile",
               },
               {
                 icon: <Globe className="w-4 h-4 text-amber-400" />,
@@ -380,8 +378,8 @@ export default function LandingPage() {
                   <span className="text-gradient">next trip</span>
                 </h2>
                 <p className="text-xl text-slate-500 max-w-2xl mx-auto">
-                  AI plans it, you enjoy it. From inspiration to booking — one
-                  seamless experience.
+                  AI plans it, you enjoy it. From destination inspiration to a
+                  structured day-by-day plan — all in one place.
                 </p>
               </div>
             </FadeInOnScroll>
@@ -452,11 +450,12 @@ export default function LandingPage() {
                       <Heart className="w-6 h-6 text-primary-300" />
                     </div>
                     <h3 className="text-xl font-bold text-white mb-2">
-                      12 Travel Vibes
+                      10 Travel Vibes
                     </h3>
                     <p className="text-white/60 leading-relaxed mb-4 text-sm">
-                      Choose from Adventure, Foodie, Romantic, Culture, and
-                      more. Your itinerary is tailored to your personality.
+                      Choose from Adventure, Foodie, Romantic, Cultural,
+                      Wellness, and more. Your itinerary is tailored to your
+                      personality.
                     </p>
                     <div className="flex flex-wrap gap-1.5">
                       {travelVibes.slice(0, 5).map((v) => (
@@ -468,7 +467,7 @@ export default function LandingPage() {
                         </span>
                       ))}
                       <span className="px-2.5 py-1 text-xs text-primary-400 font-medium">
-                        +7 more
+                        +5 more
                       </span>
                     </div>
                   </div>
@@ -522,12 +521,12 @@ export default function LandingPage() {
                       </div>
                       <div>
                         <h3 className="text-xl font-bold text-white mb-1">
-                          Offline Access
+                          Offline Access on Mobile
                         </h3>
                         <p className="text-white/60 leading-relaxed text-sm">
-                          Saved itineraries are stored locally for limited
-                          connectivity. Changes sync when you&apos;re back
-                          online.
+                          On the Faroway mobile app, saved itineraries are
+                          cached locally for limited connectivity. Signed-in
+                          trips sync automatically when you&apos;re back online.
                         </p>
                       </div>
                     </div>
@@ -626,7 +625,7 @@ export default function LandingPage() {
                 {
                   step: 2,
                   title: "Select your vibes",
-                  desc: "Choose from 12 travel vibes and pick your traveler type: solo, couple, family, or friends.",
+                  desc: "Choose from 10 travel vibes and pick your traveler type: solo, couple, family, friends, or business.",
                   icon: <Heart className="w-7 h-7 text-white" />,
                   gradient: "from-amber-500 to-amber-600",
                   image: getImageUrl(IMAGE_PATHS.marketing.passportJourney),

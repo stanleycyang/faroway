@@ -378,9 +378,22 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
               : "Price unknown"}
           </span>
           {activity.location?.name && (
-            <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-lg truncate max-w-[180px]">
+            <span
+              className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-lg max-w-full"
+              title={
+                activity.location.address &&
+                activity.location.address !== activity.location.name
+                  ? `${activity.location.name} — ${activity.location.address}`
+                  : activity.location.name
+              }
+            >
               <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
-              <span className="truncate">{activity.location.name}</span>
+              <span className="truncate max-w-[260px]">
+                {activity.location.address &&
+                activity.location.address !== activity.location.name
+                  ? `${activity.location.name} · ${activity.location.address}`
+                  : activity.location.name}
+              </span>
             </span>
           )}
           {/* Rating for non-image cards */}
@@ -417,27 +430,15 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
         {activity.tripadvisorRating != null &&
           activity.tripadvisorRating > 0 && (
             <div className="flex items-center gap-2 mt-3">
-              {activity.tripadvisorUrl ? (
-                <span className="text-xs text-gray-500">
-                  <span className="text-sm">&#9679;</span>
-                  {activity.tripadvisorRating.toFixed(1)} on TripAdvisor
-                  {activity.tripadvisorReviewCount != null && (
-                    <span className="text-[#00af87]/70 font-normal">
-                      ({activity.tripadvisorReviewCount.toLocaleString()})
-                    </span>
-                  )}
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#34e0a1]/10 rounded-lg text-xs font-semibold text-[#00af87]">
-                  <span className="text-sm">&#9679;</span>
-                  {activity.tripadvisorRating.toFixed(1)} on TripAdvisor
-                  {activity.tripadvisorReviewCount != null && (
-                    <span className="text-[#00af87]/70 font-normal">
-                      ({activity.tripadvisorReviewCount.toLocaleString()})
-                    </span>
-                  )}
-                </span>
-              )}
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#34e0a1]/10 rounded-lg text-xs font-semibold text-[#00af87]">
+                <span className="text-sm">&#9679;</span>
+                {activity.tripadvisorRating.toFixed(1)} on TripAdvisor
+                {activity.tripadvisorReviewCount != null && (
+                  <span className="text-[#00af87]/70 font-normal">
+                    ({activity.tripadvisorReviewCount.toLocaleString()})
+                  </span>
+                )}
+              </span>
             </div>
           )}
 
@@ -573,9 +574,22 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
                   )}
               </span>
               {restaurant.location?.name && (
-                <span className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-lg truncate max-w-[180px]">
+                <span
+                  className="inline-flex items-center gap-1 px-2 py-1 bg-gray-50 rounded-lg max-w-full"
+                  title={
+                    restaurant.location.address &&
+                    restaurant.location.address !== restaurant.location.name
+                      ? `${restaurant.location.name} — ${restaurant.location.address}`
+                      : restaurant.location.name
+                  }
+                >
                   <MapPin className="w-3.5 h-3.5 flex-shrink-0 text-gray-400" />
-                  <span className="truncate">{restaurant.location.name}</span>
+                  <span className="truncate max-w-[260px]">
+                    {restaurant.location.address &&
+                    restaurant.location.address !== restaurant.location.name
+                      ? `${restaurant.location.name} · ${restaurant.location.address}`
+                      : restaurant.location.name}
+                  </span>
                 </span>
               )}
               {typeof rating === "number" && rating > 0 && (
@@ -612,27 +626,15 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
             {restaurant.tripadvisorRating != null &&
               restaurant.tripadvisorRating > 0 && (
                 <div className="flex items-center gap-2 mt-3">
-                  {restaurant.tripadvisorUrl ? (
-                    <span className="text-xs text-gray-500">
-                      <span className="text-sm">&#9679;</span>
-                      {restaurant.tripadvisorRating.toFixed(1)} on TripAdvisor
-                      {restaurant.tripadvisorReviewCount != null && (
-                        <span className="text-[#00af87]/70 font-normal">
-                          ({restaurant.tripadvisorReviewCount.toLocaleString()})
-                        </span>
-                      )}
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#34e0a1]/10 rounded-lg text-xs font-semibold text-[#00af87]">
-                      <span className="text-sm">&#9679;</span>
-                      {restaurant.tripadvisorRating.toFixed(1)} on TripAdvisor
-                      {restaurant.tripadvisorReviewCount != null && (
-                        <span className="text-[#00af87]/70 font-normal">
-                          ({restaurant.tripadvisorReviewCount.toLocaleString()})
-                        </span>
-                      )}
-                    </span>
-                  )}
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-[#34e0a1]/10 rounded-lg text-xs font-semibold text-[#00af87]">
+                    <span className="text-sm">&#9679;</span>
+                    {restaurant.tripadvisorRating.toFixed(1)} on TripAdvisor
+                    {restaurant.tripadvisorReviewCount != null && (
+                      <span className="text-[#00af87]/70 font-normal">
+                        ({restaurant.tripadvisorReviewCount.toLocaleString()})
+                      </span>
+                    )}
+                  </span>
                 </div>
               )}
 

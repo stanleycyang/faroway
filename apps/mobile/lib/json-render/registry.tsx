@@ -198,21 +198,12 @@ export const HotelCard: React.FC<HotelCardProps> = ({
         )}
 
         {bookingUrl && (
-          <TouchableOpacity
-            style={styles.hotelCardButton}
-            onPress={() => openURL(bookingUrl)}
-            activeOpacity={0.8}
-          >
-            <LinearGradient
-              colors={[colors.primary[500], colors.primary[700]]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.hotelCardButtonGradient}
-            >
-              <RNText style={styles.hotelCardButtonText}>Book Now</RNText>
-              <Ionicons name="arrow-forward" size={18} color="#fff" />
-            </LinearGradient>
-          </TouchableOpacity>
+          <View style={styles.hotelCardPreviewNotice}>
+            <Ionicons name="information-circle-outline" size={16} color={colors.neutral[600]} />
+            <RNText style={styles.hotelCardPreviewNoticeText}>
+              Booking details available on your saved trip
+            </RNText>
+          </View>
         )}
       </View>
     </View>
@@ -549,19 +540,19 @@ export const MapPreview: React.FC<MapPreviewProps> = ({
   center: _center,
   zoom: _zoom = 13,
 }) => {
-  // For now, we'll show a placeholder for maps
-  // In production, you might want to use react-native-maps or Google Maps Static API
+  if (!markers.length) return null;
+  const previewNames = markers
+    .slice(0, 3)
+    .map((marker) => marker.label)
+    .filter(Boolean);
 
   return (
     <View style={styles.mapPreview}>
-      <View style={styles.mapPreviewPlaceholder}>
-        <Ionicons name="map" size={48} color={colors.neutral[300]} />
-        <RNText style={styles.mapPreviewPlaceholderText}>Map View</RNText>
-      </View>
       <View style={styles.mapPreviewOverlay}>
-        <Ionicons name="location" size={24} color={colors.primary[600]} />
+        <Ionicons name="location" size={20} color={colors.primary[600]} />
         <RNText style={styles.mapPreviewLabel}>
-          {markers.length} location{markers.length > 1 ? 's' : ''}
+          {markers.length} mapped stop{markers.length === 1 ? '' : 's'}
+          {previewNames.length > 0 ? ` · ${previewNames.join(', ')}` : ''}
         </RNText>
       </View>
     </View>
@@ -754,6 +745,17 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.neutral[500],
     marginLeft: spacing.xs,
+  },
+  hotelCardPreviewNotice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingVertical: spacing.xs,
+  },
+  hotelCardPreviewNoticeText: {
+    fontSize: 13,
+    color: colors.neutral[600],
+    flex: 1,
   },
   amenitiesContainer: {
     flexDirection: 'row',

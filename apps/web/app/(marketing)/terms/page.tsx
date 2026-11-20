@@ -51,16 +51,16 @@ export default function TermsOfServicePage() {
               </strong>
             </p>
             <p>
-              This is how we keep Faroway free. These commissions come from the
-              provider, not from you &mdash; you pay the same price as you would
-              booking directly. In accordance with the U.S. Federal Trade
-              Commission (FTC) guidelines and applicable advertising disclosure
-              laws, we disclose that:
+              This helps keep Faroway&apos;s core planning service free. Partner
+              prices, availability, and terms are set and displayed by the
+              third-party provider before you book. In accordance with the U.S.
+              Federal Trade Commission (FTC) guidelines and applicable
+              advertising disclosure laws, we disclose that:
             </p>
             <ul>
               <li>
-                Links to booking providers (including but not limited to Viator
-                and GetYourGuide) are affiliate links.
+                Links to third-party booking providers (such as Viator and other
+                participating partners) are affiliate links.
               </li>
               <li>
                 We may receive compensation when you complete a booking through
@@ -80,9 +80,10 @@ export default function TermsOfServicePage() {
 
             <h2>3. User Accounts</h2>
             <p>
-              You may use certain features of the Service without an account. To
-              save trips, sync across devices, and access personalized features,
-              you may create an account using email or third-party OAuth
+              You may browse destination guides, use our travel tools, and draft
+              trip details without an account. To generate AI itineraries, save
+              trips, sync across devices, and access personalized features, you
+              must create a free account using email or third-party OAuth
               providers (Apple Sign-In, Google Sign-In). By creating an account,
               you agree to:
             </p>
@@ -201,8 +202,8 @@ export default function TermsOfServicePage() {
                   Your contract is with the provider, not with us.
                 </strong>{" "}
                 All bookings, purchases, and transactions are between you and
-                the third-party provider (e.g., Viator, GetYourGuide, or
-                others).
+                the third-party provider (e.g., Viator or other participating
+                providers).
               </li>
               <li>
                 All bookings are subject to the respective provider&apos;s own
@@ -274,7 +275,8 @@ export default function TermsOfServicePage() {
             <ul>
               <li>
                 The app is licensed to you, not sold. This license is
-                non-transferable.
+                non-transferable and limited to devices you own or control, as
+                permitted by the applicable app store&apos;s usage rules.
               </li>
               <li>
                 Your use of the app is also subject to the terms of the platform
@@ -283,18 +285,39 @@ export default function TermsOfServicePage() {
               </li>
               <li>
                 Apple Inc. and Google LLC are not parties to these Terms and
-                have no obligation to provide maintenance, support, or warranty
-                for the app.
+                have no obligation to furnish any maintenance, support, or
+                warranty for the app. To the maximum extent permitted by
+                applicable law, Apple and Google have no warranty obligation
+                with respect to the app.
               </li>
               <li>
-                You agree that the app complies with all applicable export and
-                re-export laws and restrictions.
+                Faroway (and not Apple or Google) is solely responsible for
+                addressing any claims by you or any third party relating to the
+                app or your possession and use of it, including product
+                liability claims, any claim that the app fails to conform to
+                applicable legal or regulatory requirements, and claims arising
+                under consumer protection, privacy, or similar legislation.
               </li>
               <li>
-                In the event of any third-party claim that the app infringes a
-                third party&apos;s intellectual property rights, Faroway (not
-                Apple or Google) shall be responsible for the investigation,
-                defense, settlement, and discharge of such claim.
+                In the event of any third-party claim that the app or your
+                possession and use of it infringes a third party&apos;s
+                intellectual property rights, Faroway (not Apple or Google)
+                shall be solely responsible for the investigation, defense,
+                settlement, and discharge of such claim.
+              </li>
+              <li>
+                You represent and warrant that (i) you are not located in a
+                country that is subject to a U.S. Government embargo or
+                designated by the U.S. Government as a &ldquo;terrorist
+                supporting&rdquo; country, and (ii) you are not listed on any
+                U.S. Government list of prohibited or restricted parties.
+              </li>
+              <li>
+                You acknowledge and agree that Apple Inc. and its subsidiaries
+                are third-party beneficiaries of these Terms, and upon your
+                acceptance of these Terms, Apple will have the right (and will
+                be deemed to have accepted the right) to enforce these Terms
+                against you as a third-party beneficiary.
               </li>
             </ul>
 
@@ -436,9 +459,10 @@ export default function TermsOfServicePage() {
             <h2>15. Termination</h2>
             <p>
               Either party may terminate this agreement at any time. You may
-              delete your account through the app or website settings, or by
-              contacting us at{" "}
-              <a href="mailto:support@faroway.ai">support@faroway.ai</a>.
+              delete your account in the mobile app from the Profile tab (tap
+              Delete Account), or request account deletion by contacting us at{" "}
+              <a href="mailto:support@faroway.ai">support@faroway.ai</a> from
+              the email address on your account.
             </p>
             <p>
               We may suspend or terminate your access immediately, without prior

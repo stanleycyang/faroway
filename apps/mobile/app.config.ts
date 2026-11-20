@@ -43,7 +43,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
   const googleIosUrlScheme = process.env.EXPO_PUBLIC_GOOGLE_IOS_URL_SCHEME;
   const plugins: NonNullable<ExpoConfig['plugins']> = [
     'expo-router',
-    'expo-secure-store',
+    ['expo-secure-store', { configureFaceIDPermission: false }],
     'expo-apple-authentication',
     './plugins/withIsolatedAppLinks',
     ...(googleIosUrlScheme
@@ -76,7 +76,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     version: '1.0.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
-    userInterfaceStyle: 'automatic',
+    userInterfaceStyle: 'light',
     scheme: qa ? 'faroway-qa' : 'faroway',
     splash: {
       image: './assets/splash.png',
@@ -88,6 +88,9 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       supportsTablet: true,
       bundleIdentifier: qa ? 'ai.faroway.app.qa' : 'ai.faroway.app',
       usesAppleSignIn: true,
+      ...(process.env.EXPO_PUBLIC_APP_STORE_URL
+        ? { appStoreUrl: process.env.EXPO_PUBLIC_APP_STORE_URL }
+        : {}),
       config: {
         usesNonExemptEncryption: false,
       },
@@ -98,6 +101,12 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         backgroundColor: '#0a0a0a',
       },
       package: qa ? 'ai.faroway.app.qa' : 'ai.faroway.app',
+      ...(process.env.EXPO_PUBLIC_PLAY_STORE_URL
+        ? { playStoreUrl: process.env.EXPO_PUBLIC_PLAY_STORE_URL }
+        : {}),
+      ...(process.env.GOOGLE_SERVICES_JSON
+        ? { googleServicesFile: process.env.GOOGLE_SERVICES_JSON }
+        : {}),
       blockedPermissions: [
         'android.permission.READ_EXTERNAL_STORAGE',
         'android.permission.WRITE_EXTERNAL_STORAGE',

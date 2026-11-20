@@ -28,16 +28,15 @@ const EVENING_THEMES = [
 ];
 
 function getDateRange(startDate: string, endDate: string): string[] {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  const dates: string[] = [];
-  const cursor = new Date(start);
-
-  while (cursor <= end) {
-    dates.push(cursor.toISOString().slice(0, 10));
-    cursor.setDate(cursor.getDate() + 1);
+  const startMs = Date.parse(`${startDate}T00:00:00Z`);
+  const endMs = Date.parse(`${endDate}T00:00:00Z`);
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) {
+    return [];
   }
-
+  const dates: string[] = [];
+  for (let cursor = startMs; cursor <= endMs; cursor += 86400000) {
+    dates.push(new Date(cursor).toISOString().slice(0, 10));
+  }
   return dates;
 }
 

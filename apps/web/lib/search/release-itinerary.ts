@@ -109,12 +109,39 @@ export function tripActivityBudget(
 export function seasonMonths(
   name: string,
   description: string,
+  latitude?: number,
 ): number[] | undefined {
   const text = `${name} ${description}`;
   if (/\b(?:indoor|year[- ]round)\b/i.test(text)) return undefined;
-  if (/\b(?:ski|snowboard|winter[- ]only)\b/i.test(text)) return [12, 1, 2];
+  if (/\b(?:ski|snowboard|winter[- ]only)\b/i.test(text)) {
+    if (
+      typeof latitude === "number" &&
+      Number.isFinite(latitude) &&
+      latitude < -15
+    ) {
+      return [6, 7, 8];
+    }
+    return [12, 1, 2];
+  }
   return undefined;
 }
+
+const POSITIVE_DIET_STYLES = new Set([
+  "vegan",
+  "vegetarian",
+  "halal",
+  "kosher",
+  "pescatarian",
+  "plant",
+  "based",
+  "organic",
+  "macrobiotic",
+  "keto",
+  "paleo",
+  "mediterranean",
+  "whole30",
+  "flexitarian",
+]);
 
 const HAZARD_MODIFIERS = new Set([
   "allergy",
@@ -147,20 +174,36 @@ const HAZARD_MODIFIERS = new Set([
   "very",
   "food",
   "foods",
+  "only",
+  "strict",
+  "strictly",
+  "friendly",
+  "options",
 ]);
 
 export function hazardTokens(plan: SearchPlan): string[] {
   const raw = [
+    ...(plan.requirements?.allergies ?? []),
     ...(plan.dietaryRestrictions ?? []),
     ...(plan.diningCriteria?.dietaryNeeds ?? []),
-    ...(plan.requirements?.allergies ?? []),
   ];
   const tokens = new Set<string>();
   for (const item of raw) {
     const text = item.toLowerCase();
+    // Positive dietary lifestyles (e.g. "vegan", "halal", "kosher", "vegetarian")
+    // describe what the traveler *wants* to eat — never block venues matching them.
+    const words = text.match(/[a-z0-9]{3,}/g) ?? [];
+    const nonModifierWords = words.filter((w) => !HAZARD_MODIFIERS.has(w));
+    if (
+      nonModifierWords.length > 0 &&
+      nonModifierWords.every((w) => POSITIVE_DIET_STYLES.has(w))
+    ) {
+      continue;
+    }
     if (/\btree\s+nuts?\b/.test(text)) tokens.add("nut");
-    for (const word of text.match(/[a-z]{3,}/g) ?? []) {
-      if (HAZARD_MODIFIERS.has(word)) continue;
+    for (const word of words) {
+      if (HAZARD_MODIFIERS.has(word) || POSITIVE_DIET_STYLES.has(word))
+        continue;
       if (word === "tree" && /\btree\s+nuts?\b/.test(text)) continue;
       tokens.add(word);
       if (word === "nuts") tokens.add("nut");
@@ -178,19 +221,53 @@ export function hazardTokens(plan: SearchPlan): string[] {
   return [...tokens];
 }
 
+/** Approximate static USD conversion rates for budget-cap enforcement only. */
+const FX_TO_USD: Record<string, number> = {
+  USD: 1,
+  EUR: 1.09,
+  GBP: 1.27,
+  JPY: 0.0067,
+  CHF: 1.13,
+  CAD: 0.73,
+  AUD: 0.65,
+  NZD: 0.6,
+  SGD: 0.74,
+  HKD: 0.13,
+  KRW: 0.00073,
+  THB: 0.029,
+  IDR: 0.000063,
+  MXN: 0.055,
+  AED: 0.27,
+  INR: 0.012,
+  SEK: 0.095,
+  NOK: 0.092,
+  DKK: 0.146,
+  ISK: 0.0072,
+  BRL: 0.19,
+  TRY: 0.03,
+  VND: 0.00004,
+  ZAR: 0.055,
+  CZK: 0.043,
+  PLN: 0.25,
+  HUF: 0.0027,
+  MAD: 0.1,
+};
+
 export function scheduledStopPrice(item: {
   price?: number;
   priceLevel?: number;
   currency?: string;
 }): number {
-  const currency = item.currency?.trim().toUpperCase();
-  if (currency && currency !== "USD") return 0;
+  const currency = item.currency?.trim().toUpperCase() || "USD";
+  const rate = FX_TO_USD[currency];
   if (
     typeof item.price === "number" &&
     Number.isFinite(item.price) &&
     item.price > 0
-  )
-    return item.price;
+  ) {
+    if (rate === undefined) return 0;
+    return Math.round(item.price * rate * 100) / 100;
+  }
   if (typeof item.priceLevel === "number" && item.priceLevel > 0)
     return item.priceLevel * 15;
   return 0;
@@ -397,7 +474,11 @@ function blockedReason(
   if ("planningIdea" in item && item.planningIdea) return "planning_idea";
   const text = `${item.name} ${item.description ?? ""}`;
   if (claimsIn(item.name)) return "unsourced_claim";
-  const seasons = seasonMonths(item.name, item.description ?? "");
+  const seasons = seasonMonths(
+    item.name,
+    item.description ?? "",
+    item.location?.lat,
+  );
   if (seasons && !seasons.includes(month)) return "season";
   const children = plan.children ?? 0;
   if (
@@ -902,6 +983,75 @@ export function enforceReleaseItinerary(
           !soleCover(entry.stops, stopIndex, preferences)
         ) {
           note(`drop:diversity:${stop.item.id}`);
+          // When deduplicating a repeated meal, substitute an unused, safety-checked
+          // compatible restaurant so later days do not lose breakfast/lunch/dinner.
+          if (stop.kind === "meal") {
+            const wantedMealType =
+              stop.slot === "morning"
+                ? "breakfast"
+                : stop.slot === "afternoon"
+                  ? "lunch"
+                  : "dinner";
+            const droppedPrice = scheduledStopPrice(stop.item);
+            const currentSpendWithoutDropped =
+              scheduled
+                .flatMap((day) => day.stops)
+                .reduce((sum, s) => sum + scheduledStopPrice(s.item), 0) -
+              droppedPrice;
+            const replacement = unused().find(
+              (candidate): candidate is DiningResult => {
+                if (!("cuisineTypes" in candidate)) return false;
+                if (seenNames.has(norm(candidate.name))) return false;
+                if (!candidate.mealTypes.includes(wantedMealType)) return false;
+                if (
+                  blockedReason(plan, candidate, hazards, stepFree, month) !==
+                  null
+                )
+                  return false;
+                const prepared = prepareCopy(
+                  candidate,
+                  stop.slot,
+                  hazards,
+                  stepFree,
+                );
+                const placed: Kept = {
+                  slot: stop.slot,
+                  kind: "meal",
+                  item: prepared,
+                };
+                const candidateStops = chronological([
+                  ...next,
+                  ...entry.stops.slice(stopIndex + 1),
+                  placed,
+                ]);
+                if (candidateStops.length > MAX_STOPS) return false;
+                const minutes = candidateStops.reduce(
+                  (sum, s) => sum + durationMinutes(s.item, s.slot),
+                  0,
+                );
+                if (minutes > PACE_MINUTES) return false;
+                if (localChain(candidateStops).length !== candidateStops.length)
+                  return false;
+                if (
+                  budget !== undefined &&
+                  currentSpendWithoutDropped + scheduledStopPrice(prepared) >
+                    budget
+                )
+                  return false;
+                return true;
+              },
+            );
+            if (replacement) {
+              const placed: Kept = {
+                slot: stop.slot,
+                kind: "meal",
+                item: prepareCopy(replacement, stop.slot, hazards, stepFree),
+              };
+              seenNames.add(norm(placed.item.name));
+              next.push(placed);
+              note(`replace:diversity:${replacement.id}`);
+            }
+          }
           changed = true;
           return;
         }
@@ -994,9 +1144,34 @@ export function enforceReleaseItinerary(
         (stop) => stop.kind === "activity",
       );
       if (activitiesLeft.length === 0) {
-        const cleared = writeStops(timed, []);
-        note(`drop:timing:${timed.date}`);
-        return { ...cleared, timingProposal: undefined };
+        const mealsLeft = dayStops(timed).filter(
+          (stop) => stop.kind === "meal",
+        );
+        if (mealsLeft.length <= 1) {
+          const cleared = writeStops(timed, []);
+          note(`drop:timing:${timed.date}`);
+          return { ...cleared, timingProposal: undefined };
+        }
+        // Drop only the conflicting meal (or the last meal) instead of wiping every meal on the day.
+        const conflictEventId = proposal.conflict?.eventId;
+        const conflictingMeal =
+          (conflictEventId
+            ? mealsLeft.find(
+                (stop) =>
+                  conflictEventId === `meal:${stop.slot}:${stop.item.id}`,
+              )
+            : undefined) ?? mealsLeft[mealsLeft.length - 1];
+        note(`drop:timing:${conflictingMeal.item.id}`);
+        stops = dayStops(timed).filter(
+          (stop) =>
+            !(
+              stop.kind === "meal" &&
+              stop.slot === conflictingMeal.slot &&
+              stop.item.id === conflictingMeal.item.id
+            ),
+        );
+        timed = writeStops(timed, stops);
+        continue;
       }
       const victim =
         [...activitiesLeft]

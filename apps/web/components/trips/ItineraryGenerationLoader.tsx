@@ -149,14 +149,20 @@ export function ItineraryGenerationLoader({
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/20 to-slate-950/95" />
           <div className="relative flex min-h-[380px] flex-col justify-between p-6 sm:min-h-[440px] sm:p-10 lg:h-full lg:p-12 xl:p-16">
-            <div className="flex items-center justify-between">
-              <span className="flex items-center gap-2 text-lg font-bold">
-                <Compass className="h-6 w-6" />
+            <div className="flex items-center justify-between gap-3">
+              <a
+                href="/dashboard"
+                className="flex items-center gap-2 text-lg font-bold hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+              >
+                <Compass className="h-6 w-6" aria-hidden="true" />
                 faroway.
-              </span>
-              <span className="rounded-full border border-white/30 px-3 py-1.5 text-xs font-medium">
-                Your travel concierge
-              </span>
+              </a>
+              <a
+                href="/dashboard"
+                className="inline-flex min-h-9 items-center rounded-full border border-white/30 px-3 py-1.5 text-xs font-medium text-white hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+              >
+                My trips
+              </a>
             </div>
             <div className="mt-16 lg:mt-auto">
               <p className="mb-4 text-sm text-white/80">

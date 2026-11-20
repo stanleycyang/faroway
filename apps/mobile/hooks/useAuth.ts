@@ -23,6 +23,7 @@ import {
 } from '../lib/oauthReturnState';
 import { setAuthToken, getUserProfile } from '../services/api';
 import * as AppleAuthentication from 'expo-apple-authentication';
+import * as Crypto from 'expo-crypto';
 import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import { Platform } from 'react-native';
 // Anonymous-trip claim flow has been removed. Trip generation is auth-gated
@@ -281,11 +282,20 @@ export function useAuth() {
     try {
       setAuthState((prev) => ({ ...prev, loading: true }));
 
+      const rawNonce = Array.from(Crypto.getRandomValues(new Uint8Array(16)))
+        .map((byte) => byte.toString(16).padStart(2, '0'))
+        .join('');
+      const hashedNonce = await Crypto.digestStringAsync(
+        Crypto.CryptoDigestAlgorithm.SHA256,
+        rawNonce
+      );
+
       const credential = await AppleAuthentication.signInAsync({
         requestedScopes: [
           AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
           AppleAuthentication.AppleAuthenticationScope.EMAIL,
         ],
+        nonce: hashedNonce,
       });
 
       if (!credential.identityToken) {
@@ -295,6 +305,7 @@ export function useAuth() {
       const { data, error } = await supabase.auth.signInWithIdToken({
         provider: 'apple',
         token: credential.identityToken,
+        nonce: rawNonce,
       });
 
       if (error) throw error;

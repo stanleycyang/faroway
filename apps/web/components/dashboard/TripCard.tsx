@@ -114,19 +114,30 @@ function formatDateRange(startDate: string, endDate: string): string {
   return `${start.toLocaleDateString("en-US", { ...options, year: "numeric" })} - ${endStr}`;
 }
 
-function getDaysUntil(startDate: string): {
+function getDaysUntil(
+  startDate: string,
+  endDate: string,
+  today?: string,
+): {
   text: string;
   isUpcoming: boolean;
   isPast: boolean;
 } {
-  const now = new Date();
+  const now = today ? parseTripDate(today) : new Date();
   const start = parseTripDate(startDate);
+  const end = parseTripDate(endDate);
   const diffDays = differenceInCalendarDays(start, now);
+  const daysToEnd = differenceInCalendarDays(end, now);
 
-  if (diffDays < 0) {
+  if (diffDays <= 0 && daysToEnd >= 0) {
+    return {
+      text: diffDays === 0 ? "Starts today!" : "Happening now",
+      isUpcoming: true,
+      isPast: false,
+    };
+  }
+  if (daysToEnd < 0) {
     return { text: "Past trip", isUpcoming: false, isPast: true };
-  } else if (diffDays === 0) {
-    return { text: "Today!", isUpcoming: true, isPast: false };
   } else if (diffDays === 1) {
     return { text: "Tomorrow", isUpcoming: true, isPast: false };
   } else if (diffDays <= 7) {
@@ -143,10 +154,10 @@ function getDaysUntil(startDate: string): {
   return { text: `In ${diffDays} days`, isUpcoming: true, isPast: false };
 }
 
-export function TripCard({ trip }: TripCardProps) {
+export function TripCard({ trip, today }: TripCardProps & { today?: string }) {
   const status = toDashboardTripStatus(trip.status);
   const statusInfo = statusConfig[status];
-  const daysInfo = getDaysUntil(trip.start_date);
+  const daysInfo = getDaysUntil(trip.start_date, trip.end_date, today);
 
   const thumbnailUrl = trip.thumbnail_url || destinationImage(trip.destination);
 

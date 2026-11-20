@@ -34,7 +34,16 @@ const STAIRS =
 const PARTNER_ID = /^[A-Za-z0-9_-]{1,40}$/;
 const SAME_DAY_HOP_KM = 12;
 const IMPOSSIBLE_HOP_KM = 80;
+const MAX_DAILY_CUMULATIVE_KM = 25;
+const MAX_HOTEL_DISTANCE_KM = 25;
 const PACE_MINUTES = 600;
+const PACE_LIMITS: Record<"relaxed" | "moderate" | "packed", number> = {
+  relaxed: 420,
+  moderate: 540,
+  packed: 600,
+};
+const BOILERPLATE_COPY =
+  /^Spend about \d+ minutes at .+ Confirm the day's hours before you go\./i;
 
 export interface DimensionScores {
   grounding: number;
@@ -78,12 +87,23 @@ export interface GradeStop {
   evidenceUrls?: string[];
 }
 
+export interface GradeHotel {
+  id: string;
+  name: string;
+  lat?: number;
+  lng?: number;
+  pricePerNight?: number;
+}
+
 export interface GradeDay {
   date: string;
   destination: string;
   stops: GradeStop[];
+  hotel?: GradeHotel;
   transferDisclosed?: boolean;
   supplierSearch?: "ok" | "empty" | "failed";
+  /** Explicitly permits an empty day (e.g. rest/travel-only day). */
+  allowEmptyDay?: boolean;
 }
 
 export interface GradeBrief {
@@ -91,6 +111,11 @@ export interface GradeBrief {
   start: string;
   end: string;
   budget?: number;
+  pacePreference?: "relaxed" | "moderate" | "packed";
+  /** Reject itineraries where >50% of stops use robotic boilerplate fallback copy. */
+  rejectBoilerplate?: boolean;
+  /** Require explicit timing on every non-empty day instead of tolerating untimed stops. */
+  requireTiming?: boolean;
   preferences: string[];
   avoid: string[];
   hazards: string[];
@@ -324,6 +349,13 @@ export function gradeItinerary(
       "i",
     );
     for (const stop of stops) {
+      // A venue whose NAME explicitly features a severe allergen (e.g., "Peanut Noodle House")
+      // is never acceptable for a traveler with that allergy, even with hedge copy.
+      if (pattern.test(stop.name)) {
+        preference = 1;
+        failures.push(`preference:hazard_venue:${stop.id}`);
+        continue;
+      }
       const text = `${stop.name} ${stop.description}`;
       const hedged = /\b(?:ask|confirm|not a clearance|not a claim)\b/i.test(
         stop.description,
@@ -366,7 +398,26 @@ export function gradeItinerary(
     failures.push("feasibility:month");
   }
   let spend = 0;
+  const paceCeiling = brief.pacePreference
+    ? PACE_LIMITS[brief.pacePreference]
+    : PACE_MINUTES;
   for (const day of days) {
+    const failedOrEmptySearch =
+      day.supplierSearch === "failed" || day.supplierSearch === "empty";
+    if (day.stops.length === 0 && !failedOrEmptySearch && !day.allowEmptyDay) {
+      feasibility = 1;
+      failures.push(`feasibility:empty_day:${day.date}`);
+    }
+    if (
+      brief.requireTiming &&
+      day.stops.some(
+        (stop) =>
+          stop.startMinute === undefined || stop.endMinute === undefined,
+      )
+    ) {
+      feasibility = 1;
+      failures.push(`feasibility:missing_timing:${day.date}`);
+    }
     const timed = day.stops
       .filter(
         (stop) =>
@@ -384,21 +435,44 @@ export function gradeItinerary(
         feasibility = 1;
         failures.push(`feasibility:clock:${stop.id}`);
       } else minutes += stop.endMinute! - stop.startMinute!;
-      if (index > 0 && stop.startMinute! < timed[index - 1].endMinute!) {
-        feasibility = 1;
-        failures.push(`feasibility:overlap:${stop.id}`);
+      if (index > 0) {
+        const prev = timed[index - 1];
+        if (stop.startMinute! < prev.endMinute!) {
+          feasibility = 1;
+          failures.push(`feasibility:overlap:${stop.id}`);
+        } else {
+          // Enforce realistic transfer buffers between distinct venues > 1 km apart
+          const hopKm = suppliedDistanceKm(
+            { lat: prev.lat, lng: prev.lng },
+            { lat: stop.lat, lng: stop.lng },
+          );
+          if (hopKm != null && hopKm > 1) {
+            const requiredGap = Math.min(
+              30,
+              Math.max(10, Math.ceil(hopKm * 3)),
+            );
+            if (stop.startMinute! - prev.endMinute! < requiredGap) {
+              feasibility = 1;
+              failures.push(
+                `feasibility:transfer_buffer:${prev.id}:${stop.id}`,
+              );
+            }
+          }
+        }
       }
     }
-    if (minutes > PACE_MINUTES || day.stops.length > 6) {
+    if (minutes > paceCeiling || day.stops.length > 6) {
       feasibility = 1;
       failures.push(`feasibility:pace:${day.date}`);
     }
+    let cumulativeKm = 0;
     for (let index = 1; index < day.stops.length; index += 1) {
       const distance = suppliedDistanceKm(
         { lat: day.stops[index - 1].lat, lng: day.stops[index - 1].lng },
         { lat: day.stops[index].lat, lng: day.stops[index].lng },
       );
       if (distance == null) continue;
+      cumulativeKm += distance;
       if (
         distance > IMPOSSIBLE_HOP_KM ||
         (distance > SAME_DAY_HOP_KM && !day.transferDisclosed)
@@ -407,6 +481,33 @@ export function gradeItinerary(
         failures.push(
           `feasibility:geography:${day.stops[index - 1].id}:${day.stops[index].id}`,
         );
+      }
+    }
+    if (cumulativeKm > MAX_DAILY_CUMULATIVE_KM && !day.transferDisclosed) {
+      feasibility = 1;
+      failures.push(`feasibility:daily_distance:${day.date}`);
+    }
+    if (
+      day.hotel?.lat != null &&
+      day.hotel?.lng != null &&
+      !day.transferDisclosed
+    ) {
+      const located = day.stops.filter(
+        (stop) => stop.lat != null && stop.lng != null,
+      );
+      if (located.length > 0) {
+        const centroidLat =
+          located.reduce((sum, s) => sum + (s.lat ?? 0), 0) / located.length;
+        const centroidLng =
+          located.reduce((sum, s) => sum + (s.lng ?? 0), 0) / located.length;
+        const hotelDist = suppliedDistanceKm(
+          { lat: day.hotel.lat, lng: day.hotel.lng },
+          { lat: centroidLat, lng: centroidLng },
+        );
+        if (hotelDist != null && hotelDist > MAX_HOTEL_DISTANCE_KM) {
+          feasibility = 1;
+          failures.push(`feasibility:hotel_distance:${day.date}`);
+        }
       }
     }
     for (const stop of day.stops) {
@@ -427,8 +528,16 @@ export function gradeItinerary(
   }
 
   const generic = stops.filter((stop) => isGeneric(stop.description));
-  const specificity: 1 | 5 = generic.length > 0 ? 1 : 5;
-  if (specificity === 1) failures.push("specificity:generic");
+  const boilerplate = stops.filter((stop) =>
+    BOILERPLATE_COPY.test(stop.description.trim()),
+  );
+  const excessiveBoilerplate =
+    Boolean(brief.rejectBoilerplate) &&
+    stops.length > 0 &&
+    boilerplate.length / stops.length > 0.5;
+  const specificity: 1 | 5 = generic.length > 0 || excessiveBoilerplate ? 1 : 5;
+  if (generic.length > 0) failures.push("specificity:generic");
+  if (excessiveBoilerplate) failures.push("specificity:boilerplate");
 
   const signatures = days
     .map((day) =>
@@ -442,9 +551,31 @@ export function gradeItinerary(
     const names = day.stops.map((stop) => norm(stop.name));
     return new Set(names).size !== names.length;
   });
+  // Enforce cross-day stop uniqueness (prevents scheduling the same restaurant/venue across multiple days)
+  const seenAcrossDays = new Set<string>();
+  const crossDayDuplicates: string[] = [];
+  for (const day of days) {
+    for (const stop of day.stops) {
+      const key = norm(stop.name);
+      if (seenAcrossDays.has(key)) {
+        crossDayDuplicates.push(key);
+      } else {
+        seenAcrossDays.add(key);
+      }
+    }
+  }
   const diversity: 1 | 5 =
-    repeatedInside || new Set(signatures).size !== signatures.length ? 1 : 5;
-  if (diversity === 1) failures.push("diversity:duplicate");
+    repeatedInside ||
+    new Set(signatures).size !== signatures.length ||
+    crossDayDuplicates.length > 0
+      ? 1
+      : 5;
+  if (repeatedInside || new Set(signatures).size !== signatures.length) {
+    failures.push("diversity:duplicate");
+  }
+  if (crossDayDuplicates.length > 0) {
+    failures.push(`diversity:cross_day_duplicate:${crossDayDuplicates[0]}`);
+  }
 
   let safety: 1 | 5 = 5;
   for (const stop of stops) {

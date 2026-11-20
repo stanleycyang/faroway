@@ -5,7 +5,14 @@ import Image from "next/image";
 import { TripHeader } from "@/components/trips/TripHeader";
 import { ItineraryDay } from "@/components/trips/ItineraryDay";
 import { ShareButtons } from "@/components/ShareButtons";
+import { destinationImage } from "@/lib/trips/destination-image";
 import type { TripDay } from "@/lib/ai/types";
+
+function formatLabel(value: string): string {
+  return value
+    .replace(/[-_]+/g, " ")
+    .replace(/\b\w/g, (ch) => ch.toUpperCase());
+}
 
 interface SharedItinerary {
   days: TripDay[];
@@ -39,10 +46,12 @@ export function SharedTripView({
   travelers,
   travelerType,
   vibes,
+  budgetTier,
   itinerary,
   shareToken,
   shareUrl,
 }: SharedTripViewProps) {
+  const heroImageUrl = destinationImage(destination);
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <TripHeader
@@ -50,17 +59,23 @@ export function SharedTripView({
         startDate={startDate}
         endDate={endDate}
         travelers={travelers}
+        heroImageUrl={heroImageUrl}
         backUrl="/"
         showActions={false}
       />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
         {/* Trip Meta */}
-        {(travelerType || (vibes && vibes.length > 0)) && (
+        {(travelerType || budgetTier || (vibes && vibes.length > 0)) && (
           <div className="flex flex-wrap gap-2 mb-6">
             {travelerType && (
               <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-primary-50 text-primary-700 font-semibold ring-1 ring-primary-200/50">
-                {travelerType}
+                {formatLabel(travelerType)}
+              </span>
+            )}
+            {budgetTier && (
+              <span className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-slate-100 text-slate-700 font-semibold">
+                {formatLabel(budgetTier)} tier
               </span>
             )}
             {vibes?.map((vibe) => (
@@ -68,7 +83,7 @@ export function SharedTripView({
                 key={vibe}
                 className="inline-flex items-center px-3 py-1.5 rounded-full text-sm bg-primary-50 text-primary-700 ring-1 ring-primary-200/50"
               >
-                {vibe}
+                {formatLabel(vibe)}
               </span>
             ))}
           </div>
@@ -112,6 +127,7 @@ export function SharedTripView({
                 tips={day.tips}
                 diningOptions={day.diningOptions}
                 timingProposal={day.timingProposal}
+                hotel={day.hotel}
                 transport={day.transport}
                 defaultExpanded={true}
               />
@@ -207,11 +223,11 @@ export function SharedTripView({
               explore.
             </p>
             <Link
-              href="/create"
+              href={`/create?destination=${encodeURIComponent(destination)}`}
               className="inline-flex items-center gap-2 px-8 py-3.5 bg-white text-primary-700 rounded-full font-bold hover:bg-white/90 transition-all shadow-lg hover:shadow-xl active:scale-[0.98]"
             >
               <Sparkles className="w-5 h-5" />
-              Start planning
+              Plan your own {destination} trip
             </Link>
           </div>
         </div>

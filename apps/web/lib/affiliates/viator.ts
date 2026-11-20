@@ -196,16 +196,54 @@ function getViatorDestinationId(name: string): number | null {
     return DESTINATION_IDS[normalized];
   }
 
-  // Try without country suffix: "Santorini, Greece" → "santorini"
-  const city = normalized.split(",")[0].trim();
+  // Try without country suffix only when no conflicting country/state disambiguator exists.
+  const parts = normalized
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const city = parts[0] ?? normalized;
+  const qualifier = parts.slice(1).join(", ");
+  // Guard ambiguous city names present in DESTINATION_IDS when the user specifies
+  // a different country/state (e.g. "Paris, Texas", "London, Ontario", "Naples, Florida",
+  // "Venice, Florida", "Perth, Scotland", "Portland, Maine", "Lima, Ohio").
+  const AMBIGUOUS_CITY_QUALIFIERS: Record<string, RegExp> = {
+    paris: /\b(?:france|fr)\b/,
+    london: /\b(?:uk|england|united kingdom|gb)\b/,
+    rome: /\b(?:italy|italia|it)\b/,
+    athens: /\b(?:greece|gr)\b/,
+    venice: /\b(?:italy|italia|it)\b/,
+    florence: /\b(?:italy|italia|it)\b/,
+    dublin: /\b(?:ireland|ie)\b/,
+    melbourne: /\b(?:australia|vic|au)\b/,
+    nice: /\b(?:france|fr)\b/,
+    split: /\b(?:croatia|hr)\b/,
+    naples: /\b(?:italy|italia|it)\b/,
+    perth: /\b(?:australia|wa|au)\b/,
+    portland: /\b(?:oregon|or)\b/,
+    lima: /\b(?:peru|pe)\b/,
+  };
   if (city !== normalized && DESTINATION_IDS[city]) {
-    return DESTINATION_IDS[city];
+    const allowedQualifier = AMBIGUOUS_CITY_QUALIFIERS[city];
+    if (!allowedQualifier || !qualifier || allowedQualifier.test(qualifier)) {
+      return DESTINATION_IDS[city];
+    }
+    console.log(
+      `[Viator] Skipping ambiguous destination "${name}" (qualifier "${qualifier}" does not match static entry for "${city}")`,
+    );
+    return null;
   }
 
-  // Try partial match: find any key that starts with or is contained in the input
+  // Only match keys that appear as whole words inside the city segment — never
+  // match `key.includes(normalized)` (which wrongly mapped "York, UK" → "new york").
   for (const [key, id] of Object.entries(DESTINATION_IDS)) {
-    if (normalized.includes(key) || key.includes(normalized)) {
-      return id;
+    const boundary = new RegExp(
+      `(?:^|\\b)${key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?:\\b|$)`,
+    );
+    if (boundary.test(city)) {
+      const allowedQualifier = AMBIGUOUS_CITY_QUALIFIERS[key];
+      if (!allowedQualifier || !qualifier || allowedQualifier.test(qualifier)) {
+        return id;
+      }
     }
   }
 

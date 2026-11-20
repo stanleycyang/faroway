@@ -32,6 +32,7 @@ export function PlacesAutocompleteInput({
   const [predictions, setPredictions] = useState<Prediction[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const [apiAvailable, setApiAvailable] = useState(true);
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -47,6 +48,7 @@ export function PlacesAutocompleteInput({
     setPredictions([]);
     setIsLoading(false);
     setIsOpen(false);
+    setActiveIndex(-1);
   }, []);
 
   useEffect(() => {
@@ -93,6 +95,7 @@ export function PlacesAutocompleteInput({
   const handleInputChange = (value: string) => {
     setQuery(value);
     setIsOpen(true);
+    setActiveIndex(-1);
     setPredictions([]);
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -166,6 +169,7 @@ export function PlacesAutocompleteInput({
     if (debounceRef.current) clearTimeout(debounceRef.current);
     abortRef.current?.abort();
     setIsOpen(false);
+    setActiveIndex(-1);
     setQuery(dest.name);
     setPredictions([]);
     onSelect({
@@ -181,11 +185,70 @@ export function PlacesAutocompleteInput({
     setPredictions([]);
     setIsLoading(false);
     setIsOpen(false);
+    setActiveIndex(-1);
     inputRef.current?.focus();
   };
 
   const hasGoogleResults = predictions.length > 0;
   const showDropdown = isOpen && query.trim().length >= MIN_QUERY_LENGTH;
+  const isSearchingEmpty =
+    isLoading && predictions.length === 0 && localResults.length === 0;
+  const selectableCount = localResults.length + 1; // localResults + "Plan with <query>"
+  const clampedActiveIndex =
+    activeIndex >= 0 && activeIndex < selectableCount ? activeIndex : -1;
+
+  const handleSelectCustom = () => {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    abortRef.current?.abort();
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setIsOpen(false);
+    setActiveIndex(-1);
+    setPredictions([]);
+    onSelect({ name: trimmed, source: "user" });
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (!showDropdown) {
+      if (
+        event.key === "ArrowDown" &&
+        query.trim().length >= MIN_QUERY_LENGTH
+      ) {
+        event.preventDefault();
+        setIsOpen(true);
+        setActiveIndex(0);
+      }
+      return;
+    }
+    if (event.key === "Escape") {
+      event.preventDefault();
+      dismissResults();
+      return;
+    }
+    if (isSearchingEmpty) return;
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveIndex((prev) =>
+        prev < 0 || prev >= selectableCount - 1 ? 0 : prev + 1,
+      );
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveIndex((prev) =>
+        prev <= 0 || prev >= selectableCount ? selectableCount - 1 : prev - 1,
+      );
+    } else if (event.key === "Enter") {
+      if (clampedActiveIndex >= 0 && clampedActiveIndex < localResults.length) {
+        event.preventDefault();
+        handleSelectLocal(localResults[clampedActiveIndex]);
+      } else if (
+        clampedActiveIndex === localResults.length ||
+        query.trim().length >= MIN_QUERY_LENGTH
+      ) {
+        event.preventDefault();
+        handleSelectCustom();
+      }
+    }
+  };
 
   return (
     <div className="relative">
@@ -203,11 +266,18 @@ export function PlacesAutocompleteInput({
           maxLength={120}
           aria-label="Destination"
           aria-expanded={showDropdown}
+          aria-autocomplete="list"
           aria-controls={
             showDropdown ? "destination-search-results" : undefined
           }
+          aria-activedescendant={
+            showDropdown && !isSearchingEmpty && clampedActiveIndex >= 0
+              ? `destination-option-${clampedActiveIndex}`
+              : undefined
+          }
           role="combobox"
           onChange={(e) => handleInputChange(e.target.value)}
+          onKeyDown={handleKeyDown}
           onFocus={() => {
             if (query.length >= MIN_QUERY_LENGTH) setIsOpen(true);
           }}
@@ -232,21 +302,33 @@ export function PlacesAutocompleteInput({
           ref={dropdownRef}
           className="absolute top-full left-0 right-0 mt-2 max-h-[65vh] overflow-auto bg-white border border-gray-200 rounded-xl shadow-lg z-50"
         >
-          {isLoading &&
-          predictions.length === 0 &&
-          localResults.length === 0 ? (
+          {isSearchingEmpty ? (
             <div className="px-4 py-6 flex items-center justify-center text-gray-500">
               <Loader2 className="w-5 h-5 animate-spin mr-2" />
               Searching...
             </div>
           ) : (
-            <ul className="max-h-64 overflow-auto">
-              {localResults.map((d) => (
-                <li key={d.name}>
+            <ul
+              role="listbox"
+              aria-label="Destination suggestions"
+              className="max-h-64 overflow-auto"
+            >
+              {localResults.map((d, index) => (
+                <li
+                  key={d.name}
+                  id={`destination-option-${index}`}
+                  role="option"
+                  aria-selected={clampedActiveIndex === index}
+                >
                   <button
                     type="button"
                     onClick={() => handleSelectLocal(d)}
-                    className="w-full px-4 py-3 flex items-center gap-3 hover:bg-gray-50 transition-colors text-left"
+                    onMouseEnter={() => setActiveIndex(index)}
+                    className={`w-full px-4 py-3 flex items-center gap-3 transition-colors text-left ${
+                      clampedActiveIndex === index
+                        ? "bg-primary-50"
+                        : "hover:bg-gray-50"
+                    }`}
                   >
                     <MapPin className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
@@ -260,17 +342,20 @@ export function PlacesAutocompleteInput({
                   </button>
                 </li>
               ))}
-              <li>
+              <li
+                id={`destination-option-${localResults.length}`}
+                role="option"
+                aria-selected={clampedActiveIndex === localResults.length}
+              >
                 <button
                   type="button"
-                  className="w-full px-4 py-3 text-left text-sm font-medium text-primary"
-                  onClick={() => {
-                    abortRef.current?.abort();
-                    if (debounceRef.current) clearTimeout(debounceRef.current);
-                    setIsOpen(false);
-                    setPredictions([]);
-                    onSelect({ name: query.trim(), source: "user" });
-                  }}
+                  className={`w-full px-4 py-3 text-left text-sm font-medium text-primary ${
+                    clampedActiveIndex === localResults.length
+                      ? "bg-primary-50"
+                      : "hover:bg-gray-50"
+                  }`}
+                  onMouseEnter={() => setActiveIndex(localResults.length)}
+                  onClick={handleSelectCustom}
                 >
                   Plan with “{query.trim()}”
                 </button>

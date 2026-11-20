@@ -1,9 +1,23 @@
 "use client";
 import { withAuthRequestDeadline } from "@/lib/auth/request-deadline";
 import { createClient } from "@/lib/supabase/client";
+import {
+  getPlanningConsentPrompt,
+  type PlanningConsentPrompt,
+} from "./planning-consent-prompt";
+
+export class PlanningConsentDeclinedError extends Error {
+  constructor() {
+    super("AI sharing declined. Your saved trips are still available.");
+    this.name = "PlanningConsentDeclinedError";
+  }
+}
 
 /** Fresh choice per operation; pin both creation and generation to this account. */
-export async function requestPlanningConsent(expectedOwnerId?: string) {
+export async function requestPlanningConsent(
+  expectedOwnerId?: string,
+  promptConfirm?: PlanningConsentPrompt,
+) {
   const client = createClient();
   const initial = await withAuthRequestDeadline(client.auth.getSession());
   const userId = initial.data.session?.user.id;
@@ -26,15 +40,14 @@ export async function requestPlanningConsent(expectedOwnerId?: string) {
     disclosure.message.length > 4000
   )
     throw new Error("AI sharing information could not be verified.");
-  if (
-    !window.confirm(
-      disclosure.message +
-        "\n\nChoose OK to share and plan, or Cancel to keep your saved trips without starting AI.",
-    )
-  )
-    throw new Error(
-      "AI sharing declined. Your saved trips are still available.",
-    );
+  const activePrompt = promptConfirm ?? getPlanningConsentPrompt();
+  const approved = activePrompt
+    ? await activePrompt(disclosure.message)
+    : window.confirm(
+        disclosure.message +
+          "\n\nChoose OK to share and plan, or Cancel to keep your saved trips without starting AI.",
+      );
+  if (!approved) throw new PlanningConsentDeclinedError();
   return async () => {
     const current = await withAuthRequestDeadline(client.auth.getSession());
     if (current.error || current.data.session?.user.id !== userId)

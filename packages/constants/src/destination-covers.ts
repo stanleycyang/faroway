@@ -67,9 +67,10 @@ function countryName(value: string): string {
 
 /** Match a catalog destination, with an optional matching country qualifier. */
 export function destinationImage(destination: string): string | undefined {
-  const parts = destination.split(",");
-  if (parts.length > 2 || parts.some((part) => !part.trim())) return undefined;
-  const [name, country] = parts;
+  const parts = destination.split(",").map((part) => part.trim());
+  if (parts.length === 0 || parts.some((part) => !part)) return undefined;
+  const name = parts[0];
+  const country = parts.length >= 2 ? parts[parts.length - 1] : undefined;
   const entry = destinationCoverCatalog.find(
     ([, city, catalogCountry]) =>
       normalize(city) === normalize(name) &&

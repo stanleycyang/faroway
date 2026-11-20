@@ -347,12 +347,18 @@ export function gradeDays(
   dining: DiningResult[],
   budget: number,
 ): ItineraryGrade {
+  const expectedPartnerIds: Record<string, string | undefined> = {
+    viator: process.env.VIATOR_PARTNER_ID?.trim() || "devpartner",
+    getyourguide: process.env.GETYOURGUIDE_PARTNER_ID?.trim() || "devpartner",
+  };
+  const hasInventory = activities.length > 0 || dining.length > 0;
   const city = tripCity(plan.destination);
   const brief: GradeBrief = {
     destinations: [city],
     start: plan.dates.start,
     end: plan.dates.end,
     budget,
+    pacePreference: plan.activityCriteria.pacePreference,
     preferences: plan.activityCriteria.interests ?? [],
     avoid: plan.vibeInterpretation?.avoidKeywords ?? [],
     hazards: hazardTokens(plan),
@@ -367,7 +373,6 @@ export function gradeDays(
   };
   const graded: GradeDay[] = days.map((day) => {
     const stops: GradeStop[] = [];
-    const durations: number[] = [];
     const proposal = day.timingProposal?.fitsPolicy
       ? day.timingProposal
       : undefined;
@@ -410,15 +415,6 @@ export function gradeDays(
             ? `activity:${entry.item.id}`
             : `meal:${slot}:${entry.item.id}`;
         const event = proposal?.events.find((item) => item.id === eventId);
-        const minutes =
-          entry.kind === "meal"
-            ? slot === "morning"
-              ? 45
-              : 60
-            : Math.max(
-                30,
-                Math.round((entry.item as ActivityResult).duration || 60),
-              );
         const affiliate = bookableAffiliate(entry.item);
         const text = `${entry.item.name} ${entry.item.description ?? ""}`;
         const stop: GradeStop = {
@@ -433,7 +429,11 @@ export function gradeDays(
           endMinute: event?.endMinute,
           price: scheduledStopPrice(entry.item),
           tags: scheduledStopTags(entry.item),
-          seasons: seasonMonths(entry.item.name, entry.item.description ?? ""),
+          seasons: seasonMonths(
+            entry.item.name,
+            entry.item.description ?? "",
+            entry.item.location?.lat,
+          ),
           stepFree: STAIRS.test(text) ? false : undefined,
           kidSuitable: ALCOHOL.test(text) ? false : undefined,
         };
@@ -442,16 +442,9 @@ export function gradeDays(
           stop.productId = affiliate.productId;
           stop.affiliatePartner = affiliate.partner;
           stop.affiliateUrl = affiliate.url;
-          try {
-            const parsed = new URL(affiliate.url);
-            const value =
-              affiliate.partner === "viator"
-                ? (parsed.searchParams.get("pid") ?? "")
-                : (parsed.searchParams.get("partner_id") ?? "");
-            if (value) stop.expectedPartnerId = value;
-          } catch {
-            /* The rubric records the bad link separately. */
-          }
+          // Validate against configured partner IDs rather than echoing back the URL's own query param.
+          const configuredId = expectedPartnerIds[affiliate.partner];
+          if (configuredId) stop.expectedPartnerId = configuredId;
         } else if ("affiliateUrl" in entry.item && entry.item.affiliateUrl) {
           stop.bookable = false;
           stop.affiliatePartner = entry.item.affiliatePartner;
@@ -462,25 +455,28 @@ export function gradeDays(
           stop.startMinute = undefined;
           stop.endMinute = undefined;
         }
-        durations.push(minutes);
         stops.push(stop);
       }
     }
-    if (stops.some((stop) => stop.startMinute === undefined)) {
-      let cursor = 540;
-      for (let index = 0; index < stops.length; index += 1) {
-        const span = durations[index] ?? 60;
-        const timed = stops[index];
-        if (!timed) continue;
-        timed.startMinute = cursor;
-        timed.endMinute = cursor + span;
-        cursor = timed.endMinute + 15;
-      }
-    }
+    const disclosedEmpty = (day.tips ?? []).some((tip) =>
+      /supplier search returned nothing|no confirmed visits/i.test(tip),
+    );
     return {
       date: day.date,
       destination: city,
-      supplierSearch: stops.length === 0 ? "empty" : "ok",
+      hotel: day.hotel
+        ? {
+            id: day.hotel.id,
+            name: day.hotel.name,
+            lat: day.hotel.location?.lat,
+            lng: day.hotel.location?.lng,
+            pricePerNight: day.hotel.pricePerNight,
+          }
+        : undefined,
+      supplierSearch:
+        stops.length === 0 && (!hasInventory || disclosedEmpty)
+          ? "empty"
+          : "ok",
       stops,
     };
   });

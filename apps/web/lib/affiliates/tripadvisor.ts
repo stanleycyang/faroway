@@ -22,7 +22,7 @@ const TRIPADVISOR_API_KEY = process.env.TRIPADVISOR_API_KEY;
 const TRIPADVISOR_API_BASE = "https://api.content.tripadvisor.com/api/v1";
 const TRIPADVISOR_ENRICHMENT_TIMEOUT_MS = getEnvNumber(
   "TRIPADVISOR_ENRICHMENT_TIMEOUT_MS",
-  500,
+  3500,
   { min: 250, max: 10000 },
 );
 const TRIPADVISOR_ENRICHMENT_LIMIT = getEnvNumber(

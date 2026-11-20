@@ -119,9 +119,15 @@ function renderMarkdown(md: string): string {
     // HR
     .replace(/^---$/gm, "<hr />")
     // Headings (h3 before h2 before h1 — most specific first)
+    // Decode HTML entities before slugifying so IDs match TableOfContents anchors
     .replace(/^### (.+)$/gm, (_m, t) => {
       const id = t
         .replace(/<[^>]+>/g, "")
+        .replace(/&amp;/g, "&")
+        .replace(/&#39;|&apos;/g, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
@@ -130,6 +136,11 @@ function renderMarkdown(md: string): string {
     .replace(/^## (.+)$/gm, (_m, t) => {
       const id = t
         .replace(/<[^>]+>/g, "")
+        .replace(/&amp;/g, "&")
+        .replace(/&#39;|&apos;/g, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
@@ -138,6 +149,11 @@ function renderMarkdown(md: string): string {
     .replace(/^# (.+)$/gm, (_m, t) => {
       const id = t
         .replace(/<[^>]+>/g, "")
+        .replace(/&amp;/g, "&")
+        .replace(/&#39;|&apos;/g, "'")
+        .replace(/&quot;/g, '"')
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
         .toLowerCase()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/(^-|-$)/g, "");
@@ -214,7 +230,7 @@ function renderMarkdown(md: string): string {
         inList = false;
       }
       const headers = parseTableRow(line);
-      out.push("<table>");
+      out.push('<div class="overflow-x-auto my-6"><table>');
       out.push("<thead><tr>");
       for (const h of headers) out.push(`<th>${h}</th>`);
       out.push("</tr></thead>");
@@ -227,7 +243,7 @@ function renderMarkdown(md: string): string {
         for (const c of cells) out.push(`<td>${c}</td>`);
         out.push("</tr>");
       }
-      out.push("</tbody></table>");
+      out.push("</tbody></table></div>");
       continue;
     }
 

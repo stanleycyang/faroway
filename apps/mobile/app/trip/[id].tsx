@@ -492,6 +492,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   const mounted = useRef(false);
   const shareLock = useRef(false);
   const refreshLock = useRef(false);
+  const deleteLock = useRef(false);
   const detailController = useRef<AbortController | null>(null);
   const [account] = useState(() => {
     const state = useUserStore.getState();
@@ -512,7 +513,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
     };
   }, []);
   const { trips, currentTrip, isHydrated } = useTripStore();
-  const { getTripById } = useTrips();
+  const { getTripById, deleteTrip } = useTrips();
   const { isAuthenticated } = useAuthContext();
   const { tripGenerationCount, shouldShowRatingPrompt } = usePromptStore();
   const reduceMotion = useReduceMotion();
@@ -523,6 +524,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   const [showRatingPrompt, setShowRatingPrompt] = useState(false);
   const [showBookingsSheet, setShowBookingsSheet] = useState(false);
   const [isLoadingTrip, setIsLoadingTrip] = useState(true);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [loadAttempt, setLoadAttempt] = useState(0);
 
@@ -1106,6 +1108,108 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                 )}
               </>
             )}
+
+            {/* AI Disclosure, Issue Reporting & Trip Management */}
+            <View
+              style={{
+                marginHorizontal: 24,
+                marginTop: 24,
+                marginBottom: 12,
+                padding: 16,
+                borderRadius: 16,
+                backgroundColor: '#F8FAFC',
+                borderWidth: 1,
+                borderColor: '#E2E8F0',
+                gap: 12,
+              }}
+            >
+              <Text style={{ fontSize: 13, lineHeight: 19, color: '#475569' }}>
+                AI-generated itinerary — verify opening hours, prices, safety, and booking terms
+                directly with venues and providers before traveling.
+              </Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 16 }}>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel="Report an issue with this itinerary"
+                  style={{ minHeight: 44, justifyContent: 'center' }}
+                  onPress={() =>
+                    void WebBrowser.openBrowserAsync(
+                      `https://faroway.ai/report?type=trip&id=${encodeURIComponent(trip.id)}`
+                    )
+                  }
+                >
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: '600',
+                      color: '#334155',
+                      textDecorationLine: 'underline',
+                    }}
+                  >
+                    Report an issue
+                  </Text>
+                </TouchableOpacity>
+                {isAuthenticated &&
+                  !trip.id.startsWith('local_') &&
+                  typeof deleteTrip === 'function' && (
+                    <TouchableOpacity
+                      accessibilityRole="button"
+                      accessibilityLabel="Delete trip"
+                      disabled={isDeleting}
+                      style={{
+                        minHeight: 44,
+                        justifyContent: 'center',
+                        opacity: isDeleting ? 0.5 : 1,
+                      }}
+                      onPress={() => {
+                        if (deleteLock.current || !isActive()) return;
+                        Alert.alert(
+                          'Delete this trip?',
+                          'This permanently removes the itinerary from your account.',
+                          [
+                            { text: 'Cancel', style: 'cancel' },
+                            {
+                              text: 'Delete trip',
+                              style: 'destructive',
+                              onPress: () => {
+                                if (deleteLock.current || !isActive()) return;
+                                deleteLock.current = true;
+                                setIsDeleting(true);
+                                void deleteTrip(trip.id)
+                                  .then(() => {
+                                    if (!isActive()) return;
+                                    router.replace('/(tabs)/trips');
+                                  })
+                                  .catch((err: unknown) => {
+                                    deleteLock.current = false;
+                                    if (!isActive()) return;
+                                    setIsDeleting(false);
+                                    Alert.alert(
+                                      'Could not delete trip',
+                                      err instanceof Error
+                                        ? err.message
+                                        : 'Please check your connection and try again.'
+                                    );
+                                  });
+                              },
+                            },
+                          ]
+                        );
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          fontWeight: '600',
+                          color: '#B91C1C',
+                        }}
+                      >
+                        {isDeleting ? 'Deleting…' : 'Delete trip'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+              </View>
+            </View>
           </View>
         </Animated.ScrollView>
 

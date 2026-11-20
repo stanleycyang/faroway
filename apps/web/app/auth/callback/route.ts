@@ -30,6 +30,21 @@ export async function GET(request: Request) {
     }
   }
 
+  // Expired or invalid password-reset recovery links should send users back to forgot-password
+  if (next.startsWith("/auth/reset-password")) {
+    const forgot = new URL("/auth/forgot-password", origin);
+    forgot.searchParams.set("error", "reset_link_expired");
+    const parsedNext = new URL(next, origin);
+    const nestedRedirect = parsedNext.searchParams.get("redirectTo");
+    if (nestedRedirect) {
+      forgot.searchParams.set(
+        "redirectTo",
+        validateRedirectUrl(nestedRedirect),
+      );
+    }
+    return NextResponse.redirect(forgot);
+  }
+
   // Authentication failed - redirect to login with error
   const login = new URL("/auth/login", origin);
   login.searchParams.set(

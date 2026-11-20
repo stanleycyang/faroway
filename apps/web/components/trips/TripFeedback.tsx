@@ -111,25 +111,26 @@ export function TripFeedback({ tripId }: TripFeedbackProps) {
       <fieldset disabled={submitting} className="mt-5">
         <legend className="sr-only">Itinerary usefulness rating</legend>
         <div className="flex flex-wrap gap-2">
-          {[1, 2, 3, 4, 5].map((value) => (
-            <button
-              key={value}
-              type="button"
-              aria-label={`${value} out of 5`}
-              aria-pressed={score === value}
-              onClick={() => setScore(value)}
-              className={`inline-flex h-11 w-11 items-center justify-center rounded-xl border transition-colors ${
-                score === value
-                  ? "border-amber-400 bg-amber-50 text-amber-600"
-                  : "border-gray-200 text-gray-400 hover:border-amber-300 hover:text-amber-500"
-              }`}
-            >
-              <Star
-                className={`h-5 w-5 ${score === value ? "fill-current" : ""}`}
-              />
-              <span className="sr-only">{value}</span>
-            </button>
-          ))}
+          {[1, 2, 3, 4, 5].map((value) => {
+            const filled = score !== null && value <= score;
+            return (
+              <button
+                key={value}
+                type="button"
+                aria-label={`${value} out of 5`}
+                aria-pressed={score === value}
+                onClick={() => setScore(value)}
+                className={`inline-flex h-11 w-11 items-center justify-center rounded-xl border transition-colors ${
+                  filled
+                    ? "border-amber-400 bg-amber-50 text-amber-600"
+                    : "border-gray-200 text-gray-400 hover:border-amber-300 hover:text-amber-500"
+                }`}
+              >
+                <Star className={`h-5 w-5 ${filled ? "fill-current" : ""}`} />
+                <span className="sr-only">{value}</span>
+              </button>
+            );
+          })}
         </div>
       </fieldset>
 

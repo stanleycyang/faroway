@@ -148,9 +148,9 @@ ${
   targets?.length
     ? "Only return venues serving a requested meal in a requested area. Omit generic city-wide recommendations and all unrelated meal types. Returning an empty list is preferable to guessing."
     : `Generate a diverse mix of:
-- 3-4 breakfast/brunch spots
-- 4-5 lunch options
-- 4-5 dinner restaurants
+- ${count <= 12 ? "3-4" : `${Math.max(4, Math.ceil(count / 3))}`} breakfast/brunch spots
+- ${count <= 12 ? "4-5" : `${Math.max(5, Math.ceil(count / 3))}`} lunch options
+- ${count <= 12 ? "4-5" : `${Math.max(5, Math.ceil(count / 3))}`} dinner restaurants
 - Include specific local restaurants and a range of cuisines. Do not use the label "hidden gem"
 - Mix of price levels within the range
 - Cover the major sightseeing neighborhoods and the requested hotel areas: ${plan.hotelCriteria?.neighborhoods?.join(", ") || "central visitor areas"}. Include breakfast and lunch options outside the central nightlife district. Do not invent a venue to fill geographic gaps.`
@@ -366,10 +366,11 @@ export function calculateDiningVibeScore(
     }
   }
 
-  // Vibe-specific bonuses
-  if (vibes.includes("Foodie")) score += 15; // Foodies appreciate all good food
-  if (vibes.includes("Romantic") && text.includes("intimate")) score += 20;
-  if (vibes.includes("Cultural") && text.includes("traditional")) score += 20;
+  // Vibe-specific bonuses (case-insensitive)
+  const lowerVibes = new Set(vibes.map((v) => v.toLowerCase()));
+  if (lowerVibes.has("foodie")) score += 15; // Foodies appreciate all good food
+  if (lowerVibes.has("romantic") && text.includes("intimate")) score += 20;
+  if (lowerVibes.has("cultural") && text.includes("traditional")) score += 20;
 
   return {
     score: Math.min(100, score),

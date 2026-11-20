@@ -298,8 +298,11 @@ requireCondition(
   "iOS export compliance flag usesNonExemptEncryption must be explicit.",
 );
 requireCondition(
-  !hasText(appConfigPath, /NS(Location|Camera|PhotoLibrary|UserTracking)/),
-  "Expo config must not declare unused iOS privacy prompts.",
+  !hasText(
+    appConfigPath,
+    /NS(Location|Camera|PhotoLibrary|UserTracking|FaceID)/,
+  ) && hasText(appConfigPath, /configureFaceIDPermission:\s*false/),
+  "Expo config must not declare unused iOS privacy prompts (including Face ID).",
 );
 requireCondition(
   hasText(
@@ -421,8 +424,16 @@ requireCondition(
 );
 requireCondition(
   hasText(mobileAuthGatePath, /By continuing, you agree to our/) &&
-    hasText(mobileProfilePath, /By continuing, you agree to our/),
+    hasText(mobileProfilePath, /By continuing, you agree to our/) &&
+    hasText(
+      resolve(MOBILE, "app/onboarding/login.tsx"),
+      /By continuing, you agree to our/,
+    ),
   "Mobile sign-in entry points must show Terms and Privacy agreement copy.",
+);
+requireCondition(
+  hasText(resolve(MOBILE, "app/_layout.tsx"), /export function ErrorBoundary/),
+  "Mobile root layout must export an ErrorBoundary for crash recovery.",
 );
 requireCondition(
   !hasText(

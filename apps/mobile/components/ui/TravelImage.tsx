@@ -44,7 +44,8 @@ export function TravelImage({ source, style, ...props }: ImageProps) {
           {...props}
           key={sourceKey}
           source={source}
-          style={StyleSheet.absoluteFill}
+          resizeMode={props.resizeMode ?? 'cover'}
+          style={[StyleSheet.absoluteFillObject, styles.imageFill]}
           onError={(event) => {
             setFailedSource(sourceKey);
             props.onError?.(event);
@@ -57,6 +58,7 @@ export function TravelImage({ source, style, ...props }: ImageProps) {
 }
 const styles = StyleSheet.create({
   frame: { backgroundColor: travel.mist, overflow: 'hidden' },
+  imageFill: { width: '100%', height: '100%' },
   placeholder: {
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',

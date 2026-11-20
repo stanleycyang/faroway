@@ -259,13 +259,43 @@ export default function PrivacyPolicyPage() {
                 </a>{" "}
                 &mdash; authentication for Google users.
               </li>
+              <li>
+                <a
+                  href="https://vercel.com/legal/privacy-policy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Vercel
+                </a>{" "}
+                &mdash; web application hosting, infrastructure, and cookie-less
+                website analytics.
+              </li>
+              <li>
+                <a
+                  href="https://sentry.io/privacy/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Sentry
+                </a>{" "}
+                &mdash; error monitoring and crash diagnostics on web and mobile
+                to help us detect and fix reliability issues.
+              </li>
+              <li>
+                <a
+                  href="https://expo.dev/privacy"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Expo
+                </a>{" "}
+                (with Apple Push Notification service / Firebase Cloud
+                Messaging) &mdash; delivery of optional mobile push
+                notifications if you opt in.
+              </li>
             </ul>
 
             <h3>5.2 Affiliate Partners</h3>
-            <p>
-              Information previously shared with a former travel provider
-              remains subject to that provider’s privacy policy.
-            </p>
             <p>
               When you click an affiliate link, you are directed to a
               third-party provider&apos;s website. At that point, the provider
@@ -289,16 +319,38 @@ export default function PrivacyPolicyPage() {
             <p>
               We do not share your name, email, or account information with
               affiliate partners. The only data transmitted is the referral
-              identifier embedded in the link URL.
+              identifier embedded in the link URL. If you previously visited or
+              booked through a former partner provider linked from Faroway, any
+              information you shared with that provider remains subject to that
+              provider&apos;s privacy policy.
             </p>
 
             <h3>5.3 AI Service Providers</h3>
             <p>
-              To generate itineraries, your travel preferences (destination,
-              dates, travel vibes, traveler type) are sent to our AI processing
-              provider. This data does not include your name, email, or account
-              information. We contractually require our AI providers to not use
-              your data to train their models.
+              Before generating an itinerary, we ask for your consent to share
+              your trip brief with our AI processing providers &mdash;{" "}
+              <a
+                href="https://vercel.com/legal/privacy-policy"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Vercel AI Gateway
+              </a>{" "}
+              and{" "}
+              <a
+                href="https://policies.google.com/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Google (Gemini)
+              </a>
+              . Shared inputs include your destination, travel dates, traveler
+              details, budget, interests, travel vibes, and any optional details
+              (such as dietary or accessibility needs) you enter in your trip
+              brief. We do not send your account credentials, and declining AI
+              sharing keeps your saved trips available. We configure and
+              contract with our AI providers so your data is not used to train
+              foundation models.
             </p>
 
             <h3>5.4 Legal &amp; Safety</h3>

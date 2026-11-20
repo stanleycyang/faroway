@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { type Trip } from "@/components/dashboard/TripCard";
 import { DashboardTripList } from "@/components/dashboard/DashboardTripList";
+import { DashboardRetryButton } from "@/components/dashboard/DashboardRetryButton";
 import { loadDashboardTrips } from "@/lib/trips/load-dashboard-trips";
 import { FilterType, SortType } from "@/components/dashboard/TripFilters";
 
@@ -29,7 +30,9 @@ export default async function DashboardPage({
 
   // Parse filter and sort params
   const filter: FilterType =
-    params.filter === "upcoming" || params.filter === "past"
+    params.filter === "upcoming" ||
+    params.filter === "past" ||
+    params.filter === "in-progress"
       ? params.filter
       : "all";
   const sort: SortType =
@@ -112,12 +115,9 @@ export default async function DashboardPage({
               <p className="mt-2 text-slate-600">
                 We couldn’t retrieve your saved journeys. Try again in a moment.
               </p>
-              <Link
+              <DashboardRetryButton
                 href={`/dashboard?filter=${encodeURIComponent(filter)}&sort=${encodeURIComponent(sort)}`}
-                className="mt-5 inline-flex min-h-11 items-center rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white"
-              >
-                Try again
-              </Link>
+              />
             </div>
           </section>
         ) : (

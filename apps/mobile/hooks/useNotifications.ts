@@ -93,7 +93,13 @@ export function useNotifications(options: UseNotificationsOptions = {}): UseNoti
       // Check for notification that opened the app
       const lastResponse = await getLastNotificationResponse();
       if (lastResponse && mounted) {
-        const data = parseNotificationData(lastResponse);
+        const notification =
+          typeof lastResponse === 'object' &&
+          lastResponse !== null &&
+          'notification' in lastResponse
+            ? (lastResponse as { notification?: unknown }).notification
+            : lastResponse;
+        const data = parseNotificationData(notification);
         if (onNotificationResponse) {
           onNotificationResponse(data);
         }

@@ -10,8 +10,10 @@ export default function ToolsLayout({
   return (
     <div className="bg-white text-slate-900 min-h-screen">
       <Header />
-      <ToolsNav />
-      {children}
+      <div className="pt-16 lg:pt-20">
+        <ToolsNav />
+        {children}
+      </div>
       <Footer />
     </div>
   );

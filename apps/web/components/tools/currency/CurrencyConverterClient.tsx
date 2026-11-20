@@ -33,6 +33,10 @@ export function CurrencyConverterClient() {
       return n.toLocaleString("en-US", { maximumFractionDigits: 0 });
     if (n >= 100)
       return n.toLocaleString("en-US", { maximumFractionDigits: 1 });
+    if (n > 0 && n < 0.01)
+      return n.toLocaleString("en-US", { maximumFractionDigits: 5 });
+    if (n > 0 && n < 1)
+      return n.toLocaleString("en-US", { maximumFractionDigits: 4 });
     return n.toLocaleString("en-US", { maximumFractionDigits: 2 });
   };
 

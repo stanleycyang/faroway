@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 
-export type FilterType = "all" | "upcoming" | "past";
+export type FilterType = "all" | "upcoming" | "in-progress" | "past";
 export type SortType = "date-desc" | "date-asc" | "created";
 
 interface TripFiltersProps {
@@ -11,6 +11,7 @@ interface TripFiltersProps {
   tripCounts: {
     all: number;
     upcoming: number;
+    inProgress?: number;
     past: number;
   };
 }
@@ -32,6 +33,15 @@ export function TripFilters({
   const filters: { value: FilterType; label: string; count: number }[] = [
     { value: "all", label: "All Trips", count: tripCounts.all },
     { value: "upcoming", label: "Upcoming", count: tripCounts.upcoming },
+    ...(tripCounts.inProgress || currentFilter === "in-progress"
+      ? [
+          {
+            value: "in-progress" as const,
+            label: "In Progress",
+            count: tripCounts.inProgress ?? 0,
+          },
+        ]
+      : []),
     { value: "past", label: "Past", count: tripCounts.past },
   ];
 

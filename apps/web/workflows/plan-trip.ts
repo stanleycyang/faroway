@@ -494,6 +494,14 @@ async function runHotelsStep(
 ): Promise<HotelResult[]> {
   "use step";
   const startedAt = Date.now();
+  // Day trips (0 nights) do not need overnight hotel recommendations.
+  if (plan.dates.nights === 0) {
+    await Promise.all([
+      mergeIntermediateResult(searchId, "hotels", []),
+      mergeIntermediateResult(searchId, "topHotel", null),
+    ]);
+    return [];
+  }
   const hotels = await runHotelsAgent(plan, 10);
   await Promise.all([
     mergeIntermediateResult(searchId, "hotels", hotels),
@@ -511,7 +519,9 @@ async function runActivitiesStep(
 ): Promise<ActivityResult[]> {
   "use step";
   const startedAt = Date.now();
-  const activities = await runActivitiesAgent(plan, 15);
+  const dayCount = Math.max(1, (plan.dates.nights ?? 0) + 1);
+  const targetCount = Math.min(40, Math.max(15, dayCount * 4));
+  const activities = await runActivitiesAgent(plan, targetCount);
   await Promise.all([
     mergeIntermediateResult(searchId, "activitiesCount", activities.length),
   ]);
@@ -527,7 +537,9 @@ async function runDiningStep(
 ): Promise<DiningResult[]> {
   "use step";
   const startedAt = Date.now();
-  const dining = await runDiningAgent(plan, 12);
+  const dayCount = Math.max(1, (plan.dates.nights ?? 0) + 1);
+  const targetCount = Math.min(36, Math.max(12, dayCount * 3 + 3));
+  const dining = await runDiningAgent(plan, targetCount);
   await Promise.all([
     mergeIntermediateResult(searchId, "diningCount", dining.length),
   ]);

@@ -77,6 +77,27 @@ export function readDayTiming(value: unknown): DayTimingProposal | undefined {
     start: number;
     end: number;
   }> = [];
+  const morningActivities = list(record(day.morning).activities);
+  const afternoonActivities = list(record(day.afternoon).activities);
+  const eveningActivities = list(record(day.evening).activities);
+  const hasLongMorning = morningActivities.some(
+    (item) =>
+      typeof record(item).duration === "number" &&
+      (record(item).duration as number) > 240,
+  );
+  const hasLongAfternoon = afternoonActivities.some(
+    (item) =>
+      typeof record(item).duration === "number" &&
+      (record(item).duration as number) > 240,
+  );
+  const isMiddayRest = timing.policy === "midday-rest-v1";
+  const extendMorning =
+    !isMiddayRest && hasLongMorning && afternoonActivities.length === 0;
+  const extendAfternoon = hasLongAfternoon && eveningActivities.length === 0;
+  const morningEnd = extendMorning ? 1080 : 780;
+  const lunchEnd = extendMorning ? 1080 : 840;
+  const afternoonEnd = extendAfternoon ? 1200 : 1080;
+
   const meal = (slot: string, duration: number) => {
     const block = record(day[slot]);
     const meals = Array.isArray(block.meals)
@@ -90,7 +111,7 @@ export function readDayTiming(value: unknown): DayTimingProposal | undefined {
         kind: "meal",
         duration,
         start: slot === "morning" ? 480 : slot === "afternoon" ? 720 : 1080,
-        end: slot === "morning" ? 600 : slot === "afternoon" ? 840 : 1320,
+        end: slot === "morning" ? 600 : slot === "afternoon" ? lunchEnd : 1320,
       });
   };
   const visits = (slot: string) => {
@@ -101,14 +122,19 @@ export function readDayTiming(value: unknown): DayTimingProposal | undefined {
         kind: "activity",
         duration: activity.duration,
         start: slot === "morning" ? 540 : slot === "afternoon" ? 840 : 1080,
-        end: slot === "morning" ? 780 : slot === "afternoon" ? 1080 : 1320,
+        end:
+          slot === "morning"
+            ? morningEnd
+            : slot === "afternoon"
+              ? afternoonEnd
+              : 1320,
       });
     }
   };
   meal("morning", 45);
   visits("morning");
   meal("afternoon", 60);
-  if (timing.policy === "midday-rest-v1")
+  if (isMiddayRest)
     expected.push({
       id: "rest:midday",
       kind: "rest",

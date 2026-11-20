@@ -73,6 +73,8 @@ export default function CreateTripScreen() {
   const { isAuthenticated, user } = useAuthContext();
   const userId = user?.id;
   const accountRevision = useUserStore((state) => state.accountRevision);
+  const savedProfileBudget = useUserStore((state) => state.user?.preferences?.budget);
+  const activeBudget = draftInput?.budget ?? savedProfileBudget ?? 'moderate';
   const recoveryScope = `${userId ?? 'guest'}:${accountRevision}`;
   const recoveryOwner = useRef<string | undefined>(recoveryScope);
   const discardLock = useRef(false);
@@ -273,11 +275,11 @@ export default function CreateTripScreen() {
                   }}
                   activeOpacity={0.7}
                   accessibilityRole="button"
-                  accessibilityLabel="Sign in to sync your trips across devices"
+                  accessibilityLabel="Sign in to save your trips to your account"
                 >
                   <Ionicons name="cloud-upload-outline" size={18} color={colors.primary[600]} />
                   <Text style={styles.signInBannerText}>
-                    Sign in to sync your trips across devices
+                    Sign in to save your trips to your account
                   </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
@@ -557,6 +559,65 @@ export default function CreateTripScreen() {
                     </Text>
                   </TouchableOpacity>
                 ))}
+              </View>
+            </View>
+
+            {/* Budget */}
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>Your kind of comfort</Text>
+              <View style={styles.travelerTypes}>
+                {(
+                  [
+                    {
+                      id: 'budget',
+                      label: 'Budget',
+                      icon: 'wallet-outline' as const,
+                    },
+                    {
+                      id: 'moderate',
+                      label: 'Comfort',
+                      icon: 'cash-outline' as const,
+                    },
+                    {
+                      id: 'luxury',
+                      label: 'Luxury',
+                      icon: 'sparkles-outline' as const,
+                    },
+                  ] as const
+                ).map((option) => {
+                  const selected = activeBudget === option.id;
+                  return (
+                    <TouchableOpacity
+                      key={option.id}
+                      style={[
+                        styles.travelerTypeButton,
+                        selected && styles.travelerTypeButtonSelected,
+                      ]}
+                      onPress={() => {
+                        hapticFeedback.selection();
+                        setDraftInput({ budget: option.id });
+                      }}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      accessibilityLabel={`Budget tier: ${option.label}`}
+                    >
+                      <Ionicons
+                        name={option.icon}
+                        size={18}
+                        color={selected ? colors.primary[600] : colors.neutral[500]}
+                      />
+                      <Text
+                        style={[
+                          styles.travelerTypeLabel,
+                          selected && styles.travelerTypeLabelSelected,
+                        ]}
+                      >
+                        {option.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
             </View>
 

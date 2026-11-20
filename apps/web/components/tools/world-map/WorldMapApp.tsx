@@ -12,7 +12,6 @@ import {
   nextMilestoneCrossed,
   type Milestone,
 } from "@/lib/tools/world-map/milestones";
-import { Logo } from "@/components/Logo";
 import { WorldMap, type CountryClickIntent } from "./WorldMap";
 import { StatsHeader } from "./StatsHeader";
 import { FieldNotes } from "./FieldNotes";
@@ -195,9 +194,11 @@ export function WorldMapApp() {
         {/* Editorial top bar — quiet, no competing chrome rule */}
         <header className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-3">
-            <Logo size="sm" />
-            <span className="hidden md:inline-block text-[11px] text-slate-500 font-bold uppercase tracking-[0.24em] border-l border-ink/15 pl-3">
+            <h1 className="font-editorial text-2xl sm:text-3xl tracking-tight text-slate-900">
               World Map
+            </h1>
+            <span className="hidden md:inline-block text-[11px] text-slate-500 font-semibold uppercase tracking-[0.2em] border-l border-ink/15 pl-3">
+              Travel Tracker
             </span>
           </div>
           <div className="flex items-center gap-2">

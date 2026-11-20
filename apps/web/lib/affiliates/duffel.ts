@@ -20,10 +20,10 @@ const DUFFEL_API_TOKEN = process.env.DUFFEL_API_TOKEN;
 const DUFFEL_API_BASE = "https://api.duffel.com";
 const DUFFEL_SUPPLIER_TIMEOUT_MS = getEnvNumber(
   "DUFFEL_SUPPLIER_TIMEOUT_MS",
-  2000,
+  8000,
   { min: 2000, max: 60000 },
 );
-const DUFFEL_LINK_TIMEOUT_MS = getEnvNumber("DUFFEL_LINK_TIMEOUT_MS", 750, {
+const DUFFEL_LINK_TIMEOUT_MS = getEnvNumber("DUFFEL_LINK_TIMEOUT_MS", 2500, {
   min: 250,
   max: 10000,
 });

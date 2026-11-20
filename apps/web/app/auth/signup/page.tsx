@@ -14,10 +14,23 @@ import {
 import { validateRedirectUrl } from "@/lib/security/validate-redirect";
 import { getSignupCopy } from "@/lib/auth/login-copy";
 
+const SIGNUP_ERROR_MESSAGES: Record<string, string> = {
+  auth_code_error:
+    "There was an error creating your account. Please try again.",
+  auth_cancelled:
+    "Sign-up was canceled. Choose a method below to continue planning.",
+  auth_timeout:
+    "Sign-up could not be confirmed. Choose a method below to try again.",
+  no_code: "Invalid authentication request. Please try again.",
+};
+
 function SignupContent() {
   const searchParams = useSearchParams() ?? new URLSearchParams();
-  const redirectTo = validateRedirectUrl(searchParams.get("redirectTo"));
-  const error = searchParams.get("error");
+  const redirectTo = validateRedirectUrl(
+    searchParams.get("redirectTo") ?? searchParams.get("next"),
+  );
+  const errorCode = searchParams.get("error");
+  const errorText = errorCode ? SIGNUP_ERROR_MESSAGES[errorCode] : undefined;
   const copy = getSignupCopy(redirectTo);
 
   return (
@@ -26,13 +39,13 @@ function SignupContent() {
       subtitle={copy.subtitle}
       action="signing up"
     >
-      {/* Error Message */}
-      {error && (
+      {/* Error Message (strict allowlist prevents URL text spoofing) */}
+      {errorText && (
         <div
           role="alert"
           className="mb-4 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm"
         >
-          {error}
+          {errorText}
         </div>
       )}
 

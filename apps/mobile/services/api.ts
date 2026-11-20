@@ -179,12 +179,42 @@ async function profileAccountRequest(
     if (!isCurrent()) return changed;
     if (error) throw error;
     if (data.session?.user.id !== expectedUserId) return changed;
-    const result = await apiFetch<UserProfile>(
+    let result = await apiFetch<UserProfile>(
       '/api/user/profile',
       options,
       data.session.access_token
     );
     if (!isCurrent()) return changed;
+    // Retained native sessions can wake with an expired access token: refresh once and retry.
+    if (result.code === 'UNAUTHORIZED') {
+      let refreshTimer: ReturnType<typeof setTimeout> | undefined;
+      try {
+        const { supabase } = await import('../lib/supabase');
+        const refreshed = await Promise.race([
+          supabase.auth.refreshSession(),
+          new Promise<never>((_, reject) => {
+            refreshTimer = setTimeout(() => reject(new Error('Session refresh timed out')), 15_000);
+          }),
+        ]);
+        if (!isCurrent()) return changed;
+        if (
+          !refreshed.error &&
+          refreshed.data.session?.user.id === expectedUserId &&
+          refreshed.data.session.access_token
+        ) {
+          result = await apiFetch<UserProfile>(
+            '/api/user/profile',
+            options,
+            refreshed.data.session.access_token
+          );
+          if (!isCurrent()) return changed;
+        }
+      } catch {
+        // Keep the original UNAUTHORIZED response if session refresh fails.
+      } finally {
+        if (refreshTimer) clearTimeout(refreshTimer);
+      }
+    }
     if (result.error) return result;
     if (result.data?.id !== expectedUserId)
       return {

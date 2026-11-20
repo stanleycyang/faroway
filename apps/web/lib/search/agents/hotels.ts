@@ -292,11 +292,12 @@ export function calculateHotelVibeScore(
     }
   }
 
-  // Bonus for specific vibe-hotel matches
-  if (vibes.includes("Romantic") && text.includes("boutique")) score += 20;
-  if (vibes.includes("Relaxation") && text.includes("spa")) score += 25;
+  // Bonus for specific vibe-hotel matches (case-insensitive)
+  const lowerVibes = new Set(vibes.map((v) => v.toLowerCase()));
+  if (lowerVibes.has("romantic") && text.includes("boutique")) score += 20;
+  if (lowerVibes.has("relaxation") && text.includes("spa")) score += 25;
   if (
-    vibes.includes("Wellness") &&
+    lowerVibes.has("wellness") &&
     (text.includes("spa") || text.includes("fitness"))
   )
     score += 20;

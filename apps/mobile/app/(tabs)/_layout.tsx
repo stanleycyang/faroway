@@ -21,7 +21,7 @@ export default function TabLayout() {
           borderTopWidth: 1,
           paddingTop: 8,
           paddingBottom: bottomPadding,
-          height: 64 + bottomPadding,
+          minHeight: 64 + bottomPadding,
           ...Platform.select({
             web: { boxShadow: '0 -2px 8px rgba(0, 0, 0, 0.06)' },
             default: {
@@ -35,6 +35,8 @@ export default function TabLayout() {
         },
         tabBarLabel: ({ color, children }) => (
           <FontScaleText
+            numberOfLines={1}
+            maxFontSizeMultiplier={1.3}
             style={{
               color,
               fontSize: 12,

@@ -176,6 +176,10 @@ export function useTripGeneration(
 
   const [state, setState] = useState<TripGenerationState>(initialState);
   const [connectionAttempt, setConnectionAttempt] = useState(0);
+  const autoRetriesRef = useRef(0);
+  useEffect(() => {
+    autoRetriesRef.current = 0;
+  }, [tripId, generationId]);
   const openedJob = useRef<string | null>(null);
   const specChapters = useRef(new Map<string, StreamingSpecBlock[]>());
   const reconnect = useCallback(() => {
@@ -364,30 +368,45 @@ export function useTripGeneration(
         }
       });
     }
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    source.addEventListener("open", () => {
+      autoRetriesRef.current = 0;
+    });
     source.addEventListener("error", (event) => {
       if (terminal) return;
       terminal = true;
       const data = (event as MessageEvent<string>).data;
-      if (typeof data !== "string" || !processEvent("error", data)) {
-        const message = "Live updates disconnected. Checking your saved plan…";
-        setState((previous) =>
-          previous.isComplete
-            ? previous
-            : {
-                ...previous,
-                isStreaming: false,
-                phase: "error",
-                error: message,
-              },
-        );
-        onErrorRef.current?.(message);
+      if (typeof data === "string" && processEvent("error", data)) {
+        source.close();
+        return;
       }
-      // Status polling handles recovery; closing prevents automatic replays of
-      // partial chapters and never dispatches a new generation request.
       source.close();
+      // Attempt up to 2 bounded automatic reconnects on transient network hiccups
+      // before surfacing a paused-updates error to the traveler.
+      if (autoRetriesRef.current < 2) {
+        autoRetriesRef.current += 1;
+        const delayMs = 1500 * autoRetriesRef.current;
+        retryTimer = setTimeout(() => {
+          setConnectionAttempt((attempt) => attempt + 1);
+        }, delayMs);
+        return;
+      }
+      const message = "Live updates disconnected. Checking your saved plan…";
+      setState((previous) =>
+        previous.isComplete
+          ? previous
+          : {
+              ...previous,
+              isStreaming: false,
+              phase: "error",
+              error: message,
+            },
+      );
+      onErrorRef.current?.(message);
     });
     return () => {
       terminal = true;
+      if (retryTimer) clearTimeout(retryTimer);
       source.close();
     };
   }, [

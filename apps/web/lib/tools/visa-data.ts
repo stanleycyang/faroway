@@ -49,33 +49,39 @@ const visaMatrix: Record<string, Record<string, VisaInfo>> = {
     },
     bangkok: {
       status: "visa-free",
-      duration: "30 days",
-      notes: "Visa exemption for tourism",
+      duration: "60 days",
+      notes:
+        "Visa exemption for tourism (expanded to 60 days; Thailand Digital Arrival Card required)",
     },
     dubai: {
-      status: "visa-free",
-      duration: "90 days",
-      notes: "Visa on arrival at no cost",
+      status: "visa-on-arrival",
+      duration: "30 days",
+      notes:
+        "Free 30-day visa on arrival for US passport holders (extendable in-country)",
     },
     paris: {
       status: "visa-free",
       duration: "90 days",
-      notes: "Schengen zone — 90 days in any 180-day period",
+      notes:
+        "Schengen zone — 90 days in any 180-day period (check ETIAS launch status before travel)",
     },
     barcelona: {
       status: "visa-free",
       duration: "90 days",
-      notes: "Schengen zone — 90 days in any 180-day period",
+      notes:
+        "Schengen zone — 90 days in any 180-day period (check ETIAS launch status before travel)",
     },
     santorini: {
       status: "visa-free",
       duration: "90 days",
-      notes: "Schengen zone — 90 days in any 180-day period",
+      notes:
+        "Schengen zone — 90 days in any 180-day period (check ETIAS launch status before travel)",
     },
     london: {
-      status: "visa-free",
+      status: "e-visa",
       duration: "180 days",
-      notes: "No visa needed for tourism",
+      notes:
+        "UK Electronic Travel Authorisation (ETA) required online prior to arrival (£16 fee)",
     },
     rome: {
       status: "visa-free",

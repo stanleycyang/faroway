@@ -18,6 +18,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { TripCard, Button } from '../../components/ui';
 import { useTrips } from '../../hooks/useTrips';
 import { useAuthContext } from '../../components/AuthProvider';
+import { isRequestCanceled } from '../../lib/authProviders';
 import { useTripStore } from '../../stores/tripStore';
 import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
@@ -44,8 +45,10 @@ function GuestTripsView() {
       await signInWithGoogle();
       hapticFeedback.success();
     } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : 'Please try again';
-      Alert.alert('Sign In Failed', msg);
+      if (!isRequestCanceled(error)) {
+        const msg = error instanceof Error ? error.message : 'Please try again';
+        Alert.alert('Sign In Failed', msg);
+      }
     } finally {
       setAuthLoading(false);
     }

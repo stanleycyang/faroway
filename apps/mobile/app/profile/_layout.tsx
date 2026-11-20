@@ -28,7 +28,7 @@ export default function ProfileLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#0a0a0f' },
+        contentStyle: { backgroundColor: '#ffffff' },
         animation: reduceMotion ? 'none' : 'slide_from_right',
         animationDuration: reduceMotion ? 0 : 300,
       }}

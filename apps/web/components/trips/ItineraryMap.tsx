@@ -102,8 +102,10 @@ export function ItineraryMap({ itinerary, className }: ItineraryMapProps) {
     const map = L.map(mapRef.current, {
       zoomControl: true,
       attributionControl: true,
-      scrollWheelZoom: true,
+      scrollWheelZoom: false,
     });
+    map.on("click", () => map.scrollWheelZoom.enable());
+    map.on("mouseout", () => map.scrollWheelZoom.disable());
 
     L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19,
@@ -175,29 +177,34 @@ export function ItineraryMap({ itinerary, className }: ItineraryMapProps) {
     );
 
   return (
-    <div className={className}>
-      <div ref={mapRef} className="h-full w-full" />
-      <div className="flex items-center gap-4 px-4 py-2 bg-white border-t border-gray-100 text-xs text-gray-500">
-        <span className="flex items-center gap-1.5">
-          <span
-            className="inline-block w-2.5 h-2.5 rounded-full"
-            style={{ background: TIME_COLORS.morning }}
-          />
-          Morning
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span
-            className="inline-block w-2.5 h-2.5 rounded-full"
-            style={{ background: TIME_COLORS.afternoon }}
-          />
-          Afternoon
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span
-            className="inline-block w-2.5 h-2.5 rounded-full"
-            style={{ background: TIME_COLORS.evening }}
-          />
-          Evening
+    <div className={`flex flex-col ${className}`}>
+      <div ref={mapRef} className="min-h-0 flex-1 w-full" />
+      <div className="shrink-0 flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-white border-t border-gray-100 text-xs text-gray-600">
+        <div className="flex items-center gap-4">
+          <span className="flex items-center gap-1.5">
+            <span
+              className="inline-block w-2.5 h-2.5 rounded-full"
+              style={{ background: TIME_COLORS.morning }}
+            />
+            Morning
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span
+              className="inline-block w-2.5 h-2.5 rounded-full"
+              style={{ background: TIME_COLORS.afternoon }}
+            />
+            Afternoon
+          </span>
+          <span className="flex items-center gap-1.5">
+            <span
+              className="inline-block w-2.5 h-2.5 rounded-full"
+              style={{ background: TIME_COLORS.evening }}
+            />
+            Evening
+          </span>
+        </div>
+        <span className="text-[11px] text-gray-400">
+          Click map to enable scroll zoom
         </span>
       </div>
     </div>

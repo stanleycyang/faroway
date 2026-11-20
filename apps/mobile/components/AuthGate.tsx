@@ -19,6 +19,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthContext } from './AuthProvider';
+import { isRequestCanceled } from '../lib/authProviders';
 import { colors, borderRadius, shadows } from '../constants/theme';
 import { useReduceMotion } from '../hooks/useReduceMotion';
 
@@ -131,8 +132,10 @@ export function AuthGate({
       onClose();
     } catch (err: unknown) {
       if (!current(token)) return;
-      const msg = err instanceof Error ? err.message : 'Please try again';
-      Alert.alert('Sign In Failed', msg);
+      if (!isRequestCanceled(err)) {
+        const msg = err instanceof Error ? err.message : 'Please try again';
+        Alert.alert('Sign In Failed', msg);
+      }
     } finally {
       finish();
     }

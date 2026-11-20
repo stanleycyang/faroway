@@ -14,11 +14,34 @@ import {
 import { validateRedirectUrl } from "@/lib/security/validate-redirect";
 import { getLoginCopy } from "@/lib/auth/login-copy";
 
+const AUTH_ERROR_MESSAGES: Record<string, string> = {
+  auth_code_error: "There was an error signing you in. Please try again.",
+  auth_cancelled:
+    "Sign-in was canceled. Choose a method below to continue planning.",
+  auth_timeout:
+    "Sign-in could not be confirmed. Choose a method below to try again.",
+  no_code: "Invalid authentication request. Please try again.",
+  reset_link_expired:
+    "Your password reset link has expired. Request a new link to continue.",
+};
+
+const AUTH_STATUS_MESSAGES: Record<string, string> = {
+  password_updated: "Your password has been updated. Sign in to continue.",
+  account_created: "Account created. Check your email or sign in below.",
+  signed_out: "You have been signed out.",
+};
+
 function LoginContent() {
   const searchParams = useSearchParams() ?? new URLSearchParams();
-  const redirectTo = validateRedirectUrl(searchParams.get("redirectTo"));
-  const error = searchParams.get("error");
-  const message = searchParams.get("message");
+  const redirectTo = validateRedirectUrl(
+    searchParams.get("redirectTo") ?? searchParams.get("next"),
+  );
+  const errorCode = searchParams.get("error");
+  const messageCode = searchParams.get("message");
+  const errorText = errorCode ? AUTH_ERROR_MESSAGES[errorCode] : undefined;
+  const statusText = messageCode
+    ? AUTH_STATUS_MESSAGES[messageCode]
+    : undefined;
   const copy = getLoginCopy(redirectTo);
 
   return (
@@ -27,34 +50,22 @@ function LoginContent() {
       subtitle={copy.subtitle}
       action="signing in"
     >
-      {/* Error/Success Messages */}
-      {error && (
+      {/* Error/Success Messages (strict allowlist prevents URL text spoofing) */}
+      {errorText && (
         <div
           role="alert"
           className="mb-4 p-4 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm"
         >
-          {error === "auth_code_error" &&
-            "There was an error signing you in. Please try again."}
-          {error === "auth_cancelled" &&
-            "Sign-in was canceled. Choose a method below to continue planning."}
-          {error === "auth_timeout" &&
-            "Sign-in could not be confirmed. Choose a method below to try again."}
-          {error === "no_code" &&
-            "Invalid authentication request. Please try again."}
-          {error !== "auth_code_error" &&
-            error !== "auth_cancelled" &&
-            error !== "auth_timeout" &&
-            error !== "no_code" &&
-            error}
+          {errorText}
         </div>
       )}
 
-      {message && (
+      {statusText && (
         <div
           role="status"
           className="mb-4 p-4 rounded-lg bg-green-50 border border-green-200 text-green-700 text-sm"
         >
-          {message}
+          {statusText}
         </div>
       )}
 

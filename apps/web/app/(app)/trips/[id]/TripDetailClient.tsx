@@ -2,6 +2,12 @@
 import { useHydrated } from "@/hooks/useHydrated";
 import { getTripDuration, parseTripDate } from "@/lib/trips/date-duration";
 import { requestPlanningConsent } from "@/lib/ai/planning-consent-client";
+import { setPlanningConsentPrompt } from "@/lib/ai/planning-consent-prompt";
+import { PlanningConsentDialog } from "@/components/trips/PlanningConsentDialog";
+import {
+  buildTripExportFilename,
+  buildTripExportText,
+} from "@/lib/trips/export";
 
 import { BookingChecklist } from "@/components/trips/BookingChecklist";
 import { FlightLeg } from "@/components/trips/FlightLeg";
@@ -32,6 +38,9 @@ import {
   ChevronUp,
   Ticket,
   Plane,
+  Printer,
+  Download,
+  Trash2,
 } from "lucide-react";
 
 /**
@@ -156,6 +165,32 @@ export function TripDetailClient({
   const [showStickyBar, setShowStickyBar] = useState(false);
   const retryLock = useRef(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [activeSection, setActiveSection] = useState<
+    "trip-itinerary" | "trip-stay" | "trip-details"
+  >("trip-itinerary");
+  const [briefSavedNotice, setBriefSavedNotice] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const deleteLock = useRef(false);
+  const consentResolveRef = useRef<((approved: boolean) => void) | null>(null);
+  const [consentDialog, setConsentDialog] = useState<{
+    message: string;
+  } | null>(null);
+  useEffect(() => {
+    const unregister = setPlanningConsentPrompt(
+      (message) =>
+        new Promise<boolean>((resolve) => {
+          consentResolveRef.current?.(false);
+          consentResolveRef.current = resolve;
+          setConsentDialog({ message });
+        }),
+    );
+    return () => {
+      unregister();
+      consentResolveRef.current?.(false);
+      consentResolveRef.current = null;
+    };
+  }, []);
   const [showCompletedDossier, setShowCompletedDossier] = useState(false);
   const [hasSeenGeneratingThisSession, setHasSeenGeneratingThisSession] =
     useState(false);
@@ -449,6 +484,7 @@ export function TripDetailClient({
     if (!trip || retryLock.current || !refreshMounted.current) return;
     retryLock.current = true;
     setIsRetrying(true);
+    setBriefSavedNotice(false);
 
     try {
       const planningHeaders = await requestPlanningConsent(trip.user_id);
@@ -472,11 +508,61 @@ export function TripDetailClient({
       await fetchTrip();
     } catch (err) {
       if (!refreshMounted.current) return;
+      if (err instanceof Error && err.name === "PlanningConsentDeclinedError") {
+        return;
+      }
       console.error("Retry failed:", err);
       setError(err instanceof Error ? err.message : "Retry failed");
     } finally {
       retryLock.current = false;
       if (refreshMounted.current) setIsRetrying(false);
+    }
+  };
+
+  const handleDownloadItinerary = () => {
+    if (!trip) return;
+    const text = buildTripExportText(trip, itinerary);
+    const filename = buildTripExportFilename(trip);
+    const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const handleDeleteTrip = async () => {
+    if (!trip || deleteLock.current || !refreshMounted.current) return;
+    deleteLock.current = true;
+    setIsDeleting(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/trips/${tripId}`, {
+        method: "DELETE",
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!refreshMounted.current) return;
+      if (response.status === 401) {
+        deleteLock.current = false;
+        setIsDeleting(false);
+        router.push("/auth/login?redirectTo=/trips/" + tripId);
+        return;
+      }
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || "Failed to delete trip");
+      }
+      router.push("/dashboard");
+      router.refresh();
+    } catch (err) {
+      deleteLock.current = false;
+      if (!refreshMounted.current) return;
+      setError(err instanceof Error ? err.message : "Failed to delete trip");
+      setIsDeleting(false);
+      setConfirmDeleteOpen(false);
     }
   };
 
@@ -551,8 +637,63 @@ export function TripDetailClient({
     if (isGenerating) {
       setHasSeenGeneratingThisSession(true);
       setShowCompletedDossier(false);
+      setBriefSavedNotice(false);
     }
   }, [isGenerating]);
+
+  useEffect(() => {
+    if (
+      showFullGenerationLoader ||
+      !displayDays?.length ||
+      typeof IntersectionObserver === "undefined"
+    ) {
+      return;
+    }
+    const sectionIds = ["trip-itinerary", "trip-stay", "trip-details"] as const;
+    const elements = sectionIds
+      .map((id) => document.getElementById(id))
+      .filter((el): el is HTMLElement => el !== null);
+    if (elements.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+        const topId = visible[0]?.target.id;
+        if (
+          topId === "trip-itinerary" ||
+          topId === "trip-stay" ||
+          topId === "trip-details"
+        ) {
+          setActiveSection(topId);
+        }
+      },
+      { rootMargin: "-96px 0px -55% 0px", threshold: 0 },
+    );
+
+    for (const el of elements) observer.observe(el);
+    return () => observer.disconnect();
+  }, [showFullGenerationLoader, displayDays?.length]);
+
+  const planningConsentModal = (
+    <PlanningConsentDialog
+      open={consentDialog !== null}
+      message={consentDialog?.message ?? ""}
+      onConfirm={() => {
+        const resolve = consentResolveRef.current;
+        consentResolveRef.current = null;
+        setConsentDialog(null);
+        resolve?.(true);
+      }}
+      onCancel={() => {
+        const resolve = consentResolveRef.current;
+        consentResolveRef.current = null;
+        setConsentDialog(null);
+        resolve?.(false);
+      }}
+    />
+  );
 
   useEffect(() => {
     if (
@@ -714,6 +855,7 @@ export function TripDetailClient({
             )}
           </aside>
         </ItineraryGenerationLoader>
+        {planningConsentModal}
       </div>
     );
   }
@@ -740,36 +882,53 @@ export function TripDetailClient({
         {displayDays?.length ? (
           <nav
             aria-label="Trip sections"
-            className="sticky top-0 z-40 -mx-4 mb-8 flex gap-2 overflow-x-auto border-b border-slate-200 bg-[#f7f8fa]/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6"
+            className="print-hidden sticky top-0 z-40 -mx-4 mb-8 flex gap-2 overflow-x-auto border-b border-slate-200 bg-[#f7f8fa]/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6"
           >
-            <a
-              href="#trip-itinerary"
-              className="flex min-h-11 shrink-0 items-center rounded-full bg-slate-900 px-5 text-sm font-semibold text-white"
-            >
-              Your days
-            </a>
-            <a
-              href="#trip-stay"
-              className="flex min-h-11 shrink-0 items-center rounded-full px-5 text-sm font-medium text-slate-600 hover:bg-white"
-            >
-              Your stay
-            </a>
-            <a
-              href="#trip-details"
-              className="flex min-h-11 shrink-0 items-center rounded-full px-5 text-sm font-medium text-slate-600 hover:bg-white"
-            >
-              Trip details
-            </a>
+            {(
+              [
+                { id: "trip-itinerary", label: "Your days" },
+                { id: "trip-stay", label: "Your stay" },
+                { id: "trip-details", label: "Trip details" },
+              ] as const
+            ).map((section) => (
+              <a
+                key={section.id}
+                href={`#${section.id}`}
+                onClick={() => setActiveSection(section.id)}
+                aria-current={activeSection === section.id ? "true" : undefined}
+                className={`flex min-h-11 shrink-0 items-center rounded-full px-5 text-sm transition-colors ${
+                  activeSection === section.id
+                    ? "bg-slate-900 font-semibold text-white"
+                    : "font-medium text-slate-600 hover:bg-white"
+                }`}
+              >
+                {section.label}
+              </a>
+            ))}
           </nav>
         ) : null}
         {trip.preferences?.planNeedsRefresh === true && (
           <div
             role="status"
-            className="mb-5 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+            className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
           >
-            Your updated brief is saved. The previous plan below uses your
-            earlier dates and preferences. Start planning to update it before
-            checkout or sharing.
+            <p className="max-w-xl">
+              Your updated brief is saved. The previous plan below uses your
+              earlier dates and preferences. Start planning to update it before
+              checkout or sharing.
+            </p>
+            <button
+              type="button"
+              onClick={handleRetry}
+              disabled={isRetrying || isGenerating}
+              className="inline-flex min-h-10 shrink-0 items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+            >
+              <RefreshCw
+                className={`h-3.5 w-3.5 ${isRetrying ? "animate-spin" : ""}`}
+                aria-hidden="true"
+              />
+              {isRetrying ? "Starting…" : "Regenerate itinerary"}
+            </button>
           </div>
         )}
         {/* Generation Failed */}
@@ -990,7 +1149,11 @@ export function TripDetailClient({
             isGenerating={isGenerating}
           />
         ) : isComplete && !displayDays?.length ? (
-          <EmptyItinerary destination={trip.destination} />
+          <EmptyItinerary
+            destination={trip.destination}
+            onGenerate={handleRetry}
+            isRetrying={isRetrying}
+          />
         ) : null}
 
         <section
@@ -1039,6 +1202,7 @@ export function TripDetailClient({
             onReload={fetchTrip}
             onSaved={(saved) => {
               setTrip(saved);
+              setBriefSavedNotice(true);
               setShareUrl(
                 saved.is_shared && saved.share_token
                   ? `${window.location.origin}/s/${saved.share_token}`
@@ -1051,6 +1215,29 @@ export function TripDetailClient({
               );
             }}
           />
+          {briefSavedNotice && !isGenerating && (
+            <div
+              role="status"
+              className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"
+            >
+              <p>
+                Trip brief saved. Ready to rebuild your itinerary with these
+                changes?
+              </p>
+              <button
+                type="button"
+                onClick={handleRetry}
+                disabled={isRetrying}
+                className="inline-flex min-h-10 items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800 disabled:opacity-50"
+              >
+                <RefreshCw
+                  className={`h-3.5 w-3.5 ${isRetrying ? "animate-spin" : ""}`}
+                  aria-hidden="true"
+                />
+                {isRetrying ? "Starting…" : "Regenerate itinerary"}
+              </button>
+            </div>
+          )}
           {planEditingEnabled &&
             itinerary &&
             !isGenerating &&
@@ -1201,7 +1388,73 @@ export function TripDetailClient({
             )}
           </div>
         )}
+
+        {/* Export, Print & Manage Trip */}
+        {!isGenerating && (
+          <div className="print-hidden mt-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm">
+            <h3 className="text-base font-bold text-slate-900">
+              Take your itinerary with you
+            </h3>
+            <p className="mt-1 text-sm text-slate-600">
+              Save a print/PDF copy or plain-text file for offline access while
+              traveling.
+            </p>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              {displayDays?.length ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                  >
+                    <Printer className="h-4 w-4" aria-hidden="true" />
+                    Print / Save PDF
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadItinerary}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                  >
+                    <Download className="h-4 w-4" aria-hidden="true" />
+                    Download text (.txt)
+                  </button>
+                </>
+              ) : null}
+              {!confirmDeleteOpen ? (
+                <button
+                  type="button"
+                  onClick={() => setConfirmDeleteOpen(true)}
+                  className="ml-auto inline-flex min-h-11 items-center gap-2 rounded-full border border-red-200 px-4 py-2 text-sm font-semibold text-red-700 hover:bg-red-50"
+                >
+                  <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  Delete trip
+                </button>
+              ) : (
+                <div className="ml-auto flex flex-wrap items-center gap-2 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-900">
+                  <span>Permanently delete this trip?</span>
+                  <button
+                    type="button"
+                    onClick={handleDeleteTrip}
+                    disabled={isDeleting}
+                    className="rounded-full bg-red-600 px-3 py-1.5 font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                  >
+                    {isDeleting ? "Deleting…" : "Confirm delete"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDeleteOpen(false)}
+                    disabled={isDeleting}
+                    className="rounded-full border border-red-200 bg-white px-3 py-1.5 font-semibold text-slate-700 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </main>
+      {planningConsentModal}
 
       {/* Sticky Booking Bar */}
       {isComplete && bookableCount > 0 && (
@@ -1330,7 +1583,15 @@ function FeaturedFlights({ days }: { days: TripDay[] | null }) {
 
 // ── Empty Itinerary ─────────────────────────────────────────────────────────
 
-function EmptyItinerary({ destination }: { destination: string }) {
+function EmptyItinerary({
+  destination,
+  onGenerate,
+  isRetrying,
+}: {
+  destination: string;
+  onGenerate: () => void;
+  isRetrying: boolean;
+}) {
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center">
       <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -1343,13 +1604,23 @@ function EmptyItinerary({ destination }: { destination: string }) {
         Your trip to {destination} doesn&apos;t have an itinerary yet. Generate
         one with our AI planner!
       </p>
-      <Link
-        href={`/create?destination=${encodeURIComponent(destination)}`}
-        className="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-full font-semibold hover:bg-primary-600 transition-colors"
-      >
-        <Sparkles className="w-5 h-5" />
-        Generate Itinerary
-      </Link>
+      <div className="flex flex-wrap items-center justify-center gap-3">
+        <button
+          type="button"
+          onClick={onGenerate}
+          disabled={isRetrying}
+          className="inline-flex min-h-11 items-center gap-2 px-6 py-3 bg-primary text-white rounded-full font-semibold hover:bg-primary-600 transition-colors disabled:opacity-50"
+        >
+          <Sparkles className="w-5 h-5" />
+          {isRetrying ? "Starting…" : "Generate Itinerary"}
+        </button>
+        <Link
+          href={`/create?destination=${encodeURIComponent(destination)}`}
+          className="inline-flex min-h-11 items-center gap-2 px-5 py-3 border border-gray-300 bg-white text-gray-700 rounded-full text-sm font-semibold hover:bg-gray-50 transition-colors"
+        >
+          Plan a new trip
+        </Link>
+      </div>
     </div>
   );
 }

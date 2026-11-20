@@ -84,7 +84,9 @@ function convertStreamingDataToTrip(
     budget: input.budget,
     days: transformItineraryDays(itineraryDays),
     hotel,
-    coverImage: destinationImage(input.destination),
+    coverImage: destinationImage(
+      input.country ? `${input.destination}, ${input.country}` : input.destination
+    ),
     createdAt: new Date().toISOString(),
     status: 'planned',
   };
@@ -198,33 +200,40 @@ function StepIndicator({
   status,
   count,
   microMessage,
+  surface = 'dark',
 }: {
   step: (typeof GENERATION_STEPS)[number];
   status: 'pending' | 'searching' | 'done' | 'failed';
   count?: number;
   microMessage?: string;
+  surface?: 'dark' | 'light';
 }) {
+  const isLight = surface === 'light';
+  const iconColor = isLight ? '#0f172a' : '#fff';
+  const spinnerColor = isLight ? colors.primary[600] : '#fff';
   return (
-    <View style={styles.stepRow}>
-      <Ionicons name={step.icon} size={22} color="#fff" />
+    <View style={[styles.stepRow, isLight && styles.stepRowLight]}>
+      <Ionicons name={step.icon} size={22} color={iconColor} />
       <View style={styles.stepContent}>
-        <Text style={styles.stepText}>{step.text}</Text>
+        <Text style={[styles.stepText, isLight && styles.stepTextLight]}>{step.text}</Text>
         {status === 'searching' && microMessage ? (
-          <Text style={styles.stepMicro}>{microMessage}</Text>
+          <Text style={[styles.stepMicro, isLight && styles.stepMicroLight]}>{microMessage}</Text>
         ) : null}
         {status === 'done' && count !== undefined && (
-          <Text style={styles.stepMicro}>
+          <Text style={[styles.stepMicro, isLight && styles.stepMicroLight]}>
             {count > 0 ? `${count} options to review` : 'No options found'}
           </Text>
         )}
         {status === 'failed' ? (
-          <Text style={styles.stepMicro}>Did not finish. Nothing from this search is ready.</Text>
+          <Text style={[styles.stepMicro, isLight && styles.stepMicroLight]}>
+            Did not finish. Nothing from this search is ready.
+          </Text>
         ) : null}
       </View>
       {status === 'searching' ? (
-        <ActivityIndicator color="#fff" accessibilityLabel={`${step.text}: in progress`} />
+        <ActivityIndicator color={spinnerColor} accessibilityLabel={`${step.text}: in progress`} />
       ) : (
-        <Text style={styles.stepMicro}>
+        <Text style={[styles.stepMicro, isLight && styles.stepMicroLight]}>
           {status === 'done' ? 'Checked' : status === 'failed' ? 'Not ready' : 'Next'}
         </Text>
       )}
@@ -355,6 +364,7 @@ function GenerationSession() {
   const [retryTripId, setRetryTripId] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
   const [restartUnstarted, setRestartUnstarted] = useState(false);
+  const savedProfileBudget = useUserStore((state) => state.user?.preferences?.budget);
 
   const destinationInfo = popularDestinations.find((d) => d.name === draftInput?.destination);
   const reduceMotion = useReduceMotion();
@@ -400,10 +410,10 @@ function GenerationSession() {
             originAirport: draftInput.originAirport,
             requirements: readTravelerRequirements(draftInput.requirements) ?? undefined,
             vibes: draftInput.vibes || [],
-            budget: draftInput.budget,
+            budget: draftInput.budget ?? savedProfileBudget,
           }
         : undefined,
-    [canGenerate, draftInput]
+    [canGenerate, draftInput, savedProfileBudget]
   );
 
   const streaming = useStreamingItinerary(
@@ -681,7 +691,9 @@ function GenerationSession() {
                       : reported === 'done' || reported === 'searching'
                         ? reported
                         : 'pending';
-                  return <StepIndicator key={step.key} step={step} status={status} />;
+                  return (
+                    <StepIndicator key={step.key} step={step} status={status} surface="light" />
+                  );
                 })}
               </View>
               <JsonRenderRenderer blocks={preview.blocks} />
@@ -791,9 +803,14 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: 'rgba(255,255,255,0.2)',
   },
+  stepRowLight: {
+    borderBottomColor: '#e2e8f0',
+  },
   stepContent: { flex: 1 },
   stepText: { fontSize: 16, color: 'rgba(255,255,255,0.8)', fontWeight: '600' },
+  stepTextLight: { color: '#0f172a' },
   stepMicro: { fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: 2 },
+  stepMicroLight: { color: '#475569' },
   // Hotel preview
   hotelPreview: {
     width: '100%',

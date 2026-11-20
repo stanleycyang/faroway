@@ -130,10 +130,10 @@ For each activity, provide:
 
 Generate diverse options across categories like:
 - Sightseeing & landmarks
-- Tours (walking, food, history)
+- Self-guided neighborhood walks & scenic routes
 - Museums & cultural sites
-- Outdoor activities
-- Unique local experiences
+- Outdoor activities & parks
+- Unique independently visitable local spots
 
 Do NOT generate fake affiliate URLs. Leave affiliateUrl and affiliatePartner empty — only real API-sourced activities should have booking links.
 
@@ -345,7 +345,9 @@ Score each activity 0-100 on how well it matches the traveler's vibes. Do not ra
       vibeMatch:
         matchedVibes.length > 0
           ? matchedVibes
-          : categoryVibes.filter((v) => vibes.includes(v)),
+          : categoryVibes.filter((v) =>
+              vibes.some((req) => req.toLowerCase() === v.toLowerCase()),
+            ),
       bookingRequired: true,
     };
   });
@@ -406,7 +408,9 @@ Score each activity 0-100 on how well it matches the traveler's vibes. Do not ra
         vibeMatch:
           matchedVibes.length > 0
             ? matchedVibes
-            : categoryVibes.filter((v) => vibes.includes(v)),
+            : categoryVibes.filter((v) =>
+                vibes.some((req) => req.toLowerCase() === v.toLowerCase()),
+              ),
         bookingRequired: Boolean(affiliateUrl),
       };
     },

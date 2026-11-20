@@ -278,11 +278,19 @@
   }
 }
 
-/* ===== Print styles for packing list ===== */
+/* ===== Print styles for itineraries & packing lists ===== */
 @media print {
   nav,
   footer {
     display: none !important;
+  }
+  /* Unhide non-active day tabpanels so Cmd+P prints the entire trip, not only Day 1 */
+  [role="tabpanel"][hidden] {
+    display: block !important;
+  }
+  [role="tabpanel"] {
+    break-inside: avoid;
+    margin-bottom: 1.5rem;
   }
   body {
     -webkit-print-color-adjust: exact;

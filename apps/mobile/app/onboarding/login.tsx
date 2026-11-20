@@ -16,8 +16,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { Ionicons } from '@expo/vector-icons';
+import * as WebBrowser from 'expo-web-browser';
 import { useAuthContext } from '../../components/AuthProvider';
 import { useUserStore } from '../../stores/userStore';
+import { isRequestCanceled } from '../../lib/authProviders';
 import { colors, borderRadius } from '../../constants/theme';
 
 export default function LoginScreen() {
@@ -33,8 +35,10 @@ export default function LoginScreen() {
       setOnboardingComplete(true);
       router.replace('/(tabs)');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Please try again';
-      Alert.alert('Sign In Failed', msg);
+      if (!isRequestCanceled(err)) {
+        const msg = err instanceof Error ? err.message : 'Please try again';
+        Alert.alert('Sign In Failed', msg);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -145,6 +149,26 @@ export default function LoginScreen() {
           >
             <Text style={styles.skipText}>Skip for now</Text>
           </TouchableOpacity>
+
+          <Text style={styles.legalText}>
+            By continuing, you agree to our{' '}
+            <Text
+              style={styles.legalLink}
+              accessibilityRole="link"
+              onPress={() => void WebBrowser.openBrowserAsync('https://faroway.ai/terms')}
+            >
+              Terms of Service
+            </Text>{' '}
+            and{' '}
+            <Text
+              style={styles.legalLink}
+              accessibilityRole="link"
+              onPress={() => void WebBrowser.openBrowserAsync('https://faroway.ai/privacy')}
+            >
+              Privacy Policy
+            </Text>
+            .
+          </Text>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -223,5 +247,18 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: colors.surface[500],
     textDecorationLine: 'underline',
+  },
+  legalText: {
+    fontSize: 12,
+    color: colors.surface[500],
+    textAlign: 'center',
+    lineHeight: 18,
+    marginTop: 8,
+    paddingHorizontal: 16,
+  },
+  legalLink: {
+    color: colors.primary[700],
+    textDecorationLine: 'underline',
+    fontWeight: '600',
   },
 });
