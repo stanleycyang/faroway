@@ -1,4 +1,5 @@
 import { GENERATED_ACCESS_CONCERN_NOTE } from "./generated-activity-copy";
+import { stepFreeRequested } from "./requirement-corroboration";
 
 /** Explicit public-transport instruction versus a private motor-tour title.
  * Does not certify any timetable or infer a route from a transport preference.
@@ -52,21 +53,15 @@ export function familyActivityReviewReason(
 export function activityMobilityReviewReason(
   needs: {
     mobilityNeeds?: string;
-    requirements?: { accessibility?: readonly string[] };
+    requirements?: {
+      accessibility?: readonly string[];
+      mobilityNotes?: string;
+    };
   },
   description = "",
   title = "",
 ): "supplied_access_conflict" | "boarding_access_requires_review" | null {
-  const request = (needs.mobilityNeeds ?? "").normalize("NFKC").toLowerCase();
-  const explicitRequest =
-    /^(?:stroller access|wheelchair access|step[- ]free)\b/.test(
-      request.trim(),
-    ) && !/\b(?:not required|not needed|unnecessary)\b/.test(request);
-  if (
-    !needs.requirements?.accessibility?.includes("step_free_entrance") &&
-    !explicitRequest
-  )
-    return null;
+  if (!stepFreeRequested(needs)) return null;
   // A generated boat title cannot establish accessible boarding. This applies
   // across departure-name variants; a waterfront walk is not a boat journey.
   if (

@@ -26,6 +26,7 @@ import { filterViatorDisplay } from "@/lib/affiliates/viator-policy";
 
 import { NextRequest } from "next/server";
 import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
+import { checkRateLimitAsync } from "@/lib/security/rate-limit";
 import {
   buildSummaryBlocks,
   buildHotelBlocks,
@@ -36,6 +37,9 @@ import {
 } from "@/lib/json-render/build-spec";
 
 export const maxDuration = 300;
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -151,8 +155,31 @@ type SearchQueryResult = {
 
 export async function POST(request: NextRequest, { params }: Params) {
   const { id: tripId } = await params;
+  if (!UUID_PATTERN.test(tripId)) {
+    return new Response(JSON.stringify({ error: "Invalid trip ID" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
   const userId = await resolveUserId(request);
   if (!userId) return unauthorizedSseResponse();
+  const rl = await checkRateLimitAsync(`trip-stream:${userId}`, {
+    maxRequests: 10,
+    windowMs: 60_000,
+    failClosed: true,
+  });
+  if (!rl.allowed) {
+    return new Response(
+      JSON.stringify({ error: "Too many stream connections. Please wait." }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(Math.max(1, Math.ceil(rl.resetIn / 1000))),
+        },
+      },
+    );
+  }
   const db = getSupabase();
 
   const { data: trip, error: tripError } = await db
@@ -241,10 +268,9 @@ export async function POST(request: NextRequest, { params }: Params) {
         );
         return;
       } catch (error) {
-        const msg = error instanceof Error ? error.message : "Stream error";
         console.error(`[Stream POST] Error for trip ${tripId}:`, error);
         try {
-          send("error", { message: msg });
+          send("error", { message: "Stream connection interrupted" });
         } catch {
           /* */
         }
@@ -265,8 +291,31 @@ export async function POST(request: NextRequest, { params }: Params) {
 
 export async function GET(request: NextRequest, { params }: Params) {
   const { id: tripId } = await params;
+  if (!UUID_PATTERN.test(tripId)) {
+    return new Response(JSON.stringify({ error: "Invalid trip ID" }), {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
+    });
+  }
   const userId = await resolveUserId(request);
   if (!userId) return unauthorizedSseResponse();
+  const rl = await checkRateLimitAsync(`trip-stream:${userId}`, {
+    maxRequests: 10,
+    windowMs: 60_000,
+    failClosed: true,
+  });
+  if (!rl.allowed) {
+    return new Response(
+      JSON.stringify({ error: "Too many stream connections. Please wait." }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(Math.max(1, Math.ceil(rl.resetIn / 1000))),
+        },
+      },
+    );
+  }
   const db = getSupabase();
 
   const { data: trip, error: tripError } = await db
@@ -335,9 +384,9 @@ export async function GET(request: NextRequest, { params }: Params) {
           userId,
         );
       } catch (error) {
-        const msg = error instanceof Error ? error.message : "Stream error";
+        console.error(`[Stream GET] Error for trip ${tripId}:`, error);
         try {
-          send("error", { message: msg });
+          send("error", { message: "Stream connection interrupted" });
         } catch {
           /* */
         }

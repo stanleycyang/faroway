@@ -53,15 +53,24 @@ async function loadSharedTripUncached(
   }
   if (!trip) return null;
   const filtered = filterViatorDisplay(trip as SharedTripData);
-  const shared = {
-    ...filtered,
-    preferences: filtered.preferences ? { ...filtered.preferences } : null,
-  };
-  if (shared.preferences) {
-    delete shared.preferences.hotelSearch;
-    delete shared.preferences.flightSearch;
-    delete shared.preferences.requirements;
+  const PUBLIC_PREFERENCE_KEYS = ["travelerType", "interests"] as const;
+  let publicPreferences: Record<string, unknown> | null = null;
+  if (
+    filtered.preferences &&
+    typeof filtered.preferences === "object" &&
+    !Array.isArray(filtered.preferences)
+  ) {
+    publicPreferences = {};
+    for (const key of PUBLIC_PREFERENCE_KEYS) {
+      if (key in filtered.preferences) {
+        publicPreferences[key] = filtered.preferences[key];
+      }
+    }
   }
+  const shared: SharedTripData = {
+    ...filtered,
+    preferences: publicPreferences,
+  };
   const itineraries = Array.isArray(shared.itineraries)
     ? shared.itineraries
     : shared.itineraries

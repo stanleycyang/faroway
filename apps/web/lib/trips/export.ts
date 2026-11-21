@@ -1,4 +1,6 @@
 import type { GeneratedItinerary, TripDay } from "@faroway/types";
+import { parseTripDate } from "./date-duration";
+import { knownEstimate } from "./budget";
 
 export interface TripExportTrip {
   destination: string;
@@ -21,7 +23,7 @@ type ExportItinerary =
   | null;
 
 function formatExportDate(dateStr: string) {
-  const date = new Date(dateStr);
+  const date = parseTripDate(dateStr);
   if (Number.isNaN(date.getTime())) return dateStr;
   return date.toLocaleDateString("en-US", {
     month: "short",
@@ -34,13 +36,18 @@ function formatExportCost(cost: ExportCost) {
   if (!cost) return null;
   const amount = typeof cost === "number" ? cost : cost.amount;
   const currency = typeof cost === "number" ? "USD" : cost.currency;
-  if (!amount || amount <= 0) return null;
+  const status =
+    typeof cost === "object" && cost !== null && "status" in cost
+      ? (cost as { status?: unknown }).status
+      : undefined;
+  const valid = knownEstimate(amount, currency, status);
+  if (!valid) return null;
   return new Intl.NumberFormat("en-US", {
     style: "currency",
-    currency,
+    currency: valid.currency,
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
-  }).format(amount);
+  }).format(valid.amount);
 }
 
 function formatExportSlot(

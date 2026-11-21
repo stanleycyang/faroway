@@ -1,9 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 const limit = vi.hoisted(() => vi.fn());
+const requireAuth = vi.hoisted(() => vi.fn());
 vi.mock("@/lib/security/rate-limit", () => ({
   checkRateLimitAsync: limit,
   getClientIp: () => "test",
+}));
+vi.mock("@/lib/auth/middleware", () => ({
+  requireUserIdFromRequest: requireAuth,
 }));
 import { GET } from "@/app/api/places/venues/route";
 const request = (query: string) =>
@@ -13,6 +17,8 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   fetchMock.mockReset();
   limit.mockClear();
+  requireAuth.mockReset();
+  requireAuth.mockResolvedValue({ userId: "user-1" });
   vi.stubEnv("GOOGLE_PLACES_LIVE_ENABLED", "true");
   vi.stubEnv("GOOGLE_PLACES_ACCESSIBILITY_ENABLED", "false");
   limit.mockResolvedValue({ allowed: true });
@@ -70,6 +76,14 @@ describe("transient venue lookup", () => {
       "places.id,places.displayName,places.formattedAddress,places.googleMapsUri,places.attributions",
     );
     expect(JSON.parse(init.body)).toEqual({ textQuery: "Museum", pageSize: 3 });
+  });
+  it("rejects unauthenticated callers before rate limiting or calling Google", async () => {
+    requireAuth.mockResolvedValueOnce(
+      NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
+    );
+    expect((await GET(request("query=Museum"))).status).toBe(401);
+    expect(limit).not.toHaveBeenCalled();
+    expect(fetchMock).not.toHaveBeenCalled();
   });
   it("makes no provider calls without credentials or when rate limited", async () => {
     vi.stubEnv("GOOGLE_PLACES_API_KEY", "");

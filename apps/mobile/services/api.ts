@@ -6,6 +6,8 @@
 import { API_BASE_URL } from '../constants/api';
 import { requestWithTimeout, RequestTimeoutError } from './request';
 import { useUserStore } from '../stores/userStore';
+import { buildTripUpdatePayload } from '../lib/offline/trip-payload';
+import type { TripInput } from '../lib/tripTypes';
 import type {
   TravelerRequirements,
   ApiResponse,
@@ -249,31 +251,59 @@ type PushTokenPlatform = 'ios' | 'android' | 'web' | 'unknown';
 
 export async function registerPushToken(params: {
   token: string;
+  revision?: number;
   platform?: PushTokenPlatform;
+  consentVersion?: 'notifications-v2';
   deviceName?: string | null;
 }): Promise<
   ApiResponse<{
-    token: string;
-    platform: PushTokenPlatform;
-    deviceName: string | null;
-    updatedAt: string;
-    lastSeenAt: string;
+    registered?: boolean;
+    token?: string;
+    platform?: PushTokenPlatform;
+    deviceName?: string | null;
+    updatedAt?: string;
+    lastSeenAt?: string;
   }>
 > {
   return apiFetch('/api/user/push-token', {
     method: 'POST',
     body: JSON.stringify({
       token: params.token,
+      revision: params.revision ?? Date.now(),
+      consentVersion: params.consentVersion ?? 'notifications-v2',
       platform: params.platform || 'unknown',
-      deviceName: params.deviceName || null,
     }),
   });
 }
 
-export async function removePushToken(token?: string): Promise<ApiResponse<{ deleted: boolean }>> {
+export async function removePushToken(
+  tokenOrParams?:
+    | string
+    | {
+        token: string;
+        revision?: number;
+        platform?: PushTokenPlatform;
+        consentVersion?: 'notifications-v2';
+      }
+): Promise<ApiResponse<{ deleted: boolean }>> {
+  const params =
+    typeof tokenOrParams === 'string'
+      ? { token: tokenOrParams }
+      : tokenOrParams && typeof tokenOrParams === 'object'
+        ? tokenOrParams
+        : undefined;
   return apiFetch('/api/user/push-token', {
     method: 'DELETE',
-    body: JSON.stringify(token ? { token } : {}),
+    body: JSON.stringify(
+      params?.token
+        ? {
+            token: params.token,
+            revision: params.revision ?? Date.now(),
+            consentVersion: params.consentVersion ?? 'notifications-v2',
+            platform: params.platform || 'unknown',
+          }
+        : {}
+    ),
   });
 }
 
@@ -344,12 +374,13 @@ export async function createTrip(trip: {
 
 export async function updateTrip(
   id: string,
-  updates: Partial<Trip>,
+  updates: Partial<TripInput> & Partial<Trip>,
   expectedUpdatedAt?: string
 ): Promise<ApiResponse<{ trip: Trip }>> {
+  const payload = buildTripUpdatePayload(updates, expectedUpdatedAt);
   return apiFetch<{ trip: Trip }>(`/api/trips/${encodeURIComponent(id)}`, {
     method: 'PATCH',
-    body: JSON.stringify({ ...updates, expectedUpdatedAt }),
+    body: JSON.stringify(payload),
   });
 }
 

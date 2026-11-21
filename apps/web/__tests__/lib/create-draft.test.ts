@@ -6,9 +6,12 @@ import { describe, expect, it } from "vitest";
 import {
   saveCreateDraft,
   takeCreateDraft,
+  purgeExpiredCreateDrafts,
   saveEditorDraft,
   readEditorDraft,
   clearEditorDraft,
+  clearAllEditorDrafts,
+  editorDraftStorageKey,
   restoreHotelSearchDraft,
   restoreHotelAgeTextDraft,
 } from "@/lib/create-draft";
@@ -16,9 +19,14 @@ import {
 function createStorage() {
   const values = new Map<string, string>();
   return {
+    get length() {
+      return values.size;
+    },
+    key: (index: number) => Array.from(values.keys())[index] ?? null,
     getItem: (key: string) => values.get(key) ?? null,
     setItem: (key: string, value: string) => values.set(key, value),
     removeItem: (key: string) => values.delete(key),
+    has: (key: string) => values.has(key),
   };
 }
 
@@ -58,8 +66,43 @@ describe("same-tab setup draft", () => {
     saveEditorDraft(storage, { destination: "Paris" }, 1000);
     expect(readEditorDraft(storage, 999)).toBeNull();
     expect(readEditorDraft(storage, 86_402_000)).toBeNull();
-    storage.setItem("faroway-create-editor-draft", "invalid json");
+    storage.setItem(editorDraftStorageKey(), "invalid json");
     expect(readEditorDraft(storage, 2000)).toBeNull();
+  });
+  it("scopes editor drafts per user and clears all on sign-out", () => {
+    const storage = createStorage();
+    saveEditorDraft(storage, { destination: "Tokyo" }, 1_000, "user-a");
+    saveEditorDraft(storage, { destination: "Lisbon" }, 1_000, "guest");
+    expect(readEditorDraft(storage, 2_000, "user-a")).toEqual({
+      destination: "Tokyo",
+    });
+    expect(readEditorDraft(storage, 2_000, "user-b")).toBeNull();
+    expect(readEditorDraft(storage, 2_000, "guest")).toEqual({
+      destination: "Lisbon",
+    });
+    clearAllEditorDrafts(storage);
+    expect(readEditorDraft(storage, 2_000, "user-a")).toBeNull();
+    expect(readEditorDraft(storage, 2_000, "guest")).toBeNull();
+  });
+  it("purges expired and corrupt one-time create drafts without touching valid ones", () => {
+    const storage = createStorage();
+    const expiredId = saveCreateDraft(storage, { destination: "Rome" }, 1_000);
+    const freshId = saveCreateDraft(
+      storage,
+      { destination: "Kyoto" },
+      86_400_000,
+    );
+    storage.setItem("faroway-create-draft:corrupt-id-123", "{bad");
+    storage.setItem("unrelated-key", "keep");
+
+    purgeExpiredCreateDrafts(storage, 86_402_000);
+
+    expect(storage.has(`faroway-create-draft:${expiredId}`)).toBe(false);
+    expect(storage.has("faroway-create-draft:corrupt-id-123")).toBe(false);
+    expect(storage.has("unrelated-key")).toBe(true);
+    expect(takeCreateDraft(storage, freshId, 86_402_000)).toEqual({
+      destination: "Kyoto",
+    });
   });
 });
 

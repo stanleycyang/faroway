@@ -10,7 +10,7 @@ import { getSupabase } from "@/lib/supabase/server";
 import { requireUserIdFromRequest } from "@/lib/auth/middleware";
 import { startWorkflow } from "@/lib/workflow/runtime";
 import { planTripWorkflow } from "@/workflows/plan-trip";
-import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
+import { checkRateLimitAsync } from "@/lib/security/rate-limit";
 import { isValidDateOnly, isValidDateRange } from "@/lib/api/date-range";
 import { z } from "zod";
 import { TravelerRequirementsSchema } from "@/lib/trips/brief";
@@ -74,17 +74,23 @@ export async function POST(request: NextRequest) {
     const paused = planningPauseResponse();
     if (paused) return paused;
 
-    // Rate limit: 5 searches per minute per IP
-    const ip = getClientIp(request);
-    const { allowed } = await checkRateLimitAsync(`search:${ip}`, {
+    // Rate limit: share the hourly per-user generation bucket with /api/trips/[id]/generate
+    const hourlyLimit = await checkRateLimitAsync(`generate:hour:${userId}`, {
       maxRequests: 5,
-      windowMs: 60_000,
+      windowMs: 3_600_000,
       failClosed: true,
     });
-    if (!allowed) {
+    if (!hourlyLimit.allowed) {
       return NextResponse.json(
         { error: "Too many requests. Please try again later." },
-        { status: 429, headers: { "Retry-After": "60" } },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(
+              Math.max(1, Math.ceil((hourlyLimit.resetIn || 3_600_000) / 1000)),
+            ),
+          },
+        },
       );
     }
 
@@ -209,8 +215,7 @@ export async function POST(request: NextRequest) {
           .from("searches")
           .update({
             status: "error",
-            error_message:
-              error instanceof Error ? error.message : "Workflow start failed",
+            error_message: "Workflow failed to start",
           })
           .eq("id", searchId);
       } catch (updateError) {

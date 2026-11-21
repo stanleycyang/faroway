@@ -111,7 +111,6 @@ function CheckoutSession({ tripId, travelers, children }: TripCheckoutProps) {
     } catch {
       if (!current()) return;
       setHistoryError(true);
-      setEnabled(false);
     }
   }, [endpoint]);
   useEffect(() => {
@@ -170,10 +169,14 @@ function CheckoutSession({ tripId, travelers, children }: TripCheckoutProps) {
         signal: AbortSignal.timeout(20_000),
       });
       if (!mounted.current) return;
-      const data = await response.json();
+      const data = await response.json().catch(() => null);
       if (!mounted.current) return;
       if (!response.ok)
-        throw new Error(data.error || "Could not prepare checkout.");
+        throw new Error(
+          typeof data?.error === "string" && data.error.trim()
+            ? data.error
+            : "Could not prepare checkout.",
+        );
       if (
         data?.status !== "handoff_prepared" ||
         data?.attemptId !== selection.attemptId

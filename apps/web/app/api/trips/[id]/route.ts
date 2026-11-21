@@ -3,6 +3,7 @@ import { isDeepStrictEqual } from "node:util";
 import { NextRequest, NextResponse } from "next/server";
 import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
 import { requireUserIdFromRequest } from "@/lib/auth/middleware";
+import { checkRateLimitAsync } from "@/lib/security/rate-limit";
 import {
   UpdateBriefSchema,
   validBriefComposition,
@@ -51,6 +52,13 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     const { id } = await params;
     const auth = await requireUserIdFromRequest(request);
     if (auth instanceof NextResponse) return auth;
+    const rateLimit = await checkRateLimitAsync(`trips-update:${auth.userId}`, {
+      maxRequests: 30,
+      windowMs: 60_000,
+      failClosed: true,
+    });
+    if (!rateLimit.allowed)
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     const db = getSupabase();
 
     const body = await request.json();
@@ -209,6 +217,15 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const rateLimit = await checkRateLimitAsync(`trips-delete:${user.id}`, {
+      maxRequests: 30,
+      windowMs: 60_000,
+      failClosed: true,
+    });
+    if (!rateLimit.allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
     }
 
     const { error, count } = await supabase

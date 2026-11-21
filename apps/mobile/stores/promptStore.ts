@@ -15,6 +15,7 @@ interface PromptStore {
   markRated: () => void;
   dismissSignUpPrompt: () => void;
   dismissCreateBanner: () => void;
+  resetSessionPrompts: () => void;
   shouldShowRatingPrompt: () => boolean;
 }
 
@@ -39,6 +40,13 @@ export const usePromptStore = create<PromptStore>()(
       dismissSignUpPrompt: () => set({ hasDismissedSignUpAfterGeneration: true }),
 
       dismissCreateBanner: () => set({ hasDismissedCreateBanner: true }),
+
+      resetSessionPrompts: () =>
+        set({
+          tripGenerationCount: 0,
+          hasDismissedSignUpAfterGeneration: false,
+          hasDismissedCreateBanner: false,
+        }),
 
       shouldShowRatingPrompt: () => {
         const { hasRatedApp, lastRatingPromptDate } = get();

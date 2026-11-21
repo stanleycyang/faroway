@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   insert: vi.fn(),
   optionalAuth: vi.fn(),
+  ownedTripId: "00000000-0000-4000-8000-000000000001" as string | null,
 }));
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -46,7 +47,27 @@ describe("POST /api/track/click", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.optionalAuth.mockResolvedValue(mocks.user);
-    mocks.from.mockReturnValue({ insert: mocks.insert });
+    mocks.ownedTripId = "00000000-0000-4000-8000-000000000001";
+    mocks.from.mockImplementation((table: string) => {
+      if (table === "affiliate_clicks") {
+        return { insert: mocks.insert };
+      }
+      return {
+        select: vi.fn(() => ({
+          eq: vi.fn((_col: string, idValue: string) => ({
+            eq: vi.fn(() => ({
+              maybeSingle: vi.fn(async () => ({
+                data:
+                  table === "trips" && idValue === mocks.ownedTripId
+                    ? { id: idValue }
+                    : null,
+                error: null,
+              })),
+            })),
+          })),
+        })),
+      };
+    });
     mocks.insert.mockReturnValue({ error: null });
   });
 
@@ -149,5 +170,38 @@ describe("POST /api/track/click", () => {
 
     expect(response.status).toBe(400);
     expect(mocks.insert).not.toHaveBeenCalled();
+  });
+
+  it("drops foreign or unauthenticated tripId so clicks cannot poison another user's trip", async () => {
+    mocks.optionalAuth.mockResolvedValueOnce(null);
+    const anonResponse = await POST(
+      makeRequest({
+        itemType: "activity",
+        itemId: "act-1",
+        itemName: "Tour",
+        affiliatePartner: "viator",
+        affiliateUrl: "https://www.viator.com/tours/tokyo",
+        tripId: "00000000-0000-4000-8000-000000000099",
+      }),
+    );
+    expect(anonResponse.status).toBe(200);
+    expect(mocks.insert).toHaveBeenLastCalledWith(
+      expect.objectContaining({ user_id: null, trip_id: null }),
+    );
+
+    const foreignResponse = await POST(
+      makeRequest({
+        itemType: "activity",
+        itemId: "act-2",
+        itemName: "Tour 2",
+        affiliatePartner: "viator",
+        affiliateUrl: "https://www.viator.com/tours/tokyo",
+        tripId: "00000000-0000-4000-8000-000000000099",
+      }),
+    );
+    expect(foreignResponse.status).toBe(200);
+    expect(mocks.insert).toHaveBeenLastCalledWith(
+      expect.objectContaining({ user_id: "user-123", trip_id: null }),
+    );
   });
 });

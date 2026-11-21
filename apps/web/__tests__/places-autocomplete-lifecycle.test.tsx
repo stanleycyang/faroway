@@ -141,14 +141,82 @@ test("local suggestions follow catalog changes without another keystroke", async
     expect(JSON.stringify(renderer.toJSON())).toContain("Lyon");
     await act(async () => {
       renderer.root
-        .findAllByType("button")
+        .findAllByProps({ role: "option" })
         .find(
-          (button) =>
-            button.findAll((node) => node.children.includes("Lyon")).length > 0,
+          (option) =>
+            option.findAll((node) => node.children.includes("Lyon")).length > 0,
         )!
         .props.onClick();
     });
     expect(select).toHaveBeenCalledWith({ name: "Lyon", source: "catalog" });
+    expect(
+      renderer.root
+        .findAllByProps({ role: "option" })
+        .every((option) => option.findAllByType("button").length === 0),
+    ).toBe(true);
+  } finally {
+    await act(async () => {
+      renderer?.unmount();
+    });
+    vi.unstubAllGlobals();
+  }
+});
+
+test("combobox closes on blur and prefers exact catalog match on Enter", async () => {
+  (
+    globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+  ).IS_REACT_ACT_ENVIRONMENT = true;
+  vi.stubGlobal("document", {
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  });
+  vi.stubGlobal("window", {
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  });
+  vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ status: 501 }));
+  let renderer!: ReturnType<typeof create>;
+  const select = vi.fn();
+  try {
+    await act(async () => {
+      renderer = create(
+        <PlacesAutocompleteInput
+          onSelect={select}
+          localDestinations={[
+            { name: "Paris", country: "France" },
+            { name: "Parma", country: "Italy" },
+          ]}
+        />,
+      );
+    });
+    const input = () => renderer.root.findByType("input");
+    await act(async () => {
+      input().props.onChange({ target: { value: "paris" } });
+    });
+    expect(renderer.root.findAllByProps({ role: "option" }).length).toBe(2);
+    expect(
+      renderer.root
+        .findAllByProps({ role: "option" })
+        .every((option) => option.findAllByType("button").length === 0),
+    ).toBe(true);
+
+    await act(async () => {
+      input().props.onKeyDown({
+        key: "Enter",
+        preventDefault: vi.fn(),
+      });
+    });
+    expect(select).toHaveBeenCalledWith({ name: "Paris", source: "catalog" });
+    expect(renderer.root.findAllByProps({ role: "listbox" })).toHaveLength(0);
+
+    await act(async () => {
+      input().props.onChange({ target: { value: "par" } });
+    });
+    expect(renderer.root.findAllByProps({ role: "listbox" })).toHaveLength(1);
+    await act(async () => {
+      input().props.onBlur({ relatedTarget: null });
+    });
+    expect(renderer.root.findAllByProps({ role: "listbox" })).toHaveLength(0);
   } finally {
     await act(async () => {
       renderer?.unmount();

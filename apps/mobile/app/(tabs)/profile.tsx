@@ -22,10 +22,10 @@ const useOptionalFocusEffect =
   typeof useFocusEffect === 'function' ? useFocusEffect : (_cb: () => void) => {};
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import * as WebBrowser from 'expo-web-browser';
 import Constants from 'expo-constants';
 import { useAuthContext } from '../../components/AuthProvider';
 import { isRequestCanceled } from '../../lib/authProviders';
+import { openSafeHttpsUrl } from '../../lib/openExternalUrl';
 import { useUserStore } from '../../stores/userStore';
 import { useTripStore } from '../../stores/tripStore';
 import { colors, borderRadius } from '../../constants/theme';
@@ -47,6 +47,7 @@ interface MenuItemProps {
   onPress: () => void;
   showChevron?: boolean;
   danger?: boolean;
+  disabled?: boolean;
 }
 
 function MenuItem({
@@ -56,18 +57,22 @@ function MenuItem({
   onPress,
   showChevron = true,
   danger = false,
+  disabled = false,
 }: MenuItemProps) {
   const handlePress = () => {
+    if (disabled) return;
     hapticFeedback.light();
     onPress();
   };
 
   return (
     <TouchableOpacity
-      style={styles.menuItem}
+      style={[styles.menuItem, disabled && styles.menuItemDisabled]}
       onPress={handlePress}
       activeOpacity={0.7}
+      disabled={disabled}
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
       accessibilityLabel={value ? `${label}. ${value}` : label}
     >
       <View style={[styles.menuIconContainer, danger && styles.menuIconContainerDanger]}>
@@ -169,7 +174,7 @@ function GuestProfileCard() {
         By continuing, you agree to our{' '}
         <Text
           style={styles.termsLink}
-          onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/terms')}
+          onPress={() => void openSafeHttpsUrl('https://faroway.ai/terms')}
           accessibilityRole="link"
         >
           Terms
@@ -177,7 +182,7 @@ function GuestProfileCard() {
         and{' '}
         <Text
           style={styles.termsLink}
-          onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/privacy')}
+          onPress={() => void openSafeHttpsUrl('https://faroway.ai/privacy')}
           accessibilityRole="link"
         >
           Privacy Policy
@@ -202,6 +207,8 @@ export default function ProfileScreen() {
     undefined
   );
   const [avoidEarlyDraft, setAvoidEarlyDraft] = useState(false);
+  const [authActionBusy, setAuthActionBusy] = useState<'logout' | 'delete' | null>(null);
+  const authActionLockRef = useRef(false);
   const mountedRef = useRef(true);
 
   const isCurrentAccount = useCallback((ownerId: string | undefined, rev: number) => {
@@ -300,21 +307,29 @@ export default function ProfileScreen() {
   const pastTrips = trips.filter(
     (t) => tripDatePhase(t.startDate, t.endDate, today) === 'past'
   ).length;
-  const upcomingTrips = trips.filter(
-    (t) => tripDatePhase(t.startDate, t.endDate, today) === 'upcoming'
-  ).length;
+  const upcomingTrips = trips.filter((t) => {
+    const phase = tripDatePhase(t.startDate, t.endDate, today);
+    return phase === 'upcoming' || phase === 'in-progress';
+  }).length;
 
   const handleLogout = async () => {
+    if (authActionLockRef.current) return;
+    authActionLockRef.current = true;
+    setAuthActionBusy('logout');
     try {
       await signOut();
       hapticFeedback.success();
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : 'Failed to sign out';
       Alert.alert('Error', msg);
+    } finally {
+      authActionLockRef.current = false;
+      if (mountedRef.current) setAuthActionBusy(null);
     }
   };
 
   const handleDeleteAccount = () => {
+    if (authActionLockRef.current) return;
     hapticFeedback.warning();
     Alert.alert(
       'Delete account?',
@@ -325,12 +340,18 @@ export default function ProfileScreen() {
           text: 'Delete',
           style: 'destructive',
           onPress: async () => {
+            if (authActionLockRef.current) return;
+            authActionLockRef.current = true;
+            setAuthActionBusy('delete');
             try {
               await deleteAccount();
               hapticFeedback.success();
             } catch (error: unknown) {
               const msg = error instanceof Error ? error.message : 'Could not delete account';
               Alert.alert('Could not delete account', msg);
+            } finally {
+              authActionLockRef.current = false;
+              if (mountedRef.current) setAuthActionBusy(null);
             }
           },
         },
@@ -342,7 +363,7 @@ export default function ProfileScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' || Platform.OS === 'android' ? 'padding' : undefined}
       >
         <ScrollView
           showsVerticalScrollIndicator={false}
@@ -490,7 +511,7 @@ export default function ProfileScreen() {
                     placeholder="e.g., SFO, JFK, LHR"
                     placeholderTextColor="#64748b"
                     autoCapitalize="characters"
-                    maxLength={12}
+                    maxLength={10}
                     accessibilityLabel="Home airport code"
                   />
 
@@ -567,7 +588,7 @@ export default function ProfileScreen() {
             <MenuItem
               icon="help-circle-outline"
               label="Help Center"
-              onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/support')}
+              onPress={() => void openSafeHttpsUrl('https://faroway.ai/support')}
             />
             <MenuItem
               icon="chatbubble-outline"
@@ -579,7 +600,7 @@ export default function ProfileScreen() {
                   Alert.alert('Contact Us', 'Email us at support@faroway.ai', [
                     {
                       text: 'Open Help Center',
-                      onPress: () => void WebBrowser.openBrowserAsync('https://faroway.ai/support'),
+                      onPress: () => void openSafeHttpsUrl('https://faroway.ai/support'),
                     },
                     { text: 'OK' },
                   ]);
@@ -605,12 +626,12 @@ export default function ProfileScreen() {
             <MenuItem
               icon="document-text-outline"
               label="Terms of Service"
-              onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/terms')}
+              onPress={() => void openSafeHttpsUrl('https://faroway.ai/terms')}
             />
             <MenuItem
               icon="shield-outline"
               label="Privacy Policy"
-              onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/privacy')}
+              onPress={() => void openSafeHttpsUrl('https://faroway.ai/privacy')}
             />
           </View>
 
@@ -618,17 +639,19 @@ export default function ProfileScreen() {
             <View style={styles.menuSection}>
               <MenuItem
                 icon="log-out-outline"
-                label="Log out"
+                label={authActionBusy === 'logout' ? 'Logging out…' : 'Log out'}
                 onPress={handleLogout}
                 showChevron={false}
                 danger
+                disabled={authActionBusy !== null}
               />
               <MenuItem
                 icon="trash-outline"
-                label="Delete account"
+                label={authActionBusy === 'delete' ? 'Deleting account…' : 'Delete account'}
                 onPress={handleDeleteAccount}
                 showChevron={false}
                 danger
+                disabled={authActionBusy !== null}
               />
             </View>
           )}
@@ -835,6 +858,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderWidth: 1,
     borderColor: '#e2e8f0',
+  },
+  menuItemDisabled: {
+    opacity: 0.55,
   },
   menuIconContainer: {
     width: 40,

@@ -25,7 +25,7 @@ import type {
 const GENERIC =
   /\b(?:things to see and do|local culture|wonderful day|look around the area|enjoy the area|see the sights|hidden gem|must-see|unforgettable|local favorite|dining idea|neighborhood spot)\b/i;
 const DIET_PROMISE =
-  /\b(?:(?:gluten|nuts?|peanuts?|dairy|shellfish)[ -]?free|allergy[ -]?safe|certified vegan|certified halal|safe for (?:people with |your )?(?:a )?(?:peanut |nut |gluten )?allerg(?:y|ies)?|no (?:peanuts|nuts|gluten) (?:in|used)|can accommodate (?:your |the )?(?:peanut |nut )?allerg)\b/i;
+  /\b(?:(?:gluten|wheat|nuts?|tree[ -]?nuts?|peanuts?|dairy|milk|lactose|shellfish|fish|eggs?|soy|sesame|sulfites?)[ -]?(?:free|safe|friendly)|allergy[ -]?(?:safe|friendly)|certified vegan|certified halal|safe for (?:people with |your )?(?:a )?(?:peanut |nut |tree[ -]?nut |gluten |shellfish |dairy |egg |soy |sesame )?allerg(?:y|ies)?|no (?:peanuts?|nuts?|gluten|shellfish|dairy|eggs?|soy|sesame) (?:in|used)|can accommodate (?:your |the )?(?:peanut |nut |shellfish |dairy |gluten |egg |soy |sesame )?allerg)\b/i;
 const ACCESS_PROMISE =
   /\b(?:wheelchair[ -](?:accessible|friendly)|step[ -]?free|stair[ -]?free|fully accessible|no stairs|no steps|barrier[ -]?free)\b/i;
 const BOOKED_PROMISE =
@@ -340,7 +340,8 @@ export function affiliateLinkOk(
     }
     if (partner === "duffel") {
       return (
-        parsed.hostname.endsWith("duffel.com") &&
+        (parsed.hostname === "duffel.com" ||
+          parsed.hostname.endsWith(".duffel.com")) &&
         productId.length > 0 &&
         parsed.pathname.includes(productId)
       );
@@ -496,8 +497,29 @@ function blockedReason(
       return "step_free";
   }
   for (const hazard of hazards) {
-    if (new RegExp(`\\b${escapeRegExp(hazard)}`, "i").test(item.name))
-      return "hazard_name";
+    const hazardPattern = new RegExp(`\\b${escapeRegExp(hazard)}`, "i");
+    if (hazardPattern.test(item.name)) return "hazard_name";
+    if (
+      "cuisineTypes" in item &&
+      Array.isArray(item.cuisineTypes) &&
+      item.cuisineTypes.some(
+        (cuisine) => typeof cuisine === "string" && hazardPattern.test(cuisine),
+      )
+    ) {
+      return "hazard_cuisine";
+    }
+    const desc = (item.description ?? "").replace(
+      /\b(?:no|without|free of|avoid|ask(?:\s+the\s+venue)?\s+about)\s+[^.;!?]*/gi,
+      "",
+    );
+    if (
+      new RegExp(
+        `(?:\\b(?:famous|known|renowned|specializ\\w*|featuring|centered|devoted)\\s+(?:for|in|on)\\b[^.;!?]{0,40}\\b${escapeRegExp(hazard)}|\\b${escapeRegExp(hazard)}[ -]?(?:crusted|based|bar|shack|house|kitchen|specialty|specialties|focused|heavy|forward|boil)\\b)`,
+        "i",
+      ).test(desc)
+    ) {
+      return "hazard_description";
+    }
   }
   const avoided = plan.vibeInterpretation?.avoidKeywords ?? [];
   const stack = haystack(item);
@@ -1190,7 +1212,7 @@ export function enforceReleaseItinerary(
       stops = dayStops(timed).filter((stop) => stop.item.id !== victim.item.id);
       timed = writeStops(timed, stops);
     }
-    return timed;
+    return { ...timed, timingProposal: undefined };
   });
 
   const distinct = [...published];

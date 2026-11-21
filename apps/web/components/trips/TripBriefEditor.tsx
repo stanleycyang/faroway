@@ -25,6 +25,41 @@ interface TripBriefEditorProps {
   onReload: () => Promise<Trip | null | undefined>;
 }
 
+const BUDGET_LABELS: Record<string, string> = {
+  budget: "Budget",
+  moderate: "Comfort",
+  luxury: "Luxury",
+};
+
+const VIBE_LABELS: Record<string, string> = {
+  adventure: "Adventure",
+  relaxation: "Relaxation",
+  cultural: "Cultural",
+  foodie: "Foodie",
+  nightlife: "Nightlife",
+  romantic: "Romantic",
+  nature: "Nature",
+  shopping: "Shopping",
+  wellness: "Wellness",
+  photography: "Photography",
+};
+
+function formatHumanVibe(vibe: string): string {
+  const key = vibe.trim().toLowerCase();
+  if (VIBE_LABELS[key]) return VIBE_LABELS[key];
+  return vibe.trim()
+    ? vibe.trim().charAt(0).toUpperCase() + vibe.trim().slice(1)
+    : vibe;
+}
+
+function localTodayDateOnly(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function TripBriefEditor(props: TripBriefEditorProps) {
   return (
     <BriefForm
@@ -140,6 +175,12 @@ function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
     kind: "info" | "error";
   } | null>(null);
   const locked = trip.status === "generating";
+  const todayDate = localTodayDateOnly();
+  const budgetLabel =
+    BUDGET_LABELS[trip.budget_tier ?? "moderate"] ?? "Comfort";
+  const formattedVibes = (trip.vibes ?? [])
+    .map(formatHumanVibe)
+    .filter(Boolean);
   const inputStyle =
     "mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-gray-900 focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20";
   const list = (value: string) => [
@@ -417,8 +458,9 @@ function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
           {locked ? "Locked while planning" : "Review or edit"}
         </span>
         <p className="mt-1 text-sm text-gray-600">
-          {trip.travelers} travelers · {trip.budget_tier ?? "moderate"} budget
-          {trip.vibes?.length ? ` · ${trip.vibes.join(", ")}` : ""}
+          {trip.travelers} {trip.travelers === 1 ? "traveler" : "travelers"} ·{" "}
+          {budgetLabel} budget
+          {formattedVibes.length ? ` · ${formattedVibes.join(", ")}` : ""}
         </p>
       </summary>
       <form onSubmit={save} className="mt-5">
@@ -442,6 +484,11 @@ function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
             <input
               required
               type="date"
+              min={
+                trip.start_date && trip.start_date < todayDate
+                  ? trip.start_date
+                  : todayDate
+              }
               value={start}
               onChange={(event) => setStart(event.target.value)}
               className={inputStyle}
@@ -452,7 +499,7 @@ function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
             <input
               required
               type="date"
-              min={start}
+              min={start || todayDate}
               value={end}
               onChange={(event) => setEnd(event.target.value)}
               className={inputStyle}
@@ -494,7 +541,7 @@ function BriefForm({ trip, onSaved, onReload }: TripBriefEditorProps) {
               className={inputStyle}
             >
               <option value="budget">Budget</option>
-              <option value="moderate">Moderate</option>
+              <option value="moderate">Comfort</option>
               <option value="luxury">Luxury</option>
             </select>
           </label>

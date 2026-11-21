@@ -82,7 +82,11 @@ export function ShareButtons({
   };
 
   const openShareWindow = (url: string) => {
-    window.open(url, "_blank", "width=600,height=400,scrollbars=yes");
+    window.open(
+      url,
+      "_blank",
+      "noopener,noreferrer,width=600,height=400,scrollbars=yes",
+    );
     setShowDropdown(false);
   };
 

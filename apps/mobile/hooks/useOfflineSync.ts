@@ -16,6 +16,7 @@ import {
 import type { Trip, TripInput } from '../stores/tripStore';
 import { useUserStore } from '../stores/userStore';
 import { captureTripAccount } from '../lib/tripAccountScope';
+import { logger } from '../lib/logger';
 
 interface UseOfflineSyncOptions {
   /** Auth must have resolved a signed-in account before automatic sync. */
@@ -148,7 +149,7 @@ export function useOfflineSync(options: UseOfflineSyncOptions = {}): UseOfflineS
       appState.current = nextAppState;
       if (previous.match(/inactive|background/) && nextAppState === 'active') {
         // App came to foreground - sync
-        console.log('[useOfflineSync] App foregrounded, syncing...');
+        logger.debug('[useOfflineSync] App foregrounded, syncing...');
         await syncService.sync();
       }
     };

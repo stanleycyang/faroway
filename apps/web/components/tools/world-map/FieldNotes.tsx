@@ -58,6 +58,7 @@ export function FieldNotes({ visits }: Props) {
       "South America": [],
     };
     for (const v of Object.values(visits)) {
+      if (!v || typeof v.iso !== "string") continue;
       const continent = CONTINENT_BY_ALPHA3[v.iso];
       if (!continent) continue;
       buckets[continent].push({

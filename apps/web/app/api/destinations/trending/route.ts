@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase/server";
-import { checkRateLimit, getClientIp } from "@/lib/security/rate-limit";
+import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 import { popularDestinations } from "@faroway/constants";
 import {
   type DestinationRow,
@@ -57,7 +57,7 @@ function buildFallbackResponse(
 export async function GET(request: NextRequest) {
   // Rate limit
   const ip = getClientIp(request);
-  const rl = checkRateLimit(`destinations-trending:${ip}`, {
+  const rl = await checkRateLimitAsync(`destinations-trending:${ip}`, {
     maxRequests: 60,
     windowMs: 60_000,
   });

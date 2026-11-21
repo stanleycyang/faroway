@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PlanSaveReceipt } from "@/lib/trips/plan-command";
 import { requireUserIdFromRequest } from "@/lib/auth/middleware";
+import { checkRateLimitAsync } from "@/lib/security/rate-limit";
 import { getSupabase } from "@/lib/supabase/server";
 import { canDisplayViatorContent } from "@/lib/affiliates/viator-policy";
 import {
@@ -64,6 +65,12 @@ export async function GET(request: NextRequest, context: Context) {
         },
         503,
       );
+    const rateLimit = await checkRateLimitAsync(
+      `trip-plan-read:${auth.userId}`,
+      { maxRequests: 60, windowMs: 60_000 },
+    );
+    if (!rateLimit.allowed)
+      return json({ error: "Too many requests. Please wait a moment." }, 429);
     const { id } = await context.params;
     const plan = await readPlan(id, auth.userId);
     if (!plan) return json({ error: "Trip not found" }, 404);
@@ -114,6 +121,12 @@ export async function POST(request: NextRequest, context: Context) {
         },
         503,
       );
+    const rateLimit = await checkRateLimitAsync(
+      `trip-plan-edit:${auth.userId}`,
+      { maxRequests: 30, windowMs: 60_000, failClosed: true },
+    );
+    if (!rateLimit.allowed)
+      return json({ error: "Too many plan edits. Please wait a moment." }, 429);
     const parsed = PlanCommand.safeParse(
       await request.json().catch(() => null),
     );

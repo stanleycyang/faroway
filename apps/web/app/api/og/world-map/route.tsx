@@ -3,7 +3,11 @@ import { geoEqualEarth, geoGraticule, geoPath } from "d3-geo";
 import { feature } from "topojson-client";
 import type { FeatureCollection, Geometry } from "geojson";
 import type { Topology, GeometryCollection } from "topojson-specification";
-import { decodeProfileFromUrl } from "@/lib/tools/world-map/share";
+import {
+  decodeProfileFromUrl,
+  MAX_SHARE_PARAM_LENGTH,
+} from "@/lib/tools/world-map/share";
+import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
 import { computeStats } from "@/lib/tools/world-map/stats";
 import { numericToAlpha3 } from "@/lib/tools/world-map/iso";
 import { PALETTE } from "@/lib/tools/world-map/palette";
@@ -758,8 +762,25 @@ function StoryCard({ data }: { data: CardData }) {
 // ---- Handler -----------------------------------------------------------
 
 export async function GET(req: Request) {
+  const ip = getClientIp(req);
+  const rl = await checkRateLimitAsync(`og-world-map:${ip}`, {
+    maxRequests: 30,
+    windowMs: 60_000,
+  });
+  if (!rl.allowed) {
+    return new Response("Too many requests", {
+      status: 429,
+      headers: {
+        "Retry-After": String(Math.max(1, Math.ceil(rl.resetIn / 1000))),
+      },
+    });
+  }
+
   const url = new URL(req.url);
   const d = url.searchParams.get("d");
+  if (d && d.length > MAX_SHARE_PARAM_LENGTH) {
+    return new Response("Invalid share payload", { status: 400 });
+  }
   const fmtParam = (url.searchParams.get("format") ?? "landscape") as Format;
   const format: Format =
     fmtParam === "square" || fmtParam === "story" ? fmtParam : "landscape";

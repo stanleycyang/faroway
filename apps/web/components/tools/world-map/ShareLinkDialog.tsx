@@ -203,14 +203,20 @@ export function ShareLinkDialog({ open, onClose, initiallyCopied }: Props) {
               </span>
             </summary>
             <div className="mt-3 flex items-center justify-center bg-white p-3 rounded-xl ring-1 ring-slate-200">
-              <QRCodeSVG
-                value={url}
-                size={144}
-                marginSize={0}
-                fgColor="#0f172a"
-                bgColor="#ffffff"
-                level="M"
-              />
+              {url.length <= 2000 ? (
+                <QRCodeSVG
+                  value={url}
+                  size={144}
+                  marginSize={0}
+                  fgColor="#0f172a"
+                  bgColor="#ffffff"
+                  level="M"
+                />
+              ) : (
+                <p className="text-xs text-slate-500 text-center py-4 px-2">
+                  Link too long for a QR code — copy the link instead
+                </p>
+              )}
             </div>
           </details>
         </div>

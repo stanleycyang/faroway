@@ -22,8 +22,14 @@ vi.mock("@/lib/auth/middleware", () => ({
   requireUserIdFromRequest: (request: unknown) => authMock(request),
 }));
 
+const rateLimitMock = vi.fn(async (_id: string, _config?: unknown) => ({
+  allowed: true,
+  resetIn: 60_000,
+}));
+
 vi.mock("@/lib/security/rate-limit", () => ({
-  checkRateLimitAsync: vi.fn(async () => ({ allowed: true })),
+  checkRateLimitAsync: (id: string, config?: unknown) =>
+    rateLimitMock(id, config),
   getClientIp: vi.fn(() => "127.0.0.1"),
 }));
 
@@ -167,8 +173,18 @@ describe("POST /api/search/start", () => {
     );
   });
 
-  it("marks the search errored when workflow start fails", async () => {
-    startMock.mockRejectedValueOnce(new Error("workflow unavailable"));
+  it("shares the hourly per-user generation rate limit bucket", async () => {
+    const res = await POST(makeReq());
+    expect(res.status).toBe(200);
+    expect(rateLimitMock).toHaveBeenCalledWith("generate:hour:user-1", {
+      maxRequests: 5,
+      windowMs: 3_600_000,
+      failClosed: true,
+    });
+  });
+
+  it("marks the search errored with a sanitized message when workflow start fails", async () => {
+    startMock.mockRejectedValueOnce(new Error("internal stack detail"));
 
     const res = await POST(makeReq());
     const json = await res.json();
@@ -178,7 +194,7 @@ describe("POST /api/search/start", () => {
     expect(updates).toContainEqual(
       expect.objectContaining({
         status: "error",
-        error_message: "workflow unavailable",
+        error_message: "Workflow failed to start",
       }),
     );
   });

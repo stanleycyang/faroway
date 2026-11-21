@@ -113,3 +113,23 @@ it("rejects unsupported share versions", () => {
     ),
   ).toBeNull();
 });
+
+it("rejects oversized compressed share params and decompression bombs", () => {
+  expect(decodeProfileFromUrl("a".repeat(4097))).toBeNull();
+
+  // Highly compressible payload > 32 KB when decompressed, < 4 KB when compressed
+  const bomb = LZString.compressToEncodedURIComponent(
+    JSON.stringify({ v: 2, n: "A".repeat(40_000), d: [["JPN"]] }),
+  );
+  expect(bomb.length).toBeLessThan(4096);
+  expect(decodeProfileFromUrl(bomb)).toBeNull();
+});
+
+it("truncates overly long profile names to 60 codepoints", () => {
+  const encoded = LZString.compressToEncodedURIComponent(
+    JSON.stringify({ v: 2, n: "X".repeat(120), d: [["JPN"]] }),
+  );
+  const decoded = decodeProfileFromUrl(encoded);
+  expect(decoded).not.toBeNull();
+  expect(Array.from(decoded!.name).length).toBe(60);
+});

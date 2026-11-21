@@ -12,6 +12,7 @@ import { ResilientImage as Image } from "@/components/ResilientImage";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/hooks/useUser";
+import { createClient } from "@/lib/supabase/client";
 import {
   Calendar,
   Users,
@@ -60,9 +61,11 @@ import {
   parseCreateDraftDate,
   saveCreateDraft,
   takeCreateDraft,
+  purgeExpiredCreateDrafts,
   saveEditorDraft,
   readEditorDraft,
   clearEditorDraft,
+  clearAllEditorDrafts,
   restoreHotelSearchDraft,
   restoreHotelAgeTextDraft,
 } from "@/lib/create-draft";
@@ -201,8 +204,83 @@ interface PlannerUndoSnapshot {
   showAdvanced: boolean;
 }
 
+function startOfLocalToday(): Date {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return today;
+}
+
+class CreateTripHttpError extends Error {
+  status: number;
+  constructor(status: number, message: string) {
+    super(message);
+    this.name = "CreateTripHttpError";
+    this.status = status;
+  }
+}
+
+function formatCreateTripError(err: unknown): string {
+  if (err instanceof CreateTripHttpError) {
+    if (err.status === 401) {
+      return "Your session expired. Sign in again; your trip is saved.";
+    }
+    if (err.status === 400) {
+      return "Please check your destination, dates, and traveler details and try again.";
+    }
+    if (err.status === 409 || err.status === 410) {
+      return "That request can’t be reused. Your choices below will start a new trip.";
+    }
+    return err.message || "Something went wrong. Please try again.";
+  }
+  if (err instanceof Error && err.name === "TimeoutError") {
+    return "The request took too long. Check your connection and try again.";
+  }
+  if (err instanceof TypeError) {
+    return "We couldn’t reach Faroway. Check your connection and try again.";
+  }
+  if (err instanceof Error && err.message) {
+    return err.message;
+  }
+  return "Something went wrong. Please try again.";
+}
+
 export default function CreateTripPage() {
   const { session, loading, accountRevision } = useUser();
+  const prevUserIdRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const supabase = createClient();
+      const {
+        data: { subscription },
+      } = supabase.auth.onAuthStateChange((event) => {
+        if (event === "SIGNED_OUT") {
+          try {
+            clearAllEditorDrafts(sessionStorage);
+          } catch {
+            /* Storage cleanup is best-effort. */
+          }
+        }
+      });
+      return () => subscription.unsubscribe();
+    } catch {
+      return undefined;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (loading) return;
+    const currentUserId = session?.user.id ?? null;
+    if (prevUserIdRef.current && !currentUserId) {
+      try {
+        clearAllEditorDrafts(sessionStorage);
+      } catch {
+        /* Storage cleanup is best-effort. */
+      }
+    }
+    prevUserIdRef.current = currentUserId;
+  }, [loading, session?.user.id]);
+
   return (
     <CreateTripPlanner
       key={`${session?.user.id ?? "guest"}:${accountRevision ?? 0}`}
@@ -289,6 +367,7 @@ function CreateTripPlanner({
     };
   }, []);
   const submissionLock = useRef(false);
+  const progressStatusRef = useRef<HTMLButtonElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [progressMessage, setProgressMessage] = useState("");
@@ -318,8 +397,14 @@ function CreateTripPlanner({
   }, [session?.user.id]);
 
   useEffect(() => {
+    if (authLoading) return;
     const params = new URLSearchParams(window.location.search);
     setDraftLoaded(true);
+    try {
+      purgeExpiredCreateDrafts(localStorage);
+    } catch {
+      /* Purging stale handoff drafts is optional. */
+    }
     const loadedMemory = readTravelerMemory(memoryScopeId);
     setTravelerMemory(loadedMemory);
     const history = readTripPreferenceHistory(memoryScopeId);
@@ -345,22 +430,41 @@ function CreateTripPlanner({
 
     if (!draft && !params.has("destination")) {
       try {
-        draft = readEditorDraft<StoredCreateDraft>(sessionStorage);
+        draft = readEditorDraft<StoredCreateDraft>(
+          sessionStorage,
+          Date.now(),
+          memoryScopeId,
+        );
       } catch {
         /* Setup still works when browser storage is unavailable. */
       }
     }
 
     if (draft) {
+      const today = startOfLocalToday();
       const restoredStart = parseCreateDraftDate(draft.startDate);
       const restoredEnd = parseCreateDraftDate(draft.endDate);
+      const validStart =
+        restoredStart &&
+        !Number.isNaN(restoredStart.getTime()) &&
+        restoredStart >= today
+          ? restoredStart
+          : undefined;
+      const validEnd =
+        restoredEnd &&
+        !Number.isNaN(restoredEnd.getTime()) &&
+        (validStart ? restoredEnd >= validStart : restoredEnd >= today)
+          ? restoredEnd
+          : undefined;
 
       setSelectedPlace(plannerDestination(draft.selectedPlace, destinations));
-      if (restoredStart && !Number.isNaN(restoredStart.getTime())) {
-        setStartDate(restoredStart);
-      }
-      if (restoredEnd && (!restoredStart || restoredEnd >= restoredStart)) {
-        setEndDate(restoredEnd);
+      if (validStart) {
+        setStartDate(validStart);
+        if (validEnd) {
+          setEndDate(validEnd);
+        }
+      } else if (!restoredStart && validEnd) {
+        setEndDate(validEnd);
       }
       if (
         typeof draft.travelers === "number" &&
@@ -469,9 +573,9 @@ function CreateTripPlanner({
                 name: guideMatch.name,
                 lat: 0,
                 lng: 0,
-                placeId: guideMatch.slug,
-                isRecommended: true,
-                source: "catalog",
+                placeId: "",
+                isRecommended: false,
+                source: "user",
               }
             : {
                 name: requestedDestination
@@ -557,32 +661,38 @@ function CreateTripPlanner({
       }
       setMemoryAppliedFields(appliedFields);
     }
-  }, [memoryScopeId]);
+  }, [authLoading, memoryScopeId]);
 
   useEffect(() => {
     if (!draftLoaded || !selectedPlace) return;
     try {
-      saveEditorDraft(sessionStorage, {
-        selectedPlace,
-        startDate: startDate ? format(startDate, "yyyy-MM-dd") : "",
-        endDate: endDate ? format(endDate, "yyyy-MM-dd") : "",
-        travelers,
-        travelerType,
-        selectedVibes,
-        showAdvanced,
-        hotelSearch,
-        hotelAgeText,
-        budget,
-        dietaryPreferences,
-        allergiesText,
-        accessibility,
-        mobilityNotes,
-      } satisfies StoredCreateDraft);
+      saveEditorDraft(
+        sessionStorage,
+        {
+          selectedPlace,
+          startDate: startDate ? format(startDate, "yyyy-MM-dd") : "",
+          endDate: endDate ? format(endDate, "yyyy-MM-dd") : "",
+          travelers,
+          travelerType,
+          selectedVibes,
+          showAdvanced,
+          hotelSearch,
+          hotelAgeText,
+          budget,
+          dietaryPreferences,
+          allergiesText,
+          accessibility,
+          mobilityNotes,
+        } satisfies StoredCreateDraft,
+        Date.now(),
+        memoryScopeId,
+      );
     } catch {
       /* Autosave is optional; creating a trip still works. */
     }
   }, [
     draftLoaded,
+    memoryScopeId,
     selectedPlace,
     startDate,
     endDate,
@@ -621,6 +731,7 @@ function CreateTripPlanner({
     : null;
 
   const toggleVibe = (vibeId: string) => {
+    setUndoSnapshot(null);
     setSelectedVibes((prev) =>
       prev.includes(vibeId)
         ? prev.filter((v) => v !== vibeId)
@@ -630,14 +741,20 @@ function CreateTripPlanner({
     );
   };
 
+  const today = startOfLocalToday();
+  const hasValidDateOrder = Boolean(
+    startDate && endDate && endDate >= startDate,
+  );
+  const hasPastStartDate = Boolean(startDate && startDate < today);
+  const validDates = Boolean(hasValidDateOrder && !hasPastStartDate);
   const canGenerate =
     selectedPlace &&
-    startDate &&
-    endDate &&
+    validDates &&
     (hotelSearch === null ||
       validateHotelSearchDetails(hotelSearch, travelers));
 
   const handleSelectRecommended = (dest: (typeof destinations)[number]) => {
+    setUndoSnapshot(null);
     setSelectedPlace({
       name: dest.name,
       lat: dest.lat,
@@ -650,6 +767,7 @@ function CreateTripPlanner({
   };
 
   const handleSelectFromAutocomplete = (place: PlaceResult) => {
+    setUndoSnapshot(null);
     const entry =
       place.source === "catalog"
         ? destinations.find((d) => d.name === place.name)
@@ -743,9 +861,15 @@ function CreateTripPlanner({
       setShowDestinations(false);
     }
     if (parsed.startDate && parsed.endDate) {
+      const todayDate = startOfLocalToday();
       const nextStart = parseCreateDraftDate(parsed.startDate);
       const nextEnd = parseCreateDraftDate(parsed.endDate);
-      if (nextStart && nextEnd && nextEnd >= nextStart) {
+      if (
+        nextStart &&
+        nextEnd &&
+        nextStart >= todayDate &&
+        nextEnd >= nextStart
+      ) {
         setStartDate(nextStart);
         setEndDate(nextEnd);
       }
@@ -818,11 +942,17 @@ function CreateTripPlanner({
       suggestion.prefillParams.startDate &&
       suggestion.prefillParams.endDate
     ) {
+      const todayDate = startOfLocalToday();
       const nextStart = parseCreateDraftDate(
         suggestion.prefillParams.startDate,
       );
       const nextEnd = parseCreateDraftDate(suggestion.prefillParams.endDate);
-      if (nextStart && nextEnd && nextEnd >= nextStart) {
+      if (
+        nextStart &&
+        nextEnd &&
+        nextStart >= todayDate &&
+        nextEnd >= nextStart
+      ) {
         setStartDate(nextStart);
         setEndDate(nextEnd);
         chips.push(`${format(nextStart, "MMM d")}–${format(nextEnd, "MMM d")}`);
@@ -918,7 +1048,7 @@ function CreateTripPlanner({
   const handleGenerate = async () => {
     if ((!canGenerate && !pendingRequest) || submissionLock.current) return;
     if (!session) {
-      if (!canGenerate) return;
+      if (!canGenerate || !selectedPlace || !startDate || !endDate) return;
       const draft: StoredCreateDraft = {
         selectedPlace,
         startDate: format(startDate, "yyyy-MM-dd"),
@@ -951,6 +1081,7 @@ function CreateTripPlanner({
     setGenerateError(null);
     setProgressMessage("Creating your trip...");
     let createdTripId: string | null = null;
+    let navigating = false;
     const storageKey = `faroway:pending-create:${session.user.id}`;
     try {
       const parsedAllergies = allergiesText
@@ -1016,7 +1147,19 @@ function CreateTripPlanner({
       if (!mounted.current) return;
       if (!response.ok) {
         const data = await response.json().catch(() => ({}));
-        throw new Error(data.error || "Failed to create trip");
+        if (!mounted.current) return;
+        if (response.status === 409 || response.status === 410) {
+          try {
+            localStorage.removeItem(storageKey);
+          } catch {
+            /* Storage cleanup is best-effort. */
+          }
+          setPendingRequest(null);
+        }
+        throw new CreateTripHttpError(
+          response.status,
+          typeof data.error === "string" ? data.error : "Failed to create trip",
+        );
       }
 
       const { trip } = await response.json();
@@ -1031,7 +1174,7 @@ function CreateTripPlanner({
         );
       createdTripId = trip.id;
       try {
-        clearEditorDraft(sessionStorage);
+        clearEditorDraft(sessionStorage, memoryScopeId);
       } catch {
         /* The server trip is already saved. */
       }
@@ -1073,8 +1216,11 @@ function CreateTripPlanner({
         const genData = await genResponse.json().catch(() => ({}));
         if (!mounted.current) return;
         if (genResponse.status !== 409) {
-          throw new Error(
-            genData.error || "Failed to start itinerary generation",
+          throw new CreateTripHttpError(
+            genResponse.status,
+            typeof genData.error === "string"
+              ? genData.error
+              : "Failed to start itinerary generation",
           );
         }
       }
@@ -1082,6 +1228,7 @@ function CreateTripPlanner({
       // Redirect to trip detail page — real progress happens there via SSE
       localStorage.removeItem(storageKey);
       setPendingRequest(null);
+      navigating = true;
       router.push(`/trips/${trip.id}`);
     } catch (err) {
       if (!mounted.current) return;
@@ -1093,6 +1240,7 @@ function CreateTripPlanner({
           /* Replaying this ID remains safe. */
         }
         setPendingRequest(null);
+        navigating = true;
         router.push(`/trips/${createdTripId}`);
         return;
       }
@@ -1101,16 +1249,14 @@ function CreateTripPlanner({
         setProgressMessage("");
         return;
       }
-      setGenerateError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong. Please try again.",
-      );
+      setGenerateError(formatCreateTripError(err));
       setIsGenerating(false);
       setProgressMessage("");
     } finally {
-      submissionLock.current = false;
-      if (mounted.current) setIsGenerating(false);
+      if (!navigating) {
+        submissionLock.current = false;
+        if (mounted.current) setIsGenerating(false);
+      }
     }
   };
 
@@ -1169,6 +1315,7 @@ function CreateTripPlanner({
         <PlacesAutocompleteInput
           onSelect={handleSelectFromAutocomplete}
           localDestinations={allAutocompleteDestinations}
+          showLiveCityDetails={Boolean(session)}
         />
 
         <div className="flex gap-3 overflow-x-auto snap-x snap-proximity pb-3 mt-4">
@@ -1206,15 +1353,17 @@ function CreateTripPlanner({
     );
   };
 
-  const datesReady = Boolean(selectedPlace && startDate && endDate);
+  const datesReady = Boolean(selectedPlace && validDates);
   const preview = selectedRecommendedDest || destinations[0];
   const missingMessage = !selectedPlace
     ? "Choose a destination to get started"
     : !startDate || !endDate
       ? "Choose your dates to continue"
-      : !canGenerate
-        ? "Complete your hotel room details or turn off hotel searches"
-        : "Your trip is ready to plan";
+      : !validDates
+        ? "Choose a start date from today onward"
+        : !canGenerate
+          ? "Complete your hotel room details or turn off hotel searches"
+          : "Your trip is ready to plan";
 
   return (
     <div
@@ -1313,8 +1462,19 @@ function CreateTripPlanner({
               <DatePicker
                 startDate={startDate}
                 endDate={endDate}
-                onStartDateChange={setStartDate}
-                onEndDateChange={setEndDate}
+                onStartDateChange={(next) => {
+                  setUndoSnapshot(null);
+                  setStartDate(next);
+                }}
+                onEndDateChange={(next) => {
+                  setUndoSnapshot(null);
+                  setEndDate(next);
+                }}
+                startError={
+                  hasPastStartDate
+                    ? "Start date must be today or later."
+                    : undefined
+                }
               />
             </section>
             <section
@@ -1339,6 +1499,7 @@ function CreateTripPlanner({
                       type="button"
                       aria-label="Decrease travelers"
                       onClick={() => {
+                        setUndoSnapshot(null);
                         setTravelers((current) => Math.max(1, current - 1));
                         setTravelerType((currentType) =>
                           travelers - 1 <= 1 && currentType === "couple"
@@ -1361,6 +1522,7 @@ function CreateTripPlanner({
                       type="button"
                       aria-label="Increase travelers"
                       onClick={() => {
+                        setUndoSnapshot(null);
                         setTravelers((current) => Math.min(50, current + 1));
                         setTravelerType((currentType) =>
                           currentType === "solo"
@@ -1395,6 +1557,7 @@ function CreateTripPlanner({
                       type="button"
                       key={type.id}
                       onClick={() => {
+                        setUndoSnapshot(null);
                         setTravelerType(type.id);
                         if (hotelSearch === null) {
                           if (type.id === "solo") setTravelers(1);
@@ -1435,7 +1598,10 @@ function CreateTripPlanner({
                 {budgetOptions.map((option) => (
                   <button
                     key={option.id}
-                    onClick={() => setBudget(option.id)}
+                    onClick={() => {
+                      setUndoSnapshot(null);
+                      setBudget(option.id);
+                    }}
                     aria-pressed={budget === option.id}
                     className={`min-h-24 rounded-2xl border px-2 py-4 text-center transition-colors sm:px-4 ${budget === option.id ? "border-primary-700 bg-primary-50 text-primary-800" : "border-gray-200 bg-white text-slate-600 hover:border-slate-400"}`}
                   >
@@ -1515,15 +1681,19 @@ function CreateTripPlanner({
                 <HotelSearchFields
                   value={hotelSearch}
                   ageText={hotelAgeText}
-                  onAgeTextChange={setHotelAgeText}
+                  onAgeTextChange={(next) => {
+                    setUndoSnapshot(null);
+                    setHotelAgeText(next);
+                  }}
                   travelers={travelers}
                   onChange={(value) => {
+                    setUndoSnapshot(null);
                     setHotelSearch(value);
                     if (
                       value &&
-                      hotelSearch &&
-                      JSON.stringify(value.rooms) !==
-                        JSON.stringify(hotelSearch.rooms)
+                      (!hotelSearch ||
+                        JSON.stringify(value.rooms) !==
+                          JSON.stringify(hotelSearch.rooms))
                     ) {
                       const count = hotelGuestCounts(value).travelers;
                       if (Number.isInteger(count) && count >= 1 && count <= 50)
@@ -1571,13 +1741,14 @@ function CreateTripPlanner({
                             key={option}
                             type="button"
                             aria-pressed={active}
-                            onClick={() =>
+                            onClick={() => {
+                              setUndoSnapshot(null);
                               setDietaryPreferences((prev) =>
                                 prev.includes(option)
                                   ? prev.filter((item) => item !== option)
                                   : [...prev, option],
-                              )
-                            }
+                              );
+                            }}
                             className={`rounded-full border px-3.5 py-2 text-xs font-medium transition-colors ${
                               active
                                 ? "border-primary bg-primary-50 text-primary-700"
@@ -1602,7 +1773,10 @@ function CreateTripPlanner({
                       type="text"
                       maxLength={500}
                       value={allergiesText}
-                      onChange={(e) => setAllergiesText(e.target.value)}
+                      onChange={(e) => {
+                        setUndoSnapshot(null);
+                        setAllergiesText(e.target.value);
+                      }}
                       placeholder="e.g. peanuts, shellfish, sesame"
                       className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
@@ -1619,13 +1793,14 @@ function CreateTripPlanner({
                             key={option.id}
                             type="button"
                             aria-pressed={active}
-                            onClick={() =>
+                            onClick={() => {
+                              setUndoSnapshot(null);
                               setAccessibility((prev) =>
                                 prev.includes(option.id)
                                   ? prev.filter((item) => item !== option.id)
                                   : [...prev, option.id],
-                              )
-                            }
+                              );
+                            }}
                             className={`rounded-full border px-3.5 py-2 text-xs font-medium transition-colors ${
                               active
                                 ? "border-primary bg-primary-50 text-primary-700"
@@ -1650,7 +1825,10 @@ function CreateTripPlanner({
                       rows={2}
                       maxLength={500}
                       value={mobilityNotes}
-                      onChange={(e) => setMobilityNotes(e.target.value)}
+                      onChange={(e) => {
+                        setUndoSnapshot(null);
+                        setMobilityNotes(e.target.value);
+                      }}
                       placeholder="e.g. Stroller-friendly routes, midday rest every day, arrive on day 1 at 14:00"
                       className="w-full rounded-xl border border-gray-200 bg-white px-4 py-3 text-sm text-gray-900 placeholder-gray-400 outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                     />
@@ -1820,6 +1998,7 @@ function CreateTripPlanner({
                 : ""}
             </p>
             <button
+              ref={progressStatusRef}
               onClick={() =>
                 scrollToSection(
                   pendingRequest || generateError
@@ -1873,6 +2052,7 @@ function CreateTripPlanner({
       <PlanningConsentDialog
         open={consentDialog !== null}
         message={consentDialog?.message ?? ""}
+        fallbackFocusRef={progressStatusRef}
         onConfirm={() => {
           const resolve = consentResolveRef.current;
           consentResolveRef.current = null;

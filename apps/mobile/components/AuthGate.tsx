@@ -9,21 +9,18 @@ import {
   StyleSheet,
   TouchableOpacity,
   Modal,
-  Dimensions,
   Image,
   Alert,
   ActivityIndicator,
-  Linking,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuthContext } from './AuthProvider';
 import { isRequestCanceled } from '../lib/authProviders';
+import { openSafeHttpsUrl } from '../lib/openExternalUrl';
 import { colors, borderRadius, shadows } from '../constants/theme';
 import { useReduceMotion } from '../hooks/useReduceMotion';
-
-const { height } = Dimensions.get('window');
 
 type AuthGateTrigger = 'save' | 'book' | 'share' | 'access' | 'general' | 'generate';
 
@@ -294,7 +291,7 @@ export function AuthGate({
               By continuing, you agree to our{' '}
               <Text
                 style={styles.termsLink}
-                onPress={() => Linking.openURL('https://faroway.ai/terms')}
+                onPress={() => void openSafeHttpsUrl('https://faroway.ai/terms')}
                 accessibilityRole="link"
               >
                 Terms
@@ -302,7 +299,7 @@ export function AuthGate({
               and{' '}
               <Text
                 style={styles.termsLink}
-                onPress={() => Linking.openURL('https://faroway.ai/privacy')}
+                onPress={() => void openSafeHttpsUrl('https://faroway.ai/privacy')}
                 accessibilityRole="link"
               >
                 Privacy Policy
@@ -326,7 +323,7 @@ const styles = StyleSheet.create({
     top: 0,
     left: 0,
     right: 0,
-    height: height * 0.4,
+    height: '40%',
   },
   previewImage: {
     width: '100%',

@@ -157,8 +157,8 @@ export async function searchGYGActivities(
     );
 
     if (!response.ok) {
-      const error = await response.text();
-      console.error("[GYG] API error:", response.status, error);
+      await response.text().catch(() => {});
+      console.error("[GYG] API error:", response.status);
       return [];
     }
 
@@ -176,13 +176,13 @@ export async function searchGYGActivities(
 export async function getGYGActivity(
   activityId: string,
 ): Promise<GYGActivity | null> {
-  if (!isGYGConfigured()) {
+  if (!isGYGConfigured() || !/^[A-Za-z0-9_-]{1,64}$/.test(activityId)) {
     return null;
   }
 
   try {
     const response = await fetchWithTimeout(
-      `${GYG_API_BASE}/tours/${activityId}?cnt_language=en&currency=USD`,
+      `${GYG_API_BASE}/tours/${encodeURIComponent(activityId)}?cnt_language=en&currency=USD`,
       {
         headers: {
           Accept: "application/json",
@@ -210,13 +210,13 @@ export async function checkGYGAvailability(
   activityId: string,
   date: string,
 ): Promise<GYGAvailability[]> {
-  if (!isGYGConfigured()) {
+  if (!isGYGConfigured() || !/^[A-Za-z0-9_-]{1,64}$/.test(activityId)) {
     return [];
   }
 
   try {
     const response = await fetchWithTimeout(
-      `${GYG_API_BASE}/tours/${activityId}/availability?cnt_language=en&date[]=${encodeURIComponent(`${date}T00:00:00`)}`,
+      `${GYG_API_BASE}/tours/${encodeURIComponent(activityId)}/availability?cnt_language=en&date[]=${encodeURIComponent(`${date}T00:00:00`)}`,
       {
         headers: {
           Accept: "application/json",

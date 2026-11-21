@@ -77,4 +77,30 @@ describe("trip export helpers", () => {
     expect(text).toContain("Packing Suggestions");
     expect(text).toContain("Exported: 2026-04-08T12:00:00.000Z");
   });
+
+  it("formats calendar dates without UTC day shift and ignores empty or invalid currencies", () => {
+    const text = buildTripExportText(
+      trip,
+      {
+        totalEstimatedCost: { amount: 120, currency: "" },
+        days: [
+          {
+            dayNumber: 1,
+            date: "2026-04-01",
+            title: "Arrival",
+            morning: { activities: [], meals: [] },
+            afternoon: { activities: [], meals: [] },
+            evening: { activities: [], meals: [] },
+            totalEstimatedCost: { amount: 90, currency: "INVALID" },
+          } as unknown as TripDay,
+        ],
+      },
+      new Date("2026-04-08T12:00:00.000Z"),
+    );
+
+    expect(text).toContain("Dates: Apr 1, 2026 to Apr 7, 2026");
+    expect(text).toContain("Date: Apr 1, 2026");
+    expect(text).not.toContain("Estimated total:");
+    expect(text).not.toContain("Day estimate:");
+  });
 });

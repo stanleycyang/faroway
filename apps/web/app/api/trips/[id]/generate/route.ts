@@ -480,16 +480,19 @@ export async function GET(request: NextRequest, { params }: Params) {
         .limit(1)
         .single();
 
-      return NextResponse.json({
-        tripId,
-        workflowId: workflowRun?.id,
-        status: workflowRun?.status || trip.status || "not_started",
-        progress: progress?.progress || 0,
-        step: progress?.step || "unknown",
-        message: progress?.message || "Processing...",
-        startedAt: workflowRun?.started_at,
-        completedAt: workflowRun?.completed_at,
-      });
+      return NextResponse.json(
+        {
+          tripId,
+          workflowId: workflowRun?.id,
+          status: workflowRun?.status || trip.status || "not_started",
+          progress: progress?.progress || 0,
+          step: progress?.step || "unknown",
+          message: progress?.message || "Processing...",
+          startedAt: workflowRun?.started_at,
+          completedAt: workflowRun?.completed_at,
+        },
+        { headers: { "Cache-Control": "private, no-store" } },
+      );
     }
 
     const recovery =
@@ -506,11 +509,14 @@ export async function GET(request: NextRequest, { params }: Params) {
       .single();
 
     if (searchError || !search) {
-      return NextResponse.json({
-        tripId,
-        status: "not_started",
-        message: "No generation has been started for this trip",
-      });
+      return NextResponse.json(
+        {
+          tripId,
+          status: "not_started",
+          message: "No generation has been started for this trip",
+        },
+        { headers: { "Cache-Control": "private, no-store" } },
+      );
     }
 
     // Map search progress to a flat progress percentage
@@ -569,28 +575,31 @@ export async function GET(request: NextRequest, { params }: Params) {
       message = `${unfinished.join(", ")} did not finish. Nothing was retried automatically.`;
     }
 
-    return NextResponse.json({
-      tripId,
-      recovery: recovery?.state,
-      searchId: search.id,
-      status:
-        search.status === "completed"
-          ? "completed"
-          : search.status === "error"
-            ? "failed"
-            : "running",
-      progress: Math.min(100, Math.round(progressPercent)),
-      step: currentStep,
-      searchProgress,
-      message:
-        recovery?.state === "paused"
-          ? "Planning recovery is temporarily paused for maintenance. Your trip is saved. Check again later."
-          : recovery?.state === "unconfirmed"
-            ? "We are checking whether planning started. Your saved trip is safe; another run will not be started while its status is uncertain."
-            : message,
-      startedAt: search.created_at,
-      completedAt: search.completed_at,
-    });
+    return NextResponse.json(
+      {
+        tripId,
+        recovery: recovery?.state,
+        searchId: search.id,
+        status:
+          search.status === "completed"
+            ? "completed"
+            : search.status === "error"
+              ? "failed"
+              : "running",
+        progress: Math.min(100, Math.round(progressPercent)),
+        step: currentStep,
+        searchProgress,
+        message:
+          recovery?.state === "paused"
+            ? "Planning recovery is temporarily paused for maintenance. Your trip is saved. Check again later."
+            : recovery?.state === "unconfirmed"
+              ? "We are checking whether planning started. Your saved trip is safe; another run will not be started while its status is uncertain."
+              : message,
+        startedAt: search.created_at,
+        completedAt: search.completed_at,
+      },
+      { headers: { "Cache-Control": "private, no-store" } },
+    );
   } catch (error) {
     logger.error("[API] Error fetching generation status:", error);
     return NextResponse.json(

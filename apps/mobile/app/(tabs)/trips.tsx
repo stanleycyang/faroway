@@ -22,7 +22,7 @@ import { isRequestCanceled } from '../../lib/authProviders';
 import { useTripStore } from '../../stores/tripStore';
 import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
-import * as WebBrowser from 'expo-web-browser';
+import { openSafeHttpsUrl } from '../../lib/openExternalUrl';
 import { formatTripDate, tripDurationDays } from '../../lib/tripDate';
 
 import { tripDatePhase } from '@faroway/constants';
@@ -169,7 +169,7 @@ function GuestTripsView() {
         By continuing, you agree to our{' '}
         <Text
           style={styles.termsLink}
-          onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/terms')}
+          onPress={() => void openSafeHttpsUrl('https://faroway.ai/terms')}
           accessibilityRole="link"
         >
           Terms
@@ -177,7 +177,7 @@ function GuestTripsView() {
         and{' '}
         <Text
           style={styles.termsLink}
-          onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/privacy')}
+          onPress={() => void openSafeHttpsUrl('https://faroway.ai/privacy')}
           accessibilityRole="link"
         >
           Privacy Policy
@@ -228,7 +228,11 @@ function AuthenticatedTripsView() {
   const today = useLocalCalendarDate();
   const filteredTrips = trips.filter((trip) => {
     if (activeTab === 'all') return true;
-    return tripDatePhase(trip.startDate, trip.endDate, today) === activeTab;
+    const phase = tripDatePhase(trip.startDate, trip.endDate, today);
+    if (activeTab === 'upcoming') {
+      return phase === 'upcoming' || phase === 'in-progress';
+    }
+    return phase === activeTab;
   });
 
   const formatDateRange = (start: string, end: string) => {

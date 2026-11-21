@@ -49,6 +49,17 @@ const mockSupabase = {
   })),
 };
 
+const mockRateLimitAsync = vi.fn(async () => ({
+  allowed: true,
+  remaining: 9,
+  resetIn: 60_000,
+}));
+
+vi.mock("@/lib/security/rate-limit", () => ({
+  checkRateLimitAsync: (...args: unknown[]) =>
+    mockRateLimitAsync(...(args as [])),
+}));
+
 vi.mock("@/lib/supabase/server", () => ({
   getSupabase: vi.fn(() => mockSupabase),
 }));
@@ -238,5 +249,41 @@ describe("PATCH /api/user/profile", () => {
     const res = await PATCH(req);
 
     expect(res.status).toBe(400);
+  });
+
+  it("rejects direct email overwrites, non-HTTPS avatar URLs, and unknown notification keys", async () => {
+    const emailRes = await PATCH(
+      makeRequest("PATCH", "/api/user/profile", {
+        email: "spoofed@example.com",
+      }),
+    );
+    expect(emailRes.status).toBe(400);
+
+    const jsAvatarRes = await PATCH(
+      makeRequest("PATCH", "/api/user/profile", {
+        avatar_url: "javascript:alert(1)",
+      }),
+    );
+    expect(jsAvatarRes.status).toBe(400);
+
+    const httpAvatarRes = await PATCH(
+      makeRequest("PATCH", "/api/user/profile", {
+        avatar_url: "http://example.com/avatar.png",
+      }),
+    );
+    expect(httpAvatarRes.status).toBe(400);
+
+    const extraNotifRes = await PATCH(
+      makeRequest("PATCH", "/api/user/profile", {
+        notification_settings: { arbitrary_key: true },
+      }),
+    );
+    expect(extraNotifRes.status).toBe(400);
+    expect(mockSupabase.from).not.toHaveBeenCalled();
+    expect(mockRateLimitAsync).toHaveBeenCalledWith("profile-patch:user-123", {
+      maxRequests: 10,
+      windowMs: 60_000,
+      failClosed: true,
+    });
   });
 });

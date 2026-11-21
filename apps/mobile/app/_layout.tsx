@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Stack, router, type ErrorBoundaryProps } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { View, ActivityIndicator, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Sentry from '@sentry/react-native';
 import { AuthProvider, useAuthContext } from '../components/AuthProvider';
 import { NotificationProvider } from '../components/NotificationProvider';
@@ -11,6 +12,7 @@ import { SyncStatusBanner } from '../components/ui/SyncStatusBanner';
 import { useTripStore } from '../stores/tripStore';
 import { useUserStore } from '../stores/userStore';
 import { useReduceMotion } from '../hooks/useReduceMotion';
+import { useNetworkStatus, useSyncStatus } from '../hooks/useOfflineSync';
 
 Sentry.init({
   dsn: process.env.EXPO_PUBLIC_SENTRY_DSN,
@@ -25,6 +27,10 @@ Sentry.init({
 function RootLayoutNav() {
   const { initialized } = useAuthContext();
   const reduceMotion = useReduceMotion();
+  const insets = useSafeAreaInsets();
+  const { isOffline } = useNetworkStatus();
+  const { status: syncStatus, hasPending } = useSyncStatus();
+  const syncBannerVisible = isOffline || hasPending || syncStatus === 'syncing';
   const hydrateFromOffline = useTripStore((state) => state.hydrateFromOffline);
   const accountRevision = useUserStore((state) => state.accountRevision);
 
@@ -54,8 +60,8 @@ function RootLayoutNav() {
   return (
     <>
       <StatusBar style="dark" />
-      <SyncStatusBanner position="top" autoHide={true} />
-      <TripSyncConflicts />
+      <SyncStatusBanner position="top" autoHide={true} topInset={insets.top} />
+      <TripSyncConflicts topInset={syncBannerVisible ? 0 : insets.top} />
       <Stack
         screenOptions={{
           headerShown: false,

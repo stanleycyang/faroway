@@ -68,6 +68,8 @@ import {
   type CopilotActionType,
 } from '../../lib/tripCompanion';
 import type { TripDay } from '../../lib/itineraryTypes';
+import { isSafeHttpsUrl, openSafeHttpsUrl } from '../../lib/openExternalUrl';
+import { logger } from '../../lib/logger';
 
 const BookingTripContext = createContext<string | undefined>(undefined);
 const useBookingReview = () => {
@@ -81,14 +83,13 @@ const HEADER_HEIGHT = 300;
  * Helper function to open URLs using expo-web-browser
  */
 const openURL = async (url: string) => {
-  try {
-    await WebBrowser.openBrowserAsync(url, {
-      presentationStyle: WebBrowser.WebBrowserPresentationStyle.AUTOMATIC,
-      controlsColor: colors.primary[600],
-    });
-  } catch (error) {
-    throw error;
+  if (!isSafeHttpsUrl(url)) {
+    throw new Error('Blocked unsafe external URL');
   }
+  await WebBrowser.openBrowserAsync(url, {
+    presentationStyle: WebBrowser.WebBrowserPresentationStyle.AUTOMATIC,
+    controlsColor: colors.primary[600],
+  });
 };
 
 interface ActivityCardProps {
@@ -658,7 +659,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
       hapticFeedback.success();
     } catch (error) {
       if (!isActive() || controller.signal.aborted) return;
-      console.error('Failed to refresh trip:', error);
+      logger.error('Failed to refresh trip:', error);
       hapticFeedback.error();
       Alert.alert(
         'Couldn’t refresh trip',
@@ -1269,7 +1270,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                   accessibilityRole="button"
                   accessibilityLabel="Report an issue with this itinerary"
                   style={{ minHeight: 44, justifyContent: 'center' }}
-                  onPress={() => void WebBrowser.openBrowserAsync('https://faroway.ai/support')}
+                  onPress={() => void openSafeHttpsUrl('https://faroway.ai/support')}
                 >
                   <Text
                     style={{

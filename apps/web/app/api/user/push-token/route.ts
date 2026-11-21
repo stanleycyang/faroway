@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClientFromRequest, getSupabase } from "@/lib/supabase/server";
+import { checkRateLimitAsync } from "@/lib/security/rate-limit";
 import { z } from "zod";
 
 const schema = z.object({
@@ -20,6 +21,13 @@ async function update(request: NextRequest, enabled: boolean) {
   } = await auth.auth.getUser();
   if (authError || !user)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const rateLimit = await checkRateLimitAsync(`push-token:${user.id}`, {
+    maxRequests: 30,
+    windowMs: 60_000,
+    failClosed: true,
+  });
+  if (!rateLimit.allowed)
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
   const input = schema.safeParse(await request.json().catch(() => null));
   if (!input.success)
     return NextResponse.json(

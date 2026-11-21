@@ -59,7 +59,7 @@ export function normalizeTravelerMemory(value: unknown): TravelerMemoryDefaults 
 
   const homeAirport =
     typeof raw.homeAirport === 'string' && raw.homeAirport.trim()
-      ? raw.homeAirport.trim().toUpperCase().slice(0, 12)
+      ? raw.homeAirport.trim().toUpperCase().slice(0, 10)
       : undefined;
 
   const defaultBudget =
@@ -235,7 +235,10 @@ export function mergeTravelerMemoryIntoDraft(
   const locked = explicitFields ?? new Set<string>();
 
   if (memory.homeAirport && !draft?.originAirport && !locked.has('originAirport')) {
-    updates.originAirport = memory.homeAirport;
+    const normalizedAirport = memory.homeAirport.trim().toUpperCase().slice(0, 10);
+    if (normalizedAirport) {
+      updates.originAirport = normalizedAirport;
+    }
   }
 
   if (memory.defaultBudget && !draft?.budget && !locked.has('budget')) {
@@ -315,7 +318,7 @@ export function extractMemoryFromDraft(
       : undefined;
 
   return {
-    homeAirport: draft.originAirport?.trim() || undefined,
+    homeAirport: draft.originAirport?.trim().slice(0, 10) || undefined,
     defaultBudget: validBudget,
     defaultTravelerType: validType,
     defaultVibes: Array.isArray(draft.vibes) ? draft.vibes.slice(0, 5) : [],

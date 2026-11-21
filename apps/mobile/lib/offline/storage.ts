@@ -8,6 +8,7 @@ import type { Trip } from '../../stores/tripStore';
 import { readCachedTrips } from './cached-trip';
 import { readCachedMutations } from './cached-mutations';
 import { useUserStore } from '../../stores/userStore';
+import { logger } from '../logger';
 
 // Cache removal and all subsequent reads/writes share one queue. A new
 // account's writes cannot land between the removals in an account cleanup.
@@ -130,7 +131,7 @@ class OfflineStorage {
       const data = JSON.stringify({ version: 1, ownerId, trips });
       await AsyncStorage.setItem(STORAGE_KEYS.TRIPS, data);
     } catch (error) {
-      console.error('[OfflineStorage] Error saving trips:', error);
+      logger.error('[OfflineStorage] Error saving trips:', error);
       throw error;
     }
   }
@@ -148,7 +149,7 @@ class OfflineStorage {
       const cache = JSON.parse(data);
       return cache?.version === 1 && cache.ownerId === ownerId ? readCachedTrips(cache.trips) : [];
     } catch (error) {
-      console.error('[OfflineStorage] Error loading trips:', error);
+      logger.error('[OfflineStorage] Error loading trips:', error);
       throw error;
     }
   }
@@ -179,7 +180,7 @@ class OfflineStorage {
 
       await this.saveTrips(trips);
     } catch (error) {
-      console.error('[OfflineStorage] Error saving trip:', error);
+      logger.error('[OfflineStorage] Error saving trip:', error);
       throw error;
     }
   }
@@ -194,7 +195,7 @@ class OfflineStorage {
       const filtered = trips.filter((t) => t.id !== tripId);
       await this.saveTrips(filtered);
     } catch (error) {
-      console.error('[OfflineStorage] Error deleting trip:', error);
+      logger.error('[OfflineStorage] Error deleting trip:', error);
       throw error;
     }
   }
@@ -207,7 +208,7 @@ class OfflineStorage {
       const trips = await this.loadTrips();
       return trips.find((t) => t.id === tripId) || null;
     } catch (error) {
-      console.error('[OfflineStorage] Error getting trip:', error);
+      logger.error('[OfflineStorage] Error getting trip:', error);
       return null;
     }
   }
@@ -239,7 +240,14 @@ class OfflineStorage {
       if (existingIndex >= 0) {
         const existing = mutations[existingIndex];
 
-        // Delete supersedes everything
+        // Deleting a trip that was only created offline cancels the pending create cleanly.
+        if (existing.type === 'create' && mutation.type === 'delete') {
+          mutations.splice(existingIndex, 1);
+          await this.savePendingMutations(mutations);
+          await this.updateSyncMeta({ pendingCount: mutations.length });
+          return newMutation;
+        }
+        // Delete supersedes everything else
         if (mutation.type === 'delete') {
           mutations[existingIndex] = newMutation;
         }
@@ -278,7 +286,7 @@ class OfflineStorage {
       // If we merged into an existing mutation, return that merged entry; otherwise the new one.
       return existingIndex >= 0 ? mutations[existingIndex] : newMutation;
     } catch (error) {
-      console.error('[OfflineStorage] Error adding pending mutation:', error);
+      logger.error('[OfflineStorage] Error adding pending mutation:', error);
       throw error;
     }
   }
@@ -296,7 +304,7 @@ class OfflineStorage {
       const mutations = JSON.parse(data);
       return readCachedMutations(mutations, ownerId);
     } catch (error) {
-      console.error('[OfflineStorage] Error getting pending mutations:', error);
+      logger.error('[OfflineStorage] Error getting pending mutations:', error);
       throw error;
     }
   }
@@ -321,7 +329,7 @@ class OfflineStorage {
         JSON.stringify([...otherOwners, ...mutations])
       );
     } catch (error) {
-      console.error('[OfflineStorage] Error saving pending mutations:', error);
+      logger.error('[OfflineStorage] Error saving pending mutations:', error);
       throw error;
     }
   }
@@ -336,7 +344,7 @@ class OfflineStorage {
       await this.savePendingMutations(filtered);
       await this.updateSyncMeta({ pendingCount: filtered.length });
     } catch (error) {
-      console.error('[OfflineStorage] Error removing pending mutation:', error);
+      logger.error('[OfflineStorage] Error removing pending mutation:', error);
       throw error;
     }
   }
@@ -362,7 +370,7 @@ class OfflineStorage {
         await this.savePendingMutations(mutations);
       }
     } catch (error) {
-      console.error('[OfflineStorage] Error incrementing retry:', error);
+      logger.error('[OfflineStorage] Error incrementing retry:', error);
     }
   }
 
@@ -374,7 +382,7 @@ class OfflineStorage {
       await this.savePendingMutations([]);
       await this.updateSyncMeta({ pendingCount: 0 });
     } catch (error) {
-      console.error('[OfflineStorage] Error clearing pending mutations:', error);
+      logger.error('[OfflineStorage] Error clearing pending mutations:', error);
       throw error;
     }
   }
@@ -401,7 +409,7 @@ class OfflineStorage {
       }
       return { ...meta, pendingCount: (await this.getPendingMutations()).length } as SyncMeta;
     } catch (error) {
-      console.error('[OfflineStorage] Error getting sync meta:', error);
+      logger.error('[OfflineStorage] Error getting sync meta:', error);
       throw error;
     }
   }
@@ -417,7 +425,7 @@ class OfflineStorage {
       const updated = { ...current, ...updates, ownerId };
       await AsyncStorage.setItem(STORAGE_KEYS.SYNC_META, JSON.stringify(updated));
     } catch (error) {
-      console.error('[OfflineStorage] Error updating sync meta:', error);
+      logger.error('[OfflineStorage] Error updating sync meta:', error);
     }
   }
 

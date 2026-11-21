@@ -306,7 +306,7 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
               </span>
               {reviewCount != null && (
                 <span className="text-xs text-gray-500">
-                  ({reviewCount.toLocaleString()})
+                  ({reviewCount.toLocaleString("en-US")})
                 </span>
               )}
             </div>
@@ -425,7 +425,7 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
               </span>
               {reviewCount != null && (
                 <span className="text-gray-400">
-                  ({reviewCount.toLocaleString()})
+                  ({reviewCount.toLocaleString("en-US")})
                 </span>
               )}
             </span>
@@ -455,7 +455,7 @@ export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
                 {activity.tripadvisorRating.toFixed(1)} on TripAdvisor
                 {activity.tripadvisorReviewCount != null && (
                   <span className="text-[#00af87]/70 font-normal">
-                    ({activity.tripadvisorReviewCount.toLocaleString()})
+                    ({activity.tripadvisorReviewCount.toLocaleString("en-US")})
                   </span>
                 )}
               </span>
@@ -640,7 +640,7 @@ export function RestaurantCard({ restaurant, rationale }: RestaurantCardProps) {
                   </span>
                   {reviewCount != null && (
                     <span className="text-gray-400">
-                      ({reviewCount.toLocaleString()})
+                      ({reviewCount.toLocaleString("en-US")})
                     </span>
                   )}
                 </span>
@@ -671,7 +671,11 @@ export function RestaurantCard({ restaurant, rationale }: RestaurantCardProps) {
                     {restaurant.tripadvisorRating.toFixed(1)} on TripAdvisor
                     {restaurant.tripadvisorReviewCount != null && (
                       <span className="text-[#00af87]/70 font-normal">
-                        ({restaurant.tripadvisorReviewCount.toLocaleString()})
+                        (
+                        {restaurant.tripadvisorReviewCount.toLocaleString(
+                          "en-US",
+                        )}
+                        )
                       </span>
                     )}
                   </span>

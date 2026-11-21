@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useId, useRef, useState } from "react";
 import { DayPicker, type DateRange } from "react-day-picker";
 import { format } from "date-fns";
 import { getTripDuration } from "@/lib/trips/date-duration";
@@ -28,6 +28,8 @@ export function DatePicker({
   endError,
   className,
 }: DatePickerProps) {
+  const startDateId = useId();
+  const endDateId = useId();
   const [showCalendar, setShowCalendar] = useState(false);
   // Draft state so users can adjust before confirming
   const [draftRange, setDraftRange] = useState<DateRange | undefined>(
@@ -102,14 +104,20 @@ export function DatePicker({
       {/* Date inputs */}
       <div className="grid grid-cols-2 gap-3 sm:gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor={startDateId}
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             Start date
           </label>
           <button
+            id={startDateId}
             type="button"
             onClick={(event) => openCalendar(event.currentTarget)}
             aria-label={
-              startDate ? format(startDate, "MMM d, yyyy") : "Select start date"
+              startDate
+                ? `Start date, ${format(startDate, "MMM d, yyyy")}`
+                : "Start date, not selected"
             }
             className={cn(
               "w-full px-3 sm:px-4 py-3.5 bg-white border rounded-xl text-left flex items-center gap-2 sm:gap-3 text-sm sm:text-base transition-all",
@@ -136,14 +144,20 @@ export function DatePicker({
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label
+            htmlFor={endDateId}
+            className="block text-sm font-medium text-gray-700 mb-2"
+          >
             End date
           </label>
           <button
+            id={endDateId}
             type="button"
             onClick={(event) => openCalendar(event.currentTarget)}
             aria-label={
-              endDate ? format(endDate, "MMM d, yyyy") : "Select end date"
+              endDate
+                ? `End date, ${format(endDate, "MMM d, yyyy")}`
+                : "End date, not selected"
             }
             className={cn(
               "w-full px-3 sm:px-4 py-3.5 bg-white border rounded-xl text-left flex items-center gap-2 sm:gap-3 text-sm sm:text-base transition-all",
@@ -208,7 +222,8 @@ export function DatePicker({
                   Select dates
                 </h3>
                 <span id="date-picker-description" className="sr-only">
-                  Choose a start date and end date for your trip.
+                  Choose a start date and end date for your trip (up to 30
+                  days).
                 </span>
                 {draftRange?.from && (
                   <p className="text-sm text-gray-500 mt-0.5">
@@ -254,8 +269,10 @@ export function DatePicker({
               <DayPicker
                 mode="range"
                 selected={draftRange}
+                defaultMonth={draftRange?.from ?? startDate}
                 onSelect={handleRangeSelect}
                 disabled={{ before: today }}
+                max={30}
                 numberOfMonths={numberOfMonths}
                 showOutsideDays
               />

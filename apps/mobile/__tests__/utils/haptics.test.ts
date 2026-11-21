@@ -56,4 +56,15 @@ describe('hapticFeedback', () => {
     hapticFeedback.selection();
     expect(Haptics.selectionAsync).toHaveBeenCalled();
   });
+
+  it('swallows rejected native haptic promises without unhandled rejections', async () => {
+    (Haptics.impactAsync as jest.Mock).mockRejectedValueOnce(new Error('Unsupported device'));
+    (Haptics.selectionAsync as jest.Mock).mockImplementationOnce(() => {
+      throw new Error('Sync native failure');
+    });
+
+    expect(() => hapticFeedback.light()).not.toThrow();
+    expect(() => hapticFeedback.selection()).not.toThrow();
+    await Promise.resolve();
+  });
 });

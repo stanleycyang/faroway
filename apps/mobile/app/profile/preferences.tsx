@@ -33,11 +33,32 @@ const budgetOptions = [
 ];
 
 export default function PreferencesScreen() {
+  const router = useRouter();
   const { user, accountRevision } = useUserStore();
+  useEffect(() => {
+    if (!user) {
+      router.replace('/(tabs)/profile');
+    }
+  }, [user, router]);
   if (!user)
     return (
-      <SafeAreaView style={styles.container}>
-        <Text accessibilityLiveRegion="polite">Loading your profile…</Text>
+      <SafeAreaView style={styles.container} edges={['top', 'bottom']}>
+        <View style={styles.signedOutContainer}>
+          <Text style={styles.signedOutTitle} accessibilityRole="header">
+            Sign in to edit preferences
+          </Text>
+          <Text style={styles.signedOutBody}>
+            Return to Profile to sign in and manage your travel preferences.
+          </Text>
+          <TouchableOpacity
+            style={styles.signedOutButton}
+            onPress={() => router.replace('/(tabs)/profile')}
+            accessibilityRole="button"
+            accessibilityLabel="Return to Profile"
+          >
+            <Text style={styles.signedOutButtonText}>Return to Profile</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   return (
@@ -96,7 +117,11 @@ function PreferencesScreenEditor({ profile }: { profile: EditorProfile }) {
       updatePreferences({ ...preferences, budget: selectedBudget || undefined });
       hapticFeedback.success();
       setSaved(true);
-      router.back();
+      if (typeof router.canGoBack === 'function' && !router.canGoBack()) {
+        router.replace('/(tabs)/profile');
+      } else {
+        router.back();
+      }
     } catch (error: unknown) {
       if (!isCurrentEditor()) return;
       hapticFeedback.error();
@@ -114,7 +139,13 @@ function PreferencesScreenEditor({ profile }: { profile: EditorProfile }) {
       <View style={styles.header}>
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => {
+            if (typeof router.canGoBack === 'function' && !router.canGoBack()) {
+              router.replace('/(tabs)/profile');
+            } else {
+              router.back();
+            }
+          }}
           accessibilityRole="button"
           accessibilityLabel="Back"
         >
@@ -294,5 +325,38 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#64748b',
     marginTop: 2,
+  },
+  signedOutContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+    gap: 12,
+  },
+  signedOutTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#0f172a',
+    textAlign: 'center',
+  },
+  signedOutBody: {
+    fontSize: 15,
+    color: '#475569',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+  signedOutButton: {
+    marginTop: 8,
+    minHeight: 48,
+    paddingHorizontal: 24,
+    borderRadius: borderRadius.lg,
+    backgroundColor: colors.action.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  signedOutButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#ffffff',
   },
 });

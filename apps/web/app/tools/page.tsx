@@ -98,7 +98,7 @@ const TOOLS = [
     title: "Currency Converter",
     subtitle: "Travel Money Calculator",
     description:
-      "Convert between 11 travel currencies with real-time-style rates. Includes destination-specific tips for handling money abroad.",
+      "Convert between 11 travel currencies with approximate exchange rates for trip planning. Includes destination-specific tips for handling money abroad.",
     icon: ArrowLeftRight,
     color: "text-emerald-600",
     bg: "bg-emerald-50",

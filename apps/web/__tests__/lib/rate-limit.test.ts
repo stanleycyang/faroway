@@ -190,14 +190,37 @@ describe("getClientIp", () => {
     expect(getClientIp(request)).toBe("203.0.113.50");
   });
 
-  it("returns the first IP when x-forwarded-for contains multiple IPs", () => {
+  it("returns the rightmost IP when x-forwarded-for contains multiple IPs", () => {
     const request = new Request("http://localhost", {
       headers: {
         "x-forwarded-for": "203.0.113.50, 70.41.3.18, 150.172.238.178",
       },
     });
 
-    expect(getClientIp(request)).toBe("203.0.113.50");
+    expect(getClientIp(request)).toBe("150.172.238.178");
+  });
+
+  it("prefers x-vercel-forwarded-for rightmost hop over spoofed x-forwarded-for", () => {
+    const request = new Request("http://localhost", {
+      headers: {
+        "x-forwarded-for": "1.2.3.4",
+        "x-real-ip": "5.6.7.8",
+        "x-vercel-forwarded-for": "198.51.100.1, 203.0.113.99",
+      },
+    });
+
+    expect(getClientIp(request)).toBe("203.0.113.99");
+  });
+
+  it("prefers x-real-ip over x-forwarded-for when x-vercel-forwarded-for is absent", () => {
+    const request = new Request("http://localhost", {
+      headers: {
+        "x-forwarded-for": "1.2.3.4",
+        "x-real-ip": "198.51.100.14",
+      },
+    });
+
+    expect(getClientIp(request)).toBe("198.51.100.14");
   });
 
   it("falls back to x-real-ip when x-forwarded-for is absent", () => {

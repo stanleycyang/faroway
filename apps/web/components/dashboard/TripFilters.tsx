@@ -1,5 +1,6 @@
 "use client";
 
+import { useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export type FilterType = "all" | "upcoming" | "in-progress" | "past";
@@ -23,11 +24,14 @@ export function TripFilters({
 }: TripFiltersProps) {
   const router = useRouter();
   const searchParams = useSearchParams() ?? new URLSearchParams();
+  const [isPending, startTransition] = useTransition();
 
   const updateParams = (key: string, value: string) => {
     const params = new URLSearchParams(searchParams.toString());
     params.set(key, value);
-    router.push(`/dashboard?${params.toString()}`);
+    startTransition(() => {
+      router.replace(`/dashboard?${params.toString()}`, { scroll: false });
+    });
   };
 
   const filters: { value: FilterType; label: string; count: number }[] = [
@@ -52,7 +56,10 @@ export function TripFilters({
   ];
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center">
+    <div
+      aria-busy={isPending}
+      className={`flex flex-col sm:flex-row gap-4 justify-between items-start sm:items-center transition-opacity ${isPending ? "opacity-75" : ""}`}
+    >
       {/* Filter Tabs */}
       <div
         role="group"

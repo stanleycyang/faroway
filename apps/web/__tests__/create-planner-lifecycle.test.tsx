@@ -3,14 +3,16 @@ import { act, create } from "react-test-renderer";
 import { expect, test, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   owner: "owner-a",
+  authenticated: true,
+  loading: false,
   accountRevision: 0,
   push: vi.fn(),
   consent: vi.fn(),
 }));
 vi.mock("@/hooks/useUser", () => ({
   useUser: () => ({
-    session: { user: { id: mocks.owner } },
-    loading: false,
+    session: mocks.authenticated ? { user: { id: mocks.owner } } : null,
+    loading: mocks.loading,
     accountRevision: mocks.accountRevision,
   }),
 }));
@@ -23,12 +25,24 @@ vi.mock("next/image", () => ({ default: () => null }));
 vi.mock("@/components/create/PlacesAutocompleteInput", () => ({
   PlacesAutocompleteInput: () => null,
 }));
-vi.mock("@/components/trips/DatePicker", () => ({ DatePicker: () => null }));
+vi.mock("@/components/trips/DatePicker", () => ({
+  DatePicker: (props: {
+    startDate?: Date;
+    endDate?: Date;
+    startError?: string;
+    onStartDateChange?: (date: Date | undefined) => void;
+    onEndDateChange?: (date: Date | undefined) => void;
+  }) => React.createElement("div", { "data-testid": "date-picker", ...props }),
+}));
 vi.mock("@/lib/ai/planning-consent-client", () => ({
   requestPlanningConsent: (...args: unknown[]) => mocks.consent(...args),
 }));
 import CreateTripPage from "../app/create/page";
-import { saveEditorDraft } from "../lib/create-draft";
+import {
+  editorDraftStorageKey,
+  saveCreateDraft,
+  saveEditorDraft,
+} from "../lib/create-draft";
 import { HotelSearchFields } from "../components/trips/HotelSearchFields";
 import { hotelGuestCounts, type HotelSearchDetails } from "@faroway/constants";
 
@@ -94,15 +108,20 @@ test("hotel preferences survive a same-tab planner reload", async () => {
     setItem: (key: string, value: string) => values.set(key, value),
     removeItem: (key: string) => values.delete(key),
   };
-  saveEditorDraft(storage, {
-    travelers: 3,
-    hotelSearch: {
-      countryCode: "FR",
-      guestNationality: "CA",
-      rooms: [{ adults: 2, children: [7] }],
-      consentVersion: "hotel-search-nuitee-v1",
+  saveEditorDraft(
+    storage,
+    {
+      travelers: 3,
+      hotelSearch: {
+        countryCode: "FR",
+        guestNationality: "CA",
+        rooms: [{ adults: 2, children: [7] }],
+        consentVersion: "hotel-search-nuitee-v1",
+      },
     },
-  });
+    Date.now(),
+    "owner-a",
+  );
   vi.stubGlobal("sessionStorage", storage);
   vi.stubGlobal("localStorage", {
     getItem: () => null,
@@ -121,7 +140,7 @@ test("hotel preferences survive a same-tab planner reload", async () => {
     expect(
       renderer.root.findAllByType("input").map((node) => node.props.value),
     ).toEqual(expect.arrayContaining(["FR", "CA", "7", 2]));
-    const retained = JSON.parse(values.get("faroway-create-editor-draft")!);
+    const retained = JSON.parse(values.get(editorDraftStorageKey("owner-a"))!);
     expect(retained.draft.hotelSearch.rooms).toEqual([
       { adults: 2, children: [7] },
     ]);
@@ -431,16 +450,21 @@ test.each([
       consentVersion: "hotel-search-nuitee-v1",
     };
     const travelers = 2 + ages.length;
-    saveEditorDraft(storage, {
-      selectedPlace: { name: "Paris", source: "catalog", placeId: "paris" },
-      startDate: "2099-06-01",
-      endDate: "2099-06-03",
-      travelers,
-      travelerType: "family",
-      selectedVibes: [],
-      budget: "moderate",
-      hotelSearch,
-    });
+    saveEditorDraft(
+      storage,
+      {
+        selectedPlace: { name: "Paris", source: "catalog", placeId: "paris" },
+        startDate: "2099-06-01",
+        endDate: "2099-06-03",
+        travelers,
+        travelerType: "family",
+        selectedVibes: [],
+        budget: "moderate",
+        hotelSearch,
+      },
+      Date.now(),
+      "owner-a",
+    );
     vi.stubGlobal("sessionStorage", storage);
     vi.stubGlobal("localStorage", {
       getItem: () => null,
@@ -462,7 +486,7 @@ test.each([
           renderer = create(<CreateTripPage />);
         });
         const retained = JSON.parse(
-          values.get("faroway-create-editor-draft")!,
+          values.get(editorDraftStorageKey("owner-a"))!,
         ).draft;
         expect(retained.hotelSearch).toEqual(
           enabled ? JSON.parse(JSON.stringify(hotelSearch)) : null,
@@ -519,24 +543,29 @@ test.each(["6,", "abc"])(
       setItem: (key: string, value: string) => values.set(key, value),
       removeItem: (key: string) => values.delete(key),
     };
-    saveEditorDraft(storage, {
-      selectedPlace: { name: "Paris", source: "catalog", placeId: "paris" },
-      startDate: "2099-06-01",
-      endDate: "2099-06-03",
-      travelers: 5,
-      travelerType: "family",
-      budget: "moderate",
-      selectedVibes: [],
-      hotelSearch: {
-        countryCode: "FR",
-        guestNationality: "CA",
-        consentVersion: "hotel-search-nuitee-v1",
-        rooms: [
-          { adults: 2, children: [6] },
-          { adults: 1, children: [8] },
-        ],
+    saveEditorDraft(
+      storage,
+      {
+        selectedPlace: { name: "Paris", source: "catalog", placeId: "paris" },
+        startDate: "2099-06-01",
+        endDate: "2099-06-03",
+        travelers: 5,
+        travelerType: "family",
+        budget: "moderate",
+        selectedVibes: [],
+        hotelSearch: {
+          countryCode: "FR",
+          guestNationality: "CA",
+          consentVersion: "hotel-search-nuitee-v1",
+          rooms: [
+            { adults: 2, children: [6] },
+            { adults: 1, children: [8] },
+          ],
+        },
       },
-    });
+      Date.now(),
+      "owner-a",
+    );
     vi.stubGlobal("sessionStorage", storage);
     vi.stubGlobal("localStorage", {
       getItem: () => null,
@@ -559,7 +588,7 @@ test.each(["6,", "abc"])(
         .findAllByType("button")
         .find((button) => button.children.includes("Generate itinerary"))!;
     const saved = () =>
-      JSON.parse(values.get("faroway-create-editor-draft")!).draft;
+      JSON.parse(values.get(editorDraftStorageKey("owner-a"))!).draft;
     try {
       await act(async () => {
         renderer = create(<CreateTripPage />);
@@ -642,3 +671,457 @@ test.each(["6,", "abc"])(
     }
   },
 );
+
+test("guide deep link keeps destination across sign-in handoff and gates restore on authLoading", async () => {
+  (
+    globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+  ).IS_REACT_ACT_ENVIRONMENT = true;
+  mocks.authenticated = false;
+  mocks.loading = false;
+  mocks.owner = "owner-a";
+  mocks.accountRevision = 0;
+  mocks.push.mockClear();
+  const localValues = new Map<string, string>();
+  const localStorageMock = {
+    get length() {
+      return localValues.size;
+    },
+    key: (index: number) => Array.from(localValues.keys())[index] ?? null,
+    getItem: (key: string) => localValues.get(key) ?? null,
+    setItem: (key: string, value: string) => localValues.set(key, value),
+    removeItem: (key: string) => localValues.delete(key),
+  };
+  const sessionValues = new Map<string, string>();
+  const sessionStorageMock = {
+    get length() {
+      return sessionValues.size;
+    },
+    key: (index: number) => Array.from(sessionValues.keys())[index] ?? null,
+    getItem: (key: string) => sessionValues.get(key) ?? null,
+    setItem: (key: string, value: string) => sessionValues.set(key, value),
+    removeItem: (key: string) => sessionValues.delete(key),
+  };
+  const replaceState = vi.fn();
+  const windowMock = {
+    location: { search: "?destination=maldives" },
+    history: { replaceState },
+  };
+  vi.stubGlobal("localStorage", localStorageMock);
+  vi.stubGlobal("sessionStorage", sessionStorageMock);
+  vi.stubGlobal("window", windowMock);
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      renderer = create(<CreateTripPage />);
+    });
+    expect(JSON.stringify(renderer.toJSON())).toContain("Maldives");
+    const datePicker = renderer.root.findByProps({
+      "data-testid": "date-picker",
+    });
+    await act(async () => {
+      datePicker.props.onStartDateChange(new Date(2099, 5, 1));
+      datePicker.props.onEndDateChange(new Date(2099, 5, 5));
+    });
+    const signInGenerate = renderer.root
+      .findAllByType("button")
+      .find((b) => b.children.includes("Sign in & generate itinerary"))!;
+    expect(signInGenerate.props.disabled).toBe(false);
+    await act(async () => {
+      await signInGenerate.props.onClick();
+    });
+    expect(mocks.push).toHaveBeenCalledTimes(1);
+    const pushedUrl = String(mocks.push.mock.calls[0][0]);
+    const redirectParam = decodeURIComponent(pushedUrl.split("redirectTo=")[1]);
+    expect(redirectParam).toContain("/create?draft=");
+    const draftId = redirectParam.split("draft=")[1];
+    const handoffKey = `faroway-create-draft:${draftId}`;
+    expect(localValues.has(handoffKey)).toBe(true);
+
+    // Simulate returning from login while auth is still loading: guest:0 must NOT consume ?draft!
+    await act(async () => {
+      renderer.unmount();
+    });
+    windowMock.location.search = `?draft=${draftId}`;
+    mocks.authenticated = false;
+    mocks.loading = true;
+    await act(async () => {
+      renderer = create(<CreateTripPage />);
+    });
+    expect(localValues.has(handoffKey)).toBe(true);
+
+    // Auth resolves for owner-a: keyed remount consumes ?draft and restores Maldives + dates.
+    mocks.authenticated = true;
+    mocks.loading = false;
+    mocks.accountRevision = 1;
+    await act(async () => {
+      renderer.update(<CreateTripPage />);
+    });
+    expect(localValues.has(handoffKey)).toBe(false);
+    const output = JSON.stringify(renderer.toJSON());
+    expect(output).toContain("Maldives");
+    expect(output).toContain("Jun 1");
+    expect(output).toContain("Jun 5, 2099");
+  } finally {
+    mocks.authenticated = true;
+    mocks.loading = false;
+    await act(async () => {
+      renderer?.unmount();
+    });
+    vi.unstubAllGlobals();
+  }
+});
+
+test("keeps submission lock and isGenerating active across pending router.push", async () => {
+  (
+    globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+  ).IS_REACT_ACT_ENVIRONMENT = true;
+  mocks.authenticated = true;
+  mocks.loading = false;
+  mocks.owner = "owner-a";
+  mocks.accountRevision = 0;
+  mocks.push.mockClear();
+  mocks.consent.mockResolvedValue(async () => ({
+    Authorization: "Bearer fixture",
+  }));
+  const requestId = "33333333-3333-4333-8333-333333333333";
+  const sessionStorageMock = {
+    getItem: () =>
+      JSON.stringify({
+        version: 1,
+        savedAt: Date.now(),
+        draft: {
+          selectedPlace: { name: "Paris", source: "catalog", placeId: "paris" },
+          startDate: "2099-06-01",
+          endDate: "2099-06-04",
+          travelers: 2,
+          travelerType: "couple",
+          selectedVibes: [],
+          budget: "moderate",
+        },
+      }),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+  };
+  const localValues = new Map<string, string>();
+  vi.stubGlobal("sessionStorage", sessionStorageMock);
+  vi.stubGlobal("localStorage", {
+    getItem: (k: string) => localValues.get(k) ?? null,
+    setItem: (k: string, v: string) => localValues.set(k, v),
+    removeItem: (k: string) => localValues.delete(k),
+  });
+  vi.stubGlobal("window", {
+    location: { search: "" },
+    history: { replaceState: vi.fn() },
+  });
+  vi.stubGlobal("crypto", { randomUUID: () => requestId });
+  const fetchMock = vi
+    .fn()
+    .mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({ trip: { id: requestId, user_id: "owner-a" } }),
+      ),
+    )
+    .mockResolvedValueOnce(new Response(JSON.stringify({ success: true })));
+  vi.stubGlobal("fetch", fetchMock);
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      renderer = create(<CreateTripPage />);
+    });
+    const submitButton = () =>
+      renderer.root
+        .findAllByType("button")
+        .find((b) =>
+          b.children.some(
+            (c) =>
+              typeof c === "string" &&
+              (c.includes("Generate itinerary") ||
+                c.includes("Starting AI trip planner") ||
+                c.includes("Creating your trip")),
+          ),
+        )!;
+    await act(async () => {
+      await submitButton().props.onClick();
+    });
+    expect(mocks.push).toHaveBeenCalledWith(`/trips/${requestId}`);
+    expect(submitButton().props.disabled).toBe(true);
+    await act(async () => {
+      await submitButton().props.onClick();
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  } finally {
+    await act(async () => {
+      renderer?.unmount();
+    });
+    vi.unstubAllGlobals();
+  }
+});
+
+test.each([409, 410])(
+  "clears dead pending request on HTTP %i and shows recovery copy",
+  async (status) => {
+    (
+      globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+    ).IS_REACT_ACT_ENVIRONMENT = true;
+    mocks.authenticated = true;
+    mocks.loading = false;
+    mocks.owner = "owner-a";
+    mocks.push.mockClear();
+    mocks.consent.mockResolvedValue(async () => ({
+      Authorization: "Bearer fixture",
+    }));
+    const requestId = "44444444-4444-4444-8444-444444444444";
+    const key = "faroway:pending-create:owner-a";
+    const localValues = new Map([
+      [
+        key,
+        JSON.stringify({
+          requestId,
+          destination: "Tokyo",
+          start_date: "2099-06-01",
+          end_date: "2099-06-04",
+          travelers: 2,
+          budget: "moderate",
+        }),
+      ],
+    ]);
+    vi.stubGlobal("localStorage", {
+      getItem: (k: string) => localValues.get(k) ?? null,
+      setItem: (k: string, v: string) => localValues.set(k, v),
+      removeItem: (k: string) => localValues.delete(k),
+    });
+    vi.stubGlobal("sessionStorage", {
+      getItem: () => null,
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+    });
+    vi.stubGlobal("window", {
+      location: { search: "" },
+      history: { replaceState: vi.fn() },
+    });
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValueOnce(
+          new Response(JSON.stringify({ error: "dead" }), { status }),
+        ),
+    );
+    let renderer!: ReturnType<typeof create>;
+    try {
+      await act(async () => {
+        renderer = create(<CreateTripPage />);
+      });
+      await act(async () => {
+        await renderer.root
+          .findAllByType("button")
+          .find((b) => b.children.includes("Resume saved trip"))!
+          .props.onClick();
+      });
+      expect(localValues.has(key)).toBe(false);
+      const output = JSON.stringify(renderer.toJSON());
+      expect(output).toContain("can’t be reused");
+      expect(output).not.toContain("Resume saved trip");
+    } finally {
+      await act(async () => {
+        renderer?.unmount();
+      });
+      vi.unstubAllGlobals();
+    }
+  },
+);
+
+test.each([
+  {
+    name: "TimeoutError",
+    mockFetch: () => {
+      const err = new Error("signal timed out");
+      err.name = "TimeoutError";
+      return Promise.reject(err);
+    },
+    expected: "took too long",
+  },
+  {
+    name: "TypeError",
+    mockFetch: () => Promise.reject(new TypeError("Failed to fetch")),
+    expected: "couldn’t reach Faroway",
+  },
+  {
+    name: "401",
+    mockFetch: () =>
+      Promise.resolve(
+        new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+        }),
+      ),
+    expected: "Your session expired",
+  },
+  {
+    name: "400",
+    mockFetch: () =>
+      Promise.resolve(
+        new Response(JSON.stringify({ error: "Invalid request body" }), {
+          status: 400,
+        }),
+      ),
+    expected: "Please check your destination, dates, and traveler details",
+  },
+])("maps $name errors to friendly copy", async ({ mockFetch, expected }) => {
+  (
+    globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+  ).IS_REACT_ACT_ENVIRONMENT = true;
+  mocks.authenticated = true;
+  mocks.loading = false;
+  mocks.owner = "owner-a";
+  mocks.consent.mockResolvedValue(async () => ({
+    Authorization: "Bearer fixture",
+  }));
+  const sessionValues = new Map([
+    [
+      editorDraftStorageKey("owner-a"),
+      JSON.stringify({
+        version: 1,
+        savedAt: Date.now(),
+        draft: {
+          selectedPlace: { name: "Paris", source: "catalog", placeId: "paris" },
+          startDate: "2099-06-01",
+          endDate: "2099-06-04",
+          travelers: 2,
+          travelerType: "couple",
+          selectedVibes: [],
+          budget: "moderate",
+        },
+      }),
+    ],
+  ]);
+  vi.stubGlobal("sessionStorage", {
+    getItem: (k: string) => sessionValues.get(k) ?? null,
+    setItem: (k: string, v: string) => sessionValues.set(k, v),
+    removeItem: (k: string) => sessionValues.delete(k),
+  });
+  vi.stubGlobal("localStorage", {
+    getItem: () => null,
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+  });
+  vi.stubGlobal("window", {
+    location: { search: "" },
+    history: { replaceState: vi.fn() },
+  });
+  vi.stubGlobal("fetch", vi.fn(mockFetch));
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      renderer = create(<CreateTripPage />);
+    });
+    await act(async () => {
+      await renderer.root
+        .findAllByType("button")
+        .find((b) => b.children.includes("Generate itinerary"))!
+        .props.onClick();
+    });
+    expect(JSON.stringify(renderer.toJSON())).toContain(expected);
+  } finally {
+    await act(async () => {
+      renderer?.unmount();
+    });
+    vi.unstubAllGlobals();
+  }
+});
+
+test("rejects past start dates in restored drafts and clears undoSnapshot on manual edit", async () => {
+  (
+    globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }
+  ).IS_REACT_ACT_ENVIRONMENT = true;
+  mocks.authenticated = true;
+  mocks.loading = false;
+  mocks.owner = "owner-a";
+  const sessionValues = new Map([
+    [
+      editorDraftStorageKey("owner-a"),
+      JSON.stringify({
+        version: 1,
+        savedAt: Date.now(),
+        draft: {
+          selectedPlace: { name: "Paris", source: "catalog", placeId: "paris" },
+          startDate: "2024-01-10",
+          endDate: "2024-01-14",
+          travelers: 2,
+          travelerType: "couple",
+          selectedVibes: [],
+          budget: "moderate",
+        },
+      }),
+    ],
+  ]);
+  vi.stubGlobal("sessionStorage", {
+    getItem: (k: string) => sessionValues.get(k) ?? null,
+    setItem: (k: string, v: string) => sessionValues.set(k, v),
+    removeItem: (k: string) => sessionValues.delete(k),
+  });
+  vi.stubGlobal("localStorage", {
+    getItem: () => null,
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+  });
+  vi.stubGlobal("window", {
+    location: { search: "" },
+    history: { replaceState: vi.fn() },
+  });
+  vi.stubGlobal("fetch", undefined);
+  let renderer!: ReturnType<typeof create>;
+  try {
+    await act(async () => {
+      renderer = create(<CreateTripPage />);
+    });
+    const output = JSON.stringify(renderer.toJSON());
+    expect(output).toContain("Choose your dates");
+    const submit = () =>
+      renderer.root
+        .findAllByType("button")
+        .find((b) => b.children.includes("Generate itinerary"))!;
+    expect(submit().props.disabled).toBe(true);
+
+    // Prompt fill makes Undo visible, and a manual edit clears it.
+    const promptInput = renderer.root.findByProps({
+      id: "dream-trip-prompt-input",
+    });
+    await act(async () => {
+      promptInput.props.onChange({
+        target: { value: "5 days in Tokyo, foodie, luxury" },
+      });
+    });
+    const fillBtn = renderer.root
+      .findAllByType("button")
+      .find((b) =>
+        b.children.some(
+          (c) => typeof c === "string" && c.includes("Fill my trip"),
+        ),
+      )!;
+    await act(async () => {
+      fillBtn.props.onClick();
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+    expect(
+      renderer.root
+        .findAllByType("button")
+        .some((b) => b.children.includes("Undo")),
+    ).toBe(true);
+
+    await act(async () => {
+      renderer.root
+        .findByProps({ "aria-label": "Increase travelers" })
+        .props.onClick();
+    });
+    expect(
+      renderer.root
+        .findAllByType("button")
+        .some((b) => b.children.includes("Undo")),
+    ).toBe(false);
+  } finally {
+    await act(async () => {
+      renderer?.unmount();
+    });
+    vi.unstubAllGlobals();
+  }
+});

@@ -148,7 +148,7 @@ export function CurrencyConverterClient() {
               }`}
             >
               {fromCurrency?.symbol}
-              {qa.toLocaleString()}
+              {qa.toLocaleString("en-US")}
             </button>
           ))}
         </div>

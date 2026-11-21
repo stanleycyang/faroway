@@ -6,6 +6,7 @@ import {
   type SuggestedDay,
 } from "@faroway/types";
 import {
+  affiliateLinkOk,
   calendarDates,
   enforceReleaseItinerary,
   hazardTokens,
@@ -201,5 +202,75 @@ describe("release itinerary", () => {
       ),
     );
     expect(ids).toEqual(["walk"]);
+  });
+
+  it("blocks allergen-conflicting cuisineTypes and allergen-specialty descriptions", () => {
+    const shellfishPlan: SearchPlan = {
+      ...plan,
+      requirements: {
+        allergies: ["shellfish", "peanut"],
+        dietaryPreferences: [],
+        accessibility: [],
+        mobilityNotes: "",
+      },
+    };
+    const riskyCuisine = {
+      id: "shack-1",
+      name: "Harbor Kitchen",
+      description: "Waterfront spot with casual seating.",
+      cuisineTypes: ["Seafood", "Shellfish"],
+      priceLevel: 2 as const,
+      dietaryOptions: [],
+      mealTypes: ["dinner" as const],
+      location: { name: "Tokyo", address: "Port", lat: 35.6, lng: 139.7 },
+      images: [],
+      vibeScore: 80,
+      vibeMatch: [],
+      rating: 0,
+      reviewCount: 0,
+    };
+    const riskyDesc = {
+      ...riskyCuisine,
+      id: "satay-1",
+      name: "Garden Spot",
+      cuisineTypes: ["Asian"],
+      description: "Famous for spicy peanut-crusted skewers and noodle bowls.",
+    };
+    const result = enforceReleaseItinerary(
+      shellfishPlan,
+      [
+        {
+          ...day("Dinner"),
+          afternoon: { activities: [activity("walk")], meal: riskyDesc },
+          evening: { activities: [], meal: riskyCuisine },
+        },
+      ],
+      [activity("walk")],
+      [riskyCuisine, riskyDesc],
+    );
+    expect(result.days[0].afternoon.meal).toBeUndefined();
+    expect(result.days[0].evening.meal).toBeUndefined();
+    expect(result.repairs).toContain("drop:hazard_cuisine:shack-1");
+    expect(result.repairs).toContain("drop:hazard_description:satay-1");
+  });
+
+  it("rejects lookalike Duffel hostnames in affiliateLinkOk", () => {
+    expect(
+      affiliateLinkOk(
+        "duffel",
+        "https://evilduffel.com/links/off_123",
+        "off_123",
+      ),
+    ).toBe(false);
+    expect(
+      affiliateLinkOk(
+        "duffel",
+        "https://links.duffel.com/links/off_123",
+        "off_123",
+      ),
+    ).toBe(true);
+    expect(
+      affiliateLinkOk("duffel", "https://duffel.com/links/off_123", "off_123"),
+    ).toBe(true);
   });
 });

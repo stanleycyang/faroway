@@ -298,6 +298,15 @@ export function transformItineraryDays(apiDays: any[]): TripDay[] {
     });
 }
 
+function finiteCoord(value: unknown): number | undefined {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : undefined;
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
 /**
  * Transform hotel data from the API response.
  */
@@ -327,8 +336,8 @@ export function transformApiHotel(h: any): Hotel | undefined {
     location: {
       name: displayText(h.location?.name) || displayText(h.neighborhood),
       address: displayText(h.location?.address) || displayText(h.address),
-      lat: h.location?.lat || h.location?.coordinates?.lat || 0,
-      lng: h.location?.lng || h.location?.coordinates?.lng || 0,
+      lat: finiteCoord(h.location?.lat) ?? finiteCoord(h.location?.coordinates?.lat) ?? 0,
+      lng: finiteCoord(h.location?.lng) ?? finiteCoord(h.location?.coordinates?.lng) ?? 0,
       neighborhood:
         displayText(h.location?.neighborhood) || displayText(h.neighborhood) || undefined,
     },

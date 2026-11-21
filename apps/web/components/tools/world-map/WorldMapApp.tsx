@@ -2,16 +2,19 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import { AlertTriangle, RotateCcw, X } from "lucide-react";
 import {
   useActiveProfile,
   useWorldMapStore,
 } from "@/lib/tools/world-map/store";
+import { downloadBackupJson } from "@/lib/tools/world-map/backup";
 import { computeStats } from "@/lib/tools/world-map/stats";
 import {
   MILESTONES,
   nextMilestoneCrossed,
   type Milestone,
 } from "@/lib/tools/world-map/milestones";
+import type { CountryVisit } from "@/lib/tools/world-map/types";
 import { WorldMap, type CountryClickIntent } from "./WorldMap";
 import { StatsHeader } from "./StatsHeader";
 import { FieldNotes } from "./FieldNotes";
@@ -63,11 +66,29 @@ function writeSeenMilestones(seen: Set<number>) {
   }
 }
 
+function hasVisitDetails(visit: CountryVisit | undefined): boolean {
+  if (!visit) return false;
+  return Boolean(
+    visit.notes ||
+    visit.photoDataUrl ||
+    visit.rating ||
+    visit.firstVisit ||
+    visit.lastVisit ||
+    visit.pinnedCity ||
+    (visit.visitCount && visit.visitCount > 1),
+  );
+}
+
+const UNDO_TOAST_MS = 6_000;
+
 export function WorldMapApp() {
   const hasHydrated = useWorldMapStore((s) => s.hasHydrated);
   const profiles = useWorldMapStore((s) => s.profiles);
+  const persistError = useWorldMapStore((s) => s.persistError);
+  const clearPersistError = useWorldMapStore((s) => s.clearPersistError);
   const createProfile = useWorldMapStore((s) => s.createProfile);
   const toggleVisited = useWorldMapStore((s) => s.toggleVisited);
+  const upsertVisit = useWorldMapStore((s) => s.upsertVisit);
 
   const profile = useActiveProfile();
 
@@ -80,8 +101,15 @@ export function WorldMapApp() {
     false | { initiallyCopied: boolean }
   >(false);
   const [milestone, setMilestone] = useState<Milestone | null>(null);
+  const [undoRemoval, setUndoRemoval] = useState<{
+    profileId: string;
+    name: string;
+    visit: CountryVisit;
+  } | null>(null);
 
-  const prevCountRef = useRef<number | null>(null);
+  const prevCountRef = useRef<{ profileId: string; count: number } | null>(
+    null,
+  );
 
   const visits = useMemo(() => profile?.visits ?? {}, [profile?.visits]);
   const stats = useMemo(() => computeStats(visits), [visits]);
@@ -106,11 +134,38 @@ export function WorldMapApp() {
       if (intent === "edit") {
         setSelected({ iso, name });
       } else {
+        const existing = profile?.visits[iso];
         toggleVisited(iso);
+        if (profile && existing && hasVisitDetails(existing)) {
+          setUndoRemoval({ profileId: profile.id, name, visit: existing });
+        }
       }
     },
-    [toggleVisited],
+    [profile, toggleVisited],
   );
+
+  const handleUndoRemoval = useCallback(() => {
+    if (!undoRemoval) return;
+    if (profile && profile.id === undoRemoval.profileId) {
+      upsertVisit(undoRemoval.visit.iso, undoRemoval.visit);
+    }
+    setUndoRemoval(null);
+  }, [profile, undoRemoval, upsertVisit]);
+
+  useEffect(() => {
+    if (!undoRemoval) return;
+    const t = setTimeout(() => setUndoRemoval(null), UNDO_TOAST_MS);
+    return () => clearTimeout(t);
+  }, [undoRemoval]);
+
+  // Clear pending undo toast if the user switches profiles so restoring never
+  // writes into the wrong profile.
+  const activeProfileId = profile?.id;
+  useEffect(() => {
+    setUndoRemoval((curr) =>
+      curr && curr.profileId !== activeProfileId ? null : curr,
+    );
+  }, [activeProfileId]);
 
   const closeCountryDrawer = useCallback(() => {
     setSelected(null);
@@ -141,21 +196,22 @@ export function WorldMapApp() {
     restoreExportFocus();
   }, [restoreExportFocus]);
 
-  // Milestone toast on crossing 5/10/25/50/100.
+  // Milestone toast on crossing 5/10/25/50/100. Keyed by profile.id so
+  // switching to a larger profile never fires a false milestone.
   useEffect(() => {
-    if (!hasHydrated) return;
+    if (!hasHydrated || !profile) return;
     const total = stats.totalVisited;
     const prev = prevCountRef.current;
-    prevCountRef.current = total;
-    if (prev === null) return;
-    const crossed = nextMilestoneCrossed(prev, total);
+    prevCountRef.current = { profileId: profile.id, count: total };
+    if (prev === null || prev.profileId !== profile.id) return;
+    const crossed = nextMilestoneCrossed(prev.count, total);
     if (!crossed) return;
     const seen = readSeenMilestones();
     if (seen.has(crossed)) return;
     seen.add(crossed);
     writeSeenMilestones(seen);
     setMilestone(crossed);
-  }, [hasHydrated, stats.totalVisited]);
+  }, [hasHydrated, profile, stats.totalVisited]);
 
   useEffect(() => {
     if (!milestone) return;
@@ -212,6 +268,42 @@ export function WorldMapApp() {
             />
           </div>
         </header>
+
+        {persistError && (
+          <div
+            role="alert"
+            className="border border-red-200 bg-red-50 px-4 py-3 flex items-start gap-3 rounded-xl"
+          >
+            <div className="w-8 h-8 rounded-lg bg-red-100 text-red-600 flex items-center justify-center flex-shrink-0">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="text-xs font-bold uppercase tracking-[0.18em] text-red-700">
+                Could not save to browser storage
+              </div>
+              <p className="text-sm text-red-700 mt-0.5 leading-relaxed">
+                {persistError}
+              </p>
+            </div>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <button
+                type="button"
+                onClick={() => downloadBackupJson()}
+                className="text-xs font-semibold bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg transition-colors"
+              >
+                Download backup
+              </button>
+              <button
+                type="button"
+                onClick={clearPersistError}
+                aria-label="Dismiss storage warning"
+                className="w-7 h-7 rounded-lg text-red-500 hover:bg-red-100 flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
         <BackupBanner />
 
@@ -293,6 +385,39 @@ export function WorldMapApp() {
           }}
           onDismiss={() => setMilestone(null)}
         />
+      )}
+
+      {undoRemoval && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[55] w-[min(92vw,420px)] animate-slide-up"
+        >
+          <div className="bg-slate-900 text-white rounded-xl shadow-2xl ring-1 ring-white/10 px-4 py-3 flex items-center justify-between gap-3">
+            <span className="text-sm leading-snug truncate">
+              Removed{" "}
+              <strong className="font-semibold">{undoRemoval.name}</strong> and
+              its details
+            </span>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <button
+                type="button"
+                onClick={handleUndoRemoval}
+                className="inline-flex items-center gap-1.5 bg-white text-slate-900 text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-slate-100 transition-colors"
+              >
+                <RotateCcw className="w-3.5 h-3.5" /> Undo
+              </button>
+              <button
+                type="button"
+                onClick={() => setUndoRemoval(null)}
+                aria-label="Dismiss"
+                className="w-7 h-7 rounded-lg text-white/70 hover:bg-white/10 flex items-center justify-center"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

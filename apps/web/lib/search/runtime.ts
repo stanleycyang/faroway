@@ -43,22 +43,42 @@ export async function fetchWithTimeout(
 ): Promise<Response> {
   const controller = new AbortController();
   const parent = init.signal;
-  const onParentAbort = () => controller.abort(parent?.reason);
-  if (parent?.aborted) onParentAbort();
-  else parent?.addEventListener("abort", onParentAbort, { once: true });
-  let timeout!: ReturnType<typeof setTimeout>;
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  let cleanedUp = false;
+  const cleanup = () => {
+    if (cleanedUp) return;
+    cleanedUp = true;
+    if (timeout !== undefined) clearTimeout(timeout);
+    parent?.removeEventListener("abort", onParentAbort);
+  };
+  let rejectDeadline!: (reason: unknown) => void;
   const deadline = new Promise<never>((_, reject) => {
+    rejectDeadline = reject;
+  });
+  const onParentAbort = () => {
+    const reason =
+      parent?.reason ??
+      new DOMException("The operation was aborted.", "AbortError");
+    cleanup();
+    controller.abort(reason);
+    rejectDeadline(reason);
+  };
+  if (parent?.aborted) {
+    onParentAbort();
+  } else {
+    parent?.addEventListener("abort", onParentAbort, { once: true });
     timeout = setTimeout(() => {
       const error = new DOMException(
         `vendor request timed out after ${timeoutMs}ms`,
         "AbortError",
       );
+      cleanup();
       controller.abort(error);
-      reject(error);
+      rejectDeadline(error);
     }, timeoutMs);
-  });
-  // A caller inspecting only status must not keep a CLI process alive.
-  timeout.unref?.();
+    // A caller inspecting only status must not keep a CLI process alive.
+    timeout.unref?.();
+  }
   const bodyMethods = new Set<PropertyKey>([
     "json",
     "text",
@@ -81,7 +101,7 @@ export async function fetchWithTimeout(
                 deadline,
               ]);
             } finally {
-              clearTimeout(timeout);
+              cleanup();
             }
           };
         }
@@ -93,13 +113,11 @@ export async function fetchWithTimeout(
       fetch(input, { cache: "no-store", ...init, signal: controller.signal }),
       deadline,
     ]);
-    if (response.body === null) clearTimeout(timeout);
+    if (response.body === null) cleanup();
     return wrap(response);
   } catch (error) {
-    clearTimeout(timeout);
+    cleanup();
     throw error;
-  } finally {
-    parent?.removeEventListener("abort", onParentAbort);
   }
 }
 

@@ -207,18 +207,25 @@ export function SharedTripView({
     const mountVersion = voteVersionRef.current;
     const controller = new AbortController();
 
-    async function syncReactions() {
-      const localVotes = readStoredVotes(shareToken);
-      const seededCounts: ReactionCounts = {};
-      for (const [stopKey, entry] of Object.entries(localVotes)) {
-        if (entry?.thumbs_up || entry?.heart) {
-          seededCounts[stopKey] = {
-            thumbs_up: entry.thumbs_up ? 1 : 0,
-            heart: entry.heart ? 1 : 0,
-          };
-        }
+    // Hydrate stored votes synchronously before any async fetch so an early
+    // tap cannot overwrite prior localStorage votes or send a duplicate "add".
+    const localVotes = readStoredVotes(shareToken);
+    userVotesRef.current = localVotes;
+    setUserVotes(localVotes);
+    const seededCounts: ReactionCounts = {};
+    for (const [stopKey, entry] of Object.entries(localVotes)) {
+      if (entry?.thumbs_up || entry?.heart) {
+        seededCounts[stopKey] = {
+          thumbs_up: entry.thumbs_up ? 1 : 0,
+          heart: entry.heart ? 1 : 0,
+        };
       }
+    }
+    if (Object.keys(seededCounts).length > 0) {
+      setCounts(seededCounts);
+    }
 
+    async function syncReactions() {
       try {
         const res = await fetch(
           `/api/trips/shared/${encodeURIComponent(shareToken)}/reactions`,
@@ -233,12 +240,11 @@ export function SharedTripView({
               persisted?: boolean;
             })
           : null;
-        if (!active || voteVersionRef.current !== mountVersion) return;
+        if (!active || !payload?.counts) return;
 
-        userVotesRef.current = localVotes;
-        setUserVotes(localVotes);
-        if (payload?.counts) {
-          const merged: ReactionCounts = { ...payload.counts };
+        const serverCounts = payload.counts;
+        if (voteVersionRef.current === mountVersion) {
+          const merged: ReactionCounts = { ...serverCounts };
           for (const [stopKey, entry] of Object.entries(localVotes)) {
             const current = merged[stopKey] || { thumbs_up: 0, heart: 0 };
             merged[stopKey] = {
@@ -249,16 +255,38 @@ export function SharedTripView({
             };
           }
           setCounts(merged);
-        } else if (Object.keys(seededCounts).length > 0) {
-          setCounts(seededCounts);
+        } else {
+          // A tap happened before the initial GET finished; preserve any stop
+          // whose local vote changed since mount while merging server counts.
+          setCounts((prev) => {
+            const merged: ReactionCounts = { ...serverCounts };
+            for (const [stopKey, entry] of Object.entries(
+              userVotesRef.current,
+            )) {
+              const initialEntry = localVotes[stopKey];
+              if (
+                Boolean(entry?.thumbs_up) !==
+                  Boolean(initialEntry?.thumbs_up) ||
+                Boolean(entry?.heart) !== Boolean(initialEntry?.heart)
+              ) {
+                if (prev[stopKey]) merged[stopKey] = prev[stopKey];
+                continue;
+              }
+              const current = merged[stopKey] || { thumbs_up: 0, heart: 0 };
+              merged[stopKey] = {
+                thumbs_up: entry?.thumbs_up
+                  ? Math.max(current.thumbs_up, 1)
+                  : current.thumbs_up,
+                heart: entry?.heart
+                  ? Math.max(current.heart, 1)
+                  : current.heart,
+              };
+            }
+            return merged;
+          });
         }
       } catch {
-        if (!active || voteVersionRef.current !== mountVersion) return;
-        userVotesRef.current = localVotes;
-        setUserVotes(localVotes);
-        if (Object.keys(seededCounts).length > 0) {
-          setCounts(seededCounts);
-        }
+        // Seeded localStorage state stays intact if reactions fetch fails.
       }
     }
 

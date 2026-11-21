@@ -19,7 +19,11 @@ function subscribe(cb: () => void) {
 }
 function getDismissSnapshot(): string | null {
   if (typeof window === "undefined") return null;
-  return localStorage.getItem(DISMISS_KEY);
+  try {
+    return localStorage.getItem(DISMISS_KEY);
+  } catch {
+    return null;
+  }
 }
 
 // Banner visibility reduces to this non-pure time comparison — isolated here
@@ -86,7 +90,11 @@ export function BackupBanner() {
         <button
           type="button"
           onClick={() => {
-            localStorage.setItem(DISMISS_KEY, String(Date.now()));
+            try {
+              localStorage.setItem(DISMISS_KEY, String(Date.now()));
+            } catch {
+              /* storage denied or full — still dismiss for this session */
+            }
             setLocallyDismissed(true);
           }}
           aria-label="Dismiss"

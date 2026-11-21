@@ -106,6 +106,7 @@ export async function runDiningAgent(
   options: {
     coverageTargets?: DiningCoverageTarget[];
     existingNames?: string[];
+    throwOnError?: boolean;
   } = {},
 ): Promise<DiningResult[]> {
   const { destination, dates, diningCriteria, vibeInterpretation } = plan;
@@ -165,7 +166,7 @@ For vibes like:
 
 Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
 
-  const parent = new AbortController();
+  const reviewAbort = new AbortController();
   const reviewRequested = !options.coverageTargets?.length;
   try {
     const generatedCall = allBounded(
@@ -186,13 +187,13 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
                 maxRetries: 0,
               });
             } catch (error) {
-              parent.abort();
+              reviewAbort.abort();
               throw error;
             }
           },
         },
       ],
-      { concurrency: 1, signal: parent.signal },
+      { concurrency: 1 },
     );
     const reviewCall = reviewRequested
       ? allBounded(
@@ -204,7 +205,7 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
                 discoverDiningReviewOptions(plan, signal),
             },
           ],
-          { concurrency: 1, signal: parent.signal },
+          { concurrency: 1, signal: reviewAbort.signal },
         )
       : Promise.resolve(
           [] as PromiseSettledResult<
@@ -212,8 +213,12 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
           >[],
         );
     const [generated] = await generatedCall;
+    if (generated.status === "rejected") {
+      reviewAbort.abort();
+      await reviewCall;
+      throw generated.reason;
+    }
     const [reviewed] = await reviewCall;
-    if (generated.status === "rejected") throw generated.reason;
     const result = generated.value.object;
     const reviewOptions =
       reviewed?.status === "fulfilled" ? reviewed.value : [];
@@ -324,6 +329,7 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
       "empty",
       detail,
     );
+    if (options.throwOnError) throw error;
     return [];
   }
 }

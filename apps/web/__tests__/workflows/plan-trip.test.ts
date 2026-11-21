@@ -168,7 +168,10 @@ function createChain(table: string) {
 
 const supabaseMock = {
   from: vi.fn((table: string) => createChain(table)),
-  rpc: vi.fn(async () => ({ data: true, error: null })),
+  rpc: vi.fn(async (_fn?: string, _args?: Record<string, unknown>) => ({
+    data: true,
+    error: null,
+  })),
 };
 
 vi.mock("@/lib/supabase/server", () => ({
@@ -182,6 +185,7 @@ vi.mock("@/lib/supabase/server", () => ({
 
 import {
   paidPlanningStepRetries,
+  persistenceStepRetries,
   planTripWorkflow,
   saveSearchResults,
 } from "@/workflows/plan-trip";
@@ -346,6 +350,10 @@ describe("planTripWorkflow", () => {
   afterEach(() => vi.unstubAllEnvs());
   beforeEach(() => {
     vi.clearAllMocks();
+    supabaseMock.rpc.mockImplementation(async () => ({
+      data: true,
+      error: null,
+    }));
     insertedResults = null;
     searchUpdates.length = 0;
     persistedResults = [];
@@ -1075,6 +1083,55 @@ describe("planTripWorkflow", () => {
       enrichment: 0,
       aggregator: 0,
     });
+    expect(persistenceStepRetries).toEqual({
+      buildAndSaveSpec: 0,
+    });
+  });
+
+  it("fails and does not mark search completed when trip attempt is no longer active", async () => {
+    supabaseMock.rpc.mockImplementation(
+      async (fn?: string, args?: Record<string, unknown>) => {
+        if (
+          fn === "apply_trip_generation_update" &&
+          args?.p_state === "planned"
+        ) {
+          return { data: false, error: null };
+        }
+        return { data: true, error: null };
+      },
+    );
+
+    const result = await planTripWorkflow(workflowInput);
+
+    expect(result.status).toBe("error");
+    expect(result.error).toContain("no longer active");
+    expect(
+      searchUpdates.some(
+        (u) =>
+          u &&
+          typeof u === "object" &&
+          "status" in u &&
+          (u as { status?: unknown }).status === "completed",
+      ),
+    ).toBe(false);
+    expect(mocks.dispatchItineraryReady).not.toHaveBeenCalled();
+  });
+
+  it("passes throwOnError to specialist agents so outages are not masked", async () => {
+    await planTripWorkflow(workflowInput);
+    expect(mocks.runHotelsAgent).toHaveBeenCalledWith(searchPlan, 10, {
+      throwOnError: true,
+    });
+    expect(mocks.runActivitiesAgent).toHaveBeenCalledWith(
+      searchPlan,
+      expect.any(Number),
+      { throwOnError: true },
+    );
+    expect(mocks.runDiningAgent).toHaveBeenCalledWith(
+      searchPlan,
+      expect.any(Number),
+      { throwOnError: true },
+    );
   });
 
   it("continues to aggregation when a provider fails and keeps that failure visible", async () => {

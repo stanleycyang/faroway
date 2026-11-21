@@ -3,12 +3,19 @@
 import Link from "next/link";
 import { TripRecovery } from "@/components/trips/TripRecovery";
 
-export default function SharedTripError({ reset }: { reset: () => void }) {
+export default function SharedTripError({
+  error,
+  reset,
+}: {
+  error: Error & { digest?: string };
+  reset: () => void;
+}) {
   return (
     <TripRecovery
       eyebrow="A shared journey"
       title="This itinerary is taking a moment"
       description="We couldn’t load the shared trip. Try again in a moment. This error doesn’t confirm whether the owner has changed the link."
+      error={error}
       reset={reset}
     >
       <Link

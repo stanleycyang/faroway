@@ -1,9 +1,17 @@
 "use client";
 
 import { create, type StateCreator } from "zustand";
-import { persist, createJSONStorage } from "zustand/middleware";
+import {
+  persist,
+  type PersistStorage,
+  type StorageValue,
+} from "zustand/middleware";
 import { nanoid } from "nanoid";
-import { CURRENT_SCHEMA_VERSION, migrate } from "./migrations";
+import {
+  CURRENT_SCHEMA_VERSION,
+  migrateAndSanitize,
+  sanitizeAppState,
+} from "./migrations";
 import type { AppState, AppSettings, CountryVisit, Profile } from "./types";
 
 const STORAGE_KEY = "wm:app-state";
@@ -25,6 +33,8 @@ const DEFAULT_SETTINGS: AppSettings = {};
 export interface WorldMapStore extends AppState {
   hasHydrated: boolean;
   setHasHydrated: (v: boolean) => void;
+  persistError: string | null;
+  clearPersistError: () => void;
 
   // Profile ops
   createProfile: (name: string, emoji?: string) => string;
@@ -60,8 +70,10 @@ const creator: StateCreator<
   activeProfileId: "",
   settings: { ...DEFAULT_SETTINGS },
   hasHydrated: false,
+  persistError: null,
 
-  setHasHydrated: (v) => set({ hasHydrated: v }),
+  setHasHydrated: (v) => runWithoutPersist(() => set({ hasHydrated: v })),
+  clearPersistError: () => runWithoutPersist(() => set({ persistError: null })),
 
   createProfile: (name, emoji) => {
     const profile = createEmptyProfile(name, emoji);
@@ -208,8 +220,7 @@ const creator: StateCreator<
         mergedVisits[iso] = {
           ...v,
           ...existing,
-          visitCount:
-            (existing?.visitCount ?? 0) + (v.visitCount ?? 0) || undefined,
+          visitCount: existing?.visitCount ?? v.visitCount,
         };
       }
       const nextProfile: Profile = {
@@ -247,8 +258,7 @@ const creator: StateCreator<
           mergedVisits[iso] = {
             ...v,
             ...existing,
-            visitCount:
-              (existing?.visitCount ?? 0) + (v.visitCount ?? 0) || undefined,
+            visitCount: existing?.visitCount ?? v.visitCount,
           };
         }
         return {
@@ -264,9 +274,9 @@ const creator: StateCreator<
   },
 
   replaceAll: (state) => {
-    // Run incoming state through the migration pipeline so older backups
-    // don't strand users on stale schemas.
-    const migrated = migrate(state);
+    // Run incoming state through the migration + sanitization pipeline so
+    // older or malformed backups don't strand users on stale or corrupt data.
+    const migrated = migrateAndSanitize(state);
     set({
       schemaVersion: migrated.schemaVersion,
       profiles: migrated.profiles,
@@ -280,9 +290,9 @@ const creator: StateCreator<
   },
 });
 
-// In non-browser environments (SSR build, vitest node env) there is no
-// window.localStorage — fall back to an in-memory shim so zustand's persist
-// middleware doesn't crash on setItem.
+// In non-browser environments (SSR build, vitest node env) or when cookies /
+// storage are blocked, fall back to an in-memory shim so zustand's persist
+// middleware never crashes or stalls hydration.
 function memoryStorage(): Storage {
   const store = new Map<string, string>();
   return {
@@ -301,25 +311,141 @@ function memoryStorage(): Storage {
   };
 }
 
+const fallbackStorage = memoryStorage();
+
+function resolveBackingStorage(): Storage {
+  if (typeof window === "undefined") return fallbackStorage;
+  try {
+    return window.localStorage;
+  } catch {
+    return fallbackStorage;
+  }
+}
+
+let skipPersistDepth = 0;
+function runWithoutPersist<T>(fn: () => T): T {
+  skipPersistDepth += 1;
+  try {
+    return fn();
+  } finally {
+    skipPersistDepth -= 1;
+  }
+}
+
+function isQuotaError(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { name?: string; code?: number };
+  return (
+    e.name === "QuotaExceededError" ||
+    e.name === "NS_ERROR_DOM_QUOTA_REACHED" ||
+    e.code === 22 ||
+    e.code === 1014
+  );
+}
+
+function formatPersistError(err: unknown): string {
+  if (isQuotaError(err)) {
+    return "Browser storage is full — your latest changes couldn’t be saved. Try removing a cover photo or downloading a backup to free space.";
+  }
+  return "Couldn’t save changes to browser storage. Your changes are kept for this session — download a JSON backup so you don’t lose them.";
+}
+
+let storeInitialized = false;
+function setPersistErrorSafe(message: string | null) {
+  const apply = () => {
+    if (useWorldMapStore.getState().persistError === message) return;
+    runWithoutPersist(() => {
+      useWorldMapStore.setState({ persistError: message });
+    });
+  };
+  if (storeInitialized) {
+    apply();
+  } else {
+    queueMicrotask(apply);
+  }
+}
+
+type PersistedSlice = Pick<
+  WorldMapStore,
+  "schemaVersion" | "profiles" | "activeProfileId" | "settings"
+>;
+
+const safePersistStorage: PersistStorage<PersistedSlice> = {
+  getItem: (name): StorageValue<PersistedSlice> | null => {
+    try {
+      const raw = resolveBackingStorage().getItem(name);
+      if (raw === null) return null;
+      const parsed = JSON.parse(raw) as StorageValue<PersistedSlice>;
+      if (!parsed || typeof parsed !== "object") return null;
+      return parsed;
+    } catch (err) {
+      console.warn(
+        "[world-map] Failed to read persisted map state; starting clean.",
+        err,
+      );
+      return null;
+    }
+  },
+  setItem: (name, value) => {
+    if (skipPersistDepth > 0) return;
+    try {
+      resolveBackingStorage().setItem(name, JSON.stringify(value));
+      setPersistErrorSafe(null);
+    } catch (err) {
+      console.warn("[world-map] Failed to persist map state.", err);
+      setPersistErrorSafe(formatPersistError(err));
+    }
+  },
+  removeItem: (name) => {
+    try {
+      resolveBackingStorage().removeItem(name);
+    } catch (err) {
+      console.warn("[world-map] Failed to clear persisted map state.", err);
+    }
+  },
+};
+
 export const useWorldMapStore = create<WorldMapStore>()(
   persist(creator, {
     name: STORAGE_KEY,
-    storage: createJSONStorage(() =>
-      typeof window === "undefined" ? memoryStorage() : window.localStorage,
-    ),
+    storage: safePersistStorage,
     version: CURRENT_SCHEMA_VERSION,
-    migrate: (persisted) => migrate(persisted) as WorldMapStore,
+    migrate: (persisted) => migrateAndSanitize(persisted) as WorldMapStore,
+    merge: (persistedState, currentState) => {
+      if (!persistedState || typeof persistedState !== "object") {
+        return currentState;
+      }
+      return {
+        ...currentState,
+        ...sanitizeAppState(persistedState),
+      };
+    },
     partialize: (state) => ({
       schemaVersion: state.schemaVersion,
       profiles: state.profiles,
       activeProfileId: state.activeProfileId,
       settings: state.settings,
     }),
-    onRehydrateStorage: () => (state) => {
-      state?.setHasHydrated(true);
+    onRehydrateStorage: () => (state, err) => {
+      if (err) {
+        console.warn(
+          "[world-map] Failed to rehydrate persisted map state.",
+          err,
+        );
+      }
+      if (state) {
+        state.setHasHydrated(true);
+      } else {
+        queueMicrotask(() => {
+          runWithoutPersist(() =>
+            useWorldMapStore.setState({ hasHydrated: true }),
+          );
+        });
+      }
     },
   }),
 );
+storeInitialized = true;
 
 // Helper hook: the currently active profile.
 export function useActiveProfile(): Profile | undefined {
