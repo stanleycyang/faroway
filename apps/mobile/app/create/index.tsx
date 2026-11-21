@@ -367,8 +367,8 @@ export default function CreateTripScreen() {
         Alert.alert(
           'Defaults saved',
           saved
-            ? 'Your comfort tier, vibes, and dietary/access notes will prefill future trips. You can edit or clear them anytime.'
-            : 'Choose a comfort tier, vibes, or dietary/access needs first to save defaults.'
+            ? 'Your budget tier, vibes, and dietary/access notes will prefill future trips. You can edit or clear them anytime.'
+            : 'Choose a budget tier, vibes, or dietary/access needs first to save defaults.'
         );
       })
       .catch(() => {

@@ -389,7 +389,7 @@ export function DreamTripPromptBar({
           <Text style={styles.memorySummary}>{memoryItems.join(' · ')}</Text>
         ) : (
           <Text style={styles.memoryEmpty}>
-            Save your usual comfort tier, vibes, or dietary notes to prefill future trips.
+            Save your usual budget tier, vibes, or dietary notes to prefill future trips.
           </Text>
         )}
       </View>

@@ -462,7 +462,7 @@ export default function ProfileScreen() {
                     </View>
                   ) : (
                     <Text style={styles.memoryHint}>
-                      No defaults saved yet. Add your home airport, preferred comfort tier, or save
+                      No defaults saved yet. Add your home airport, preferred budget tier, or save
                       vibes & dietary notes from the trip planner.
                     </Text>
                   )}
@@ -706,7 +706,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   termsLink: {
-    color: colors.primary[600],
+    color: colors.action.primary,
     textDecorationLine: 'underline',
   },
   socialButton: {

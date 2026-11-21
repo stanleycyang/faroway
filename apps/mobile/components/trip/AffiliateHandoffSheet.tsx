@@ -16,21 +16,134 @@ export interface AffiliateHandoffSheetProps {
   visible: boolean;
   params: ConfirmAffiliateOpenParams | null;
   opening?: boolean;
+  inline?: boolean;
   onClose: () => void;
   onConfirm: (params: ConfirmAffiliateOpenParams) => void;
+}
+
+export interface AffiliateHandoffCardProps {
+  params: ConfirmAffiliateOpenParams;
+  opening?: boolean;
+  onClose: () => void;
+  onConfirm: (params: ConfirmAffiliateOpenParams) => void;
+}
+
+export function AffiliateHandoffCard({
+  params,
+  opening = false,
+  onClose,
+  onConfirm,
+}: AffiliateHandoffCardProps) {
+  const partnerName = formatAffiliatePartnerName(params.affiliatePartner);
+
+  return (
+    <View style={styles.sheet} accessibilityViewIsModal>
+      <SafeAreaView edges={['bottom']}>
+        <View style={styles.header}>
+          <View style={styles.partnerBadge}>
+            <Ionicons name="shield-checkmark-outline" size={14} color="#0F766E" />
+            <Text style={styles.partnerBadgeText}>{partnerName}</Text>
+          </View>
+          <TouchableOpacity
+            onPress={onClose}
+            style={styles.closeButton}
+            accessibilityRole="button"
+            accessibilityLabel="Close partner handoff"
+          >
+            <Ionicons name="close" size={22} color="#0F172A" />
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.title} accessibilityRole="header">
+          Continue to {partnerName}
+        </Text>
+        <Text style={styles.itemTitle} numberOfLines={2}>
+          {params.itemName}
+        </Text>
+
+        <View style={styles.detailsBox}>
+          <View style={styles.detailRow}>
+            <Ionicons name="pricetag-outline" size={16} color="#475569" />
+            <Text style={styles.detailText}>
+              {params.priceLabel
+                ? `Estimated price: ${params.priceLabel}`
+                : 'Final price is confirmed on the partner site'}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Ionicons name="document-text-outline" size={16} color="#475569" />
+            <Text style={styles.detailText}>
+              {params.cancellationLabel ||
+                'Availability, taxes, and cancellation terms are confirmed with the partner before payment.'}
+            </Text>
+          </View>
+          <View style={styles.detailRow}>
+            <Ionicons name="bookmark-outline" size={16} color="#475569" />
+            <Text style={styles.detailText}>
+              Your Faroway itinerary stays saved here when you return.
+            </Text>
+          </View>
+        </View>
+
+        <Text style={styles.disclosure}>{AFFILIATE_DISCLOSURE_SHORT}</Text>
+
+        <TouchableOpacity
+          style={[styles.primaryButton, opening && styles.primaryButtonDisabled]}
+          onPress={() => onConfirm(params)}
+          disabled={opening}
+          activeOpacity={0.85}
+          accessibilityRole="button"
+          accessibilityLabel={`Continue to ${partnerName}`}
+        >
+          {opening ? (
+            <ActivityIndicator size="small" color="#FFFFFF" />
+          ) : (
+            <>
+              <Text style={styles.primaryButtonText}>Continue to {partnerName}</Text>
+              <Ionicons name="open-outline" size={16} color="#FFFFFF" />
+            </>
+          )}
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={onClose}
+          disabled={opening}
+          accessibilityRole="button"
+          accessibilityLabel="Not now"
+        >
+          <Text style={styles.secondaryButtonText}>Not now</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    </View>
+  );
 }
 
 export function AffiliateHandoffSheet({
   visible,
   params,
   opening = false,
+  inline = false,
   onClose,
   onConfirm,
 }: AffiliateHandoffSheetProps) {
   const reduceMotion = useReduceMotion();
-  if (!params) return null;
+  if (!params || (inline && !visible)) return null;
 
-  const partnerName = formatAffiliatePartnerName(params.affiliatePartner);
+  const content = (
+    <View style={[styles.overlay, inline && styles.inlineOverlay]}>
+      <AffiliateHandoffCard
+        params={params}
+        opening={opening}
+        onClose={onClose}
+        onConfirm={onConfirm}
+      />
+    </View>
+  );
+
+  if (inline) {
+    return content;
+  }
 
   return (
     <SafeModal
@@ -39,87 +152,7 @@ export function AffiliateHandoffSheet({
       animationType={reduceMotion ? 'none' : 'slide'}
       onRequestClose={onClose}
     >
-      <View style={styles.overlay}>
-        <View style={styles.sheet} accessibilityViewIsModal>
-          <SafeAreaView edges={['bottom']}>
-            <View style={styles.header}>
-              <View style={styles.partnerBadge}>
-                <Ionicons name="shield-checkmark-outline" size={14} color="#0F766E" />
-                <Text style={styles.partnerBadgeText}>{partnerName}</Text>
-              </View>
-              <TouchableOpacity
-                onPress={onClose}
-                style={styles.closeButton}
-                accessibilityRole="button"
-                accessibilityLabel="Close partner handoff"
-              >
-                <Ionicons name="close" size={22} color="#0F172A" />
-              </TouchableOpacity>
-            </View>
-
-            <Text style={styles.title} accessibilityRole="header">
-              Continue to {partnerName}
-            </Text>
-            <Text style={styles.itemTitle} numberOfLines={2}>
-              {params.itemName}
-            </Text>
-
-            <View style={styles.detailsBox}>
-              <View style={styles.detailRow}>
-                <Ionicons name="pricetag-outline" size={16} color="#475569" />
-                <Text style={styles.detailText}>
-                  {params.priceLabel
-                    ? `Estimated price: ${params.priceLabel}`
-                    : 'Final price is confirmed on the partner site'}
-                </Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Ionicons name="document-text-outline" size={16} color="#475569" />
-                <Text style={styles.detailText}>
-                  {params.cancellationLabel ||
-                    'Availability, taxes, and cancellation terms are confirmed with the partner before payment.'}
-                </Text>
-              </View>
-              <View style={styles.detailRow}>
-                <Ionicons name="bookmark-outline" size={16} color="#475569" />
-                <Text style={styles.detailText}>
-                  Your Faroway itinerary stays saved here when you return.
-                </Text>
-              </View>
-            </View>
-
-            <Text style={styles.disclosure}>{AFFILIATE_DISCLOSURE_SHORT}</Text>
-
-            <TouchableOpacity
-              style={[styles.primaryButton, opening && styles.primaryButtonDisabled]}
-              onPress={() => onConfirm(params)}
-              disabled={opening}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel={`Continue to ${partnerName}`}
-            >
-              {opening ? (
-                <ActivityIndicator size="small" color="#FFFFFF" />
-              ) : (
-                <>
-                  <Text style={styles.primaryButtonText}>Continue to {partnerName}</Text>
-                  <Ionicons name="open-outline" size={16} color="#FFFFFF" />
-                </>
-              )}
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.secondaryButton}
-              onPress={onClose}
-              disabled={opening}
-              accessibilityRole="button"
-              accessibilityLabel="Not now"
-            >
-              <Text style={styles.secondaryButtonText}>Not now</Text>
-            </TouchableOpacity>
-          </SafeAreaView>
-        </View>
-      </View>
+      {content}
     </SafeModal>
   );
 }
@@ -129,6 +162,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.5)',
     justifyContent: 'flex-end',
+  },
+  inlineOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 20,
   },
   sheet: {
     backgroundColor: '#FFFFFF',

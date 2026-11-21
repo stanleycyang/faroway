@@ -141,6 +141,7 @@ function RootLayoutNav() {
 
 export function ErrorBoundary({ error, retry }: ErrorBoundaryProps) {
   useEffect(() => {
+    void SplashScreen.hideAsync?.().catch(() => {});
     Sentry.captureException(error);
   }, [error]);
 

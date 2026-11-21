@@ -46,30 +46,40 @@ export function resolveApiBaseUrl({ isDev, envUrl, hostUri }: ResolveApiBaseUrlO
   return PRODUCTION_API_URL;
 }
 
+function isApiOnlyHostname(hostname: string): boolean {
+  const lower = hostname.toLowerCase();
+  return lower.startsWith('api.') || lower.startsWith('api-');
+}
+
+function parseSafeWebOrigin(raw: string | undefined): string | null {
+  const trimmed = raw?.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    if (
+      parsed.protocol === 'https:' &&
+      !parsed.username &&
+      !parsed.password &&
+      !isApiOnlyHostname(parsed.hostname)
+    ) {
+      return parsed.origin;
+    }
+  } catch {
+    // Ignore malformed URL and fall back.
+  }
+  return null;
+}
+
 /**
  * Resolve the canonical browser-facing web origin (`www.faroway.ai`),
- * ignoring `api.*` origins so web fallbacks never hit API-only hosts.
+ * ignoring `api.*` / `api-*` origins and unsafe URLs so web fallbacks never hit API-only hosts.
  */
 export function resolveWebBaseUrl({ envWebUrl, envApiUrl }: ResolveWebBaseUrlOptions): string {
-  const explicit = envWebUrl?.trim();
-  if (explicit) return explicit;
+  const explicitOrigin = parseSafeWebOrigin(envWebUrl);
+  if (explicitOrigin) return explicitOrigin;
 
-  const candidateApi = envApiUrl?.trim();
-  if (candidateApi) {
-    try {
-      const parsed = new URL(candidateApi);
-      if (
-        parsed.protocol === 'https:' &&
-        !parsed.username &&
-        !parsed.password &&
-        !parsed.hostname.toLowerCase().startsWith('api.')
-      ) {
-        return parsed.origin;
-      }
-    } catch {
-      // Ignore malformed API URL and fall back to canonical web origin.
-    }
-  }
+  const apiDerivedOrigin = parseSafeWebOrigin(envApiUrl);
+  if (apiDerivedOrigin) return apiDerivedOrigin;
 
   return PRODUCTION_WEB_URL;
 }

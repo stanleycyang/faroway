@@ -1,5 +1,5 @@
 import type { Activity, Trip } from '../stores/tripStore';
-import { formatKnownPrice } from './tripCost';
+import { formatKnownPrice, formatTripCost, readTripCost } from './tripCost';
 
 /** These are candidates for saved-plan review, not confirmed available inventory. */
 export function collectBookingOptions(trip: Trip): { activity: Activity; dayNumber: number }[] {
@@ -29,6 +29,7 @@ export function collectBookingOptions(trip: Trip): { activity: Activity; dayNumb
   }
   if (trip.hotel?.bookingUrl) {
     const hotel = trip.hotel;
+    const nightlyCost = readTripCost({ amount: hotel.pricePerNight, currency: hotel.currency });
     items.unshift({
       dayNumber: 0,
       activity: {
@@ -39,7 +40,7 @@ export function collectBookingOptions(trip: Trip): { activity: Activity; dayNumb
         location: hotel.location?.name || '',
         duration: '',
         type: 'accommodation',
-        price: `${formatKnownPrice(hotel.pricePerNight, hotel.currency)} / night`,
+        price: nightlyCost ? `${formatTripCost(nightlyCost)} / night` : 'Check rates',
         bookingUrl: hotel.bookingUrl,
         affiliatePartner: hotel.affiliatePartner,
       },

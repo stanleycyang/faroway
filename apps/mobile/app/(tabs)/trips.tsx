@@ -521,7 +521,7 @@ const styles = StyleSheet.create({
   tabText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#64748b',
+    color: colors.surface[600],
   },
   tabTextActive: {
     color: '#fff',

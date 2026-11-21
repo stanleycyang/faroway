@@ -62,7 +62,7 @@ jest.mock('../../hooks/useReduceMotion', () => ({ useReduceMotion: () => true })
 
 Object.assign(globalThis, { __DEV__: false });
 
-import RootLayout from '../../app/_layout';
+import RootLayout, { ErrorBoundary } from '../../app/_layout';
 import { FONT_LOAD_TIMEOUT_MS, FONT_SOURCES } from '../../constants/fonts';
 
 describe('RootLayout brand font loading', () => {
@@ -116,5 +116,15 @@ describe('RootLayout brand font loading', () => {
     } finally {
       jest.useRealTimers();
     }
+  });
+
+  it('hides the native splash screen when ErrorBoundary catches an early startup error', async () => {
+    let tree!: ReactTestRenderer;
+    await act(async () => {
+      tree = create(<ErrorBoundary error={new Error('Provider crashed')} retry={jest.fn()} />);
+    });
+
+    expect(mockHideAsync).toHaveBeenCalledTimes(1);
+    await act(async () => tree.unmount());
   });
 });

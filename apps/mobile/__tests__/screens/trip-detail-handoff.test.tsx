@@ -295,7 +295,7 @@ describe('TripDetailScreen direct affiliate handoff & brand UI', () => {
     await act(async () => tree.unmount());
   });
 
-  it('opens BookingsSheet with Trip Essentials, context labels, and FTC disclosure', async () => {
+  it('opens BookingsSheet with Trip Essentials, context labels, and FTC disclosure without sibling Modal collisions', async () => {
     let tree!: ReactTestRenderer;
     await act(async () => {
       tree = create(<TripDetailScreen />);
@@ -304,6 +304,8 @@ describe('TripDetailScreen direct affiliate handoff & brand UI', () => {
     const openSheetBtn = tree.root.findByProps({ accessibilityLabel: 'Booking options' });
     await act(async () => openSheetBtn.props.onPress());
 
+    expect(tree.root.findAllByType('Modal' as unknown as React.ComponentType)).toHaveLength(1);
+
     const sheetJson = serializeTree(tree.toJSON());
     expect(sheetJson).toContain('Hotel stay');
     expect(sheetJson).toContain('Trip essentials');
@@ -311,20 +313,84 @@ describe('TripDetailScreen direct affiliate handoff & brand UI', () => {
     expect(sheetJson).toContain('SafetyWing');
     expect(sheetJson).toContain(AFFILIATE_DISCLOSURE_SHORT);
 
+    // Tapping a bookable item or Trip Essential inside BookingsSheet keeps the exact same
+    // single Modal open and renders confirmation inline (no sibling Modal swap race).
     const airaloBtn = tree.root.findByProps({
       accessibilityLabel: 'Travel eSIM data via Airalo',
     });
     await act(async () => airaloBtn.props.onPress());
+    const modalsAfterTap = tree.root.findAllByType('Modal' as unknown as React.ComponentType);
+    expect(modalsAfterTap).toHaveLength(1);
+
+    const notNowBtn = tree.root.findByProps({ accessibilityLabel: 'Not now' });
+    await act(async () => notNowBtn.props.onPress());
+    expect(tree.root.findAllByType('Modal' as unknown as React.ComponentType)).toHaveLength(1);
+
+    const sheetItemBtn = tree.root.findByProps({
+      accessibilityLabel: 'Open Viator for Louvre Guided Tour',
+    });
+    await act(async () => sheetItemBtn.props.onPress());
+    expect(tree.root.findAllByType('Modal' as unknown as React.ComponentType)).toHaveLength(1);
+
+    const confirmViator = tree.root.findByProps({ accessibilityLabel: 'Continue to Viator' });
+    await act(async () => confirmViator.props.onPress());
+
+    expect(mockOpenAffiliateLink).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tripId: mockTripId,
+        affiliatePartner: 'viator',
+        affiliateUrl: 'https://www.viator.com/tours/Paris/Louvre',
+      }),
+      expect.any(Function)
+    );
+    expect(tree.root.findAllByType('Modal' as unknown as React.ComponentType)).toHaveLength(0);
+
+    // Re-open BookingsSheet and complete Trip Essential handoff cleanly.
+    await act(async () => openSheetBtn.props.onPress());
+    await act(async () =>
+      tree.root.findByProps({ accessibilityLabel: 'Travel eSIM data via Airalo' }).props.onPress()
+    );
     const confirmAiralo = tree.root.findByProps({ accessibilityLabel: 'Continue to Airalo' });
     await act(async () => confirmAiralo.props.onPress());
 
-    expect(mockOpenAffiliateLink).toHaveBeenCalledWith(
+    expect(mockOpenAffiliateLink).toHaveBeenLastCalledWith(
       expect.objectContaining({
         affiliatePartner: 'airalo',
         affiliateUrl: 'https://www.airalo.com/',
       }),
       expect.any(Function)
     );
+    expect(tree.root.findAllByType('Modal' as unknown as React.ComponentType)).toHaveLength(0);
+    await act(async () => tree.unmount());
+  });
+
+  it('renders hotel card cleanly when hotel bookingUrl is absent', async () => {
+    mockTripData = buildTrip({
+      hotel: {
+        id: 'htl-2',
+        name: 'Unlinked Hotel',
+        description: 'No partner link',
+        pricePerNight: NaN,
+        totalPrice: 0,
+        rating: 4.2,
+        reviewCount: 10,
+        amenities: [],
+        images: [],
+        bookingUrl: undefined,
+        location: { name: 'Center', address: '1 Main', lat: 0, lng: 0 },
+      },
+    });
+    let tree!: ReactTestRenderer;
+    await act(async () => {
+      tree = create(<TripDetailScreen />);
+    });
+
+    const json = serializeTree(tree.toJSON());
+    expect(json).toContain('Unlinked Hotel');
+    expect(json).not.toContain('Check availability for Unlinked Hotel');
+    expect(
+      tree.root.findAllByProps({ accessibilityLabel: 'Check availability for Unlinked Hotel' })
+    ).toHaveLength(0);
     await act(async () => tree.unmount());
   });
 

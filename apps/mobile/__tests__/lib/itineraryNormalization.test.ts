@@ -500,4 +500,17 @@ test('does not fabricate opentable on meals and normalizes hotel/activity/transp
     bookingUrl: 'https://www.booking.com/hotel/fr/example.html',
   });
   expect(bookingHotel?.affiliatePartner).toBe('booking');
+
+  const bookingInfoHotel = transformApiHotel({
+    name: 'BookingInfo Hotel',
+    bookingInfo: {
+      affiliateId: 'stay22',
+      bookingUrl: 'https://www.stay22.com/embed/gm?aid=2',
+    },
+  });
+  expect(bookingInfoHotel?.bookingUrl).toBe('https://www.stay22.com/embed/gm?aid=2');
+  expect(bookingInfoHotel?.affiliatePartner).toBe('stay22');
+
+  const unlinkedHotel = transformApiHotel({ name: 'Unlinked Hotel' });
+  expect(unlinkedHotel?.bookingUrl).toBeUndefined();
 });

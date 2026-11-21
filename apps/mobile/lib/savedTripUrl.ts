@@ -6,11 +6,13 @@ export function savedTripReviewUrl(tripId?: string): string | null {
     return null;
   try {
     const base = new URL(WEB_BASE_URL);
+    const hostname = base.hostname.toLowerCase();
     if (
       base.protocol !== 'https:' ||
       base.username ||
       base.password ||
-      base.hostname.toLowerCase().startsWith('api.')
+      hostname.startsWith('api.') ||
+      hostname.startsWith('api-')
     ) {
       return null;
     }

@@ -29,7 +29,7 @@ import { useTripStore, Trip, TripInput } from '../../stores/tripStore';
 import { useUserStore } from '../../stores/userStore';
 import { usePromptStore } from '../../stores/promptStore';
 import { useAuthContext } from '../../components/AuthProvider';
-import { popularDestinations } from '@faroway/constants';
+import { normalizeBudgetTier, popularDestinations } from '@faroway/constants';
 import { colors } from '../../constants/theme';
 import {
   useStreamingItinerary,
@@ -575,7 +575,7 @@ function GenerationSession() {
             flightConsent: draftInput.flightConsent,
             requirements: readTravelerRequirements(draftInput.requirements) ?? undefined,
             vibes: draftInput.vibes || [],
-            budget: draftInput.budget ?? savedProfileBudget,
+            budget: normalizeBudgetTier(draftInput?.budget ?? savedProfileBudget) ?? 'moderate',
           }
         : undefined,
     [canGenerate, draftInput, savedProfileBudget]
@@ -910,7 +910,7 @@ function GenerationSession() {
             accessibilityLabel="View your generated trip"
           >
             <LinearGradient
-              colors={[colors.primary[500], colors.primary[700]]}
+              colors={[colors.action.primary, colors.primary[800]]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.viewButtonGradient}
@@ -1181,7 +1181,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorButtonPrimary: {
-    backgroundColor: colors.primary[600],
+    backgroundColor: colors.action.primary,
   },
   errorButtonText: { color: '#fff', fontWeight: '600', fontSize: 16 },
 

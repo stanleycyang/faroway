@@ -64,5 +64,30 @@ describe('API configuration', () => {
         envApiUrl: 'http://localhost:3000',
       })
     ).toBe('https://www.faroway.ai');
+    expect(
+      resolveWebBaseUrl({
+        envApiUrl: 'https://api-staging.faroway.ai',
+      })
+    ).toBe('https://www.faroway.ai');
+    expect(
+      resolveWebBaseUrl({
+        envWebUrl: 'http://www.faroway.ai',
+      })
+    ).toBe('https://www.faroway.ai');
+    expect(
+      resolveWebBaseUrl({
+        envWebUrl: 'https://user:pass@www.faroway.ai',
+      })
+    ).toBe('https://www.faroway.ai');
+    expect(
+      resolveWebBaseUrl({
+        envWebUrl: 'https://api-staging.faroway.ai',
+      })
+    ).toBe('https://www.faroway.ai');
+    expect(
+      resolveWebBaseUrl({
+        envWebUrl: 'not-a-url',
+      })
+    ).toBe('https://www.faroway.ai');
   });
 });

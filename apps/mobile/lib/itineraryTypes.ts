@@ -48,7 +48,7 @@ export interface Hotel {
   reviewCount: number;
   amenities: string[];
   images: string[];
-  bookingUrl: string;
+  bookingUrl?: string;
   affiliatePartner?: string;
   location: {
     name: string;

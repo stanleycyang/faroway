@@ -423,3 +423,17 @@ it('sends flightSearch: null when flightConsent is explicitly false', async () =
   const body = JSON.parse(posts()[0][1].body);
   expect(body.preferences.flightSearch).toBeNull();
 });
+
+it('normalizes legacy budget tier aliases before posting to /api/trips', async () => {
+  await createAndStartTrip({ ...input, budget: 'Comfort' }, jest.fn());
+  const firstBody = JSON.parse(posts()[0][1].body);
+  expect(firstBody.budget).toBe('moderate');
+
+  jest.clearAllMocks();
+  const { default: storage } = await import('@react-native-async-storage/async-storage');
+  await storage.clear();
+
+  await createAndStartTrip({ ...input, budget: 'Luxury' }, jest.fn());
+  const secondBody = JSON.parse(posts()[0][1].body);
+  expect(secondBody.budget).toBe('luxury');
+});

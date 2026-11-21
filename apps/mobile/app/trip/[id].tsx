@@ -81,13 +81,17 @@ import type { TripDay } from '../../lib/itineraryTypes';
 
 interface BookingHandoffContextValue {
   tripId: string | undefined;
+  openingHandoff: boolean;
   startHandoff: (params: ConfirmAffiliateOpenParams) => void;
+  confirmHandoff: (params: ConfirmAffiliateOpenParams) => Promise<boolean>;
   fallbackReview: () => void;
 }
 
 const BookingHandoffContext = createContext<BookingHandoffContextValue>({
   tripId: undefined,
+  openingHandoff: false,
   startHandoff: () => undefined,
+  confirmHandoff: async () => false,
   fallbackReview: () => undefined,
 });
 
@@ -358,7 +362,7 @@ function FeaturedHotelCard({
             ))}
           </View>
         )}
-        {hotel.bookingUrl && (
+        {Boolean(hotel.bookingUrl) && (
           <TouchableOpacity
             style={styles.hotelCardButton}
             onPress={handleBooking}
@@ -517,8 +521,37 @@ function BookingsSheet({
   bookableItems: { activity: Activity; dayNumber: number }[];
   costReferences: string[];
 }) {
-  const { tripId, startHandoff, fallbackReview } = useBookingHandoff();
+  const { tripId, openingHandoff, confirmHandoff, fallbackReview } = useBookingHandoff();
   const reduceMotion = useReduceMotion();
+  const [pendingSheetHandoff, setPendingSheetHandoff] = useState<ConfirmAffiliateOpenParams | null>(
+    null
+  );
+
+  useEffect(() => {
+    if (!visible) setPendingSheetHandoff(null);
+  }, [visible]);
+
+  const startInlineHandoff = (params: ConfirmAffiliateOpenParams) => {
+    if (!isAllowedAffiliateUrl(params.affiliateUrl)) {
+      hapticFeedback.warning();
+      Alert.alert(
+        'Partner Link Unavailable',
+        'This partner link could not be verified. Try another booking option from the itinerary.'
+      );
+      return;
+    }
+    hapticFeedback.light();
+    setPendingSheetHandoff(params);
+  };
+
+  const handleRequestClose = () => {
+    if (openingHandoff) return;
+    if (pendingSheetHandoff) {
+      setPendingSheetHandoff(null);
+      return;
+    }
+    onClose();
+  };
 
   const renderBookableItem = ({ item }: { item: { activity: Activity; dayNumber: number } }) => {
     const { activity, dayNumber } = item;
@@ -533,12 +566,12 @@ function BookingsSheet({
         : undefined;
 
     const handleBook = () => {
-      onClose();
       if (!activity.bookingUrl || !isAllowedAffiliateUrl(activity.bookingUrl)) {
+        onClose();
         fallbackReview();
         return;
       }
-      startHandoff({
+      startInlineHandoff({
         itemType: itemTypeForAffiliateActivityType(activity.type),
         itemId: activity.id,
         itemName: activity.title,
@@ -584,7 +617,7 @@ function BookingsSheet({
       visible={visible}
       animationType={reduceMotion ? 'none' : 'slide'}
       presentationStyle="pageSheet"
-      onRequestClose={onClose}
+      onRequestClose={handleRequestClose}
     >
       <SafeAreaView edges={['top']} style={styles.sheetContainer}>
         <View style={styles.sheetHeader}>
@@ -592,7 +625,7 @@ function BookingsSheet({
             {bookableItems.length} Booking {bookableItems.length === 1 ? 'Option' : 'Options'}
           </Text>
           <TouchableOpacity
-            onPress={onClose}
+            onPress={handleRequestClose}
             style={styles.sheetClose}
             accessibilityRole="button"
             accessibilityLabel="Close bookings"
@@ -637,8 +670,7 @@ function BookingsSheet({
                   <TouchableOpacity
                     style={styles.sheetItemButton}
                     onPress={() => {
-                      onClose();
-                      startHandoff({
+                      startInlineHandoff({
                         itemType: 'activity',
                         itemId: essential.id,
                         itemName: essential.title,
@@ -663,6 +695,23 @@ function BookingsSheet({
           keyExtractor={(item) => item.activity.id}
           contentContainerStyle={styles.sheetList}
           ItemSeparatorComponent={() => <View style={styles.sheetSeparator} />}
+        />
+        <AffiliateHandoffSheet
+          inline
+          visible={visible && pendingSheetHandoff !== null}
+          params={pendingSheetHandoff}
+          opening={openingHandoff}
+          onClose={() => {
+            if (!openingHandoff) setPendingSheetHandoff(null);
+          }}
+          onConfirm={(params) => {
+            void confirmHandoff(params).then((opened) => {
+              if (opened) {
+                setPendingSheetHandoff(null);
+                onClose();
+              }
+            });
+          }}
         />
       </SafeAreaView>
     </Modal>
@@ -753,8 +802,8 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   }, []);
 
   const handleConfirmHandoff = useCallback(
-    async (params: ConfirmAffiliateOpenParams) => {
-      if (openingHandoff) return;
+    async (params: ConfirmAffiliateOpenParams): Promise<boolean> => {
+      if (openingHandoff) return false;
       setOpeningHandoff(true);
       const {
         priceLabel: _priceLabel,
@@ -764,6 +813,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
       try {
         await openAffiliateLink(trackingParams, openURL);
         if (isActive()) setHandoffParams(null);
+        return true;
       } catch {
         if (isActive()) {
           Alert.alert(
@@ -771,6 +821,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
             'Please try again or check your connection. Your trip stays saved in Faroway.'
           );
         }
+        return false;
       } finally {
         if (isActive()) setOpeningHandoff(false);
       }
@@ -782,10 +833,12 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   const handoffContextValue = useMemo<BookingHandoffContextValue>(
     () => ({
       tripId: resolvedTripId,
+      openingHandoff,
       startHandoff: handleStartHandoff,
+      confirmHandoff: handleConfirmHandoff,
       fallbackReview: () => reviewSavedTripBooking(resolvedTripId, openURL),
     }),
-    [resolvedTripId, handleStartHandoff]
+    [resolvedTripId, openingHandoff, handleStartHandoff, handleConfirmHandoff]
   );
 
   useFocusEffect(
@@ -1841,7 +1894,7 @@ const styles = StyleSheet.create({
   dayTabNumber: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#64748b',
+    color: colors.surface[600],
     marginBottom: 2,
   },
   dayTabNumberSelected: {

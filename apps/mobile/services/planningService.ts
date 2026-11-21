@@ -1,3 +1,4 @@
+import { normalizeBudgetTier } from '@faroway/constants';
 import { readTravelerRequirements } from '../lib/travelerRequirements';
 import { resolveFlightSearchPreferences } from '../lib/flightOrigin';
 import type { SearchInput } from '@faroway/types';
@@ -45,7 +46,7 @@ export async function createAndStartTrip(
     start_date: input.startDate,
     end_date: input.endDate,
     travelers: input.travelers,
-    budget: input.budget || 'moderate',
+    budget: normalizeBudgetTier(input.budget) ?? 'moderate',
     preferences: {
       travelerType: input.travelerType,
       ...flightPreferences,

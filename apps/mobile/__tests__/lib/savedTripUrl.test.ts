@@ -24,6 +24,7 @@ it.each([
   'https://user:password@staging.faroway.ai',
   'https://user@staging.faroway.ai',
   'https://api.faroway.ai',
+  'https://api-staging.faroway.ai',
 ])('rejects unsafe configured origin %s without falling back to production', (origin) => {
   jest.replaceProperty(api, 'WEB_BASE_URL', origin);
   expect(savedTripReviewUrl(id)).toBeNull();

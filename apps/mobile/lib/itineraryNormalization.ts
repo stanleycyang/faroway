@@ -332,7 +332,11 @@ export function transformItineraryDays(apiDays: any[]): TripDay[] {
 export function transformApiHotel(h: any): Hotel | undefined {
   if (!h || typeof h !== 'object' || Array.isArray(h) || !displayText(h.name)) return undefined;
 
-  const bookingUrl = displayText(h.affiliateUrl) || displayText(h.bookingUrl);
+  const bookingUrl =
+    displayText(h.affiliateUrl) ||
+    displayText(h.bookingUrl) ||
+    displayText(h.bookingInfo?.bookingUrl) ||
+    undefined;
   return {
     id: displayText(h.id) || `hotel_${Date.now()}`,
     name: displayText(h.name),
