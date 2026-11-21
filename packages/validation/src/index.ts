@@ -70,6 +70,38 @@ export const tripStatusSchema = z.enum([
 
 export const budgetLevelSchema = z.enum(['budget', 'moderate', 'luxury']);
 
+export const budgetTierInputSchema = z.preprocess((val) => {
+  if (typeof val !== 'string') return val;
+  const key = val.trim().toLowerCase();
+  if (key === 'comfort' || key === 'mid_range' || key === 'mid-range') {
+    return 'moderate';
+  }
+  return key;
+}, budgetLevelSchema);
+
+export const travelVibeIdSchema = z.enum([
+  'adventure',
+  'relaxation',
+  'culture',
+  'foodie',
+  'nightlife',
+  'nature',
+  'romantic',
+  'family',
+  'budget',
+  'luxury',
+  'solo',
+  'wellness',
+  'shopping',
+  'photography',
+]);
+
+export const normalizedTravelVibeSchema = z.preprocess((val) => {
+  if (typeof val !== 'string') return val;
+  const key = val.trim().toLowerCase();
+  return key === 'cultural' ? 'culture' : key;
+}, travelVibeIdSchema);
+
 export const travelerTypeSchema = z.enum(['solo', 'couple', 'family', 'friends', 'business']);
 
 export const createTripSchema = z
@@ -195,8 +227,49 @@ export const searchInputSchema = z.object({
 // Affiliate Schemas
 // =============================================================================
 
+export const affiliatePartnerIdSchema = z.enum([
+  'viator',
+  'getyourguide',
+  'travelpayouts',
+  'stay22',
+  'booking',
+  'expedia',
+  'safetywing',
+  'airalo',
+  'klook',
+  'discovercars',
+  'hostelworld',
+  'duffel',
+  'tripadvisor',
+  'opentable',
+  'skyscanner',
+  'ivisa',
+  'wise',
+]);
+
+export const affiliateClickItemTypeSchema = z.enum([
+  'hotel',
+  'activity',
+  'restaurant',
+  'flight',
+  'transport',
+]);
+
+export const affiliateClickSourceSchema = z.enum([
+  'search_results',
+  'trip_view',
+  'itinerary',
+  'email',
+  'shared_trip',
+  'blog',
+  'destination_guide',
+  'tool',
+  'booking_checklist',
+  'on_trip',
+]);
+
 export const trackClickSchema = z.object({
-  itemType: z.enum(['hotel', 'activity', 'restaurant', 'flight']),
+  itemType: affiliateClickItemTypeSchema,
   itemId: z.string().min(1),
   itemName: z.string().min(1),
   affiliatePartner: z.string().min(1),
@@ -205,7 +278,22 @@ export const trackClickSchema = z.object({
   tripId: z.string().optional(),
   price: z.number().optional(),
   currency: z.string().optional(),
-  source: z.enum(['search_results', 'trip_view', 'itinerary', 'email']).optional(),
+  source: affiliateClickSourceSchema.optional(),
+  clickId: z.string().max(200).optional(),
+  placement: z.string().max(100).optional(),
+  campaign: z.string().max(200).optional(),
+});
+
+export const conversionWebhookSchema = z.object({
+  partner: affiliatePartnerIdSchema,
+  clickId: z.string().min(1).max(200),
+  externalTransactionId: z.string().min(1).max(200),
+  status: z.enum(['pending', 'confirmed', 'canceled', 'refunded']).default('confirmed'),
+  bookingAmount: z.number().nonnegative().optional(),
+  commissionAmount: z.number().nonnegative().optional(),
+  currency: z.string().trim().min(3).max(3).toUpperCase().default('USD'),
+  occurredAt: dateSchema.optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 // =============================================================================
@@ -222,3 +310,6 @@ export type UpdatePreferencesInput = z.infer<typeof updatePreferencesSchema>;
 export type TripQuery = z.infer<typeof tripQuerySchema>;
 export type SearchInputValidated = z.infer<typeof searchInputSchema>;
 export type TrackClickInput = z.infer<typeof trackClickSchema>;
+export type TravelVibeIdInput = z.infer<typeof travelVibeIdSchema>;
+export type AffiliatePartnerIdInput = z.infer<typeof affiliatePartnerIdSchema>;
+export type ConversionWebhookInput = z.infer<typeof conversionWebhookSchema>;
