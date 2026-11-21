@@ -833,6 +833,88 @@ describe("Multi-Partner Affiliate Deep-Link & Essentials Engine", () => {
         currency: "USD",
       });
     }
+
+    // 6. Space-separated North American postal/ZIP multi-segment disambiguation
+    for (const canadianPostalDest of [
+      "Toronto, ON M5V 2T6, CA",
+      "London, ON N6A 3K7, CA",
+      "Montreal, QC H2Y 1C6, CA",
+      "Vancouver, BC V6B 1A1, CA",
+      "Calgary, AB T2P 1J9, CA",
+      "Toronto, ON M5V2T6, CA",
+      "London, ON N6A 3K7",
+      "Victoria, BC V8W 1P6",
+    ]) {
+      expect(resolveDestinationTravelMeta(canadianPostalDest)).toMatchObject({
+        iso2: "CA",
+        airaloSlug: "canada-esim",
+        currency: "CAD",
+      });
+    }
+
+    const torontoPostalEssentials = buildTripEssentials({
+      destination: "Toronto, ON M5V 2T6, CA",
+      sourceCurrency: "USD",
+    });
+    expect(torontoPostalEssentials.esim.url).toBe(
+      "https://www.airalo.com/canada-esim",
+    );
+    expect(torontoPostalEssentials.visa.url).toBe(
+      "https://www.ivisa.com/apply-online?destination=Canada",
+    );
+    expect(torontoPostalEssentials.fx.url).toBe(
+      "https://wise.com/us/currency-converter/usd-to-cad-rate?source=USD&target=CAD",
+    );
+
+    for (const usZipDest of [
+      "Ontario, CA 91764",
+      "Paris, TX 75460",
+      "Los Angeles, CA 90001",
+      "Los Angeles, CA 90001-1234",
+      "New Brunswick, NJ 08901",
+    ]) {
+      expect(resolveDestinationTravelMeta(usZipDest)).toMatchObject({
+        iso2: "US",
+        airaloSlug: "united-states-esim",
+        currency: "USD",
+      });
+    }
+
+    const ontarioCaZipEssentials = buildTripEssentials({
+      destination: "Ontario, CA 91764",
+      sourceCurrency: "USD",
+    });
+    expect(ontarioCaZipEssentials.esim.url).toBe(
+      "https://www.airalo.com/united-states-esim",
+    );
+    expect(ontarioCaZipEssentials.visa.url).toBe(
+      "https://www.ivisa.com/apply-online?destination=United+States",
+    );
+    expect(ontarioCaZipEssentials.fx.url).toBe(
+      "https://wise.com/us/travel-money/",
+    );
+
+    // Non-postal phrases starting with 2-letter tokens (e.g. "la", "on", "in") must not false-match
+    for (const nonPostalPhrase of ["Paris, la Défense", "Paris, in 2026"]) {
+      expect(resolveDestinationTravelMeta(nonPostalPhrase)).toMatchObject({
+        iso2: "FR",
+        airaloSlug: "france-esim",
+        currency: "EUR",
+      });
+    }
+    expect(resolveDestinationTravelMeta("London, on the Thames")).toBeNull();
+    expect(
+      resolveDestinationTravelMeta("London, on the Thames, UK"),
+    ).toMatchObject({
+      iso2: "GB",
+      airaloSlug: "united-kingdom-esim",
+      currency: "GBP",
+    });
+    expect(resolveDestinationTravelMeta("New York, in 2026")).toMatchObject({
+      iso2: "US",
+      airaloSlug: "united-states-esim",
+      currency: "USD",
+    });
   });
 
   it("rejects impossible calendar dates in buildGYGAffiliateUrl and omits inverted end/return dates across builders", () => {

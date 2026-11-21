@@ -404,6 +404,14 @@ const NON_COUNTRY_SUBREGION_PATTERNS = [
   /\bnew\s+england\b/gi,
 ] as const;
 
+const TRAILING_SUBREGION_POSTAL_RE =
+  /^([a-z]{2})(?:\s+(?:\d{5}(?:-\d{4})?|[a-z]\d[a-z](?:(?:\s+|-)?\d[a-z]\d)?))?$/;
+
+function extractTrailingSubregionAbbr(segment: string): string | null {
+  const match = TRAILING_SUBREGION_POSTAL_RE.exec(segment);
+  return match?.[1] ?? null;
+}
+
 function stripNonCountrySubregions(text: string): string {
   let sanitized = text;
   for (const pattern of NON_COUNTRY_SUBREGION_PATTERNS) {
@@ -501,16 +509,19 @@ export function resolveDestinationTravelMeta(
     }
   }
 
-  // 3. Trailing-segment 2-letter Canadian province / US state abbreviations.
+  // 3. Trailing-segment 2-letter Canadian province / US state abbreviations
+  // (standalone or followed by a North American postal/ZIP code).
   // Check Canadian province abbreviations before US state abbreviations so
-  // "<City>, <CanadianProvinceAbbr>, CA" resolves to Canada instead of California ("ca").
+  // "<City>, <CanadianProvinceAbbr>[ <POSTAL>], CA" resolves to Canada instead of California ("ca").
   for (let i = trailingSegments.length - 1; i >= 0; i--) {
-    if (CANADIAN_PROVINCE_ABBR_SET.has(trailingSegments[i])) {
+    const abbr = extractTrailingSubregionAbbr(trailingSegments[i]);
+    if (abbr && CANADIAN_PROVINCE_ABBR_SET.has(abbr)) {
       return findCountryMeta("Canada");
     }
   }
   for (let i = trailingSegments.length - 1; i >= 0; i--) {
-    if (US_STATE_ABBR_SET.has(trailingSegments[i])) {
+    const abbr = extractTrailingSubregionAbbr(trailingSegments[i]);
+    if (abbr && US_STATE_ABBR_SET.has(abbr)) {
       return findCountryMeta("United States");
     }
   }
