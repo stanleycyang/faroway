@@ -501,13 +501,16 @@ export function resolveDestinationTravelMeta(
     }
   }
 
-  // 3. Trailing-segment 2-letter Canadian province / US state abbreviations
+  // 3. Trailing-segment 2-letter Canadian province / US state abbreviations.
+  // Check Canadian province abbreviations before US state abbreviations so
+  // "<City>, <CanadianProvinceAbbr>, CA" resolves to Canada instead of California ("ca").
   for (let i = trailingSegments.length - 1; i >= 0; i--) {
-    const seg = trailingSegments[i];
-    if (CANADIAN_PROVINCE_ABBR_SET.has(seg)) {
+    if (CANADIAN_PROVINCE_ABBR_SET.has(trailingSegments[i])) {
       return findCountryMeta("Canada");
     }
-    if (US_STATE_ABBR_SET.has(seg)) {
+  }
+  for (let i = trailingSegments.length - 1; i >= 0; i--) {
+    if (US_STATE_ABBR_SET.has(trailingSegments[i])) {
       return findCountryMeta("United States");
     }
   }

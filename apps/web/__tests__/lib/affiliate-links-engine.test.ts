@@ -785,6 +785,54 @@ describe("Multi-Partner Affiliate Deep-Link & Essentials Engine", () => {
       airaloSlug: "australia-esim",
       currency: "AUD",
     });
+
+    // 5. "<City>, <CanadianProvinceAbbr>, CA" must resolve to Canada, not California ("ca"),
+    // while "<City>, CA" ("Ontario, CA", "Los Angeles, CA") and explicit US suffixes stay US
+    for (const canadianCityProvCa of [
+      "London, ON, CA",
+      "Toronto, ON, CA",
+      "Vancouver, BC, CA",
+      "Montreal, QC, CA",
+      "St. John's, NL, CA",
+      "Charlottetown, PE, CA",
+      "Halifax, NS, CA",
+    ]) {
+      expect(resolveDestinationTravelMeta(canadianCityProvCa)).toMatchObject({
+        iso2: "CA",
+        airaloSlug: "canada-esim",
+        currency: "CAD",
+      });
+    }
+
+    const torontoEssentials = buildTripEssentials({
+      destination: "Toronto, ON, CA",
+      sourceCurrency: "USD",
+    });
+    expect(torontoEssentials.esim.url).toBe(
+      "https://www.airalo.com/canada-esim",
+    );
+    expect(torontoEssentials.visa.url).toBe(
+      "https://www.ivisa.com/apply-online?destination=Canada",
+    );
+    expect(torontoEssentials.fx.url).toBe(
+      "https://wise.com/us/currency-converter/usd-to-cad-rate?source=USD&target=CAD",
+    );
+
+    for (const usCaDisambig of [
+      "Ontario, CA",
+      "Los Angeles, CA",
+      "Los Angeles, CA, US",
+      "Los Angeles, CA, USA",
+      "Ontario, CA, US",
+      "Portland, ME, US",
+      "Austin, TX, US",
+    ]) {
+      expect(resolveDestinationTravelMeta(usCaDisambig)).toMatchObject({
+        iso2: "US",
+        airaloSlug: "united-states-esim",
+        currency: "USD",
+      });
+    }
   });
 
   it("rejects impossible calendar dates in buildGYGAffiliateUrl and omits inverted end/return dates across builders", () => {
