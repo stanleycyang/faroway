@@ -35,6 +35,8 @@ export interface DestinationSuggestion {
   suggestedVibes: string[];
   suggestedBudget: BudgetTier;
   suggestedDays: number;
+  startDate?: string;
+  endDate?: string;
 }
 
 export interface SuggestDestinationsInput {
@@ -639,7 +641,7 @@ export async function parseDreamTripPrompt(
       import('../services/request'),
     ]);
     const authHeaders = await getAuthHeaders().catch(() => ({}) as Record<string, string>);
-    if (options?.signal?.aborted) return local;
+    if (!authHeaders.Authorization || options?.signal?.aborted) return local;
 
     const apiData = await requestWithTimeout(
       `${API_BASE_URL}/api/trips/parse-prompt`,
@@ -678,7 +680,29 @@ export async function parseDreamTripPrompt(
         ).slice(0, 5)
       : [];
 
-    const apiRequirements = travelerRequirementsSchema.safeParse(raw.requirements);
+    const rawReqs =
+      raw.requirements && typeof raw.requirements === 'object'
+        ? raw.requirements
+        : Array.isArray(raw.allergies) ||
+            Array.isArray(raw.dietaryPreferences) ||
+            Array.isArray(raw.accessibility) ||
+            typeof raw.mobilityNotes === 'string'
+          ? {
+              allergies: Array.isArray(raw.allergies) ? raw.allergies : [],
+              dietaryPreferences: Array.isArray(raw.dietaryPreferences)
+                ? raw.dietaryPreferences
+                : [],
+              accessibility: Array.isArray(raw.accessibility) ? raw.accessibility : [],
+              mobilityNotes: typeof raw.mobilityNotes === 'string' ? raw.mobilityNotes : '',
+            }
+          : undefined;
+    const apiRequirements = travelerRequirementsSchema.safeParse(rawReqs);
+    const hasApiRequirements =
+      apiRequirements.success &&
+      (apiRequirements.data.allergies.length > 0 ||
+        apiRequirements.data.dietaryPreferences.length > 0 ||
+        apiRequirements.data.accessibility.length > 0 ||
+        apiRequirements.data.mobilityNotes.trim().length > 0);
 
     const rawDestObj =
       raw.destination && typeof raw.destination === 'object' && !Array.isArray(raw.destination)
@@ -718,20 +742,27 @@ export async function parseDreamTripPrompt(
         ? (raw.budget as BudgetTier)
         : local.budget;
 
+    const rawDays =
+      typeof raw.durationDays === 'number'
+        ? raw.durationDays
+        : typeof raw.days === 'number'
+          ? raw.days
+          : undefined;
+
     const merged = {
       destination: apiDestination,
       country: apiCountry,
       startDate: isIsoDate(raw.startDate) ? raw.startDate : local.startDate,
       endDate: isIsoDate(raw.endDate) ? raw.endDate : local.endDate,
       days:
-        typeof raw.days === 'number' && Number.isFinite(raw.days) && raw.days >= 1 && raw.days <= 30
-          ? Math.round(raw.days)
+        rawDays !== undefined && Number.isFinite(rawDays) && rawDays >= 1 && rawDays <= 30
+          ? Math.round(rawDays)
           : local.days,
       travelers: travelersCandidate,
       travelerType,
       budget,
       vibes: apiVibes.length > 0 ? apiVibes : local.vibes,
-      requirements: apiRequirements.success ? apiRequirements.data : local.requirements,
+      requirements: hasApiRequirements ? apiRequirements.data : local.requirements,
     };
 
     return {
@@ -1320,7 +1351,7 @@ export async function suggestDestinations(
   options?: { signal?: AbortSignal; timeoutMs?: number }
 ): Promise<DestinationSuggestion[]> {
   const local = suggestDestinationsLocal(input);
-  if (!input.query.trim()) return local;
+  if (input.query.trim().length < 2) return local;
 
   try {
     const [{ API_BASE_URL }, { getAuthHeaders }, { requestWithTimeout }] = await Promise.all([
@@ -1363,18 +1394,24 @@ export async function suggestDestinations(
       if (!item || typeof item !== 'object') continue;
       const record = item as Record<string, unknown>;
       const destination =
-        typeof record.destination === 'string' && record.destination.trim()
-          ? record.destination.trim()
-          : typeof record.city === 'string' && record.city.trim()
-            ? record.city.trim()
-            : '';
+        typeof record.name === 'string' && record.name.trim()
+          ? record.name.trim()
+          : typeof record.destination === 'string' && record.destination.trim()
+            ? record.destination.trim()
+            : typeof record.city === 'string' && record.city.trim()
+              ? record.city.trim()
+              : '';
       const country = typeof record.country === 'string' ? record.country.trim() : '';
       if (!destination) continue;
 
       const vibes = Array.isArray(record.suggestedVibes)
-        ? record.suggestedVibes
-            .filter((v): v is string => typeof v === 'string' && VALID_VIBE_IDS.has(v))
-            .slice(0, 3)
+        ? Array.from(
+            new Set(
+              record.suggestedVibes
+                .map((v) => (v === 'cultural' ? 'culture' : v))
+                .filter((v): v is string => typeof v === 'string' && VALID_VIBE_IDS.has(v))
+            )
+          ).slice(0, 3)
         : ['culture', 'foodie'];
       const budget =
         record.suggestedBudget === 'budget' ||
@@ -1382,17 +1419,29 @@ export async function suggestDestinations(
         record.suggestedBudget === 'luxury'
           ? record.suggestedBudget
           : 'moderate';
+      const prefill =
+        record.prefillParams && typeof record.prefillParams === 'object'
+          ? (record.prefillParams as Record<string, unknown>)
+          : null;
+      const prefillStart = prefill && isIsoDate(prefill.startDate) ? prefill.startDate : undefined;
+      const prefillEnd = prefill && isIsoDate(prefill.endDate) ? prefill.endDate : undefined;
 
       normalized.push({
         id:
-          typeof record.id === 'string' && record.id
-            ? record.id
-            : destination.toLowerCase().replace(/\s+/g, '-'),
+          typeof record.slug === 'string' && record.slug
+            ? record.slug
+            : typeof record.id === 'string' && record.id
+              ? record.id
+              : destination.toLowerCase().replace(/\s+/g, '-'),
         destination,
         country,
         image:
           catalogDestinationImage(country ? `${destination}, ${country}` : destination) ??
-          (typeof record.image === 'string' ? record.image : undefined),
+          (typeof record.heroImage === 'string'
+            ? record.heroImage
+            : typeof record.image === 'string'
+              ? record.image
+              : undefined),
         whyItFits:
           typeof record.whyItFits === 'string' && record.whyItFits.trim()
             ? record.whyItFits.trim()
@@ -1409,6 +1458,7 @@ export async function suggestDestinations(
           record.suggestedDays >= 1
             ? Math.min(21, Math.round(record.suggestedDays))
             : (input.days ?? 5),
+        ...(prefillStart && prefillEnd ? { startDate: prefillStart, endDate: prefillEnd } : {}),
       });
       if (normalized.length >= 3) break;
     }

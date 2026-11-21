@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { createClientFromRequest } from "@/lib/supabase/server";
+import { requireUserIdFromRequest } from "@/lib/auth/middleware";
 import { checkRateLimitAsync } from "@/lib/security/rate-limit";
-import { parseJsonRequest } from "@/lib/api/json";
 import {
   DreamTripPromptInputSchema,
   VALID_ACCESSIBILITY,
@@ -24,10 +23,12 @@ import { validateApiKey } from "@/lib/ai/client";
 import {
   PLANNING_MODEL,
   PLANNING_PROVIDER_OPTIONS,
+  isStalePlanningDisclosure,
 } from "@/lib/ai/planning-disclosure";
 import { withAbortTimeout } from "@/lib/search/runtime";
 
 const LLM_ENHANCE_TIMEOUT_MS = 3_500;
+const MAX_BODY_BYTES = 4_096;
 
 const LlmExtractionSchema = z.object({
   destinationName: z.string().trim().min(2).max(120).optional(),
@@ -53,9 +54,13 @@ const LlmExtractionSchema = z.object({
 function shouldEnhanceWithLlm(
   prompt: string,
   deterministic: ParsedDreamTrip,
+  headers: Headers,
 ): boolean {
   if (!validateApiKey()) return false;
   if (process.env.NODE_ENV === "test") return false;
+  // Never transmit user prompt text (which may include health/allergy/accessibility details)
+  // to Google Gemini / Vercel AI Gateway without explicit AI disclosure consent.
+  if (isStalePlanningDisclosure(headers)) return false;
   // Enhance only when the deterministic parse has gaps or the prompt is rich/nuanced.
   return (
     !deterministic.destination ||
@@ -82,7 +87,6 @@ async function enhanceWithLlm(
         schema: LlmExtractionSchema,
         maxOutputTokens: 400,
         maxRetries: 0,
-        timeout: LLM_ENHANCE_TIMEOUT_MS,
         abortSignal,
         system:
           "Extract structured travel preferences from a single trip request. Only populate fields explicitly stated or clearly implied by the user. Never invent allergies, dietary needs, accessibility needs, or dates not grounded in the prompt.",
@@ -97,31 +101,45 @@ async function enhanceWithLlm(
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = await createClientFromRequest(request);
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+    const auth = await requireUserIdFromRequest(request);
+    if (auth instanceof NextResponse) return auth;
 
-    if (authError || !user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const rl = await checkRateLimitAsync(`parse-prompt:${user.id}`, {
+    const rl = await checkRateLimitAsync(`parse-prompt:${auth.userId}`, {
       maxRequests: 30,
       windowMs: 60_000,
+      failClosed: true,
     });
     if (!rl.allowed) {
       return NextResponse.json(
         { error: "Too many requests. Please wait a moment and try again." },
-        { status: 429 },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(Math.max(1, Math.ceil(rl.resetIn / 1000))),
+          },
+        },
       );
     }
 
-    const jsonResult = await parseJsonRequest(request);
-    if (!jsonResult.ok) return jsonResult.response;
+    const rawText = await request.text().catch(() => null);
+    if (rawText === null || rawText.length > MAX_BODY_BYTES) {
+      return NextResponse.json(
+        { error: "Please provide a shorter trip description." },
+        { status: 400 },
+      );
+    }
 
-    const validated = DreamTripPromptInputSchema.safeParse(jsonResult.data);
+    let body: unknown = null;
+    try {
+      body = JSON.parse(rawText);
+    } catch {
+      return NextResponse.json(
+        { error: "Invalid JSON request body." },
+        { status: 400 },
+      );
+    }
+
+    const validated = DreamTripPromptInputSchema.safeParse(body);
     if (!validated.success) {
       return NextResponse.json(
         {
@@ -138,7 +156,7 @@ export async function POST(request: NextRequest) {
     const deterministic = parseDreamTripPrompt(prompt, now);
 
     let parsed = deterministic;
-    if (shouldEnhanceWithLlm(prompt, deterministic)) {
+    if (shouldEnhanceWithLlm(prompt, deterministic, request.headers)) {
       try {
         const enhancement = await enhanceWithLlm(prompt, now);
         if (enhancement) {

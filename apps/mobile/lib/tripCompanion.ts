@@ -17,25 +17,41 @@ export interface UpNextStatus {
   scheduledLabel: string | null;
 }
 
+function parseExplicitClockMinutes(raw: string | undefined): number | null {
+  if (!raw) return null;
+  const match = /^(\d{1,2}):(\d{2})\s*(am|pm)?$/i.exec(raw.trim());
+  if (!match) return null;
+  let hour = Number(match[1]);
+  const minute = Number(match[2]);
+  const period = match[3]?.toLowerCase();
+  if (period === 'pm' && hour < 12) hour += 12;
+  if (period === 'am' && hour === 12) hour = 0;
+  if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
+    return hour * 60 + minute;
+  }
+  return null;
+}
+
 function slotBaseMinutes(activity: Activity): number {
+  const explicitClock = parseExplicitClockMinutes(activity.time);
+  if (explicitClock !== null) return explicitClock;
   const slot = (activity.scheduleSlot || activity.time || '').toLowerCase();
   if (slot.includes('breakfast') || slot.includes('morning')) return 9 * 60 + 30;
   if (slot.includes('lunch') || slot.includes('afternoon')) return 13 * 60 + 30;
   if (slot.includes('dinner') || slot.includes('evening') || slot.includes('night')) {
     return 18 * 60 + 30;
   }
-  const clockMatch = /^(\d{1,2}):(\d{2})\s*(am|pm)?$/i.exec(slot.trim());
-  if (clockMatch) {
-    let hour = Number(clockMatch[1]);
-    const minute = Number(clockMatch[2]);
-    const period = clockMatch[3]?.toLowerCase();
-    if (period === 'pm' && hour < 12) hour += 12;
-    if (period === 'am' && hour === 12) hour = 0;
-    if (hour >= 0 && hour <= 23 && minute >= 0 && minute <= 59) {
-      return hour * 60 + minute;
-    }
-  }
   return 11 * 60;
+}
+
+function slotDisplayLabel(activity: Activity): string {
+  const slot = (activity.scheduleSlot || activity.time || '').toLowerCase();
+  if (slot.includes('morning') || slot.includes('breakfast')) return 'Morning';
+  if (slot.includes('afternoon') || slot.includes('lunch')) return 'Afternoon';
+  if (slot.includes('evening') || slot.includes('dinner') || slot.includes('night')) {
+    return 'Evening';
+  }
+  return 'Scheduled';
 }
 
 export function formatMinutesAsClock(totalMinutes: number): string {
@@ -47,12 +63,12 @@ export function formatMinutesAsClock(totalMinutes: number): string {
   return `${h12}:${String(mins).padStart(2, '0')} ${period}`;
 }
 
-function resolveActivityStartMinutes(
+function resolveActivityTiming(
   day: TripDay,
   activity: Activity,
   indexInDay: number,
   shiftMinutes: number
-): number {
+): { startMin: number; hasClockTime: boolean } {
   const proposal = day.timingProposal;
   if (proposal) {
     const eventId =
@@ -61,13 +77,35 @@ function resolveActivityStartMinutes(
         : `activity:${activity.id}`;
     const event = proposal.events.find((e) => e.id === eventId);
     if (event && Number.isFinite(event.startMinute)) {
-      return Math.min(23 * 60 + 45, Math.max(0, event.startMinute + shiftMinutes));
+      return {
+        startMin: Math.min(23 * 60 + 45, Math.max(0, event.startMinute + shiftMinutes)),
+        hasClockTime: true,
+      };
     }
   }
-  return Math.min(
-    23 * 60 + 45,
-    Math.max(0, slotBaseMinutes(activity) + indexInDay * 35 + shiftMinutes)
-  );
+  const explicitClock = parseExplicitClockMinutes(activity.time);
+  if (explicitClock !== null) {
+    return {
+      startMin: Math.min(23 * 60 + 45, Math.max(0, explicitClock + shiftMinutes)),
+      hasClockTime: true,
+    };
+  }
+  return {
+    startMin: Math.min(
+      23 * 60 + 45,
+      Math.max(0, slotBaseMinutes(activity) + indexInDay * 35 + shiftMinutes)
+    ),
+    hasClockTime: false,
+  };
+}
+
+function calendarDayOrdinalUtc(isoDate: string): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(isoDate.trim());
+  if (!match) return null;
+  const y = Number(match[1]);
+  const m = Number(match[2]);
+  const d = Number(match[3]);
+  return Math.floor(Date.UTC(y, m - 1, d) / 86_400_000);
 }
 
 export function detectUpNextStop(
@@ -90,7 +128,9 @@ export function detectUpNextStop(
 
   const today = localCalendarDate(now);
   const phase = tripDatePhase(trip.startDate, trip.endDate, today);
-  const matchingDayIndex = trip.days.findIndex((d) => d.date === today);
+  const matchingDayIndex = trip.days.findIndex(
+    (d) => typeof d.date === 'string' && d.date.slice(0, 10) === today
+  );
 
   if (phase !== 'in-progress' && matchingDayIndex === -1) {
     return empty;
@@ -98,13 +138,19 @@ export function detectUpNextStop(
 
   let dayIndex = matchingDayIndex;
   if (dayIndex === -1) {
-    const start = parseTripDate(trip.startDate);
-    const todayDate = parseTripDate(today);
-    if (!Number.isNaN(start.getTime()) && !Number.isNaN(todayDate.getTime())) {
-      const diff = Math.floor((todayDate.getTime() - start.getTime()) / 86_400_000);
-      dayIndex = Math.max(0, Math.min(totalDays - 1, diff));
+    const startOrd = calendarDayOrdinalUtc(trip.startDate);
+    const todayOrd = calendarDayOrdinalUtc(today);
+    if (startOrd !== null && todayOrd !== null) {
+      dayIndex = Math.max(0, Math.min(totalDays - 1, todayOrd - startOrd));
     } else {
-      dayIndex = 0;
+      const start = parseTripDate(trip.startDate);
+      const todayDate = parseTripDate(today);
+      if (!Number.isNaN(start.getTime()) && !Number.isNaN(todayDate.getTime())) {
+        const diff = Math.round((todayDate.getTime() - start.getTime()) / 86_400_000);
+        dayIndex = Math.max(0, Math.min(totalDays - 1, diff));
+      } else {
+        dayIndex = 0;
+      }
     }
   }
 
@@ -125,7 +171,7 @@ export function detectUpNextStop(
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const scheduled = stops.map((stop, idx) => ({
     stop,
-    startMin: resolveActivityStartMinutes(activeDay, stop, idx, shiftMinutes),
+    ...resolveActivityTiming(activeDay, stop, idx, shiftMinutes),
   }));
 
   // Pick the first stop that hasn't clearly passed (allow 45m grace window so current stop stays highlighted)
@@ -136,6 +182,9 @@ export function detectUpNextStop(
 
   const chosen = scheduled[nextIdx];
   const following = scheduled[nextIdx + 1]?.stop ?? null;
+  const baseLabel = chosen.hasClockTime
+    ? formatMinutesAsClock(chosen.startMin)
+    : slotDisplayLabel(chosen.stop);
 
   return {
     isActiveTrip: true,
@@ -144,10 +193,7 @@ export function detectUpNextStop(
     totalDays,
     nextStop: chosen.stop,
     followingStop: following,
-    scheduledLabel:
-      shiftMinutes > 0
-        ? `${formatMinutesAsClock(chosen.startMin)} (+${shiftMinutes}m)`
-        : formatMinutesAsClock(chosen.startMin),
+    scheduledLabel: shiftMinutes > 0 ? `${baseLabel} (+${shiftMinutes}m)` : baseLabel,
   };
 }
 
@@ -252,8 +298,10 @@ export function shiftDaySchedule(
 
   const labelsByActivityId: Record<string, string> = {};
   day.activities.forEach((activity, index) => {
-    const shifted = resolveActivityStartMinutes(day, activity, index, normalizedOffset);
-    labelsByActivityId[activity.id] = formatMinutesAsClock(shifted);
+    const resolved = resolveActivityTiming(day, activity, index, normalizedOffset);
+    labelsByActivityId[activity.id] = resolved.hasClockTime
+      ? formatMinutesAsClock(resolved.startMin)
+      : `${slotDisplayLabel(activity)} (+${normalizedOffset}m)`;
   });
 
   return {
@@ -738,9 +786,21 @@ export function applyLocalTripRemix(
       };
     }
 
-    const updatedActivities = targetDay.activities.map((a) =>
-      a.id === morningStop.id ? { ...a, scheduleSlot: 'afternoon' as const, time: 'afternoon' } : a
-    );
+    const shiftedStop = {
+      ...morningStop,
+      scheduleSlot: 'afternoon' as const,
+      time: 'afternoon',
+    };
+    const remaining = targetDay.activities.filter((a) => a.id !== morningStop.id);
+    const firstEveningIndex = remaining.findIndex((a) => a.scheduleSlot === 'evening');
+    const updatedActivities =
+      firstEveningIndex === -1
+        ? [...remaining, shiftedStop]
+        : [
+            ...remaining.slice(0, firstEveningIndex),
+            shiftedStop,
+            ...remaining.slice(firstEveningIndex),
+          ];
     const updatedDays = days.map((d, idx) =>
       idx === dayIndex
         ? {
@@ -807,20 +867,26 @@ export async function runTripCopilotAction(params: {
   action: CopilotActionType;
   dayNumber: number;
   slot?: 'morning' | 'afternoon' | 'evening';
+  targetDayNumber?: number;
+  targetSlot?: 'morning' | 'afternoon' | 'evening';
   stopName?: string;
   instruction?: string;
-  previousApiSnapshot?: unknown;
+  expectedUpdatedAt?: string;
+  undoRevisionId?: string;
   signal?: AbortSignal;
-}): Promise<CopilotRemixResult & { apiSnapshot?: unknown }> {
+}): Promise<CopilotRemixResult & { undoRevisionId?: string | null; updatedAt?: string }> {
   const {
     tripId,
     days,
     action,
     dayNumber,
     slot,
+    targetDayNumber,
+    targetSlot,
     stopName,
     instruction,
-    previousApiSnapshot,
+    expectedUpdatedAt,
+    undoRevisionId,
     signal,
   } = params;
 
@@ -836,17 +902,23 @@ export async function runTripCopilotAction(params: {
     ]);
     const headers = await getAuthHeaders();
     if (signal?.aborted) {
-      return { applied: false, summary: 'Cancelled', diff: [], source: 'local' };
+      return { applied: false, summary: 'Cancelled', diff: [], source: 'api' };
     }
 
     const resolvedSlot = slot ?? (action === 'shift_day' ? 'morning' : undefined);
+    const instructionMentionsDay = Boolean(instruction && /\bday\s+\d+\b/i.test(instruction));
+    const includeDayNumber = !(action === 'natural_language' && instructionMentionsDay);
+
     const payload: Record<string, unknown> = {
       ...(action !== 'natural_language' ? { action } : {}),
-      dayNumber,
+      ...(includeDayNumber ? { dayNumber } : {}),
       ...(resolvedSlot ? { slot: resolvedSlot } : {}),
+      ...(targetDayNumber !== undefined ? { targetDayNumber } : {}),
+      ...(targetSlot ? { targetSlot } : {}),
       ...(stopName ? { stopName } : {}),
       ...(instruction ? { prompt: instruction } : {}),
-      ...(previousApiSnapshot ? { previousItinerarySnapshot: previousApiSnapshot } : {}),
+      ...(expectedUpdatedAt ? { expectedUpdatedAt } : {}),
+      ...(undoRevisionId ? { undoRevisionId } : {}),
     };
 
     const data = await requestWithTimeout(
@@ -877,7 +949,13 @@ export async function runTripCopilotAction(params: {
     );
 
     if (!data || typeof data !== 'object') {
-      return applyLocalTripRemix(days, { action, dayNumber, stopName, instruction });
+      return {
+        applied: false,
+        summary: 'Could not read co-pilot response.',
+        diff: [],
+        notice: 'Your saved itinerary is unchanged. Please try again.',
+        source: 'api',
+      };
     }
 
     const record = data as Record<string, unknown>;
@@ -901,26 +979,24 @@ export async function runTripCopilotAction(params: {
       updatedDays: updatedDays && updatedDays.length > 0 ? updatedDays : undefined,
       previousDays: days.map((d) => ({ ...d, activities: d.activities.map((a) => ({ ...a })) })),
       notice: typeof record.notice === 'string' ? record.notice : undefined,
-      apiSnapshot: record.previousItinerarySnapshot,
+      undoRevisionId: typeof record.undoRevisionId === 'string' ? record.undoRevisionId : null,
+      updatedAt: typeof record.updatedAt === 'string' ? record.updatedAt : undefined,
       source: 'api',
     };
   } catch (error) {
     if ((error as Error)?.name === 'AbortError') {
       throw error;
     }
-    // Fall back to strictly grounded local handling for relax_day / shift_day, or honest error notice
-    const fallback = applyLocalTripRemix(days, { action, dayNumber, stopName, instruction });
-    if (fallback.applied) {
-      return {
-        ...fallback,
-        notice: 'Applied locally. Pull down to sync once online.',
-      };
-    }
+    // For remote saved trips, never silently diverge from server state on network/auth/conflict errors.
     return {
-      ...fallback,
+      applied: false,
+      summary: 'Could not save this edit right now.',
+      diff: [],
       notice:
-        fallback.notice ??
-        (error instanceof Error ? error.message : 'Could not reach Faroway right now.'),
+        error instanceof Error
+          ? error.message
+          : 'Check your connection and try again. Your saved trip is unchanged.',
+      source: 'api',
     };
   }
 }

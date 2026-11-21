@@ -143,23 +143,20 @@ export async function saveTravelerMemory(
 ): Promise<TravelerMemoryDefaults | null> {
   const existing = await loadTravelerMemory(userId);
   const merged = normalizeTravelerMemory({
-    homeAirport: patch.homeAirport !== undefined ? patch.homeAirport : existing?.homeAirport,
-    defaultBudget:
-      patch.defaultBudget !== undefined ? patch.defaultBudget : existing?.defaultBudget,
-    defaultPace: patch.defaultPace !== undefined ? patch.defaultPace : existing?.defaultPace,
+    homeAirport: 'homeAirport' in patch ? patch.homeAirport : existing?.homeAirport,
+    defaultBudget: 'defaultBudget' in patch ? patch.defaultBudget : existing?.defaultBudget,
+    defaultPace: 'defaultPace' in patch ? patch.defaultPace : existing?.defaultPace,
     defaultTravelerType:
-      patch.defaultTravelerType !== undefined
-        ? patch.defaultTravelerType
-        : existing?.defaultTravelerType,
+      'defaultTravelerType' in patch ? patch.defaultTravelerType : existing?.defaultTravelerType,
     defaultVibes:
-      patch.defaultVibes !== undefined ? patch.defaultVibes : (existing?.defaultVibes ?? []),
+      'defaultVibes' in patch ? (patch.defaultVibes ?? []) : (existing?.defaultVibes ?? []),
     requirements:
-      patch.requirements !== undefined
-        ? patch.requirements
+      'requirements' in patch
+        ? (patch.requirements ?? EMPTY_REQUIREMENTS)
         : (existing?.requirements ?? EMPTY_REQUIREMENTS),
     avoidEarlyStarts:
-      patch.avoidEarlyStarts !== undefined
-        ? patch.avoidEarlyStarts
+      'avoidEarlyStarts' in patch
+        ? Boolean(patch.avoidEarlyStarts)
         : (existing?.avoidEarlyStarts ?? false),
     updatedAt: new Date().toISOString(),
   });

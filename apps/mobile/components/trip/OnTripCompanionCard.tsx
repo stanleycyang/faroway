@@ -1,5 +1,15 @@
-import React, { useMemo, useState } from 'react';
-import { Linking, Modal, Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  Alert,
+  Linking,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as WebBrowser from 'expo-web-browser';
@@ -35,7 +45,11 @@ async function openExternalMapsUrl(url: string) {
   } catch {
     // Fall back to in-app browser below.
   }
-  await WebBrowser.openBrowserAsync(url).catch(() => undefined);
+  try {
+    await WebBrowser.openBrowserAsync(url);
+  } catch {
+    Alert.alert('Could not open Maps', 'Please open your Maps app to view directions.');
+  }
 }
 
 export function OnTripCompanionCard({
@@ -48,13 +62,22 @@ export function OnTripCompanionCard({
 }: OnTripCompanionCardProps) {
   const [showTaxiModal, setShowTaxiModal] = useState(false);
   const [showChecklist, setShowChecklist] = useState(false);
+  const [clockTick, setClockTick] = useState(() => Date.now());
+
+  useEffect(() => {
+    const interval = setInterval(() => setClockTick(Date.now()), 60_000);
+    return () => clearInterval(interval);
+  }, []);
 
   const upNext = useMemo(
-    () => detectUpNextStop(trip, new Date(), scheduleShiftMinutes),
-    [trip, scheduleShiftMinutes]
+    () => detectUpNextStop(trip, new Date(clockTick), scheduleShiftMinutes),
+    [trip, clockTick, scheduleShiftMinutes]
   );
 
-  const readiness: BookingReadinessSummary = useMemo(() => computeBookingReadiness(trip), [trip]);
+  const readiness: BookingReadinessSummary = useMemo(
+    () => computeBookingReadiness(trip, new Date(clockTick)),
+    [trip, clockTick]
+  );
 
   const currentDay = trip.days[selectedDayIndex];
   const outdoorStops = useMemo(() => findOutdoorStopsOnDay(currentDay), [currentDay]);
@@ -283,7 +306,10 @@ export function OnTripCompanionCard({
               </TouchableOpacity>
             </View>
 
-            <View style={styles.taxiCardBody}>
+            <ScrollView
+              contentContainerStyle={styles.taxiCardBody}
+              showsVerticalScrollIndicator={false}
+            >
               <Text style={styles.taxiPhrase}>{taxiCard.driverPhrase}</Text>
               <Text style={styles.taxiVenueName}>{taxiCard.venueName}</Text>
               <View style={styles.taxiAddressBox}>
@@ -293,7 +319,7 @@ export function OnTripCompanionCard({
                 <Text style={styles.taxiDestinationText}>{taxiCard.destinationLine}</Text>
               </View>
               <Text style={styles.taxiFootnote}>{taxiCard.englishSubtitle}</Text>
-            </View>
+            </ScrollView>
           </SafeAreaView>
         </SafeModal>
       ) : null}

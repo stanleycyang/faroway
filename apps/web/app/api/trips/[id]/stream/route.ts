@@ -373,6 +373,8 @@ async function pollAndStream(
   let sentDining = false;
   let sentTransport = false;
   let sentSpecComplete = false;
+  let sentDayOneJson = "";
+  const sentDiscoverySignatures = new Map<string, string>();
   let lastItineraryJson = "";
   const MAX_POLLS = 180;
 
@@ -427,6 +429,82 @@ async function pollAndStream(
     }
 
     const ir = filterViatorDisplay(search.intermediate_results || {});
+
+    // Forward grounded per-stage discoveries emitted by plan-trip.ts
+    const rawDiscoveries: Array<Record<string, unknown>> = [];
+    if (Array.isArray(ir.discoveries)) {
+      for (const item of ir.discoveries) {
+        if (item && typeof item === "object" && !Array.isArray(item)) {
+          rawDiscoveries.push(item as Record<string, unknown>);
+        }
+      }
+    }
+    for (const key of [
+      "discovery_orchestrator",
+      "discovery_hotels",
+      "discovery_activities",
+      "discovery_dining",
+      "discovery_transport",
+      "discovery_enrichment",
+      "discovery_aggregator",
+    ] as const) {
+      const val = (ir as Record<string, unknown>)[key];
+      if (Array.isArray(val)) {
+        for (const item of val) {
+          if (item && typeof item === "object" && !Array.isArray(item)) {
+            rawDiscoveries.push(item as Record<string, unknown>);
+          }
+        }
+      } else if (val && typeof val === "object") {
+        rawDiscoveries.push(val as Record<string, unknown>);
+      }
+    }
+    const newlyArrivedDiscoveries: Array<Record<string, unknown>> = [];
+    for (const disc of rawDiscoveries) {
+      const discId = typeof disc.id === "string" ? disc.id : "";
+      if (!discId) continue;
+      const sig = JSON.stringify(disc);
+      if (sentDiscoverySignatures.get(discId) !== sig) {
+        sentDiscoverySignatures.set(discId, sig);
+        newlyArrivedDiscoveries.push(disc);
+      }
+    }
+    if (newlyArrivedDiscoveries.length > 0) {
+      send("discovery", { discoveries: newlyArrivedDiscoveries });
+    }
+
+    if (ir.dayOne && typeof ir.dayOne === "object") {
+      const normalizedDayOne = normalizeItineraryDays([ir.dayOne]);
+      const dayOne = normalizedDayOne?.[0] as
+        | Record<string, unknown>
+        | undefined;
+      const dayOneStops = dayOne
+        ? (["morning", "afternoon", "evening"] as const).reduce((sum, slot) => {
+            const block = dayOne[slot] as
+              | { activities?: unknown[]; meals?: unknown[]; meal?: unknown }
+              | undefined;
+            const acts = Array.isArray(block?.activities)
+              ? block.activities.length
+              : 0;
+            const meals = Array.isArray(block?.meals)
+              ? block.meals.length
+              : block?.meal
+                ? 1
+                : 0;
+            return sum + acts + meals;
+          }, 0)
+        : 0;
+      if (dayOne && dayOneStops > 0) {
+        const dayOneJson = JSON.stringify(dayOne);
+        if (dayOneJson !== sentDayOneJson) {
+          sentDayOneJson = dayOneJson;
+          send("day_ready", {
+            day: dayOne,
+            discovery: (ir as Record<string, unknown>).discovery_aggregator,
+          });
+        }
+      }
+    }
 
     if (!sentHotels && ir.hotels) {
       const hotels = ir.hotels as HotelInput[];

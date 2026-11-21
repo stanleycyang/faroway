@@ -26,6 +26,7 @@ export interface Trip {
     | "completed"
     | "failed";
   search_id?: string;
+  plan_revision_id?: string | null;
   is_shared?: boolean;
   share_token?: string | null;
   created_at: string;

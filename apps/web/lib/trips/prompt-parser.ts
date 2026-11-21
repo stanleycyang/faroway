@@ -468,6 +468,18 @@ function extractDates(
   const monthPattern = Object.keys(MONTH_MAP).join("|");
   const durationDays = extractDuration(text);
 
+  function isValidIsoCalendarDate(iso: string): boolean {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return false;
+    const [y, m, d] = iso.split("-").map(Number);
+    if (m < 1 || m > 12 || d < 1 || d > 31) return false;
+    const dt = new Date(Date.UTC(y, m - 1, d));
+    return (
+      dt.getUTCFullYear() === y &&
+      dt.getUTCMonth() === m - 1 &&
+      dt.getUTCDate() === d
+    );
+  }
+
   // 1. Explicit ISO date range: 2026-10-10 to 2026-10-15
   const isoRange = text.match(
     /\b(\d{4}-\d{2}-\d{2})\s*(?:to|through|thru|–|—|-)\s*(\d{4}-\d{2}-\d{2})\b/i,
@@ -475,7 +487,11 @@ function extractDates(
   if (isoRange) {
     const start = isoRange[1];
     const end = isoRange[2];
-    if (end >= start) {
+    if (
+      isValidIsoCalendarDate(start) &&
+      isValidIsoCalendarDate(end) &&
+      end >= start
+    ) {
       const days = Math.min(30, Math.max(1, diffDaysInclusive(start, end)));
       const monthIdx = Number(start.slice(5, 7)) - 1;
       return {
@@ -1405,10 +1421,13 @@ export function summarizeParsedDreamTrip(parsed: ParsedDreamTrip): string[] {
   if (parsed.startDate && parsed.endDate) {
     const [, sm, sd] = parsed.startDate.split("-").map(Number);
     const [, em, ed] = parsed.endDate.split("-").map(Number);
-    const startLabel = `${MONTH_NAMES[sm - 1].slice(0, 3)} ${sd}`;
-    const endLabel =
-      sm === em ? `${ed}` : `${MONTH_NAMES[em - 1].slice(0, 3)} ${ed}`;
-    summary.push(`${startLabel}–${endLabel}`);
+    const startMonth = MONTH_NAMES[sm - 1];
+    const endMonth = MONTH_NAMES[em - 1];
+    if (startMonth && endMonth && Number.isFinite(sd) && Number.isFinite(ed)) {
+      const startLabel = `${startMonth.slice(0, 3)} ${sd}`;
+      const endLabel = sm === em ? `${ed}` : `${endMonth.slice(0, 3)} ${ed}`;
+      summary.push(`${startLabel}–${endLabel}`);
+    }
   }
   if (parsed.travelers !== undefined || parsed.travelerType) {
     const parts: string[] = [];

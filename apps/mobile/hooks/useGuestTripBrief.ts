@@ -20,14 +20,17 @@ export function useGuestTripBrief(incoming: Partial<TripInput> | null = null) {
   const revision = useUserStore((state) => state.accountRevision);
   const [message, setMessage] = useState<string | null>(null);
   const [restored, setRestored] = useState(false);
+  const [settled, setSettled] = useState(false);
   const [discardUnreadable, setDiscardUnreadable] = useState<null | (() => Promise<void>)>(null);
   useEffect(() => {
     if (!initialized || loading) return;
     setMessage(null);
     setDiscardUnreadable(null);
     setRestored(false);
+    setSettled(false);
     if (user) {
       void clearGuestTripBrief().catch(() => {});
+      setSettled(true);
       return;
     }
     let active = true;
@@ -80,8 +83,10 @@ export function useGuestTripBrief(incoming: Partial<TripInput> | null = null) {
         }
         ready = true;
         persist();
+        setSettled(true);
       })
       .catch((error: unknown) => {
+        if (active && current()) setSettled(true);
         if (active && current() && error instanceof GuestBriefReadError) {
           let discarding = false;
           setDiscardUnreadable(() => async () => {
@@ -121,5 +126,5 @@ export function useGuestTripBrief(incoming: Partial<TripInput> | null = null) {
       unsubscribe();
     };
   }, [initialized, loading, user, revision, incomingKey]);
-  return { message, restored, discardUnreadable };
+  return { message, restored, discardUnreadable, settled };
 }

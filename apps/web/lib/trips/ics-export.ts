@@ -34,6 +34,7 @@ const MAX_DAY_MINUTE = 23 * 60 + 59;
 
 function escapeIcsText(value: string): string {
   return value
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
     .replace(/\\/g, "\\\\")
     .replace(/\r\n|\r|\n/g, "\\n")
     .replace(/;/g, "\\;")
@@ -417,13 +418,22 @@ export function buildTripIcsContent(
     if (!dayDate) continue;
 
     const scheduledEvents = scheduleDayEvents(day, destination);
+    const dateStamp = `${dayDate.year}${String(dayDate.month).padStart(2, "0")}${String(dayDate.day).padStart(2, "0")}`;
     for (const event of scheduledEvents) {
-      const uid = `faroway-${destSlug}-d${dayNumber}-${event.uidSuffix}@faroway.ai`;
+      const safeStart = Math.max(
+        0,
+        Math.min(MAX_DAY_MINUTE - 15, event.startMinute),
+      );
+      const safeEnd = Math.min(
+        MAX_DAY_MINUTE,
+        Math.max(safeStart + 15, event.endMinute),
+      );
+      const uid = `faroway-${destSlug}-${dateStamp}-d${dayNumber}-${event.uidSuffix}@faroway.ai`;
       lines.push("BEGIN:VEVENT");
       lines.push(foldIcsLine(`UID:${uid}`));
       lines.push(`DTSTAMP:${dtstamp}`);
-      lines.push(`DTSTART:${formatLocalDateTime(dayDate, event.startMinute)}`);
-      lines.push(`DTEND:${formatLocalDateTime(dayDate, event.endMinute)}`);
+      lines.push(`DTSTART:${formatLocalDateTime(dayDate, safeStart)}`);
+      lines.push(`DTEND:${formatLocalDateTime(dayDate, safeEnd)}`);
       lines.push(foldIcsLine(`SUMMARY:${escapeIcsText(event.summary)}`));
       if (event.location) {
         lines.push(foldIcsLine(`LOCATION:${escapeIcsText(event.location)}`));

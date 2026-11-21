@@ -210,7 +210,32 @@ export function TripDetailClient({
     useState(false);
   const [copilotQuickAction, setCopilotQuickAction] =
     useState<CopilotQuickTrigger | null>(null);
+  const [copilotBusy, setCopilotBusy] = useState(false);
   const copilotNonceRef = useRef(0);
+  const handleCopilotItineraryUpdated = useCallback(
+    (
+      updated: GeneratedItinerary,
+      updatedAt?: string,
+      planRevision?: string | null,
+    ) => {
+      setItinerary(updated);
+      setShareUrl(null);
+      setTrip((prev) =>
+        prev
+          ? {
+              ...prev,
+              ...(updatedAt ? { updated_at: updatedAt } : {}),
+              ...(planRevision !== undefined
+                ? { plan_revision_id: planRevision }
+                : {}),
+              is_shared: false,
+              share_token: null,
+            }
+          : prev,
+      );
+    },
+    [],
+  );
   const triggerCopilotQuickAction = useCallback(
     (action: {
       type: "swap_stop" | "relax_day" | "rain_backup";
@@ -1170,6 +1195,7 @@ export function TripDetailClient({
                     activeDayNumber={
                       displayDays[activeDay]?.dayNumber ?? activeDay + 1
                     }
+                    disabled={copilotBusy}
                     onTriggerRainSwap={(dayNumber) =>
                       triggerCopilotQuickAction({
                         type: "rain_backup",
@@ -1185,18 +1211,11 @@ export function TripDetailClient({
                       displayDays[activeDay]?.dayNumber ?? activeDay + 1
                     }
                     expectedUpdatedAt={trip.updated_at}
+                    expectedPlanRevision={trip.plan_revision_id ?? null}
                     pendingAction={copilotQuickAction}
-                    onItineraryUpdated={(updated, updatedAt) => {
-                      setItinerary(updated);
-                      if (updatedAt) {
-                        setTrip((prev) =>
-                          prev ? { ...prev, updated_at: updatedAt } : prev,
-                        );
-                      }
-                    }}
-                    onSyncRequested={() => {
-                      void fetchTrip();
-                    }}
+                    onBusyChange={setCopilotBusy}
+                    onItineraryUpdated={handleCopilotItineraryUpdated}
+                    onSyncRequested={fetchTrip}
                   />
                 </>
               )}

@@ -396,14 +396,11 @@ describe("Trip Surgical Co-Pilot Engine", () => {
     expect(relaxed.applied).toBe(true);
     expect(relaxed.updatedItinerary.days[0].morning.activities).toHaveLength(1);
 
-    const undone = applyCopilotEdit(relaxed.updatedItinerary, {
-      action: "undo",
-      previousItinerarySnapshot:
-        relaxed.previousItinerarySnapshot as unknown as Record<
-          string,
-          unknown
-        > & { days: Record<string, unknown>[] },
-    });
+    const undone = applyCopilotEdit(
+      relaxed.updatedItinerary,
+      { action: "undo" },
+      { undoTargetItinerary: relaxed.previousItinerarySnapshot },
+    );
     expect(undone.applied).toBe(true);
     expect(undone.updatedItinerary.days[0].morning.activities).toHaveLength(2);
     expect(undone.updatedItinerary.days[0].morning.activities[0].name).toBe(
@@ -411,7 +408,7 @@ describe("Trip Surgical Co-Pilot Engine", () => {
     );
   });
 
-  it("classifies indoor and outdoor stops accurately", () => {
+  it("classifies indoor and outdoor stops accurately without substring false positives", () => {
     expect(isOutdoorStop({ name: "Tuileries Garden Walk" })).toBe(true);
     expect(isOutdoorStop({ name: "Louvre Museum" })).toBe(false);
     expect(isIndoorStop({ name: "Louvre Museum" })).toBe(true);
@@ -421,6 +418,15 @@ describe("Trip Surgical Co-Pilot Engine", () => {
     expect(
       isIndoorStop({ name: "Marché des Enfants Rouges Covered Market" }),
     ).toBe(true);
+    // Word-boundary guards: "Spanish" must not match "spa"; "parking" must not match "park"
+    expect(isIndoorStop({ name: "Spanish Quarter Walking Tour" })).toBe(false);
+    expect(isOutdoorStop({ name: "Spanish Quarter Walking Tour" })).toBe(true);
+    expect(
+      isOutdoorStop({
+        name: "Atelier Light Hall",
+        description: "Modern cultural venue with free parking",
+      }),
+    ).toBe(false);
   });
 
   it("parses natural-language co-pilot prompts into structured intents", () => {
@@ -544,19 +550,42 @@ describe("POST /api/trips/[id]/copilot route guards", () => {
     routeMocks.getSupabase.mockReset();
   });
 
+  const VALID_TRIP_ID = "11111111-1111-4111-8111-111111111111";
+
   it("rejects unauthenticated requests with 401", async () => {
     routeMocks.requireUserIdFromRequest.mockResolvedValue(
       NextResponse.json({ error: "Unauthorized" }, { status: 401 }),
     );
-    const req = new NextRequest("http://localhost/api/trips/trip-1/copilot", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "relax_day", dayNumber: 1 }),
-    });
+    const req = new NextRequest(
+      `http://localhost/api/trips/${VALID_TRIP_ID}/copilot`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "relax_day", dayNumber: 1 }),
+      },
+    );
     const res = await copilotPost(req, {
-      params: Promise.resolve({ id: "trip-1" }),
+      params: Promise.resolve({ id: VALID_TRIP_ID }),
     });
     expect(res.status).toBe(401);
+  });
+
+  it("rejects non-UUID trip IDs with 400", async () => {
+    routeMocks.requireUserIdFromRequest.mockResolvedValue({
+      userId: "owner-1",
+    });
+    const req = new NextRequest(
+      "http://localhost/api/trips/not-a-uuid/copilot",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "relax_day", dayNumber: 1 }),
+      },
+    );
+    const res = await copilotPost(req, {
+      params: Promise.resolve({ id: "not-a-uuid" }),
+    });
+    expect(res.status).toBe(400);
   });
 
   it("returns 404 when trip does not belong to user", async () => {
@@ -577,13 +606,16 @@ describe("POST /api/trips/[id]/copilot route guards", () => {
         }),
       }),
     });
-    const req = new NextRequest("http://localhost/api/trips/trip-1/copilot", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "relax_day", dayNumber: 1 }),
-    });
+    const req = new NextRequest(
+      `http://localhost/api/trips/${VALID_TRIP_ID}/copilot`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "relax_day", dayNumber: 1 }),
+      },
+    );
     const res = await copilotPost(req, {
-      params: Promise.resolve({ id: "trip-1" }),
+      params: Promise.resolve({ id: VALID_TRIP_ID }),
     });
     expect(res.status).toBe(404);
   });
@@ -600,7 +632,7 @@ describe("POST /api/trips/[id]/copilot route guards", () => {
             eq: () => ({
               single: async () => ({
                 data: {
-                  id: "trip-1",
+                  id: VALID_TRIP_ID,
                   user_id: "owner-1",
                   destination: "Paris",
                   start_date: "2026-06-10",
@@ -615,7 +647,7 @@ describe("POST /api/trips/[id]/copilot route guards", () => {
                       id: "itin-1",
                       days: itinerary.days,
                       overview: itinerary.overview,
-                      total_cost: 900,
+                      total_cost: { amount: 900, currency: "EUR" },
                       packing_list: [],
                       general_tips: [],
                       generated_at: "2026-05-01T00:00:00Z",
@@ -629,27 +661,30 @@ describe("POST /api/trips/[id]/copilot route guards", () => {
         }),
       }),
     });
-    const req = new NextRequest("http://localhost/api/trips/trip-1/copilot", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "relax_day",
-        dayNumber: 1,
-        expectedUpdatedAt: "2026-05-01T00:00:00Z",
-      }),
-    });
+    const req = new NextRequest(
+      `http://localhost/api/trips/${VALID_TRIP_ID}/copilot`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "relax_day",
+          dayNumber: 1,
+          expectedUpdatedAt: "2026-05-01T00:00:00Z",
+        }),
+      },
+    );
     const res = await copilotPost(req, {
-      params: Promise.resolve({ id: "trip-1" }),
+      params: Promise.resolve({ id: VALID_TRIP_ID }),
     });
     expect(res.status).toBe(409);
   });
 
-  it("persists an applied edit for the verified owner and returns before/after diff", async () => {
+  it("persists an applied edit atomically via RPC for the verified owner and returns before/after diff", async () => {
     routeMocks.requireUserIdFromRequest.mockResolvedValue({
       userId: "owner-1",
     });
     const itinerary = makeItinerary();
-    const savedDays: unknown[] = [];
+    const rpcCalls: Array<{ fn: string; params: Record<string, unknown> }> = [];
 
     routeMocks.getSupabase.mockReturnValue({
       from: (table: string) => {
@@ -660,7 +695,7 @@ describe("POST /api/trips/[id]/copilot route guards", () => {
                 eq: () => ({
                   single: async () => ({
                     data: {
-                      id: "trip-1",
+                      id: VALID_TRIP_ID,
                       user_id: "owner-1",
                       destination: "Paris",
                       start_date: "2026-06-10",
@@ -675,7 +710,7 @@ describe("POST /api/trips/[id]/copilot route guards", () => {
                           id: "itin-1",
                           days: itinerary.days,
                           overview: itinerary.overview,
-                          total_cost: 900,
+                          total_cost: { amount: 900, currency: "EUR" },
                           packing_list: [],
                           general_tips: [],
                           generated_at: "2026-05-01T00:00:00Z",
@@ -687,58 +722,51 @@ describe("POST /api/trips/[id]/copilot route guards", () => {
                 }),
               }),
             }),
-            update: (payload: { updated_at: string }) => ({
-              eq: () => ({
-                eq: () => ({
-                  eq: () => ({
-                    select: () => ({
-                      maybeSingle: async () => ({
-                        data: { updated_at: payload.updated_at },
-                        error: null,
-                      }),
-                    }),
-                  }),
-                }),
-              }),
-            }),
-          };
-        }
-        if (table === "itineraries") {
-          return {
-            update: (payload: { days: unknown }) => {
-              savedDays.push(payload.days);
-              return {
-                eq: () => ({
-                  eq: async () => ({ error: null }),
-                }),
-              };
-            },
           };
         }
         throw new Error(`Unexpected table ${table}`);
       },
+      rpc: async (fn: string, params: Record<string, unknown>) => {
+        rpcCalls.push({ fn, params });
+        return {
+          data: {
+            state: "applied",
+            planRevision: "22222222-2222-4222-8222-222222222222",
+            undoRevisionId: "33333333-3333-4333-8333-333333333333",
+            revision: "2026-05-02T12:05:00Z",
+          },
+          error: null,
+        };
+      },
     });
 
-    const req = new NextRequest("http://localhost/api/trips/trip-1/copilot", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "relax_day",
-        dayNumber: 1,
-        expectedUpdatedAt: "2026-05-02T12:00:00Z",
-      }),
-    });
+    const req = new NextRequest(
+      `http://localhost/api/trips/${VALID_TRIP_ID}/copilot`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "relax_day",
+          dayNumber: 1,
+          expectedUpdatedAt: "2026-05-02T12:00:00Z",
+        }),
+      },
+    );
     const res = await copilotPost(req, {
-      params: Promise.resolve({ id: "trip-1" }),
+      params: Promise.resolve({ id: VALID_TRIP_ID }),
     });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.applied).toBe(true);
     expect(body.diff).toHaveLength(1);
     expect(body.diff[0].action).toBe("removed");
-    expect(
-      body.previousItinerarySnapshot.days[0].morning.activities,
-    ).toHaveLength(2);
-    expect(savedDays).toHaveLength(1);
+    expect(body.undoRevisionId).toBe("33333333-3333-4333-8333-333333333333");
+    expect(body.updatedItinerary.totalEstimatedCost).toEqual({
+      amount: 900,
+      currency: "EUR",
+    });
+    expect(rpcCalls).toHaveLength(1);
+    expect(rpcCalls[0].fn).toBe("apply_trip_copilot_edit");
+    expect(rpcCalls[0].params.p_mode).toBe("apply");
   });
 });

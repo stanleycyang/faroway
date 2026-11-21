@@ -109,12 +109,20 @@ describe('tripCompanion', () => {
     expect(upNext.nextStop?.title).toBe('Senso-ji Temple');
     expect(upNext.followingStop?.title).toBe('Asakusa Ramen Bar');
 
-    // Shifting +60m updates scheduled labels without mutating the original day
+    // Shifting +60m updates scheduled labels without inventing fake clock times or mutating the original day
     const shifted = shiftDaySchedule(trip.days[0], 60);
     expect(shifted.offsetMinutes).toBe(60);
-    expect(shifted.labelsByActivityId['a1']).toBe('10:30 AM');
+    expect(shifted.labelsByActivityId['a1']).toBe('Morning (+60m)');
     expect(shifted.bannerText).toContain('+60 min');
     expect(trip.days[0].activities[0].time).toBe('morning');
+
+    // Explicit clock times shift numerically when present
+    const timedDay = {
+      ...trip.days[0],
+      activities: [makeActivity({ id: 'a1', time: '09:30', scheduleSlot: 'morning' })],
+    };
+    const shiftedTimed = shiftDaySchedule(timedDay, 60);
+    expect(shiftedTimed.labelsByActivityId['a1']).toBe('10:30 AM');
 
     // Non-active date returns isActiveTrip: false
     const beforeTrip = new Date(2026, 8, 1, 10, 0, 0);

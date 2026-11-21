@@ -119,21 +119,6 @@ function buildCloneTripHref(params: {
   return query ? `/create?${query}` : "/create";
 }
 
-function getOrCreateVoterId(): string {
-  const storageKey = "faroway:shared-voter-id";
-  try {
-    const existing = window.localStorage.getItem(storageKey);
-    if (existing && /^[a-zA-Z0-9_-]{4,80}$/.test(existing)) {
-      return existing;
-    }
-    const generated = `v_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 10)}`;
-    window.localStorage.setItem(storageKey, generated);
-    return generated;
-  } catch {
-    return `v_${Date.now().toString(36)}`;
-  }
-}
-
 function readStoredVotes(token: string): UserVotes {
   try {
     const raw = window.localStorage.getItem(`faroway:shared-votes:${token}`);
@@ -212,17 +197,17 @@ export function SharedTripView({
   const [userVotes, setUserVotes] = useState<UserVotes>({});
   const userVotesRef = useRef<UserVotes>({});
   const activeTokenRef = useRef<string | null>(null);
-  const voterIdRef = useRef<string | null>(null);
   const pendingRef = useRef<Set<string>>(new Set());
+  const voteVersionRef = useRef(0);
 
   useEffect(() => {
     let active = true;
     activeTokenRef.current = shareToken;
     pendingRef.current.clear();
+    const mountVersion = voteVersionRef.current;
     const controller = new AbortController();
 
     async function syncReactions() {
-      voterIdRef.current = getOrCreateVoterId();
       const localVotes = readStoredVotes(shareToken);
       const seededCounts: ReactionCounts = {};
       for (const [stopKey, entry] of Object.entries(localVotes)) {
@@ -248,7 +233,7 @@ export function SharedTripView({
               persisted?: boolean;
             })
           : null;
-        if (!active) return;
+        if (!active || voteVersionRef.current !== mountVersion) return;
 
         userVotesRef.current = localVotes;
         setUserVotes(localVotes);
@@ -268,7 +253,7 @@ export function SharedTripView({
           setCounts(seededCounts);
         }
       } catch {
-        if (!active) return;
+        if (!active || voteVersionRef.current !== mountVersion) return;
         userVotesRef.current = localVotes;
         setUserVotes(localVotes);
         if (Object.keys(seededCounts).length > 0) {
@@ -292,6 +277,7 @@ export function SharedTripView({
       const lockKey = `${requestToken}:${stopKey}:${reaction}`;
       if (pendingRef.current.has(lockKey)) return;
       pendingRef.current.add(lockKey);
+      const requestVersion = ++voteVersionRef.current;
 
       const currentVotes = userVotesRef.current;
       const wasVoted = Boolean(currentVotes[stopKey]?.[reaction]);
@@ -321,8 +307,6 @@ export function SharedTripView({
       });
 
       try {
-        const voterId = voterIdRef.current || getOrCreateVoterId();
-        voterIdRef.current = voterId;
         const res = await fetch(
           `/api/trips/shared/${encodeURIComponent(requestToken)}/reactions`,
           {
@@ -332,7 +316,6 @@ export function SharedTripView({
               stopKey,
               reaction,
               action,
-              voterId,
             }),
           },
         );
@@ -344,7 +327,13 @@ export function SharedTripView({
           };
           if (activeTokenRef.current !== requestToken) return;
           if (payload?.counts && payload.persisted) {
-            setCounts(payload.counts);
+            if (voteVersionRef.current === requestVersion) {
+              setCounts(payload.counts);
+            } else if (payload.counts[stopKey]) {
+              // Another stop was toggled concurrently; reconcile only this stopKey.
+              const stopServerCounts = payload.counts[stopKey];
+              setCounts((prev) => ({ ...prev, [stopKey]: stopServerCounts }));
+            }
           }
         }
       } catch {

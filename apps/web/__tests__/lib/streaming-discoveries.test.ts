@@ -584,10 +584,18 @@ describe("ItineraryGenerationLoader Pillar C UI", () => {
         button.props.onClick();
       });
 
-      expect(onPeekDayOne).toHaveBeenCalledTimes(1);
       const panelText = JSON.stringify(renderer!.toJSON());
       expect(panelText).toContain("Fushimi Inari Dawn Walk");
       expect(panelText).toContain("Nishiki Soba Kitchen");
+      expect(onPeekDayOne).toHaveBeenCalledTimes(0);
+
+      const openViewButton = renderer!.root.findByProps({
+        "data-testid": "open-day-one-view-button",
+      });
+      await act(async () => {
+        openViewButton.props.onClick();
+      });
+      expect(onPeekDayOne).toHaveBeenCalledTimes(1);
 
       const completeHtml = renderToStaticMarkup(
         React.createElement(ItineraryGenerationLoader, {

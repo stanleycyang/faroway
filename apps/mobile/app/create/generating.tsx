@@ -853,7 +853,8 @@ function GenerationSession() {
               {!streaming.isComplete && discoveries.length > 0 ? (
                 <LiveDiscoveryTicker discoveries={discoveries} surface="light" />
               ) : null}
-              {firstStreamedDay ? (
+              {firstStreamedDay &&
+              !preview.blocks.some((block) => block.type === 'ItineraryDay') ? (
                 <DayOnePreviewPanel
                   rawDay={firstStreamedDay}
                   expanded={showDayOnePreview}

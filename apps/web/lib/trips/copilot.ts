@@ -1,15 +1,21 @@
 import { z } from "zod";
-import { differenceInCalendarDays } from "date-fns";
-import type {
-  ActivityResult,
-  GeneratedItinerary,
-  ItineraryActivity,
-  Restaurant,
-  TimeOfDay,
-  TripDay,
+import {
+  isTimingNote,
+  type ActivityResult,
+  type GeneratedItinerary,
+  type ItineraryActivity,
+  type Restaurant,
+  type TimeOfDay,
+  type TripDay,
 } from "@faroway/types";
 import { canDisplayViatorContent } from "@/lib/affiliates/viator-policy";
-import { parseTripDate } from "@/lib/trips/date-duration";
+export {
+  analyzeBookingReadiness,
+  findOnTripUpNext,
+  type BookingReadinessReport,
+  type BookingReadinessStop,
+  type OnTripUpNext,
+} from "@/lib/trips/companion-radar";
 
 export const COPILOT_SLOTS = ["morning", "afternoon", "evening"] as const;
 export type CopilotSlot = (typeof COPILOT_SLOTS)[number];
@@ -45,6 +51,7 @@ export interface CopilotOptions {
   backupPool?: Array<
     ItineraryActivity | ActivityResult | Record<string, unknown>
   >;
+  undoTargetItinerary?: GeneratedItinerary | null;
 }
 
 export const CopilotRequestSchema = z
@@ -57,12 +64,8 @@ export const CopilotRequestSchema = z
     targetSlot: z.enum(COPILOT_SLOTS).optional(),
     stopName: z.string().trim().max(200).optional(),
     expectedUpdatedAt: z.string().min(1).optional(),
-    previousItinerarySnapshot: z
-      .object({
-        days: z.array(z.record(z.string(), z.unknown())),
-      })
-      .passthrough()
-      .optional(),
+    expectedPlanRevision: z.string().uuid().nullable().optional(),
+    undoRevisionId: z.string().uuid().optional(),
   })
   .refine(
     (data) => Boolean(data.action || (data.prompt && data.prompt.length > 0)),
@@ -191,18 +194,44 @@ function activityText(stop: {
     .toLowerCase();
 }
 
+function compileWordPatterns(keywords: readonly string[]): RegExp[] {
+  return keywords.map(
+    (kw) =>
+      new RegExp(
+        `\\b${kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/\s+/g, "\\s+")}\\b`,
+        "i",
+      ),
+  );
+}
+
+const STRONG_INDOOR_PATTERNS = compileWordPatterns(STRONG_INDOOR_KEYWORDS);
+const OUTDOOR_PATTERNS = compileWordPatterns(OUTDOOR_KEYWORDS);
+const INDOOR_TITLE_OVERRIDE_PATTERNS = compileWordPatterns([
+  "covered market",
+  "market hall",
+  "food hall",
+  "museum",
+  "gallery",
+  "aquarium",
+  "indoor",
+]);
+
+function matchesAnyPattern(text: string, patterns: readonly RegExp[]): boolean {
+  return patterns.some((pattern) => pattern.test(text));
+}
+
 export function isIndoorStop(stop: {
   name?: string;
   description?: string;
   category?: string;
   location?: { name?: string };
 }): boolean {
-  const title = (stop.name ?? "").toLowerCase();
+  const title = stop.name ?? "";
   const full = activityText(stop);
-  if (STRONG_INDOOR_KEYWORDS.some((kw) => title.includes(kw))) return true;
+  if (matchesAnyPattern(title, STRONG_INDOOR_PATTERNS)) return true;
   if (
-    STRONG_INDOOR_KEYWORDS.some((kw) => full.includes(kw)) &&
-    !OUTDOOR_KEYWORDS.some((kw) => title.includes(kw))
+    matchesAnyPattern(full, STRONG_INDOOR_PATTERNS) &&
+    !matchesAnyPattern(title, OUTDOOR_PATTERNS)
   ) {
     return true;
   }
@@ -215,25 +244,17 @@ export function isOutdoorStop(stop: {
   category?: string;
   location?: { name?: string };
 }): boolean {
-  const title = (stop.name ?? "").toLowerCase();
+  const title = stop.name ?? "";
   const full = activityText(stop);
 
   // Covered / indoor markets and museums win over generic "market" / "walk" text.
-  if (
-    title.includes("covered market") ||
-    title.includes("market hall") ||
-    title.includes("food hall") ||
-    title.includes("museum") ||
-    title.includes("gallery") ||
-    title.includes("aquarium") ||
-    title.includes("indoor")
-  ) {
+  if (matchesAnyPattern(title, INDOOR_TITLE_OVERRIDE_PATTERNS)) {
     return false;
   }
 
-  if (OUTDOOR_KEYWORDS.some((kw) => title.includes(kw))) return true;
+  if (matchesAnyPattern(title, OUTDOOR_PATTERNS)) return true;
   if (stop.category === "adventure" && !isIndoorStop(stop)) return true;
-  if (!isIndoorStop(stop) && OUTDOOR_KEYWORDS.some((kw) => full.includes(kw))) {
+  if (!isIndoorStop(stop) && matchesAnyPattern(full, OUTDOOR_PATTERNS)) {
     return true;
   }
   return false;
@@ -288,6 +309,20 @@ function isActivityLocked(
   return false;
 }
 
+function getSlotMeals(day: TripDay, slot: CopilotSlot): Restaurant[] {
+  const block = day[slot] as
+    | { meals?: Restaurant[]; meal?: Restaurant }
+    | undefined;
+  if (!block) return [];
+  if (Array.isArray(block.meals) && block.meals.length > 0) return block.meals;
+  if (block.meal) return [block.meal];
+  return [];
+}
+
+function generateFreshPlanItemId(): string {
+  return `item_${crypto.randomUUID().replace(/-/g, "")}`;
+}
+
 function collectUsedIdentifiers(itinerary: GeneratedItinerary): {
   names: Set<string>;
   ids: Set<string>;
@@ -300,8 +335,7 @@ function collectUsedIdentifiers(itinerary: GeneratedItinerary): {
         if (act?.name) names.add(normalizeName(act.name));
         if (act?.id) ids.add(act.id);
       }
-      const meals = Array.isArray(day[slot]?.meals) ? day[slot].meals : [];
-      for (const meal of meals) {
+      for (const meal of getSlotMeals(day, slot)) {
         if (meal?.name) names.add(normalizeName(meal.name));
         if (meal?.id) ids.add(meal.id);
       }
@@ -310,9 +344,21 @@ function collectUsedIdentifiers(itinerary: GeneratedItinerary): {
   return { names, ids };
 }
 
-function clearStaleDayTiming(day: TripDay): void {
+function clearStaleDayTiming(
+  day: TripDay,
+  itinerary?: GeneratedItinerary,
+): void {
   delete day.timingProposal;
   delete day.totalEstimatedCost;
+  if (Array.isArray(day.tips)) {
+    day.tips = day.tips.filter(
+      (tip) => typeof tip === "string" && !isTimingNote(tip),
+    );
+  }
+  day.summary = "Schedule updated. Check travel times and opening hours.";
+  if (itinerary) {
+    itinerary.overview = "";
+  }
 }
 
 function mapCategory(raw: unknown): ItineraryActivity["category"] {
@@ -350,8 +396,11 @@ export function normalizeBackupCandidate(
 
   // Already shaped like ItineraryActivity
   if (
+    typeof item.id === "string" &&
+    item.id.trim().length > 0 &&
     item.estimatedCost &&
     typeof item.estimatedCost === "object" &&
+    !Array.isArray(item.estimatedCost) &&
     item.vibeMatch &&
     typeof item.vibeMatch === "object" &&
     !Array.isArray(item.vibeMatch)
@@ -670,8 +719,8 @@ export function parseCopilotPrompt(
   ) {
     const slotToClear: CopilotSlot =
       slots[0] ??
-      (/\b([2-6]\s*pm|1[4-8]:00|afternoon)\b/i.test(trimmed)
-        ? "morning"
+      (/\b([7-9]\s*pm|19|20|21|22):?00?\b/i.test(trimmed)
+        ? "afternoon"
         : "morning");
     return {
       action: "shift_day",
@@ -825,20 +874,23 @@ function pickLighterDestinationSlot(
     }
   }
 
-  // Next try the following day's lightest slot
-  for (let offset = 1; offset < days.length; offset++) {
-    const idx = (sourceDayIndex + offset) % days.length;
+  // Next try the lightest slot across subsequent future days (never wrap back to Day 1)
+  let bestFuture: {
+    dayIndex: number;
+    slot: CopilotSlot;
+    count: number;
+  } | null = null;
+  for (let idx = sourceDayIndex + 1; idx < days.length; idx++) {
     const day = days[idx];
-    let lightestSlot: CopilotSlot = "afternoon";
-    let minLen = Number.POSITIVE_INFINITY;
     for (const s of COPILOT_SLOTS) {
       const len = getSlotActivities(day, s).length;
-      if (len < minLen) {
-        minLen = len;
-        lightestSlot = s;
+      if (!bestFuture || len < bestFuture.count) {
+        bestFuture = { dayIndex: idx, slot: s, count: len };
       }
     }
-    return { dayIndex: idx, slot: lightestSlot };
+  }
+  if (bestFuture) {
+    return { dayIndex: bestFuture.dayIndex, slot: bestFuture.slot };
   }
 
   // Fallback to same day afternoon/evening even if it already has 2 items
@@ -871,8 +923,13 @@ export function applyCopilotEdit(
 
   const action: CopilotAction =
     request.action ?? parsedIntent?.action ?? "swap_stop";
-  const dayNumber = request.dayNumber ?? parsedIntent?.dayNumber;
-  const slot = request.slot ?? parsedIntent?.slot;
+  const isPromptDriven = Boolean(request.prompt && !request.action);
+  const dayNumber = isPromptDriven
+    ? (parsedIntent?.dayNumber ?? request.dayNumber)
+    : (request.dayNumber ?? parsedIntent?.dayNumber);
+  const slot = isPromptDriven
+    ? (parsedIntent?.slot ?? request.slot)
+    : (request.slot ?? parsedIntent?.slot);
   const targetDayNumber =
     request.targetDayNumber ?? parsedIntent?.targetDayNumber;
   const targetSlot = request.targetSlot ?? parsedIntent?.targetSlot;
@@ -893,13 +950,11 @@ export function applyCopilotEdit(
 
   // ── 1. UNDO ───────────────────────────────────────────────────────────────
   if (action === "undo") {
-    const snap = request.previousItinerarySnapshot as
-      | GeneratedItinerary
-      | undefined;
+    const snap = options.undoTargetItinerary;
     if (!snap || !Array.isArray(snap.days)) {
       return {
         applied: false,
-        summary: "No previous snapshot was provided to undo.",
+        summary: "No previous revision is available to undo.",
         diff: [],
         updatedItinerary: previousSnapshot,
         previousItinerarySnapshot: previousSnapshot,
@@ -1007,12 +1062,13 @@ export function applyCopilotEdit(
 
     const slotBlock = ensureSlot(targetDay, targetSlotFound);
     const oldActivity = slotBlock.activities[targetIdx];
-    const nextActivity: ItineraryActivity = {
+    const nextActivity: TaggedActivity = {
       ...structuredClone(replacement),
       timeOfDay: targetSlotFound,
+      planItemId: generateFreshPlanItemId(),
     };
     slotBlock.activities[targetIdx] = nextActivity;
-    clearStaleDayTiming(targetDay);
+    clearStaleDayTiming(targetDay, updated);
 
     return {
       applied: true,
@@ -1107,7 +1163,7 @@ export function applyCopilotEdit(
     const toRemove = candidates[0];
     const slotBlock = ensureSlot(day, toRemove.slot);
     slotBlock.activities.splice(toRemove.index, 1);
-    clearStaleDayTiming(day);
+    clearStaleDayTiming(day, updated);
 
     return {
       applied: true,
@@ -1158,6 +1214,7 @@ export function applyCopilotEdit(
     const lockedOutdoor: string[] = [];
 
     for (const s of COPILOT_SLOTS) {
+      if (slot && s !== slot) continue;
       const acts = getSlotActivities(day, s);
       acts.forEach((act, idx) => {
         if (!isOutdoorStop(act)) return;
@@ -1202,9 +1259,10 @@ export function applyCopilotEdit(
         continue;
       }
       const slotBlock = ensureSlot(day, target.slot);
-      const nextActivity: ItineraryActivity = {
+      const nextActivity: TaggedActivity = {
         ...structuredClone(indoorBackup),
         timeOfDay: target.slot,
+        planItemId: generateFreshPlanItemId(),
       };
       slotBlock.activities[target.index] = nextActivity;
       used.names.add(normalizeName(nextActivity.name));
@@ -1230,7 +1288,7 @@ export function applyCopilotEdit(
       };
     }
 
-    clearStaleDayTiming(day);
+    clearStaleDayTiming(day, updated);
     const notices: string[] = [];
     if (unswapped.length > 0) {
       notices.push(
@@ -1321,7 +1379,7 @@ export function applyCopilotEdit(
       }
 
       for (const idx of touchedDays) {
-        clearStaleDayTiming(updated.days[idx]);
+        clearStaleDayTiming(updated.days[idx], updated);
       }
 
       return {
@@ -1347,7 +1405,9 @@ export function applyCopilotEdit(
       const needle = stopName.toLowerCase();
       for (let dIdx = 0; dIdx < updated.days.length; dIdx++) {
         const d = updated.days[dIdx];
+        if (dayNumber !== undefined && d.dayNumber !== dayNumber) continue;
         for (const s of COPILOT_SLOTS) {
+          if (slot && s !== slot) continue;
           const acts = getSlotActivities(d, s);
           const idx = acts.findIndex((a) =>
             a.name.toLowerCase().includes(needle),
@@ -1429,8 +1489,8 @@ export function applyCopilotEdit(
     const destBlock = ensureSlot(destDay, destSlot);
     destBlock.activities.push({ ...moved, timeOfDay: destSlot });
 
-    clearStaleDayTiming(srcDay);
-    clearStaleDayTiming(destDay);
+    clearStaleDayTiming(srcDay, updated);
+    clearStaleDayTiming(destDay, updated);
 
     return {
       applied: true,
@@ -1458,288 +1518,4 @@ export function applyCopilotEdit(
     updatedItinerary: previousSnapshot,
     previousItinerarySnapshot: previousSnapshot,
   };
-}
-
-// ── Companion Radar Helpers (Booking Readiness & On-Trip Up Next) ───────────
-
-export interface BookingReadinessStop {
-  name: string;
-  dayNumber: number;
-  reason: string;
-}
-
-export interface BookingReadinessReport {
-  daysUntilTrip: number | null;
-  urgentStops: BookingReadinessStop[];
-  headline: string;
-  urgency: "high" | "medium" | "low" | "on_trip" | "past";
-}
-
-const TIMED_ENTRY_KEYWORDS = [
-  "museum",
-  "gallery",
-  "observation deck",
-  "skytree",
-  "tower",
-  "boat",
-  "cruise",
-  "ferry",
-  "guided tour",
-  "tour",
-  "michelin",
-  "fine dining",
-  "tasting menu",
-  "omakase",
-  "opera",
-  "theater",
-  "theatre",
-  "concert",
-  "aquarium",
-  "palace",
-  "castle",
-  "cathedral",
-  "basilica",
-  "sagrada",
-  "louvre",
-  "uffizi",
-  "colosseum",
-  "alhambra",
-  "teamlab",
-  "ghibli",
-  "shibuya sky",
-  "cooking class",
-];
-
-function classifyTimedEntryReason(
-  item: {
-    name?: string;
-    description?: string;
-    bookingInfo?: { requiresReservation?: boolean; bookingUrl?: string };
-    reservationInfo?: { recommended?: boolean };
-  },
-  isRestaurant: boolean,
-): string | null {
-  if (item.bookingInfo?.requiresReservation || item.bookingInfo?.bookingUrl) {
-    return "Timed-entry or advance ticket recommended";
-  }
-  if (isRestaurant && item.reservationInfo?.recommended) {
-    return "Advance dining reservation recommended";
-  }
-  const text = `${item.name ?? ""} ${item.description ?? ""}`.toLowerCase();
-  const matched = TIMED_ENTRY_KEYWORDS.find((kw) => text.includes(kw));
-  if (!matched) return null;
-  if (
-    ["michelin", "fine dining", "tasting menu", "omakase"].includes(matched)
-  ) {
-    return "Popular dining spot — often books out early";
-  }
-  if (
-    [
-      "boat",
-      "cruise",
-      "ferry",
-      "guided tour",
-      "tour",
-      "cooking class",
-    ].includes(matched)
-  ) {
-    return "Scheduled departure or small-group capacity";
-  }
-  return "Popular timed-entry attraction";
-}
-
-export function analyzeBookingReadiness(
-  itinerary: GeneratedItinerary | null,
-  startDate: string,
-  endDate?: string,
-  now = new Date(),
-): BookingReadinessReport {
-  const urgentStops: BookingReadinessStop[] = [];
-  const seen = new Set<string>();
-
-  for (const day of itinerary?.days ?? []) {
-    for (const slot of COPILOT_SLOTS) {
-      for (const act of getSlotActivities(day, slot)) {
-        if (!act?.name || act.planningIdea) continue;
-        const key = normalizeName(act.name);
-        if (seen.has(key)) continue;
-        const reason = classifyTimedEntryReason(act, false);
-        if (reason) {
-          seen.add(key);
-          urgentStops.push({
-            name: act.name,
-            dayNumber: day.dayNumber,
-            reason,
-          });
-        }
-      }
-      const meals = Array.isArray(day[slot]?.meals) ? day[slot].meals : [];
-      for (const meal of meals) {
-        if (!meal?.name || meal.planningIdea) continue;
-        const key = normalizeName(meal.name);
-        if (seen.has(key)) continue;
-        const reason = classifyTimedEntryReason(meal, true);
-        if (reason) {
-          seen.add(key);
-          urgentStops.push({
-            name: meal.name,
-            dayNumber: day.dayNumber,
-            reason,
-          });
-        }
-      }
-    }
-  }
-
-  const parsedStart = parseTripDate(startDate);
-  const parsedEnd = endDate ? parseTripDate(endDate) : null;
-  const startValid = !Number.isNaN(parsedStart.getTime());
-  const daysUntilTrip = startValid
-    ? differenceInCalendarDays(parsedStart, now)
-    : null;
-
-  let urgency: BookingReadinessReport["urgency"] = "low";
-  if (daysUntilTrip !== null) {
-    const endDiff =
-      parsedEnd && !Number.isNaN(parsedEnd.getTime())
-        ? differenceInCalendarDays(parsedEnd, now)
-        : daysUntilTrip;
-    if (daysUntilTrip <= 0 && endDiff >= 0) {
-      urgency = "on_trip";
-    } else if (endDiff < 0) {
-      urgency = "past";
-    } else if (daysUntilTrip <= 14) {
-      urgency = "high";
-    } else if (daysUntilTrip <= 45) {
-      urgency = "medium";
-    } else {
-      urgency = "low";
-    }
-  }
-
-  const count = urgentStops.length;
-  const stopPhrase =
-    count === 1
-      ? "1 timed-entry stop typically sells out early"
-      : `${count} timed-entry stops typically sell out early`;
-
-  let headline: string;
-  if (urgency === "on_trip") {
-    headline =
-      count > 0
-        ? `You're on your trip · Double-check entry times for ${count} timed-entry stop${count > 1 ? "s" : ""}`
-        : "You're on your trip · Tap any stop for address and directions";
-  } else if (urgency === "past") {
-    headline =
-      count > 0
-        ? `${count} timed-entry stop${count > 1 ? "s" : ""} noted in this saved trip`
-        : "Saved trip archive";
-  } else if (daysUntilTrip !== null && daysUntilTrip > 0) {
-    const dayLabel =
-      daysUntilTrip === 1 ? "1 day out" : `${daysUntilTrip} days out`;
-    headline =
-      count > 0
-        ? `${dayLabel} · ${stopPhrase}`
-        : `${dayLabel} · No high-demand timed-entry bottlenecks spotted`;
-  } else {
-    headline =
-      count > 0 ? stopPhrase : "No high-demand timed-entry bottlenecks spotted";
-  }
-
-  return {
-    daysUntilTrip,
-    urgentStops,
-    headline,
-    urgency,
-  };
-}
-
-export interface OnTripUpNext {
-  dayNumber: number;
-  dayIndex: number;
-  dayTitle: string;
-  date: string;
-  slot: CopilotSlot;
-  stop: {
-    name: string;
-    address?: string;
-    locationName?: string;
-    description?: string;
-    coordinates?: { lat: number; lng: number };
-  };
-}
-
-export function findOnTripUpNext(
-  itinerary: GeneratedItinerary | null,
-  startDate: string,
-  endDate: string,
-  now = new Date(),
-): OnTripUpNext | null {
-  if (!itinerary?.days?.length) return null;
-  const start = parseTripDate(startDate);
-  const end = parseTripDate(endDate);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
-
-  const daysSinceStart = differenceInCalendarDays(now, start);
-  const daysUntilEnd = differenceInCalendarDays(end, now);
-  if (daysSinceStart < 0 || daysUntilEnd < 0) return null;
-
-  const todayIso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
-  let dayIndex = itinerary.days.findIndex(
-    (d) => typeof d.date === "string" && d.date.slice(0, 10) === todayIso,
-  );
-  if (dayIndex === -1) {
-    dayIndex = Math.min(daysSinceStart, itinerary.days.length - 1);
-  }
-  const day = itinerary.days[dayIndex];
-  if (!day) return null;
-
-  const hour = now.getHours();
-  const preferredOrder: CopilotSlot[] =
-    hour < 12
-      ? ["morning", "afternoon", "evening"]
-      : hour < 17
-        ? ["afternoon", "evening", "morning"]
-        : ["evening", "afternoon", "morning"];
-
-  for (const slot of preferredOrder) {
-    const acts = getSlotActivities(day, slot);
-    if (acts.length > 0 && acts[0]?.name) {
-      const stop = acts[0];
-      return {
-        dayNumber: day.dayNumber,
-        dayIndex,
-        dayTitle: day.title || `Day ${day.dayNumber}`,
-        date: day.date || todayIso,
-        slot,
-        stop: {
-          name: stop.name,
-          address: stop.location?.address,
-          locationName: stop.location?.name,
-          description: stop.description,
-          coordinates: stop.location?.coordinates,
-        },
-      };
-    }
-    const meals = Array.isArray(day[slot]?.meals) ? day[slot].meals : [];
-    if (meals.length > 0 && meals[0]?.name) {
-      const meal = meals[0];
-      return {
-        dayNumber: day.dayNumber,
-        dayIndex,
-        dayTitle: day.title || `Day ${day.dayNumber}`,
-        date: day.date || todayIso,
-        slot,
-        stop: {
-          name: meal.name,
-          address: meal.location?.address,
-          locationName: meal.location?.name,
-          description: meal.description,
-          coordinates: meal.location?.coordinates,
-        },
-      };
-    }
-  }
-
-  return null;
 }

@@ -289,6 +289,9 @@ function CreateTripPlanner({
     };
   }, []);
   const submissionLock = useRef(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generateError, setGenerateError] = useState<string | null>(null);
+  const [progressMessage, setProgressMessage] = useState("");
   const [pendingRequest, setPendingRequest] =
     useState<PendingCreateTrip | null>(null);
   useEffect(() => {
@@ -313,9 +316,6 @@ function CreateTripPlanner({
       );
     }
   }, [session?.user.id]);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [generateError, setGenerateError] = useState<string | null>(null);
-  const [progressMessage, setProgressMessage] = useState("");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -772,40 +772,18 @@ function CreateTripPlanner({
     if (parsed.vibes.length > 0) {
       setSelectedVibes(parsed.vibes.slice(0, 5));
     }
-    let populatedRequirements = false;
-    if (parsed.dietaryPreferences.length > 0) {
-      setDietaryPreferences((prev) => [
-        ...new Set([...prev, ...parsed.dietaryPreferences]),
-      ]);
-      populatedRequirements = true;
-    }
-    if (parsed.allergies.length > 0) {
-      setAllergiesText((prev) => {
-        const existing = prev
-          .split(",")
-          .map((item) => item.trim())
-          .filter(Boolean);
-        return [...new Set([...existing, ...parsed.allergies])]
-          .join(", ")
-          .slice(0, 500);
-      });
-      populatedRequirements = true;
-    }
-    if (parsed.accessibility.length > 0) {
-      setAccessibility((prev) => [
-        ...new Set([...prev, ...parsed.accessibility]),
-      ]);
-      populatedRequirements = true;
-    }
-    if (parsed.mobilityNotes) {
-      setMobilityNotes((prev) =>
-        prev.trim()
-          ? `${prev.trim()}; ${parsed.mobilityNotes}`.slice(0, 500)
-          : parsed.mobilityNotes!.slice(0, 500),
-      );
-      populatedRequirements = true;
-    }
-    if (populatedRequirements) {
+    // Replace prompt-derived requirement fields cleanly when re-applying a prompt,
+    // while keeping previously saved requirements if the new prompt didn't mention any.
+    const promptMentionsRequirements =
+      parsed.dietaryPreferences.length > 0 ||
+      parsed.allergies.length > 0 ||
+      parsed.accessibility.length > 0 ||
+      Boolean(parsed.mobilityNotes);
+    if (promptMentionsRequirements) {
+      setDietaryPreferences([...new Set(parsed.dietaryPreferences)]);
+      setAllergiesText([...new Set(parsed.allergies)].join(", ").slice(0, 500));
+      setAccessibility([...new Set(parsed.accessibility)]);
+      setMobilityNotes((parsed.mobilityNotes ?? "").slice(0, 500));
       setShowAdvanced(true);
     }
     setAppliedKickoffSummary({
@@ -903,7 +881,9 @@ function CreateTripPlanner({
       mobilityNotes: mobilityNotes.trim(),
       avoidEarlyStarts:
         travelerMemory.avoidEarlyStarts ||
-        /early\s+(?:starts?|mornings?)/i.test(mobilityNotes),
+        /\b(?:no|avoid|skip|without|hate|relaxed)\s+(?:early\s+)?(?:starts?|mornings?)\b/i.test(
+          mobilityNotes,
+        ),
     });
     setTravelerMemory(saved);
     setMemoryAppliedFields(["Current planner preferences"]);
@@ -1064,9 +1044,10 @@ function CreateTripPlanner({
             dietaryPreferences,
           accessibility:
             payload.preferences?.requirements?.accessibility ?? accessibility,
-          avoidEarlyStarts: /early\s+(?:starts?|mornings?)/i.test(
-            payload.preferences?.requirements?.mobilityNotes ?? mobilityNotes,
-          ),
+          avoidEarlyStarts:
+            /\b(?:no|avoid|skip|without|hate|relaxed)\s+(?:early\s+)?(?:starts?|mornings?)\b/i.test(
+              payload.preferences?.requirements?.mobilityNotes ?? mobilityNotes,
+            ),
         });
       } catch {
         /* Preference history is optional local storage. */
@@ -1289,7 +1270,7 @@ function CreateTripPlanner({
           >
             <DreamTripPromptBar
               isAuthenticated={Boolean(session)}
-              disabled={!draftLoaded || isGenerating}
+              disabled={!draftLoaded || authLoading || isGenerating}
               travelerMemory={travelerMemory}
               memoryAppliedFields={memoryAppliedFields}
               learnedSuggestions={learnedSuggestions}

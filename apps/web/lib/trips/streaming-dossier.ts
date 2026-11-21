@@ -442,7 +442,7 @@ export function extractAgentDiscoveries(
   if (Array.isArray(input.days) && input.days.length > 0) {
     const dayOne =
       input.days.find((day) => day?.dayNumber === 1) ?? input.days[0];
-    if (dayOne) {
+    if (dayOne && countDayStops(dayOne) > 0) {
       synthesized.push(buildDayOneDiscovery(dayOne, input.days.length, now));
     }
   }

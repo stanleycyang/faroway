@@ -803,7 +803,12 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   const timingDay = trip.days[selectedDay]
     ? transformItineraryDays([trip.days[selectedDay]])[0]
     : undefined;
-  const shiftedSchedule = shiftDaySchedule(timingDay, scheduleShiftMinutes);
+  const todayLocalDate = (() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  })();
+  const isViewingToday = timingDay?.date?.slice(0, 10) === todayLocalDate;
+  const shiftedSchedule = shiftDaySchedule(timingDay, isViewingToday ? scheduleShiftMinutes : 0);
   const dayRouteSummary = summarizeDayRoute(timingDay);
   const dayMapsUrl =
     Platform.OS === 'ios'
@@ -815,18 +820,26 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   const handleOpenDayInMaps = () => {
     if (!dayMapsUrl) return;
     hapticFeedback.light();
+    const openFallback = () =>
+      openURL(dayMapsUrl).catch(() => {
+        Alert.alert('Could not open Maps', 'Please open your Maps app to view this day route.');
+      });
     if (Linking && typeof Linking.openURL === 'function') {
       void Linking.openURL(dayMapsUrl).catch(() => {
-        void openURL(dayMapsUrl).catch(() => undefined);
+        void openFallback();
       });
       return;
     }
-    void openURL(dayMapsUrl).catch(() => undefined);
+    void openFallback();
   };
 
-  const handleApplyUpdatedDays = (updatedDays: TripDay[]) => {
+  const handleApplyUpdatedDays = (updatedDays: TripDay[], updatedAt?: string) => {
     if (!isActive() || !trip) return;
-    const updatedTrip = { ...trip, days: updatedDays };
+    const updatedTrip = {
+      ...trip,
+      days: updatedDays,
+      ...(updatedAt ? { updatedAt } : {}),
+    };
     if (typeof saveTrip === 'function') saveTrip(updatedTrip);
     if (typeof setCurrentTrip === 'function') setCurrentTrip(updatedTrip);
   };
@@ -1371,6 +1384,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
           tripId={trip.id}
           days={trip.days}
           dayNumber={trip.days[selectedDay]?.dayNumber ?? selectedDay + 1}
+          expectedUpdatedAt={trip.updatedAt}
           initialAction={remixInitialAction}
           onApplyUpdatedDays={handleApplyUpdatedDays}
           onSyncComplete={handleSyncAfterRemix}

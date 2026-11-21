@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarClock,
   CloudRain,
@@ -12,7 +12,10 @@ import {
   X,
 } from "lucide-react";
 import type { GeneratedItinerary } from "@faroway/types";
-import { analyzeBookingReadiness, findOnTripUpNext } from "@/lib/trips/copilot";
+import {
+  analyzeBookingReadiness,
+  findOnTripUpNext,
+} from "@/lib/trips/companion-radar";
 
 export interface CompanionWeatherCue {
   rainyDayNumber?: number;
@@ -46,24 +49,63 @@ export function TripCompanionBanner({
 }: TripCompanionBannerProps) {
   const [checklistOpen, setChecklistOpen] = useState(false);
   const [taxiModalOpen, setTaxiModalOpen] = useState(false);
+  const [clientNow, setClientNow] = useState<Date | null>(null);
+  const taxiCloseBtnRef = useRef<HTMLButtonElement | null>(null);
+  const taxiTriggerBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  // Avoid SSR/CSR timezone hydration mismatches by resolving local clock after mount
+  // when no deterministic `now` prop is provided, and refreshing periodically.
+  useEffect(() => {
+    if (now) return;
+    const initial = setTimeout(() => setClientNow(new Date()), 0);
+    const interval = setInterval(() => setClientNow(new Date()), 5 * 60_000);
+    return () => {
+      clearTimeout(initial);
+      clearInterval(interval);
+    };
+  }, [now]);
+
+  const effectiveNow = now ?? clientNow;
 
   const readiness = useMemo(
-    () => analyzeBookingReadiness(itinerary, startDate, endDate, now),
-    [itinerary, startDate, endDate, now],
+    () => analyzeBookingReadiness(itinerary, startDate, endDate, effectiveNow),
+    [itinerary, startDate, endDate, effectiveNow],
   );
 
   const upNext = useMemo(
-    () => findOnTripUpNext(itinerary, startDate, endDate, now),
-    [itinerary, startDate, endDate, now],
+    () => findOnTripUpNext(itinerary, startDate, endDate, effectiveNow),
+    [itinerary, startDate, endDate, effectiveNow],
   );
 
   useEffect(() => {
     if (!taxiModalOpen) return;
+    const triggerBtn = taxiTriggerBtnRef.current;
+    const previousFocused =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    taxiCloseBtnRef.current?.focus();
+
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setTaxiModalOpen(false);
+      if (event.key === "Escape") {
+        event.preventDefault();
+        setTaxiModalOpen(false);
+        return;
+      }
+      if (event.key === "Tab") {
+        // Keep focus trapped inside the full-screen modal (only the Close button is focusable)
+        event.preventDefault();
+        taxiCloseBtnRef.current?.focus();
+      }
     };
     window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      document.body.style.overflow = previousOverflow;
+      (triggerBtn ?? previousFocused)?.focus?.();
+    };
   }, [taxiModalOpen]);
 
   const targetRainDay = weatherCue?.rainyDayNumber ?? activeDayNumber;
@@ -108,6 +150,7 @@ export function TripCompanionBanner({
             </div>
 
             <button
+              ref={taxiTriggerBtnRef}
               type="button"
               onClick={() => setTaxiModalOpen(true)}
               className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-bold text-slate-950 hover:bg-slate-100 transition-colors"
@@ -234,16 +277,17 @@ export function TripCompanionBanner({
           role="dialog"
           aria-modal="true"
           aria-label={`Taxi card for ${upNext.stop.name}`}
-          className="fixed inset-0 z-[100] flex flex-col justify-between bg-white p-6 sm:p-10 text-slate-950"
+          className="fixed inset-0 z-[100] flex flex-col justify-between overflow-y-auto bg-white p-6 sm:p-10 text-slate-950"
         >
           <div className="flex items-center justify-between border-b-2 border-slate-900 pb-4">
             <span className="text-sm font-bold uppercase tracking-widest text-slate-700">
               Please take me to
             </span>
             <button
+              ref={taxiCloseBtnRef}
               type="button"
               onClick={() => setTaxiModalOpen(false)}
-              className="inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 border-slate-950 bg-slate-950 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full border-2 border-slate-950 bg-slate-950 px-4 py-2 text-sm font-bold text-white hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
             >
               <X className="h-4 w-4" aria-hidden="true" />
               Close

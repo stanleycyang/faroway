@@ -35,17 +35,25 @@ export interface TripCopilotBarProps {
   itinerary: GeneratedItinerary;
   activeDayNumber: number;
   expectedUpdatedAt?: string;
+  expectedPlanRevision?: string | null;
   disabled?: boolean;
   pendingAction?: CopilotQuickTrigger | null;
+  onBusyChange?: (busy: boolean) => void;
   onItineraryUpdated: (
     updatedItinerary: GeneratedItinerary,
     updatedAt?: string,
+    planRevision?: string | null,
   ) => void;
   onSyncRequested?: () => void;
 }
 
-interface CopilotResponsePayload extends CopilotResult {
+interface CopilotResponsePayload extends Omit<
+  CopilotResult,
+  "previousItinerarySnapshot"
+> {
   updatedAt?: string;
+  planRevision?: string | null;
+  undoRevisionId?: string | null;
   error?: string;
 }
 
@@ -55,8 +63,10 @@ export function TripCopilotBar({
   itinerary,
   activeDayNumber,
   expectedUpdatedAt,
+  expectedPlanRevision,
   disabled = false,
   pendingAction,
+  onBusyChange,
   onItineraryUpdated,
   onSyncRequested,
 }: TripCopilotBarProps) {
@@ -64,12 +74,15 @@ export function TripCopilotBar({
   const [busy, setBusy] = useState(false);
   const [activeLabel, setActiveLabel] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [lastResult, setLastResult] = useState<CopilotResult | null>(null);
-  const [lastSnapshot, setLastSnapshot] = useState<GeneratedItinerary | null>(
+  const [lastResult, setLastResult] = useState<CopilotResponsePayload | null>(
     null,
   );
+  const [undoRevisionId, setUndoRevisionId] = useState<string | null>(null);
 
   const latestUpdatedAtRef = useRef<string | undefined>(expectedUpdatedAt);
+  const latestPlanRevisionRef = useRef<string | null | undefined>(
+    expectedPlanRevision,
+  );
   const inFlight = useRef(false);
   const mounted = useRef(false);
   const lastHandledNonce = useRef<number>(0);
@@ -85,6 +98,10 @@ export function TripCopilotBar({
     latestUpdatedAtRef.current = expectedUpdatedAt;
   }, [expectedUpdatedAt]);
 
+  useEffect(() => {
+    latestPlanRevisionRef.current = expectedPlanRevision;
+  }, [expectedPlanRevision]);
+
   const executeCommand = useCallback(
     async (
       payload: {
@@ -93,18 +110,21 @@ export function TripCopilotBar({
         dayNumber?: number;
         slot?: CopilotSlot;
         stopName?: string;
-        previousItinerarySnapshot?: GeneratedItinerary;
+        undoRevisionId?: string;
       },
       label: string,
+      clearPromptOnApply = false,
     ) => {
       if (disabled || inFlight.current || !mounted.current) return;
       inFlight.current = true;
       setBusy(true);
+      onBusyChange?.(true);
       setActiveLabel(label);
       setError(null);
 
       try {
         const expectedRevision = latestUpdatedAtRef.current;
+        const expectedPlanRev = latestPlanRevisionRef.current;
         const response = await fetch(`/api/trips/${tripId}/copilot`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -113,6 +133,9 @@ export function TripCopilotBar({
             ...payload,
             ...(expectedRevision
               ? { expectedUpdatedAt: expectedRevision }
+              : {}),
+            ...(expectedPlanRev !== undefined
+              ? { expectedPlanRevision: expectedPlanRev }
               : {}),
           }),
         });
@@ -138,15 +161,24 @@ export function TripCopilotBar({
         if (data.updatedAt) {
           latestUpdatedAtRef.current = data.updatedAt;
         }
+        if (data.planRevision !== undefined) {
+          latestPlanRevisionRef.current = data.planRevision;
+        }
 
         if (data.applied) {
-          if (payload.action === "undo") {
-            setLastSnapshot(null);
-          } else {
-            setLastSnapshot(data.previousItinerarySnapshot);
+          if (clearPromptOnApply) {
+            setPrompt("");
           }
-          onItineraryUpdated(data.updatedItinerary, data.updatedAt);
-          onSyncRequested?.();
+          if (payload.action === "undo") {
+            setUndoRevisionId(null);
+          } else {
+            setUndoRevisionId(data.undoRevisionId ?? null);
+          }
+          onItineraryUpdated(
+            data.updatedItinerary,
+            data.updatedAt,
+            data.planRevision,
+          );
         }
       } catch (err) {
         if (!mounted.current) return;
@@ -159,11 +191,12 @@ export function TripCopilotBar({
         inFlight.current = false;
         if (mounted.current) {
           setBusy(false);
+          onBusyChange?.(false);
           setActiveLabel(null);
         }
       }
     },
-    [disabled, tripId, onItineraryUpdated, onSyncRequested],
+    [disabled, tripId, onBusyChange, onItineraryUpdated, onSyncRequested],
   );
 
   // Allow Day cards or Companion Banner to trigger a co-pilot action cleanly
@@ -193,16 +226,29 @@ export function TripCopilotBar({
     event.preventDefault();
     const trimmed = prompt.trim();
     if (!trimmed || busy || disabled) return;
-    setPrompt("");
-    void executeCommand({ prompt: trimmed }, "Applying your tweak…");
+    const isUndoPrompt = /\b(undo|revert|roll\s*back|go\s+back)\b/i.test(
+      trimmed,
+    );
+    if (isUndoPrompt) {
+      void executeCommand(
+        {
+          action: "undo",
+          ...(undoRevisionId ? { undoRevisionId } : {}),
+        },
+        "Undoing last change…",
+        true,
+      );
+      return;
+    }
+    void executeCommand({ prompt: trimmed }, "Applying your tweak…", true);
   };
 
   const handleUndo = () => {
-    if (!lastSnapshot || busy || disabled) return;
+    if (!undoRevisionId || busy || disabled) return;
     void executeCommand(
       {
         action: "undo",
-        previousItinerarySnapshot: lastSnapshot,
+        undoRevisionId,
       },
       "Undoing last change…",
     );
@@ -231,7 +277,7 @@ export function TripCopilotBar({
             </p>
           </div>
         </div>
-        {lastSnapshot && !busy && (
+        {undoRevisionId && !busy && (
           <button
             type="button"
             onClick={handleUndo}
@@ -405,7 +451,7 @@ export function TripCopilotBar({
               </p>
             </div>
             <div className="flex items-center gap-2 shrink-0">
-              {lastResult.applied && lastSnapshot && (
+              {lastResult.applied && undoRevisionId && (
                 <button
                   type="button"
                   onClick={handleUndo}

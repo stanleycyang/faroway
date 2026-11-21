@@ -135,9 +135,9 @@ describe("maps-route helpers", () => {
     );
   });
 
-  it("caps Google Maps waypoints at 9 when a day has > 11 stops and switches to transit for wide routes", () => {
+  it("caps Google Maps waypoints at 9 when a day has > 11 stops and uses driving for wide multi-stop routes", () => {
     const manyActivities = Array.from({ length: 13 }, (_, idx) =>
-      makeActivity(`stop-${idx}`, `Stop #${idx + 1} & Co`, {
+      makeActivity(`stop-${idx}`, `Stop #${idx + 1} | Co`, {
         name: `District ${idx + 1}`,
         coordinates: { lat: 35.65 + idx * 0.02, lng: 139.7 + idx * 0.01 },
       }),
@@ -152,11 +152,14 @@ describe("maps-route helpers", () => {
     const parsed = new URL(googleUrl);
     const waypoints = (parsed.searchParams.get("waypoints") || "").split("|");
     expect(waypoints).toHaveLength(9);
-    expect(parsed.searchParams.get("travelmode")).toBe("transit");
+    // Driving preserves waypoints (Google Maps drops waypoints in transit mode)
+    expect(parsed.searchParams.get("travelmode")).toBe("driving");
 
     const appleUrl = buildAppleMapsDayRouteUrl(packedDay, "Tokyo")!;
     const parsedApple = new URL(appleUrl);
-    expect(parsedApple.searchParams.get("dirflg")).toBe("r");
+    expect(parsedApple.searchParams.get("dirflg")).toBe("d");
+    const appleDaddrs = parsedApple.searchParams.getAll("daddr");
+    expect(appleDaddrs[appleDaddrs.length - 1]).toContain("Stop #13");
   });
 
   it("handles single-stop days and missing coordinates cleanly", () => {

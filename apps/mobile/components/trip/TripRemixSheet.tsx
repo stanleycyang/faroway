@@ -1,7 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
   Modal,
+  Platform,
   ScrollView,
   StyleSheet,
   Text,
@@ -32,8 +34,9 @@ export interface TripRemixSheetProps {
   tripId: string;
   days: TripDay[];
   dayNumber: number;
+  expectedUpdatedAt?: string;
   initialAction?: CopilotActionType | null;
-  onApplyUpdatedDays: (updatedDays: TripDay[]) => void;
+  onApplyUpdatedDays: (updatedDays: TripDay[], updatedAt?: string) => void;
   onSyncComplete?: () => void;
 }
 
@@ -43,6 +46,7 @@ export function TripRemixSheet({
   tripId,
   days,
   dayNumber,
+  expectedUpdatedAt,
   initialAction = null,
   onApplyUpdatedDays,
   onSyncComplete,
@@ -56,8 +60,13 @@ export function TripRemixSheet({
   const [diffItems, setDiffItems] = useState<CopilotDiffItem[]>([]);
   const [undoSnapshot, setUndoSnapshot] = useState<{
     localDays: TripDay[];
-    apiSnapshot?: unknown;
+    undoRevisionId?: string | null;
   } | null>(null);
+  const latestUpdatedAtRef = useRef<string | undefined>(expectedUpdatedAt);
+
+  useEffect(() => {
+    latestUpdatedAtRef.current = expectedUpdatedAt;
+  }, [expectedUpdatedAt]);
 
   const mountedRef = useRef(true);
   const busyLockRef = useRef(false);
@@ -101,7 +110,13 @@ export function TripRemixSheet({
 
   const executeAction = async (
     action: CopilotActionType,
-    opts?: { stopName?: string; text?: string; slot?: 'morning' | 'afternoon' | 'evening' }
+    opts?: {
+      stopName?: string;
+      text?: string;
+      slot?: 'morning' | 'afternoon' | 'evening';
+      targetDayNumber?: number;
+      targetSlot?: 'morning' | 'afternoon' | 'evening';
+    }
   ) => {
     if (busyLockRef.current) return;
     busyLockRef.current = true;
@@ -120,8 +135,11 @@ export function TripRemixSheet({
         action,
         dayNumber,
         slot: opts?.slot,
+        targetDayNumber: opts?.targetDayNumber,
+        targetSlot: opts?.targetSlot,
         stopName: opts?.stopName,
         instruction: opts?.text,
+        expectedUpdatedAt: latestUpdatedAtRef.current,
         signal: controller.signal,
       });
       if (!mountedRef.current || controller.signal.aborted) return;
@@ -130,12 +148,16 @@ export function TripRemixSheet({
       setResultNotice(response.notice ?? null);
       setDiffItems(response.diff);
 
+      if (response.updatedAt) {
+        latestUpdatedAtRef.current = response.updatedAt;
+      }
+
       if (response.applied && response.updatedDays) {
         setUndoSnapshot({
           localDays: response.previousDays ?? days,
-          apiSnapshot: response.apiSnapshot,
+          undoRevisionId: response.undoRevisionId,
         });
-        onApplyUpdatedDays(response.updatedDays);
+        onApplyUpdatedDays(response.updatedDays, response.updatedAt);
         if (response.source === 'api') {
           onSyncComplete?.();
         }
@@ -149,10 +171,10 @@ export function TripRemixSheet({
       );
       hapticFeedback.error();
     } finally {
-      if (mountedRef.current && controllerRef.current === controller) {
-        setBusy(false);
+      if (controllerRef.current === controller) {
+        busyLockRef.current = false;
+        if (mountedRef.current) setBusy(false);
       }
-      busyLockRef.current = false;
     }
   };
 
@@ -169,37 +191,67 @@ export function TripRemixSheet({
     hapticFeedback.light();
     const snapshot = undoSnapshot;
 
-    // Immediately restore local state so UI feels instant
-    onApplyUpdatedDays(snapshot.localDays);
-    setUndoSnapshot(null);
-    setDiffItems([]);
-    setResultSummary(`Reverted your last edit on Day ${dayNumber}.`);
-    setResultNotice(null);
+    if (tripId.startsWith('local_')) {
+      onApplyUpdatedDays(snapshot.localDays);
+      setUndoSnapshot(null);
+      setDiffItems([]);
+      setResultSummary(`Reverted your last edit on Day ${dayNumber}.`);
+      setResultNotice(null);
+      return;
+    }
 
-    if (!tripId.startsWith('local_') && snapshot.apiSnapshot) {
-      busyLockRef.current = true;
-      setBusy(true);
-      const controller = new AbortController();
-      controllerRef.current = controller;
-      try {
-        await runTripCopilotAction({
-          tripId,
-          days: snapshot.localDays,
-          action: 'undo',
-          dayNumber,
-          previousApiSnapshot: snapshot.apiSnapshot,
-          signal: controller.signal,
-        });
-        if (mountedRef.current && !controller.signal.aborted) {
-          onSyncComplete?.();
-        }
-      } catch {
-        // Local state is already restored; next pull-to-refresh reconciles.
-      } finally {
-        if (mountedRef.current && controllerRef.current === controller) {
-          setBusy(false);
-        }
+    if (!snapshot.undoRevisionId) {
+      setResultSummary('No saved revision is available to undo.');
+      setResultNotice('Pull down to refresh your latest trip.');
+      return;
+    }
+
+    busyLockRef.current = true;
+    setBusy(true);
+    const controller = new AbortController();
+    controllerRef.current = controller;
+    try {
+      const response = await runTripCopilotAction({
+        tripId,
+        days,
+        action: 'undo',
+        dayNumber,
+        expectedUpdatedAt: latestUpdatedAtRef.current,
+        undoRevisionId: snapshot.undoRevisionId,
+        signal: controller.signal,
+      });
+      if (!mountedRef.current || controller.signal.aborted) return;
+
+      if (response.updatedAt) {
+        latestUpdatedAtRef.current = response.updatedAt;
+      }
+
+      if (response.applied) {
+        onApplyUpdatedDays(response.updatedDays ?? snapshot.localDays, response.updatedAt);
+        setUndoSnapshot(null);
+        setDiffItems([]);
+        setResultSummary(response.summary || `Reverted your last edit on Day ${dayNumber}.`);
+        setResultNotice(response.notice ?? null);
+        onSyncComplete?.();
+        hapticFeedback.success();
+      } else {
+        setResultSummary(response.summary || 'Could not undo your last edit.');
+        setResultNotice(
+          response.notice ?? 'Your saved itinerary was not changed. Check your connection.'
+        );
+        hapticFeedback.error();
+      }
+    } catch (error) {
+      if (!mountedRef.current || (error as Error)?.name === 'AbortError') return;
+      setResultSummary('Could not undo your last edit.');
+      setResultNotice(
+        error instanceof Error ? error.message : 'Check your connection and try again.'
+      );
+      hapticFeedback.error();
+    } finally {
+      if (controllerRef.current === controller) {
         busyLockRef.current = false;
+        if (mountedRef.current) setBusy(false);
       }
     }
   };
@@ -208,7 +260,7 @@ export function TripRemixSheet({
 
   const activeDay = days.find((d) => d.dayNumber === dayNumber);
   const swappableStops = (activeDay?.activities ?? []).filter(
-    (a) => a.type !== 'transport' && a.type !== 'accommodation'
+    (a) => a.type !== 'transport' && a.type !== 'accommodation' && a.type !== 'restaurant'
   );
 
   return (
@@ -219,192 +271,205 @@ export function TripRemixSheet({
       onRequestClose={onClose}
     >
       <SafeAreaView edges={['top', 'bottom']} style={styles.container}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.headerTitle} accessibilityRole="header">
-              Remix Day {dayNumber}
-            </Text>
-            <Text style={styles.headerSubtitle}>
-              Make targeted tweaks without regenerating your whole trip.
-            </Text>
-          </View>
-          <TouchableOpacity
-            style={styles.closeBtn}
-            onPress={onClose}
-            accessibilityRole="button"
-            accessibilityLabel="Close remix sheet"
-          >
-            <Ionicons name="close" size={24} color="#0f172a" />
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          {/* Quick 1-Tap Actions */}
-          <Text style={styles.sectionLabel}>Quick adjustments</Text>
-          <View style={styles.quickGrid}>
+          <View style={styles.header}>
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <Text style={styles.headerTitle} accessibilityRole="header">
+                Remix Day {dayNumber}
+              </Text>
+              <Text style={styles.headerSubtitle}>
+                Make targeted tweaks without regenerating your whole trip.
+              </Text>
+            </View>
             <TouchableOpacity
-              style={styles.quickActionCard}
-              disabled={busy}
-              onPress={() => void executeAction('relax_day')}
+              style={styles.closeBtn}
+              onPress={onClose}
               accessibilityRole="button"
-              accessibilityLabel={`Make Day ${dayNumber} more relaxed`}
+              accessibilityLabel="Close remix sheet"
             >
-              <Ionicons name="cafe-outline" size={20} color="#0F766E" />
-              <View style={styles.quickActionCopy}>
-                <Text style={styles.quickActionTitle}>Make this day more relaxed</Text>
-                <Text style={styles.quickActionSub}>Trim an optional stop for breathing room</Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickActionCard}
-              disabled={busy}
-              onPress={() => void executeAction('rain_backup')}
-              accessibilityRole="button"
-              accessibilityLabel={`Rainy-day indoor backup for Day ${dayNumber}`}
-            >
-              <Ionicons name="rainy-outline" size={20} color="#143D46" />
-              <View style={styles.quickActionCopy}>
-                <Text style={styles.quickActionTitle}>Rainy-day indoor backup</Text>
-                <Text style={styles.quickActionSub}>
-                  Swap outdoor stops for grounded indoor options
-                </Text>
-              </View>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.quickActionCard}
-              disabled={busy}
-              onPress={() => void executeAction('shift_day', { slot: 'morning' })}
-              accessibilityRole="button"
-              accessibilityLabel={`Later start on Day ${dayNumber}`}
-            >
-              <Ionicons name="sunny-outline" size={20} color="#B45309" />
-              <View style={styles.quickActionCopy}>
-                <Text style={styles.quickActionTitle}>Slower morning</Text>
-                <Text style={styles.quickActionSub}>Move a morning visit into the afternoon</Text>
-              </View>
+              <Ionicons name="close" size={24} color="#0f172a" />
             </TouchableOpacity>
           </View>
 
-          {/* Swap a specific stop */}
-          {swappableStops.length > 0 ? (
-            <View style={styles.swapSection}>
-              <Text style={styles.sectionLabel}>Swap a stop</Text>
-              <View style={styles.stopChips}>
-                {swappableStops.map((stop) => {
-                  const chosen = selectedStop === stop.title;
-                  return (
-                    <TouchableOpacity
-                      key={stop.id}
-                      style={[styles.stopChip, chosen && styles.stopChipSelected]}
-                      onPress={() => {
-                        hapticFeedback.selection();
-                        setSelectedStop(chosen ? undefined : stop.title);
-                      }}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: chosen }}
-                      accessibilityLabel={`Select ${stop.title} to swap`}
-                    >
-                      <Text
-                        style={[styles.stopChipText, chosen && styles.stopChipTextSelected]}
-                        numberOfLines={1}
-                      >
-                        {stop.title}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
+          <ScrollView
+            contentContainerStyle={styles.scrollContent}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Quick 1-Tap Actions */}
+            <Text style={styles.sectionLabel}>Quick adjustments</Text>
+            <View style={styles.quickGrid}>
               <TouchableOpacity
-                style={[styles.swapButton, busy && styles.buttonDisabled]}
+                style={styles.quickActionCard}
+                disabled={busy}
+                onPress={() => void executeAction('relax_day')}
+                accessibilityRole="button"
+                accessibilityLabel={`Make Day ${dayNumber} more relaxed`}
+              >
+                <Ionicons name="cafe-outline" size={20} color="#0F766E" />
+                <View style={styles.quickActionCopy}>
+                  <Text style={styles.quickActionTitle}>Make this day more relaxed</Text>
+                  <Text style={styles.quickActionSub}>
+                    Trim an optional stop for breathing room
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.quickActionCard}
+                disabled={busy}
+                onPress={() => void executeAction('rain_backup')}
+                accessibilityRole="button"
+                accessibilityLabel={`Rainy-day indoor backup for Day ${dayNumber}`}
+              >
+                <Ionicons name="rainy-outline" size={20} color="#143D46" />
+                <View style={styles.quickActionCopy}>
+                  <Text style={styles.quickActionTitle}>Rainy-day indoor backup</Text>
+                  <Text style={styles.quickActionSub}>
+                    Swap outdoor stops for grounded indoor options
+                  </Text>
+                </View>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.quickActionCard}
                 disabled={busy}
                 onPress={() =>
-                  void executeAction('swap_stop', {
-                    stopName: selectedStop ?? swappableStops[0]?.title,
+                  void executeAction('shift_day', {
+                    slot: 'morning',
+                    targetDayNumber: dayNumber,
+                    targetSlot: 'afternoon',
                   })
                 }
                 accessibilityRole="button"
-                accessibilityLabel={
-                  selectedStop ? `Swap ${selectedStop}` : 'Swap a stop for a grounded alternative'
-                }
+                accessibilityLabel={`Later start on Day ${dayNumber}`}
               >
-                <Ionicons name="swap-horizontal" size={18} color="#ffffff" />
-                <Text style={styles.swapButtonText}>
-                  {selectedStop ? `Swap "${selectedStop}"` : 'Swap selected stop'}
-                </Text>
+                <Ionicons name="sunny-outline" size={20} color="#B45309" />
+                <View style={styles.quickActionCopy}>
+                  <Text style={styles.quickActionTitle}>Slower morning</Text>
+                  <Text style={styles.quickActionSub}>Move a morning visit into the afternoon</Text>
+                </View>
               </TouchableOpacity>
             </View>
-          ) : null}
 
-          {/* Natural-Language Remix Input */}
-          <View style={styles.nlSection}>
-            <Text style={styles.sectionLabel}>Or tell Faroway what to change</Text>
-            <SafeTextInput
-              style={styles.nlInput}
-              value={instruction}
-              onChangeText={setInstruction}
-              placeholder={`e.g., Make Day ${dayNumber} less packed or swap the afternoon museum`}
-              placeholderTextColor="#64748b"
-              multiline
-              maxLength={300}
-              textAlignVertical="top"
-              accessibilityLabel="Describe how to remix this day"
-            />
-            <TouchableOpacity
-              style={[styles.nlSubmitBtn, (!instruction.trim() || busy) && styles.buttonDisabled]}
-              disabled={!instruction.trim() || busy}
-              onPress={() => {
-                const text = instruction.trim();
-                if (!text) return;
-                void executeAction('natural_language', { text });
-              }}
-              accessibilityRole="button"
-              accessibilityLabel="Apply remix instruction"
-            >
-              {busy ? (
-                <SafeActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <Ionicons name="sparkles" size={16} color="#ffffff" />
-              )}
-              <Text style={styles.nlSubmitText}>{busy ? 'Updating Day…' : 'Apply change'}</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Before / After Diff Card + Undo */}
-          {resultSummary ? (
-            <View style={styles.resultCard} accessibilityLiveRegion="polite">
-              <Text style={styles.resultSummary}>{resultSummary}</Text>
-              {diffItems.map((item, idx) => (
-                <View key={`${item.dayNumber}-${item.slot}-${idx}`} style={styles.diffRow}>
-                  <Text style={styles.diffBadge}>{item.action.toUpperCase()}</Text>
-                  <Text style={styles.diffText}>
-                    {item.before && item.after && item.before !== item.after
-                      ? `${item.before} → ${item.after}`
-                      : item.before || item.after || item.slot}
-                  </Text>
+            {/* Swap a specific stop */}
+            {swappableStops.length > 0 ? (
+              <View style={styles.swapSection}>
+                <Text style={styles.sectionLabel}>Swap a stop</Text>
+                <View style={styles.stopChips}>
+                  {swappableStops.map((stop) => {
+                    const chosen = selectedStop === stop.title;
+                    return (
+                      <TouchableOpacity
+                        key={stop.id}
+                        style={[styles.stopChip, chosen && styles.stopChipSelected]}
+                        onPress={() => {
+                          hapticFeedback.selection();
+                          setSelectedStop(chosen ? undefined : stop.title);
+                        }}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: chosen }}
+                        accessibilityLabel={`Select ${stop.title} to swap`}
+                      >
+                        <Text
+                          style={[styles.stopChipText, chosen && styles.stopChipTextSelected]}
+                          numberOfLines={1}
+                        >
+                          {stop.title}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
-              ))}
-              {resultNotice ? <Text style={styles.resultNotice}>{resultNotice}</Text> : null}
-              {undoSnapshot ? (
                 <TouchableOpacity
-                  style={styles.undoBtn}
-                  onPress={() => void handleUndo()}
+                  style={[styles.swapButton, busy && styles.buttonDisabled]}
                   disabled={busy}
+                  onPress={() =>
+                    void executeAction('swap_stop', {
+                      stopName: selectedStop ?? swappableStops[0]?.title,
+                    })
+                  }
                   accessibilityRole="button"
-                  accessibilityLabel="Undo last remix change"
+                  accessibilityLabel={
+                    selectedStop ? `Swap ${selectedStop}` : 'Swap a stop for a grounded alternative'
+                  }
                 >
-                  <Ionicons name="arrow-undo-outline" size={16} color="#0f172a" />
-                  <Text style={styles.undoBtnText}>Undo change</Text>
+                  <Ionicons name="swap-horizontal" size={18} color="#ffffff" />
+                  <Text style={styles.swapButtonText}>
+                    {selectedStop ? `Swap "${selectedStop}"` : 'Swap selected stop'}
+                  </Text>
                 </TouchableOpacity>
-              ) : null}
+              </View>
+            ) : null}
+
+            {/* Natural-Language Remix Input */}
+            <View style={styles.nlSection}>
+              <Text style={styles.sectionLabel}>Or tell Faroway what to change</Text>
+              <SafeTextInput
+                style={styles.nlInput}
+                value={instruction}
+                onChangeText={setInstruction}
+                placeholder={`e.g., Make Day ${dayNumber} less packed or swap the afternoon museum`}
+                placeholderTextColor="#64748b"
+                multiline
+                maxLength={300}
+                textAlignVertical="top"
+                accessibilityLabel="Describe how to remix this day"
+              />
+              <TouchableOpacity
+                style={[styles.nlSubmitBtn, (!instruction.trim() || busy) && styles.buttonDisabled]}
+                disabled={!instruction.trim() || busy}
+                onPress={() => {
+                  const text = instruction.trim();
+                  if (!text) return;
+                  void executeAction('natural_language', { text });
+                }}
+                accessibilityRole="button"
+                accessibilityLabel="Apply remix instruction"
+              >
+                {busy ? (
+                  <SafeActivityIndicator size="small" color="#ffffff" />
+                ) : (
+                  <Ionicons name="sparkles" size={16} color="#ffffff" />
+                )}
+                <Text style={styles.nlSubmitText}>{busy ? 'Updating Day…' : 'Apply change'}</Text>
+              </TouchableOpacity>
             </View>
-          ) : null}
-        </ScrollView>
+
+            {/* Before / After Diff Card + Undo */}
+            {resultSummary ? (
+              <View style={styles.resultCard} accessibilityLiveRegion="polite">
+                <Text style={styles.resultSummary}>{resultSummary}</Text>
+                {diffItems.map((item, idx) => (
+                  <View key={`${item.dayNumber}-${item.slot}-${idx}`} style={styles.diffRow}>
+                    <Text style={styles.diffBadge}>{item.action.toUpperCase()}</Text>
+                    <Text style={styles.diffText}>
+                      {item.before && item.after && item.before !== item.after
+                        ? `${item.before} → ${item.after}`
+                        : item.before || item.after || item.slot}
+                    </Text>
+                  </View>
+                ))}
+                {resultNotice ? <Text style={styles.resultNotice}>{resultNotice}</Text> : null}
+                {undoSnapshot ? (
+                  <TouchableOpacity
+                    style={styles.undoBtn}
+                    onPress={() => void handleUndo()}
+                    disabled={busy}
+                    accessibilityRole="button"
+                    accessibilityLabel="Undo last remix change"
+                  >
+                    <Ionicons name="arrow-undo-outline" size={16} color="#0f172a" />
+                    <Text style={styles.undoBtnText}>Undo change</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+            ) : null}
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </SafeModal>
   );

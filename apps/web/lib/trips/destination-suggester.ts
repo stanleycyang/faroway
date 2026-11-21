@@ -1433,7 +1433,11 @@ function buildPrefillDates(
   if (!targetMonth) return {};
   const refYear = referenceDate.getFullYear();
   const refMonth = referenceDate.getMonth() + 1;
-  const year = targetMonth < refMonth ? refYear + 1 : refYear;
+  const year =
+    targetMonth < refMonth ||
+    (targetMonth === refMonth && 10 < referenceDate.getDate())
+      ? refYear + 1
+      : refYear;
   const start = new Date(year, targetMonth - 1, 10);
   const end = new Date(year, targetMonth - 1, 10 + Math.max(1, days) - 1);
   const fmt = (d: Date) =>

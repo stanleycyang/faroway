@@ -288,10 +288,13 @@ export function buildGoogleMapsDayRouteUrl(
   if (queries.length === 0) return null;
 
   const estimatedKm = computeTotalDistanceKm(stops);
-  const travelMode =
-    estimatedKm !== null && estimatedKm > WALKING_THRESHOLD_KM
-      ? "transit"
-      : "walking";
+  const longRoute = estimatedKm !== null && estimatedKm > WALKING_THRESHOLD_KM;
+  // Google Maps Directions URL drops waypoints in transit mode; use driving for long multi-stop days.
+  const travelMode = longRoute
+    ? queries.length > 2
+      ? "driving"
+      : "transit"
+    : "walking";
 
   const params = new URLSearchParams();
   params.set("api", "1");
@@ -304,7 +307,11 @@ export function buildGoogleMapsDayRouteUrl(
 
   const origin = queries[0];
   const finalStop = queries[queries.length - 1];
-  const intermediate = queries.slice(1, -1).slice(0, MAX_GOOGLE_WAYPOINTS);
+  const intermediate = queries
+    .slice(1, -1)
+    .slice(0, MAX_GOOGLE_WAYPOINTS)
+    .map((q) => q.replace(/\|/g, " ").trim())
+    .filter(Boolean);
 
   params.set("origin", origin);
   params.set("destination", finalStop);
@@ -329,8 +336,9 @@ export function buildAppleMapsDayRouteUrl(
   if (queries.length === 0) return null;
 
   const estimatedKm = computeTotalDistanceKm(stops);
-  const dirflg =
-    estimatedKm !== null && estimatedKm > WALKING_THRESHOLD_KM ? "r" : "w";
+  const longRoute = estimatedKm !== null && estimatedKm > WALKING_THRESHOLD_KM;
+  // Apple Maps multi-stop daddr routes are unsupported in transit mode (dirflg=r).
+  const dirflg = longRoute ? (queries.length > 2 ? "d" : "r") : "w";
 
   const params = new URLSearchParams();
   if (queries.length === 1) {
@@ -340,7 +348,13 @@ export function buildAppleMapsDayRouteUrl(
   }
 
   params.set("saddr", queries[0]);
-  const destinations = queries.slice(1, 1 + MAX_APPLE_DESTINATIONS);
+  const destinations =
+    queries.length - 1 > MAX_APPLE_DESTINATIONS
+      ? [
+          ...queries.slice(1, MAX_APPLE_DESTINATIONS),
+          queries[queries.length - 1],
+        ]
+      : queries.slice(1);
   for (const dest of destinations) {
     params.append("daddr", dest);
   }

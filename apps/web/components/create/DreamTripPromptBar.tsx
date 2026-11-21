@@ -14,23 +14,42 @@ import {
   Plane,
   Calendar,
 } from "lucide-react";
-import {
-  VALID_ACCESSIBILITY,
-  VALID_BUDGETS,
-  VALID_DIETARY,
-  VALID_VIBES,
-  parseDreamTripPrompt,
-  summarizeParsedDreamTrip,
-  type AccessibilityOptionId,
-  type BudgetTier,
-  type DietaryOption,
-  type ParsedDreamTrip,
-  type VibeId,
+import type {
+  AccessibilityOptionId,
+  BudgetTier,
+  DietaryOption,
+  ParsedDreamTrip,
+  VibeId,
 } from "@/lib/trips/prompt-parser";
-import {
-  suggestDestinations,
-  type DestinationSuggestion,
-} from "@/lib/trips/destination-suggester";
+import type { DestinationSuggestion } from "@/lib/trips/destination-suggester";
+
+const VALID_BUDGETS: readonly BudgetTier[] = ["budget", "moderate", "luxury"];
+const VALID_VIBES: readonly VibeId[] = [
+  "adventure",
+  "relaxation",
+  "cultural",
+  "foodie",
+  "nightlife",
+  "romantic",
+  "nature",
+  "shopping",
+  "wellness",
+  "photography",
+];
+const VALID_DIETARY: readonly DietaryOption[] = [
+  "Vegetarian",
+  "Vegan",
+  "Halal",
+  "Kosher",
+  "Gluten-free",
+  "Pescatarian",
+];
+const VALID_ACCESSIBILITY: readonly AccessibilityOptionId[] = [
+  "step_free_entrance",
+  "accessible_restroom",
+  "accessible_seating",
+  "accessible_parking",
+];
 import {
   hasTravelerMemoryValues,
   summarizeTravelerMemory,
@@ -243,11 +262,15 @@ export function DreamTripPromptBar({
       }
 
       if (!parsed) {
+        const { parseDreamTripPrompt } =
+          await import("@/lib/trips/prompt-parser");
         parsed = parseDreamTripPrompt(raw);
       }
 
       if (!mounted.current) return;
 
+      const { summarizeParsedDreamTrip } =
+        await import("@/lib/trips/prompt-parser");
       const summaryChips = summarizeParsedDreamTrip(parsed);
       if (summaryChips.length === 0) {
         setParseFeedback(
@@ -287,7 +310,7 @@ export function DreamTripPromptBar({
 
     try {
       let results: DestinationSuggestion[] | null = null;
-      if (isAuthenticated && typeof fetch === "function") {
+      if (typeof fetch === "function") {
         try {
           const response = await fetch("/api/trips/suggest-destinations", {
             method: "POST",
@@ -309,6 +332,8 @@ export function DreamTripPromptBar({
       }
 
       if (!results) {
+        const { suggestDestinations } =
+          await import("@/lib/trips/destination-suggester");
         results = suggestDestinations(requestBody);
       }
 
@@ -870,8 +895,9 @@ export function DreamTripPromptBar({
                   Always apply to my trips
                 </h3>
                 <p className="text-[11px] text-slate-500">
-                  Saved locally for your account. Never overrides explicit links
-                  or drafts, and always clearable in one click.
+                  {isAuthenticated
+                    ? "Saved locally on this device for your account. Never overrides explicit links or drafts, and always clearable in one click."
+                    : "Saved in this browser. Sign in to keep separate defaults for your account; always clearable in one click."}
                 </p>
               </div>
             </div>

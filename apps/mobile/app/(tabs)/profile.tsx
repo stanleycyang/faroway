@@ -11,12 +11,15 @@ import {
   Image,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
   Linking,
   Platform,
   TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
+const useOptionalFocusEffect =
+  typeof useFocusEffect === 'function' ? useFocusEffect : (_cb: () => void) => {};
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as WebBrowser from 'expo-web-browser';
@@ -213,10 +216,9 @@ export default function ProfileScreen() {
     };
   }, []);
 
-  useEffect(() => {
+  const reloadMemory = useCallback(() => {
     const ownerId = user?.id;
     const rev = accountRevision;
-    setEditingMemory(false);
     void loadTravelerMemory(ownerId)
       .then((loaded) => {
         if (!isCurrentAccount(ownerId, rev)) return;
@@ -227,6 +229,17 @@ export default function ProfileScreen() {
       })
       .catch(() => undefined);
   }, [user?.id, accountRevision, isCurrentAccount]);
+
+  useEffect(() => {
+    setEditingMemory(false);
+    reloadMemory();
+  }, [reloadMemory]);
+
+  useOptionalFocusEffect(
+    useCallback(() => {
+      reloadMemory();
+    }, [reloadMemory])
+  );
 
   const handleSaveMemoryEdit = () => {
     const ownerId = user?.id;
@@ -327,294 +340,306 @@ export default function ProfileScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle} accessibilityRole="header">
-            Profile
-          </Text>
-        </View>
-
-        {/* Logged-Out State */}
-        {!isAuthenticated && <GuestProfileCard />}
-
-        {/* Logged-In State */}
-        {isAuthenticated && user && (
-          <View style={styles.profileCard}>
-            {user.avatar ? (
-              <Image source={{ uri: user.avatar }} style={styles.avatar} />
-            ) : (
-              <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                <Ionicons name="person" size={36} color={colors.surface[500]} />
-              </View>
-            )}
-            <Text style={styles.userName}>{user.name}</Text>
-            <Text style={styles.userEmail}>{user.email}</Text>
-
-            {/* Stats */}
-            <View style={styles.statsContainer}>
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{trips.length}</Text>
-                <Text style={styles.statLabel}>Total Trips</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{upcomingTrips}</Text>
-                <Text style={styles.statLabel}>Upcoming</Text>
-              </View>
-              <View style={styles.statDivider} />
-              <View style={styles.statItem}>
-                <Text style={styles.statValue}>{pastTrips}</Text>
-                <Text style={styles.statLabel}>Past</Text>
-              </View>
-            </View>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+          {/* Header */}
+          <View style={styles.header}>
+            <Text style={styles.headerTitle} accessibilityRole="header">
+              Profile
+            </Text>
           </View>
-        )}
 
-        {/* Account Menu (only when logged in) */}
-        {isAuthenticated && (
-          <View style={styles.menuSection}>
-            <Text style={styles.menuSectionTitle}>Account</Text>
-            <MenuItem
-              icon="person-outline"
-              label="Edit profile"
-              onPress={() => router.push('/profile/edit-profile')}
-            />
-            <MenuItem
-              icon="heart-outline"
-              label="Travel preferences"
-              value={
-                user?.preferences?.vibes?.length
-                  ? `${user.preferences.vibes.length} vibes selected`
-                  : profileStatus === 'ready'
-                    ? 'Not set'
-                    : profileStatus === 'error'
-                      ? 'Couldn’t load — open to retry'
-                      : 'Loading saved preferences…'
-              }
-              onPress={() => router.push('/profile/preferences')}
-            />
-            <MenuItem
-              icon="notifications-outline"
-              label="Notifications"
-              onPress={() => router.push('/profile/notifications')}
-            />
-          </View>
-        )}
+          {/* Logged-Out State */}
+          {!isAuthenticated && <GuestProfileCard />}
 
-        {/* Traveler Memory (Always-apply defaults) */}
-        <View style={styles.menuSection}>
-          <Text style={styles.menuSectionTitle}>Traveler Memory</Text>
-          <View style={styles.memoryCard}>
-            <View style={styles.memoryHeaderRow}>
-              <View style={styles.memoryTitleWrap}>
-                <Ionicons name="bookmark-outline" size={18} color="#0F766E" />
-                <Text style={styles.memoryHeading}>Always apply to my trips</Text>
-              </View>
-              <TouchableOpacity
-                style={styles.memoryTextBtn}
-                onPress={() => {
-                  hapticFeedback.light();
-                  setAirportDraft(memory?.homeAirport ?? '');
-                  setBudgetDraft(memory?.defaultBudget);
-                  setAvoidEarlyDraft(memory?.avoidEarlyStarts ?? false);
-                  setEditingMemory((v) => !v);
-                }}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  editingMemory ? 'Cancel editing traveler memory' : 'Edit traveler memory'
-                }
-              >
-                <Text style={styles.memoryEditLabel}>{editingMemory ? 'Cancel' : 'Edit'}</Text>
-              </TouchableOpacity>
-            </View>
-
-            {!editingMemory ? (
-              <>
-                {hasMemory && memoryLines.length > 0 ? (
-                  <View style={styles.memoryPillList}>
-                    {memoryLines.map((line) => (
-                      <View key={line} style={styles.memoryPill}>
-                        <Text style={styles.memoryPillText}>{line}</Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : (
-                  <Text style={styles.memoryHint}>
-                    No defaults saved yet. Add your home airport, preferred comfort tier, or save
-                    vibes & dietary notes from the trip planner.
-                  </Text>
-                )}
-
-                {hasMemory ? (
-                  <View style={styles.memoryFooterRow}>
-                    <TouchableOpacity
-                      style={styles.memoryClearBtn}
-                      onPress={handleClearMemory}
-                      accessibilityRole="button"
-                      accessibilityLabel="Clear traveler memory defaults"
-                    >
-                      <Text style={styles.memoryClearBtnText}>Clear defaults</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : null}
-              </>
-            ) : (
-              <View style={styles.memoryEditor}>
-                <Text style={styles.memoryFieldLabel}>Home airport (optional)</Text>
-                <TextInput
-                  style={styles.memoryInput}
-                  value={airportDraft}
-                  onChangeText={setAirportDraft}
-                  placeholder="e.g., SFO, JFK, LHR"
-                  placeholderTextColor="#64748b"
-                  autoCapitalize="characters"
-                  maxLength={12}
-                  accessibilityLabel="Home airport code"
-                />
-
-                <Text style={styles.memoryFieldLabel}>Default comfort tier</Text>
-                <View style={styles.memoryTierRow}>
-                  {(
-                    [
-                      { id: 'budget', label: 'Budget' },
-                      { id: 'moderate', label: 'Comfort' },
-                      { id: 'luxury', label: 'Luxury' },
-                    ] as const
-                  ).map((tier) => {
-                    const selected = budgetDraft === tier.id;
-                    return (
-                      <TouchableOpacity
-                        key={tier.id}
-                        style={[styles.memoryTierBtn, selected && styles.memoryTierBtnSelected]}
-                        onPress={() => {
-                          hapticFeedback.selection();
-                          setBudgetDraft(selected ? undefined : tier.id);
-                        }}
-                        accessibilityRole="button"
-                        accessibilityState={{ selected }}
-                        accessibilityLabel={`Default comfort: ${tier.label}`}
-                      >
-                        <Text
-                          style={[styles.memoryTierText, selected && styles.memoryTierTextSelected]}
-                        >
-                          {tier.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
+          {/* Logged-In State */}
+          {isAuthenticated && user && (
+            <View style={styles.profileCard}>
+              {user.avatar ? (
+                <Image source={{ uri: user.avatar }} style={styles.avatar} />
+              ) : (
+                <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                  <Ionicons name="person" size={36} color={colors.surface[500]} />
                 </View>
+              )}
+              <Text style={styles.userName}>{user.name}</Text>
+              <Text style={styles.userEmail}>{user.email}</Text>
 
+              {/* Stats */}
+              <View style={styles.statsContainer}>
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{trips.length}</Text>
+                  <Text style={styles.statLabel}>Total Trips</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{upcomingTrips}</Text>
+                  <Text style={styles.statLabel}>Upcoming</Text>
+                </View>
+                <View style={styles.statDivider} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statValue}>{pastTrips}</Text>
+                  <Text style={styles.statLabel}>Past</Text>
+                </View>
+              </View>
+            </View>
+          )}
+
+          {/* Account Menu (only when logged in) */}
+          {isAuthenticated && (
+            <View style={styles.menuSection}>
+              <Text style={styles.menuSectionTitle}>Account</Text>
+              <MenuItem
+                icon="person-outline"
+                label="Edit profile"
+                onPress={() => router.push('/profile/edit-profile')}
+              />
+              <MenuItem
+                icon="heart-outline"
+                label="Travel preferences"
+                value={
+                  user?.preferences?.vibes?.length
+                    ? `${user.preferences.vibes.length} vibes selected`
+                    : profileStatus === 'ready'
+                      ? 'Not set'
+                      : profileStatus === 'error'
+                        ? 'Couldn’t load — open to retry'
+                        : 'Loading saved preferences…'
+                }
+                onPress={() => router.push('/profile/preferences')}
+              />
+              <MenuItem
+                icon="notifications-outline"
+                label="Notifications"
+                onPress={() => router.push('/profile/notifications')}
+              />
+            </View>
+          )}
+
+          {/* Traveler Memory (Always-apply defaults) */}
+          <View style={styles.menuSection}>
+            <Text style={styles.menuSectionTitle}>Traveler Memory</Text>
+            <View style={styles.memoryCard}>
+              <View style={styles.memoryHeaderRow}>
+                <View style={styles.memoryTitleWrap}>
+                  <Ionicons name="bookmark-outline" size={18} color="#0F766E" />
+                  <Text style={styles.memoryHeading}>Always apply to my trips</Text>
+                </View>
                 <TouchableOpacity
-                  style={styles.memoryToggleRow}
+                  style={styles.memoryTextBtn}
                   onPress={() => {
-                    hapticFeedback.selection();
-                    setAvoidEarlyDraft((v) => !v);
+                    hapticFeedback.light();
+                    setAirportDraft(memory?.homeAirport ?? '');
+                    setBudgetDraft(memory?.defaultBudget);
+                    setAvoidEarlyDraft(memory?.avoidEarlyStarts ?? false);
+                    setEditingMemory((v) => !v);
                   }}
-                  accessibilityRole="checkbox"
-                  accessibilityState={{ checked: avoidEarlyDraft }}
-                  accessibilityLabel="Prefer relaxed mornings without early starts"
-                >
-                  <Ionicons
-                    name={avoidEarlyDraft ? 'checkbox' : 'square-outline'}
-                    size={22}
-                    color={avoidEarlyDraft ? '#0F766E' : '#475569'}
-                  />
-                  <Text style={styles.memoryToggleLabel}>
-                    Prefer relaxed mornings (avoid early starts)
-                  </Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.memorySaveBtn}
-                  onPress={handleSaveMemoryEdit}
                   accessibilityRole="button"
-                  accessibilityLabel="Save traveler memory defaults"
+                  accessibilityLabel={
+                    editingMemory ? 'Cancel editing traveler memory' : 'Edit traveler memory'
+                  }
                 >
-                  <Text style={styles.memorySaveBtnText}>Save defaults</Text>
+                  <Text style={styles.memoryEditLabel}>{editingMemory ? 'Cancel' : 'Edit'}</Text>
                 </TouchableOpacity>
               </View>
-            )}
-          </View>
-        </View>
 
-        <View style={styles.menuSection}>
-          <Text style={styles.menuSectionTitle}>Support</Text>
-          <MenuItem
-            icon="help-circle-outline"
-            label="Help Center"
-            onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/support')}
-          />
-          <MenuItem
-            icon="chatbubble-outline"
-            label="Contact Us"
-            onPress={async () => {
-              try {
-                await Linking.openURL('mailto:support@faroway.ai');
-              } catch {
-                Alert.alert('Contact Us', 'Email us at support@faroway.ai', [
-                  {
-                    text: 'Open Help Center',
-                    onPress: () => void WebBrowser.openBrowserAsync('https://faroway.ai/support'),
-                  },
-                  { text: 'OK' },
-                ]);
-              }
-            }}
-          />
-          {Platform.OS !== 'web' && hasRealStoreListing() && (
+              {!editingMemory ? (
+                <>
+                  {hasMemory && memoryLines.length > 0 ? (
+                    <View style={styles.memoryPillList}>
+                      {memoryLines.map((line) => (
+                        <View key={line} style={styles.memoryPill}>
+                          <Text style={styles.memoryPillText}>{line}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <Text style={styles.memoryHint}>
+                      No defaults saved yet. Add your home airport, preferred comfort tier, or save
+                      vibes & dietary notes from the trip planner.
+                    </Text>
+                  )}
+
+                  {hasMemory ? (
+                    <View style={styles.memoryFooterRow}>
+                      <TouchableOpacity
+                        style={styles.memoryClearBtn}
+                        onPress={handleClearMemory}
+                        accessibilityRole="button"
+                        accessibilityLabel="Clear traveler memory defaults"
+                      >
+                        <Text style={styles.memoryClearBtnText}>Clear defaults</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+                </>
+              ) : (
+                <View style={styles.memoryEditor}>
+                  <Text style={styles.memoryFieldLabel}>Home airport (optional)</Text>
+                  <TextInput
+                    style={styles.memoryInput}
+                    value={airportDraft}
+                    onChangeText={setAirportDraft}
+                    placeholder="e.g., SFO, JFK, LHR"
+                    placeholderTextColor="#64748b"
+                    autoCapitalize="characters"
+                    maxLength={12}
+                    accessibilityLabel="Home airport code"
+                  />
+
+                  <Text style={styles.memoryFieldLabel}>Default comfort tier</Text>
+                  <View style={styles.memoryTierRow}>
+                    {(
+                      [
+                        { id: 'budget', label: 'Budget' },
+                        { id: 'moderate', label: 'Comfort' },
+                        { id: 'luxury', label: 'Luxury' },
+                      ] as const
+                    ).map((tier) => {
+                      const selected = budgetDraft === tier.id;
+                      return (
+                        <TouchableOpacity
+                          key={tier.id}
+                          style={[styles.memoryTierBtn, selected && styles.memoryTierBtnSelected]}
+                          onPress={() => {
+                            hapticFeedback.selection();
+                            setBudgetDraft(selected ? undefined : tier.id);
+                          }}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected }}
+                          accessibilityLabel={`Default comfort: ${tier.label}`}
+                        >
+                          <Text
+                            style={[
+                              styles.memoryTierText,
+                              selected && styles.memoryTierTextSelected,
+                            ]}
+                          >
+                            {tier.label}
+                          </Text>
+                        </TouchableOpacity>
+                      );
+                    })}
+                  </View>
+
+                  <TouchableOpacity
+                    style={styles.memoryToggleRow}
+                    onPress={() => {
+                      hapticFeedback.selection();
+                      setAvoidEarlyDraft((v) => !v);
+                    }}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: avoidEarlyDraft }}
+                    accessibilityLabel="Prefer relaxed mornings without early starts"
+                  >
+                    <Ionicons
+                      name={avoidEarlyDraft ? 'checkbox' : 'square-outline'}
+                      size={22}
+                      color={avoidEarlyDraft ? '#0F766E' : '#475569'}
+                    />
+                    <Text style={styles.memoryToggleLabel}>
+                      Prefer relaxed mornings (avoid early starts)
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.memorySaveBtn}
+                    onPress={handleSaveMemoryEdit}
+                    accessibilityRole="button"
+                    accessibilityLabel="Save traveler memory defaults"
+                  >
+                    <Text style={styles.memorySaveBtnText}>Save defaults</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.menuSection}>
+            <Text style={styles.menuSectionTitle}>Support</Text>
             <MenuItem
-              icon="star-outline"
-              label="Rate the App"
+              icon="help-circle-outline"
+              label="Help Center"
+              onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/support')}
+            />
+            <MenuItem
+              icon="chatbubble-outline"
+              label="Contact Us"
               onPress={async () => {
-                const result = await requestStoreReview();
-                if (result.destination === 'unavailable') {
-                  Alert.alert('Unable to open ratings', 'Please try again later.');
+                try {
+                  await Linking.openURL('mailto:support@faroway.ai');
+                } catch {
+                  Alert.alert('Contact Us', 'Email us at support@faroway.ai', [
+                    {
+                      text: 'Open Help Center',
+                      onPress: () => void WebBrowser.openBrowserAsync('https://faroway.ai/support'),
+                    },
+                    { text: 'OK' },
+                  ]);
                 }
               }}
             />
-          )}
-        </View>
+            {Platform.OS !== 'web' && hasRealStoreListing() && (
+              <MenuItem
+                icon="star-outline"
+                label="Rate the App"
+                onPress={async () => {
+                  const result = await requestStoreReview();
+                  if (result.destination === 'unavailable') {
+                    Alert.alert('Unable to open ratings', 'Please try again later.');
+                  }
+                }}
+              />
+            )}
+          </View>
 
-        <View style={styles.menuSection}>
-          <Text style={styles.menuSectionTitle}>Legal</Text>
-          <MenuItem
-            icon="document-text-outline"
-            label="Terms of Service"
-            onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/terms')}
-          />
-          <MenuItem
-            icon="shield-outline"
-            label="Privacy Policy"
-            onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/privacy')}
-          />
-        </View>
-
-        {isAuthenticated && (
           <View style={styles.menuSection}>
+            <Text style={styles.menuSectionTitle}>Legal</Text>
             <MenuItem
-              icon="log-out-outline"
-              label="Log out"
-              onPress={handleLogout}
-              showChevron={false}
-              danger
+              icon="document-text-outline"
+              label="Terms of Service"
+              onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/terms')}
             />
             <MenuItem
-              icon="trash-outline"
-              label="Delete account"
-              onPress={handleDeleteAccount}
-              showChevron={false}
-              danger
+              icon="shield-outline"
+              label="Privacy Policy"
+              onPress={() => WebBrowser.openBrowserAsync('https://faroway.ai/privacy')}
             />
           </View>
-        )}
 
-        {/* App Version */}
-        <Text style={styles.versionText}>
-          Faroway v{Constants.expoConfig?.version ?? '1.0.0'}
-          {Constants.nativeBuildVersion ? ` (${Constants.nativeBuildVersion})` : ''}
-        </Text>
-      </ScrollView>
+          {isAuthenticated && (
+            <View style={styles.menuSection}>
+              <MenuItem
+                icon="log-out-outline"
+                label="Log out"
+                onPress={handleLogout}
+                showChevron={false}
+                danger
+              />
+              <MenuItem
+                icon="trash-outline"
+                label="Delete account"
+                onPress={handleDeleteAccount}
+                showChevron={false}
+                danger
+              />
+            </View>
+          )}
+
+          {/* App Version */}
+          <Text style={styles.versionText}>
+            Faroway v{Constants.expoConfig?.version ?? '1.0.0'}
+            {Constants.nativeBuildVersion ? ` (${Constants.nativeBuildVersion})` : ''}
+          </Text>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </SafeAreaView>
   );
 }

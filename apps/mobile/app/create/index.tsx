@@ -24,7 +24,9 @@ import {
   KeyboardAvoidingView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
+const useOptionalFocusEffect =
+  typeof useFocusEffect === 'function' ? useFocusEffect : (_cb: () => void) => {};
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Button, PlacesAutocomplete, DateRangePicker, VibeSelector } from '../../components/ui';
@@ -186,51 +188,68 @@ export default function CreateTripScreen() {
   }, [guestBrief.restored]);
 
   // Load saved Traveler Memory defaults scoped by userId and auto-apply without
-  // overwriting explicit URL parameters or already-filled fields.
+  // overwriting explicit URL parameters or unfinished guest briefs.
+  const reloadTravelerMemory = useCallback(
+    (allowAutoApply: boolean) => {
+      let active = true;
+      const scope = `${userId ?? 'guest'}:${accountRevision}`;
+
+      void loadTravelerMemory(userId)
+        .then((loaded) => {
+          if (!active || !isRecoveryCurrent()) return;
+          setTravelerMemory(loaded);
+          if (!allowAutoApply || !loaded || !hasTravelerMemoryContent(loaded)) return;
+          if (memoryLoadedScopeRef.current === scope) return;
+          memoryLoadedScopeRef.current = scope;
+
+          const explicit = new Set<string>();
+          if (params.destination) explicit.add('destination');
+          if (params.vibes) explicit.add('vibes');
+          if (params.travelerType) explicit.add('travelerType');
+          if (params.travelers) explicit.add('travelers');
+
+          const currentDraft = useTripStore.getState().draftInput;
+          const merged = mergeTravelerMemoryIntoDraft(currentDraft, loaded, explicit);
+          if (Object.keys(merged).length > 0) {
+            setDraftInput(merged);
+            setMemoryApplied(true);
+          }
+        })
+        .catch(() => {
+          // Ignore storage read failures so the planner stays usable.
+        });
+
+      return () => {
+        active = false;
+      };
+    },
+    [
+      userId,
+      accountRevision,
+      isRecoveryCurrent,
+      params.destination,
+      params.vibes,
+      params.travelerType,
+      params.travelers,
+      setDraftInput,
+    ]
+  );
+
   useEffect(() => {
-    let active = true;
-    const scope = `${userId ?? 'guest'}:${accountRevision}`;
     setTravelerMemory(null);
     setMemoryApplied(false);
+    // For guests, wait until useGuestTripBrief finishes restoring any unfinished brief
+    // so auto-applying defaults never marks the guest brief as edited & clobbers it.
+    if (!isAuthenticated && !guestBrief.settled) return;
+    return reloadTravelerMemory(true);
+  }, [isAuthenticated, guestBrief.settled, reloadTravelerMemory]);
 
-    void loadTravelerMemory(userId)
-      .then((loaded) => {
-        if (!active || !isRecoveryCurrent()) return;
-        setTravelerMemory(loaded);
-        if (!loaded || !hasTravelerMemoryContent(loaded)) return;
-        if (memoryLoadedScopeRef.current === scope) return;
-        memoryLoadedScopeRef.current = scope;
-
-        const explicit = new Set<string>();
-        if (params.destination) explicit.add('destination');
-        if (params.vibes) explicit.add('vibes');
-        if (params.travelerType) explicit.add('travelerType');
-        if (params.travelers) explicit.add('travelers');
-
-        const currentDraft = useTripStore.getState().draftInput;
-        const merged = mergeTravelerMemoryIntoDraft(currentDraft, loaded, explicit);
-        if (Object.keys(merged).length > 0) {
-          setDraftInput(merged);
-          setMemoryApplied(true);
-        }
-      })
-      .catch(() => {
-        // Ignore storage read failures so the planner stays usable.
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [
-    userId,
-    accountRevision,
-    isRecoveryCurrent,
-    params.destination,
-    params.vibes,
-    params.travelerType,
-    params.travelers,
-    setDraftInput,
-  ]);
+  useOptionalFocusEffect(
+    useCallback(() => {
+      if (!isAuthenticated && !guestBrief.settled) return;
+      return reloadTravelerMemory(false);
+    }, [isAuthenticated, guestBrief.settled, reloadTravelerMemory])
+  );
 
   const handleApplyParsedPrompt = useCallback(
     (parsed: ParsedTripPrompt) => {
@@ -263,7 +282,33 @@ export default function CreateTripScreen() {
       if (parsed.travelerType) updates.travelerType = parsed.travelerType;
       if (parsed.budget) updates.budget = parsed.budget;
       if (parsed.vibes.length > 0) updates.vibes = parsed.vibes;
-      if (parsed.requirements) updates.requirements = parsed.requirements;
+      if (parsed.requirements) {
+        const prevReq = previous?.requirements;
+        const mergedAllergies = Array.from(
+          new Set([...(prevReq?.allergies ?? []), ...parsed.requirements.allergies])
+        ).slice(0, 10);
+        const mergedDietary = Array.from(
+          new Set([
+            ...(prevReq?.dietaryPreferences ?? []),
+            ...parsed.requirements.dietaryPreferences,
+          ])
+        ).slice(0, 10);
+        const mergedAccess = Array.from(
+          new Set([...(prevReq?.accessibility ?? []), ...parsed.requirements.accessibility])
+        ).slice(0, 10);
+        const prevNotes = prevReq?.mobilityNotes?.trim() ?? '';
+        const nextNotes = parsed.requirements.mobilityNotes?.trim() ?? '';
+        const mergedNotes =
+          prevNotes && nextNotes && !prevNotes.toLowerCase().includes(nextNotes.toLowerCase())
+            ? `${prevNotes}; ${nextNotes}`.slice(0, 500)
+            : (nextNotes || prevNotes).slice(0, 500);
+        updates.requirements = {
+          allergies: mergedAllergies,
+          dietaryPreferences: mergedDietary,
+          accessibility: mergedAccess,
+          mobilityNotes: mergedNotes,
+        };
+      }
 
       if (Object.keys(updates).length > 0) {
         setDraftInput(updates);
@@ -298,7 +343,10 @@ export default function CreateTripScreen() {
         budget: suggestion.suggestedBudget,
         vibes: suggestion.suggestedVibes,
       };
-      if (!previous?.startDate || !previous?.endDate) {
+      if (suggestion.startDate && suggestion.endDate) {
+        updates.startDate = suggestion.startDate;
+        updates.endDate = suggestion.endDate;
+      } else if (!previous?.startDate || !previous?.endDate) {
         updates.startDate = fmt(start);
         updates.endDate = fmt(end);
       }

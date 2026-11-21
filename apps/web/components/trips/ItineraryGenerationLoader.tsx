@@ -164,11 +164,16 @@ export function ItineraryGenerationLoader({
     phase !== "error" &&
     /still generating in background|reconnect for updates/i.test(message);
   const chapters = draftChapters(days, specBlocks);
-  const hasDayOneReady =
-    Array.isArray(days) && days.length > 0 && phase !== "complete";
-  const dayOneChapter = hasDayOneReady
-    ? (chapters.find((chapter) => chapter.number === 1) ?? chapters[0] ?? null)
-    : null;
+  const candidateDayOneChapter =
+    Array.isArray(days) && days.length > 0 && phase !== "complete"
+      ? (chapters.find((chapter) => chapter.number === 1) ??
+        chapters[0] ??
+        null)
+      : null;
+  const hasDayOneReady = Boolean(
+    candidateDayOneChapter && candidateDayOneChapter.stops.length > 0,
+  );
+  const dayOneChapter = hasDayOneReady ? candidateDayOneChapter : null;
   const feedDiscoveries =
     discoveries && discoveries.length > 0
       ? mergeDiscoveries([], discoveries)
@@ -343,19 +348,30 @@ export function ItineraryGenerationLoader({
                         : "First chapter drafted"}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    data-testid="peek-day-one-button"
-                    aria-expanded={dayOnePreviewOpen}
-                    onClick={() => {
-                      setDayOnePreviewOpen((open) => !open);
-                      onPeekDayOne?.();
-                    }}
-                    className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
-                  >
-                    <Eye className="h-3.5 w-3.5" aria-hidden="true" />
-                    {dayOnePreviewOpen ? "Hide Day 1" : "Preview Day 1"}
-                  </button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      data-testid="peek-day-one-button"
+                      aria-expanded={dayOnePreviewOpen}
+                      onClick={() => {
+                        setDayOnePreviewOpen((open) => !open);
+                      }}
+                      className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+                    >
+                      <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                      {dayOnePreviewOpen ? "Hide Day 1" : "Preview Day 1"}
+                    </button>
+                    {onPeekDayOne && (
+                      <button
+                        type="button"
+                        data-testid="open-day-one-view-button"
+                        onClick={onPeekDayOne}
+                        className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-teal-300 bg-white px-4 py-2 text-xs font-semibold text-teal-900 hover:bg-teal-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+                      >
+                        Open Day 1 in trip view
+                      </button>
+                    )}
+                  </div>
                 </div>
                 {dayOnePreviewOpen && (
                   <div className="mt-4 border-t border-teal-100 pt-4">
