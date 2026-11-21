@@ -1132,11 +1132,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                   accessibilityRole="button"
                   accessibilityLabel="Report an issue with this itinerary"
                   style={{ minHeight: 44, justifyContent: 'center' }}
-                  onPress={() =>
-                    void WebBrowser.openBrowserAsync(
-                      `https://faroway.ai/report?type=trip&id=${encodeURIComponent(trip.id)}`
-                    )
-                  }
+                  onPress={() => void WebBrowser.openBrowserAsync('https://faroway.ai/support')}
                 >
                   <Text
                     style={{
