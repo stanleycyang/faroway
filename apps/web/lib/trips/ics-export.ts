@@ -7,6 +7,7 @@ import {
 } from "@faroway/types";
 
 export interface TripExportInput {
+  id?: string;
   destination: string;
   start_date: string;
   end_date?: string;
@@ -392,6 +393,14 @@ export function buildTripIcsContent(
   const dtstamp = formatUtcTimestamp(exportedAt);
   const destination = trip.destination?.trim() || "Trip";
   const destSlug = slugifyDestination(destination) || "trip";
+  const tripIdSlug =
+    typeof trip.id === "string" && trip.id.trim()
+      ? trip.id
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9-]+/g, "")
+          .slice(0, 36)
+      : "";
   const tripStart = parseCalendarDate(trip.start_date);
 
   const lines: string[] = [
@@ -428,7 +437,8 @@ export function buildTripIcsContent(
         MAX_DAY_MINUTE,
         Math.max(safeStart + 15, event.endMinute),
       );
-      const uid = `faroway-${destSlug}-${dateStamp}-d${dayNumber}-${event.uidSuffix}@faroway.ai`;
+      const uidPrefix = tripIdSlug ? `${tripIdSlug}-${destSlug}` : destSlug;
+      const uid = `faroway-${uidPrefix}-${dateStamp}-d${dayNumber}-${event.uidSuffix}@faroway.ai`;
       lines.push("BEGIN:VEVENT");
       lines.push(foldIcsLine(`UID:${uid}`));
       lines.push(`DTSTAMP:${dtstamp}`);

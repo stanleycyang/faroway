@@ -1,9 +1,10 @@
 import { differenceInCalendarDays } from "date-fns";
-import type {
-  GeneratedItinerary,
-  ItineraryActivity,
-  Restaurant,
-  TripDay,
+import {
+  readDayTiming,
+  type GeneratedItinerary,
+  type ItineraryActivity,
+  type Restaurant,
+  type TripDay,
 } from "@faroway/types";
 import { parseTripDate } from "@/lib/trips/date-duration";
 
@@ -282,17 +283,43 @@ export function findOnTripUpNext(
   if (!day) return null;
 
   const hour = effectiveNow.getHours();
-  const preferredOrder: CompanionSlot[] =
+  const nowMinutes = hour * 60 + effectiveNow.getMinutes();
+
+  // Check explicit proposed event times first when available so we never
+  // direct travelers back to stops whose scheduled window has already ended.
+  const timing = readDayTiming(day);
+  const timingEndById = new Map<string, number>();
+  if (timing?.events?.length) {
+    for (const ev of timing.events) {
+      if (typeof ev.endMinute === "number" && Number.isFinite(ev.endMinute)) {
+        const prev = timingEndById.get(ev.id);
+        if (prev === undefined || ev.endMinute > prev) {
+          timingEndById.set(ev.id, ev.endMinute);
+        }
+      }
+    }
+  }
+
+  // Forward-only slot progression: never fall back to already-elapsed earlier slots.
+  const remainingSlots: CompanionSlot[] =
     hour < 12
       ? ["morning", "afternoon", "evening"]
       : hour < 17
-        ? ["afternoon", "evening", "morning"]
-        : ["evening", "afternoon", "morning"];
+        ? ["afternoon", "evening"]
+        : ["evening"];
 
-  for (const slot of preferredOrder) {
+  const isNotEnded = (timingId: string | null): boolean => {
+    if (!timingId) return true;
+    const endMinute = timingEndById.get(timingId);
+    return endMinute === undefined || endMinute > nowMinutes;
+  };
+
+  for (const slot of remainingSlots) {
     const acts = getSlotActivities(day, slot);
-    if (acts.length > 0 && acts[0]?.name) {
-      const stop = acts[0];
+    const nextAct = acts.find(
+      (a) => a?.name && isNotEnded(a.id ? `activity:${a.id}` : null),
+    );
+    if (nextAct) {
       return {
         dayNumber: day.dayNumber,
         dayIndex,
@@ -300,17 +327,19 @@ export function findOnTripUpNext(
         date: day.date || todayIso,
         slot,
         stop: {
-          name: stop.name,
-          address: stop.location?.address,
-          locationName: stop.location?.name,
-          description: stop.description,
-          coordinates: stop.location?.coordinates,
+          name: nextAct.name,
+          address: nextAct.location?.address,
+          locationName: nextAct.location?.name,
+          description: nextAct.description,
+          coordinates: nextAct.location?.coordinates,
         },
       };
     }
     const meals = getSlotMeals(day, slot);
-    if (meals.length > 0 && meals[0]?.name) {
-      const meal = meals[0];
+    const nextMeal = meals.find(
+      (m) => m?.name && isNotEnded(m.id ? `meal:${slot}:${m.id}` : null),
+    );
+    if (nextMeal) {
       return {
         dayNumber: day.dayNumber,
         dayIndex,
@@ -318,11 +347,11 @@ export function findOnTripUpNext(
         date: day.date || todayIso,
         slot,
         stop: {
-          name: meal.name,
-          address: meal.location?.address,
-          locationName: meal.location?.name,
-          description: meal.description,
-          coordinates: meal.location?.coordinates,
+          name: nextMeal.name,
+          address: nextMeal.location?.address,
+          locationName: nextMeal.location?.name,
+          description: nextMeal.description,
+          coordinates: nextMeal.location?.coordinates,
         },
       };
     }

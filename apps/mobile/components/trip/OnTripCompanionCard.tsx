@@ -597,7 +597,7 @@ const styles = StyleSheet.create({
     color: '#0f172a',
   },
   taxiCardBody: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
     gap: 20,
   },

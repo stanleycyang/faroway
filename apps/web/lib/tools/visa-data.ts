@@ -81,7 +81,7 @@ const visaMatrix: Record<string, Record<string, VisaInfo>> = {
       status: "e-visa",
       duration: "180 days",
       notes:
-        "UK Electronic Travel Authorisation (ETA) required online prior to arrival (£16 fee)",
+        "UK Electronic Travel Authorisation (ETA) required online prior to arrival (£20 fee; verify current Home Office fee before travel)",
     },
     rome: {
       status: "visa-free",

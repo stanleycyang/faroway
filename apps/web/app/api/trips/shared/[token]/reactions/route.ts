@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getSupabase } from "@/lib/supabase/server";
 import { checkRateLimitAsync, getClientIp } from "@/lib/security/rate-limit";
+import { filterViatorDisplay } from "@/lib/affiliates/viator-policy";
 
 const TOKEN_PATTERN = /^[a-zA-Z0-9_-]{4,128}$/;
 const VOTER_COOKIE_NAME = "faroway_voter";
@@ -230,9 +231,10 @@ async function verifySharedTrip(token: string): Promise<{
     }
   ).itineraries;
   const itinerary = Array.isArray(joined) ? joined[0] : joined;
+  const filteredItinerary = filterViatorDisplay(itinerary);
   return {
     tripId: data.id,
-    validStopKeys: extractValidStopKeys(itinerary?.days),
+    validStopKeys: extractValidStopKeys(filteredItinerary?.days),
   };
 }
 
@@ -409,7 +411,10 @@ export async function POST(
             reaction,
             voter_id: voterId,
           },
-          { onConflict: "share_token,stop_key,reaction,voter_id" },
+          {
+            onConflict: "share_token,stop_key,reaction,voter_id",
+            ignoreDuplicates: true,
+          },
         );
 
       if (upsertError) {
