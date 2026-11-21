@@ -9,7 +9,7 @@ import {
   Pressable,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { colors, borderRadius } from '../../constants/theme';
+import { colors, borderRadius, fontFamilies } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { USE_NATIVE_DRIVER } from '../../lib/animation';
@@ -124,6 +124,7 @@ export function Button({
     };
 
     return {
+      fontFamily: fontFamilies.sans,
       fontWeight: '700',
       flexShrink: 1,
       textAlign: 'center',
@@ -142,7 +143,7 @@ export function Button({
               ? '#fff'
               : variant === 'secondary'
                 ? '#0f172a'
-                : colors.primary[400]
+                : colors.action.primary
           }
           size="small"
         />

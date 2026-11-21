@@ -1,4 +1,4 @@
-import { travelerTypes, travelVibes } from '@faroway/constants';
+import { normalizeVibeList, travelerTypes } from '@faroway/constants';
 import type { TripInput } from '../stores/tripStore';
 
 export function tripInputFromLink(params: Record<string, unknown>): Partial<TripInput> | null {
@@ -13,10 +13,7 @@ export function tripInputFromLink(params: Record<string, unknown>): Partial<Trip
     if (value !== undefined) result[key] = value;
   }
   const vibes = text('vibes');
-  if (vibes !== undefined)
-    result.vibes = [...new Set(vibes.split(',').map((value) => value.trim()))]
-      .filter((value) => travelVibes.some((choice) => choice.id === value))
-      .slice(0, 5);
+  if (vibes !== undefined) result.vibes = normalizeVibeList(vibes.split(','), 5);
   const type = text('travelerType');
   if (type && travelerTypes.some((choice) => choice.id === type)) result.travelerType = type;
   const count = Number(text('travelers'));

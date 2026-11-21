@@ -1,6 +1,9 @@
 const mockAlert = jest.fn();
 jest.mock('react-native', () => ({ Alert: { alert: mockAlert } }));
-jest.mock('../../constants/api', () => ({ API_BASE_URL: 'https://staging.faroway.ai' }));
+jest.mock('../../constants/api', () => ({
+  API_BASE_URL: 'https://staging.faroway.ai',
+  WEB_BASE_URL: 'https://staging.faroway.ai',
+}));
 import {
   reviewSavedTripBooking,
   resetSavedTripBookingDisclosure,

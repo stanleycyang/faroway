@@ -1,3 +1,4 @@
+import { validateFlightSearchDetails } from '@faroway/constants';
 import { travelerRequirementsSchema } from './travelerRequirements';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Crypto from 'expo-crypto';
@@ -95,6 +96,16 @@ export function savedTripCreationDraft(userId: string) {
           travelerType: z.enum(['solo', 'couple', 'family', 'friends', 'business']).optional(),
           originCity: z.string().max(200).optional(),
           originAirport: z.string().max(10).optional(),
+          adults: z.number().int().min(1).max(50).optional(),
+          children: z.number().int().min(0).max(49).optional(),
+          flightSearch: z
+            .unknown()
+            .nullable()
+            .optional()
+            .refine(
+              (val) => val === undefined || val === null || validateFlightSearchDetails(val),
+              'Invalid flight search preferences'
+            ),
           requirements: travelerRequirementsSchema.nullish(),
           vibes: z.array(z.string().max(50)).max(10).optional(),
         }),
@@ -113,6 +124,9 @@ export function savedTripCreationDraft(userId: string) {
       travelerType: body.preferences.travelerType || 'couple',
       originCity: body.preferences.originCity,
       originAirport: body.preferences.originAirport,
+      ...(body.preferences.flightSearch !== undefined
+        ? { flightConsent: body.preferences.flightSearch !== null }
+        : {}),
       requirements: body.preferences.requirements,
       vibes: body.preferences.vibes || [],
     };

@@ -5,6 +5,7 @@ import {
   readVenueSource,
   readDiningReviewOptions,
 } from '@faroway/types';
+import { normalizeAffiliatePartner, resolveAffiliatePartnerByUrl } from '@faroway/constants';
 import { durationLabel } from './durationLabel';
 import { venuePhoto } from './venuePhotos';
 import type { Activity, Hotel, TripDay } from './itineraryTypes';
@@ -37,6 +38,20 @@ function displayStrings(value: unknown): string[] {
     : [];
 }
 
+function resolveNormalizedPartner(
+  explicitPartner: unknown,
+  bookingUrl?: string
+): string | undefined {
+  const raw = displayText(explicitPartner).trim();
+  if (raw) {
+    return normalizeAffiliatePartner(raw) ?? raw;
+  }
+  if (bookingUrl) {
+    return resolveAffiliatePartnerByUrl(bookingUrl);
+  }
+  return undefined;
+}
+
 function transformTransport(value: unknown): TripDay['transport'] {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const fields = value as Record<string, unknown>;
@@ -49,6 +64,8 @@ function transformTransport(value: unknown): TripDay['transport'] {
       dateTime: displayText(fields.dateTime),
     };
   };
+  const bookingUrl =
+    displayText(fields.affiliateUrl) || displayText(fields.bookingUrl) || undefined;
   return {
     expiresAt: displayText(fields.expiresAt) || undefined,
     type: fields.type as NonNullable<TripDay['transport']>['type'],
@@ -59,8 +76,8 @@ function transformTransport(value: unknown): TripDay['transport'] {
     stops: Number.isInteger(fields.stops) ? displayNumber(fields.stops) : undefined,
     price: displayNumber(fields.price),
     currency: displayText(fields.currency),
-    bookingUrl: displayText(fields.affiliateUrl) || displayText(fields.bookingUrl) || undefined,
-    affiliatePartner: displayText(fields.affiliatePartner) || undefined,
+    bookingUrl,
+    affiliatePartner: resolveNormalizedPartner(fields.affiliatePartner, bookingUrl),
   };
 }
 
@@ -75,6 +92,11 @@ function transformApiActivity(a: any, timeOfDay: string): Activity {
   const photo = venuePhoto(name, venueAddress);
   const suppliedImage = displayText(a.images?.[0]) || displayText(a.image);
   const image = suppliedImage || photo?.imageUrl;
+  const bookingUrl =
+    displayText(a.bookingInfo?.bookingUrl) ||
+    displayText(a.bookingUrl) ||
+    displayText(a.affiliateUrl) ||
+    undefined;
   return {
     venueAddress: venueAddress || undefined,
     imageCredit:
@@ -131,13 +153,11 @@ function transformApiActivity(a: any, timeOfDay: string): Activity {
       a.estimatedCost?.status === 'unknown' || a.priceStatus === 'unknown'
         ? undefined
         : formatCostValue(a.estimatedCost) || formatCostValue(a.price),
-    bookingUrl:
-      displayText(a.bookingInfo?.bookingUrl) ||
-      displayText(a.bookingUrl) ||
-      displayText(a.affiliateUrl) ||
-      undefined,
-    affiliatePartner:
-      displayText(a.bookingInfo?.affiliateId) || displayText(a.affiliatePartner) || undefined,
+    bookingUrl,
+    affiliatePartner: resolveNormalizedPartner(
+      a.bookingInfo?.affiliateId ?? a.affiliatePartner,
+      bookingUrl
+    ),
     image,
     rating: displayNumber(a.rating) !== undefined && a.rating <= 5 ? a.rating : undefined,
     reviewCount: displayNumber(a.reviewCount),
@@ -152,6 +172,12 @@ function transformApiActivity(a: any, timeOfDay: string): Activity {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function transformApiRestaurant(r: any): Activity {
+  const bookingUrl =
+    displayText(r.reservationInfo?.url) ||
+    displayText(r.bookingUrl) ||
+    displayText(r.reservationUrl) ||
+    displayText(r.affiliateUrl) ||
+    undefined;
   return {
     source: readVenueSource(r.source),
     planningIdea: r.planningIdea === true ? true : undefined,
@@ -170,16 +196,17 @@ function transformApiRestaurant(r: any): Activity {
       r.estimatedCost?.status === 'unknown' || r.priceStatus === 'unknown'
         ? undefined
         : formatCostValue(r.estimatedCost) || formatCostValue(r.price),
-    bookingUrl:
-      displayText(r.reservationInfo?.url) ||
-      displayText(r.bookingUrl) ||
-      displayText(r.reservationUrl) ||
-      displayText(r.affiliateUrl) ||
-      undefined,
+    bookingUrl,
     image: displayText(r.images?.[0]) || displayText(r.image) || undefined,
     topReview: displayText(r.topReview) || undefined,
     isSaved: typeof r.isSaved === 'boolean' ? r.isSaved : undefined,
-    affiliatePartner: 'opentable',
+    affiliatePartner: resolveNormalizedPartner(
+      r.reservationInfo?.affiliateId ??
+        r.reservationInfo?.provider ??
+        r.bookingInfo?.affiliateId ??
+        r.affiliatePartner,
+      bookingUrl
+    ),
     rating: displayNumber(r.rating) !== undefined && r.rating <= 5 ? r.rating : undefined,
     reviewCount: displayNumber(r.reviewCount),
   };
@@ -305,6 +332,11 @@ export function transformItineraryDays(apiDays: any[]): TripDay[] {
 export function transformApiHotel(h: any): Hotel | undefined {
   if (!h || typeof h !== 'object' || Array.isArray(h) || !displayText(h.name)) return undefined;
 
+  const bookingUrl =
+    displayText(h.affiliateUrl) ||
+    displayText(h.bookingUrl) ||
+    displayText(h.bookingInfo?.bookingUrl) ||
+    undefined;
   return {
     id: displayText(h.id) || `hotel_${Date.now()}`,
     name: displayText(h.name),
@@ -323,7 +355,11 @@ export function transformApiHotel(h: any): Hotel | undefined {
       : displayText(h.image)
         ? [h.image]
         : [],
-    bookingUrl: displayText(h.affiliateUrl) || displayText(h.bookingUrl),
+    bookingUrl,
+    affiliatePartner: resolveNormalizedPartner(
+      h.bookingInfo?.affiliateId ?? h.affiliatePartner,
+      bookingUrl
+    ),
     location: {
       name: displayText(h.location?.name) || displayText(h.neighborhood),
       address: displayText(h.location?.address) || displayText(h.address),

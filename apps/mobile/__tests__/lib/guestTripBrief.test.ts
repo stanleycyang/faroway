@@ -91,3 +91,14 @@ test('malformed requirements are rejected instead of saved as an unconstrained b
   ).rejects.toThrow();
   expect(await readGuestTripBrief()).toBeNull();
 });
+
+test('preserves flight originCity, originAirport, and flightConsent across restoration', async () => {
+  const withFlights: TripInput = {
+    ...draft,
+    originCity: 'San Francisco',
+    originAirport: 'SFO',
+    flightConsent: true,
+  };
+  await saveGuestTripBrief(withFlights, () => true, 1000);
+  expect(await readGuestTripBrief(2000)).toEqual(withFlights);
+});

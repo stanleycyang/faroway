@@ -13,7 +13,7 @@ type MarkedDate = {
 
 export function getMarkedDates(startDate: string, endDate: string) {
   const marked: Record<string, MarkedDate> = {};
-  const accentColor = colors.primary[500];
+  const accentColor = colors.action.primary;
   const fillColor = 'rgba(249, 112, 102, 0.2)';
 
   if (startDate && !endDate && !Number.isNaN(parseTripDate(startDate).getTime())) {

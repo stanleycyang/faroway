@@ -131,3 +131,28 @@ it('restores the exact dietary and mobility requirements of a pending request', 
   expect((await savedTripCreationDraft('a'))?.requirements).toEqual(requirements);
   expect(await pendingTripCreation('a', body)).toEqual(receipt);
 });
+
+it('restores originAirport and flightConsent from pending flightSearch preferences', async () => {
+  const body = JSON.stringify({
+    destination: 'Tokyo',
+    start_date: '2099-06-01',
+    end_date: '2099-06-04',
+    travelers: 2,
+    preferences: {
+      originCity: 'San Francisco',
+      originAirport: 'SFO',
+      adults: 2,
+      children: 0,
+      flightSearch: {
+        consentVersion: 'flight-search-duffel-v1',
+        childAges: [],
+      },
+    },
+  });
+  await pendingTripCreation('a', body);
+  expect(await savedTripCreationDraft('a')).toMatchObject({
+    originCity: 'San Francisco',
+    originAirport: 'SFO',
+    flightConsent: true,
+  });
+});

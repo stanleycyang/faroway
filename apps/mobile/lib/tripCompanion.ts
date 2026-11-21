@@ -512,6 +512,11 @@ export interface BookingReadinessFlag {
   dayNumber: number;
   title: string;
   reason: string;
+  id?: string;
+  activityType?: string;
+  bookingUrl?: string;
+  affiliatePartner?: string;
+  price?: string;
 }
 
 export interface BookingReadinessSummary {
@@ -574,6 +579,11 @@ export function computeBookingReadiness(
           dayNumber: day.dayNumber,
           title: activity.title,
           reason: matched.reason,
+          id: activity.id,
+          activityType: activity.type,
+          bookingUrl: activity.bookingUrl,
+          affiliatePartner: activity.affiliatePartner,
+          price: activity.price,
         });
       } else if (activity.bookingUrl) {
         seenTitles.add(key);
@@ -584,6 +594,11 @@ export function computeBookingReadiness(
             activity.type === 'restaurant'
               ? 'Check reservation availability directly'
               : 'Review ticket options with the provider',
+          id: activity.id,
+          activityType: activity.type,
+          bookingUrl: activity.bookingUrl,
+          affiliatePartner: activity.affiliatePartner,
+          price: activity.price,
         });
       }
     }

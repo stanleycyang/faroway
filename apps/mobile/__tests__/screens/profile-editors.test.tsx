@@ -131,13 +131,20 @@ it('allows saving vibes without manufacturing an invalid empty budget', async ()
   await act(async () => {
     await renderer.root.findByProps({ accessibilityLabel: 'Save preferences' }).props.onPress();
   });
-  expect(mockUpdate).toHaveBeenCalledWith({ preferences: { vibes: ['cultural'] } }, 'account-a');
-  expect(mockStore.updatePreferences).toHaveBeenCalledWith({ vibes: ['cultural'] });
+  expect(mockUpdate).toHaveBeenCalledWith({ preferences: { vibes: ['culture'] } }, 'account-a');
+  expect(mockStore.updatePreferences).toHaveBeenCalledWith({ vibes: ['culture'] });
   expect(mockBack).toHaveBeenCalledTimes(1);
 });
 
-it('keeps the existing traveler type when saving unrelated vibe and budget preferences', async () => {
+it('keeps the existing traveler type and normalizes legacy cultural/comfort preferences', async () => {
   mockStore.user = { ...initialUser, preferences: { vibes: ['cultural'], travelerType: 'family' } };
+  mockRead.mockResolvedValueOnce({
+    data: {
+      ...mockStore.user,
+      email: 'qa@example.invalid',
+      preferences: { vibes: ['cultural'], budget: 'comfort', travelerType: 'family' },
+    },
+  });
   await act(async () => {
     renderer = create(<PreferencesScreen />);
   });
@@ -145,7 +152,7 @@ it('keeps the existing traveler type when saving unrelated vibe and budget prefe
     await renderer.root.findByProps({ accessibilityLabel: 'Save preferences' }).props.onPress();
   });
   expect(mockUpdate).toHaveBeenCalledWith(
-    { preferences: { vibes: ['cultural'], travelerType: 'family' } },
+    { preferences: { vibes: ['culture'], budget: 'moderate', travelerType: 'family' } },
     'account-a'
   );
 });

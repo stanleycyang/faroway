@@ -16,7 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getInspirationBySlug, popularDestinations } from '@faroway/constants';
-import { colors, borderRadius, shadows } from '../../constants/theme';
+import { colors, borderRadius, shadows, fontFamilies } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { USE_NATIVE_DRIVER } from '../../lib/animation';
@@ -122,7 +122,7 @@ export default function InspirationDetailScreen() {
           accessibilityRole="button"
           accessibilityLabel="Go back"
         >
-          <Text style={{ fontSize: 16, color: colors.primary[500], fontWeight: '600' }}>
+          <Text style={{ fontSize: 16, color: colors.action.primary, fontWeight: '600' }}>
             Go back
           </Text>
         </TouchableOpacity>
@@ -361,11 +361,8 @@ const styles = StyleSheet.create({
     paddingBottom: 28,
   },
   heroTextContainer: {},
-  heroEmoji: {
-    fontSize: 40,
-    marginBottom: 8,
-  },
   heroTitle: {
+    fontFamily: fontFamilies.display,
     fontSize: 34,
     fontWeight: '700',
     color: '#fff',
@@ -509,6 +506,6 @@ const styles = StyleSheet.create({
   ctaSubtext: {
     marginTop: 10,
     fontSize: 13,
-    color: '#94a3b8',
+    color: colors.surface[600],
   },
 });

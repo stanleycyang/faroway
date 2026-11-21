@@ -20,7 +20,7 @@ import { getPopularDestinations, getTrendingDestinations } from '../../services/
 import type { DestinationInfo } from '@faroway/types';
 import { useTripStore } from '../../stores/tripStore';
 import { useUserStore } from '../../stores/userStore';
-import { colors, borderRadius, shadows } from '../../constants/theme';
+import { colors, borderRadius, shadows, fontFamilies } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import { useReduceMotion } from '../../hooks/useReduceMotion';
 import { USE_NATIVE_DRIVER } from '../../lib/animation';
@@ -221,7 +221,7 @@ export default function ExploreScreen() {
                 <Ionicons
                   name={item.icon}
                   size={20}
-                  color={colors.primary[600]}
+                  color={colors.action.primary}
                   accessible={false}
                 />
                 <Text style={styles.inspirationText}>{item.text}</Text>
@@ -319,8 +319,21 @@ export default function ExploreScreen() {
         </View>
 
         {/* Bottom padding */}
-        <View style={{ height: 32 }} />
+        <View style={{ height: 88 }} />
       </Animated.ScrollView>
+
+      {/* Thumb-zone Plan Trip CTA */}
+      <TouchableOpacity
+        style={styles.planTripFab}
+        onPress={handleCreateTrip}
+        activeOpacity={0.9}
+        accessibilityRole="button"
+        accessibilityLabel="Plan Trip"
+        accessibilityHint="Opens the AI trip planner"
+      >
+        <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
+        <Text style={styles.planTripFabText}>Plan Trip</Text>
+      </TouchableOpacity>
     </SafeAreaView>
   );
 }
@@ -346,6 +359,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   headerTitle: {
+    fontFamily: fontFamilies.display,
     fontSize: 30,
     lineHeight: 36,
     letterSpacing: -0.7,
@@ -376,30 +390,6 @@ const styles = StyleSheet.create({
     minHeight: 240,
     justifyContent: 'flex-end',
   },
-  heroPattern: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-  },
-  heroPatternEmoji: {
-    position: 'absolute',
-    fontSize: 60,
-    opacity: 0.15,
-    right: 20,
-    top: 20,
-  },
-  heroPattern2: {
-    right: 80,
-    top: 60,
-    fontSize: 40,
-  },
-  heroPattern3: {
-    right: -10,
-    top: 100,
-    fontSize: 50,
-  },
   heroContent: {
     position: 'relative',
     zIndex: 1,
@@ -421,6 +411,7 @@ const styles = StyleSheet.create({
     color: '#fff',
   },
   heroTitle: {
+    fontFamily: fontFamilies.display,
     fontSize: 26,
     fontWeight: '800',
     color: '#fff',
@@ -443,6 +434,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   heroButtonText: {
+    fontFamily: fontFamilies.sans,
     fontSize: 16,
     fontWeight: '700',
     color: colors.action.primary,
@@ -495,7 +487,7 @@ const styles = StyleSheet.create({
   seeAllButton: {
     fontSize: 14,
     fontWeight: '600',
-    color: colors.primary[500],
+    color: colors.action.primary,
   },
   inspirationsContainer: {
     paddingHorizontal: 24,
@@ -558,5 +550,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: 'rgba(255,255,255,0.8)',
     marginTop: 2,
+  },
+  planTripFab: {
+    position: 'absolute',
+    right: 20,
+    bottom: 16,
+    minHeight: 48,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.action.primary,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    ...shadows.lg,
+  },
+  planTripFabText: {
+    fontFamily: fontFamilies.sans,
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

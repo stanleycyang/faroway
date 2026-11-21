@@ -61,7 +61,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       'expo-notifications',
       {
         icon: './assets/notification-icon.png',
-        color: '#FF6B6B',
+        color: '#C03A31',
         sounds: [],
         defaultChannel: 'default',
       },
@@ -81,7 +81,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     splash: {
       image: './assets/splash.png',
       resizeMode: 'contain',
-      backgroundColor: '#0a0a0a',
+      backgroundColor: '#143D46',
     },
     assetBundlePatterns: ['**/*'],
     ios: {
@@ -98,7 +98,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     android: {
       adaptiveIcon: {
         foregroundImage: './assets/adaptive-icon.png',
-        backgroundColor: '#0a0a0a',
+        backgroundColor: '#F97066',
       },
       package: qa ? 'ai.faroway.app.qa' : 'ai.faroway.app',
       ...(process.env.EXPO_PUBLIC_PLAY_STORE_URL

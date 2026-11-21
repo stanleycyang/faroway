@@ -387,3 +387,53 @@ it('restored whitespace-normalized requirements retry the same creation after a 
   expect(creates).toHaveLength(2);
   expect(creates[0][1].body).toBe(creates[1][1].body);
 });
+
+it('sends adults, children: 0, and flightSearch consent details when flightConsent is enabled', async () => {
+  await createAndStartTrip(
+    {
+      ...input,
+      originCity: 'San Francisco',
+      originAirport: 'sfo',
+      flightConsent: true,
+    },
+    jest.fn()
+  );
+  const body = JSON.parse(posts()[0][1].body);
+  expect(body.preferences).toMatchObject({
+    originCity: 'San Francisco',
+    originAirport: 'SFO',
+    adults: 2,
+    children: 0,
+    flightSearch: {
+      consentVersion: 'flight-search-duffel-v1',
+      childAges: [],
+    },
+  });
+});
+
+it('sends flightSearch: null when flightConsent is explicitly false', async () => {
+  await createAndStartTrip(
+    {
+      ...input,
+      originCity: 'San Francisco',
+      flightConsent: false,
+    },
+    jest.fn()
+  );
+  const body = JSON.parse(posts()[0][1].body);
+  expect(body.preferences.flightSearch).toBeNull();
+});
+
+it('normalizes legacy budget tier aliases before posting to /api/trips', async () => {
+  await createAndStartTrip({ ...input, budget: 'Comfort' }, jest.fn());
+  const firstBody = JSON.parse(posts()[0][1].body);
+  expect(firstBody.budget).toBe('moderate');
+
+  jest.clearAllMocks();
+  const { default: storage } = await import('@react-native-async-storage/async-storage');
+  await storage.clear();
+
+  await createAndStartTrip({ ...input, budget: 'Luxury' }, jest.fn());
+  const secondBody = JSON.parse(posts()[0][1].body);
+  expect(secondBody.budget).toBe('luxury');
+});

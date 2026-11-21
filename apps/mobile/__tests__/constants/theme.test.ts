@@ -1,4 +1,14 @@
-import { colors, spacing, borderRadius, typography, shadows, glass } from '../../constants/theme';
+import {
+  colors,
+  spacing,
+  borderRadius,
+  typography,
+  shadows,
+  glass,
+  travel,
+  fontFamilies,
+  bookingButtons,
+} from '../../constants/theme';
 
 describe('theme constants', () => {
   describe('colors', () => {
@@ -96,6 +106,49 @@ describe('theme constants', () => {
 
     it('has dark glass style', () => {
       expect(glass.dark.borderWidth).toBe(1);
+    });
+  });
+
+  describe('brand tokens and WCAG AA contrast', () => {
+    function relativeLuminance(hex: string) {
+      const clean = hex.replace('#', '');
+      const [r, g, b] = [0, 2, 4].map((offset) => {
+        const channel = parseInt(clean.slice(offset, offset + 2), 16) / 255;
+        return channel <= 0.03928 ? channel / 12.92 : ((channel + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    function contrastRatio(fg: string, bg: string) {
+      const l1 = relativeLuminance(fg);
+      const l2 = relativeLuminance(bg);
+      return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    }
+
+    it('exports brand font families, warm paper surface, and unified booking buttons', () => {
+      expect(fontFamilies.sans).toBe('PlusJakartaSans');
+      expect(fontFamilies.display).toBe('PlayfairDisplay');
+      expect(typography.h1.fontFamily).toBe('PlayfairDisplay');
+      expect(typography.body.fontFamily).toBe('PlusJakartaSans');
+      expect(travel.ocean).toBe('#143D46');
+      expect(travel.paperBg).toBe('#FAF8F3');
+      expect(colors.action.primary).toBe('#C03A31');
+      expect(bookingButtons.primaryBg).toBe('#C03A31');
+      expect(bookingButtons.primaryText).toBe('#FFFFFF');
+      expect(bookingButtons.oceanGradient).toEqual(['#143D46', '#0F2E35']);
+    });
+
+    it('satisfies WCAG AA (>= 4.5:1) for interactive brand text and button pairs', () => {
+      expect(contrastRatio(colors.action.primary, '#FFFFFF')).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(colors.action.primary, travel.paperBg)).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(colors.primary[800], '#FFFFFF')).toBeGreaterThanOrEqual(4.5);
+      expect(contrastRatio(colors.surface[600], travel.paperBg)).toBeGreaterThanOrEqual(4.5);
+      expect(
+        contrastRatio(bookingButtons.primaryText, bookingButtons.primaryBg)
+      ).toBeGreaterThanOrEqual(4.5);
+      expect(
+        contrastRatio(bookingButtons.inverseText, bookingButtons.inverseBg)
+      ).toBeGreaterThanOrEqual(4.5);
     });
   });
 });

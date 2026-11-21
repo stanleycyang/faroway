@@ -171,7 +171,7 @@ async function setupAndroidNotificationChannel(): Promise<void> {
     name: 'Default',
     importance: Notifications.AndroidImportance.MAX,
     vibrationPattern: [0, 250, 250, 250],
-    lightColor: '#FF6B6B',
+    lightColor: '#C03A31',
     sound: 'default',
   });
 
