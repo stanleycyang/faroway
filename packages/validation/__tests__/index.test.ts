@@ -470,12 +470,56 @@ describe("affiliatePartnerIdSchema & conversionWebhookSchema", () => {
       externalTransactionId: "tx-999",
       bookingAmount: 420.5,
       commissionAmount: 25.2,
-      currency: "usd",
+      currency: "USD",
+      occurredAt: "2026-11-21T07:00:00Z",
     });
     expect(webhook.success).toBe(true);
     if (webhook.success) {
       expect(webhook.data.status).toBe("confirmed");
       expect(webhook.data.currency).toBe("USD");
+      expect(webhook.data.occurredAt).toBe("2026-11-21T07:00:00Z");
+    }
+
+    expect(
+      conversionWebhookSchema.safeParse({
+        partner: "stay22",
+        clickId: "clk-777",
+        externalTransactionId: "tx-1000",
+        occurredAt: "2026-11-21",
+      }).success,
+    ).toBe(true);
+  });
+
+  it("rejects non-finite amounts, invalid currencies, and non-ISO occurredAt values", () => {
+    const base = {
+      partner: "viator",
+      clickId: "clk-1",
+      externalTransactionId: "tx-1",
+    } as const;
+
+    expect(
+      conversionWebhookSchema.safeParse({ ...base, bookingAmount: Infinity }).success,
+    ).toBe(false);
+    expect(
+      conversionWebhookSchema.safeParse({ ...base, bookingAmount: Number.NaN }).success,
+    ).toBe(false);
+    expect(
+      conversionWebhookSchema.safeParse({ ...base, commissionAmount: Infinity }).success,
+    ).toBe(false);
+    expect(
+      conversionWebhookSchema.safeParse({ ...base, commissionAmount: -1 }).success,
+    ).toBe(false);
+
+    for (const badCurrency of ["12$", "usd", "US", "USDX", " USD "]) {
+      expect(
+        conversionWebhookSchema.safeParse({ ...base, currency: badCurrency }).success,
+      ).toBe(false);
+    }
+
+    for (const badDate of ["0", "not-a-date", "2026-02-30", "2026-13-01", "2026/11/21"]) {
+      expect(
+        conversionWebhookSchema.safeParse({ ...base, occurredAt: badDate }).success,
+      ).toBe(false);
     }
   });
 });

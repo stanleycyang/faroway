@@ -284,15 +284,39 @@ export const trackClickSchema = z.object({
   campaign: z.string().max(200).optional(),
 });
 
+const ISO_DATE_REGEX =
+  /^(\d{4})-(\d{2})-(\d{2})(?:T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})?)?$/;
+
+function isValidIsoDateString(val: string): boolean {
+  const match = ISO_DATE_REGEX.exec(val);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const utcDate = new Date(Date.UTC(year, month - 1, day));
+  if (
+    utcDate.getUTCFullYear() !== year ||
+    utcDate.getUTCMonth() !== month - 1 ||
+    utcDate.getUTCDate() !== day
+  ) {
+    return false;
+  }
+  return !Number.isNaN(Date.parse(val));
+}
+
+export const isoDateSchema = z.string().refine(isValidIsoDateString, {
+  message: 'Invalid ISO date',
+});
+
 export const conversionWebhookSchema = z.object({
   partner: affiliatePartnerIdSchema,
   clickId: z.string().min(1).max(200),
   externalTransactionId: z.string().min(1).max(200),
   status: z.enum(['pending', 'confirmed', 'canceled', 'refunded']).default('confirmed'),
-  bookingAmount: z.number().nonnegative().optional(),
-  commissionAmount: z.number().nonnegative().optional(),
-  currency: z.string().trim().min(3).max(3).toUpperCase().default('USD'),
-  occurredAt: dateSchema.optional(),
+  bookingAmount: z.number().finite().nonnegative().optional(),
+  commissionAmount: z.number().finite().nonnegative().optional(),
+  currency: z.string().regex(/^[A-Z]{3}$/).optional(),
+  occurredAt: isoDateSchema.optional(),
   metadata: z.record(z.unknown()).optional(),
 });
 

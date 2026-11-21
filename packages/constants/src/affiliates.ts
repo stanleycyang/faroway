@@ -290,7 +290,7 @@ const PARTNER_ALIAS_MAP: Record<string, AffiliatePartnerId> = {
 export function normalizeAffiliatePartner(partner: unknown): AffiliatePartnerId | undefined {
   if (typeof partner !== 'string') return undefined;
   const key = partner.trim().toLowerCase().replace(/[^a-z0-9]/g, '');
-  return key ? PARTNER_ALIAS_MAP[key] : undefined;
+  return key && Object.hasOwn(PARTNER_ALIAS_MAP, key) ? PARTNER_ALIAS_MAP[key] : undefined;
 }
 
 export function formatAffiliatePartnerName(partner: string): string {
@@ -344,8 +344,8 @@ export function injectAffiliateSubId(
   clickId: string,
   options?: { itemType?: string }
 ): string | null {
+  if (typeof clickId !== 'string' || !clickId.trim()) return null;
   const cleanClickId = clickId.trim();
-  if (!cleanClickId) return null;
 
   const parsed = parseSafeHttpsUrl(url);
   if (!parsed) return null;
@@ -357,9 +357,7 @@ export function injectAffiliateSubId(
 
   const urlPartner = resolveAffiliatePartnerByUrl(url);
   const targetId: AffiliatePartnerId | undefined =
-    urlPartner === 'travelpayouts'
-      ? 'travelpayouts'
-      : (normalizeAffiliatePartner(partner) ?? urlPartner);
+    urlPartner ?? normalizeAffiliatePartner(partner);
 
   if (!targetId) {
     parsed.searchParams.set('click_id', cleanClickId);

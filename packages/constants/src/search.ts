@@ -91,7 +91,9 @@ export const BUDGET_TIER_ALIASES: Record<string, BudgetTierId> = {
 export function normalizeBudgetTier(value: unknown): BudgetTierId | undefined {
   if (typeof value !== 'string') return undefined;
   const key = value.trim().toLowerCase();
-  return key ? BUDGET_TIER_ALIASES[key] : undefined;
+  return key && Object.hasOwn(BUDGET_TIER_ALIASES, key)
+    ? BUDGET_TIER_ALIASES[key]
+    : undefined;
 }
 
 export function formatBudgetLabel(value: unknown): BudgetTierLabel | undefined {

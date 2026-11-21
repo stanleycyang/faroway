@@ -59,6 +59,14 @@ describe('affiliate partner registry', () => {
     expect(itemTypeForAffiliatePartner('skyscanner')).toBe('flight');
     expect(itemTypeForAffiliatePartner('safetywing')).toBe('activity');
   });
+
+  it('guards against prototype-property partner lookups without throwing', () => {
+    for (const protoKey of ['constructor', '__proto__', 'toString', 'valueOf', 'hasOwnProperty']) {
+      expect(normalizeAffiliatePartner(protoKey)).toBeUndefined();
+      expect(formatAffiliatePartnerName(protoKey)).toBe(protoKey);
+      expect(itemTypeForAffiliatePartner(protoKey)).toBe('activity');
+    }
+  });
 });
 
 describe('isAllowedAffiliateUrl and resolveAffiliatePartnerByUrl', () => {
@@ -209,8 +217,50 @@ describe('injectAffiliateSubId', () => {
     }
   });
 
-  it('returns null for disallowed URLs or empty clickId', () => {
+  it('returns null for disallowed URLs or empty/non-string clickId', () => {
     expect(injectAffiliateSubId('https://evil.example/deal', 'viator', 'clk-1')).toBeNull();
     expect(injectAffiliateSubId('https://www.viator.com/tours/Paris', 'viator', '   ')).toBeNull();
+    expect(
+      injectAffiliateSubId('https://www.viator.com/tours/Paris', 'viator', null as unknown as string)
+    ).toBeNull();
+    expect(
+      injectAffiliateSubId(
+        'https://www.viator.com/tours/Paris',
+        'viator',
+        undefined as unknown as string
+      )
+    ).toBeNull();
+    expect(
+      injectAffiliateSubId('https://www.viator.com/tours/Paris', 'viator', 123 as unknown as string)
+    ).toBeNull();
+  });
+
+  it('prefers the URL host partner over mismatched or prototype partner inputs', () => {
+    const bookingWithMismatchedPartner = injectAffiliateSubId(
+      'https://www.booking.com/hotel/fr/ritzy.html?aid=999',
+      'viator',
+      'clk-mismatch'
+    );
+    expect(bookingWithMismatchedPartner).not.toBeNull();
+    const bookingUrl = new URL(bookingWithMismatchedPartner!);
+    expect(bookingUrl.searchParams.get('label')).toBe('clk-mismatch');
+    expect(bookingUrl.searchParams.has('campaign')).toBe(false);
+
+    const stay22WithMismatchedPartner = injectAffiliateSubId(
+      'https://www.stay22.com/embed/gm?aid=1',
+      'booking',
+      'clk-stay22'
+    );
+    const stay22Url = new URL(stay22WithMismatchedPartner!);
+    expect(stay22Url.searchParams.get('campaign')).toBe('clk-stay22');
+    expect(stay22Url.searchParams.has('label')).toBe(false);
+
+    const viatorWithProtoPartner = injectAffiliateSubId(
+      'https://www.viator.com/tours/Paris',
+      'constructor',
+      'clk-proto'
+    );
+    expect(viatorWithProtoPartner).not.toBeNull();
+    expect(new URL(viatorWithProtoPartner!).searchParams.get('campaign')).toBe('clk-proto');
   });
 });

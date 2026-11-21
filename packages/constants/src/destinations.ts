@@ -249,19 +249,26 @@ export function normalizeVibeId(value: unknown): TravelVibeId | undefined {
   if (typeof value !== 'string') return undefined;
   const key = value.trim().toLowerCase();
   if (!key) return undefined;
-  const aliased = VIBE_ALIASES[key] ?? key;
+  const aliased = Object.hasOwn(VIBE_ALIASES, key) ? VIBE_ALIASES[key] : key;
   return TRAVEL_VIBE_SET.has(aliased) ? (aliased as TravelVibeId) : undefined;
 }
 
 export function normalizeVibeList(values: readonly unknown[], max = 5): TravelVibeId[] {
+  if (typeof max !== 'number' || Number.isNaN(max) || max <= 0) {
+    return [];
+  }
+  const limit = max === Infinity ? Infinity : Math.floor(max);
+  if (limit <= 0) {
+    return [];
+  }
   const out: TravelVibeId[] = [];
   const seen = new Set<TravelVibeId>();
   for (const raw of values) {
+    if (out.length >= limit) break;
     const id = normalizeVibeId(raw);
     if (id && !seen.has(id)) {
       seen.add(id);
       out.push(id);
-      if (out.length >= max) break;
     }
   }
   return out;
