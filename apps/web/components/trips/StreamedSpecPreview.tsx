@@ -72,7 +72,7 @@ function SpecBlock({ block }: { block: StreamingSpecBlock }) {
 
 function TripSummary({ props }: { props: SpecProps }) {
   return (
-    <div className="rounded-2xl border border-primary-100 bg-gradient-to-br from-primary-50 to-amber-50 p-5 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-500">
+    <div className="rounded-2xl border border-[#DCE5E3] bg-[#EFF5F3] p-5 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-500">
       <p className="text-xs font-bold uppercase tracking-wide text-primary-700">
         Trip preview
       </p>
@@ -82,7 +82,7 @@ function TripSummary({ props }: { props: SpecProps }) {
       <div className="mt-3 flex flex-wrap gap-2 text-sm text-gray-700">
         {textProp(props, "dates") && (
           <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-3 py-1.5 font-medium shadow-sm">
-            <Calendar className="h-4 w-4 text-primary-600" />
+            <Calendar className="h-4 w-4 text-primary-700" />
             {textProp(props, "dates")}
           </span>
         )}
@@ -117,8 +117,8 @@ function HotelCard({ props }: { props: SpecProps }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="flex items-start gap-3">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-50">
-          <Hotel className="h-5 w-5 text-blue-600" />
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#EFF5F3]">
+          <Hotel className="h-5 w-5 text-[#143D46]" />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -155,7 +155,7 @@ function HotelCard({ props }: { props: SpecProps }) {
             </div>
           )}
           {bookingUrl && (
-            <span className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-primary-600">
+            <span className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary-700 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-primary-800">
               <Ticket className="h-4 w-4" />
               Booking preview — review your saved plan
             </span>
@@ -205,7 +205,7 @@ function DayTimeline({ props }: { props: SpecProps }) {
           <span className="w-16 shrink-0 text-sm font-bold text-gray-500">
             {textProp(item, "time", "--")}
           </span>
-          <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary" />
+          <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-primary-700" />
           <span className="min-w-0 flex-1 text-sm font-medium text-gray-800">
             {textProp(item, "title", "Stop")}
           </span>
@@ -221,7 +221,7 @@ function ActivityCard({ props }: { props: SpecProps }) {
       source={props.source}
       accent="primary"
       description={textProp(props, "description")}
-      icon={<MapPin className="h-5 w-5 text-primary-600" />}
+      icon={<MapPin className="h-5 w-5 text-primary-700" />}
       meta={[
         textProp(props, "time"),
         textProp(props, "duration"),
@@ -337,7 +337,7 @@ function MetaLine({ items }: { items: Array<string | undefined> }) {
           {item?.includes("$") ? (
             <DollarSign className="h-4 w-4" />
           ) : item?.includes("star") || item?.includes("/5") ? (
-            <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+            <Star className="h-4 w-4 fill-amber-600 text-amber-600" />
           ) : (
             <Clock className="h-4 w-4" />
           )}

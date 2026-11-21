@@ -361,7 +361,7 @@ export function PlanEditor({
                   onClick={() =>
                     void save(command(item.locked ? "unlock" : "lock", item.id))
                   }
-                  className="min-h-11 shrink-0 px-2 text-sm font-semibold text-primary"
+                  className="min-h-11 shrink-0 px-2 text-sm font-semibold text-primary-700 hover:text-primary-800"
                   aria-label={`${item.locked ? "Unlock" : "Lock"} ${item.name}`}
                 >
                   {item.locked ? "Unlock" : "Lock"}
@@ -419,7 +419,7 @@ export function PlanEditor({
               <button
                 disabled={!a || !b}
                 onClick={() => setReviewing(true)}
-                className="min-h-11 rounded-full bg-primary px-5 py-2 font-semibold text-white disabled:opacity-40 sm:col-span-2"
+                className="min-h-11 rounded-full bg-primary-700 px-5 py-2 font-semibold text-white hover:bg-primary-800 disabled:opacity-40 sm:col-span-2"
               >
                 Review swap
               </button>
@@ -443,7 +443,7 @@ export function PlanEditor({
               <div className="mt-3 flex gap-4">
                 <button
                   onClick={() => void save(command("swap", a.id, b.id))}
-                  className="min-h-11 font-semibold text-primary"
+                  className="min-h-11 font-semibold text-primary-700 hover:text-primary-800"
                 >
                   Confirm swap
                 </button>

@@ -1,6 +1,14 @@
 "use client";
 
 import {
+  flightQuoteIsCurrent,
+  formatAffiliatePartnerName,
+  isAllowedAffiliateUrl,
+  normalizeAffiliatePartner,
+  readPrice,
+  resolveAffiliatePartnerByUrl,
+} from "@faroway/constants";
+import {
   readDayTiming,
   dayTimingTips,
   isTimingNote,
@@ -21,6 +29,10 @@ import {
 import { explainStopSelection } from "@/lib/trips/explain-stop";
 
 import { FlightLeg } from "./FlightLeg";
+import { useTripCheckout } from "./TripCheckoutContext";
+import { AffiliateDisclosure } from "@/components/affiliates/AffiliateDisclosure";
+import { TrackedAffiliateButton } from "@/components/affiliates/TrackedAffiliateButton";
+import { useAffiliateTracking } from "@/components/affiliates/AffiliateTrackingContext";
 import React, { useMemo, useState } from "react";
 import {
   ChevronDown,
@@ -35,6 +47,8 @@ import {
   Navigation,
   CloudRain,
   Coffee,
+  Star,
+  ExternalLink,
 } from "lucide-react";
 import {
   ActivityCard,
@@ -49,6 +63,7 @@ interface TimeBlock {
 }
 
 interface HotelInfo {
+  id?: string;
   name: string;
   starRating?: number;
   pricePerNight?: number;
@@ -56,6 +71,7 @@ interface HotelInfo {
   priceStatus?: string;
   amenities?: string[];
   affiliateUrl?: string;
+  affiliatePartner?: string;
   image?: string;
 }
 
@@ -136,6 +152,8 @@ export function ItineraryDay({
   requirements,
   onQuickAction,
 }: ItineraryDayProps) {
+  const checkout = useTripCheckout();
+  const affiliateCtx = useAffiliateTracking();
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const timingDay = { date, morning, afternoon, evening, tips, timingProposal };
   const validTiming = readDayTiming(timingDay);
@@ -300,6 +318,48 @@ export function ItineraryDay({
     return map;
   }, [safeMorning, safeAfternoon, safeEvening, vibes, requirements]);
 
+  const hasAllowedHotelUrl = Boolean(
+    hotel?.affiliateUrl && isAllowedAffiliateUrl(hotel.affiliateUrl),
+  );
+  const hotelPartner = hasAllowedHotelUrl
+    ? (resolveAffiliatePartnerByUrl(hotel!.affiliateUrl!) ??
+      normalizeAffiliatePartner(hotel?.affiliatePartner) ??
+      "stay22")
+    : undefined;
+  const hotelPartnerLabel = hotelPartner
+    ? formatAffiliatePartnerName(hotelPartner)
+    : "Partner";
+  const hotelPrice = readPrice(hotel?.pricePerNight, hotel?.currency);
+  const fallbackHotelLink =
+    !hotel?.affiliateUrl &&
+    affiliateCtx?.hotelPartnerLinks?.primary?.url &&
+    isAllowedAffiliateUrl(affiliateCtx.hotelPartnerLinks.primary.url)
+      ? affiliateCtx.hotelPartnerLinks.primary
+      : null;
+
+  const transportId = (transport as { id?: string } | undefined)?.id;
+  const isReturnLeg = Boolean(transportId?.endsWith("__return"));
+  const hasAllowedTransportUrl = Boolean(
+    transport?.affiliateUrl && isAllowedAffiliateUrl(transport.affiliateUrl),
+  );
+  const transportPartner = hasAllowedTransportUrl
+    ? (resolveAffiliatePartnerByUrl(transport!.affiliateUrl!) ??
+      normalizeAffiliatePartner(transport?.affiliatePartner) ??
+      "duffel")
+    : undefined;
+  const transportPartnerLabel = transportPartner
+    ? formatAffiliatePartnerName(transportPartner)
+    : "Partner";
+  const transportPrice = readPrice(transport?.price, transport?.currency);
+  const transportCurrent = transport ? flightQuoteIsCurrent(transport) : false;
+  const flightFallbackLinks = (affiliateCtx?.flightFallbackLinks ?? []).filter(
+    (link): link is NonNullable<typeof link> & { url: string } =>
+      Boolean(link.url && isAllowedAffiliateUrl(link.url)),
+  );
+  const transportRouteLabel = transport
+    ? `${transport.departure?.airport || "Origin"} → ${transport.arrival?.airport || "Destination"}`
+    : "";
+
   return (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
       {/* Day Header - Always visible */}
@@ -310,8 +370,8 @@ export function ItineraryDay({
           className="w-full px-4 sm:px-6 py-5 sm:py-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
         >
           <div className="flex items-center gap-3 sm:gap-4">
-            <div className="w-12 h-14 sm:w-14 sm:h-16 rounded-xl bg-slate-900 flex flex-col items-center justify-center text-white flex-shrink-0">
-              <span className="text-xs font-medium leading-none opacity-80">
+            <div className="w-12 h-14 sm:w-14 sm:h-16 rounded-xl bg-[#143D46] flex flex-col items-center justify-center text-white flex-shrink-0">
+              <span className="text-xs font-medium leading-none opacity-85">
                 Day
               </span>
               <span className="text-2xl sm:text-3xl font-bold leading-none">
@@ -319,7 +379,7 @@ export function ItineraryDay({
               </span>
             </div>
             <div className="text-left min-w-0">
-              <p className="text-xs sm:text-sm text-gray-500 font-medium">
+              <p className="text-xs sm:text-sm text-slate-600 font-medium">
                 {formatDate(date)}
               </p>
               <h3 className="text-base sm:text-xl font-semibold text-gray-900 text-left text-balance">
@@ -327,12 +387,12 @@ export function ItineraryDay({
               </h3>
               {clustering.summaryLabel && (
                 <p className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-slate-600">
-                  <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                  <MapPin className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
                   <span>{clustering.summaryLabel}</span>
                 </p>
               )}
               {bookableCount > 0 && !isExpanded && (
-                <p className="text-xs text-primary-600 font-medium mt-0.5">
+                <p className="text-xs text-primary-700 font-medium mt-0.5">
                   {bookableCount} bookable experience
                   {bookableCount > 1 ? "s" : ""}
                 </p>
@@ -342,19 +402,19 @@ export function ItineraryDay({
 
           <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
             {totalEstimatedCost && totalEstimatedCost.amount > 0 && (
-              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-full text-sm text-gray-700 font-semibold">
-                <DollarSign className="w-4 h-4 text-gray-400" />
+              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 rounded-full text-sm text-slate-700 font-semibold">
+                <DollarSign className="w-4 h-4 text-slate-500" />
                 {formatCost(
                   totalEstimatedCost.amount,
                   totalEstimatedCost.currency,
                 )}
               </div>
             )}
-            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-slate-50 flex items-center justify-center">
               {isExpanded ? (
-                <ChevronUp className="w-5 h-5 text-gray-400" />
+                <ChevronUp className="w-5 h-5 text-slate-600" />
               ) : (
-                <ChevronDown className="w-5 h-5 text-gray-400" />
+                <ChevronDown className="w-5 h-5 text-slate-600" />
               )}
             </div>
           </div>
@@ -445,74 +505,385 @@ export function ItineraryDay({
 
           {/* Hotel Card */}
           {hotel && (
-            <div className="mb-6 p-4 sm:p-5 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-2xl border border-blue-100 transition-shadow hover:shadow-md">
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-sm">
-                  <Hotel className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-                    <h4 className="font-bold text-gray-900 text-sm break-words">
-                      {hotel.name}
-                    </h4>
-                    {typeof hotel.starRating === "number" &&
-                      Number.isInteger(hotel.starRating) &&
-                      hotel.starRating >= 1 &&
-                      hotel.starRating <= 5 && (
-                        <span className="text-xs text-yellow-500 flex-shrink-0">
-                          {"★".repeat(hotel.starRating)}
-                        </span>
-                      )}
+            <div className="mb-6 p-4 sm:p-5 bg-[#EFF5F3] rounded-2xl border border-[#DCE5E3] transition-shadow hover:shadow-md">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+                <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
+                  <div className="w-12 h-12 rounded-xl bg-[#143D46] flex items-center justify-center flex-shrink-0 shadow-sm">
+                    <Hotel className="w-6 h-6 text-white" />
                   </div>
-                  <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3 mt-0.5 text-xs text-gray-500">
-                    <span className="font-bold text-gray-800 text-sm">
-                      {formatEstimate(
-                        hotel.pricePerNight,
-                        hotel.currency,
-                        hotel.priceStatus,
-                      )}
-                      <span className="font-normal text-gray-500">
-                        {knownEstimate(
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <h4 className="font-bold text-slate-900 text-sm break-words">
+                        {hotel.name}
+                      </h4>
+                      {typeof hotel.starRating === "number" &&
+                        Number.isInteger(hotel.starRating) &&
+                        hotel.starRating >= 1 &&
+                        hotel.starRating <= 5 && (
+                          <span
+                            aria-label={`${hotel.starRating} out of 5 stars`}
+                            className="inline-flex items-center gap-0.5 flex-shrink-0"
+                          >
+                            {Array.from(
+                              { length: hotel.starRating },
+                              (_, starIdx) => (
+                                <Star
+                                  key={starIdx}
+                                  className="h-3.5 w-3.5 fill-amber-600 text-amber-600"
+                                  aria-hidden="true"
+                                />
+                              ),
+                            )}
+                          </span>
+                        )}
+                    </div>
+                    <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:gap-3 mt-0.5 text-xs text-slate-600">
+                      <span className="font-bold text-slate-900 text-sm">
+                        {formatEstimate(
                           hotel.pricePerNight,
                           hotel.currency,
                           hotel.priceStatus,
-                        )
-                          ? " estimated/night"
-                          : ""}
+                        )}
+                        <span className="font-normal text-slate-600">
+                          {knownEstimate(
+                            hotel.pricePerNight,
+                            hotel.currency,
+                            hotel.priceStatus,
+                          )
+                            ? " estimated/night"
+                            : ""}
+                        </span>
                       </span>
-                    </span>
-                    {hotel.amenities && hotel.amenities.length > 0 && (
-                      <span className="max-w-full truncate text-gray-500">
-                        {hotel.amenities.slice(0, 3).join(" · ")}
-                      </span>
-                    )}
+                      {hotel.amenities && hotel.amenities.length > 0 && (
+                        <span className="max-w-full truncate text-slate-600">
+                          {hotel.amenities.slice(0, 3).join(" · ")}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
-                {hotel.affiliateUrl && (
-                  <p className="max-w-xs flex-shrink-0 rounded-xl bg-slate-50 px-3 py-2 text-xs font-medium leading-5 text-slate-700">
+                {hasAllowedHotelUrl ? (
+                  <div className="flex flex-col items-start sm:items-end gap-1.5 flex-shrink-0">
+                    {checkout ? (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.currentTarget.focus();
+                          checkout.review({
+                            id: hotel.id || `${hotel.name}-${dayNumber}`,
+                            name: hotel.name,
+                            date,
+                            mode: "partner_click",
+                            itemType: "hotel",
+                            partner: hotelPartner,
+                            partnerLabel: hotelPartnerLabel,
+                            affiliateUrl: hotel.affiliateUrl!,
+                            price: hotelPrice?.amount,
+                            currency: hotelPrice?.currency,
+                            source:
+                              affiliateCtx?.source ??
+                              (checkout.mode === "shared"
+                                ? "shared_trip"
+                                : "itinerary"),
+                            placement: "day_hotel_card",
+                          });
+                        }}
+                        className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary-700 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-800 transition-colors"
+                      >
+                        <span>Check rates on {hotelPartnerLabel}</span>
+                        <ExternalLink
+                          className="h-3.5 w-3.5"
+                          aria-hidden="true"
+                        />
+                      </button>
+                    ) : (
+                      <TrackedAffiliateButton
+                        variant="secondary"
+                        label={`Check rates on ${hotelPartnerLabel}`}
+                        affiliateUrl={hotel.affiliateUrl!}
+                        partner={hotelPartner}
+                        itemType="hotel"
+                        itemId={hotel.id || `${hotel.name}-${dayNumber}`}
+                        itemName={hotel.name}
+                        tripId={affiliateCtx?.tripId}
+                        price={hotelPrice?.amount}
+                        currency={hotelPrice?.currency}
+                        source={affiliateCtx?.source ?? "itinerary"}
+                        placement="day_hotel_card"
+                      />
+                    )}
+                    <AffiliateDisclosure className="text-[11px] text-slate-600" />
+                  </div>
+                ) : fallbackHotelLink ? (
+                  <div className="flex flex-col items-start sm:items-end gap-1.5 flex-shrink-0">
+                    {checkout ? (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.currentTarget.focus();
+                          checkout.review({
+                            id: hotel.id || `${hotel.name}-${dayNumber}`,
+                            name: hotel.name,
+                            date,
+                            mode: "partner_click",
+                            itemType: "hotel",
+                            partner: fallbackHotelLink.partner,
+                            partnerLabel: formatAffiliatePartnerName(
+                              fallbackHotelLink.partner,
+                            ),
+                            affiliateUrl: fallbackHotelLink.url!,
+                            source:
+                              affiliateCtx?.source ??
+                              (checkout.mode === "shared"
+                                ? "shared_trip"
+                                : "itinerary"),
+                            placement: "day_hotel_fallback",
+                          });
+                        }}
+                        className="inline-flex min-h-11 items-center gap-2 rounded-full bg-primary-700 px-4 py-2 text-xs font-semibold text-white hover:bg-primary-800 transition-colors"
+                      >
+                        <span>{fallbackHotelLink.label}</span>
+                        <ExternalLink
+                          className="h-3.5 w-3.5"
+                          aria-hidden="true"
+                        />
+                      </button>
+                    ) : (
+                      <TrackedAffiliateButton
+                        variant="secondary"
+                        label={fallbackHotelLink.label}
+                        affiliateUrl={fallbackHotelLink.url!}
+                        partner={fallbackHotelLink.partner}
+                        itemType="hotel"
+                        itemId={hotel.id || `${hotel.name}-${dayNumber}`}
+                        itemName={hotel.name}
+                        tripId={affiliateCtx?.tripId}
+                        source={affiliateCtx?.source ?? "itinerary"}
+                        placement="day_hotel_fallback"
+                      />
+                    )}
+                    <AffiliateDisclosure className="text-[11px] text-slate-600" />
+                  </div>
+                ) : hotel.affiliateUrl ? (
+                  <p className="max-w-xs flex-shrink-0 rounded-xl bg-white px-3 py-2 text-xs font-medium leading-5 text-slate-700 border border-[#DCE5E3]">
                     Hotel booking unavailable. Confirm the room and rate on the
                     hotel’s site.
                   </p>
-                )}
+                ) : null}
               </div>
             </div>
           )}
 
           {/* Transport estimates preserve provider-local times and missing facts. */}
           {transport && (
-            <div className="mb-6 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-700 p-5 text-white">
-              <FlightLeg transport={transport} label="Transport option" />
-              <p className="mt-3 text-xs text-blue-100">
+            <div className="mb-6 rounded-2xl bg-gradient-to-br from-[#143D46] to-[#0E2C33] p-5 text-white">
+              <FlightLeg
+                transport={transport}
+                label={
+                  isReturnLeg
+                    ? "Return flight"
+                    : transport.type === "flight"
+                      ? "Outbound flight"
+                      : "Transport option"
+                }
+              />
+              <p className="mt-3 text-xs text-[#EFF5F3]/90">
                 Planning estimate. Confirm the party size, current price, and
                 availability with the provider.
               </p>
-              {transport.affiliateUrl && (
-                <p className="mt-3 rounded-xl bg-white px-4 py-3 text-sm font-medium text-blue-900">
+              {hasAllowedTransportUrl ? (
+                <div className="mt-4 space-y-2">
+                  {!transportCurrent && transportPartner === "duffel" && (
+                    <p className="text-xs text-amber-200">
+                      This saved fare quote may have expired — check live
+                      availability or compare carriers below.
+                    </p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {checkout ? (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.currentTarget.focus();
+                          checkout.review({
+                            id: transportId || `flight-day-${dayNumber}`,
+                            name: `${transport.provider || "Flight"} (${transportRouteLabel})`,
+                            date,
+                            dateLabel: `${transportRouteLabel} · ${formatDate(date)}`,
+                            mode: "partner_click",
+                            itemType:
+                              transport.type === "flight"
+                                ? "flight"
+                                : "transport",
+                            partner: transportPartner,
+                            partnerLabel: transportPartnerLabel,
+                            affiliateUrl: transport.affiliateUrl!,
+                            price: transportPrice?.amount,
+                            currency: transportPrice?.currency,
+                            source:
+                              affiliateCtx?.source ??
+                              (checkout.mode === "shared"
+                                ? "shared_trip"
+                                : "itinerary"),
+                            placement: "day_transport_card",
+                          });
+                        }}
+                        className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-[#143D46] hover:bg-[#EFF5F3] transition-colors"
+                      >
+                        <span>
+                          {transportPartner === "duffel"
+                            ? isReturnLeg
+                              ? "Review round-trip flight on Duffel"
+                              : "Book flight on Duffel"
+                            : `Book ${transport.type === "flight" ? "flight" : "ticket"} on ${transportPartnerLabel}`}
+                        </span>
+                        <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                      </button>
+                    ) : (
+                      <TrackedAffiliateButton
+                        variant="onDark"
+                        label={
+                          transportPartner === "duffel"
+                            ? isReturnLeg
+                              ? "Review round-trip flight on Duffel"
+                              : "Book flight on Duffel"
+                            : `Book ${transport.type === "flight" ? "flight" : "ticket"} on ${transportPartnerLabel}`
+                        }
+                        affiliateUrl={transport.affiliateUrl!}
+                        partner={transportPartner}
+                        itemType={
+                          transport.type === "flight" ? "flight" : "transport"
+                        }
+                        itemId={transportId || `flight-day-${dayNumber}`}
+                        itemName={`${transport.provider || "Flight"} (${transportRouteLabel})`}
+                        tripId={affiliateCtx?.tripId}
+                        price={transportPrice?.amount}
+                        currency={transportPrice?.currency}
+                        source={affiliateCtx?.source ?? "itinerary"}
+                        placement="day_transport_card"
+                      />
+                    )}
+                    {(!transportCurrent || transportPartner !== "duffel") &&
+                      flightFallbackLinks.slice(0, 2).map((link) => {
+                        const partnerLabel = formatAffiliatePartnerName(
+                          link.partner,
+                        );
+                        return checkout ? (
+                          <button
+                            key={link.partner}
+                            type="button"
+                            onClick={(event) => {
+                              event.currentTarget.focus();
+                              checkout.review({
+                                id: `${transportId || `flight-day-${dayNumber}`}-${link.partner}`,
+                                name: `${transportRouteLabel} · ${partnerLabel}`,
+                                date,
+                                dateLabel: `${transportRouteLabel} · ${formatDate(date)}`,
+                                mode: "partner_click",
+                                itemType: "flight",
+                                partner: link.partner,
+                                partnerLabel,
+                                affiliateUrl: link.url,
+                                source:
+                                  affiliateCtx?.source ??
+                                  (checkout.mode === "shared"
+                                    ? "shared_trip"
+                                    : "itinerary"),
+                                placement: "day_transport_fallback",
+                              });
+                            }}
+                            className="inline-flex min-h-10 items-center gap-1.5 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-xs font-semibold text-white hover:bg-white/20 transition-colors"
+                          >
+                            <span>{link.label}</span>
+                            <ExternalLink
+                              className="h-3.5 w-3.5"
+                              aria-hidden="true"
+                            />
+                          </button>
+                        ) : (
+                          <TrackedAffiliateButton
+                            key={link.partner}
+                            variant="onDark"
+                            label={link.label}
+                            affiliateUrl={link.url}
+                            partner={link.partner}
+                            itemType="flight"
+                            itemId={`${transportId || `flight-day-${dayNumber}`}-${link.partner}`}
+                            itemName={`${transportRouteLabel} · ${partnerLabel}`}
+                            tripId={affiliateCtx?.tripId}
+                            source={affiliateCtx?.source ?? "itinerary"}
+                            placement="day_transport_fallback"
+                          />
+                        );
+                      })}
+                  </div>
+                  <AffiliateDisclosure className="text-xs text-[#EFF5F3]/90" />
+                </div>
+              ) : !transport.affiliateUrl && flightFallbackLinks.length > 0 ? (
+                <div className="mt-4 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    {flightFallbackLinks.slice(0, 2).map((link) => {
+                      const partnerLabel = formatAffiliatePartnerName(
+                        link.partner,
+                      );
+                      return checkout ? (
+                        <button
+                          key={link.partner}
+                          type="button"
+                          onClick={(event) => {
+                            event.currentTarget.focus();
+                            checkout.review({
+                              id: `${transportId || `flight-day-${dayNumber}`}-${link.partner}`,
+                              name: `${transportRouteLabel} · ${partnerLabel}`,
+                              date,
+                              dateLabel: `${transportRouteLabel} · ${formatDate(date)}`,
+                              mode: "partner_click",
+                              itemType: "flight",
+                              partner: link.partner,
+                              partnerLabel,
+                              affiliateUrl: link.url,
+                              source:
+                                affiliateCtx?.source ??
+                                (checkout.mode === "shared"
+                                  ? "shared_trip"
+                                  : "itinerary"),
+                              placement: "day_transport_fallback",
+                            });
+                          }}
+                          className="inline-flex min-h-11 items-center gap-2 rounded-full bg-white px-4 py-2.5 text-sm font-semibold text-[#143D46] hover:bg-[#EFF5F3] transition-colors"
+                        >
+                          <span>{link.label}</span>
+                          <ExternalLink
+                            className="h-4 w-4"
+                            aria-hidden="true"
+                          />
+                        </button>
+                      ) : (
+                        <TrackedAffiliateButton
+                          key={link.partner}
+                          variant="onDark"
+                          label={link.label}
+                          affiliateUrl={link.url}
+                          partner={link.partner}
+                          itemType="flight"
+                          itemId={`${transportId || `flight-day-${dayNumber}`}-${link.partner}`}
+                          itemName={`${transportRouteLabel} · ${partnerLabel}`}
+                          tripId={affiliateCtx?.tripId}
+                          source={affiliateCtx?.source ?? "itinerary"}
+                          placement="day_transport_fallback"
+                        />
+                      );
+                    })}
+                  </div>
+                  <AffiliateDisclosure className="text-xs text-[#EFF5F3]/90" />
+                </div>
+              ) : transport.affiliateUrl ? (
+                <p className="mt-3 rounded-xl bg-white px-4 py-3 text-sm font-medium text-[#143D46]">
                   {transport.type === "flight"
                     ? "Flight booking unavailable. Confirm the fare with the airline or a flight seller."
                     : "Transport booking unavailable. Confirm the ticket with the operator."}
                 </p>
-              )}
+              ) : null}
             </div>
           )}
 
@@ -577,7 +948,7 @@ export function ItineraryDay({
                     key={i}
                     className="text-sm leading-relaxed text-slate-600 flex items-start gap-2"
                   >
-                    <span className="text-slate-400 mt-0.5">•</span>
+                    <span className="text-slate-500 mt-0.5">•</span>
                     <span className="min-w-0 break-words">
                       <SourceNote text={tip} />
                     </span>
@@ -670,6 +1041,7 @@ function TimeBlockSection({
           <RestaurantCard
             key={meal.id || idx}
             restaurant={meal}
+            date={date}
             rationale={stopRationales.get(`meal:${slotName}:${meal.id || idx}`)}
           />
         ))}

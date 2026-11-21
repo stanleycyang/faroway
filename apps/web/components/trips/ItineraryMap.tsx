@@ -203,7 +203,7 @@ export function ItineraryMap({ itinerary, className }: ItineraryMapProps) {
             Evening
           </span>
         </div>
-        <span className="text-[11px] text-gray-400">
+        <span className="text-[11px] text-slate-600">
           Click map to enable scroll zoom
         </span>
       </div>

@@ -4,7 +4,7 @@ export function TripViewLoading() {
       role="status"
       aria-busy="true"
       aria-label="Loading trip"
-      className="min-h-screen bg-gradient-to-b from-gray-50 to-white"
+      className="min-h-screen bg-[#FAF8F3]"
     >
       <div className="border-b border-gray-200">
         <div className="max-w-4xl mx-auto px-4 sm:px-6">

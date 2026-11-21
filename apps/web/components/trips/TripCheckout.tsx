@@ -1,29 +1,51 @@
 "use client";
 
 import React, {
-  createContext,
   useCallback,
-  useContext,
   useEffect,
-  useRef,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { ShieldCheck, X, Calendar, Users, ArrowRight } from "lucide-react";
 import { z } from "zod";
+import {
+  formatAffiliatePartnerName,
+  isAllowedAffiliateUrl,
+  itemTypeForAffiliatePartner,
+  normalizeAffiliatePartner,
+  readPrice,
+  resolveAffiliatePartnerByUrl,
+} from "@faroway/constants";
+import type { AffiliateClickSource } from "@faroway/types";
 import { useModalFocusTrap } from "@/hooks/useModalFocusTrap";
 import { isValidDateOnly } from "@/lib/api/date-range";
 import { formatTripDate } from "@/lib/trips/date-duration";
+import { formatEstimate } from "@/lib/trips/budget";
 import { buildViatorHandoffUrl } from "@/lib/affiliates/viator-link";
+import { AffiliateDisclosure } from "@/components/affiliates/AffiliateDisclosure";
+import { trackAffiliateClick } from "@/components/affiliates/track-click-client";
+import {
+  CheckoutContext,
+  useTripCheckout,
+  type CheckoutSelection,
+  type TripCheckoutContextValue,
+} from "./TripCheckoutContext";
+
+export {
+  useTripCheckout,
+  type CheckoutSelection,
+  type TripCheckoutContextValue,
+};
 
 const attemptIdSchema = z.string().uuid();
 
-interface Selection {
-  id: string;
-  name: string;
-  date: string;
-  attemptId?: string;
+interface ResolvedSelection extends CheckoutSelection {
+  resolvedMode: "viator_hosted" | "partner_click";
+  resolvedPartner: string;
+  resolvedPartnerLabel: string;
 }
+
 interface Handoff {
   id: string;
   item_id: string;
@@ -31,6 +53,7 @@ interface Handoff {
   clicked_at: string;
   canResume?: boolean;
 }
+
 function isHandoff(value: unknown): value is Handoff {
   if (!value || typeof value !== "object") return false;
   const item = value as Record<string, unknown>;
@@ -51,25 +74,35 @@ function isHandoff(value: unknown): value is Handoff {
     (item.canResume === undefined || typeof item.canResume === "boolean")
   );
 }
-const CheckoutContext = createContext<{
-  enabled: boolean;
-  review: (selection: Selection) => void;
-} | null>(null);
-
-export function useTripCheckout() {
-  return useContext(CheckoutContext);
-}
 
 /** Saved provider handoffs, deliberately separate from booking confirmations. */
 interface TripCheckoutProps {
-  tripId: string;
+  tripId?: string;
   travelers: number;
+  mode?: "owner" | "shared";
+  source?: AffiliateClickSource;
   children: React.ReactNode;
 }
-export function TripCheckout(props: TripCheckoutProps) {
-  return <CheckoutSession key={props.tripId} {...props} />;
+
+export function TripCheckout({
+  mode = "owner",
+  tripId,
+  ...rest
+}: TripCheckoutProps) {
+  const sessionKey =
+    mode === "shared" ? "shared" : `owner:${tripId ?? "unknown"}`;
+  return (
+    <CheckoutSession key={sessionKey} mode={mode} tripId={tripId} {...rest} />
+  );
 }
-function CheckoutSession({ tripId, travelers, children }: TripCheckoutProps) {
+
+function CheckoutSession({
+  tripId,
+  travelers,
+  mode = "owner",
+  source,
+  children,
+}: TripCheckoutProps) {
   const mounted = useRef(false);
   const readSequence = useRef(0);
   useEffect(() => {
@@ -78,16 +111,26 @@ function CheckoutSession({ tripId, travelers, children }: TripCheckoutProps) {
       mounted.current = false;
     };
   }, []);
+
+  const isOwnerMode = mode === "owner" && Boolean(tripId);
+  const defaultSource: AffiliateClickSource =
+    source ?? (mode === "shared" ? "shared_trip" : "itinerary");
+
   const [enabled, setEnabled] = useState(false);
   const [attempts, setAttempts] = useState<Handoff[]>([]);
-  const [selection, setSelection] = useState<Selection | null>(null);
+  const [selection, setSelection] = useState<ResolvedSelection | null>(null);
   const [busy, setBusy] = useState(false);
   const busyRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
   const [historyError, setHistoryError] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
-  const endpoint = `/api/trips/${encodeURIComponent(tripId)}/checkout`;
+
+  const endpoint = tripId
+    ? `/api/trips/${encodeURIComponent(tripId)}/checkout`
+    : "";
+
   const refresh = useCallback(async () => {
+    if (!isOwnerMode || !endpoint) return;
     const sequence = ++readSequence.current;
     const current = () => mounted.current && sequence === readSequence.current;
     try {
@@ -113,19 +156,24 @@ function CheckoutSession({ tripId, travelers, children }: TripCheckoutProps) {
       setHistoryError(true);
       setEnabled(false);
     }
-  }, [endpoint]);
+  }, [endpoint, isOwnerMode]);
+
   useEffect(() => {
+    if (!isOwnerMode) return;
     void refresh();
     const onFocus = () => {
       void refresh();
     };
     window.addEventListener("focus", onFocus);
     return () => window.removeEventListener("focus", onFocus);
-  }, [refresh]);
+  }, [isOwnerMode, refresh]);
+
   const close = () => {
     if (!busyRef.current) setSelection(null);
   };
+
   useModalFocusTrap({ open: selection !== null, dialogRef, onClose: close });
+
   useEffect(() => {
     if (!selection) return;
     const previousOverflow = document.body.style.overflow;
@@ -134,12 +182,39 @@ function CheckoutSession({ tripId, travelers, children }: TripCheckoutProps) {
       document.body.style.overflow = previousOverflow;
     };
   }, [selection]);
+
   const review = useCallback(
-    (item: Selection) => {
+    (item: CheckoutSelection) => {
       if (busyRef.current) return;
+      const isViatorHosted =
+        isOwnerMode &&
+        (item.mode === "viator_hosted" || (!item.mode && !item.affiliateUrl));
+
+      if (!isViatorHosted) {
+        if (!item.affiliateUrl || !isAllowedAffiliateUrl(item.affiliateUrl)) {
+          return;
+        }
+        const resolvedPartner =
+          resolveAffiliatePartnerByUrl(item.affiliateUrl) ??
+          normalizeAffiliatePartner(item.partner) ??
+          "viator";
+        const resolvedPartnerLabel =
+          item.partnerLabel || formatAffiliatePartnerName(resolvedPartner);
+        setError(null);
+        setSelection({
+          ...item,
+          resolvedMode: "partner_click",
+          resolvedPartner,
+          resolvedPartnerLabel,
+        });
+        return;
+      }
+
       setError(null);
       const previous = attempts.find(
-        (a) => a.item_id === `${item.id}@${item.date}` && a.canResume !== false,
+        (a) =>
+          a.item_id === `${item.id}@${item.date ?? ""}` &&
+          a.canResume !== false,
       );
       setSelection({
         ...item,
@@ -147,11 +222,31 @@ function CheckoutSession({ tripId, travelers, children }: TripCheckoutProps) {
           item.attemptId ||
           previous?.id.slice("checkout-".length) ||
           crypto.randomUUID(),
+        resolvedMode: "viator_hosted",
+        resolvedPartner: "viator",
+        resolvedPartnerLabel: "Viator",
       });
     },
-    [attempts],
+    [attempts, isOwnerMode],
   );
-  const contextValue = useMemo(() => ({ enabled, review }), [enabled, review]);
+
+  const contextValue = useMemo<TripCheckoutContextValue>(
+    () => ({ enabled, partnerEnabled: true, mode, review }),
+    [enabled, mode, review],
+  );
+
+  const openExternalPartner = (url: string) => {
+    const popup =
+      typeof window.open === "function"
+        ? window.open(url, "_blank", "noopener,noreferrer")
+        : null;
+    if (!popup || popup.closed) {
+      window.location.assign(url);
+    } else {
+      setSelection(null);
+    }
+  };
+
   const continueToProvider = async () => {
     if (!selection || busyRef.current) return;
     busyRef.current = true;
@@ -159,58 +254,104 @@ function CheckoutSession({ tripId, travelers, children }: TripCheckoutProps) {
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          activityId: selection.id,
-          date: selection.date,
-          attemptId: selection.attemptId,
-        }),
-        signal: AbortSignal.timeout(20_000),
-      });
-      if (!mounted.current) return;
-      const data = await response.json();
-      if (!mounted.current) return;
-      if (!response.ok)
-        throw new Error(data.error || "Could not prepare checkout.");
-      if (
-        data?.status !== "handoff_prepared" ||
-        data?.attemptId !== selection.attemptId
-      ) {
-        throw new Error(
-          "This booking step could not be confirmed. Review your saved progress before continuing.",
+      if (selection.resolvedMode === "viator_hosted") {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            activityId: selection.id,
+            date: selection.date,
+            attemptId: selection.attemptId,
+          }),
+          signal: AbortSignal.timeout(20_000),
+        });
+        if (!mounted.current) return;
+        const data = await response.json();
+        if (!mounted.current) return;
+        if (!response.ok)
+          throw new Error(data.error || "Could not prepare checkout.");
+        if (
+          data?.status !== "handoff_prepared" ||
+          data?.attemptId !== selection.attemptId
+        ) {
+          throw new Error(
+            "This booking step could not be confirmed. Review your saved progress before continuing.",
+          );
+        }
+        const url = buildViatorHandoffUrl(
+          data.redirectUrl,
+          `checkout-${selection.attemptId}`,
         );
+        if (!url) throw new Error("The provider link could not be verified.");
+        openExternalPartner(url);
+        return;
       }
-      const url = buildViatorHandoffUrl(
-        data.redirectUrl,
-        `checkout-${selection.attemptId}`,
-      );
-      if (!url) throw new Error("The provider link could not be verified.");
-      // Same-tab navigation avoids async popup blockers. The ledger survives
-      // browser back, app restarts, and failed navigation; no booking is inferred.
-      window.location.assign(url);
+
+      if (
+        !selection.affiliateUrl ||
+        !isAllowedAffiliateUrl(selection.affiliateUrl)
+      ) {
+        throw new Error("The partner link could not be verified.");
+      }
+
+      const tracked = await trackAffiliateClick({
+        affiliateUrl: selection.affiliateUrl,
+        partner: selection.resolvedPartner,
+        itemType:
+          selection.itemType ??
+          itemTypeForAffiliatePartner(selection.resolvedPartner),
+        itemId: selection.id,
+        itemName: selection.name,
+        tripId: isOwnerMode ? tripId : undefined,
+        price: selection.price,
+        currency: selection.currency,
+        source: selection.source ?? defaultSource,
+        placement: selection.placement ?? "checkout_modal",
+        campaign: selection.campaign,
+      });
+
+      if (!mounted.current) return;
+      if (!tracked || !isAllowedAffiliateUrl(tracked.url)) {
+        throw new Error("The partner link could not be verified.");
+      }
+      openExternalPartner(tracked.url);
     } catch (reason) {
       if (!mounted.current) return;
       setError(reason instanceof Error ? reason.message : "Please try again.");
-      void refresh();
+      if (selection.resolvedMode === "viator_hosted") {
+        void refresh();
+      }
     } finally {
       busyRef.current = false;
       if (mounted.current) setBusy(false);
     }
   };
-  const uniqueAttempts = attempts.filter(
-    (a, index) => attempts.findIndex((b) => b.item_id === a.item_id) === index,
-  );
+
+  const uniqueAttempts = isOwnerMode
+    ? attempts.filter(
+        (a, index) =>
+          attempts.findIndex((b) => b.item_id === a.item_id) === index,
+      )
+    : [];
   const previouslyPrepared =
-    selection &&
+    isOwnerMode &&
+    selection?.resolvedMode === "viator_hosted" &&
     attempts.some((a) => a.item_id === `${selection.id}@${selection.date}`);
+
+  const validSelectionPrice = selection
+    ? readPrice(selection.price, selection.currency)
+    : null;
+  const formattedDateDisplay = selection
+    ? selection.dateLabel ||
+      (selection.date ? formatTripDate(selection.date) : "Flexible dates")
+    : "";
+
   return (
     <CheckoutContext value={contextValue}>
-      {historyError && (
+      {isOwnerMode && historyError && (
         <p
           role="status"
-          className="rounded-xl bg-amber-50 p-4 text-sm text-amber-900"
+          className="mb-4 rounded-xl bg-amber-50 p-4 text-sm text-amber-900"
         >
           Your booking steps could not be loaded.{" "}
           <button onClick={() => void refresh()} className="underline">
@@ -218,7 +359,7 @@ function CheckoutSession({ tripId, travelers, children }: TripCheckoutProps) {
           </button>
         </p>
       )}
-      {uniqueAttempts.length > 0 && (
+      {isOwnerMode && uniqueAttempts.length > 0 && (
         <section
           aria-label="Saved booking steps"
           className="mb-6 rounded-2xl border border-primary-100 bg-primary-50/50 p-5"
@@ -255,6 +396,7 @@ function CheckoutSession({ tripId, travelers, children }: TripCheckoutProps) {
                         date,
                         name: attempt.item_name,
                         attemptId: attempt.id.slice("checkout-".length),
+                        mode: "viator_hosted",
                       });
                     }}
                     className="min-h-11 text-sm font-semibold text-primary-800 disabled:opacity-40"
@@ -269,7 +411,12 @@ function CheckoutSession({ tripId, travelers, children }: TripCheckoutProps) {
       )}
       {children}
       {selection && (
-        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/60 sm:items-center sm:p-4">
+        <div
+          className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/60 sm:items-center sm:p-4"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) close();
+          }}
+        >
           <div
             ref={dialogRef}
             tabIndex={-1}
@@ -284,6 +431,7 @@ function CheckoutSession({ tripId, travelers, children }: TripCheckoutProps) {
               className="mx-auto mb-6 h-1 w-10 rounded-full bg-slate-200 sm:hidden"
             />
             <button
+              type="button"
               aria-label="Close checkout review"
               disabled={busy}
               onClick={close}
@@ -291,43 +439,74 @@ function CheckoutSession({ tripId, travelers, children }: TripCheckoutProps) {
             >
               <X className="h-5 w-5" />
             </button>
-            <ShieldCheck className="mb-5 h-7 w-7 text-teal-800" />
+            <ShieldCheck
+              className="mb-4 h-7 w-7 text-[#0F766E]"
+              aria-hidden="true"
+            />
             <h2
               id="checkout-title"
               className="max-w-sm pr-6 font-editorial text-3xl leading-tight tracking-tight text-slate-900"
             >
-              Your next step, with Viator
+              Your next step, with {selection.resolvedPartnerLabel}
             </h2>
-            <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-              <p className="font-semibold text-slate-900">{selection.name}</p>
-              <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-slate-600">
-                <span className="inline-flex items-center gap-2">
-                  <Calendar className="h-4 w-4" />
-                  {formatTripDate(selection.date)}
+
+            {/* 3-row summary card */}
+            <div className="mt-5 divide-y divide-slate-200 rounded-2xl border border-slate-200 bg-[#FAF8F3]">
+              {/* Row 1: Experience / Partner + Price */}
+              <div className="flex items-start justify-between gap-3 p-4">
+                <div className="min-w-0">
+                  <p className="font-semibold text-slate-900">
+                    {selection.name}
+                  </p>
+                  <p className="mt-0.5 text-xs font-medium text-slate-600">
+                    Partner: {selection.resolvedPartnerLabel}
+                  </p>
+                </div>
+                {validSelectionPrice && (
+                  <span className="shrink-0 rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-900 ring-1 ring-slate-200">
+                    Est.{" "}
+                    {formatEstimate(
+                      validSelectionPrice.amount,
+                      validSelectionPrice.currency,
+                    )}
+                  </span>
+                )}
+              </div>
+
+              {/* Row 2: Date / Route + Travelers */}
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 px-4 py-3 text-xs font-medium text-slate-700">
+                <span className="inline-flex items-center gap-1.5">
+                  <Calendar
+                    className="h-4 w-4 text-slate-600"
+                    aria-hidden="true"
+                  />
+                  {formattedDateDisplay}
                 </span>
-                <span className="inline-flex items-center gap-2">
-                  <Users className="h-4 w-4" />
+                <span className="inline-flex items-center gap-1.5">
+                  <Users
+                    className="h-4 w-4 text-slate-600"
+                    aria-hidden="true"
+                  />
                   {travelers} {travelers === 1 ? "traveler" : "travelers"}
                 </span>
               </div>
+
+              {/* Row 3: New-tab handoff note */}
+              <div className="px-4 py-3">
+                <p
+                  id="checkout-description"
+                  className="text-xs leading-relaxed text-slate-700"
+                >
+                  Opens {selection.resolvedPartnerLabel} in a new tab to confirm
+                  final price and terms. Your Faroway itinerary stays saved.
+                </p>
+              </div>
             </div>
-            <p
-              id="checkout-description"
-              className="mt-4 text-sm leading-relaxed text-gray-600"
-            >
-              Confirm your date, time, traveler details, final price and
-              cancellation terms on Viator. Payment and booking support are
-              handled by Viator. Your Faroway itinerary stays saved.
-            </p>
-            <p className="mt-3 text-xs text-gray-500">
-              Faroway may earn a commission when you book. Continuing does not
-              reserve a place or charge you.
-            </p>
+
             {previouslyPrepared && (
               <p className="mt-4 rounded-xl bg-amber-50 p-3 text-sm text-amber-900">
-                Already paid? Check Viator’s confirmation email before
-                continuing. We cannot yet verify whether this step resulted in a
-                booking.
+                Already paid? Check {selection.resolvedPartnerLabel}’s
+                confirmation email before continuing.
               </p>
             )}
             {error && (
@@ -335,22 +514,26 @@ function CheckoutSession({ tripId, travelers, children }: TripCheckoutProps) {
                 {error} Your plan is still saved.
               </p>
             )}
-            <p className="mt-3 text-xs leading-5 text-slate-600">
-              You’ll leave Faroway in this tab to finish on Viator. Payment and
-              booking support stay with Viator.
-            </p>
+
             <button
+              type="button"
               onClick={() => void continueToProvider()}
-              disabled={busy || !enabled}
-              className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3 font-semibold text-white hover:bg-slate-700 disabled:opacity-50"
+              disabled={
+                busy || (selection.resolvedMode === "viator_hosted" && !enabled)
+              }
+              className="mt-6 flex min-h-12 w-full items-center justify-center gap-2 rounded-full bg-primary-700 px-5 py-3 font-semibold text-white transition-colors hover:bg-primary-800 disabled:opacity-50"
             >
-              {busy ? "Preparing your booking step…" : "Continue to Viator"}
+              {busy
+                ? "Preparing your booking step…"
+                : `Continue to ${selection.resolvedPartnerLabel}`}
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </button>
+            <AffiliateDisclosure className="mt-3 text-center text-xs text-slate-600" />
             <button
+              type="button"
               onClick={close}
               disabled={busy}
-              className="mt-2 min-h-11 w-full text-sm text-gray-600"
+              className="mt-1 min-h-11 w-full text-sm font-medium text-slate-600 hover:text-slate-900"
             >
               Keep planning
             </button>

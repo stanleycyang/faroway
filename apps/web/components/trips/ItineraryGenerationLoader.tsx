@@ -29,6 +29,7 @@ import {
   type DraftChapter,
 } from "@/lib/trips/streaming-dossier";
 import { formatTripDate, parseTripDate } from "@/lib/trips/date-duration";
+import { Logo } from "@/components/Logo";
 import { TripCoverImage } from "./TripCoverImage";
 
 export type GenerationPhase =
@@ -210,7 +211,7 @@ export function ItineraryGenerationLoader({
     section?.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true });
   };
   return (
-    <div className="concierge-dossier fixed inset-0 z-[100] overflow-y-auto bg-[#f7f8fa] text-slate-900">
+    <div className="concierge-dossier fixed inset-0 z-[100] overflow-y-auto bg-[#FAF8F3] text-slate-900">
       <div className="mx-auto min-h-dvh lg:grid lg:grid-cols-[minmax(340px,0.82fr)_minmax(0,1.18fr)]">
         <aside className="relative min-h-[380px] overflow-hidden bg-slate-900 text-white sm:min-h-[440px] lg:sticky lg:top-0 lg:h-dvh lg:overflow-y-auto">
           <TripCoverImage
@@ -224,10 +225,10 @@ export function ItineraryGenerationLoader({
             <div className="flex items-center justify-between gap-3">
               <a
                 href="/dashboard"
-                className="flex items-center gap-2 text-lg font-bold hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
+                aria-label="Faroway"
+                className="inline-flex items-center hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white"
               >
-                <Compass className="h-6 w-6" aria-hidden="true" />
-                faroway.
+                <Logo size="sm" variant="light" asLink={false} />
               </a>
               <a
                 href="/dashboard"
@@ -269,7 +270,7 @@ export function ItineraryGenerationLoader({
                   : "Explore your emerging journey"}
               </button>
             </div>
-            <p className="mt-10 hidden text-xs text-white/60 lg:block">
+            <p className="mt-10 hidden text-xs text-white/80 lg:block">
               A personal itinerary, thoughtfully brought together.
             </p>
           </div>
@@ -449,7 +450,7 @@ export function ItineraryGenerationLoader({
                       className="flex items-center gap-2.5 text-xs leading-5 text-slate-600"
                     >
                       <span
-                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${state === "done" ? "bg-teal-50 text-teal-800" : state === "active" ? "bg-primary-50 text-primary-800" : state === "interrupted" ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-400"}`}
+                        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full ${state === "done" ? "bg-teal-50 text-teal-800" : state === "active" ? "bg-primary-50 text-primary-800" : state === "interrupted" ? "bg-amber-50 text-amber-800" : "bg-slate-100 text-slate-500"}`}
                       >
                         {state === "done" ? (
                           <Check className="h-3.5 w-3.5" />
@@ -638,7 +639,7 @@ export function ItineraryGenerationLoader({
                 </div>
               ) : (
                 <div className="flex items-center gap-4 rounded-2xl border border-dashed border-slate-300 px-5 py-6">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-slate-400">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-slate-500">
                     <Hotel className="h-5 w-5" />
                   </span>
                   <div>
@@ -701,7 +702,7 @@ export function ItineraryGenerationLoader({
                   ))
                 ) : (
                   <div className="rounded-2xl border border-slate-200 bg-white p-6">
-                    <BookOpen className="h-5 w-5 text-slate-400" />
+                    <BookOpen className="h-5 w-5 text-slate-500" />
                     <p className="mt-3 text-sm font-medium">
                       Making room for memorable days
                     </p>
@@ -739,7 +740,7 @@ export function ItineraryGenerationLoader({
         </main>
       </div>
       {phase === "complete" && onOpenTrip && (
-        <div className="fixed inset-x-0 bottom-0 z-10 border-t border-slate-200 bg-[#f7f8fa]/95 px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur sm:px-10 lg:left-[41%] lg:px-12 xl:px-16">
+        <div className="fixed inset-x-0 bottom-0 z-10 border-t border-slate-200 bg-[#FAF8F3]/95 px-5 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] backdrop-blur sm:px-10 lg:left-[41%] lg:px-12 xl:px-16">
           <div className="mx-auto max-w-2xl">
             <button
               onClick={onOpenTrip}
@@ -782,7 +783,7 @@ function DiscoveryCount({
   const value = Number.isFinite(count) ? Math.max(0, count) : 0;
   return (
     <div className="px-2 text-center">
-      <Icon className="mx-auto h-4 w-4 text-slate-400" aria-hidden="true" />
+      <Icon className="mx-auto h-4 w-4 text-slate-500" aria-hidden="true" />
       <p className="mt-2 text-xl font-semibold tabular-nums text-slate-900">
         {value > 0 ? value : "—"}
       </p>

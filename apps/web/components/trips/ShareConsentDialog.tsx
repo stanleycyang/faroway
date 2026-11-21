@@ -42,7 +42,7 @@ export function ShareConsentDialog({
         <button
           type="button"
           onClick={onConfirm}
-          className="min-h-11 rounded-lg bg-primary px-4 text-white"
+          className="min-h-11 rounded-lg bg-primary-700 px-4 font-semibold text-white hover:bg-primary-800"
         >
           Create public link
         </button>

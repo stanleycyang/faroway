@@ -123,7 +123,7 @@ export function TripFeedback({ tripId }: TripFeedbackProps) {
                 className={`inline-flex h-11 w-11 items-center justify-center rounded-xl border transition-colors ${
                   filled
                     ? "border-amber-400 bg-amber-50 text-amber-600"
-                    : "border-gray-200 text-gray-400 hover:border-amber-300 hover:text-amber-500"
+                    : "border-gray-200 text-slate-500 hover:border-amber-500 hover:text-amber-700"
                 }`}
               >
                 <Star className={`h-5 w-5 ${filled ? "fill-current" : ""}`} />
@@ -212,7 +212,7 @@ export function TripFeedback({ tripId }: TripFeedbackProps) {
             type="button"
             disabled={submitting}
             onClick={submit}
-            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-primary-600 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary-700 px-5 py-2.5 text-sm font-bold text-white transition-colors hover:bg-primary-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             {submitting ? "Saving…" : "Send feedback"}

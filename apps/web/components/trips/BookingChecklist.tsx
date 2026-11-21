@@ -1,12 +1,25 @@
 "use client";
 import { removeLocalRetry } from "@/lib/trips/remove-local-retry";
 import { z } from "zod";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ExternalLink } from "lucide-react";
+import {
+  formatAffiliatePartnerName,
+  isAllowedAffiliateUrl,
+  normalizeAffiliatePartner,
+  readPrice,
+  resolveAffiliatePartnerByUrl,
+} from "@faroway/constants";
+import type { ItineraryActivity, TripDay } from "@faroway/types";
 import {
   BookingReportCommand,
   bookingLabels,
   type BookingReportInput,
 } from "@/lib/trips/booking-checklist";
+import { useTripCheckout } from "./TripCheckoutContext";
+import { TrackedAffiliateButton } from "@/components/affiliates/TrackedAffiliateButton";
+import { AffiliateDisclosure } from "@/components/affiliates/AffiliateDisclosure";
+
 type Status = BookingReportInput["status"];
 const ReportRow = z.object({
   id: z.string(),
@@ -33,13 +46,39 @@ const ChecklistRead = z
   })
   .refine((value) => !value.editable || value.generationId.length > 0);
 type Checklist = z.infer<typeof ChecklistRead>;
+
+function findMatchingActivity(
+  days: TripDay[] | undefined,
+  name: string,
+  date: string,
+): ItineraryActivity | undefined {
+  if (!days?.length) return undefined;
+  const normalizedName = name.trim().toLowerCase();
+  const candidates: ItineraryActivity[] = [];
+  for (const day of days) {
+    for (const slot of [day.morning, day.afternoon, day.evening]) {
+      if (!slot) continue;
+      for (const act of Array.isArray(slot.activities) ? slot.activities : []) {
+        if (act && act.name.trim().toLowerCase() === normalizedName) {
+          if (day.date === date) return act;
+          candidates.push(act);
+        }
+      }
+    }
+  }
+  return candidates[0];
+}
+
 export function BookingChecklist({
   tripId,
   userId,
+  days,
 }: {
   tripId: string;
   userId: string;
+  days?: TripDay[];
 }) {
+  const checkout = useTripCheckout();
   const [data, setData] = useState<Checklist | null>(null);
   const [unreadableRetry, setUnreadableRetry] = useState(false);
   const [pending, setPending] = useState<BookingReportInput | null>(null);
@@ -173,7 +212,7 @@ export function BookingChecklist({
       const latest = await refresh();
       if (!latest) return;
       setMessage(
-        "Your report is saved. It is not provider confirmation or proof of commission.",
+        "Progress saved to your trip checklist. Check your provider’s email for official booking confirmation.",
       );
     } catch (error) {
       if (!mounted.current) return;
@@ -187,6 +226,33 @@ export function BookingChecklist({
       if (mounted.current) setBusy(false);
     }
   };
+
+  const matchedActivities = useMemo(() => {
+    const map = new Map<string, ItineraryActivity>();
+    if (!data?.items?.length || !days?.length) return map;
+    for (const item of data.items) {
+      const match = findMatchingActivity(days, item.name, item.date);
+      if (match) map.set(item.id, match);
+    }
+    return map;
+  }, [data?.items, days]);
+
+  const hasAnyBookableCta = useMemo(() => {
+    for (const act of matchedActivities.values()) {
+      const url = act.bookingInfo?.bookingUrl;
+      if (
+        (url && isAllowedAffiliateUrl(url)) ||
+        (checkout?.mode === "owner" &&
+          checkout.enabled &&
+          act.bookingInfo?.affiliateId === "viator" &&
+          /^activity_v_[a-zA-Z0-9]+$/.test(act.id))
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }, [matchedActivities, checkout?.mode, checkout?.enabled]);
+
   return (
     <section
       aria-label="Booking checklist"
@@ -195,12 +261,11 @@ export function BookingChecklist({
       <h2 className="text-lg font-bold text-gray-900">Booking checklist</h2>
       <p className="mt-1 text-sm text-gray-600">
         Keep track of activities to arrange. Some activities need no
-        reservation. Opening a provider page does not confirm a booking.
+        reservation. Opening a partner link does not confirm a booking.
       </p>
-      <p className="mt-2 rounded-lg bg-slate-50 p-3 text-sm">
-        Provider verification is not connected. All booked or opened statuses
-        here are reported by you; none are independently verified. Prices,
-        reservations and commissions are not confirmed by this checklist.
+      <p className="mt-2 rounded-lg bg-[#EFF5F3] p-3 text-sm text-slate-700">
+        Statuses here are saved by you for planning — opening a link or marking
+        an item booked doesn’t automatically sync with providers.
       </p>
       {message && (
         <p role="status" className="mt-3 text-sm">
@@ -301,51 +366,141 @@ export function BookingChecklist({
         <p className="mt-3 text-sm">No available activities to track yet.</p>
       )}
       <ul className="mt-3 space-y-3">
-        {data?.items.map((item) => (
-          <li key={item.id} className="rounded-xl border border-gray-200 p-3">
-            <h3 className="font-semibold">{item.name}</h3>
-            <p className="text-sm text-gray-600">{item.date}</p>
-            <p className="mt-1 text-sm">{bookingLabels[item.status]}</p>
-            {item.needsReview && (
-              <p className="mt-1 text-sm text-amber-900">
-                Trip changed — review this report against your current dates and
-                activity. Existing reservations were not changed.
-              </p>
-            )}
-            {data.editable && (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {(Object.keys(bookingLabels) as Status[]).map((status) => (
-                  <button
-                    key={status}
-                    disabled={
-                      busy || !!pending || unreadableRetry || !data.editable
-                    }
-                    onClick={() =>
-                      setReview({
-                        name: item.name,
-                        command: {
-                          requestId: crypto.randomUUID(),
-                          expectedUpdatedAt: data.revision,
-                          generationId: data.generationId,
-                          itemId: item.id,
-                          expectedReportId: item.reportId,
-                          status,
-                        },
-                      })
-                    }
-                    className="min-h-11 rounded-lg border border-gray-300 px-3 text-sm disabled:opacity-50"
-                  >
-                    {status === "needed"
-                      ? "Still needed"
-                      : status === "provider_opened"
-                        ? "I opened the provider"
-                        : "I booked this"}
-                  </button>
-                ))}
+        {data?.items.map((item) => {
+          const matchedActivity = matchedActivities.get(item.id);
+          const bookingUrl = matchedActivity?.bookingInfo?.bookingUrl;
+          const hasAllowedUrl = Boolean(
+            bookingUrl && isAllowedAffiliateUrl(bookingUrl),
+          );
+          const isViatorHosted = Boolean(
+            matchedActivity &&
+            checkout?.mode === "owner" &&
+            checkout.enabled &&
+            matchedActivity.bookingInfo?.affiliateId === "viator" &&
+            /^activity_v_[a-zA-Z0-9]+$/.test(matchedActivity.id),
+          );
+          const canBookNow =
+            item.status !== "traveler_booked" &&
+            Boolean(matchedActivity) &&
+            (hasAllowedUrl || isViatorHosted);
+          const partner = hasAllowedUrl
+            ? (resolveAffiliatePartnerByUrl(bookingUrl!) ??
+              normalizeAffiliatePartner(
+                matchedActivity?.bookingInfo?.affiliateId,
+              ) ??
+              "viator")
+            : "viator";
+          const partnerLabel = formatAffiliatePartnerName(partner);
+          const price = readPrice(
+            matchedActivity?.estimatedCost?.amount,
+            matchedActivity?.estimatedCost?.currency,
+          );
+
+          return (
+            <li key={item.id} className="rounded-xl border border-gray-200 p-3">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div>
+                  <h3 className="font-semibold text-slate-900">{item.name}</h3>
+                  <p className="text-sm text-gray-600">{item.date}</p>
+                  <p className="mt-1 text-sm text-slate-800">
+                    {bookingLabels[item.status]}
+                  </p>
+                </div>
+                {canBookNow && matchedActivity && (
+                  <div className="shrink-0">
+                    {checkout ? (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.currentTarget.focus();
+                          checkout.review({
+                            id: matchedActivity.id,
+                            name: matchedActivity.name,
+                            date: item.date,
+                            mode: isViatorHosted
+                              ? "viator_hosted"
+                              : "partner_click",
+                            itemType: "activity",
+                            partner,
+                            partnerLabel,
+                            affiliateUrl: hasAllowedUrl
+                              ? bookingUrl
+                              : undefined,
+                            price: price?.amount,
+                            currency: price?.currency,
+                            source: "booking_checklist",
+                            placement: "booking_checklist",
+                          });
+                        }}
+                        className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-primary-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-primary-800 transition-colors"
+                      >
+                        <span>Book now</span>
+                        <ExternalLink
+                          className="h-3.5 w-3.5"
+                          aria-hidden="true"
+                        />
+                      </button>
+                    ) : hasAllowedUrl ? (
+                      <TrackedAffiliateButton
+                        variant="primary"
+                        className="inline-flex min-h-11 items-center gap-1.5 rounded-lg bg-primary-700 px-3.5 py-2 text-sm font-semibold text-white hover:bg-primary-800 transition-colors"
+                        label="Book now"
+                        affiliateUrl={bookingUrl!}
+                        partner={partner}
+                        itemType="activity"
+                        itemId={matchedActivity.id}
+                        itemName={matchedActivity.name}
+                        tripId={tripId}
+                        price={price?.amount}
+                        currency={price?.currency}
+                        source="booking_checklist"
+                        placement="booking_checklist"
+                      />
+                    ) : null}
+                  </div>
+                )}
               </div>
-            )}
-          </li>
-        ))}
+              {item.needsReview && (
+                <p className="mt-1 text-sm text-amber-900">
+                  Trip changed — review this report against your current dates
+                  and activity. Existing reservations were not changed.
+                </p>
+              )}
+              {data.editable && (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(Object.keys(bookingLabels) as Status[]).map((status) => (
+                    <button
+                      key={status}
+                      disabled={
+                        busy || !!pending || unreadableRetry || !data.editable
+                      }
+                      onClick={() =>
+                        setReview({
+                          name: item.name,
+                          command: {
+                            requestId: crypto.randomUUID(),
+                            expectedUpdatedAt: data.revision,
+                            generationId: data.generationId,
+                            itemId: item.id,
+                            expectedReportId: item.reportId,
+                            status,
+                          },
+                        })
+                      }
+                      className="min-h-11 rounded-lg border border-gray-300 px-3 text-sm disabled:opacity-50"
+                    >
+                      {status === "needed"
+                        ? "Still needed"
+                        : status === "provider_opened"
+                          ? "I opened the provider"
+                          : "I booked this"}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </li>
+          );
+        })}
       </ul>
       {review && !pending && !unreadableRetry && (
         <div
@@ -397,9 +552,12 @@ export function BookingChecklist({
           </ul>
         </details>
       )}
-      <p className="mt-3 text-xs text-gray-500">
-        This first checklist covers itinerary activities. Track hotel, flight
-        and dining reservations with their providers.
+      {hasAnyBookableCta && (
+        <AffiliateDisclosure className="mt-3 text-xs text-slate-600" />
+      )}
+      <p className="mt-3 text-xs text-slate-600">
+        This checklist tracks itinerary activities. Use the Bookings drawer to
+        open stay, flight, dining, and trip essential links.
       </p>
     </section>
   );
