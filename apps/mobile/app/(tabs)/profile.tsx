@@ -1,7 +1,7 @@
 import { useProfileRefresh } from '../../hooks/useProfileRefresh';
 import { useLocalCalendarDate } from '../../hooks/useLocalCalendarDate';
 import { tripDatePhase } from '@faroway/constants';
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   Linking,
   Platform,
+  TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -27,6 +28,14 @@ import { useTripStore } from '../../stores/tripStore';
 import { colors, borderRadius } from '../../constants/theme';
 import { hapticFeedback } from '../../utils/haptics';
 import { requestStoreReview, hasRealStoreListing } from '../../lib/storeReview';
+import {
+  clearTravelerMemory,
+  hasTravelerMemoryContent,
+  loadTravelerMemory,
+  saveTravelerMemory,
+  summarizeTravelerMemory,
+  type TravelerMemoryDefaults,
+} from '../../lib/travelerMemory';
 
 interface MenuItemProps {
   icon: keyof typeof Ionicons.glyphMap;
@@ -181,8 +190,97 @@ function GuestProfileCard() {
 export default function ProfileScreen() {
   const router = useRouter();
   const { isAuthenticated, signOut, deleteAccount } = useAuthContext();
-  const { user } = useUserStore();
+  const { user, accountRevision } = useUserStore();
   const { trips } = useTripStore();
+  const [memory, setMemory] = useState<TravelerMemoryDefaults | null>(null);
+  const [editingMemory, setEditingMemory] = useState(false);
+  const [airportDraft, setAirportDraft] = useState('');
+  const [budgetDraft, setBudgetDraft] = useState<'budget' | 'moderate' | 'luxury' | undefined>(
+    undefined
+  );
+  const [avoidEarlyDraft, setAvoidEarlyDraft] = useState(false);
+  const mountedRef = useRef(true);
+
+  const isCurrentAccount = useCallback((ownerId: string | undefined, rev: number) => {
+    const latest = useUserStore.getState();
+    return mountedRef.current && latest.user?.id === ownerId && latest.accountRevision === rev;
+  }, []);
+
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const ownerId = user?.id;
+    const rev = accountRevision;
+    setEditingMemory(false);
+    void loadTravelerMemory(ownerId)
+      .then((loaded) => {
+        if (!isCurrentAccount(ownerId, rev)) return;
+        setMemory(loaded);
+        setAirportDraft(loaded?.homeAirport ?? '');
+        setBudgetDraft(loaded?.defaultBudget);
+        setAvoidEarlyDraft(loaded?.avoidEarlyStarts ?? false);
+      })
+      .catch(() => undefined);
+  }, [user?.id, accountRevision, isCurrentAccount]);
+
+  const handleSaveMemoryEdit = () => {
+    const ownerId = user?.id;
+    const rev = accountRevision;
+    hapticFeedback.selection();
+    void saveTravelerMemory(ownerId, {
+      homeAirport: airportDraft.trim() || undefined,
+      defaultBudget: budgetDraft,
+      avoidEarlyStarts: avoidEarlyDraft,
+    })
+      .then((saved) => {
+        if (!isCurrentAccount(ownerId, rev)) return;
+        setMemory(saved);
+        setEditingMemory(false);
+        hapticFeedback.success();
+      })
+      .catch(() => {
+        if (isCurrentAccount(ownerId, rev)) {
+          Alert.alert('Could not save defaults', 'Please try again.');
+        }
+      });
+  };
+
+  const handleClearMemory = () => {
+    const ownerId = user?.id;
+    const rev = accountRevision;
+    Alert.alert(
+      'Clear traveler memory?',
+      'This removes your always-apply defaults on this device. Your saved trips stay untouched.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Clear defaults',
+          style: 'destructive',
+          onPress: () => {
+            void clearTravelerMemory(ownerId)
+              .then(() => {
+                if (!isCurrentAccount(ownerId, rev)) return;
+                setMemory(null);
+                setAirportDraft('');
+                setBudgetDraft(undefined);
+                setAvoidEarlyDraft(false);
+                setEditingMemory(false);
+                hapticFeedback.success();
+              })
+              .catch(() => undefined);
+          },
+        },
+      ]
+    );
+  };
+
+  const memoryLines = summarizeTravelerMemory(memory);
+  const hasMemory = hasTravelerMemoryContent(memory);
 
   const profileStatus = useProfileRefresh();
   const today = useLocalCalendarDate();
@@ -303,6 +401,142 @@ export default function ProfileScreen() {
             />
           </View>
         )}
+
+        {/* Traveler Memory (Always-apply defaults) */}
+        <View style={styles.menuSection}>
+          <Text style={styles.menuSectionTitle}>Traveler Memory</Text>
+          <View style={styles.memoryCard}>
+            <View style={styles.memoryHeaderRow}>
+              <View style={styles.memoryTitleWrap}>
+                <Ionicons name="bookmark-outline" size={18} color="#0F766E" />
+                <Text style={styles.memoryHeading}>Always apply to my trips</Text>
+              </View>
+              <TouchableOpacity
+                style={styles.memoryTextBtn}
+                onPress={() => {
+                  hapticFeedback.light();
+                  setAirportDraft(memory?.homeAirport ?? '');
+                  setBudgetDraft(memory?.defaultBudget);
+                  setAvoidEarlyDraft(memory?.avoidEarlyStarts ?? false);
+                  setEditingMemory((v) => !v);
+                }}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  editingMemory ? 'Cancel editing traveler memory' : 'Edit traveler memory'
+                }
+              >
+                <Text style={styles.memoryEditLabel}>{editingMemory ? 'Cancel' : 'Edit'}</Text>
+              </TouchableOpacity>
+            </View>
+
+            {!editingMemory ? (
+              <>
+                {hasMemory && memoryLines.length > 0 ? (
+                  <View style={styles.memoryPillList}>
+                    {memoryLines.map((line) => (
+                      <View key={line} style={styles.memoryPill}>
+                        <Text style={styles.memoryPillText}>{line}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : (
+                  <Text style={styles.memoryHint}>
+                    No defaults saved yet. Add your home airport, preferred comfort tier, or save
+                    vibes & dietary notes from the trip planner.
+                  </Text>
+                )}
+
+                {hasMemory ? (
+                  <View style={styles.memoryFooterRow}>
+                    <TouchableOpacity
+                      style={styles.memoryClearBtn}
+                      onPress={handleClearMemory}
+                      accessibilityRole="button"
+                      accessibilityLabel="Clear traveler memory defaults"
+                    >
+                      <Text style={styles.memoryClearBtnText}>Clear defaults</Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : null}
+              </>
+            ) : (
+              <View style={styles.memoryEditor}>
+                <Text style={styles.memoryFieldLabel}>Home airport (optional)</Text>
+                <TextInput
+                  style={styles.memoryInput}
+                  value={airportDraft}
+                  onChangeText={setAirportDraft}
+                  placeholder="e.g., SFO, JFK, LHR"
+                  placeholderTextColor="#64748b"
+                  autoCapitalize="characters"
+                  maxLength={12}
+                  accessibilityLabel="Home airport code"
+                />
+
+                <Text style={styles.memoryFieldLabel}>Default comfort tier</Text>
+                <View style={styles.memoryTierRow}>
+                  {(
+                    [
+                      { id: 'budget', label: 'Budget' },
+                      { id: 'moderate', label: 'Comfort' },
+                      { id: 'luxury', label: 'Luxury' },
+                    ] as const
+                  ).map((tier) => {
+                    const selected = budgetDraft === tier.id;
+                    return (
+                      <TouchableOpacity
+                        key={tier.id}
+                        style={[styles.memoryTierBtn, selected && styles.memoryTierBtnSelected]}
+                        onPress={() => {
+                          hapticFeedback.selection();
+                          setBudgetDraft(selected ? undefined : tier.id);
+                        }}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
+                        accessibilityLabel={`Default comfort: ${tier.label}`}
+                      >
+                        <Text
+                          style={[styles.memoryTierText, selected && styles.memoryTierTextSelected]}
+                        >
+                          {tier.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <TouchableOpacity
+                  style={styles.memoryToggleRow}
+                  onPress={() => {
+                    hapticFeedback.selection();
+                    setAvoidEarlyDraft((v) => !v);
+                  }}
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: avoidEarlyDraft }}
+                  accessibilityLabel="Prefer relaxed mornings without early starts"
+                >
+                  <Ionicons
+                    name={avoidEarlyDraft ? 'checkbox' : 'square-outline'}
+                    size={22}
+                    color={avoidEarlyDraft ? '#0F766E' : '#475569'}
+                  />
+                  <Text style={styles.memoryToggleLabel}>
+                    Prefer relaxed mornings (avoid early starts)
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.memorySaveBtn}
+                  onPress={handleSaveMemoryEdit}
+                  accessibilityRole="button"
+                  accessibilityLabel="Save traveler memory defaults"
+                >
+                  <Text style={styles.memorySaveBtnText}>Save defaults</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        </View>
 
         <View style={styles.menuSection}>
           <Text style={styles.menuSectionTitle}>Support</Text>
@@ -610,5 +844,146 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#94a3b8',
     marginTop: 16,
+  },
+  memoryCard: {
+    backgroundColor: '#ffffff',
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    padding: 16,
+    gap: 12,
+  },
+  memoryHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  memoryTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+  memoryHeading: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0f172a',
+  },
+  memoryTextBtn: {
+    minHeight: 44,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+  },
+  memoryEditLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F766E',
+  },
+  memoryPillList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  memoryPill: {
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  memoryPillText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#134E4A',
+  },
+  memoryHint: {
+    fontSize: 13,
+    lineHeight: 19,
+    color: '#475569',
+  },
+  memoryFooterRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  memoryClearBtn: {
+    minHeight: 44,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+  },
+  memoryClearBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#9B2D25',
+  },
+  memoryEditor: {
+    gap: 10,
+  },
+  memoryFieldLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  memoryInput: {
+    minHeight: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    backgroundColor: '#f8fafc',
+    paddingHorizontal: 12,
+    fontSize: 15,
+    color: '#0f172a',
+  },
+  memoryTierRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  memoryTierBtn: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    backgroundColor: '#f8fafc',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  memoryTierBtnSelected: {
+    borderColor: '#0F766E',
+    backgroundColor: '#F0FDFA',
+  },
+  memoryTierText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  memoryTierTextSelected: {
+    color: '#134E4A',
+    fontWeight: '700',
+  },
+  memoryToggleRow: {
+    minHeight: 44,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  memoryToggleLabel: {
+    flex: 1,
+    fontSize: 14,
+    color: '#0f172a',
+  },
+  memorySaveBtn: {
+    minHeight: 46,
+    borderRadius: 12,
+    backgroundColor: '#143D46',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 4,
+  },
+  memorySaveBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#ffffff',
   },
 });

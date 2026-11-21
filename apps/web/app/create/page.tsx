@@ -66,6 +66,30 @@ import {
   restoreHotelSearchDraft,
   restoreHotelAgeTextDraft,
 } from "@/lib/create-draft";
+import {
+  DreamTripPromptBar,
+  type AppliedKickoffSummary,
+} from "@/components/create/DreamTripPromptBar";
+import {
+  summarizeParsedDreamTrip,
+  type ParsedDreamTrip,
+  type VibeId,
+  type DietaryOption,
+} from "@/lib/trips/prompt-parser";
+import type { DestinationSuggestion } from "@/lib/trips/destination-suggester";
+import {
+  applyLearnedSuggestion,
+  clearTravelerMemory,
+  computeLearnedSuggestions,
+  createEmptyTravelerMemory,
+  mergeTravelerMemoryIntoCreateState,
+  readTravelerMemory,
+  readTripPreferenceHistory,
+  recordTripPreferenceSignal,
+  saveTravelerMemory,
+  type LearnedPreferenceSuggestion,
+  type TravelerMemory,
+} from "@/lib/trips/traveler-memory";
 
 const destinations = destinationCatalog.map((destination) => ({
   ...destination,
@@ -161,6 +185,22 @@ interface StoredCreateDraft {
   mobilityNotes?: string;
 }
 
+interface PlannerUndoSnapshot {
+  selectedPlace: SelectedPlace | null;
+  showDestinations: boolean;
+  startDate: Date | undefined;
+  endDate: Date | undefined;
+  travelers: number;
+  travelerType: string;
+  budget: (typeof budgetOptions)[number]["id"];
+  selectedVibes: string[];
+  dietaryPreferences: string[];
+  allergiesText: string;
+  accessibility: AccessibilityOptionId[];
+  mobilityNotes: string;
+  showAdvanced: boolean;
+}
+
 export default function CreateTripPage() {
   const { session, loading, accountRevision } = useUser();
   return (
@@ -215,6 +255,19 @@ function CreateTripPlanner({
     [],
   );
   const [mobilityNotes, setMobilityNotes] = useState("");
+  const memoryScopeId = session?.user.id ?? "guest";
+  const [travelerMemory, setTravelerMemory] = useState<TravelerMemory>(() =>
+    createEmptyTravelerMemory(),
+  );
+  const [memoryAppliedFields, setMemoryAppliedFields] = useState<string[]>([]);
+  const [learnedSuggestions, setLearnedSuggestions] = useState<
+    LearnedPreferenceSuggestion[]
+  >([]);
+  const [appliedKickoffSummary, setAppliedKickoffSummary] =
+    useState<AppliedKickoffSummary | null>(null);
+  const [undoSnapshot, setUndoSnapshot] = useState<PlannerUndoSnapshot | null>(
+    null,
+  );
   const consentResolveRef = useRef<((approved: boolean) => void) | null>(null);
   const [consentDialog, setConsentDialog] = useState<{
     message: string;
@@ -267,6 +320,11 @@ function CreateTripPlanner({
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     setDraftLoaded(true);
+    const loadedMemory = readTravelerMemory(memoryScopeId);
+    setTravelerMemory(loadedMemory);
+    const history = readTripPreferenceHistory(memoryScopeId);
+    setLearnedSuggestions(computeLearnedSuggestions(history, loadedMemory));
+
     const draftId = params.get("draft");
     let draft: Partial<StoredCreateDraft> | null = null;
 
@@ -429,12 +487,14 @@ function CreateTripPlanner({
     }
 
     const requestedBudget = params.get("budget")?.toLowerCase();
-    if (
+    const validRequestedBudget =
       requestedBudget === "budget" ||
       requestedBudget === "moderate" ||
       requestedBudget === "luxury"
-    ) {
-      setBudget(requestedBudget);
+        ? requestedBudget
+        : null;
+    if (validRequestedBudget) {
+      setBudget(validRequestedBudget);
     }
     const requestedTravelers = Number(params.get("travelers"));
     if (
@@ -446,8 +506,9 @@ function CreateTripPlanner({
       if (requestedTravelers === 1) setTravelerType("solo");
     }
     const requestedVibes = params.get("vibes");
+    let parsedUrlVibes: string[] = [];
     if (requestedVibes) {
-      const parsedVibes = [
+      parsedUrlVibes = [
         ...new Set(
           requestedVibes
             .split(",")
@@ -455,9 +516,48 @@ function CreateTripPlanner({
             .filter((id) => vibes.some((v) => v.id === id)),
         ),
       ].slice(0, 5);
-      if (parsedVibes.length > 0) setSelectedVibes(parsedVibes);
+      if (parsedUrlVibes.length > 0) setSelectedVibes(parsedUrlVibes);
     }
-  }, []);
+
+    // Apply saved Traveler Memory defaults without clobbering explicit URL params or drafts.
+    const { merged, appliedFields } = mergeTravelerMemoryIntoCreateState(
+      {
+        budget: validRequestedBudget ?? "moderate",
+        selectedVibes: parsedUrlVibes,
+        dietaryPreferences: [],
+        allergiesText: "",
+        accessibility: [],
+        mobilityNotes: "",
+      },
+      loadedMemory,
+      {
+        hasDraft: false,
+        urlHasBudget: Boolean(validRequestedBudget),
+        urlHasVibes: parsedUrlVibes.length > 0,
+      },
+    );
+    if (appliedFields.length > 0) {
+      if (!validRequestedBudget && merged.budget !== "moderate") {
+        setBudget(merged.budget);
+      }
+      if (parsedUrlVibes.length === 0 && merged.selectedVibes.length > 0) {
+        setSelectedVibes(merged.selectedVibes);
+      }
+      if (merged.dietaryPreferences.length > 0) {
+        setDietaryPreferences(merged.dietaryPreferences);
+      }
+      if (merged.allergiesText) {
+        setAllergiesText(merged.allergiesText);
+      }
+      if (merged.accessibility.length > 0) {
+        setAccessibility(merged.accessibility);
+      }
+      if (merged.mobilityNotes) {
+        setMobilityNotes(merged.mobilityNotes);
+      }
+      setMemoryAppliedFields(appliedFields);
+    }
+  }, [memoryScopeId]);
 
   useEffect(() => {
     if (!draftLoaded || !selectedPlace) return;
@@ -567,6 +667,272 @@ function CreateTripPlanner({
 
   const handleChangeDestination = () => {
     setShowDestinations(true);
+  };
+
+  const resolveKickoffDestination = (
+    name: string,
+    slug?: string,
+  ): SelectedPlace => {
+    const normalizedName = name.trim().toLowerCase();
+    const normalizedSlug = slug?.trim().toLowerCase();
+    const recommended = destinations.find(
+      (d) =>
+        (normalizedSlug && d.id === normalizedSlug) ||
+        d.name.toLowerCase() === normalizedName,
+    );
+    if (recommended) {
+      return {
+        name: recommended.name,
+        lat: recommended.lat,
+        lng: recommended.lng,
+        placeId: recommended.id,
+        isRecommended: true,
+        source: "catalog",
+      };
+    }
+    const cover = allCatalogCovers.find(
+      (g) =>
+        (normalizedSlug && g.slug.toLowerCase() === normalizedSlug) ||
+        g.name.toLowerCase() === normalizedName,
+    );
+    if (cover) {
+      return {
+        name: cover.name,
+        lat: 0,
+        lng: 0,
+        placeId: cover.slug,
+        isRecommended: true,
+        source: "catalog",
+      };
+    }
+    return {
+      name: name.trim().slice(0, 120),
+      lat: 0,
+      lng: 0,
+      placeId: "",
+      isRecommended: false,
+      source: "user",
+    };
+  };
+
+  const captureUndoSnapshot = (): PlannerUndoSnapshot => ({
+    selectedPlace,
+    showDestinations,
+    startDate,
+    endDate,
+    travelers,
+    travelerType,
+    budget,
+    selectedVibes: [...selectedVibes],
+    dietaryPreferences: [...dietaryPreferences],
+    allergiesText,
+    accessibility: [...accessibility],
+    mobilityNotes,
+    showAdvanced,
+  });
+
+  const handleApplyParsedPrompt = (parsed: ParsedDreamTrip) => {
+    setUndoSnapshot(captureUndoSnapshot());
+    if (parsed.destination) {
+      setSelectedPlace(
+        resolveKickoffDestination(
+          parsed.destination.name,
+          parsed.destination.slug,
+        ),
+      );
+      setShowDestinations(false);
+    }
+    if (parsed.startDate && parsed.endDate) {
+      const nextStart = parseCreateDraftDate(parsed.startDate);
+      const nextEnd = parseCreateDraftDate(parsed.endDate);
+      if (nextStart && nextEnd && nextEnd >= nextStart) {
+        setStartDate(nextStart);
+        setEndDate(nextEnd);
+      }
+    }
+    if (hotelSearch === null) {
+      if (
+        typeof parsed.travelers === "number" &&
+        Number.isInteger(parsed.travelers) &&
+        parsed.travelers >= 1 &&
+        parsed.travelers <= 50
+      ) {
+        setTravelers(parsed.travelers);
+      }
+      if (
+        parsed.travelerType &&
+        travelerTypes.some((type) => type.id === parsed.travelerType)
+      ) {
+        setTravelerType(parsed.travelerType);
+      }
+    }
+    if (parsed.budget) {
+      setBudget(parsed.budget);
+    }
+    if (parsed.vibes.length > 0) {
+      setSelectedVibes(parsed.vibes.slice(0, 5));
+    }
+    let populatedRequirements = false;
+    if (parsed.dietaryPreferences.length > 0) {
+      setDietaryPreferences((prev) => [
+        ...new Set([...prev, ...parsed.dietaryPreferences]),
+      ]);
+      populatedRequirements = true;
+    }
+    if (parsed.allergies.length > 0) {
+      setAllergiesText((prev) => {
+        const existing = prev
+          .split(",")
+          .map((item) => item.trim())
+          .filter(Boolean);
+        return [...new Set([...existing, ...parsed.allergies])]
+          .join(", ")
+          .slice(0, 500);
+      });
+      populatedRequirements = true;
+    }
+    if (parsed.accessibility.length > 0) {
+      setAccessibility((prev) => [
+        ...new Set([...prev, ...parsed.accessibility]),
+      ]);
+      populatedRequirements = true;
+    }
+    if (parsed.mobilityNotes) {
+      setMobilityNotes((prev) =>
+        prev.trim()
+          ? `${prev.trim()}; ${parsed.mobilityNotes}`.slice(0, 500)
+          : parsed.mobilityNotes!.slice(0, 500),
+      );
+      populatedRequirements = true;
+    }
+    if (populatedRequirements) {
+      setShowAdvanced(true);
+    }
+    setAppliedKickoffSummary({
+      chips: summarizeParsedDreamTrip(parsed),
+      hasSafetyNotice:
+        parsed.dietaryPreferences.length > 0 ||
+        parsed.allergies.length > 0 ||
+        parsed.accessibility.length > 0,
+      sourceLabel: "Filled from your prompt",
+    });
+  };
+
+  const handleApplySuggestion = (suggestion: DestinationSuggestion) => {
+    setUndoSnapshot(captureUndoSnapshot());
+    setSelectedPlace(
+      resolveKickoffDestination(suggestion.name, suggestion.slug),
+    );
+    setShowDestinations(false);
+    setBudget(suggestion.prefillParams.budget);
+    if (suggestion.prefillParams.vibes.length > 0) {
+      setSelectedVibes(suggestion.prefillParams.vibes.slice(0, 5));
+    }
+    const chips = [
+      `${suggestion.name}, ${suggestion.country}`,
+      suggestion.prefillParams.budget === "budget"
+        ? "Budget"
+        : suggestion.prefillParams.budget === "luxury"
+          ? "Luxury"
+          : "Comfort",
+    ];
+    if (
+      suggestion.prefillParams.startDate &&
+      suggestion.prefillParams.endDate
+    ) {
+      const nextStart = parseCreateDraftDate(
+        suggestion.prefillParams.startDate,
+      );
+      const nextEnd = parseCreateDraftDate(suggestion.prefillParams.endDate);
+      if (nextStart && nextEnd && nextEnd >= nextStart) {
+        setStartDate(nextStart);
+        setEndDate(nextEnd);
+        chips.push(`${format(nextStart, "MMM d")}–${format(nextEnd, "MMM d")}`);
+      }
+    }
+    setAppliedKickoffSummary({
+      chips,
+      hasSafetyNotice: false,
+      sourceLabel: "Selected suggestion",
+    });
+  };
+
+  const handleUndoKickoff = () => {
+    if (!undoSnapshot) return;
+    setSelectedPlace(undoSnapshot.selectedPlace);
+    setShowDestinations(undoSnapshot.showDestinations);
+    setStartDate(undoSnapshot.startDate);
+    setEndDate(undoSnapshot.endDate);
+    setTravelers(undoSnapshot.travelers);
+    setTravelerType(undoSnapshot.travelerType);
+    setBudget(undoSnapshot.budget);
+    setSelectedVibes(undoSnapshot.selectedVibes);
+    setDietaryPreferences(undoSnapshot.dietaryPreferences);
+    setAllergiesText(undoSnapshot.allergiesText);
+    setAccessibility(undoSnapshot.accessibility);
+    setMobilityNotes(undoSnapshot.mobilityNotes);
+    setShowAdvanced(undoSnapshot.showAdvanced);
+    setUndoSnapshot(null);
+    setAppliedKickoffSummary(null);
+  };
+
+  const handleSaveMemory = (next: Partial<TravelerMemory>) => {
+    const saved = saveTravelerMemory(memoryScopeId, next);
+    setTravelerMemory(saved);
+    const history = readTripPreferenceHistory(memoryScopeId);
+    setLearnedSuggestions(computeLearnedSuggestions(history, saved));
+  };
+
+  const handleSaveCurrentAsMemory = () => {
+    const parsedAllergies = allergiesText
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const validVibes = selectedVibes.filter((v): v is VibeId =>
+      vibes.some((entry) => entry.id === v),
+    );
+    const validDietary = dietaryPreferences.filter((d): d is DietaryOption =>
+      DIETARY_PREFERENCE_OPTIONS.some((option) => option === d),
+    );
+    const saved = saveTravelerMemory(memoryScopeId, {
+      defaultBudget: budget,
+      defaultVibes: validVibes,
+      dietaryPreferences: validDietary,
+      allergies: parsedAllergies,
+      accessibility,
+      mobilityNotes: mobilityNotes.trim(),
+      avoidEarlyStarts:
+        travelerMemory.avoidEarlyStarts ||
+        /early\s+(?:starts?|mornings?)/i.test(mobilityNotes),
+    });
+    setTravelerMemory(saved);
+    setMemoryAppliedFields(["Current planner preferences"]);
+    const history = readTripPreferenceHistory(memoryScopeId);
+    setLearnedSuggestions(computeLearnedSuggestions(history, saved));
+  };
+
+  const handleClearMemory = () => {
+    clearTravelerMemory(memoryScopeId);
+    const empty = createEmptyTravelerMemory();
+    setTravelerMemory(empty);
+    setMemoryAppliedFields([]);
+    const history = readTripPreferenceHistory(memoryScopeId);
+    setLearnedSuggestions(computeLearnedSuggestions(history, empty));
+  };
+
+  const handleAcceptLearnedSuggestion = (
+    suggestion: LearnedPreferenceSuggestion,
+  ) => {
+    const updated = applyLearnedSuggestion(travelerMemory, suggestion);
+    const saved = saveTravelerMemory(memoryScopeId, updated);
+    setTravelerMemory(saved);
+    setLearnedSuggestions((prev) =>
+      prev.filter((item) => item.id !== suggestion.id),
+    );
+  };
+
+  const handleDismissLearnedSuggestion = (id: string) => {
+    setLearnedSuggestions((prev) => prev.filter((item) => item.id !== id));
   };
 
   const handleGenerate = async () => {
@@ -688,6 +1054,22 @@ function CreateTripPlanner({
         clearEditorDraft(sessionStorage);
       } catch {
         /* The server trip is already saved. */
+      }
+      try {
+        recordTripPreferenceSignal(memoryScopeId, {
+          budget: payload.budget ?? budget,
+          vibes: payload.preferences?.vibes ?? selectedVibes,
+          dietaryPreferences:
+            payload.preferences?.requirements?.dietaryPreferences ??
+            dietaryPreferences,
+          accessibility:
+            payload.preferences?.requirements?.accessibility ?? accessibility,
+          avoidEarlyStarts: /early\s+(?:starts?|mornings?)/i.test(
+            payload.preferences?.requirements?.mobilityNotes ?? mobilityNotes,
+          ),
+        });
+      } catch {
+        /* Preference history is optional local storage. */
       }
 
       setProgressMessage("Starting AI trip planner...");
@@ -905,6 +1287,23 @@ function CreateTripPlanner({
             disabled={!draftLoaded || isGenerating}
             className="min-w-0 space-y-8 sm:space-y-10"
           >
+            <DreamTripPromptBar
+              isAuthenticated={Boolean(session)}
+              disabled={!draftLoaded || isGenerating}
+              travelerMemory={travelerMemory}
+              memoryAppliedFields={memoryAppliedFields}
+              learnedSuggestions={learnedSuggestions}
+              appliedSummary={appliedKickoffSummary}
+              canUndo={undoSnapshot !== null}
+              onApplyParsedPrompt={handleApplyParsedPrompt}
+              onApplySuggestion={handleApplySuggestion}
+              onUndo={handleUndoKickoff}
+              onSaveMemory={handleSaveMemory}
+              onSaveCurrentAsMemory={handleSaveCurrentAsMemory}
+              onClearMemory={handleClearMemory}
+              onAcceptLearnedSuggestion={handleAcceptLearnedSuggestion}
+              onDismissLearnedSuggestion={handleDismissLearnedSuggestion}
+            />
             <section
               id="planner-destination"
               aria-label="Choose destination"

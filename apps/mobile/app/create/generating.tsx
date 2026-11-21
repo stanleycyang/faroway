@@ -31,7 +31,11 @@ import { usePromptStore } from '../../stores/promptStore';
 import { useAuthContext } from '../../components/AuthProvider';
 import { popularDestinations } from '@faroway/constants';
 import { colors } from '../../constants/theme';
-import { useStreamingItinerary, StreamingBlock } from '../../hooks/useStreamingItinerary';
+import {
+  useStreamingItinerary,
+  StreamingBlock,
+  type AgentDiscovery,
+} from '../../hooks/useStreamingItinerary';
 import {
   buildSeededItineraryOutline,
   type SeededItineraryOutline,
@@ -329,6 +333,149 @@ function SeededOutlineCard({ outline }: { outline: SeededItineraryOutline }) {
   );
 }
 
+function discoveryIconName(
+  agent: AgentDiscovery['agent']
+): React.ComponentProps<typeof Ionicons>['name'] {
+  switch (agent) {
+    case 'hotels':
+      return 'bed-outline';
+    case 'activities':
+      return 'compass-outline';
+    case 'dining':
+      return 'restaurant-outline';
+    case 'transport':
+      return 'train-outline';
+    case 'enrichment':
+      return 'information-circle-outline';
+    case 'aggregator':
+      return 'map-outline';
+    default:
+      return 'sparkles-outline';
+  }
+}
+
+function LiveDiscoveryTicker({
+  discoveries,
+  surface = 'dark',
+}: {
+  discoveries: AgentDiscovery[];
+  surface?: 'dark' | 'light';
+}) {
+  if (discoveries.length === 0) return null;
+  const isLight = surface === 'light';
+  const visible = discoveries.slice(-5).reverse();
+
+  return (
+    <View
+      style={[styles.discoveryBox, isLight && styles.discoveryBoxLight]}
+      accessibilityLiveRegion="polite"
+      accessibilityLabel="Live planning finds"
+    >
+      <Text style={[styles.discoveryKicker, isLight && styles.discoveryKickerLight]}>
+        Live scout feed
+      </Text>
+      {visible.map((item) => (
+        <View key={item.id} style={[styles.discoveryRow, isLight && styles.discoveryRowLight]}>
+          <Ionicons
+            name={discoveryIconName(item.agent)}
+            size={18}
+            color={isLight ? '#0F766E' : '#99F6E4'}
+          />
+          <View style={styles.discoveryCopy}>
+            <Text style={[styles.discoveryHeadline, isLight && styles.discoveryHeadlineLight]}>
+              {item.headline}
+            </Text>
+            {item.detail ? (
+              <Text style={[styles.discoveryDetail, isLight && styles.discoveryDetailLight]}>
+                {item.detail}
+              </Text>
+            ) : null}
+          </View>
+          {item.badge ? (
+            <View style={[styles.discoveryBadge, isLight && styles.discoveryBadgeLight]}>
+              <Text style={[styles.discoveryBadgeText, isLight && styles.discoveryBadgeTextLight]}>
+                {item.badge}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function DayOnePreviewPanel({
+  rawDay,
+  expanded,
+  onToggle,
+  surface = 'dark',
+}: {
+  rawDay: unknown;
+  expanded: boolean;
+  onToggle: () => void;
+  surface?: 'dark' | 'light';
+}) {
+  const day = useMemo(() => transformItineraryDays([rawDay])[0], [rawDay]);
+  if (!day) return null;
+  const isLight = surface === 'light';
+
+  return (
+    <View style={[styles.dayOneCard, isLight && styles.dayOneCardLight]}>
+      <TouchableOpacity
+        style={[styles.dayOneButton, isLight && styles.dayOneButtonLight]}
+        onPress={onToggle}
+        accessibilityRole="button"
+        accessibilityState={{ expanded }}
+        accessibilityLabel={expanded ? 'Hide Day 1 preview' : 'Day 1 ready — preview now'}
+      >
+        <View style={styles.dayOneButtonCopy}>
+          <Text style={[styles.dayOneKicker, isLight && styles.dayOneKickerLight]}>
+            Day 1 ready — preview now
+          </Text>
+          <Text style={[styles.dayOneTheme, isLight && styles.dayOneThemeLight]} numberOfLines={1}>
+            {day.theme}
+          </Text>
+        </View>
+        <Ionicons
+          name={expanded ? 'chevron-up' : 'chevron-down'}
+          size={20}
+          color={isLight ? '#0f172a' : '#ffffff'}
+        />
+      </TouchableOpacity>
+
+      {expanded ? (
+        <View style={[styles.dayOneStops, isLight && styles.dayOneStopsLight]}>
+          {day.activities.length > 0 ? (
+            day.activities.slice(0, 6).map((stop) => (
+              <View key={stop.id} style={styles.dayOneStopRow}>
+                <Text style={[styles.dayOneStopTime, isLight && styles.dayOneStopTimeLight]}>
+                  {stop.scheduleSlot || stop.time || 'Stop'}
+                </Text>
+                <View style={styles.dayOneStopCopy}>
+                  <Text style={[styles.dayOneStopTitle, isLight && styles.dayOneStopTitleLight]}>
+                    {stop.title}
+                  </Text>
+                  {stop.location ? (
+                    <Text
+                      style={[styles.dayOneStopLocation, isLight && styles.dayOneStopLocationLight]}
+                    >
+                      {stop.location}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            ))
+          ) : (
+            <Text style={[styles.dayOneStopLocation, isLight && styles.dayOneStopLocationLight]}>
+              Day 1 outline is ready — stops are being finalized while remaining days load.
+            </Text>
+          )}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 export default function GeneratingScreen() {
   const owner = useUserStore((state) => state.user?.id);
   const revision = useUserStore((state) => state.accountRevision);
@@ -361,6 +508,7 @@ function GenerationSession() {
     };
   }, []);
   const [showDetails, setShowDetails] = useState(false);
+  const [showDayOnePreview, setShowDayOnePreview] = useState(false);
   const [retryTripId, setRetryTripId] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
   const [restartUnstarted, setRestartUnstarted] = useState(false);
@@ -471,6 +619,11 @@ function GenerationSession() {
   ]);
 
   const searchProgress = streaming.searchProgress || {};
+  const discoveries = streaming.discoveries ?? [];
+  const firstStreamedDay =
+    !streaming.isComplete && Array.isArray(streaming.days) && streaming.days.length > 0
+      ? streaming.days[0]
+      : null;
   const preview = useMemo(() => validatePreviewBlocks(streaming.blocks), [streaming.blocks]);
   const showProgressiveBlocks = preview.blocks.length > 0;
 
@@ -608,6 +761,21 @@ function GenerationSession() {
               </TouchableOpacity>
               {showDetails && seededOutline && <SeededOutlineCard outline={seededOutline} />}
 
+              {/* Live Agent Discovery Ticker */}
+              {discoveries.length > 0 ? (
+                <LiveDiscoveryTicker discoveries={discoveries} surface="dark" />
+              ) : null}
+
+              {/* Day 1 Progressive Preview (placed after details toggle to preserve disclosure order) */}
+              {firstStreamedDay ? (
+                <DayOnePreviewPanel
+                  rawDay={firstStreamedDay}
+                  expanded={showDayOnePreview}
+                  onToggle={() => setShowDayOnePreview((v) => !v)}
+                  surface="dark"
+                />
+              ) : null}
+
               {/* Hotel preview */}
               {streaming.topHotel && <HotelPreviewCard hotel={streaming.topHotel} />}
 
@@ -682,6 +850,17 @@ function GenerationSession() {
                   </Text>
                 </View>
               )}
+              {!streaming.isComplete && discoveries.length > 0 ? (
+                <LiveDiscoveryTicker discoveries={discoveries} surface="light" />
+              ) : null}
+              {firstStreamedDay ? (
+                <DayOnePreviewPanel
+                  rawDay={firstStreamedDay}
+                  expanded={showDayOnePreview}
+                  onToggle={() => setShowDayOnePreview((v) => !v)}
+                  surface="light"
+                />
+              ) : null}
               <View accessibilityLabel="Planning stages">
                 {GENERATION_STEPS.map((step) => {
                   const reported = searchProgress[step.key];
@@ -999,4 +1178,172 @@ const styles = StyleSheet.create({
   },
   viewButtonText: { color: '#fff', fontSize: 18, fontWeight: '700' },
   viewButtonArrow: { color: '#fff', fontSize: 20, marginLeft: 8 },
+
+  // Live Discovery Ticker (dark and light surfaces)
+  discoveryBox: {
+    width: '100%',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.16)',
+    borderRadius: 16,
+    padding: 14,
+    marginBottom: 16,
+    gap: 10,
+  },
+  discoveryBoxLight: {
+    backgroundColor: '#ffffff',
+    borderColor: '#cbd5e1',
+  },
+  discoveryKicker: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    textTransform: 'uppercase',
+    color: '#99F6E4',
+  },
+  discoveryKickerLight: {
+    color: '#0F766E',
+  },
+  discoveryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.16)',
+  },
+  discoveryRowLight: {
+    borderTopColor: '#e2e8f0',
+  },
+  discoveryCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  discoveryHeadline: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  discoveryHeadlineLight: {
+    color: '#0f172a',
+  },
+  discoveryDetail: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  discoveryDetailLight: {
+    color: '#475569',
+  },
+  discoveryBadge: {
+    backgroundColor: 'rgba(20,184,166,0.22)',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  discoveryBadgeLight: {
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1,
+    borderColor: '#99F6E4',
+  },
+  discoveryBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#99F6E4',
+  },
+  discoveryBadgeTextLight: {
+    color: '#0F766E',
+  },
+
+  // Day 1 Progressive Preview
+  dayOneCard: {
+    width: '100%',
+    borderRadius: 16,
+    backgroundColor: 'rgba(20,184,166,0.16)',
+    borderWidth: 1,
+    borderColor: 'rgba(153,246,228,0.4)',
+    marginBottom: 16,
+    overflow: 'hidden',
+  },
+  dayOneCardLight: {
+    backgroundColor: '#ffffff',
+    borderColor: '#99F6E4',
+  },
+  dayOneButton: {
+    minHeight: 54,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    gap: 10,
+  },
+  dayOneButtonLight: {
+    backgroundColor: '#F0FDFA',
+  },
+  dayOneButtonCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  dayOneKicker: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#99F6E4',
+  },
+  dayOneKickerLight: {
+    color: '#0F766E',
+  },
+  dayOneTheme: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  dayOneThemeLight: {
+    color: '#0f172a',
+  },
+  dayOneStops: {
+    paddingHorizontal: 16,
+    paddingBottom: 14,
+    paddingTop: 8,
+    gap: 10,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: 'rgba(255,255,255,0.2)',
+  },
+  dayOneStopsLight: {
+    borderTopColor: '#e2e8f0',
+    backgroundColor: '#ffffff',
+  },
+  dayOneStopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 10,
+  },
+  dayOneStopTime: {
+    width: 72,
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#99F6E4',
+    textTransform: 'capitalize',
+  },
+  dayOneStopTimeLight: {
+    color: '#0F766E',
+  },
+  dayOneStopCopy: {
+    flex: 1,
+    gap: 2,
+  },
+  dayOneStopTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#ffffff',
+  },
+  dayOneStopTitleLight: {
+    color: '#0f172a',
+  },
+  dayOneStopLocation: {
+    fontSize: 12,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  dayOneStopLocationLight: {
+    color: '#475569',
+  },
 });

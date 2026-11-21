@@ -12,6 +12,7 @@ import {
   Plane,
   ArrowDown,
   BookOpen,
+  Eye,
 } from "lucide-react";
 import type { TripDay } from "@faroway/types";
 import type {
@@ -20,7 +21,11 @@ import type {
 } from "@/hooks/useTripGeneration";
 import {
   draftChapters,
+  extractAgentDiscoveries,
+  mergeDiscoveries,
   streamStepState,
+  type AgentDiscovery,
+  type AgentDiscoveryAgent,
   type DraftChapter,
 } from "@/lib/trips/streaming-dossier";
 import { formatTripDate, parseTripDate } from "@/lib/trips/date-duration";
@@ -81,7 +86,50 @@ export interface ItineraryGenerationLoaderProps {
   transportCount: number;
   days?: TripDay[] | null;
   specBlocks?: StreamingSpecBlock[];
+  discoveries?: AgentDiscovery[];
+  onPeekDayOne?: () => void;
 }
+
+const agentMeta: Record<
+  AgentDiscoveryAgent,
+  { label: string; icon: typeof Compass; tone: string }
+> = {
+  orchestrator: {
+    label: "Brief",
+    icon: Compass,
+    tone: "bg-slate-100 text-slate-700",
+  },
+  hotels: {
+    label: "Stays",
+    icon: Hotel,
+    tone: "bg-teal-50 text-teal-800",
+  },
+  activities: {
+    label: "Activities",
+    icon: MapPin,
+    tone: "bg-primary-50 text-primary-800",
+  },
+  dining: {
+    label: "Dining",
+    icon: Utensils,
+    tone: "bg-amber-50 text-amber-800",
+  },
+  transport: {
+    label: "Flights",
+    icon: Plane,
+    tone: "bg-sky-50 text-sky-800",
+  },
+  enrichment: {
+    label: "Local",
+    icon: Sparkles,
+    tone: "bg-emerald-50 text-emerald-800",
+  },
+  aggregator: {
+    label: "Itinerary",
+    icon: BookOpen,
+    tone: "bg-teal-50 text-teal-800",
+  },
+};
 
 export function ItineraryGenerationLoader({
   destination,
@@ -104,7 +152,10 @@ export function ItineraryGenerationLoader({
   transportCount,
   days,
   specBlocks,
+  discoveries,
+  onPeekDayOne,
 }: ItineraryGenerationLoaderProps) {
+  const [dayOnePreviewOpen, setDayOnePreviewOpen] = useState(false);
   const percentage = Number.isFinite(progress)
     ? Math.round(Math.max(0, Math.min(100, progress)))
     : 0;
@@ -113,6 +164,22 @@ export function ItineraryGenerationLoader({
     phase !== "error" &&
     /still generating in background|reconnect for updates/i.test(message);
   const chapters = draftChapters(days, specBlocks);
+  const hasDayOneReady =
+    Array.isArray(days) && days.length > 0 && phase !== "complete";
+  const dayOneChapter = hasDayOneReady
+    ? (chapters.find((chapter) => chapter.number === 1) ?? chapters[0] ?? null)
+    : null;
+  const feedDiscoveries =
+    discoveries && discoveries.length > 0
+      ? mergeDiscoveries([], discoveries)
+      : extractAgentDiscoveries({
+          searchProgress,
+          activitiesCount,
+          diningCount,
+          transportCount,
+          days,
+        });
+  const recentDiscoveries = [...feedDiscoveries].reverse();
   const discoveryCount =
     Math.max(0, activitiesCount) + Math.max(0, diningCount);
   const activeSteps = steps.filter(
@@ -254,6 +321,90 @@ export function ItineraryGenerationLoader({
                 message ||
                 "We’re reading your brief and shaping a journey around you."}
             </p>
+            {hasDayOneReady && dayOneChapter && (
+              <section
+                aria-label="Day 1 preview ready"
+                data-testid="day-one-preview-panel"
+                className="dossier-arrival mt-5 rounded-2xl border border-teal-200 bg-gradient-to-br from-teal-50/90 via-white to-white p-5 shadow-xs"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="inline-flex items-center gap-2 text-xs font-semibold text-teal-800">
+                      <span className="h-1.5 w-1.5 rounded-full bg-teal-600 motion-safe:animate-pulse" />
+                      Day 1 unlocked while the rest finishes
+                    </p>
+                    <h3 className="mt-1.5 font-editorial text-xl leading-snug text-slate-900">
+                      Day 1 is ready — preview now
+                    </h3>
+                    <p className="mt-1 text-xs leading-5 text-slate-600">
+                      {dayOneChapter.title ? `${dayOneChapter.title} · ` : ""}
+                      {dayOneChapter.stops.length > 0
+                        ? `${dayOneChapter.stops.length} ${dayOneChapter.stops.length === 1 ? "stop" : "stops"} ready to read`
+                        : "First chapter drafted"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    data-testid="peek-day-one-button"
+                    aria-expanded={dayOnePreviewOpen}
+                    onClick={() => {
+                      setDayOnePreviewOpen((open) => !open);
+                      onPeekDayOne?.();
+                    }}
+                    className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-900"
+                  >
+                    <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                    {dayOnePreviewOpen ? "Hide Day 1" : "Preview Day 1"}
+                  </button>
+                </div>
+                {dayOnePreviewOpen && (
+                  <div className="mt-4 border-t border-teal-100 pt-4">
+                    {dayOneChapter.summary && (
+                      <p className="mb-3 text-xs leading-6 text-slate-600">
+                        {dayOneChapter.summary}
+                      </p>
+                    )}
+                    {dayOneChapter.stops.length > 0 ? (
+                      <ol className="space-y-2">
+                        {dayOneChapter.stops.slice(0, 5).map((stop, index) => (
+                          <li
+                            key={`peek:${stop.period}:${stop.name}:${index}`}
+                            className="flex items-start justify-between gap-3 rounded-xl border border-slate-200/80 bg-white px-3.5 py-2.5"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-[11px] font-medium capitalize text-slate-500">
+                                {stop.kind === "dining" ? "Dining" : "Activity"}
+                                {stop.period ? ` · ${stop.period}` : ""}
+                              </p>
+                              <p className="mt-0.5 text-sm font-medium text-slate-900">
+                                {stop.name}
+                              </p>
+                              {stop.description && (
+                                <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-slate-600">
+                                  {stop.description}
+                                </p>
+                              )}
+                            </div>
+                          </li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <p className="text-xs text-slate-600">
+                        Stops are still arriving for Day 1.
+                      </p>
+                    )}
+                    <button
+                      type="button"
+                      onClick={goToChapters}
+                      className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-teal-800 hover:underline"
+                    >
+                      Jump to full Day 1 chapter
+                      <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
+                    </button>
+                  </div>
+                )}
+              </section>
+            )}
             <details className="mt-4 border-y border-slate-200 py-4">
               <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 text-sm">
                 <span className="font-semibold">Behind the journey</span>
@@ -338,6 +489,97 @@ export function ItineraryGenerationLoader({
                   count={transportCount}
                   label="Flight options"
                 />
+              </div>
+              <div
+                aria-label="Live Agent Scout Feed"
+                data-testid="live-agent-scout-feed"
+                className="mt-4 rounded-2xl border border-slate-200 bg-white p-4"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <span
+                      aria-hidden="true"
+                      className={`h-1.5 w-1.5 rounded-full ${
+                        phase === "complete"
+                          ? "bg-teal-600"
+                          : phase === "error"
+                            ? "bg-amber-600"
+                            : "bg-teal-600 motion-safe:animate-pulse"
+                      }`}
+                    />
+                    <h3 className="text-xs font-semibold tracking-wide text-slate-800">
+                      Live Agent Scout Feed
+                    </h3>
+                  </div>
+                  <span className="text-[11px] tabular-nums text-slate-500">
+                    {recentDiscoveries.length > 0
+                      ? `${recentDiscoveries.length} ${recentDiscoveries.length === 1 ? "find" : "finds"}`
+                      : "Listening"}
+                  </span>
+                </div>
+                {recentDiscoveries.length > 0 ? (
+                  <ol
+                    aria-live="polite"
+                    aria-relevant="additions text"
+                    className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1"
+                  >
+                    {recentDiscoveries.map((item) => {
+                      const meta = agentMeta[item.agent];
+                      const Icon = meta.icon;
+                      const isSafetyBadge =
+                        item.badge === "Safety filter" ||
+                        item.badge === "Accessibility";
+                      const isDayOneBadge = item.badge === "Day 1 ready";
+                      return (
+                        <li
+                          key={item.id}
+                          data-testid="scout-feed-item"
+                          className="dossier-arrival flex items-start gap-3 rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2.5"
+                        >
+                          <span
+                            className={`mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${meta.tone}`}
+                            aria-hidden="true"
+                          >
+                            <Icon className="h-3.5 w-3.5" />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-xs font-semibold leading-5 text-slate-900">
+                                {item.headline}
+                              </p>
+                              {item.badge && (
+                                <span
+                                  className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                                    isDayOneBadge
+                                      ? "bg-teal-100 text-teal-900"
+                                      : isSafetyBadge
+                                        ? "bg-amber-100 text-amber-900"
+                                        : "bg-white text-slate-600 ring-1 ring-slate-200/80"
+                                  }`}
+                                >
+                                  {item.badge}
+                                </span>
+                              )}
+                            </div>
+                            {item.detail && (
+                              <p className="mt-0.5 text-xs leading-5 text-slate-600">
+                                {item.detail}
+                              </p>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ol>
+                ) : (
+                  <p
+                    aria-live="polite"
+                    className="mt-2.5 text-xs leading-5 text-slate-500"
+                  >
+                    Scout updates appear here as each specialist returns real
+                    results.
+                  </p>
+                )}
               </div>
             </section>
             <section aria-label="Suggested stay" className="mt-8">

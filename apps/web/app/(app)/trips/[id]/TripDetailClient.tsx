@@ -8,6 +8,10 @@ import {
   buildTripExportFilename,
   buildTripExportText,
 } from "@/lib/trips/export";
+import {
+  buildTripIcsContent,
+  buildTripIcsFilename,
+} from "@/lib/trips/ics-export";
 
 import { BookingChecklist } from "@/components/trips/BookingChecklist";
 import { FlightLeg } from "@/components/trips/FlightLeg";
@@ -40,6 +44,7 @@ import {
   Plane,
   Printer,
   Download,
+  Calendar,
   Trash2,
 } from "lucide-react";
 
@@ -83,7 +88,15 @@ import { LiveTripBudget } from "@/components/trips/TripBudget";
 import { destinationImage } from "@/lib/trips/destination-image";
 import { TripDayNavigation } from "@/components/trips/TripDayNavigation";
 import { TripHeader } from "@/components/trips/TripHeader";
-import { ItineraryDay } from "@/components/trips/ItineraryDay";
+import {
+  ItineraryDay,
+  type ItineraryDayRequirements,
+} from "@/components/trips/ItineraryDay";
+import { TripCompanionBanner } from "@/components/trips/TripCompanionBanner";
+import {
+  TripCopilotBar,
+  type CopilotQuickTrigger,
+} from "@/components/trips/TripCopilotBar";
 import { ItineraryGenerationLoader } from "@/components/trips/ItineraryGenerationLoader";
 import { StreamedSpecPreview } from "@/components/trips/StreamedSpecPreview";
 import { TripWeather } from "@/components/trips/TripWeather";
@@ -192,8 +205,26 @@ export function TripDetailClient({
     };
   }, []);
   const [showCompletedDossier, setShowCompletedDossier] = useState(false);
+  const [peekingDayOne, setPeekingDayOne] = useState(false);
   const [hasSeenGeneratingThisSession, setHasSeenGeneratingThisSession] =
     useState(false);
+  const [copilotQuickAction, setCopilotQuickAction] =
+    useState<CopilotQuickTrigger | null>(null);
+  const copilotNonceRef = useRef(0);
+  const triggerCopilotQuickAction = useCallback(
+    (action: {
+      type: "swap_stop" | "relax_day" | "rain_backup";
+      dayNumber: number;
+      stopName?: string;
+    }) => {
+      copilotNonceRef.current += 1;
+      setCopilotQuickAction({
+        ...action,
+        nonce: copilotNonceRef.current,
+      });
+    },
+    [],
+  );
 
   // Determine if we should stream
   const shouldStream =
@@ -534,6 +565,21 @@ export function TripDetailClient({
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
+  const handleDownloadCalendar = () => {
+    if (!trip) return;
+    const ics = buildTripIcsContent(trip, itinerary);
+    const filename = buildTripIcsFilename(trip);
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
   const handleDeleteTrip = async () => {
     if (!trip || deleteLock.current || !refreshMounted.current) return;
     deleteLock.current = true;
@@ -626,9 +672,46 @@ export function TripDetailClient({
   );
   const dayIdPrefix = `trip-${tripId}-day`;
 
+  const tripVibes = useMemo(() => {
+    if (Array.isArray(trip?.vibes) && trip.vibes.length > 0) return trip.vibes;
+    const prefVibes = trip?.preferences?.vibes;
+    return Array.isArray(prefVibes)
+      ? prefVibes.filter((v): v is string => typeof v === "string")
+      : undefined;
+  }, [trip]);
+
+  const tripRequirements = useMemo<ItineraryDayRequirements | undefined>(() => {
+    const raw = trip?.preferences?.requirements;
+    if (!raw || typeof raw !== "object" || Array.isArray(raw)) {
+      if (trip?.dietary_restrictions?.length || trip?.mobility_needs) {
+        return {
+          dietaryPreferences: trip.dietary_restrictions ?? undefined,
+          mobilityNotes: trip.mobility_needs ?? undefined,
+        };
+      }
+      return undefined;
+    }
+    const r = raw as Record<string, unknown>;
+    return {
+      allergies: Array.isArray(r.allergies)
+        ? r.allergies.filter((v): v is string => typeof v === "string")
+        : undefined,
+      dietaryPreferences: Array.isArray(r.dietaryPreferences)
+        ? r.dietaryPreferences.filter((v): v is string => typeof v === "string")
+        : (trip?.dietary_restrictions ?? undefined),
+      accessibility: Array.isArray(r.accessibility)
+        ? r.accessibility.filter((v): v is string => typeof v === "string")
+        : undefined,
+      mobilityNotes:
+        typeof r.mobilityNotes === "string"
+          ? r.mobilityNotes
+          : (trip?.mobility_needs ?? undefined),
+    };
+  }, [trip]);
+
   const showFullGenerationLoader =
     !!trip &&
-    (isGenerating ||
+    ((isGenerating && !peekingDayOne) ||
       (showCompletedDossier && tripIsComplete && !!displayDays?.length));
   const stickyBookingVisible =
     showStickyBar && !trip?.preferences?.planNeedsRefresh;
@@ -637,6 +720,7 @@ export function TripDetailClient({
     if (isGenerating) {
       setHasSeenGeneratingThisSession(true);
       setShowCompletedDossier(false);
+      setPeekingDayOne(false);
       setBriefSavedNotice(false);
     }
   }, [isGenerating]);
@@ -799,7 +883,15 @@ export function TripDetailClient({
               : generation.message)
           }
           summary={readyScreenDescription}
-          onOpenTrip={() => setShowCompletedDossier(false)}
+          onOpenTrip={() => {
+            setShowCompletedDossier(false);
+            setPeekingDayOne(false);
+          }}
+          discoveries={generation.discoveries}
+          onPeekDayOne={() => {
+            setShowCompletedDossier(false);
+            setPeekingDayOne(true);
+          }}
           searchProgress={generation.searchProgress}
           activitiesCount={generation.activitiesCount}
           diningCount={generation.diningCount}
@@ -1049,6 +1141,65 @@ export function TripDetailClient({
         {/* Day-by-Day Itinerary — progressive rendering */}
         {displayDays && displayDays.length > 0 ? (
           <div id="trip-itinerary" className="space-y-5 scroll-mt-24">
+            {isGenerating && peekingDayOne && (
+              <div
+                role="status"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary-100 bg-primary-50/70 px-4 py-3 text-sm text-primary-900"
+              >
+                <span className="font-medium">
+                  Previewing Day 1 while Faroway finishes the rest of your trip…
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setPeekingDayOne(false)}
+                  className="inline-flex min-h-9 items-center rounded-full bg-slate-900 px-3.5 py-1.5 text-xs font-semibold text-white hover:bg-slate-800"
+                >
+                  Back to live progress
+                </button>
+              </div>
+            )}
+            {!isGenerating &&
+              itinerary &&
+              !trip.preferences?.planNeedsRefresh && (
+                <>
+                  <TripCompanionBanner
+                    destination={trip.destination}
+                    startDate={trip.start_date}
+                    endDate={trip.end_date}
+                    itinerary={itinerary}
+                    activeDayNumber={
+                      displayDays[activeDay]?.dayNumber ?? activeDay + 1
+                    }
+                    onTriggerRainSwap={(dayNumber) =>
+                      triggerCopilotQuickAction({
+                        type: "rain_backup",
+                        dayNumber,
+                      })
+                    }
+                  />
+                  <TripCopilotBar
+                    tripId={tripId}
+                    destination={trip.destination}
+                    itinerary={itinerary}
+                    activeDayNumber={
+                      displayDays[activeDay]?.dayNumber ?? activeDay + 1
+                    }
+                    expectedUpdatedAt={trip.updated_at}
+                    pendingAction={copilotQuickAction}
+                    onItineraryUpdated={(updated, updatedAt) => {
+                      setItinerary(updated);
+                      if (updatedAt) {
+                        setTrip((prev) =>
+                          prev ? { ...prev, updated_at: updatedAt } : prev,
+                        );
+                      }
+                    }}
+                    onSyncRequested={() => {
+                      void fetchTrip();
+                    }}
+                  />
+                </>
+              )}
             <div className="flex items-center justify-between">
               <h2
                 tabIndex={-1}
@@ -1129,6 +1280,16 @@ export function TripDetailClient({
                         defaultExpanded={true}
                         transport={day.transport}
                         hotel={day.hotel}
+                        destination={trip.destination}
+                        vibes={tripVibes}
+                        requirements={tripRequirements}
+                        onQuickAction={
+                          !isGenerating &&
+                          itinerary &&
+                          !trip.preferences?.planNeedsRefresh
+                            ? triggerCopilotQuickAction
+                            : undefined
+                        }
                       />
                     </DayErrorBoundary>
                   </div>
@@ -1417,6 +1578,14 @@ export function TripDetailClient({
                   >
                     <Download className="h-4 w-4" aria-hidden="true" />
                     Download text (.txt)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDownloadCalendar}
+                    className="inline-flex min-h-11 items-center gap-2 rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                  >
+                    <Calendar className="h-4 w-4" aria-hidden="true" />
+                    Download calendar (.ics)
                   </button>
                 </>
               ) : null}

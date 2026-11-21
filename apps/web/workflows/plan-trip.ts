@@ -3,6 +3,18 @@ import { mappedDaysToSpec } from "@/lib/json-render/mapped-days";
 import { readPrice } from "@faroway/constants";
 import { matchesTransportProjection } from "@/lib/search/transport-reference";
 import { applyGenerationUpdate } from "@/lib/trips/apply-generation-update";
+import {
+  buildAccessibilityDiscovery,
+  buildActivitiesDiscovery,
+  buildDayOneDiscovery,
+  buildDiningDiscoveries,
+  buildEnrichmentDiscovery,
+  buildHotelsDiscovery,
+  buildOrchestratorDiscovery,
+  buildTransportDiscovery,
+  mergeDiscoveries,
+  type AgentDiscovery,
+} from "@/lib/trips/streaming-dossier";
 import { getWorkflowMetadata } from "workflow";
 import { viatorContentMetadata } from "@/lib/affiliates/viator-policy";
 /**
@@ -198,6 +210,36 @@ export async function planTripWorkflow(
       .filter(([, status]) => status === "error")
       .map(([label]) => label);
 
+    const specialistDiscoveries = mergeDiscoveries(
+      [],
+      [
+        buildOrchestratorDiscovery(searchPlan),
+        ...(sourceStatus.hotels === "done"
+          ? [buildHotelsDiscovery(hotels, searchPlan.dates.nights)].filter(
+              (item): item is AgentDiscovery => item !== null,
+            )
+          : []),
+        ...(sourceStatus.activities === "done"
+          ? [buildActivitiesDiscovery(activities)].filter(
+              (item): item is AgentDiscovery => item !== null,
+            )
+          : []),
+        ...(sourceStatus.dining === "done"
+          ? buildDiningDiscoveries(dining, searchPlan)
+          : []),
+        ...(sourceStatus.transport === "done"
+          ? [buildTransportDiscovery(transport)].filter(
+              (item): item is AgentDiscovery => item !== null,
+            )
+          : []),
+        ...(sourceStatus.enrichment === "done"
+          ? [buildEnrichmentDiscovery(enrichment)].filter(
+              (item): item is AgentDiscovery => item !== null,
+            )
+          : []),
+      ],
+    );
+
     await setProgressState(
       searchId,
       tripId,
@@ -214,6 +256,7 @@ export async function planTripWorkflow(
           : unfinished.length
             ? `${unfinished.join(", ")} did not finish. Composing from the searches that completed. Nothing was retried automatically.`
             : "Composing the final itinerary...",
+        discoveries: specialistDiscoveries,
       },
     );
     if (coreSearchesFailed) {
@@ -236,6 +279,7 @@ export async function planTripWorkflow(
       transport,
       enrichmentNotes: enrichment.notes,
       sourceStatus,
+      priorDiscoveries: specialistDiscoveries,
     });
 
     // ── Step 5: Compose Itinerary (already done by aggregator) ──────
@@ -471,7 +515,15 @@ async function buildSearchPlanStep(params: {
       },
     })
     .eq("id", searchId);
-  await mergeIntermediateResult(searchId, "searchPlan", plan);
+  const orchestratorDiscovery = buildOrchestratorDiscovery(plan);
+  await Promise.all([
+    mergeIntermediateResult(searchId, "searchPlan", plan),
+    mergeIntermediateResult(
+      searchId,
+      "discovery_orchestrator",
+      orchestratorDiscovery,
+    ),
+  ]);
 
   if (tripId) {
     await applyGenerationUpdate(tripId, searchId, "progress", {
@@ -479,6 +531,8 @@ async function buildSearchPlanStep(params: {
       step: "orchestrator",
       progress: 15,
       message: "Search plan ready. Running providers in parallel...",
+      discovery: orchestratorDiscovery,
+      discoveries: [orchestratorDiscovery],
       updated_at: new Date().toISOString(),
     });
   }
@@ -503,9 +557,13 @@ async function runHotelsStep(
     return [];
   }
   const hotels = await runHotelsAgent(plan, 10);
+  const hotelDiscovery = buildHotelsDiscovery(hotels, plan.dates.nights);
   await Promise.all([
     mergeIntermediateResult(searchId, "hotels", hotels),
     mergeIntermediateResult(searchId, "topHotel", hotels[0] || null),
+    ...(hotelDiscovery
+      ? [mergeIntermediateResult(searchId, "discovery_hotels", hotelDiscovery)]
+      : []),
   ]);
   console.log(
     `[WorkflowTiming] search=${searchId} stage=hotels duration_ms=${Date.now() - startedAt}`,
@@ -522,8 +580,18 @@ async function runActivitiesStep(
   const dayCount = Math.max(1, (plan.dates.nights ?? 0) + 1);
   const targetCount = Math.min(40, Math.max(15, dayCount * 4));
   const activities = await runActivitiesAgent(plan, targetCount);
+  const activitiesDiscovery = buildActivitiesDiscovery(activities);
   await Promise.all([
     mergeIntermediateResult(searchId, "activitiesCount", activities.length),
+    ...(activitiesDiscovery
+      ? [
+          mergeIntermediateResult(
+            searchId,
+            "discovery_activities",
+            activitiesDiscovery,
+          ),
+        ]
+      : []),
   ]);
   console.log(
     `[WorkflowTiming] search=${searchId} stage=activities duration_ms=${Date.now() - startedAt}`,
@@ -540,8 +608,18 @@ async function runDiningStep(
   const dayCount = Math.max(1, (plan.dates.nights ?? 0) + 1);
   const targetCount = Math.min(36, Math.max(12, dayCount * 3 + 3));
   const dining = await runDiningAgent(plan, targetCount);
+  const diningDiscoveries = buildDiningDiscoveries(dining, plan);
   await Promise.all([
     mergeIntermediateResult(searchId, "diningCount", dining.length),
+    ...(diningDiscoveries.length > 0
+      ? [
+          mergeIntermediateResult(
+            searchId,
+            "discovery_dining",
+            diningDiscoveries,
+          ),
+        ]
+      : []),
   ]);
   console.log(
     `[WorkflowTiming] search=${searchId} stage=dining duration_ms=${Date.now() - startedAt}`,
@@ -557,8 +635,18 @@ async function runTransportStep(
   "use step";
   const startedAt = Date.now();
   const transport = await runTransportAgent(plan, travelers || 1, 5);
+  const transportDiscovery = buildTransportDiscovery(transport);
   await Promise.all([
     mergeIntermediateResult(searchId, "transportCount", transport.length),
+    ...(transportDiscovery
+      ? [
+          mergeIntermediateResult(
+            searchId,
+            "discovery_transport",
+            transportDiscovery,
+          ),
+        ]
+      : []),
   ]);
   console.log(
     `[WorkflowTiming] search=${searchId} stage=transport duration_ms=${Date.now() - startedAt}`,
@@ -577,6 +665,7 @@ async function runEnrichmentStep(
   "use step";
   const startedAt = Date.now();
   const merged = await runSearchEnrichment(plan, searchId);
+  const enrichmentDiscovery = buildEnrichmentDiscovery(merged);
   await Promise.all([
     mergeIntermediateResult(
       searchId,
@@ -589,6 +678,15 @@ async function runEnrichmentStep(
       merged.dining.length,
     ),
     mergeIntermediateResult(searchId, "enrichmentNotes", merged.notes),
+    ...(enrichmentDiscovery
+      ? [
+          mergeIntermediateResult(
+            searchId,
+            "discovery_enrichment",
+            enrichmentDiscovery,
+          ),
+        ]
+      : []),
   ]);
   console.log(
     `[WorkflowTiming] search=${searchId} stage=enrichment duration_ms=${Date.now() - startedAt}`,
@@ -609,6 +707,7 @@ async function aggregateItineraryStep(params: {
   transport: TransportResult[];
   enrichmentNotes: string[];
   sourceStatus?: SpecialistProgress;
+  priorDiscoveries?: AgentDiscovery[];
 }): Promise<MappedItinerary> {
   "use step";
   const startedAt = Date.now();
@@ -709,6 +808,48 @@ async function aggregateItineraryStep(params: {
     mapped.days[0].tips = [...(mapped.days[0].tips || []), ...reminders];
   }
 
+  const dayOne = mapped.days[0];
+  const dayOneDiscovery = dayOne
+    ? buildDayOneDiscovery(dayOne, mapped.days.length)
+    : null;
+  const accessibilityDiscovery = buildAccessibilityDiscovery(params.plan);
+  const aggregatorDiscoveries = mergeDiscoveries(
+    params.priorDiscoveries ?? [],
+    [
+      ...(dayOneDiscovery ? [dayOneDiscovery] : []),
+      ...(accessibilityDiscovery ? [accessibilityDiscovery] : []),
+    ],
+  );
+
+  // Progressive Day-1-first reveal: unlock Day 1 immediately while remaining days finalize.
+  if (dayOne && dayOneDiscovery) {
+    await Promise.all([
+      mergeIntermediateResult(params.searchId, "dayOne", dayOne),
+      ...(mapped.days.length > 1
+        ? [mergeIntermediateResult(params.searchId, "days", [dayOne])]
+        : []),
+      mergeIntermediateResult(
+        params.searchId,
+        "discovery_aggregator",
+        dayOneDiscovery,
+      ),
+      ...(params.tripId
+        ? [
+            applyGenerationUpdate(params.tripId, params.searchId, "progress", {
+              trip_id: params.tripId,
+              step: "aggregator",
+              progress: 85,
+              message: dayOneDiscovery.headline,
+              day_ready: dayOne,
+              discovery: dayOneDiscovery,
+              discoveries: aggregatorDiscoveries,
+              updated_at: new Date().toISOString(),
+            }),
+          ]
+        : []),
+    ]);
+  }
+
   await Promise.all([
     mergeIntermediateResult(params.searchId, "days", mapped.days),
     mergeIntermediateResult(params.searchId, "topHotel", mapped.topHotel),
@@ -737,6 +878,7 @@ async function aggregateItineraryStep(params: {
           Object.values(params.sourceStatus).includes("error")
             ? "Itinerary composed from the searches that completed. A failed search was not retried."
             : "Itinerary composed. Saving now...",
+        discoveries: aggregatorDiscoveries,
       },
     ),
   ]);
@@ -1004,11 +1146,20 @@ async function setProgressState(
     step: string;
     progress: number;
     message: string;
+    discoveries?: AgentDiscovery[];
   },
 ): Promise<void> {
   "use step";
   const db = getSupabase();
   await db.from("searches").update({ progress }).eq("id", searchId);
+
+  if (workflow?.discoveries && workflow.discoveries.length > 0) {
+    await db.rpc("merge_intermediate_results", {
+      p_search_id: searchId,
+      p_key: "discoveries",
+      p_value: workflow.discoveries,
+    });
+  }
 
   if (!tripId || !workflow) return;
   await applyGenerationUpdate(tripId, searchId, "progress", {
@@ -1016,6 +1167,9 @@ async function setProgressState(
     step: workflow.step,
     progress: workflow.progress,
     message: workflow.message,
+    ...(workflow.discoveries?.length
+      ? { discoveries: workflow.discoveries }
+      : {}),
     updated_at: new Date().toISOString(),
   });
 }

@@ -1,5 +1,16 @@
 import { TravelerRequirementsEditor } from '../../components/TravelerRequirementsEditor';
+import { DreamTripPromptBar } from '../../components/create/DreamTripPromptBar';
 import { travelerRequirementsSchema } from '../../lib/travelerRequirements';
+import {
+  clearTravelerMemory,
+  extractMemoryFromDraft,
+  hasTravelerMemoryContent,
+  loadTravelerMemory,
+  mergeTravelerMemoryIntoDraft,
+  saveTravelerMemory,
+  type TravelerMemoryDefaults,
+} from '../../lib/travelerMemory';
+import type { DestinationSuggestion, ParsedTripPrompt } from '../../lib/promptParser';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
@@ -137,6 +148,10 @@ export default function CreateTripScreen() {
   const [mapLoadFailed, setMapLoadFailed] = useState(false);
   const [showAuthGate, setShowAuthGate] = useState(false);
   const [authGateAction, setAuthGateAction] = useState<'banner' | 'generate'>('generate');
+  const [travelerMemory, setTravelerMemory] = useState<TravelerMemoryDefaults | null>(null);
+  const [memoryApplied, setMemoryApplied] = useState(false);
+  const [undoDraftSnapshot, setUndoDraftSnapshot] = useState<TripInput | null>(null);
+  const memoryLoadedScopeRef = useRef<string | null>(null);
 
   const showSignInBanner =
     !isAuthenticated && tripGenerationCount >= 1 && !hasDismissedCreateBanner;
@@ -169,6 +184,162 @@ export default function CreateTripScreen() {
   useEffect(() => {
     if (guestBrief.restored) setShowSearch(false);
   }, [guestBrief.restored]);
+
+  // Load saved Traveler Memory defaults scoped by userId and auto-apply without
+  // overwriting explicit URL parameters or already-filled fields.
+  useEffect(() => {
+    let active = true;
+    const scope = `${userId ?? 'guest'}:${accountRevision}`;
+    setTravelerMemory(null);
+    setMemoryApplied(false);
+
+    void loadTravelerMemory(userId)
+      .then((loaded) => {
+        if (!active || !isRecoveryCurrent()) return;
+        setTravelerMemory(loaded);
+        if (!loaded || !hasTravelerMemoryContent(loaded)) return;
+        if (memoryLoadedScopeRef.current === scope) return;
+        memoryLoadedScopeRef.current = scope;
+
+        const explicit = new Set<string>();
+        if (params.destination) explicit.add('destination');
+        if (params.vibes) explicit.add('vibes');
+        if (params.travelerType) explicit.add('travelerType');
+        if (params.travelers) explicit.add('travelers');
+
+        const currentDraft = useTripStore.getState().draftInput;
+        const merged = mergeTravelerMemoryIntoDraft(currentDraft, loaded, explicit);
+        if (Object.keys(merged).length > 0) {
+          setDraftInput(merged);
+          setMemoryApplied(true);
+        }
+      })
+      .catch(() => {
+        // Ignore storage read failures so the planner stays usable.
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    userId,
+    accountRevision,
+    isRecoveryCurrent,
+    params.destination,
+    params.vibes,
+    params.travelerType,
+    params.travelers,
+    setDraftInput,
+  ]);
+
+  const handleApplyParsedPrompt = useCallback(
+    (parsed: ParsedTripPrompt) => {
+      const previous = useTripStore.getState().draftInput;
+      if (previous) {
+        setUndoDraftSnapshot({
+          ...previous,
+          vibes: [...(previous.vibes ?? [])],
+          requirements: previous.requirements
+            ? {
+                ...previous.requirements,
+                allergies: [...previous.requirements.allergies],
+                dietaryPreferences: [...previous.requirements.dietaryPreferences],
+                accessibility: [...previous.requirements.accessibility],
+              }
+            : previous.requirements,
+        });
+      }
+
+      const updates: Partial<TripInput> = {};
+      if (parsed.destination) {
+        updates.destination = parsed.destination;
+        updates.country = parsed.country ?? '';
+        setMapLoadFailed(false);
+        setShowSearch(false);
+      }
+      if (parsed.startDate) updates.startDate = parsed.startDate;
+      if (parsed.endDate) updates.endDate = parsed.endDate;
+      if (parsed.travelers) updates.travelers = parsed.travelers;
+      if (parsed.travelerType) updates.travelerType = parsed.travelerType;
+      if (parsed.budget) updates.budget = parsed.budget;
+      if (parsed.vibes.length > 0) updates.vibes = parsed.vibes;
+      if (parsed.requirements) updates.requirements = parsed.requirements;
+
+      if (Object.keys(updates).length > 0) {
+        setDraftInput(updates);
+      }
+    },
+    [setDraftInput]
+  );
+
+  const handleUndoParsedPrompt = useCallback(() => {
+    if (!undoDraftSnapshot) return;
+    setDraftInput(undoDraftSnapshot);
+    setShowSearch(!undoDraftSnapshot.destination);
+    setUndoDraftSnapshot(null);
+  }, [undoDraftSnapshot, setDraftInput]);
+
+  const handleSelectSuggestion = useCallback(
+    (suggestion: DestinationSuggestion) => {
+      const previous = useTripStore.getState().draftInput;
+      if (previous) {
+        setUndoDraftSnapshot({ ...previous, vibes: [...(previous.vibes ?? [])] });
+      }
+      const start = new Date();
+      start.setDate(start.getDate() + 30);
+      const end = new Date(start);
+      end.setDate(start.getDate() + Math.max(1, suggestion.suggestedDays - 1));
+      const fmt = (d: Date) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+      const updates: Partial<TripInput> = {
+        destination: suggestion.destination,
+        country: suggestion.country,
+        budget: suggestion.suggestedBudget,
+        vibes: suggestion.suggestedVibes,
+      };
+      if (!previous?.startDate || !previous?.endDate) {
+        updates.startDate = fmt(start);
+        updates.endDate = fmt(end);
+      }
+      setMapLoadFailed(false);
+      setShowSearch(false);
+      setDraftInput(updates);
+    },
+    [setDraftInput]
+  );
+
+  const handleSaveCurrentAsMemory = useCallback(() => {
+    const currentDraft = useTripStore.getState().draftInput;
+    const patch = extractMemoryFromDraft(currentDraft);
+    void saveTravelerMemory(userId, patch)
+      .then((saved) => {
+        if (!isRecoveryCurrent()) return;
+        setTravelerMemory(saved);
+        setMemoryApplied(Boolean(saved));
+        Alert.alert(
+          'Defaults saved',
+          saved
+            ? 'Your comfort tier, vibes, and dietary/access notes will prefill future trips. You can edit or clear them anytime.'
+            : 'Choose a comfort tier, vibes, or dietary/access needs first to save defaults.'
+        );
+      })
+      .catch(() => {
+        if (isRecoveryCurrent()) {
+          Alert.alert('Could not save defaults', 'Please try again.');
+        }
+      });
+  }, [userId, isRecoveryCurrent]);
+
+  const handleClearMemory = useCallback(() => {
+    void clearTravelerMemory(userId)
+      .then(() => {
+        if (!isRecoveryCurrent()) return;
+        setTravelerMemory(null);
+        setMemoryApplied(false);
+      })
+      .catch(() => undefined);
+  }, [userId, isRecoveryCurrent]);
 
   const handleSelectDestination = (name: string, country: string, placeId?: string) => {
     hapticFeedback.selection();
@@ -350,6 +521,18 @@ export default function CreateTripScreen() {
                 Choose a place and your dates. We’ll bring the days together.
               </Text>
             </View>
+
+            <DreamTripPromptBar
+              onApplyParsed={handleApplyParsedPrompt}
+              onUndoParsed={handleUndoParsedPrompt}
+              canUndo={Boolean(undoDraftSnapshot)}
+              onSelectSuggestion={handleSelectSuggestion}
+              memory={travelerMemory}
+              memoryApplied={memoryApplied}
+              onSaveCurrentAsMemory={handleSaveCurrentAsMemory}
+              onClearMemory={handleClearMemory}
+              onEditMemory={() => router.push('/(tabs)/profile')}
+            />
 
             {/* Destination Selection */}
             <View style={styles.section}>

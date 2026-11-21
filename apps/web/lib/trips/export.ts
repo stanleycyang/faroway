@@ -136,3 +136,9 @@ export function buildTripExportFilename(trip: TripExportTrip) {
     .replace(/^-|-$/g, "");
   return `faroway-${destination || "trip"}-${trip.start_date}.txt`;
 }
+
+export {
+  buildTripIcsContent,
+  buildTripIcsFilename,
+  type TripExportInput,
+} from "./ics-export";

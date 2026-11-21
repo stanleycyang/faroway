@@ -193,6 +193,7 @@ interface ActivityCardProps {
   activity: Activity;
   date?: string;
   index?: number;
+  rationale?: string[];
 }
 
 function getBadge(
@@ -218,7 +219,7 @@ function getBadge(
   return null;
 }
 
-export function ActivityCard({ activity, date }: ActivityCardProps) {
+export function ActivityCard({ activity, date, rationale }: ActivityCardProps) {
   const checkout = useTripCheckout();
   const viatorContentEnabled = useViatorContentEnabled();
   if (!canDisplayViatorContent(activity, viatorContentEnabled)) return null;
@@ -349,6 +350,25 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
         <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap mt-1">
           {activity.description}
         </p>
+
+        {rationale && rationale.length > 0 && (
+          <div
+            className="flex flex-wrap items-center gap-1.5 mt-2.5"
+            aria-label="Why we picked this"
+          >
+            {rationale.slice(0, 2).map((reason, idx) => (
+              <span
+                key={`${reason}-${idx}`}
+                className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200/70"
+              >
+                <span aria-hidden="true" className="text-emerald-600">
+                  ✦
+                </span>
+                {reason}
+              </span>
+            ))}
+          </div>
+        )}
 
         {visitNote && (
           <p className="mt-2 text-xs leading-relaxed text-slate-600">
@@ -484,9 +504,10 @@ export function ActivityCard({ activity, date }: ActivityCardProps) {
 
 interface RestaurantCardProps {
   restaurant: Restaurant;
+  rationale?: string[];
 }
 
-export function RestaurantCard({ restaurant }: RestaurantCardProps) {
+export function RestaurantCard({ restaurant, rationale }: RestaurantCardProps) {
   // Guard against receiving a non-object (e.g. a plain string from inconsistent AI output)
   if (!restaurant || typeof restaurant !== "object" || !restaurant.name)
     return null;
@@ -547,6 +568,25 @@ export function RestaurantCard({ restaurant }: RestaurantCardProps) {
             <p className="text-sm text-gray-600 leading-relaxed line-clamp-2">
               {restaurant.description}
             </p>
+
+            {rationale && rationale.length > 0 && (
+              <div
+                className="flex flex-wrap items-center gap-1.5 mt-2"
+                aria-label="Why we picked this"
+              >
+                {rationale.slice(0, 2).map((reason, idx) => (
+                  <span
+                    key={`${reason}-${idx}`}
+                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200/70"
+                  >
+                    <span aria-hidden="true" className="text-emerald-600">
+                      ✦
+                    </span>
+                    {reason}
+                  </span>
+                ))}
+              </div>
+            )}
 
             {/* Metadata chips */}
             <div className="flex flex-wrap items-center gap-2 mt-3 text-xs text-gray-500">

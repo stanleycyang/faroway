@@ -31,6 +31,8 @@ import {
   Alert,
   Modal,
   FlatList,
+  Linking,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
@@ -55,6 +57,17 @@ import { reviewSavedTripBooking } from '../../lib/savedTripBooking';
 import { formatTripDate, formatTripTime } from '../../lib/tripDate';
 import { collectBookingOptions } from '../../lib/bookingOptions';
 import { selectTripDetail } from '../../lib/tripSummary';
+import { OnTripCompanionCard } from '../../components/trip/OnTripCompanionCard';
+import { TripRemixSheet } from '../../components/trip/TripRemixSheet';
+import {
+  buildAppleMapsDayRouteUrl,
+  buildGoogleMapsDayRouteUrl,
+  explainMobileStop,
+  shiftDaySchedule,
+  summarizeDayRoute,
+  type CopilotActionType,
+} from '../../lib/tripCompanion';
+import type { TripDay } from '../../lib/itineraryTypes';
 
 const BookingTripContext = createContext<string | undefined>(undefined);
 const useBookingReview = () => {
@@ -80,9 +93,11 @@ const openURL = async (url: string) => {
 
 interface ActivityCardProps {
   activity: TripActivity;
+  rationale?: string[];
+  shiftedTime?: string;
 }
 
-function ActivityCard({ activity }: ActivityCardProps) {
+function ActivityCard({ activity, rationale, shiftedTime }: ActivityCardProps) {
   const visitNote = proposedVisitNote(activity.proposedVisitType);
   const reviewBooking = useBookingReview();
   const getTypeIcon = (type: string) => {
@@ -127,7 +142,7 @@ function ActivityCard({ activity }: ActivityCardProps) {
   return (
     <View style={styles.activityCard}>
       <View style={styles.activityTime}>
-        <Text style={styles.activityTimeText}>{activity.time}</Text>
+        <Text style={styles.activityTimeText}>{shiftedTime || activity.time}</Text>
         <View style={[styles.activityDot, { backgroundColor: getTypeColor(activity.type) }]} />
         <View style={styles.activityLine} />
       </View>
@@ -165,6 +180,16 @@ function ActivityCard({ activity }: ActivityCardProps) {
           {activity.price && <Text style={styles.activityPrice}>{activity.price}</Text>}
         </View>
         <Text style={styles.activityDescription}>{activity.description}</Text>
+        {rationale && rationale.length > 0 && (
+          <View style={styles.rationaleRow}>
+            {rationale.map((reason) => (
+              <View key={reason} style={styles.rationalePill}>
+                <Ionicons name="sparkles-outline" size={12} color="#0F766E" />
+                <Text style={styles.rationaleText}>{reason}</Text>
+              </View>
+            ))}
+          </View>
+        )}
         {visitNote && <Text style={styles.activityDescription}>{visitNote}</Text>}
         <VenueSourceNotice source={activity.source} />
         {activity.rating && (
@@ -512,7 +537,7 @@ function TripDetailSession({ id }: { id: string | undefined }) {
       mounted.current = false;
     };
   }, []);
-  const { trips, currentTrip, isHydrated } = useTripStore();
+  const { trips, currentTrip, isHydrated, saveTrip, setCurrentTrip } = useTripStore();
   const { getTripById, deleteTrip } = useTrips();
   const { isAuthenticated } = useAuthContext();
   const { tripGenerationCount, shouldShowRatingPrompt } = usePromptStore();
@@ -523,6 +548,9 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   const [showAuthGate, setShowAuthGate] = useState(false);
   const [showRatingPrompt, setShowRatingPrompt] = useState(false);
   const [showBookingsSheet, setShowBookingsSheet] = useState(false);
+  const [showRemixSheet, setShowRemixSheet] = useState(false);
+  const [remixInitialAction, setRemixInitialAction] = useState<CopilotActionType | null>(null);
+  const [scheduleShiftMinutes, setScheduleShiftMinutes] = useState(0);
   const [isLoadingTrip, setIsLoadingTrip] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -775,6 +803,41 @@ function TripDetailSession({ id }: { id: string | undefined }) {
   const timingDay = trip.days[selectedDay]
     ? transformItineraryDays([trip.days[selectedDay]])[0]
     : undefined;
+  const shiftedSchedule = shiftDaySchedule(timingDay, scheduleShiftMinutes);
+  const dayRouteSummary = summarizeDayRoute(timingDay);
+  const dayMapsUrl =
+    Platform.OS === 'ios'
+      ? (buildAppleMapsDayRouteUrl(timingDay, trip.destination, trip.country) ??
+        buildGoogleMapsDayRouteUrl(timingDay, trip.destination, trip.country))
+      : (buildGoogleMapsDayRouteUrl(timingDay, trip.destination, trip.country) ??
+        buildAppleMapsDayRouteUrl(timingDay, trip.destination, trip.country));
+
+  const handleOpenDayInMaps = () => {
+    if (!dayMapsUrl) return;
+    hapticFeedback.light();
+    if (Linking && typeof Linking.openURL === 'function') {
+      void Linking.openURL(dayMapsUrl).catch(() => {
+        void openURL(dayMapsUrl).catch(() => undefined);
+      });
+      return;
+    }
+    void openURL(dayMapsUrl).catch(() => undefined);
+  };
+
+  const handleApplyUpdatedDays = (updatedDays: TripDay[]) => {
+    if (!isActive() || !trip) return;
+    const updatedTrip = { ...trip, days: updatedDays };
+    if (typeof saveTrip === 'function') saveTrip(updatedTrip);
+    if (typeof setCurrentTrip === 'function') setCurrentTrip(updatedTrip);
+  };
+
+  const handleSyncAfterRemix = () => {
+    const controller = detailController.current;
+    if (!id || !isActive() || id.startsWith('local_') || !controller || controller.signal.aborted) {
+      return;
+    }
+    void getTripById(id, controller.signal).catch(() => undefined);
+  };
   const visibleTips = (timingDay?.tips ?? []).filter(
     (tip) => !timingDay?.timingProposal || !isTimingNote(tip)
   );
@@ -985,6 +1048,21 @@ function TripDetailSession({ id }: { id: string | undefined }) {
               </View>
             ) : (
               <>
+                {/* On-Trip Companion, Booking Readiness & Rain-Swap Banner */}
+                <OnTripCompanionCard
+                  trip={trip}
+                  selectedDayIndex={selectedDay}
+                  scheduleShiftMinutes={scheduleShiftMinutes}
+                  onShiftSchedule={setScheduleShiftMinutes}
+                  onSelectActiveDay={setSelectedDay}
+                  onTriggerRainSwap={(targetDayNum) => {
+                    const idx = trip.days.findIndex((d) => d.dayNumber === targetDayNum);
+                    if (idx >= 0) setSelectedDay(idx);
+                    setRemixInitialAction('rain_backup');
+                    setShowRemixSheet(true);
+                  }}
+                />
+
                 {/* Day Selector */}
                 <View style={styles.daySelector}>
                   <ScrollView
@@ -1028,9 +1106,46 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                   </ScrollView>
                 </View>
 
-                {/* Day Theme */}
+                {/* Day Theme + 1-Tap Maps & Remix Controls */}
                 <View style={styles.dayThemeContainer}>
                   <Text style={styles.dayTheme}>{trip.days[selectedDay]?.theme}</Text>
+                  {dayRouteSummary.label ? (
+                    <Text style={styles.dayRouteMeta}>{dayRouteSummary.label}</Text>
+                  ) : null}
+                  {shiftedSchedule.bannerText ? (
+                    <View style={styles.shiftBanner}>
+                      <Ionicons name="time-outline" size={14} color="#0F766E" />
+                      <Text style={styles.shiftBannerText}>{shiftedSchedule.bannerText}</Text>
+                    </View>
+                  ) : null}
+                  <View style={styles.dayActionRow}>
+                    {dayMapsUrl ? (
+                      <TouchableOpacity
+                        style={styles.dayActionButton}
+                        onPress={handleOpenDayInMaps}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Open Day ${trip.days[selectedDay]?.dayNumber ?? selectedDay + 1} route in Maps`}
+                      >
+                        <Ionicons name="map-outline" size={16} color="#143D46" />
+                        <Text style={styles.dayActionButtonText}>Open Day in Maps</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                    {!trip.planNeedsRefresh ? (
+                      <TouchableOpacity
+                        style={[styles.dayActionButton, styles.dayActionButtonAccent]}
+                        onPress={() => {
+                          hapticFeedback.light();
+                          setRemixInitialAction(null);
+                          setShowRemixSheet(true);
+                        }}
+                        accessibilityRole="button"
+                        accessibilityLabel={`Remix or edit Day ${trip.days[selectedDay]?.dayNumber ?? selectedDay + 1}`}
+                      >
+                        <Ionicons name="sparkles-outline" size={16} color="#9B2D25" />
+                        <Text style={styles.dayActionButtonAccentText}>Remix / Edit Day</Text>
+                      </TouchableOpacity>
+                    ) : null}
+                  </View>
                 </View>
 
                 {/* Transport */}
@@ -1081,8 +1196,17 @@ function TripDetailSession({ id }: { id: string | undefined }) {
                 )}
                 {/* Activities */}
                 <View style={styles.activitiesContainer}>
-                  {timingDay?.activities.map((activity) => (
-                    <ActivityCard key={activity.id} activity={activity} />
+                  {timingDay?.activities.map((activity, index) => (
+                    <ActivityCard
+                      key={activity.id}
+                      activity={activity}
+                      rationale={explainMobileStop(activity, {
+                        vibes: trip.vibes,
+                        requirements: trip.requirements,
+                        previousActivity: index > 0 ? timingDay.activities[index - 1] : undefined,
+                      })}
+                      shiftedTime={shiftedSchedule.labelsByActivityId[activity.id]}
+                    />
                   ))}
                 </View>
                 <DiningReviewOptions options={timingDay?.diningOptions} />
@@ -1235,6 +1359,21 @@ function TripDetailSession({ id }: { id: string | undefined }) {
           onClose={() => setShowBookingsSheet(false)}
           bookableItems={bookableItems}
           costReferences={costReferences}
+        />
+
+        {/* Day Remix Bottom Sheet */}
+        <TripRemixSheet
+          visible={showRemixSheet}
+          onClose={() => {
+            setShowRemixSheet(false);
+            setRemixInitialAction(null);
+          }}
+          tripId={trip.id}
+          days={trip.days}
+          dayNumber={trip.days[selectedDay]?.dayNumber ?? selectedDay + 1}
+          initialAction={remixInitialAction}
+          onApplyUpdatedDays={handleApplyUpdatedDays}
+          onSyncComplete={handleSyncAfterRemix}
         />
 
         {/* Auth gate for guests */}
@@ -1923,5 +2062,83 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#fff',
+  },
+  dayRouteMeta: {
+    fontSize: 13,
+    color: '#475569',
+    marginTop: 4,
+  },
+  shiftBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1,
+    borderColor: '#99F6E4',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  shiftBannerText: {
+    flex: 1,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '600',
+    color: '#134E4A',
+  },
+  dayActionRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 12,
+  },
+  dayActionButton: {
+    minHeight: 44,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#cbd5e1',
+    backgroundColor: '#f8fafc',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  dayActionButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#143D46',
+  },
+  dayActionButtonAccent: {
+    borderColor: '#FDB4AF',
+    backgroundColor: '#FFF5F4',
+  },
+  dayActionButtonAccentText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#9B2D25',
+  },
+  rationaleRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 8,
+    marginBottom: 4,
+  },
+  rationalePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F0FDFA',
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
+    borderRadius: 999,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+  },
+  rationaleText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#134E4A',
   },
 });

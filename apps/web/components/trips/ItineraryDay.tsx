@@ -5,15 +5,23 @@ import {
   dayTimingTips,
   isTimingNote,
   type DayTimingProposal,
+  type TripDay,
+  type TripDayTransport,
 } from "@faroway/types";
 import { SourceNote } from "./SourceNote";
 import { ProposedTiming } from "./ProposedTiming";
 import { DiningReviewOptions } from "./DiningReviewOptions";
 import { parseTripDate } from "@/lib/trips/date-duration";
 import { formatEstimate, knownEstimate } from "@/lib/trips/budget";
+import {
+  buildAppleMapsDayRouteUrl,
+  buildGoogleMapsDayRouteUrl,
+  summarizeDayClustering,
+} from "@/lib/trips/maps-route";
+import { explainStopSelection } from "@/lib/trips/explain-stop";
 
 import { FlightLeg } from "./FlightLeg";
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -23,6 +31,10 @@ import {
   Lightbulb,
   DollarSign,
   Hotel,
+  MapPin,
+  Navigation,
+  CloudRain,
+  Coffee,
 } from "lucide-react";
 import {
   ActivityCard,
@@ -30,7 +42,6 @@ import {
   type Activity,
   type Restaurant,
 } from "./ActivityCard";
-import type { TripDayTransport } from "@faroway/types";
 
 interface TimeBlock {
   activities: Activity[];
@@ -46,6 +57,19 @@ interface HotelInfo {
   amenities?: string[];
   affiliateUrl?: string;
   image?: string;
+}
+
+export interface ItineraryDayRequirements {
+  allergies?: string[];
+  dietaryPreferences?: string[];
+  accessibility?: string[];
+  mobilityNotes?: string;
+}
+
+export interface ItineraryDayQuickAction {
+  type: "swap_stop" | "relax_day" | "rain_backup";
+  dayNumber: number;
+  stopName?: string;
 }
 
 interface ItineraryDayProps {
@@ -66,6 +90,30 @@ interface ItineraryDayProps {
   defaultExpanded?: boolean;
   hotel?: HotelInfo;
   transport?: TripDayTransport;
+  destination?: string;
+  vibes?: string[];
+  requirements?: ItineraryDayRequirements;
+  onQuickAction?: (action: ItineraryDayQuickAction) => void;
+}
+
+function safeBlock(block: TimeBlock): TimeBlock {
+  const rawActivities = Array.isArray(block?.activities)
+    ? block.activities
+    : [];
+  const blockRecord = block as unknown as Record<string, unknown>;
+  const rawMeals = Array.isArray(block?.meals)
+    ? block.meals
+    : blockRecord?.meal && typeof blockRecord.meal === "object"
+      ? [blockRecord.meal as Restaurant]
+      : [];
+  return {
+    activities: rawActivities.filter(
+      (a) => a != null && typeof a === "object" && typeof a.name === "string",
+    ),
+    meals: rawMeals.filter(
+      (m) => m != null && typeof m === "object" && typeof m.name === "string",
+    ),
+  };
 }
 
 export function ItineraryDay({
@@ -83,6 +131,10 @@ export function ItineraryDay({
   defaultExpanded = true,
   hotel,
   transport,
+  destination,
+  vibes,
+  requirements,
+  onQuickAction,
 }: ItineraryDayProps) {
   const [isExpanded, setIsExpanded] = useState(defaultExpanded);
   const timingDay = { date, morning, afternoon, evening, tips, timingProposal };
@@ -119,99 +171,250 @@ export function ItineraryDay({
   };
   const formatCost = formatEstimate;
 
-  const safeBlock = (block: TimeBlock): TimeBlock => {
-    const rawActivities = Array.isArray(block?.activities)
-      ? block.activities
-      : [];
-    const blockRecord = block as unknown as Record<string, unknown>;
-    const rawMeals = Array.isArray(block?.meals)
-      ? block.meals
-      : blockRecord?.meal && typeof blockRecord.meal === "object"
-        ? [blockRecord.meal as Restaurant]
-        : [];
-    return {
-      activities: rawActivities.filter(
-        (a) => a != null && typeof a === "object" && typeof a.name === "string",
-      ),
-      meals: rawMeals.filter(
-        (m) => m != null && typeof m === "object" && typeof m.name === "string",
-      ),
-    };
-  };
-
-  const hasContent = (block: TimeBlock) => {
-    const safe = safeBlock(block);
-    return safe.activities.length > 0 || safe.meals.length > 0;
-  };
+  const safeMorning = useMemo(() => safeBlock(morning), [morning]);
+  const safeAfternoon = useMemo(() => safeBlock(afternoon), [afternoon]);
+  const safeEvening = useMemo(() => safeBlock(evening), [evening]);
 
   // Count bookable items for this day
   const countBookable = () => {
     let count = 0;
-    for (const block of [morning, afternoon, evening]) {
-      const safe = safeBlock(block);
-      count += safe.activities.filter((a) => a.bookingInfo?.bookingUrl).length;
-      count += safe.meals.filter((m) => m.reservationInfo?.url).length;
+    for (const block of [safeMorning, safeAfternoon, safeEvening]) {
+      count += block.activities.filter((a) => a.bookingInfo?.bookingUrl).length;
+      count += block.meals.filter((m) => m.reservationInfo?.url).length;
     }
     return count;
   };
 
-  const hasMorning = hasContent(morning);
-  const hasAfternoon = hasContent(afternoon);
-  const hasEvening = hasContent(evening);
+  const hasMorning =
+    safeMorning.activities.length > 0 || safeMorning.meals.length > 0;
+  const hasAfternoon =
+    safeAfternoon.activities.length > 0 || safeAfternoon.meals.length > 0;
+  const hasEvening =
+    safeEvening.activities.length > 0 || safeEvening.meals.length > 0;
   const bookableCount = countBookable();
+
+  const routeDay = useMemo(
+    () =>
+      ({
+        dayNumber,
+        date,
+        title,
+        summary,
+        morning: safeMorning,
+        afternoon: safeAfternoon,
+        evening: safeEvening,
+        tips: Array.isArray(tips) ? tips : [],
+      }) as unknown as TripDay,
+    [
+      dayNumber,
+      date,
+      title,
+      summary,
+      safeMorning,
+      safeAfternoon,
+      safeEvening,
+      tips,
+    ],
+  );
+
+  const clustering = useMemo(
+    () => summarizeDayClustering(routeDay),
+    [routeDay],
+  );
+  const googleMapsUrl = useMemo(
+    () => buildGoogleMapsDayRouteUrl(routeDay, destination),
+    [routeDay, destination],
+  );
+  const appleMapsUrl = useMemo(
+    () => buildAppleMapsDayRouteUrl(routeDay, destination),
+    [routeDay, destination],
+  );
+
+  // Precompute strictly factual per-stop rationale pills sequentially so each
+  // stop can reference walking proximity from the preceding stop on this day.
+  const stopRationales = useMemo(() => {
+    const map = new Map<string, string[]>();
+    let previousStop: { name: string; lat?: number; lng?: number } | undefined;
+
+    const recordStop = (
+      key: string,
+      stop: Activity | Restaurant,
+      isMeal: boolean,
+    ) => {
+      const coords = stop.location?.coordinates;
+      const locRecord = stop.location as
+        | {
+            name?: string;
+            address?: string;
+            neighborhood?: string;
+            lat?: number;
+            lng?: number;
+            coordinates?: { lat?: number; lng?: number };
+          }
+        | undefined;
+      const lat = coords?.lat ?? locRecord?.lat;
+      const lng = coords?.lng ?? locRecord?.lng;
+
+      const reasons = explainStopSelection(
+        {
+          name: stop.name,
+          description: stop.description,
+          category: isMeal ? undefined : (stop as Activity).category,
+          location: {
+            name: locRecord?.name,
+            address: locRecord?.address,
+            neighborhood: locRecord?.neighborhood,
+            lat,
+            lng,
+          },
+          rating: stop.rating,
+          duration: isMeal ? undefined : (stop as Activity).duration,
+          vibeMatch: stop.vibeMatch,
+          cuisineType: isMeal ? (stop as Restaurant).cuisineType : undefined,
+          mealType: isMeal ? (stop as Restaurant).mealType : undefined,
+        },
+        {
+          vibes,
+          previousStop,
+          requirements,
+        },
+      );
+
+      map.set(key, reasons);
+      previousStop = { name: stop.name, lat, lng };
+    };
+
+    const blocks: Array<["morning" | "afternoon" | "evening", TimeBlock]> = [
+      ["morning", safeMorning],
+      ["afternoon", safeAfternoon],
+      ["evening", safeEvening],
+    ];
+    for (const [slotName, block] of blocks) {
+      block.activities.forEach((act, idx) =>
+        recordStop(`act:${slotName}:${act.id || idx}`, act, false),
+      );
+      block.meals.forEach((meal, idx) =>
+        recordStop(`meal:${slotName}:${meal.id || idx}`, meal, true),
+      );
+    }
+    return map;
+  }, [safeMorning, safeAfternoon, safeEvening, vibes, requirements]);
 
   return (
     <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
       {/* Day Header - Always visible */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        aria-expanded={isExpanded}
-        className="w-full px-4 sm:px-6 py-5 sm:py-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
-      >
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="w-12 h-14 sm:w-14 sm:h-16 rounded-xl bg-slate-900 flex flex-col items-center justify-center text-white flex-shrink-0">
-            <span className="text-xs font-medium leading-none opacity-80">
-              Day
-            </span>
-            <span className="text-2xl sm:text-3xl font-bold leading-none">
-              {dayNumber}
-            </span>
-          </div>
-          <div className="text-left min-w-0">
-            <p className="text-xs sm:text-sm text-gray-500 font-medium">
-              {formatDate(date)}
-            </p>
-            <h3 className="text-base sm:text-xl font-semibold text-gray-900 text-left text-balance">
-              {title}
-            </h3>
-            {bookableCount > 0 && !isExpanded && (
-              <p className="text-xs text-primary-600 font-medium mt-0.5">
-                {bookableCount} bookable experience
-                {bookableCount > 1 ? "s" : ""}
+      <div className="border-b border-transparent">
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          aria-expanded={isExpanded}
+          className="w-full px-4 sm:px-6 py-5 sm:py-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="w-12 h-14 sm:w-14 sm:h-16 rounded-xl bg-slate-900 flex flex-col items-center justify-center text-white flex-shrink-0">
+              <span className="text-xs font-medium leading-none opacity-80">
+                Day
+              </span>
+              <span className="text-2xl sm:text-3xl font-bold leading-none">
+                {dayNumber}
+              </span>
+            </div>
+            <div className="text-left min-w-0">
+              <p className="text-xs sm:text-sm text-gray-500 font-medium">
+                {formatDate(date)}
               </p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
-          {totalEstimatedCost && totalEstimatedCost.amount > 0 && (
-            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-full text-sm text-gray-700 font-semibold">
-              <DollarSign className="w-4 h-4 text-gray-400" />
-              {formatCost(
-                totalEstimatedCost.amount,
-                totalEstimatedCost.currency,
+              <h3 className="text-base sm:text-xl font-semibold text-gray-900 text-left text-balance">
+                {title}
+              </h3>
+              {clustering.summaryLabel && (
+                <p className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-slate-600">
+                  <MapPin className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
+                  <span>{clustering.summaryLabel}</span>
+                </p>
+              )}
+              {bookableCount > 0 && !isExpanded && (
+                <p className="text-xs text-primary-600 font-medium mt-0.5">
+                  {bookableCount} bookable experience
+                  {bookableCount > 1 ? "s" : ""}
+                </p>
               )}
             </div>
-          )}
-          <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center">
-            {isExpanded ? (
-              <ChevronUp className="w-5 h-5 text-gray-400" />
-            ) : (
-              <ChevronDown className="w-5 h-5 text-gray-400" />
+          </div>
+
+          <div className="flex items-center gap-2 sm:gap-4 flex-shrink-0">
+            {totalEstimatedCost && totalEstimatedCost.amount > 0 && (
+              <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 rounded-full text-sm text-gray-700 font-semibold">
+                <DollarSign className="w-4 h-4 text-gray-400" />
+                {formatCost(
+                  totalEstimatedCost.amount,
+                  totalEstimatedCost.currency,
+                )}
+              </div>
+            )}
+            <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center">
+              {isExpanded ? (
+                <ChevronUp className="w-5 h-5 text-gray-400" />
+              ) : (
+                <ChevronDown className="w-5 h-5 text-gray-400" />
+              )}
+            </div>
+          </div>
+        </button>
+
+        {/* Day header action bar: Maps route links + optional quick remix controls */}
+        {(googleMapsUrl || appleMapsUrl || onQuickAction) && (
+          <div className="px-4 sm:px-6 pb-3.5 flex flex-wrap items-center justify-between gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {googleMapsUrl && (
+                <a
+                  href={googleMapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-800 hover:bg-slate-200 transition-colors"
+                >
+                  <Navigation className="w-3.5 h-3.5 text-slate-600" />
+                  Google Maps route
+                </a>
+              )}
+              {appleMapsUrl && (
+                <a
+                  href={appleMapsUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-800 hover:bg-slate-200 transition-colors"
+                >
+                  <MapPin className="w-3.5 h-3.5 text-slate-600" />
+                  Apple Maps
+                </a>
+              )}
+            </div>
+
+            {onQuickAction && (
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    onQuickAction({ type: "relax_day", dayNumber })
+                  }
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-900 ring-1 ring-amber-200/80 hover:bg-amber-100 transition-colors"
+                >
+                  <Coffee className="w-3.5 h-3.5 text-amber-700" />
+                  Relax this day
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    onQuickAction({ type: "rain_backup", dayNumber })
+                  }
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-sky-50 text-sky-900 ring-1 ring-sky-200/80 hover:bg-sky-100 transition-colors"
+                >
+                  <CloudRain className="w-3.5 h-3.5 text-sky-700" />
+                  Rainy-day backup
+                </button>
+              </div>
             )}
           </div>
-        </div>
-      </button>
+        )}
+      </div>
 
       {/* Expanded Content */}
       {isExpanded && (
@@ -326,8 +529,10 @@ export function ItineraryDay({
               <TimeBlockSection
                 icon={<Sunrise className="w-4 h-4" />}
                 label="Morning"
+                slotName="morning"
                 date={date}
                 block={morning}
+                stopRationales={stopRationales}
               />
             )}
 
@@ -336,8 +541,10 @@ export function ItineraryDay({
               <TimeBlockSection
                 icon={<Sun className="w-4 h-4" />}
                 label="Afternoon"
+                slotName="afternoon"
                 date={date}
                 block={afternoon}
+                stopRationales={stopRationales}
               />
             )}
 
@@ -346,8 +553,10 @@ export function ItineraryDay({
               <TimeBlockSection
                 icon={<Moon className="w-4 h-4" />}
                 label="Evening"
+                slotName="evening"
                 date={date}
                 block={evening}
+                stopRationales={stopRationales}
               />
             )}
           </div>
@@ -400,10 +609,19 @@ interface TimeBlockSectionProps {
   date: string;
   icon: React.ReactNode;
   label: string;
+  slotName: "morning" | "afternoon" | "evening";
   block: TimeBlock;
+  stopRationales: Map<string, string[]>;
 }
 
-function TimeBlockSection({ date, icon, label, block }: TimeBlockSectionProps) {
+function TimeBlockSection({
+  date,
+  icon,
+  label,
+  slotName,
+  block,
+  stopRationales,
+}: TimeBlockSectionProps) {
   // Normalize: handle both { meals: [...] } and legacy { meal: {...} } formats
   const rawActivities = Array.isArray(block?.activities)
     ? block.activities
@@ -443,10 +661,17 @@ function TimeBlockSection({ date, icon, label, block }: TimeBlockSectionProps) {
             activity={activity}
             date={date}
             index={idx}
+            rationale={stopRationales.get(
+              `act:${slotName}:${activity.id || idx}`,
+            )}
           />
         ))}
         {meals.map((meal, idx) => (
-          <RestaurantCard key={meal.id || idx} restaurant={meal} />
+          <RestaurantCard
+            key={meal.id || idx}
+            restaurant={meal}
+            rationale={stopRationales.get(`meal:${slotName}:${meal.id || idx}`)}
+          />
         ))}
       </div>
     </div>

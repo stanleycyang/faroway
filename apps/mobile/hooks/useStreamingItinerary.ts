@@ -21,6 +21,55 @@ export interface MicroProgress {
   detail?: string;
 }
 
+export type DiscoveryAgent =
+  | 'orchestrator'
+  | 'hotels'
+  | 'activities'
+  | 'dining'
+  | 'transport'
+  | 'enrichment'
+  | 'aggregator';
+
+export interface AgentDiscovery {
+  id: string;
+  agent: DiscoveryAgent;
+  headline: string;
+  detail?: string;
+  badge?: string;
+  timestamp: number;
+}
+
+const VALID_DISCOVERY_AGENTS = new Set<DiscoveryAgent>([
+  'orchestrator',
+  'hotels',
+  'activities',
+  'dining',
+  'transport',
+  'enrichment',
+  'aggregator',
+]);
+
+const MAX_DISCOVERIES = 12;
+
+export function mergeAgentDiscoveries(
+  existing: AgentDiscovery[],
+  incoming: AgentDiscovery | AgentDiscovery[]
+): AgentDiscovery[] {
+  const list = Array.isArray(incoming) ? incoming : [incoming];
+  if (list.length === 0) return existing;
+
+  const byId = new Map<string, AgentDiscovery>();
+  for (const item of existing) {
+    byId.set(item.id, item);
+  }
+  for (const item of list) {
+    if (!item || !item.id || !item.headline.trim()) continue;
+    byId.set(item.id, item);
+  }
+  const merged = Array.from(byId.values());
+  return merged.length > MAX_DISCOVERIES ? merged.slice(-MAX_DISCOVERIES) : merged;
+}
+
 export interface StreamingState {
   /** Accumulated json-render blocks (grows progressively as spec-block events arrive) */
   blocks: StreamingBlock[];
@@ -53,6 +102,8 @@ export interface StreamingState {
   microProgress: MicroProgress | null;
   /** History of micro-progress messages */
   microHistory: MicroProgress[];
+  /** Grounded real-time discovery feed emitted by specialist agents */
+  discoveries: AgentDiscovery[];
 }
 
 export interface UseStreamingItineraryOptions {
@@ -103,6 +154,7 @@ const initialState: StreamingState = {
   days: null,
   microProgress: null,
   microHistory: [],
+  discoveries: [],
 };
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
@@ -194,6 +246,14 @@ export function parseStreamingJson(rawData: string): unknown | null {
 }
 
 interface StreamingEventData {
+  id?: string;
+  agent?: string;
+  headline?: string;
+  badge?: string;
+  timestamp?: number;
+  discoveries?: unknown[];
+  discovery?: unknown;
+  day?: unknown;
   stage?: string;
   step?: string;
   progress?: number;
@@ -205,6 +265,31 @@ interface StreamingEventData {
   days?: unknown[];
   blocks?: StreamingBlock[];
   spec?: StreamingBlock[];
+}
+
+function parseAgentDiscovery(raw: unknown): AgentDiscovery | null {
+  if (!isObjectRecord(raw)) return null;
+  const headline = typeof raw.headline === 'string' ? raw.headline.trim() : '';
+  if (!headline) return null;
+  const agent =
+    typeof raw.agent === 'string' && VALID_DISCOVERY_AGENTS.has(raw.agent as DiscoveryAgent)
+      ? (raw.agent as DiscoveryAgent)
+      : 'orchestrator';
+  const id =
+    typeof raw.id === 'string' && raw.id.trim()
+      ? raw.id.trim()
+      : `${agent}:${headline.toLowerCase().slice(0, 48)}`;
+  return {
+    id,
+    agent,
+    headline,
+    detail: typeof raw.detail === 'string' && raw.detail.trim() ? raw.detail.trim() : undefined,
+    badge: typeof raw.badge === 'string' && raw.badge.trim() ? raw.badge.trim() : undefined,
+    timestamp:
+      typeof raw.timestamp === 'number' && Number.isFinite(raw.timestamp)
+        ? raw.timestamp
+        : Date.now(),
+  };
 }
 
 function isStreamingEventData(value: unknown): value is StreamingEventData {
@@ -273,42 +358,199 @@ export function useStreamingItinerary(options: UseStreamingItineraryOptions): St
           break;
         }
 
-        case 'hotels':
+        case 'hotels': {
+          const hotelsCount = reportedCount(data.count);
+          const hotelName =
+            isObjectRecord(data.topHotel) && typeof data.topHotel.name === 'string'
+              ? data.topHotel.name.trim()
+              : '';
+          const synthetic: AgentDiscovery[] = [];
+          if (hotelName) {
+            synthetic.push({
+              id: 'hotels:top-pick',
+              agent: 'hotels',
+              headline: `Found stay option: ${hotelName}`,
+              detail:
+                hotelsCount && hotelsCount > 1
+                  ? `${hotelsCount} stays compared`
+                  : 'Review details before booking',
+              badge: 'Stays',
+              timestamp: Date.now(),
+            });
+          } else if (hotelsCount && hotelsCount > 0) {
+            synthetic.push({
+              id: 'hotels:count',
+              agent: 'hotels',
+              headline: `Found ${hotelsCount} places to stay`,
+              badge: 'Stays',
+              timestamp: Date.now(),
+            });
+          }
           setState((prev) => ({
             ...prev,
-            hotelsCount: reportedCount(data.count),
+            hotelsCount,
             topHotel: data.topHotel ?? prev.topHotel,
+            discoveries: mergeAgentDiscoveries(prev.discoveries, synthetic),
           }));
           break;
+        }
 
-        case 'activities':
+        case 'activities': {
+          const activitiesCount = reportedCount(data.count);
+          const synthetic: AgentDiscovery[] =
+            activitiesCount && activitiesCount > 0
+              ? [
+                  {
+                    id: 'activities:count',
+                    agent: 'activities',
+                    headline: `Shortlisted ${activitiesCount} sights & experiences`,
+                    badge: 'Explore',
+                    timestamp: Date.now(),
+                  },
+                ]
+              : [];
           setState((prev) => ({
             ...prev,
-            activitiesCount: reportedCount(data.count),
+            activitiesCount,
+            discoveries: mergeAgentDiscoveries(prev.discoveries, synthetic),
           }));
           break;
+        }
 
-        case 'dining':
+        case 'dining': {
+          const diningCount = reportedCount(data.count);
+          const synthetic: AgentDiscovery[] =
+            diningCount && diningCount > 0
+              ? [
+                  {
+                    id: 'dining:count',
+                    agent: 'dining',
+                    headline: `Selected ${diningCount} dining spots to review`,
+                    badge: 'Dining',
+                    timestamp: Date.now(),
+                  },
+                ]
+              : [];
           setState((prev) => ({
             ...prev,
-            diningCount: reportedCount(data.count),
+            diningCount,
+            discoveries: mergeAgentDiscoveries(prev.discoveries, synthetic),
           }));
           break;
+        }
 
-        case 'transport':
+        case 'transport': {
+          const transportCount = reportedCount(data.count);
+          const synthetic: AgentDiscovery[] =
+            transportCount && transportCount > 0
+              ? [
+                  {
+                    id: 'transport:count',
+                    agent: 'transport',
+                    headline: `Checked ${transportCount} transit & route option${transportCount === 1 ? '' : 's'}`,
+                    badge: 'Transit',
+                    timestamp: Date.now(),
+                  },
+                ]
+              : [];
           setState((prev) => ({
             ...prev,
-            transportCount: reportedCount(data.count),
+            transportCount,
+            discoveries: mergeAgentDiscoveries(prev.discoveries, synthetic),
           }));
           break;
+        }
 
-        case 'itinerary':
+        case 'day_ready': {
+          const readyDay = data.day;
+          if (isObjectRecord(readyDay)) {
+            const readyDayNumber =
+              typeof readyDay.dayNumber === 'number' && readyDay.dayNumber > 0
+                ? readyDay.dayNumber
+                : 1;
+            const title =
+              typeof readyDay.title === 'string' && readyDay.title.trim()
+                ? readyDay.title.trim()
+                : `Day ${readyDayNumber}`;
+            setState((prev) => {
+              const existingDays = Array.isArray(prev.days) ? [...prev.days] : [];
+              const idx = existingDays.findIndex(
+                (d) => isObjectRecord(d) && d.dayNumber === readyDayNumber
+              );
+              if (idx >= 0) existingDays[idx] = readyDay;
+              else existingDays.push(readyDay);
+              existingDays.sort((a, b) => {
+                const an = isObjectRecord(a) && typeof a.dayNumber === 'number' ? a.dayNumber : 99;
+                const bn = isObjectRecord(b) && typeof b.dayNumber === 'number' ? b.dayNumber : 99;
+                return an - bn;
+              });
+              return {
+                ...prev,
+                days: existingDays,
+                discoveries: mergeAgentDiscoveries(prev.discoveries, {
+                  id: `aggregator:day-${readyDayNumber}`,
+                  agent: 'aggregator',
+                  headline: `Day ${readyDayNumber} ready: ${title}`,
+                  badge: `Day ${readyDayNumber}`,
+                  timestamp: Date.now(),
+                }),
+              };
+            });
+          }
+          break;
+        }
+
+        case 'itinerary': {
+          const incomingDays = Array.isArray(data.days) ? data.days : null;
+          const firstDay =
+            incomingDays && incomingDays.length > 0 && isObjectRecord(incomingDays[0])
+              ? incomingDays[0]
+              : null;
+          const synthetic: AgentDiscovery[] = firstDay
+            ? [
+                {
+                  id: 'aggregator:day-1',
+                  agent: 'aggregator',
+                  headline:
+                    typeof firstDay.title === 'string' && firstDay.title.trim()
+                      ? `Day 1 ready: ${firstDay.title.trim()}`
+                      : `Drafted ${incomingDays!.length}-day schedule`,
+                  badge: 'Itinerary',
+                  timestamp: Date.now(),
+                },
+              ]
+            : [];
           setState((prev) => ({
             ...prev,
-            days: data.days ?? prev.days,
+            days: incomingDays ?? prev.days,
             topHotel: data.topHotel ?? prev.topHotel,
+            discoveries: mergeAgentDiscoveries(prev.discoveries, synthetic),
           }));
           break;
+        }
+
+        case 'discovery': {
+          const incoming: AgentDiscovery[] = [];
+          const direct = parseAgentDiscovery(data);
+          if (direct) incoming.push(direct);
+          if (data.discovery) {
+            const nested = parseAgentDiscovery(data.discovery);
+            if (nested) incoming.push(nested);
+          }
+          if (Array.isArray(data.discoveries)) {
+            for (const entry of data.discoveries) {
+              const parsed = parseAgentDiscovery(entry);
+              if (parsed) incoming.push(parsed);
+            }
+          }
+          if (incoming.length > 0) {
+            setState((prev) => ({
+              ...prev,
+              discoveries: mergeAgentDiscoveries(prev.discoveries, incoming),
+            }));
+          }
+          break;
+        }
 
         case 'spec-block': {
           const newBlocks = data.blocks as StreamingBlock[];
