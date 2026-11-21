@@ -55,6 +55,22 @@ const nonViatorActivity: Activity = {
   reviewCount: 180,
 };
 
+const unallowlistedActivity: Activity = {
+  id: "act_unverified_789",
+  name: "Unverified Local Walk",
+  description: "Unverified partner link fixture to verify safe fallback.",
+  duration: 45,
+  estimatedCost: { amount: 15, status: "estimate", currency: "USD" },
+  timeOfDay: "afternoon",
+  category: "sightseeing",
+  location: { name: "Île de la Cité" },
+  bookingInfo: {
+    requiresReservation: true,
+    affiliateId: "unverified",
+    bookingUrl: "https://evil.test/tours/unverified-walk",
+  },
+};
+
 const featuredRestaurant: Restaurant = {
   id: "rest_le_petit_cler",
   name: "Le Petit Cler",
@@ -152,6 +168,7 @@ function MonetizationCheckoutFixture() {
           >
             <ActivityCard activity={viatorActivity} date="2099-06-01" />
             <ActivityCard activity={nonViatorActivity} date="2099-06-01" />
+            <ActivityCard activity={unallowlistedActivity} date="2099-06-01" />
           </section>
         </TripCheckout>
       </ViatorContentPolicy>

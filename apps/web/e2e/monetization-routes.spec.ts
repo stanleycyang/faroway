@@ -99,36 +99,78 @@ test.describe("POST /api/track/click", () => {
         partner: "viator",
         url: "https://www.viator.com/tours/Paris/Walk/d479-123P1?pid=P12345678",
         itemType: "activity",
+        expectedSubIdParam: "campaign",
+        expectUtm: false,
       },
       {
         partner: "getyourguide",
         url: "https://www.getyourguide.com/paris-l16/louvre-t12345/",
         itemType: "activity",
+        expectedSubIdParam: "cmp",
+        expectUtm: false,
+      },
+      {
+        partner: "travelpayouts",
+        url: "https://tp.media/r?marker=12345&trs=99&p=4114&u=https%3A%2F%2Fwww.aviasales.com",
+        itemType: "flight",
+        expectedSubIdParam: "sub_id",
+        expectUtm: false,
+      },
+      {
+        partner: "stay22",
+        url: "https://www.stay22.com/allez/roam?aid=faroway&address=Paris",
+        itemType: "hotel",
+        expectedSubIdParam: "campaign",
+        expectUtm: false,
+      },
+      {
+        partner: "booking",
+        url: "https://www.booking.com/searchresults.html?ss=Paris&aid=999999",
+        itemType: "hotel",
+        expectedSubIdParam: "label",
+        expectUtm: false,
+      },
+      {
+        partner: "safetywing",
+        url: "https://safetywing.com/nomad-insurance?ambassador=faroway",
+        itemType: "activity",
+        expectedSubIdParam: "referenceID",
+        expectUtm: true,
       },
       {
         partner: "discovercars",
         url: "https://www.discovercars.com/france/paris",
         itemType: "transport",
+        expectedSubIdParam: "sub_id",
+        expectUtm: true,
       },
       {
         partner: "duffel",
         url: "https://book.duffel.com/flights/SFO-CDG",
         itemType: "flight",
+        expectedSubIdParam: "click_id",
+        expectUtm: true,
       },
       {
         partner: "opentable",
         url: "https://www.opentable.com/r/septime-paris",
         itemType: "restaurant",
+        expectedSubIdParam: "sub_id",
+        expectUtm: true,
       },
       {
         partner: "hostelworld",
         url: "https://www.hostelworld.com/hostels/Paris",
         itemType: "hotel",
+        expectedSubIdParam: "sub_id",
+        expectUtm: true,
       },
       {
         partner: "tripadvisor",
         url: "https://www.tripadvisor.com/Attraction-g187147-Paris.html",
         itemType: "activity",
+        expectedSubIdParam: "sub_id",
+        expectUtm: true,
       },
     ] as const;
 
@@ -146,12 +188,23 @@ test.describe("POST /api/track/click", () => {
       expect(response.status()).toBe(200);
       const json = (await response.json()) as {
         clickId: string;
+        partner: string;
+        trackingUrl: string;
         redirectUrl: string;
       };
       expect(json.clickId).toBeTruthy();
+      expect(json.partner).toBe(c.partner);
+      expect(json.trackingUrl).toBe(json.redirectUrl);
       const redirect = new URL(json.redirectUrl);
-      expect(redirect.searchParams.get("click_id")).toBe(json.clickId);
-      expect(redirect.searchParams.get("utm_source")).toBe("faroway");
+      expect(redirect.searchParams.get(c.expectedSubIdParam)).toBe(
+        json.clickId,
+      );
+      if (c.expectUtm) {
+        expect(redirect.searchParams.get("utm_source")).toBe("faroway");
+        expect(redirect.searchParams.get("utm_medium")).toBe("affiliate");
+      } else {
+        expect(redirect.searchParams.get("utm_source")).toBeNull();
+      }
     }
 
     const stateRes = await request.get(`${FIXTURE_URL}/fixture/state`);

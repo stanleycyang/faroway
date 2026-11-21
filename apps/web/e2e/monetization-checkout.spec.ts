@@ -194,6 +194,9 @@ test("ActivityCard opens Viator consent modal with FTC disclosure and renders sa
   await setupRoutes(page);
 
   await expect(
+    page.getByRole("button", { name: "Book on GetYourGuide" }),
+  ).toBeVisible();
+  await expect(
     page.getByText(
       "Booking isn’t available in Faroway for this stop. Check the provider for price and availability.",
     ),
@@ -207,8 +210,9 @@ test("ActivityCard opens Viator consent modal with FTC disclosure and renders sa
   await expect(dialog).toBeVisible();
   await expect(dialog).toContainText("Your next step, with Viator");
   await expect(dialog).toContainText("Louvre Museum Guided Tour");
+  await expect(dialog).toContainText("Opens Viator in a new tab");
   await expect(dialog).toContainText(
-    "Faroway may earn a commission when you book. Continuing does not reserve a place or charge you.",
+    "We may earn a commission at no extra cost to you.",
   );
 });
 
@@ -341,7 +345,7 @@ test("BookingChecklist transitions Still needed -> I opened the provider -> I bo
 
   await expect(
     checklist.getByText(
-      "Your report is saved. It is not provider confirmation or proof of commission.",
+      "Progress saved to your trip checklist. Check your provider’s email for official booking confirmation.",
     ),
   ).toBeVisible();
   await expect(
@@ -369,8 +373,11 @@ test("FeaturedHotelCard and FlightLeg render truthful estimates and expired flig
   await expect(hotelArticle).toContainText(/240\.00/);
   await expect(hotelArticle).toContainText("estimated per night");
   await expect(hotelArticle).toContainText(/720\.00 for 3 assigned nights/);
+  await expect(
+    hotelArticle.getByRole("button", { name: "Check rates on Stay22" }),
+  ).toBeVisible();
   await expect(hotelArticle).toContainText(
-    "Hotel checkout is not available in Faroway yet.",
+    "We may earn a commission at no extra cost to you.",
   );
 
   const flights = page.getByRole("region", { name: "Flight options" });
@@ -383,9 +390,11 @@ test("FeaturedHotelCard and FlightLeg render truthful estimates and expired flig
 
   const dining = page.getByRole("region", { name: "Dining options" });
   await expect(dining).toContainText("Le Petit Cler");
-  await expect(dining).toContainText("Reservations aren’t made in Faroway");
+  await expect(
+    dining.getByRole("button", { name: "Reserve on OpenTable" }),
+  ).toBeVisible();
   await expect(dining).toContainText(
-    "Confirm availability and cancellation terms with the restaurant.",
+    "We may earn a commission at no extra cost to you.",
   );
 });
 
@@ -483,13 +492,11 @@ test("enabled=false disables checkout triggers and saved resume actions", async 
   });
 
   await expect(
-    page.getByText(
-      "Viator checkout unavailable. Refresh this trip and try again. Your plan stays saved.",
-    ),
-  ).toBeVisible();
-  await expect(
     page.getByRole("button", { name: "Review on Viator" }),
   ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Book on Viator" }),
+  ).toBeVisible();
   const savedSection = page.getByRole("region", {
     name: "Saved booking steps",
   });

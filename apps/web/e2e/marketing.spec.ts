@@ -164,7 +164,7 @@ test("trip brief preserves choices through edits, reload and sign-in", async ({
   for (const name of [
     "Adventure",
     "Relaxation",
-    "Cultural",
+    "Culture",
     "Foodie",
     "Nature",
   ]) {
@@ -196,7 +196,10 @@ test("trip brief preserves choices through edits, reload and sign-in", async ({
     ),
   ).toBe(true);
   await page
-    .getByRole("button", { name: "Luxury Exceptional stays", exact: true })
+    .getByRole("button", {
+      name: "Luxury Exceptional stays & experiences",
+      exact: true,
+    })
     .click();
   await page.getByRole("button", { name: "Change", exact: true }).click();
   await page.getByRole("button", { name: "Keep Paris", exact: true }).click();
@@ -208,7 +211,10 @@ test("trip brief preserves choices through edits, reload and sign-in", async ({
     page.getByRole("button", { name: "Adventure", exact: true }),
   ).toHaveAttribute("aria-pressed", "true");
   await expect(
-    page.getByRole("button", { name: "Luxury Exceptional stays", exact: true }),
+    page.getByRole("button", {
+      name: "Luxury Exceptional stays & experiences",
+      exact: true,
+    }),
   ).toHaveAttribute("aria-pressed", "true");
   // This branch's brief has travel-group choices; advanced hotel preferences
   // belong to separate unfinished release work and are not present here.
