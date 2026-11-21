@@ -607,7 +607,7 @@ describe("Multi-Partner Affiliate Deep-Link & Essentials Engine", () => {
     }
   });
 
-  it("disambiguates homonymous US/Canadian cities before city substring matching in resolveDestinationTravelMeta", () => {
+  it("disambiguates homonymous US/Canadian/Australian cities and subregions in resolveDestinationTravelMeta", () => {
     expect(resolveDestinationTravelMeta("Paris, Texas")).toMatchObject({
       iso2: "US",
       currency: "USD",
@@ -630,6 +630,10 @@ describe("Multi-Partner Affiliate Deep-Link & Essentials Engine", () => {
       iso2: "US",
       currency: "USD",
     });
+    expect(resolveDestinationTravelMeta("Ontario, CA")).toMatchObject({
+      iso2: "US",
+      currency: "USD",
+    });
     expect(resolveDestinationTravelMeta("Paris, France")).toMatchObject({
       iso2: "FR",
       currency: "EUR",
@@ -637,6 +641,149 @@ describe("Multi-Partner Affiliate Deep-Link & Essentials Engine", () => {
     expect(resolveDestinationTravelMeta("Paris")).toMatchObject({
       iso2: "FR",
       currency: "EUR",
+    });
+    expect(resolveDestinationTravelMeta("Georgia")).toMatchObject({
+      iso2: "US",
+      currency: "USD",
+    });
+    expect(resolveDestinationTravelMeta("Atlanta, Georgia")).toMatchObject({
+      iso2: "US",
+      currency: "USD",
+    });
+    expect(resolveDestinationTravelMeta("Atlanta, GA")).toMatchObject({
+      iso2: "US",
+      currency: "USD",
+    });
+    expect(resolveDestinationTravelMeta("Paris, Ontario")).toMatchObject({
+      iso2: "CA",
+      currency: "CAD",
+    });
+    expect(resolveDestinationTravelMeta("Paris, Ontario, CA")).toMatchObject({
+      iso2: "CA",
+      currency: "CAD",
+    });
+    expect(resolveDestinationTravelMeta("Tokyo, Japan")).toMatchObject({
+      iso2: "JP",
+      currency: "JPY",
+    });
+    expect(resolveDestinationTravelMeta("Tokyo")).toMatchObject({
+      iso2: "JP",
+      currency: "JPY",
+    });
+
+    // 1. New Mexico must resolve to US, while explicit Mexico suffixes stay MX
+    for (const usNewMexico of [
+      "Santa Fe, New Mexico",
+      "Albuquerque, New Mexico",
+      "New Mexico",
+      "Boston, New England",
+      "New England",
+      "New England, USA",
+    ]) {
+      expect(resolveDestinationTravelMeta(usNewMexico)).toMatchObject({
+        iso2: "US",
+        airaloSlug: "united-states-esim",
+        currency: "USD",
+      });
+    }
+    expect(resolveDestinationTravelMeta("New Mexico, Mexico")).toMatchObject({
+      iso2: "MX",
+      airaloSlug: "mexico-esim",
+      currency: "MXN",
+    });
+    expect(resolveDestinationTravelMeta("Mexico City, Mexico")).toMatchObject({
+      iso2: "MX",
+      airaloSlug: "mexico-esim",
+      currency: "MXN",
+    });
+
+    const santaFeEssentials = buildTripEssentials({
+      destination: "Santa Fe, New Mexico",
+      sourceCurrency: "USD",
+    });
+    expect(santaFeEssentials.esim.url).toBe(
+      "https://www.airalo.com/united-states-esim",
+    );
+    expect(santaFeEssentials.visa.url).toBe(
+      "https://www.ivisa.com/apply-online?destination=United+States",
+    );
+    expect(santaFeEssentials.fx.url).toBe("https://wise.com/us/travel-money/");
+
+    // 2. US cities named after countries + explicit US state must resolve to US
+    for (const usCountryHomonymCity of [
+      "Mexico, Missouri",
+      "Norway, Maine",
+      "Sweden, Maine",
+      "Denmark, South Carolina",
+      "Peru, Illinois",
+      "Brazil, Indiana",
+    ]) {
+      expect(resolveDestinationTravelMeta(usCountryHomonymCity)).toMatchObject({
+        iso2: "US",
+        airaloSlug: "united-states-esim",
+        currency: "USD",
+      });
+    }
+
+    // 3. Canadian province codes NL / PE resolve to CA while standalone NL / PE stay NL / PE
+    expect(resolveDestinationTravelMeta("St. John's, NL")).toMatchObject({
+      iso2: "CA",
+      airaloSlug: "canada-esim",
+      currency: "CAD",
+    });
+    expect(resolveDestinationTravelMeta("Charlottetown, PE")).toMatchObject({
+      iso2: "CA",
+      airaloSlug: "canada-esim",
+      currency: "CAD",
+    });
+    expect(resolveDestinationTravelMeta("NL")).toMatchObject({
+      iso2: "NL",
+      currency: "EUR",
+    });
+    expect(resolveDestinationTravelMeta("PE")).toMatchObject({
+      iso2: "PE",
+      currency: "PEN",
+    });
+
+    // 4. Australian subregions (including New South Wales) resolve to AU, not GB, while Wales/England stay GB
+    expect(
+      resolveDestinationTravelMeta("Sydney, New South Wales"),
+    ).toMatchObject({
+      iso2: "AU",
+      airaloSlug: "australia-esim",
+      currency: "AUD",
+    });
+    expect(resolveDestinationTravelMeta("New South Wales")).toMatchObject({
+      iso2: "AU",
+      airaloSlug: "australia-esim",
+      currency: "AUD",
+    });
+    expect(
+      resolveDestinationTravelMeta("Sydney, New South Wales, Australia"),
+    ).toMatchObject({
+      iso2: "AU",
+      airaloSlug: "australia-esim",
+      currency: "AUD",
+    });
+    expect(resolveDestinationTravelMeta("Cardiff, Wales")).toMatchObject({
+      iso2: "GB",
+      airaloSlug: "united-kingdom-esim",
+      currency: "GBP",
+    });
+    expect(resolveDestinationTravelMeta("London, England")).toMatchObject({
+      iso2: "GB",
+      airaloSlug: "united-kingdom-esim",
+      currency: "GBP",
+    });
+    expect(resolveDestinationTravelMeta("Victoria, BC")).toMatchObject({
+      iso2: "CA",
+      airaloSlug: "canada-esim",
+      currency: "CAD",
+    });
+    expect(resolveDestinationTravelMeta("Melbourne, Victoria")).toMatchObject({
+      iso2: "AU",
+      airaloSlug: "australia-esim",
+      currency: "AUD",
     });
   });
 

@@ -362,7 +362,11 @@ const CANADIAN_PROVINCE_NAMES = [
   "nova scotia",
   "new brunswick",
   "newfoundland",
+  "newfoundland and labrador",
   "prince edward island",
+  "northwest territories",
+  "nunavut",
+  "yukon",
 ] as const;
 
 const CANADIAN_PROVINCE_ABBR_SET = new Set([
@@ -376,7 +380,37 @@ const CANADIAN_PROVINCE_ABBR_SET = new Set([
   "nb",
   "nl",
   "pe",
+  "nt",
+  "nu",
+  "yt",
 ]);
+
+const AUSTRALIAN_STATE_NAMES = [
+  "new south wales",
+  "victoria",
+  "queensland",
+  "western australia",
+  "south australia",
+  "tasmania",
+  "australian capital territory",
+  "northern territory",
+] as const;
+
+const US_REGION_NAMES = ["new england"] as const;
+
+const NON_COUNTRY_SUBREGION_PATTERNS = [
+  /\bnew\s+mexico\b/gi,
+  /\bnew\s+south\s+wales\b/gi,
+  /\bnew\s+england\b/gi,
+] as const;
+
+function stripNonCountrySubregions(text: string): string {
+  let sanitized = text;
+  for (const pattern of NON_COUNTRY_SUBREGION_PATTERNS) {
+    sanitized = sanitized.replace(pattern, " ");
+  }
+  return sanitized;
+}
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -397,13 +431,14 @@ function findCountryMeta(canonicalName: string): CountryTravelMeta | null {
 }
 
 function matchCountryOrAlias(text: string): CountryTravelMeta | null {
+  const sanitized = stripNonCountrySubregions(text);
   for (const meta of COUNTRY_META_LIST) {
-    if (hasWordMatch(text, meta.countryName.toLowerCase())) {
+    if (hasWordMatch(sanitized, meta.countryName.toLowerCase())) {
       return meta;
     }
   }
   for (const [alias, canonical] of Object.entries(EXPLICIT_COUNTRY_ALIASES)) {
-    if (hasWordMatch(text, alias)) {
+    if (hasWordMatch(sanitized, alias)) {
       return findCountryMeta(canonical);
     }
   }
@@ -439,29 +474,34 @@ export function resolveDestinationTravelMeta(
     .filter(Boolean);
   const trailingSegments = segments.slice(1);
 
-  // 2. Explicit country / country-alias disambiguation (trailing segments first, then full text)
+  // 2. Trailing-segment explicit country / alias / full state or province disambiguation
+  // (checked before full-string country matching so e.g. "Mexico, Missouri" resolves to US)
   for (let i = trailingSegments.length - 1; i >= 0; i--) {
     const seg = trailingSegments[i];
     const isoExact = COUNTRY_META_LIST.find(
-      (c) => c.iso2.toLowerCase() === seg && !US_STATE_ABBR_SET.has(seg),
+      (c) =>
+        c.iso2.toLowerCase() === seg &&
+        !US_STATE_ABBR_SET.has(seg) &&
+        !CANADIAN_PROVINCE_ABBR_SET.has(seg),
     );
     if (isoExact) return isoExact;
     const countryMatch = matchCountryOrAlias(seg);
     if (countryMatch) return countryMatch;
-  }
-  const fullCountryMatch = matchCountryOrAlias(lower);
-  if (fullCountryMatch) return fullCountryMatch;
-
-  // 3. Trailing region/state/province disambiguation (full names before 2-letter abbreviations)
-  for (let i = trailingSegments.length - 1; i >= 0; i--) {
-    const seg = trailingSegments[i];
-    if (US_STATE_NAMES.some((state) => hasWordMatch(seg, state))) {
+    if (
+      US_STATE_NAMES.some((state) => hasWordMatch(seg, state)) ||
+      US_REGION_NAMES.some((region) => hasWordMatch(seg, region))
+    ) {
       return findCountryMeta("United States");
     }
     if (CANADIAN_PROVINCE_NAMES.some((prov) => hasWordMatch(seg, prov))) {
       return findCountryMeta("Canada");
     }
+    if (AUSTRALIAN_STATE_NAMES.some((state) => hasWordMatch(seg, state))) {
+      return findCountryMeta("Australia");
+    }
   }
+
+  // 3. Trailing-segment 2-letter Canadian province / US state abbreviations
   for (let i = trailingSegments.length - 1; i >= 0; i--) {
     const seg = trailingSegments[i];
     if (CANADIAN_PROVINCE_ABBR_SET.has(seg)) {
@@ -472,12 +512,21 @@ export function resolveDestinationTravelMeta(
     }
   }
 
-  // 4. Full-string word-boundary US state / Canadian province fallback (e.g. "New York", "Paris Texas")
-  if (US_STATE_NAMES.some((state) => hasWordMatch(lower, state))) {
+  // 4. Full-string word-boundary country/alias match (with subregion phrases guarded), then states/provinces
+  const fullCountryMatch = matchCountryOrAlias(lower);
+  if (fullCountryMatch) return fullCountryMatch;
+
+  if (
+    US_STATE_NAMES.some((state) => hasWordMatch(lower, state)) ||
+    US_REGION_NAMES.some((region) => hasWordMatch(lower, region))
+  ) {
     return findCountryMeta("United States");
   }
   if (CANADIAN_PROVINCE_NAMES.some((prov) => hasWordMatch(lower, prov))) {
     return findCountryMeta("Canada");
+  }
+  if (AUSTRALIAN_STATE_NAMES.some((state) => hasWordMatch(lower, state))) {
+    return findCountryMeta("Australia");
   }
 
   // 5. popularDestinations city & country word-boundary match
