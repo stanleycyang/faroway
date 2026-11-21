@@ -29,7 +29,7 @@ export async function dispatchItineraryReady(tripId: string, searchId: string) {
     // and newly opted-out accounts must not use the earlier snapshot.
     const current = await db
       .from("trips")
-      .select("id")
+      .select("id, destination")
       .eq("id", tripId)
       .eq("search_id", searchId)
       .eq("user_id", userId)
@@ -43,11 +43,16 @@ export async function dispatchItineraryReady(tripId: string, searchId: string) {
       .maybeSingle();
     let outcome = "skipped";
     if (!current.error && current.data && !deletion.error && !deletion.data) {
+      const destination =
+        "destination" in current.data &&
+        typeof current.data.destination === "string"
+          ? current.data.destination.trim()
+          : "";
       const result = await sendItineraryReadyPush(db, {
         userId,
         tripId,
         itineraryId,
-        destination: "",
+        destination,
       });
       outcome =
         result.sent > 0 ? "accepted" : result.failed > 0 ? "failed" : "skipped";

@@ -9,16 +9,25 @@
  */
 
 import { providerAmount, currencyCode, formatPrice } from "@faroway/constants";
+import { isValidDateOnly } from "@/lib/api/date-range";
 import { fetchWithTimeout, getEnvNumber } from "@/lib/search/runtime";
+import { finalizeAffiliateLink, type AffiliateLinkResult } from "./types";
 
-const GYG_TIMEOUT_MS = getEnvNumber("ITINERARY_GYG_TIMEOUT_MS", 15000, {
-  min: 1000,
-  max: 30000,
-});
+function getGygTimeoutMs(): number {
+  return getEnvNumber("ITINERARY_GYG_TIMEOUT_MS", 15000, {
+    min: 1000,
+    max: 30000,
+  });
+}
 
-// Environment variables
-const GYG_API_KEY = process.env.GETYOURGUIDE_API_KEY;
-const GYG_PARTNER_ID = process.env.GETYOURGUIDE_PARTNER_ID;
+function getGygApiKey(): string | undefined {
+  return process.env.GETYOURGUIDE_API_KEY?.trim() || undefined;
+}
+
+function getGygPartnerId(): string | undefined {
+  return process.env.GETYOURGUIDE_PARTNER_ID?.trim() || undefined;
+}
+
 const GYG_API_BASE = "https://api.getyourguide.com/1";
 
 // Types
@@ -89,7 +98,7 @@ export interface GYGAvailability {
  * Check if GetYourGuide API is configured
  */
 export function isGYGConfigured(): boolean {
-  return !!(GYG_API_KEY && GYG_PARTNER_ID);
+  return !!(getGygApiKey() && getGygPartnerId());
 }
 
 /**
@@ -144,16 +153,17 @@ export async function searchGYGActivities(
       }
     }
 
+    const apiKey = getGygApiKey() ?? "";
     const response = await fetchWithTimeout(
       `${GYG_API_BASE}/tours?${queryParams}`,
       {
         headers: {
           Accept: "application/json",
-          "X-ACCESS-TOKEN": GYG_API_KEY!,
+          "X-ACCESS-TOKEN": apiKey,
         },
         signal: params.signal,
       },
-      GYG_TIMEOUT_MS,
+      getGygTimeoutMs(),
     );
 
     if (!response.ok) {
@@ -186,7 +196,7 @@ export async function getGYGActivity(
       {
         headers: {
           Accept: "application/json",
-          "X-ACCESS-TOKEN": GYG_API_KEY!,
+          "X-ACCESS-TOKEN": getGygApiKey() ?? "",
         },
       },
     );
@@ -220,7 +230,7 @@ export async function checkGYGAvailability(
       {
         headers: {
           Accept: "application/json",
-          "X-ACCESS-TOKEN": GYG_API_KEY!,
+          "X-ACCESS-TOKEN": getGygApiKey() ?? "",
         },
       },
     );
@@ -297,9 +307,65 @@ export function generateGYGAffiliateUrl(
   return buildGYGAffiliateUrl(
     activityId,
     trackingId,
-    GYG_PARTNER_ID,
+    getGygPartnerId(),
     options?.date,
   );
+}
+
+export function buildGYGSearchUrl(params: {
+  destination: string;
+  query?: string;
+  startDate?: string;
+  endDate?: string;
+  trackingId?: string;
+  partnerId?: string;
+}): AffiliateLinkResult {
+  const q = params.query?.trim()
+    ? `${params.query.trim()} ${params.destination.trim()}`
+    : params.destination.trim();
+  if (!q) {
+    return finalizeAffiliateLink({
+      partner: "getyourguide",
+      label: "Explore tours on GetYourGuide",
+      vertical: "activities",
+      url: null,
+      configured: false,
+      isSearchFallback: true,
+    });
+  }
+
+  const rawPartnerId = (params.partnerId ?? getGygPartnerId())?.trim();
+  const validPartnerId =
+    rawPartnerId && /^[A-Za-z0-9_-]{1,40}$/.test(rawPartnerId)
+      ? rawPartnerId
+      : undefined;
+
+  const url = new URL("https://www.getyourguide.com/s/");
+  url.searchParams.set("q", q);
+  if (params.startDate && isValidDateOnly(params.startDate)) {
+    url.searchParams.set("date_from", params.startDate);
+  }
+  if (params.endDate && isValidDateOnly(params.endDate)) {
+    url.searchParams.set("date_to", params.endDate);
+  }
+  if (validPartnerId) {
+    url.searchParams.set("partner_id", validPartnerId);
+  }
+  if (params.trackingId) {
+    const campaign = params.trackingId
+      .replace(/[^a-zA-Z0-9-]/g, "")
+      .slice(0, 64);
+    if (campaign) url.searchParams.set("cmp", campaign);
+  }
+
+  return finalizeAffiliateLink({
+    partner: "getyourguide",
+    label: "Explore tours on GetYourGuide",
+    vertical: "activities",
+    url: url.toString(),
+    configured: Boolean(validPartnerId),
+    isSearchFallback: true,
+  });
 }
 
 /**

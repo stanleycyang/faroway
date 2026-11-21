@@ -123,10 +123,13 @@ describe("Expo push notification helpers", () => {
       expect.objectContaining({
         to: "ExpoPushToken[token_1]",
         title: "Your itinerary is ready",
+        body: "Your Tokyo itinerary is ready to review and book.",
         data: expect.objectContaining({
           type: "trip_generation_complete",
           tripId: "trip-1",
           itineraryId: "itinerary-1",
+          destination: "Tokyo",
+          url: "/trips/trip-1",
         }),
       }),
     ]);

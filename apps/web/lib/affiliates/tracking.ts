@@ -6,17 +6,12 @@
  */
 
 import { affiliateClickInsert } from "@/lib/affiliates/click-record";
+import type { AffiliatePartnerId } from "@faroway/constants";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 import { nanoid } from "nanoid";
 
 // Types
-export type AffiliatePartner =
-  | "viator"
-  | "getyourguide"
-  | "tripadvisor"
-  | "discovercars"
-  | "hostelworld"
-  | "duffel";
+export type AffiliatePartner = AffiliatePartnerId;
 
 export interface AffiliateClick {
   id: string;

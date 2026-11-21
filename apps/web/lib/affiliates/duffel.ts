@@ -15,18 +15,25 @@
 import { providerAmount, currencyCode } from "@faroway/constants";
 import { fetchWithTimeout, getEnvNumber } from "@/lib/search/runtime";
 
-// Environment variables
-const DUFFEL_API_TOKEN = process.env.DUFFEL_API_TOKEN;
 const DUFFEL_API_BASE = "https://api.duffel.com";
-const DUFFEL_SUPPLIER_TIMEOUT_MS = getEnvNumber(
-  "DUFFEL_SUPPLIER_TIMEOUT_MS",
-  8000,
-  { min: 2000, max: 60000 },
-);
-const DUFFEL_LINK_TIMEOUT_MS = getEnvNumber("DUFFEL_LINK_TIMEOUT_MS", 2500, {
-  min: 250,
-  max: 10000,
-});
+
+function getDuffelApiToken(): string | undefined {
+  return process.env.DUFFEL_API_TOKEN?.trim() || undefined;
+}
+
+function getDuffelSupplierTimeoutMs(): number {
+  return getEnvNumber("DUFFEL_SUPPLIER_TIMEOUT_MS", 8000, {
+    min: 2000,
+    max: 60000,
+  });
+}
+
+function getDuffelLinkTimeoutMs(): number {
+  return getEnvNumber("DUFFEL_LINK_TIMEOUT_MS", 2500, {
+    min: 250,
+    max: 10000,
+  });
+}
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -45,10 +52,7 @@ export interface DuffelFlightSearchParams {
   limit?: number;
 }
 
-export interface DuffelOffer {
-  offerId: string;
-  airlines: string[];
-  price: { amount: number; currency: string };
+export interface DuffelOfferSlice {
   departure: {
     airport: string;
     city: string;
@@ -63,6 +67,7 @@ export interface DuffelOffer {
   };
   duration: number; // minutes
   stops: number;
+  airlines: string[];
   cabinClass: string;
   segments: Array<{
     carrier: string;
@@ -72,8 +77,25 @@ export interface DuffelOffer {
     arrival: { airport: string; dateTime: string; terminal?: string };
     duration: number;
   }>;
+}
+
+export interface DuffelOffer extends DuffelOfferSlice {
+  offerId: string;
+  price: { amount: number; currency: string };
   expiresAt: string;
   duffelLinkUrl?: string;
+  returnLeg?: DuffelOfferSlice;
+}
+
+export type DuffelReturnStatus = "success" | "failure" | "abandoned";
+
+export function parseDuffelReturnStatus(
+  value: unknown,
+): DuffelReturnStatus | null {
+  if (value === "success" || value === "failure" || value === "abandoned") {
+    return value;
+  }
+  return null;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -84,7 +106,7 @@ export interface DuffelOffer {
  */
 function getHeaders(): Record<string, string> {
   return {
-    Authorization: `Bearer ${DUFFEL_API_TOKEN}`,
+    Authorization: `Bearer ${getDuffelApiToken() ?? ""}`,
     "Duffel-Version": "v2",
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -108,19 +130,12 @@ function parseDuration(isoDuration: string): number {
   return hours * 60 + minutes + Math.ceil(seconds / 60);
 }
 
-/**
- * Normalize a raw Duffel offer from the API response into our DuffelOffer shape.
- */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function normalizeOffer(raw: any): DuffelOffer {
-  // Duffel offers contain slices → segments. The first slice is the outbound.
-  const firstSlice = raw.slices?.[0];
-  const segments = firstSlice?.segments || [];
-
+function normalizeSlice(slice: any): DuffelOfferSlice {
+  const segments = slice?.segments || [];
   const firstSegment = segments[0];
   const lastSegment = segments[segments.length - 1] || firstSegment;
 
-  // Collect unique marketing carrier names
   const airlineSet = new Set<string>();
   for (const seg of segments) {
     const name =
@@ -131,16 +146,8 @@ function normalizeOffer(raw: any): DuffelOffer {
     airlineSet.add(name);
   }
 
-  // Calculate total duration across all segments in the first slice
-  const totalDuration = parseDuration(firstSlice?.duration || "");
-
   return {
-    offerId: raw.id,
     airlines: Array.from(airlineSet),
-    price: {
-      amount: providerAmount(raw.total_amount)!,
-      currency: currencyCode(raw.total_currency)!,
-    },
     departure: {
       airport: firstSegment?.origin?.iata_code || "",
       city:
@@ -159,7 +166,7 @@ function normalizeOffer(raw: any): DuffelOffer {
       dateTime: lastSegment?.arriving_at || "",
       terminal: lastSegment?.destination_terminal || undefined,
     },
-    duration: totalDuration,
+    duration: parseDuration(slice?.duration || ""),
     stops: Math.max(0, segments.length - 1),
     cabinClass:
       firstSegment?.passengers?.[0]?.cabin_class_marketing_name ||
@@ -186,8 +193,31 @@ function normalizeOffer(raw: any): DuffelOffer {
       },
       duration: parseDuration(seg.duration || ""),
     })),
+  };
+}
+
+/**
+ * Normalize a raw Duffel offer from the API response into our DuffelOffer shape.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function normalizeOffer(raw: any): DuffelOffer {
+  const outbound = normalizeSlice(raw.slices?.[0]);
+  const secondSlice = raw.slices?.[1];
+  const returnLeg =
+    Array.isArray(secondSlice?.segments) && secondSlice.segments.length > 0
+      ? normalizeSlice(secondSlice)
+      : undefined;
+
+  return {
+    offerId: raw.id,
+    ...outbound,
+    price: {
+      amount: providerAmount(raw.total_amount)!,
+      currency: currencyCode(raw.total_currency)!,
+    },
     expiresAt: raw.expires_at || "",
     duffelLinkUrl: undefined,
+    ...(returnLeg ? { returnLeg } : {}),
   };
 }
 
@@ -197,7 +227,7 @@ function normalizeOffer(raw: any): DuffelOffer {
  * Check if the Duffel API is configured with a valid token.
  */
 export function isDuffelConfigured(): boolean {
-  return !!DUFFEL_API_TOKEN;
+  return !!getDuffelApiToken();
 }
 
 /**
@@ -276,11 +306,12 @@ export async function searchDuffelFlights(
       `[Duffel] Searching flights: ${params.origin} → ${params.destination} on ${params.departureDate}`,
     );
 
+    const supplierTimeoutMs = getDuffelSupplierTimeoutMs();
     const offerRequestUrl = new URL(`${DUFFEL_API_BASE}/air/offer_requests`);
     offerRequestUrl.searchParams.set("return_offers", "true");
     offerRequestUrl.searchParams.set(
       "supplier_timeout",
-      String(DUFFEL_SUPPLIER_TIMEOUT_MS),
+      String(supplierTimeoutMs),
     );
 
     const response = await fetchWithTimeout(
@@ -290,7 +321,7 @@ export async function searchDuffelFlights(
         headers: getHeaders(),
         body: JSON.stringify(body),
       },
-      DUFFEL_SUPPLIER_TIMEOUT_MS + 500,
+      supplierTimeoutMs + 500,
     );
 
     if (!response.ok) {
@@ -334,12 +365,14 @@ export async function searchDuffelFlights(
  * @param offerId - The Duffel offer ID to create a booking link for
  * @param markupAmount - Markup amount to add (default: "5.00")
  * @param markupCurrency - Currency for the markup (default: "USD")
+ * @param options - Optional tripId and clickId for return redirect and attribution
  * @returns The Duffel Link URL for the hosted booking page, or null on failure
  */
 export async function generateDuffelLink(
   offerId: string,
   markupAmount = 5,
   markupCurrency = "USD",
+  options?: { tripId?: string; clickId?: string },
 ): Promise<string | null> {
   if (!isDuffelConfigured()) {
     console.warn("[Duffel] API not configured, cannot generate link");
@@ -349,16 +382,25 @@ export async function generateDuffelLink(
   try {
     const appUrl =
       process.env.NEXT_PUBLIC_APP_URL ||
+      process.env.NEXT_PUBLIC_BASE_URL ||
       process.env.NEXT_PUBLIC_SITE_URL ||
-      "https://faroway.ai";
-    const makeReturnUrl = (status: string) => {
-      const url = new URL("/trips", appUrl);
+      "https://www.faroway.ai";
+    const tripPath =
+      options?.tripId && /^[a-zA-Z0-9-]+$/.test(options.tripId)
+        ? `/trips/${encodeURIComponent(options.tripId)}`
+        : "/dashboard";
+    const clickId = options?.clickId?.trim();
+    const makeReturnUrl = (status: DuffelReturnStatus) => {
+      const url = new URL(tripPath, appUrl);
       url.searchParams.set("duffel", status);
+      if (clickId) {
+        url.searchParams.set("click_id", clickId);
+      }
       return url.toString();
     };
     const body = {
       data: {
-        reference: offerId,
+        reference: clickId || offerId,
         success_url: makeReturnUrl("success"),
         failure_url: makeReturnUrl("failure"),
         abandonment_url: makeReturnUrl("abandoned"),
@@ -380,7 +422,7 @@ export async function generateDuffelLink(
         headers: getHeaders(),
         body: JSON.stringify(body),
       },
-      DUFFEL_LINK_TIMEOUT_MS,
+      getDuffelLinkTimeoutMs(),
     );
 
     if (!response.ok) {

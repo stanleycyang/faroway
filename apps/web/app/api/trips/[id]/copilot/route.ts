@@ -1,3 +1,5 @@
+import { tripDayPassthroughSchema } from "@/lib/search/result-schemas";
+import { z } from "zod";
 import { NextRequest, NextResponse } from "next/server";
 import type { GeneratedItinerary, HotelResult, TripDay } from "@faroway/types";
 import { requireUserIdFromRequest } from "@/lib/auth/middleware";
@@ -508,7 +510,7 @@ export async function POST(request: NextRequest, context: Context) {
 
     const persistedItinerary: GeneratedItinerary = {
       ...result.updatedItinerary,
-      days: nextStampedDays as unknown as TripDay[],
+      days: z.array(tripDayPassthroughSchema).parse(nextStampedDays),
       overview: "",
     };
 

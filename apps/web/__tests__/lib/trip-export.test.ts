@@ -77,4 +77,132 @@ describe("trip export helpers", () => {
     expect(text).toContain("Packing Suggestions");
     expect(text).toContain("Exported: 2026-04-08T12:00:00.000Z");
   });
+
+  it("includes allowed affiliate booking URLs, essentials, disclosure, and Viator gating", () => {
+    const day = {
+      dayNumber: 1,
+      date: "2026-04-01",
+      title: "Arrival",
+      summary: "Explore",
+      morning: {
+        activities: [
+          {
+            id: "gyg-1",
+            name: "Food Tour",
+            bookingInfo: {
+              requiresReservation: true,
+              bookingUrl:
+                "https://www.getyourguide.com/activity-t123/?partner_id=GYG1",
+              affiliateId: "getyourguide",
+            },
+          },
+          {
+            id: "activity_v_1",
+            name: "Viator Legacy Tour",
+            affiliatePartner: "viator",
+            bookingInfo: {
+              requiresReservation: true,
+              bookingUrl:
+                "https://www.viator.com/tours/Tokyo/t1?pid=P1&mcid=1&medium=api",
+              affiliateId: "viator",
+            },
+          },
+          {
+            id: "bad-1",
+            name: "Unallowed Link Tour",
+            bookingInfo: {
+              requiresReservation: true,
+              bookingUrl: "https://evil.example/book",
+            },
+          },
+        ],
+        meals: [
+          {
+            id: "meal-1",
+            name: "Sushi Counter",
+            reservationInfo: {
+              recommended: true,
+              url: "https://www.opentable.com/booking/restref/availability?rid=12345",
+            },
+          },
+        ],
+      },
+      afternoon: { activities: [], meals: [] },
+      evening: { activities: [], meals: [] },
+      transport: {
+        type: "flight",
+        provider: "JAL",
+        departure: {
+          airport: "SFO",
+          city: "San Francisco",
+          dateTime: "2026-04-01T10:00:00Z",
+        },
+        arrival: {
+          airport: "HND",
+          city: "Tokyo",
+          dateTime: "2026-04-02T14:00:00Z",
+        },
+        duration: 660,
+        stops: 0,
+        price: 900,
+        currency: "USD",
+        affiliateUrl: "https://links.duffel.com/sess_1",
+      },
+      tips: [],
+    } as unknown as TripDay;
+
+    const text = buildTripExportText(
+      trip,
+      {
+        overview: "Overview",
+        topHotel: {
+          id: "h1",
+          name: "Hotel Century",
+          description: "Central",
+          amenities: [],
+          location: { name: "Shinjuku", address: "1-1", lat: 0, lng: 0 },
+          images: [],
+          vibeScore: 90,
+          vibeMatch: [],
+          affiliateUrl:
+            "https://www.stay22.com/allez/roam?aid=s1&address=Tokyo",
+          affiliatePartner: "stay22",
+        },
+        days: [day],
+      },
+      new Date("2026-04-08T12:00:00.000Z"),
+      {
+        viatorContentEnabled: false,
+        essentials: [
+          {
+            label: "Airalo Japan eSIM",
+            category: "esim",
+            url: "https://www.airalo.com/japan-esim?ref=a1",
+          },
+          {
+            label: "Blocked Essential",
+            category: "other",
+            url: "https://evil.example/bad",
+          },
+        ],
+      },
+    );
+
+    expect(text).toContain("Top Hotel: Hotel Century");
+    expect(text).toContain(
+      "https://www.stay22.com/allez/roam?aid=s1&address=Tokyo",
+    );
+    expect(text).toContain(
+      "https://www.getyourguide.com/activity-t123/?partner_id=GYG1",
+    );
+    expect(text).toContain(
+      "https://www.opentable.com/booking/restref/availability?rid=12345",
+    );
+    expect(text).toContain("https://links.duffel.com/sess_1");
+    expect(text).toContain("Airalo Japan eSIM");
+    expect(text).not.toContain("Viator Legacy Tour");
+    expect(text).not.toContain("evil.example");
+    expect(text).toContain("commission");
+    expect(text.match(/Transport:/g)).toHaveLength(1);
+  });
 });

@@ -3,51 +3,39 @@
  * POST /api/track/conversion - Webhook for affiliate partners to report conversions
  */
 
+import crypto from "node:crypto";
+import type { AffiliatePartnerId } from "@faroway/constants";
+import { conversionWebhookSchema } from "@faroway/validation";
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabase } from "@/lib/supabase/server";
-import { z } from "zod";
-import crypto from "crypto";
 
-// Webhook secrets for each affiliate partner
-const WEBHOOK_SECRETS: Record<string, string | undefined> = {
-  viator: process.env.VIATOR_WEBHOOK_SECRET,
-  getyourguide: process.env.GYG_WEBHOOK_SECRET,
-  klook: process.env.KLOOK_WEBHOOK_SECRET,
+const WEBHOOK_SECRET_ENV_KEYS: Partial<Record<AffiliatePartnerId, string>> = {
+  viator: "VIATOR_WEBHOOK_SECRET",
+  getyourguide: "GYG_WEBHOOK_SECRET",
+  klook: "KLOOK_WEBHOOK_SECRET",
+  travelpayouts: "TRAVELPAYOUTS_WEBHOOK_SECRET",
+  stay22: "STAY22_WEBHOOK_SECRET",
+  duffel: "DUFFEL_WEBHOOK_SECRET",
+  safetywing: "SAFETYWING_WEBHOOK_SECRET",
+  airalo: "AIRALO_WEBHOOK_SECRET",
 };
 
-const ConversionSchema = z.object({
-  // Required fields
-  click_id: z.string().min(1).max(200),
-  partner: z.enum(["viator", "getyourguide", "klook"]),
-
-  // Conversion details
-  order_id: z.string().min(1).max(200).optional(),
-  booking_reference: z.string().min(1).max(200).optional(),
-
-  // Financial
-  booking_value: z.number().finite().nonnegative(),
-  commission_value: z.number().finite().nonnegative(),
-  currency: z
-    .string()
-    .regex(/^[A-Z]{3}$/)
-    .default("USD"),
-
-  // Status
-  status: z.enum(["confirmed", "pending", "cancelled"]).default("confirmed"),
-
-  // Timing
-  conversion_date: z.string().datetime({ offset: true }).optional(),
-});
+function getWebhookSecret(partner: AffiliatePartnerId): string | undefined {
+  const envKey = WEBHOOK_SECRET_ENV_KEYS[partner];
+  if (!envKey) return undefined;
+  const value = process.env[envKey]?.trim();
+  return value || undefined;
+}
 
 /**
  * Verify webhook signature from affiliate partner
  */
 function verifyWebhookSignature(
-  partner: string,
+  partner: AffiliatePartnerId,
   payload: string,
   signature: string | null,
 ): boolean {
-  const secret = WEBHOOK_SECRETS[partner];
+  const secret = getWebhookSecret(partner);
 
   // Fail-closed: reject if no secret configured regardless of environment
   if (!secret) {
@@ -57,29 +45,115 @@ function verifyWebhookSignature(
     return false;
   }
 
-  if (!signature || !/^[a-f0-9]{64}$/i.test(signature)) {
+  if (!signature) {
     return false;
   }
 
-  // Calculate expected signature
+  const normalizedSig = signature.startsWith("sha256=")
+    ? signature.slice(7)
+    : signature;
+
+  if (!/^[a-f0-9]{64}$/i.test(normalizedSig)) {
+    return false;
+  }
+
   const expectedSignature = crypto
     .createHmac("sha256", secret)
     .update(payload)
     .digest("hex");
 
-  // Constant-time comparison
   return crypto.timingSafeEqual(
-    Buffer.from(signature, "hex"),
+    Buffer.from(normalizedSig, "hex"),
     Buffer.from(expectedSignature, "hex"),
   );
+}
+
+function normalizeWebhookInput(raw: Record<string, unknown>): {
+  schemaInput: Record<string, unknown>;
+  legacyOrderId?: string;
+  legacyBookingReference?: string;
+} {
+  const isLegacySnakeCase =
+    raw.click_id !== undefined && raw.clickId === undefined;
+  const legacyOrderId =
+    typeof raw.order_id === "string" && raw.order_id.trim()
+      ? raw.order_id.trim()
+      : undefined;
+  const legacyBookingReference =
+    typeof raw.booking_reference === "string" && raw.booking_reference.trim()
+      ? raw.booking_reference.trim()
+      : undefined;
+
+  const rawStatus = raw.status === "cancelled" ? "canceled" : raw.status;
+
+  if (!isLegacySnakeCase) {
+    return {
+      schemaInput: {
+        ...raw,
+        ...(rawStatus !== undefined ? { status: rawStatus } : {}),
+      },
+      legacyOrderId,
+      legacyBookingReference,
+    };
+  }
+
+  const clickId = typeof raw.click_id === "string" ? raw.click_id : undefined;
+  const externalTransactionId =
+    raw.externalTransactionId ??
+    legacyOrderId ??
+    legacyBookingReference ??
+    (clickId && clickId.trim() ? clickId.trim() : undefined);
+
+  return {
+    schemaInput: {
+      partner: raw.partner,
+      clickId,
+      externalTransactionId,
+      ...(rawStatus !== undefined ? { status: rawStatus } : {}),
+      ...(raw.bookingAmount !== undefined || raw.booking_value !== undefined
+        ? { bookingAmount: raw.bookingAmount ?? raw.booking_value }
+        : {}),
+      ...(raw.commissionAmount !== undefined ||
+      raw.commission_value !== undefined
+        ? { commissionAmount: raw.commissionAmount ?? raw.commission_value }
+        : {}),
+      ...(raw.currency !== undefined ? { currency: raw.currency } : {}),
+      ...(raw.occurredAt !== undefined || raw.conversion_date !== undefined
+        ? { occurredAt: raw.occurredAt ?? raw.conversion_date }
+        : {}),
+      ...(raw.metadata !== undefined ? { metadata: raw.metadata } : {}),
+    },
+    legacyOrderId,
+    legacyBookingReference,
+  };
 }
 
 export async function POST(request: NextRequest) {
   try {
     const rawBody = await request.text();
-    const body = JSON.parse(rawBody);
 
-    const parseResult = ConversionSchema.safeParse(body);
+    let parsedJson: unknown;
+    try {
+      parsedJson = JSON.parse(rawBody);
+    } catch {
+      return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
+    }
+
+    if (
+      !parsedJson ||
+      typeof parsedJson !== "object" ||
+      Array.isArray(parsedJson)
+    ) {
+      return NextResponse.json(
+        { error: "Invalid webhook payload" },
+        { status: 400 },
+      );
+    }
+
+    const { schemaInput, legacyOrderId, legacyBookingReference } =
+      normalizeWebhookInput(parsedJson as Record<string, unknown>);
+
+    const parseResult = conversionWebhookSchema.safeParse(schemaInput);
 
     if (!parseResult.success) {
       console.error(
@@ -107,17 +181,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find the original click
+    // Find the original click (use .single() for mock compatibility)
     const { data: click, error: findError } = await getSupabase()
       .from("affiliate_clicks")
       .select("*")
-      .eq("id", data.click_id)
+      .eq("id", data.clickId)
       .single();
 
     if (findError || !click) {
-      console.error("[Conversion Webhook] Click not found:", data.click_id);
+      console.error("[Conversion Webhook] Click not found:", data.clickId);
       // Still record the conversion, but log the issue
     }
+
+    const dbStatus =
+      data.status === "canceled" || data.status === "refunded"
+        ? "cancelled"
+        : data.status;
+    const currency = data.currency ?? "USD";
+    const bookingValue = data.bookingAmount ?? 0;
+    const commissionValue = data.commissionAmount ?? 0;
 
     // Record the conversion idempotently. Partner webhooks are retried and may
     // advance a booking from pending to confirmed or cancelled.
@@ -127,14 +209,14 @@ export async function POST(request: NextRequest) {
         {
           click_id: click?.id || null,
           partner: data.partner,
-          order_id: data.order_id,
-          booking_reference: data.booking_reference,
-          booking_value: data.booking_value,
-          commission_value: data.commission_value,
-          currency: data.currency,
-          status: data.status,
+          order_id: legacyOrderId ?? data.externalTransactionId,
+          booking_reference: legacyBookingReference ?? null,
+          booking_value: bookingValue,
+          commission_value: commissionValue,
+          currency,
+          status: dbStatus,
           user_id: click?.user_id || null,
-          conversion_date: data.conversion_date || new Date().toISOString(),
+          conversion_date: data.occurredAt ?? new Date().toISOString(),
         },
         { onConflict: "partner,conversion_key" },
       );
@@ -149,21 +231,27 @@ export async function POST(request: NextRequest) {
 
     // Update the original click as converted
     if (click) {
-      await getSupabase()
+      const { error: updateError } = await getSupabase()
         .from("affiliate_clicks")
         .update({
-          converted: data.status === "confirmed",
-          conversion_value:
-            data.status === "confirmed" ? data.commission_value : null,
+          converted: dbStatus === "confirmed",
+          conversion_value: dbStatus === "confirmed" ? commissionValue : null,
         })
-        .eq("id", data.click_id);
+        .eq("id", data.clickId);
+
+      if (updateError) {
+        console.error(
+          "[Conversion Webhook] Failed to reconcile click:",
+          updateError,
+        );
+      }
     }
 
     console.log(
-      `[Conversion Webhook] Recorded: ${data.click_id} - $${data.commission_value} from ${data.partner}`,
+      `[Conversion Webhook] Recorded: ${data.clickId} - $${commissionValue} from ${data.partner}`,
     );
 
-    return NextResponse.json({ success: true, clickId: data.click_id });
+    return NextResponse.json({ success: true, clickId: data.clickId });
   } catch (error) {
     console.error("[Conversion Webhook] Error:", error);
     return NextResponse.json(

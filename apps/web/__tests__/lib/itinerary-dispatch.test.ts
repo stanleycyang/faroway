@@ -18,7 +18,7 @@ beforeEach(() => {
     error: null,
   });
   send.mockResolvedValue({ sent: 1, failed: 0 });
-  trip = { id: "trip" };
+  trip = { id: "trip", destination: "Kyoto" };
   deletion = null;
   from.mockImplementation((table: string) => {
     const chain = {
@@ -53,6 +53,20 @@ it("uses a durable current-generation claim before provider dispatch", async () 
     expect.objectContaining({
       userId: "owner",
       itineraryId: "saved-itinerary",
+      destination: "Kyoto",
+    }),
+  );
+});
+
+it("falls back safely when destination is absent from trip row", async () => {
+  trip = { id: "trip" };
+  expect(await dispatchItineraryReady("trip", "search")).toBe("accepted");
+  expect(send).toHaveBeenCalledWith(
+    expect.anything(),
+    expect.objectContaining({
+      userId: "owner",
+      itineraryId: "saved-itinerary",
+      destination: "",
     }),
   );
 });

@@ -299,7 +299,19 @@ Score each restaurant 0-100 on how well it matches the traveler's vibes.`;
     // Enrich with TripAdvisor ratings and reviews
     if (isTripAdvisorConfigured()) {
       try {
-        restaurants = await enrichWithTripAdvisor(restaurants, "restaurants");
+        const enriched = await enrichWithTripAdvisor(
+          restaurants,
+          "restaurants",
+        );
+        restaurants = enriched.map((restaurant) =>
+          typeof restaurant.tripadvisorUrl === "string" &&
+          restaurant.tripadvisorUrl.startsWith("https://")
+            ? {
+                ...restaurant,
+                affiliatePartner: restaurant.affiliatePartner ?? "tripadvisor",
+              }
+            : restaurant,
+        );
       } catch (e) {
         console.error("[Dining Agent] TripAdvisor enrichment error:", e);
       }

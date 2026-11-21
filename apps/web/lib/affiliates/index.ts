@@ -2,9 +2,35 @@
  * Affiliate Partner Integrations
  *
  * This module provides integrations with travel affiliate partners:
- * - Viator (tours & experiences) - 15-20% commission
- * - Click tracking for commission attribution
+ * - Viator & GetYourGuide & Klook & Tiqets (tours & experiences)
+ * - Stay22, Booking.com, Expedia, Hostelworld (hotels & stays)
+ * - Duffel, Skyscanner, Aviasales (flights)
+ * - SafetyWing, Airalo, DiscoverCars, iVisa/Sherpa, Wise (trip essentials)
+ * - Travelpayouts wrapper & click tracking for commission attribution
  */
+
+export {
+  envTrim,
+  envFlag,
+  finalizeAffiliateLink,
+  type AffiliateLinkResult,
+} from "./types";
+
+// Travelpayouts (Multi-vertical affiliate network wrapper)
+export {
+  isTravelpayoutsConfigured,
+  buildTravelpayoutsLink,
+} from "./travelpayouts";
+
+// Hotels (Stay22, Booking.com, Expedia, Hostelworld + LiteAPI gate status)
+export {
+  buildStay22Url,
+  buildBookingUrl,
+  buildExpediaHotelUrl,
+  buildHostelworldUrl,
+  buildHotelPartnerLinks,
+  type HotelDeepLinkParams,
+} from "./hotels";
 
 // Viator (Tours & Experiences)
 export {
@@ -18,6 +44,7 @@ export {
   type ViatorProduct,
   type ViatorAvailability,
 } from "./viator";
+export { buildViatorHandoffUrl, buildViatorSearchUrl } from "./viator-link";
 
 // GetYourGuide (Tours & Activities)
 export {
@@ -25,21 +52,50 @@ export {
   searchGYGActivities,
   getGYGActivity,
   checkGYGAvailability,
+  buildGYGAffiliateUrl,
   generateGYGAffiliateUrl,
+  buildGYGSearchUrl,
   mapGYGCategoryToVibe,
   type GYGSearchParams,
   type GYGActivity,
   type GYGAvailability,
 } from "./getyourguide";
 
-// Duffel (Flights via Links)
+// Additional Activity Fallbacks (Klook, Tiqets via Travelpayouts)
+export {
+  buildKlookActivitySearchUrl,
+  buildTiqetsActivitySearchUrl,
+  buildActivityFallbackLinks,
+} from "./activities";
+
+// Duffel (Flights via Links) & Flight Search Fallbacks
 export {
   isDuffelConfigured,
   searchDuffelFlights,
   generateDuffelLink,
+  parseDuffelReturnStatus,
   type DuffelFlightSearchParams,
   type DuffelOffer,
+  type DuffelOfferSlice,
+  type DuffelReturnStatus,
 } from "./duffel";
+export {
+  buildSkyscannerFlightUrl,
+  buildAviasalesFlightUrl,
+  buildFlightFallbackLinks,
+  type FlightFallbackParams,
+} from "./flights";
+
+// Trip Essentials (SafetyWing, Airalo, DiscoverCars, iVisa/Sherpa, Wise)
+export {
+  resolveDestinationTravelMeta,
+  buildSafetyWingUrl,
+  buildAiraloUrl,
+  buildDiscoverCarsUrl,
+  buildVisaToolUrl,
+  buildWiseUrl,
+  buildTripEssentials,
+} from "./essentials";
 
 // TripAdvisor Content API (Enrichment)
 export {

@@ -226,4 +226,123 @@ describe("ics-export", () => {
     expect(ics).toContain("END:VCALENDAR\r\n");
     expect(ics).not.toContain("BEGIN:VEVENT");
   });
+
+  it("emits un-escaped RFC 5545 URL properties, essentials, transport, and gates Viator content", () => {
+    const day = makeDay({
+      morning: {
+        activities: [
+          {
+            id: "gyg-1",
+            name: "Kyoto Walk",
+            description: "Guided morning tour",
+            duration: 90,
+            estimatedCost: { amount: 40, currency: "USD" },
+            timeOfDay: "morning",
+            category: "cultural",
+            location: { name: "Gion" },
+            vibeMatch: { matchedVibes: ["culture"], reasoning: "Match" },
+            bookingInfo: {
+              requiresReservation: true,
+              bookingUrl:
+                "https://www.getyourguide.com/activity-t42/?partner_id=GYG1&a=1;2,3",
+              affiliateId: "getyourguide",
+            },
+          },
+          {
+            id: "activity_v_legacy",
+            name: "Hidden Viator Tour",
+            description: "Should be hidden",
+            duration: 60,
+            estimatedCost: { amount: 30, currency: "USD" },
+            timeOfDay: "morning",
+            category: "cultural",
+            location: { name: "Kyoto" },
+            vibeMatch: { matchedVibes: [], reasoning: "" },
+            affiliatePartner: "viator",
+            bookingInfo: {
+              requiresReservation: true,
+              bookingUrl:
+                "https://www.viator.com/tours/Kyoto/t1?pid=P1&mcid=1&medium=api",
+            },
+          } as unknown as TripDay["morning"]["activities"][number],
+        ],
+        meals: [],
+      },
+      transport: {
+        type: "flight",
+        provider: "ANA",
+        departure: {
+          airport: "SFO",
+          city: "San Francisco",
+          dateTime: "2026-05-10T10:15:00Z",
+        },
+        arrival: {
+          airport: "KIX",
+          city: "Osaka",
+          dateTime: "2026-05-11T14:00:00Z",
+        },
+        duration: 60,
+        stops: 0,
+        price: 800,
+        currency: "USD",
+        affiliateUrl: "https://links.duffel.com/session_ics",
+      },
+    });
+
+    const ics = buildTripIcsContent(
+      { destination: "Kyoto", start_date: "2026-05-10" },
+      {
+        tripId: "t1",
+        destination: "Kyoto",
+        startDate: "2026-05-10",
+        endDate: "2026-05-10",
+        days: [day],
+        totalEstimatedCost: { amount: 1000, currency: "USD" },
+        overview: "",
+        generatedAt: "2026-05-01T00:00:00Z",
+        topHotel: {
+          id: "h1",
+          name: "Ace Hotel Kyoto",
+          description: "Design hotel",
+          amenities: [],
+          location: { name: "Nakagyo", address: "Kyoto", lat: 0, lng: 0 },
+          images: [],
+          vibeScore: 95,
+          vibeMatch: [],
+          affiliateUrl:
+            "https://www.stay22.com/allez/roam?aid=s1&address=Kyoto",
+        },
+      },
+      new Date("2026-05-01T00:00:00Z"),
+      {
+        viatorContentEnabled: false,
+        essentials: [
+          {
+            label: "Airalo eSIM",
+            category: "esim",
+            url: "https://www.airalo.com/japan-esim?ref=a1",
+          },
+        ],
+      },
+    );
+
+    const encoder = new TextEncoder();
+    for (const line of ics.split("\r\n")) {
+      expect(encoder.encode(line).length).toBeLessThanOrEqual(75);
+    }
+
+    const unfolded = ics.replace(/\r\n /g, "");
+    expect(unfolded).toContain(
+      "URL:https://www.getyourguide.com/activity-t42/?partner_id=GYG1&a=1;2,3\r\n",
+    );
+    expect(unfolded).toContain(
+      "URL:https://links.duffel.com/session_ics?utm_source=faroway&utm_medium=export_ics\r\n",
+    );
+    expect(unfolded).toContain(
+      "URL:https://www.stay22.com/allez/roam?aid=s1&address=Kyoto\r\n",
+    );
+    expect(unfolded).toContain("Trip Essentials & Booking Links");
+    expect(unfolded).not.toContain("Hidden Viator Tour");
+    expect(unfolded).not.toContain("viator.com");
+  });
 });

@@ -104,8 +104,15 @@ export async function runTransportAgent(
     },
   );
 
-  // Deduplicate by similar route + time
-  const deduplicated = deduplicateTransportResults(allResults);
+  const outboundResults = allResults.filter((r) => !r.id.endsWith("__return"));
+  const returnByOutboundId = new Map(
+    allResults
+      .filter((r) => r.id.endsWith("__return"))
+      .map((r) => [r.id.slice(0, -8), r]),
+  );
+
+  // Deduplicate outbound offers by similar route + time
+  const deduplicated = deduplicateTransportResults(outboundResults);
 
   console.log(
     `[Transport Agent] After deduplication: ${deduplicated.length} results`,
@@ -114,8 +121,17 @@ export async function runTransportAgent(
   // Sort by price ascending (cheapest first)
   deduplicated.sort((a, b) => a.price - b.price);
 
-  // Return up to count results
-  return deduplicated.slice(0, count);
+  // Return up to count outbound results, paired with their return legs when present
+  const selectedOutbound = deduplicated.slice(0, count);
+  const finalResults: TransportResult[] = [];
+  for (const outbound of selectedOutbound) {
+    finalResults.push(outbound);
+    const pairedReturn = returnByOutboundId.get(outbound.id);
+    if (pairedReturn) {
+      finalResults.push(pairedReturn);
+    }
+  }
+  return finalResults;
 }
 
 async function searchDuffelProvider(
@@ -178,9 +194,10 @@ async function searchDuffelProvider(
     for (let i = 0; i < currentOffers.length; i++) {
       const offer = currentOffers[i];
       const affiliateUrl = affiliateUrls[i];
+      const outboundId = `transport_duffel_${offer.offerId}`;
 
       results.push({
-        id: `transport_duffel_${offer.offerId}`,
+        id: outboundId,
         type: "flight" as const,
         provider: offer.airlines.join(", ") || "Unknown Airline",
         departure: {
@@ -221,6 +238,55 @@ async function searchDuffelProvider(
         vibeScore: 0,
         vibeMatch: [],
       });
+
+      if (offer.returnLeg) {
+        const ret = offer.returnLeg;
+        results.push({
+          id: `${outboundId}__return`,
+          type: "flight" as const,
+          provider:
+            ret.airlines.join(", ") ||
+            offer.airlines.join(", ") ||
+            "Unknown Airline",
+          departure: {
+            airport: ret.departure.airport,
+            city: ret.departure.city,
+            dateTime: ret.departure.dateTime,
+            terminal: ret.departure.terminal,
+          },
+          arrival: {
+            airport: ret.arrival.airport,
+            city: ret.arrival.city,
+            dateTime: ret.arrival.dateTime,
+            terminal: ret.arrival.terminal,
+          },
+          duration: ret.duration,
+          stops: ret.stops,
+          price: offer.price.amount,
+          currency: offer.price.currency,
+          expiresAt: offer.expiresAt || undefined,
+          cabinClass: normalizeCabinClass(ret.cabinClass),
+          airlines: ret.airlines,
+          segments: ret.segments.map((seg) => ({
+            carrier: seg.carrier,
+            flightNumber: seg.flightNumber,
+            departure: {
+              airport: seg.departure.airport,
+              dateTime: seg.departure.dateTime,
+            },
+            arrival: {
+              airport: seg.arrival.airport,
+              dateTime: seg.arrival.dateTime,
+            },
+            duration: seg.duration,
+          })),
+          affiliateUrl,
+          affiliatePartner: "duffel",
+          source: "duffel" as const,
+          vibeScore: 0,
+          vibeMatch: [],
+        });
+      }
     }
 
     return results;
